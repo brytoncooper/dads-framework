@@ -44,17 +44,13 @@ If your generated starter migration imports
 `@dads-framework/feature-flags-postgres`, keep the migration file exactly as
 deployed. Add `migrations/support/feature-flags.ts` with this export.
 
-```ts
-export { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags/postgres";
-```
+<!-- dads:excerpt {"path": "apps/kit-workbench/migrations/support/feature-flags.ts", "language": "ts", "from": "export { installFeatureFlagSchemaV1 } from \"@dads-framework/feature-flags/postgres\";", "through": "export { installFeatureFlagSchemaV1 } from \"@dads-framework/feature-flags/postgres\";"} -->
 
 Add the following entry to `workspace.moduleAliases` in
 `assembly/migrations.ts` so the runner can replay the original file on an
 empty database.
 
-```ts
-"@dads-framework/feature-flags-postgres": "migrations/support/feature-flags.ts",
-```
+<!-- dads:excerpt {"path": "apps/kit-workbench/assembly/migrations.ts", "language": "ts", "from": "      moduleAliases: {", "through": "          \"migrations/support/feature-flags.ts\","} -->
 
 Add the following entry to `compilerOptions.paths` in `tsconfig.json` so
 TypeScript follows the same mapping.

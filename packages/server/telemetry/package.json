@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/telemetry",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,7 +16,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/telemetry-core": "0.1.0",
+    "@dads-framework/telemetry-core": "0.2.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.222.0",
     "@opentelemetry/instrumentation": "^0.222.0",
@@ -27,7 +27,7 @@
     "@opentelemetry/sdk-trace": "^2.11.0"
   },
   "devDependencies": {
-    "@dads-framework/http": "0.1.0",
+    "@dads-framework/http": "0.2.0",
     "pg": "^8.13.0",
     "vitest": "~4.1.0",
     "zod": "^4.4.3"

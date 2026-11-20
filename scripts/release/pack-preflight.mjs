@@ -15,7 +15,11 @@ import process from "node:process";
 import { URL, fileURLToPath, pathToFileURL } from "node:url";
 import { loadPrivatePatterns } from "../checks/check-private-references.mjs";
 import { auditPackage } from "./artifact-policy.mjs";
-import { verifyNativeExecutable } from "./native-executable.mjs";
+import {
+  nativeArchiveTarget,
+  verifyNativeExecutable,
+} from "./native-executable.mjs";
+import { releaseVersion } from "./release-version.mjs";
 import { releaseWorkspaces } from "./release-workspaces.mjs";
 
 const repository = fileURLToPath(new URL("../../", import.meta.url));
@@ -64,15 +68,11 @@ function extract(scratch, unpacked, record, index) {
   return join(destination, "package");
 }
 
-function nativeRecords(outputDirectory) {
+function nativeRecords(outputDirectory, version) {
   return readdirSync(outputDirectory)
     .filter((filename) => filename.endsWith(".tgz"))
     .map((filename) => {
-      if (
-        !/^dads-framework-testing-native-[a-z0-9-]+-0\.1\.0\.tgz$/.test(
-          filename,
-        )
-      ) {
+      if (!nativeArchiveTarget(filename, version)) {
         throw new Error(
           "Only hosted native archives may be prepopulated in the release output directory.",
         );
@@ -128,6 +128,7 @@ export function verifyReleaseArtifacts(
   packageName,
   outputDirectory,
 ) {
+  const version = releaseVersion(root);
   const workspaces = releaseWorkspaces(root);
   const packages = workspaces
     .map(({ name }) => name)
@@ -147,7 +148,9 @@ export function verifyReleaseArtifacts(
     mkdirSync(unpacked);
     const records = pack(root, packages, scratch);
     const expectedPackages = new Set(packages);
-    const native = outputDirectory ? nativeRecords(outputDirectory) : [];
+    const native = outputDirectory
+      ? nativeRecords(outputDirectory, version)
+      : [];
     if (outputDirectory && native.length !== 5) {
       throw new Error(
         "Expected five verified native archives in the release output directory.",
@@ -161,8 +164,15 @@ export function verifyReleaseArtifacts(
         );
       }
       const directory = extract(scratch, unpacked, record, index);
+      if (!record.archive) {
+        const manifest = JSON.parse(
+          readFileSync(join(directory, "package.json"), "utf8"),
+        );
+        if (manifest.version !== version)
+          throw new Error(`Unexpected release version in ${record.filename}.`);
+      }
       const nativeExecutable = record.archive
-        ? verifyNativeExecutable(directory, record.filename)
+        ? verifyNativeExecutable(directory, record.filename, version)
         : undefined;
       for (const [rule, count] of auditPackage(
         directory,

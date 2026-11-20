@@ -8,14 +8,13 @@ web app, PostgreSQL, and separate customer and staff APIs.
 Use Node 24, npm, and Docker with the Compose v2 plugin. Start Docker and run
 the creator from the directory where you want the new `my-app` folder.
 
-Use the commands below when your registry carries a stable `create-dads`
-release. The public npm `latest` tag currently points to a staging version.
+Use `create-dads` 0.2.0 for this walkthrough.
 For an exercise you can run from a source checkout,
 [try the Workbench API](#try-the-workbench-api-from-source).
 
 [Creator command reference](../../../packages/foundation/create-dads/README.md#try-it)
 
-<!-- dads:excerpt {"path": "packages/foundation/create-dads/README.md", "language": "sh", "from": "npm create dads@latest my-app", "through": "cd my-app"} -->
+<!-- dads:excerpt {"path": "packages/foundation/create-dads/README.md", "language": "sh", "from": "npm create dads@0.2.0 my-app", "through": "cd my-app"} -->
 
 The creator installs dependencies, writes `package-lock.json`, starts the
 Compose stack, and runs the database migrations. Watch for the `Open`,
@@ -23,8 +22,8 @@ Compose stack, and runs the database migrations. Watch for the `Open`,
 after the services respond. Open the URL on the `Open` line. The app shows
 a sign-in form.
 
-Check your configured registry with `npm config get registry` and its
-selected version with `npm view create-dads@latest version`.
+Use `npm config get registry` to identify your registry and
+`npm view create-dads@0.2.0 version` to check whether it carries 0.2.0.
 
 ## Save a note
 

@@ -2,10 +2,10 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { releaseVersion } from "./release-version.mjs";
 import { releaseWorkspaces } from "./release-workspaces.mjs";
 
-const firstReleaseVersion = "0.1.0";
-const firstReleaseCount = 57;
+const releasePackageCount = 57;
 
 function readJson(file) {
   return JSON.parse(readFileSync(file, "utf8"));
@@ -22,6 +22,7 @@ export function repositorySlug(root) {
 }
 
 export function releaseSubjects(root, directory) {
+  const version = releaseVersion(root);
   const workspaces = releaseWorkspaces(root);
   const facade = readJson(join(root, "packages/testing/core/package.json"));
   const native = Object.keys(facade.optionalDependencies ?? {});
@@ -29,16 +30,18 @@ export function releaseSubjects(root, directory) {
     ...workspaces.map(({ name }) => name),
     ...native,
   ]);
-  if (native.length !== 5 || expectedNames.size !== firstReleaseCount) {
+  if (native.length !== 5 || expectedNames.size !== releasePackageCount) {
     throw new Error(
-      `Expected exactly ${firstReleaseCount} release names, including five native packages.`,
+      `Expected exactly ${releasePackageCount} release names, including five native packages.`,
     );
   }
   const archives = readdirSync(directory)
     .filter((name) => name.endsWith(".tgz"))
     .sort();
-  if (archives.length !== firstReleaseCount) {
-    throw new Error(`Expected exactly ${firstReleaseCount} release tarballs.`);
+  if (archives.length !== releasePackageCount) {
+    throw new Error(
+      `Expected exactly ${releasePackageCount} release tarballs.`,
+    );
   }
 
   const repository = `git+https://github.com/${repositorySlug(root)}.git`;
@@ -55,7 +58,7 @@ export function releaseSubjects(root, directory) {
     );
     if (
       !remainingNames.delete(manifest.name) ||
-      manifest.version !== firstReleaseVersion ||
+      manifest.version !== version ||
       manifest.private === true ||
       manifest.repository?.url !== repository
     )

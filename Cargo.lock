@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "dad-test"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dads-testing-core",
  "dads-testing-javascript",
@@ -112,7 +112,7 @@ dependencies = [
 
 [[package]]
 name = "dads-testing-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -121,7 +121,7 @@ dependencies = [
 
 [[package]]
 name = "dads-testing-javascript"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dads-testing-core",
  "dads-testing-store",
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "dads-testing-store"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dads-testing-core",
  "serde",

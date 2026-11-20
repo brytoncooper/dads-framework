@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/migrations",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -27,8 +27,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/audit-actor": "0.1.0",
-    "@dads-framework/postgres": "0.1.0",
+    "@dads-framework/audit-actor": "0.2.0",
+    "@dads-framework/postgres": "0.2.0",
     "jiti": "2.4.2",
     "node-pg-migrate": "^9.0.0",
     "typescript": "6.0.3",

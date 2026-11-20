@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/cross-domain-references",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,10 +16,10 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/errors": "0.1.0"
+    "@dads-framework/errors": "0.2.0"
   },
   "devDependencies": {
-    "@dads-framework/postgres": "0.1.0",
+    "@dads-framework/postgres": "0.2.0",
     "@types/pg": "^8.20.0",
     "vitest": "~4.1.0"
   },

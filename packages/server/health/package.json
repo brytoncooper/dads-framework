@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/health",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,7 +16,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/http": "0.1.0",
+    "@dads-framework/http": "0.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

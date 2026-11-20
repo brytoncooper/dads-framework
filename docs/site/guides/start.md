@@ -24,7 +24,7 @@ a boundary check for imports that reach into another domain. The route
 contract feeds request validation, OpenAPI, and typed clients. You can
 spend the next change on what the feature does. [Build a resource in the starter](./guarded-resource.md).
 
-New to terms like _domain_, _contract_, or _kit_? The [Dads vocabulary](./vocabulary.md) shows what each one means in this app.
+When you follow the browser’s workspace ID into a route named `/tenants/:tenantId`, the [Dads vocabulary](./vocabulary.md) explains how the two names fit together.
 
 ## What happens when access changes?
 

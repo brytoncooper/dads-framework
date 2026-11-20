@@ -1,91 +1,65 @@
 # Dads vocabulary
 
-When you change a feature, these names tell you who owns the behavior,
-which app exposes it, and which test proves it. The examples follow
-Notes in the starter.
+## Where does the workspace ID show up in the API?
 
-## Dads, `dad`, starter, and Workbench
+The starter calls it a **workspace** in the browser and a **tenant** in
+the API. The workspace picker selects a tenant ID, and Notes uses it in
+`/api/tenants/:tenantId/notes`. When tracing a workspace bug, follow the
+same ID from the picker through the route to the database query.
+[Workspace picker](../../../apps/kit-workbench/apps/web/workspace-controls.tsx) ·
+[Notes routes](../../../apps/kit-workbench/domains/notes/server/routes.ts)
 
-**Dads** is the framework and its packages. **`dad`** is the command-line
-tool for working in a Dads project. The **starter** is the app you get
-from `npm create dads`. Its source lives in the framework repository as
-**Kit Workbench** (`apps/kit-workbench`). The repository also has a
-reference task API called **Workbench** (`apps/workbench`).
+## I added a route to a plugin. Which API serves it?
 
-For example, create the starter and save a note to see a complete feature
-run locally. [Quickstart](./quickstart.md) ·
+Check where the plugin is **mounted**. The HTTP **kit** supplies route
+builders. The Notes **plugin** contributes the built routes to a host.
+The customer app selects that plugin in its `routes` array, so the same
+Notes URL returns 404 on the staff app. The attachment worker is a
+separate plugin selected under `jobs`.
+[Compose APIs and plugins](./composition.md) ·
+[Customer app](../../../apps/kit-workbench/apps/customer/app.ts)
+
+## Can I delete the `// dad:add domains` comment?
+
+Leave it where you want the generator to insert a plugin. The comment is
+an edit marker for the CLI. The actual entry in the API’s `routes` array
+is what serves requests. From the starter, preview
+`npx dad add domain inventory --api staff --dry-run --json` to see the
+planned files. Omitting `--api staff` creates the domain without mounting
+it in an API. [Generator guide](../../../docs/generators.md).
+
+## Which Workbench has the Notes starter?
+
+The Notes starter comes from `apps/kit-workbench`. **Workbench** also
+names the separate reference task API in `apps/workbench`.
+`npm run workbench:dev` from the framework checkout starts that task API.
+Follow Quickstart to run the Notes UI.
+[Quickstart](./quickstart.md) ·
 [Reference Workbench](../../../apps/workbench/README.md)
 
-## Domain and API
+## Why does Notes use a permission handle and a permission name?
 
-A **domain** owns a feature's behavior and the rules around its data.
-An **API** is a running surface that selects which operations to expose.
+`tenantAccess.tenant.permissions.view` is the **handle** exported by the
+tenant access model. The Notes route declaration reads the **wire names**
+from that handle and gets the target ID from `fromParam("tenantId")`.
+The write guard takes the handle directly. Follow the handle to find
+which relationships grant access.
+[Notes access declaration](../../../apps/kit-workbench/domains/notes/access/index.ts) ·
+[Tenant permission rules](../../../packages/server/tenants/src/tenant-access.ts)
 
-Notes owns the note routes. The customer API mounts them, and the staff
-API exposes its own selection of operations. The app entry point is
-where you look to find out which routes a caller can reach.
-[Notes domain](../../../apps/kit-workbench/domains/notes/index.ts) ·
-[Customer API](../../../apps/kit-workbench/apps/customer/app.ts) ·
-[Staff API](../../../apps/kit-workbench/apps/staff/app.ts)
+## If the route checks the tenant, why does the list filter by tenant too?
 
-## Contract and schema
+The permission check answers whether the caller may read the tenant
+named in the URL. The list query **scopes** the results to that tenant.
+Notes applies the same predicate to the page of rows and its total count.
+When changing the query, check both.
+[Notes list route](../../../apps/kit-workbench/domains/notes/server/routes.ts) ·
+[Add a guarded resource](./guarded-resource.md)
 
-An HTTP **contract** describes an operation at the boundary, including
-its method, path, and input and output shapes. A **schema** is a runtime
-definition for parsing one of those shapes.
+## What does a recommended test task tell me?
 
-The create-note contract uses `noteInput` to parse the body. That schema
-trims the text and checks its length. Look in the contract when changing
-what callers send or receive.
-[Notes route contract](../../../apps/kit-workbench/domains/notes/server/routes.ts) ·
-[Notes schemas](../../../apps/kit-workbench/domains/notes/contract/wire.ts)
-
-## Plugin and kit
-
-A **plugin** declares what it contributes to a host and which services it
-needs. A **kit** is a framework capability package, such as feature flags.
-
-The Notes plugin asks for starter services and contributes routes and a
-flag definition. The feature flags package supplies the capability the
-app uses to evaluate that flag.
-[Notes plugin](../../../apps/kit-workbench/domains/notes/server/plugin.ts) ·
-[Feature flags](./flags.md)
-
-## Library, port, and adapter
-
-A **library** groups reusable code or declarations behind an entry point.
-A **port** describes the operations a caller needs. An **adapter**
-implements those operations for a particular technology.
-
-The starter's app runtime library declares that its file service uses the
-`ObjectStorage` port. The starter assembly picks the storage
-implementation. This gives Notes a file service it can use without
-choosing where attachments live.
-[Runtime library](../../../apps/kit-workbench/libraries/app-runtime/index.ts) ·
-[Local service assembly](../../../apps/kit-workbench/assembly/local-services.ts)
-
-## Relation, permission, and scope
-
-A **relation** records how a subject is connected to an object, such as an
-account's membership in a tenant. A **permission** describes an action the
-subject can take, based on rules that evaluate those relationships. A
-**scope** is the boundary, such as a tenant, within which access applies.
-
-The Notes route checks the tenant's `view` permission using the
-`tenantId` from the URL. The integration test exercises an allowed
-request and denial for a signed-in caller outside the tenant.
-[Notes access rule](../../../apps/kit-workbench/domains/notes/access/index.ts) ·
-[Starter integration test](../../../apps/kit-workbench/tests/starter.integration.test.ts) ·
-[Permissions guide](./permissions.md)
-
-## Reader and writer
-
-A **reader** looks up stored data. A **writer** changes it. Giving a
-caller only a reader makes that part of the app easier to reason about.
-You can test a business rule with a small in-memory implementation and
-test the SQL separately.
-
-The audit package uses a reader to look up request logs. Its retention
-job gets a writer that deletes old rows and returns the number removed.
-[Request log reader](../../../packages/server/audit/src/lib/database/readers/request-log-reader.interface.ts) ·
-[Request log writer](../../../packages/server/audit/src/lib/database/writers/request-log-writer.interface.ts)
+`dad test:recommend` reports the tasks selected for a change. In the
+starter, a Notes route edit can select `domains-notes`, whose configured
+command is `npm run verify`. Read the `dad verify` report to see which
+checks ran and their results.
+[Verification and code health](./verification.md)

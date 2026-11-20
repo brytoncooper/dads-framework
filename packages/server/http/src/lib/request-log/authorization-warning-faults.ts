@@ -13,7 +13,7 @@
  * records its own once an hour, which is still a handful of rows an hour.
  */
 
-import type { AuthorizationWarning } from "@dads-framework/request-work";
+import type { AuthorizationWarning } from "@dads-framework/runtime/request-work";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 

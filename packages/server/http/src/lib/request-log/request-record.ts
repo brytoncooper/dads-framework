@@ -11,7 +11,7 @@
  */
 
 import type { AuditActor } from "@dads-framework/audit-actor";
-import type { RequestWorkTally } from "@dads-framework/request-work";
+import type { RequestWorkTally } from "@dads-framework/runtime/request-work";
 import {
   CLIENT_CONTEXT_HEADER,
   decodeClientContext,

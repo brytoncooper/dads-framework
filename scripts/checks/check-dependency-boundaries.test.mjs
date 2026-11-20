@@ -73,6 +73,15 @@ test("a production import of an unlisted package is a violation", () => {
   assert.equal(result.violations[0].file, "packages/one/src/index.ts");
 });
 
+test("a dynamic import of an unlisted adapter is a violation", () => {
+  const world = createWorld({
+    "dads.project.json": projectFile(declaration()),
+    "packages/one/src/index.ts": 'export const load = () => import("bullmq");',
+  });
+
+  assert.deepEqual(gatesOf(checkDependencyBoundaries(world)), ["imports"]);
+});
+
 test("relative, builtin, and allowed imports pass", () => {
   const world = createWorld({
     "dads.project.json": projectFile(
@@ -125,6 +134,28 @@ test("a peer dependency the declaration omits is a violation", () => {
     result.violations[0].message,
     /declares "react" in peerDependencies/u,
   );
+});
+
+test("optional dependencies must match the declaration", () => {
+  const files = {
+    "packages/one/package.json": manifest({
+      optionalDependencies: { "native-helper": "1.0.0" },
+    }),
+  };
+  const unlisted = createWorld({
+    ...files,
+    "dads.project.json": projectFile(declaration()),
+  });
+  assert.deepEqual(gatesOf(checkDependencyBoundaries(unlisted)), [
+    "declared-dependencies",
+  ]);
+  const allowed = createWorld({
+    ...files,
+    "dads.project.json": projectFile(
+      declaration({ allowedDependencies: ["native-helper"] }),
+    ),
+  });
+  assert.deepEqual(checkDependencyBoundaries(allowed).violations, []);
 });
 
 test("a third-party allowance nothing installs is a violation", () => {
@@ -326,4 +357,91 @@ test("human output ends with the violation count", () => {
 
   assert.match(output, /^imports: @fixture\/one imports "zod"/u);
   assert.match(output, /dependency boundaries: 1 violation\n$/u);
+});
+
+function scopedBindingWorld(files, overrides = {}) {
+  return createWorld({
+    "dads.project.json": projectFile(
+      declaration({
+        allowedDependencies: ["drizzle-orm"],
+      }),
+      declaration({
+        name: "@fixture/two",
+        root: "packages/two",
+        allowedDependencies: ["@fixture/one"],
+      }),
+    ),
+    "packages/one/package.json": manifest({
+      exports: {
+        "./postgres": {
+          default: "./dist/postgres/index.js",
+          types: "./dist/postgres/index.d.ts",
+        },
+      },
+      dadsBindings: { postgres: ["drizzle-orm"] },
+      peerDependencies: { "drizzle-orm": "1.0.0" },
+      peerDependenciesMeta: { "drizzle-orm": { optional: true } },
+      ...overrides,
+    }),
+    "packages/one/src/postgres/index.ts":
+      'import { sql } from "drizzle-orm"; export { sql };',
+    ...files,
+  });
+}
+
+test("a binding can load its optional peer within its own export", () => {
+  assert.deepEqual(
+    checkDependencyBoundaries(scopedBindingWorld()).violations,
+    [],
+  );
+});
+
+test("core cannot reach an adapter subpath or its optional peer", () => {
+  const result = checkDependencyBoundaries(
+    scopedBindingWorld({
+      "packages/one/src/core.ts": [
+        'export * from "./postgres/index.js";',
+        'export const load = () => import("drizzle-orm");',
+      ].join("\n"),
+      "packages/two/src/core.ts": [
+        'export * from "@fixture/one/postgres";',
+        'export * from "../../one/src/postgres/index.js";',
+      ].join("\n"),
+    }),
+  );
+  assert.deepEqual(gatesOf(result), [
+    "imports",
+    "imports",
+    "imports",
+    "imports",
+  ]);
+  assert.ok(
+    result.violations.every(({ message }) =>
+      message.includes("outside its source scope"),
+    ),
+  );
+});
+
+test("a scoped binding must declare peers as optional", () => {
+  assert.throws(
+    () =>
+      checkDependencyBoundaries(
+        scopedBindingWorld({}, { peerDependenciesMeta: {} }),
+      ),
+    /Invalid source binding @fixture\/one\/postgres/u,
+  );
+});
+
+test("a source binding cannot be aliased through another export", () => {
+  const exports = {
+    ".": { default: "./dist/postgres/index.js" },
+    "./postgres": {
+      default: "./dist/postgres/index.js",
+      types: "./dist/postgres/index.d.ts",
+    },
+  };
+  assert.throws(
+    () => checkDependencyBoundaries(scopedBindingWorld({}, { exports })),
+    /Invalid source binding @fixture\/one\/postgres/u,
+  );
 });

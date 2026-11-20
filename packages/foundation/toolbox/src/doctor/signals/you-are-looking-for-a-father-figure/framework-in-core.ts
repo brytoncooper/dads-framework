@@ -25,6 +25,8 @@ import {
   type PackageImport,
 } from "../scanners/package-graph.js";
 
+import { readSourceBindings } from "../scanners/source-bindings.js";
+
 /** The frameworks and ORMs the companion names, with the scopes they publish under. */
 const FRAMEWORKS = new Map<string, string>([
   ["nest", "nest"],
@@ -70,7 +72,18 @@ function countFrameworksInCore(context: DoctorContext) {
   if (!graph.declared) return readings;
   for (const declared of graph.packages) {
     if (declared.kind !== "core") continue;
-    const found = frameworkImports(vendorImports(graph, declared));
+    const bindings = readSourceBindings(context, declared);
+    const found = frameworkImports(
+      vendorImports(graph, declared).filter(
+        (entry) =>
+          !bindings.some(
+            (binding) =>
+              entry.module !== undefined &&
+              entry.path.startsWith(`${binding.sourceRoot}/`) &&
+              binding.dependencies.includes(entry.module),
+          ),
+      ),
+    );
     const entries = [...found.values()].flat();
     readings.set(declared.name, {
       value: found.size,

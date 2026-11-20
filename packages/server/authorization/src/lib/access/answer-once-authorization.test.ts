@@ -9,8 +9,8 @@ import { accessModel } from "@dads-framework/access";
 
 import { describe, expect, it } from "vitest";
 
-import { answeringEachQuestionOnce } from "@dads-framework/request-work";
-import { measureRequestWork } from "@dads-framework/request-work/testing";
+import { answeringEachQuestionOnce } from "@dads-framework/runtime/request-work";
+import { measureRequestWork } from "@dads-framework/runtime/request-work/testing";
 
 import { AnswerOnceAuthorization } from "@dads-framework/access/runtime";
 import {

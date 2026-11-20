@@ -16,7 +16,7 @@ Use Node 24 with Docker running and the Compose plugin available. Run the
 creator from a parent directory:
 
 ```sh
-npm create dads@0.2.0 my-app
+npm create dads@0.3.0 my-app
 cd my-app
 ```
 

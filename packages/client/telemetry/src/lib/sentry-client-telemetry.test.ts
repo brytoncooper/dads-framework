@@ -12,8 +12,8 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import type { TelemetryBreadcrumb } from "@dads-framework/client-telemetry-core";
-import { clientTelemetryConformance } from "@dads-framework/client-telemetry-core/testing";
+import type { TelemetryBreadcrumb } from "../core/index.js";
+import { clientTelemetryConformance } from "../testing.js";
 import type { SentryConfiguration } from "./logic/sentry-configuration.js";
 import {
   SentryClientTelemetry,

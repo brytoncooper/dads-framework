@@ -1,9 +1,30 @@
 {
   "name": "@dads-framework/email-sender",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
+  },
+  "dadsConformance": {
+    "capability": "Outbound email submission",
+    "suite": "src/core/email-sender-conformance.ts",
+    "law": "emailSenderConformance",
+    "runs": [
+      {
+        "test": "src/lib/mailgun-email-sender.test.ts",
+        "provider": {
+          "module": "./mailgun-email-sender.js",
+          "name": "MailgunEmailSender"
+        }
+      },
+      {
+        "test": "src/lib/resend-email-sender.test.ts",
+        "provider": {
+          "module": "./resend-email-sender.js",
+          "name": "ResendEmailSender"
+        }
+      }
+    ]
   },
   "exports": {
     ".": {
@@ -13,18 +34,23 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./core/testing": {
+      "types": "./dist/core/testing.d.ts",
+      "default": "./dist/core/testing.js"
     }
   },
   "files": [
     "dist",
     "README.md"
   ],
-  "dependencies": {
-    "@dads-framework/email-sender-core": "0.2.0",
-    "resend": "^6.17.2"
-  },
   "devDependencies": {
-    "vitest": "~4.1.0"
+    "vitest": "~4.1.0",
+    "resend": "^6.17.2"
   },
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
@@ -39,5 +65,13 @@
     "type": "git",
     "url": "git+https://github.com/brytoncooper/dads-framework.git",
     "directory": "packages/server/email-sender"
+  },
+  "peerDependencies": {
+    "resend": "^6.17.2"
+  },
+  "peerDependenciesMeta": {
+    "resend": {
+      "optional": true
+    }
   }
 }

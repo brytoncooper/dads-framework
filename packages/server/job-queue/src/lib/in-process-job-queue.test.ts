@@ -11,11 +11,7 @@ import {
 } from "@dads-framework/audit-actor";
 
 import { InProcessJobQueue } from "./in-process-job-queue.js";
-import {
-  cronSchedule,
-  defineJob,
-  intervalSchedule,
-} from "@dads-framework/job-queue-core";
+import { cronSchedule, defineJob, intervalSchedule } from "../core/index.js";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 

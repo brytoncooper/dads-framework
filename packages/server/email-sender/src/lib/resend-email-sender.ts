@@ -1,9 +1,9 @@
-import { Resend, type CreateEmailOptions } from "resend";
+import type { CreateEmailOptions, Resend } from "resend";
 import type {
   EmailMessage,
   EmailSender,
   EmailSendReceipt,
-} from "@dads-framework/email-sender-core";
+} from "../core/index.js";
 import { formatEmailAddress } from "./logic/format-email-address.js";
 
 /**
@@ -12,17 +12,17 @@ import { formatEmailAddress } from "./logic/format-email-address.js";
  * branch.
  */
 export class ResendEmailSender implements EmailSender {
-  private readonly resend: Resend;
+  private resend?: Promise<Resend>;
 
   constructor(
-    apiKey: string,
+    private readonly apiKey: string,
     private readonly from: string,
-  ) {
-    this.resend = new Resend(apiKey);
-  }
+  ) {}
 
   async send(message: EmailMessage): Promise<EmailSendReceipt> {
-    const { data, error } = await this.resend.emails.send(
+    this.resend ??= createResendClient(this.apiKey);
+    const resend = await this.resend;
+    const { data, error } = await resend.emails.send(
       toResendPayload(message, this.from),
     );
     if (error) {
@@ -30,6 +30,27 @@ export class ResendEmailSender implements EmailSender {
     }
     return { providerMessageId: data.id };
   }
+}
+
+async function createResendClient(apiKey: string): Promise<Resend> {
+  try {
+    import.meta.resolve("resend");
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "ERR_MODULE_NOT_FOUND"
+    ) {
+      throw new Error(
+        "The Resend email driver requires the resend SDK. Run npm install resend@^6.17.2.",
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+
+  const { Resend } = await import("resend");
+  return new Resend(apiKey);
 }
 
 /**

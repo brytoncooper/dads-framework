@@ -15,7 +15,7 @@ export {
   type JobQueueCounts,
   type JobQueueInspection,
   type RunningJobSchedule,
-} from "@dads-framework/job-queue-core";
+} from "./core/index.js";
 export {
   createJobQueue,
   type CreateJobQueueOptions,

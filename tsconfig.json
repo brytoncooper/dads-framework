@@ -14,9 +14,6 @@
       "path": "./packages/testing/core"
     },
     {
-      "path": "./packages/testing/import-nx"
-    },
-    {
       "path": "./packages/testing/path-aliases"
     },
     {
@@ -47,7 +44,7 @@
       "path": "./packages/server/errors"
     },
     {
-      "path": "./packages/server/clock"
+      "path": "./packages/server/runtime"
     },
     {
       "path": "./packages/server/http"
@@ -71,28 +68,13 @@
       "path": "./packages/server/audit-actor"
     },
     {
-      "path": "./packages/server/request-work"
-    },
-    {
       "path": "./packages/server/telemetry"
-    },
-    {
-      "path": "./packages/server/telemetry-core"
-    },
-    {
-      "path": "./packages/server/diagnostics"
-    },
-    {
-      "path": "./packages/server/health"
     },
     {
       "path": "./packages/server/event-bus"
     },
     {
       "path": "./packages/server/job-queue"
-    },
-    {
-      "path": "./packages/server/job-queue-core"
     },
     {
       "path": "./packages/server/csv"
@@ -104,13 +86,7 @@
       "path": "./packages/server/object-storage"
     },
     {
-      "path": "./packages/server/object-storage-core"
-    },
-    {
       "path": "./packages/server/email-sender"
-    },
-    {
-      "path": "./packages/server/email-sender-core"
     },
     {
       "path": "./packages/server/email-templates"
@@ -137,12 +113,6 @@
       "path": "./packages/server/feature-flags"
     },
     {
-      "path": "./packages/server/feature-flags-postgres"
-    },
-    {
-      "path": "./packages/server/feature-flags-http"
-    },
-    {
       "path": "./packages/client/feature-flags"
     },
     {
@@ -156,9 +126,6 @@
     },
     {
       "path": "./packages/client/telemetry"
-    },
-    {
-      "path": "./packages/client/telemetry-core"
     },
     {
       "path": "./packages/client/xlsx"

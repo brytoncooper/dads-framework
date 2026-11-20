@@ -29,8 +29,7 @@ function inspect(
   law = "register('queries', () => open({}));",
   firstProvider = NATIVE,
 ): boolean {
-  const root = mkdtempSync(join(tmpdir(), "explicit-wrapper-conformance-"));
-  const files = {
+  return inspectFiles({
     "package.json": JSON.stringify({
       dependencies: { "renamed-vendor-db": "npm:vendor-db@^1.0.0" },
       dadsConformance: {
@@ -50,7 +49,11 @@ function inspect(
       export function aliasedDecorator(config) { return new Decorated(config); }
     `,
     [RUNNER]: DECLARATIONS + run,
-  };
+  });
+}
+
+function inspectFiles(files: Readonly<Record<string, string>>): boolean {
+  const root = mkdtempSync(join(tmpdir(), "explicit-wrapper-conformance-"));
   try {
     for (const [file, content] of Object.entries(files)) {
       const path = join(root, ROOT, file);
@@ -112,5 +115,79 @@ describe("explicit wrapper conformance", () => {
       inspect(decoratorRun.replace("() => run()", "() => undefined")),
     ).toBe(false);
     expect(inspect(decoratorRun, DECORATED, RUNNER, "")).toBe(false);
+  });
+});
+
+const TABLE = `export const laws = [{
+  name: "connects",
+  run(provider) { provider.connect(); },
+}];`;
+const TABLE_RUN = `
+  describe("local provider", () => {
+    it.each(laws)("$name", async ({ run }) => {
+      const provider = new Local();
+      try {
+        await run({ provider });
+      } finally {}
+    });
+  });
+`;
+
+function inspectTable(registration: string, suite = TABLE): boolean {
+  return inspectFiles({
+    "package.json": JSON.stringify({
+      dadsConformance: {
+        capability: "Pool checkout",
+        suite: "src/laws.ts",
+        law: "laws",
+        runs: [
+          { test: RUNNER, provider: NATIVE },
+          { test: RUNNER, provider: { module: "./local.js", name: "Local" } },
+        ],
+      },
+    }),
+    "src/laws.ts": suite,
+    "src/local.ts": "export class Local { connect() {} }",
+    [RUNNER]:
+      `
+      import { describe, it } from "vitest";
+      import { Pool as Plain } from "vendor-db";
+      import { Local } from "./local.js";
+      import { laws } from "./laws.js";
+
+      it.each(laws)("$name", ({ run }) => { run(new Plain()); });
+    ` + registration,
+  });
+}
+
+describe("table-driven wrapper conformance", () => {
+  it("accepts direct registrations when both implementations reach the law", () => {
+    expect(inspectTable(TABLE_RUN)).toBe(true);
+  });
+
+  it("rejects fixtures without a provider law", () => {
+    expect(
+      inspectTable(TABLE_RUN, TABLE.replace("provider.connect();", "")),
+    ).toBe(false);
+    expect(
+      inspectTable(TABLE_RUN, `export const laws = [{ name: "connects" }];`),
+    ).toBe(false);
+  });
+
+  it("rejects a constructed provider that is unused by the law", () => {
+    expect(
+      inspectTable(TABLE_RUN.replace("run({ provider })", "run(new Plain())")),
+    ).toBe(false);
+  });
+
+  it("rejects skipped registrations and shadowed provider imports", () => {
+    expect(inspectTable(TABLE_RUN.replace("describe(", "describe.skip("))).toBe(
+      false,
+    );
+    expect(
+      inspectTable(
+        TABLE_RUN.replace("  it.each", "  const Local = Plain; it.each"),
+      ),
+    ).toBe(false);
   });
 });

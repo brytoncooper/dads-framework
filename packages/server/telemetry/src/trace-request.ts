@@ -3,7 +3,7 @@ import { isSpanContextValid, trace } from "@opentelemetry/api";
 import {
   requestTraceAttributes,
   type RequestTraceFacts,
-} from "@dads-framework/telemetry-core";
+} from "./core/index.js";
 
 export function annotateRequest(facts: RequestTraceFacts): void {
   trace.getActiveSpan()?.setAttributes(requestTraceAttributes(facts));

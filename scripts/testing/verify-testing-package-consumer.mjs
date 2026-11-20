@@ -236,6 +236,58 @@ export function runCleanConsumerCli(consumerDirectory) {
   }
 }
 
+export function runCleanConsumerNx(consumerDirectory) {
+  const source = [
+    'import assert from "node:assert/strict";',
+    'import { importNxTestingWorkspace, planNativeNxTesting } from "@dads-framework/testing/nx";',
+    "assert.equal(typeof importNxTestingWorkspace, 'function');",
+    "assert.equal(typeof planNativeNxTesting, 'function');",
+  ].join(" ");
+  execFileSync(process.execPath, ["--input-type=module", "-e", source], {
+    cwd: consumerDirectory,
+    stdio: "inherit",
+    env: cleanConsumerEnvironment(),
+  });
+
+  const bins = new Map([
+    ["dad-test-import-nx", 2],
+    ["dad-test-nx", 1],
+  ]);
+  for (const [name, expectedStatus] of bins) {
+    const executable = process.platform === "win32" ? `${name}.cmd` : name;
+    requireFile(
+      join(consumerDirectory, "node_modules", ".bin", executable),
+      `installed ${name} executable`,
+    );
+    const completed = spawnSync(
+      process.execPath,
+      [
+        join(
+          consumerDirectory,
+          "node_modules",
+          "@dads-framework",
+          "testing",
+          "bin",
+          `${name}.js`,
+        ),
+      ],
+      {
+        cwd: consumerDirectory,
+        encoding: "utf8",
+        env: cleanConsumerEnvironment(),
+      },
+    );
+    if (
+      completed.status !== expectedStatus ||
+      !completed.stderr?.startsWith(`Usage: ${name} `)
+    ) {
+      throw new Error(
+        `Unexpected packed ${name} response: ${completed.stderr}`,
+      );
+    }
+  }
+}
+
 /** Adds one npm workspace package so `init` has a package to discover. */
 function writeConsumerWorkspacePackage(consumerDirectory) {
   mkdirSync(join(consumerDirectory, "packages", "lib"), { recursive: true });

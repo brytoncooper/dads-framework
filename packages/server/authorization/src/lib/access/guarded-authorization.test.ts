@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { measureWork } from "@dads-framework/request-work";
+import { measureWork } from "@dads-framework/runtime/request-work";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import { relationshipWrite } from "@dads-framework/access/runtime";

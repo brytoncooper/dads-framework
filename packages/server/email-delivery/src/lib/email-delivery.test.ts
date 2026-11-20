@@ -10,10 +10,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import type { Clock } from "@dads-framework/clock";
-import { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
-import { defineJob } from "@dads-framework/job-queue-core";
-import { FakeJobQueue } from "@dads-framework/job-queue-core/testing";
+import type { Clock } from "@dads-framework/runtime/clock";
+import { FakeEmailSender } from "@dads-framework/email-sender/core/testing";
+import { defineJob } from "@dads-framework/job-queue/core";
+import { FakeJobQueue } from "@dads-framework/job-queue/core/testing";
 
 import type { EmailEnvelope } from "./email-envelope.js";
 import type { EmailTemplate } from "./email-template-port.js";

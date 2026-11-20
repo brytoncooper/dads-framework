@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { expect, it } from "vitest";
-import { traceAttributionCases } from "@dads-framework/telemetry-core/testing";
+import { traceAttributionCases } from "./core/testing/index.js";
 
 const traceProcess = fileURLToPath(
   new URL("../proof/trace-process.mjs", import.meta.url),

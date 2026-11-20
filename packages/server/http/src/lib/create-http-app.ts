@@ -6,8 +6,8 @@ import Fastify, {
 } from "fastify";
 import type { DestinationStream } from "pino";
 
-import type { DiagnosticsReporter } from "@dads-framework/diagnostics";
-import { beginRequestWork } from "@dads-framework/request-work";
+import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
+import { beginRequestWork } from "@dads-framework/runtime/request-work";
 import {
   ACCESS_REFUSAL_HEADER,
   REQUEST_ID_HEADER,

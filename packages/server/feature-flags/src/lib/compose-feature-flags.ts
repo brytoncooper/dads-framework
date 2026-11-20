@@ -1,4 +1,4 @@
-import type { Clock } from "@dads-framework/clock";
+import type { Clock } from "@dads-framework/runtime/clock";
 
 import type { FeatureFlagDefinition } from "../contract/index.js";
 import { FeatureFlagEvaluator } from "./feature-flag-evaluator.js";

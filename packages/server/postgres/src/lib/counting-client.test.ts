@@ -10,7 +10,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { measureWork } from "@dads-framework/request-work";
+import { measureWork } from "@dads-framework/runtime/request-work";
 
 import { countStatementsOn } from "./counting-client.js";
 

@@ -5,7 +5,7 @@ import {
   defineJob,
   type JobDefinition,
   type JobLog,
-} from "@dads-framework/job-queue-core";
+} from "@dads-framework/job-queue/core";
 
 import type { CatalogSizeReader } from "./catalog-size-reader.js";
 import {

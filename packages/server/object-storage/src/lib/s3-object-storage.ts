@@ -1,12 +1,5 @@
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client,
-  type S3ClientConfig,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { S3Client } from "@aws-sdk/client-s3";
+import { loadS3Sdk, loadS3Presigner } from "./load-s3-sdk.js";
 
 import type { CloudFrontDownloadSigner } from "./cloudfront-download-signer.js";
 import type {
@@ -14,7 +7,7 @@ import type {
   SignedUpload,
   SignedUploadRequest,
   StoredObject,
-} from "@dads-framework/object-storage-core";
+} from "../core.js";
 
 /** A fixed access key pair, e.g. MinIO's root user in development. */
 export type S3StaticCredentials = {
@@ -44,32 +37,38 @@ export type S3ObjectStorageOptions = {
  * passed only when a static pair is configured; otherwise the key is absent
  * so the SDK resolves its default credential chain.
  */
-export function s3ClientConfig(
-  options: S3ObjectStorageOptions,
-): S3ClientConfig {
-  const config: S3ClientConfig = {
+export function s3ClientConfig(options: S3ObjectStorageOptions) {
+  return {
     region: options.region,
     forcePathStyle: options.useBucketInPath,
     // A checksum computed by default would cover a signed upload URL's empty
     // body, so storage would refuse the real bytes sent to that URL.
-    requestChecksumCalculation: "WHEN_REQUIRED",
+    requestChecksumCalculation: "WHEN_REQUIRED" as const,
+    ...(options.endpoint ? { endpoint: options.endpoint } : {}),
+    ...(options.credentials
+      ? {
+          credentials: {
+            accessKeyId: options.credentials.accessKeyId,
+            secretAccessKey: options.credentials.secretAccessKey,
+          },
+        }
+      : {}),
   };
-  if (options.endpoint) config.endpoint = options.endpoint;
-  if (options.credentials) {
-    config.credentials = {
-      accessKeyId: options.credentials.accessKeyId,
-      secretAccessKey: options.credentials.secretAccessKey,
-    };
-  }
-  return config;
 }
 
 /** S3 API driver — same client for MinIO, AWS S3, and DigitalOcean Spaces. */
 export class S3ObjectStorage implements ObjectStorage {
-  private readonly client: S3Client;
+  private readonly config: ReturnType<typeof s3ClientConfig>;
+  private client?: S3Client;
 
   constructor(private readonly options: S3ObjectStorageOptions) {
-    this.client = new S3Client(s3ClientConfig(options));
+    this.config = s3ClientConfig(options);
+  }
+
+  private async loadClient() {
+    const sdk = await loadS3Sdk();
+    const client = (this.client ??= new sdk.S3Client(this.config));
+    return { sdk, client };
   }
 
   async put(
@@ -77,8 +76,9 @@ export class S3ObjectStorage implements ObjectStorage {
     body: Uint8Array | string,
     contentType: string,
   ): Promise<void> {
-    await this.client.send(
-      new PutObjectCommand({
+    const { sdk, client } = await this.loadClient();
+    await client.send(
+      new sdk.PutObjectCommand({
         Bucket: this.options.bucket,
         Key: key,
         Body: body,
@@ -89,8 +89,9 @@ export class S3ObjectStorage implements ObjectStorage {
 
   async get(key: string): Promise<StoredObject | null> {
     try {
-      const response = await this.client.send(
-        new GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
+      const { sdk, client } = await this.loadClient();
+      const response = await client.send(
+        new sdk.GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
       );
       const body = await response.Body?.transformToByteArray();
       if (!body) return null;
@@ -109,14 +110,16 @@ export class S3ObjectStorage implements ObjectStorage {
     }
   }
 
-  getSignedUrl(key: string, expiresInSeconds: number): Promise<string> {
+  async getSignedUrl(key: string, expiresInSeconds: number): Promise<string> {
     if (this.options.downloadSigner)
       return Promise.resolve(
         this.options.downloadSigner.sign(key, expiresInSeconds),
       );
+    const { sdk, client } = await this.loadClient();
+    const { getSignedUrl } = await loadS3Presigner();
     return getSignedUrl(
-      this.client,
-      new GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
+      client,
+      new sdk.GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
       { expiresIn: expiresInSeconds },
     );
   }
@@ -126,9 +129,11 @@ export class S3ObjectStorage implements ObjectStorage {
     request: SignedUploadRequest,
   ): Promise<SignedUpload> {
     const checksum = Buffer.from(request.sha256, "hex").toString("base64");
+    const { sdk, client } = await this.loadClient();
+    const { getSignedUrl } = await loadS3Presigner();
     const url = await getSignedUrl(
-      this.client,
-      new PutObjectCommand({
+      client,
+      new sdk.PutObjectCommand({
         Bucket: this.options.bucket,
         Key: key,
         ContentType: request.contentType,
@@ -159,17 +164,19 @@ export class S3ObjectStorage implements ObjectStorage {
   }
 
   async delete(key: string): Promise<void> {
-    await this.client.send(
-      new DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
+    const { sdk, client } = await this.loadClient();
+    await client.send(
+      new sdk.DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
     );
   }
 
   async list(prefix: string): Promise<string[]> {
     const keys: string[] = [];
     let continuationToken: string | undefined;
+    const { sdk, client } = await this.loadClient();
     do {
-      const response = await this.client.send(
-        new ListObjectsV2Command({
+      const response = await client.send(
+        new sdk.ListObjectsV2Command({
           Bucket: this.options.bucket,
           Prefix: prefix,
           ContinuationToken: continuationToken,

@@ -4,7 +4,7 @@ Use SSO to authenticate an account and SCIM to manage the directory records
 for a workspace. The starter uses tenant memberships to decide which
 workspace records the authenticated account can access.
 
-The [0.2.0 starter](./quickstart.md#create-the-project) includes a local workspace where you can exercise the permissions, provisioning, and support flows below. [Run the starter examples](../../../apps/kit-workbench/examples/README.md)
+The [0.3.0 starter](./quickstart.md#create-the-project) includes a local workspace where you can exercise the permissions, provisioning, and support flows below. [Run the starter examples](../../../apps/kit-workbench/examples/README.md)
 
 ## Turn on company sign-in
 

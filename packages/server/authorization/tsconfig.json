@@ -17,13 +17,13 @@
       "path": "../errors"
     },
     {
-      "path": "../job-queue-core"
+      "path": "../job-queue"
     },
     {
       "path": "../postgres"
     },
     {
-      "path": "../request-work"
+      "path": "../runtime"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

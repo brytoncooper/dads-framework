@@ -8,19 +8,25 @@
   },
   "references": [
     {
-      "path": "../clock"
-    },
-    {
       "path": "../../contract"
     },
     {
       "path": "../errors"
     },
     {
-      "path": "../request-work"
+      "path": "../runtime"
     },
     {
       "path": "../../foundation/plugin"
+    },
+    {
+      "path": "../../access"
+    },
+    {
+      "path": "../http"
+    },
+    {
+      "path": "../postgres"
     }
   ],
   "include": ["src/**/*.ts"],

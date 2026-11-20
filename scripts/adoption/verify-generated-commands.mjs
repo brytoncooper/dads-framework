@@ -1,5 +1,6 @@
-import { writeFileSync } from "node:fs";
+import { realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readJson } from "./verify-generated-project-workspace.mjs";
 
 const generators = [
   ["domain", "inventory"],
@@ -41,17 +42,38 @@ export async function runGeneratedCommands(transcript, creator, projectRoot) {
 }
 
 export async function verifyGeneratedCommands(transcript, projectRoot) {
+  const manifestPath = join(projectRoot, "package.json");
+  const reportPath = ".adoption-vitest.json";
+  const manifest = readJson(manifestPath);
+  manifest.scripts.test += ` --reporter=default --reporter=json --outputFile.json=${reportPath}`;
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+
   const { stdout } = await transcript.run("sh", ["ci/verify.sh"], {
     cwd: projectRoot,
   });
   for (const evidence of [
     "dad check boundaries",
-    "catalog-resource.test.ts",
-    "generated-web.test.ts",
     "the package entry point loads",
   ]) {
     if (!stdout.includes(evidence)) {
       throw new Error(`Generated verification did not report ${evidence}.`);
+    }
+  }
+
+  const report = readJson(join(projectRoot, reportPath));
+  const canonicalRoot = realpathSync(projectRoot);
+  for (const path of [
+    "domains/catalog/server/catalog-resource.test.ts",
+    "assembly/generated-web.test.ts",
+  ]) {
+    if (
+      !report.testResults.some(
+        (result) =>
+          result.name === join(canonicalRoot, path) &&
+          result.status === "passed",
+      )
+    ) {
+      throw new Error(`Generated verification did not pass ${path}.`);
     }
   }
 }

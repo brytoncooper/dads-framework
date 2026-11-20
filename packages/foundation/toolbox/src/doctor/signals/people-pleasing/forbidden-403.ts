@@ -7,11 +7,11 @@
  * and denial look the same from outside, so a caller with no relationship
  * learns nothing at all.
  *
- * The reading is per package, over the production sources of the packages that
- * declare routes, with comments removed so an essay arguing against 403 is not
- * counted as one. A repository with no blueprints has no routes to return it
- * and the signal says it was not measured: the number would otherwise be a zero
- * that means "nothing was looked at".
+ * The reading starts at declared route modules and follows their local
+ * dependencies, including delegated handlers and re-exports. Independent
+ * protocol mounts do not enter the scan unless a route reaches them.
+ * Equality comparisons observe a status rather than emit it. Without any
+ * declared blueprints the signal is unmeasured.
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
@@ -20,32 +20,91 @@ import type {
   SignalEvidence,
   SignalReading,
 } from "../../doctor-signal.js";
-import { strippedSourceLines } from "../scanners/package-graph.js";
+import type { GraphPackage } from "../scanners/package-graph.js";
 import { readRouteModel } from "../scanners/route-model.js";
+import { resolveRelativeImport, ts } from "../scanners/typescript-program.js";
 
-const FORBIDDEN_STATUS = /\b403\b/;
+const EQUALITY_OPERATORS = new Set([
+  ts.SyntaxKind.EqualsEqualsToken,
+  ts.SyntaxKind.EqualsEqualsEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsEqualsToken,
+]);
+
+function isStatusComparison(node: ts.NumericLiteral): boolean {
+  let expression: ts.Expression = node;
+  while (ts.isParenthesizedExpression(expression.parent)) {
+    expression = expression.parent;
+  }
+  const parent = expression.parent;
+  return (
+    ts.isBinaryExpression(parent) &&
+    EQUALITY_OPERATORS.has(parent.operatorToken.kind)
+  );
+}
 
 function forbiddenLinesIn(
   context: DoctorContext,
-  paths: readonly string[],
+  path: string,
 ): readonly SignalEvidence[] {
-  const found: SignalEvidence[] = [];
-  for (const path of paths) {
-    for (const [index, line] of strippedSourceLines(
-      context.read(path),
-    ).entries()) {
-      if (FORBIDDEN_STATUS.test(line)) {
-        found.push({ path, line: index + 1, name: "403" });
-      }
+  const source = ts.createSourceFile(
+    path,
+    context.read(path),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const lines = new Set<number>();
+  function visit(node: ts.Node): void {
+    if (
+      ts.isNumericLiteral(node) &&
+      Number(node.text) === 403 &&
+      !isStatusComparison(node)
+    ) {
+      lines.add(
+        source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
+      );
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  return Array.from(lines, (line) => ({ path, line, name: "403" }));
+}
+
+function reachableRouteSources(
+  declared: GraphPackage,
+  routePaths: readonly string[],
+): ReadonlySet<string> {
+  const sources = new Set(declared.sources);
+  const dependencies = new Map<string, string[]>();
+  for (const entry of declared.imports) {
+    const target = resolveRelativeImport(entry.path, entry.specifier).find(
+      (candidate) => sources.has(candidate),
+    );
+    if (target === undefined) continue;
+    const targets = dependencies.get(entry.path) ?? [];
+    targets.push(target);
+    dependencies.set(entry.path, targets);
+  }
+
+  const reachable = new Set(routePaths);
+  for (const path of reachable) {
+    for (const dependency of dependencies.get(path) ?? []) {
+      reachable.add(dependency);
     }
   }
-  return found;
+  return reachable;
 }
 
 function countForbidden(context: DoctorContext) {
   const readings = new Map<string, SignalReading>();
-  for (const declared of readRouteModel(context).packagesWithRoutes) {
-    const evidence = forbiddenLinesIn(context, declared.sources);
+  const routes = readRouteModel(context);
+  for (const declared of routes.packagesWithRoutes) {
+    const paths = routes.operations
+      .filter((operation) => operation.packageName === declared.name)
+      .map((operation) => operation.path);
+    const evidence = Array.from(reachableRouteSources(declared, paths)).flatMap(
+      (path) => forbiddenLinesIn(context, path),
+    );
     readings.set(declared.name, { value: evidence.length, evidence });
   }
   return readings;

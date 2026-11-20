@@ -6,6 +6,7 @@ import {
   DiskObjectStorage,
   type DiskFreeSpace,
   type DiskObjectStorageLog,
+  type DiskObjectStorageOptions,
 } from "./disk-object-storage.js";
 
 export const PREFIX = "/api/site/files";
@@ -31,14 +32,20 @@ export function recordingLog(): DiskObjectStorageLog {
 }
 
 export function storage(freeSpace: DiskFreeSpace = PLENTY): DiskObjectStorage {
-  return new DiskObjectStorage({
+  return new DiskObjectStorage(storageOptions(freeSpace));
+}
+
+export function storageOptions(
+  freeSpace: DiskFreeSpace = PLENTY,
+): DiskObjectStorageOptions {
+  return {
     rootDirectory: root,
     signingKey: () => Promise.resolve(new Uint8Array(32).fill(7)),
     publicPathPrefix: PREFIX,
     clock: () => now,
     freeSpace,
     log: recordingLog(),
-  });
+  };
 }
 
 export function advanceClock(milliseconds: number): void {

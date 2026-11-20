@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { bullMqJobOptions } from "./bullmq-job-options.js";
-import { defineJob } from "@dads-framework/job-queue-core";
+import { defineJob } from "../core/index.js";
 
 describe("BullMQ job options", () => {
   it("maps retries and bounded completed/failed retention", () => {

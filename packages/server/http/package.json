@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/http",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -17,6 +17,10 @@
     "./protocol-mounts": {
       "types": "./dist/protocol-mounts/index.d.ts",
       "default": "./dist/protocol-mounts/index.js"
+    },
+    "./health": {
+      "types": "./dist/health/index.d.ts",
+      "default": "./dist/health/index.js"
     }
   },
   "files": [
@@ -24,12 +28,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.2.0",
-    "@dads-framework/audit-actor": "0.2.0",
-    "@dads-framework/contract": "0.2.0",
-    "@dads-framework/diagnostics": "0.2.0",
-    "@dads-framework/errors": "0.2.0",
-    "@dads-framework/request-work": "0.2.0",
+    "@dads-framework/access": "0.3.0",
+    "@dads-framework/audit-actor": "0.3.0",
+    "@dads-framework/contract": "0.3.0",
+    "@dads-framework/errors": "0.3.0",
+    "@dads-framework/runtime": "0.3.0",
     "@fastify/cors": "^11.3.0",
     "fastify": "5.10.0",
     "pino": "^10.3.1",

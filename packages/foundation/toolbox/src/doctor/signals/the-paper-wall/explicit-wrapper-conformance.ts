@@ -4,10 +4,13 @@ import { isRecord, isString, isUnknownArray } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
 import { ts, visitNodes } from "../scanners/typescript-program.js";
 
-type ImportReference = {
-  readonly module: string;
-  readonly name: string;
-};
+import { declaresLawTable, runsLawTable } from "./table-wrapper-conformance.js";
+import {
+  localModule,
+  providerIdentity,
+  sourceFile,
+  type ImportReference,
+} from "./wrapper-conformance-provider.js";
 
 type ConformanceRun = {
   readonly test: string;
@@ -58,15 +61,6 @@ function packageFile(root: string, path: string): string | undefined {
   return file.startsWith(`${root}/`) ? file : undefined;
 }
 
-function sourceFile(context: DoctorContext, file: string): ts.SourceFile {
-  return ts.createSourceFile(
-    file,
-    context.read(file),
-    ts.ScriptTarget.Latest,
-    true,
-  );
-}
-
 function namedRuntimeImports(
   statement: ts.ImportDeclaration,
 ): readonly ts.ImportSpecifier[] {
@@ -99,17 +93,6 @@ function readImports(
     }
   }
   return imports;
-}
-
-function localModule(
-  root: string,
-  file: string,
-  specifier: string,
-): string | undefined {
-  const resolved = posix
-    .normalize(posix.join(posix.dirname(file), specifier))
-    .replace(/\.[cm]?js$/, ".ts");
-  return resolved.startsWith(`${root}/`) ? resolved : undefined;
 }
 
 function parameterName(
@@ -181,71 +164,6 @@ function declaresLaw(source: ts.SourceFile, name: string): boolean {
       registersLaw(statement, register, open),
     ) === true
   );
-}
-
-function constructedClass(
-  source: ts.SourceFile,
-  factory: string,
-): string | undefined {
-  const declaration = source.statements.find(
-    (statement): statement is ts.FunctionDeclaration =>
-      ts.isFunctionDeclaration(statement) && statement.name?.text === factory,
-  );
-  if (declaration?.body?.statements.length !== 1) return undefined;
-  const returned = declaration.body.statements[0];
-  if (returned === undefined || !ts.isReturnStatement(returned))
-    return undefined;
-  const expression = returned.expression;
-  if (expression === undefined || !ts.isNewExpression(expression))
-    return undefined;
-  if (!ts.isIdentifier(expression.expression)) return undefined;
-  const name = expression.expression.text;
-  const declared = source.statements.some(
-    (statement) =>
-      ts.isClassDeclaration(statement) &&
-      statement.name?.text === name &&
-      statement.members.some(ts.isMethodDeclaration),
-  );
-  return declared ? name : undefined;
-}
-
-function dependencyAlias(
-  context: DoctorContext,
-  root: string,
-  name: string,
-): string {
-  const manifest: unknown = JSON.parse(context.read(`${root}/package.json`));
-  if (!isRecord(manifest)) return name;
-  for (const key of [
-    "dependencies",
-    "devDependencies",
-    "optionalDependencies",
-    "peerDependencies",
-  ]) {
-    const dependencies = manifest[key];
-    if (!isRecord(dependencies)) continue;
-    const reference = dependencies[name];
-    if (!isString(reference) || !reference.startsWith("npm:")) continue;
-    return /^npm:(@[^/]+\/[^@/]+|[^@/]+)(?:@|$)/.exec(reference)?.[1] ?? name;
-  }
-  return name;
-}
-
-function providerIdentity(
-  context: DoctorContext,
-  root: string,
-  test: string,
-  provider: ImportReference,
-): string | undefined {
-  if (!provider.module.startsWith(".")) {
-    const base = provider.module.match(/^(@[^/]+\/[^/]+|[^/]+)$/)?.[0];
-    if (base === undefined || base.startsWith("node:")) return undefined;
-    return dependencyAlias(context, root, base);
-  }
-  const file = localModule(root, test, provider.module);
-  if (file === undefined || !context.files().includes(file)) return undefined;
-  const className = constructedClass(sourceFile(context, file), provider.name);
-  return className === undefined ? undefined : `${file}#${className}`;
 }
 
 function providerUsedInRun(
@@ -329,6 +247,38 @@ function runsLaw(
   });
 }
 
+function runsDeclaredTable(
+  source: ts.SourceFile,
+  root: string,
+  suite: string,
+  law: string,
+  provider: ImportReference,
+): boolean {
+  const imports = readImports(source);
+  const entries = [...imports];
+  const suiteBinding = entries.find(
+    ([, reference]) =>
+      reference.name === law &&
+      reference.module.startsWith(".") &&
+      localModule(root, source.fileName, reference.module) === suite,
+  )?.[0];
+  if (suiteBinding === undefined) return false;
+  const providerBinding = entries.find(
+    ([, reference]) =>
+      reference.module === provider.module && reference.name === provider.name,
+  )?.[0];
+  if (providerBinding === undefined) return false;
+  return runsLawTable(
+    source,
+    suiteBinding,
+    providerBinding,
+    (identifier, module, name) => {
+      const reference = imports.get(identifier.text);
+      return reference?.module === module && reference.name === name;
+    },
+  );
+}
+
 function hasConformance(
   context: DoctorContext,
   root: string,
@@ -337,7 +287,9 @@ function hasConformance(
   const files = context.files();
   const suite = packageFile(root, conformance.suite);
   if (suite === undefined || !files.includes(suite)) return false;
-  if (!declaresLaw(sourceFile(context, suite), conformance.law)) return false;
+  const source = sourceFile(context, suite);
+  const table = declaresLawTable(source, conformance.law);
+  if (!table && !declaresLaw(source, conformance.law)) return false;
   const providers = new Set<string>();
   for (const run of conformance.runs) {
     const provider = checkedRunIdentity(
@@ -346,6 +298,7 @@ function hasConformance(
       suite,
       conformance.law,
       run,
+      table,
     );
     if (provider === undefined || providers.has(provider)) return false;
     providers.add(provider);
@@ -359,6 +312,7 @@ function checkedRunIdentity(
   suite: string,
   law: string,
   run: ConformanceRun,
+  table: boolean,
 ): string | undefined {
   const test = packageFile(root, run.test);
   if (
@@ -367,8 +321,9 @@ function checkedRunIdentity(
     !context.files().includes(test)
   )
     return undefined;
-  if (!runsLaw(sourceFile(context, test), root, suite, law, run.provider))
-    return undefined;
+  const source = sourceFile(context, test);
+  const runs = table ? runsDeclaredTable : runsLaw;
+  if (!runs(source, root, suite, law, run.provider)) return undefined;
   return providerIdentity(context, root, test, run.provider);
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/feature-flags",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -17,21 +17,72 @@
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
+    },
+    "./http": {
+      "types": "./dist/http/index.d.ts",
+      "default": "./dist/http/index.js"
+    },
+    "./postgres": {
+      "types": "./dist/postgres/index.d.ts",
+      "default": "./dist/postgres/index.js"
     }
   },
   "files": [
     "dist",
+    "src/postgres/migrations/*.migration.ts",
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/clock": "0.2.0",
-    "@dads-framework/contract": "0.2.0",
-    "@dads-framework/errors": "0.2.0",
-    "@dads-framework/plugin": "0.2.0",
-    "@dads-framework/request-work": "0.2.0",
+    "@dads-framework/contract": "0.3.0",
+    "@dads-framework/errors": "0.3.0",
+    "@dads-framework/plugin": "0.3.0",
+    "@dads-framework/runtime": "0.3.0",
     "zod": "^4.4.3"
   },
+  "dadsBindings": {
+    "http": [
+      "@dads-framework/access",
+      "@dads-framework/http"
+    ],
+    "postgres": [
+      "@dads-framework/postgres",
+      "drizzle-orm",
+      "node-pg-migrate"
+    ]
+  },
+  "peerDependencies": {
+    "@dads-framework/access": "0.3.0",
+    "@dads-framework/http": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "drizzle-orm": "^0.45.2",
+    "node-pg-migrate": "^9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@dads-framework/access": {
+      "optional": true
+    },
+    "@dads-framework/http": {
+      "optional": true
+    },
+    "@dads-framework/postgres": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    },
+    "node-pg-migrate": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@dads-framework/access": "0.3.0",
+    "@dads-framework/http": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@testcontainers/postgresql": "^12.0.4",
+    "@types/pg": "^8.20.0",
+    "drizzle-orm": "^0.45.2",
+    "node-pg-migrate": "^9.0.0",
+    "testcontainers": "^12.0.4",
     "vitest": "~4.1.0"
   },
   "scripts": {

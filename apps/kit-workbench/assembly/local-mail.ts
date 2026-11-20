@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { SystemClock } from "@dads-framework/clock";
+import { SystemClock } from "@dads-framework/runtime/clock";
 import {
   createEmailDelivery,
   createEmailDeliveryJobs,
@@ -12,8 +12,8 @@ import {
 import type {
   EmailMessage,
   EmailSender,
-} from "@dads-framework/email-sender-core";
-import type { JobQueue } from "@dads-framework/job-queue-core";
+} from "@dads-framework/email-sender/core";
+import type { JobQueue } from "@dads-framework/job-queue/core";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
 import type { EnqueueStarterEmail } from "../libraries/app-runtime/index.js";

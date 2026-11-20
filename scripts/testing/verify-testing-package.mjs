@@ -17,6 +17,7 @@ import { buildTestingHostBinary } from "./build-testing-host-binary.mjs";
 import {
   installCleanConsumer,
   runCleanConsumerCli,
+  runCleanConsumerNx,
   runCleanConsumerPlan,
 } from "./verify-testing-package-consumer.mjs";
 import {
@@ -140,8 +141,9 @@ try {
   );
   runCleanConsumerPlan(consumerDirectory);
   runCleanConsumerCli(consumerDirectory);
+  runCleanConsumerNx(consumerDirectory);
   process.stdout.write(
-    `Packed testing facade and ${nativePackageName}; clean consumer plan and CLI passed.\n`,
+    `Packed testing facade and ${nativePackageName}; clean consumer plan, CLI, and Nx entrypoints passed.\n`,
   );
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });

@@ -11,10 +11,10 @@ application logic stays plain TypeScript.
 ## Start your own app
 
 Use Node 24, npm, and Docker with Compose v2. Start Docker and run the
-0.2.0 creator from the parent directory for your new project.
+0.3.0 creator from the parent directory for your new project.
 
 ```sh
-npm create dads@0.2.0 my-app
+npm create dads@0.3.0 my-app
 ```
 
 The creator installs dependencies, starts PostgreSQL, applies migrations,
@@ -23,7 +23,7 @@ The [Quickstart](./docs/site/guides/quickstart.md) walks through local email
 verification and saving a protected note. From the generated directory,
 `npm start` starts the stack again and `npm run dev:down` stops it.
 
-If `create-dads@0.2.0` is unavailable from your npm registry, use the
+If `create-dads@0.3.0` is unavailable from your npm registry, use the
 [reference Workbench below](#run-the-workbench) to try Dads from
 source. For a project you already run, see
 [adopt one capability](./docs/site/guides/adopt.md).

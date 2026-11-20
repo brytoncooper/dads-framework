@@ -18,7 +18,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import type { BullMqJobQueue as BullMqJobQueueClass } from "./bullmq-job-queue.js";
-import { defineJob, type JobLog } from "@dads-framework/job-queue-core";
+import { defineJob, type JobLog } from "../core/index.js";
 
 const bullmq = vi.hoisted(() => {
   const lifecycle: string[] = [];
@@ -80,14 +80,7 @@ vi.mock("bullmq", () => ({
   Worker: bullmq.FakeWorker,
 }));
 
-// The project runs with `isolate: false`, so every file in a worker shares one
-// module graph. When another file (`create-job-queue.test.ts`) has already
-// imported the driver, its cached module is bound to the real `bullmq`, and a
-// static import here would hand back that copy — the fake above never reaches
-// it, and every test waits on a real Redis handshake. Dropping the module cache
-// and importing the driver after `vi.mock` is registered guarantees this file
-// gets a driver built on the fakes whatever ran before it; dropping it again
-// afterwards keeps the fake-bound copy out of the files that run next.
+// Reset any driver module already loaded by another test in this worker.
 let BullMqJobQueue: typeof BullMqJobQueueClass;
 
 beforeAll(async () => {
@@ -118,6 +111,15 @@ function startedQueue(queueName: string) {
 }
 
 describe("BullMqJobQueue lifecycle", () => {
+  it("closes an unused queue without opening Redis connections", async () => {
+    bullmq.lifecycle.length = 0;
+    const queue = startedQueue("unused-queue");
+
+    await queue.close();
+    await expect(queue.inspect()).rejects.toThrow("Job queue is closed");
+    expect(bullmq.lifecycle).toEqual([]);
+  });
+
   it("stays unstarted until the worker's redis connections are ready", async () => {
     bullmq.lifecycle.length = 0;
     const queue = startedQueue("readiness-test");

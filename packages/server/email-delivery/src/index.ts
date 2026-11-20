@@ -1,7 +1,7 @@
 /**
  * Public surface of `@dads-framework/email-delivery` — the outbound-email row,
  * the facade that writes it, the jobs that deliver it, and the operator
- * actions over it. Transport belongs to `@dads-framework/email-sender-core` and
+ * actions over it. Transport belongs to `@dads-framework/email-sender/core` and
  * rendering to `@dads-framework/email-templates`.
  */
 export {

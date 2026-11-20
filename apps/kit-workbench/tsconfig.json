@@ -5,6 +5,11 @@
     "module": "NodeNext",
     "jsx": "react-jsx",
     "moduleResolution": "NodeNext",
+    "paths": {
+      "@dads-framework/feature-flags-postgres": [
+        "./migrations/support/feature-flags.ts"
+      ]
+    },
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,

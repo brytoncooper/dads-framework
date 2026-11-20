@@ -32,7 +32,7 @@
 import {
   chargeDatabaseQuery,
   countDatabaseQuery,
-} from "@dads-framework/request-work";
+} from "@dads-framework/runtime/request-work";
 
 /**
  * A function this module is willing to call with whatever it was handed.

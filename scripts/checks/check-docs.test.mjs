@@ -116,3 +116,36 @@ test("a README missing the H1, the paragraph, and the example reports all three"
   assert.match(result.output, /no paragraph between the H1/);
   assert.match(result.output, /no fenced code block/);
 });
+
+test("a subpath is checked against the README in its owning package", (t) => {
+  const root = createWorkspace(conformantReadme);
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const packageDirectory = join(root, "packages/testing/core");
+  writeFileSync(
+    join(packageDirectory, "package.json"),
+    JSON.stringify({
+      name: "@dads-framework/testing",
+      exports: { "./nx": "./dist/nx/index.js" },
+    }),
+  );
+  writeFileSync(
+    join(root, "docs/readme-conformance.json"),
+    JSON.stringify({ packages: ["@dads-framework/testing/nx"] }),
+  );
+  const missingReadme = checkDocs({ root, commands });
+  assert.match(
+    missingReadme.output,
+    /packages\/testing\/core\/nx\/README.md: missing/u,
+  );
+
+  mkdirSync(join(packageDirectory, "nx"));
+  writeFileSync(join(packageDirectory, "nx/README.md"), conformantReadme);
+  assert.equal(checkDocs({ root, commands }).exitCode, 0);
+
+  writeFileSync(
+    join(root, "docs/readme-conformance.json"),
+    JSON.stringify({ packages: ["@dads-framework/testing/missing"] }),
+  );
+  const missingExport = checkDocs({ root, commands });
+  assert.match(missingExport.output, /no package or exported subpath/u);
+});

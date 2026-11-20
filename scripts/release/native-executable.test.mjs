@@ -14,7 +14,7 @@ import { releaseVersion } from "./release-version.mjs";
 test("release archives require the exact release version in their name and manifest", (context) => {
   const root = mkdtempSync(join(tmpdir(), "dads-native-release-"));
   context.after(() => rmSync(root, { recursive: true, force: true }));
-  const version = "0.2.0-rc.1";
+  const version = "0.3.0-rc.1";
   const packageRoot = join(root, "package");
   const platform = "linux-arm64-gnu";
   const archivePrefix = `dads-framework-testing-native-${platform}-`;
@@ -72,12 +72,12 @@ test("matches each hosted Rust build record to its versioned npm tarball", () =>
     ["win32-x64", "x86_64-pc-windows-msvc"],
   ];
   for (const [platform, rustTarget] of platforms) {
-    const filename = `dads-framework-testing-native-${platform}-0.2.0.tgz`;
-    assert.equal(nativeArchiveRustTarget(filename, "0.2.0"), rustTarget);
+    const filename = `dads-framework-testing-native-${platform}-0.3.0.tgz`;
+    assert.equal(nativeArchiveRustTarget(filename, "0.3.0"), rustTarget);
     assert.equal(nativeArchiveRustTarget(filename, "0.1.0"), undefined);
   }
   assert.equal(
-    nativeArchiveRustTarget("dads-framework-testing-0.2.0.tgz", "0.2.0"),
+    nativeArchiveRustTarget("dads-framework-testing-0.3.0.tgz", "0.3.0"),
     undefined,
   );
 });

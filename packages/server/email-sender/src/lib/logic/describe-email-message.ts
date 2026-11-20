@@ -1,4 +1,4 @@
-import type { EmailMessage } from "@dads-framework/email-sender-core";
+import type { EmailMessage } from "../../core/index.js";
 
 /**
  * The shape of a message that is safe to write anywhere — counts and flags,

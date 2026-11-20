@@ -13,10 +13,7 @@
  * second vendor adds a loader, not a member.
  */
 
-import {
-  NoneClientTelemetry,
-  type ClientTelemetry,
-} from "@dads-framework/client-telemetry-core";
+import { NoneClientTelemetry, type ClientTelemetry } from "../core/index.js";
 import { FanOutClientTelemetry } from "./fan-out-client-telemetry.js";
 import {
   LocalClientTelemetry,

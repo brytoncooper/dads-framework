@@ -1,4 +1,4 @@
-import type { EmailAttachment } from "@dads-framework/email-sender-core";
+import type { EmailAttachment } from "@dads-framework/email-sender/core";
 
 import type { OutboundEmailTx } from "./database/outbound-email-store.js";
 import type { EmailEnvelope } from "./email-envelope.js";

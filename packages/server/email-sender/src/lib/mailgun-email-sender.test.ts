@@ -1,4 +1,4 @@
-import { emailSenderConformance } from "@dads-framework/email-sender-core/testing";
+import { emailSenderConformance } from "../core/email-sender-conformance.js";
 /**
  * The Mailgun driver is a vendor adapter with no SDK behind it, so the tests
  * inject `fetch` and read the request Mailgun would have received: the right

@@ -1,4 +1,4 @@
-import type { EmailAddress } from "@dads-framework/email-sender-core";
+import type { EmailAddress } from "../../core/index.js";
 
 /**
  * A display name holding any of these would change what the header means: a

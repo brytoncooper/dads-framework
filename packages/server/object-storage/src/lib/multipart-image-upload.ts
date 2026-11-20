@@ -4,10 +4,7 @@ import type {
   StoredObjectHead,
   UploadedPart,
 } from "./direct-transfer-storage.js";
-import type {
-  ObjectStorage,
-  StoredObject,
-} from "@dads-framework/object-storage-core";
+import type { ObjectStorage, StoredObject } from "../core.js";
 
 export type ImageMultipartReceipt = {
   readonly storageUploadId: string;

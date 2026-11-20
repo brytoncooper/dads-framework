@@ -1,0 +1,55 @@
+{
+  "name": "@dads-framework/runtime",
+  "version": "0.3.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./clock": {
+      "types": "./dist/clock/index.d.ts",
+      "default": "./dist/clock/index.js"
+    },
+    "./request-work": {
+      "types": "./dist/request-work/index.d.ts",
+      "default": "./dist/request-work/index.js"
+    },
+    "./request-work/testing": {
+      "types": "./dist/request-work/testing.d.ts",
+      "default": "./dist/request-work/testing.js"
+    },
+    "./diagnostics": {
+      "types": "./dist/diagnostics/index.d.ts",
+      "default": "./dist/diagnostics/index.js"
+    },
+    "./diagnostics/testing": {
+      "types": "./dist/diagnostics/testing.d.ts",
+      "default": "./dist/diagnostics/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "INVARIANTS.md",
+    "clock",
+    "request-work",
+    "diagnostics"
+  ],
+  "devDependencies": {
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/runtime"
+  }
+}

@@ -6,7 +6,7 @@ import type {
   RouteOptions,
 } from "fastify";
 
-import { answeringEachQuestionOnce } from "@dads-framework/request-work";
+import { answeringEachQuestionOnce } from "@dads-framework/runtime/request-work";
 import {
   ACCESS_REFUSAL_HEADER,
   ACCESS_REFUSAL_VALUE,

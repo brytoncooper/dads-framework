@@ -1,27 +1,53 @@
 {
   "name": "@dads-framework/object-storage",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
+  },
+  "dadsConformance": {
+    "capability": "Object storage bytes and metadata",
+    "suite": "src/lib/object-storage-conformance.ts",
+    "law": "objectStorageConformance",
+    "runs": [
+      {
+        "test": "src/lib/in-memory-object-storage.test.ts",
+        "provider": {
+          "module": "./in-memory-object-storage.js",
+          "name": "InMemoryObjectStorage"
+        }
+      },
+      {
+        "test": "src/lib/disk-object-storage.test.ts",
+        "provider": {
+          "module": "./disk-object-storage.js",
+          "name": "DiskObjectStorage"
+        }
+      }
+    ]
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "default": "./dist/core.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "files": [
     "dist",
     "README.md"
   ],
-  "dependencies": {
+  "devDependencies": {
     "@aws-sdk/client-s3": "^3.1082.0",
     "@aws-sdk/cloudfront-signer": "^3.1149.0",
     "@aws-sdk/s3-request-presigner": "^3.1082.0",
-    "@dads-framework/object-storage-core": "0.2.0"
-  },
-  "devDependencies": {
     "testcontainers": "^12.0.4",
     "vitest": "~4.1.0"
   },
@@ -38,5 +64,21 @@
     "type": "git",
     "url": "git+https://github.com/brytoncooper/dads-framework.git",
     "directory": "packages/server/object-storage"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-s3": "^3.1082.0",
+    "@aws-sdk/cloudfront-signer": "^3.1149.0",
+    "@aws-sdk/s3-request-presigner": "^3.1082.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/cloudfront-signer": {
+      "optional": true
+    },
+    "@aws-sdk/s3-request-presigner": {
+      "optional": true
+    }
   }
 }

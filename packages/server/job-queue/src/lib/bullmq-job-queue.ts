@@ -1,7 +1,7 @@
-import { type ConnectionOptions, Queue, Worker } from "bullmq";
+import type { ConnectionOptions, Queue, Worker } from "bullmq";
 
 import { runWithAuditActor } from "@dads-framework/audit-actor";
-import type { DiagnosticsReporter } from "@dads-framework/diagnostics";
+import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
 
 import { bullMqJobOptions } from "./bullmq-job-options.js";
 import { jobRunActor } from "./job-actor.js";
@@ -12,8 +12,8 @@ import {
   type JobQueue,
   type JobQueueInspection,
   type RunningJobSchedule,
-} from "@dads-framework/job-queue-core";
-import { JobRegistry } from "@dads-framework/job-queue-core/provider";
+} from "../core/index.js";
+import { JobRegistry } from "../core/provider.js";
 import {
   attemptsOf,
   isTerminalAttempt,
@@ -24,7 +24,7 @@ import { redisConnection } from "./redis-connection.js";
 /** BullMQ adapter: Redis owns durable work, retries, and recurring schedules. */
 export class BullMqJobQueue implements JobQueue {
   private readonly registry = new JobRegistry();
-  private readonly queue: Queue;
+  private driver: Promise<{ queue: Queue; Worker: typeof Worker }> | undefined;
   private readonly connection: ConnectionOptions;
   private worker: Worker | undefined;
   private started = false;
@@ -101,13 +101,23 @@ export class BullMqJobQueue implements JobQueue {
       throw new Error("BullMQ queue name must not be empty");
     }
     this.connection = redisConnection(redisUrl);
-    this.queue = new Queue(queueName, { connection: this.connection });
-    this.queue.on("error", (error) => {
-      this.log.error(
-        { event: "job.queue.error", err: error },
-        "job queue error",
-      );
+  }
+
+  private getDriver(): Promise<{ queue: Queue; Worker: typeof Worker }> {
+    if (this.closing) {
+      return Promise.reject(new Error("Job queue is closed"));
+    }
+    this.driver ??= import("bullmq").then(({ Queue, Worker }) => {
+      const queue = new Queue(this.queueName, { connection: this.connection });
+      queue.on("error", (error) => {
+        this.log.error(
+          { event: "job.queue.error", err: error },
+          "job queue error",
+        );
+      });
+      return { queue, Worker };
     });
+    return this.driver;
   }
 
   register(jobs: readonly JobDefinition[]): void {
@@ -134,7 +144,8 @@ export class BullMqJobQueue implements JobQueue {
 
   private async startConsuming(): Promise<void> {
     try {
-      await this.reconcileSchedules();
+      const { queue, Worker } = await this.getDriver();
+      await this.reconcileSchedules(queue);
       this.worker = new Worker(
         this.queueName,
         async (job) => {
@@ -192,19 +203,15 @@ export class BullMqJobQueue implements JobQueue {
 
   async enqueue(jobName: string, payload: unknown): Promise<void> {
     const definition = this.registry.get(jobName);
-    await this.queue.add(jobName, payload, bullMqJobOptions(definition));
+    const { queue } = await this.getDriver();
+    await queue.add(jobName, payload, bullMqJobOptions(definition));
   }
 
   async inspect(): Promise<JobQueueInspection> {
+    const { queue } = await this.getDriver();
     const [schedulers, counts] = await Promise.all([
-      this.queue.getJobSchedulers(0, -1, true),
-      this.queue.getJobCounts(
-        "waiting",
-        "active",
-        "delayed",
-        "completed",
-        "failed",
-      ),
+      queue.getJobSchedulers(0, -1, true),
+      queue.getJobCounts("waiting", "active", "delayed", "completed", "failed"),
     ]);
     return {
       driver: "bullmq",
@@ -239,7 +246,8 @@ export class BullMqJobQueue implements JobQueue {
     if (running) {
       await this.closeWorkerOnce(running);
     }
-    await this.queue.close();
+    const driver = await this.driver?.catch(() => undefined);
+    await driver?.queue.close();
   }
 
   /**
@@ -258,7 +266,7 @@ export class BullMqJobQueue implements JobQueue {
     return closingWorker;
   }
 
-  private async reconcileSchedules(): Promise<void> {
+  private async reconcileSchedules(queue: Queue): Promise<void> {
     const expectedScheduleIds = new Set(
       this.registry
         .list()
@@ -266,10 +274,10 @@ export class BullMqJobQueue implements JobQueue {
           definition.schedules.map((schedule) => schedule.id),
         ),
     );
-    const existingSchedules = await this.queue.getJobSchedulers(0, -1, true);
+    const existingSchedules = await queue.getJobSchedulers(0, -1, true);
     for (const schedule of existingSchedules) {
       if (!expectedScheduleIds.has(schedule.key)) {
-        await this.queue.removeJobScheduler(schedule.key);
+        await queue.removeJobScheduler(schedule.key);
         this.log.info(
           {
             event: "job.schedule.removed",
@@ -287,7 +295,7 @@ export class BullMqJobQueue implements JobQueue {
           schedule.kind === "cron"
             ? { pattern: schedule.pattern, tz: schedule.timeZone }
             : { every: schedule.everyMs };
-        await this.queue.upsertJobScheduler(schedule.id, repeat, {
+        await queue.upsertJobScheduler(schedule.id, repeat, {
           name: definition.name,
           data: schedule.payload,
           opts: bullMqJobOptions(definition),

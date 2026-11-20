@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryDirectTransferStorage } from "./in-memory-direct-transfer-storage.js";
-import { InMemoryObjectStorage } from "@dads-framework/object-storage-core";
+import { InMemoryObjectStorage } from "../core.js";
 
 const bytes = (...values: number[]) => Uint8Array.from(values);
 

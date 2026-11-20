@@ -1,6 +1,6 @@
 import { afterEach, describe, it, vi } from "vitest";
 
-import { emailSenderConformance } from "@dads-framework/email-sender-core/testing";
+import { emailSenderConformance } from "../core/email-sender-conformance.js";
 
 import { ResendEmailSender } from "./resend-email-sender.js";
 

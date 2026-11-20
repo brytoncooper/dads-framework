@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/audit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -25,16 +25,16 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/audit-actor": "0.2.0",
-    "@dads-framework/authorization": "0.2.0",
-    "@dads-framework/clock": "0.2.0",
-    "@dads-framework/contract": "0.2.0",
-    "@dads-framework/email-delivery": "0.2.0",
-    "@dads-framework/email-templates": "0.2.0",
-    "@dads-framework/http": "0.2.0",
-    "@dads-framework/job-queue": "0.2.0",
-    "@dads-framework/plugin": "0.2.0",
-    "@dads-framework/postgres": "0.2.0",
+    "@dads-framework/audit-actor": "0.3.0",
+    "@dads-framework/authorization": "0.3.0",
+    "@dads-framework/contract": "0.3.0",
+    "@dads-framework/email-delivery": "0.3.0",
+    "@dads-framework/email-templates": "0.3.0",
+    "@dads-framework/http": "0.3.0",
+    "@dads-framework/job-queue": "0.3.0",
+    "@dads-framework/plugin": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@dads-framework/runtime": "0.3.0",
     "drizzle-orm": "^0.45.2",
     "node-pg-migrate": "^9.0.0",
     "zod": "^4.4.3"

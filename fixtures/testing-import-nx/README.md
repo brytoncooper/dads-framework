@@ -8,7 +8,7 @@ From the repository root, build the workspace and run the importer test:
 
 ```sh
 npm run build
-npm test -w @dads-framework/testing-import-nx -- src/import-nx.test.ts
+npm test -w @dads-framework/testing -- src/nx/import-nx.test.ts
 ```
 
 The test creates its own workspace and asserts which targets appear in the

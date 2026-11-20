@@ -125,6 +125,21 @@ if (await authorization.check({ subject: alice, resource: example, permission: "
 `,
     },
     {
+      name: "feature-flag-bindings",
+      packages: [
+        "@dads-framework/access",
+        "@dads-framework/feature-flags",
+        "@dads-framework/http",
+        "@dads-framework/postgres",
+      ],
+      consumerConfig: { skipLibCheck: true },
+      vendorTypePackages: ["@types/pg", "node-pg-migrate@^9.0.0"],
+      source: `import { createFeatureFlagRoutes } from "@dads-framework/feature-flags/http";
+import { DrizzleFeatureFlagStore, installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags/postgres";
+if (typeof createFeatureFlagRoutes !== "function" || typeof DrizzleFeatureFlagStore !== "function" || typeof installFeatureFlagSchemaV1 !== "function") throw new Error("Packed feature flag bindings did not load");
+`,
+    },
+    {
       name: "generated-client",
       packages: ["@dads-framework/client-request-transport"],
       source: `import { defineGeneratedRoute, opaqueIdSchema } from "@dads-framework/contract";

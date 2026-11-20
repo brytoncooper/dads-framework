@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   describeException,
   type DiagnosticsReporter,
-} from "@dads-framework/diagnostics";
+} from "@dads-framework/runtime/diagnostics";
 import {
   type HttpErrorResponse,
   mapErrorToHttpResponse,

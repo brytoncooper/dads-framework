@@ -4,7 +4,7 @@ import {
   cronSchedule,
   defineJob,
   type JobDefinition,
-} from "@dads-framework/job-queue-core";
+} from "@dads-framework/job-queue/core";
 
 import { EMAIL_SWEEP_JOB } from "./email-job-names.js";
 

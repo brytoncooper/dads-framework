@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/identity-better-auth",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -29,14 +29,14 @@
   "dependencies": {
     "@better-auth/core": "1.7.26",
     "@better-auth/sso": "1.7.26",
-    "@dads-framework/identity": "0.2.0",
+    "@dads-framework/identity": "0.3.0",
     "better-auth": "1.7.26",
     "kysely": "0.28.17",
     "node-pg-migrate": "^9.0.0"
   },
   "devDependencies": {
-    "@dads-framework/migrations": "0.2.0",
-    "@dads-framework/postgres": "0.2.0",
+    "@dads-framework/migrations": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
     "@testcontainers/postgresql": "^12.0.4",
     "samlify": "2.15.1",
     "testcontainers": "^12.0.4",

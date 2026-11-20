@@ -1,17 +1,5 @@
-import {
-  AbortMultipartUploadCommand,
-  CompleteMultipartUploadCommand,
-  CreateMultipartUploadCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  ListPartsCommand,
-  type Part,
-  PutObjectCommand,
-  S3Client,
-  UploadPartCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { Part, S3Client } from "@aws-sdk/client-s3";
+import { loadS3Sdk, loadS3Presigner } from "./load-s3-sdk.js";
 
 import type { DirectTransferStorage } from "./direct-transfer-storage.js";
 import {
@@ -22,7 +10,7 @@ import {
   type WriteOnceUploadRequest,
 } from "./direct-transfer-storage.js";
 import { attachmentDisposition } from "./logic/attachment-disposition.js";
-import type { SignedUpload } from "@dads-framework/object-storage-core";
+import type { SignedUpload } from "../core.js";
 import {
   s3ClientConfig,
   type S3ObjectStorageOptions,
@@ -38,10 +26,17 @@ import {
  * MinIO, the regional S3 host in production.
  */
 export class S3DirectTransferStorage implements DirectTransferStorage {
-  private readonly client: S3Client;
+  private readonly config: ReturnType<typeof s3ClientConfig>;
+  private client?: S3Client;
 
   constructor(private readonly options: S3ObjectStorageOptions) {
-    this.client = new S3Client(s3ClientConfig(options));
+    this.config = s3ClientConfig(options);
+  }
+
+  private async loadClient() {
+    const sdk = await loadS3Sdk();
+    const client = (this.client ??= new sdk.S3Client(this.config));
+    return { sdk, client };
   }
 
   async startMultipartUpload(input: {
@@ -49,8 +44,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     readonly contentType: string;
     readonly metadata: Readonly<Record<string, string>>;
   }): Promise<MultipartUploadRef> {
-    const response = await this.client.send(
-      new CreateMultipartUploadCommand({
+    const { sdk, client } = await this.loadClient();
+    const response = await client.send(
+      new sdk.CreateMultipartUploadCommand({
         Bucket: this.options.bucket,
         Key: input.key,
         ContentType: input.contentType,
@@ -62,16 +58,18 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     return { key: input.key, storageUploadId: response.UploadId };
   }
 
-  presignUploadPart(
+  async presignUploadPart(
     input: MultipartUploadRef & {
       readonly partNumber: number;
       readonly byteSize?: number;
       readonly expiresInSeconds: number;
     },
   ): Promise<string> {
+    const { sdk, client } = await this.loadClient();
+    const { getSignedUrl } = await loadS3Presigner();
     return getSignedUrl(
-      this.client,
-      new UploadPartCommand({
+      client,
+      new sdk.UploadPartCommand({
         Bucket: this.options.bucket,
         Key: input.key,
         UploadId: input.storageUploadId,
@@ -103,9 +101,10 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
   ): Promise<UploadedPart[]> {
     const parts: UploadedPart[] = [];
     let marker: string | undefined;
+    const { sdk, client } = await this.loadClient();
     do {
-      const page = await this.client.send(
-        new ListPartsCommand({
+      const page = await client.send(
+        new sdk.ListPartsCommand({
           Bucket: this.options.bucket,
           Key: upload.key,
           UploadId: upload.storageUploadId,
@@ -123,8 +122,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
       readonly parts: readonly Pick<UploadedPart, "partNumber" | "etag">[];
     },
   ): Promise<void> {
-    await this.client.send(
-      new CompleteMultipartUploadCommand({
+    const { sdk, client } = await this.loadClient();
+    await client.send(
+      new sdk.CompleteMultipartUploadCommand({
         Bucket: this.options.bucket,
         Key: input.key,
         UploadId: input.storageUploadId,
@@ -140,8 +140,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
 
   async abortMultipartUpload(upload: MultipartUploadRef): Promise<void> {
     try {
-      await this.client.send(
-        new AbortMultipartUploadCommand({
+      const { sdk, client } = await this.loadClient();
+      await client.send(
+        new sdk.AbortMultipartUploadCommand({
           Bucket: this.options.bucket,
           Key: upload.key,
           UploadId: upload.storageUploadId,
@@ -155,8 +156,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
 
   async headObject(key: string): Promise<StoredObjectHead | null> {
     try {
-      const response = await this.client.send(
-        new HeadObjectCommand({ Bucket: this.options.bucket, Key: key }),
+      const { sdk, client } = await this.loadClient();
+      const response = await client.send(
+        new sdk.HeadObjectCommand({ Bucket: this.options.bucket, Key: key }),
       );
       return {
         byteSize: response.ContentLength ?? 0,
@@ -175,8 +177,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     byteCount: number,
   ): Promise<Uint8Array | null> {
     try {
-      const response = await this.client.send(
-        new GetObjectCommand({
+      const { sdk, client } = await this.loadClient();
+      const response = await client.send(
+        new sdk.GetObjectCommand({
           Bucket: this.options.bucket,
           Key: key,
           Range: `bytes=0-${Math.max(0, byteCount - 1).toString()}`,
@@ -191,7 +194,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     }
   }
 
-  presignAttachmentDownload(input: {
+  async presignAttachmentDownload(input: {
     readonly key: string;
     readonly fileName: string;
     readonly expiresInSeconds: number;
@@ -204,9 +207,11 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
           input.fileName,
         ),
       );
+    const { sdk, client } = await this.loadClient();
+    const { getSignedUrl } = await loadS3Presigner();
     return getSignedUrl(
-      this.client,
-      new GetObjectCommand({
+      client,
+      new sdk.GetObjectCommand({
         Bucket: this.options.bucket,
         Key: input.key,
         ResponseContentDisposition: attachmentDisposition(input.fileName),
@@ -216,8 +221,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
   }
 
   async deleteObject(key: string): Promise<void> {
-    await this.client.send(
-      new DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
+    const { sdk, client } = await this.loadClient();
+    await client.send(
+      new sdk.DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
     );
   }
 
@@ -225,9 +231,11 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     input: WriteOnceUploadRequest,
   ): Promise<SignedUpload> {
     const checksum = Buffer.from(input.sha256, "hex").toString("base64");
+    const { sdk, client } = await this.loadClient();
+    const { getSignedUrl } = await loadS3Presigner();
     const url = await getSignedUrl(
-      this.client,
-      new PutObjectCommand({
+      client,
+      new sdk.PutObjectCommand({
         Bucket: this.options.bucket,
         Key: input.key,
         ContentType: input.contentType,
@@ -262,8 +270,9 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
 
   async headObjectChecksum(key: string): Promise<StoredObjectChecksum | null> {
     try {
-      const response = await this.client.send(
-        new HeadObjectCommand({
+      const { sdk, client } = await this.loadClient();
+      const response = await client.send(
+        new sdk.HeadObjectCommand({
           Bucket: this.options.bucket,
           Key: key,
           ChecksumMode: "ENABLED",

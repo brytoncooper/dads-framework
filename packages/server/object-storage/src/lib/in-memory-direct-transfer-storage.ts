@@ -9,10 +9,7 @@ import {
   type UploadedPart,
   type WriteOnceUploadRequest,
 } from "./direct-transfer-storage.js";
-import {
-  InMemoryObjectStorage,
-  type SignedUpload,
-} from "@dads-framework/object-storage-core";
+import { InMemoryObjectStorage, type SignedUpload } from "../core.js";
 
 type ReceivedPart = { readonly bytes: Uint8Array; readonly etag: string };
 

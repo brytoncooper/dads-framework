@@ -13,7 +13,7 @@ import {
   type FeatureFlagContextResolver,
   type FeatureFlagPreviewRecord,
   FeatureFlagRequestEvaluator,
-} from "@dads-framework/feature-flags-http";
+} from "@dads-framework/feature-flags/http";
 import type { FeatureStateProtocol } from "@dads-framework/http";
 import { tenantIdSchema } from "@dads-framework/tenants";
 import { z } from "zod";

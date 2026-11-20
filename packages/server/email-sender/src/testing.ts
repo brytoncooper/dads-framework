@@ -3,4 +3,4 @@
  * fake only, kept out of the main barrel so production code cannot import it
  * (docs/testing/seeders.md).
  */
-export { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
+export { FakeEmailSender } from "./core/testing.js";

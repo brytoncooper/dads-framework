@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { defineJob, type JobDefinition } from "@dads-framework/job-queue-core";
+import { defineJob, type JobDefinition } from "@dads-framework/job-queue/core";
 
 import { outboundEmailIdSchema } from "../outbound-email-status.js";
 import { EMAIL_DELIVER_JOB } from "./email-job-names.js";

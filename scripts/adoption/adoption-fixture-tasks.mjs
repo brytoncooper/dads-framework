@@ -14,6 +14,7 @@ import process from "node:process";
 
 import { isExecutableOnlyAdoptionPackage } from "./adoption-package-classification.mjs";
 import { collectPackageClosure, tarballFor } from "./adoption-packing.mjs";
+import { consolidatedPackageProof } from "./consolidated-package-proof.mjs";
 import { createAdoptionFixtures } from "./verify-adoption-fixtures-cases.mjs";
 
 /**
@@ -141,7 +142,10 @@ function packageEntryProof(root, packageName) {
         assert.equal(typeof Button, "function");
       `;
     default:
-      return `await import(${JSON.stringify(packageName)})`;
+      return (
+        consolidatedPackageProof(packageName) ??
+        `await import(${JSON.stringify(packageName)})`
+      );
   }
 }
 

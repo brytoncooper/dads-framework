@@ -4,7 +4,7 @@ export {
   type EmailAttachment,
   type EmailMessage,
   type EmailSendReceipt,
-} from "@dads-framework/email-sender-core";
+} from "./core/index.js";
 export {
   formatEmailAddress,
   formatEmailAddresses,

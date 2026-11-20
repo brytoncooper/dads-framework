@@ -1,5 +1,5 @@
 import { otlpTraceEndpoint } from "./otlp-trace-endpoint.js";
-import type { RequestTraceFacts } from "@dads-framework/telemetry-core";
+import type { RequestTraceFacts } from "./core/index.js";
 
 /** Identity used when OTEL_SERVICE_NAME does not override it. */
 export type TelemetryOptions = {

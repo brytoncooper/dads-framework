@@ -6,7 +6,6 @@
     "tsBuildInfoFile": "dist/telemetry.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../telemetry-core" }],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

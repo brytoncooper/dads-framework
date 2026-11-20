@@ -9,7 +9,7 @@ import { checkDocsSite } from "../docs/site-build.mjs";
  * Documentation conformance. Two questions, both answered from the repository
  * rather than from a reviewer's memory:
  *
- * 1. Does every package listed in `docs/readme-conformance.json` have a README
+ * 1. Does every package or exported subpath listed in `docs/readme-conformance.json` have a README
  *    shaped like `docs/package-readme-template.md`?
  * 2. Does the `@dads-framework/testing` README still cover the whole `dad-test`
  *    command line, as the built CLI reports it?
@@ -143,10 +143,11 @@ function readConformancePackages(root) {
   const names = parsed?.packages;
   const isNameList =
     Array.isArray(names) &&
-    names.every((name) => typeof name === "string" && name.length > 0);
+    names.every((name) => typeof name === "string" && name.length > 0) &&
+    new Set(names).size === names.length;
   if (!isNameList) {
     throw new Error(
-      `${CONFORMANCE_FILE} must contain a "packages" array of package names`,
+      `${CONFORMANCE_FILE} must contain a "packages" array of unique package names or export subpaths`,
     );
   }
   return names;
@@ -190,7 +191,10 @@ function readPackageDirectories(root) {
     }
 
     if (typeof manifest?.name === "string") {
-      directoriesByName.set(manifest.name, directory);
+      directoriesByName.set(manifest.name, {
+        directory,
+        exports: manifest.exports,
+      });
     }
   };
 
@@ -198,8 +202,22 @@ function readPackageDirectories(root) {
   return directoriesByName;
 }
 
+function readmePathFor(name, directoriesByName) {
+  const segments = name.split("/");
+  const packageName = segments
+    .splice(0, name.startsWith("@") ? 2 : 1)
+    .join("/");
+  const owner = directoriesByName.get(packageName);
+  if (!owner) return undefined;
+  if (segments.length === 0) return `packages/${owner.directory}/README.md`;
+  if (!segments.every((segment) => /^[\w-]+$/u.test(segment))) return undefined;
+  const subpath = segments.join("/");
+  if (!Object.hasOwn(owner.exports ?? {}, `./${subpath}`)) return undefined;
+  return `packages/${owner.directory}/${subpath}/README.md`;
+}
+
 /**
- * Checks every listed package README against the template, and the `dad-test`
+ * Checks every listed package or subpath README against the template, and the `dad-test`
  * README against `commands`. Returns the process result rather than exiting so
  * the tests can assert on it.
  */
@@ -210,15 +228,14 @@ export function checkDocs({ root, commands }) {
   let checkedPackageCount = 0;
 
   for (const packageName of packageNames) {
-    const directory = directoriesByName.get(packageName);
-    if (directory === undefined) {
+    const readmePath = readmePathFor(packageName, directoriesByName);
+    if (readmePath === undefined) {
       problems.push(
-        `${CONFORMANCE_FILE}: no package under packages/ is named ${packageName}`,
+        `${CONFORMANCE_FILE}: no package or exported subpath under packages/ is named ${packageName}`,
       );
       continue;
     }
 
-    const readmePath = `packages/${directory}/README.md`;
     let text;
     try {
       text = readFileSync(join(root, readmePath), "utf8");

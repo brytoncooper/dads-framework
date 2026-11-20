@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/client-feature-flags",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,7 +16,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/feature-flags": "0.2.0"
+    "@dads-framework/feature-flags": "0.3.0"
   },
   "peerDependencies": {
     "react": "^19.0.0"

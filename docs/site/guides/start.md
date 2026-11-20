@@ -1,69 +1,55 @@
 # Why Dads
 
-Removing someone from a workspace should also remove their access through
-its activity feed. A copied membership check can drift and leave the feed
-readable. Dads is a TypeScript backend framework that lets related routes
-share a permission rule and declare what each API exposes.
+Imagine removing someone from a workspace on Friday. On Monday, can they
+still read its activity feed? A passing test for the task detail page tells
+you very little about the feed, the list, or the next endpoint someone adds.
 
-[Start with the quickstart](./quickstart.md) to run a web app, PostgreSQL,
-and two APIs from one project. If you already have an application,
-[adopt one capability](./adopt.md) to try Dads in a smaller change.
-Browse the [package examples](https://dadsframework.dev/docs/packages) for install commands, working code, and expected results.
+I’d reach for Dads on a team that keeps shipping features around shared
+records. You can read a route and see what it accepts, what it returns,
+and who can call it. You can change a permission in its owning domain
+and test what that change means for every feature that uses it.
 
-## One codebase, two APIs
+## What happens when access changes?
 
-The starter has a customer API and a staff API. Both mount tenant routes.
-Only the customer API mounts the notes plugin. A signed-in workspace member
-can list notes there. An account without access gets a 404. The staff API
-has no notes route at all.
+The Workbench gives Bob access to Alice’s workspace. He can read its task
+and activity. Alice removes him. The same test tries the task, claim,
+artifact, and activity operations again and proves Bob has lost access.
+[Read the revocation test](../../../apps/workbench/src/workbench-api.test.ts).
 
-The [staff entrypoint](../../../apps/kit-workbench/apps/staff/app.ts)
-makes its route and job selection in one place.
+The starter shows how to build a smaller version yourself. Its notes route
+uses the workspace’s view permission and takes the workspace ID from the
+URL. Here is the actual declaration.
 
-<!-- dads:excerpt {"path": "apps/kit-workbench/apps/staff/app.ts", "language": "ts", "from": "export function staffApp(provider: ServiceProvider) {", "through": "}"} -->
+<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/access/index.ts","language":"ts","from":"export const notesPermission = tenantAccess.tenant.permissions.view;","through":"};"} -->
 
-The route, permission, and API composition can each change independently:
+A list has one more job. Its database query must use the authorized workspace
+for **both the rows and the count**. The starter applies the same predicate
+to both. A member sees their workspace’s notes. A signed-in outsider who
+requests that workspace gets a 404. [Follow the query and its denial test](./guarded-resource.md).
 
-- **Contract.** The notes route declares its tenant parameter, pagination
-  query, and response item schema. Dads validates requests and generates
-  OpenAPI from the route definitions. See [HTTP and contracts](./http.md).
-- **Permission.** Notes use the tenant's view permission. The notes query
-  also scopes its reads to that tenant. See
-  [permissions and relationships](./permissions.md).
-- **Composition.** Each API chooses its own plugin list. Both can use the
-  same tenant domain. See [API composition](./composition.md).
+## What happens when the API changes?
 
-## What you take on
+Suppose you add a field to a database table. The public response still has
+its own explicit schema. When you decide to expose the field, that contract
+also describes it to OpenAPI and to a client using the same schema. The
+application code behind the handler stays plain TypeScript.
+[See the route, response, and client together](./http.md).
 
-Dads asks you to keep schemas, access rules, and API entrypoints explicit.
-That is additional work when you add a route. It gives you a place to change
-each decision and a way to prove that the right access still holds.
+If you later need a staff API, select the domains it exposes in its
+entrypoint. The customer API can keep using the same domains. You can make
+that decision after the first API is already useful. [API composition](./composition.md).
 
-The starter uses Fastify and PostgreSQL. Its PostgreSQL access adapter can
-commit an application write and related permission changes in one transaction.
-If your records and permissions live in separate systems, plan how those
-systems will stay consistent. See the
-[PostgreSQL access adapter](../../../packages/server/postgres-access/README.md).
+## When I’d choose it
 
-Local signup and email delivery are part of the starter. For a public
-deployment, configure mail, HTTPS, and secrets with the
-[deployment guide](../../../apps/kit-workbench/DEPLOY.md).
+For an app with teams, shared records, and changing roles, the cost of an
+explicit contract and permission rule pays off each time another feature
+needs the same decision. For a small service with a few public endpoints,
+a router and a validator may be plenty. An existing TypeScript app can
+also adopt just permissions, email, or another [standalone capability](./adopt.md).
 
-## Start a Dads project
+## Try the decision yourself
 
-Follow the [quickstart](./quickstart.md) to create an account, save a note,
-and find the source that decides where the note route runs.
-
-## Verify and set up CI
-
-Run `npm run verify` from the generated project. Commit
-`package-lock.json` so the generated `ci/verify.sh` can install the same
-dependencies and run the same checks. See the [portable CI recipe](../../../ci/README.md).
-
-Use [change-aware verification](./verification.md) for focused feedback
-while you work. The [guarded resource walkthrough](./guarded-resource.md)
-traces a permission from its definition to an HTTP denial test.
-
-## Try it with three accounts
-
-The starter can set up an owner, an invited member, and an outsider in a local workspace. Open **Examples** in its browser app to inspect effective permissions, export audit records, or try directory provisioning against the running APIs. [Set up the example workspace](../../../apps/kit-workbench/examples/README.md)
+Run the [quickstart](./quickstart.md) with Node 24 and Docker. Create a
+workspace, save a note, then open **Examples**. The [example setup](../../../apps/kit-workbench/examples/README.md)
+gives you an owner, a member, and an outsider so you can try the same request
+with different access. The generated app’s `npm run verify` runs its checks.

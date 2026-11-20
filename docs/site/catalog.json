@@ -23,6 +23,14 @@
       "navigationGroup": "Get started"
     },
     {
+      "slug": "vocabulary",
+      "title": "Dads vocabulary",
+      "owner": "@dads-framework/toolbox",
+      "section": "Guides",
+      "path": "docs/site/guides/vocabulary.md",
+      "navigationGroup": "Get started"
+    },
+    {
       "slug": "adopt",
       "title": "Adopt one capability",
       "owner": "@dads-framework/toolbox",

@@ -13,6 +13,18 @@ The resulting account still needs the workspace permission.
 
 ## Try it
 
+### Test the client and session policy
+
+From the generated project, run:
+
+```sh
+npm test -- tests/enterprise-sign-in-client.test.ts tests/session-subjects.test.ts
+```
+
+The tests check that the browser can start company sign-in and preserve an
+invitation return URL. They also check that a tenant route applies that tenant's
+session policy. Use a test identity provider to complete the browser flow.
+
 ### Prepare a workspace and an OIDC client
 
 Run [example setup](./README.md) and keep your terminal in `.dads/examples`.

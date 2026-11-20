@@ -15,56 +15,20 @@ rechecks the caller's workspace view permission.
 
 ## Try it
 
-Complete the [example setup](./README.md) first. The starter migration enables
-`notes.export` for everyone. Configure a ten-minute preview that turns it off
-for the owner of this tenant. The customer API checks the configured account's
-current tenant view permission and stores only the token's SHA-256 digest in
-its preview configuration.
+Run the feature preview test from the generated project:
 
 ```sh
-preview_token=$(openssl rand -hex 32)
-digest=$(printf '%s' "$preview_token" | openssl dgst -sha256 -r | cut -d ' ' -f 1)
-expiry=$(node -p 'new Date(Date.now() + 10 * 60 * 1000).toISOString()')
-export DADS_FEATURE_PREVIEW=$(
-  jq -cn --arg owner "$ownerId" --arg tenant "$tenant" \
-    --arg digest "$digest" --arg expiry "$expiry" \
-    '{accountId: $owner, tenantId: $tenant, feature: "notes.export",
-      active: false, tokenSha256: $digest, expiresAt: $expiry}'
-)
-npm --prefix ../.. run dev:up
-. ./env.sh
+npm test -- tests/feature-previews.test.ts
 ```
 
-Read feature state with and without the token. Both requests return HTTP 200 with
-`data.features` and `data.stateHash`.
+[The test](../tests/feature-previews.test.ts) starts with the flag off.
+An account sends a preview token before it has workspace membership.
+The response shows no enabled flags and includes
+`x-feature-preview-dropped: 1`. Give the same account membership and the
+same request returns `["notes.export"]`. The token still gets dropped when
+the request targets a different workspace.
 
-```sh
-features_url="$web/api/tenants/$tenant/notes/features"
-
-curl -fsS -b owner.cookies "$features_url" | jq '.data.features'
-curl -fsS -b owner.cookies -H "x-feature-preview: $preview_token" \
-  "$features_url" | jq '.data.features'
-```
-
-Expect `["notes.export"]` for the ordinary request and `[]` for the preview.
-Send the same token as the other tenant member to check that the account binding
-holds. The response includes `x-feature-preview-dropped: 1` and the ordinary
-feature state with `notes.export`.
-
-```sh
-curl -fsS -i -b member.cookies -H "x-feature-preview: $preview_token" \
-  "$features_url"
-
-curl -fsS -b owner.cookies "$features_url" | jq '.data.features'
-```
-
-The final request still returns `["notes.export"]`. Previewing is read-only and
-the rollout stays enabled.
-
-To remove the preview before it expires, unset the configuration and reapply it.
-
-```sh
-unset DADS_FEATURE_PREVIEW preview_token
-npm --prefix ../.. run dev:up
-. ./env.sh
-```
+In a running app, the customer API reads `DADS_FEATURE_PREVIEW` as JSON
+with `tenantId`, `accountId`, `feature`, `active`, `tokenSha256`, and
+`expiresAt`. The caller sends the original token in the `x-feature-preview`
+header. The preview changes only the response to the authorized read.

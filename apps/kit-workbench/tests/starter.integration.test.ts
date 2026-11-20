@@ -1,4 +1,3 @@
-import * as dns from "node:dns/promises";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,17 +10,13 @@ import { z } from "zod";
 import { migrate } from "../assembly/migrations.js";
 import { startApp } from "../assembly/start-app.js";
 import { proveAuditExport } from "./audit-export.test-support.js";
+import { withDnsTxtRecord } from "./dns-txt.test-support.js";
 import { proveNoteArtifacts } from "./note-artifacts.test-support.js";
 import {
   provePermissionsAfterInvite,
   provePermissionsBeforeInvite,
 } from "./permissions-dashboard.test-support.js";
 import type { StarterEmail } from "../libraries/app-runtime/index.js";
-
-vi.mock("node:dns/promises", async (importOriginal) => ({
-  ...(await importOriginal<typeof dns>()),
-  resolveTxt: vi.fn(),
-}));
 
 const origin = "http://127.0.0.1:3000";
 const secret = "fixture-signing-key-with-forty-characters";
@@ -316,29 +311,29 @@ async function proveRequiredSsoInvitation(
 ) {
   const domain = "company.example.test";
   const challenge = enterpriseSsoDomainChallenge(secret, tenantId, domain);
-  vi.mocked(dns.resolveTxt).mockResolvedValueOnce([[challenge.value]]);
-  const required = await startApp("customer", {
-    ...config,
-    enterprise: {
-      ssoProviders: [
-        {
-          id: "sso-fixture",
-          tenantId,
-          domain,
-          mode: "required",
-          protocol: "oidc",
-          issuer: origin,
-          clientId: "fixture",
-          clientSecret: "fixture-secret",
-          authorizationEndpoint: `${origin}/authorize`,
-          tokenEndpoint: `${origin}/token`,
-          jwksEndpoint: `${origin}/keys`,
-        },
-      ],
-    },
-  });
+  const required = await withDnsTxtRecord(challenge, () =>
+    startApp("customer", {
+      ...config,
+      enterprise: {
+        ssoProviders: [
+          {
+            id: "sso-fixture",
+            tenantId,
+            domain,
+            mode: "required",
+            protocol: "oidc",
+            issuer: origin,
+            clientId: "fixture",
+            clientSecret: "fixture-secret",
+            authorizationEndpoint: `${origin}/authorize`,
+            tokenEndpoint: `${origin}/token`,
+            jwksEndpoint: `${origin}/keys`,
+          },
+        ],
+      },
+    }),
+  );
   try {
-    expect(vi.mocked(dns.resolveTxt)).toHaveBeenCalledWith(challenge.name);
     const owner = await required.inject({
       url: `/api/tenants/${tenantId}/notes`,
       headers: requestHeaders(issuerCookie),

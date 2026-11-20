@@ -94,3 +94,5 @@ Licensed under [MIT](./LICENSE.md).
 
 See [Third-party notices](./THIRD_PARTY_NOTICES.md) for the upstream code and
 licenses included with Dads.
+
+The [website source and build instructions](./website/README.md) are included in this repository.

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dads Framework — Start with a working backend.</title>
+    <meta
+      name="description"
+      content="Start a TypeScript app with sign-in, PostgreSQL, and a typed API in one command."
+    />
+    <meta name="theme-color" content="#0e1114" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dads Framework" />
+    <meta
+      property="og:description"
+      content="Start a TypeScript app with sign-in, PostgreSQL, and a typed API in one command."
+    />
+    <meta
+      property="og:image"
+      content="https://dadsframework.dev/assets/dads-social.png"
+    />
+    <meta property="og:image:alt" content="Dads Framework monogram" />
+    <link rel="canonical" href="https://dadsframework.dev/" />
+    <link rel="icon" href="/assets/dads-favicon.png" type="image/png" />
+    <link rel="stylesheet" href="/assets/base.css" />
+    <link rel="stylesheet" href="/assets/home.css" />
+    <link rel="stylesheet" href="/assets/composition-preview.css" />
+    <script src="/assets/home.js" defer></script>
+    <script src="/assets/composition-preview.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <!-- site-header -->
+    <main id="main">
+      <section class="home-hero">
+        <div class="wrap hero-layout">
+          <div class="hero-intro">
+            <p class="product-type">TypeScript backend framework</p>
+            <h1>Start with a <span>working backend.</span></h1>
+            <p class="hero-lede">
+              One command starts a TypeScript app with sign-in, PostgreSQL, and
+              a typed API. Follow a working feature from browser to database,
+              then build yours alongside it.
+            </p>
+            <div class="hero-actions">
+              <a class="primary-action" href="/docs/quickstart.html"
+                >Build your first app <span aria-hidden="true">→</span></a
+              >
+              <a class="text-action" href="/docs/">Why Dads?</a>
+            </div>
+          </div>
+          <section
+            class="feature-preview"
+            aria-labelledby="feature-preview-title"
+          >
+            <h2 id="feature-preview-title">Create your app</h2>
+            <div class="install">
+              <span class="prompt-sign" aria-hidden="true">$</span>
+              <code id="install-command">npm create dads@latest my-app</code>
+              <button
+                id="copy-command"
+                type="button"
+                aria-label="Copy install command"
+                hidden
+              >
+                Copy
+              </button>
+              <span id="copy-status" class="sr" role="status"></span>
+            </div>
+            <pre aria-label="Selected files from the starter"><code>my-app/
+  apps/web/
+  domains/notes/
+    contract/
+    server/
+      routes.ts
+      tables.ts
+    web-client/
+  assembly/</code></pre>
+            <a
+              href="https://github.com/brytoncooper/dads-framework/tree/main/apps/kit-workbench/domains/notes"
+              >Open the notes feature on GitHub ↗</a
+            >
+          </section>
+        </div>
+      </section>
+
+      <section class="route-section">
+        <div class="wrap">
+          <div class="section-heading">
+            <h2>Follow a request.</h2>
+            <a
+              class="route-path"
+              href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/domains/notes/server/routes.ts"
+              ><b>GET</b> <code>/tenants/:tenantId/notes</code>
+              <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <ol class="request-steps">
+            <li>
+              <h3><a href="/docs/http.html">Validate the input</a></h3>
+              <p>
+                The route declares the tenant ID, pagination parameters, and
+                response item. Those schemas also describe the endpoint in
+                OpenAPI.
+              </p>
+            </li>
+            <li>
+              <h3>
+                <a href="/docs/permissions.html">Check the relationship</a>
+              </h3>
+              <p>
+                A session identifies the caller. The tenant’s view permission
+                decides whether that caller can read notes in this workspace.
+              </p>
+            </li>
+            <li>
+              <h3><a href="/docs/guarded-resource.html">Scope the query</a></h3>
+              <p>
+                The handler filters by the authorized tenant ID before it counts
+                or returns rows. Another workspace’s notes stay out of the
+                result.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="starter-section wrap" id="starter">
+        <div class="starter-copy">
+          <h2>Run the whole starter.</h2>
+          <p>
+            Docker brings up PostgreSQL, a web app, and both APIs. Sign in,
+            invite someone to a workspace, and see which notes they can read.
+          </p>
+          <a class="text-action" href="/docs/quickstart.html"
+            >Walk through your first note <span aria-hidden="true">→</span></a
+          >
+        </div>
+        <div class="setup">
+          <p class="setup-label">
+            Local setup <span>Node 24 · Docker Compose</span>
+          </p>
+          <p>
+            <code>npm run dev:mail</code> prints the local verification link.
+            Save a note, then follow the request into the notes domain.
+          </p>
+          <p class="requirements">
+            Run the creator with Node 24 and Docker Compose.
+            <a
+              href="https://github.com/brytoncooper/dads-framework/tree/main/apps/kit-workbench"
+              >Read the starter source</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <section class="wrap starter-section" aria-labelledby="multi-api-heading">
+        <div class="starter-copy">
+          <h2 id="multi-api-heading">When you need a second API.</h2>
+          <p>
+            The customer API exposes notes. The staff API exposes audit exports.
+            Each entrypoint chooses its routes and can share domain services.
+          </p>
+          <a class="text-action" href="/docs/composition.html"
+            >See how API composition works</a
+          >
+        </div>
+        <section
+          class="composition-preview"
+          aria-label="Starter API composition example"
+        >
+          <div
+            class="composition-tabs"
+            role="tablist"
+            aria-label="API entrypoint"
+            hidden
+          >
+            <button
+              type="button"
+              role="tab"
+              id="composition-tab-customer"
+              aria-controls="composition-customer"
+              aria-selected="true"
+            >
+              Customer API
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="composition-tab-staff"
+              aria-controls="composition-staff"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Staff API
+            </button>
+          </div>
+          <div class="composition-editor">
+            <section class="composition-pane" id="composition-customer">
+              <div class="composition-source">
+                <h2>Customer API</h2>
+                <a
+                  href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/customer/app.ts"
+                  >apps/customer/app.ts <span aria-hidden="true">↗</span></a
+                >
+              </div>
+              <pre
+                tabindex="0"
+              ><code class="language-ts">  <span class="composition-syntax">return</span> composeApi(<span class="composition-string">"customer"</span>, {
+    services: [provider, starterAccess],
+    routes: [
+      tenantsPlugin,
+      tenantPermissionsPlugin,
+      <strong class="mount">notesPlugin</strong>,
+      <span class="composition-comment">// dad:add domains</span>
+    ],
+    jobs: [notesAttachmentWorker],
+  });</code></pre>
+            </section>
+            <section class="composition-pane" id="composition-staff">
+              <div class="composition-source">
+                <h2>Staff API</h2>
+                <a
+                  href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/staff/app.ts"
+                  >apps/staff/app.ts <span aria-hidden="true">↗</span></a
+                >
+              </div>
+              <pre
+                tabindex="0"
+              ><code class="language-ts">  <span class="composition-syntax">return</span> composeApi(<span class="composition-string">"staff"</span>, {
+    services: [provider, starterAccess],
+    routes: [
+      <strong class="mount">tenantsPlugin</strong>,
+      tenantAuditExportPlugin,
+      <span class="composition-comment">// dad:add domains</span>
+    ],
+    jobs: [],
+  });</code></pre>
+            </section>
+          </div>
+          <div class="composition-request">
+            <div class="composition-request-head">
+              <p>Example request</p>
+              <code>GET /api/tenants/:tenantId/notes</code>
+            </div>
+            <table
+              id="preview-cases"
+              aria-label="Example notes request outcomes"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">API</th>
+                  <th scope="col">Workspace access</th>
+                  <th scope="col">Response</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Customer</th>
+                  <td>Member</td>
+                  <td>200 OK</td>
+                </tr>
+                <tr>
+                  <th scope="row">Customer</th>
+                  <td>Revoked</td>
+                  <td>404 Not Found</td>
+                </tr>
+                <tr>
+                  <th scope="row">Staff</th>
+                  <td>Any</td>
+                  <td>404 Not Found</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="composition-controls" hidden>
+              <label for="composition-access">Workspace access</label>
+              <select id="composition-access">
+                <option value="member">Member</option>
+                <option value="revoked">Revoked</option>
+              </select>
+              <div class="composition-result" role="status">
+                <strong id="composition-status" data-outcome="allowed"
+                  >200 OK</strong
+                >
+                <span id="composition-detail"
+                  >The tenant member can list notes.</span
+                >
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="further">
+        <div class="wrap further-grid">
+          <div class="further-title"><h2>Where to go next</h2></div>
+          <div class="reading-list">
+            <a href="/docs/adopt.html"
+              ><span>Bring Dads into an existing app</span
+              ><small>Adoption guide</small><i aria-hidden="true">↗</i></a
+            >
+            <a href="/docs/verification.html"
+              ><span>Choose the checks a change needs</span
+              ><small>Verification guide</small><i aria-hidden="true">↗</i></a
+            >
+            <a href="<!-- dad-url -->"
+              ><span>Meet Tess and her “temporary” flag</span
+              ><small>Dad’s field notes</small><i aria-hidden="true">↗</i></a
+            >
+            <a href="<!-- gary-url -->"
+              ><span>Who let Gary back in?</span
+              ><small>A revocation story</small><i aria-hidden="true">↗</i></a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- site-footer -->
+  </body>
+</html>

@@ -42,7 +42,9 @@ defines who can issue and revoke grants and where to review attempts.
 
 ## Try the feature examples
 
-Open **Examples** in the web app to follow a walkthrough alongside the running APIs. Start with the permissions dashboard to compare what the owner, a member, and an outsider can see. The same walkthroughs ship under `examples/`. [Example setup](./examples/README.md)
+Open **Examples** in the web app for implementation walkthroughs and runnable
+tests. Try the permissions dashboard to compare what the owner, a member, and
+an outsider can see. [Browse the starter examples](./examples/README.md)
 
 ## Run against your own database
 
@@ -69,39 +71,22 @@ Set `DADS_PREPARE_PERMISSION_CHECKS=1` to reuse PostgreSQL plans for permission
 checks when the app connects directly to PostgreSQL. The default is off.
 Leave it off when the connection uses transaction pooling.
 
-## Call the customer API from the command line
+## Test the customer API
 
-Use Bash, curl, and jq. Set `base` to the browser URL printed by
-`npm start`, or use the address below when running `npm run dev:web` on
-its default port.
+From the generated project, run this test with Docker running:
 
 ```sh
-base=http://127.0.0.1:5173
-read -rs password
-signup=$(jq -cn --arg password "$password" \
-  '{email:"local@example.test",name:"Local user",password:$password}')
-curl -fsS "$base/api/auth/sign-up/email" -H "Origin: $base" \
-  -H 'Content-Type: application/json' -d "$signup"
+npm test -- tests/starter.integration.test.ts
 ```
 
-Open the `verify-email` link from `npm run dev:mail` in the Compose stack
-or from the API's local mail output when using the manual setup. Sign in
-with the same email and password, then create a tenant and a note.
-
-```sh
-signin=$(jq -cn --arg password "$password" \
-  '{email:"local@example.test",password:$password}')
-curl -fsS "$base/api/auth/sign-in/email" -H "Origin: $base" \
-  -H 'Content-Type: application/json' -c .dads-cookies -d "$signin"
-tenant=$(curl -fsS "$base/api/tenants" -b .dads-cookies \
-  -H 'Content-Type: application/json' -d '{"name":"First workspace"}' | jq -r .data.id)
-curl -fsS "$base/api/tenants/$tenant/notes" -b .dads-cookies \
-  -H 'Content-Type: application/json' -d '{"text":"My first note"}'
-curl -fsS "$base/api/tenants/$tenant/notes" -b .dads-cookies
-```
+The test starts a temporary PostgreSQL database and signs in two accounts.
+Expect a passing test that creates a note with HTTP 201, reads it with HTTP
+200, and gets HTTP 404 when the other account requests the same workspace.
+An anonymous request gets HTTP 401.
+[Read the integration test](./tests/starter.integration.test.ts)
 
 Membership guards each notes route. SQL reads and writes carry the same tenant
-key. An account without membership gets a 404 even if it knows the tenant ID.
+key.
 
 Protected writes recheck the same permission inside the serializable
 transaction that writes the row. Generated resource updates use the same
@@ -112,32 +97,10 @@ If they overlap, PostgreSQL can serialize either change first.
 If the database cannot serialize a write, the API returns a retryable
 `POSTGRES_CONFLICT` (HTTP 409). Reads retain their ordinary permission check.
 
-## Invite someone to a tenant
-
-A tenant owner or administrator can send an invitation from a signed-in session.
-
-```sh
-curl -fsS "$base/api/tenants/$tenant/invitations" -b .dads-cookies \
-  -H "Origin: $base" --json '{"email":"collaborator@example.test"}'
-```
-
-The mail contains a link with the token in its fragment. A recipient with an
-existing account signs in with the same verified email. A new recipient signs
-up and verifies that email first. For this command-line starter, save the
-recipient's session to `.dads-recipient-cookies`, then submit the token from the
-mail fragment.
-
-```sh
-read -rs token
-printf '%s\n' "$token" | jq -Rn '{token:input}' | \
-  curl -fsS "$base/api/tenants/invitations/accept" -b .dads-recipient-cookies \
-    -H "Origin: $base" -H 'Content-Type: application/json' --data-binary @-
-unset token
-```
-
-Invitations are single-use and expire after seven days. Use terminal mail only
-with the local development flag. In deployed apps, deliver invitation messages
-through a confidential mail transport.
+The same test exercises invitations. A signed-in account can read the
+workspace's notes after accepting the invitation sent to its verified email.
+Invitations are single-use and expire after seven days. Use confidential mail
+delivery in deployed apps.
 
 ## Add a domain
 

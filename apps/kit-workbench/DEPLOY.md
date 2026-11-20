@@ -50,11 +50,12 @@ A running API returns HTTP 200:
 { "data": { "status": "ok" } }
 ```
 
-Now use the
-[customer API walkthrough](./README.md#call-the-customer-api-from-the-command-line)
-with delivered mail to verify a session, create a tenant, and write a note.
-Repeat the note request as an account without membership and expect HTTP 404. Confirm the staff origin exposes only the intended routes. Verify
-HTTPS and email delivery in the environment you operate.
+Open the deployed workbench and create an account. Verify the account through
+delivered email, sign in, create a workspace, and add a note. In the browser's
+Network tab, confirm the note read returns HTTP 200. In a separate profile,
+sign in with an account outside that workspace. Open the same notes API URL
+and expect HTTP 404. Confirm the staff origin exposes only the intended routes.
+Verify HTTPS and email delivery in the environment you operate.
 
 ## Enable enterprise identity
 

@@ -1,13 +1,30 @@
 # Why Dads
 
-Imagine removing someone from a workspace on Friday. On Monday, can they
-still read its activity feed? A passing test for the task detail page tells
-you very little about the feed, the list, or the next endpoint someone adds.
+Say the first thing your customer needs is a shared notebook. You want to
+get a note from the browser into the database and back onto the screen.
+With Dads, you can try that whole loop on your first run. Sign in, create
+a workspace, save a note, and refresh. Then open the code that did it.
 
-I’d reach for Dads on a team that keeps shipping features around shared
-records. You can read a route and see what it accepts, what it returns,
-and who can call it. You can change a permission in its owning domain
-and test what that change means for every feature that uses it.
+## Start where your own feature begins
+
+Run `npm create dads@latest my-app` with Node 24 and Docker running.
+The creator installs the app, starts PostgreSQL, applies migrations, and
+prints the web URL. The notes feature is ordinary TypeScript in your
+project. Three files show how the pieces fit together.
+
+| When you want to…                          | Open this file in your app                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Change what the client can send or receive | [`domains/notes/contract/wire.ts`](../../../apps/kit-workbench/domains/notes/contract/wire.ts)       |
+| Follow a request into the database         | [`domains/notes/server/routes.ts`](../../../apps/kit-workbench/domains/notes/server/routes.ts)       |
+| See how the browser calls the API          | [`domains/notes/web-client/index.ts`](../../../apps/kit-workbench/domains/notes/web-client/index.ts) |
+
+The reason to choose Dads is what happens on the **second** feature.
+Your team already has a working example, a place to put the new code, and
+a boundary check for imports that reach into another domain. The route
+contract feeds request validation, OpenAPI, and typed clients. You can
+spend the next change on what the feature does. [Build a resource in the starter](./guarded-resource.md).
+
+When you follow the browser’s workspace ID into a route named `/tenants/:tenantId`, the [Dads vocabulary](./vocabulary.md) explains how the two names fit together.
 
 ## What happens when access changes?
 
@@ -41,9 +58,8 @@ that decision after the first API is already useful. [API composition](./composi
 
 ## When I’d choose it
 
-For an app with teams, shared records, and changing roles, the cost of an
-explicit contract and permission rule pays off each time another feature
-needs the same decision. For a small service with a few public endpoints,
+Choose the full framework when you expect multiple features or developers
+to share a backend and want a working structure from the first commit. For a small service with a few public endpoints,
 a router and a validator may be plenty. An existing TypeScript app can
 also adopt just permissions, email, or another [standalone capability](./adopt.md).
 

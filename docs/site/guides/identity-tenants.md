@@ -61,6 +61,39 @@ Cookie: <collaborator-session-cookie>
 Accepting with the owner's cookie or replaying a used invitation returns
 `404`. The browser origin must match the configured origin for acceptance.
 
+## Set up the same services in an existing app
+
+The generated starter applies its migrations when you run `npm start`. If you
+own the migration history for a **fresh database**, install the default
+identity and tenant schemas in an app migration. This example also installs
+the PostgreSQL relationship tables used by the tenant directory.
+
+```ts
+import { installIdentitySchemaV2 } from "@dads-framework/identity-better-auth";
+import { relationshipSchemaMigration } from "@dads-framework/postgres-access";
+import { installTenantSchemaV2 } from "@dads-framework/tenants";
+import type { MigrationBuilder } from "node-pg-migrate";
+
+export function up(pgm: MigrationBuilder): void {
+  pgm.sql(relationshipSchemaMigration.sql);
+  installIdentitySchemaV2(pgm);
+  installTenantSchemaV2(pgm);
+}
+
+export const down = false;
+```
+
+The identity installer creates the signing-key columns Better Auth reads during
+sign-in. The tenant installer creates the directory tables invitation acceptance
+uses to detect deactivated accounts. You can use ordinary email invitations
+with SCIM provisioning turned off.
+
+For a database that already has V1 tables, apply the additive migrations
+described in the [identity adapter](../../../packages/server/identity-better-auth/README.md)
+and [tenant package](../../../packages/server/tenants/README.md). A starter
+that has applied its enterprise identity migration already has these tables
+and columns.
+
 ## Reuse the boundary on another route
 
 Read the account from the session, use the route tenant ID in the

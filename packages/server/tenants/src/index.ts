@@ -27,6 +27,7 @@ export { Tenants, type TenantContext, type TenantRecord } from "./tenants.js";
 
 export { tenantMigrations } from "./tenant-migrations.js";
 
+export { installTenantSchemaV2 } from "./install-tenant-schema-v2.js";
 export { installTenantSchemaV1 } from "./migrations/20261120040000_tenants.migration.js";
 
 export { createTenantScimDirectory } from "./tenant-scim-directory.js";

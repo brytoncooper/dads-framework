@@ -10,11 +10,11 @@ lacks the required relationship.
 ## Preview a starter beside your application
 
 An isolated starter lets you practice on a working API before editing your
-application. When your registry carries a stable `create-dads` release, run
-this preview with the root of your existing application as the target.
+application. Run this preview with `create-dads` 0.2.0 and the root of your
+existing application as the target.
 
 ```sh
-npm create dads@latest /path/to/your/project -- --existing --dry-run --json
+npm create dads@0.2.0 /path/to/your/project -- --existing --dry-run --json
 ```
 
 Check that `initialization.projectRoot` points to the project's `dads/`
@@ -31,8 +31,8 @@ Open the web URL printed by the launcher and [save a note](./quickstart.md#save-
 Commit the starter's `package-lock.json` if you use its CI. Its
 `ci/verify.sh` runs `npm ci` before verification.
 
-The public npm `latest` tag currently points to a staging version. From a
-framework checkout, you can preview the same layout with the source creator.
+From a framework checkout, you can preview the same layout with the source
+creator.
 
 ```sh
 npm ci

@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/http",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -24,12 +24,12 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.1.0",
-    "@dads-framework/audit-actor": "0.1.0",
-    "@dads-framework/contract": "0.1.0",
-    "@dads-framework/diagnostics": "0.1.0",
-    "@dads-framework/errors": "0.1.0",
-    "@dads-framework/request-work": "0.1.0",
+    "@dads-framework/access": "0.2.0",
+    "@dads-framework/audit-actor": "0.2.0",
+    "@dads-framework/contract": "0.2.0",
+    "@dads-framework/diagnostics": "0.2.0",
+    "@dads-framework/errors": "0.2.0",
+    "@dads-framework/request-work": "0.2.0",
     "@fastify/cors": "^11.3.0",
     "fastify": "5.10.0",
     "pino": "^10.3.1",

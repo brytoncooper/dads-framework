@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/postgres-access",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -17,12 +17,12 @@
     "BENCHMARK.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.1.0",
-    "@dads-framework/postgres": "0.1.0",
+    "@dads-framework/access": "0.2.0",
+    "@dads-framework/postgres": "0.2.0",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
-    "@dads-framework/authorization": "0.1.0",
+    "@dads-framework/authorization": "0.2.0",
     "vitest": "~4.1.0",
     "zod": "^4.4.3"
   },

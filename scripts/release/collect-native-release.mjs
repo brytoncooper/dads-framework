@@ -2,11 +2,14 @@ import { createHash } from "node:crypto";
 import { copyFileSync, constants, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import process from "node:process";
+import { nativeArchiveTarget } from "./native-executable.mjs";
+import { releaseVersion } from "./release-version.mjs";
 
 const [inputs, output] = process.argv.slice(2);
 if (!inputs || !output)
   throw new Error("Expected native input and release output directories.");
 
+const version = releaseVersion(process.cwd());
 const entries = readdirSync(inputs, { withFileTypes: true });
 if (entries.length !== 5 || entries.some((entry) => !entry.isDirectory())) {
   throw new Error("Expected five hosted native matrix artifacts.");
@@ -24,9 +27,10 @@ for (const entry of entries) {
     build.files.length !== 2
   )
     throw new Error(`Unexpected native build record in ${entry.name}.`);
-  const native = build.files.filter(({ name }) =>
-    /^dads-framework-testing-native-[a-z0-9-]+-0\.1\.0\.tgz$/.test(name),
-  );
+  const native = build.files.filter(({ name }) => {
+    const target = nativeArchiveTarget(name, version);
+    return target !== undefined && target === build.target;
+  });
   if (native.length !== 1)
     throw new Error(`Missing native archive in ${entry.name}.`);
   const [{ name, sha256 }] = native;

@@ -9,14 +9,17 @@ const releaseTargets = {
   "win32-x64": { architecture: 0x8664, magic: 0x00004550 },
 };
 
-export function verifyNativeExecutable(root, nativeArchive) {
-  const matches =
-    /^dads-framework-testing-native-([a-z0-9-]+)-0\.1\.0\.tgz$/.exec(
-      nativeArchive,
-    );
-  const platform = matches?.[1];
+export function nativeArchiveTarget(filename, version) {
+  return Object.keys(releaseTargets).find(
+    (platform) =>
+      filename === `dads-framework-testing-native-${platform}-${version}.tgz`,
+  );
+}
+
+export function verifyNativeExecutable(root, nativeArchive, version) {
+  const platform = nativeArchiveTarget(nativeArchive, version);
+  if (!platform) throw new Error("Unknown native release archive target.");
   const target = releaseTargets[platform];
-  if (!target) throw new Error("Unknown native release archive target.");
 
   const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const binary = platform.startsWith("win32")
@@ -24,7 +27,7 @@ export function verifyNativeExecutable(root, nativeArchive) {
     : "bin/dad-test";
   if (
     manifest.name !== `@dads-framework/testing-native-${platform}` ||
-    manifest.version !== "0.1.0" ||
+    manifest.version !== version ||
     manifest.bin?.["dad-test"] !== `./${binary}`
   )
     throw new Error(

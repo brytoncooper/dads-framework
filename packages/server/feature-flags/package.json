@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/feature-flags",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -24,11 +24,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/clock": "0.1.0",
-    "@dads-framework/contract": "0.1.0",
-    "@dads-framework/errors": "0.1.0",
-    "@dads-framework/plugin": "0.1.0",
-    "@dads-framework/request-work": "0.1.0",
+    "@dads-framework/clock": "0.2.0",
+    "@dads-framework/contract": "0.2.0",
+    "@dads-framework/errors": "0.2.0",
+    "@dads-framework/plugin": "0.2.0",
+    "@dads-framework/request-work": "0.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -43,6 +43,7 @@ export type WriteWithPermission = <Result>(
 
 export type StarterServices = {
   readonly db: DrizzleHandle;
+  readonly authorization: Pick<Authorization, "check">;
   readonly files: ObjectStorage;
   readonly jobs: JobQueue;
   readonly writeWithPermission: WriteWithPermission;

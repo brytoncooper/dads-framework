@@ -80,3 +80,8 @@ export {
   type AuditServices,
 } from "./lib/audit-plugin.js";
 export { configurePluginAuditTriggers } from "./lib/database/configure-plugin-audit-triggers.js";
+export {
+  createAuditLogExporter,
+  type AuditLogExportOptions,
+  type AuditLogExportPage,
+} from "./lib/export/create-audit-log-exporter.js";

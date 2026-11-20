@@ -21,7 +21,10 @@ export {
   TenantDirectory,
   type ActiveTenant,
 } from "./lib/ports/tenant-directory.js";
-export { GetEffectiveFeatureState } from "./lib/queries/get-effective-feature-state.js";
+export {
+  type FeatureFlagPreviewReader,
+  GetEffectiveFeatureState,
+} from "./lib/queries/get-effective-feature-state.js";
 export { GetPublicFeatureState } from "./lib/queries/get-public-feature-state.js";
 export { ListFeatureFlagHistory } from "./lib/queries/list-feature-flag-history.js";
 export { ListFeatureFlagManagement } from "./lib/queries/list-feature-flag-management.js";

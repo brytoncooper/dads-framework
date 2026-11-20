@@ -11,7 +11,7 @@ afterEach(async () => {
   while (apps.length > 0) await apps.pop()?.close();
 });
 
-type Seen = { url: string; requestId: string | null };
+type Seen = { url: string; method: string; requestId: string | null };
 
 async function appWith(
   options: Parameters<typeof mountFetchHandler>[1],
@@ -21,6 +21,7 @@ async function appWith(
     handler: (request) => {
       seen.push({
         url: new URL(request.url).pathname,
+        method: request.method,
         requestId: request.clone().headers.get(REQUEST_ID_HEADER),
       });
       return Promise.resolve(new Response("ok", { status: 200 }));
@@ -50,6 +51,28 @@ describe("mountFetchHandler options", () => {
       "/mcp",
       "/mcp/",
       "/mcp/deeper",
+    ]);
+  });
+
+  it("forwards explicitly selected methods without adding HEAD", async () => {
+    const { app, seen } = await appWith({
+      methods: ["GET", "PUT", "PATCH", "DELETE"],
+    });
+    for (const method of ["PUT", "PATCH", "DELETE"] as const) {
+      expect((await app.inject({ method, url: "/mcp/users" })).statusCode).toBe(
+        200,
+      );
+    }
+    expect(
+      (await app.inject({ method: "HEAD", url: "/mcp/users" })).statusCode,
+    ).toBe(404);
+    expect(
+      (await app.inject({ method: "POST", url: "/mcp/users" })).statusCode,
+    ).toBe(404);
+    expect(seen.map(({ method }) => method)).toEqual([
+      "PUT",
+      "PATCH",
+      "DELETE",
     ]);
   });
 

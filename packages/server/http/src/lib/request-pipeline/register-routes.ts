@@ -37,6 +37,7 @@ import { compileRouteScopePlan } from "./enforce-scope.js";
 import { envelope } from "./envelope.js";
 import {
   assertFeatureStateWriteIsCurrent,
+  featureStateContext,
   type FeatureStateProtocol,
   type FeatureStateSnapshot,
   resolveFeatureState,
@@ -309,6 +310,8 @@ function withFeaturePreview<T>(
     request: allowed.request,
     reply: allowed.reply,
     authenticatedSubject: allowed.decision.authenticatedSubject,
+    subject: allowed.decision.subject,
+    context: featureStateContext(allowed.featureState, allowed.request),
     method: definition.method,
     writesDuringFeaturePreview:
       definition.capabilities.writesDuringFeaturePreview,

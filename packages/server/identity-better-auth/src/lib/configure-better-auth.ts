@@ -1,5 +1,5 @@
 import type { IdentityEmail } from "@dads-framework/identity";
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { jwt } from "better-auth/plugins";
 import { PostgresDialect } from "kysely";
 import {
@@ -7,12 +7,25 @@ import {
   type BetterAuthIdentityOptions,
 } from "./identity-options.js";
 
+import {
+  enterpriseDatabaseHooks,
+  enterpriseSsoPlugin,
+} from "./enterprise-plugin.js";
+import type { EnterpriseSsoProvider } from "./enterprise-options.js";
+
+const enterpriseSessionFields = {
+  ssoProviderBinding: { type: "string", required: false, input: false },
+} satisfies NonNullable<
+  NonNullable<BetterAuthOptions["session"]>["additionalFields"]
+>;
+
 const SESSION_SECONDS = 60 * 60 * 24 * 7;
 
 export function configureBetterAuth(
   options: BetterAuthIdentityOptions,
   origin: string,
   sendEmail: (email: IdentityEmail) => void,
+  providers: readonly EnterpriseSsoProvider[] = [],
 ) {
   return betterAuth({
     baseURL: origin,
@@ -24,7 +37,16 @@ export function configureBetterAuth(
       transaction: true,
     },
     user: { modelName: "identity_users" },
-    account: { modelName: "identity_credentials" },
+    account: {
+      modelName: "identity_credentials",
+      ...(providers.length > 0 && {
+        updateAccountOnSignIn: false,
+        additionalFields: enterpriseSessionFields,
+      }),
+    },
+    ...(providers.length > 0 && {
+      databaseHooks: enterpriseDatabaseHooks(providers),
+    }),
     verification: {
       modelName: "identity_verifications",
       storeIdentifier: "hashed",
@@ -35,6 +57,9 @@ export function configureBetterAuth(
       updateAge: 0,
       disableSessionRefresh: true,
       cookieCache: { enabled: false },
+      ...(providers.length > 0 && {
+        additionalFields: enterpriseSessionFields,
+      }),
     },
     emailAndPassword: {
       enabled: true,
@@ -53,7 +78,8 @@ export function configureBetterAuth(
       sendOnSignUp: true,
       expiresIn: 3600,
       sendVerificationEmail: ({ user, url }) => {
-        sendEmail({ kind: "verify-email", to: user.email, url });
+        if (!user.emailVerified)
+          sendEmail({ kind: "verify-email", to: user.email, url });
         return Promise.resolve();
       },
     },
@@ -61,6 +87,7 @@ export function configureBetterAuth(
     telemetry: { enabled: false },
     logger: { disabled: true },
     plugins: [
+      ...(providers.length > 0 ? [enterpriseSsoPlugin(providers, origin)] : []),
       jwt({
         disableSettingJwtHeader: true,
         jwt: {

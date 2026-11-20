@@ -2,6 +2,7 @@ import type {
   FastifyPluginCallback,
   FastifyReply,
   FastifyRequest,
+  HTTPMethods,
 } from "fastify";
 
 import type { FetchHandler } from "@dads-framework/contract";
@@ -21,6 +22,8 @@ export type ProtocolExchange = Readonly<{
 }>;
 
 export type ProtocolMountOptions = Readonly<{
+  /** The methods forwarded to the handler. Defaults to GET and POST. */
+  methods?: readonly HTTPMethods[];
   /**
    * `Set-Cookie` values appended to one answer after the handler's own — how
    * an application can clear its authorization-consistency cookie on sign-out.
@@ -185,8 +188,11 @@ export function mountFetchHandler(
         ? {}
         : { bodyLimit: options.bodyLimitBytes };
     const urls = options.servePrefixRoot === true ? ["/", "/*"] : ["/*"];
+    const method = [...(options.methods ?? ["GET", "POST"])];
+    const explicitHead =
+      options.methods === undefined ? {} : { exposeHeadRoute: false };
     for (const url of urls) {
-      scope.route({ method: ["GET", "POST"], url, ...bodyLimit, handler });
+      scope.route({ method, url, ...bodyLimit, ...explicitHead, handler });
     }
     done();
   };

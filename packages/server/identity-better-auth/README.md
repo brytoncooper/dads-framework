@@ -1,6 +1,6 @@
 # @dads-framework/identity-better-auth
 
-Binds the Dads identity contract to Better Auth and PostgreSQL for email and password sign-in.
+Binds the Dads identity contract to Better Auth and PostgreSQL for email, password, and optional tenant SSO sign-in.
 
 ## Try it
 
@@ -62,8 +62,7 @@ cannot be redeemed with another account's email.
 
 ## What it refuses to do
 
-The handler omits SSO, SCIM, administrative impersonation and provider
-token endpoints. Reads return account identity without password or raw
+The handler omits SCIM, and provider token endpoints. Reads return account identity without password or raw
 session records. JWTs carry only the subject, session ID, and standard
 issuer, audience, time and expiry claims. An offline verifier must check
 signature, issuer, audience and expiry. A revoked cookie session cannot
@@ -81,3 +80,97 @@ link. Keep request bodies and authentication query strings out of logs.
 Denied invitation issuance returns `401` without a session and `403` for a
 refused origin or account policy. A wrong, expired, or spent invitation
 returns the same `400` response.
+
+## Staff impersonation storage
+
+Use the PostgreSQL adapter with the vendor-neutral impersonation service.
+Pass the primary PostgreSQL pool and an application policy that checks the
+actor's permission for the specified action, tenant, and target.
+
+```ts
+import { createImpersonation } from "@dads-framework/identity/impersonation";
+import { createPostgresImpersonationStore } from "@dads-framework/identity-better-auth/impersonation-store";
+
+const impersonation = createImpersonation({
+  ...createPostgresImpersonationStore(postgres.pool),
+  identity,
+  authorize: accountPolicy.authorizeImpersonation,
+  lifetimeMs: 5 * 60_000,
+});
+```
+
+Apply `20261120070700_staff_impersonation.migration.ts` for this repository.
+In an adopting application, call `installStaffImpersonationSchemaV1` from a
+migration through the same package subpath. The adapter adds a durable audit
+row in the same PostgreSQL statement as each successful grant creation or
+removal. A failure rolls back both writes. Every accepted use also requires a
+durable audit row. Audit entries contain account IDs and grant IDs. The
+server-side session ID is stored only with the grant.
+
+Mount application-owned impersonation routes and explicitly allow the
+operations that accept an impersonation grant. The underlying Better Auth
+session remains the authenticated staff session. See the
+[staff impersonation service guide](../identity/src/impersonation/README.md)
+for the start, use, stop, and revoke contracts.
+
+## Enterprise SSO
+
+A trusted deployment administrator supplies one or more tenant providers via
+`createEnterpriseBetterAuthIdentity(options, providers)`. Keep the provider
+configuration and OIDC client secrets on the server. Use a different
+`sso-` provider ID for each connection and a unique exact email domain.
+Providers belonging to one tenant must have the same mode.
+
+Call `enterpriseSsoDomainChallenge(options.secret, tenantId, domain)` and
+publish its returned TXT name and value in the domain's DNS. The factory
+checks the TXT record during startup. Leave the record published across
+restarts and regenerate it when rotating the identity secret. The
+provider catalog is deployment configuration. The HTTP handler exposes no
+provider registration or mutation routes.
+
+Apply `installIdentityEnterpriseSsoSchema` after the base identity migration
+when using enterprise SSO. Apply `installIdentitySigningKeyMetadataSchema`
+on all deployments using this adapter version, including existing
+password-only deployments.
+
+### Connect and test a provider
+
+1. Start with mode `optional`. For OIDC, configure a confidential client,
+   registered issuer, authorization, token, and JWKS URLs. Use
+   `/api/auth/sso/callback` on the application origin as the redirect URI.
+   The provider must support PKCE and supply `email`, boolean
+   `email_verified`, and an immutable subject in the signed ID token.
+2. For SAML, configure the IdP entity ID, Redirect binding sign-in URL,
+   signing certificate, and the email attribute when it differs from
+   `email`. Register the SP using
+   `GET /api/auth/sso/saml2/sp/metadata?providerId=<id>`.
+   The metadata describes the application entity ID and ACS at
+   `POST /api/auth/sso/saml2/sp/acs/<id>`. Configure signed responses with
+   an immutable NameID, recipient, audience, and validity conditions.
+3. From the application origin, send `POST /api/auth/sign-in/sso` with
+   `{ providerId, callbackURL }` and navigate that browser to the returned
+   `url`. Use a same-origin application callback. On return, verify
+   `readEnterpriseSession(headers, tenantId)` and confirm the account and
+   provider. Try a user outside the configured domain before enabling
+   required mode.
+
+A first SSO sign-in can provision a verified identity. If the email matches
+an already verified local identity in the provider's domain, the transaction
+binds the provider subject to that account. A later sign-in must match the
+subject and verified email. The adapter does not store IdP tokens. Treat
+the issuer, client ID or SAML certificate, tenant, domain, and provider ID
+as the authority boundary. Rebinding an existing identity to changed
+provider authority requires a controlled account migration with reviewed
+credential changes. A deployment changing the authority invalidates
+sessions minted under the previous binding.
+
+For tenant routes, call `readTenantSession(headers, tenantId)` before
+authorizing tenant membership. Required mode enforces that tenant's SSO
+session, and password sessions for a required domain cannot authenticate
+or mint identity JWTs. SSO does not assign tenant membership.
+
+For reauthentication, initiate a new SSO round trip and call
+`readEnterpriseSession(headers, tenantId, maxAgeMs)`. Compare its account
+ID with the original actor for the sensitive action. Freshness measures
+the completion of an application SSO flow. Configure IdP policy to
+require a new credential prompt or MFA when that assurance is needed.

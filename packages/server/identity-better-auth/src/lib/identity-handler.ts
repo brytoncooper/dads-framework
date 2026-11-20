@@ -17,6 +17,10 @@ const VENDOR_POST = new Set([
 const VENDOR_GET = new Set(["/verify-email", "/jwks", "/token"]);
 
 type BetterAuth = ReturnType<typeof configureBetterAuth>;
+type EnterpriseRoutes = (
+  request: Request,
+  route: string,
+) => Promise<Response | undefined>;
 type AccountInvitations = ReturnType<typeof createAccountInvitations>;
 
 export function createIdentityHandler(
@@ -24,12 +28,12 @@ export function createIdentityHandler(
   invitations: AccountInvitations,
   origin: string,
   readSession: Identity["readSession"],
+  enterpriseRoutes?: EnterpriseRoutes,
 ): Identity["handle"] {
   return async (request) => {
     const path = routeOf(request);
-    if (path === "GET /get-session") {
-      return json(await readSession(request.headers), 200);
-    }
+    if (path === "GET /get-session")
+      return sessionResponse(readSession, request.headers);
     if (path === "POST /invite" || path === "POST /accept-invitation") {
       return invitationResponse(
         request,
@@ -39,11 +43,47 @@ export function createIdentityHandler(
         readSession,
       );
     }
-    if (path === null || !isVendorPath(request.method, path)) {
+    if (path === null) return json({ error: "not-found" }, 404);
+    if (enterpriseRoutes !== undefined) {
+      const enterprise = await enterpriseResponse(
+        request,
+        path,
+        enterpriseRoutes,
+        readSession,
+      );
+      if (enterprise !== undefined) return enterprise;
+    }
+    if (!isVendorPath(request.method, path)) {
       return json({ error: "not-found" }, 404);
     }
     return vendorResponse(await vendor.handler(request), path);
   };
+}
+
+async function sessionResponse(
+  readSession: Identity["readSession"],
+  headers: Headers,
+): Promise<Response> {
+  const session = await readSession(headers);
+  return json(
+    session === null
+      ? null
+      : { account: session.account, expiresAt: session.expiresAt },
+    200,
+  );
+}
+
+async function enterpriseResponse(
+  request: Request,
+  path: string,
+  routes: EnterpriseRoutes,
+  readSession: Identity["readSession"],
+): Promise<Response | undefined> {
+  const enterprise = await routes(request, path);
+  if (enterprise !== undefined) return vendorResponse(enterprise, path);
+  if (path === "GET /token" && (await readSession(request.headers)) === null)
+    return json({ error: "unauthorized" }, 401);
+  return undefined;
 }
 
 function routeOf(request: Request): string | null {

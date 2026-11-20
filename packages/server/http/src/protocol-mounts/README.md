@@ -18,8 +18,10 @@ await app.register(
 );
 ```
 
-Send a request to `/example` on the running app to receive `Ready`. Keep the
-prefix literal so the host can inspect the mount.
+Send a GET or POST request to `/example/status` on the running app to receive `Ready`. Keep the
+prefix literal so the host can inspect the mount. Use the `methods` option for
+protocols that need additional verbs. Explicit method lists also control whether
+HEAD is forwarded.
 
 ## Why this is its own project, nested inside the kit it belongs to
 

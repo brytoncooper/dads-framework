@@ -3,7 +3,10 @@ import { composeApi, type Plugin } from "@dads-framework/plugin";
 
 import { starterAccess } from "../../assembly/model.js";
 import type { ServiceProvider } from "../../assembly/services.js";
-import { tenantsPlugin } from "../../domains/tenants/index.js";
+import {
+  tenantAuditExportPlugin,
+  tenantsPlugin,
+} from "../../domains/tenants/index.js";
 // dad:add imports
 
 const staffWorkers: readonly Plugin<
@@ -22,6 +25,7 @@ export function staffApp(provider: ServiceProvider) {
     services: [provider, starterAccess],
     routes: [
       tenantsPlugin,
+      tenantAuditExportPlugin,
       // dad:add domains
     ],
     jobs: staffWorkers,

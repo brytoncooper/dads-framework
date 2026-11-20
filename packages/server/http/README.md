@@ -210,6 +210,16 @@ model and a fake lookup port to `buildTestApp`.
 
 Set `currentTraceId` and `requestTrace` on `createHttpApp` to correlate request records and annotate the active request span. The observer receives the request ID and the audit actor kind.
 
+## Feature state previews
+
+When a host configures `featureState.preview`, the resolver receives the
+preview ID, authenticated subject, effective subject, and feature-state
+context. By default the context comes from a request header. The host verifies the effective identity and context before
+returning a preview. Set `featureState.contextFromRequest` to derive context
+from the request URL instead of the caller’s header. Preview responses are private and non-cacheable. A
+resolver may return a `scopeKey` for its feature evaluator to match against
+the context being evaluated.
+
 ## What it refuses to do
 
 Application code supplies identity, access policies, and business handlers. The HTTP kit enforces the declared route boundary and owns transport.

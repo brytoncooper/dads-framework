@@ -1,10 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { membershipFact } from "./membership-facts.js";
 import type { TenantId } from "./tenant-access.js";
-import { tenantInvitation, tenantMembership } from "./tenant-tables.js";
+import { lockScimAccountBinding } from "./tenant-scim-membership.js";
+import {
+  tenantInvitation,
+  tenantMembership,
+  tenantMembershipKey,
+} from "./tenant-tables.js";
 import {
   accountSubject,
   checkTenantPermission,
@@ -140,12 +145,7 @@ export class TenantInvitations {
     const [member] = await tx
       .select({ accountId: tenantMembership.accountId })
       .from(tenantMembership)
-      .where(
-        and(
-          eq(tenantMembership.tenantId, tenantId),
-          eq(tenantMembership.accountId, accountId),
-        ),
-      )
+      .where(tenantMembershipKey(tenantId, accountId))
       .for("share");
     if (member === undefined) throw new TenantInvitationUnavailableError();
   }
@@ -155,6 +155,10 @@ export class TenantInvitations {
     tenantId: TenantId,
     accountId: string,
   ): Promise<void> {
+    const scimBinding = await lockScimAccountBinding(tx, tenantId, accountId);
+    if (scimBinding?.active === false) {
+      throw new TenantInvitationUnavailableError();
+    }
     const [added] = await tx
       .insert(tenantMembership)
       .values({ tenantId, accountId, role: "member" })

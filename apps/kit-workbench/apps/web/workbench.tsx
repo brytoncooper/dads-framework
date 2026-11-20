@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@dads-framework/ui/elements";
+import { Button, Card, CardContent } from "@dads-framework/ui/elements";
 import { useEffect, useState } from "react";
 import {
   listTenants,
@@ -10,6 +10,7 @@ import {
   type WorkbenchCopyKey,
 } from "./copy/workbench-copy.js";
 import { Notes } from "./notes.js";
+import { PermissionsDashboard } from "./permissions-dashboard.js";
 import { AcceptInvitation, WorkspacePicker } from "./workspace-controls.js";
 
 type WorkbenchProps = {
@@ -23,6 +24,7 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
   const [selected, setSelected] = useState<Tenant["id"]>();
   const [loadError, setLoadError] = useState<WorkbenchCopyKey>();
   const [reload, setReload] = useState(0);
+  const [view, setView] = useState<"notes" | "permissions">("notes");
   const tenant =
     tenants?.find((entry) => entry.id === selected) ?? tenants?.[0];
 
@@ -76,7 +78,36 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
         />
       </aside>
       {tenant ? (
-        <Notes key={tenant.id} tenant={tenant} />
+        <div className="workspace-content">
+          <nav
+            className="workspace-views"
+            aria-label={t("workbench.permissions.navigation")}
+          >
+            <Button
+              variant={view === "notes" ? "default" : "outline"}
+              aria-pressed={view === "notes"}
+              onClick={() => {
+                setView("notes");
+              }}
+            >
+              {t("workbench.permissions.notes")}
+            </Button>
+            <Button
+              variant={view === "permissions" ? "default" : "outline"}
+              aria-pressed={view === "permissions"}
+              onClick={() => {
+                setView("permissions");
+              }}
+            >
+              {t("workbench.permissions.title")}
+            </Button>
+          </nav>
+          {view === "notes" ? (
+            <Notes key={tenant.id} tenant={tenant} />
+          ) : (
+            <PermissionsDashboard key={tenant.id} tenant={tenant} />
+          )}
+        </div>
       ) : (
         <Card className="empty-workspace">
           <CardContent>

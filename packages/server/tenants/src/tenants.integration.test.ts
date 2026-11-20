@@ -194,9 +194,28 @@ describe("two tenants on Postgres", () => {
       tenants.memberships.roster(guest.id, project.id),
     ).resolves.toHaveLength(2);
     await expect(
+      tenants.memberships.permissions("pat", project.id, guest.id),
+    ).resolves.toEqual({
+      role: "admin",
+      view: true,
+      manageMembers: true,
+      manageTenant: false,
+    });
+    await expect(
+      tenants.memberships.permissions(guest.id, project.id, "pat"),
+    ).resolves.toEqual({
+      role: "owner",
+      view: true,
+      manageMembers: true,
+      manageTenant: true,
+    });
+    await expect(
       tenants.memberships.removeMember(guest.id, project.id, "pat"),
     ).rejects.toBeInstanceOf(TenantUnavailableError);
     await tenants.memberships.removeMember("pat", project.id, guest.id);
+    await expect(
+      tenants.memberships.permissions("pat", project.id, guest.id),
+    ).rejects.toBeInstanceOf(TenantUnavailableError);
     await expect(tenants.list(guest.id)).resolves.toEqual([]);
     await expect(tenants.context(guest.id, project.id)).rejects.toBeInstanceOf(
       TenantUnavailableError,

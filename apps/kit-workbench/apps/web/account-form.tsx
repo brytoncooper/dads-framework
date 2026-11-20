@@ -4,6 +4,7 @@ import { Input, Label } from "@dads-framework/ui/forms";
 import { useState } from "react";
 import { field, useAction } from "./actions.js";
 import { signIn, signUp, type Account } from "./auth-client.js";
+import { EnterpriseSignInForm } from "./enterprise-sign-in-form.js";
 
 type AccountFormProps = {
   readonly onSignIn: (account: Account) => void;
@@ -104,6 +105,7 @@ export function AccountForm({ onSignIn, hasInvitation }: AccountFormProps) {
             ? t("workbench.auth.existing")
             : t("workbench.auth.createTitle")}
         </Button>
+        {!creating && <EnterpriseSignInForm />}
       </CardContent>
     </Card>
   );

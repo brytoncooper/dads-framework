@@ -669,6 +669,7 @@
       "kind": "binding",
       "published": false,
       "allowedDependencies": [
+        "@dads-framework/identity",
         "@dads-framework/access",
         "@dads-framework/postgres",
         "drizzle-orm",
@@ -695,6 +696,8 @@
       "kind": "adapter",
       "published": false,
       "allowedDependencies": [
+        "@better-auth/core",
+        "@better-auth/sso",
         "@dads-framework/identity",
         "better-auth",
         "kysely",

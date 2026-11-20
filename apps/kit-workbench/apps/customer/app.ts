@@ -6,7 +6,10 @@ import {
   notesAttachmentWorker,
   notesPlugin,
 } from "../../domains/notes/index.js";
-import { tenantsPlugin } from "../../domains/tenants/index.js";
+import {
+  tenantPermissionsPlugin,
+  tenantsPlugin,
+} from "../../domains/tenants/index.js";
 // dad:add imports
 
 export function customerApp(provider: ServiceProvider) {
@@ -14,6 +17,7 @@ export function customerApp(provider: ServiceProvider) {
     services: [provider, starterAccess],
     routes: [
       tenantsPlugin,
+      tenantPermissionsPlugin,
       notesPlugin,
       // dad:add domains
     ],

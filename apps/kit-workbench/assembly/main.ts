@@ -1,8 +1,12 @@
 import { startTelemetry } from "@dads-framework/telemetry";
 import { readEnvironment } from "./config.js";
 import { developmentMail } from "./dev-mail.js";
+import { readEnterpriseConfiguration } from "./enterprise-config.js";
+import { readFeaturePreview } from "./feature-previews.js";
 
 const environment = readEnvironment(process.env);
+const enterprise = readEnterpriseConfiguration(process.env);
+const featurePreview = readFeaturePreview(process.env);
 const logMail = environment.DADS_DEV_LOG_MAIL === "1";
 if (
   logMail &&
@@ -24,6 +28,8 @@ try {
       databaseUrl: environment.DATABASE_URL,
       baseUrl: environment.baseUrl,
       secret: environment.DADS_IDENTITY_SECRET,
+      enterprise,
+      ...(featurePreview === undefined ? {} : { featurePreview }),
       preparePermissionChecks:
         environment.DADS_PREPARE_PERMISSION_CHECKS === "1",
       fileStorageDirectory: environment.DADS_FILE_STORAGE_DIR,

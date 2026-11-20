@@ -8,7 +8,12 @@ import { z } from "zod";
 
 import { migrate } from "../assembly/migrations.js";
 import { startApp } from "../assembly/start-app.js";
+import { proveAuditExport } from "./audit-export.test-support.js";
 import { proveNoteArtifacts } from "./note-artifacts.test-support.js";
+import {
+  provePermissionsAfterInvite,
+  provePermissionsBeforeInvite,
+} from "./permissions-dashboard.test-support.js";
 import type { StarterEmail } from "../libraries/app-runtime/index.js";
 
 const origin = "http://127.0.0.1:3000";
@@ -178,6 +183,26 @@ it(
             })
           ).statusCode,
         ).toBe(200);
+        const betaAccount = await provePermissionsBeforeInvite(
+          customer,
+          betaTenant,
+          beta,
+          alpha,
+          requestHeaders,
+        );
+        await provePermissionsBeforeInvite(
+          customer,
+          alphaTenant,
+          alpha,
+          beta,
+          requestHeaders,
+        );
+        const crossTenantAccount = await customer.inject({
+          method: "GET",
+          url: `/api/tenants/${alphaTenant}/members/${encodeURIComponent(betaAccount)}/permissions`,
+          headers: requestHeaders(alpha),
+        });
+        expect(crossTenantAccount.statusCode).toBe(404);
         await proveInvitation({
           customer,
           emails,
@@ -185,6 +210,21 @@ it(
           recipientCookie: beta,
           tenantId: alphaTenant,
           databaseUrl,
+        });
+        await provePermissionsAfterInvite(
+          customer,
+          alphaTenant,
+          alpha,
+          beta,
+          requestHeaders,
+        );
+        await proveAuditExport({
+          customer,
+          staff,
+          owner: requestHeaders(alpha),
+          member: requestHeaders(beta),
+          tenantId: alphaTenant,
+          otherTenantId: betaTenant,
         });
       } finally {
         await Promise.all([customer.close(), staff.close()]);

@@ -78,7 +78,9 @@ export function sseRoute(config: SseRouteConfig): RawRouteBlueprint {
         reply.hijack();
         reply.raw.writeHead(200, {
           "content-type": "text/event-stream",
-          "cache-control": "no-cache",
+          "cache-control": String(
+            reply.getHeader("cache-control") ?? "no-cache",
+          ),
           connection: "keep-alive",
         });
 

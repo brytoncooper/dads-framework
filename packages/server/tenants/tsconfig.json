@@ -6,7 +6,11 @@
     "tsBuildInfoFile": "dist/tenants.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../../access" }, { "path": "../postgres" }],
+  "references": [
+    { "path": "../../access" },
+    { "path": "../identity" },
+    { "path": "../postgres" }
+  ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

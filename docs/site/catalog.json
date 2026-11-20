@@ -93,6 +93,14 @@
       "navigationGroup": "Build a feature"
     },
     {
+      "slug": "company-access",
+      "title": "Connect a company directory",
+      "owner": "@dads-framework/identity",
+      "section": "Guides",
+      "path": "docs/site/guides/company-access.md",
+      "navigationGroup": "Build a feature"
+    },
+    {
       "slug": "flags",
       "title": "Feature flags",
       "owner": "@dads-framework/feature-flags",

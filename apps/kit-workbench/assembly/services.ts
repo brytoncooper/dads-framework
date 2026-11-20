@@ -4,8 +4,8 @@ import {
   GetEffectiveFeatureState,
   type FeatureFlagDefinition,
 } from "@dads-framework/feature-flags";
+import { readFeatureFlagPreview } from "@dads-framework/feature-flags-http";
 import { DrizzleFeatureFlagStore } from "@dads-framework/feature-flags-postgres";
-import { createBetterAuthIdentity } from "@dads-framework/identity-better-auth";
 import { definePlugin, type PluginScope } from "@dads-framework/plugin";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import {
@@ -13,7 +13,7 @@ import {
   preparePostgresChecks,
   TransactionalAccessChanges,
 } from "@dads-framework/postgres-access";
-import { Tenants } from "@dads-framework/tenants";
+import { Tenants, type TenantsOptions } from "@dads-framework/tenants";
 
 import {
   starterServices,
@@ -24,14 +24,25 @@ import {
 
 import { createLocalMail, openLocalServices } from "./local-services.js";
 import { createProtectedWrite } from "./protected-write.js";
+import { openIdentityServices } from "./identity-services.js";
+import type { FeaturePreviewConfiguration } from "./feature-previews.js";
+import type { EnterpriseConfiguration } from "./enterprise-config.js";
+import {
+  openStaffImpersonationServices,
+  type StaffImpersonationServices,
+} from "./staff-impersonation-services.js";
 
-type HostServices = StarterServices & {
-  readonly authorization: PostgresAuthorization;
-  readonly local: ReturnType<typeof openLocalServices>;
-  readonly mailJobs: ReturnType<typeof createLocalMail>["jobs"];
-};
+type HostServices = StarterServices &
+  Awaited<ReturnType<typeof openIdentityServices>> &
+  StaffImpersonationServices & {
+    readonly authorization: PostgresAuthorization;
+    readonly local: ReturnType<typeof openLocalServices>;
+    readonly mailJobs: ReturnType<typeof createLocalMail>["jobs"];
+  };
 
-export function provideServices(create: (scope: PluginScope) => HostServices) {
+export function provideServices(
+  create: (scope: PluginScope) => Promise<HostServices>,
+) {
   return definePlugin<
     "host-services",
     [],
@@ -43,7 +54,7 @@ export function provideServices(create: (scope: PluginScope) => HostServices) {
   >({
     name: "host-services",
     implements: starterServices,
-    setup: ({ scope }) => ({ provides: create(scope) }),
+    setup: async ({ scope }) => ({ provides: await create(scope) }),
   });
 }
 
@@ -53,33 +64,22 @@ export type ServiceConfiguration = {
   readonly databaseUrl: string;
   readonly baseUrl: string;
   readonly secret: string;
+  readonly enterprise?: EnterpriseConfiguration;
+  readonly featurePreview?: FeaturePreviewConfiguration;
   readonly preparePermissionChecks?: boolean;
   readonly enqueueEmail?: EnqueueStarterEmail;
   readonly fileStorageDirectory?: string;
   readonly mailSpoolDirectory?: string;
 };
 
-export function openServices(
+export async function openServices(
   scope: PluginScope,
   config: ServiceConfiguration,
   model: AccessModel,
   definitions: readonly FeatureFlagDefinition[],
+  enableStaffImpersonation = false,
 ) {
-  const connection = createPostgresConnection(
-    {
-      schema: {},
-      connectionString: config.databaseUrl,
-      auditActorSource: currentAuditActor,
-    },
-    {
-      error: (_fault, message) => {
-        process.stderr.write(
-          `${message ?? "Could not close the database connection."}\n`,
-        );
-      },
-    },
-  );
-  scope.onDispose(connection.close);
+  const connection = openDatabase(scope, config.databaseUrl);
   const local = openLocalServices(scope, config, connection.drizzle);
   const mail =
     config.mailSpoolDirectory === undefined
@@ -99,19 +99,24 @@ export function openServices(
       ? preparePostgresChecks(connection.pool)
       : connection.pool,
   });
-  const tenants = new Tenants({
+  const tenantOptions: TenantsOptions = {
     database: connection.drizzle,
     access: tenantAccess,
     authorizationAt: (tx) => authorization.inDrizzleTransaction(tx),
     changes: new TransactionalAccessChanges(authorization, connection.drizzle),
-  });
-  const identity = createBetterAuthIdentity({
-    database: connection,
-    baseUrl: config.baseUrl,
-    secret: config.secret,
-    enqueueEmail,
-    canInvite: () => Promise.resolve(false),
-  });
+  };
+  const tenants = new Tenants(tenantOptions);
+  const identity = await openIdentityServices(
+    {
+      database: connection,
+      baseUrl: config.baseUrl,
+      secret: config.secret,
+      enqueueEmail,
+      canInvite: () => Promise.resolve(false),
+    },
+    config.enterprise,
+    tenantOptions,
+  );
   return {
     db: connection.drizzle,
     local,
@@ -123,7 +128,15 @@ export function openServices(
       authorization,
     ),
     tenants,
-    identity,
+    ...identity,
+    ...(enableStaffImpersonation
+      ? openStaffImpersonationServices(
+          connection.pool,
+          config,
+          identity,
+          tenants,
+        )
+      : { staffImpersonation: undefined }),
     invitationOrigin: new URL(config.baseUrl).origin,
     enqueueTenantInvitation: tenantInvitationMailer(
       config.baseUrl,
@@ -133,8 +146,25 @@ export function openServices(
     flags: new GetEffectiveFeatureState(
       definitions,
       new DrizzleFeatureFlagStore(connection.drizzle),
+      readFeatureFlagPreview,
     ),
   };
+}
+
+function openDatabase(scope: PluginScope, connectionString: string) {
+  const connection = createPostgresConnection(
+    { schema: {}, connectionString, auditActorSource: currentAuditActor },
+    {
+      error: (_fault, message) => {
+        process.stderr.write(
+          `${message ?? "Could not close the database connection."}
+`,
+        );
+      },
+    },
+  );
+  scope.onDispose(connection.close);
+  return connection;
 }
 
 function tenantInvitationMailer(

@@ -1,12 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
+import { inspectMemberPermissions } from "./membership-permissions.js";
 import { membershipFact } from "./membership-facts.js";
 import {
   assignableTenantRoleSchema,
   type TenantId,
   type TenantRole,
 } from "./tenant-access.js";
-import { tenantMembership } from "./tenant-tables.js";
+import { tenantMembership, tenantMembershipKey } from "./tenant-tables.js";
 import {
   accountSubject,
   checkTenantPermission,
@@ -44,6 +45,11 @@ export class TenantMemberships {
     });
   }
 
+  /** Read the selected member's effective permissions for this tenant. */
+  permissions(actorId: string, tenantId: TenantId, accountId: string) {
+    return inspectMemberPermissions(this.options, actorId, tenantId, accountId);
+  }
+
   /** Owners may assign admin or member roles. The creating owner remains an owner. */
   changeRole(
     actorId: string,
@@ -66,7 +72,7 @@ export class TenantMemberships {
         ))
       )
         throw new TenantUnavailableError();
-      const match = memberKey(tenantId, target.id);
+      const match = tenantMembershipKey(tenantId, target.id);
       const [member] = await tx
         .select()
         .from(tenantMembership)
@@ -117,7 +123,7 @@ export class TenantMemberships {
         "manage_members",
       );
       if (!canManage) throw new TenantUnavailableError();
-      const match = memberKey(tenantId, target.id);
+      const match = tenantMembershipKey(tenantId, target.id);
       const [member] = await tx
         .select()
         .from(tenantMembership)
@@ -152,11 +158,4 @@ export class TenantMemberships {
       );
     });
   }
-}
-
-function memberKey(tenantId: TenantId, accountId: string) {
-  return and(
-    eq(tenantMembership.tenantId, tenantId),
-    eq(tenantMembership.accountId, accountId),
-  );
 }

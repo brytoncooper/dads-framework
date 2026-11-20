@@ -5,7 +5,10 @@ import { FeatureFlagEvaluator } from "./feature-flag-evaluator.js";
 import { UpdateFeatureFlags } from "./mutations/update-feature-flags.js";
 import type { FeatureFlagStore } from "./ports/feature-flag-store.js";
 import type { TenantDirectory } from "./ports/tenant-directory.js";
-import { GetEffectiveFeatureState } from "./queries/get-effective-feature-state.js";
+import {
+  type FeatureFlagPreviewReader,
+  GetEffectiveFeatureState,
+} from "./queries/get-effective-feature-state.js";
 import { GetPublicFeatureState } from "./queries/get-public-feature-state.js";
 import { ListFeatureFlagHistory } from "./queries/list-feature-flag-history.js";
 import { ListFeatureFlagManagement } from "./queries/list-feature-flag-management.js";
@@ -19,6 +22,7 @@ export type FeatureFlagsDeps = {
    * one is a reviewed code change, never a runtime setting.
    */
   readonly publicSlugs?: readonly string[];
+  readonly readPreview?: FeatureFlagPreviewReader;
   readonly store: FeatureFlagStore;
   readonly tenants: TenantDirectory;
   readonly clock: Clock;
@@ -42,7 +46,11 @@ export type FeatureFlags = {
 /** Wires code-owned definitions to stored audience state. Definitions are never stored. */
 export function composeFeatureFlags(deps: FeatureFlagsDeps): FeatureFlags {
   assertSlugsDefinedOnce(deps.definitions);
-  const effective = new GetEffectiveFeatureState(deps.definitions, deps.store);
+  const effective = new GetEffectiveFeatureState(
+    deps.definitions,
+    deps.store,
+    deps.readPreview,
+  );
   return {
     management: new ListFeatureFlagManagement(
       deps.definitions,
@@ -67,6 +75,7 @@ export function composeFeatureFlags(deps: FeatureFlagsDeps): FeatureFlags {
       new GetEffectiveFeatureState(
         deps.definitions,
         new ReadStatesOnceFeatureFlagStore(deps.store),
+        deps.readPreview,
       ),
     ),
   };

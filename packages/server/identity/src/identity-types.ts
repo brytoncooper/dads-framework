@@ -7,6 +7,8 @@ export type IdentityAccount = {
 
 export type IdentitySession = {
   readonly account: IdentityAccount;
+  /** Stable server-side session identifier. Never a session credential. */
+  readonly sessionId?: string;
   readonly expiresAt: Date;
 };
 

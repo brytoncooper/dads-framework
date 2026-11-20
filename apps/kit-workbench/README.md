@@ -20,6 +20,26 @@ To invite someone, open **Invite a collaborator** and enter their email. Run
 `npm run dev:mail` again to find the invitation link. The invitee can open it,
 sign up or sign in with that verified email, then select **Accept invitation**.
 
+Open **Permissions** for the active workspace and select a member by account ID.
+The dashboard shows the member's role and checks whether they can view the
+workspace, manage members, or manage workspace settings. Owners and admins can
+inspect members of workspaces where they have membership management permission.
+
+With enterprise SSO configured, expand **Sign in with company SSO** on the
+sign-in form. Enter the provider ID supplied by your workspace administrator.
+The browser returns to the workbench after your identity provider completes
+sign-in.
+
+Workspace owners can download audit metadata from the staff API at
+`GET /api/tenants/{tenantId}/audit-log/export`. Send an authenticated session
+cookie. The response is an NDJSON attachment with up to 100 rows by default.
+Pass `pageSize` between 1 and 500 and follow the `Link` header with `rel="next"`
+to resume. The endpoint rechecks the tenant permission for each page.
+
+Approved staff can use a short-lived grant to inspect a tenant through a
+member's view permission. The [staff impersonation setup](./DEPLOY.md#staff-support-impersonation)
+defines who can issue and revoke grants and where to review attempts.
+
 ## Run against your own database
 
 For API development with an existing test database, set the browser origin

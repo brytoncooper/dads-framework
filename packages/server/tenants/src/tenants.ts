@@ -6,6 +6,7 @@ import { membershipFact } from "./membership-facts.js";
 import { tenantIdSchema, type TenantId } from "./tenant-access.js";
 import { TenantInvitations } from "./tenant-invitations.js";
 import { TenantMemberships } from "./tenant-memberships.js";
+import { bindTenantScimUser } from "./tenant-scim-membership.js";
 import { tenantMembership, tenantTable } from "./tenant-tables.js";
 import {
   accountSubject,
@@ -99,6 +100,22 @@ export class Tenants {
         auditScope: { kind: "application", values: { tenant_id: tenantId } },
       };
     });
+  }
+
+  /** Link a verified local account mapping supplied by the application. */
+  bindScimUser(
+    actorId: string,
+    tenantId: TenantId,
+    userId: string,
+    accountId: string,
+  ): Promise<void> {
+    return bindTenantScimUser(
+      this.options,
+      actorId,
+      tenantId,
+      userId,
+      accountId,
+    );
   }
 
   rename(

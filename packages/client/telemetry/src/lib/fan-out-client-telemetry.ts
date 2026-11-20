@@ -17,7 +17,7 @@ import {
   ClientTelemetry,
   type TelemetryBreadcrumb,
   type TelemetryContext,
-} from "@dads-framework/client-telemetry-core";
+} from "../core/index.js";
 
 export class FanOutClientTelemetry extends ClientTelemetry {
   readonly #destinations: readonly ClientTelemetry[];

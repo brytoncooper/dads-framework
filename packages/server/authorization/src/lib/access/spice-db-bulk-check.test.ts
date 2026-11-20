@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { measureWork } from "@dads-framework/request-work";
+import { measureWork } from "@dads-framework/runtime/request-work";
 
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 

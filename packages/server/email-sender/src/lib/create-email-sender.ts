@@ -1,6 +1,6 @@
 import { CaptureEmailSender } from "./capture-email-sender.js";
 import type { CapturedMailbox } from "./captured-mailbox.js";
-import type { EmailSender } from "@dads-framework/email-sender-core";
+import type { EmailSender } from "../core/index.js";
 import { LogEmailSender } from "./log-email-sender.js";
 import {
   MailgunEmailSender,

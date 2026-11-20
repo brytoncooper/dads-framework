@@ -12,6 +12,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 
+import { consolidatedPackageProof } from "./consolidated-package-proof.mjs";
+
 const requestedPackage = process.argv[2];
 if (!requestedPackage) {
   throw new Error("Expected a workspace package name.");
@@ -63,7 +65,8 @@ try {
     [
       "--input-type=module",
       "--eval",
-      `await import(${JSON.stringify(requestedPackage)})`,
+      consolidatedPackageProof(requestedPackage) ??
+        `await import(${JSON.stringify(requestedPackage)})`,
     ],
     { cwd: fixtureRoot, stdio: "inherit" },
   );

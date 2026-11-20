@@ -13,8 +13,8 @@ import { describe, expect, it } from "vitest";
 import {
   answeringEachQuestionOnce,
   countAuthorizationReadFreshness,
-} from "@dads-framework/request-work";
-import { measureRequestWork } from "@dads-framework/request-work/testing";
+} from "@dads-framework/runtime/request-work";
+import { measureRequestWork } from "@dads-framework/runtime/request-work/testing";
 
 import { AnswerOnceAuthorization } from "@dads-framework/access/runtime";
 import { relationshipWrite } from "@dads-framework/access/runtime";

@@ -7,10 +7,6 @@ A job parses its payload and calls one mutation — business logic never lives
 here. Each application owns a stable queue name. Set worker concurrency and
 Redis history bounds explicitly.
 
-The package re-exports job definitions and the queue contract from
-[`@dads-framework/job-queue-core`](../job-queue-core/README.md). The shared
-provider suite runs against the in-memory fake and the Redis-backed driver.
-
 ## Try it
 
 In a project using Node.js 22 or later, install the example dependencies.
@@ -61,6 +57,28 @@ The starter creates the in-process queue and closes it when the service scope is
 
 ## Use it
 
-In an application, register its job definitions before `start()`, then
-enqueue work by registered name. Choose `bullmq` and supply `redisUrl` when
-jobs must survive a process restart.
+Import `defineJob` and `JobQueue` from `@dads-framework/job-queue/core` in
+features that declare jobs or accept a queue. The main entry point also
+exports these contracts and provides `createJobQueue` for application wiring.
+
+Install `bullmq@^5.79.3`, choose the `bullmq` driver, and supply `redisUrl`
+when jobs must survive a process restart. The driver loads BullMQ on its
+first Redis operation.
+
+In tests, import `FakeJobQueue` from `@dads-framework/job-queue/testing`.
+Call `runEnqueued()` to run recorded jobs. Custom drivers can use
+`JobRegistry` from `@dads-framework/job-queue/core/provider` and verify
+their contract with `jobQueueConformance` from
+`@dads-framework/job-queue/core/testing`.
+
+## What it refuses to do
+
+The in-process driver keeps jobs and schedules in memory. Persistence and
+retries require the BullMQ driver.
+
+## Contract
+
+Register job definitions before `start()`. Job names and schedule IDs
+must be unique. Enqueue work by registered name. Queue inspection returns
+job and schedule metadata and counts. `createJobQueue` throws for an empty
+queue name or a BullMQ configuration without a Redis URL.

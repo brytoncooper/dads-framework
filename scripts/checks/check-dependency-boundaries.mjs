@@ -4,6 +4,11 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import {
+  bindingScopes,
+  scopedImportProblem,
+} from "./binding-dependency-scopes.mjs";
+
 /**
  * Package boundaries, in three gates over one declaration.
  *
@@ -49,11 +54,18 @@ export function checkDependencyBoundaries(world) {
     [...manifests.values()].map((entry) => entry.manifest.name),
   );
 
+  const bindings = new Map(
+    packages.flatMap((declared) => {
+      const manifest = manifests.get(declared.name)?.manifest;
+      if (manifest?.dadsBindings === undefined) return [];
+      return [[manifest.name, bindingScopes(manifest, declared, world)]];
+    }),
+  );
   const violations = [];
   const skippedSurfaces = [];
   for (const declared of packages) {
     const allowed = new Set(declared.allowedDependencies ?? []);
-    violations.push(...checkImports(declared, allowed, world));
+    violations.push(...checkImports(declared, allowed, world, bindings));
 
     const entry = manifests.get(declared.name);
     if (entry === undefined) continue;
@@ -70,13 +82,27 @@ export function checkDependencyBoundaries(world) {
 }
 
 /** Every production source file of a package reaches only allowed packages. */
-function checkImports(declared, allowed, world) {
+function checkImports(declared, allowed, world, bindings) {
   const violations = [];
   for (const file of world.listFiles(`${declared.root}/src`)) {
     if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
     for (const dependency of readModuleSpecifiers(world.read(file), file)) {
-      if (isLocalSpecifier(dependency)) continue;
       const name = packageOf(dependency);
+      const scopedProblem = scopedImportProblem({
+        file,
+        specifier: dependency,
+        owner: declared.name,
+        module: name,
+        bindings,
+        kind: declared.kind,
+      });
+      if (scopedProblem !== undefined) {
+        violations.push(
+          violation(GATES.imports, declared, file, name, scopedProblem),
+        );
+        continue;
+      }
+      if (isLocalSpecifier(dependency)) continue;
       if (allowed.has(name)) continue;
       violations.push(
         violation(GATES.imports, declared, file, name, `imports "${name}"`),
@@ -90,7 +116,11 @@ function checkImports(declared, allowed, world) {
 function checkDeclaredDependencies(declared, allowed, entry, workspaceNames) {
   const violations = [];
   const installed = new Set();
-  for (const field of ["dependencies", "peerDependencies"]) {
+  for (const field of [
+    "dependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ]) {
     for (const name of Object.keys(entry.manifest[field] ?? {})) {
       installed.add(name);
       if (allowed.has(name)) continue;
@@ -113,7 +143,7 @@ function checkDeclaredDependencies(declared, allowed, entry, workspaceNames) {
         declared,
         entry.path,
         name,
-        `allows "${name}" but does not declare it in dependencies or peerDependencies`,
+        `allows "${name}" but does not declare it in dependencies, optionalDependencies, or peerDependencies`,
       ),
     );
   }
@@ -185,7 +215,7 @@ function surfaceFiles(root, manifest) {
 
 /**
  * Every module specifier a file names: `import`, `export … from`, and the
- * `import("…")` type nodes the TypeScript emitter writes into a `.d.ts`.
+ * dynamic imports, and `import("…")` types in emitted declarations.
  */
 function readModuleSpecifiers(source, path) {
   const parsed = ts.createSourceFile(
@@ -210,6 +240,14 @@ function readModuleSpecifiers(source, path) {
       ts.isStringLiteral(node.argument.literal)
     ) {
       specifiers.add(node.argument.literal.text);
+    }
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments[0] !== undefined &&
+      ts.isStringLiteralLike(node.arguments[0])
+    ) {
+      specifiers.add(node.arguments[0].text);
     }
     ts.forEachChild(node, visit);
   };

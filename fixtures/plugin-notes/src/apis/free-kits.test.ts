@@ -18,10 +18,14 @@ import {
   FixedClock,
   InMemoryFeatureFlagStore,
 } from "@dads-framework/feature-flags/testing";
-import { createFeatureFlagRoutesPlugin } from "@dads-framework/feature-flags-http";
-import { featureFlagsPostgresSchema } from "@dads-framework/feature-flags-postgres";
+import { createFeatureFlagRoutesPlugin } from "@dads-framework/feature-flags/http";
+import { featureFlagsPostgresSchema } from "@dads-framework/feature-flags/postgres";
 import { buildTestApp } from "@dads-framework/http/testing";
 import { discoverDomainMigrations } from "@dads-framework/migrations";
+import {
+  defaultMigrationWorkspace,
+  listShippedDatabaseMigrations,
+} from "@dads-framework/migrations/journal-status";
 import { composeApi, providePlugin } from "@dads-framework/plugin";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { expect, it, vi } from "vitest";
@@ -117,12 +121,25 @@ it("declares the free kits once and lets hosts select their routes and jobs", as
 it("feeds declared audit policy and original migration files to the host", async () => {
   const api = composeApi("maintenance", { services, routes: [], jobs: [] });
   const root = join(import.meta.dirname, "..", "..", "..", "..");
-  const migrations = await discoverDomainMigrations({
-    workspace: { root, sources: api.migrationSources(root), moduleAliases: {} },
-  });
+  const workspace = {
+    root,
+    sources: api.migrationSources(root),
+    moduleAliases: {},
+  };
+  const migrations = await discoverDomainMigrations({ workspace });
   expect(new Set(migrations.map(({ owner }) => owner))).toEqual(
     new Set(["audit", "feature-flags-postgres"]),
   );
+  const packaged = (await listShippedDatabaseMigrations(workspace))
+    .filter(({ owner }) => owner === "feature-flags-postgres")
+    .map(({ journalName, sha256 }) => ({ journalName, sha256 }));
+  const historical = (
+    await listShippedDatabaseMigrations(defaultMigrationWorkspace(root))
+  )
+    .filter(({ owner }) => owner === "feature-flags-postgres")
+    .map(({ journalName, sha256 }) => ({ journalName, sha256 }));
+  expect(packaged).toHaveLength(1);
+  expect(packaged).toEqual(historical);
   expect(api.untrackedAuditTables).toContain("short_lived_tokens");
   const sql = vi.fn<(statement: string) => void>();
   configurePluginAuditTriggers({ sql }, api, { notes: { keyColumns: ["id"] } });

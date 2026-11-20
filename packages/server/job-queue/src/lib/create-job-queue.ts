@@ -1,7 +1,7 @@
-import type { DiagnosticsReporter } from "@dads-framework/diagnostics";
+import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
 import { BullMqJobQueue } from "./bullmq-job-queue.js";
 import { InProcessJobQueue } from "./in-process-job-queue.js";
-import type { JobLog, JobQueue } from "@dads-framework/job-queue-core";
+import type { JobLog, JobQueue } from "../core/index.js";
 
 export type CreateJobQueueOptions = {
   /** Stable application namespace; different applications use different queues. */

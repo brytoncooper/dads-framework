@@ -4,7 +4,12 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"],
     "jsx": "react-jsx",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@dads-framework/feature-flags-postgres": [
+        "./apps/kit-workbench/migrations/support/feature-flags.ts"
+      ]
+    }
   },
   "include": [
     "packages/**/*.ts",

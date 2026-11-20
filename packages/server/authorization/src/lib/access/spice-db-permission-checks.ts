@@ -1,6 +1,6 @@
 import { v1 } from "@authzed/authzed-node";
 
-import { noteAuthorizationWarning } from "@dads-framework/request-work";
+import { noteAuthorizationWarning } from "@dads-framework/runtime/request-work";
 
 import type {
   PermissionCheckOutcome,

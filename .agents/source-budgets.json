@@ -47,10 +47,6 @@
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
-      "@dads-framework/clock": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
       "@dads-framework/contract": {
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
@@ -71,10 +67,6 @@
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
-      "@dads-framework/diagnostics": {
-        "floor": 1,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
       "@dads-framework/email-delivery": {
         "floor": 1,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
@@ -92,10 +84,6 @@
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
       "@dads-framework/event-bus": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/health": {
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
@@ -127,19 +115,15 @@
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
-      "@dads-framework/request-work": {
+      "@dads-framework/runtime": {
         "floor": 1,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+        "reason": "preserves diagnostics and request-work invariants under the consolidated runtime package (recorded 2026-11-20)"
       },
       "@dads-framework/styles": {
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
       "@dads-framework/testing": {
-        "floor": 1,
-        "reason": "recorded 2026-09-06"
-      },
-      "@dads-framework/testing-import-nx": {
         "floor": 1,
         "reason": "recorded 2026-09-06"
       },

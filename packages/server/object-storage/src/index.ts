@@ -4,7 +4,7 @@ export {
   type SignedUpload,
   type SignedUploadRequest,
   type StoredObject,
-} from "@dads-framework/object-storage-core";
+} from "./core.js";
 export {
   S3ObjectStorage,
   type S3ObjectStorageOptions,

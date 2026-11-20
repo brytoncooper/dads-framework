@@ -16,7 +16,7 @@ export type FeatureFlagHistoryPage = {
 
 /**
  * Where audience state and its history are kept. Absorbs the storage engine:
- * `@dads-framework/feature-flags-postgres` is one, the testing fake another.
+ * `@dads-framework/feature-flags/postgres` is one, the testing fake another.
  * Its one write is all or nothing.
  */
 export abstract class FeatureFlagStore {

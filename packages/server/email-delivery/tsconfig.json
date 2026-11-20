@@ -8,19 +8,19 @@
   },
   "references": [
     {
-      "path": "../clock"
+      "path": "../runtime"
     },
     {
       "path": "../../contract"
     },
     {
-      "path": "../email-sender-core"
+      "path": "../email-sender"
     },
     {
       "path": "../errors"
     },
     {
-      "path": "../job-queue-core"
+      "path": "../job-queue"
     },
     {
       "path": "../postgres"

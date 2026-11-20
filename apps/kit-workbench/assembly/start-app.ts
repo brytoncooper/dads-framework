@@ -1,8 +1,8 @@
 import { accessModel } from "@dads-framework/access";
 import { anonymousActor } from "@dads-framework/audit-actor";
-import { createHealthRoutes } from "@dads-framework/health";
 import { sql } from "drizzle-orm";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
+import { createHealthRoutes } from "@dads-framework/http/health";
 import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
 import { IDENTITY_PATH } from "@dads-framework/identity-better-auth";
 import type { TelemetryRuntime } from "@dads-framework/telemetry";

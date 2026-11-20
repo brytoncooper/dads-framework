@@ -11,7 +11,7 @@
       "path": "../audit-actor"
     },
     {
-      "path": "../request-work"
+      "path": "../runtime"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

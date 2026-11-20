@@ -8,7 +8,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { describeJobs } from "@dads-framework/job-queue-core";
+import { describeJobs } from "@dads-framework/job-queue/core";
 
 import { createDeliverOutboundEmailJob } from "./deliver-outbound-email.job.js";
 import { EMAIL_DELIVER_JOB, EMAIL_SWEEP_JOB } from "./email-job-names.js";

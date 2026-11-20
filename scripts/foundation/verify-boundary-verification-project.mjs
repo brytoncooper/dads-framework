@@ -124,7 +124,9 @@ export function createBoundaryProject({
           !source.endsWith("/authorization-explanation-schema.js") &&
           (statSync(source).isDirectory() || source.endsWith(".js")),
       });
-      git(["init"]);
+      // Keep fixture setup commits off refs/heads/main, which verification
+      // captures as history evidence and includes in receipt identity.
+      git(["init", "--initial-branch=boundary-proof"]);
       git(["config", "user.email", "boundary-verification@example.test"]);
       git(["config", "user.name", "Boundary Verification"]);
       git(["add", "--all", "--force"]);

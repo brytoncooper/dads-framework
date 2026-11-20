@@ -12,9 +12,6 @@
       "path": "../request-transport"
     },
     {
-      "path": "../telemetry-core"
-    },
-    {
       "path": "../../contract"
     }
   ],

@@ -26,7 +26,7 @@ import {
   ClientTelemetry,
   type TelemetryBreadcrumb,
   type TelemetryContext,
-} from "@dads-framework/client-telemetry-core";
+} from "../core/index.js";
 import {
   sentryConfiguration,
   type SentryConfiguration,

@@ -11,7 +11,7 @@
  * `ObjectStorage` stays the seam for bytes the API itself holds.
  */
 
-import type { SignedUpload } from "@dads-framework/object-storage-core";
+import type { SignedUpload } from "../core.js";
 
 /** One open multipart upload: the server-chosen key and the bucket's upload id. */
 export type MultipartUploadRef = {

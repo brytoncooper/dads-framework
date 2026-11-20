@@ -13,7 +13,7 @@ import {
   ClientTelemetry,
   type TelemetryBreadcrumb,
   type TelemetryContext,
-} from "@dads-framework/client-telemetry-core";
+} from "../core/index.js";
 import { FanOutClientTelemetry } from "./fan-out-client-telemetry.js";
 
 class RecordingTelemetry extends ClientTelemetry {

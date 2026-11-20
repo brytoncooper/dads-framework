@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { jobQueueConformance } from "@dads-framework/job-queue-core/testing";
+import { jobQueueConformance } from "../core/lib/testing/job-queue-conformance.js";
 import {
   RedisContainer,
   type StartedRedisContainer,
@@ -13,11 +13,7 @@ import {
 } from "@dads-framework/audit-actor";
 
 import { BullMqJobQueue } from "./bullmq-job-queue.js";
-import {
-  cronSchedule,
-  defineJob,
-  intervalSchedule,
-} from "@dads-framework/job-queue-core";
+import { cronSchedule, defineJob, intervalSchedule } from "../core/index.js";
 
 /** Real Redis via Testcontainers — proves the driver, not just the seam. */
 describe("BullMqJobQueue (integration)", () => {

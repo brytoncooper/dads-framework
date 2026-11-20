@@ -11,7 +11,7 @@ import {
 } from "./create-object-storage.js";
 import { DiskObjectStorage } from "./disk-object-storage.js";
 import { InMemoryDirectTransferStorage } from "./in-memory-direct-transfer-storage.js";
-import { InMemoryObjectStorage } from "@dads-framework/object-storage-core";
+import { InMemoryObjectStorage } from "../core.js";
 
 const DISK_OPTIONS: CreateObjectStorageOptions = {
   driver: "disk",

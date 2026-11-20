@@ -79,7 +79,7 @@ export async function installGeneratedProject(
     collectPackageClosure(packageName, context.packages, packageNames);
   }
   manifest.overrides = buildInternalDependencyOverrides(
-    requestedPackages,
+    packageNames,
     context.packages,
     context.tarballs,
   );

@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "dist/email-sender.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../email-sender-core" }],
+  "references": [],
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

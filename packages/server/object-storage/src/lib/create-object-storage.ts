@@ -2,10 +2,7 @@ import {
   DiskObjectStorage,
   type DiskObjectStorageOptions,
 } from "./disk-object-storage.js";
-import {
-  InMemoryObjectStorage,
-  type ObjectStorage,
-} from "@dads-framework/object-storage-core";
+import { InMemoryObjectStorage, type ObjectStorage } from "../core.js";
 import {
   S3ObjectStorage,
   type S3ObjectStorageOptions,

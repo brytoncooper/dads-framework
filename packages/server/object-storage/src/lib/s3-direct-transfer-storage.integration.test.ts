@@ -1,4 +1,4 @@
-import { objectStorageConformance } from "@dads-framework/object-storage-core/testing";
+import { objectStorageConformance } from "../testing.js";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { createHash } from "node:crypto";
 import {

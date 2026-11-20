@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
+import { FakeEmailSender } from "@dads-framework/email-sender/core/testing";
 
 import { FakeOutboundEmailStore } from "../testing/fake-outbound-email-store.js";
 import { DeliverOutboundEmail } from "./deliver-outbound-email.mutation.js";

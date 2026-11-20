@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "dist/object-storage.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../object-storage-core" }],
+  "references": [],
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": [
     "src/**/*.test.ts",

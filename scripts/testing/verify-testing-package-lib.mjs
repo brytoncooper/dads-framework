@@ -1,7 +1,7 @@
 /**
  * Packing phase of the testing package proof: turn the two source packages
  * into tarballs and prove the tarballs carry exactly what a consumer is
- * promised — no `src/`, no `native/`, no Nx, no stray dependency.
+ * promised — no source tree, embedded executable, or dependency on Nx.
  *
  * `verify-testing-package.mjs` owns the run; this module owns the packing and
  * the file-shape rules, plus the two small file readers both phases share.
@@ -117,11 +117,14 @@ export function verifyPackedContents(
   nativePackageName,
 ) {
   const files = packed.files;
-  const forbidden = files.filter(
-    (file) =>
-      /(^|\/)(src|native|target|node_modules)(\/|$)/.test(file) ||
-      /(^|\/)nx(\/|$)/i.test(file),
-  );
+  const forbidden = files.filter((file) => {
+    if (/(^|\/)(src|native|target|node_modules)(\/|$)/.test(file)) return true;
+    if (!/(^|\/)nx(\/|$)/i.test(file)) return false;
+    return (
+      label !== "facade" ||
+      (!file.startsWith("dist/nx/") && file !== "nx/README.md")
+    );
+  });
   if (forbidden.length > 0)
     throw new Error(
       `${label} package leaks forbidden source/runtime paths: ${forbidden.join(", ")}.`,
@@ -130,24 +133,29 @@ export function verifyPackedContents(
     throw new Error(`${label} package is missing package.json or README.md.`);
   }
   if (label === "facade") {
-    if (
-      !files.includes("bin/dad-test.js") ||
-      !files.some((file) => file.startsWith("dist/"))
-    ) {
-      throw new Error(
-        "Facade package is missing its CLI or built dist output.",
-      );
+    const requiredFiles = [
+      "bin/dad-test.js",
+      "bin/dad-test-import-nx.js",
+      "bin/dad-test-nx.js",
+      "dist/index.js",
+      "dist/nx/index.js",
+      "dist/nx/index.d.ts",
+      "nx/README.md",
+    ];
+    for (const file of requiredFiles) {
+      if (!files.includes(file))
+        throw new Error(`Testing package does not contain ${file}.`);
     }
-    if (
-      manifest.dependencies?.nx !== undefined ||
-      manifest.devDependencies?.nx !== undefined
-    ) {
-      throw new Error(
-        "Facade package carries Nx as a runtime or development dependency.",
-      );
+    for (const field of [
+      "dependencies",
+      "devDependencies",
+      "peerDependencies",
+      "optionalDependencies",
+    ]) {
+      if (manifest[field]?.nx !== undefined) {
+        throw new Error(`Testing package declares Nx in ${field}.`);
+      }
     }
-    if (files.some((file) => file.startsWith("native/")))
-      throw new Error("Facade package embeds native artifacts.");
   } else {
     const expectedBinary =
       process.platform === "win32" ? "bin/dad-test.exe" : "bin/dad-test";

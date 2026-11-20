@@ -5,6 +5,68 @@ updating dependencies. Keep the starter's first-party Dads packages on the
 same release version and review the manifest and lockfile diff. Save a
 passing `npm run verify` result before the upgrade so you can compare failures.
 
+## Move from 0.2 to 0.3
+
+Update your direct Dads dependencies together. The table lists package names
+without their common `@dads-framework/` prefix. In `package.json`, install the
+package before the first subpath slash. In source files, import the full path
+shown on the right.
+
+| 0.2 package                                    | 0.3 import                                                                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `email-sender-core`                            | `email-sender/core` and `email-sender/core/testing`                                                              |
+| `object-storage-core`                          | `object-storage/core` and `object-storage/testing`                                                               |
+| `job-queue-core`                               | `job-queue/core`, `job-queue/core/testing` and `job-queue/core/provider`                                         |
+| `feature-flags-http`, `feature-flags-postgres` | `feature-flags/http`, `feature-flags/postgres`                                                                   |
+| `health`                                       | `http/health`                                                                                                    |
+| `testing-import-nx`                            | `testing/nx`. The `dad-test-nx` and `dad-test-import-nx` executables ship with `testing`.                        |
+| `telemetry-core`, `client-telemetry-core`      | `telemetry/core`, `client-telemetry/core`. Use each package's `/testing` entry point for its test helpers.       |
+| `clock`, `request-work`, `diagnostics`         | `runtime/clock`, `runtime/request-work`, `runtime/diagnostics`. The latter two retain their `/testing` subpaths. |
+
+For example, replace an `@dads-framework/email-sender-core` dependency with
+`@dads-framework/email-sender` and import your port from
+`@dads-framework/email-sender/core`. Remove the old dependency after updating
+its imports. A package version bump alone leaves those imports pointing at
+the 0.2 contracts.
+
+Check the drivers your app enables. Declare their optional peers directly
+in your app so a clean production install includes them. For example, add
+`resend` for the Resend driver, `bullmq` for the Redis queue, or
+`@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` for S3 and signed
+URLs. The package READMEs list driver setup for [storage](../../../packages/server/object-storage/README.md),
+[jobs](../../../packages/server/job-queue/README.md), [flags](../../../packages/server/feature-flags/README.md)
+and [telemetry](../../../packages/server/telemetry/README.md). Run `npm install`,
+review the lockfile, and exercise each configured driver.
+
+### Preserve the starter migration
+
+If your generated starter migration imports
+`@dads-framework/feature-flags-postgres`, keep the migration file exactly as
+deployed. Add `migrations/support/feature-flags.ts` with this export.
+
+<!-- dads:excerpt {"path": "apps/kit-workbench/migrations/support/feature-flags.ts", "language": "ts", "from": "export { installFeatureFlagSchemaV1 } from \"@dads-framework/feature-flags/postgres\";", "through": "export { installFeatureFlagSchemaV1 } from \"@dads-framework/feature-flags/postgres\";"} -->
+
+Add the following entry to `workspace.moduleAliases` in
+`assembly/migrations.ts` so the runner can replay the original file on an
+empty database.
+
+<!-- dads:excerpt {"path": "apps/kit-workbench/assembly/migrations.ts", "language": "ts", "from": "      moduleAliases: {", "through": "          \"migrations/support/feature-flags.ts\","} -->
+
+Add the following entry to `compilerOptions.paths` in `tsconfig.json` so
+TypeScript follows the same mapping.
+
+```json
+{
+  "@dads-framework/feature-flags-postgres": [
+    "./migrations/support/feature-flags.ts"
+  ]
+}
+```
+
+For a custom migration that imports other symbols from the old package, add
+those exports to the support module as well. Test the upgrade against both
+an empty database and one with the original migration already applied.
+
 ## Check contracts and consumers
 
 In the reference Workbench, the list-workspaces route declares

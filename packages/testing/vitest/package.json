@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/testing-vitest",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -16,7 +16,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/path-aliases": "0.2.0"
+    "@dads-framework/path-aliases": "0.3.0"
   },
   "peerDependencies": {
     "vite": ">=6 <9"

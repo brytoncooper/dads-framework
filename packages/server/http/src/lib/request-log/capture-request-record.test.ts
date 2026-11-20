@@ -17,8 +17,8 @@ import { permissionToken } from "@dads-framework/access";
 import { requires } from "../route/route-guards.test-support.js";
 import { anonymousActor, type AuditActor } from "@dads-framework/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { FakeDiagnosticsReporter } from "@dads-framework/diagnostics/testing";
-import { noteAuthorizationWarning } from "@dads-framework/request-work";
+import { FakeDiagnosticsReporter } from "@dads-framework/runtime/diagnostics/testing";
+import { noteAuthorizationWarning } from "@dads-framework/runtime/request-work";
 
 import { createHttpApp } from "../create-http-app.js";
 import type {

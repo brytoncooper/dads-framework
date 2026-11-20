@@ -3,10 +3,11 @@ import {
   mkdirSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { collectPackageClosure, tarballFor } from "./adoption-packing.mjs";
 import { buildInternalDependencyOverrides } from "./generated-project-installation.mjs";
 import { readJson, runCreator } from "./verify-generated-project-workspace.mjs";
@@ -54,14 +55,14 @@ export async function lockGeneratedProject(transcript, projectRoot, context) {
     ...manifest.dependencies,
     ...manifest.devDependencies,
   }).filter((name) => context.packages.has(name));
-  manifest.overrides = buildInternalDependencyOverrides(
-    direct,
-    context.packages,
-    context.tarballs,
-  );
   const closure = [];
   for (const name of direct)
     collectPackageClosure(name, context.packages, closure);
+  manifest.overrides = buildInternalDependencyOverrides(
+    closure,
+    context.packages,
+    context.tarballs,
+  );
   for (const name of closure) {
     const section =
       manifest.devDependencies?.[name] === undefined
@@ -84,6 +85,19 @@ export async function lockGeneratedProject(transcript, projectRoot, context) {
       cwd: projectRoot,
     },
   );
+  const lock = readJson(join(projectRoot, "package-lock.json"));
+  for (const [name, specifier] of Object.entries(manifest.overrides)) {
+    const resolved = lock.packages?.[`node_modules/${name}`]?.resolved;
+    if (
+      !resolved?.startsWith("file:") ||
+      realpathSync(resolve(projectRoot, resolved.slice(5))) !==
+        realpathSync(specifier.slice(5))
+    ) {
+      throw new Error(
+        `The generated lock did not use the packed tarball for ${name}.`,
+      );
+    }
+  }
 }
 
 export async function verifyExistingProjectSafety({

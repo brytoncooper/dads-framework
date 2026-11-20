@@ -144,3 +144,39 @@ describe("the kind matrix", () => {
     ).toThrow(/declares kind "library"/u);
   });
 });
+
+it("checks a public optional binding under its own kind", async () => {
+  const path = "packages/flags/package.json";
+  const manifest = JSON.stringify({
+    exports: {
+      "./postgres": {
+        types: "./dist/postgres/index.d.ts",
+        default: "./dist/postgres/index.js",
+      },
+    },
+    dadsBindings: { postgres: ["postgres"] },
+    peerDependencies: { postgres: "1.0.0" },
+    peerDependenciesMeta: { postgres: { optional: true } },
+  });
+  const base = contextOver([
+    ["flags", "core", ["contract", "postgres"]],
+    ["contract", "core"],
+    ["postgres", "adapter"],
+  ]);
+  const context: DoctorContext = {
+    ...base,
+    exists: (file) =>
+      base.exists(file) ||
+      file === path ||
+      file === "packages/flags/src/postgres/index.ts",
+    read: (file) => (file === path ? manifest : base.read(file)),
+  };
+
+  const readings = await kindInversionsSignal.run(context);
+
+  expect([...readings.keys()]).toEqual([
+    "flags -> contract",
+    "flags/postgres -> postgres",
+  ]);
+  expect(readings.get("flags/postgres -> postgres")?.value).toBe(0);
+});

@@ -1,7 +1,7 @@
 import { isJsonObject } from "./logic/is-json-object.js";
-import type { Clock } from "@dads-framework/clock";
-import type { EmailSender } from "@dads-framework/email-sender-core";
-import type { JobQueue } from "@dads-framework/job-queue-core";
+import type { Clock } from "@dads-framework/runtime/clock";
+import type { EmailSender } from "@dads-framework/email-sender/core";
+import type { JobQueue } from "@dads-framework/job-queue/core";
 
 import type { OutboundEmailStore } from "./database/outbound-email-store.js";
 import type { EmailDelivery } from "./email-delivery.js";

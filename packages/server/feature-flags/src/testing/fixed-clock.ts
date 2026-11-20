@@ -1,4 +1,4 @@
-import { Clock } from "@dads-framework/clock";
+import { Clock } from "@dads-framework/runtime/clock";
 
 /** A clock that always answers the same instant. */
 export class FixedClock extends Clock {

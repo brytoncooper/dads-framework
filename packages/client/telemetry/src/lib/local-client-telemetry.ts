@@ -32,7 +32,7 @@ import {
   ClientTelemetry,
   type TelemetryBreadcrumb,
   type TelemetryContext,
-} from "@dads-framework/client-telemetry-core";
+} from "../core/index.js";
 import { describeClientError } from "./logic/describe-client-error.js";
 
 /** Breadcrumbs older than this say nothing about the fault that just happened. */

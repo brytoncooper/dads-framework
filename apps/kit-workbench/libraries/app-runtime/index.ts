@@ -10,8 +10,8 @@ import type {
   IdentityEmail,
   IdentitySession,
 } from "@dads-framework/identity";
-import type { JobQueue } from "@dads-framework/job-queue-core";
-import type { ObjectStorage } from "@dads-framework/object-storage-core";
+import type { JobQueue } from "@dads-framework/job-queue/core";
+import type { ObjectStorage } from "@dads-framework/object-storage/core";
 import { defineService } from "@dads-framework/plugin";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 import {

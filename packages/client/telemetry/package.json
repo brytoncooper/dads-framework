@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/client-telemetry",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -13,6 +13,10 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
     }
   },
   "files": [
@@ -20,12 +24,19 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/client-request-transport": "0.2.0",
-    "@dads-framework/client-telemetry-core": "0.2.0",
-    "@dads-framework/contract": "0.2.0",
+    "@dads-framework/client-request-transport": "0.3.0",
+    "@dads-framework/contract": "0.3.0"
+  },
+  "peerDependencies": {
     "@sentry/react": "^10.74.0"
   },
+  "peerDependenciesMeta": {
+    "@sentry/react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@sentry/react": "^10.74.0",
     "jsdom": "~22.1.0",
     "vitest": "~4.1.0"
   },

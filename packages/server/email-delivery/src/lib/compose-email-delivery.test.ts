@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
+import { FakeEmailSender } from "@dads-framework/email-sender/core/testing";
 
 import { composeEmailDelivery } from "./compose-email-delivery.js";
 import type {

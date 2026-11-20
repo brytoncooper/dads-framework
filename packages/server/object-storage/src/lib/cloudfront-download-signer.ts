@@ -1,5 +1,6 @@
-import { getSignedUrl } from "@aws-sdk/cloudfront-signer";
 import { createPrivateKey } from "node:crypto";
+
+import { loadCloudFrontSigner } from "./load-cloudfront-signer.js";
 
 export type CloudFrontDownloadSignerOptions = {
   readonly baseUrl: string;
@@ -61,6 +62,7 @@ export class CloudFrontDownloadSigner {
       `${this.baseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`,
     );
     if (fileName !== undefined) url.searchParams.set("download", fileName);
+    const { getSignedUrl } = loadCloudFrontSigner();
     return getSignedUrl({
       url: url.href.replace(/\*/g, "%2A"),
       keyPairId: this.options.keyPairId,

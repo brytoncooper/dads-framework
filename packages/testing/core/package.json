@@ -1,23 +1,30 @@
 {
   "name": "@dads-framework/testing",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "bin": {
-    "dad-test": "./bin/dad-test.js"
+    "dad-test": "./bin/dad-test.js",
+    "dad-test-import-nx": "./bin/dad-test-import-nx.js",
+    "dad-test-nx": "./bin/dad-test-nx.js"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./nx": {
+      "types": "./dist/nx/index.d.ts",
+      "default": "./dist/nx/index.js"
     }
   },
   "files": [
     "bin",
     "dist",
-    "README.md"
+    "README.md",
+    "nx/README.md"
   ],
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
@@ -26,11 +33,11 @@
     "typecheck": "tsc -b --pretty false"
   },
   "optionalDependencies": {
-    "@dads-framework/testing-native-darwin-arm64": "0.2.0",
-    "@dads-framework/testing-native-darwin-x64": "0.2.0",
-    "@dads-framework/testing-native-linux-arm64-gnu": "0.2.0",
-    "@dads-framework/testing-native-linux-x64-gnu": "0.2.0",
-    "@dads-framework/testing-native-win32-x64": "0.2.0"
+    "@dads-framework/testing-native-darwin-arm64": "0.3.0",
+    "@dads-framework/testing-native-darwin-x64": "0.3.0",
+    "@dads-framework/testing-native-linux-arm64-gnu": "0.3.0",
+    "@dads-framework/testing-native-linux-x64-gnu": "0.3.0",
+    "@dads-framework/testing-native-win32-x64": "0.3.0"
   },
   "license": "MIT",
   "author": "Bryton Cooper",

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { access, mkdir } from "node:fs/promises";
 import { PostgresRequestLogSink } from "@dads-framework/audit";
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import { createDiagnosticsReporter } from "@dads-framework/diagnostics";
+import { createDiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
 import { createJobQueue } from "@dads-framework/job-queue";
 import { createObjectStorage } from "@dads-framework/object-storage";
 import type { PluginScope } from "@dads-framework/plugin";

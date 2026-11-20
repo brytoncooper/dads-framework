@@ -9,8 +9,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import type { Clock } from "@dads-framework/clock";
-import { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
+import type { Clock } from "@dads-framework/runtime/clock";
+import { FakeEmailSender } from "@dads-framework/email-sender/core/testing";
 
 import type { EmailEnvelope } from "../email-envelope.js";
 import type {

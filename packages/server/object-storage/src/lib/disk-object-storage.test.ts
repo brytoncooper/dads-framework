@@ -1,4 +1,4 @@
-import { objectStorageConformance } from "@dads-framework/object-storage-core/testing";
+import { objectStorageConformance } from "./object-storage-conformance.js";
 /**
  * What: the disk driver keeps each object as a file under its root, by the
  * same key the cloud uses, whole or not at all, and hands out signed,
@@ -37,6 +37,7 @@ import {
   recordingLog,
   root,
   storage,
+  storageOptions,
   prepareDiskObjectStorageFixture,
   removeDiskObjectStorageFixture,
 } from "./disk-object-storage.test-support.js";
@@ -67,7 +68,7 @@ afterEach(removeDiskObjectStorageFixture);
 
 describe("DiskObjectStorage", () => {
   it.each(objectStorageConformance)("$name", async ({ run }) => {
-    await run(storage());
+    await run(new DiskObjectStorage(storageOptions()));
   });
 
   it("round-trips an object with its content type, under <root>/objects/<key>", async () => {

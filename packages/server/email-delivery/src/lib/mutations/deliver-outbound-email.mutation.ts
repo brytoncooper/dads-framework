@@ -1,5 +1,5 @@
-import type { Clock } from "@dads-framework/clock";
-import type { EmailSender } from "@dads-framework/email-sender-core";
+import type { Clock } from "@dads-framework/runtime/clock";
+import type { EmailSender } from "@dads-framework/email-sender/core";
 import { ok, type Result } from "@dads-framework/errors";
 
 import type {

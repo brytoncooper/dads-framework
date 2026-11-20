@@ -9,7 +9,7 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { Clock } from "@dads-framework/clock";
+import type { Clock } from "@dads-framework/runtime/clock";
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
 import { FakeOutboundEmailStore } from "../testing/fake-outbound-email-store.js";

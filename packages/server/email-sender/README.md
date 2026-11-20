@@ -100,8 +100,12 @@ or verification email owns the message content.
 | `log`         | `LogEmailSender`        | No     | `null`               | Default. Records `email.logged` and **withholds** the address and body.                                 |
 | `log-verbose` | `VerboseLogEmailSender` | No     | `null`               | A developer's own machine. Renders the whole email into the logs.                                       |
 | `capture`     | `CaptureEmailSender`    | No     | the `mail-N` id      | Development. The application can inspect captured messages in memory.                                   |
-| `resend`      | `ResendEmailSender`     | Yes    | Resend's message id  | Real delivery. Requires `RESEND_API_KEY`.                                                               |
+| `resend`      | `ResendEmailSender`     | Yes    | Resend's message id  | Real delivery. Requires the `resend` SDK and `RESEND_API_KEY`.                                          |
 | `mailgun`     | `MailgunEmailSender`    | Yes    | Mailgun's message id | Real delivery. Requires `MAILGUN_API_KEY` + `MAILGUN_DOMAIN`; `MAILGUN_REGION` picks the US or EU host. |
+
+Install the optional SDK with `npm install resend@^6.17.2` when using the Resend
+driver. The sender loads the SDK on its first send. If the SDK is missing,
+that send rejects with the install command.
 
 Attachment BYTES stop at the two non-sending drivers: `capture` and
 `log-verbose` keep each attachment's filename, content type and size, never its
@@ -144,7 +148,43 @@ the envelope translation lives in the pure `logic/build-mailgun-form.ts`, and
 `fetch` is injected so the tests read the exact request rather than a vendor's
 mock.
 
-The sender and message contracts live in
-[`@dads-framework/email-sender-core`](../email-sender-core/README.md).
-Resend and Mailgun run the shared sender tests with in-memory transport
-responses.
+## What it refuses to do
+
+The `log` driver withholds addresses and message bodies to protect recipients
+and one-time tokens. Keep the `capture` and `log-verbose` drivers in
+development environments.
+
+## Contract
+
+Import the sender and message contracts from
+`@dads-framework/email-sender/core` when implementing or accepting a sender.
+Import the capturing fake and conformance cases from
+`@dads-framework/email-sender/core/testing`. Both entry points work without the
+Resend SDK. Resend and Mailgun run the shared sender tests with in-memory
+transport responses.
+
+After installing the dependencies from [Try it](#try-it), save this as
+`example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import type { EmailSender } from "@dads-framework/email-sender/core";
+import { FakeEmailSender } from "@dads-framework/email-sender/core/testing";
+
+async function notify(sender: EmailSender) {
+  return sender.send({
+    to: [{ address: "customer@example.com" }],
+    subject: "Order ready",
+    text: "Order 1042 is ready for pickup.",
+  });
+}
+
+const sender = new FakeEmailSender();
+const receipt = await notify(sender);
+console.log(receipt.providerMessageId, sender.sent[0]?.subject);
+```
+
+The script prints `fake-1 Order ready`. In a test, inspect `sent` for the message your feature submitted.
+
+The starter implements the `EmailSender` contract with a local spool that writes each message to a JSON file. [`apps/kit-workbench/assembly/local-mail.ts`](../../../apps/kit-workbench/assembly/local-mail.ts)

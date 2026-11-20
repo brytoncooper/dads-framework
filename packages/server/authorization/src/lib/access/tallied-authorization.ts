@@ -12,7 +12,7 @@
  * forwards, so behaviour is unchanged in every case.
  */
 
-import { chargeAuthorizationCheck } from "@dads-framework/request-work";
+import { chargeAuthorizationCheck } from "@dads-framework/runtime/request-work";
 
 import {
   Authorization,

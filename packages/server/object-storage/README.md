@@ -12,9 +12,15 @@ path-only and HMAC-signed with a key the box makes (`loadOrCreateDiskSigningKey`
 server-chosen multipart uploads, presigned part and attachment-download URLs,
 and the reads that verify a finished upload.
 
-The package re-exports the capability and in-memory implementation from
-[`@dads-framework/object-storage-core`](../object-storage-core/README.md).
-The core's conformance suite also runs against the disk and S3 implementations.
+Use `@dads-framework/object-storage/core` to import the storage capability
+and its in-memory implementation. Use the package root to select the memory,
+disk, or S3 driver with `createObjectStorage`. The `/testing` export
+provides the provider conformance suite.
+
+## What it refuses to do
+
+The disk driver rejects invalid object keys and refuses writes that would
+put the volume below its configured free-space floor.
 
 ## Try it
 
@@ -68,6 +74,10 @@ file reads and writes.
 
 The starter selects a memory or disk object store at composition time. [`apps/kit-workbench/assembly/local-services.ts`](../../../apps/kit-workbench/assembly/local-services.ts)
 
+For an in-memory store, import `InMemoryObjectStorage` from
+`@dads-framework/object-storage/core` and construct it without options.
+Objects live in the current process.
+
 ## Choose a storage path
 
 Use `ObjectStorage.put` and `get` for server-owned bytes. For browser uploads,
@@ -75,7 +85,25 @@ create a signed upload with the required size, content type, and checksum.
 Send the browser the returned URL and headers, then verify the stored object
 before associating it with an application record.
 
+The memory and disk drivers require no AWS SDK packages. Install the
+optional SDKs when configuring an S3-compatible driver.
+
+```sh
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+```
+
+Install `@aws-sdk/client-s3` for S3 requests and
+`@aws-sdk/s3-request-presigner` for S3 URL signing. The SDKs load when an
+operation needs them. If a required package is missing, the operation
+reports which package to install.
+
 ## Download delivery
+
+Install `@aws-sdk/cloudfront-signer` when configuring CloudFront signing.
+
+```sh
+npm install @aws-sdk/cloudfront-signer
+```
 
 S3 options can carry one `CloudFrontDownloadSigner`, shared by
 `getSignedUrl` and `presignAttachmentDownload`. Its deployment-owned HTTPS base
@@ -89,3 +117,10 @@ Without the download signer, local MinIO and staged AWS environments retain S3
 GET signatures. Browser download buttons navigate to attachment links; they do
 not fetch the file into application memory. Before switching a deployment to the signer, configure CloudFront routing
 and trusted public keys.
+
+## Provider contract
+
+Import `objectStorageConformance` from
+`@dads-framework/object-storage/testing` to check exact bytes and content type,
+prefix isolation, idempotent deletion, and signed-upload headers. The suite runs
+against the memory, disk, and S3 implementations.

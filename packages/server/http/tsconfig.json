@@ -18,13 +18,10 @@
       "path": "../../contract"
     },
     {
-      "path": "../diagnostics"
+      "path": "../runtime"
     },
     {
       "path": "../errors"
-    },
-    {
-      "path": "../request-work"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

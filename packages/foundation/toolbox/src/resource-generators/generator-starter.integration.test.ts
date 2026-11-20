@@ -72,6 +72,7 @@ it(
       ]);
       const tests = runTool(scratch, "vitest/vitest.mjs", [
         "run",
+        "--reporter=verbose",
         "domains",
         "tests",
       ]);

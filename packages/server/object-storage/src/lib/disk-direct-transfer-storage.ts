@@ -25,7 +25,7 @@ import {
   isValidKey,
 } from "./disk-object-storage.js";
 import type { SignedPartUploadQuery } from "./disk-part-links.js";
-import type { SignedUpload } from "@dads-framework/object-storage-core";
+import type { SignedUpload } from "../core.js";
 
 /** One part a browser PUT to a signed part link, as the disk now holds it. */
 export type ReceivedPart = {

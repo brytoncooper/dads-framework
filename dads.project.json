@@ -23,7 +23,7 @@
     {
       "name": "@dads-framework/testing",
       "root": "packages/testing/core",
-      "responsibility": "Bootstraps, plans, runs, and explains conservative declared verification tasks through a native JSON boundary.",
+      "responsibility": "Bootstraps, plans, runs, and explains declared verification tasks through a native JSON boundary. Its Nx adapter imports recipes and adapts live targets.",
       "kind": "core",
       "published": false,
       "allowedDependencies": [
@@ -77,16 +77,6 @@
         "dads-testing-store"
       ],
       "verification": ["cargo test -p dad-test"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/testing-import-nx",
-      "root": "packages/testing/import-nx",
-      "responsibility": "Imports standalone Nx recipes and adapts live Nx verification targets without adding Nx to the testing facade runtime.",
-      "kind": "adapter",
-      "published": false,
-      "allowedDependencies": ["@dads-framework/testing"],
-      "verification": ["npm test -w @dads-framework/testing-import-nx"],
       "skills": ["dads-orient"]
     },
     {
@@ -330,23 +320,13 @@
       "skills": ["dads-orient"]
     },
     {
-      "name": "@dads-framework/clock",
-      "root": "packages/server/clock",
-      "responsibility": "The `Clock` abstract class and its system implementation. Anything that",
+      "name": "@dads-framework/runtime",
+      "root": "packages/server/runtime",
+      "responsibility": "Provides the clock, request work accounting, and diagnostic sinks used across server kits.",
       "kind": "core",
       "published": false,
       "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/clock"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/telemetry-core",
-      "root": "packages/server/telemetry-core",
-      "responsibility": "Defines safe request trace attribution and its in-memory conformance recorder.",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/telemetry-core"],
+      "verification": ["npm test -w @dads-framework/runtime"],
       "skills": ["dads-orient"]
     },
     {
@@ -356,7 +336,6 @@
       "kind": "adapter",
       "published": false,
       "allowedDependencies": [
-        "@dads-framework/telemetry-core",
         "@opentelemetry/api",
         "@opentelemetry/exporter-trace-otlp-proto",
         "@opentelemetry/instrumentation",
@@ -372,16 +351,15 @@
     {
       "name": "@dads-framework/http",
       "root": "packages/server/http",
-      "responsibility": "The one way routes exist. You should be able to ship an endpoint from this",
+      "responsibility": "Defines HTTP routes and assembles liveness and readiness probes over application-provided checks.",
       "kind": "adapter",
       "published": false,
       "allowedDependencies": [
         "@dads-framework/access",
         "@dads-framework/audit-actor",
         "@dads-framework/contract",
-        "@dads-framework/diagnostics",
         "@dads-framework/errors",
-        "@dads-framework/request-work",
+        "@dads-framework/runtime",
         "@fastify/cors",
         "fastify",
         "pino",
@@ -399,7 +377,7 @@
       "published": false,
       "allowedDependencies": [
         "@dads-framework/audit-actor",
-        "@dads-framework/request-work",
+        "@dads-framework/runtime",
         "@testcontainers/postgresql",
         "drizzle-orm",
         "pg",
@@ -425,7 +403,7 @@
     {
       "name": "@dads-framework/authorization",
       "root": "packages/server/authorization",
-      "responsibility": "Binds SpiceDB enforcement and snapshots, plus PostgreSQL outbox and catalog operations.",
+      "responsibility": "SpiceDB checks and snapshots, Postgres outbox and catalog.",
       "kind": "binding",
       "published": false,
       "allowedDependencies": [
@@ -433,9 +411,9 @@
         "@dads-framework/access",
         "@dads-framework/contract",
         "@dads-framework/errors",
-        "@dads-framework/job-queue-core",
+        "@dads-framework/job-queue",
         "@dads-framework/postgres",
-        "@dads-framework/request-work",
+        "@dads-framework/runtime",
         "drizzle-orm",
         "node-pg-migrate",
         "testcontainers",
@@ -482,36 +460,6 @@
       "skills": ["dads-orient"]
     },
     {
-      "name": "@dads-framework/request-work",
-      "root": "packages/server/request-work",
-      "responsibility": "Per-request work accounting: how many database statements and authorization",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/request-work"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/diagnostics",
-      "root": "packages/server/diagnostics",
-      "responsibility": "Where a server fault goes.",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/diagnostics"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/health",
-      "root": "packages/server/health",
-      "responsibility": "Assembles HTTP routes and application-provided dependency checks into liveness and readiness probes.",
-      "kind": "profile",
-      "published": false,
-      "allowedDependencies": ["@dads-framework/http", "zod"],
-      "verification": ["npm test -w @dads-framework/health"],
-      "skills": ["dads-orient"]
-    },
-    {
       "name": "@dads-framework/event-bus",
       "root": "packages/server/event-bus",
       "responsibility": "The `EventBus` seam for asynchronous cross-domain communication: domains",
@@ -529,21 +477,11 @@
       "published": false,
       "allowedDependencies": [
         "@dads-framework/audit-actor",
-        "@dads-framework/diagnostics",
-        "@dads-framework/job-queue-core",
-        "bullmq"
+        "@dads-framework/runtime",
+        "bullmq",
+        "cron-parser"
       ],
       "verification": ["npm test -w @dads-framework/job-queue"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/job-queue-core",
-      "root": "packages/server/job-queue-core",
-      "responsibility": "Owns job definitions, the queue contract, registration rules, and the in-memory stand-in and provider conformance suite.",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/job-queue-core"],
       "skills": ["dads-orient"]
     },
     {
@@ -575,20 +513,9 @@
       "allowedDependencies": [
         "@aws-sdk/client-s3",
         "@aws-sdk/cloudfront-signer",
-        "@aws-sdk/s3-request-presigner",
-        "@dads-framework/object-storage-core"
+        "@aws-sdk/s3-request-presigner"
       ],
       "verification": ["npm test -w @dads-framework/object-storage"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/object-storage-core",
-      "root": "packages/server/object-storage-core",
-      "responsibility": "Defines the object storage port, in-memory implementation and shared provider conformance suite.",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/object-storage-core"],
       "skills": ["dads-orient"]
     },
     {
@@ -597,18 +524,8 @@
       "responsibility": "Send outbound email. Callers hold one `EmailSender` and call `send()`; the",
       "kind": "adapter",
       "published": false,
-      "allowedDependencies": ["@dads-framework/email-sender-core", "resend"],
+      "allowedDependencies": ["resend"],
       "verification": ["npm test -w @dads-framework/email-sender"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/email-sender-core",
-      "root": "packages/server/email-sender-core",
-      "responsibility": "Owns email sender and message contracts and the shared in-memory stand-in and provider conformance suite.",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": [],
-      "verification": ["npm test -w @dads-framework/email-sender-core"],
       "skills": ["dads-orient"]
     },
     {
@@ -634,12 +551,12 @@
       "kind": "binding",
       "published": false,
       "allowedDependencies": [
-        "@dads-framework/clock",
         "@dads-framework/contract",
-        "@dads-framework/email-sender-core",
+        "@dads-framework/email-sender",
         "@dads-framework/errors",
-        "@dads-framework/job-queue-core",
+        "@dads-framework/job-queue",
         "@dads-framework/postgres",
+        "@dads-framework/runtime",
         "drizzle-orm",
         "node-pg-migrate",
         "zod"
@@ -666,7 +583,6 @@
       "allowedDependencies": [
         "@dads-framework/audit-actor",
         "@dads-framework/authorization",
-        "@dads-framework/clock",
         "@dads-framework/contract",
         "@dads-framework/email-delivery",
         "@dads-framework/email-templates",
@@ -674,6 +590,7 @@
         "@dads-framework/job-queue",
         "@dads-framework/plugin",
         "@dads-framework/postgres",
+        "@dads-framework/runtime",
         "drizzle-orm",
         "node-pg-migrate",
         "react",
@@ -732,50 +649,32 @@
     {
       "name": "@dads-framework/feature-flags",
       "root": "packages/server/feature-flags",
-      "responsibility": "Code-owned feature flags: definitions, per-tenant audiences (off, selected tenants, everyone), revision-checked batches with change history, and the effective allow-list for one context.",
+      "responsibility": "Defines feature flags, per-tenant audiences, revision-checked changes, and effective access. Its HTTP and PostgreSQL bindings expose and persist flag state.",
       "kind": "core",
       "published": false,
       "allowedDependencies": [
-        "@dads-framework/clock",
+        "@dads-framework/access",
         "@dads-framework/contract",
         "@dads-framework/errors",
+        "@dads-framework/http",
         "@dads-framework/plugin",
-        "@dads-framework/request-work",
+        "@dads-framework/postgres",
+        "@dads-framework/runtime",
+        "drizzle-orm",
+        "node-pg-migrate",
         "zod"
       ],
       "verification": ["npm test -w @dads-framework/feature-flags"],
       "skills": ["dads-orient"]
     },
     {
-      "name": "@dads-framework/feature-flags-postgres",
+      "name": "@dads-fixture/feature-flag-migration-history",
       "root": "packages/server/feature-flags-postgres",
-      "responsibility": "Keeps feature-flag audience state and history in Postgres: the schema migration, Drizzle tables, and the all-or-nothing batch store.",
+      "responsibility": "Preserves the 0.2 PostgreSQL feature flag migration for journal replay and verifies its packaged copy.",
       "kind": "binding",
       "published": false,
-      "allowedDependencies": [
-        "@dads-framework/contract",
-        "@dads-framework/feature-flags",
-        "@dads-framework/plugin",
-        "@dads-framework/postgres",
-        "drizzle-orm",
-        "node-pg-migrate"
-      ],
-      "verification": ["npm test -w @dads-framework/feature-flags-postgres"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/feature-flags-http",
-      "root": "packages/server/feature-flags-http",
-      "responsibility": "Serves feature flags over the HTTP kit: permission-guarded management routes, the caller's effective state, the public list, and the per-request evaluator.",
-      "kind": "binding",
-      "published": false,
-      "allowedDependencies": [
-        "@dads-framework/access",
-        "@dads-framework/feature-flags",
-        "@dads-framework/http",
-        "@dads-framework/plugin"
-      ],
-      "verification": ["npm test -w @dads-framework/feature-flags-http"],
+      "allowedDependencies": ["node-pg-migrate"],
+      "verification": ["npm test -w @dads-fixture/plugin-notes"],
       "skills": ["dads-orient"]
     },
     {
@@ -804,7 +703,7 @@
       "responsibility": "The TypeScript authoring kit for relationship-based authorization: `access()`, entity handles, combinators, and the emitter that writes committed `generated/*.zed` fragments. SpiceDB schema is generated from these definitions.",
       "kind": "core",
       "published": false,
-      "allowedDependencies": ["@dads-framework/request-work", "zod"],
+      "allowedDependencies": ["@dads-framework/runtime", "zod"],
       "verification": ["npm test -w @dads-framework/access"],
       "skills": ["dads-orient"]
     },
@@ -826,21 +725,10 @@
       "published": false,
       "allowedDependencies": [
         "@dads-framework/client-request-transport",
-        "@dads-framework/client-telemetry-core",
         "@dads-framework/contract",
         "@sentry/react"
       ],
       "verification": ["npm test -w @dads-framework/client-telemetry"],
-      "skills": ["dads-orient"]
-    },
-    {
-      "name": "@dads-framework/client-telemetry-core",
-      "root": "packages/client/telemetry-core",
-      "responsibility": "Owns the client fault reporting contract, in-memory stand-in, and shared conformance suite.",
-      "kind": "core",
-      "published": false,
-      "allowedDependencies": ["@dads-framework/contract"],
-      "verification": ["npm test -w @dads-framework/client-telemetry-core"],
       "skills": ["dads-orient"]
     },
     {
@@ -937,49 +825,46 @@
         "@dads-framework/client-feature-flags",
         "@dads-framework/client-request-transport",
         "@dads-framework/client-telemetry",
-        "@dads-framework/client-telemetry-core",
         "@dads-framework/client-xlsx",
-        "@dads-framework/clock",
         "@dads-framework/contract",
         "@dads-framework/copy",
         "@dads-framework/cross-domain-references",
         "@dads-framework/csv",
         "@dads-framework/design-tokens",
         "@dads-framework/dev",
-        "@dads-framework/diagnostics",
         "@dads-framework/email-delivery",
         "@dads-framework/email-sender",
-        "@dads-framework/email-sender-core",
         "@dads-framework/email-templates",
         "@dads-framework/errors",
         "@dads-framework/event-bus",
         "@dads-framework/feature-flags",
-        "@dads-framework/feature-flags-http",
-        "@dads-framework/feature-flags-postgres",
-        "@dads-framework/health",
         "@dads-framework/http",
         "@dads-framework/identity",
         "@dads-framework/identity-better-auth",
         "@dads-framework/job-queue",
-        "@dads-framework/job-queue-core",
         "@dads-framework/migrations",
         "@dads-framework/object-storage",
-        "@dads-framework/object-storage-core",
         "@dads-framework/path-aliases",
         "@dads-framework/pdf",
         "@dads-framework/plugin",
         "@dads-framework/postgres",
         "@dads-framework/postgres-access",
-        "@dads-framework/request-work",
+        "@dads-framework/runtime",
         "@dads-framework/styles",
         "@dads-framework/telemetry",
-        "@dads-framework/telemetry-core",
         "@dads-framework/tenants",
         "@dads-framework/testing",
-        "@dads-framework/testing-import-nx",
         "@dads-framework/testing-vitest",
         "@dads-framework/toolbox",
         "@dads-framework/ui",
+        "@opentelemetry/api",
+        "@opentelemetry/exporter-trace-otlp-proto",
+        "@opentelemetry/instrumentation",
+        "@opentelemetry/instrumentation-http",
+        "@opentelemetry/instrumentation-pg",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-node",
+        "@opentelemetry/sdk-trace",
         "drizzle-orm",
         "node-pg-migrate",
         "react",

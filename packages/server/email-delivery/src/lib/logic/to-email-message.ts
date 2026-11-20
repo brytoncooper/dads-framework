@@ -2,7 +2,7 @@ import type {
   EmailAddress,
   EmailAttachment,
   EmailMessage,
-} from "@dads-framework/email-sender-core";
+} from "@dads-framework/email-sender/core";
 
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { RenderedEmailContent } from "../email-template-port.js";

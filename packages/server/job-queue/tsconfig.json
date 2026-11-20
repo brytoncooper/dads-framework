@@ -11,10 +11,7 @@
       "path": "../audit-actor"
     },
     {
-      "path": "../diagnostics"
-    },
-    {
-      "path": "../job-queue-core"
+      "path": "../runtime"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

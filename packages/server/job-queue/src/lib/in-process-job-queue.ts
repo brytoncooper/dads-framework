@@ -1,4 +1,4 @@
-import { getNextMillis } from "bullmq";
+import cronParser from "cron-parser";
 
 import { runWithAuditActor } from "@dads-framework/audit-actor";
 
@@ -12,8 +12,8 @@ import {
   type JobQueueCounts,
   type JobQueueInspection,
   type RunningJobSchedule,
-} from "@dads-framework/job-queue-core";
-import { JobRegistry } from "@dads-framework/job-queue-core/provider";
+} from "../core/index.js";
+import { JobRegistry } from "../core/provider.js";
 
 type ScheduledTimer = {
   readonly jobName: string;
@@ -23,8 +23,8 @@ type ScheduledTimer = {
 };
 
 /**
- * Container-free driver for tests and local development. It uses BullMQ's
- * cron calculation, but is intentionally not durable and does not retry.
+ * Container-free driver for tests and local development. It schedules recurring work
+ * in memory without persistence or retries.
  */
 export class InProcessJobQueue implements JobQueue {
   private readonly registry = new JobRegistry();
@@ -183,13 +183,18 @@ function nextRunMillis(
   now: number,
   schedule: JobSchedule<unknown>,
 ): number | undefined {
-  if (schedule.kind === "cron") {
-    return getNextMillis(now, {
-      pattern: schedule.pattern,
-      tz: schedule.timeZone,
-    });
+  if (schedule.kind === "interval") {
+    return (Math.floor(now / schedule.everyMs) + 1) * schedule.everyMs;
   }
-  return getNextMillis(now, { every: schedule.everyMs });
+  const expression = cronParser.parseExpression(schedule.pattern, {
+    currentDate: new Date(now),
+    tz: schedule.timeZone,
+  });
+  try {
+    return expression.next().getTime();
+  } catch {
+    return undefined;
+  }
 }
 
 function describeRunningSchedule(

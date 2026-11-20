@@ -16,7 +16,7 @@ This local test uses an in-memory outbox, a manually drained queue, and a captur
 In a project using Node.js 22 or later, install the example dependencies.
 
 ```sh
-npm install @dads-framework/email-delivery @dads-framework/email-sender-core @dads-framework/job-queue-core zod@4
+npm install @dads-framework/email-delivery @dads-framework/email-sender @dads-framework/job-queue zod@4
 npm install -D tsx
 ```
 
@@ -32,8 +32,8 @@ import {
   type RenderEmailTemplate,
 } from "@dads-framework/email-delivery";
 import { FakeOutboundEmailStore } from "@dads-framework/email-delivery/testing";
-import { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
-import { FakeJobQueue } from "@dads-framework/job-queue-core/testing";
+import { FakeEmailSender } from "@dads-framework/email-sender/core/testing";
+import { FakeJobQueue } from "@dads-framework/job-queue/core/testing";
 import { z } from "zod";
 
 const notice: EmailTemplate = {

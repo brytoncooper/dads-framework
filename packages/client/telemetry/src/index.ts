@@ -10,7 +10,7 @@ export {
   NoneClientTelemetry,
   type TelemetryBreadcrumb,
   type TelemetryContext,
-} from "@dads-framework/client-telemetry-core";
+} from "./core/index.js";
 export {
   createClientTelemetry,
   type ClientTelemetryDriver,

@@ -1,14 +1,17 @@
 {
   "signal": "forbidden-403",
   "issue": "people-pleasing",
-  "why": "A package that declares routes carries a 403, which tells a stranger the resource exists.",
+  "why": "The application route and its delegated handler emit 403. A reachable observer only compares a status, and an independently mounted protocol emits a response outside the domain route graph.",
   "files": {
     "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
-    "fixtures/api/src/routes.ts": "const routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    response: thingResponse,\n    handler: () => readThing(),\n  }),\n];\n",
+    "fixtures/api/src/routes.ts": "import { readThing } from \"./handlers.js\";\nimport { recordStatus } from \"./audit.js\";\nconst routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    response: thingResponse,\n    handler: () => {\n      const response = readThing();\n      recordStatus(response.status);\n      return response;\n    },\n  }),\n  getRoute({\n    operation: \"getOtherThing\",\n    path: \"/other-things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    response: thingResponse,\n    handler: () => ({ status: 403 }),\n  }),\n];\n",
     "fixtures/api/src/denials.ts": "const denialProofRecorded = true;\n",
-    "fixtures/api/src/statuses.ts": "const forbidden = 403;\n"
+    "fixtures/api/src/handlers.ts": "export { readThing } from \"./read-thing.js\";\n",
+    "fixtures/api/src/read-thing.ts": "export function readThing() {\n  return { status: 403 };\n}\n",
+    "fixtures/api/src/audit.ts": "export function recordStatus(status: number) {\n  return status === 403;\n}\n",
+    "fixtures/api/src/protocol.ts": "export function handleProtocolRequest() {\n  return new Response(null, { status: 403 });\n}\n"
   },
   "expected": {
-    "@fixture/api": 1
+    "@fixture/api": 2
   }
 }

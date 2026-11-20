@@ -26,14 +26,12 @@ test("redirects http's schema edge to its packed tarball", () => {
       tarballs,
     ),
     {
-      "@dads-framework/http": {
-        "@dads-framework/contract": { ".": "file:/tmp/schema.tgz" },
-      },
+      "@dads-framework/contract": "file:/tmp/schema.tgz",
     },
   );
 });
 
-test("redirects every testing native optional edge", () => {
+test("redirects all native options when testing is both a root and a toolbox dependency", () => {
   const nativeNames = [
     "@dads-framework/testing-native-darwin-arm64",
     "@dads-framework/testing-native-darwin-x64",
@@ -42,6 +40,12 @@ test("redirects every testing native optional edge", () => {
     "@dads-framework/testing-native-win32-x64",
   ];
   const packages = new Map([
+    [
+      "@dads-framework/toolbox",
+      packageRecord("@dads-framework/toolbox", {
+        "@dads-framework/testing": "0.1.0",
+      }),
+    ],
     [
       "@dads-framework/testing",
       packageRecord(
@@ -56,20 +60,14 @@ test("redirects every testing native optional edge", () => {
     nativeNames.map((name) => [name, `/tmp/${name}.tgz`]),
   );
   const overrides = buildInternalDependencyOverrides(
-    ["@dads-framework/testing"],
+    ["@dads-framework/testing", "@dads-framework/toolbox"],
     packages,
     tarballs,
   );
 
-  assert.deepEqual(
-    Object.keys(overrides["@dads-framework/testing"]),
-    nativeNames,
-  );
+  assert.deepEqual(Object.keys(overrides), nativeNames);
   for (const name of nativeNames) {
-    assert.equal(
-      overrides["@dads-framework/testing"][name]["."],
-      `file:/tmp/${name}.tgz`,
-    );
+    assert.equal(overrides[name], `file:/tmp/${name}.tgz`);
   }
 
   assert.deepEqual(collectPackageClosure("@dads-framework/testing", packages), [
@@ -90,13 +88,10 @@ test("does not override registry dependencies or direct roots", () => {
   ]);
   const tarballs = new Map([["@dads-framework/contract", "/tmp/schema.tgz"]]);
   const overrides = buildInternalDependencyOverrides(
-    ["@dads-framework/http"],
+    ["@dads-framework/http", "@dads-framework/contract"],
     packages,
     tarballs,
   );
 
-  assert.deepEqual(Object.keys(overrides), ["@dads-framework/http"]);
-  assert.equal(overrides["@dads-framework/http"]["."], undefined);
-  assert.equal(overrides["@dads-framework/http"].zod, undefined);
-  assert.equal(overrides["@dads-framework/contract"], undefined);
+  assert.deepEqual(overrides, {});
 });

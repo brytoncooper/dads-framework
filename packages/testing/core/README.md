@@ -127,8 +127,8 @@ each reason code implies from the plan and the manifest instead.
 
 `dad-test init` refuses Nx workspaces and writes an unsuccessful coverage report
 instead of treating a few root scripts as the repository's entire task inventory.
-Use the optional `@dads-framework/testing-import-nx` live adapter (`dad-test-nx
-plan`) for those repositories.
+Use `dad-test-nx plan` for those repositories. The [Nx adapter and import guide](nx/README.md)
+covers both CLIs and the `@dads-framework/testing/nx` API.
 
 `dad-test init` writes `dads.testing.json` at the workspace root, taking
 `--manifest`, `--force`, and `--json`. It detects the package manager — npm,
@@ -203,7 +203,8 @@ tasks are an executable plus arguments; an explicit `shell: true` runs
 
 ## What it refuses to do
 
-- No Nx runtime.
+- The core API and `dad-test` run without Nx. The Nx adapter uses the target
+  workspace’s local Nx installation.
 - No test-result cache and no result reuse: every `run` executes its selected
   tasks again.
 - No daemon, no network service, no telemetry.

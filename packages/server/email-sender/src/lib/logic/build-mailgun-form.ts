@@ -1,4 +1,4 @@
-import type { EmailMessage } from "@dads-framework/email-sender-core";
+import type { EmailMessage } from "../../core/index.js";
 import { formatEmailAddress } from "./format-email-address.js";
 
 /**

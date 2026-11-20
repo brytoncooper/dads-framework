@@ -1,4 +1,4 @@
-import type { Clock } from "@dads-framework/clock";
+import type { Clock } from "@dads-framework/runtime/clock";
 import { ok, type Result } from "@dads-framework/errors";
 
 import type { OutboundEmailStore } from "../database/outbound-email-store.js";

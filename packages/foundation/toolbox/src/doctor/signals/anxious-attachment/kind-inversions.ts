@@ -28,6 +28,8 @@ import type {
   SignalReadings,
 } from "../../doctor-signal.js";
 
+import { readSourceBindings } from "../scanners/source-bindings.js";
+
 const PROJECT_FILE = "dads.project.json";
 
 const ALLOWED_TARGET_KINDS = new Map<string, readonly string[]>([
@@ -75,18 +77,47 @@ function countForbiddenEdges(context: DoctorContext): SignalReadings {
   const kinds = readKinds(packages);
   const readings = new Map<string, SignalReading>();
   for (const declared of packages) {
-    const allowed = ALLOWED_TARGET_KINDS.get(kinds.get(declared.name) ?? "");
-    for (const dependency of declared.allowedDependencies) {
-      const targetKind = kinds.get(dependency);
-      if (targetKind === undefined || allowed === undefined) continue;
-      const edge = `${declared.name} -> ${dependency}`;
-      readings.set(edge, {
-        value: allowed.includes(targetKind) ? 0 : 1,
-        evidence: [{ path: PROJECT_FILE, name: edge }],
-      });
+    const bindings = readSourceBindings(context, declared);
+    const depsInBindings = new Set(
+      bindings.flatMap((scope) => scope.dependencies),
+    );
+    recordEdges(
+      readings,
+      kinds,
+      declared.name,
+      kinds.get(declared.name),
+      declared.allowedDependencies.filter((name) => !depsInBindings.has(name)),
+    );
+    for (const binding of bindings) {
+      recordEdges(
+        readings,
+        kinds,
+        `${declared.name}/${binding.name}`,
+        "binding",
+        binding.dependencies,
+      );
     }
   }
   return readings;
+}
+
+function recordEdges(
+  readings: Map<string, SignalReading>,
+  kinds: ReadonlyMap<string, string>,
+  owner: string,
+  ownerKind: string | undefined,
+  dependencies: readonly string[],
+): void {
+  const allowed = ALLOWED_TARGET_KINDS.get(ownerKind ?? "");
+  for (const dependency of dependencies) {
+    const targetKind = kinds.get(dependency);
+    if (targetKind === undefined || allowed === undefined) continue;
+    const edge = `${owner} -> ${dependency}`;
+    readings.set(edge, {
+      value: allowed.includes(targetKind) ? 0 : 1,
+      evidence: [{ path: PROJECT_FILE, name: edge }],
+    });
+  }
 }
 
 export const kindInversionsSignal: DoctorSignal = {

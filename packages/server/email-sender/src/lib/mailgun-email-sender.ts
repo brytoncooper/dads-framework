@@ -2,7 +2,7 @@ import type {
   EmailMessage,
   EmailSender,
   EmailSendReceipt,
-} from "@dads-framework/email-sender-core";
+} from "../core/index.js";
 import { buildMailgunForm } from "./logic/build-mailgun-form.js";
 
 /**

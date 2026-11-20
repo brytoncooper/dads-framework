@@ -37,7 +37,7 @@ import {
   currentRequestWork,
   countAuthorizationLookupSize,
   noteAuthorizationWarning,
-} from "@dads-framework/request-work";
+} from "@dads-framework/runtime/request-work";
 
 import {
   Authorization,

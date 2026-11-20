@@ -1,6 +1,6 @@
 {
   "name": "dads-workspace",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "packageManager": "npm@11.19.0",
@@ -33,7 +33,7 @@
     "budgets:report": "node scripts/checks/check-source-budgets.mjs --report",
     "verify:foundation": "npm run lint && npm run typecheck && npm test -w @dads-framework/toolbox && npm run pack:foundation",
     "verify:creator": "npm run lint && npm run typecheck && npm test -w create-dads && node scripts/adoption/verify-packed-package.mjs create-dads",
-    "verify:testing": "npm run typecheck && npm test -w @dads-framework/testing && npm test -w @dads-framework/testing-import-nx && npm test -w @dads-framework/testing-vitest && node --test scripts/testing/testing-soundness-context.test.mjs scripts/testing/testing-soundness-generator.test.mjs scripts/testing/testing-soundness-baseline.test.mjs scripts/testing/testing-soundness-concurrency.test.mjs scripts/testing/testing-soundness-parallel.test.mjs scripts/testing/testing-soundness-execution.test.mjs scripts/testing/verify-testing-release.test.mjs scripts/adoption/adoption-commands.test.mjs scripts/adoption/adoption-concurrency.test.mjs scripts/adoption/adoption-package-classification.test.mjs scripts/adoption/adoption-packing.test.mjs scripts/adoption/adoption-phase-timing.test.mjs scripts/adoption/adoption-task-runner.test.mjs scripts/adoption/generated-project-installation.test.mjs scripts/checks/check-private-references.test.mjs scripts/checks/check-docs.test.mjs scripts/checks/check-dependency-boundaries.test.mjs && node scripts/testing/verify-testing-package.mjs --build-host && node scripts/adoption/verify-packed-package.mjs @dads-framework/testing-vitest",
+    "verify:testing": "npm run typecheck && npm test -w @dads-framework/testing && npm test -w @dads-framework/testing-vitest && node --test scripts/testing/testing-soundness-context.test.mjs scripts/testing/testing-soundness-generator.test.mjs scripts/testing/testing-soundness-baseline.test.mjs scripts/testing/testing-soundness-concurrency.test.mjs scripts/testing/testing-soundness-parallel.test.mjs scripts/testing/testing-soundness-execution.test.mjs scripts/testing/verify-testing-release.test.mjs scripts/adoption/adoption-commands.test.mjs scripts/adoption/adoption-concurrency.test.mjs scripts/adoption/adoption-package-classification.test.mjs scripts/adoption/adoption-packing.test.mjs scripts/adoption/adoption-phase-timing.test.mjs scripts/adoption/adoption-task-runner.test.mjs scripts/adoption/generated-project-installation.test.mjs scripts/checks/check-private-references.test.mjs scripts/checks/check-docs.test.mjs scripts/checks/check-dependency-boundaries.test.mjs && node scripts/testing/verify-testing-package.mjs --build-host && node scripts/adoption/verify-packed-package.mjs @dads-framework/testing-vitest",
     "verify:testing-native": "cargo +1.96.0 fmt --all --check && cargo +1.96.0 clippy --workspace --all-targets -- -D warnings && node scripts/testing/verify-testing-native-packages.mjs --metadata-only && node scripts/testing/verify-testing-package.mjs --build-host",
     "testing:soundness": "node scripts/testing/run-testing-soundness.mjs",
     "verify:testing-release": "node scripts/testing/verify-testing-release.mjs",

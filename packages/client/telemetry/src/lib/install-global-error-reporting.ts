@@ -11,7 +11,7 @@
  * beside the other rules about what to report.
  */
 
-import type { ClientTelemetry } from "@dads-framework/client-telemetry-core";
+import type { ClientTelemetry } from "../core/index.js";
 import { isChunkLoadFailure } from "./logic/is-chunk-load-failure.js";
 import { shouldReportFailure } from "./logic/should-report-failure.js";
 

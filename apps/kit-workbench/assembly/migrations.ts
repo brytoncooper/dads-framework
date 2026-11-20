@@ -21,7 +21,10 @@ export function migrate(databaseUrl: string) {
     workspace: {
       root: fileURLToPath(new URL("..", import.meta.url)),
       sources,
-      moduleAliases: {},
+      moduleAliases: {
+        "@dads-framework/feature-flags-postgres":
+          "migrations/support/feature-flags.ts",
+      },
     },
   });
 }

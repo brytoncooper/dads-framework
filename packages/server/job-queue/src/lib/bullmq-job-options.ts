@@ -1,5 +1,5 @@
 import type { JobsOptions, KeepJobs } from "bullmq";
-import type { JobDefinition } from "@dads-framework/job-queue-core";
+import type { JobDefinition } from "../core/index.js";
 
 const COMPLETED_RETENTION: KeepJobs = { age: 86_400, count: 1_000 };
 const FAILED_RETENTION: KeepJobs = { age: 604_800, count: 5_000 };

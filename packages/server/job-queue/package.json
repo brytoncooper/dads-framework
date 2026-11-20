@@ -1,9 +1,30 @@
 {
   "name": "@dads-framework/job-queue",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22"
+  },
+  "dadsConformance": {
+    "capability": "Job registration and delivery",
+    "suite": "src/core/lib/testing/job-queue-conformance.ts",
+    "law": "jobQueueConformance",
+    "runs": [
+      {
+        "test": "src/core/lib/testing/in-memory-job-queue.test.ts",
+        "provider": {
+          "module": "./in-memory-job-queue.js",
+          "name": "FakeJobQueue"
+        }
+      },
+      {
+        "test": "src/lib/bullmq-job-queue.integration.test.ts",
+        "provider": {
+          "module": "./bullmq-job-queue.js",
+          "name": "BullMqJobQueue"
+        }
+      }
+    ]
   },
   "exports": {
     ".": {
@@ -13,6 +34,18 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./core/testing": {
+      "types": "./dist/core/testing.d.ts",
+      "default": "./dist/core/testing.js"
+    },
+    "./core/provider": {
+      "types": "./dist/core/provider.d.ts",
+      "default": "./dist/core/provider.js"
     }
   },
   "files": [
@@ -20,15 +53,15 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/audit-actor": "0.2.0",
-    "@dads-framework/diagnostics": "0.2.0",
-    "@dads-framework/job-queue-core": "0.2.0",
-    "bullmq": "^5.79.3"
+    "@dads-framework/audit-actor": "0.3.0",
+    "@dads-framework/runtime": "0.3.0",
+    "cron-parser": "4.9.0"
   },
   "devDependencies": {
     "@testcontainers/redis": "^12.0.4",
     "vitest": "~4.1.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "bullmq": "^5.79.3"
   },
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
@@ -43,5 +76,13 @@
     "type": "git",
     "url": "git+https://github.com/brytoncooper/dads-framework.git",
     "directory": "packages/server/job-queue"
+  },
+  "peerDependencies": {
+    "bullmq": "^5.79.3"
+  },
+  "peerDependenciesMeta": {
+    "bullmq": {
+      "optional": true
+    }
   }
 }

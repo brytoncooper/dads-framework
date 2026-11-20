@@ -254,6 +254,43 @@ API can clear an authorization-consistency cookie on sign-out.
 await app.register(mountFetchHandler(auth), { prefix: "/api/auth" });
 ```
 
+## Liveness and readiness
+
+Use `createHealthRoutes(checks)` to expose separate checks for processes and
+traffic routers. `/health` confirms the process responds. `/ready` evaluates
+the application's readiness probes. Register the routes during API composition
+and supply probes for dependencies required to serve traffic.
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { createHealthRoutes } from "@dads-framework/http/health";
+import { buildTestApp } from "@dads-framework/http/testing";
+
+const app = await buildTestApp({
+  routes: createHealthRoutes({
+    pingDatabase: () => Promise.reject(new Error("Database unavailable")),
+    pingCriticalServices: () => Promise.resolve(),
+  }),
+});
+try {
+  const live = await app.inject({ method: "GET", url: "/health" });
+  const ready = await app.inject({ method: "GET", url: "/ready" });
+  console.log(live.statusCode, ready.statusCode);
+} finally {
+  await app.close();
+}
+```
+
+The simulated outage prints `200 503`. Liveness still succeeds. Replace
+the example probes with your application’s dependency checks when
+registering the routes in your HTTP app.
+
+In the generated app, `assembly/start-app.ts` registers probes for the
+database, job queue, and file store. [Starter health wiring](../../../apps/kit-workbench/assembly/start-app.ts)
+
 ## Compose authorization for lists
 
 Use `requires`, `requiresVisible`, or `requiresScoped` from
@@ -277,6 +314,8 @@ evaluator to match against
 the context being evaluated.
 
 ## What it refuses to do
+
+Readiness reports the results of probes supplied by the application.
 
 Application code supplies identity, access policies, and business handlers. The HTTP kit enforces the declared route boundary and owns transport.
 

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, constants, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import process from "node:process";
-import { nativeArchiveTarget } from "./native-executable.mjs";
+import { nativeArchiveRustTarget } from "./native-executable.mjs";
 import { releaseVersion } from "./release-version.mjs";
 
 const [inputs, output] = process.argv.slice(2);
@@ -28,7 +28,7 @@ for (const entry of entries) {
   )
     throw new Error(`Unexpected native build record in ${entry.name}.`);
   const native = build.files.filter(({ name }) => {
-    const target = nativeArchiveTarget(name, version);
+    const target = nativeArchiveRustTarget(name, version);
     return target !== undefined && target === build.target;
   });
   if (native.length !== 1)

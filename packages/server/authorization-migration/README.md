@@ -4,6 +4,11 @@ Scaffold and apply ordered SpiceDB schema snapshots and relationship migration s
 
 ## Try it
 
+The generated starter uses Postgres for authorization in
+[`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts). For the SpiceDB schema journal, see the repository's
+[journal runner tests](./src/lib/run-authorization-migrations.test.ts), which
+show ordered application and a rerun that skips applied entries.
+
 Use Node.js 22 or later. The script creates a temporary journal, previews the
 first migration ID, then checks that scaffolding the same schema again is a
 no-op. No SpiceDB instance is needed to scaffold.

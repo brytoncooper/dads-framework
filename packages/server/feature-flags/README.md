@@ -85,6 +85,11 @@ console.log(
 The script prints `true` for Acme and `false` for the platform. The
 selected-tenant rollout leaves the platform audience off.
 
+The generated starter defines the note-export flag in
+[`domains/notes/server/flags.ts`](../../../apps/kit-workbench/domains/notes/server/flags.ts) and contributes it from
+[`domains/notes/server/plugin.ts`](../../../apps/kit-workbench/domains/notes/server/plugin.ts). The service in
+[`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts) evaluates the API’s declared flags.
+
 ## Use it
 
 - `defineFeatureFlag(definition)` parses a definition where it is declared.

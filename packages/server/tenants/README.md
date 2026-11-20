@@ -4,6 +4,11 @@ Manage tenants, memberships, and one-time invitations with relationship authoriz
 
 ## Try it
 
+In the generated starter, [`libraries/app-runtime/index.ts`](../../../apps/kit-workbench/libraries/app-runtime/index.ts) declares tenant
+access against the application's account entity. [`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts)
+constructs `Tenants` and supplies transaction-bound authorization so membership
+rows and relationship facts commit together.
+
 Use Node.js 22 or later and a disposable Postgres database. Install the tuple
 table and complete tenant schema in one migration before running the script below.
 

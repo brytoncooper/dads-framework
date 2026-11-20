@@ -60,6 +60,11 @@ try {
 The script prints `[]`. The migration creates the tables, and the store
 finds no persisted audience for `orders.export` in the fresh database.
 
+The generated starter creates the store in [`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts)
+using its shared Drizzle connection. The repo’s
+[`src/lib/drizzle-feature-flag-store.integration.test.ts`](src/lib/drizzle-feature-flag-store.integration.test.ts) exercises
+that store against PostgreSQL.
+
 ## Use it
 
 - `src/lib/migrations/20261119180000_feature_flags.migration.ts` creates

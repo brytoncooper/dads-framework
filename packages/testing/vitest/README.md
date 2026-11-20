@@ -75,6 +75,12 @@ npx vitest run
 Vitest reports one passing test. The plugin resolves `@app/button` to
 `src/button.ts` using the alias in `tsconfig.json`.
 
+Put the `plugins` array in your project's `vitest.config.ts`, alongside
+its existing `test` settings. The
+[plugin test](src/dads-tsconfig-paths.test.ts) creates a temporary project
+with a root `tsconfig.json` and checks that the Vite hook resolves
+`@fixture/core` to `src/core.ts`.
+
 ## Use it
 
 `dadsTsconfigPaths(options)` is the only export, alongside its

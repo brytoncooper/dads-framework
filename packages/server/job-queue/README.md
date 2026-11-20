@@ -57,6 +57,8 @@ console.log((await queue.inspect()).counts.completed);
 
 The script prints `Report daily is ready` and `1` completed job. The in-process driver finishes accepted work on close and runs without Redis.
 
+The starter creates the in-process queue and closes it when the service scope is disposed. [`apps/kit-workbench/assembly/local-services.ts`](../../../apps/kit-workbench/assembly/local-services.ts)
+
 ## Use it
 
 In an application, register its job definitions before `start()`, then

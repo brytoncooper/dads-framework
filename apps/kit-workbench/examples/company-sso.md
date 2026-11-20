@@ -1,9 +1,19 @@
 # Sign in with a company identity provider
 
-Connect a test OIDC provider to an existing workspace. Start in optional
-mode so a workspace owner can keep using password sign-in while testing.
+## How the starter implements it
 
-## Prepare a workspace and an OIDC client
+[assembly/identity-services.ts](../assembly/identity-services.ts) creates the
+enterprise identity adapter from the configured providers. The browser starts
+sign-in in [apps/web/enterprise-sign-in-client.ts](../apps/web/enterprise-sign-in-client.ts).
+For a protected workspace request, [assembly/session-subjects.ts](../assembly/session-subjects.ts)
+reads the session under the policy for the tenant matched in the route.
+The resulting account still needs the workspace permission.
+
+<!-- dads:excerpt {"path":"assembly/session-subjects.ts","language":"ts","from":"      const tenantId = tenantFromParams(params);","through":"        : { type: accountEntity.wireName, id: session.account.id };"} -->
+
+## Try it
+
+### Prepare a workspace and an OIDC client
 
 Run [example setup](./README.md) and keep your terminal in `.dads/examples`.
 Use the generated workspace ID as `tenantId`.
@@ -24,7 +34,7 @@ browser and its authentication endpoints on the same origin.
 Invite an IdP test user to the workspace and have them accept with a verified
 email in your company domain. Use an address that the IdP also verifies.
 
-## Configure and prove domain ownership
+### Configure and prove domain ownership
 
 Copy this JSON into `sso-providers.local.json` in the private
 `.dads/examples` directory. Replace the tenant UUID, domain, issuer,
@@ -83,7 +93,7 @@ printf '%s/api/auth/sso/callback\n' "$web"
 On a deployed test instance, restart each participating API with the same
 tenant policy.
 
-## Check sign-in and workspace access
+### Check sign-in and workspace access
 
 1. Open the workbench at `$web` in a separate browser profile. Open **Sign in
    with company SSO**, enter `sso-alpha`, and continue through the IdP.

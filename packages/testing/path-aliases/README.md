@@ -57,6 +57,12 @@ The first line is `src/ui/button.ts`. The second is `null` because `react`
 has no entry in the alias map. For an on-disk project, pass the path of your
 tsconfig and `nodeFileSystem` to the same resolver.
 
+For a disk-backed example, the repository's
+[domain boundaries fixture](../../../fixtures/domain-boundaries/tsconfig.json)
+maps `@app/product-id` to `libraries/product-id/src/index.ts`. Pass the
+fixture's `tsconfig.json` and `nodeFileSystem` to resolve that import from
+its declared alias.
+
 ## Use it
 
 | Export                                                                                         | What it is                                                                |

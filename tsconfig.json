@@ -29,6 +29,9 @@
       "path": "./fixtures/boundary-verification"
     },
     {
+      "path": "./fixtures/default-services"
+    },
+    {
       "path": "./fixtures/plugin-notes"
     },
     {

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/default-services.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["migrations/**/*.ts"],
+  "references": [
+    { "path": "../../packages/server/identity-better-auth" },
+    { "path": "../../packages/server/postgres-access" },
+    { "path": "../../packages/server/tenants" }
+  ]
+}

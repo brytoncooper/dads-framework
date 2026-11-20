@@ -1,11 +1,19 @@
 # Export one workspace's audit metadata
 
-Use the sessions and running APIs from [example setup](./README.md). Write
-notes on the customer API and download audit pages from the staff API. The
-caller must own the workspace. The staff API checks the workspace's
-`manage_tenant` permission on each page.
+## How the starter implements it
 
-## Write two changes you can find in the export
+[apps/staff/app.ts](../apps/staff/app.ts) mounts the audit export plugin.
+[migrations/20261120080000_starter.migration.ts](../migrations/20261120080000_starter.migration.ts)
+installs the trigger that records note writes under `tenant_id`.
+[domains/tenants/server/audit-export.ts](../domains/tenants/server/audit-export.ts)
+uses that same dimension to scope every page and authorizes the authenticated
+account before returning the tenant's audit metadata.
+
+<!-- dads:excerpt {"path":"domains/tenants/server/audit-export.ts","language":"ts","from":"        const exportPage = createAuditLogExporter({","through":"              permission: permission.permissionName,"} -->
+
+## Try it
+
+### Write two changes you can find in the export
 
 ```sh
 sample="audit-example-$(date +%s)-$$"
@@ -20,7 +28,7 @@ done
 Each insert records a tenant-scoped audit entry. The request IDs let you
 match the entries to the two writes.
 
-## Download two pages
+### Download two pages
 
 ```sh
 export_url="$staff/api/tenants/$tenant/audit-log/export"
@@ -48,7 +56,7 @@ The full lines include `position`, `recordedAt`, `actorKind`, `actorId`,
 Stored note text and row snapshots are excluded. Follow the relative
 `Link` target with `rel="next"` to continue. The link is absent on the final page.
 
-## Check the workspace boundary
+### Check the workspace boundary
 
 ```sh
 curl -sS -i -w '\n' -b member.cookies "$staff$next"

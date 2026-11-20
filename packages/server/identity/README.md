@@ -4,6 +4,10 @@ The account, session, and mail contracts used by Dads applications and their ide
 
 ## Try it
 
+In the generated starter, [`assembly/session-subjects.ts`](../../../apps/kit-workbench/assembly/session-subjects.ts) reads the
+`Identity` session and maps the authenticated account to an authorization
+subject at the HTTP boundary.
+
 Use Node.js 22 or later. The test adapter uses an explicitly seeded cookie
 and a fixed clock. It needs no identity provider or database.
 

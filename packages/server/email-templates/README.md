@@ -60,6 +60,8 @@ console.log(message.html.includes("Order 1042 is ready for pickup."));
 
 The script prints the subject, the plain-text body, and `true` for the same text in the rendered HTML. Rendering runs locally.
 
+The starter defines, registers, and renders its account-link email template. [`apps/kit-workbench/assembly/local-mail-template.ts`](../../../apps/kit-workbench/assembly/local-mail-template.ts)
+
 ## Render a message
 
 Define the React template and its property schema in the owning domain. Pass

@@ -6,6 +6,10 @@ their retention jobs and diagnostic route to the application's services.
 
 ## Try it
 
+In the generated starter, [`migrations/20261120080000_starter.migration.ts`](../../../apps/kit-workbench/migrations/20261120080000_starter.migration.ts)
+installs the audit schema and attaches row triggers. That migration knows the
+application's table keys and which columns define tenant scope.
+
 Use Node.js 22 or later and a disposable Postgres database. Set
 `DATABASE_URL` to the migrated database. Apply the audit schema through
 `installAuditSchemaV1(pgm)` in your migration runner, create the example

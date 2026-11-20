@@ -4,6 +4,13 @@ Binds the Dads identity contract to Better Auth and PostgreSQL for email, passwo
 
 ## Try it
 
+In the generated starter, [`assembly/identity-services.ts`](../../../apps/kit-workbench/assembly/identity-services.ts) constructs
+the adapter with the application database and mail service.
+[`assembly/start-app.ts`](../../../apps/kit-workbench/assembly/start-app.ts) mounts the handler at `/api/auth`. The starter's existing journal installs
+[base identity in its bootstrap migration](../../../apps/kit-workbench/migrations/20261120080000_starter.migration.ts)
+and adds
+[signing-key metadata in a later migration](../../../apps/kit-workbench/migrations/20261120080300_enterprise_identity.migration.ts).
+
 Use Node.js 24 and a disposable Postgres database. Apply
 `installIdentitySchemaV2(pgm)` from this package in your migration runner.
 Set `DATABASE_URL` to point at the migrated database. Set `IDENTITY_SECRET`

@@ -41,6 +41,12 @@ The host check prints `darwin-arm64`. The binary path ends in
 The native response contains `"ok":true` and a task with `"id":"app:test"`
 and `"decision":"run"`. A plan shows which tasks would run.
 
+In the repository, the
+[native release workflow](../../../../.github/workflows/testing-native-release.yml)
+packs this platform's package from `packages/testing/native/darwin-arm64/`
+and installs the tarball with the facade in a fresh `testing-consumer`
+directory to check planning through the installed artifact.
+
 ## Commands
 
 The native executable reads one JSON request from standard input. Set

@@ -1,10 +1,22 @@
 # Inspect a workspace member's permissions
 
-Use the sessions from [example setup](./README.md). The owner and the invited
-member belong to the same workspace. The outsider has a verified account
-and no relationship to that workspace.
+## How the starter implements it
 
-## Look up the member and check their permissions
+[apps/web/permissions-dashboard.tsx](../apps/web/permissions-dashboard.tsx)
+loads the active workspace's roster and displays the selected account's
+effective permissions. The customer API registers the route in
+[domains/tenants/server/permission-routes.ts](../domains/tenants/server/permission-routes.ts).
+Its `access` guard requires `manage_members` on the workspace in the URL.
+The handler passes the authenticated caller, workspace, and selected account
+to the tenant service.
+
+<!-- dads:excerpt {"path":"domains/tenants/server/permission-routes.ts","language":"ts","from":"const access = requires(","through":");"} -->
+
+<!-- dads:excerpt {"path":"domains/tenants/server/permission-routes.ts","language":"ts","from":"      route: memberPermissionsRoute,","through":"        ),"} -->
+
+## Try it
+
+### Look up the member and check their permissions
 
 As the owner, request the roster and select the account with the `member`
 role. The roster returns `data` entries with `accountId` and `role`, plus
@@ -36,7 +48,7 @@ Sign in as the owner at `$web`, select the example workspace, and open
 The dashboard shows **Member**, with **View workspace** allowed and
 **Manage members** and **Manage workspace settings** denied.
 
-## Try the same inspection with the other sessions
+### Try the same inspection with the other sessions
 
 ```sh
 curl -sS -i -w '\n' -b member.cookies "$permissions"

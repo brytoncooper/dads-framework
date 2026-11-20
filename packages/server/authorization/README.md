@@ -6,6 +6,11 @@ a SpiceDB adapter, an outbox, and a fake for tests.
 
 ## Try it
 
+The generated starter uses Postgres for authorization in
+[`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts). For the SpiceDB adapter, see the repository's
+[SpiceDB integration test](./src/lib/access/spice-db-authorization.integration.test.ts),
+which checks a permitted grant and denies a subject with no relationship.
+
 Use Node.js 22 or later and a fresh local SpiceDB datastore. This example
 replaces the datastore's entire schema. The Docker command starts an
 ephemeral testing instance with its gRPC port bound to loopback.

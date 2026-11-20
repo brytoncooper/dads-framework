@@ -57,6 +57,12 @@ unaffected. The run delegates `api:test` to Nx, which executes the sample
 reason for each task. In an existing Nx workspace, start with the last two
 commands after installing the adapter and making a change.
 
+Keep `nx.json` at the workspace root and each `project.json` in the
+corresponding project directory, as in `apps/api/project.json` above. The
+[adapter fixture](src/nx-native-plugin-workspace.test.ts) builds a disposable
+workspace with a root config and plugin-inferred targets to exercise how the
+adapter follows dependencies and expands inputs.
+
 ## Commands
 
 ### `dad-test-nx plan|run [workspace]`

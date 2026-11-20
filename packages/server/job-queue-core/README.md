@@ -46,6 +46,8 @@ console.log((await queue.inspect()).counts.completed);
 
 The script prints `Report daily is ready` and `1` completed job. The fake records enqueues and runs handlers when the test calls `runEnqueued()`.
 
+The starter defines a job that computes the size and SHA-256 digest of a stored note attachment. [`apps/kit-workbench/domains/notes/server/attachments.ts`](../../../apps/kit-workbench/domains/notes/server/attachments.ts)
+
 ## Provider contract
 
 Register job definitions before starting the queue. Job names and schedule ids

@@ -66,6 +66,8 @@ file. Open that file to read its contents, then delete the temporary directory
 when finished. The URL prefix configures signed links. This example uses local
 file reads and writes.
 
+The starter selects a memory or disk object store at composition time. [`apps/kit-workbench/assembly/local-services.ts`](../../../apps/kit-workbench/assembly/local-services.ts)
+
 ## Choose a storage path
 
 Use `ObjectStorage.put` and `get` for server-owned bytes. For browser uploads,

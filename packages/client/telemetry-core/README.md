@@ -36,6 +36,10 @@ The console shows an array containing `render`. The application supplies
 `NoneClientTelemetry` when recording is disabled or a configured recorder
 when enabled.
 
+The [local HTTP reporter](../telemetry/src/lib/local-client-telemetry.ts)
+implements this port and sends buffered browser faults to the app's
+diagnostics endpoint.
+
 ## Provider contract
 
 Reporting is synchronous and cannot throw. `flush(timeoutMs)` resolves

@@ -31,6 +31,8 @@ if (stored) {
 
 The script prints `text/plain Ready`. The object lives in the current process.
 
+The starter uses the injected storage capability to write and read note attachments and their inspection results. [`apps/kit-workbench/domains/notes/server/attachments.ts`](../../../apps/kit-workbench/domains/notes/server/attachments.ts)
+
 ## Provider contract
 
 The `/testing` export provides named conformance cases. Run them against a

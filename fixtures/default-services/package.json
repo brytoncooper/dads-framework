@@ -1,0 +1,23 @@
+{
+  "name": "@dads-fixture/default-services",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@dads-framework/identity-better-auth": "0.1.0",
+    "@dads-framework/migrations": "0.1.0",
+    "@dads-framework/postgres-access": "0.1.0",
+    "@dads-framework/tenants": "0.1.0",
+    "node-pg-migrate": "^9.0.0"
+  },
+  "devDependencies": {
+    "@dads-framework/access": "0.1.0",
+    "@dads-framework/postgres": "0.1.0",
+    "vitest": "~4.1.0",
+    "zod": "^4.4.3"
+  },
+  "scripts": {
+    "test:integration": "vitest run src/default-services.integration.test.ts"
+  },
+  "license": "MIT"
+}

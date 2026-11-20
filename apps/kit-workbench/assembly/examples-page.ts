@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { Marked, Renderer } from "marked";
 import type { Plugin } from "vite";
 import { workbenchCopy } from "../apps/web/copy/workbench-copy.js";
+import { expandGuideExcerpts } from "./example-source-excerpts.js";
 
 const guides = [
   { id: "setup", file: "README.md", copyKey: "workbench.examples.setup" },
@@ -111,7 +112,14 @@ const createExamplesPlugin: () => Plugin = () => {
             );
             context.server?.watcher.add(path);
             const source = await readFile(path, "utf8");
-            const body = await markdown.parse(source);
+            const expanded = await expandGuideExcerpts(
+              source,
+              file,
+              (sourcePath) => {
+                context.server?.watcher.add(sourcePath);
+              },
+            );
+            const body = await markdown.parse(expanded);
             return { id, body, label: escapeText(workbenchCopy[copyKey].en) };
           }),
         );

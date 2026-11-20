@@ -92,6 +92,9 @@ console.log("Migrations complete");
 The first run creates the `notes` table and records the migration in the
 journal. Running the script again skips the recorded migration.
 
+In the generated app, `assembly/migrations.ts` points the runner at
+`migrations/`. [Starter runner](../../../apps/kit-workbench/assembly/migrations.ts) · [Starter schema migration](../../../apps/kit-workbench/migrations/20261120080000_starter.migration.ts)
+
 ## What it refuses to do
 
 The runner uses a declared migration workspace. It refuses mismatched applied checksums before updating the schema.

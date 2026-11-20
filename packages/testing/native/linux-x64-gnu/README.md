@@ -42,6 +42,12 @@ The host check prints `linux-x64` and a glibc version. The binary path ends in
 The native response contains `"ok":true` and a task with `"id":"app:test"`
 and `"decision":"run"`. A plan shows which tasks would run.
 
+In the repository, the
+[native release workflow](../../../../.github/workflows/testing-native-release.yml)
+packs this platform's package from `packages/testing/native/linux-x64-gnu/`
+and installs the tarball with the facade in a fresh `testing-consumer`
+directory to check planning through the installed artifact.
+
 ## Commands
 
 The native executable reads one JSON request from standard input. Set

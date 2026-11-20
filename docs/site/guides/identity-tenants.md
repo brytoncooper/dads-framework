@@ -68,20 +68,10 @@ own the migration history for a **fresh database**, install the default
 identity and tenant schemas in an app migration. This example also installs
 the PostgreSQL relationship tables used by the tenant directory.
 
-```ts
-import { installIdentitySchemaV2 } from "@dads-framework/identity-better-auth";
-import { relationshipSchemaMigration } from "@dads-framework/postgres-access";
-import { installTenantSchemaV2 } from "@dads-framework/tenants";
-import type { MigrationBuilder } from "node-pg-migrate";
+The [example app migration](../../../fixtures/default-services/migrations/20261120000000_default_services.migration.ts)
+lives under `migrations/` in the adopting project.
 
-export function up(pgm: MigrationBuilder): void {
-  pgm.sql(relationshipSchemaMigration.sql);
-  installIdentitySchemaV2(pgm);
-  installTenantSchemaV2(pgm);
-}
-
-export const down = false;
-```
+<!-- dads:excerpt {"path":"fixtures/default-services/migrations/20261120000000_default_services.migration.ts","language":"ts","from":"import { installIdentitySchemaV2 } from \"@dads-framework/identity-better-auth\";","through":"export const down = false;"} -->
 
 The identity installer creates the signing-key columns Better Auth reads during
 sign-in. The tenant installer creates the directory tables invitation acceptance

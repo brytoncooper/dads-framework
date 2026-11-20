@@ -45,6 +45,9 @@ export function StockCounter() {
 The page shows a themed **Add unit** button and a count of zero. Press Tab
 to focus the button, then Enter to increment the count.
 
+The [starter's note forms](../../../apps/kit-workbench/apps/web/note-forms.tsx)
+use the shared `Button` and disable form submission while a request is pending.
+
 ## Use it
 
 | Import path                             | Includes                                                  |

@@ -79,6 +79,10 @@ the API task's sample command and prints a run exit code of `0`. To generate
 a starting manifest from an existing npm, pnpm, or Yarn workspace, start with
 `dad-test init` and review `dads.testing.init-report.json`.
 
+In a checked-in workspace, keep `dads.testing.json` at the workspace root.
+The repository's [testing manifest fixture](../../../fixtures/testing/dads.testing.json)
+does this in `fixtures/testing/` and makes its test task depend on typecheck.
+
 ## Commands
 
 `plan`, `run`, and `explain` share the same selection flags: `--manifest`

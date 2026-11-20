@@ -61,6 +61,10 @@ The transport adds the `/api` prefix, unwraps `data`, and validates the payload.
 The console prints `true`. Change the response to `{"data":{"ok":"yes"}}` to
 see the call reject with a schema validation error.
 
+The [starter's notes API client](../../../apps/kit-workbench/domains/notes/web-client/index.ts)
+uses `getFromApi` with a tenant-bound route and a response schema to load
+feature state.
+
 ## What it refuses to do
 
 The transport parses replies through the caller's schema. Application code owns rendering, retry decisions, and query-cache keys.

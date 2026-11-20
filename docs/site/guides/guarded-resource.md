@@ -1,77 +1,50 @@
 # Add a guarded resource
 
-The starter's notes are scoped to a workspace. Try the existing list before
-scaffolding a resource of your own.
+In the generated app, a Notes request authorizes the tenant named in the URL.
+[`domains/notes/access/index.ts`](../../../apps/kit-workbench/domains/notes/access/index.ts)
+uses the tenant model's `view` permission and resolves the resource ID from
+the route's `tenantId` parameter.
 
-## Read as a member and as an outsider
+<!-- dads:excerpt {"path": "apps/kit-workbench/domains/notes/access/index.ts", "language": "ts", "from": "export const notesPermission = tenantAccess.tenant.permissions.view;", "through": "};"} -->
 
-Run `npm start` and create and verify two accounts in the workbench.
-Use Bash, curl, and jq with the workbench URL printed at startup or by
-`npm run dev:status`. Sign in as the future owner first, then as the
-account you will keep outside the new workspace.
-[Starter setup and sign-in](../../../apps/kit-workbench/README.md#call-the-customer-api-from-the-command-line)
+## Scope the records and their count
+
+[`domains/notes/server/routes.ts`](../../../apps/kit-workbench/domains/notes/server/routes.ts)
+sets `access: notesAccess` on the list. Its query applies the same tenant
+predicate to the rows and the count. The response contains the requested
+page under `data` and its total under `meta.total`.
+
+<!-- dads:excerpt {"path": "apps/kit-workbench/domains/notes/server/routes.ts", "language": "ts", "from": "    listRoute({", "through": "          total: totals[0]?.total ?? 0,\n        };\n      },\n    }),"} -->
+
+## Prove denial with a signed-in outsider
+
+[`tests/starter.integration.test.ts`](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+creates Alpha and Beta in separate workspaces. Alpha reads Alpha's notes.
+Beta can read Beta's workspace, then gets **404** when requesting Alpha's
+workspace using the same signed-in session. An anonymous request gets **401**.
+
+<!-- dads:excerpt {"path": "apps/kit-workbench/tests/starter.integration.test.ts", "language": "ts", "from": "        const betaRead = await customer.inject({", "through": "        ).toBe(401);"} -->
+
+Run it from the generated app with Docker running. The test starts its own
+PostgreSQL container.
 
 ```sh
-read -rp 'Workbench URL: ' base
-for jar in .dads-cookies .dads-outsider-cookies; do
-  read -rp "Verified email for $jar: " email
-  read -rsp 'Password: ' password
-  printf '\n'
-  jq -cn --arg email "$email" --arg password "$password" '{email:$email,password:$password}' |
-    curl -fsS "$base/api/auth/sign-in/email" -H "Origin: $base" \
-      -H 'Content-Type: application/json' -c "$jar" --data-binary @- >/dev/null
-  unset password
-done
-
-tenant=$(curl -fsS "$base/api/tenants" -b .dads-cookies \
-  --json '{"name":"Field team"}' | jq -er .data.id)
-notes="$base/api/tenants/$tenant/notes"
-curl -fsS "$notes" -b .dads-cookies --json '{"text":"Check the gate"}'
-curl -fsS "$notes?page=1&perPage=10" -b .dads-cookies
-curl -sS -i "$notes" -b .dads-outsider-cookies
-curl -sS -i "$notes"
+npm test -- tests/starter.integration.test.ts
 ```
 
-The member's list returns **200 OK**. The response has a page of records
-under `data` and pagination under `meta`. The IDs below are examples.
+## Scaffold another resource
 
-```json
-{
-  "data": [
-    {
-      "id": "6b161f9d-73bc-4a7e-935a-26a57f6a618f",
-      "tenantId": "d2453c79-98e2-4c0c-85de-ade0410a01ee",
-      "text": "Check the gate"
-    }
-  ],
-  "meta": { "total": 1, "page": 1, "perPage": 10 }
-}
-```
-
-The signed-in outsider gets **404** with
-`{"error":{"code":"RESOURCE_NOT_FOUND","message":"Resource not found"}}`.
-The anonymous request gets **401**.
-
-<!-- dads:excerpt {"path": "apps/kit-workbench/domains/notes/server/routes.ts", "language": "ts", "from": "    listRoute({", "through": "          db.select({ total: count() }).from(noteTable).where(scope),"} -->
-
-`notesAccess` checks the tenant ID from the URL. The handler applies the
-same tenant ID to the record query and the count. This keeps both
-`data` and `meta.total` within the authorized workspace.
-
-## Generate your own resource
-
-From an installed starter, preview the files and route placement, then
-apply the scaffold.
+Preview the files and API placement from the generated app, then rerun
+without the preview flags to write them.
 
 ```sh
 npx dad add resource products --api staff --dry-run --json
 npx dad add resource products --api staff
 ```
 
-The scaffold adds list, read, and update operations, an access model, a
+The scaffold adds list, read, and update operations, access declarations, a
 migration, and client exports. Apply the migration with `npm run migrate`.
-Supply your app's create workflow and seed a product in each of two tenants.
-Assert the exact product IDs returned to each tenant, check denial for an
-unrelated caller, and check that a caller without management permission
-cannot update the product. Run `npm run verify`.
-[Starter integration test](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+Add your app's create workflow and test with a product in each of two
+tenants. Assert each tenant's returned IDs and count, then prove denial for
+a caller outside the tenant and for updates by a caller without management
+permission. Run `npm run verify`.

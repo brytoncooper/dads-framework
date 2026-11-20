@@ -32,6 +32,10 @@ The logger receives a structured event with a fingerprint. Wire the
 reporter once in application composition. During shutdown, flush any
 buffered events with `flush(timeoutMs)` before closing it.
 
+In the generated app, `assembly/local-services.ts` creates the log reporter
+and `assembly/start-app.ts` passes it to the HTTP app.
+[Starter reporter setup](../../../apps/kit-workbench/assembly/local-services.ts) · [Starter HTTP wiring](../../../apps/kit-workbench/assembly/start-app.ts)
+
 ## The seam
 
 `DiagnosticsReporter` names three things and no vendor: `captureException`,

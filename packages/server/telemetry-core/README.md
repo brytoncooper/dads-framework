@@ -32,6 +32,11 @@ The first line contains `"dads.audit.actor.kind":"user"` and
 `"dads.request.id":"order-42"`. The second line contains only the actor kind
 because the request ID includes spaces.
 
+The repo’s telemetry adapter calls this helper in
+[`packages/server/telemetry/src/trace-request.ts`](../telemetry/src/trace-request.ts) to add attributes
+to the active span. The generated starter connects that adapter in
+[`assembly/start-app.ts`](../../../apps/kit-workbench/assembly/start-app.ts).
+
 ## Contract
 
 `requestTraceAttributes` accepts the two facts a server has resolved for its

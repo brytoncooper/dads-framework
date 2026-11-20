@@ -32,6 +32,10 @@ running for the live PostgreSQL checks.
 Commit the generated `package-lock.json`. The `ci/verify.sh` command runs
 `npm ci` before verification, and `ci/` contains templates for CI providers.
 
+The generated project includes [`package.json`](../../../apps/kit-workbench/package.json) for its launch commands
+and [`assembly/compose.yml`](../../../apps/kit-workbench/assembly/compose.yml) for the local services those commands start.
+The links open the starter source in this repo.
+
 ## Commands
 
 - `--name <name>` sets the npm package name.

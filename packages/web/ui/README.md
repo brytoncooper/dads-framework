@@ -32,7 +32,7 @@ that callback from the keyboard.
 | --------------------------------------- | --------------------------------------------------------- |
 | `@dads-framework/ui/elements`           | Buttons, badges, calendar, and class name utilities       |
 | `@dads-framework/ui/forms`              | Inputs, fields, switches, checkbox, and combobox          |
-| `@dads-framework/ui/display`            | Alert, empty state, scroll area, and table primitives     |
+| `@dads-framework/ui/display`            | Alerts, empty states, tables, and permission decisions    |
 | `@dads-framework/ui/overlays`           | Dialogs, menus, sheets, tooltips, and attachment previews |
 | `@dads-framework/ui/data-table`         | Responsive data table, toolbar, filters, and sorting      |
 | `@dads-framework/ui/data-table/routing` | Table search schemas and helpers for route files          |
@@ -51,6 +51,9 @@ property types.
   destination as `href` and the list search values separately as `search`.
 - Pass a stable `tableId` to `useDataTable` to remember visible columns on the
   device. Without an ID, column preferences last for the current visit.
+- `PermissionDecisionTable` renders permission labels and decisions supplied by
+  the host. Provide a stable ID for each decision and localized column and
+  status labels. The host obtains decisions through its authorized API.
 - `AttachmentViewer` accepts a URL or Blob from the caller's `loadSource`.
   For PDFs, serve the PDF.js WASM decoders at `/pdfjs/wasm/`. The caller owns
   the download handler.

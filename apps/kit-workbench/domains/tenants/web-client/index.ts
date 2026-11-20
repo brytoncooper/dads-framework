@@ -66,3 +66,5 @@ export function acceptTenantInvitation(token: string) {
     returns: tenantInvitationAccepted,
   });
 }
+
+export { readMemberPermissions, readPermissionRoster } from "./permissions.js";

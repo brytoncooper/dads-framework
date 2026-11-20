@@ -13,6 +13,7 @@ import type { FeatureStateProtocol } from "./feature-state.js";
 import {
   currentFeatureStatePreview,
   type FeatureStatePreview,
+  runWithFeatureStatePreview,
 } from "./feature-state-preview.js";
 import { registerRoutes } from "./register-routes.js";
 
@@ -120,6 +121,21 @@ async function buildApp(input: {
 }
 
 describe("feature preview request pipeline", () => {
+  it("does not carry a preview into work that runs after the request completes", async () => {
+    const background = await runWithFeatureStatePreview(viewOnly, () => {
+      expect(currentFeatureStatePreview()).toEqual(viewOnly);
+      const evaluateAfterRequest = new Promise<FeatureStatePreview | undefined>(
+        (resolve) => {
+          setImmediate(() => {
+            resolve(currentFeatureStatePreview());
+          });
+        },
+      );
+      return Promise.resolve({ evaluateAfterRequest });
+    });
+    await expect(background.evaluateAfterRequest).resolves.toBeUndefined();
+  });
+
   it("carries a live preview into the snapshot and the handler", async () => {
     const resolved: string[] = [];
     const app = await buildApp({ previews: { p1: viewOnly }, resolved });

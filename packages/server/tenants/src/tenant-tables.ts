@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import {
   pgTable,
   primaryKey,
@@ -40,3 +41,10 @@ export const tenantInvitation = pgTable("tenant_invitation", {
   }).notNull(),
   acceptedAt: timestamp("accepted_at", { mode: "date", withTimezone: true }),
 });
+
+export function tenantMembershipKey(tenantId: TenantId, accountId: string) {
+  return and(
+    eq(tenantMembership.tenantId, tenantId),
+    eq(tenantMembership.accountId, accountId),
+  );
+}

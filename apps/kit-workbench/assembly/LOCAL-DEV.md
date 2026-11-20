@@ -11,7 +11,7 @@ URL it prints. Docker assigns separate loopback ports for the browser and
 the two APIs. Each project uses its own ports, database, and persistent
 application files.
 
-| Command               | Result                                                                 |
+| Run                   | Result                                                                 |
 | --------------------- | ---------------------------------------------------------------------- |
 | `npm run dev:up`      | Start the stack and wait for a healthy browser URL.                    |
 | `npm run dev:mail`    | Read verification and invitation messages from the private mailbox.    |
@@ -49,3 +49,38 @@ npm run verify
 ```
 
 The integration suite starts its own disposable PostgreSQL container.
+
+### Preview Notes export for a tenant member
+
+The customer API accepts `DADS_FEATURE_PREVIEW` as an optional JSON setting.
+Set it for one account and tenant. The API checks the account's current tenant
+permission when it resolves the preview. The matched route parameter selects the tenant.
+
+Generate a random token and put its SHA-256 digest in the JSON setting. Keep
+the token for the request header.
+
+```sh
+preview_token=$(openssl rand -hex 32)
+printf '%s' "$preview_token" | openssl dgst -sha256
+```
+
+Set `DADS_FEATURE_PREVIEW` before starting the customer API. Replace the
+account ID, tenant ID, digest, and expiry with values for your preview.
+
+```json
+{
+  "accountId": "your-account-id",
+  "tenantId": "00000000-0000-4000-8000-000000000000",
+  "feature": "notes.export",
+  "active": true,
+  "tokenSha256": "<sha256>",
+  "expiresAt": "2026-12-01T12:00:00Z"
+}
+```
+
+Send an authenticated request to
+`GET /api/tenants/<tenant-id>/notes/features` with
+`x-feature-preview: <token>`. The response's `features` includes
+`notes.export`, and the same token works on the tenant's note export URL.
+The preview is read-only. Restart the API with the setting removed to revoke
+the token before its expiry.

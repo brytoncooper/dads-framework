@@ -34,5 +34,10 @@ export const tenantAuditConfiguration = {
       scopeColumns: { tenant_id: "tenant_id" },
     },
   },
-  excludeTables: ["tenant_invitation"],
+  excludeTables: [
+    "tenant_invitation",
+    "tenant_scim_user",
+    "tenant_scim_group",
+    "tenant_scim_group_member",
+  ],
 };

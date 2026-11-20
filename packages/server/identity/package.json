@@ -10,14 +10,23 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./scim": {
+      "types": "./dist/scim/index.d.ts",
+      "default": "./dist/scim/index.js"
+    },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
+    },
+    "./impersonation": {
+      "types": "./dist/impersonation/index.d.ts",
+      "default": "./dist/impersonation/index.js"
     }
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "src/impersonation/README.md"
   ],
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",

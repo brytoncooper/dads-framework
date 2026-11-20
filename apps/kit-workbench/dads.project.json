@@ -158,6 +158,28 @@
       "skills": []
     },
     {
+      "name": "domains-support",
+      "root": "domains/support",
+      "kind": "core",
+      "responsibility": "Owns the staff impersonation HTTP surface.",
+      "allowedDependencies": [
+        "@dads-framework/identity",
+        "@dads-framework/tenants",
+        "zod"
+      ],
+      "verification": ["npm run verify"],
+      "skills": []
+    },
+    {
+      "name": "libraries-sign-in-options",
+      "root": "libraries/sign-in-options",
+      "kind": "core",
+      "responsibility": "Owns the sign-in availability route contract.",
+      "allowedDependencies": ["@dads-framework/contract", "zod"],
+      "verification": ["npm run verify"],
+      "skills": []
+    },
+    {
       "name": "migrations",
       "root": "migrations",
       "kind": "binding",

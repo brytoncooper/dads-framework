@@ -194,9 +194,28 @@ describe("two tenants on Postgres", () => {
       tenants.memberships.roster(guest.id, project.id),
     ).resolves.toHaveLength(2);
     await expect(
+      tenants.memberships.permissions("pat", project.id, guest.id),
+    ).resolves.toEqual({
+      role: "admin",
+      view: true,
+      manageMembers: true,
+      manageTenant: false,
+    });
+    await expect(
+      tenants.memberships.permissions(guest.id, project.id, "pat"),
+    ).resolves.toEqual({
+      role: "owner",
+      view: true,
+      manageMembers: true,
+      manageTenant: true,
+    });
+    await expect(
       tenants.memberships.removeMember(guest.id, project.id, "pat"),
     ).rejects.toBeInstanceOf(TenantUnavailableError);
     await tenants.memberships.removeMember("pat", project.id, guest.id);
+    await expect(
+      tenants.memberships.permissions("pat", project.id, guest.id),
+    ).rejects.toBeInstanceOf(TenantUnavailableError);
     await expect(tenants.list(guest.id)).resolves.toEqual([]);
     await expect(tenants.context(guest.id, project.id)).rejects.toBeInstanceOf(
       TenantUnavailableError,
@@ -226,6 +245,45 @@ describe("two tenants on Postgres", () => {
     await expect(
       tenants.memberships.roster("jordan", tenant.id),
     ).resolves.toHaveLength(2);
+  });
+
+  it("checks the locked invitation tenant and verified recipient before granting membership", async () => {
+    const tenant = await tenants.create("sso-owner", "SSO Required");
+    const invite = await tenants.invitations.issue(
+      "sso-owner",
+      tenant.id,
+      "proof@example.test",
+    );
+    const account = {
+      id: "proof-recipient",
+      email: "Proof@example.test",
+      emailVerified: true,
+    };
+    await expect(
+      tenants.invitations.accept(invite.token, account, async (recipient) => {
+        expect(recipient).toEqual({
+          tenantId: tenant.id,
+          account: { ...account, email: "proof@example.test" },
+        });
+        await expect(
+          database.pool.query(
+            "SELECT tenant_id FROM tenant_invitation WHERE tenant_id = $1 FOR UPDATE NOWAIT",
+            [tenant.id],
+          ),
+        ).rejects.toMatchObject({ code: "55P03" });
+        return false;
+      }),
+    ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
+    await expect(tenants.list(account.id)).resolves.toEqual([]);
+    await expect(
+      tenants.invitations.accept(
+        invite.token,
+        account,
+        ({ tenantId, account: verified }) =>
+          Promise.resolve(tenantId === tenant.id && verified.id === account.id),
+      ),
+    ).resolves.toBe(tenant.id);
+    await expect(tenants.list(account.id)).resolves.toEqual([tenant]);
   });
 
   it("holds the inviter's membership through the acceptance authorization check", async () => {

@@ -79,6 +79,7 @@ npx dad verify --changed --json
 
 - [Generator guide](./docs/generators.md) covers all nine `dad add` commands.
 - [Domain boundaries](./docs/domain-boundaries.md) explains public entrypoints and composition.
+- [Connect a company directory](./docs/site/guides/company-access.md) walks through enterprise sign-in, provisioning, and auditing access.
 - [Toolbox command reference](./packages/foundation/toolbox/README.md) covers CLI flags and outputs.
 - [CI workflow templates](./ci/README.md) run verification on another machine.
 - [Doctor and enforcement](./docs/doctor.md) explain what each finding means.

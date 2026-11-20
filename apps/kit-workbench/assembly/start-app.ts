@@ -2,18 +2,15 @@ import { accessModel } from "@dads-framework/access";
 import { anonymousActor } from "@dads-framework/audit-actor";
 import { createHealthRoutes } from "@dads-framework/health";
 import { sql } from "drizzle-orm";
-import {
-  createHttpApp,
-  registerRoutes,
-  type SubjectResolver,
-} from "@dads-framework/http";
+import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
-import type { Identity } from "@dads-framework/identity";
 import { IDENTITY_PATH } from "@dads-framework/identity-better-auth";
 import type { TelemetryRuntime } from "@dads-framework/telemetry";
 
+import { configureFeaturePreviews } from "./feature-previews.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";
-import { accountEntity } from "../libraries/app-runtime/index.js";
+import { sessionSubjects } from "./session-subjects.js";
+import { createSignInOptionsRoutes } from "./sign-in-options-route.js";
 import {
   openServices,
   provideServices,
@@ -26,14 +23,32 @@ export async function startApp(
   telemetry?: TelemetryRuntime,
 ) {
   const provider = provideServices((scope) => {
-    return openServices(scope, config, model, composed.flags);
+    return openServices(scope, config, model, composed.flags, name === "staff");
   });
   const composed = apiEntrypoints[name](provider);
   const model = accessModel(composed.access);
   const running = await composed.start();
   try {
-    const { authorization, identity, db, local, mailJobs } =
-      running.read(provider);
+    const {
+      authorization,
+      identity,
+      enterpriseIdentity,
+      scimHandler,
+      staffImpersonation,
+      db,
+      flags,
+      local,
+      mailJobs,
+    } = running.read(provider);
+    const featureState =
+      name === "customer" && config.featurePreview !== undefined
+        ? configureFeaturePreviews({
+            configuration: config.featurePreview,
+            definitions: composed.flags,
+            flags,
+            authorization,
+          })
+        : undefined;
     await local.prepareFiles();
     local.queue.register([...mailJobs, ...running.jobs]);
     await local.queue.start();
@@ -45,30 +60,48 @@ export async function startApp(
         await Promise.all([local.queue.inspect(), local.checkFiles()]);
       },
     });
-    const http = await createHttpApp({
-      nodeEnv: process.env["NODE_ENV"] ?? "development",
-      trustedOrigins: [config.baseUrl],
-      diagnostics: local.diagnostics,
-      requestLog: () => local.requestLog,
-      ...(telemetry === undefined
-        ? {}
-        : {
-            currentTraceId: telemetry.currentTraceId,
-            requestTrace: telemetry.annotateRequest,
-          }),
-    });
+    const http = await openHttp(config.baseUrl, local, telemetry);
     http.addHook("onClose", () => running.stop());
     try {
       void http.register(mountFetchHandler({ handler: identity.handle }), {
         prefix: IDENTITY_PATH,
       });
+      if (name === "customer" && scimHandler !== undefined) {
+        void http.register(
+          mountFetchHandler(
+            { handler: scimHandler },
+            {
+              methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            },
+          ),
+          { prefix: "/scim/v2" },
+        );
+      }
+      if (name === "staff" && staffImpersonation !== undefined) {
+        void http.register(
+          mountFetchHandler(
+            { handler: staffImpersonation },
+            {
+              methods: ["POST"],
+              servePrefixRoot: true,
+              bodyLimitBytes: 1024,
+            },
+          ),
+          { prefix: "/api/staff/impersonation" },
+        );
+      }
       void http.register(
         (api, _options, done) => {
           registerRoutes(api, {
-            routes: [...running.routes, ...infrastructure],
+            routes: [
+              ...running.routes,
+              ...infrastructure,
+              ...createSignInOptionsRoutes(enterpriseIdentity !== undefined),
+            ],
             accessModel: model,
-            subjects: sessionSubjects(identity),
+            subjects: sessionSubjects(identity, enterpriseIdentity),
             authorization,
+            ...(featureState === undefined ? {} : { featureState }),
             auditActorForSubject: ({ subject, requestId }) =>
               subject === null
                 ? anonymousActor(requestId)
@@ -90,17 +123,21 @@ export async function startApp(
   }
 }
 
-function sessionSubjects(identity: Identity): SubjectResolver {
-  return {
-    async resolve({ headers }) {
-      const normalized = new Headers();
-      for (const [name, header] of Object.entries(headers)) {
-        if (typeof header === "string") normalized.set(name, header);
-      }
-      const session = await identity.readSession(normalized);
-      return session === null
-        ? null
-        : { type: accountEntity.wireName, id: session.account.id };
-    },
-  };
+function openHttp(
+  baseUrl: string,
+  local: Awaited<ReturnType<typeof openServices>>["local"],
+  telemetry?: TelemetryRuntime,
+) {
+  return createHttpApp({
+    nodeEnv: process.env["NODE_ENV"] ?? "development",
+    trustedOrigins: [baseUrl],
+    diagnostics: local.diagnostics,
+    requestLog: () => local.requestLog,
+    ...(telemetry === undefined
+      ? {}
+      : {
+          currentTraceId: telemetry.currentTraceId,
+          requestTrace: telemetry.annotateRequest,
+        }),
+  });
 }

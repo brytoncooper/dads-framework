@@ -72,9 +72,12 @@ await flags.evaluator.isActive({
 - `defineFeatureFlag(definition)` parses a definition where it is declared.
   A definition is off by default and names at least one affected page or API
   capability.
-- `composeFeatureFlags({ definitions, publicSlugs?, store, tenants, clock })`
+- `composeFeatureFlags({ definitions, publicSlugs?, store, tenants, clock, readPreview? })`
   returns `management`, `history`, `update`, `effective`, `publicState`,
   `evaluator`, and `evaluatorReadingStatesOncePerRequest`.
+- `readPreview(context)` optionally supplies an authorized request override
+  for one defined flag. Effective state and both evaluators include the override.
+  The public list, management views, rollout state, and history use stored audiences.
 - `TenantDirectory` is the application's port: `findActiveTenants(ids)`
   answers which ids are active tenants and what they are called.
 - `FeatureFlagStore` is the storage port. `@dads-framework/feature-flags-postgres`

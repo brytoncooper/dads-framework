@@ -25,6 +25,8 @@ npm fetches dependencies such as Fastify, Zod, React, Lucide, PDF.js and
 Fontsource as separate packages. Retain the upstream notices if you bundle or
 redistribute those dependencies.
 
+Company single sign-on uses the separately installed MIT-licensed Better Auth SSO plugin for OIDC and SAML. [Better Auth source and license](https://github.com/better-auth/better-auth/tree/v1.7.26/packages/sso)
+
 The font CSS imports separately installed IBM Plex Sans and IBM Plex Mono
 subsets from [Fontsource](https://fontsource.org/). IBM Plex is distributed
 under SIL Open Font License 1.1 with the reserved font name “Plex”.

@@ -50,6 +50,23 @@ const featureState = {
   proves, not from a header alone, when tenants must not read each other's
   pilots.
 
+### Scoped previews
+
+Set `readPreview: readFeatureFlagPreview` when composing the flags. Set
+`featureState.preview.resolver` to `createFeatureFlagPreviewResolver` and
+choose the request and dropped-response headers in `featureState.preview`.
+Use the composed flags’ definitions in the preview resolver and share
+`resolveContext` with `FeatureFlagRequestEvaluator`.
+
+The host supplies `findPreview(previewId)` to look up a typed record with
+`owner`, `context`, `feature`, `active`, `allowsWrites` and `expiresAt`.
+The host issues and revokes those records separately from rollout settings.
+Its `canPreview({ subject, context, feature })` verifies current preview
+permission, including the caller's relationship to the selected tenant. A
+context header is only a hint for that check. The resolver also checks the
+record's owner, context, expiry and flag definition before applying it.
+Requests with a valid preview receive a private, non-cacheable response.
+
 ## What it refuses to do
 
 - It never answers a management route to a caller without the `manage`

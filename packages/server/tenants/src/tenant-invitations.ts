@@ -1,10 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { membershipFact } from "./membership-facts.js";
 import type { TenantId } from "./tenant-access.js";
-import { tenantInvitation, tenantMembership } from "./tenant-tables.js";
+import { lockScimAccountBinding } from "./tenant-scim-membership.js";
+import {
+  tenantInvitation,
+  tenantMembership,
+  tenantMembershipKey,
+} from "./tenant-tables.js";
 import {
   accountSubject,
   checkTenantPermission,
@@ -24,6 +29,15 @@ export type AuthenticatedTenantAccount = {
   readonly email: string;
   readonly emailVerified: boolean;
 };
+
+/** Application policy over the verified recipient and locked invitation scope. */
+export type TenantInvitationAcceptanceCheck = (
+  recipient: {
+    readonly tenantId: TenantId;
+    readonly account: AuthenticatedTenantAccount;
+  },
+  transaction: TenantTransaction,
+) => Promise<boolean>;
 
 export class TenantInvitationUnavailableError extends Error {
   constructor() {
@@ -69,6 +83,7 @@ export class TenantInvitations {
   accept(
     token: string,
     account: AuthenticatedTenantAccount,
+    checkAcceptance?: TenantInvitationAcceptanceCheck,
   ): Promise<TenantId> {
     const email = providerEmail.safeParse(account.email);
     if (
@@ -94,6 +109,18 @@ export class TenantInvitations {
           issuer,
           invitation.tenantId,
           "manage_members",
+        ))
+      ) {
+        throw new TenantInvitationUnavailableError();
+      }
+      if (
+        checkAcceptance !== undefined &&
+        !(await checkAcceptance(
+          {
+            tenantId: invitation.tenantId,
+            account: { id: actor.id, email: email.data, emailVerified: true },
+          },
+          tx,
         ))
       ) {
         throw new TenantInvitationUnavailableError();
@@ -140,12 +167,7 @@ export class TenantInvitations {
     const [member] = await tx
       .select({ accountId: tenantMembership.accountId })
       .from(tenantMembership)
-      .where(
-        and(
-          eq(tenantMembership.tenantId, tenantId),
-          eq(tenantMembership.accountId, accountId),
-        ),
-      )
+      .where(tenantMembershipKey(tenantId, accountId))
       .for("share");
     if (member === undefined) throw new TenantInvitationUnavailableError();
   }
@@ -155,6 +177,10 @@ export class TenantInvitations {
     tenantId: TenantId,
     accountId: string,
   ): Promise<void> {
+    const scimBinding = await lockScimAccountBinding(tx, tenantId, accountId);
+    if (scimBinding?.active === false) {
+      throw new TenantInvitationUnavailableError();
+    }
     const [added] = await tx
       .insert(tenantMembership)
       .values({ tenantId, accountId, role: "member" })

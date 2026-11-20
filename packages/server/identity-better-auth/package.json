@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./impersonation-store": {
+      "types": "./dist/impersonation-store/index.d.ts",
+      "default": "./dist/impersonation-store/index.js"
     }
   },
   "files": [
@@ -23,8 +27,10 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@better-auth/core": "1.7.26",
+    "@better-auth/sso": "1.7.26",
     "@dads-framework/identity": "0.1.0",
-    "better-auth": "1.6.23",
+    "better-auth": "1.7.26",
     "kysely": "0.28.17",
     "node-pg-migrate": "^9.0.0"
   },
@@ -32,6 +38,7 @@
     "@dads-framework/migrations": "0.1.0",
     "@dads-framework/postgres": "0.1.0",
     "@testcontainers/postgresql": "^12.0.4",
+    "samlify": "2.15.1",
     "testcontainers": "^12.0.4",
     "vitest": "~4.1.0"
   },

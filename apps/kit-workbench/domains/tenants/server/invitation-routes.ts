@@ -33,7 +33,11 @@ import { tenantInvitationOpenApiCopy } from "../copy/invitation-openapi.js";
 
 type InvitationServices = Pick<
   StarterServices,
-  "tenants" | "identity" | "invitationOrigin" | "enqueueTenantInvitation"
+  | "tenants"
+  | "identity"
+  | "readTenantSessionPolicy"
+  | "invitationOrigin"
+  | "enqueueTenantInvitation"
 >;
 
 const permission = tenantAccess.tenant.permissions.manage_members;
@@ -91,6 +95,7 @@ function acceptRoute({
   tenants,
   identity,
   invitationOrigin,
+  readTenantSessionPolicy,
 }: InvitationServices) {
   // Acceptance re-reads the verified identity from its cookie. Typed route
   // handlers intentionally receive an authorization subject, not headers.
@@ -130,11 +135,12 @@ function acceptRoute({
           "INVITATION_ORIGIN",
           "The request origin is not allowed.",
         );
-      const cookie = request.headers.cookie;
-      const signedIn =
-        typeof cookie === "string"
-          ? await identity.readSession(new Headers({ cookie }))
-          : null;
+      const policy = await invitationSession(
+        identity,
+        readTenantSessionPolicy,
+        request.headers.cookie,
+      );
+      const signedIn = policy?.session ?? null;
       if (
         signedIn === null ||
         !signedIn.account.emailVerified ||
@@ -155,6 +161,8 @@ function acceptRoute({
         tenants,
         input.data.token,
         signedIn.account,
+        ({ tenantId }) =>
+          Promise.resolve(policy?.allowsTenant(tenantId) === true),
       );
       await reply
         .header("cache-control", "no-store")
@@ -163,15 +171,31 @@ function acceptRoute({
   });
 }
 
+async function invitationSession(
+  identity: InvitationServices["identity"],
+  readTenantSessionPolicy: InvitationServices["readTenantSessionPolicy"],
+  cookie: string | string[] | undefined,
+) {
+  if (typeof cookie !== "string") return null;
+  const headers = new Headers({ cookie });
+  if (readTenantSessionPolicy !== undefined)
+    return readTenantSessionPolicy(headers);
+  const session = await identity.readSession(headers);
+  return session === null ? null : { session, allowsTenant: () => true };
+}
+
 async function redeemInvitation(
   tenants: InvitationServices["tenants"],
   token: string,
   account: Parameters<
     InvitationServices["tenants"]["invitations"]["accept"]
   >[1],
+  authorize: Parameters<
+    InvitationServices["tenants"]["invitations"]["accept"]
+  >[2],
 ) {
   try {
-    return await tenants.invitations.accept(token, account);
+    return await tenants.invitations.accept(token, account, authorize);
   } catch (error) {
     if (error instanceof TenantInvitationUnavailableError) {
       throw notFound(

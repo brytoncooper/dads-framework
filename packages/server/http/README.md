@@ -210,6 +210,17 @@ model and a fake lookup port to `buildTestApp`.
 
 Set `currentTraceId` and `requestTrace` on `createHttpApp` to correlate request records and annotate the active request span. The observer receives the request ID and the audit actor kind.
 
+## Feature state previews
+
+When a host configures `featureState.preview`, the resolver receives the
+preview ID, authenticated subject, effective subject, and feature-state
+context. By default the context comes from a request header. The host verifies the effective identity and context before
+returning a preview. Set `featureState.contextFromRequest` to derive context
+from matched route parameters instead of the caller’s header. Preview responses
+are private and non-cacheable. A resolver may return a `scopeKey` for its feature
+evaluator to match against
+the context being evaluated.
+
 ## What it refuses to do
 
 Application code supplies identity, access policies, and business handlers. The HTTP kit enforces the declared route boundary and owns transport.
@@ -224,3 +235,7 @@ Its transport conformance runs over a real Fastify socket and against the
 contract package's independent in-memory Fetch host. The shared proof covers
 GET and POST beneath a prefix. Fastify-specific hooks and limits have their own
 tests.
+
+A subject resolver can read the matched route's decoded `params` when its
+session policy depends on a route parameter. Validate those values before
+using them to select a policy.

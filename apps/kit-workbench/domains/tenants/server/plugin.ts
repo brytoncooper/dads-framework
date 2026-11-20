@@ -1,6 +1,7 @@
 import { definePlugin } from "@dads-framework/plugin";
 import { starterServices } from "../../../libraries/app-runtime/index.js";
 import { tenantInvitationRoutes } from "./invitation-routes.js";
+import { tenantPermissionRoutes } from "./permission-routes.js";
 import { tenantRoutes } from "./routes.js";
 
 export const tenantsPlugin = definePlugin({
@@ -15,4 +16,12 @@ export const tenantsPlugin = definePlugin({
       ],
     };
   },
+});
+
+export const tenantPermissionsPlugin = definePlugin({
+  name: "tenant-permissions-routes",
+  requires: [starterServices],
+  setup: ({ use }) => ({
+    routes: tenantPermissionRoutes(use(starterServices).tenants),
+  }),
 });

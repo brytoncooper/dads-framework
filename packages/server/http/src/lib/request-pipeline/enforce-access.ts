@@ -24,20 +24,21 @@ import {
  * so denied checks keep surfacing as 404 (never leaking existence) and
  * missing subjects as 401.
  */
+type SubjectRequest = {
+  headers: Record<string, string | string[] | undefined>;
+  readonly url?: string;
+  /** Decoded parameters for the matched route, before application validation. */
+  readonly params?: unknown;
+};
+
 export type SubjectResolver = {
-  resolve(request: {
-    headers: Record<string, string | string[] | undefined>;
-    readonly url?: string;
-  }): Promise<SubjectRef | null>;
+  resolve(request: SubjectRequest): Promise<SubjectRef | null>;
   /**
    * The same resolution, plus which credential answered. Optional on purpose:
    * a resolver that cannot say enforces exactly as before and simply reports
    * no method.
    */
-  resolveWithMethod?(request: {
-    headers: Record<string, string | string[] | undefined>;
-    readonly url?: string;
-  }): Promise<ResolvedSubject | null>;
+  resolveWithMethod?(request: SubjectRequest): Promise<ResolvedSubject | null>;
 };
 
 export type PermissionChecker = {

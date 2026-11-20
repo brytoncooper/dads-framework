@@ -86,6 +86,8 @@
 .fields,
 .field,
 .workspace-sidebar,
+.workspace-content,
+.permissions-content,
 .notes,
 .notes-list {
   display: grid;
@@ -102,6 +104,13 @@
   grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
+}
+.workspace-views,
+.permission-role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 .section-heading {
   align-items: end;
@@ -161,4 +170,18 @@
   .workspace-layout {
     grid-template-columns: 1fr;
   }
+}
+
+.enterprise-sign-in {
+  margin-block-start: 1rem;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--border);
+}
+.enterprise-sign-in summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.field-hint {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
 }

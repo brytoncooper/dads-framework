@@ -37,6 +37,10 @@ export type FeatureStateProtocol = {
   readonly clientHashHeader: string;
   /** Request header naming the caller's context, handed to the evaluator. */
   readonly contextHeader: string;
+  /** Derives context from matched route parameters instead of reading its context header. */
+  readonly contextFromRequest?: (request: {
+    readonly params: unknown;
+  }) => string | undefined;
   /**
    * Optional per-caller preview of one feature. Omitted, a preview id header
    * is ignored like any unknown header.
@@ -46,11 +50,23 @@ export type FeatureStateProtocol = {
 
 type HeaderCarrier = {
   readonly headers: Record<string, string | string[] | undefined>;
+  readonly params?: unknown;
 };
 
 function oneHeader(request: HeaderCarrier, name: string): string | undefined {
   const value = request.headers[name];
   return typeof value === "string" ? value : undefined;
+}
+
+export function featureStateContext(
+  protocol: FeatureStateProtocol | undefined,
+  request: HeaderCarrier,
+): string | undefined {
+  if (protocol === undefined) return undefined;
+  if (protocol.contextFromRequest === undefined) {
+    return oneHeader(request, protocol.contextHeader);
+  }
+  return protocol.contextFromRequest({ params: request.params });
 }
 
 /** Resolves a request-local snapshot without retaining a database connection. */
@@ -64,7 +80,7 @@ export async function resolveFeatureState(input: {
   const snapshot = await input.protocol.evaluator.evaluate({
     authenticatedSubject: input.authenticatedSubject,
     subject: input.subject,
-    context: oneHeader(input.request, input.protocol.contextHeader),
+    context: featureStateContext(input.protocol, input.request),
   });
   return snapshot;
 }

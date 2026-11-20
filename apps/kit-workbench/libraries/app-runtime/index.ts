@@ -5,12 +5,20 @@ import {
   type PermissionToken,
 } from "@dads-framework/access";
 import type { GetEffectiveFeatureState } from "@dads-framework/feature-flags";
-import type { Identity, IdentityEmail } from "@dads-framework/identity";
+import type {
+  Identity,
+  IdentityEmail,
+  IdentitySession,
+} from "@dads-framework/identity";
 import type { JobQueue } from "@dads-framework/job-queue-core";
 import type { ObjectStorage } from "@dads-framework/object-storage-core";
 import { defineService } from "@dads-framework/plugin";
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import { createTenantAccess, type Tenants } from "@dads-framework/tenants";
+import {
+  createTenantAccess,
+  type TenantId,
+  type Tenants,
+} from "@dads-framework/tenants";
 import { z } from "zod";
 
 export const accountEntity = entityHandle({
@@ -43,10 +51,15 @@ export type WriteWithPermission = <Result>(
 
 export type StarterServices = {
   readonly db: DrizzleHandle;
+  readonly authorization: Pick<Authorization, "check">;
   readonly files: ObjectStorage;
   readonly jobs: JobQueue;
   readonly writeWithPermission: WriteWithPermission;
   readonly identity: Identity;
+  readonly readTenantSessionPolicy?: (headers: Headers) => Promise<{
+    readonly session: IdentitySession;
+    readonly allowsTenant: (tenantId: TenantId) => boolean;
+  } | null>;
   readonly invitationOrigin: string;
   readonly enqueueTenantInvitation: (
     email: string,

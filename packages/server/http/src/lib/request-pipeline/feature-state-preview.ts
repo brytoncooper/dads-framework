@@ -25,6 +25,8 @@ export type FeatureStatePreview = {
   readonly active: boolean;
   /** Whether writes run while this preview applies; false refuses them. */
   readonly allowsWrites: boolean;
+  /** Application-defined context key for evaluations inside the request. */
+  readonly scopeKey?: string;
 };
 
 /** Application-bound resolver. Null means the id names no live preview for this caller. */
@@ -32,6 +34,8 @@ export type FeatureStatePreviewResolver = {
   resolve(input: {
     readonly previewId: string;
     readonly authenticatedSubject: SubjectRef;
+    readonly subject: SubjectRef | null;
+    readonly context: string | undefined;
   }): Promise<FeatureStatePreview | null>;
 };
 
@@ -44,7 +48,12 @@ export type FeatureStatePreviewProtocol = {
   readonly droppedHeader: string;
 };
 
-const previewContext = new AsyncLocalStorage<FeatureStatePreview>();
+type ActivePreview = {
+  readonly preview: FeatureStatePreview;
+  active: boolean;
+};
+
+const previewContext = new AsyncLocalStorage<ActivePreview>();
 
 /**
  * The preview the current request carries, or `undefined` outside a request or
@@ -52,7 +61,8 @@ const previewContext = new AsyncLocalStorage<FeatureStatePreview>();
  * handler answers the same as the request's own snapshot.
  */
 export function currentFeatureStatePreview(): FeatureStatePreview | undefined {
-  return previewContext.getStore();
+  const scope = previewContext.getStore();
+  return scope?.active === true ? scope.preview : undefined;
 }
 
 /** Runs `work` with `preview` as the current preview, for this pipeline and for tests. */
@@ -60,7 +70,28 @@ export function runWithFeatureStatePreview<T>(
   preview: FeatureStatePreview,
   work: () => Promise<T>,
 ): Promise<T> {
-  return previewContext.run(preview, work);
+  const scope = { preview, active: true };
+  return previewContext.run(scope, async () => {
+    try {
+      return await work();
+    } finally {
+      scope.active = false;
+    }
+  });
+}
+
+type PreviewReply = {
+  header(name: string, value: string): unknown;
+  readonly raw: { setHeader(name: string, value: string): unknown };
+};
+
+function writePreviewHeader(
+  reply: PreviewReply,
+  name: string,
+  value: string,
+): void {
+  void reply.header(name, value);
+  void reply.raw.setHeader(name, value);
 }
 
 type PreviewRequest = {
@@ -79,8 +110,10 @@ type PreviewRequest = {
 export async function carryFeatureStatePreview<T>(input: {
   readonly protocol: FeatureStatePreviewProtocol | undefined;
   readonly request: PreviewRequest;
-  readonly reply: { header(name: string, value: string): unknown };
+  readonly reply: PreviewReply;
   readonly authenticatedSubject: SubjectRef | null;
+  readonly subject: SubjectRef | null;
+  readonly context: string | undefined;
   readonly method: string;
   readonly writesDuringFeaturePreview: "allowed" | undefined;
   readonly work: () => Promise<T>;
@@ -93,12 +126,15 @@ export async function carryFeatureStatePreview<T>(input: {
   if (typeof previewId !== "string" || previewId.length === 0) {
     return input.work();
   }
+  writePreviewHeader(input.reply, "cache-control", "private, no-store");
   const preview = await protocol.resolver.resolve({
     previewId,
     authenticatedSubject: input.authenticatedSubject,
+    subject: input.subject,
+    context: input.context,
   });
   if (preview === null) {
-    void input.reply.header(protocol.droppedHeader, "1");
+    writePreviewHeader(input.reply, protocol.droppedHeader, "1");
     return input.work();
   }
   if (

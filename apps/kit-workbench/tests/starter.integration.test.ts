@@ -1,6 +1,7 @@
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { enterpriseSsoDomainChallenge } from "@dads-framework/identity-better-auth";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { connectPostgresClient } from "@dads-framework/postgres";
 import { expect, it, vi } from "vitest";
@@ -8,7 +9,13 @@ import { z } from "zod";
 
 import { migrate } from "../assembly/migrations.js";
 import { startApp } from "../assembly/start-app.js";
+import { proveAuditExport } from "./audit-export.test-support.js";
+import { withDnsTxtRecord } from "./dns-txt.test-support.js";
 import { proveNoteArtifacts } from "./note-artifacts.test-support.js";
+import {
+  provePermissionsAfterInvite,
+  provePermissionsBeforeInvite,
+} from "./permissions-dashboard.test-support.js";
 import type { StarterEmail } from "../libraries/app-runtime/index.js";
 
 const origin = "http://127.0.0.1:3000";
@@ -178,6 +185,26 @@ it(
             })
           ).statusCode,
         ).toBe(200);
+        const betaAccount = await provePermissionsBeforeInvite(
+          customer,
+          betaTenant,
+          beta,
+          alpha,
+          requestHeaders,
+        );
+        await provePermissionsBeforeInvite(
+          customer,
+          alphaTenant,
+          alpha,
+          beta,
+          requestHeaders,
+        );
+        const crossTenantAccount = await customer.inject({
+          method: "GET",
+          url: `/api/tenants/${alphaTenant}/members/${encodeURIComponent(betaAccount)}/permissions`,
+          headers: requestHeaders(alpha),
+        });
+        expect(crossTenantAccount.statusCode).toBe(404);
         await proveInvitation({
           customer,
           emails,
@@ -185,6 +212,22 @@ it(
           recipientCookie: beta,
           tenantId: alphaTenant,
           databaseUrl,
+          config,
+        });
+        await provePermissionsAfterInvite(
+          customer,
+          alphaTenant,
+          alpha,
+          beta,
+          requestHeaders,
+        );
+        await proveAuditExport({
+          customer,
+          staff,
+          owner: requestHeaders(alpha),
+          member: requestHeaders(beta),
+          tenantId: alphaTenant,
+          otherTenantId: betaTenant,
         });
       } finally {
         await Promise.all([customer.close(), staff.close()]);
@@ -203,6 +246,7 @@ type InvitationProof = {
   readonly recipientCookie: string;
   readonly tenantId: string;
   readonly databaseUrl: string;
+  readonly config: Parameters<typeof startApp>[1];
 };
 
 async function proveInvitation(proof: InvitationProof) {
@@ -232,6 +276,8 @@ async function proveInvitation(proof: InvitationProof) {
   });
   expect(wrongOrigin.statusCode).toBe(403);
 
+  await proveRequiredSsoInvitation(proof, token);
+
   const joined = await accept(customer, token, recipientCookie);
   expect(joined.statusCode).toBe(200);
   expect(joined.json()).toEqual({ data: { tenantId } });
@@ -257,6 +303,48 @@ async function proveInvitation(proof: InvitationProof) {
   expect((await accept(customer, expired, recipientCookie)).statusCode).toBe(
     404,
   );
+}
+
+async function proveRequiredSsoInvitation(
+  { config, recipientCookie, issuerCookie, tenantId }: InvitationProof,
+  token: string,
+) {
+  const domain = "company.example.test";
+  const challenge = enterpriseSsoDomainChallenge(secret, tenantId, domain);
+  const required = await withDnsTxtRecord(challenge, () =>
+    startApp("customer", {
+      ...config,
+      enterprise: {
+        ssoProviders: [
+          {
+            id: "sso-fixture",
+            tenantId,
+            domain,
+            mode: "required",
+            protocol: "oidc",
+            issuer: origin,
+            clientId: "fixture",
+            clientSecret: "fixture-secret",
+            authorizationEndpoint: `${origin}/authorize`,
+            tokenEndpoint: `${origin}/token`,
+            jwksEndpoint: `${origin}/keys`,
+          },
+        ],
+      },
+    }),
+  );
+  try {
+    const owner = await required.inject({
+      url: `/api/tenants/${tenantId}/notes`,
+      headers: requestHeaders(issuerCookie),
+    });
+    expect(owner.statusCode).toBe(401);
+    expect((await accept(required, token, recipientCookie)).statusCode).toBe(
+      404,
+    );
+  } finally {
+    await required.close();
+  }
 }
 
 async function invite(

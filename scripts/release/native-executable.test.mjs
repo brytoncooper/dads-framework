@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   nativeArchiveTarget,
+  nativeArchiveRustTarget,
   verifyNativeExecutable,
 } from "./native-executable.mjs";
 import { releaseVersion } from "./release-version.mjs";
@@ -59,5 +60,24 @@ test("release archives require the exact release version in their name and manif
   assert.throws(
     () => verifyNativeExecutable(packageRoot, archive, expectedVersion),
     /manifest does not match/,
+  );
+});
+
+test("matches each hosted Rust build record to its versioned npm tarball", () => {
+  const platforms = [
+    ["darwin-arm64", "aarch64-apple-darwin"],
+    ["darwin-x64", "x86_64-apple-darwin"],
+    ["linux-arm64-gnu", "aarch64-unknown-linux-gnu"],
+    ["linux-x64-gnu", "x86_64-unknown-linux-gnu"],
+    ["win32-x64", "x86_64-pc-windows-msvc"],
+  ];
+  for (const [platform, rustTarget] of platforms) {
+    const filename = `dads-framework-testing-native-${platform}-0.2.0.tgz`;
+    assert.equal(nativeArchiveRustTarget(filename, "0.2.0"), rustTarget);
+    assert.equal(nativeArchiveRustTarget(filename, "0.1.0"), undefined);
+  }
+  assert.equal(
+    nativeArchiveRustTarget("dads-framework-testing-0.2.0.tgz", "0.2.0"),
+    undefined,
   );
 });

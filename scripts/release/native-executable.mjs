@@ -2,11 +2,31 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const releaseTargets = {
-  "darwin-arm64": { architecture: 0x0100000c, magic: 0xfeedfacf },
-  "darwin-x64": { architecture: 0x01000007, magic: 0xfeedfacf },
-  "linux-arm64-gnu": { architecture: 0xb7, magic: 0x464c457f },
-  "linux-x64-gnu": { architecture: 0x3e, magic: 0x464c457f },
-  "win32-x64": { architecture: 0x8664, magic: 0x00004550 },
+  "darwin-arm64": {
+    rustTarget: "aarch64-apple-darwin",
+    architecture: 0x0100000c,
+    magic: 0xfeedfacf,
+  },
+  "darwin-x64": {
+    rustTarget: "x86_64-apple-darwin",
+    architecture: 0x01000007,
+    magic: 0xfeedfacf,
+  },
+  "linux-arm64-gnu": {
+    rustTarget: "aarch64-unknown-linux-gnu",
+    architecture: 0xb7,
+    magic: 0x464c457f,
+  },
+  "linux-x64-gnu": {
+    rustTarget: "x86_64-unknown-linux-gnu",
+    architecture: 0x3e,
+    magic: 0x464c457f,
+  },
+  "win32-x64": {
+    rustTarget: "x86_64-pc-windows-msvc",
+    architecture: 0x8664,
+    magic: 0x00004550,
+  },
 };
 
 export function nativeArchiveTarget(filename, version) {
@@ -14,6 +34,11 @@ export function nativeArchiveTarget(filename, version) {
     (platform) =>
       filename === `dads-framework-testing-native-${platform}-${version}.tgz`,
   );
+}
+
+export function nativeArchiveRustTarget(filename, version) {
+  const platform = nativeArchiveTarget(filename, version);
+  return releaseTargets[platform]?.rustTarget;
 }
 
 export function verifyNativeExecutable(root, nativeArchive, version) {

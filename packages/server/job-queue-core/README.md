@@ -4,6 +4,48 @@ Use `defineJob` to declare a job and accept `JobQueue` wherever a feature
 submits one. Applications can create a queue with
 [`@dads-framework/job-queue`](../job-queue/README.md).
 
+## Try it
+
+In a project using Node.js 22 or later, install the example dependencies.
+
+```sh
+npm install @dads-framework/job-queue-core zod@4
+npm install -D tsx
+```
+
+Save this as `example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { defineJob } from "@dads-framework/job-queue-core";
+import { FakeJobQueue } from "@dads-framework/job-queue-core/testing";
+import { z } from "zod";
+
+const queue = new FakeJobQueue("reports");
+queue.register([
+  defineJob({
+    name: "report-ready",
+    payload: z.object({ reportId: z.string() }),
+    retry: { attempts: 1, backoffMs: 1 },
+    schedules: [],
+    run: async ({ reportId }) => {
+      console.log(`Report ${reportId} is ready`);
+    },
+  }),
+]);
+await queue.start();
+try {
+  await queue.enqueue("report-ready", { reportId: "daily" });
+  await queue.runEnqueued();
+} finally {
+  await queue.close();
+}
+console.log((await queue.inspect()).counts.completed);
+```
+
+The script prints `Report daily is ready` and `1` completed job. The fake records enqueues and runs handlers when the test calls `runEnqueued()`.
+
 ## Provider contract
 
 Register job definitions before starting the queue. Job names and schedule ids

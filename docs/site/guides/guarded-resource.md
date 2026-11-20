@@ -1,50 +1,77 @@
 # Add a guarded resource
 
-Start with a resource that belongs to a workspace, such as a product catalog.
-A signed-in workspace member should be able to read it. A caller who belongs
-to a different workspace should get a 404, even with the workspace ID.
+The starter's notes are scoped to a workspace. Try the existing list before
+scaffolding a resource of your own.
 
-## Generate a resource
+## Read as a member and as an outsider
 
-From the root of an installed starter:
+Run `npm start` and create and verify two accounts in the workbench.
+Use Bash, curl, and jq with the workbench URL printed at startup or by
+`npm run dev:status`. Sign in as the future owner first, then as the
+account you will keep outside the new workspace.
+[Starter setup and sign-in](../../../apps/kit-workbench/README.md#call-the-customer-api-from-the-command-line)
 
-1. Run `npx dad add resource products --api staff --dry-run --json` and review the files and API entrypoint in the plan.
-2. Run `npx dad add resource products --api staff` to apply the change.
+```sh
+read -rp 'Workbench URL: ' base
+for jar in .dads-cookies .dads-outsider-cookies; do
+  read -rp "Verified email for $jar: " email
+  read -rsp 'Password: ' password
+  printf '\n'
+  jq -cn --arg email "$email" --arg password "$password" '{email:$email,password:$password}' |
+    curl -fsS "$base/api/auth/sign-in/email" -H "Origin: $base" \
+      -H 'Content-Type: application/json' -c "$jar" --data-binary @- >/dev/null
+  unset password
+done
 
-The scaffold adds list, read, and update routes, plus the access model,
-database migration, and web-client exports. Install dependencies if the
-manifest changed, apply the migration, and run `npm run verify`. Your app
-supplies the product creation workflow and chooses where the generated
-components appear in the browser. [Generator guide](../../generators.md)
+tenant=$(curl -fsS "$base/api/tenants" -b .dads-cookies \
+  --json '{"name":"Field team"}' | jq -er .data.id)
+notes="$base/api/tenants/$tenant/notes"
+curl -fsS "$notes" -b .dads-cookies --json '{"text":"Check the gate"}'
+curl -fsS "$notes?page=1&perPage=10" -b .dads-cookies
+curl -sS -i "$notes" -b .dads-outsider-cookies
+curl -sS -i "$notes"
+```
 
-## Follow a working request
+The member's list returns **200 OK**. The response has a page of records
+under `data` and pagination under `meta`. The IDs below are examples.
 
-In the starter, sign in, create a workspace, and add a note. The notes API
-takes the workspace's tenant ID from the URL. Its access declaration selects
-the tenant view permission, and the route uses that same tenant ID in its
-database predicate. The create handler rechecks permission inside the
-transaction that inserts the note.
-[Start the kit](../../../apps/kit-workbench/README.md) ·
-[Notes access](../../../apps/kit-workbench/domains/notes/access/index.ts) ·
-[Notes routes](../../../apps/kit-workbench/domains/notes/server/routes.ts)
+```json
+{
+  "data": [
+    {
+      "id": "6b161f9d-73bc-4a7e-935a-26a57f6a618f",
+      "tenantId": "d2453c79-98e2-4c0c-85de-ade0410a01ee",
+      "text": "Check the gate"
+    }
+  ],
+  "meta": { "total": 1, "page": 1, "perPage": 10 }
+}
+```
 
-Start your resource proof with a successful read. Then try reading without
-a session and as a signed-in caller from another workspace. Try updating as
-a caller without management permission. Write the denial assertions
-through the same API entry point your clients use. For lists, seed rows in
-both workspaces and assert which IDs come back.
-[Starter integration proof](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+The signed-in outsider gets **404** with
+`{"error":{"code":"RESOURCE_NOT_FOUND","message":"Resource not found"}}`.
+The anonymous request gets **401**.
 
-For a smaller example, the notes plugin fixture reads one note through its
-author relationship and refuses a request by an unrelated caller. Its
-customer and staff surfaces have their own composition tests. From the
-framework checkout, run `npm run build` and
-`npm test -w @dads-fixture/plugin-notes`.
-[Note fixture routes](../../../fixtures/plugin-notes/src/notes-routes.ts) ·
-[Customer API](../../../fixtures/plugin-notes/src/apis/customer-api.ts) ·
-[Staff API](../../../fixtures/plugin-notes/src/apis/staff-api.ts) ·
-[Note fixture test](../../../fixtures/plugin-notes/src/notes-plugin.test.ts) ·
-[API selection test](../../../fixtures/plugin-notes/src/apis/api-selection.test.ts)
+<!-- dads:excerpt {"path": "apps/kit-workbench/domains/notes/server/routes.ts", "language": "ts", "from": "    listRoute({", "through": "          db.select({ total: count() }).from(noteTable).where(scope),"} -->
 
-Before editing an existing route, run `dad orient <path> --json` to find its
-owner, allowed dependencies, and suggested verification.
+`notesAccess` checks the tenant ID from the URL. The handler applies the
+same tenant ID to the record query and the count. This keeps both
+`data` and `meta.total` within the authorized workspace.
+
+## Generate your own resource
+
+From an installed starter, preview the files and route placement, then
+apply the scaffold.
+
+```sh
+npx dad add resource products --api staff --dry-run --json
+npx dad add resource products --api staff
+```
+
+The scaffold adds list, read, and update operations, an access model, a
+migration, and client exports. Apply the migration with `npm run migrate`.
+Supply your app's create workflow and seed a product in each of two tenants.
+Assert the exact product IDs returned to each tenant, check denial for an
+unrelated caller, and check that a caller without management permission
+cannot update the product. Run `npm run verify`.
+[Starter integration test](../../../apps/kit-workbench/tests/starter.integration.test.ts)

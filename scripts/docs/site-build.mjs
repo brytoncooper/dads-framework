@@ -4,17 +4,24 @@ import { dirname, join } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
+import { checkPackageExamples } from "./package-examples.mjs";
 import { loadSiteCatalog } from "./site-catalog.mjs";
-import { checkExamples } from "./site-examples.mjs";
+import { checkExamples, loadPageExamples } from "./site-examples.mjs";
+import { expandPageExamples } from "./site-excerpt.mjs";
+import { exampleFileReader } from "./site-links.mjs";
 import { renderPage } from "./site-render.mjs";
 
 const rootDirectory = fileURLToPath(new URL("../../", import.meta.url));
 const ASSETS = ["search.js", "site.css"];
 
 function createSite(root) {
-  const pages = loadSiteCatalog(root);
-  const byPath = new Map(pages.map((page) => [page.path, page]));
   const files = new Map();
+  const readExampleFile = exampleFileReader(root, files);
+  const pages = loadSiteCatalog(root).map((page) => {
+    loadPageExamples(page, readExampleFile);
+    return { ...page, markdown: expandPageExamples(page, readExampleFile) };
+  });
+  const byPath = new Map(pages.map((page) => [page.path, page]));
   for (const page of pages) {
     files.set(`source/${page.path}`, page.sourceMarkdown ?? page.markdown);
     files.set(
@@ -67,9 +74,10 @@ export function checkDocsSite(root) {
       stdio: "inherit",
     },
   );
-  const { pages, files } = createSite(root);
-  const tests = checkExamples(root, pages, files);
-  return `docs health: ${String(pages.length)} pages, ${String(tests)} compiled and executed example suites\n`;
+  const { pages } = createSite(root);
+  const tests = checkExamples(root, pages);
+  const readmes = checkPackageExamples(root);
+  return `docs health: ${String(pages.length)} pages, ${String(tests)} compiled and executed example suites, ${String(readmes.packages)} package READMEs and ${String(readmes.snippets)} typechecked README examples\n`;
 }
 
 function writeDocsSite(root) {

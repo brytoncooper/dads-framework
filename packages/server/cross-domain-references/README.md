@@ -5,6 +5,61 @@ each cross-domain reference and run a read-only check against Postgres. The
 check reports stored IDs that have no target row, so you can clean up data
 before adding a foreign key or moving records.
 
+## Try it
+
+In a Node.js 22+ project, install the packages.
+
+```sh
+npm install @dads-framework/cross-domain-references @dads-framework/postgres
+```
+
+Set `DATABASE_URL` to the connection string for a running PostgreSQL database. The
+database role needs permission to create temporary tables.
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  checkCrossDomainReferences,
+  declareCrossDomainReferences,
+} from "@dads-framework/cross-domain-references";
+import { connectPostgresClient } from "@dads-framework/postgres";
+
+const databaseUrl = process.env["DATABASE_URL"];
+if (!databaseUrl) throw new Error("Set DATABASE_URL");
+
+const references = declareCrossDomainReferences([
+  {
+    id: "orders.managing_organization_id",
+    consumerDomain: "orders",
+    consumerTable: "orders",
+    consumerColumn: "managing_organization_id",
+    providerDomain: "organizations",
+    providerTable: "organizations",
+    providerColumn: "id",
+    classification: "live-association",
+  },
+]);
+
+const client = await connectPostgresClient(databaseUrl);
+try {
+  await client.query("CREATE TEMP TABLE organizations (id text PRIMARY KEY)");
+  await client.query(
+    "CREATE TEMP TABLE orders (managing_organization_id text)",
+  );
+  await client.query("INSERT INTO orders VALUES ($1)", ["missing-org"]);
+  const findings = await checkCrossDomainReferences(client, references);
+  console.log(findings.flatMap((finding) => finding.sampleIds).join(", "));
+} finally {
+  await client.end();
+}
+```
+
+The script prints `missing-org`. The temporary tables disappear when the
+connection closes.
+
 ## A declaration
 
 A reference belongs to the domain whose table carries the id, so the

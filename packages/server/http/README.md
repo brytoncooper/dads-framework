@@ -5,6 +5,57 @@ handler, response, and generated OpenAPI. Define the route in its domain,
 register it in the API, and test both allowed and denied requests. This
 package owns the Fastify integration.
 
+## Try it
+
+In a Node.js 22+ project, install the packages.
+
+```sh
+npm install @dads-framework/http zod
+```
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  createHttpApp,
+  getRoute,
+  publicAccess,
+  registerRoutes,
+  routeGroup,
+} from "@dads-framework/http";
+import { z } from "zod";
+
+const greeting = getRoute({
+  path: "/greeting",
+  summary: "Read a public greeting",
+  access: publicAccess(),
+  response: z.object({ message: z.string() }),
+  handler: () => ({ message: "Hello" }),
+});
+
+const app = await createHttpApp({
+  nodeEnv: "test",
+  trustedOrigins: [],
+  logger: false,
+});
+try {
+  registerRoutes(app, {
+    routes: routeGroup("Greetings", [greeting]),
+    subjects: { resolve: () => Promise.resolve(null) },
+    authorization: { check: () => Promise.resolve(false) },
+  });
+  const response = await app.inject({ method: "GET", url: "/greeting" });
+  console.log(response.statusCode, response.body);
+} finally {
+  await app.close();
+}
+```
+
+The injected request prints `200 {"data":{"message":"Hello"}}`. It runs
+through the HTTP app without opening a port.
+
 ## Define a route — the verb IS the function
 
 ```ts

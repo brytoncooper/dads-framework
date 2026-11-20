@@ -1,24 +1,35 @@
 # Work with a coding agent
 
-Read the repository's `AGENTS.md` before editing. In a generated app, use
-the shared `AGENTS.md` instructions and the skills the starter writes
-alongside its code. `CLAUDE.md` imports that same file.
+Give the agent a path, a concrete change, and a behavior to preserve. For
+example, give this task to an agent working in a generated Dads app.
 
-Give the agent a concrete path and a behavior to preserve. For example, in a
-generated app, ask it to change the Notes route and keep the cross-tenant
-denial test passing. Find the owning workflow with
-`npx dad orient domains/notes/server/routes.ts --json`.
+> Add pagination coverage for `GET /api/tenants/:tenantId/notes`. Read
+> `AGENTS.md` and start in `domains/notes/server/routes.ts`. Create two notes in
+> one workspace and verify that `perPage=1` returns one note and a total of
+> two. Preserve the 404 for a signed-in user outside the tenant. Report the
+> commands you ran.
 
-Use the result to find the owner, permitted dependencies, applicable skills,
-and suggested verification. Read
-[the agent operating model](../../agent-operating-model.md) for the limits on
-cross-package changes. The JSON output includes a path to the owning guide. Use `dad doctor explain <issue-id>` and the
-[Doctor reference](../../doctor.md) to turn a diagnostic into a repair plan.
+Run orientation from the generated app root.
 
-For a route or migration, follow the owning package's README and the
-[guarded resource example](./guarded-resource.md) or
-[migration guide](./audit-migrations.md). Use the Markdown source link on each
-page or the site's `llms.txt` when loading the docs into another tool.
+```sh
+npx dad orient domains/notes/server/routes.ts --json
+```
 
-Report which checks ran and where they ran. State any cases that still need
-a database, browser, or deployment environment.
+The result identifies `domains-notes` as the owner and `domains/notes` as its
+root. Check `orientation.allowedDependencies` before adding an import and
+follow the guide in `documentation`. Use any matching skill from the
+project's `.agents/skills/`. `CLAUDE.md` imports the same `AGENTS.md`
+instructions. [Agent operating model](../../agent-operating-model.md)
+
+After the edit, inspect the change-aware plan and run the starter's checks
+with Docker running.
+
+```sh
+npx dad test:recommend --changed --json
+npm run verify
+```
+
+Review the [starter integration test](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+for both a successful read and the cross-tenant denial. Ask the agent to
+identify any checks still outstanding, such as browser behavior. See
+[verification](./verification.md) for the focused test command.

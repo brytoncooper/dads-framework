@@ -1,6 +1,5 @@
 import { Marked, Renderer } from "marked";
 
-import { sourceExcerpt } from "./site-excerpt.mjs";
 import { markdownLink } from "./site-links.mjs";
 
 const HTML_CHARS = new Map([
@@ -26,22 +25,11 @@ function anchor(text, counts) {
   return used === 0 ? slug : `${slug}-${String(used)}`;
 }
 
-function renderMarkdown(markdown, page, files, link) {
+function renderMarkdown(markdown, link) {
   const counts = new Map();
-  const linkedSources = new Set();
   const renderer = new Renderer();
-  renderer.html = (token) => {
-    const excerpt = sourceExcerpt({
-      token: token.text,
-      page,
-      linkedSources,
-      files,
-    });
-    if (excerpt) {
-      return `<pre><code class="language-${excerpt.language}">${escape(excerpt.excerpt)}\n</code></pre>\n`;
-    }
-    return token.text.trimStart().startsWith("<!--") ? "" : escape(token.text);
-  };
+  renderer.html = (token) =>
+    token.text.trimStart().startsWith("<!--") ? "" : escape(token.text);
   renderer.heading = function (token) {
     const id = anchor(token.text, counts);
     return `<h${token.depth} id="${escape(id)}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
@@ -50,10 +38,7 @@ function renderMarkdown(markdown, page, files, link) {
   parser.use({
     walkTokens(token) {
       if (token.type !== "link" && token.type !== "image") return;
-      token.href = link(
-        token.href,
-        token.type === "link" ? linkedSources : undefined,
-      );
+      token.href = link(token.href);
     },
   });
   return parser.parse(markdown);
@@ -71,7 +56,7 @@ const NAVIGATION_GROUPS = [
 
 function navigation(pages, current) {
   const grouped = Map.groupBy(
-    pages,
+    pages.filter((page) => !page.packagePage),
     (page) => page.navigationGroup ?? page.section,
   );
   return [...new Set([...NAVIGATION_GROUPS, ...grouped.keys()])]
@@ -87,20 +72,17 @@ function navigation(pages, current) {
     .join("");
 }
 
+function packageLinks(page) {
+  if (!page.packagePage) return "";
+  const reference = page.apiSlug
+    ? `<a href="${page.apiSlug}.html">API reference</a>`
+    : "";
+  return `<div class="package-links"><a href="packages.html">All packages</a><a href="#try-it">Try it</a>${reference}</div>`;
+}
+
 export function renderPage({ root, page, pages, byPath, files }) {
-  const article = renderMarkdown(
-    page.markdown,
-    page.path,
-    files,
-    (target, linkedSources) =>
-      markdownLink({
-        root,
-        pages: byPath,
-        files,
-        linkedSources,
-        source: page.path,
-        target,
-      }),
+  const article = renderMarkdown(page.markdown, (target) =>
+    markdownLink({ root, pages: byPath, files, source: page.path, target }),
   );
   return `<!doctype html>
 <html lang="en">
@@ -124,7 +106,8 @@ export function renderPage({ root, page, pages, byPath, files }) {
 <p id="search-status" aria-live="polite"></p>
 <ul id="search-results"></ul>
 </section>
-<article>${article}</article>
+${packageLinks(page)}
+<article${page.slug === "packages" ? ' class="package-index"' : ""}>${article}</article>
 <footer><span>Owner <code>${escape(page.owner)}</code></span><a href="source/${escape(page.path)}">Markdown source</a></footer>
 </main>
 </div>

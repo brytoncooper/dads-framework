@@ -7,38 +7,80 @@ request.
 
 ## Try it
 
+Install the flag kit and its HTTP binding.
+
+```sh
+npm install @dads-framework/feature-flags @dads-framework/feature-flags-http @dads-framework/http
+```
+
+Save as `flag-routes.mts` and run `node flag-routes.mts` with Node.js 22.18 or
+newer. The test harness runs requests in process and denies all permission
+checks by default.
+
+<!-- dads:check-example -->
+
 ```ts
+import { composeFeatureFlags } from "@dads-framework/feature-flags";
+import {
+  FakeTenantDirectory,
+  featureFlagDefinitionFactory,
+  FixedClock,
+  InMemoryFeatureFlagStore,
+} from "@dads-framework/feature-flags/testing";
+import { createFeatureFlagRoutes } from "@dads-framework/feature-flags-http";
 import { fromFixed } from "@dads-framework/http";
 import {
-  createFeatureFlagRoutes,
-  FeatureFlagRequestEvaluator,
-} from "@dads-framework/feature-flags-http";
-import {
-  CLIENT_FEATURE_STATE_HASH_HEADER,
-  FEATURE_STATE_CONTEXT_HEADER,
-  FEATURE_STATE_HASH_HEADER,
-} from "@dads-framework/feature-flags";
+  buildTestApp,
+  TEST_SUBJECT_HEADER,
+} from "@dads-framework/http/testing";
 
-const routes = createFeatureFlagRoutes({
-  featureFlags: flags,
-  manage: {
-    kind: "permission",
-    resourceType: "app/settings",
-    permission: "manage_feature_flags",
-    resourceId: fromFixed("main"),
+const exportFlag = featureFlagDefinitionFactory({ slug: "orders.export" });
+const flags = composeFeatureFlags({
+  definitions: [exportFlag],
+  publicSlugs: [exportFlag.slug],
+  store: new InMemoryFeatureFlagStore(),
+  tenants: new FakeTenantDirectory(),
+  clock: new FixedClock(new Date("2026-01-01T00:00:00Z")),
+});
+await flags.update.execute({
+  actorId: "example-operator",
+  request: {
+    changes: [{ slug: exportFlag.slug, expectedRevision: 0, mode: "EVERYONE" }],
   },
 });
 
-const featureState = {
-  evaluator: new FeatureFlagRequestEvaluator(flags.effective, ({ context }) =>
-    context === undefined ? null : { kind: "tenant", tenantId: context },
-  ),
-  hashHeader: FEATURE_STATE_HASH_HEADER,
-  clientHashHeader: CLIENT_FEATURE_STATE_HASH_HEADER,
-  contextHeader: FEATURE_STATE_CONTEXT_HEADER,
-};
-// registerRoutes(app, { routes, featureState, ... })
+const app = await buildTestApp({
+  routes: createFeatureFlagRoutes({
+    featureFlags: flags,
+    manage: {
+      kind: "permission",
+      resourceType: "app/settings",
+      permission: "manage_feature_flags",
+      resourceId: fromFixed("main"),
+    },
+  }),
+});
+try {
+  const publicState = await app.inject({
+    method: "GET",
+    url: "/feature-state/public",
+  });
+  console.log(publicState.statusCode, publicState.body);
+
+  const management = await app.inject({
+    method: "GET",
+    url: "/feature-flags",
+    headers: { [TEST_SUBJECT_HEADER]: "example-user" },
+  });
+  console.log(management.statusCode);
+} finally {
+  await app.close();
+}
 ```
+
+The anonymous public request returns `200` with `orders.export` in
+`data.features`. The signed-in caller has no management permission, so the
+second request returns `404`.
 
 ## Use it
 

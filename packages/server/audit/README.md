@@ -4,33 +4,115 @@ Find who changed an audited row, what changed, and which request caused it.
 The kit also records requests and client diagnostics. `composeAudit` wires
 their retention jobs and diagnostic route to the application's services.
 
-## Configure row auditing
+## Try it
 
-Apply the audit kit migrations before configuring triggers from an application
-migration. Declare each application table's identity columns and map any scope
-dimensions to its columns. List application tables that should be excluded
-from persistent audit history, such as temporary credential storage.
+Use Node.js 22 or later and a disposable Postgres database. Set
+`DATABASE_URL` to the migrated database. Apply the audit schema through
+`installAuditSchemaV1(pgm)` in your migration runner, create the example
+table, and attach the trigger as shown under [Use it](#use-it). The
+application must authorize access before invoking the audit reader.
+
+```sh
+npm install @dads-framework/audit @dads-framework/audit-actor @dads-framework/postgres
+npm install -D tsx
+```
+
+Save as `record-audit.mts` and run `npx tsx record-audit.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { randomUUID } from "node:crypto";
+import { DrizzleAuditLogReader } from "@dads-framework/audit";
+import {
+  currentAuditActor,
+  withSystemActor,
+} from "@dads-framework/audit-actor";
+import { createPostgresConnection } from "@dads-framework/postgres";
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("Set DATABASE_URL.");
+
+const connection = createPostgresConnection(
+  {
+    connectionString,
+    schema: {},
+    auditActorSource: currentAuditActor,
+  },
+  console,
+);
+try {
+  const id = randomUUID();
+  const workspace = "audit-example";
+  await withSystemActor("example-import", () =>
+    connection.pool.query(
+      "INSERT INTO documents (id, workspace_key, project_key) VALUES ($1, $2, $3)",
+      [id, workspace, "example-project"],
+    ),
+  );
+
+  const reader = new DrizzleAuditLogReader(connection.drizzle);
+  const filter = { record: { tableName: "documents", rowKey: { id } } };
+  const rows = await reader.listRows(
+    { kind: "application", values: { workspace } },
+    filter,
+    null,
+    10,
+  );
+  console.log(rows.map(({ operation, actorId }) => [operation, actorId]));
+  const outside = await reader.listRows(
+    { kind: "application", values: { workspace: "unrelated" } },
+    filter,
+    null,
+    10,
+  );
+  console.log(outside.length);
+} finally {
+  await connection.close();
+}
+```
+
+The result is one row with operation `insert` and actor ID `example-import`,
+then `0` for the unrelated workspace.
+
+## Use it
+
+Register a migration after the audit schema migration. For the example, add
+the table before attaching the trigger.
 
 ```ts
 import { configureAuditTriggers } from "@dads-framework/audit/schema";
+import type { MigrationBuilder } from "node-pg-migrate";
 
-configureAuditTriggers(pgm, {
-  tables: {
-    documents: {
-      keyColumns: ["id"],
-      scopeColumns: { workspace: "workspace_key", project: "project_key" },
+export function up(pgm: MigrationBuilder) {
+  pgm.sql(`
+    CREATE TABLE public.documents (
+      id uuid PRIMARY KEY,
+      workspace_key text NOT NULL,
+      project_key text NOT NULL
+    )
+  `);
+  configureAuditTriggers(pgm, {
+    tables: {
+      documents: {
+        keyColumns: ["id"],
+        scopeColumns: { workspace: "workspace_key", project: "project_key" },
+      },
     },
-  },
-  excludeTables: ["temporary_tokens"],
-});
+  });
+}
 ```
+
+In an application migration, declare each audited table's identity columns and
+map any scope dimensions. Use `excludeTables` to explicitly remove triggers
+from existing tables such as temporary credential storage.
 
 The migration reconciles each named table's trigger in the public schema.
 Name new tables in their own application migration. Audit-owned tables are
 always excluded from this configuration. Configuration changes affect future
 writes. The kit keeps previously recorded audit entries intact.
 
-## Read the audit trail
+### Read the audit trail
 
 Capture dimensions from the affected row at write time. Read them with
 `{ kind: "application", values: { workspace: "example" } }`. All supplied
@@ -42,10 +124,6 @@ Wrap writes in an audit actor context or use the attributed Postgres pool
 from an application request or job. Applications can supply their own actor
 kinds and request attribution. An audited write without an actor stamp
 fails before it commits.
-
-The trigger records identity columns and before and after row images as JSON
-objects. Request and diagnostic context follows the client context contract.
-Captured client hint headers are stored as string values.
 
 ## Export audit metadata for a tenant
 
@@ -91,7 +169,14 @@ between requests can change the remaining results.
 
 Audit records describe supplied mutations and actors. Application policies decide which records each caller may see.
 
-## Install in an API
+## Contract
+
+The trigger records identity columns and before and after row images as JSON
+objects. Request and diagnostic context follows the client context contract.
+Captured client hint headers are stored as string values. The reader returns
+the newest rows first. Pass the last row's cursor to continue paging.
+
+### Install in an API
 
 `createAuditPlugin` declares the audit migrations, exclusions, and scope columns.
 Provide a database, clock, and logger through `auditDepsService`. Include

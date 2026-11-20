@@ -54,40 +54,98 @@ in an existing transaction, use `inTransaction` or `inDrizzleTransaction`.
 
 ## Try it
 
-```ts
-import {
-  AlreadyAppliedAccessChanges,
-  PostgresAuthorization,
-  TransactionalAccessChanges,
-  relationshipSchemaMigration,
-} from "@dads-framework/postgres-access";
-import {
-  authorizationKinds,
-  DEFAULT_AUTHORIZATION_GUARD_MARKS,
-  GuardedAuthorization,
-} from "@dads-framework/authorization";
+Use Node.js 22 or later and an empty development Postgres database. Set
+`DATABASE_URL` to a connection string for a role that can create tables and
+indexes. The script installs the relationship schema and uses a fresh
+namespace per run. In an application, apply the SQL through your migration
+runner and use a stable namespace.
 
-// Install relationshipSchemaMigration.sql through the application's migration runner.
-// connection and model come from the application composition root.
-const backend = new PostgresAuthorization({
-  model,
-  namespace: "app",
-  executor: connection.pool,
-});
-const authorization = new GuardedAuthorization(
-  backend,
-  DEFAULT_AUTHORIZATION_GUARD_MARKS,
-  authorizationKinds(model),
-);
-const changes = new TransactionalAccessChanges(backend, connection.drizzle);
-const afterCommit = new AlreadyAppliedAccessChanges();
+```sh
+npm install @dads-framework/access @dads-framework/postgres @dads-framework/postgres-access zod
+npm install -D tsx
 ```
 
-Bind `authorization` as the authorization port, `changes` as the enqueue port, and `afterCommit` as the after-commit dispatcher. Writers keep calling `enqueue(entries, tx)`; the tuples and the business row commit or roll back together. Use `backend.inTransaction(client)` for a read or explicit tuple operation that must see the caller's pending writes. Use `backend.inDrizzleTransaction(tx)` when the application owns a Drizzle transaction.
+Save as `check-postgres-access.mts` and run `npx tsx check-postgres-access.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { randomUUID } from "node:crypto";
+import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { relationshipWrite } from "@dads-framework/access/runtime";
+import { createPostgresConnection } from "@dads-framework/postgres";
+import {
+  PostgresAuthorization,
+  relationshipSchemaMigration,
+} from "@dads-framework/postgres-access";
+import { z } from "zod";
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("Set DATABASE_URL.");
+
+const user = entityHandle({ wireName: "user", idSchema: z.string() });
+const team = entityHandle({
+  wireName: "team",
+  idSchema: z.string(),
+  kind: "scope",
+});
+const teamAccess = access(team, {
+  roles: { member: user },
+  permissions: (roles) => ({ view: [roles.member] }),
+});
+const model = accessModel([
+  access(user, { roles: {}, permissions: () => ({}) }),
+  teamAccess,
+]);
+
+const connection = createPostgresConnection(
+  { connectionString, schema: {} },
+  console,
+);
+try {
+  await connection.pool.query(relationshipSchemaMigration.sql);
+  const authorization = new PostgresAuthorization({
+    model,
+    namespace: randomUUID(),
+    executor: connection.pool,
+  });
+  const resource = { type: team.wireName, id: "team-1" };
+  const subject = { type: user.wireName, id: "alice" };
+  const relation = teamAccess.roles.member.roleName;
+  const query = {
+    resource,
+    subject,
+    permission: teamAccess.permissions.view.permissionName,
+  };
+
+  console.log(await authorization.check(query));
+  await authorization.writeRelationships([
+    relationshipWrite(resource, relation, subject),
+  ]);
+  console.log(await authorization.check(query));
+  await authorization.deleteRelationships({
+    resourceType: resource.type,
+    resourceId: resource.id,
+    relation,
+    subject,
+  });
+  console.log(await authorization.check(query));
+} finally {
+  await connection.close();
+}
+```
+
+The script prints `false`, `true`, and `false` as the membership is granted
+and revoked.
 
 ## Use it
 
 Choose Postgres for an app that already uses Postgres and can keep relationship facts beside its data. Install the relationship schema through the app's migration runner. Configure a stable namespace for this model, and select the backend at application composition. Use the same model for Postgres policy compilation and HTTP scope planning.
+
+Bind `TransactionalAccessChanges` as the enqueue port and
+`AlreadyAppliedAccessChanges` as the after-commit dispatcher. The
+application passes its active transaction to `enqueue(entries, tx)`.
+Relationship facts and the business row then commit or roll back together.
 
 In Postgres mode, start neither the access-change projector nor the SpiceDB migration runner. Successful writes return an empty consistency token. Data visibility follows the caller's Postgres transaction. The after-commit dispatcher is a no-op because committed facts are already visible. Keep any application locks that coordinate work beyond projecting authorization facts.
 

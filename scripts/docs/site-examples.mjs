@@ -3,24 +3,50 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 
-export function checkExamples(root, pages, files) {
+const GUIDE_FENCE_LANGUAGES = new Set(["sh", "bash", "json", "http", "text"]);
+
+export function validateGuideCode(page, token) {
+  if (page.section !== "Guides" || token.type !== "code") return;
+  const language = token.lang?.trim();
+  if (!GUIDE_FENCE_LANGUAGES.has(language)) {
+    throw new Error(
+      `${page.path}: use a source-backed excerpt for executable code, or label the block sh, bash, json, http, or text.`,
+    );
+  }
+  if (language === "json") {
+    try {
+      JSON.parse(token.text);
+    } catch (error) {
+      throw new Error(
+        `${page.path}: invalid JSON code block: ${error.message}`,
+        { cause: error },
+      );
+    }
+  }
+}
+
+export function loadPageExamples(page, readFile) {
+  for (const { source, proof } of page.examples ?? []) {
+    if (
+      typeof source !== "string" ||
+      !/\.tsx?$/u.test(source) ||
+      typeof proof !== "string" ||
+      !/\.(?:test|spec)\.tsx?$/u.test(proof)
+    ) {
+      throw new Error(
+        `${page.path}: examples need a TypeScript source and a Vitest proof file.`,
+      );
+    }
+    readFile(source);
+    readFile(proof);
+  }
+}
+
+export function checkExamples(root, pages) {
   const sources = new Set();
   const tests = new Set();
   for (const page of pages) {
-    if (
-      page.section === "Guides" &&
-      /^\s{0,3}(?:```|~~~)/m.test(page.markdown)
-    ) {
-      throw new Error(
-        `${page.path}: link to the runnable sample and its proof instead of duplicating code.`,
-      );
-    }
     for (const { source, proof } of page.examples ?? []) {
-      if (!files.has(`source/${source}`) || !files.has(`source/${proof}`)) {
-        throw new Error(
-          `${page.path}: link the example and proof in the guide.`,
-        );
-      }
       sources.add(source);
       tests.add(proof);
     }

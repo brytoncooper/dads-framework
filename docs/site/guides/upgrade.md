@@ -1,36 +1,48 @@
 # Upgrade a Dads project
 
 Check the target release's package README and generated API reference before
-updating your dependencies. Keep first-party Dads packages on the same
-release version when upgrading the starter.
+updating dependencies. Keep the starter's first-party Dads packages on the
+same release version and review the manifest and lockfile diff. Save a
+passing `npm run verify` result before the upgrade so you can compare failures.
 
-1. Save a passing `npm run verify` result from the current version and keep
-   the existing lockfile in Git. Update the selected capability and any
-   companion packages required by the target release, then review the
-   dependency and lockfile diff.
-2. Compare emitted contracts with the previous version. Regenerate clients
-   with the app's current generation script and fix consumers of changed
-   fields or exports.
-3. Rehearse pending migrations against a restored database. Keep applied
-   migration files intact.
-4. Run authorization denial tests and the app's complete verification
-   command. Check the app's smoke test before promoting the new version.
+## Check contracts and consumers
 
-For example, if a list response adds a field, regenerate the client and run
-the screen's list test. If the change also touches query authorization, test
-the same request with a user outside the tenant before promotion.
+In the reference Workbench, the list-workspaces route declares
+`workspaceResponse` as each response item. When an upgrade affects that
+contract, regenerate the client and compare the affected operation and
+schema with the previous version. The client parses each item with the
+same schema. [Workspace route](../../../apps/workbench/src/routes.ts) ·
+[Generated client](../../../apps/workbench/src/client.generated.ts)
 
-Package splits and incompatible public changes need version-specific notes.
-Consult the affected package README when moving between versions.
+```sh
+npm run workbench:generate
+git diff -- apps/workbench/src/client.generated.ts apps/workbench/src/contracts.ts
+npm test -w @dads-app/workbench
+```
 
-## Moving from earlier source checkouts
+These commands run from the framework checkout. In your app, use its own
+client generation and consumer-test commands. If a field is added to an
+existing schema, the generated source can stay the same because it imports
+the schema. Review the schema diff and exercise the caller that reads the
+field.
 
-If an older source branch split tables, forms, display, and shell components
-across packages, migrate the imports to the current `@dads-framework/ui`
-subpaths. See the [UI package reference](../../../packages/web/ui/README.md).
-Update imports and dependency declarations in the same change, and rerun the
-table and form tests that consume those components.
+## Rehearse database and access changes
 
-When moving an existing route to the [HTTP kit](../../../packages/server/http/README.md),
-migrate its request and response schemas, regenerate its consumer, and prove
-its existing denial behavior.
+Run pending migrations against a restored test database before switching
+traffic. Keep applied migration files intact. In the starter, point
+`DATABASE_URL` at that test database and run `npm run migrate`. Then run
+`npm run verify` with Docker running.
+
+Smoke-test the deployed candidate with a member and a signed-in account
+outside the tenant. A member can list notes on the customer API. The second
+account gets a 404, and the staff host returns 404 for the same route even
+when the member makes the request.
+[Starter deployment checks](../../../apps/kit-workbench/DEPLOY.md#start-and-check)
+
+## Move from earlier source checkouts
+
+If your source branch split tables, forms, display, and shell components
+across packages, move those imports to the current `@dads-framework/ui`
+subpaths. For example, import `Input` from `@dads-framework/ui/forms`.
+Update the dependency declarations with the imports and rerun the affected
+form and table tests. [UI package reference](../../../packages/web/ui/README.md)

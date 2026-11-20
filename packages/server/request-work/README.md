@@ -38,6 +38,16 @@ Use the [HTTP package](../http/README.md) to attach the tally to request records
 
 ## Try it
 
+In a Node.js 22+ project, install the package.
+
+```sh
+npm install @dads-framework/request-work
+```
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import { chargeDatabaseQuery } from "@dads-framework/request-work";
 import { measureRequestWork } from "@dads-framework/request-work/testing";
@@ -47,6 +57,9 @@ const tally = await measureRequestWork(() =>
 );
 console.log(tally.dbQueryCount); // 1
 ```
+
+The script prints `1` for one charged database call. The test helper
+starts the request tally without an HTTP server.
 
 ## What it refuses to do
 

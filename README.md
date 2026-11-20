@@ -28,6 +28,7 @@ If `create-dads@latest` is unavailable from your npm registry, use the
 [reference Workbench below](#run-the-workbench) to try Dads from
 source. For a project you already run, see
 [adopt one capability](./docs/site/guides/adopt.md).
+Browse the [package examples](https://dadsframework.dev/docs/packages) for install commands, working code, and expected results.
 
 Each API entrypoint selects its own routes and jobs. Share a domain's services
 across entrypoints and keep the composition visible in code.

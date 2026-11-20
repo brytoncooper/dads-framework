@@ -15,8 +15,16 @@ their requested sheets.
 
 ## Try it
 
-Build a small workbook and read the same sheet back. App code validates the
-resulting row values before using them in business operations.
+Install the codec in a browser TypeScript app and run the example through
+the app’s bundler.
+
+```sh
+npm install @dads-framework/client-xlsx
+```
+
+Build an inventory template and read its example row back.
+
+<!-- dads:check-example -->
 
 ```ts
 import { xlsxWorkbookCodec } from "@dads-framework/client-xlsx";
@@ -32,8 +40,12 @@ const file = await xlsxWorkbookCodec.build({
 });
 
 const { sheets } = await xlsxWorkbookCodec.read(file, ["Inventory"]);
-console.log(sheets[0]?.rows[0]?.cells.SKU); // "0012"
+console.log(sheets[0]?.rows[0]?.cells.SKU);
 ```
+
+The console prints `0012` with the leading zeros intact. For a browser upload,
+pass the selected file's `await file.arrayBuffer()` to `read` and validate the
+returned cell values before importing inventory records.
 
 ## Workbook contract
 

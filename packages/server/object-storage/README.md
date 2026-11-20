@@ -16,6 +16,56 @@ The package re-exports the capability and in-memory implementation from
 [`@dads-framework/object-storage-core`](../object-storage-core/README.md).
 The core's conformance suite also runs against the disk and S3 implementations.
 
+## Try it
+
+Use a writable temporary directory on a volume with enough free space to
+leave at least 2 GiB or 5% of total capacity, whichever is larger, after the
+write.
+
+In a project using Node.js 22 or later, install the example dependencies.
+
+```sh
+npm install @dads-framework/object-storage
+npm install -D tsx
+```
+
+Save this as `example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  createObjectStorage,
+  loadOrCreateDiskSigningKey,
+} from "@dads-framework/object-storage";
+
+const rootDirectory = await mkdtemp(join(tmpdir(), "dads-storage-"));
+const storage = createObjectStorage({
+  driver: "disk",
+  rootDirectory,
+  signingKey: () => loadOrCreateDiskSigningKey(rootDirectory),
+  publicPathPrefix: "http://localhost:3000/files",
+  clock: () => new Date(),
+  log: console,
+});
+
+const key = "reports/daily.txt";
+await storage.put(key, "Ready for review", "text/plain");
+const stored = await storage.get(key);
+if (stored) {
+  console.log(stored.contentType, new TextDecoder().decode(stored.body));
+}
+console.log(join(rootDirectory, "objects", key));
+```
+
+The script prints `text/plain Ready for review` and the path to the written
+file. Open that file to read its contents, then delete the temporary directory
+when finished. The URL prefix configures signed links. This example uses local
+file reads and writes.
+
 ## Choose a storage path
 
 Use `ObjectStorage.put` and `get` for server-owned bytes. For browser uploads,

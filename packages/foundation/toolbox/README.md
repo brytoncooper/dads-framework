@@ -13,28 +13,20 @@ declarations, so the answer does not change with who is asking.
 
 ## Try it
 
-With Node 24 and Docker Compose running, create an app with the Toolbox
-installed. For a Toolbox-only installation in an existing project, run
-`npm install --save-dev @dads-framework/toolbox`.
+From a Dads application such as the generated starter, install the Toolbox
+and ask which package owns the notes route.
 
 ```sh
-npm create dads@latest my-app
-cd my-app
+npm install --save-dev @dads-framework/toolbox
 npx dad orient domains/notes/server/routes.ts --json
-npx dad doctor explain enmeshment
 ```
 
-The creator prints the assigned browser, customer API, and staff API URLs
-after the Docker stack responds. Run `npm start` to start the stack again.
-Use the generated README for local sign-in and verification and `DEPLOY.md`
-for hosting outside development.
+The result contains `ok: true` and identifies the owner, its verification
+commands, and the path to its README. Run `npx dad doctor explain enmeshment`
+to see the explanation for that diagnostic.
 
-```
-@dads-framework/toolbox
-Explains Dads ownership and runs deterministic agent workflows.
-Skill: dads-orient
-Verify: npm test -w @dads-framework/toolbox
-```
+To create a project that already includes the Toolbox, run
+`npm create dads@latest my-app` with Node 24 and Docker Compose running.
 
 Dads is the framework; its packages live under `@dads-framework/*`, and `dad`
 is the executable this package exposes. `dad --help` (or `dad help`) prints the

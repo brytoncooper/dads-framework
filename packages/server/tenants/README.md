@@ -4,40 +4,84 @@ Manage tenants, memberships, and one-time invitations with relationship authoriz
 
 ## Try it
 
+Use Node.js 22 or later and a disposable Postgres database. Install the tuple
+table and the tenant tables in one migration before running the script below.
+
+```sh
+npm install @dads-framework/access @dads-framework/postgres @dads-framework/postgres-access @dads-framework/tenants zod
+npm install -D tsx
+```
+
+In your migration runner, pass its builder to
+`pgm.sql(relationshipSchemaMigration.sql)` and `installTenantSchemaV1(pgm)`.
+The first export comes from `@dads-framework/postgres-access` and the second
+from `@dads-framework/tenants`. Set `DATABASE_URL` to connect to the migrated
+database. This script uses fixture account IDs. In an application, resolve
+those IDs from verified sessions before invoking the tenant service.
+
+Save as `create-tenant.mts` and run `npx tsx create-tenant.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
-import { accessModel } from "@dads-framework/access";
+import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { createPostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
   TransactionalAccessChanges,
-  relationshipSchemaMigration,
 } from "@dads-framework/postgres-access";
 import {
   createTenantAccess,
-  tenantMigrations,
+  TenantUnavailableError,
   Tenants,
 } from "@dads-framework/tenants";
+import { z } from "zod";
 
-// Install relationshipSchemaMigration.sql and tenantMigrations before serving traffic.
-// Each account and tenant definition belongs to the same composed access model.
-const access = createTenantAccess(accountDefinition.entity);
-const model = accessModel([accountDefinition, access.tenant]);
-const backend = new PostgresAuthorization({
-  model,
-  namespace: "app",
-  executor: connection.pool,
-});
-const tenants = new Tenants({
-  database: connection.drizzle,
-  access,
-  authorizationAt: (transaction) => backend.inDrizzleTransaction(transaction),
-  changes: new TransactionalAccessChanges(backend, connection.drizzle),
-});
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("Set DATABASE_URL.");
 
-const tenant = await tenants.create(session.account.id, "Example workspace");
-const context = await tenants.context(session.account.id, tenant.id);
+const account = entityHandle({ wireName: "account", idSchema: z.string() });
+const tenantAccess = createTenantAccess(account);
+const model = accessModel([
+  access(account, { roles: {}, permissions: () => ({}) }),
+  tenantAccess.tenant,
+]);
+
+const connection = createPostgresConnection(
+  { connectionString, schema: {} },
+  console,
+);
+try {
+  const backend = new PostgresAuthorization({
+    model,
+    namespace: "tenant-example",
+    executor: connection.pool,
+  });
+  const tenants = new Tenants({
+    database: connection.drizzle,
+    access: tenantAccess,
+    authorizationAt: (tx) => backend.inDrizzleTransaction(tx),
+    changes: new TransactionalAccessChanges(backend, connection.drizzle),
+  });
+
+  const tenant = await tenants.create("alice", "Example workspace");
+  const context = await tenants.context("alice", tenant.id);
+  console.log(context.tenant.name);
+  try {
+    await tenants.context("outside-account", tenant.id);
+    throw new Error("Expected access to be denied.");
+  } catch (error) {
+    if (!(error instanceof TenantUnavailableError)) throw error;
+    console.log(error.constructor.name);
+  }
+} finally {
+  await connection.close();
+}
 ```
 
-The creator gets the owner relationship. Tenant data and membership facts commit in one transaction on the primary database.
+The script prints `Example workspace` and `TenantUnavailableError`. The
+creator's owner relationship commits in the same transaction as the tenant
+and its membership row.
 
 ## Use it
 

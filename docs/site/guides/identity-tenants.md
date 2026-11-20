@@ -1,39 +1,73 @@
 # Sign-in and tenant boundaries
 
-A session identifies an account. Workspace membership determines what that
-account can access. The starter uses Better Auth for the session and Postgres
-relationships for workspace access.
-[Identity contract](../../../packages/server/identity/README.md) ·
-[Better Auth adapter](../../../packages/server/identity-better-auth/README.md)
+Use two accounts to see what changes when someone joins a workspace. Better
+Auth identifies the signed-in account. The tenant kit uses that account's
+relationships to decide whether it can read notes or manage invitations.
 
-## Try the invitation flow
+## Invite a collaborator
 
-Start the kit and create an account. Open the verification link from
-`npm run dev:mail`, sign in, and create a workspace. Invite a collaborator
-from the workspace panel, then use a separate browser profile to sign in as
-the invitee. The recipient must verify the email address on the invitation
-before accepting it.
-[Starter walkthrough](../../../apps/kit-workbench/README.md)
+1. Run `npm start` in a generated starter and open the browser URL it prints.
+   Create an account for `owner@example.test`, open the verification link from
+   `npm run dev:mail`, then sign in. Create a workspace called **Alpha** and add a
+   note that says “Kickoff on Tuesday.”
+2. Open a separate browser profile and repeat sign-up and verification for
+   `collaborator@example.test`. In the owner's profile, open **Invite a
+   collaborator** and enter that email.
+3. Run `npm run dev:mail` again and open the invitation in the collaborator's
+   profile. Select **Accept invitation**. Select **Alpha** and read the note.
 
-Before accepting, try opening the workspace's notes using the invitee's
-session. The API returns 404. After acceptance the recipient can read the
-invited workspace. Reusing the same invitation does not create another
-membership. The signed-session integration test also covers a wrong
-recipient, expiration, and an unsigned request.
-[Starter integration proof](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+## Follow the API requests
 
-## Wire tenant-aware requests
+The tenant ID is the `data.id` returned by `POST /api/tenants`. The owner
+issues the invitation with their session cookie. Here and below, substitute
+the actual workspace ID, browser origin, and credentials.
 
-Mount the identity handler and resolve the account from the session at the
-API boundary. Parse the tenant ID from the route and use the tenant
-capability to check membership and roles. Scope database operations to
-that verified tenant, and carry the same scope into flags and audit
-where the operation uses them.
-[Starter request wiring](../../../apps/kit-workbench/assembly/start-app.ts) ·
-[Tenant capability](../../../packages/server/tenants/README.md)
+```http
+POST /api/tenants/<alpha-id>/invitations
+Cookie: <owner-session-cookie>
+Origin: <browser-origin>
+Content-Type: application/json
 
-Local mail and container tests exercise the flow on your machine. Before
-deploying, exercise email delivery, verification and invitation links,
-session cookies over HTTPS, and a guarded action with two accounts in the
-target environment.
-[Starter deployment guide](../../../apps/kit-workbench/DEPLOY.md)
+{"email":"collaborator@example.test"}
+```
+
+The API returns `201 Created` with `data.expiresAt`. The invitation email
+delivers the token in the link's URL fragment.
+
+```http
+POST /api/tenants/invitations/accept
+Cookie: <collaborator-session-cookie>
+Origin: <browser-origin>
+Content-Type: application/json
+
+{"token":"<token-from-invitation-link>"}
+```
+
+The correct verified recipient gets `200 OK` with
+`{"data":{"tenantId":"<alpha-id>"}}`. Try the same notes request before
+and after acceptance.
+
+```http
+GET /api/tenants/<alpha-id>/notes
+Cookie: <collaborator-session-cookie>
+```
+
+| Caller and state               | Result                                    |
+| ------------------------------ | ----------------------------------------- |
+| Collaborator before acceptance | `404`                                     |
+| Collaborator after acceptance  | `200` with “Kickoff on Tuesday” in `data` |
+| Caller without a session       | `401`                                     |
+
+Accepting with the owner's cookie or replaying a used invitation returns
+`404`. The browser origin must match the configured origin for acceptance.
+
+## Reuse the boundary on another route
+
+Read the account from the session, use the route tenant ID in the
+permission check, and use that same tenant ID in the database query. The
+notes list uses one tenant predicate for both the rows and their count.
+
+<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/server/routes.ts","language":"ts","from":"      handler: async ({ params, query }) => {","through":"          db.select({ total: count() }).from(noteTable).where(scope),"} -->
+
+The starter integration test exercises wrong-recipient, expired, replayed,
+and unsigned invitations alongside successful redemption. [Signed-session test](../../../apps/kit-workbench/tests/starter.integration.test.ts)

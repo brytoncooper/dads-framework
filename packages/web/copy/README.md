@@ -10,21 +10,31 @@ screen that renders `orders.page.titel`.
 
 ## Try it
 
-Keep the catalog in the owning feature and translate a typed key at render
-time.
+Install the copy library and its React 19 peers in your TypeScript app.
+
+```sh
+npm install @dads-framework/copy react@^19 react-dom@^19
+```
+
+Keep the catalog in the feature that owns the labels. Use `translate`
+when rendering a label.
+
+<!-- dads:check-example -->
 
 ```ts
 import { defineCopy, translate } from "@dads-framework/copy";
 
 const notesCopy = defineCopy({
   "notes.page.title": { en: "Notes" },
+  "notes.action.add": { en: "Add note" },
 });
 
-console.log(translate(notesCopy, "en", "notes.page.title")); // "Notes"
+console.log(translate(notesCopy, "en", "notes.page.title"));
+console.log(translate(notesCopy, "en", "notes.action.add"));
 ```
 
-The renderer reads the feature's catalog. A misspelled key fails type
-checking.
+The console prints `Notes` and then `Add note`. Change the key to
+`notes.page.titel` to see TypeScript reject the misspelling.
 
 ## The law: mechanism here, words with the product
 

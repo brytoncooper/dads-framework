@@ -1,28 +1,85 @@
-# @dads-framework/authorization-migration — the authorization schema journal
+# `@dads-framework/authorization-migration`
 
-Change a SpiceDB schema without interrupting live access. The runner applies
-an ordered journal of `NNNN_slug` entries, each holding the full `schema.zed`
-snapshot it writes and the relationship steps that keep access intact (backfill
-or move first, then delete). The runner refuses gaps, duplicates, folders
-missing from the journal, and a snapshot that drops the journal's own
-definition. Applied entries are recorded as `authz/migration_version`
-relationships, so a rerun is a no-op.
+Scaffold and apply ordered SpiceDB schema snapshots and relationship migration steps.
 
-Authorization changes (`authz-changes/`) are the patch form: each records the
-definitions it changes and what it depends on, so two branches can add changes
-without renumbering a shared index. `scaffoldMigration` and
-`scaffoldAuthorizationChange` author new entries; `renumberMigration` moves an
-entry that collided with another branch.
+## Try it
 
-The journal folder is the caller's: nothing here assumes where it lives.
+Use Node.js 22 or later. The script creates a temporary journal, previews the
+first migration ID, then checks that scaffolding the same schema again is a
+no-op. No SpiceDB instance is needed to scaffold.
 
-## Plan a change
+```sh
+npm install @dads-framework/authorization-migration
+npm install -D tsx
+```
 
-1. Keep the current schema and journal under version control. Use
-   `scaffoldAuthorizationChange` for a dependency-ordered patch, or
-   `scaffoldMigration` for an entry containing a complete schema snapshot.
-2. Put tuple moves or backfills before the schema removes the old relations.
-   Check the pending IDs with `pendingAuthorizationMigrationIds`.
-3. Run `runAuthorizationMigrations` from the deployment job with your journal,
-   its folder, the authorized SpiceDB store, and the deployment logger. Read
-   the applied markers before a repeat run.
+Save as `scaffold-journal.mts` and run `npx tsx scaffold-journal.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  listShippedAuthorizationMigrationIds,
+  scaffoldMigration,
+} from "@dads-framework/authorization-migration";
+
+const journalFolder = await mkdtemp(join(tmpdir(), "dads-journal-"));
+try {
+  const input = {
+    journalFolder,
+    mode: "new",
+    slug: "baseline",
+    composedSchema: `
+definition authz/migration_version {}
+definition authz/migration_journal {
+  relation applied: authz/migration_version
+}
+definition user {}
+`,
+  } satisfies Parameters<typeof scaffoldMigration>[0];
+
+  console.log((await scaffoldMigration(input)).action);
+  console.log(
+    (await listShippedAuthorizationMigrationIds(journalFolder)).join(),
+  );
+  console.log((await scaffoldMigration(input)).action);
+} finally {
+  await rm(journalFolder, { recursive: true, force: true });
+}
+```
+
+The script prints `created`, `0001_baseline`, and `up-to-date`. To retain
+the generated `index.ts`, `schema.zed`, and `migration.ts` in your app, use
+an existing journal directory and omit the temporary directory cleanup.
+
+## Use it
+
+Pass the generated index's `journal`, the absolute path of its directory, an
+`AuthorizationMigrationStore`, and a logger with an `info` method to
+`runAuthorizationMigrations`. For a development run against SpiceDB, start
+with a dedicated datastore and construct `SpiceDbAuthorization` from
+`@dads-framework/authorization` with its endpoint and credentials. Pass the
+adapter as `store`. A successful run logs the applied ID. Rerunning the
+same journal reports zero newly applied entries.
+
+For independently authored patches, use `scaffoldAuthorizationChange` and
+pass their directory as `changesFolder` on the same runner. Each patch
+records the definitions it changes and the changes it depends on.
+`renumberMigration` moves a snapshot entry that collided with another branch.
+
+## What it refuses to do
+
+The runner rejects gaps, duplicate entries, unregistered folders, and snapshots
+that drop the journal definition. A destructive entry after the baseline
+requires the relationship steps that make its schema write legal.
+
+## Contract
+
+Each `NNNN_slug` holds a full schema snapshot. The runner calls
+`beforeSchemaWrite`, writes the snapshot, and then calls `afterSchemaWrite`
+when those steps are present. It records success as an
+`authz/migration_version` relationship. A failure leaves the marker
+unwritten. Make relationship steps safe to repeat when retrying an entry.

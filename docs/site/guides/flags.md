@@ -1,33 +1,87 @@
 # Feature flags
 
-Use a flag when a capability should reach some audiences before others. In
-the starter, the notes panel offers PDF and CSV downloads when the active
-workspace's `notes.export` flag is on.
-[Run the browser workbench](../../../apps/kit-workbench/README.md)
+In the starter, enabling `notes.export` lets workspace members download
+a note as CSV or PDF. The flag definition defaults to off. A starter
+migration enables it globally so exports work on a fresh install.
 
-## Trace the notes export flag
+## Read and use the flag
 
-The notes domain defines the flag in code and names its owner, capability,
-default, and cleanup trigger. The plugin contributes that definition. The
-starter's example database migration enables it for everyone, so a fresh
-starter demonstrates downloads even though the definition defaults to off.
-[Flag definition](../../../apps/kit-workbench/domains/notes/server/flags.ts) ·
-[Notes plugin](../../../apps/kit-workbench/domains/notes/server/plugin.ts) ·
-[Example enablement migration](../../../apps/kit-workbench/migrations/20261120080200_enable_notes_exports.migration.ts)
+Start the app, sign in, create an **Alpha** workspace, and add a note. The
+workbench reads the active workspace's feature state and shows the download
+buttons when the returned feature list includes `notes.export`.
 
-The browser reads `GET /api/tenants/:tenantId/notes/features` for the active
-workspace. The server guards the tenant route and evaluates the flag for
-that tenant. Export requests have their own server-side checks. A flag can
-hide or reveal a feature for an audience, while the authorization rule
-still governs access to its data.
-[Feature state route](../../../apps/kit-workbench/domains/notes/server/routes.ts) ·
-[Export routes](../../../apps/kit-workbench/domains/notes/server/exports.ts)
+```http
+GET /api/tenants/<alpha-id>/notes/features
+Cookie: <alpha-member-session-cookie>
+```
 
-When adding your own flag, test the off state, one enabled tenant, and a
-caller without membership. Use revision-checked updates when changing flag
-state, and put the removal condition in the flag definition so a completed
-rollout has a clear cleanup step.
-[Feature flag kit](../../../packages/server/feature-flags/README.md) ·
-[Postgres storage](../../../packages/server/feature-flags-postgres/README.md) ·
-[HTTP binding](../../../packages/server/feature-flags-http/README.md)
-[Flag composition test](../../../packages/server/feature-flags/src/lib/compose-feature-flags.test.ts)
+In the fresh starter, the `200 OK` response includes the following data.
+
+```json
+{ "data": { "features": ["notes.export"], "stateHash": "<opaque-state-hash>" } }
+```
+
+Download CSV from the note list or request the export directly using the
+note ID returned by the notes API.
+
+```http
+GET /api/tenants/<alpha-id>/notes/<note-id>/exports/csv
+Cookie: <alpha-member-session-cookie>
+```
+
+The export returns `200` with `data.contentType` set to `text/csv`
+and `data.base64` containing the encoded file. The route checks workspace
+permission, evaluates the flag for the route's tenant, and looks up the
+note within that same tenant. A Beta-only member requesting Alpha's
+features or export gets `404`, even while the flag is on globally.
+
+## Preview the rollout with the default off
+
+On a disposable starter database, use a rollout with the flag off.
+For a fresh starter project, you can omit the sample
+`20261120080200_enable_notes_exports.migration.ts` **before** applying
+any migrations. An Alpha member then sees an empty `data.features` array
+and gets `404` on the export route.
+
+Generate a preview token and obtain its digest.
+
+```sh
+preview_token=$(openssl rand -hex 32)
+printf '%s' "$preview_token" | openssl dgst -sha256
+```
+
+Set `DADS_FEATURE_PREVIEW` on the customer API and restart it. Substitute
+the Alpha member's account ID, workspace ID, and digest, and choose a
+future expiry.
+
+```json
+{
+  "accountId": "<alpha-member-account-id>",
+  "tenantId": "00000000-0000-4000-8000-000000000001",
+  "feature": "notes.export",
+  "active": true,
+  "tokenSha256": "<sha256-hex-digest>",
+  "expiresAt": "2030-01-01T12:00:00Z"
+}
+```
+
+Send the same feature and export requests with
+`x-feature-preview: <preview-token>` and the Alpha member's session
+cookie. The feature list now includes `notes.export` and the export
+succeeds. Remove the header and the saved off state applies again.
+Use the preview against Beta with a Beta member session to confirm it
+doesn't enable export there.
+
+## Define your own flag
+
+Give a flag an owner, a default, and a removal condition. The notes domain
+contributes this definition through its plugin.
+
+<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/server/flags.ts","language":"ts","from":"export const notesExportFlag = defineFeatureFlag({","through":"});"} -->
+
+Use revision-checked updates for saved rollout changes. Test the default
+off state, an enabled tenant, and a caller without membership.
+
+[Preview-test coverage](../../../apps/kit-workbench/tests/feature-previews.test.ts) ·
+[Export-test coverage](../../../apps/kit-workbench/tests/note-artifacts.test-support.ts) ·
+[Flag lifecycle](../../../packages/server/feature-flags/README.md)

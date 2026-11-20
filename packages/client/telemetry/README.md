@@ -10,8 +10,17 @@ reaches the page.
 
 ## Try it
 
-Configure the reporter at browser startup. The app must serve the selected
-same-origin endpoint.
+Install the reporter in a React 19 browser app.
+
+```sh
+npm install @dads-framework/client-telemetry react@^19 react-dom@^19
+```
+
+Connect `POST /api/client-diagnostics` to your same-origin diagnostics
+receiver. The [audit package](../../server/audit/README.md) describes the
+server-side receiver. Run this once in a development build to check delivery.
+
+<!-- dads:check-example -->
 
 ```ts
 import { createClientTelemetry } from "@dads-framework/client-telemetry";
@@ -23,11 +32,13 @@ const telemetry = createClientTelemetry({
 });
 
 telemetry.reportError(new Error("Example render failure"), { kind: "render" });
-const delivered = await telemetry.flush(2_000);
+console.log(await telemetry.flush(2_000));
 ```
 
-Use a build identifier for `release`. A successful flush hands the buffered
-events to the configured destination.
+The browser Network panel shows a POST containing one render fault. The
+console prints `true` if the receiver accepts it within two seconds. In the app,
+use your build identifier for `release` and call `reportError` from the failure
+handler.
 
 ## The seam
 

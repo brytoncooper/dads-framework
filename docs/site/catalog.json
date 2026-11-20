@@ -52,14 +52,7 @@
       "owner": "@dads-framework/plugin",
       "section": "Guides",
       "path": "docs/site/guides/composition.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "guarded-resource",
-      "title": "Add a guarded resource",
-      "owner": "@dads-framework/http",
-      "section": "Guides",
-      "path": "docs/site/guides/guarded-resource.md",
+      "navigationGroup": "Build a feature",
       "examples": [
         {
           "source": "fixtures/plugin-notes/src/notes-routes.ts",
@@ -73,7 +66,14 @@
           "source": "fixtures/plugin-notes/src/apis/staff-api.ts",
           "proof": "fixtures/plugin-notes/src/apis/api-selection.test.ts"
         }
-      ],
+      ]
+    },
+    {
+      "slug": "guarded-resource",
+      "title": "Add a guarded resource",
+      "owner": "@dads-framework/http",
+      "section": "Guides",
+      "path": "docs/site/guides/guarded-resource.md",
       "navigationGroup": "Build a feature"
     },
     {
@@ -185,6 +185,62 @@
       "section": "Guides",
       "path": "docs/site/guides/agents.md",
       "navigationGroup": "Operate & verify"
+    },
+    {
+      "slug": "starter-examples",
+      "title": "Try the starter examples",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/README.md",
+      "navigationGroup": "Starter examples"
+    },
+    {
+      "slug": "example-permissions",
+      "title": "Inspect effective permissions",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/permissions-dashboard.md",
+      "navigationGroup": "Starter examples"
+    },
+    {
+      "slug": "example-audit-export",
+      "title": "Export audit metadata",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/audit-export.md",
+      "navigationGroup": "Starter examples"
+    },
+    {
+      "slug": "example-flag-preview",
+      "title": "Preview a feature flag",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/flag-preview.md",
+      "navigationGroup": "Starter examples"
+    },
+    {
+      "slug": "example-impersonation",
+      "title": "Try staff impersonation",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/staff-impersonation.md",
+      "navigationGroup": "Starter examples"
+    },
+    {
+      "slug": "example-scim",
+      "title": "Provision users and groups",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/directory-sync.md",
+      "navigationGroup": "Starter examples"
+    },
+    {
+      "slug": "example-sso",
+      "title": "Set up company sign-in",
+      "owner": "@dads-fixture/kit-workbench",
+      "section": "Guides",
+      "path": "apps/kit-workbench/examples/company-sso.md",
+      "navigationGroup": "Starter examples"
     },
     {
       "slug": "principles",

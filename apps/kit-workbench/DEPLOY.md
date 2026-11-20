@@ -32,7 +32,25 @@ routes. Set `PORT` for each process and `HOST` to the interface reached by
 your ingress. Terminate HTTPS at the ingress and forward the original
 origin and cookie headers so sign-in stays on the intended origin.
 
-Expect `GET /api/health` to return HTTP 200 with a status of `ok`. Use the
+For example, start a customer process behind a same-host HTTPS proxy after setting the database, identity, and email configuration above:
+
+```sh
+NODE_ENV=production DADS_API=customer HOST=127.0.0.1 PORT=3000 npm run start:api
+```
+
+From a second terminal on that host, check liveness:
+
+```sh
+curl -fsS http://127.0.0.1:3000/api/health
+```
+
+A running API returns HTTP 200:
+
+```json
+{ "data": { "status": "ok" } }
+```
+
+Now use the
 [customer API walkthrough](./README.md#call-the-customer-api-from-the-command-line)
 with delivered mail to verify a session, create a tenant, and write a note.
 Repeat the note request as an account without membership and expect HTTP 404. Confirm the staff origin exposes only the intended routes. Verify
@@ -87,10 +105,14 @@ through the ingress. Confirm an unauthenticated request to
 `/scim/v2/ServiceProviderConfig` gets 401 and the IdP's bearer token gets 200.
 Each bearer credential manages the Users and Groups in its configured tenant.
 
-Use the tenant package's `tenants.bindScimUser` operation to link a verified
-local account and existing membership through a tenant owner. The tenant
-adapter revokes that linked membership when SCIM deactivates or deletes its
-user. Keep the tenant owner on the operator's normal account lifecycle.
+On a SCIM-enabled tenant, the owner can link a verified account with an
+existing membership using
+`POST /api/tenants/<tenant-id>/scim/users/<scim-user-id>/bind`. Send the
+owner's session cookie, the configured browser origin, and a JSON body
+with the member's `accountId`. The endpoint calls `tenants.bindScimUser`
+and returns `204`. The tenant adapter revokes the linked membership when
+SCIM deactivates or deletes its user. Keep the tenant owner on the
+operator's normal account lifecycle.
 To rotate access, add a new digest for the same tenant on every customer
 replica, update the token at the IdP, then remove the old digest. Remove `DADS_ENTERPRISE_SCIM` and restart customer
 replicas to unmount provisioning.

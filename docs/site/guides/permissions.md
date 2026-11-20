@@ -1,41 +1,46 @@
 # Permissions are relationships
 
-To explain why a person can read a workspace's notes, name what connects
-them to that workspace. The starter checks the tenant view permission using
-the tenant ID from the request. A signed-in outsider who knows that ID still
-gets a 404. Start the kit, create two workspaces under different accounts,
-and try reading one account's notes with the other's session.
-[Starter commands](../../../apps/kit-workbench/README.md#call-the-customer-api-from-the-command-line)
+In the starter, an account can read a workspace's notes when it has the
+owner, admin, or member relationship to that particular tenant. The tenant
+access model defines which relationships grant each permission.
 
-## Follow the check to storage
+<!-- dads:excerpt {"path": "packages/server/tenants/src/tenant-access.ts", "language": "ts", "from": "    permissions: (roles) => ({", "through": "    }),"} -->
 
-The notes access declaration uses an exported tenant permission handle.
-The list query uses the authorized tenant in its database filter. Keep
-those two inputs aligned, then test which rows the caller actually receives.
-For create and update routes, select the intended permission and keep the
-write's permission recheck and related relationship changes within the
-transaction where the provider supports it.
-[Notes access](../../../apps/kit-workbench/domains/notes/access/index.ts) ·
-[Notes routes](../../../apps/kit-workbench/domains/notes/server/routes.ts) ·
-[Access model](../../../packages/access/README.md)
+The notes route uses the exported `view` permission. For
+`GET /api/tenants/:tenantId/notes`, `fromParam("tenantId")` tells the
+HTTP kit which tenant to check against the caller's session account.
 
 <!-- dads:excerpt {"path": "apps/kit-workbench/domains/notes/access/index.ts", "language": "ts", "from": "export const notesPermission = tenantAccess.tenant.permissions.view;", "through": "};"} -->
 
-## Choose a provider
+## Check the same account before and after it joins
 
-Choose the runtime implementation when you compose the application.
+Run the member and outsider requests in the guarded resource example first.
+Use `collaborator@example.test` as the outsider's verified email. Reuse
+`base`, `tenant`, and the cookie jars from that shell.
+[Member and outsider setup](./guarded-resource.md#read-as-a-member-and-as-an-outsider)
 
-- **SpiceDB** evaluates the emitted model in its own relationship store.
-  Use the framework's runtime fake for focused HTTP tests and run integration
-  tests against SpiceDB for policies that rely on provider behavior.
-  [SpiceDB authorization kit](../../../packages/server/authorization/README.md)
-- **Postgres access** has **Trusted experimental** status. Use it when your
-  business rows and relationship facts share a primary database and your
-  policy fits the supported expressions. Using the same transaction lets a
-  grant or revocation commit with the business write. Measure point checks
-  and lists against your own graph before rollout.
-  [Postgres access](../../../packages/server/postgres-access/README.md#trusted-experimental)
+```sh
+notes="$base/api/tenants/$tenant/notes"
+curl -sS -i "$notes" -b .dads-outsider-cookies
+curl -fsS "$base/api/tenants/$tenant/invitations" -b .dads-cookies \
+  -H "Origin: $base" --json '{"email":"collaborator@example.test"}'
+```
 
-Add a grant, check access, remove it, and verify that a new request loses
-access. Repeat the exercise through the list route as well as the record
-route. [Tenant integration proof](../../../packages/server/tenants/src/tenants.integration.test.ts)
+The first request returns **404**. The second returns **201** and sends an
+invitation. Copy its token from the fragment of the link in the development
+mail log, then paste it at the silent prompt.
+
+```sh
+read -rs token
+printf '%s\n' "$token" | jq -Rn '{token:input}' | \
+  curl -fsS "$base/api/tenants/invitations/accept" -b .dads-outsider-cookies \
+    -H "Origin: $base" -H 'Content-Type: application/json' --data-binary @-
+unset token
+curl -fsS -i "$notes" -b .dads-outsider-cookies
+```
+
+Acceptance returns `{"data":{"tenantId":"<workspace ID>"}}`. The same
+notes request now returns **200** with `data` and pagination `meta`.
+The account and URL stayed the same. Accepting the invitation added the
+membership relationship the permission checks.
+[Starter integration test](../../../apps/kit-workbench/tests/starter.integration.test.ts)

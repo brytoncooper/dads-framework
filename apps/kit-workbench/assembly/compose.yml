@@ -30,6 +30,9 @@ services:
     command: ["npm", "run", "start:api"]
     environment: &api-environment
       DADS_API: customer
+      DADS_ENTERPRISE_SSO_PROVIDERS:
+      DADS_ENTERPRISE_SCIM:
+      DADS_FEATURE_PREVIEW:
       DATABASE_URL: postgres://dads:${DADS_LOCAL_POSTGRES_PASSWORD}@database:5432/dads
       DADS_IDENTITY_SECRET: ${DADS_LOCAL_IDENTITY_SECRET:?Run npm run dev:up}
       DADS_BASE_URL: ${DADS_LOCAL_WEB_URL:-http://127.0.0.1}
@@ -51,6 +54,7 @@ services:
     environment:
       <<: *api-environment
       DADS_API: staff
+      DADS_ENTERPRISE_STAFF_IMPERSONATION:
 
   web:
     image: node:24-bookworm-slim

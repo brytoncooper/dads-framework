@@ -4,27 +4,46 @@ React controls, data tables, and application layouts with a neutral default them
 
 ## Try it
 
-Install `@dads-framework/ui` and `@dads-framework/styles` in your React 19 app.
-In the application's Tailwind CSS entry point, scan the installed UI package.
-Adjust the source path relative to that stylesheet.
+Install the components and default theme in a React 19 TypeScript app with
+Tailwind CSS 4 configured.
+
+```sh
+npm install @dads-framework/ui @dads-framework/styles react@^19 react-dom@^19
+```
+
+Set your Tailwind CSS entry point to the following. This example assumes the
+stylesheet lives in `src/`. Resolve the source path from your stylesheet to
+the location of the installed UI package.
 
 ```css
 @import "@dads-framework/styles/index.css";
 @source "../node_modules/@dads-framework/ui/dist";
 ```
 
+Render `<StockCounter />` on a page that loads that stylesheet.
+
+<!-- dads:check-example -->
+
 ```tsx
+import { useState } from "react";
 import { Button } from "@dads-framework/ui/elements";
 
-export function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
-  return <Button onClick={onRefresh}>Refresh</Button>;
+export function StockCounter() {
+  const [units, setUnits] = useState(0);
+
+  return (
+    <>
+      <Button type="button" onClick={() => setUnits((count) => count + 1)}>
+        Add unit
+      </Button>
+      <p role="status">Units in stock: {units}</p>
+    </>
+  );
 }
 ```
 
-Pass a callback that refreshes a query or reloads the current view. Build
-the app to confirm that Tailwind found the installed component classes and
-then use Tab and Enter to check that the control is reachable and invokes
-that callback from the keyboard.
+The page shows a themed **Add unit** button and a count of zero. Press Tab
+to focus the button, then Enter to increment the count.
 
 ## Use it
 

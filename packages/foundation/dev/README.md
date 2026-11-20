@@ -4,7 +4,16 @@ Run several development checkouts side by side. Each Git worktree gets its own l
 
 ## Try it
 
-Add `dads.dev.json` at the root of the application. List each service's command, port offset, and HTTP readiness path. Commands are executable arguments.
+In a Git checkout, install the runner and make sure `psql` is available.
+The example assumes the application has a `dev` script that starts an HTTP
+service on the supplied `HOST` and `PORT` with a `/health` endpoint. The
+`migrate` script must use the supplied `DATABASE_URL`.
+
+```sh
+npm install --save-dev @dads-framework/dev
+```
+
+Save this as `dads.dev.json` in the application root.
 
 ```json
 {
@@ -20,7 +29,21 @@ Add `dads.dev.json` at the root of the application. List each service's command,
 }
 ```
 
-Set `DADS_DEV_POSTGRES_URL` to a loopback Postgres maintenance database. Its role needs permission to create databases. Install `psql` locally, then run `dad-dev ready` and `dad-dev up` in both checkouts. `dad-dev status` shows the local URLs, database names, and paths to owner-only settings files and file roots. `dad-dev down` stops the current checkout. A restart reuses its database and files.
+Export `DADS_DEV_POSTGRES_URL` with the URL of a loopback Postgres
+maintenance database. The role needs permission to create databases. Run
+these commands from the configured checkout.
+
+```sh
+npx dad-dev ready
+npx dad-dev up
+npx dad-dev status
+npx dad-dev down
+```
+
+`up` waits for `/health` before returning. `status` lists the service URL,
+database, and file root for the checkout. A second configured worktree gets
+its own values. Restarting the same checkout after `down` reuses its
+database and files.
 
 To check isolation, run `dad-dev status` after both worktrees are up. The
 slot records should show distinct API URLs, Postgres databases, and file
@@ -28,7 +51,7 @@ roots. A stop and restart in one worktree should leave the other running.
 
 ## Commands
 
-| Command                               | Behavior                                                                                                                                                   |
+| Invocation                            | Behavior                                                                                                                                                   |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dad-dev ready`                       | Assigns the slot, prepares Postgres and file storage, writes the environment file, and runs `npm ci` in the checkout if it has a lockfile.                 |
 | `dad-dev up`                          | Prepares the slot, runs optional `prepare`, starts the services, and waits for their HTTP readiness checks.                                                |

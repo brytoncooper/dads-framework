@@ -20,7 +20,9 @@ npm create dads@latest my-app
 cd my-app
 ```
 
-Open the web URL printed by the creator. From the generated directory,
+The creator installs dependencies, waits for the Docker stack to become
+healthy, and prints the web URL. Open that URL to reach the sign-in screen.
+From the generated directory,
 `npm start` starts the stack again, `npm run dev:status` shows its state,
 and `npm run dev:down` stops it. Use the [quickstart](../../../docs/site/guides/quickstart.md)
 to read a verification email from the local mailbox, sign in, and save a note.

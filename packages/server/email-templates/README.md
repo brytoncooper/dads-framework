@@ -16,6 +16,50 @@ Supply an optional `EmailBranding` object to `renderEmailTemplate`,
 application's header or footer logo. Each image specifies an HTTPS URL,
 alternative text, and display dimensions in pixels.
 
+## Try it
+
+In a project using Node.js 22 or later, install the example dependencies.
+
+```sh
+npm install @dads-framework/email-templates react@19 react-dom@19 zod@4
+npm install -D tsx
+```
+
+Save this as `example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { createElement } from "react";
+import { z } from "zod";
+import {
+  defineEmailTemplate,
+  EmailText,
+  renderEmailTemplate,
+} from "@dads-framework/email-templates";
+
+const template = defineEmailTemplate({
+  name: "orders.pickup-ready",
+  description: "Tells a customer that their order is ready for pickup.",
+  props: z.object({
+    order: z.string().meta({ description: "The customer's order number" }),
+  }),
+  subject: ({ order }) => `Order ${order} is ready`,
+  body: ({ order }) =>
+    createElement(EmailText, {
+      children: `Order ${order} is ready for pickup.`,
+    }),
+  samples: { example: { order: "1042" } },
+});
+
+const message = await renderEmailTemplate(template, { order: "1042" });
+console.log(message.subject);
+console.log(message.text.trim());
+console.log(message.html.includes("Order 1042 is ready for pickup."));
+```
+
+The script prints the subject, the plain-text body, and `true` for the same text in the rendered HTML. Rendering runs locally.
+
 ## Render a message
 
 Define the React template and its property schema in the owning domain. Pass

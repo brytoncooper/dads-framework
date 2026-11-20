@@ -14,24 +14,48 @@ alias shape he cannot honor exactly is a startup failure, not a quiet miss.
 
 ## Try it
 
-```ts
-import {
-  createAliasResolver,
-  nodeFileSystem,
-} from "@dads-framework/path-aliases";
+The npm install below is for the public release.
 
-const resolveAlias = createAliasResolver({
-  tsconfig: "/repo/tsconfig.json",
-  fileSystem: nodeFileSystem,
-});
+From an npm project on Node.js 22 or newer, install the resolver.
 
-resolveAlias("@app/ui/button"); // "/repo/src/ui/button.tsx"
-resolveAlias("react"); // null — not this resolver's to answer
+```sh
+npm install @dads-framework/path-aliases
 ```
 
-With `"paths": { "@app/*": ["src/*"] }` in that tsconfig, `@app/ui/button`
-answers the file the compiler would have picked. A bare specifier such as
-`react` is left to whoever asked.
+Save the following as `resolve-alias.mts`. The in-memory file system includes
+both the tsconfig and its target, so the example needs no other files.
+
+<!-- dads:check-example -->
+
+```ts
+import { relative, resolve } from "node:path";
+import {
+  createAliasResolver,
+  inMemoryFileSystem,
+} from "@dads-framework/path-aliases";
+
+const tsconfig = resolve("tsconfig.json");
+const source = resolve("src/ui/button.ts");
+const fileSystem = inMemoryFileSystem({
+  [tsconfig]: JSON.stringify({
+    compilerOptions: { paths: { "@app/*": ["./src/*"] } },
+  }),
+  [source]: 'export const label = "Save";',
+});
+const resolveAlias = createAliasResolver({ tsconfig, fileSystem });
+
+const button = resolveAlias("@app/ui/button");
+console.log(button && relative(".", button).split("\\").join("/"));
+console.log(resolveAlias("react"));
+```
+
+```sh
+node --experimental-strip-types resolve-alias.mts
+```
+
+The first line is `src/ui/button.ts`. The second is `null` because `react`
+has no entry in the alias map. For an on-disk project, pass the path of your
+tsconfig and `nodeFileSystem` to the same resolver.
 
 ## Use it
 

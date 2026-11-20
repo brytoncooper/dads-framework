@@ -4,14 +4,49 @@ The account, session, and mail contracts used by Dads applications and their ide
 
 ## Try it
 
+Use Node.js 22 or later. The test adapter uses an explicitly seeded cookie
+and a fixed clock. It needs no identity provider or database.
+
+```sh
+npm install @dads-framework/identity
+npm install -D tsx
+```
+
+Save as `read-session.mts` and run `npx tsx read-session.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import type { Identity } from "@dads-framework/identity";
+import {
+  inMemoryIdentity,
+  inMemoryIdentityCookie,
+} from "@dads-framework/identity/testing";
 
-export async function currentAccount(identity: Identity, request: Request) {
-  const session = await identity.readSession(request.headers);
+async function currentAccount(identity: Identity, headers: Headers) {
+  const session = await identity.readSession(headers);
   return session?.account ?? null;
 }
+
+const identity = inMemoryIdentity(
+  {
+    fixture: {
+      account: {
+        id: "alice",
+        email: "alice@example.test",
+        emailVerified: true,
+      },
+      expiresAt: new Date("2030-01-02T00:00:00Z"),
+    },
+  },
+  () => new Date("2030-01-01T00:00:00Z"),
+);
+const headers = new Headers({ cookie: inMemoryIdentityCookie("fixture") });
+console.log((await currentAccount(identity, headers))?.id);
+console.log(await currentAccount(identity, new Headers()));
 ```
+
+The script prints `alice` for the seeded session and `null` without a cookie.
 
 ## Use it
 

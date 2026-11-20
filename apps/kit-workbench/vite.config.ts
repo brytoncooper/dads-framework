@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, posix, resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
+import { bundledExamplesPage } from "./assembly/examples-page.js";
 
 const apiTarget = process.env["DADS_DEV_API_URL"] ?? "http://127.0.0.1:3000";
 
@@ -53,10 +54,27 @@ function bundledAssetLicenses(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), bundledAssetLicenses()],
-  build: { license: { fileName: "THIRD_PARTY_LICENSES.md" } },
+  plugins: [tailwindcss(), bundledAssetLicenses(), bundledExamplesPage()],
+  build: {
+    license: { fileName: "THIRD_PARTY_LICENSES.md" },
+    rolldownOptions: {
+      input: { workbench: "index.html", examples: "examples.html" },
+    },
+  },
   server: {
     strictPort: true,
+    fs: {
+      // Keep Vite's default denials and protect the local example sessions.
+      deny: [
+        ".env",
+        ".env.*",
+        "*.{crt,pem,key,p12,pfx,cer,der}",
+        ".npmrc",
+        ".yarnrc.yml",
+        "**/.git/**",
+        "**/.dads/**",
+      ],
+    },
     proxy: { "/api": { target: apiTarget } },
   },
   preview: {

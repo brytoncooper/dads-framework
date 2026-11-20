@@ -6,17 +6,59 @@ writes a batch of flag changes and their history in one transaction.
 
 ## Try it
 
-```ts
-import { composeFeatureFlags } from "@dads-framework/feature-flags";
-import { DrizzleFeatureFlagStore } from "@dads-framework/feature-flags-postgres";
+Use a fresh Postgres database for the example and export its connection URL
+as `DATABASE_URL`. Install the store and the migration runner.
 
-const flags = composeFeatureFlags({
-  definitions,
-  store: new DrizzleFeatureFlagStore(db), // db: a DrizzleHandle from @dads-framework/postgres
-  tenants,
-  clock,
-});
+```sh
+npm install @dads-framework/feature-flags-postgres @dads-framework/postgres node-pg-migrate
+mkdir -p migrations
 ```
+
+Save this as `migrations/1767225600000_feature_flags.mjs`.
+
+```js
+export {
+  installFeatureFlagSchemaV1 as up,
+  removeFeatureFlagSchemaV1 as down,
+} from "@dads-framework/feature-flags-postgres";
+```
+
+Apply the migration.
+
+```sh
+npx node-pg-migrate up
+```
+
+Save as `read-flag-store.mts` and run `node read-flag-store.mts` with Node.js
+22.18 or newer.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  DrizzleFeatureFlagStore,
+  featureFlagStates,
+} from "@dads-framework/feature-flags-postgres";
+import { createPostgresConnection } from "@dads-framework/postgres";
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString)
+  throw new Error("Set DATABASE_URL before running this script.");
+
+const connection = createPostgresConnection(
+  { connectionString, schema: { featureFlagStates } },
+  console,
+);
+try {
+  const store = new DrizzleFeatureFlagStore(connection.drizzle);
+  console.log(await store.listStates(["orders.export"]));
+} finally {
+  await connection.close();
+}
+```
+
+The script prints `[]`. The migration creates the tables, and the store
+finds no persisted audience for `orders.export` in the fresh database.
 
 ## Use it
 

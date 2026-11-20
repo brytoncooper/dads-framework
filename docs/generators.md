@@ -1,9 +1,50 @@
 # Generate application code
 
-Run these commands at the root of a Dads kit starter. Use `dad add --help`
-to see the available generators.
+## Add inventory to the staff API
 
-| Command                                                | What it adds                                                                                             |
+From the root of an installed starter, create an inventory domain. Preview a resource called `item` before you add it to the staff API.
+
+```sh
+npx dad add domain inventory
+npx dad add resource item --domain inventory --api staff --dry-run --json
+```
+
+Look in `result.files` for `apps/staff/app.ts`, `domains/inventory/server/item-reader.ts`, and `domains/inventory/server/item-writer.ts`. The first wires the resource into the staff API. The other two hold its database reads and writes. The preview leaves those files untouched.
+
+Apply the change and preview it again:
+
+```sh
+npx dad add resource item --domain inventory --api staff
+npx dad add resource item --domain inventory --api staff --dry-run --json
+```
+
+The second preview returns:
+
+```json
+{
+  "ok": true,
+  "result": {
+    "kind": "resource",
+    "domain": "inventory",
+    "files": [],
+    "dryRun": true
+  }
+}
+```
+
+Install from your configured package source, apply the migration to your development database, and exercise the generated route test.
+
+```sh
+npm install
+npm run migrate
+npm test -- domains/inventory/server/item-resource.test.ts
+```
+
+The test submits an edit from an outsider and a stale edit from an authorized owner. Open it beside `domains/inventory/server/item-resource.ts` to see the permission and version checks.
+
+## Choose a generator
+
+| Generator                                              | What it adds                                                                                             |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `dad add domain inventory`                             | A domain with contract, access, server and web-client surfaces                                           |
 | `dad add endpoint status --domain inventory`           | An authenticated GET operation and its route proof                                                       |
@@ -19,17 +60,6 @@ Add `--api customer` or `--api staff` to a domain or endpoint command to
 select the domain in that API. A resource requires an API selection. If a
 domain is already selected by multiple APIs, each selection includes its
 domain routes. Adding a new domain without an API leaves it unmounted.
-
-For a first resource in a fresh starter, create the domain with
-`npx dad add domain inventory`. Then preview the resource on the staff API
-with `npx dad add resource item --domain inventory --api staff --dry-run --json`.
-
-The preview lists planned changes, including the resource files and API
-registration. Remove the preview flags to apply it. Use `--dry-run --json`
-on other generators to inspect their planned changes. Generators only write
-new files or explicit registry entries, including those marked with comments
-in the starter. An unchanged rerun creates no duplicate entries. A file
-collision aborts before changes are written.
 
 Email and resource generators add package dependencies, and the library
 generator adds an npm workspace. Run `npm install` from the app root using

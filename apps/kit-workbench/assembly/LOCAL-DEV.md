@@ -54,7 +54,7 @@ The integration suite starts its own disposable PostgreSQL container.
 
 The customer API accepts `DADS_FEATURE_PREVIEW` as an optional JSON setting.
 Set it for one account and tenant. The API checks the account's current tenant
-permission when it resolves the preview. The request URL selects the tenant.
+permission when it resolves the preview. The matched route parameter selects the tenant.
 
 Generate a random token and put its SHA-256 digest in the JSON setting. Keep
 the token for the request header.

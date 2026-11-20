@@ -18,6 +18,11 @@ export type EnterpriseBetterAuthIdentity = Identity & {
     headers: Headers,
     tenantId: string,
   ) => Promise<IdentitySession | null>;
+  /** Snapshot a verified session to check tenant policy without another database lookup. */
+  readonly readTenantSessionPolicy: (headers: Headers) => Promise<{
+    readonly session: IdentitySession;
+    readonly allowsTenant: (tenantId: string) => boolean;
+  } | null>;
   /** Read a session authenticated via this tenant's configured SSO provider. */
   readonly readEnterpriseSession: (
     headers: Headers,
@@ -69,19 +74,38 @@ export function createIdentitySessionReaders(
       };
     };
 
-  const readTenantSession: EnterpriseBetterAuthIdentity["readTenantSession"] =
-    async (headers, tenantId) => {
-      if (
-        !providers.some(
-          (provider) =>
-            provider.tenantId === tenantId && provider.mode === "required",
-        )
-      )
-        return readSession(headers);
-      return await readEnterpriseSession(headers, tenantId);
+  const requiredTenants = new Set(
+    providers
+      .filter(({ mode }) => mode === "required")
+      .map(({ tenantId }) => tenantId),
+  );
+  const readTenantSessionPolicy: EnterpriseBetterAuthIdentity["readTenantSessionPolicy"] =
+    async (headers) => {
+      const context = await readCurrent(headers);
+      if (context === null) return null;
+      const session = identityView(context.current);
+      const expiresAt = session.expiresAt.getTime();
+      const ssoTenantId = context.provider?.tenantId;
+      return {
+        session,
+        allowsTenant: (tenantId) =>
+          expiresAt > Date.now() &&
+          (ssoTenantId === tenantId || !requiredTenants.has(tenantId)),
+      };
     };
 
-  return { readSession, readEnterpriseSession, readTenantSession };
+  const readTenantSession: EnterpriseBetterAuthIdentity["readTenantSession"] =
+    async (headers, tenantId) => {
+      const policy = await readTenantSessionPolicy(headers);
+      return policy?.allowsTenant(tenantId) ? policy.session : null;
+    };
+
+  return {
+    readSession,
+    readEnterpriseSession,
+    readTenantSession,
+    readTenantSessionPolicy,
+  };
 }
 
 function sessionMatchesProvider(

@@ -19,7 +19,7 @@ import { tenantIdSchema } from "@dads-framework/tenants";
 import { z } from "zod";
 
 import { accountEntity, tenantAccess } from "../libraries/app-runtime/index.js";
-import { tenantFromRequest } from "./session-subjects.js";
+import { tenantFromParams } from "./session-subjects.js";
 
 const previewSetting = z.strictObject({
   accountId: accountEntity.idSchema,
@@ -75,7 +75,7 @@ export function configureFeaturePreviews(options: {
   return {
     evaluator: new FeatureFlagRequestEvaluator(flags, resolveTenant),
     contextHeader: FEATURE_STATE_CONTEXT_HEADER,
-    contextFromRequest: ({ url }) => tenantFromRequest(url),
+    contextFromRequest: ({ params }) => tenantFromParams(params) ?? undefined,
     hashHeader: FEATURE_STATE_HASH_HEADER,
     clientHashHeader: CLIENT_FEATURE_STATE_HASH_HEADER,
     preview: {

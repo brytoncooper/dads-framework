@@ -37,6 +37,11 @@ export async function openIdentityServices(
   return {
     identity: enterpriseIdentity ?? createBetterAuthIdentity(identityOptions),
     enterpriseIdentity,
+    ...(enterpriseIdentity === undefined
+      ? {}
+      : {
+          readTenantSessionPolicy: enterpriseIdentity.readTenantSessionPolicy,
+        }),
     scimHandler:
       scim === undefined
         ? undefined

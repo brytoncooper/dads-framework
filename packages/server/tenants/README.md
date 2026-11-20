@@ -49,6 +49,13 @@ Use the account ID from the application's authenticated session. Pass request te
 
 `invitations.issue(accountId, tenantId, recipientEmail)` produces a one-time token and its expiration. Deliver that token to the recipient through the application's invitation link or email. `invitations.accept(token, session.account)` accepts only the intended account with a verified email. The account session supplies `id`, `email`, and `emailVerified`. The token digest, expiry, and redemption state stay in storage. Tenant invitations grant membership and work with identity systems that support verified account emails.
 
+Applications with tenant sign-in requirements can pass a
+`TenantInvitationAcceptanceCheck` as the third argument to
+`invitations.accept`. The callback receives the locked invitation's tenant,
+the verified accepting account, and the same Postgres transaction. Return
+`true` to permit redemption. Denial leaves the invitation unconsumed and
+membership unchanged. Use the supplied tenant and account for policy lookup.
+
 Use `context.audience` for feature flag evaluation and `context.auditScope` for tenant audit reads. `tenantAuditConfiguration` defines the `tenant_id` dimension for tenant and membership records. It excludes invitation rows. Bind `createTenantDirectory(database)` as the flag manager's platform-authorized tenant directory.
 
 ## What it refuses to do

@@ -174,3 +174,9 @@ For reauthentication, initiate a new SSO round trip and call
 ID with the original actor for the sensitive action. Freshness measures
 the completion of an application SSO flow. Configure IdP policy to
 require a new credential prompt or MFA when that assurance is needed.
+
+For a tenant invitation, read a verified session with
+`readTenantSessionPolicy(headers)` before opening the membership transaction.
+Apply its `allowsTenant(tenantId)` check to the tenant read from the locked
+invitation. The check reuses the validated session without querying the pool
+again while the transaction holds a connection.

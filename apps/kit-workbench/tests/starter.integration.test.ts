@@ -1,6 +1,8 @@
+import * as dns from "node:dns/promises";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { enterpriseSsoDomainChallenge } from "@dads-framework/identity-better-auth";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { connectPostgresClient } from "@dads-framework/postgres";
 import { expect, it, vi } from "vitest";
@@ -15,6 +17,11 @@ import {
   provePermissionsBeforeInvite,
 } from "./permissions-dashboard.test-support.js";
 import type { StarterEmail } from "../libraries/app-runtime/index.js";
+
+vi.mock("node:dns/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof dns>()),
+  resolveTxt: vi.fn(),
+}));
 
 const origin = "http://127.0.0.1:3000";
 const secret = "fixture-signing-key-with-forty-characters";
@@ -210,6 +217,7 @@ it(
           recipientCookie: beta,
           tenantId: alphaTenant,
           databaseUrl,
+          config,
         });
         await provePermissionsAfterInvite(
           customer,
@@ -243,6 +251,7 @@ type InvitationProof = {
   readonly recipientCookie: string;
   readonly tenantId: string;
   readonly databaseUrl: string;
+  readonly config: Parameters<typeof startApp>[1];
 };
 
 async function proveInvitation(proof: InvitationProof) {
@@ -272,6 +281,8 @@ async function proveInvitation(proof: InvitationProof) {
   });
   expect(wrongOrigin.statusCode).toBe(403);
 
+  await proveRequiredSsoInvitation(proof, token);
+
   const joined = await accept(customer, token, recipientCookie);
   expect(joined.statusCode).toBe(200);
   expect(joined.json()).toEqual({ data: { tenantId } });
@@ -297,6 +308,48 @@ async function proveInvitation(proof: InvitationProof) {
   expect((await accept(customer, expired, recipientCookie)).statusCode).toBe(
     404,
   );
+}
+
+async function proveRequiredSsoInvitation(
+  { config, recipientCookie, issuerCookie, tenantId }: InvitationProof,
+  token: string,
+) {
+  const domain = "company.example.test";
+  const challenge = enterpriseSsoDomainChallenge(secret, tenantId, domain);
+  vi.mocked(dns.resolveTxt).mockResolvedValueOnce([[challenge.value]]);
+  const required = await startApp("customer", {
+    ...config,
+    enterprise: {
+      ssoProviders: [
+        {
+          id: "sso-fixture",
+          tenantId,
+          domain,
+          mode: "required",
+          protocol: "oidc",
+          issuer: origin,
+          clientId: "fixture",
+          clientSecret: "fixture-secret",
+          authorizationEndpoint: `${origin}/authorize`,
+          tokenEndpoint: `${origin}/token`,
+          jwksEndpoint: `${origin}/keys`,
+        },
+      ],
+    },
+  });
+  try {
+    expect(vi.mocked(dns.resolveTxt)).toHaveBeenCalledWith(challenge.name);
+    const owner = await required.inject({
+      url: `/api/tenants/${tenantId}/notes`,
+      headers: requestHeaders(issuerCookie),
+    });
+    expect(owner.statusCode).toBe(401);
+    expect((await accept(required, token, recipientCookie)).statusCode).toBe(
+      404,
+    );
+  } finally {
+    await required.close();
+  }
 }
 
 async function invite(

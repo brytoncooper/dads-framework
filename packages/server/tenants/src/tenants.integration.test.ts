@@ -247,6 +247,45 @@ describe("two tenants on Postgres", () => {
     ).resolves.toHaveLength(2);
   });
 
+  it("checks the locked invitation tenant and verified recipient before granting membership", async () => {
+    const tenant = await tenants.create("sso-owner", "SSO Required");
+    const invite = await tenants.invitations.issue(
+      "sso-owner",
+      tenant.id,
+      "proof@example.test",
+    );
+    const account = {
+      id: "proof-recipient",
+      email: "Proof@example.test",
+      emailVerified: true,
+    };
+    await expect(
+      tenants.invitations.accept(invite.token, account, async (recipient) => {
+        expect(recipient).toEqual({
+          tenantId: tenant.id,
+          account: { ...account, email: "proof@example.test" },
+        });
+        await expect(
+          database.pool.query(
+            "SELECT tenant_id FROM tenant_invitation WHERE tenant_id = $1 FOR UPDATE NOWAIT",
+            [tenant.id],
+          ),
+        ).rejects.toMatchObject({ code: "55P03" });
+        return false;
+      }),
+    ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
+    await expect(tenants.list(account.id)).resolves.toEqual([]);
+    await expect(
+      tenants.invitations.accept(
+        invite.token,
+        account,
+        ({ tenantId, account: verified }) =>
+          Promise.resolve(tenantId === tenant.id && verified.id === account.id),
+      ),
+    ).resolves.toBe(tenant.id);
+    await expect(tenants.list(account.id)).resolves.toEqual([tenant]);
+  });
+
   it("holds the inviter's membership through the acceptance authorization check", async () => {
     const tenant = await tenants.create("casey", "Lock proof");
     const first = await tenants.invitations.issue(

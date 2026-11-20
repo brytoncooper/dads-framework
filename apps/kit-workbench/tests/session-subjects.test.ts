@@ -25,17 +25,21 @@ it("requires the tenant's session policy on tenant routes", async () => {
   };
   const subjects = sessionSubjects(identity, identity);
   const headers = { cookie: "fixture" };
-  const encodedTenant = tenantId.toUpperCase().replace(/^C/u, "%43");
   expect(
     await subjects.resolve({
       headers,
-      url: `/api/tenants/${encodedTenant}/notes?limit=1`,
+      url: `/api/tenants/${tenantId.toUpperCase()}/notes?limit=1`,
+      params: { tenantId: tenantId.toUpperCase() },
     }),
   ).toBeNull();
   expect(readTenantSession).toHaveBeenCalledWith(
     new Headers(headers),
     tenantId,
   );
+  expect(
+    await subjects.resolve({ headers, params: { tenantId: "invalid" } }),
+  ).toBeNull();
+  expect(readTenantSession).toHaveBeenCalledTimes(1);
   expect(readSession).not.toHaveBeenCalled();
   expect(
     await subjects.resolve({ headers, url: "/api/tenants" }),

@@ -7,15 +7,16 @@ import { accountEntity } from "../libraries/app-runtime/index.js";
 
 export function sessionSubjects(
   identity: Identity,
-  enterprise?: EnterpriseBetterAuthIdentity,
+  enterprise?: Pick<EnterpriseBetterAuthIdentity, "readTenantSession">,
 ): SubjectResolver {
   return {
-    async resolve({ headers, url }) {
+    async resolve({ headers, params }) {
       const normalized = new Headers();
       for (const [name, header] of Object.entries(headers)) {
         if (typeof header === "string") normalized.set(name, header);
       }
-      const tenantId = tenantFromRequest(url);
+      const tenantId = tenantFromParams(params);
+      if (tenantId === null) return null;
       const session =
         enterprise !== undefined && tenantId !== undefined
           ? await enterprise.readTenantSession(normalized, tenantId)
@@ -27,15 +28,10 @@ export function sessionSubjects(
   };
 }
 
-export function tenantFromRequest(url?: string): string | undefined {
-  const path = url?.split("?")[0];
-  const match = /^\/api\/tenants\/([^/]+)(?:\/|$)/u.exec(path ?? "");
-  const segment = match?.[1];
-  if (segment === undefined) return undefined;
-  try {
-    const tenant = tenantIdSchema.safeParse(decodeURIComponent(segment));
-    return tenant.success ? tenant.data.toLowerCase() : undefined;
-  } catch {
+/** Undefined is unscoped. Null means the matched tenant parameter is invalid. */
+export function tenantFromParams(params: unknown): string | null | undefined {
+  if (typeof params !== "object" || params === null || !("tenantId" in params))
     return undefined;
-  }
+  const tenant = tenantIdSchema.safeParse(params.tenantId);
+  return tenant.success ? tenant.data.toLowerCase() : null;
 }

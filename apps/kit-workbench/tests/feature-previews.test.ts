@@ -6,6 +6,7 @@ import { FakeAuthorization } from "@dads-framework/access/testing";
 import {
   effectiveFeatureStateSchema,
   GetEffectiveFeatureState,
+  hashFeatureState,
 } from "@dads-framework/feature-flags";
 import {
   featureFlagDefinitionFactory,
@@ -100,6 +101,18 @@ it("requires membership and uses the actual route tenant for previews", async ()
     expect(allowed.json()).toMatchObject({
       data: { features: [definition.slug] },
     });
+
+    const encodedPath = await app.inject({
+      method: "GET",
+      url: `/api/%74enants/${tenantId}/notes/features`,
+      headers: { ...headers, "x-feature-state-context": otherTenantId },
+    });
+    expect(encodedPath.statusCode).toBe(200);
+    expect(encodedPath.headers["x-feature-preview-dropped"]).toBeUndefined();
+    expect(encodedPath.headers["x-feature-state-hash"]).toBe(
+      hashFeatureState([definition.slug]),
+    );
+    expect(encodedPath.json()).toEqual(allowed.json());
 
     const other = await app.inject({
       method: "GET",

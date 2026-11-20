@@ -30,6 +30,15 @@ export type AuthenticatedTenantAccount = {
   readonly emailVerified: boolean;
 };
 
+/** Application policy over the verified recipient and locked invitation scope. */
+export type TenantInvitationAcceptanceCheck = (
+  recipient: {
+    readonly tenantId: TenantId;
+    readonly account: AuthenticatedTenantAccount;
+  },
+  transaction: TenantTransaction,
+) => Promise<boolean>;
+
 export class TenantInvitationUnavailableError extends Error {
   constructor() {
     super("Tenant invitation is unavailable");
@@ -74,6 +83,7 @@ export class TenantInvitations {
   accept(
     token: string,
     account: AuthenticatedTenantAccount,
+    checkAcceptance?: TenantInvitationAcceptanceCheck,
   ): Promise<TenantId> {
     const email = providerEmail.safeParse(account.email);
     if (
@@ -99,6 +109,18 @@ export class TenantInvitations {
           issuer,
           invitation.tenantId,
           "manage_members",
+        ))
+      ) {
+        throw new TenantInvitationUnavailableError();
+      }
+      if (
+        checkAcceptance !== undefined &&
+        !(await checkAcceptance(
+          {
+            tenantId: invitation.tenantId,
+            account: { id: actor.id, email: email.data, emailVerified: true },
+          },
+          tx,
         ))
       ) {
         throw new TenantInvitationUnavailableError();

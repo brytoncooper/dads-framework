@@ -14,6 +14,7 @@ export {
 } from "./tenant-composition.js";
 export {
   type AuthenticatedTenantAccount,
+  type TenantInvitationAcceptanceCheck,
   TenantInvitationUnavailableError,
 } from "./tenant-invitations.js";
 export type { TenantMembership } from "./tenant-memberships.js";

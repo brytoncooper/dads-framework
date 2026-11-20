@@ -36,6 +36,10 @@ console.log(translate(notesCopy, "en", "notes.action.add"));
 The console prints `Notes` and then `Add note`. Change the key to
 `notes.page.titel` to see TypeScript reject the misspelling.
 
+The [starter's workbench catalog](../../../apps/kit-workbench/apps/web/copy/workbench-copy.ts)
+defines the notes and account labels and exposes a typed React hook that
+resolves the labels from their keys.
+
 ## The law: mechanism here, words with the product
 
 **No file in this kit defines a glossary entry or a refused word.** Not one

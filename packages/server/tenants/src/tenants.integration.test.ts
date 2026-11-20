@@ -7,7 +7,6 @@ import type {
   FeatureFlagContext,
   TenantDirectory,
 } from "@dads-framework/feature-flags";
-import { runNodePgMigrations } from "@dads-framework/migrations";
 import {
   createPostgresConnection,
   type PostgresConnection,
@@ -18,6 +17,7 @@ import {
   TransactionalAccessChanges,
 } from "@dads-framework/postgres-access";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
+import { MigrationBuilder } from "node-pg-migrate";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -26,7 +26,7 @@ import {
   createTenantDirectory,
   tenantAuditConfiguration,
   TenantInvitationUnavailableError,
-  tenantMigrations,
+  installTenantSchemaV2,
   TenantUnavailableError,
   Tenants,
 } from "./index.js";
@@ -50,22 +50,19 @@ describe("two tenants on Postgres", () => {
   beforeAll(async () => {
     const postgres = await startUnmigratedTestPostgres();
     cleanup.push(postgres.stop);
-    await postgres.pool.query(relationshipSchemaMigration.sql);
-    await runNodePgMigrations({
-      databaseUrl: postgres.connectionString,
-      workspace: {
-        root: tenantMigrations.directory,
-        sources: [
-          {
-            root: ".",
-            files: /^[^/]+\.migration\.ts$/,
-            owner: "tenants",
-            required: true,
-          },
-        ],
-        moduleAliases: {},
+    const migration = new MigrationBuilder(
+      {
+        query: () =>
+          Promise.reject(new Error("Schema assembly performs no I/O")),
+        select: () => Promise.resolve([]),
       },
-    });
+      undefined,
+      false,
+      { info: () => undefined, warn: () => undefined, error: () => undefined },
+    );
+    migration.sql(relationshipSchemaMigration.sql);
+    installTenantSchemaV2(migration);
+    await postgres.pool.query(migration.getSql());
     database = createPostgresConnection(
       { connectionString: postgres.connectionString, schema: {} },
       { error: () => undefined },

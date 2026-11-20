@@ -57,6 +57,10 @@ The script prints `200 ready`. The collector receives a server span for
 `example-api` with request ID `example-1` and actor kind `anonymous`.
 Without an exporter endpoint, the script prints `Telemetry disabled`.
 
+The generated starter starts telemetry in [`assembly/main.ts`](../../../apps/kit-workbench/assembly/main.ts) before
+loading the HTTP host. [`assembly/start-app.ts`](../../../apps/kit-workbench/assembly/start-app.ts) supplies the request
+attribution hook to the HTTP kit.
+
 ## Configure it
 
 Use the standard OTLP HTTP/protobuf variables. `OTEL_EXPORTER_OTLP_ENDPOINT` is the base URL. `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` takes precedence and must include the trace path. The exporter supports standard OTLP headers and timeouts; `OTEL_SERVICE_NAME` can override the application's service name, and `OTEL_RESOURCE_ATTRIBUTES` adds resource metadata. `OTEL_SDK_DISABLED=true` or `OTEL_TRACES_EXPORTER=none` disables tracing.

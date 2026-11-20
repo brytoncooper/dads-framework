@@ -38,6 +38,8 @@ console.log("Wrote daily-report.pdf");
 
 Open `daily-report.pdf` to see one page with the two lines of text.
 
+The starter uses `createPdfRenderer` to generate PDF exports of notes. [`apps/kit-workbench/domains/notes/server/exports.ts`](../../../apps/kit-workbench/domains/notes/server/exports.ts)
+
 ## Portable fixed-page output
 
 Use `createFixedPagePdfRenderer()` for simple documents with uniform page

@@ -1,9 +1,24 @@
 # Provision users and groups with SCIM
 
-Create a directory user in one workspace, add the user to a group, then
-deactivate the user. Run the commands in Bash with curl, jq, and OpenSSL.
+## How the starter implements it
 
-## Configure the customer API
+[assembly/start-app.ts](../assembly/start-app.ts) mounts the SCIM handler at
+`/scim/v2` on the configured customer API. [assembly/scim.ts](../assembly/scim.ts)
+connects the user and group adapters to the tenant database. The bearer
+credential determines which tenant the directory can manage.
+
+<!-- dads:excerpt {"path":"assembly/scim.ts","language":"ts","from":"  return createScimHandler({","through":"    },"} -->
+
+A directory record becomes linked to an existing app membership only when the
+owner invokes [domains/tenants/server/scim-binding-route.ts](../domains/tenants/server/scim-binding-route.ts).
+The route checks that SCIM is enabled for that workspace, then calls the
+tenant service to make the link in a transaction.
+
+<!-- dads:excerpt {"path":"domains/tenants/server/scim-binding-route.ts","language":"ts","from":"        const { tenantId, scimUserId } = params.data;","through":"        }"} -->
+
+## Try it
+
+### Configure the customer API
 
 Run [example setup](./README.md) and keep your Bash terminal in
 `.dads/examples`. Load the workspace ID and API URLs from the setup.
@@ -24,7 +39,7 @@ npm --prefix ../.. run dev:up
 Keep the token in this shell for the requests. For an IdP pilot, store the
 token at the IdP and point it at `https://<customer-api-origin>/scim/v2`.
 
-## Create a user and a group
+### Create a user and a group
 
 ```sh
 base="$customer"
@@ -61,7 +76,7 @@ The group request returns `201` with the user ID in `members[].value`.
 SCIM users and groups are directory records. Workbench permissions come
 from the application's workspace memberships.
 
-## Link a membership and test offboarding
+### Link a membership and test offboarding
 
 Confirm the member can read workspace notes, then link the directory ID
 to the existing app membership using the tenant owner's session.

@@ -3,6 +3,7 @@ export {
   IDENTITY_PATH,
   type BetterAuthIdentityOptions,
 } from "./lib/identity-options.js";
+export { installIdentitySchemaV2 } from "./lib/install-identity-schema-v2.js";
 export { up as installIdentitySchemaV1 } from "./lib/migrations/20261120070500_identity.migration.js";
 
 export { createEnterpriseBetterAuthIdentity } from "./lib/create-better-auth-identity.js";

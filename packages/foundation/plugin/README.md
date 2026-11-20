@@ -37,6 +37,10 @@ try {
 The script prints `0` by reading the notes plugin's provided service after
 startup. When the script exits, the composed runtime has stopped.
 
+In the generated starter, [`domains/notes/server/plugin.ts`](../../../apps/kit-workbench/domains/notes/server/plugin.ts) declares
+the Notes plugin and [`apps/customer/app.ts`](../../../apps/kit-workbench/apps/customer/app.ts) selects it for the customer
+API. The links open the starter source in this repo.
+
 ## Use it
 
 ### Routes, jobs, and declared contributions

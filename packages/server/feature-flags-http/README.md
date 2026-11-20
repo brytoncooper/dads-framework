@@ -82,6 +82,10 @@ The anonymous public request returns `200` with `orders.export` in
 `data.features`. The signed-in caller has no management permission, so the
 second request returns `404`.
 
+The repo-only [`src/lib/feature-flag-routes.test.ts`](src/lib/feature-flag-routes.test.ts) mounts these
+routes and checks public reads and management access. The generated starter
+wires the package’s request evaluator in [`assembly/feature-previews.ts`](../../../apps/kit-workbench/assembly/feature-previews.ts).
+
 ## Use it
 
 - `createFeatureFlagRoutes({ featureFlags, manage, tag? })` returns the

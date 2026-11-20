@@ -4,12 +4,19 @@ Binds the Dads identity contract to Better Auth and PostgreSQL for email, passwo
 
 ## Try it
 
-Use Node.js 22 or later and a disposable Postgres database. Apply
-`installIdentitySchemaV1(pgm)` from this package in your migration runner.
+In the generated starter, [`assembly/identity-services.ts`](../../../apps/kit-workbench/assembly/identity-services.ts) constructs
+the adapter with the application database and mail service.
+[`assembly/start-app.ts`](../../../apps/kit-workbench/assembly/start-app.ts) mounts the handler at `/api/auth`. The starter's existing journal installs
+[base identity in its bootstrap migration](../../../apps/kit-workbench/migrations/20261120080000_starter.migration.ts)
+and adds
+[signing-key metadata in a later migration](../../../apps/kit-workbench/migrations/20261120080300_enterprise_identity.migration.ts).
+
+Use Node.js 24 and a disposable Postgres database. Apply
+`installIdentitySchemaV2(pgm)` from this package in your migration runner.
 Set `DATABASE_URL` to point at the migrated database. Set `IDENTITY_SECRET`
 to a locally generated secret of at least 32 characters. The example invokes
-the HTTP handler directly, so it needs no listening HTTP server. It uses a
-test-only invitation policy and does not attempt to send email.
+the HTTP handler directly, so it needs no listening HTTP server. It captures
+the verification link in memory and keeps it out of the console.
 
 ```sh
 npm install @dads-framework/identity-better-auth @dads-framework/postgres
@@ -21,6 +28,7 @@ Save as `identity-boundary.mts` and run `npx tsx identity-boundary.mts`.
 <!-- dads:check-example -->
 
 ```ts
+import { randomUUID } from "node:crypto";
 import {
   createBetterAuthIdentity,
   IDENTITY_PATH,
@@ -39,42 +47,82 @@ const connection = createPostgresConnection(
 );
 const baseUrl = "http://localhost:3000";
 try {
+  let verificationUrl: string | undefined;
   const identity = createBetterAuthIdentity({
     database: connection,
     baseUrl,
     secret,
-    enqueueEmail: async () => {
-      throw new Error(
-        "Connect a confidential mail queue before testing email flows.",
-      );
+    enqueueEmail: async ({ kind, url }) => {
+      if (kind === "verify-email") verificationUrl = url;
     },
     canInvite: async () => false,
   });
 
-  const request = new Request(baseUrl + IDENTITY_PATH + "/invite", {
-    method: "POST",
-    headers: { origin: baseUrl, "content-type": "application/json" },
-    body: JSON.stringify({ email: "guest@example.test" }),
+  function post(path: string, body: object) {
+    return identity.handle(
+      new Request(baseUrl + IDENTITY_PATH + path, {
+        method: "POST",
+        headers: { origin: baseUrl, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+  }
+
+  const email = `example-${randomUUID()}@example.test`;
+  const password = randomUUID();
+  const registration = await post("/sign-up/email", {
+    name: "Example account",
+    email,
+    password,
   });
-  console.log(await identity.readSession(request.headers));
-  console.log((await identity.handle(request)).status);
+  if (registration.status !== 200 || verificationUrl === undefined) {
+    throw new Error("Expected a verification email.");
+  }
+
+  console.log((await post("/sign-in/email", { email, password })).status);
+  const verification = await identity.handle(new Request(verificationUrl));
+  if (verification.status !== 302) throw new Error("Verification failed.");
+
+  const signIn = await post("/sign-in/email", { email, password });
+  console.log(signIn.status);
+  const cookie = signIn.headers
+    .getSetCookie()
+    .find((value) => value.includes("session_token"))
+    ?.split(";")[0];
+  if (cookie === undefined) throw new Error("Expected a session cookie.");
+
+  const session = await identity.readSession(new Headers({ cookie }));
+  console.log(session?.account.emailVerified);
 } finally {
   await connection.close();
 }
 ```
 
-The script prints `null` for the missing session and `401` for the unsigned
-invitation request. To try sign-in, mount the handler and connect a test mailbox.
-Post a new email and password to `/sign-up/email`, open the verification link
-from that mailbox, and post the credentials to `/sign-in/email`. Pass the cookie
-from that response to `readSession` to observe the verified account.
+The script prints `403` before email verification, `200` after verification,
+and `true` when the session lookup confirms the verified account.
 
 ## Use it
 
-Apply the migration with the Dads migration runner. It discovers
-`20261120070500_identity.migration.ts` for this repository. An adopter can
-call `installIdentitySchemaV1` from its own migration via the package's
-public export. Mount `identity.handle` under `IDENTITY_PATH` (`/api/auth`)
+For a fresh database, call `installIdentitySchemaV2(pgm)` from an
+application-owned migration. It installs accounts, credentials, sessions,
+verification and invitation records, and the signing-key schema required by
+the default adapter.
+
+```ts
+import { installIdentitySchemaV2 } from "@dads-framework/identity-better-auth";
+
+export const up = installIdentitySchemaV2;
+export const down = false;
+```
+
+If you already applied a migration that only called `installIdentitySchemaV1`,
+keep that migration and call `installIdentitySigningKeyMetadataSchema(pgm)`
+once in a new migration. If your journal already applied the signing-key
+migration, the default schema is complete. Dads repository deployments use
+the shipped `20261120070500_identity.migration.ts` and
+`20261120070530_identity_jwks.migration.ts` steps.
+
+Mount `identity.handle` under `IDENTITY_PATH` (`/api/auth`)
 and pass through the original browser request and response headers,
 including each `Set-Cookie` header. Replace client-supplied forwarding
 headers at the trusted ingress before invoking the handler. Better Auth
@@ -181,10 +229,8 @@ restarts and regenerate it when rotating the identity secret. The
 provider catalog is deployment configuration. The HTTP handler exposes no
 provider registration or mutation routes.
 
-Apply `installIdentityEnterpriseSsoSchema` after the base identity migration
-when using enterprise SSO. Apply `installIdentitySigningKeyMetadataSchema`
-on all deployments using this adapter version, including existing
-password-only deployments.
+Apply `installIdentityEnterpriseSsoSchema(pgm)` in a separate migration
+after installing the default identity schema.
 
 ### Connect and test a provider
 

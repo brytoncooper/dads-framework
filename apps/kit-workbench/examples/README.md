@@ -1,6 +1,10 @@
 # Try the starter examples
 
-Use the running starter as a small company workspace. You’ll have three verified accounts: an owner, a member the owner invited, and an outsider. Each exercise uses the same workspace so you can try an action as one person and repeat it as another.
+Each example starts with the files and code that implement the feature in
+your generated app. Open the starter-relative source links to see the full
+implementation, then use the **Try it** section to exercise it. The same
+workspace supplies an owner, an invited member, and an outsider so you can
+verify where access changes.
 
 ## Prepare your workspace
 
@@ -17,7 +21,7 @@ The setup creates the accounts, verifies their email through the local mailbox, 
 
 Run the shell examples from that directory with Bash, curl, jq, and OpenSSL available. The environment file sets `$web`, `$customer`, `$staff`, `$tenant`, `$ownerId`, and `$memberId`. Source it again after applying a configuration change to pick up the current ports.
 
-## Pick an exercise
+## Explore an implementation
 
 | Exercise                                            | What you can observe                                                                                                                                  |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |

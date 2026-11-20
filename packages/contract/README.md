@@ -35,6 +35,10 @@ console.log(accountId.safeParse(42).success);
 The script prints `account-1` and then `false`. The schema accepts the
 wire string and rejects a numeric ID.
 
+The opaque-ID behavior is covered by the repo’s [`src/lib/type-tests/entity-id.type.test.ts`](src/lib/type-tests/entity-id.type.test.ts).
+In the generated starter, [`domains/notes/server/routes.ts`](../../apps/kit-workbench/domains/notes/server/routes.ts) and
+[`domains/notes/web-client/index.ts`](../../apps/kit-workbench/domains/notes/web-client/index.ts) share the package’s pagination schema.
+
 ## What it refuses to do
 
 This package supplies shared wire schemas. Domains choose their own business fields and the HTTP kit owns request handling.

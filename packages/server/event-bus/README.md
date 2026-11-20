@@ -38,6 +38,10 @@ await bus.publish("reports.refreshed", { reportId: "daily-sales" });
 
 The subscriber prints `daily-sales` before `publish` resolves.
 
+Create the bus in application composition and register subscribers there.
+The delivery test shows an event reaching its subscriber and a handler
+failure reaching the logger. [Event delivery test](./src/lib/create-event-bus.test.ts)
+
 ## Delivery boundary
 
 Delivery is in process. For events that must survive a restart, write a durable

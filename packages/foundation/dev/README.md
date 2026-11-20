@@ -49,6 +49,10 @@ To check isolation, run `dad-dev status` after both worktrees are up. The
 slot records should show distinct API URLs, Postgres databases, and file
 roots. A stop and restart in one worktree should leave the other running.
 
+The repo-only [`proof/dads.dev.json`](proof/dads.dev.json) runs two services using
+[`proof/service.mjs`](proof/service.mjs). [`proof/verify-slots.sh`](proof/verify-slots.sh) exercises
+that configuration in separate worktrees.
+
 ## Commands
 
 | Invocation                            | Behavior                                                                                                                                                   |

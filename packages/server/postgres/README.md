@@ -70,6 +70,9 @@ try {
 
 The script prints `1` and closes the connection.
 
+In the generated app, `assembly/services.ts` opens the shared application
+connection and closes it when the provider stops. [Starter service wiring](../../../apps/kit-workbench/assembly/services.ts)
+
 ## What it refuses to do
 
 This package manages database connections. Applications provide connection configuration and own schema migrations.

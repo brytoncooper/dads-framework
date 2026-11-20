@@ -5,6 +5,11 @@ to enforce permissions, generate a SpiceDB schema, or build scoped lists.
 
 ## Try it
 
+In the generated starter, [`libraries/app-runtime/index.ts`](../../apps/kit-workbench/libraries/app-runtime/index.ts)
+defines account and tenant access handles shared by the domains.
+[`assembly/start-app.ts`](../../apps/kit-workbench/assembly/start-app.ts) composes the selected API's declarations into one
+model before opening its services.
+
 Use Node.js 22 or later. This example emits schema text locally and needs no
 authorization datastore.
 

@@ -235,6 +235,27 @@
       "skills": ["secure-http-operation", "verify-http-work"]
     },
     {
+      "name": "@dads-fixture/default-services",
+      "root": "fixtures/default-services",
+      "responsibility": "Proves the documented default identity and tenant migration on fresh PostgreSQL and preserves its journal and data on replay.",
+      "kind": "composition",
+      "published": false,
+      "allowedDependencies": [
+        "@dads-framework/access",
+        "@dads-framework/identity-better-auth",
+        "@dads-framework/migrations",
+        "@dads-framework/postgres",
+        "@dads-framework/postgres-access",
+        "@dads-framework/tenants",
+        "node-pg-migrate",
+        "zod"
+      ],
+      "verification": [
+        "npm run test:integration -w @dads-fixture/default-services"
+      ],
+      "skills": ["dads-orient"]
+    },
+    {
       "name": "@dads-fixture/stale-save",
       "root": "fixtures/stale-save",
       "responsibility": "Exercises a version-guarded HTTP update with relationship authorization on PostgreSQL.",

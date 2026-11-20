@@ -1,20 +1,27 @@
+import { posix } from "node:path";
+
 import { Marked } from "marked";
 
 import { validateGuideCode } from "./site-examples.mjs";
 
 const DIRECTIVE = "<!-- dads:excerpt ";
+const STARTER_ROOT = "apps/kit-workbench/";
 const LANGUAGES = new Map([
   ["sh", ".md"],
   ["ts", ".ts"],
   ["tsx", ".tsx"],
 ]);
 
-function uniqueLine(lines, text, fail) {
-  const first = lines.indexOf(text);
-  if (first === -1 || lines.lastIndexOf(text) !== first) {
-    fail(`expected exactly one line matching ${JSON.stringify(text)}`);
+function uniqueAnchor(lines, text, fail) {
+  const anchor = text.split(/\r?\n/u);
+  const matches = (_, index) =>
+    anchor.every((line, offset) => lines[index + offset] === line);
+  const first = lines.findIndex(matches);
+  if (first === -1 || lines.findLastIndex(matches) !== first) {
+    const target = anchor.length === 1 ? "one line" : "one block of lines";
+    fail(`expected exactly ${target} matching ${JSON.stringify(text)}`);
   }
-  return first;
+  return { first, last: first + anchor.length - 1 };
 }
 
 export function sourceExcerpt({ token, page, readFile }) {
@@ -41,15 +48,29 @@ export function sourceExcerpt({ token, page, readFile }) {
   ) {
     fail("expected a source path, language, start line and end line");
   }
-  const lines = readFile(path).toString().split(/\r?\n/u);
-  const start = uniqueLine(lines, from, fail);
-  const end = uniqueLine(lines, through, fail);
+  if (
+    posix.isAbsolute(path) ||
+    posix.normalize(path) !== path ||
+    path.startsWith("../") ||
+    /[\\`\r\n]/u.test(path)
+  ) {
+    fail("expected a relative source path without traversal");
+  }
+  const repositoryPath = page.startsWith(`${STARTER_ROOT}examples/`)
+    ? `${STARTER_ROOT}${path}`
+    : path;
+  const lines = readFile(repositoryPath).toString().split(/\r?\n/u);
+  const start = uniqueAnchor(lines, from, fail).first;
+  const end = uniqueAnchor(lines, through, fail).last;
   if (end < start) fail("the end line precedes the start line");
   const excerpt = lines
     .slice(start, end + 1)
     .join("\n")
     .trimEnd();
-  return { language, excerpt };
+  const displayPath = repositoryPath.startsWith(STARTER_ROOT)
+    ? repositoryPath.slice(STARTER_ROOT.length)
+    : repositoryPath;
+  return { language, excerpt, path: displayPath };
 }
 
 function fencedExcerpt({ language, excerpt }) {
@@ -66,14 +87,27 @@ export function expandPageExamples(page, readFile) {
   const parser = new Marked();
   const tokens = parser.lexer(page.markdown);
   const excerpts = new Map();
+  let previous;
   for (const token of tokens) {
-    if (token.type !== "html" || !token.block) continue;
-    const excerpt = sourceExcerpt({
-      token: token.text,
-      page: page.path,
-      readFile,
-    });
-    if (excerpt) excerpts.set(token, fencedExcerpt(excerpt));
+    if (token.type === "space") continue;
+    if (token.type === "html" && token.block) {
+      const excerpt = sourceExcerpt({
+        token: token.text,
+        page: page.path,
+        readFile,
+      });
+      if (excerpt) {
+        const alreadyLabeled =
+          previous?.type === "paragraph" &&
+          previous.tokens.some(
+            (inline) =>
+              inline.type === "codespan" && inline.text === excerpt.path,
+          );
+        const label = alreadyLabeled ? "" : `\`${excerpt.path}\`\n\n`;
+        excerpts.set(token, label + fencedExcerpt(excerpt));
+      }
+    }
+    previous = token;
   }
   parser.walkTokens(tokens, (token) => {
     validateGuideCode(page, token);

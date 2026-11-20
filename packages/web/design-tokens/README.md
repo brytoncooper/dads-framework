@@ -23,6 +23,10 @@ console.log(tokens.palette.grey["grey-970"].$value);
 The first line prints `{palette.grey.grey-970}`. The second prints
 `{ colorSpace: 'oklch', components: [ 0.97, 0, 70 ] }`.
 
+The [package adoption check](../../../scripts/adoption/adoption-fixture-tasks.mjs)
+imports the same JSON path in a consumer fixture and checks for the palette,
+light, and dark groups.
+
 ## Use it
 
 `palette` declares raw OKLCH colors. `light` declares semantic roles, such as

@@ -26,6 +26,7 @@ test("includes the exact selected source lines", () => {
   assert.deepEqual(select("first\r\nbegin\r\n  <type>\r\nend\r\nlast"), {
     language: "ts",
     excerpt: "begin\n  <type>\nend",
+    path: "sample.ts",
   });
 });
 
@@ -43,6 +44,33 @@ test("rejects stale, ambiguous, and inverted selections", () => {
     /exactly one line matching "end"/u,
   );
   assert.throws(() => select("end\nbegin"), /end line precedes/u);
+});
+
+test("includes only the selected declaration with multiline anchors", () => {
+  const source = [
+    "export function example() {",
+    "  return 1;",
+    "}",
+    "export function other() {",
+    "  return 2;",
+    "}",
+  ].join("\r\n");
+  const anchors = {
+    from: "export function example() {\n  return 1;",
+    through: "  return 1;\n}",
+  };
+  assert.equal(
+    select(source, anchors).excerpt,
+    "export function example() {\n  return 1;\n}",
+  );
+  assert.throws(
+    () => select(source, { ...anchors, through: "  return 1;\n  }" }),
+    /expected exactly one block of lines/u,
+  );
+  assert.throws(
+    () => select(source, { ...anchors, through: "}\n}" }),
+    /expected exactly one block of lines/u,
+  );
 });
 
 test("leaves ordinary comments alone", () => {
@@ -74,14 +102,64 @@ test("renders standalone TSX excerpts in agent Markdown and HTML", () => {
   });
   assert.equal(
     page.markdown,
-    "# Guide\n\n````tsx\n" + fragment + "\n````\n\nNext.\n",
+    "# Guide\n\n`sample.tsx`\n\n````tsx\n" + fragment + "\n````\n\nNext.\n",
   );
   const html = renderPage({ page, pages: [page] });
   assert.match(
     html,
     /<code class="language-tsx">begin\n {2}&lt;div&gt;`{3}&lt;\/div&gt;\nend/u,
   );
-  assert.doesNotMatch(html, /sample\.tsx|dads:excerpt/u);
+  assert.match(html, /<p><code>sample\.tsx<\/code><\/p>\n<pre>/u);
+  assert.doesNotMatch(html, /dads:excerpt/u);
+});
+
+test("resolves starter examples and existing repo guides to the generated app path", () => {
+  const generated = "domains/example/server/routes.ts";
+  const repository = `apps/kit-workbench/${generated}`;
+  for (const page of [
+    {
+      ...guide(directive({ path: generated })),
+      path: "apps/kit-workbench/examples/example.md",
+    },
+    guide(directive({ path: repository })),
+  ]) {
+    page.markdown = expandPageExamples(page, (path) => {
+      assert.equal(path, repository);
+      return "begin\nend";
+    });
+    assert.match(
+      page.markdown,
+      /^`domains\/example\/server\/routes\.ts`\n\n```ts/u,
+    );
+    assert.match(
+      renderPage({ page, pages: [page] }),
+      /<code>domains\/example\/server\/routes\.ts<\/code>/u,
+    );
+  }
+});
+
+test("leaves an existing generated file label above an excerpt", () => {
+  const page = guide("`sample.ts`\n\n" + directive());
+  const markdown = expandPageExamples(page, () => "begin\nend");
+  assert.equal(markdown.match(/`sample\.ts`/gu)?.length, 1);
+});
+
+test("rejects traversal and absolute starter excerpt paths before reading", () => {
+  for (const path of [
+    "../sample.ts",
+    "domains/../sample.ts",
+    "/sample.ts",
+    "..\\sample.ts",
+  ]) {
+    const page = {
+      ...guide(directive({ path })),
+      path: "apps/kit-workbench/examples/example.md",
+    };
+    assert.throws(
+      () => expandPageExamples(page, () => assert.fail("source read")),
+      /relative source path without traversal/u,
+    );
+  }
 });
 
 test("allows labeled instructional fences and validates JSON", () => {

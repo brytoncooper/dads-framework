@@ -61,6 +61,10 @@ console.log(tally.dbQueryCount); // 1
 The script prints `1` for one charged database call. The test helper
 starts the request tally without an HTTP server.
 
+The HTTP package starts a tally for each incoming request. The attributed
+Postgres client charges its queries to that tally.
+[HTTP ingress](../http/src/lib/create-http-app.ts) · [Attributed query wrapper](../postgres/src/lib/counting-client.ts)
+
 ## What it refuses to do
 
 This package tracks request-scoped work. An HTTP app owns timeouts and decides when to finish or shut down outstanding work.

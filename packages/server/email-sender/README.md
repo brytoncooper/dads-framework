@@ -44,6 +44,8 @@ console.log(mailbox.list()[0]?.text);
 
 The script prints `mail-1` and `Order 1042 is ready for pickup.` from the local mailbox. The capture driver keeps the message in memory and requires no provider account.
 
+The package tests exercise the capture driver and its mailbox outside the starter. [`packages/server/email-sender/src/lib/capture-email-sender.test.ts`](src/lib/capture-email-sender.test.ts)
+
 ## Use it
 
 ```ts

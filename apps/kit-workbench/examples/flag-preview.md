@@ -1,5 +1,20 @@
 # Preview Notes export availability for one account
 
+## How the starter implements it
+
+[domains/notes/server/flags.ts](../domains/notes/server/flags.ts) declares
+`notes.export`. The customer API configures a preview in
+[assembly/feature-previews.ts](../assembly/feature-previews.ts), scoped to an
+account and tenant. The record can only affect read requests. At request time
+the resolver reads the tenant from the route, matches the token digest, and
+rechecks the caller's workspace view permission.
+
+<!-- dads:excerpt {"path":"assembly/feature-previews.ts","language":"ts","from":"  const record: FeatureFlagPreviewRecord = {","through":"    expiresAt: configuration.expiresAt,"} -->
+
+<!-- dads:excerpt {"path":"assembly/feature-previews.ts","language":"ts","from":"        canPreview: ({ subject, context }) =>","through":"      }),"} -->
+
+## Try it
+
 Complete the [example setup](./README.md) first. The starter migration enables
 `notes.export` for everyone. Configure a ten-minute preview that turns it off
 for the owner of this tenant. The customer API checks the configured account's

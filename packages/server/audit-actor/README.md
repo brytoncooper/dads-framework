@@ -5,6 +5,11 @@ Postgres write can identify the request, job, or script that caused it.
 
 ## Try it
 
+In the generated starter, [`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts) passes
+`currentAuditActor` to the Postgres pool so it can stamp each connection at
+checkout. [`assembly/start-app.ts`](../../../apps/kit-workbench/assembly/start-app.ts) supplies an anonymous actor for
+HTTP requests with no resolved subject.
+
 Use Node.js 22 or later. The example reads async attribution directly and
 needs no database.
 

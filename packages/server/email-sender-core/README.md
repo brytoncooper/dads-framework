@@ -40,6 +40,8 @@ console.log(receipt.providerMessageId, sender.sent[0]?.subject);
 
 The script prints `fake-1 Order ready`. In a test, inspect `sent` for the message your feature submitted.
 
+The starter implements the `EmailSender` contract with a local spool that writes each message to a JSON file. [`apps/kit-workbench/assembly/local-mail.ts`](../../../apps/kit-workbench/assembly/local-mail.ts)
+
 ## Provider contract
 
 Senders accept an envelope and message bodies. Vendors that accept the message

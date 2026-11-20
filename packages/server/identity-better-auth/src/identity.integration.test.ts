@@ -1,13 +1,15 @@
 import { verifyIdentitySessionConformance } from "@dads-framework/identity/testing";
 import type { Identity, IdentityEmail } from "@dads-framework/identity";
-import { createBetterAuthIdentity } from "@dads-framework/identity-better-auth";
+import {
+  createBetterAuthIdentity,
+  installIdentitySchemaV2,
+} from "@dads-framework/identity-better-auth";
 import {
   startUnmigratedTestPostgres,
   type TestPostgres,
 } from "@dads-framework/postgres/testing";
-import { runNodePgMigrations } from "@dads-framework/migrations";
 import { Buffer } from "node:buffer";
-import { fileURLToPath, URL } from "node:url";
+import { MigrationBuilder } from "node-pg-migrate";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 const ORIGIN = "https://identity.example.test";
@@ -21,21 +23,17 @@ let identity: Identity;
 beforeAll(async () => {
   const postgres = await startUnmigratedTestPostgres({ attributed: false });
   database = postgres;
-  await runNodePgMigrations({
-    databaseUrl: postgres.connectionString,
-    workspace: {
-      root: fileURLToPath(new URL("..", import.meta.url)),
-      sources: [
-        {
-          root: "src/lib/migrations",
-          files: /^src\/lib\/migrations\/[^/]+\.migration\.ts$/u,
-          required: true,
-          owner: "identity-better-auth",
-        },
-      ],
-      moduleAliases: {},
+  const migration = new MigrationBuilder(
+    {
+      query: () => Promise.reject(new Error("Schema assembly performs no I/O")),
+      select: () => Promise.resolve([]),
     },
-  });
+    undefined,
+    false,
+    { info: () => undefined, warn: () => undefined, error: () => undefined },
+  );
+  installIdentitySchemaV2(migration);
+  await postgres.pool.query(migration.getSql());
   identity = createBetterAuthIdentity({
     database: postgres,
     baseUrl: ORIGIN,

@@ -54,6 +54,11 @@ in an existing transaction, use `inTransaction` or `inDrizzleTransaction`.
 
 ## Try it
 
+In the generated starter, [`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts) creates the Postgres
+adapter and connects it to tenant services using the application database.
+[`assembly/protected-write.ts`](../../../apps/kit-workbench/assembly/protected-write.ts) checks permission in the transaction
+that commits the protected write.
+
 Use Node.js 22 or later and an empty development Postgres database. Set
 `DATABASE_URL` to a connection string for a role that can create tables and
 indexes. The script installs the relationship schema and uses a fresh

@@ -30,3 +30,6 @@ console.log(dueAt(fixed, 60_000).toISOString()); // 2026-01-01T00:01:00.000Z
 The script prints `2026-01-01T00:01:00.000Z`. Use `createClock()` in
 application wiring and give tests a fixed `now()`. Durations and elapsed-time
 performance measurements belong to a monotonic clock.
+
+In the generated app, `assembly/local-mail.ts` supplies a system clock
+to email delivery and its jobs. [Starter mail wiring](../../../apps/kit-workbench/assembly/local-mail.ts)

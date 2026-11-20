@@ -32,6 +32,10 @@ Dads is the framework; its packages live under `@dads-framework/*`, and `dad`
 is the executable this package exposes. `dad --help` (or `dad help`) prints the
 command index. Run `dad add --help` for the generator index.
 
+Run the command from the generated app root. The starter’s
+[`dads.project.json`](../../../apps/kit-workbench/dads.project.json) declares ownership and verification, and
+[`domains/notes/server/routes.ts`](../../../apps/kit-workbench/domains/notes/server/routes.ts) is the file passed to `orient`.
+
 ## Commands
 
 Add `--json` to the documented command to emit machine-readable output. Without it, most commands print the same object

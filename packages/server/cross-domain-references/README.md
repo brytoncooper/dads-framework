@@ -60,6 +60,11 @@ try {
 The script prints `missing-org`. The temporary tables disappear when the
 connection closes.
 
+Declare references beside the consuming domain and call the check from an
+operator command or CI job. The PostgreSQL integration test seeds a document
+with a missing owner and verifies that the report identifies it.
+[PostgreSQL integration test](./src/lib/database/check-cross-domain-references.integration.test.ts)
+
 ## A declaration
 
 A reference belongs to the domain whose table carries the id, so the

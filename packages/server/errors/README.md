@@ -34,6 +34,9 @@ console.log(mapErrorToHttpResponse(error, "request-1").status); // 404
 The script prints `404`. The HTTP mapper puts the stable
 `DOCUMENT_NOT_FOUND` code in the response body.
 
+In the generated app, the note export handler throws `notFound` when the
+note is unavailable. [Starter export handler](../../../apps/kit-workbench/domains/notes/server/exports.ts)
+
 ## What it refuses to do
 
 A domain result carries its declared value or failure. An HTTP or UI boundary chooses the representation for its caller.

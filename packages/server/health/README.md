@@ -40,6 +40,9 @@ The simulated outage prints `200 503`. Liveness still succeeds. Replace
 the example probes with your application’s dependency checks when
 registering the routes in your HTTP app.
 
+In the generated app, `assembly/start-app.ts` registers probes for the
+database, job queue, and file store. [Starter health wiring](../../../apps/kit-workbench/assembly/start-app.ts)
+
 ## What it refuses to do
 
 Readiness is based on probes the application supplies. Health reporting cannot substitute for an application's tests.

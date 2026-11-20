@@ -47,6 +47,10 @@ The console prints `0012` with the leading zeros intact. For a browser upload,
 pass the selected file's `await file.arrayBuffer()` to `read` and validate the
 returned cell values before importing inventory records.
 
+The [workbook round-trip test](src/lib/workbook-codec.test.ts) builds an
+inventory workbook and checks that the SKU, count, and date survive the read
+as text.
+
 ## Workbook contract
 
 `xlsxWorkbookCodec` bundles build, read, and update behind the `WorkbookCodec`

@@ -4,8 +4,13 @@ Manage tenants, memberships, and one-time invitations with relationship authoriz
 
 ## Try it
 
+In the generated starter, [`libraries/app-runtime/index.ts`](../../../apps/kit-workbench/libraries/app-runtime/index.ts) declares tenant
+access against the application's account entity. [`assembly/services.ts`](../../../apps/kit-workbench/assembly/services.ts)
+constructs `Tenants` and supplies transaction-bound authorization so membership
+rows and relationship facts commit together.
+
 Use Node.js 22 or later and a disposable Postgres database. Install the tuple
-table and the tenant tables in one migration before running the script below.
+table and complete tenant schema in one migration before running the script below.
 
 ```sh
 npm install @dads-framework/access @dads-framework/postgres @dads-framework/postgres-access @dads-framework/tenants zod
@@ -13,7 +18,7 @@ npm install -D tsx
 ```
 
 In your migration runner, pass its builder to
-`pgm.sql(relationshipSchemaMigration.sql)` and `installTenantSchemaV1(pgm)`.
+`pgm.sql(relationshipSchemaMigration.sql)` and `installTenantSchemaV2(pgm)`.
 The first export comes from `@dads-framework/postgres-access` and the second
 from `@dads-framework/tenants`. Set `DATABASE_URL` to connect to the migrated
 database. This script uses fixture account IDs. In an application, resolve
@@ -108,15 +113,29 @@ Membership administration rejects access across tenant boundaries. The service d
 
 ## Contract
 
-The data and authorization ports use the same serializable Postgres transaction. Install the package's migration folder through the application's migration runner, or call `installTenantSchemaV1` inside an application-owned migration. The Postgres access adapter has [Trusted experimental status](../postgres-access/README.md#trusted-experimental). Applications can own additional kinds and sub-scopes in their composed access model.
+The data and authorization ports use the same serializable Postgres transaction. On an empty database, install the package's `tenantMigrations` through the
+application's runner or call `installTenantSchemaV2` in an application-owned
+migration. Both options install tenant, membership, invitation, and SCIM
+user and group storage. Choose one path. Invitation acceptance always checks
+directory user storage for a deactivated account binding. The Postgres access adapter has [Trusted experimental status](../postgres-access/README.md#trusted-experimental). Applications can own additional kinds and sub-scopes in their composed access model.
 
 Translate `TenantUnavailableError` and `TenantInvitationUnavailableError` at the transport boundary. A database error rejects the transaction and leaves membership state unchanged. When a transaction retries after a PostgreSQL serialization failure, run the whole operation again.
 
+## Upgrade an existing tenant schema
+
+Keep applied migration files intact. If your application used only
+`installTenantSchemaV1`, add a new forward migration that calls
+`installTenantScimSchemaV1` followed by `installTenantScimGroupSchemaV1`.
+Apply it before serving invitation acceptance. If the SCIM user installer
+already ran, add only the group installer. Databases with both SCIM
+migrations already applied, including the generated starter, have the
+complete schema and need no additional tenant migration. Reserve
+`installTenantSchemaV2` for fresh databases.
+
 ## SCIM provisioning
 
-Install `tenantMigrations` or call `installTenantScimSchemaV1` after
-`installTenantSchemaV1`, followed by `installTenantScimGroupSchemaV1`. Use the same tenant options and synchronous Postgres
-access adapter for the tenant service and the SCIM directory.
+Use the same tenant options and synchronous Postgres access adapter for the
+tenant service and the SCIM directory.
 
 ```ts
 import { createScimHandler } from "@dads-framework/identity/scim";

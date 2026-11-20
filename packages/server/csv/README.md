@@ -34,6 +34,8 @@ Customer
 "River, Inc."
 ```
 
+The starter applies its spreadsheet-safety policy to note text and passes the result to `toCsv`. [`apps/kit-workbench/domains/notes/server/exports.ts`](../../../apps/kit-workbench/domains/notes/server/exports.ts)
+
 ## Use it
 
 The column list controls the header names and order. Before exporting data

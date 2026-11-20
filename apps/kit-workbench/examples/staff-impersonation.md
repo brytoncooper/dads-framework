@@ -1,5 +1,19 @@
 # View a tenant as a member from the staff API
 
+## How the starter implements it
+
+[assembly/staff-impersonation-services.ts](../assembly/staff-impersonation-services.ts)
+creates a Postgres-backed grant service and applies the configured tenant's
+SSO policy to the staff session. Its authorization callback checks the
+operator allowlist and the target account's current ability to view the
+workspace. [domains/support/server/impersonation.ts](../domains/support/server/impersonation.ts)
+handles the commands; [assembly/start-app.ts](../assembly/start-app.ts)
+mounts them on the staff API when enabled.
+
+<!-- dads:excerpt {"path":"assembly/staff-impersonation-services.ts","language":"ts","from":"  const staff = new Set(staffAccountIds);","through":"    );"} -->
+
+## Try it
+
 Complete the [example setup](./README.md) first. For this exercise the owner
 represents an approved support operator and the member is the target.
 

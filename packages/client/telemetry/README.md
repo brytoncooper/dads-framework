@@ -40,6 +40,10 @@ console prints `true` if the receiver accepts it within two seconds. In the app,
 use your build identifier for `release` and call `reportError` from the failure
 handler.
 
+The [local reporter tests](src/lib/local-client-telemetry.test.ts) flush a
+render error through an injected fetch function and validate the outgoing
+diagnostics payload.
+
 ## The seam
 
 `ClientTelemetry` names three things and no vendor: `reportError`,

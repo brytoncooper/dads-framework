@@ -30,6 +30,9 @@ The first block has a light background and dark text. The second has a dark
 background and light text. To theme installed Dads UI controls as well, add the
 source directive shown in the [UI quick start](../ui/README.md#try-it).
 
+The [starter's web stylesheet](../../../apps/kit-workbench/apps/web/styles.css)
+imports the theme and tells Tailwind where to scan the installed UI components.
+
 ## Use it
 
 `index.css` imports the palette, semantic roles, dark overrides, Tailwind

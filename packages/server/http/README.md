@@ -56,6 +56,10 @@ try {
 The injected request prints `200 {"data":{"message":"Hello"}}`. It runs
 through the HTTP app without opening a port.
 
+In the generated app, route declarations live with the owning domain.
+`assembly/start-app.ts` registers them with identity and authorization.
+[Notes routes](../../../apps/kit-workbench/domains/notes/server/routes.ts) · [Starter HTTP wiring](../../../apps/kit-workbench/assembly/start-app.ts)
+
 ## Define a route — the verb IS the function
 
 ```ts

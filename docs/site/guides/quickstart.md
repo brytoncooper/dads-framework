@@ -38,20 +38,43 @@ selected version with `npm view create-dads@latest version`.
 4. Enter text in **New note** and select **Add note**. The note appears in
    the active workspace.
 
-The web app uses the customer API. To follow the request through the
-project, open these files from `my-app`:
+## Find the code behind Add note
 
-| Path                              | What to look for                                            |
-| --------------------------------- | ----------------------------------------------------------- |
-| `domains/notes/contract/index.ts` | The notes schemas and their public exports.                 |
-| `domains/notes/access/index.ts`   | The tenant permission shared by the notes routes.           |
-| `domains/notes/server/routes.ts`  | The notes routes and the tenant scope on their data access. |
-| `apps/customer/app.ts`            | The entrypoint that mounts the tenants and notes plugins.   |
-| `apps/staff/app.ts`               | The entrypoint that mounts tenant routes only.              |
+These paths are relative to the generated app root.
 
-The [starter integration test](../../../apps/kit-workbench/tests/starter.integration.test.ts)
-checks that a member can read their workspace's notes, cross-tenant access
-is denied, and the staff API has no notes route.
+```text
+apps/
+  customer/app.ts
+  staff/app.ts
+  web/note-forms.tsx
+domains/
+  notes/
+    index.ts
+    access/index.ts
+    contract/index.ts
+    contract/wire.ts
+    server/plugin.ts
+    server/routes.ts
+    web-client/index.ts
+tests/
+  starter.integration.test.ts
+```
+
+1. `apps/web/note-forms.tsx` calls `createNote` from
+   `domains/notes/web-client/index.ts`. The client and route share the
+   schemas in `domains/notes/contract/`. [Read the request and response code](./http.md)
+2. `apps/customer/app.ts` mounts the Notes plugin through
+   `domains/notes/index.ts`. The plugin passes the app's services to the
+   route in `server/routes.ts`. [Trace the API selection](./composition.md)
+3. `domains/notes/access/index.ts` selects the workspace permission.
+   `tests/starter.integration.test.ts` checks the member's write and read,
+   cross-tenant denial, and the staff API's response for the same URL.
+   [Read and run the denial test](./guarded-resource.md#prove-denial-with-a-signed-in-outsider)
+
+For an owner, member, and outsider in one prepared workspace, run
+`npm run examples:setup` in the running generated app. The
+[starter exercises](../../../apps/kit-workbench/examples/README.md) explain
+how to use those accounts.
 
 ## Restart or stop the app
 
@@ -68,8 +91,8 @@ for details on Compose, logs, and the local mailbox.
 
 ## Make your first change
 
-Follow the [guarded resource walkthrough](./guarded-resource.md) to add a
-resource with a permission and prove denial in a test. Run
+Follow the [resource scaffold](./guarded-resource.md#scaffold-another-resource)
+to add a resource with a permission and prove denial in a test. Run
 `npm run verify` from the project root with Docker running to check your
 changes before adding the same command to [CI](../../../ci/README.md).
 

@@ -86,6 +86,8 @@ The script prints `queued`, logs the delivery event, and prints
 by the fake sender. For durable delivery, use a PostgreSQL outbox and a durable
 queue.
 
+The starter binds the PostgreSQL outbox to its local spool sender and assembles the delivery jobs. [`apps/kit-workbench/assembly/local-mail.ts`](../../../apps/kit-workbench/assembly/local-mail.ts)
+
 ## Outbox persistence
 
 `DrizzleOutboundEmailStore` binds the Postgres adapter to the outbox tables.

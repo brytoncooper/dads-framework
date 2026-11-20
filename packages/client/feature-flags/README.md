@@ -45,6 +45,9 @@ prop to `south` to see **Bulk export unavailable**. In the app, read the
 effective state from your authorized feature-state endpoint and enforce the
 flag and permission on the export endpoint.
 
+The [runtime tests](src/lib/feature-state-runtime.test.ts) use a loader with
+two tenants to check that their feature lists and state hashes stay separate.
+
 ## Use it
 
 - `new FeatureStateRuntime(load)`: `activate(contextKey)`, `hydrate`,

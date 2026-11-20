@@ -9,6 +9,83 @@ claimed row, a sweep job picks up what is due and fails stale claims, and
 operator actions cover the rest. The application supplies an email sender, a
 job queue, and a renderer when assembling these operations.
 
+## Try it
+
+This local test uses an in-memory outbox, a manually drained queue, and a capturing sender. It requires no database or email provider.
+
+In a project using Node.js 22 or later, install the example dependencies.
+
+```sh
+npm install @dads-framework/email-delivery @dads-framework/email-sender-core @dads-framework/job-queue-core zod@4
+npm install -D tsx
+```
+
+Save this as `example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  composeEmailDelivery,
+  createEmailDelivery,
+  type EmailTemplate,
+  type RenderEmailTemplate,
+} from "@dads-framework/email-delivery";
+import { FakeOutboundEmailStore } from "@dads-framework/email-delivery/testing";
+import { FakeEmailSender } from "@dads-framework/email-sender-core/testing";
+import { FakeJobQueue } from "@dads-framework/job-queue-core/testing";
+import { z } from "zod";
+
+const notice: EmailTemplate = {
+  name: "orders.pickup-ready",
+  props: z.object({}),
+  samples: { example: {} },
+};
+const render: RenderEmailTemplate = async () => ({
+  subject: "Order ready",
+  html: "<p>Your order is ready for pickup.</p>",
+  text: "Your order is ready for pickup.",
+});
+const store = new FakeOutboundEmailStore();
+const emailSender = new FakeEmailSender();
+const jobQueue = new FakeJobQueue();
+const deps = {
+  store,
+  emailSender,
+  clock: { now: () => new Date() },
+  render,
+  log: console,
+};
+const emailDelivery = createEmailDelivery({ ...deps, jobQueue });
+const catalog = {
+  find: (name: string) => (name === notice.name ? notice : undefined),
+};
+jobQueue.register(
+  composeEmailDelivery({ ...deps, emailDelivery, catalog }).jobs,
+);
+
+await jobQueue.start();
+try {
+  const { id } = await emailDelivery.enqueue(
+    notice,
+    {},
+    {
+      to: [{ address: "customer@example.com" }],
+    },
+  );
+  console.log(store.find(id)?.status);
+  await jobQueue.runEnqueued();
+  console.log(store.find(id)?.status, emailSender.sent[0]?.subject);
+} finally {
+  await jobQueue.close();
+}
+```
+
+The script prints `queued`, logs the delivery event, and prints
+`sent Order ready` after the worker runs. The `sent` status records acceptance
+by the fake sender. For durable delivery, use a PostgreSQL outbox and a durable
+queue.
+
 ## Outbox persistence
 
 `DrizzleOutboundEmailStore` binds the Postgres adapter to the outbox tables.

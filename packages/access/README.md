@@ -5,6 +5,18 @@ to enforce permissions, generate a SpiceDB schema, or build scoped lists.
 
 ## Try it
 
+Use Node.js 22 or later. This example emits schema text locally and needs no
+authorization datastore.
+
+```sh
+npm install @dads-framework/access zod
+npm install -D tsx
+```
+
+Save as `team-schema.mts` and run `npx tsx team-schema.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import {
   access,

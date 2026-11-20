@@ -4,15 +4,24 @@ The default UI palette and semantic roles in the DTCG design token format.
 
 ## Try it
 
-Install this package and import the token document with your JSON-aware tooling.
+Install the token document in a project running Node.js 22 or later.
+
+```sh
+npm install @dads-framework/design-tokens
+```
+
+Save this as `inspect-tokens.mjs` and run `node inspect-tokens.mjs` to check the
+light background role and the palette color it references.
 
 ```js
 import tokens from "@dads-framework/design-tokens/default.tokens.json" with { type: "json" };
 
-console.log(Object.keys(tokens));
+console.log(tokens.light.surfaces.background.$value);
+console.log(tokens.palette.grey["grey-970"].$value);
 ```
 
-The document defines `palette`, `light`, and `dark` groups.
+The first line prints `{palette.grey.grey-970}`. The second prints
+`{ colorSpace: 'oklch', components: [ 0.97, 0, 70 ] }`.
 
 ## Use it
 

@@ -8,8 +8,10 @@ web app, PostgreSQL, and separate customer and staff APIs.
 Use Node 24, npm, and Docker with the Compose v2 plugin. Start Docker and run
 the creator from the directory where you want the new `my-app` folder.
 
-Run `npm create dads@latest my-app`. After it finishes, enter the new
-project with `cd my-app`.
+Use the commands below when your registry carries a stable `create-dads`
+release. The public npm `latest` tag currently points to a staging version.
+For an exercise you can run from a source checkout,
+[try the Workbench API](#try-the-workbench-api-from-source).
 
 [Creator command reference](../../../packages/foundation/create-dads/README.md#try-it)
 
@@ -21,13 +23,8 @@ Compose stack, and runs the database migrations. Watch for the `Open`,
 after the services respond. Open the URL on the `Open` line. The app shows
 a sign-in form.
 
-If npm reports that `create-dads` is unavailable, check the configured
-registry with `npm config get registry` and the package with
-`npm view create-dads@latest version`. The npm command requires a published
-release. From a framework checkout, the creator can be exercised against
-local packages with `npm run verify:adoption`. The
-[creator tests](../../../packages/foundation/create-dads/src/cli.test.ts)
-cover startup and failure handling.
+Check your configured registry with `npm config get registry` and its
+selected version with `npm view create-dads@latest version`.
 
 ## Save a note
 
@@ -75,3 +72,27 @@ Follow the [guarded resource walkthrough](./guarded-resource.md) to add a
 resource with a permission and prove denial in a test. Run
 `npm run verify` from the project root with Docker running to check your
 changes before adding the same command to [CI](../../../ci/README.md).
+
+## Try the Workbench API from source
+
+The repository includes a reference task API that uses the same HTTP and
+permission packages as the Notes starter. With Node 24 and Docker running,
+start it from the framework checkout.
+
+```sh
+npm ci
+npm run workbench:dev
+```
+
+Once the API is ready, send this request from another terminal.
+
+```sh
+curl -fsS http://127.0.0.1:4317/api/workspaces \
+  -H 'x-workbench-user: alice'
+```
+
+The response lists the workspaces visible to the local demo identity Alice.
+Press Ctrl+C in the launcher terminal or run `npm run workbench:stop`.
+To exercise the Notes creator against local package tarballs, run
+`npm run verify:adoption` from the framework checkout.
+[Workbench source guide](../../../apps/workbench/README.md)

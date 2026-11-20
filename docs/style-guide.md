@@ -78,6 +78,12 @@ When an example is a fragment, identify the application code it assumes.
 Use plain status language to tell readers which environments or providers
 the evidence covers.
 
+## Writing a guide
+
+Pick one thing the reader can do on the page. Say where to start, show the command or code they need, and show an observable result. For a protected route, include the request from an authorized caller and the response an outsider receives. Link to deeper material after the reader has enough to try the example.
+
+Use fenced shell commands and example payloads for the interaction. A TypeScript excerpt can pull exact lines from a tracked implementation into the guide. When a guide includes an executable example in the site catalog, pair its source with the test that proves it.
+
 ## Enforcement
 
 Documentation is part of done, in three places:

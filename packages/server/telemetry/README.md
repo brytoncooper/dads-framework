@@ -6,37 +6,56 @@ exporter endpoint is configured.
 
 ## Try it
 
-Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` for a local collector. Initialize telemetry before loading HTTP or Postgres.
+Install the telemetry adapter. Start a local OTLP HTTP collector with a
+debug exporter on port 4318.
+
+```sh
+npm install @dads-framework/telemetry
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+```
+
+Save as `trace-request.mts` and run `node trace-request.mts` with Node.js
+22.18 or newer. The script initializes telemetry before loading Node HTTP.
+
+<!-- dads:check-example -->
 
 ```ts
 import { startTelemetry } from "@dads-framework/telemetry";
 
 const telemetry = await startTelemetry({ serviceName: "example-api" });
-try {
-  const { createHttpApp } = await import("@dads-framework/http");
-  const app = await createHttpApp({
-    nodeEnv: "production",
-    trustedOrigins: [],
-    ...(telemetry === undefined
-      ? {}
-      : {
-          currentTraceId: telemetry.currentTraceId,
-          requestTrace: telemetry.annotateRequest,
-        }),
-  });
-  try {
-    await app.listen({ host: "127.0.0.1" });
-    await new Promise<void>((resolve) => {
-      process.once("SIGTERM", resolve);
-      process.once("SIGINT", resolve);
+if (telemetry === undefined) {
+  console.log("Telemetry disabled");
+} else {
+  const { createServer } = await import("node:http");
+  const server = createServer((_request, response) => {
+    telemetry.annotateRequest({
+      requestId: "example-1",
+      actorKind: "anonymous",
     });
+    response.end("ready");
+  });
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("Expected a loopback TCP address");
+    }
+    const response = await fetch(`http://127.0.0.1:${address.port}/ready`);
+    console.log(response.status, await response.text());
   } finally {
-    await app.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await telemetry.shutdown();
   }
-} finally {
-  await telemetry?.shutdown();
 }
 ```
+
+The script prints `200 ready`. The collector receives a server span for
+`example-api` with request ID `example-1` and actor kind `anonymous`.
+Without an exporter endpoint, the script prints `Telemetry disabled`.
 
 ## Configure it
 

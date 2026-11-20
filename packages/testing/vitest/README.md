@@ -15,23 +15,65 @@ alias shape he cannot honor exactly is a startup failure, not a quiet miss.
 
 ## Try it
 
+The npm install below is for the public release.
+
+In a new directory on Node.js 22.12 or newer, install Vitest 4, Vite 7, and the
+alias plugin.
+
+```sh
+npm init -y
+npm pkg set type=module
+npm install --save-dev vitest@4 vite@7 @dads-framework/testing-vitest
+mkdir -p src
+```
+
+Save this as `tsconfig.json`.
+
+```json
+{
+  "compilerOptions": {
+    "paths": { "@app/*": ["./src/*"] }
+  }
+}
+```
+
+Save this as `vitest.config.ts`.
+
+<!-- dads:check-example -->
+
 ```ts
-// vitest.config.ts
+import { fileURLToPath } from "node:url";
 import { dadsTsconfigPaths } from "@dads-framework/testing-vitest";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [
     dadsTsconfigPaths({
-      tsconfig: new URL("./tsconfig.json", import.meta.url).pathname,
+      tsconfig: fileURLToPath(new URL("./tsconfig.json", import.meta.url)),
     }),
   ],
 });
 ```
 
-With `"paths": { "@app/*": ["src/*"] }` in that tsconfig, `import { button }
-from "@app/ui/button"` resolves to `src/ui/button.ts` inside Vitest. A bare
-specifier such as `react` is left to Vite.
+Create the module and test, then run Vitest.
+
+```sh
+printf 'export const label = "Save";\n' > src/button.ts
+
+cat > button.test.mjs <<'JS'
+import { expect, test } from "vitest";
+import { label } from "@app/button";
+
+test("loads the button label through the tsconfig alias", () => {
+  expect(label).toBe("Save");
+});
+JS
+
+npx vitest run
+```
+
+Vitest reports one passing test. The plugin resolves `@app/button` to
+`src/button.ts` using the alias in `tsconfig.json`.
 
 ## Use it
 

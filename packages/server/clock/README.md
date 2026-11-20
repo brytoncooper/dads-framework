@@ -6,8 +6,18 @@ and logic never reaches for `Date.now()` ambiently.
 
 ## Try it
 
+In a Node.js 22+ project, install the package.
+
+```sh
+npm install @dads-framework/clock
+```
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
-import { createClock, type Clock } from "@dads-framework/clock";
+import { type Clock } from "@dads-framework/clock";
 
 function dueAt(clock: Clock, delayMs: number) {
   return new Date(clock.now().getTime() + delayMs);
@@ -15,8 +25,8 @@ function dueAt(clock: Clock, delayMs: number) {
 
 const fixed = { now: () => new Date("2026-01-01T00:00:00Z") };
 console.log(dueAt(fixed, 60_000).toISOString()); // 2026-01-01T00:01:00.000Z
-const systemClock = createClock();
 ```
 
-Use `createClock()` in application wiring and give tests a fixed `now()`.
-Durations and elapsed-time performance measurements belong to a monotonic clock.
+The script prints `2026-01-01T00:01:00.000Z`. Use `createClock()` in
+application wiring and give tests a fixed `now()`. Durations and elapsed-time
+performance measurements belong to a monotonic clock.

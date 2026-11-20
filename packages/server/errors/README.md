@@ -13,6 +13,16 @@ Use `staleSave()` after an authorized conditional update fails to match the expe
 
 ## Try it
 
+In a Node.js 22+ project, install the package.
+
+```sh
+npm install @dads-framework/errors
+```
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import { notFound } from "@dads-framework/errors";
 import { mapErrorToHttpResponse } from "@dads-framework/errors/map-error-to-http-response";
@@ -20,6 +30,9 @@ import { mapErrorToHttpResponse } from "@dads-framework/errors/map-error-to-http
 const error = notFound("DOCUMENT_NOT_FOUND", "The document was not found.");
 console.log(mapErrorToHttpResponse(error, "request-1").status); // 404
 ```
+
+The script prints `404`. The HTTP mapper puts the stable
+`DOCUMENT_NOT_FOUND` code in the response body.
 
 ## What it refuses to do
 

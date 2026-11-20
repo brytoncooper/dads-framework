@@ -1,5 +1,62 @@
 # Dads Testing native runtime (macOS arm64)
 
 This package contains the platform-native `dad-test` executable used by
-`@dads-framework/testing` on macOS arm64. Install it directly only when npm's
-optional-dependency selection is unavailable.
+`@dads-framework/testing` on macOS on Apple silicon.
+
+## Try it
+
+Use a POSIX shell and Node.js 22 or newer in an empty directory on macOS on Apple silicon.
+Normally, npm selects this runtime when you install
+[`@dads-framework/testing`](../../core/README.md). Use this direct install
+after the public release when optional dependencies are unavailable.
+
+```sh
+node -p 'process.platform + "-" + process.arch'
+npm init -y
+npm install --save-dev @dads-framework/testing-native-darwin-arm64
+binary=$(node -p 'require.resolve("@dads-framework/testing-native-darwin-arm64")')
+printf '%s\n' "$binary"
+test -x "$binary" && printf 'Executable found\n'
+
+cat > dads.testing.json <<'JSON'
+{
+  "schemaVersion": 1,
+  "workspace": { "root": ".", "fullFallback": { "taskIds": ["app:test"] } },
+  "projects": [{ "id": "app", "root": ".", "fallbackDependencies": [] }],
+  "tasks": [{
+    "id": "app:test",
+    "project": "app",
+    "kind": "test",
+    "execution": { "executable": "node", "args": ["--version"], "cwd": "." },
+    "dependsOn": [],
+    "impact": { "mode": "always" }
+  }]
+}
+JSON
+node -p 'JSON.stringify({ schemaVersion: 1, operation: "plan", workspaceRoot: process.cwd(), all: true })' | "$binary"
+```
+
+The host check prints `darwin-arm64`. The binary path ends in
+`bin/dad-test`, followed by `Executable found` from the file check.
+The native response contains `"ok":true` and a task with `"id":"app:test"`
+and `"decision":"run"`. A plan shows which tasks would run.
+
+## Commands
+
+The native executable reads one JSON request from standard input. Set
+`workspaceRoot` to an absolute directory containing `dads.testing.json`. It accepts
+`plan` and `run` as the `operation` field. For the flag-based CLI, including
+`init` and `explain`, use the
+[testing facade](../../core/README.md#commands).
+
+## What it refuses to do
+
+This build supports macOS on Apple silicon only.
+
+## Contract
+
+The executable returns a JSON response with `schemaVersion` and `ok`. On
+success, `result.plan` describes task selection. An invalid request returns
+`ok: false`, an `error` message, and exit code 1. Use the
+[testing facade](../../core/README.md#contract) for the supported application
+interface.

@@ -1,40 +1,36 @@
 # Compose APIs and plugins
 
-Give each API an explicit list of routes and jobs. In the starter, the
-customer API serves tenants and notes and selects the notes attachment
-worker. The staff API selects tenant routes and starts with an empty job
-list. Both call the same service provider and use the same composed access
-model.
-[Customer entry point](../../../apps/kit-workbench/apps/customer/app.ts) ·
-[Staff entry point](../../../apps/kit-workbench/apps/staff/app.ts)
+The notes fixture gives customers a single-note endpoint and staff a note
+count. Each API selects its routes and jobs from plugins. Both compositions
+use the same service definitions for a clock and note storage.
 
-<!-- dads:excerpt {"path": "apps/kit-workbench/apps/customer/app.ts", "language": "ts", "from": "export function customerApp(provider: ServiceProvider) {", "through": "}"} -->
+<!-- dads:excerpt {"path": "fixtures/plugin-notes/src/apis/customer-api.ts", "language": "ts", "from": "export const customerApi = composeApi(\"customer\", {", "through": "});"} -->
 
-## Add a surface to one API
+<!-- dads:excerpt {"path": "fixtures/plugin-notes/src/apis/staff-api.ts", "language": "ts", "from": "export const staffApi = composeApi(\"staff\", {", "through": "});"} -->
 
-1. Export the route contribution from its domain plugin. The starter notes
-   plugin declares the services it needs and uses them to build its routes.
-   Its worker contribution has a separate export, so the host can select
-   routes and jobs independently.
-   [Notes plugin](../../../apps/kit-workbench/domains/notes/server/plugin.ts)
-2. Add the plugin to the target entry point's `routes`. Use a separate route
-   contribution when one domain has different customer and staff
-   operations. Keep each operation's permission check even when the host
-   selects a limited surface.
-3. Run requests through both API compositions. The starter's integration
-   test sends a valid customer request to the staff host and expects the
-   unmounted notes route to return 404.
-   [API selection proof](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+## Try the same request on both hosts
 
-To try both hosts locally, follow the starter's existing-database instructions.
-Keep the customer host running and start staff on a separate port with
-`DADS_API=staff`. The notes plugin fixture shows a second composition with
-shared storage and different route and job selections.
-[Run the starter](../../../apps/kit-workbench/README.md#run-against-your-own-database) ·
-[Notes fixture](../../../fixtures/plugin-notes/README.md)
+From the framework checkout with dependencies installed, build the workspace
+and run the API selection test. It starts two in-process HTTP hosts, writes
+a note to the customer store, and uses a test identity with both the note's
+`author` relationship and the dashboard's `operator` relationship.
 
-When a plugin needs another vendor or shared dependency, give the host a
-service to supply and keep vendor wiring at that integration boundary.
-[Plugin contract](../../../packages/foundation/plugin/README.md) ·
-[Dependency libraries](../../dependency-libraries.md) ·
-[Independent Evolution Principle](../../principles.md)
+```sh
+npm run build
+npm test -w @dads-fixture/plugin-notes -- api-selection.test.ts
+```
+
+<!-- dads:excerpt {"path": "fixtures/plugin-notes/src/apis/api-selection.test.ts", "language": "ts", "from": "    const request = {", "through": "    expect(staff.jobs.map((job) => job.name)).toEqual([\"notes.count\"]);"} -->
+
+For that identity, customer serves `GET /notes/note-one` with
+`{"data":{"id":"note-one","text":"one note"}}`. Staff serves
+`GET /staff/notes/count` with a `data.count` integer for its own store.
+Each host returns **404** for the other host's path. Staff also returns
+**404** for its own count route when the caller lacks the operator
+relationship. Route selection and the route's permission check both matter.
+
+To add a surface, export its route contribution from the domain plugin and
+select it in the intended API's `routes` array. Put background jobs in a
+separate contribution so each host can select them independently. Test the
+request on both hosts with the same authorized identity, then change the
+identity on the host that serves the route to exercise the permission check.

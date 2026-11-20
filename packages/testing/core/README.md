@@ -11,22 +11,73 @@ the proof runs out he widens out loud, with a reason and a line number.
 
 ## Try it
 
-Use a built source checkout while the first public npm release is on hold.
-Follow the [native build instructions](#native-packages). In the target Git
-workspace, put the built checkout's `node_modules/.bin` on your `PATH` and
-choose a base ref available in that workspace.
+Use Node.js 22 or newer and Git. The npm install below is for the public
+release and includes the [matching native runtime](#native-packages). For a
+source checkout, first run the following from its root, then skip the
+`npm install` line in the example.
 
 ```sh
-dad-test init
-dad-test explain --base origin/main
-dad-test plan --base origin/main --report dads-testing-report.json --json
-dad-test run --base origin/main --json
-dad-test run --all --jobs 4 --json
+npm ci
+npm run build
+cargo build -p dad-test
+export DADS_TEST_NATIVE_BINARY="$PWD/target/debug/dad-test"
+export PATH="$PWD/node_modules/.bin:$PATH"
 ```
 
-Review the tasks and skips in `dads.testing.init-report.json` before running
-the generated manifest. The [quickstart](../../../docs/testing/quickstart.md)
-walks through a widened plan and a proven skip.
+Run the example in an empty directory.
+
+```sh
+npm init -y
+npm install --save-dev @dads-framework/testing
+git init -q
+printf 'node_modules/\n' > .gitignore
+mkdir -p api web
+
+cat > dads.testing.json <<'JSON'
+{
+  "schemaVersion": 1,
+  "workspace": { "root": ".", "fullFallback": { "taskIds": ["api:test", "web:test"] } },
+  "projects": [
+    { "id": "api", "root": "api", "fallbackDependencies": [] },
+    { "id": "web", "root": "web", "fallbackDependencies": [] }
+  ],
+  "tasks": [
+    {
+      "id": "api:test",
+      "project": "api",
+      "kind": "test",
+      "execution": { "executable": "node", "args": ["--version"], "cwd": "api" },
+      "dependsOn": [],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "web:test",
+      "project": "web",
+      "kind": "test",
+      "execution": { "executable": "node", "args": ["--version"], "cwd": "web" },
+      "dependsOn": [],
+      "impact": { "mode": "project" }
+    }
+  ]
+}
+JSON
+
+printf 'export const port = 3000;\n' > api/config.js
+printf 'export const title = "Home";\n' > web/config.js
+git add .
+git -c user.name="Dads Example" -c user.email="example@example.invalid" commit -qm baseline
+
+printf 'export const port = 3001;\n' > api/config.js
+PATH="$PWD/node_modules/.bin:$PATH"
+dad-test explain
+result=$(dad-test run --json)
+printf '%s\n' "$result" | node -p 'JSON.parse(require("node:fs").readFileSync(0, "utf8")).result.run.exitCode'
+```
+
+The explanation reports `RUN api:test` and `SKIP web:test`. The run executes
+the API task's sample command and prints a run exit code of `0`. To generate
+a starting manifest from an existing npm, pnpm, or Yarn workspace, start with
+`dad-test init` and review `dads.testing.init-report.json`.
 
 ## Commands
 

@@ -7,13 +7,29 @@ can choose a disk or S3 implementation from
 
 ## Try it
 
+In a project using Node.js 22 or later, install the example dependencies.
+
+```sh
+npm install @dads-framework/object-storage-core
+npm install -D tsx
+```
+
+Save this as `example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import { InMemoryObjectStorage } from "@dads-framework/object-storage-core";
 
 const storage = new InMemoryObjectStorage();
 await storage.put("reports/daily.txt", "Ready", "text/plain");
-console.log((await storage.get("reports/daily.txt"))?.contentType); // text/plain
+const stored = await storage.get("reports/daily.txt");
+if (stored) {
+  console.log(stored.contentType, new TextDecoder().decode(stored.body));
+}
 ```
+
+The script prints `text/plain Ready`. The object lives in the current process.
 
 ## Provider contract
 

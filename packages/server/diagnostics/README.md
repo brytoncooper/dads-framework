@@ -6,6 +6,16 @@ process boundaries so one failure leaves a comparable record everywhere.
 
 ## Try it
 
+In a Node.js 22+ project, install the package.
+
+```sh
+npm install @dads-framework/diagnostics
+```
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import { createDiagnosticsReporter } from "@dads-framework/diagnostics";
 

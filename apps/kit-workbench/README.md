@@ -40,6 +40,10 @@ Approved staff can use a short-lived grant to inspect a tenant through a
 member's view permission. The [staff impersonation setup](./DEPLOY.md#staff-support-impersonation)
 defines who can issue and revoke grants and where to review attempts.
 
+## Try the feature examples
+
+Open **Examples** in the web app to follow a walkthrough alongside the running APIs. Start with the permissions dashboard to compare what the owner, a member, and an outsider can see. The same walkthroughs ship under `examples/`. [Example setup](./examples/README.md)
+
 ## Run against your own database
 
 For API development with an existing test database, set the browser origin

@@ -32,21 +32,34 @@ Use `saveWithRefresh({ save, refresh })` to refresh the authorized record after 
 
 ## Try it
 
+In a browser TypeScript app, install the transport and the packages that
+define the route and its response schema.
+
+```sh
+npm install @dads-framework/client-request-transport @dads-framework/contract zod@^4
+```
+
+Have your app serve same-origin `GET /api/status` with an HTTP 200 JSON response
+of `{"data":{"ok":true}}`, then call this from a browser module.
+
+<!-- dads:check-example -->
+
 ```ts
 import { defineRoute } from "@dads-framework/contract";
 import { getFromApi } from "@dads-framework/client-request-transport";
 import { z } from "zod";
 
 const status = defineRoute("GET", "/status", () => "/status");
-await getFromApi({
+const result = await getFromApi({
   route: status.bind(),
   returns: z.object({ ok: z.boolean() }),
 });
+console.log(result.ok);
 ```
 
-If the endpoint returns `{"data":{"ok":true}}`, the call resolves to
-`{ ok: true }`. Callers can handle network and API errors separately, and a
-malformed success payload fails schema validation.
+The transport adds the `/api` prefix, unwraps `data`, and validates the payload.
+The console prints `true`. Change the response to `{"data":{"ok":"yes"}}` to
+see the call reject with a schema validation error.
 
 ## What it refuses to do
 

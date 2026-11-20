@@ -39,9 +39,58 @@ dependencies of `@dads-framework/postgres`.
 
 ## Try it
 
+In a Node.js 22+ project, install the runner and create a migration.
+
 ```sh
-npm exec -- dads-migrate-status
+npm install @dads-framework/migrations node-pg-migrate
+mkdir -p migrations
+cat > migrations/20260101000000_create_notes.migration.ts <<'EOF'
+import type { MigrationBuilder } from "node-pg-migrate";
+
+export const dependsOn = [];
+
+export function up(pgm: MigrationBuilder) {
+  pgm.createTable("notes", { id: { type: "serial", primaryKey: true } });
+}
+
+export function down(pgm: MigrationBuilder) {
+  pgm.dropTable("notes");
+}
+EOF
 ```
+
+Set `DATABASE_URL` to an empty PostgreSQL database where your role can
+create schemas and tables. From the project root, save this as
+`example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import { runNodePgMigrations } from "@dads-framework/migrations";
+
+const databaseUrl = process.env["DATABASE_URL"];
+if (!databaseUrl) throw new Error("Set DATABASE_URL");
+
+await runNodePgMigrations({
+  databaseUrl,
+  workspace: {
+    root: process.cwd(),
+    sources: [
+      {
+        root: "migrations",
+        files: /^migrations\/[^/]+\.migration\.ts$/,
+        owner: "app",
+        required: true,
+      },
+    ],
+    moduleAliases: {},
+  },
+});
+console.log("Migrations complete");
+```
+
+The first run creates the `notes` table and records the migration in the
+journal. Running the script again skips the recorded migration.
 
 ## What it refuses to do
 

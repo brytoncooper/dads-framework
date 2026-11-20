@@ -1,31 +1,47 @@
 # Adopt one capability
 
-Choose this path when an existing application already works and you want
-one narrower guarantee before adopting more. For a service with unclear
-request validation, start with one route and write a test for the malformed
-payload you want to reject. Keep serving the rest of the application as before.
+Choose one behavior to prove in your existing application. For a route with
+unclear validation, capture a malformed request in a test, define the accepted
+input at the HTTP boundary, then run the malformed request and a valid one.
+Keep the route's existing access rules and prove denial with an account that
+lacks the required relationship.
+[HTTP contract example](./http.md) · [Denial test](./guarded-resource.md)
 
-If the [toolbox](../../../packages/foundation/toolbox/README.md) is installed
-in the existing repository, run `npx dad doctor` to see its current findings.
-Use `dad doctor explain <issue-id>` to get the rule and the repair it expects.
-See the [Doctor command reference](../../doctor.md) for profiles and reports.
+## Preview a starter beside your application
 
-Choose one change with a clear test: validate a boundary, generate a client,
-or lock the existing code-health baseline. Keep the original app running and
-prove the new capability before routing production inputs to it.
+An isolated starter lets you practice on a working API before editing your
+application. When your registry carries a stable `create-dads` release, run
+this preview with the root of your existing application as the target.
 
-Use the creator's [existing-project mode](../../../packages/foundation/create-dads/README.md#commands)
-to place a separate starter under the target's `dads/` directory. Preview it
-with `npm create dads@latest /path/to/your/project -- --existing --dry-run`.
-Remove `--dry-run` to write the files and install the starter's dependencies.
-Your existing project keeps its package manifest and runtime. Start Docker,
-then run `npm start` from the new `dads/` directory. Open the web URL shown
-when the starter is ready. The [quickstart](./quickstart.md) walks through
-the sign-in and note flow in that starter.
+```sh
+npm create dads@latest /path/to/your/project -- --existing --dry-run --json
+```
 
-Commit the isolated starter's lockfile if you use its CI. Its generated
+Check that `initialization.projectRoot` points to the project's `dads/`
+subdirectory. `initialization.created` lists the starter files it would write.
+Remove `--dry-run` to write those files and install dependencies. The host
+manifest stays intact. With Docker running, start the separate app.
+
+```sh
+cd /path/to/your/project/dads
+npm start
+```
+
+Open the web URL printed by the launcher and [save a note](./quickstart.md#save-a-note).
+Commit the starter's `package-lock.json` if you use its CI. Its
 `ci/verify.sh` runs `npm ci` before verification.
 
-Use [the adoption model](../../adoption-model.md)
-to decide when to bring a capability into the host project, and
-[dependency libraries](../../dependency-libraries.md) for a bounded integration.
+The public npm `latest` tag currently points to a staging version. From a
+framework checkout, you can preview the same layout with the source creator.
+
+```sh
+npm ci
+npm run build
+node packages/foundation/create-dads/dist/cli.js /path/to/your/project \
+  --existing --dry-run --json
+```
+
+If the host already has the [Toolbox](../../../packages/foundation/toolbox/README.md),
+run `npx dad doctor` in the host to inspect its current findings. Use
+`npx dad doctor explain <issue-id>` to read the rule and the suggested repair.
+[Doctor reference](../../doctor.md)

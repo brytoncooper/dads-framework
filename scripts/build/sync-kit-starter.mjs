@@ -36,11 +36,13 @@ const paths = [
   "package.json",
   "tsconfig.json",
   "index.html",
+  "examples.html",
   "vite.config.ts",
   ...[
     "apps",
     "assembly",
     "domains",
+    "examples",
     "libraries",
     "migrations",
     "tests",

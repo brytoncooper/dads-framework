@@ -4,6 +4,48 @@ Keep outbound mail code independent of the delivery provider. Callers use
 `EmailSender.send()`. The application chooses the driver when it creates
 the sender.
 
+## Try it
+
+In a project using Node.js 22 or later, install the example dependencies.
+
+```sh
+npm install @dads-framework/email-sender
+npm install -D tsx
+```
+
+Save this as `example.mts` and run `npx tsx example.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  CapturedMailbox,
+  createEmailSender,
+} from "@dads-framework/email-sender";
+
+const mailbox = new CapturedMailbox();
+const sender = createEmailSender(
+  {
+    driver: "capture",
+    from: "orders@example.com",
+    mailbox,
+  },
+  console,
+);
+const receipt = await sender.send({
+  to: [{ address: "customer@example.com" }],
+  subject: "Order ready",
+  text: "Order 1042 is ready for pickup.",
+});
+
+console.log(receipt.providerMessageId);
+console.log(mailbox.list()[0]?.text);
+```
+
+The script prints `mail-1` and `Order 1042 is ready for pickup.` from the local mailbox. The capture driver keeps the message in memory and requires no provider account.
+
+## Use it
+
 ```ts
 const receipt = await emailSender.send({
   to: [{ address: "invitee@example.com", name: "Dana Reyes" }],

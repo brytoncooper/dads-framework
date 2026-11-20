@@ -8,6 +8,7 @@ share a permission rule and declare what each API exposes.
 [Start with the quickstart](./quickstart.md) to run a web app, PostgreSQL,
 and two APIs from one project. If you already have an application,
 [adopt one capability](./adopt.md) to try Dads in a smaller change.
+Browse the [package examples](https://dadsframework.dev/docs/packages) for install commands, working code, and expected results.
 
 ## One codebase, two APIs
 
@@ -62,3 +63,7 @@ dependencies and run the same checks. See the [portable CI recipe](../../../ci/R
 Use [change-aware verification](./verification.md) for focused feedback
 while you work. The [guarded resource walkthrough](./guarded-resource.md)
 traces a permission from its definition to an HTTP denial test.
+
+## Try it with three accounts
+
+The starter can set up an owner, an invited member, and an outsider in a local workspace. Open **Examples** in its browser app to inspect effective permissions, export audit records, or try directory provisioning against the running APIs. [Set up the example workspace](../../../apps/kit-workbench/examples/README.md)

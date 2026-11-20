@@ -4,17 +4,70 @@ Binds the Dads identity contract to Better Auth and PostgreSQL for email, passwo
 
 ## Try it
 
-```ts
-import { createBetterAuthIdentity } from "@dads-framework/identity-better-auth";
+Use Node.js 22 or later and a disposable Postgres database. Apply
+`installIdentitySchemaV1(pgm)` from this package in your migration runner.
+Set `DATABASE_URL` to point at the migrated database. Set `IDENTITY_SECRET`
+to a locally generated secret of at least 32 characters. The example invokes
+the HTTP handler directly, so it needs no listening HTTP server. It uses a
+test-only invitation policy and does not attempt to send email.
 
-const identity = createBetterAuthIdentity({
-  database: postgres,
-  baseUrl: environment.appOrigin,
-  secret: environment.identitySecret,
-  enqueueEmail: mailQueue.enqueueIdentityEmail,
-  canInvite: accountPolicy.canInvite,
-});
+```sh
+npm install @dads-framework/identity-better-auth @dads-framework/postgres
+npm install -D tsx
 ```
+
+Save as `identity-boundary.mts` and run `npx tsx identity-boundary.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  createBetterAuthIdentity,
+  IDENTITY_PATH,
+} from "@dads-framework/identity-better-auth";
+import { createPostgresConnection } from "@dads-framework/postgres";
+
+const connectionString = process.env.DATABASE_URL;
+const secret = process.env.IDENTITY_SECRET;
+if (!connectionString || !secret) {
+  throw new Error("Set DATABASE_URL and IDENTITY_SECRET.");
+}
+
+const connection = createPostgresConnection(
+  { connectionString, schema: {} },
+  console,
+);
+const baseUrl = "http://localhost:3000";
+try {
+  const identity = createBetterAuthIdentity({
+    database: connection,
+    baseUrl,
+    secret,
+    enqueueEmail: async () => {
+      throw new Error(
+        "Connect a confidential mail queue before testing email flows.",
+      );
+    },
+    canInvite: async () => false,
+  });
+
+  const request = new Request(baseUrl + IDENTITY_PATH + "/invite", {
+    method: "POST",
+    headers: { origin: baseUrl, "content-type": "application/json" },
+    body: JSON.stringify({ email: "guest@example.test" }),
+  });
+  console.log(await identity.readSession(request.headers));
+  console.log((await identity.handle(request)).status);
+} finally {
+  await connection.close();
+}
+```
+
+The script prints `null` for the missing session and `401` for the unsigned
+invitation request. To try sign-in, mount the handler and connect a test mailbox.
+Post a new email and password to `/sign-up/email`, open the verification link
+from that mailbox, and post the credentials to `/sign-in/email`. Pass the cookie
+from that response to `readSession` to observe the verified account.
 
 ## Use it
 

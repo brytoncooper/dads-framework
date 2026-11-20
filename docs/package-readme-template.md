@@ -21,10 +21,9 @@ package holds the boundary it holds. Delete the section rather than pad it.
 
 ## Try it
 
-_Reference. Required._ One fenced code block a reader can paste and run, with
-the output or effect they should see. State prerequisites such as a running
-test database or an installed adapter before the block. The conformance check
-requires a fenced block, so include the example here.
+_Reference. Required._ Name the environment and give the installation command. Walk the reader through one job the package does using its public entry point. Show the output, resulting record, or visible change they can use to confirm it worked. If an adapter needs a running service or credentials, identify those inputs before using them.
+
+Put `<!-- dads:check-example -->` on the line immediately before the canonical TypeScript or TSX code block so the docs check compiles it. For a command-line tool or stylesheet, show the actual invocation or stylesheet and how to observe the result.
 
 ## Commands
 

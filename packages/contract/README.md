@@ -14,13 +14,26 @@ Use `rowVersionSchema` on read and success responses and spread `expectedRowVers
 
 ## Try it
 
+Install the shared schemas.
+
+```sh
+npm install @dads-framework/contract
+```
+
+Save as `account-id.mts` and run `node account-id.mts` with Node.js 22.18 or newer.
+
+<!-- dads:check-example -->
+
 ```ts
 import { opaqueIdSchema } from "@dads-framework/contract";
 
 const accountId = opaqueIdSchema("AccountId", "Account identifier.");
-const parsed = accountId.parse("account-1"); // branded AccountId
-accountId.safeParse(42).success; // false
+console.log(accountId.parse("account-1"));
+console.log(accountId.safeParse(42).success);
 ```
+
+The script prints `account-1` and then `false`. The schema accepts the
+wire string and rejects a numeric ID.
 
 ## What it refuses to do
 

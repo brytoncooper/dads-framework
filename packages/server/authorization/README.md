@@ -6,18 +6,56 @@ a SpiceDB adapter, an outbox, and a fake for tests.
 
 ## Try it
 
-```ts
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
+Use Node.js 22 or later and a fresh local SpiceDB datastore. This example
+replaces the datastore's entire schema. The Docker command starts an
+ephemeral testing instance with its gRPC port bound to loopback.
 
-const auth = new FakeAuthorization();
-const resource = { type: "project", id: "p1" };
-const subject = { type: "user", id: "u1" };
-const query = { resource, subject, permission: "viewer" };
-
-console.log(await auth.check(query)); // false
-auth.seed({ resource, subject, relation: "viewer" });
-console.log(await auth.check(query)); // true
+```sh
+npm install @dads-framework/authorization
+npm install -D tsx
+docker run --rm -p 127.0.0.1:50051:50051 authzed/spicedb:v1.57.0 serve-testing
 ```
+
+In another terminal, save this as `check-access.mts` and run
+`npx tsx check-access.mts`.
+
+<!-- dads:check-example -->
+
+```ts
+import {
+  SpiceDbAuthorization,
+  relationshipWrite,
+} from "@dads-framework/authorization";
+
+const authorization = new SpiceDbAuthorization({
+  endpoint: "127.0.0.1:50051",
+  presharedKey: "quickstart",
+  insecure: true,
+  consistency: "fully-consistent",
+});
+
+await authorization.writeSchema(`
+definition user {}
+definition project {
+  relation viewer: user
+  permission view = viewer
+}
+`);
+
+const resource = { type: "project", id: "project-1" };
+const subject = { type: "user", id: "alice" };
+const query = { resource, subject, permission: "view" };
+
+console.log(await authorization.check(query));
+await authorization.writeRelationships([
+  relationshipWrite(resource, "viewer", subject),
+]);
+console.log(await authorization.check(query));
+```
+
+The first run prints `false` and then `true`. Restart the container to clear
+the grant before repeating the example. For unit tests of direct grants, use
+`FakeAuthorization` from `@dads-framework/authorization/testing`.
 
 ## Use it
 

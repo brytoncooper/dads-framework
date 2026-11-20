@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { posix, relative, resolve, sep } from "node:path";
 
@@ -41,14 +42,7 @@ function fileOrReadme(root, path) {
   return undefined;
 }
 
-export function markdownLink({
-  root,
-  pages,
-  files,
-  linkedSources,
-  source,
-  target,
-}) {
+export function markdownLink({ root, pages, files, source, target }) {
   if (target.startsWith("#") || EXTERNAL.test(target) || target === "")
     return target;
   if (SCHEME.test(target) || target.startsWith("//")) {
@@ -73,7 +67,6 @@ export function markdownLink({
   if (!files.has(relativeFile)) {
     files.set(relativeFile, readPublicFile(root, file));
   }
-  linkedSources?.add(relativeFile);
   const encodedPath = file.split("/").map(encodeURIComponent).join("/");
   if (/\.md$/i.test(file)) return `${REPOSITORY_BLOB}${encodedPath}${suffix}`;
   return `source/${encodedPath}${suffix}`;
@@ -84,4 +77,35 @@ export function readPublicFile(root, path) {
   const canonical = realpathSync(absolute);
   repositoryFile(realpathSync(root), canonical);
   return readFileSync(canonical);
+}
+
+export function exampleFileReader(root, files) {
+  const tracked = new Set(
+    execFileSync("git", ["ls-files", "--full-name", "-z"], {
+      cwd: root,
+      encoding: "utf8",
+    }).split("\0"),
+  );
+  const canonicalRoot = realpathSync(root);
+  return (path) => {
+    if (
+      typeof path !== "string" ||
+      path === "" ||
+      path.startsWith("-") ||
+      posix.isAbsolute(path) ||
+      posix.normalize(path) !== path ||
+      !tracked.has(path)
+    ) {
+      throw new Error(`Docs example needs a tracked repository file: ${path}.`);
+    }
+    const absolute = repositoryFile(canonicalRoot, path);
+    if (realpathSync(absolute) !== absolute || !lstatSync(absolute).isFile()) {
+      throw new Error(
+        `Docs example must point directly to a repository file: ${path}.`,
+      );
+    }
+    const file = readPublicFile(canonicalRoot, path);
+    files.set(`source/${path}`, file);
+    return file;
+  };
 }

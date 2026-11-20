@@ -14,7 +14,7 @@ it("projects only explicitly selected runtime surfaces and still disposes setup"
       return {
         provides: { count: 1 },
         routes: [{ path: "/notices" }],
-        jobs: [{ name: "cleanup" }],
+        jobs: [{ name: "cleanup", priority: 1 }],
       };
     },
   });
@@ -36,13 +36,17 @@ it("projects only explicitly selected runtime surfaces and still disposes setup"
   try {
     expect(data.read(notices).count).toBe(1);
     expect(data.routes).toEqual([]);
+    expectTypeOf(data.jobs).toEqualTypeOf<readonly never[]>();
     expect(data.jobs).toEqual([]);
     expectTypeOf(http.routes).toEqualTypeOf<readonly { path: string }[]>();
     expect(http.routes).toEqual([{ path: "/notices" }]);
+    expectTypeOf(http.jobs).toEqualTypeOf<readonly never[]>();
     expect(http.jobs).toEqual([]);
-    expectTypeOf(worker.jobs).toEqualTypeOf<readonly { name: string }[]>();
+    expectTypeOf(worker.jobs).toEqualTypeOf<
+      readonly { name: string; priority: number }[]
+    >();
     expect(worker.routes).toEqual([]);
-    expect(worker.jobs).toEqual([{ name: "cleanup" }]);
+    expect(worker.jobs).toEqual([{ name: "cleanup", priority: 1 }]);
   } finally {
     await Promise.all([data.stop(), http.stop(), worker.stop()]);
   }

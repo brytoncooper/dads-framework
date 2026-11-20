@@ -4,13 +4,31 @@ The default stylesheet for Dads React components and Tailwind CSS 4 apps.
 
 ## Try it
 
-In your application's Tailwind CSS entry point, import the theme and scan the
-installed UI package. Adjust the source path relative to your stylesheet.
+Install the stylesheet in an existing Tailwind CSS 4 app.
+
+```sh
+npm install @dads-framework/styles
+```
+
+Set your application's Tailwind CSS entry point to the following import. The
+package loads Tailwind and the theme together.
 
 ```css
 @import "@dads-framework/styles/index.css";
-@source "../node_modules/@dads-framework/ui/dist";
 ```
+
+Add this markup to a page scanned by Tailwind and open it in the browser.
+
+```html
+<section class="bg-background p-4 text-foreground">Light theme</section>
+<section class="dark">
+  <div class="bg-background p-4 text-foreground">Dark theme</div>
+</section>
+```
+
+The first block has a light background and dark text. The second has a dark
+background and light text. To theme installed Dads UI controls as well, add the
+source directive shown in the [UI quick start](../ui/README.md#try-it).
 
 ## Use it
 

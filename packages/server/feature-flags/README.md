@@ -13,6 +13,17 @@ defined.
 
 ## Try it
 
+Install the flag kit.
+
+```sh
+npm install @dads-framework/feature-flags @dads-framework/clock
+```
+
+Save as `pilot.mts` and run `node pilot.mts` with Node.js 22.18 or newer.
+The script enables invoice export for one tenant in memory.
+
+<!-- dads:check-example -->
+
 ```ts
 import {
   composeFeatureFlags,
@@ -57,15 +68,22 @@ await flags.update.execute({
   },
 });
 
-await flags.evaluator.isActive({
-  slug: bulkExport.slug,
-  context: { kind: "tenant", tenantId: "acme" },
-}); // true
-await flags.evaluator.isActive({
-  slug: bulkExport.slug,
-  context: { kind: "platform" },
-}); // false
+console.log(
+  await flags.evaluator.isActive({
+    slug: bulkExport.slug,
+    context: { kind: "tenant", tenantId: "acme" },
+  }),
+);
+console.log(
+  await flags.evaluator.isActive({
+    slug: bulkExport.slug,
+    context: { kind: "platform" },
+  }),
+);
 ```
+
+The script prints `true` for Acme and `false` for the platform. The
+selected-tenant rollout leaves the platform audience off.
 
 ## Use it
 

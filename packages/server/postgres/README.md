@@ -41,16 +41,34 @@ needs the `databaseMigrations` named input instead.
 
 ## Try it
 
+In a Node.js 22+ project, install the package.
+
+```sh
+npm install @dads-framework/postgres
+```
+
+Set `DATABASE_URL` to the connection string for a running PostgreSQL database.
+
+Save this as `example.mts` and run `node --experimental-strip-types example.mts`.
+
+<!-- dads:check-example -->
+
 ```ts
 import { connectPostgresClient } from "@dads-framework/postgres";
 
+const databaseUrl = process.env["DATABASE_URL"];
+if (!databaseUrl) throw new Error("Set DATABASE_URL");
+
 const client = await connectPostgresClient(databaseUrl);
 try {
-  await client.query("SELECT 1");
+  const result = await client.query<{ answer: number }>("SELECT 1 AS answer");
+  console.log(result.rows[0]?.answer);
 } finally {
   await client.end();
 }
 ```
+
+The script prints `1` and closes the connection.
 
 ## What it refuses to do
 

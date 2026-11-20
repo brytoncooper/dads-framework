@@ -6,6 +6,17 @@ and reports response hashes from its own transport.
 
 ## Try it
 
+In a React 19 TypeScript app, install the client and the shared state schema.
+
+```sh
+npm install @dads-framework/client-feature-flags @dads-framework/feature-flags react@^19
+```
+
+Render `<ExportAvailability tenantId="north" />` from your app. The sample loader
+gives one tenant the export flag and returns an empty list for other tenants.
+
+<!-- dads:check-example -->
+
 ```tsx
 import {
   FeatureStateRuntime,
@@ -13,31 +24,26 @@ import {
   useFeatureEnabled,
 } from "@dads-framework/client-feature-flags";
 import { effectiveFeatureStateSchema } from "@dads-framework/feature-flags/contract";
-import { z } from "zod";
 
-const responseSchema = z.object({ data: effectiveFeatureStateSchema });
-const runtime = new FeatureStateRuntime(async (contextKey) => {
-  const response = await fetch("/api/feature-state", {
-    headers: { "x-feature-state-context": contextKey },
-  });
-  if (!response.ok) throw new Error("Could not load feature state.");
-  return responseSchema.parse(await response.json()).data;
-});
+const exportFeature = "billing.invoices.bulk-export";
+const runtime = new FeatureStateRuntime(async (tenantId) =>
+  effectiveFeatureStateSchema.parse({
+    features: tenantId === "north" ? [exportFeature] : [],
+    stateHash: tenantId === "north" ? "north-v1" : "other-v1",
+  }),
+);
 
-function ExportButton({ tenantId }: { tenantId: string }) {
+export function ExportAvailability({ tenantId }: { tenantId: string }) {
   useActivateFeatureState(runtime, tenantId);
-  const enabled = useFeatureEnabled(
-    runtime,
-    tenantId,
-    "billing.invoices.bulk-export",
-  );
-  return enabled ? <button>Export</button> : null;
+  const enabled = useFeatureEnabled(runtime, tenantId, exportFeature);
+  return <p>{enabled ? "Bulk export available" : "Bulk export unavailable"}</p>;
 }
 ```
 
-This example assumes the app serves the feature-state endpoint. The button
-appears after the active tenant's loaded flags include the export slug. Keep
-the permission and flag check on the export endpoint as well.
+After the loader resolves, `north` shows **Bulk export available**. Switch the
+prop to `south` to see **Bulk export unavailable**. In the app, read the
+effective state from your authorized feature-state endpoint and enforce the
+flag and permission on the export endpoint.
 
 ## Use it
 

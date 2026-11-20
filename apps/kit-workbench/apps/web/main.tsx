@@ -56,6 +56,7 @@ function App() {
             {t("workbench.brand")}
           </a>
           <nav className="masthead-links" aria-label={t("workbench.links")}>
+            <a href="/examples.html">{t("workbench.examples")}</a>
             <a href="/api/health">{t("workbench.apiHealth")}</a>
             {account && (
               <Button

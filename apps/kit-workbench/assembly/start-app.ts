@@ -7,6 +7,7 @@ import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
 import { IDENTITY_PATH } from "@dads-framework/identity-better-auth";
 import type { TelemetryRuntime } from "@dads-framework/telemetry";
 
+import { scimBindingRoutes } from "../domains/tenants/index.js";
 import { configureFeaturePreviews } from "./feature-previews.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";
 import { sessionSubjects } from "./session-subjects.js";
@@ -35,6 +36,8 @@ export async function startApp(
       enterpriseIdentity,
       scimHandler,
       staffImpersonation,
+      tenants,
+      invitationOrigin,
       db,
       flags,
       local,
@@ -96,6 +99,14 @@ export async function startApp(
             routes: [
               ...running.routes,
               ...infrastructure,
+              ...(name === "customer" && scimHandler !== undefined
+                ? scimBindingRoutes(
+                    tenants,
+                    invitationOrigin,
+                    config.enterprise?.scim?.map(({ tenantId }) => tenantId) ??
+                      [],
+                  )
+                : []),
               ...createSignInOptionsRoutes(enterpriseIdentity !== undefined),
             ],
             accessModel: model,

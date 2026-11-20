@@ -14,17 +14,48 @@ rather than guessed at.
 
 ## Try it
 
+The npm install below is for the public release.
+
+Use Node.js 22 or newer and Git. The adapter uses the Nx installation in the
+workspace. This example creates a small Nx workspace with independent
+`api:test` and `web:test` targets. Run it in an empty directory.
+
 ```sh
-dad-test-nx plan /path/to/workspace --base HEAD --json
-dad-test-nx run /path/to/workspace --base HEAD --targets test,lint --json
+npm init -y
+npm install --save-dev nx @dads-framework/testing-import-nx
+printf '{}\n' > nx.json
+printf 'node_modules/\n.nx/\n' > .gitignore
+
+for project in api web; do
+  mkdir -p "apps/$project"
+  cat > "apps/$project/project.json" <<JSON
+{
+  "name": "$project",
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node --version" }
+    }
+  }
+}
+JSON
+  printf 'module.exports = "v1";\n' > "apps/$project/index.js"
+done
+
+git init -q
+git add .
+git -c user.name="Dads Example" -c user.email="example@example.invalid" commit -qm baseline
+
+printf 'module.exports = "v2";\n' > apps/api/index.js
+npx dad-test-nx plan --base HEAD --targets test
+npx dad-test-nx run --base HEAD --targets test
 ```
 
-Without `--json`, each call prints two lines:
-
-```
-R verification targets registered; E targets excluded.
-S selected, U proven unaffected. Nx owns prerequisite execution; see --json for coverage reasons.
-```
+The plan reports two registered targets, one selected and one proven
+unaffected. The run delegates `api:test` to Nx, which executes the sample
+`node --version` command. Add `--json` to see the project and selection
+reason for each task. In an existing Nx workspace, start with the last two
+commands after installing the adapter and making a change.
 
 ## Commands
 

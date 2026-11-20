@@ -8,7 +8,15 @@ A plugin you cannot see is a plugin you cannot reason about. Every plugin here i
 
 ## Try it
 
-Start with a single plugin to see what composition returns:
+Install the plugin kernel.
+
+```sh
+npm install @dads-framework/plugin
+```
+
+Save as `plugin.mts` and run `node plugin.mts` with Node.js 22.18 or newer.
+
+<!-- dads:check-example -->
 
 ```ts
 import { composeApp, definePlugin } from "@dads-framework/plugin";
@@ -26,8 +34,16 @@ try {
 }
 ```
 
-The next example shows how a larger Notes plugin uses a clock service and
-contributes migrations, access, flags, HTTP routes, and jobs.
+The script prints `0` by reading the notes plugin's provided service after
+startup. When the script exits, the composed runtime has stopped.
+
+## Use it
+
+### Routes, jobs, and declared contributions
+
+The next excerpt shows how a Notes plugin uses a clock service and contributes
+migrations, access, flags, HTTP routes, and jobs. The fixture below contains
+the surrounding definitions and host wiring.
 
 ```ts
 import { accessModel } from "@dads-framework/access";
@@ -89,7 +105,7 @@ route answers through `@dads-framework/http`, its job runs in the in-process
 job queue, `discoverDomainMigrations` finds its migration, and its access
 definitions compile through `emitAccessIr(accessModel(app.access))`.
 
-## Use it
+### Entry points
 
 | Entry point                                     | What it is                                                                                        |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -126,9 +142,10 @@ const staff = composeApi("staff", {
 
 A plugin in `services` contributes its provided value and declared metadata.
 Only plugins in `routes` expose routes, and only plugins in `jobs` expose
-jobs. A plugin appears once in an API selection. Split independently deployed
-route and job groups into separate plugins and list their dependencies in
-`requires`. Use `composeApp` when every surface of a plugin ships together.
+jobs. Use `jobs: []` for an API with no workers. A plugin appears once in an
+API selection. Split independently deployed route and job groups into separate
+plugins and list their dependencies in `requires`. Use `composeApp` when every
+surface of a plugin ships together.
 
 Only selected plugins participate in an API's composition. A selected plugin
 with an unsatisfied dependency fails during composition with the API and

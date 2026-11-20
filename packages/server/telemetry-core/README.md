@@ -5,6 +5,33 @@ audit actor's kind. Use this package at the host boundary when building a
 reporter or adapter. To export Node HTTP and Postgres spans to a collector,
 use [the telemetry package](../telemetry/README.md).
 
+## Try it
+
+Install the package.
+
+```sh
+npm install @dads-framework/telemetry-core
+```
+
+Save as `trace-attributes.mts` and run `node trace-attributes.mts` with
+Node.js 22.18 or newer.
+
+<!-- dads:check-example -->
+
+```ts
+import { requestTraceAttributes } from "@dads-framework/telemetry-core";
+
+for (const requestId of ["order-42", "invalid request id"]) {
+  console.log(
+    JSON.stringify(requestTraceAttributes({ requestId, actorKind: "user" })),
+  );
+}
+```
+
+The first line contains `"dads.audit.actor.kind":"user"` and
+`"dads.request.id":"order-42"`. The second line contains only the actor kind
+because the request ID includes spaces.
+
 ## Contract
 
 `requestTraceAttributes` accepts the two facts a server has resolved for its

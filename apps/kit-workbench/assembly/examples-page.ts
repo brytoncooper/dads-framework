@@ -77,18 +77,21 @@ type GuideContent = {
   readonly label: string;
 };
 
+function renderGuide(
+  markup: string,
+  { id, label, body }: GuideContent,
+): string {
+  return markup
+    .replaceAll("{{id}}", id)
+    .replace("{{label}}", () => label)
+    .replace("{{body}}", () => body);
+}
+
 function renderGuides(html: string, guides: readonly GuideContent[]): string {
   return html.replace(
     /<template id="guide-(?:link|article)">([\s\S]*?)<\/template>/g,
     (_template: string, markup: string) =>
-      guides
-        .map(({ id, body, label }) =>
-          markup
-            .replaceAll("{{id}}", id)
-            .replace("{{label}}", () => label)
-            .replace("{{body}}", () => body),
-        )
-        .join("\n"),
+      guides.map((guide) => renderGuide(markup, guide)).join("\n"),
   );
 }
 

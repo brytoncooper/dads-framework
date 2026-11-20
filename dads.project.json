@@ -403,7 +403,7 @@
     {
       "name": "@dads-framework/authorization",
       "root": "packages/server/authorization",
-      "responsibility": "Owns SpiceDB checks and snapshots and the Postgres outbox and catalog.",
+      "responsibility": "SpiceDB checks and snapshots, Postgres outbox and catalog.",
       "kind": "binding",
       "published": false,
       "allowedDependencies": [

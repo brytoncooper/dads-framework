@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -182,7 +183,9 @@ function runDad(
 }
 
 function createProject(): string {
-  const projectRoot = mkdtempSync(join(tmpdir(), "dads-cli-refusals-"));
+  const projectRoot = realpathSync(
+    mkdtempSync(join(tmpdir(), "dads-cli-refusals-")),
+  );
   temporaryProjects.push(projectRoot);
   mkdirSync(join(projectRoot, "src"), { recursive: true });
   writeFileSync(

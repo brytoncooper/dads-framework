@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://dadsframework.dev/sitemap.xml

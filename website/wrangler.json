@@ -1,0 +1,17 @@
+{
+  "name": "dads-framework-site",
+  "compatibility_date": "2026-10-26",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "dadsframework.dev",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { runAdoptionTasks } from "./adoption-task-runner.mjs";
 
 /**
- * Every package under `packages/`, at whatever depth its domain folder puts
+ * Every publishable package under `packages/`, at whatever depth its domain folder puts
  * it. The walk stops at the first `package.json`: a package never contains
  * another one.
  */
@@ -32,7 +32,7 @@ export function loadAdoptionPackages(root) {
       }
       return;
     }
-    if (typeof manifest.name === "string") {
+    if (manifest.private !== true && typeof manifest.name === "string") {
       packages.set(manifest.name, { directory, manifest });
     }
   };

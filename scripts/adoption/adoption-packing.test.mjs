@@ -1,7 +1,32 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
-import { packedFilename, tarballFor } from "./adoption-packing.mjs";
+import {
+  loadAdoptionPackages,
+  packedFilename,
+  tarballFor,
+} from "./adoption-packing.mjs";
+
+test("packs published libraries and native binaries while leaving private migration history in the repo", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "adoption-inventory-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const [directory, manifest] of [
+    ["server/history", { name: "migration-history", private: true }],
+    ["server/flags", { name: "flags" }],
+    ["testing/native/linux", { name: "linux-binary" }],
+  ]) {
+    const path = join(root, "packages", directory);
+    mkdirSync(path, { recursive: true });
+    writeFileSync(join(path, "package.json"), JSON.stringify(manifest));
+  }
+  assert.deepEqual([...loadAdoptionPackages(root).keys()].sort(), [
+    "flags",
+    "linux-binary",
+  ]);
+});
 
 test("reads the tarball name npm reported", () => {
   assert.equal(

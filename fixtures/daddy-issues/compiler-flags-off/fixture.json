@@ -1,0 +1,19 @@
+{
+  "signal": "compiler-flags-off",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "The base configuration asks for `strict` and stops there, so eight of the guarantees the escape-hatch readings assume were never switched on.",
+  "files": {
+    "tsconfig.base.json": "{\n  \"compilerOptions\": {\n    \"strict\": true\n  }\n}\n"
+  },
+  "expected": {
+    "strict": 0,
+    "noUncheckedIndexedAccess": 1,
+    "exactOptionalPropertyTypes": 1,
+    "noImplicitOverride": 1,
+    "noImplicitReturns": 1,
+    "noFallthroughCasesInSwitch": 1,
+    "noPropertyAccessFromIndexSignature": 1,
+    "useUnknownInCatchVariables": 1,
+    "verbatimModuleSyntax": 1
+  }
+}

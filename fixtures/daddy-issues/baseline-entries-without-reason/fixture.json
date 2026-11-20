@@ -1,0 +1,11 @@
+{
+  "signal": "baseline-entries-without-reason",
+  "issue": "gaslighting",
+  "why": "One recorded ceiling carries no reason at all, so nothing in the record says what it is or when it should go.",
+  "files": {
+    ".agents/source-budgets.json": "{\n  \"schemaVersion\": 1,\n  \"exempt\": [\"**/*.generated.ts\"],\n  \"ceilings\": {\n    \"fileLines\": {\n      \"apps/api/src/handler.ts\": {\n        \"mark\": 420\n      }\n    }\n  },\n  \"floors\": {}\n}\n"
+  },
+  "expected": {
+    "ceilings.fileLines.apps/api/src/handler.ts": 1
+  }
+}

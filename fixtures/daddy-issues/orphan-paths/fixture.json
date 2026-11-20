@@ -1,0 +1,14 @@
+{
+  "signal": "orphan-paths",
+  "issue": "you-let-the-babysitter-raise-them",
+  "why": "A source file sits under no declared root, so dad orient has no owner to name.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/owned\",\n      \"root\": \"packages/group/owned\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/owned/src/owned.ts": "const owned = 1;\n",
+    "packages/group/stray/src/stray.ts": "const stray = 1;\n"
+  },
+  "expected": {
+    "packages/group/owned/src/owned.ts": 0,
+    "packages/group/stray/src/stray.ts": 1
+  }
+}

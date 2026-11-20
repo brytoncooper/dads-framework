@@ -1,0 +1,12 @@
+{
+  "signal": "sequential-authz-writes",
+  "issue": "commitment-issues",
+  "why": "A create inserts the row and then writes its owner tuple as a second step, so a crash between them leaves a row nobody can reach.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/orders/src/create-order.ts": "type Store = {\n  insert(table: string): { values(row: object): Promise<void> };\n};\n\ntype Graph = {\n  writeRelationships(facts: readonly object[]): Promise<void>;\n};\n\n/** Creates an order and records who owns it. */\nexport async function createOrder(\n  db: Store,\n  graph: Graph,\n  id: string,\n): Promise<void> {\n  await db.insert(\"orders\").values({ id });\n  await graph.writeRelationships([{ resource: id, relation: \"owner\" }]);\n}\n"
+  },
+  "expected": {
+    "packages/group/orders/src/create-order.ts": 1
+  }
+}

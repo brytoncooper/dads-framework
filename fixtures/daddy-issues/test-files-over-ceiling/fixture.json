@@ -1,0 +1,14 @@
+{
+  "signal": "test-files-over-ceiling",
+  "issue": "enmeshment",
+  "why": "One test file is a single counted line over the 600-line ceiling.",
+  "files": {
+    "scripts/oversized.test.mjs": {
+      "line": "export const line = 1;",
+      "repeat": 601
+    }
+  },
+  "expected": {
+    "scripts/oversized.test.mjs": 601
+  }
+}

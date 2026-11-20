@@ -1,0 +1,13 @@
+{
+  "signal": "deprecated-still-consumed",
+  "issue": "people-pleasing",
+  "why": "An export marked for removal is still imported by a sibling module.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/legacy.ts": "/**\n * The old total.\n *\n * @deprecated Use the total in `report.ts` instead.\n */\nexport function legacyTotal(): number {\n  return 0;\n}\n",
+    "packages/group/name/src/report.ts": "import { legacyTotal } from \"./legacy.js\";\n\n/** The total this package reports today. */\nexport function reportTotal(): number {\n  return legacyTotal();\n}\n"
+  },
+  "expected": {
+    "packages/group/name/src/legacy.ts legacyTotal": 1
+  }
+}

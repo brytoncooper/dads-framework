@@ -1,0 +1,37 @@
+{
+  "description": "The plan response for fixtures/testing under the all operation, recorded by hand. Keys here are a subset: the live response may add keys, but it may not drop or change one of these. Regenerating this file by pasting a live response defeats its purpose.",
+  "versions": {
+    "protocolSchemaVersion": 1
+  },
+  "response": {
+    "schemaVersion": 1,
+    "ok": true,
+    "result": {
+      "operation": "plan",
+      "plan": {
+        "schemaVersion": 1,
+        "complete": true,
+        "scope": {
+          "kind": "all",
+          "fullFallback": true
+        },
+        "counts": {
+          "run": 2,
+          "skipProvenUnaffected": 0
+        },
+        "tasks": [
+          {
+            "id": "fixture:typecheck",
+            "decision": "run",
+            "reason": "full-fallback"
+          },
+          {
+            "id": "fixture:test",
+            "decision": "run",
+            "reason": "full-fallback"
+          }
+        ]
+      }
+    }
+  }
+}

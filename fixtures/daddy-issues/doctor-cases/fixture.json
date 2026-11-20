@@ -1,0 +1,13 @@
+{
+  "signal": "doctor-cases",
+  "issue": "dad-has-issues-too",
+  "why": "The doctor's own corpus holds two case directories, and the floor holds that count.",
+  "files": {
+    "fixtures/daddy-issues/lint-rules/fixture.json": "{\n  \"signal\": \"lint-rules\"\n}\n",
+    "fixtures/daddy-issues/rust-inline-tests/fixture.json": "{\n  \"signal\": \"rust-inline-tests\"\n}\n",
+    "fixtures/daddy-issues/a-copy/fixture.json": "{\n  \"signal\": \"lint-rules\"\n}\n"
+  },
+  "expected": {
+    "cases": 2
+  }
+}

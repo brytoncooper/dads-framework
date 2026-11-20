@@ -1,0 +1,25 @@
+node_modules
+dist
+coverage
+package-lock.json
+
+# Build and tool output. Prettier must stand on its own here: a run that is not
+# also reading .gitignore still has to skip everything a checkout generates.
+target/
+.dads/
+testing-evidence/
+packages/testing/native/*/bin/
+*.tsbuildinfo
+*.tgz
+
+# Private notes kept beside the checkout and never committed.
+docs/private/
+.agents/plans/
+
+# Legal text is kept byte-exact.
+LICENSE.md
+
+# Written byte-exact by their own tools. ESLint rewrites this file on
+# `--suppress-all` and `--prune-suppressions`; reformatting it would make
+# every prune leave the tree dirty.
+eslint-suppressions.json

@@ -1,0 +1,12 @@
+{
+  "signal": "strict-profile-absent",
+  "issue": "failure-to-launch",
+  "why": "An application with routes asserts no profile.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "apps/service/src/orders.routes.ts": "/** The orders route table. */\nexport const orderRoutes = [\"GET /orders\"];\n"
+  },
+  "expected": {
+    "apps/service": 1
+  }
+}

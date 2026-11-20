@@ -1,0 +1,44 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/audit.tsbuildinfo",
+    "types": ["node"],
+    "jsx": "react-jsx"
+  },
+  "references": [
+    {
+      "path": "../audit-actor"
+    },
+    {
+      "path": "../authorization"
+    },
+    {
+      "path": "../clock"
+    },
+    {
+      "path": "../../contract"
+    },
+    {
+      "path": "../email-delivery"
+    },
+    {
+      "path": "../email-templates"
+    },
+    {
+      "path": "../http"
+    },
+    {
+      "path": "../job-queue"
+    },
+    {
+      "path": "../postgres"
+    },
+    {
+      "path": "../../foundation/plugin"
+    }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

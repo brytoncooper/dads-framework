@@ -1,0 +1,12 @@
+{
+  "signal": "per-feature-authorization",
+  "issue": "you-repeat-the-cycle",
+  "why": "A feature package declares its own access decision.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/orders.ts": "function canEditOrder(): boolean {\n  return true;\n}\n\nvoid canEditOrder;\n"
+  },
+  "expected": {
+    "packages/group/name/src/orders.ts": 1
+  }
+}

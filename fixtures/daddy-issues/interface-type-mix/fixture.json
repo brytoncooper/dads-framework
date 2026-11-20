@@ -1,0 +1,12 @@
+{
+  "signal": "interface-type-mix",
+  "issue": "disorganized-attachment",
+  "why": "A module declares an interface where the house rule is a type.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/money.ts": "interface Money {\n  readonly amount: number;\n}\n\nfunction amountOf(money: Money): number {\n  return money.amount;\n}\n\nvoid amountOf;\n"
+  },
+  "expected": {
+    "packages/group/name/src/money.ts": 1
+  }
+}

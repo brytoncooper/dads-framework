@@ -1,0 +1,12 @@
+{
+  "signal": "unparsed-boundary-reads",
+  "issue": "disorganized-attachment",
+  "why": "A parsed file lands in a named shape with nothing checking it was that shape.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/settings.ts": "type Settings = {\n  readonly retries: number;\n};\n\nfunction readSettings(text: string): Settings {\n  const settings: Settings = JSON.parse(text);\n  return settings;\n}\n\nvoid readSettings;\n"
+  },
+  "expected": {
+    "packages/group/name": 1
+  }
+}

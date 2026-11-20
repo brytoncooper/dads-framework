@@ -1,0 +1,12 @@
+{
+  "signal": "tenant-column-authorization",
+  "issue": "you-repeat-the-cycle",
+  "why": "A query filters on the tenant column instead of asking a relationship.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/orders.ts": "function findOrders(\n  client: OrderClient,\n  organizationId: string,\n): Promise<OrderRows> {\n  return client.query(\"select * from orders where organization_id = $1\", [\n    organizationId,\n  ]);\n}\n\nvoid findOrders;\n"
+  },
+  "expected": {
+    "packages/group/name": 1
+  }
+}

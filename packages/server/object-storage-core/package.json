@@ -1,0 +1,38 @@
+{
+  "name": "@dads-framework/object-storage-core",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "devDependencies": {
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/object-storage-core"
+  }
+}

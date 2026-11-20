@@ -1,0 +1,15 @@
+{
+  "signal": "no-in-memory-provider",
+  "issue": "the-paper-wall",
+  "why": "A capability has one provider, it is the real one, and nothing can stand in for it.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/clock.ts": "/** Telling the time, as this package needs it. */\nexport type Clock = {\n  readonly now: () => number;\n};\n",
+    "packages/group/name/src/system-clock.ts": "import type { Clock } from \"./clock.js\";\n\n/** The clock the operating system keeps. */\nexport const systemClock: Clock = {\n  now: () => Date.now(),\n};\n",
+    "packages/group/name/src/schedule.ts": "import type { Clock } from \"./clock.js\";\n\n/** When the next is due. */\nexport function nextRun(clock: Clock): number {\n  return clock.now() + 1;\n}\n",
+    "packages/group/name/src/report.ts": "import type { Clock } from \"./clock.js\";\n\n/** When the report is due. */\nexport function reportRun(clock: Clock): number {\n  return clock.now() + 1;\n}\n"
+  },
+  "expected": {
+    "packages/group/name/src/clock.ts Clock": 1
+  }
+}

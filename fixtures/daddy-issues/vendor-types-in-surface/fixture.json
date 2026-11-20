@@ -1,0 +1,13 @@
+{
+  "signal": "vendor-types-in-surface",
+  "issue": "anxious-attachment",
+  "why": "A core package exports a type whose field is a vendor type its declaration does not allow.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/core\",\n      \"root\": \"packages/group/core\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/core/src/order.ts": "import type { QueryResult } from \"vendor-db\";\n\n/** An order as the store hands it back. */\nexport type Order = {\n  readonly row: QueryResult;\n};\n"
+  },
+  "expected": {
+    "@fixture/core": 1
+  }
+}

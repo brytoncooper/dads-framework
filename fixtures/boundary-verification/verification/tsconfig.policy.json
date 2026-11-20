@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "../src",
+    "outDir": "./compiled-ts",
+    "skipLibCheck": false
+  },
+  "include": [
+    "../src/access.ts",
+    "../src/consumer-types.ts",
+    "../src/read-document-result.ts",
+    "../src/read-document.ts"
+  ]
+}

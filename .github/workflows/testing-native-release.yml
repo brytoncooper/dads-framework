@@ -1,0 +1,132 @@
+name: Testing native packages
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    name: ${{ matrix.package }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: packages/testing/native/darwin-arm64
+            runner: macos-15
+            target: aarch64-apple-darwin
+          - package: packages/testing/native/darwin-x64
+            runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - package: packages/testing/native/linux-arm64-gnu
+            runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - package: packages/testing/native/linux-x64-gnu
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - package: packages/testing/native/win32-x64
+            runner: windows-2025
+            target: x86_64-pc-windows-msvc
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.3
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.96.0"
+          components: rust-docs
+          targets: ${{ matrix.target }}
+      - name: Install JavaScript tooling
+        run: npm ci --ignore-scripts
+      - name: Build facade
+        run: npm run build --workspace @dads-framework/testing
+      - name: Build platform native package
+        run: node scripts/testing/build-testing-native-package.mjs --target "${{ matrix.target }}" --package-dir "${{ matrix.package }}"
+      - name: Verify native package metadata and artifact
+        run: node scripts/testing/verify-testing-native-packages.mjs --package-dir "${{ matrix.package }}"
+      - name: Prepare MIT notices
+        run: node scripts/release/sync-package-licenses.mjs
+      - name: Pack facade and matching native package
+        run: |
+          runner_temp="$RUNNER_TEMP"
+          if [[ "$RUNNER_OS" == Windows ]]; then runner_temp="$(cygpath -u "$runner_temp")"; fi
+          mkdir -p "$runner_temp/testing-packages"
+          npm pack "./${{ matrix.package }}" --pack-destination "$runner_temp/testing-packages" >/dev/null
+          npm pack ./packages/testing/core --pack-destination "$runner_temp/testing-packages" >/dev/null
+      - name: Smoke clean consumer
+        run: |
+          set -euo pipefail
+          facade_version=$(node -p 'require("./packages/testing/core/package.json").version')
+          runner_temp="$RUNNER_TEMP"
+          if [[ "$RUNNER_OS" == Windows ]]; then runner_temp="$(cygpath -u "$runner_temp")"; fi
+          consumer="$runner_temp/testing-consumer"
+          mkdir -p "$consumer"
+          cd "$consumer"
+          git init --quiet
+          npm init --yes >/dev/null
+          native_tar=(../testing-packages/dads-framework-testing-native-*.tgz)
+          facade_tar="../testing-packages/dads-framework-testing-$facade_version.tgz"
+          test "${#native_tar[@]}" -eq 1
+          test -f "${native_tar[0]}" && test -f "$facade_tar"
+          npm install --no-save --omit=optional "${native_tar[0]}" "$facade_tar" >/dev/null
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("dads.testing.json", JSON.stringify({schemaVersion:1,workspace:{root:".",fullFallback:{taskIds:["consumer:test"]}},projects:[{id:"consumer",root:".",fallbackDependencies:[]}],tasks:[{id:"consumer:test",project:"consumer",kind:"test",execution:{executable:"node",args:["--version"],cwd:"."},dependsOn:[],impact:{mode:"always"}}]})); const { planTesting } = await import("@dads-framework/testing"); const plan = await planTesting({workspaceRoot:process.cwd(), all:true}); if (plan.tasks[0]?.id !== "consumer:test") throw new Error("dad-test clean-consumer smoke returned the wrong plan");'
+          node node_modules/@dads-framework/testing/bin/dad-test.js explain --all --json > explain.json
+          node -e 'const r = JSON.parse(require("node:fs").readFileSync("explain.json", "utf8")); if (r.ok !== true || r.result.tasks[0]?.id !== "consumer:test" || r.result.summary.selected !== 1) throw new Error("dad-test explain smoke failed: " + JSON.stringify(r).slice(0, 500));'
+          node node_modules/@dads-framework/testing/bin/dad-test.js plan --all --report report.json --json > plan.json
+          test -f report.json
+          node -e 'const r = JSON.parse(require("node:fs").readFileSync("plan.json", "utf8")); if (r.ok !== true || r.result.report.projectClosure.closureTaskCount !== 1) throw new Error("dad-test plan --report smoke failed: " + JSON.stringify(r).slice(0, 500));'
+          mkdir -p packages/lib
+          echo '{"name":"lib","private":true,"scripts":{"test":"node --version"}}' > packages/lib/package.json
+          node -e 'const fs = require("node:fs"); const manifest = JSON.parse(fs.readFileSync("package.json", "utf8")); manifest.workspaces = ["packages/*"]; fs.writeFileSync("package.json", JSON.stringify(manifest, null, 2) + "\n");'
+          node node_modules/@dads-framework/testing/bin/dad-test.js init --force --json > init.json
+          node -e 'const r = JSON.parse(require("node:fs").readFileSync("init.json", "utf8")); if (r.ok !== true || !r.result.manifest.tasks.some((task) => task.id === "lib:test") || r.result.report.validation.method !== "native") throw new Error("dad-test init smoke failed: " + JSON.stringify(r).slice(0, 500));'
+      - name: Record artifact digests and build identity
+        env:
+          DADS_NATIVE_TARGET: ${{ matrix.target }}
+        run: |
+          node <<'NODE'
+          const { createHash } = require("node:crypto");
+          const { execFileSync } = require("node:child_process");
+          const { readdirSync, readFileSync, writeFileSync } = require("node:fs");
+          const { join } = require("node:path");
+          const directory = join(process.env.RUNNER_TEMP, "testing-packages");
+          const version = (tool) => execFileSync(tool, ["--version"], { encoding: "utf8" }).trim();
+          const names = readdirSync(directory).filter((name) => name.endsWith(".tgz")).sort();
+          if (names.length !== 2) throw new Error("Expected one native tarball and one facade tarball");
+          const files = names.map((name) => ({
+            name,
+            sha256: createHash("sha256").update(readFileSync(join(directory, name))).digest("hex"),
+          }));
+          const build = {
+            repository: process.env.GITHUB_REPOSITORY,
+            commit: process.env.GITHUB_SHA,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            target: process.env.DADS_NATIVE_TARGET,
+            platform: process.platform,
+            arch: process.arch,
+            node: process.version,
+            rustc: version("rustc"),
+            cargo: version("cargo"),
+            files,
+          };
+          writeFileSync(join(directory, "build.json"), JSON.stringify(build, null, 2) + "\n");
+          NODE
+      - name: Upload verified tarballs
+        uses: actions/upload-artifact@v4
+        with:
+          name: dads-testing-native-${{ matrix.target }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/testing-packages/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

@@ -1,0 +1,65 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const releaseTargets = {
+  "darwin-arm64": { architecture: 0x0100000c, magic: 0xfeedfacf },
+  "darwin-x64": { architecture: 0x01000007, magic: 0xfeedfacf },
+  "linux-arm64-gnu": { architecture: 0xb7, magic: 0x464c457f },
+  "linux-x64-gnu": { architecture: 0x3e, magic: 0x464c457f },
+  "win32-x64": { architecture: 0x8664, magic: 0x00004550 },
+};
+
+export function verifyNativeExecutable(root, nativeArchive) {
+  const matches =
+    /^dads-framework-testing-native-([a-z0-9-]+)-0\.1\.0\.tgz$/.exec(
+      nativeArchive,
+    );
+  const platform = matches?.[1];
+  const target = releaseTargets[platform];
+  if (!target) throw new Error("Unknown native release archive target.");
+
+  const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  const binary = platform.startsWith("win32")
+    ? "bin/dad-test.exe"
+    : "bin/dad-test";
+  if (
+    manifest.name !== `@dads-framework/testing-native-${platform}` ||
+    manifest.version !== "0.1.0" ||
+    manifest.bin?.["dad-test"] !== `./${binary}`
+  )
+    throw new Error(
+      "Native tarball manifest does not match its release target.",
+    );
+  const bytes = readFileSync(join(root, binary));
+  if (!matchesHeader(bytes, platform, target)) {
+    throw new Error(
+      "Native executable format or architecture does not match its release target.",
+    );
+  }
+  return binary;
+}
+
+function matchesHeader(bytes, platform, { architecture, magic }) {
+  if (bytes.length < 64) return false;
+  if (platform.startsWith("linux")) {
+    return (
+      bytes.readUInt32LE(0) === magic &&
+      bytes[4] === 2 &&
+      bytes[5] === 1 &&
+      bytes.readUInt16LE(18) === architecture
+    );
+  }
+  if (platform.startsWith("darwin")) {
+    return (
+      bytes.readUInt32LE(0) === magic && bytes.readUInt32LE(4) === architecture
+    );
+  }
+  const peOffset = bytes.readUInt32LE(60);
+  return (
+    bytes.readUInt16LE(0) === 0x5a4d &&
+    peOffset >= 64 &&
+    peOffset <= bytes.length - 6 &&
+    bytes.readUInt32LE(peOffset) === magic &&
+    bytes.readUInt16LE(peOffset + 4) === architecture
+  );
+}

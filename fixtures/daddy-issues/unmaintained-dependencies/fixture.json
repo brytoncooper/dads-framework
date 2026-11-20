@@ -1,0 +1,24 @@
+{
+  "signal": "unmaintained-dependencies",
+  "issue": "you-stay-with-people-who-cannot-meet-you",
+  "why": "A manifest depends on a package the registry says was last published three and a half years ago, so every consumer inherits a decision somebody else stopped making.",
+  "today": "2026-09-06",
+  "files": {
+    "packages/group/thing/package.json": "{\n  \"name\": \"@fixture/thing\",\n  \"dependencies\": {\n    \"left-behind\": \"^1.0.0\"\n  }\n}\n"
+  },
+  "responses": {
+    "https://registry.npmjs.org/left-behind": {
+      "status": 200,
+      "body": {
+        "name": "left-behind",
+        "time": {
+          "created": "2019-01-04T08:00:00.000Z",
+          "modified": "2023-03-15T09:12:00.000Z"
+        }
+      }
+    }
+  },
+  "expected": {
+    "left-behind": 17
+  }
+}

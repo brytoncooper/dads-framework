@@ -1,0 +1,12 @@
+{
+  "signal": "readme-missing",
+  "issue": "avoidant-attachment",
+  "why": "A declared package ships a manifest a registry would install and no README beside it, so its first consumer is handed nothing to read.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/name\",\n      \"root\": \"packages/group/name\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/name/package.json": "{\n  \"name\": \"@fixture/name\"\n}\n"
+  },
+  "expected": {
+    "@fixture/name": 1
+  }
+}

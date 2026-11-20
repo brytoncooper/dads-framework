@@ -1,0 +1,13 @@
+{
+  "signal": "loose-contract-objects",
+  "issue": "people-pleasing",
+  "why": "A contract package publishes a request body as a stripping z.object, so a misspelled field is accepted and lost; the SCIM body beside it names its authority and the strict one needs none.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/orders-contract/package.json": "{\n  \"name\": \"@fixture/orders-contract\"\n}\n",
+    "packages/orders-contract/src/order-bodies.ts": "import { z } from \"zod\";\n\n/** The body a client sends to create an order. */\nexport const createOrderBody = z.object({ name: z.string() });\n\n/**\n * A SCIM user as a directory sends it.\n *\n * foreign-spec: RFC 7643 says a server ignores attributes it does not advertise.\n */\nexport const scimUserBody = z.object({ userName: z.string() });\n\n/** The body a client sends to rename an order. */\nexport const renameOrderBody = z.strictObject({ name: z.string() });\n"
+  },
+  "expected": {
+    "packages/orders-contract/src/order-bodies.ts": 1
+  }
+}

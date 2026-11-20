@@ -1,0 +1,14 @@
+{
+  "signal": "single-implementer-abstractions",
+  "issue": "commitment-issues",
+  "why": "A capability has one implementer, which is its own stand-in, and one consumer.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/clock.ts": "/** Telling the time, as this package needs it. */\nexport type Clock = {\n  readonly now: () => number;\n};\n",
+    "packages/group/name/src/in-memory-clock.ts": "import type { Clock } from \"./clock.js\";\n\n/** A clock that starts at zero and never moves. */\nexport const inMemoryClock: Clock = {\n  now: () => 0,\n};\n",
+    "packages/group/name/src/schedule.ts": "import type { Clock } from \"./clock.js\";\n\n/** When the next is due. */\nexport function nextRun(clock: Clock): number {\n  return clock.now() + 1;\n}\n"
+  },
+  "expected": {
+    "packages/group/name/src/clock.ts Clock": 1
+  }
+}

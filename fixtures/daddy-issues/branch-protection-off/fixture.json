@@ -1,0 +1,28 @@
+{
+  "signal": "branch-protection-off",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "The forge says no rule protects the branch every change lands on, so the gate is a suggestion the moment somebody pushes straight at it.",
+  "files": {},
+  "commands": {
+    "git config --get remote.origin.url": {
+      "stdout": "git@github.com:fixture-owner/fixture-repo.git\n"
+    }
+  },
+  "responses": {
+    "https://api.github.com/repos/fixture-owner/fixture-repo": {
+      "status": 200,
+      "body": { "default_branch": "main" }
+    },
+    "https://api.github.com/repos/fixture-owner/fixture-repo/branches/main/protection": {
+      "status": 404,
+      "body": { "message": "Branch not protected" }
+    },
+    "https://api.github.com/repos/fixture-owner/fixture-repo/actions/runs?per_page=20&status=completed": {
+      "status": 200,
+      "body": { "total_count": 0, "workflow_runs": [] }
+    }
+  },
+  "expected": {
+    "main": 1
+  }
+}

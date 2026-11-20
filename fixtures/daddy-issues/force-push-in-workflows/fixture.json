@@ -1,0 +1,11 @@
+{
+  "signal": "force-push-in-workflows",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "A pipeline replaces the default branch with something that never went through the gate, from a machine where nobody is reading the output.",
+  "files": {
+    "Jenkinsfile": "pipeline {\n  stage('release') { sh 'git push --force origin main' }\n}\n"
+  },
+  "expected": {
+    "Jenkinsfile": 1
+  }
+}

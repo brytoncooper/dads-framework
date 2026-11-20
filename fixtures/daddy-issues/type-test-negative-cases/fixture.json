@@ -1,0 +1,11 @@
+{
+  "signal": "type-test-negative-cases",
+  "issue": "commitment-issues",
+  "why": "One package asserts twice that an authoring mistake must not compile.",
+  "files": {
+    "packages/group/name/type-tests/contract.ts": "// @ts-expect-error the first mistake must not compile\nexport const first: number = \"one\";\n// @ts-expect-error the second mistake must not compile\nexport const second: number = \"two\";\n"
+  },
+  "expected": {
+    "packages/group/name": 2
+  }
+}

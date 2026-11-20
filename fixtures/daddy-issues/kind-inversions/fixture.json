@@ -1,0 +1,11 @@
+{
+  "signal": "kind-inversions",
+  "issue": "anxious-attachment",
+  "why": "A core package declares a dependency on an adapter, which the kind matrix forbids.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/core\",\n      \"root\": \"packages/group/core\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": [\n        \"@fixture/adapter\"\n      ]\n    },\n    {\n      \"name\": \"@fixture/adapter\",\n      \"root\": \"packages/group/adapter\",\n      \"kind\": \"adapter\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n"
+  },
+  "expected": {
+    "@fixture/core -> @fixture/adapter": 1
+  }
+}

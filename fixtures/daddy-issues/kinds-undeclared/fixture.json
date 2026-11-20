@@ -1,0 +1,16 @@
+{
+  "signal": "kinds-undeclared",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "A workspace package the project file never names has no kind, so no edge of it is forbidden.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/declared\",\n      \"root\": \"packages/declared\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/declared/package.json": "{\n  \"name\": \"@fixture/declared\"\n}\n",
+    "packages/declared/README.md": "# @fixture/declared\n\nA fixture package.\n",
+    "packages/extra/package.json": "{\n  \"name\": \"@fixture/extra\"\n}\n",
+    "packages/extra/README.md": "# @fixture/extra\n\nA fixture package.\n"
+  },
+  "expected": {
+    "@fixture/declared": 0,
+    "@fixture/extra": 1
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "signal": "nondeterministic-generated-files",
+  "issue": "dad-has-issues-too",
+  "why": "Two commits inside the window change the emitted client and nothing else, so the generator disagreed with itself twice while its input stood still.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "generate the client from the contract",
+      "date": "2026-07-01T00:00:00Z",
+      "files": {
+        "scripts/generate-client.mjs": "export const generated = \"client\";\n",
+        "packages/example/src/client.generated.ts": "export const client = { order: [\"list\", \"read\"] };\n"
+      }
+    },
+    {
+      "message": "regenerate the client",
+      "date": "2026-07-20T00:00:00Z",
+      "files": {
+        "packages/example/src/client.generated.ts": "export const client = { order: [\"read\", \"list\"] };\n"
+      }
+    },
+    {
+      "message": "regenerate the client again",
+      "date": "2026-08-05T00:00:00Z",
+      "files": {
+        "packages/example/src/client.generated.ts": "export const client = { order: [\"list\", \"read\"] };\n"
+      }
+    }
+  ],
+  "expected": {
+    "packages/example/src/client.generated.ts": 2
+  }
+}

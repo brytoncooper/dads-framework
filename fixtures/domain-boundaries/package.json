@@ -1,0 +1,16 @@
+{
+  "name": "@dads-fixture/domain-boundaries",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@dads-framework/plugin": "0.1.0"
+  },
+  "devDependencies": {
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "test": "tsc -p tsconfig.json && vitest run"
+  },
+  "license": "MIT"
+}

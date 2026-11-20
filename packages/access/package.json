@@ -1,0 +1,52 @@
+{
+  "name": "@dads-framework/access",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    },
+    "./testing": {
+      "types": "./dist/runtime/testing.d.ts",
+      "default": "./dist/runtime/testing.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@dads-framework/request-work": "0.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.2",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/access"
+  }
+}

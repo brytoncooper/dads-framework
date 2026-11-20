@@ -1,0 +1,29 @@
+{
+  "signal": "reorganization-churn",
+  "issue": "failure-to-launch",
+  "why": "Two commits land inside the ninety days before 2026-09-06 and one of them only moves a file, so half the recent history is reparenting rather than work.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "write the two checks",
+      "date": "2026-07-01T00:00:00Z",
+      "files": {
+        "scripts/checks/first.mjs": "export const first = {\n  name: \"first\",\n  order: 1,\n  enabled: true,\n};\n",
+        "scripts/checks/second.mjs": "export const second = {\n  name: \"second\",\n  order: 2,\n  enabled: true,\n};\n"
+      }
+    },
+    {
+      "message": "reparent the first check",
+      "date": "2026-07-15T00:00:00Z",
+      "files": {
+        "scripts/checks/first.mjs": null,
+        "scripts/gates/first.mjs": "export const first = {\n  name: \"first\",\n  order: 1,\n  enabled: true,\n};\n"
+      }
+    }
+  ],
+  "expected": {
+    "last 90 days": 50
+  }
+}

@@ -1,0 +1,15 @@
+[package]
+name = "dad-test"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+dads-testing-core = { path = "../dads-testing-core" }
+dads-testing-javascript = { path = "../dads-testing-javascript" }
+dads-testing-store = { path = "../dads-testing-store" }
+serde_json.workspace = true

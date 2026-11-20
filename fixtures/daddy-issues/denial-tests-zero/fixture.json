@@ -1,0 +1,12 @@
+{
+  "signal": "denial-tests-zero",
+  "issue": "commitment-issues",
+  "why": "A package declares a protected route and nothing in it ever executes a denial.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "const routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    response: thingResponse,\n    handler: () => readThing(),\n  }),\n];\n"
+  },
+  "expected": {
+    "@fixture/api": 1
+  }
+}

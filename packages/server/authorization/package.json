@@ -1,0 +1,64 @@
+{
+  "name": "@dads-framework/authorization",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
+    "./authz-journal": {
+      "types": "./dist/authz-journal/index.d.ts",
+      "default": "./dist/authz-journal/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@authzed/authzed-node": "^1.6.1",
+    "@dads-framework/access": "0.1.0",
+    "@dads-framework/contract": "0.1.0",
+    "@dads-framework/errors": "0.1.0",
+    "@dads-framework/job-queue-core": "0.1.0",
+    "@dads-framework/postgres": "0.1.0",
+    "@dads-framework/request-work": "0.1.0",
+    "drizzle-orm": "^0.45.2",
+    "node-pg-migrate": "^9.0.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "testcontainers": "^12.0.4"
+  },
+  "peerDependenciesMeta": {
+    "testcontainers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "testcontainers": "^12.0.4",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/authorization"
+  }
+}

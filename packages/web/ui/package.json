@@ -1,0 +1,108 @@
+{
+  "name": "@dads-framework/ui",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./elements": {
+      "types": "./dist/elements/index.d.ts",
+      "default": "./dist/elements/index.js"
+    },
+    "./forms": {
+      "types": "./dist/forms/index.d.ts",
+      "default": "./dist/forms/index.js"
+    },
+    "./display": {
+      "types": "./dist/display/index.d.ts",
+      "default": "./dist/display/index.js"
+    },
+    "./overlays": {
+      "types": "./dist/overlays/index.d.ts",
+      "default": "./dist/overlays/index.js"
+    },
+    "./data-table": {
+      "types": "./dist/data-table/index.d.ts",
+      "default": "./dist/data-table/index.js"
+    },
+    "./page": {
+      "types": "./dist/page/index.d.ts",
+      "default": "./dist/page/index.js"
+    },
+    "./shell": {
+      "types": "./dist/shell/index.d.ts",
+      "default": "./dist/shell/index.js"
+    },
+    "./icons": {
+      "types": "./dist/icons/index.d.ts",
+      "default": "./dist/icons/index.js"
+    },
+    "./data-table/routing": {
+      "types": "./dist/data-table/routing.d.ts",
+      "default": "./dist/data-table/routing.js"
+    },
+    "./elements/calendar": {
+      "types": "./dist/elements/calendar.d.ts",
+      "default": "./dist/elements/calendar.js"
+    },
+    "./elements/css-custom-properties": {
+      "types": "./dist/elements/css-custom-properties.d.ts",
+      "default": "./dist/elements/css-custom-properties.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "third-party-licenses"
+  ],
+  "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@dads-framework/copy": "0.1.0",
+    "@daypicker/react": "^10.0.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "3.14.13",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.16.0",
+    "pdfjs-dist": "5.4.530",
+    "radix-ui": "^1.6.7",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "~22.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b && node ../../../scripts/build/copy-source-assets.mjs",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/web/ui"
+  }
+}

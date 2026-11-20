@@ -1,0 +1,30 @@
+name: Private references
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  # gitleaks-action lists a pull request's commits on pull_request events.
+  pull-requests: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scan tracked files for private references
+        run: node scripts/checks/check-private-references.mjs
+      # gitleaks is the real secret scanner; the script above catches a
+      # handful of high-signal token shapes plus machine-local paths, and
+      # any private patterns kept in scripts/checks/private-references.local.json
+      # beside a checkout.
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

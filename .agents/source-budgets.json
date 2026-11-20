@@ -1,0 +1,1966 @@
+{
+  "schemaVersion": 1,
+  "countedLines": "non-blank, non-comment",
+  "exempt": ["**/*.generated.ts", "**/dist/**"],
+  "ceilings": {},
+  "floors": {
+    "docsConformancePackages": {
+      "packages": {
+        "floor": 24,
+        "reason": "raised from 20 when the four feature-flags packages joined docs/readme-conformance.json (recorded 2026-11-19)"
+      }
+    },
+    "invariantsFiles": {
+      "@dads-app/workbench": {
+        "floor": 0,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/access": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/audit": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/audit-actor": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/authorization": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/authorization-migration": {
+        "floor": 0,
+        "reason": "recorded 2026-11-19"
+      },
+      "@dads-framework/client-request-transport": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/client-telemetry": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/client-xlsx": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/clock": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/contract": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/copy": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/cross-domain-references": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/csv": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/design-tokens": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/diagnostics": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/email-delivery": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/email-sender": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/email-templates": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/errors": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/event-bus": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/health": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/http": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/job-queue": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/migrations": {
+        "floor": 0,
+        "reason": "imported from the origin product's migration runner on 2026-11-19 under the kit-import approval; a migration runner opens its own connection and binds node-pg-migrate with no core conformance suite, so whether these two rules apply to it is a question for Bryton (recorded 2026-11-19)"
+      },
+      "@dads-framework/object-storage": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/path-aliases": {
+        "floor": 1,
+        "reason": "recorded 2026-09-07"
+      },
+      "@dads-framework/pdf": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/postgres": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/request-work": {
+        "floor": 1,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/styles": {
+        "floor": 0,
+        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/testing": {
+        "floor": 1,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-import-nx": {
+        "floor": 1,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-native-darwin-arm64": {
+        "floor": 0,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-native-darwin-x64": {
+        "floor": 0,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-native-linux-arm64-gnu": {
+        "floor": 0,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-native-linux-x64-gnu": {
+        "floor": 0,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-native-win32-x64": {
+        "floor": 0,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/testing-vitest": {
+        "floor": 1,
+        "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/toolbox": {
+        "floor": 1,
+        "reason": "recorded 2026-09-06"
+      },
+      "create-dads": {
+        "floor": 1,
+        "reason": "recorded 2026-09-06"
+      }
+    },
+    "lintRules": {
+      "scripts:constructor-super": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:for-direction": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:getter-return": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-async-promise-executor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-case-declarations": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-class-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-compare-neg-zero": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-cond-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-const-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-constant-binary-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-constant-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-control-regex": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-debugger": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-delete-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-dupe-args": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-dupe-class-members": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-dupe-else-if": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-dupe-keys": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-duplicate-case": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-empty": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-empty-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-empty-pattern": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-empty-static-block": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-ex-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-extra-boolean-cast": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-fallthrough": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-func-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-global-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-import-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-invalid-regexp": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-irregular-whitespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-loss-of-precision": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-misleading-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-new-native-nonconstructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-nonoctal-decimal-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-obj-calls": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-octal": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-prototype-builtins": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-redeclare": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-regex-spaces": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-self-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-setter-return": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-shadow-restricted-names": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-sparse-arrays": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-this-before-super": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unassigned-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-undef": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unexpected-multiline": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unreachable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unsafe-finally": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unsafe-negation": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unsafe-optional-chaining": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unused-labels": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unused-private-class-members": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-unused-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-useless-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-useless-backreference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-useless-catch": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-useless-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:no-with": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:preserve-caught-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:require-yield": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:use-isnan": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "scripts:valid-typeof": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/await-thenable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/ban-ts-comment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/consistent-type-assertions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/consistent-type-definitions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/consistent-type-imports": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-array-constructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-array-delete": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-base-to-string": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-confusing-void-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-deprecated": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-duplicate-enum-values": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-duplicate-type-constituents": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-dynamic-delete": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-empty-object-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-explicit-any": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-extra-non-null-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-extraneous-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-floating-promises": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-for-in-array": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-implied-eval": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-invalid-void-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-meaningless-void-operator": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-misused-new": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-misused-promises": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-misused-spread": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-mixed-enums": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-namespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-non-null-asserted-nullish-coalescing": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-non-null-asserted-optional-chain": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-non-null-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-redundant-type-constituents": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-require-imports": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-this-alias": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-boolean-literal-compare": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-template-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-type-arguments": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-type-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-type-constraint": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-type-conversion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unnecessary-type-parameters": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-argument": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-call": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-declaration-merging": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-enum-comparison": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-function-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-member-access": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-return": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-type-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unsafe-unary-minus": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unused-expressions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-unused-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-useless-constructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-useless-default-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/no-wrapper-object-types": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/only-throw-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-as-const": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-literal-enum-member": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-namespace-keyword": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-promise-reject-errors": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-readonly": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-reduce-type-parameter": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/prefer-return-this-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/related-getter-setter-pairs": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/require-await": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/restrict-plus-operands": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/restrict-template-expressions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/return-await": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/switch-exhaustiveness-check": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/triple-slash-reference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/unbound-method": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/unified-signatures": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:@typescript-eslint/use-unknown-in-catch-callback-variable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:complexity": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:for-direction": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:max-depth": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:max-nested-callbacks": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:max-statements": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-async-promise-executor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-case-declarations": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-compare-neg-zero": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-cond-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-console": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-constant-binary-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-constant-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-control-regex": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-debugger": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-delete-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-dupe-else-if": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-duplicate-case": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-empty": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-empty-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-empty-pattern": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-empty-static-block": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-ex-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-extra-boolean-cast": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-fallthrough": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-global-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-invalid-regexp": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-irregular-whitespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-loss-of-precision": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-misleading-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-nonoctal-decimal-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-octal": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-prototype-builtins": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-regex-spaces": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-self-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-shadow-restricted-names": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-sparse-arrays": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-unassigned-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-unexpected-multiline": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-unsafe-finally": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-unsafe-optional-chaining": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-unused-labels": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-unused-private-class-members": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-useless-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-useless-backreference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-useless-catch": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-useless-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:no-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:prefer-const": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:prefer-rest-params": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:prefer-spread": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:preserve-caught-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:require-yield": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:use-isnan": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "source:valid-typeof": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/await-thenable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/ban-ts-comment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/consistent-type-assertions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/consistent-type-definitions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/consistent-type-imports": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-array-constructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-array-delete": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-base-to-string": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-confusing-void-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-deprecated": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-duplicate-enum-values": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-duplicate-type-constituents": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-dynamic-delete": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-empty-object-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-explicit-any": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-extra-non-null-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-extraneous-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-floating-promises": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-for-in-array": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-implied-eval": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-invalid-void-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-meaningless-void-operator": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-misused-new": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-misused-promises": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-misused-spread": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-mixed-enums": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-namespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-non-null-asserted-nullish-coalescing": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-non-null-asserted-optional-chain": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-non-null-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-redundant-type-constituents": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-require-imports": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-this-alias": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-boolean-literal-compare": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-template-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-type-arguments": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-type-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-type-constraint": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-type-conversion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unnecessary-type-parameters": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-argument": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-call": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-declaration-merging": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-enum-comparison": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-function-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-member-access": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-return": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-type-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unsafe-unary-minus": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unused-expressions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-unused-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-useless-constructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-useless-default-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/no-wrapper-object-types": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/only-throw-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-as-const": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-literal-enum-member": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-namespace-keyword": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-promise-reject-errors": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-readonly": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-reduce-type-parameter": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/prefer-return-this-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/related-getter-setter-pairs": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/require-await": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/restrict-plus-operands": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/restrict-template-expressions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/return-await": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/switch-exhaustiveness-check": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/triple-slash-reference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/unbound-method": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/unified-signatures": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:@typescript-eslint/use-unknown-in-catch-callback-variable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:for-direction": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-async-promise-executor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-case-declarations": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-compare-neg-zero": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-cond-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-constant-binary-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-constant-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-control-regex": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-debugger": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-delete-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-dupe-else-if": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-duplicate-case": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-empty": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-empty-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-empty-pattern": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-empty-static-block": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-ex-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-extra-boolean-cast": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-fallthrough": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-global-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-invalid-regexp": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-irregular-whitespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-loss-of-precision": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-misleading-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-nonoctal-decimal-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-octal": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-prototype-builtins": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-regex-spaces": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-restricted-syntax": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-self-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-shadow-restricted-names": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-sparse-arrays": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-unassigned-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-unexpected-multiline": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-unsafe-finally": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-unsafe-optional-chaining": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-unused-labels": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-unused-private-class-members": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-useless-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-useless-backreference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-useless-catch": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-useless-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:no-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:prefer-const": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:prefer-rest-params": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:prefer-spread": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:preserve-caught-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:require-yield": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:use-isnan": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "test:valid-typeof": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/await-thenable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/ban-ts-comment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/consistent-type-assertions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/consistent-type-definitions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/consistent-type-imports": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-array-constructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-array-delete": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-base-to-string": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-confusing-void-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-deprecated": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-duplicate-enum-values": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-duplicate-type-constituents": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-dynamic-delete": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-empty-object-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-explicit-any": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-extra-non-null-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-extraneous-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-floating-promises": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-for-in-array": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-implied-eval": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-invalid-void-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-meaningless-void-operator": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-misused-new": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-misused-promises": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-misused-spread": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-mixed-enums": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-namespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-non-null-asserted-nullish-coalescing": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-non-null-asserted-optional-chain": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-non-null-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-redundant-type-constituents": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-require-imports": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-this-alias": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-boolean-literal-compare": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-template-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-type-arguments": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-type-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-type-constraint": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-type-conversion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unnecessary-type-parameters": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-argument": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-call": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-declaration-merging": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-enum-comparison": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-function-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-member-access": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-return": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-type-assertion": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unsafe-unary-minus": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unused-expressions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-unused-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-useless-constructor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-useless-default-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/no-wrapper-object-types": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/only-throw-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-as-const": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-literal-enum-member": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-namespace-keyword": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-promise-reject-errors": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-readonly": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-reduce-type-parameter": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/prefer-return-this-type": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/related-getter-setter-pairs": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/require-await": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/restrict-plus-operands": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/restrict-template-expressions": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/return-await": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/switch-exhaustiveness-check": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/triple-slash-reference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/unbound-method": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/unified-signatures": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:@typescript-eslint/use-unknown-in-catch-callback-variable": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:for-direction": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-async-promise-executor": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-case-declarations": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-compare-neg-zero": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-cond-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-constant-binary-expression": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-constant-condition": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-control-regex": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-debugger": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-delete-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-dupe-else-if": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-duplicate-case": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-empty": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-empty-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-empty-pattern": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-empty-static-block": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-ex-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-extra-boolean-cast": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-fallthrough": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-global-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-invalid-regexp": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-irregular-whitespace": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-loss-of-precision": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-misleading-character-class": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-nonoctal-decimal-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-octal": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-prototype-builtins": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-regex-spaces": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-self-assign": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-shadow-restricted-names": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-sparse-arrays": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-unassigned-vars": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-unexpected-multiline": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-unsafe-finally": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-unsafe-optional-chaining": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-unused-labels": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-unused-private-class-members": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-useless-assignment": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-useless-backreference": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-useless-catch": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-useless-escape": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:no-var": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:prefer-const": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:prefer-rest-params": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:prefer-spread": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:preserve-caught-error": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:require-yield": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:use-isnan": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      },
+      "type-tests:valid-typeof": {
+        "floor": 1,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      }
+    },
+    "soundnessCases": {
+      "cases": {
+        "floor": 21,
+        "reason": "seeded 2026-09-04 before the gate existed"
+      }
+    },
+    "typeTestNegativeCases": {
+      "packages/access": {
+        "floor": 8,
+        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+      },
+      "packages/contract": {
+        "floor": 6,
+        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+      },
+      "packages/server/authorization": {
+        "floor": 2,
+        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+      },
+      "packages/server/http": {
+        "floor": 18,
+        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+      },
+      "packages/web/copy": {
+        "floor": 4,
+        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+      }
+    }
+  }
+}

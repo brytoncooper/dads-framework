@@ -1,0 +1,11 @@
+{
+  "signal": "agent-hooks-unwired",
+  "issue": "you-let-the-babysitter-raise-them",
+  "why": "The house rules are written down and no harness runs anything when an edit happens, so the rules hold for exactly as long as the reader's attention.",
+  "files": {
+    "AGENTS.md": "# House rules\n\nRun the gate before you push.\n"
+  },
+  "expected": {
+    "harnesses": 1
+  }
+}

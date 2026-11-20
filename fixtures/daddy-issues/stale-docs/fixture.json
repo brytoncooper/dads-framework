@@ -1,0 +1,28 @@
+{
+  "signal": "stale-docs",
+  "issue": "you-are-looking-for-a-father-figure",
+  "why": "The guide was written on 2025-01-01 and the script it cites was rewritten five months later, so on 2026-09-06 the document has been 613 days out of date about running code.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "write the guide beside the gate it describes",
+      "date": "2025-01-01T00:00:00Z",
+      "files": {
+        "docs/guide.md": "# The gate\n\nRun [the gate](../scripts/verify.mjs) before pushing.\n",
+        "scripts/verify.mjs": "export const gate = \"lint\";\n"
+      }
+    },
+    {
+      "message": "rewrite the gate the guide describes",
+      "date": "2025-06-01T00:00:00Z",
+      "files": {
+        "scripts/verify.mjs": "export const gate = \"lint, types, tests\";\n"
+      }
+    }
+  ],
+  "expected": {
+    "docs/guide.md": 613
+  }
+}

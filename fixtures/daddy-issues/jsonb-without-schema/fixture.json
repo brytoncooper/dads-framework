@@ -1,0 +1,12 @@
+{
+  "signal": "jsonb-without-schema",
+  "issue": "disorganized-attachment",
+  "why": "One jsonb column names its payload type; one is typed as a bag of unknowns and one carries no type at all, so nothing says what either holds.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/events.ts": "import { jsonb, pgTable, text } from \"drizzle-orm/pg-core\";\n\ntype EventPayload = {\n  readonly kind: string;\n};\n\n/** Every event the store has recorded. */\nexport const events = pgTable(\"events\", {\n  id: text(\"id\").primaryKey(),\n  payload: jsonb(\"payload\").$type<EventPayload>(),\n  metadata: jsonb(\"metadata\").$type<Record<string, unknown>>(),\n  extra: jsonb(\"extra\"),\n});\n"
+  },
+  "expected": {
+    "packages/group/name/src/events.ts": 2
+  }
+}

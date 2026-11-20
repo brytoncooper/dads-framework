@@ -1,0 +1,12 @@
+{
+  "signal": "role-if-ladders",
+  "issue": "you-repeat-the-cycle",
+  "why": "A branch compares a member's role against a permission name.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/page.ts": "type Member = {\n  readonly role: string;\n};\n\nfunction pageFor(member: Member): string {\n  if (member.role === \"admin\") return \"admin\";\n  return \"member\";\n}\n\nvoid pageFor;\n"
+  },
+  "expected": {
+    "packages/group/name": 1
+  }
+}

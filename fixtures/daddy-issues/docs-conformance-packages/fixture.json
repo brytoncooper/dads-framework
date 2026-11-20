@@ -1,0 +1,11 @@
+{
+  "signal": "docs-conformance-packages",
+  "issue": "avoidant-attachment",
+  "why": "Two packages are held to the README template, and the list may never shrink.",
+  "files": {
+    "docs/readme-conformance.json": "{\n  \"packages\": [\n    \"@fixture/one\",\n    \"@fixture/two\"\n  ]\n}\n"
+  },
+  "expected": {
+    "packages": 2
+  }
+}

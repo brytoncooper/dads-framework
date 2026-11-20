@@ -1,0 +1,35 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "tsBuildInfoFile": "dist/workbench.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/web/**"],
+  "references": [
+    {
+      "path": "../../packages/access"
+    },
+    {
+      "path": "../../packages/contract"
+    },
+    {
+      "path": "../../packages/server/authorization"
+    },
+    {
+      "path": "../../packages/server/errors"
+    },
+    {
+      "path": "../../packages/server/http"
+    },
+    {
+      "path": "../../packages/server/postgres"
+    },
+    {
+      "path": "../../packages/server/postgres-access"
+    }
+  ]
+}

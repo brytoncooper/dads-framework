@@ -1,0 +1,14 @@
+{
+  "signal": "duplicated-helpers",
+  "issue": "anxious-attachment",
+  "why": "Two production files of one package declare the same helper. Migration entry points and helpers do not count.",
+  "files": {
+    "packages/group/name/src/one.ts": "export function isRecord(value: unknown): boolean {\n  return typeof value === \"object\";\n}\n",
+    "packages/group/name/src/two.ts": "export function isRecord(value: unknown): boolean {\n  return value !== null;\n}\n",
+    "packages/group/name/src/20261119000000_create_orders.migration.ts": "/** Applies this migration. */\nexport function up(): void {}\n\n/** Reverts this migration. */\nexport function down(): void {}\n",
+    "packages/group/name/src/20261119000001_add_notes.migration.ts": "/** Applies this migration. */\nexport function up(): void {}\n\n/** Reverts this migration. */\nexport function down(): void {}\n"
+  },
+  "expected": {
+    "packages/group/name:isRecord": 2
+  }
+}

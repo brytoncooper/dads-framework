@@ -1,0 +1,13 @@
+{
+  "signal": "duplicate-wire-schemas",
+  "issue": "disorganized-attachment",
+  "why": "Two modules of one package export a declaration with the same field names.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/order-type.ts": "/** The order as the wire describes it. */\nexport type Order = {\n  readonly id: string;\n  readonly total: number;\n  readonly currency: string;\n};\n",
+    "packages/group/name/src/order-record.ts": "/** The order as the store describes it. */\nexport type OrderRecord = {\n  readonly id: string;\n  readonly total: number;\n  readonly currency: string;\n};\n"
+  },
+  "expected": {
+    "packages/group/name": 1
+  }
+}

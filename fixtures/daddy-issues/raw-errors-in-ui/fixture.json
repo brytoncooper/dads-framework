@@ -1,0 +1,12 @@
+{
+  "signal": "raw-errors-in-ui",
+  "issue": "people-pleasing",
+  "why": "A screen prints whatever the failed request's error said, so a customer reads a message written for whoever debugs it.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/web/orders/src/save-failure.tsx": "/** What the order form shows when saving failed. */\nexport function SaveFailure(props: { readonly error: Error }) {\n  return <p>{props.error.message}</p>;\n}\n"
+  },
+  "expected": {
+    "packages/web/orders/src/save-failure.tsx": 1
+  }
+}

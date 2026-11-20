@@ -1,0 +1,22 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/job-queue.tsbuildinfo",
+    "types": ["node"]
+  },
+  "references": [
+    {
+      "path": "../audit-actor"
+    },
+    {
+      "path": "../diagnostics"
+    },
+    {
+      "path": "../job-queue-core"
+    }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

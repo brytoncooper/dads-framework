@@ -1,0 +1,12 @@
+{
+  "signal": "rows-sent-whole",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "A response mapper spreads the whole row into what it sends, so every column the table gains reaches the client.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/orders/src/http/order-response.ts": "type OrderRow = {\n  readonly id: string;\n  readonly total: number;\n};\n\n/** The order as the API sends it. */\nexport function toOrderResponse(row: OrderRow): object {\n  return { ...row, total: row.total.toFixed(2) };\n}\n"
+  },
+  "expected": {
+    "packages/group/orders/src/http/order-response.ts": 1
+  }
+}

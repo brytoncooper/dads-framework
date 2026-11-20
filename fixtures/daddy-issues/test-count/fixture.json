@@ -1,0 +1,12 @@
+{
+  "signal": "test-count",
+  "issue": "commitment-issues",
+  "why": "One package has a passing test in the report, and the floor holds that count.",
+  "files": {
+    "packages/group/name/package.json": "{\n  \"name\": \"@fixture/name\"\n}\n",
+    "node_modules/.dads/vitest-report.json": "{\n  \"testResults\": [\n    {\n      \"name\": \"{{root}}/packages/group/name/src/one.test.ts\",\n      \"assertionResults\": [\n        {\n          \"status\": \"passed\"\n        },\n        {\n          \"status\": \"skipped\"\n        }\n      ]\n    }\n  ]\n}\n"
+  },
+  "expected": {
+    "@fixture/name": 1
+  }
+}

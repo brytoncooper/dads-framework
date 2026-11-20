@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "workspace": {
+    "root": ".",
+    "fullFallback": { "taskIds": ["fixture:typecheck", "fixture:test"] }
+  },
+  "projects": [{ "id": "fixture", "root": "src", "fallbackDependencies": [] }],
+  "tasks": [
+    {
+      "id": "fixture:typecheck",
+      "project": "fixture",
+      "kind": "typecheck",
+      "execution": { "executable": "npm", "args": ["run", "typecheck"] },
+      "dependsOn": [],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "fixture:test",
+      "project": "fixture",
+      "kind": "test",
+      "execution": { "executable": "npm", "args": ["test"] },
+      "dependsOn": ["fixture:typecheck"],
+      "impact": { "mode": "reachability" }
+    }
+  ]
+}

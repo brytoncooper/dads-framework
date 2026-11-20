@@ -1,0 +1,11 @@
+{
+  "signal": "eslint-disables",
+  "issue": "daddy-issues",
+  "why": "One hand-written module silences the linter in a comment.",
+  "files": {
+    "src/hatch.ts": "/* eslint-disable -- the specimen */\nexport const value = 1;\n"
+  },
+  "expected": {
+    "src/hatch.ts": 1
+  }
+}

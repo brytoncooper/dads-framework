@@ -1,0 +1,6 @@
+{
+  "channel": "events.updated",
+  "seq": 41,
+  "at": "2026-07-10T12:00:00.000Z",
+  "payload": { "pit.level": 0.62, "conveyor3.motor": true }
+}

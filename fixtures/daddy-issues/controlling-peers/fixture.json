@@ -1,0 +1,11 @@
+{
+  "signal": "controlling-peers",
+  "issue": "you-stay-with-people-who-cannot-meet-you",
+  "why": "A manifest makes the Node runtime a peer, so every consumer inherits the pin.",
+  "files": {
+    "packages/group/thing/package.json": "{\n  \"name\": \"@fixture/thing\",\n  \"peerDependencies\": {\n    \"node\": \">=20\"\n  }\n}\n"
+  },
+  "expected": {
+    "@fixture/thing": 1
+  }
+}

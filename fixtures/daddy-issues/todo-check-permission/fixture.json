@@ -1,0 +1,11 @@
+{
+  "signal": "todo-check-permission",
+  "issue": "commitment-issues",
+  "why": "A route ships with the access decision written as a note two lines under it.",
+  "files": {
+    "packages/group/name/src/orders.ts": "export const listOrders = {\n  method: \"GET\",\n  path: \"/orders\",\n};\n// TODO: check permission before this returns anybody else's row\n"
+  },
+  "expected": {
+    "packages/group/name/src/orders.ts": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "signal": "intra-package-cycles",
+  "issue": "enmeshment",
+  "why": "Two modules of one package import each other.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/first.ts": "import { second } from \"./second.js\";\n\n/** The first step. */\nexport function first(): number {\n  return second();\n}\n",
+    "packages/group/name/src/second.ts": "import { first } from \"./first.js\";\n\n/** The second step. */\nexport function second(): number {\n  return first();\n}\n"
+  },
+  "expected": {
+    "packages/group/name": 1
+  }
+}

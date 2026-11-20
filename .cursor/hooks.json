@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "node scripts/agent-guards/guard-protected-files.mjs",
+        "matcher": "Edit|Write|MultiEdit",
+        "failClosed": true
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node scripts/agent-guards/guard-shell-commands.mjs",
+        "failClosed": true
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node scripts/agent-guards/check-after-edit.mjs",
+        "failClosed": true
+      }
+    ]
+  }
+}

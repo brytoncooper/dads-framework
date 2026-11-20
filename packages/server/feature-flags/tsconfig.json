@@ -1,0 +1,28 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/feature-flags.tsbuildinfo",
+    "types": ["node"]
+  },
+  "references": [
+    {
+      "path": "../clock"
+    },
+    {
+      "path": "../../contract"
+    },
+    {
+      "path": "../errors"
+    },
+    {
+      "path": "../request-work"
+    },
+    {
+      "path": "../../foundation/plugin"
+    }
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

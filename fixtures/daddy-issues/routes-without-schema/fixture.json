@@ -1,0 +1,13 @@
+{
+  "signal": "routes-without-schema",
+  "issue": "avoidant-attachment",
+  "why": "A read route declares no output schema, so a consumer has the path and a hope.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "const routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    handler: () => readThing(),\n  }),\n];\n",
+    "fixtures/api/src/denials.ts": "const denialProofRecorded = true;\n"
+  },
+  "expected": {
+    "fixtures/api/src/routes.ts:getThing": 1
+  }
+}

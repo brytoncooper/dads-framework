@@ -1,0 +1,12 @@
+{
+  "signal": "suppressed-violations",
+  "issue": "the-silent-treatment",
+  "why": "One tracked file carries two violations the linter has been told to stop reporting, and nothing yet requires that number to fall.",
+  "files": {
+    "eslint-suppressions.json": "{\n  \"src/handler.ts\": {\n    \"complexity\": { \"count\": 2 }\n  }\n}\n",
+    "src/handler.ts": "export const handled = [\"first\", \"second\"];\n"
+  },
+  "expected": {
+    "src/handler.ts": 2
+  }
+}

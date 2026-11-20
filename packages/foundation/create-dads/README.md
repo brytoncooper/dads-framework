@@ -1,0 +1,62 @@
+# `create-dads`
+
+Create a Postgres-backed TypeScript API with email sign-in, tenants,
+relationship-guarded notes, and named customer and staff entrypoints.
+
+## What Dad does for you
+
+Dads writes the starter files, installs the Dads capability packages and
+records their versions in `package-lock.json`. The creator starts the local
+Docker stack and prints its healthy web and API URLs. An identical rerun
+keeps the project files and resumes the stack.
+
+## Try it
+
+Use Node 24 with Docker running and the Compose plugin available. Run the
+creator from a parent directory:
+
+```sh
+npm create dads@latest my-app
+cd my-app
+```
+
+Open the web URL printed by the creator. From the generated directory,
+`npm start` starts the stack again, `npm run dev:status` shows its state,
+and `npm run dev:down` stops it. For a separate API host, use
+`npm run start:api` and the environment in the generated deployment guide. Run `npm run verify` from the app root. The generated README lists
+the Docker requirements for its live PostgreSQL proof.
+Commit the generated `package-lock.json`. The `ci/verify.sh` command runs
+`npm ci` before verification, and `ci/` contains templates for CI providers.
+
+## Commands
+
+- `--name <name>` sets the npm package name.
+- `--existing` creates an isolated project under the target's `dads/` folder.
+- `--dry-run` lists files without writing them.
+- `--skip-install` writes files and leaves dependency installation and startup to your own tooling.
+- `--skip-doctor` skips the initial report on an existing project.
+- `--today YYYY-MM-DD` supplies a date to the initial Doctor report.
+- `--json` prints one machine-readable result.
+
+The Doctor report runs before writes when the target already contains a
+project. It can surface adoption issues without changing the project. Existing-project mode leaves local startup to the adopter.
+
+If Docker startup fails, the creator exits nonzero and keeps installed files
+and the lockfile. Once Docker is available, run `npm start` from the generated
+project.
+
+## What it refuses to do
+
+The creator rejects unknown options and reports a conflict when an owned file
+has changed. Use the isolated `--existing` mode to keep an existing application
+intact.
+
+## Verification
+
+```sh
+npm test -w create-dads
+```
+
+The packed adoption proof installs the generated app from local tarballs
+and runs its provider-neutral CI command against a disposable PostgreSQL
+database.

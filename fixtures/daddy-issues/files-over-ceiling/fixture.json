@@ -1,0 +1,14 @@
+{
+  "signal": "files-over-ceiling",
+  "issue": "enmeshment",
+  "why": "One production file is a single counted line over the 400-line ceiling.",
+  "files": {
+    "scripts/oversized.mjs": {
+      "line": "export const line = 1;",
+      "repeat": 401
+    }
+  },
+  "expected": {
+    "scripts/oversized.mjs": 401
+  }
+}

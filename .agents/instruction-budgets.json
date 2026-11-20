@@ -1,0 +1,10 @@
+{
+  "agentEntrypoint": { "path": "AGENTS.md", "maxApproximateTokens": 350 },
+  "skills": {
+    "directory": ".agents/skills",
+    "maxApproximateTokensPerSkill": 500,
+    "maxApproximateTokensPerWorkflowSkill": 1000,
+    "maxApproximateTokensPerSupportingReference": 1500,
+    "maxApproximateTokensTotal": 3000
+  }
+}

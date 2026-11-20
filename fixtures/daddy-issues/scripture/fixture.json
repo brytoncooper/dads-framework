@@ -1,0 +1,64 @@
+{
+  "signal": "scripture",
+  "issue": "you-are-looking-for-a-father-figure",
+  "why": "Ten commits touch the package, one author wrote all ten, and the package records no invariants, so every rule it follows lives in one person.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n",
+    "packages/example/package.json": "{ \"name\": \"@fixture/example\" }\n"
+  },
+  "history": [
+    {
+      "message": "start the package",
+      "date": "2026-08-01T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 1;\n" }
+    },
+    {
+      "message": "second decision",
+      "date": "2026-08-02T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 2;\n" }
+    },
+    {
+      "message": "third decision",
+      "date": "2026-08-03T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 3;\n" }
+    },
+    {
+      "message": "fourth decision",
+      "date": "2026-08-04T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 4;\n" }
+    },
+    {
+      "message": "fifth decision",
+      "date": "2026-08-05T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 5;\n" }
+    },
+    {
+      "message": "sixth decision",
+      "date": "2026-08-06T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 6;\n" }
+    },
+    {
+      "message": "seventh decision",
+      "date": "2026-08-07T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 7;\n" }
+    },
+    {
+      "message": "eighth decision",
+      "date": "2026-08-08T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 8;\n" }
+    },
+    {
+      "message": "ninth decision",
+      "date": "2026-08-09T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 9;\n" }
+    },
+    {
+      "message": "tenth decision",
+      "date": "2026-08-10T00:00:00Z",
+      "files": { "packages/example/src/thing.ts": "export const step = 10;\n" }
+    }
+  ],
+  "expected": {
+    "@fixture/example": 100
+  }
+}

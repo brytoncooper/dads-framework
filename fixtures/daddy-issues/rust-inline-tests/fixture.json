@@ -1,0 +1,11 @@
+{
+  "signal": "rust-inline-tests",
+  "issue": "enmeshment",
+  "why": "A production Rust file carries its test module inline instead of in a sibling tests.rs.",
+  "files": {
+    "crates/example/src/lib.rs": "pub fn go() {}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn works() {}\n}\n"
+  },
+  "expected": {
+    "crates/example/src/lib.rs": 1
+  }
+}

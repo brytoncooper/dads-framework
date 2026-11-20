@@ -1,0 +1,12 @@
+{
+  "signal": "console-in-production",
+  "issue": "you-repeat-the-cycle",
+  "why": "Production source prints straight to the process console.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/announce.ts": "function announce(): void {\n  console.log(\"shipped\");\n}\n\nvoid announce;\n"
+  },
+  "expected": {
+    "packages/group/name/src/announce.ts": 1
+  }
+}

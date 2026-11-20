@@ -1,0 +1,11 @@
+{
+  "signal": "no-verify-in-scripts",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "A release script skips the hooks, so the bypass has stopped being a decision somebody makes under pressure and become the way the repository ships.",
+  "files": {
+    "scripts/release.sh": "#!/bin/sh\ngit push --no-verify origin release\n"
+  },
+  "expected": {
+    "scripts/release.sh": 1
+  }
+}

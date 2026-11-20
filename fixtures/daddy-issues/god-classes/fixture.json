@@ -1,0 +1,12 @@
+{
+  "signal": "god-classes",
+  "issue": "enmeshment",
+  "why": "One class carries thirteen methods where the ceiling is twelve.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/store.ts": "class Store {\n  method01(): void {}\n  method02(): void {}\n  method03(): void {}\n  method04(): void {}\n  method05(): void {}\n  method06(): void {}\n  method07(): void {}\n  method08(): void {}\n  method09(): void {}\n  method10(): void {}\n  method11(): void {}\n  method12(): void {}\n  method13(): void {}\n}\n\nvoid Store;\n"
+  },
+  "expected": {
+    "packages/group/name/src/store.ts:1 Store": 13
+  }
+}

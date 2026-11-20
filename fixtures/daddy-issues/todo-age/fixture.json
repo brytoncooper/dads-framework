@@ -1,0 +1,20 @@
+{
+  "signal": "todo-age",
+  "issue": "commitment-issues",
+  "why": "The note was written on 2025-01-01 and nothing has touched that line since, so on 2026-09-06 the promise is 613 days old.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "leave a note instead of doing the work",
+      "date": "2025-01-01T00:00:00Z",
+      "files": {
+        "scripts/checks/check-listing.mjs": "// TODO: split this module before the next change\nexport const listed = [\"first\", \"second\"];\n"
+      }
+    }
+  ],
+  "expected": {
+    "scripts/checks/check-listing.mjs": 613
+  }
+}

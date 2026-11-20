@@ -1,0 +1,14 @@
+{
+  "signal": "forbidden-403",
+  "issue": "people-pleasing",
+  "why": "A package that declares routes carries a 403, which tells a stranger the resource exists.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "const routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    response: thingResponse,\n    handler: () => readThing(),\n  }),\n];\n",
+    "fixtures/api/src/denials.ts": "const denialProofRecorded = true;\n",
+    "fixtures/api/src/statuses.ts": "const forbidden = 403;\n"
+  },
+  "expected": {
+    "@fixture/api": 1
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "signal": "lint-rules",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "Every probe scope resolves the same two error-level rules, and nothing is left at warn.",
+  "files": {
+    "packages/http/core/src/index.ts": "export * from \"./route.js\";\n",
+    "packages/http/core/src/index.test.ts": "import { it } from \"vitest\";\nit(\"passes\", () => undefined);\n",
+    "packages/http/core/type-tests/route-cards.ts": "export const card: string = \"one\";\n",
+    "scripts/checks/check-docs.mjs": "export const checked = true;\n"
+  },
+  "commands": {
+    "npx eslint --print-config packages/http/core/src/index.ts": {
+      "status": 0,
+      "stdout": "{\"rules\":{\"no-var\":\"error\",\"eqeqeq\":[\"error\"],\"semi\":\"off\"}}"
+    },
+    "npx eslint --print-config packages/http/core/src/index.test.ts": {
+      "status": 0,
+      "stdout": "{\"rules\":{\"no-var\":\"error\",\"eqeqeq\":[\"error\"],\"semi\":\"off\"}}"
+    },
+    "npx eslint --print-config packages/http/core/type-tests/route-cards.ts": {
+      "status": 0,
+      "stdout": "{\"rules\":{\"no-var\":\"error\",\"eqeqeq\":[\"error\"],\"semi\":\"off\"}}"
+    },
+    "npx eslint --print-config scripts/checks/check-docs.mjs": {
+      "status": 0,
+      "stdout": "{\"rules\":{\"no-var\":\"error\",\"eqeqeq\":[\"error\"],\"semi\":\"off\"}}"
+    }
+  },
+  "expected": {
+    "source:eqeqeq": 1,
+    "source:no-var": 1,
+    "test:eqeqeq": 1,
+    "test:no-var": 1,
+    "type-tests:eqeqeq": 1,
+    "type-tests:no-var": 1,
+    "scripts:eqeqeq": 1,
+    "scripts:no-var": 1
+  }
+}

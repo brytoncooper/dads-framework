@@ -1,0 +1,12 @@
+{
+  "signal": "fan-out",
+  "issue": "enmeshment",
+  "why": "One module reaches sixteen places where the ceiling is fifteen.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/wide.ts": "import \"package-01\";\nimport \"package-02\";\nimport \"package-03\";\nimport \"package-04\";\nimport \"package-05\";\nimport \"package-06\";\nimport \"package-07\";\nimport \"package-08\";\nimport \"package-09\";\nimport \"package-10\";\nimport \"package-11\";\nimport \"package-12\";\nimport \"package-13\";\nimport \"package-14\";\nimport \"package-15\";\nimport \"package-16\";\n"
+  },
+  "expected": {
+    "packages/group/name/src/wide.ts": 16
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "name": "@dads-framework/postgres",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./drizzle": {
+      "types": "./dist/drizzle.d.ts",
+      "default": "./dist/drizzle.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
+    "./testing/deterministic-uuid": {
+      "types": "./dist/testing/deterministic-uuid.d.ts",
+      "default": "./dist/testing/deterministic-uuid.js"
+    }
+  },
+  "dadsConformance": {
+    "capability": "PostgreSQL pool checkout and transaction isolation",
+    "suite": "src/lib/postgres-pool-laws.ts",
+    "law": "runPostgresPoolLaws",
+    "runs": [
+      {
+        "test": "src/lib/postgres-connection-conformance.integration.test.ts",
+        "provider": {
+          "module": "pg",
+          "name": "Pool"
+        }
+      },
+      {
+        "test": "src/lib/postgres-connection-conformance.integration.test.ts",
+        "provider": {
+          "module": "./attributed-pool.js",
+          "name": "createAttributedPool"
+        }
+      }
+    ]
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@dads-framework/audit-actor": "0.1.0",
+    "@dads-framework/request-work": "0.1.0",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.21.0"
+  },
+  "peerDependencies": {
+    "@testcontainers/postgresql": "^12.0.4",
+    "testcontainers": "^12.0.4"
+  },
+  "peerDependenciesMeta": {
+    "@testcontainers/postgresql": {
+      "optional": true
+    },
+    "testcontainers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^12.0.4",
+    "@types/pg": "^8.20.0",
+    "testcontainers": "^12.0.4",
+    "vitest": "~4.1.0",
+    "zod": "^4.4.3"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/postgres"
+  }
+}

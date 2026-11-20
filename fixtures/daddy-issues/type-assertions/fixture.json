@@ -1,0 +1,12 @@
+{
+  "signal": "type-assertions",
+  "issue": "daddy-issues",
+  "why": "Production source asserts an unknown value is a string instead of narrowing it.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/label.ts": "function label(value: unknown): string {\n  return value as string;\n}\n"
+  },
+  "expected": {
+    "packages/group/name/src/label.ts": 1
+  }
+}

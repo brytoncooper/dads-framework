@@ -1,0 +1,12 @@
+{
+  "signal": "guards-fail-closed",
+  "issue": "dad-has-issues-too",
+  "why": "The wired guard runs a formatter and names no way for that formatter to be absent, so a checkout where it was never installed cannot be edited at all.",
+  "files": {
+    ".claude/settings.json": "{\n  \"hooks\": {\n    \"PostToolUse\": [\n      {\n        \"matcher\": \"Edit\",\n        \"hooks\": [{ \"type\": \"command\", \"command\": \"node scripts/guard.mjs\" }]\n      }\n    ]\n  }\n}\n",
+    "scripts/guard.mjs": "import { spawnSync } from \"node:child_process\";\nconst formatted = spawnSync(\"prettier\", [\"--check\", \".\"]);\nprocess.exitCode = formatted.status === 0 ? 0 : 2;\n"
+  },
+  "expected": {
+    "scripts/guard.mjs": 1
+  }
+}

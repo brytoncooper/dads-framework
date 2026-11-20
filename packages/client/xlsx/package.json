@@ -1,0 +1,61 @@
+{
+  "name": "@dads-framework/client-xlsx",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dadsConformance": {
+    "capability": "Read portable XLSX table cells, cached numbers and sparse rows",
+    "suite": "test-support/workbook-table-reader-laws.ts",
+    "law": "runWorkbookTableReaderLaws",
+    "runs": [
+      {
+        "test": "src/lib/workbook-table-conformance.test.ts",
+        "provider": {
+          "module": "../../test-support/exceljs-workbook-reader.js",
+          "name": "openExcelJsWorkbookReader"
+        }
+      },
+      {
+        "test": "src/lib/workbook-table-conformance.test.ts",
+        "provider": {
+          "module": "../../test-support/spreadsheetml-reader.js",
+          "name": "openSpreadsheetMlReader"
+        }
+      }
+    ]
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.3",
+    "jsdom": "~22.1.0",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/client/xlsx"
+  }
+}

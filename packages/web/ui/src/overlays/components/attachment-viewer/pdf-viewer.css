@@ -1,0 +1,44 @@
+/*
+ * pdf.js ships its viewer styles unlayered, including a `:root` rule that sets
+ * `color-scheme`. Importing them into their own cascade layer keeps them below
+ * the app's unlayered design tokens, so they cannot override the theme.
+ */
+@import "pdfjs-dist/legacy/web/pdf_viewer.css" layer(pdfjs);
+
+/* Pages sit on the grey stage with a gap between them. */
+.pdfViewer.removePageBorders .page {
+  margin: 1rem auto;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+/*
+ * Print draws every page to an image in this hidden container (see
+ * pdf/use-pdf-print.ts). While a print is running the body carries
+ * `attachment-viewer-printing`, and the print rules hide the whole app and
+ * show only these pages, one per sheet. The paper-margin reset is injected
+ * for the run only, because `@page` cannot be scoped to a body class.
+ */
+.attachment-viewer-print {
+  display: none;
+}
+
+@media print {
+  body.attachment-viewer-printing > *:not(.attachment-viewer-print) {
+    display: none !important;
+  }
+
+  body.attachment-viewer-printing .attachment-viewer-print {
+    display: block;
+  }
+
+  body.attachment-viewer-printing .attachment-viewer-print-page {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    break-after: page;
+  }
+
+  body.attachment-viewer-printing .attachment-viewer-print-page:last-child {
+    break-after: auto;
+  }
+}

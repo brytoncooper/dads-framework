@@ -1,0 +1,32 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/http.tsbuildinfo",
+    "types": ["node"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "references": [
+    {
+      "path": "../../access"
+    },
+    {
+      "path": "../audit-actor"
+    },
+    {
+      "path": "../../contract"
+    },
+    {
+      "path": "../diagnostics"
+    },
+    {
+      "path": "../errors"
+    },
+    {
+      "path": "../request-work"
+    }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

@@ -1,0 +1,14 @@
+{
+  "signal": "shared-database",
+  "issue": "you-stay-with-people-who-cannot-meet-you",
+  "why": "Two packages open the same Postgres client, so the schema is a contract nobody wrote.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/orders\",\n      \"root\": \"packages/group/orders\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    },\n    {\n      \"name\": \"@fixture/billing\",\n      \"root\": \"packages/group/billing\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/orders/src/store.ts": "import { Pool } from \"pg\";\n\nconst orders = Pool;\n",
+    "packages/group/billing/src/store.ts": "import { Pool } from \"pg\";\n\nconst billing = Pool;\n"
+  },
+  "expected": {
+    "@fixture/orders": 1,
+    "@fixture/billing": 1
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@dads-framework/testing-native-darwin-arm64",
+  "version": "0.1.0",
+  "description": "Native dad-test executable for macOS arm64.",
+  "license": "MIT",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/dad-test",
+    "README.md",
+    "LICENSE.md",
+    "THIRD_PARTY_NOTICES.txt",
+    "RUST_STANDARD_LIBRARY_NOTICES.html"
+  ],
+  "exports": {
+    ".": "./bin/dad-test"
+  },
+  "bin": {
+    "dad-test": "./bin/dad-test"
+  },
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/testing/native/darwin-arm64"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../../scripts/verify-prepublish.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

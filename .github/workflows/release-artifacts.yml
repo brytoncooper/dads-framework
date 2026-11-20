@@ -1,0 +1,99 @@
+name: Prepare npm release artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release-artifacts
+  cancel-in-progress: false
+
+jobs:
+  native:
+    if: github.ref == 'refs/heads/main' && github.event.repository.private == false
+    uses: ./.github/workflows/testing-native-release.yml
+
+  collect:
+    needs: native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.96.0"
+          components: clippy, rustfmt
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+          cache: false
+      - name: Install proof tools
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.24.3
+          go env GOPATH | sed 's|$|/bin|' >> "$GITHUB_PATH"
+          npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dads-testing-native-*-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-release
+      - name: Verify source and assemble release archives
+        env:
+          RELEASE_DIR: ${{ runner.temp }}/npm-release
+          NATIVE_DIR: ${{ runner.temp }}/native-release
+          DADS_VERIFY_JOBS: 2
+          VITEST_MAX_WORKERS: 2
+          DADS_VERIFY_TEST_PROGRESS: 1
+          DADS_ADOPTION_JOBS: 2
+        run: |
+          node scripts/release/sync-package-licenses.mjs
+          npm run verify -- --no-cache --require-receipt
+          mkdir "$RELEASE_DIR"
+          node scripts/release/collect-native-release.mjs "$NATIVE_DIR" "$RELEASE_DIR"
+          node scripts/release/pack-preflight.mjs --output "$RELEASE_DIR"
+          node scripts/adoption/verify-adoption.mjs --packed-directory "$RELEASE_DIR"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dads-npm-verified-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/npm-release/*.tgz
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+
+  sign:
+    needs: collect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.3
+      - uses: actions/download-artifact@v4
+        with:
+          name: dads-npm-verified-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/npm-release
+      - name: Sign exact release archives
+        env:
+          RELEASE_DIR: ${{ runner.temp }}/npm-release
+        run: |
+          npm install --prefix "$RUNNER_TEMP/npm-signing" --registry=https://registry.npmjs.org/ --ignore-scripts --no-audit --no-fund --save-exact npm@11.21.2
+          node scripts/release/sign-release.mjs sign "$RELEASE_DIR" "$RUNNER_TEMP/npm-signing/node_modules/npm"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dads-npm-release-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/npm-release/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

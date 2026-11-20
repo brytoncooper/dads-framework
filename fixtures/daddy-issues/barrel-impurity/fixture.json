@@ -1,0 +1,11 @@
+{
+  "signal": "barrel-impurity",
+  "issue": "enmeshment",
+  "why": "A package barrel declares a constant beside its re-exports.",
+  "files": {
+    "packages/group/name/src/index.ts": "export * from \"./one.js\";\nexport const version = \"1\";\n"
+  },
+  "expected": {
+    "packages/group/name/src/index.ts": 1
+  }
+}

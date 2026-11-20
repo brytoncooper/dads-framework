@@ -1,0 +1,11 @@
+{
+  "signal": "unused-suppressions",
+  "issue": "the-silent-treatment",
+  "why": "The suppressions file still promises something about a file that is no longer in the repository, so the record has outlived what it was about.",
+  "files": {
+    "eslint-suppressions.json": "{\n  \"src/deleted.ts\": {\n    \"complexity\": { \"count\": 1 }\n  }\n}\n"
+  },
+  "expected": {
+    "src/deleted.ts:complexity": 1
+  }
+}

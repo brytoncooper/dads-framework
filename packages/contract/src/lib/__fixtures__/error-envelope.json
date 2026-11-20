@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "ORGANIZATION_SLUG_TAKEN",
+    "message": "Organization slug \"acme\" is already taken",
+    "details": {
+      "slug": "acme"
+    }
+  }
+}

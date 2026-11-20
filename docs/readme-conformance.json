@@ -1,0 +1,28 @@
+{
+  "packages": [
+    "@dads-framework/path-aliases",
+    "@dads-framework/testing",
+    "@dads-framework/testing-import-nx",
+    "@dads-framework/testing-vitest",
+    "@dads-framework/toolbox",
+    "create-dads",
+    "@dads-framework/feature-flags",
+    "@dads-framework/feature-flags-postgres",
+    "@dads-framework/feature-flags-http",
+    "@dads-framework/client-feature-flags",
+    "@dads-framework/access",
+    "@dads-framework/plugin",
+    "@dads-framework/authorization",
+    "@dads-framework/postgres-access",
+    "@dads-framework/contract",
+    "@dads-framework/audit",
+    "@dads-framework/audit-actor",
+    "@dads-framework/migrations",
+    "@dads-framework/postgres",
+    "@dads-framework/http",
+    "@dads-framework/client-request-transport",
+    "@dads-framework/errors",
+    "@dads-framework/health",
+    "@dads-framework/request-work"
+  ]
+}

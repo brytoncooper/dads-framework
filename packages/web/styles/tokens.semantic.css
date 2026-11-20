@@ -1,0 +1,119 @@
+:root {
+  color-scheme: light;
+
+  /* --- surfaces: the page is dead concrete, so the white card has something
+     to lift off. No warm paper tint — chroma stays at zero. Popover shares
+     the card's white and is separated by elevation instead — a menu is the
+     same material as the panel it opens over, only higher. --- */
+  --background: var(--palette-grey-970);
+  --foreground: var(--palette-grey-255);
+  --card: var(--palette-white);
+  --card-foreground: var(--palette-grey-255);
+  --popover: var(--palette-white);
+  --popover-foreground: var(--palette-grey-255);
+
+  /* --- neutral fills: muted, accent and secondary, each a distinct step
+     (in light, secondary sits darkest so a secondary control reads on a card).
+     --muted is the one the table leans on hardest: rows hover at `bg-muted/50`
+     and select at full strength, so it has to survive being halved. --- */
+  --muted: var(--palette-grey-970);
+  --muted-foreground: var(--palette-grey-470);
+  --secondary: var(--palette-grey-915);
+  --secondary-foreground: var(--palette-grey-255);
+  --accent: var(--palette-grey-935);
+  --accent-foreground: var(--palette-grey-255);
+
+  /* --- a header band is structure, not a row: dense data needs somewhere for
+     the eye to stop. Near-white (0.9835) disappeared into the card; this sits
+     a step darker than the concrete page so the band reads. --- */
+  --table-header: var(--palette-grey-965);
+
+  --table-row-hover: var(--palette-action-gray-933);
+  --table-row-selected: var(--palette-action-gray-912);
+
+  --primary: var(--palette-action-gray-537);
+  --primary-foreground: var(--palette-white);
+  --primary-hover: var(--palette-action-gray-512);
+
+  --brand: var(--palette-accent-gray-493);
+  --brand-foreground: var(--palette-white);
+
+  --destructive: var(--palette-crimson-420);
+  --destructive-foreground: var(--palette-white);
+
+  /* --- lines: --border is structure, --input is an interactive boundary --- */
+  --border: var(--palette-grey-880);
+  --input: var(--palette-grey-600);
+  --ring: var(--palette-action-gray-537);
+
+  /* --- status ramp: deep enough to carry white text on a filled chip --- */
+  --success: var(--palette-green-500);
+  --success-foreground: var(--palette-white);
+  --warning: var(--palette-amber-500);
+  --warning-foreground: var(--palette-white);
+  --warning-wash: var(--palette-amber-970);
+  --warning-edge: var(--palette-amber-720);
+  --info: var(--palette-action-gray-512);
+  --info-foreground: var(--palette-white);
+
+  /* --- Operations Blue: navigation and inline links, never a commit action --- */
+  --link: var(--palette-action-gray-455);
+
+  /* --- instrument palette: steel, verdigris, moss, oxide, slate. Deep
+     enough to carry --background as a label, because that is how a swatch and
+     a filled series both get read. Moss replaced brass, which sat on the warning
+     amber and made a series read as an alarm. --- */
+  --chart-1: var(--palette-action-gray-537);
+  --chart-2: var(--palette-verdigris-528);
+  --chart-3: var(--palette-moss-520);
+  --chart-4: var(--palette-crimson-420);
+  --chart-5: var(--palette-slate-550);
+
+  /* --- chrome rail: black, the deepest plane in the system. Ink, hover,
+     and the "you are here" wash are authored for this dark surface — page ink
+     would disappear on it. --- */
+  --sidebar: var(--palette-black);
+  --sidebar-foreground: var(--palette-grey-970);
+  --sidebar-primary: var(--palette-accent-gray-640);
+  --sidebar-primary-foreground: var(--palette-grey-198);
+  --sidebar-accent: var(--palette-grey-292);
+  --sidebar-accent-foreground: var(--palette-grey-970);
+  --sidebar-border: var(--palette-grey-318);
+  --sidebar-ring: var(--palette-action-gray-648);
+  --sidebar-link: var(--palette-action-gray-742);
+
+  --sidebar-active: var(--palette-action-gray-318);
+  --sidebar-active-foreground: var(--palette-action-gray-865);
+
+  --selection: var(--palette-accent-gray-493-a22);
+
+  /* --- the dim laid over the page behind a dialog or sheet, used at an alpha
+     (`bg-scrim/50`), and the dark stage an image or PDF is shown on --- */
+  --scrim: var(--palette-black);
+
+  /* --- elevation 1..6 map to shadow-2xs, -xs, -sm, -md, -lg, -xl ---
+     Two layers each: a tight contact shadow that says the edge is resting on
+     something, and a wider ambient one that says how far above it is. Depth is
+     this ramp's job — a hairline border cannot carry a plane on its own, which
+     is what a card outlined on a near-white page was trying to do. */
+  --elevation-1: 0 1px 1px 0 var(--palette-grey-240-a07);
+  --elevation-2:
+    0 1px 1px -0.5px var(--palette-grey-240-a07),
+    0 1px 2px 0 var(--palette-grey-240-a11);
+  --elevation-3:
+    0 1px 2px -1px var(--palette-grey-240-a15),
+    0 3px 6px -2px var(--palette-grey-240-a12);
+  --elevation-4:
+    0 2px 4px -2px var(--palette-grey-240-a15),
+    0 8px 16px -6px var(--palette-grey-240-a16);
+  --elevation-5:
+    0 4px 8px -4px var(--palette-grey-240-a17),
+    0 16px 32px -12px var(--palette-grey-240-a20);
+  --elevation-6:
+    0 8px 16px -8px var(--palette-grey-240-a19),
+    0 32px 64px -20px var(--palette-grey-240-a26);
+
+  /* Modest and industrial: 4px on chips, 6px on buttons and fields, 10px on
+     cards. Nothing in the system is bubbly. */
+  --radius: 0.5rem;
+}

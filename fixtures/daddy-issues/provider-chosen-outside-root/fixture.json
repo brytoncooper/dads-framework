@@ -1,0 +1,15 @@
+{
+  "signal": "provider-chosen-outside-root",
+  "issue": "the-paper-wall",
+  "why": "A library binding constructs its declared library and an unrelated vendor client. Only the unrelated construction trips the rule.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/orders.ts": "import { Client } from \"vendor-db\";\n\n/** Opens the store. */\nexport function openStore(): void {\n  new Client();\n}\n",
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/migrations\",\n      \"root\": \"packages/group/name\",\n      \"kind\": \"binding\",\n      \"allowedDependencies\": [\n        \"@vendor/migrations\"\n      ]\n    }\n  ]\n}\n",
+    "packages/group/name/src/migrations.ts": "import { MigrationBuilder as Builder } from \"@vendor/migrations/builder\";\n\nconst builder = new Builder();\n"
+  },
+  "expected": {
+    "packages/group/name/src/migrations.ts": 0,
+    "packages/group/name/src/orders.ts": 1
+  }
+}

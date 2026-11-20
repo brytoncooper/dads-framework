@@ -1,0 +1,17 @@
+{
+  "signal": "hooks-not-wired",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "A repository with history and no hooks directory has nothing wired to core.hooksPath, so the gate meets a change for the first time in CI.",
+  "history": [
+    {
+      "message": "start the repository with no hooks",
+      "date": "2026-08-01T00:00:00Z",
+      "files": {
+        "scripts/verify.mjs": "export const verified = true;\n"
+      }
+    }
+  ],
+  "expected": {
+    "core.hooksPath": 1
+  }
+}

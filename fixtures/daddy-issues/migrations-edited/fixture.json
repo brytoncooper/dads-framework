@@ -1,0 +1,43 @@
+{
+  "signal": "migrations-edited",
+  "issue": "gaslighting",
+  "why": "A migration already on the base line is rewritten by a branch, so the file no longer says what a database that ran it did; the branch's own draft migration is fixed twice and reads zero, because nothing has run it yet.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "create orders",
+      "date": "2026-07-01T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260701000000_create_orders.migration.ts": "export const up = \"create table orders\";\n"
+      },
+      "base": true
+    },
+    {
+      "message": "add order notes",
+      "date": "2026-07-10T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260710000000_add_notes.migration.ts": "export const up = \"alter table orders add note\";\n"
+      }
+    },
+    {
+      "message": "fix the draft notes migration",
+      "date": "2026-07-11T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260710000000_add_notes.migration.ts": "export const up = \"alter table orders add note text\";\n"
+      }
+    },
+    {
+      "message": "fix the orders migration in place",
+      "date": "2026-07-12T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260701000000_create_orders.migration.ts": "export const up = \"create table orders (id text)\";\n"
+      }
+    }
+  ],
+  "expected": {
+    "packages/store/src/migrations/20260701000000_create_orders.migration.ts": 1,
+    "packages/store/src/migrations/20260710000000_add_notes.migration.ts": 0
+  }
+}

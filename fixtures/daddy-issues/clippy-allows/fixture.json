@@ -1,0 +1,11 @@
+{
+  "signal": "clippy-allows",
+  "issue": "enmeshment",
+  "why": "Production Rust allows a denied clippy lint in line.",
+  "files": {
+    "crates/example/src/lib.rs": "#[allow(clippy::too_many_lines)]\npub fn wide() {}\n"
+  },
+  "expected": {
+    "crates/example/src/lib.rs": 1
+  }
+}

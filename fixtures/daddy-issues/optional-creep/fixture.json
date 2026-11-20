@@ -1,0 +1,12 @@
+{
+  "signal": "optional-creep",
+  "issue": "people-pleasing",
+  "why": "Two of the three fields a route promises are optional.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/orders-response.ts": "/** What the orders route answers with. */\nexport type OrdersResponse = {\n  readonly id: string;\n  readonly total?: number;\n  readonly currency?: string;\n};\n"
+  },
+  "expected": {
+    "packages/group/name/src/orders-response.ts OrdersResponse": 67
+  }
+}

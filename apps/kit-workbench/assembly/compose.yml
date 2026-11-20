@@ -1,0 +1,73 @@
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dads
+      POSTGRES_DB: dads
+      POSTGRES_PASSWORD: ${DADS_LOCAL_POSTGRES_PASSWORD:?Run npm run dev:up}
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "dads", "-d", "dads"]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+
+  dependencies:
+    image: node:24-bookworm-slim
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+      - dependencies:/app/node_modules
+    command:
+      - node
+      - assembly/install-local-dependencies.mjs
+
+  api: &api
+    image: node:24-bookworm-slim
+    init: true
+    working_dir: /app
+    command: ["npm", "run", "start:api"]
+    environment: &api-environment
+      DADS_API: customer
+      DATABASE_URL: postgres://dads:${DADS_LOCAL_POSTGRES_PASSWORD}@database:5432/dads
+      DADS_IDENTITY_SECRET: ${DADS_LOCAL_IDENTITY_SECRET:?Run npm run dev:up}
+      DADS_BASE_URL: ${DADS_LOCAL_WEB_URL:-http://127.0.0.1}
+      DADS_FILE_STORAGE_DIR: /var/lib/dads/files
+      DADS_MAIL_SPOOL_DIR: /var/lib/dads/mail
+      HOST: 0.0.0.0
+      PORT: 3000
+      NODE_ENV: development
+    volumes:
+      - .:/app:ro
+      - dependencies:/app/node_modules:ro
+      - app-data:/var/lib/dads
+    ports:
+      - target: 3000
+        host_ip: 127.0.0.1
+
+  staff:
+    <<: *api
+    environment:
+      <<: *api-environment
+      DADS_API: staff
+
+  web:
+    image: node:24-bookworm-slim
+    init: true
+    working_dir: /app
+    command:
+      ["npm", "run", "dev:web", "--", "--host", "0.0.0.0", "--strictPort"]
+    environment:
+      DADS_DEV_API_URL: http://api:3000
+    volumes:
+      - .:/app:ro
+      - dependencies:/app/node_modules
+    ports:
+      - target: 5173
+        host_ip: 127.0.0.1
+
+volumes:
+  database-data:
+  dependencies:
+  app-data:

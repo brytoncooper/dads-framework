@@ -1,0 +1,95 @@
+/* ==========================================================================
+   Dark — the roles that change, and nothing else. Dark keeps the warm
+   `greige` neutrals; light's are untinted `grey`.
+
+   This file restates roles; it never mints one. A name that appears here and
+   not in `tokens.semantic.css` is a role with no light value, which is a bug
+   a reader would only find at night.
+   ========================================================================== */
+
+.dark {
+  color-scheme: dark;
+
+  --background: var(--palette-greige-198);
+  --foreground: var(--palette-greige-960);
+  --card: var(--palette-greige-229);
+  --card-foreground: var(--palette-greige-960);
+  --popover: var(--palette-greige-258);
+  --popover-foreground: var(--palette-greige-960);
+
+  --muted: var(--palette-greige-280);
+  --muted-foreground: var(--palette-greige-750);
+  --secondary: var(--palette-greige-322);
+  --secondary-foreground: var(--palette-greige-960);
+  --accent: var(--palette-greige-342);
+  --accent-foreground: var(--palette-greige-960);
+
+  --table-header: var(--palette-grey-255);
+  --table-row-hover: var(--palette-action-gray-287);
+  --table-row-selected: var(--palette-action-gray-318);
+
+  --primary: var(--palette-action-gray-648);
+  --primary-foreground: var(--palette-action-gray-185);
+  --primary-hover: var(--palette-action-gray-620);
+
+  --brand: var(--palette-accent-gray-640);
+  --brand-foreground: var(--palette-greige-198);
+
+  --destructive: var(--palette-crimson-700);
+  --destructive-foreground: var(--palette-greige-198);
+
+  --border: var(--palette-greige-342);
+  --input: var(--palette-greige-580);
+  --ring: var(--palette-action-gray-648);
+
+  --success: var(--palette-green-725);
+  --success-foreground: var(--palette-greige-198);
+  --warning: var(--palette-amber-795);
+  --warning-foreground: var(--palette-greige-198);
+  --warning-wash: var(--palette-amber-290);
+  --warning-edge: var(--palette-amber-600);
+  --info: var(--palette-action-gray-685);
+  --info-foreground: var(--palette-greige-198);
+
+  --link: var(--palette-action-gray-742);
+
+  --chart-1: var(--palette-action-gray-648);
+  --chart-2: var(--palette-verdigris-738);
+  --chart-3: var(--palette-moss-780);
+  --chart-4: var(--palette-crimson-700);
+  --chart-5: var(--palette-slate-695);
+
+  --sidebar: var(--palette-black);
+  --sidebar-foreground: var(--palette-greige-960);
+  --sidebar-primary: var(--palette-accent-gray-640);
+  --sidebar-primary-foreground: var(--palette-greige-198);
+  --sidebar-accent: var(--palette-grey-246);
+  --sidebar-accent-foreground: var(--palette-greige-960);
+  --sidebar-border: var(--palette-grey-260);
+  --sidebar-ring: var(--palette-action-gray-648);
+
+  --sidebar-active: var(--palette-action-gray-318);
+  --sidebar-active-foreground: var(--palette-action-gray-865);
+  --sidebar-link: var(--palette-action-gray-742);
+
+  --selection: var(--palette-accent-gray-640-a34);
+
+  /* Depth on dark comes from black, not from tinted ink — and it has to be
+     stronger than on light, because a dark surface has less room to darken. */
+  --elevation-1: 0 1px 1px 0 var(--palette-black-a36);
+  --elevation-2:
+    0 1px 1px -0.5px var(--palette-black-a36),
+    0 1px 2px 0 var(--palette-black-a48);
+  --elevation-3:
+    0 1px 2px -1px var(--palette-black-a56),
+    0 3px 6px -2px var(--palette-black-a48);
+  --elevation-4:
+    0 2px 4px -2px var(--palette-black-a58),
+    0 8px 16px -6px var(--palette-black-a55);
+  --elevation-5:
+    0 4px 8px -4px var(--palette-black-a62),
+    0 16px 32px -12px var(--palette-black-a62);
+  --elevation-6:
+    0 8px 16px -8px var(--palette-black-a68),
+    0 32px 64px -20px var(--palette-black-a72);
+}

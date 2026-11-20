@@ -1,0 +1,21 @@
+{
+  "signal": "suppression-age",
+  "issue": "the-silent-treatment",
+  "why": "The entry was written into the suppressions file on 2025-01-01 and no commit since has moved it, so on 2026-09-06 it is one record that has stood for 613 days. It covers nothing, which is the point: the file has not been opened since the day it was generated, and nothing requires it to be.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "generate the suppressions file and never open it again",
+      "date": "2025-01-01T00:00:00Z",
+      "files": {
+        "apps/api/src/handler.ts": "export const handled = [\"first\", \"second\"];\n",
+        "eslint-suppressions.json": "{\n  \"apps/api/src/handler.ts\": {\n    \"complexity\": { \"count\": 0 }\n  }\n}\n"
+      }
+    }
+  ],
+  "expected": {
+    "apps/api/src/handler.ts complexity": 1
+  }
+}

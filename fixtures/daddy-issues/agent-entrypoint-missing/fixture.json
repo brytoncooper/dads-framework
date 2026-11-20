@@ -1,0 +1,11 @@
+{
+  "signal": "agent-entrypoint-missing",
+  "issue": "you-let-the-babysitter-raise-them",
+  "why": "A repository somebody works in — it has a manifest — tells an automated contributor nothing at its root.",
+  "files": {
+    "package.json": "{\n  \"name\": \"fixture-workspace\",\n  \"private\": true\n}\n"
+  },
+  "expected": {
+    "entrypoint": 1
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 3,
+  "capabilities": [],
+  "packages": [
+    {
+      "name": "boundary-verification",
+      "root": "src",
+      "responsibility": "Proves exact policy artifact verification without importing authoring source into the consumer.",
+      "allowedDependencies": [],
+      "verification": [],
+      "skills": ["dads-orient", "verify-http-work"]
+    }
+  ],
+  "verification": {
+    "projectId": "dads-boundary-verification",
+    "tasks": [
+      {
+        "id": "policy:check",
+        "packageName": "boundary-verification",
+        "command": "node verification/compile-fixture.mjs",
+        "dependsOn": [],
+        "sourceInputs": ["src"],
+        "nonSourceInputs": [
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "dads.project.json",
+          "verification/compile-fixture.mjs",
+          "verification/tsconfig.policy.json",
+          "verification/fail-provider"
+        ],
+        "reusePolicy": "never",
+        "execution": {
+          "kind": "shell"
+        }
+      },
+      {
+        "id": "policy:build",
+        "packageName": "boundary-verification",
+        "command": "node verification/provider-runner.mjs",
+        "dependsOn": ["policy:check"],
+        "sourceInputs": ["src/access.ts", "src/build-policy.ts"],
+        "nonSourceInputs": [
+          "verification/provider-runner.mjs",
+          "verification/vendor/access"
+        ],
+        "reusePolicy": "never",
+        "execution": {
+          "kind": "controlled-node",
+          "adapter": "artifact-provider-v1",
+          "workingDirectory": ".",
+          "runnerEntrypoint": "verification/provider-runner.mjs",
+          "runnerArguments": [],
+          "runnerVersion": "boundary-policy-provider-v1",
+          "inputFiles": [
+            {
+              "path": "verification/provider-runner.mjs",
+              "role": "test"
+            },
+            {
+              "path": "verification/compiled/access.js",
+              "role": "source"
+            },
+            {
+              "path": "verification/vendor/access/core/emit-ir.js",
+              "role": "resolved-dependency"
+            },
+            {
+              "path": "verification/vendor/access/core/emit-zed.js",
+              "role": "resolved-dependency"
+            },
+            {
+              "path": "verification/vendor/access/core/generated-header.js",
+              "role": "resolved-dependency"
+            },
+            {
+              "path": "verification/vendor/access/core/grantable.js",
+              "role": "resolved-dependency"
+            },
+            {
+              "path": "verification/vendor/access/core/holders.js",
+              "role": "resolved-dependency"
+            },
+            {
+              "path": "verification/vendor/access/core/refs.js",
+              "role": "resolved-dependency"
+            }
+          ],
+          "outputFiles": ["policy.json"],
+          "publishOutputs": [
+            {
+              "outputPath": "policy.json",
+              "projectPath": "verification/generated/policy.json"
+            }
+          ],
+          "environment": [],
+          "prerequisiteOutputTaskIds": [],
+          "timeoutMilliseconds": 10000
+        }
+      },
+      {
+        "id": "consumer:artifact-check",
+        "packageName": "boundary-verification",
+        "command": "node verification/consumer-runner.mjs",
+        "dependsOn": ["policy:build"],
+        "sourceInputs": [
+          "src/consumer-types.ts",
+          "src/read-document-result.ts",
+          "src/read-document.ts",
+          "src/read-document.test.ts",
+          "src/read-document-unit.test.ts",
+          "type-tests/consumer.ts"
+        ],
+        "nonSourceInputs": [
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "type-tests/tsconfig.json",
+          "dads.project.json",
+          "verification/consumer-runner.mjs",
+          "verification/vendor/access"
+        ],
+        "reusePolicy": "candidate",
+        "execution": {
+          "kind": "controlled-node",
+          "adapter": "artifact-consumer-v1",
+          "workingDirectory": ".",
+          "runnerEntrypoint": "verification/consumer-runner.mjs",
+          "runnerArguments": [],
+          "runnerVersion": "boundary-consumer-v1",
+          "inputFiles": [
+            {
+              "path": "verification/consumer-runner.mjs",
+              "role": "test"
+            },
+            {
+              "path": "verification/compiled/read-document.js",
+              "role": "source"
+            },
+            {
+              "path": "verification/compiled/read-document-result.js",
+              "role": "source"
+            },
+            {
+              "path": "src/consumer-types.ts",
+              "role": "source"
+            },
+            {
+              "path": "src/read-document-result.ts",
+              "role": "source"
+            },
+            {
+              "path": "src/read-document.ts",
+              "role": "source"
+            },
+            {
+              "path": "src/read-document.test.ts",
+              "role": "test"
+            },
+            {
+              "path": "src/read-document-unit.test.ts",
+              "role": "test"
+            },
+            {
+              "path": "type-tests/consumer.ts",
+              "role": "test"
+            },
+            {
+              "path": "package.json",
+              "role": "configuration"
+            },
+            {
+              "path": "package-lock.json",
+              "role": "configuration"
+            },
+            {
+              "path": "tsconfig.json",
+              "role": "configuration"
+            },
+            {
+              "path": "type-tests/tsconfig.json",
+              "role": "configuration"
+            },
+            {
+              "path": "verification/generated/policy.json",
+              "role": "artifact"
+            },
+            {
+              "path": "verification/vendor/access/core/parse-zed.js",
+              "role": "resolved-dependency"
+            }
+          ],
+          "outputFiles": ["consumer-result.json"],
+          "publishOutputs": [],
+          "environment": [
+            {
+              "name": "BOUNDARY_FIXTURE_MODE",
+              "value": "deterministic",
+              "secret": false
+            }
+          ],
+          "prerequisiteOutputTaskIds": ["policy:build"],
+          "timeoutMilliseconds": 10000
+        }
+      },
+      {
+        "id": "consumer:vitest",
+        "packageName": "boundary-verification",
+        "command": "node verification/run-vitest.mjs",
+        "dependsOn": ["policy:build"],
+        "sourceInputs": [
+          "src/read-document-result.ts",
+          "src/read-document-unit.test.ts"
+        ],
+        "nonSourceInputs": ["package.json", "verification/run-vitest.mjs"],
+        "reusePolicy": "never",
+        "execution": {
+          "kind": "shell"
+        }
+      },
+      {
+        "id": "consumer:typecheck",
+        "packageName": "boundary-verification",
+        "command": "node verification/run-type-tests.mjs",
+        "dependsOn": ["policy:build"],
+        "sourceInputs": ["src/consumer-types.ts", "type-tests/consumer.ts"],
+        "nonSourceInputs": [
+          "type-tests/tsconfig.json",
+          "verification/run-type-tests.mjs"
+        ],
+        "reusePolicy": "never",
+        "execution": {
+          "kind": "shell"
+        }
+      },
+      {
+        "id": "authorization:live",
+        "packageName": "boundary-verification",
+        "command": "node verification/live-check.mjs",
+        "dependsOn": ["policy:build"],
+        "sourceInputs": ["verification/live-check.mjs"],
+        "nonSourceInputs": [],
+        "reusePolicy": "never",
+        "execution": {
+          "kind": "shell"
+        }
+      }
+    ],
+    "fullFallbackTaskIds": [
+      "policy:check",
+      "policy:build",
+      "consumer:artifact-check",
+      "consumer:vitest",
+      "consumer:typecheck",
+      "authorization:live"
+    ]
+  }
+}

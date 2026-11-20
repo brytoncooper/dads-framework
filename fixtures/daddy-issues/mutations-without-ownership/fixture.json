@@ -1,0 +1,16 @@
+{
+  "signal": "mutations-without-ownership",
+  "issue": "commitment-issues",
+  "why": "A create route exists and nothing in the package writes an ownership tuple.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "import { publicAccess } from \"@dads-framework/http\";\nconst routes = [\n  postRoute({\n    operation: \"createThing\",\n    path: \"/things\",\n    access: requireThings,\n    body: createThingBody,\n    response: thingResponse,\n    handler: () => createThing(),\n  }),\n];\n\npostRoute({\n  operation: \"reportTelemetry\",\n  path: \"/reportTelemetry\",\n  access: publicAccess(),\n  status: 200,\n  body: boundedTelemetry,\n  resourcePolicy: { kind: \"resource-free\", purpose: \"append-only-telemetry\" },\n  response: acceptedCount,\n  handler: recordTelemetry,\n});\n\npostRoute({\n  operation: \"protectedCreateWithPolicy\",\n  path: \"/protectedCreateWithPolicy\",\n  access: requireThings,\n  status: 200,\n  body: boundedTelemetry,\n  resourcePolicy: { kind: \"resource-free\", purpose: \"append-only-telemetry\" },\n  response: acceptedCount,\n  handler: recordTelemetry,\n});\n\npostRoute({\n  operation: \"publicResourceCreate\",\n  path: \"/publicResourceCreate\",\n  access: publicAccess(),\n  status: 201,\n  body: boundedTelemetry,\n  resourcePolicy: { kind: \"resource-free\", purpose: \"append-only-telemetry\" },\n  response: acceptedCount,\n  handler: recordTelemetry,\n});\n",
+    "fixtures/api/src/denials.ts": "const denialProofRecorded = true;\n"
+  },
+  "expected": {
+    "fixtures/api/src/routes.ts:createThing": 1,
+    "fixtures/api/src/routes.ts:reportTelemetry": 0,
+    "fixtures/api/src/routes.ts:protectedCreateWithPolicy": 1,
+    "fixtures/api/src/routes.ts:publicResourceCreate": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "signal": "packages-without-surface",
+  "issue": "failure-to-launch",
+  "why": "A package that will be installed by somebody outside this repository publishes declarations and no report of them, so a change to what it promises is invisible in review.",
+  "files": {
+    "packages/group/name/package.json": "{\n  \"name\": \"@fixture/name\",\n  \"exports\": {\n    \".\": { \"types\": \"./dist/index.d.ts\", \"default\": \"./dist/index.js\" }\n  },\n  \"publishConfig\": { \"access\": \"public\" }\n}\n"
+  },
+  "expected": {
+    "@fixture/name": 1
+  }
+}

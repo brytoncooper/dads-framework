@@ -1,0 +1,28 @@
+//! JavaScript and TypeScript fact extraction for Dads Testing.
+//!
+//! Oxc is intentionally contained in this adapter. Its arena-backed data is converted into plain
+//! strings and byte spans before this crate returns, so consumers never retain Oxc IDs, lifetimes,
+//! AST nodes, or resolver values.
+
+mod changed_module_evidence;
+mod commonjs;
+mod diff_hunks;
+mod export_declarations;
+mod facts;
+mod frontend;
+mod graph_export;
+mod import_declarations;
+mod module_analysis;
+mod removed_paths;
+mod spans;
+mod specifier_resolution;
+mod workspace;
+
+#[cfg(test)]
+mod tests;
+
+pub use facts::{
+    JsImportFact, JsImportKind, JsLanguage, JsModuleFacts, JsPosition, JsSpan, JsSymbolFact,
+    JsUncertainty, JsWorkspaceFacts,
+};
+pub use frontend::{JavaScriptFrontend, analyze_request, analyze_workspace};

@@ -1,0 +1,14 @@
+{
+  "packages/authorization/core": {
+    "package": "@dads-framework/authorization",
+    "formerFloor": 32,
+    "replacementRoots": ["packages/access", "packages/server/authorization"],
+    "reason": "The legacy model, catalog and durable-intent authoring DSL were retired. Hold the current entity, role, permission, scope and SQL binding contracts in Access and Authorization."
+  },
+  "packages/http/core": {
+    "package": "@dads-framework/http",
+    "formerFloor": 4,
+    "replacementRoots": ["packages/server/http"],
+    "reason": "The current HTTP route cards retain body, path-parameter and registration guards under new route contracts."
+  }
+}

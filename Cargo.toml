@@ -1,0 +1,35 @@
+[workspace]
+members = [
+    "crates/dads-testing-core",
+    "crates/dads-testing-javascript",
+    "crates/dads-testing-store",
+    "crates/dads-testing-cli",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96.0"
+license = "MIT"
+
+# Escape hatches are denied, not discouraged. A panic path that survives review must first be
+# expressed as a typed error; a function that outgrows `too-many-lines-threshold` (clippy.toml)
+# must first be split. The only allowances are `#![allow(...)]` at the head of a test module and
+# the counted `#[allow(clippy::too_many_lines)]` marks that name the split that removes them.
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unreachable = "deny"
+todo = "deny"
+unimplemented = "deny"
+too_many_lines = "deny"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+thiserror = "2.0.12"
+sha2 = "0.10.9"

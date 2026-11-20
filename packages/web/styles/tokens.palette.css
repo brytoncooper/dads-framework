@@ -1,0 +1,90 @@
+:root {
+  --palette-black: oklch(0 0 0);
+  --palette-white: oklch(1 0 0);
+
+  --palette-grey-198: oklch(0.198 0 0);
+  --palette-grey-246: oklch(0.246 0 0);
+  --palette-grey-255: oklch(0.255 0 70);
+  --palette-grey-260: oklch(0.26 0 0);
+  --palette-grey-292: oklch(0.292 0 0);
+  --palette-grey-318: oklch(0.318 0 0);
+  --palette-grey-470: oklch(0.47 0 0);
+  --palette-grey-600: oklch(0.6 0 0);
+  --palette-grey-880: oklch(0.88 0 0);
+  --palette-grey-915: oklch(0.915 0 0);
+  --palette-grey-935: oklch(0.935 0 0);
+  --palette-grey-965: oklch(0.965 0 70);
+  --palette-grey-970: oklch(0.97 0 70);
+
+  --palette-greige-198: oklch(0.198 0.006 70);
+  --palette-greige-229: oklch(0.229 0.007 70);
+  --palette-greige-258: oklch(0.258 0.0075 70);
+  --palette-greige-280: oklch(0.28 0.0078 70);
+  --palette-greige-322: oklch(0.322 0.0085 70);
+  --palette-greige-342: oklch(0.342 0.009 70);
+  --palette-greige-580: oklch(0.58 0.011 70);
+  --palette-greige-750: oklch(0.75 0.013 70);
+  --palette-greige-960: oklch(0.96 0.0035 70);
+
+  /* The light theme's shadow ink at the alphas the elevation ramp stacks. Untinted, like every light-theme neutral. */
+  --palette-grey-240-a07: oklch(0.24 0 0 / 0.07);
+  --palette-grey-240-a11: oklch(0.24 0 0 / 0.11);
+  --palette-grey-240-a12: oklch(0.24 0 0 / 0.12);
+  --palette-grey-240-a15: oklch(0.24 0 0 / 0.15);
+  --palette-grey-240-a16: oklch(0.24 0 0 / 0.16);
+  --palette-grey-240-a17: oklch(0.24 0 0 / 0.17);
+  --palette-grey-240-a19: oklch(0.24 0 0 / 0.19);
+  --palette-grey-240-a20: oklch(0.24 0 0 / 0.2);
+  --palette-grey-240-a26: oklch(0.24 0 0 / 0.26);
+
+  /* Depth on a dark surface comes from black, not from tinted ink. */
+  --palette-black-a36: oklch(0 0 0 / 0.36);
+  --palette-black-a48: oklch(0 0 0 / 0.48);
+  --palette-black-a55: oklch(0 0 0 / 0.55);
+  --palette-black-a56: oklch(0 0 0 / 0.56);
+  --palette-black-a58: oklch(0 0 0 / 0.58);
+  --palette-black-a62: oklch(0 0 0 / 0.62);
+  --palette-black-a68: oklch(0 0 0 / 0.68);
+  --palette-black-a72: oklch(0 0 0 / 0.72);
+
+  --palette-action-gray-185: oklch(0.185 0 0);
+  --palette-action-gray-287: oklch(0.287 0 0);
+  --palette-action-gray-318: oklch(0.318 0 0);
+  --palette-action-gray-455: oklch(0.455 0 0);
+  --palette-action-gray-512: oklch(0.512 0 0);
+  --palette-action-gray-537: oklch(0.5369 0 0);
+  --palette-action-gray-620: oklch(0.62 0 0);
+  --palette-action-gray-648: oklch(0.648 0 0);
+  --palette-action-gray-685: oklch(0.685 0 0);
+  --palette-action-gray-742: oklch(0.742 0 0);
+  --palette-action-gray-865: oklch(0.865 0 0);
+  --palette-action-gray-912: oklch(0.912 0 0);
+  --palette-action-gray-933: oklch(0.933 0 0);
+
+  --palette-accent-gray-318: oklch(0.318 0 0);
+  --palette-accent-gray-328: oklch(0.328 0 0);
+  --palette-accent-gray-493: oklch(0.4927 0 0);
+  --palette-accent-gray-493-a22: oklch(0.4927 0 0 / 0.22);
+  --palette-accent-gray-640: oklch(0.64 0 0);
+  --palette-accent-gray-640-a34: oklch(0.64 0 0 / 0.34);
+  --palette-accent-gray-882: oklch(0.882 0 0);
+
+  --palette-crimson-420: oklch(0.42 0.185 22);
+  --palette-crimson-700: oklch(0.7 0.188 20);
+
+  --palette-green-500: oklch(0.5 0.115 158);
+  --palette-green-725: oklch(0.725 0.138 158);
+  --palette-amber-290: oklch(0.29 0.05 82);
+  --palette-amber-500: oklch(0.5 0.11 70);
+  --palette-amber-600: oklch(0.6 0.11 80);
+  --palette-amber-720: oklch(0.72 0.13 80);
+  --palette-amber-795: oklch(0.795 0.14 80);
+  --palette-amber-970: oklch(0.97 0.05 94);
+
+  --palette-verdigris-528: oklch(0.528 0.096 188);
+  --palette-verdigris-738: oklch(0.738 0.102 188);
+  --palette-moss-520: oklch(0.52 0.12 135);
+  --palette-moss-780: oklch(0.78 0.14 135);
+  --palette-slate-550: oklch(0.55 0.075 292);
+  --palette-slate-695: oklch(0.695 0.084 292);
+}

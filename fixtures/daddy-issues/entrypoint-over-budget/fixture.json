@@ -1,0 +1,14 @@
+{
+  "signal": "entrypoint-over-budget",
+  "issue": "you-let-the-babysitter-raise-them",
+  "why": "The entrypoint is four times the budget the repository recorded for it, so the rules cost more context than the change they govern.",
+  "files": {
+    ".agents/instruction-budgets.json": "{\n  \"agentEntrypoint\": { \"path\": \"AGENTS.md\", \"maxApproximateTokens\": 4 },\n  \"skills\": {\n    \"directory\": \".agents/skills\",\n    \"maxApproximateTokensPerSkill\": 500,\n    \"maxApproximateTokensPerWorkflowSkill\": 1000,\n    \"maxApproximateTokensPerSupportingReference\": 1500,\n    \"maxApproximateTokensTotal\": 3000\n  }\n}\n",
+    "AGENTS.md": "# House rules\n\nRead the whole document before changing one line of anything at all.\n",
+    ".claude/settings.json": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Edit\",\n        \"hooks\": [{ \"type\": \"command\", \"command\": \"node guard.mjs\" }]\n      }\n    ]\n  }\n}\n"
+  },
+  "expected": {
+    "AGENTS.md": 1,
+    ".agents/skills": 0
+  }
+}

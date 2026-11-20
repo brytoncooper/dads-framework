@@ -1,0 +1,248 @@
+//! Turning changed paths into impacted projects. Every step that cannot prove an answer records
+//! a located issue and widens, so a plan is never quietly narrower than the evidence supports.
+use super::PlanEvidence;
+use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
+use crate::manifest::TestingManifest;
+use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
+use crate::scope::deepest_project_for_path;
+use std::collections::BTreeSet;
+
+/// Attributes each changed path to its owning project. A path no declared project owns cannot be
+/// reasoned about at all, so it selects the complete fallback.
+pub(super) fn own_changed_paths<'a>(
+    manifest: &'a TestingManifest,
+    scope: &ResolvedScope,
+    evidence: &mut PlanEvidence<'a>,
+) {
+    if scope.full_fallback {
+        return;
+    }
+    for changed_path in &scope.changed_paths {
+        match deepest_project_for_path(&manifest.projects, changed_path) {
+            Some(project) => {
+                evidence.changed_projects.insert(project.id.as_str());
+                evidence
+                    .fallback_impacted_projects
+                    .insert(project.id.as_str());
+                evidence
+                    .reachability_impacted_projects
+                    .insert(project.id.as_str());
+                evidence
+                    .changed_paths_by_project
+                    .entry(project.id.as_str())
+                    .or_default()
+                    .push(changed_path.clone());
+            }
+            None => {
+                evidence.full_fallback = true;
+                evidence
+                    .full_fallback_issue_indexes
+                    .push(evidence.issues.len());
+                evidence.issues.push(PlanIssue {
+                    path: Some(changed_path.clone()),
+                    ..PlanIssue::new(
+                        "unknown-changed-path",
+                        format!(
+                            "{changed_path} is not owned by a declared project; selected the complete fallback."
+                        ),
+                        IssueSeverity::Uncertainty,
+                        IssueScope::Workspace,
+                    )
+                });
+            }
+        }
+    }
+}
+
+/// Follows the precision frontend's evidence where there is any, and records the widening where
+/// there is not. Only a manifest that declares reachability impact can use a graph at all.
+pub(super) fn widen_through_graph<'a>(
+    manifest: &'a TestingManifest,
+    scope: &ResolvedScope,
+    graph: Option<&DependencyGraph>,
+    evidence: &mut PlanEvidence<'a>,
+) {
+    if evidence.full_fallback || scope.changed_paths.is_empty() || !manifest.declares_graph_reader()
+    {
+        return;
+    }
+    let Some(graph) = graph else {
+        record_missing_frontend(evidence);
+        return;
+    };
+    let changed_paths = scope.changed_paths.clone();
+    let uncovered_paths = changed_paths
+        .iter()
+        .filter(|path| !graph.contains_path(path))
+        .cloned()
+        .collect::<Vec<_>>();
+    if uncovered_paths.is_empty() {
+        let reachable = graph.symbol_reachability_from(changed_paths);
+        record_reachable_paths(manifest, &reachable.paths, evidence);
+        record_reachable_uncertainties(manifest, reachable.uncertainties, evidence);
+        evidence.reached_edges = reachable.edges;
+    } else {
+        record_uncovered_paths(manifest, &uncovered_paths, evidence);
+    }
+}
+
+/// No frontend answered at all: every changed project widens through its declared dependents.
+fn record_missing_frontend(evidence: &mut PlanEvidence<'_>) {
+    let changed = evidence
+        .changed_projects
+        .iter()
+        .copied()
+        .collect::<Vec<_>>();
+    evidence.uncertainty_impacted_projects.extend(&changed);
+    for project in changed {
+        let index = evidence.issues.len();
+        evidence
+            .issue_indexes_by_project
+            .entry(project)
+            .or_default()
+            .push(index);
+    }
+    evidence.issues.push(PlanIssue::new(
+        "reachability-frontend-unavailable",
+        "No precision frontend was available for changed modules; widened through declared project dependencies.",
+        IssueSeverity::Uncertainty,
+        IssueScope::Workspace,
+    ));
+}
+
+/// The frontend answered, but not about these paths: their owners widen through dependents.
+fn record_uncovered_paths<'a>(
+    manifest: &'a TestingManifest,
+    uncovered_paths: &[String],
+    evidence: &mut PlanEvidence<'a>,
+) {
+    let changed = evidence
+        .changed_projects
+        .iter()
+        .copied()
+        .collect::<Vec<_>>();
+    evidence.uncertainty_impacted_projects.extend(changed);
+    for uncovered_path in uncovered_paths {
+        let owning_project = deepest_project_for_path(&manifest.projects, uncovered_path);
+        if let Some(project) = owning_project {
+            let index = evidence.issues.len();
+            evidence
+                .issue_indexes_by_project
+                .entry(project.id.as_str())
+                .or_default()
+                .push(index);
+        }
+        evidence.issues.push(PlanIssue {
+            path: Some(uncovered_path.clone()),
+            project: owning_project.map(|project| project.id.clone()),
+            ..PlanIssue::new(
+                "changed-module-unavailable",
+                format!(
+                    "{uncovered_path} is not covered by the precision frontend; widened through declared project dependencies."
+                ),
+                IssueSeverity::Uncertainty,
+                IssueScope::Module,
+            )
+        });
+    }
+}
+
+/// Proven reachability: every reached module puts its owner in scope, and a reached module with
+/// no owner means the graph reaches outside the manifest, which forces the complete fallback.
+fn record_reachable_paths<'a>(
+    manifest: &'a TestingManifest,
+    paths: &BTreeSet<String>,
+    evidence: &mut PlanEvidence<'a>,
+) {
+    for path in paths {
+        if let Some(project) = deepest_project_for_path(&manifest.projects, path) {
+            evidence
+                .reachability_impacted_projects
+                .insert(project.id.as_str());
+        } else {
+            evidence.full_fallback = true;
+            evidence
+                .full_fallback_issue_indexes
+                .push(evidence.issues.len());
+            evidence.issues.push(PlanIssue {
+                path: Some(path.clone()),
+                ..PlanIssue::new(
+                    "reachable-module-unowned",
+                    format!(
+                        "{path} is reachable but has no declared project owner; selected the complete fallback."
+                    ),
+                    IssueSeverity::Uncertainty,
+                    IssueScope::Workspace,
+                )
+            });
+        }
+    }
+}
+
+/// Where the traversal stopped being provable. An owned uncertainty widens its project; an
+/// unowned one has nothing to widen, so it selects the complete fallback.
+fn record_reachable_uncertainties<'a>(
+    manifest: &'a TestingManifest,
+    uncertainties: Vec<GraphUncertainty>,
+    evidence: &mut PlanEvidence<'a>,
+) {
+    for uncertainty in uncertainties {
+        let owning_project = deepest_project_for_path(&manifest.projects, &uncertainty.path);
+        let position = uncertainty
+            .location
+            .as_ref()
+            .map(|location| location.position);
+        let uncertainty_scope = match uncertainty.scope {
+            GraphUncertaintyScope::WholeWorkspace => IssueScope::Workspace,
+            GraphUncertaintyScope::ReachedModule => IssueScope::Module,
+        };
+        match owning_project {
+            Some(project) => {
+                evidence
+                    .uncertainty_impacted_projects
+                    .insert(project.id.as_str());
+                let index = evidence.issues.len();
+                evidence
+                    .issue_indexes_by_project
+                    .entry(project.id.as_str())
+                    .or_default()
+                    .push(index);
+                evidence.issues.push(PlanIssue {
+                    path: Some(uncertainty.path.clone()),
+                    project: Some(project.id.clone()),
+                    line: position.map(|position| position.line),
+                    column: position.map(|position| position.column),
+                    ..PlanIssue::new(
+                        uncertainty.code,
+                        format!(
+                            "{}: {}; widened through declared project dependencies.",
+                            uncertainty.path, uncertainty.message
+                        ),
+                        IssueSeverity::Uncertainty,
+                        uncertainty_scope,
+                    )
+                });
+            }
+            None => {
+                evidence.full_fallback = true;
+                evidence
+                    .full_fallback_issue_indexes
+                    .push(evidence.issues.len());
+                evidence.issues.push(PlanIssue {
+                    path: Some(uncertainty.path.clone()),
+                    line: position.map(|position| position.line),
+                    column: position.map(|position| position.column),
+                    ..PlanIssue::new(
+                        uncertainty.code,
+                        format!(
+                            "{}: {}; no project owns the uncertainty, so the complete fallback was selected.",
+                            uncertainty.path, uncertainty.message
+                        ),
+                        IssueSeverity::Uncertainty,
+                        uncertainty_scope,
+                    )
+                });
+            }
+        }
+    }
+}

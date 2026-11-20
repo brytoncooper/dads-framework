@@ -1,0 +1,2 @@
+# The harness links installed tools after committing the fixture.
+/node_modules

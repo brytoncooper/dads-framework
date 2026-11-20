@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/plugin-notes.tsbuildinfo",
+    "types": ["node"]
+  },
+  "references": [
+    { "path": "../../packages/foundation/plugin" },
+    { "path": "../../packages/access" },
+    { "path": "../../packages/server/http" },
+    { "path": "../../packages/server/job-queue" }
+  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

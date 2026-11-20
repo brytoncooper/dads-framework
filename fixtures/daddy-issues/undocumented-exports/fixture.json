@@ -1,0 +1,12 @@
+{
+  "signal": "undocumented-exports",
+  "issue": "avoidant-attachment",
+  "why": "The package's only exported declaration has nothing written above it.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/total.ts": "export function total(values: readonly number[]): number {\n  return values.reduce((sum, value) => sum + value, 0);\n}\n"
+  },
+  "expected": {
+    "packages/group/name": 100
+  }
+}

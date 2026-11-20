@@ -1,0 +1,12 @@
+{
+  "signal": "vendor-named-domain",
+  "issue": "you-are-looking-for-a-father-figure",
+  "why": "A domain type is an alias of a vendor's row type.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/order.ts": "import type { Row } from \"vendor-db\";\n\n/** An order, in the store's words. */\nexport type Order = Row;\n"
+  },
+  "expected": {
+    "packages/group/name/src/order.ts": 1
+  }
+}

@@ -1,0 +1,597 @@
+{
+  "schemaVersion": 1,
+  "allTaskIds": [
+    "api:lint",
+    "api:test",
+    "api:typecheck",
+    "core:lint",
+    "core:test",
+    "core:typecheck",
+    "web:lint",
+    "web:test",
+    "web:typecheck"
+  ],
+  "cases": [
+    {
+      "id": "direct-ts-import",
+      "description": "A producer change crosses an export-star boundary without selecting the whole workspace fallback.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/leaf.ts",
+          "contents": "export const leaf = \"direct-change\";\nconsole.log(leaf);\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": [
+        "api:test",
+        "core:lint",
+        "core:test",
+        "web:test"
+      ]
+    },
+    {
+      "id": "direct-named-importer",
+      "description": "A changed direct named importer has one known owning task closure.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "apps/api/src/direct.ts",
+          "contents": "import { leaf } from \"../../../packages/core/src/leaf.js\";\nexport const direct = `${leaf}-changed`;\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:test"]
+    },
+    {
+      "id": "transitive-ts-import",
+      "description": "A transitive re-export chain must not hide its consumer or require a whole-workspace fallback.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/reexport.ts",
+          "contents": "export { leaf } from \"./leaf.js\";\nexport const transitive = true;\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["web:test", "web:typecheck"]
+    },
+    {
+      "id": "unrelated-sibling-export",
+      "description": "An unrelated sibling export must not select downstream tests when no importer reaches it.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/sibling.ts",
+          "contents": "export const unrelatedSibling = false;\n"
+        }
+      ],
+      "requiredTaskIds": ["core:lint", "core:test", "core:typecheck"],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "mixed-export-and-unattributed-hunk",
+      "description": "An unattributed hunk must widen through declared dependents without forcing an unrelated global fallback.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/sibling.ts",
+          "contents": "export const unrelatedSibling = false;\nconst internalChange = \"unattributed\";\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["core:lint"]
+    },
+    {
+      "id": "re-export",
+      "description": "Named re-exports must retain consumer reachability without forcing a whole-workspace fallback.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/reexport.ts",
+          "contents": "export { leaf as renamedLeaf } from \"./leaf.js\";\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": [
+        "api:test",
+        "api:typecheck",
+        "web:test",
+        "web:typecheck"
+      ]
+    },
+    {
+      "id": "export-star",
+      "description": "An export-star must carry changed symbol identity through its known consumers.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/star.ts",
+          "contents": "export * from \"./leaf.js\";\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["web:test", "web:typecheck"]
+    },
+    {
+      "id": "type-only-dependency",
+      "description": "A type-only cross-file dependency must never be silently skipped or require a global fallback.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/types.ts",
+          "contents": "export type LeafOptions = { readonly tag: string; readonly revision: number };\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:typecheck"]
+    },
+    {
+      "id": "static-dynamic-import",
+      "description": "A changed literal dynamic importer has a statically known test closure while project typechecks follow declared dependencies.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/loader.ts",
+          "contents": "export const loadLeaf = () => import(\"./reexport.js\");\n"
+        }
+      ],
+      "requiredTaskIds": ["core:lint", "core:test", "core:typecheck"],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["core:test"]
+    },
+    {
+      "id": "nonliteral-dynamic-import",
+      "description": "A nonliteral dynamic import must widen through the owning project's declared dependency closure.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "apps/api/src/dynamic.ts",
+          "contents": "const part = \"server\"; export const load = () => import(`./${part}.js`);\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "cjs-literal-require",
+      "description": "A changed literal CommonJS require adds an unexpected runtime export and reaches the Web test closure while project typechecks follow declared dependencies.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/runtime.cjs",
+          "contents": "module.exports = require(\"./reexport.js\");\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["web:test"]
+    },
+    {
+      "id": "cjs-nonliteral-require",
+      "description": "A nonliteral CommonJS require removes the dynamic runtime marker and must widen through the Web project's declared dependency closure.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "apps/web/src/dynamic.cjs",
+          "contents": "const target = \"runtime.cjs\"; module.exports = require(`./${target}`);\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["web:test"]
+    },
+    {
+      "id": "alias-import",
+      "description": "An unresolved alias must widen through the API project's declared dependency closure.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "apps/api/src/alias.ts",
+          "contents": "import { leaf } from \"@fixture/core\"; export const alias = leaf;\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:typecheck"]
+    },
+    {
+      "id": "unresolved-local-import",
+      "description": "An unresolved local import must widen through the Web project's declared dependency closure.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "apps/web/src/unresolved.ts",
+          "contents": "import { missing } from \"./missing.js\"; export const unresolved = missing;\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["web:typecheck"]
+    },
+    {
+      "id": "config-file",
+      "description": "A config change is outside source-language proof.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "tooling.config.json",
+          "contents": "{\"revision\":1}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "required",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "lockfile",
+      "description": "A lockfile change is release-relevant and must widen.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "package-lock.json",
+          "contents": "{\"lockfileVersion\":3}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "required",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "unsupported-language",
+      "description": "An unsupported owned source language must widen through the API project's declared dependency closure.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "apps/api/src/query.sql",
+          "contents": "select 1;\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "add-file",
+      "description": "Adding an owned module cannot skip that project's tasks.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/new-module.ts",
+          "contents": "export const added = true;\n"
+        }
+      ],
+      "requiredTaskIds": ["core:lint", "core:test", "core:typecheck"],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "delete-file",
+      "description": "Deleting an owned module widens through every declared dependent when prior facts are unavailable.",
+      "operations": [
+        {
+          "kind": "delete",
+          "path": "packages/core/src/sibling.ts"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "rename-file",
+      "description": "Both ends of a rename are considered and missing prior facts widen through declared dependents.",
+      "operations": [
+        {
+          "kind": "rename",
+          "from": "packages/core/src/sibling.ts",
+          "to": "packages/core/src/renamed-sibling.ts"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "unowned-path",
+      "description": "An unowned workspace path must select the declared complete fallback.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "README.md",
+          "contents": "# changed outside declared ownership\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "required",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    }
+  ]
+}

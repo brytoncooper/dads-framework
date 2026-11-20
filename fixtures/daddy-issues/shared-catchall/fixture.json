@@ -1,0 +1,11 @@
+{
+  "signal": "shared-catchall",
+  "issue": "you-stay-with-people-who-cannot-meet-you",
+  "why": "A package named utils is admitted by four others, one more than the companion allows.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/utils\",\n      \"root\": \"packages/group/toolkit\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    },\n    {\n      \"name\": \"@fixture/one\",\n      \"root\": \"packages/group/one\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": [\n        \"@fixture/utils\"\n      ]\n    },\n    {\n      \"name\": \"@fixture/two\",\n      \"root\": \"packages/group/two\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": [\n        \"@fixture/utils\"\n      ]\n    },\n    {\n      \"name\": \"@fixture/three\",\n      \"root\": \"packages/group/three\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": [\n        \"@fixture/utils\"\n      ]\n    },\n    {\n      \"name\": \"@fixture/four\",\n      \"root\": \"packages/group/four\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": [\n        \"@fixture/utils\"\n      ]\n    }\n  ]\n}\n"
+  },
+  "expected": {
+    "@fixture/utils": 1
+  }
+}

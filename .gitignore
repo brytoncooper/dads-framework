@@ -1,0 +1,38 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+*.tsbuildinfo
+.dads/
+target/
+packages/testing/native/*/bin/
+testing-evidence/
+
+# Machine-local files that must never be committed.
+.claude/settings.local.json
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+
+# Private notes kept beside the checkout and never committed.
+docs/private/
+
+# Agent planning ledgers are private. Keep them beside the checkout; never commit them.
+.agents/plans/
+
+# Private scan patterns stay beside the checkout; never commit them.
+scripts/checks/private-references.local.json
+
+# Internal documentation stays private: plans, decisions, benchmark evidence, agent ledgers.
+docs/plans/
+docs/decisions/
+docs/benchmarks/
+docs/agents/
+
+# The release preparation command copies the repository MIT notice before packing.
+packages/**/LICENSE.md
+packages/testing/native/*/THIRD_PARTY_NOTICES.txt
+packages/testing/native/*/RUST_STANDARD_LIBRARY_NOTICES.html

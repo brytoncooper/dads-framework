@@ -1,0 +1,12 @@
+{
+  "signal": "invariants-files",
+  "issue": "avoidant-attachment",
+  "why": "One declared package records its invariants, and the floor holds that file.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/name\",\n      \"root\": \"packages/group/name\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/name/INVARIANTS.md": "# Invariants\n"
+  },
+  "expected": {
+    "@fixture/name": 1
+  }
+}

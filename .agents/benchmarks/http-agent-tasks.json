@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "name": "locate-route-framework",
+      "path": "packages/server/http/src/lib/route/route-group.ts",
+      "expectedPackage": "@dads-framework/http",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-authorization-bridge",
+      "path": "packages/server/http/src/lib/route/access.ts",
+      "expectedPackage": "@dads-framework/http",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-access-enforcement",
+      "path": "packages/server/http/src/lib/request-pipeline/enforce-access.ts",
+      "expectedPackage": "@dads-framework/http",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-authorization-model",
+      "path": "packages/access/src/core/access-model.ts",
+      "expectedPackage": "@dads-framework/access",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-spicedb-adapter",
+      "path": "packages/server/authorization/src/lib/access/spice-db-authorization.ts",
+      "expectedPackage": "@dads-framework/authorization",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-authorization-outbox",
+      "path": "packages/server/authorization/src/lib/access-changes/apply-after-commit.ts",
+      "expectedPackage": "@dads-framework/authorization",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-doctor-gate",
+      "path": "packages/foundation/toolbox/src/doctor/doctor-gate.ts",
+      "expectedPackage": "@dads-framework/toolbox",
+      "maxOutputCharacters": 700
+    },
+    {
+      "name": "locate-boundary-proof",
+      "path": "fixtures/boundary-verification/src/read-document.ts",
+      "expectedPackage": "@dads-fixture/boundary-verification",
+      "maxOutputCharacters": 700
+    }
+  ]
+}

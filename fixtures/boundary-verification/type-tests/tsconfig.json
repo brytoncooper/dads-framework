@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "skipLibCheck": false,
+    "noEmit": true,
+    "rootDir": ".."
+  },
+  "include": ["consumer.ts", "../src/consumer-types.ts"]
+}

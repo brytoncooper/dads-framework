@@ -1,0 +1,47 @@
+{
+  "signal": "ci-duration-trend",
+  "issue": "dad-has-issues-too",
+  "why": "The gate's last three runs took twelve, eighteen and fourteen minutes, and the median is the number somebody can point at when it doubles.",
+  "files": {},
+  "commands": {
+    "git config --get remote.origin.url": {
+      "stdout": "https://github.com/fixture-owner/fixture-repo.git\n"
+    }
+  },
+  "responses": {
+    "https://api.github.com/repos/fixture-owner/fixture-repo": {
+      "status": 200,
+      "body": { "default_branch": "main" }
+    },
+    "https://api.github.com/repos/fixture-owner/fixture-repo/branches/main/protection": {
+      "status": 200,
+      "body": { "required_pull_request_reviews": {} }
+    },
+    "https://api.github.com/repos/fixture-owner/fixture-repo/actions/runs?per_page=20&status=completed": {
+      "status": 200,
+      "body": {
+        "total_count": 3,
+        "workflow_runs": [
+          {
+            "name": "verify",
+            "run_started_at": "2026-09-01T10:00:00Z",
+            "updated_at": "2026-09-01T10:12:00Z"
+          },
+          {
+            "name": "verify",
+            "run_started_at": "2026-09-02T10:00:00Z",
+            "updated_at": "2026-09-02T10:18:00Z"
+          },
+          {
+            "name": "verify",
+            "run_started_at": "2026-09-03T10:00:00Z",
+            "updated_at": "2026-09-03T10:14:00Z"
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "verify": 14
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/foundation/toolbox"
+    },
+    {
+      "path": "./packages/foundation/dev"
+    },
+    {
+      "path": "./packages/foundation/create-dads"
+    },
+    {
+      "path": "./packages/testing/core"
+    },
+    {
+      "path": "./packages/testing/import-nx"
+    },
+    {
+      "path": "./packages/testing/path-aliases"
+    },
+    {
+      "path": "./packages/testing/vitest"
+    },
+    {
+      "path": "./packages/foundation/plugin"
+    },
+    {
+      "path": "./fixtures/boundary-verification"
+    },
+    {
+      "path": "./fixtures/plugin-notes"
+    },
+    {
+      "path": "./fixtures/stale-save"
+    },
+    {
+      "path": "./fixtures/testing"
+    },
+    {
+      "path": "./apps/workbench"
+    },
+    {
+      "path": "./packages/server/errors"
+    },
+    {
+      "path": "./packages/server/clock"
+    },
+    {
+      "path": "./packages/server/http"
+    },
+    {
+      "path": "./packages/server/postgres"
+    },
+    {
+      "path": "./packages/server/postgres-access"
+    },
+    {
+      "path": "./packages/server/authorization"
+    },
+    {
+      "path": "./packages/server/migrations"
+    },
+    {
+      "path": "./packages/server/authorization-migration"
+    },
+    {
+      "path": "./packages/server/audit-actor"
+    },
+    {
+      "path": "./packages/server/request-work"
+    },
+    {
+      "path": "./packages/server/telemetry"
+    },
+    {
+      "path": "./packages/server/telemetry-core"
+    },
+    {
+      "path": "./packages/server/diagnostics"
+    },
+    {
+      "path": "./packages/server/health"
+    },
+    {
+      "path": "./packages/server/event-bus"
+    },
+    {
+      "path": "./packages/server/job-queue"
+    },
+    {
+      "path": "./packages/server/job-queue-core"
+    },
+    {
+      "path": "./packages/server/csv"
+    },
+    {
+      "path": "./packages/server/pdf"
+    },
+    {
+      "path": "./packages/server/object-storage"
+    },
+    {
+      "path": "./packages/server/object-storage-core"
+    },
+    {
+      "path": "./packages/server/email-sender"
+    },
+    {
+      "path": "./packages/server/email-sender-core"
+    },
+    {
+      "path": "./packages/server/email-templates"
+    },
+    {
+      "path": "./packages/server/email-delivery"
+    },
+    {
+      "path": "./packages/server/cross-domain-references"
+    },
+    {
+      "path": "./packages/server/audit"
+    },
+    {
+      "path": "./packages/server/tenants"
+    },
+    {
+      "path": "./packages/server/identity"
+    },
+    {
+      "path": "./packages/server/identity-better-auth"
+    },
+    {
+      "path": "./packages/server/feature-flags"
+    },
+    {
+      "path": "./packages/server/feature-flags-postgres"
+    },
+    {
+      "path": "./packages/server/feature-flags-http"
+    },
+    {
+      "path": "./packages/client/feature-flags"
+    },
+    {
+      "path": "./packages/contract"
+    },
+    {
+      "path": "./packages/access"
+    },
+    {
+      "path": "./packages/client/request-transport"
+    },
+    {
+      "path": "./packages/client/telemetry"
+    },
+    {
+      "path": "./packages/client/telemetry-core"
+    },
+    {
+      "path": "./packages/client/xlsx"
+    },
+    {
+      "path": "./packages/web/ui"
+    },
+    {
+      "path": "./packages/web/copy"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/stale-save.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [
+    { "path": "../../packages/access" },
+    { "path": "../../packages/contract" },
+    { "path": "../../packages/server/errors" },
+    { "path": "../../packages/server/http" },
+    { "path": "../../packages/server/postgres" }
+  ]
+}

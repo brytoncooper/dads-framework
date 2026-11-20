@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "name": "orders",
+      "root": "domains/orders",
+      "responsibility": "Owns order reservation and its stock port.",
+      "allowedDependencies": ["product-id"],
+      "verification": [],
+      "skills": []
+    },
+    {
+      "name": "inventory",
+      "root": "domains/inventory",
+      "responsibility": "Owns available stock and its reservation implementation.",
+      "allowedDependencies": ["product-id"],
+      "verification": [],
+      "skills": []
+    },
+    {
+      "name": "product-id",
+      "root": "libraries/product-id",
+      "responsibility": "Owns shared identifiers used in both domains.",
+      "allowedDependencies": [],
+      "verification": [],
+      "skills": []
+    },
+    {
+      "name": "api-composition",
+      "root": "src/composition",
+      "responsibility": "Binds providers and selects each API's routes.",
+      "allowedDependencies": ["orders", "inventory", "@dads-framework/plugin"],
+      "verification": [],
+      "skills": []
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "signal": "stagnant-debt",
+  "issue": "dad-has-issues-too",
+  "why": "The ceiling was recorded on 2025-01-01 and no commit since has changed it, so on 2026-09-06 the exception has stood for 613 days without moving toward its threshold.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "seed the ceiling for the legacy handler",
+      "date": "2025-01-01T00:00:00Z",
+      "files": {
+        ".agents/source-budgets.json": "{\n  \"schemaVersion\": 1,\n  \"exempt\": [],\n  \"ceilings\": {\n    \"fileLines\": {\n      \"apps/api/src/legacy.ts\": {\n        \"mark\": 612,\n        \"reason\": \"seeded 2025-01-01 before the gate existed\"\n      }\n    }\n  },\n  \"floors\": {}\n}\n"
+      }
+    }
+  ],
+  "expected": {
+    "ceilings/fileLines/apps/api/src/legacy.ts": 613
+  }
+}

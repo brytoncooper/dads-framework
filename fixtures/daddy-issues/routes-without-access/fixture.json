@@ -1,0 +1,12 @@
+{
+  "signal": "routes-without-access",
+  "issue": "avoidant-attachment",
+  "why": "A route declares no access, so nobody said who may call it.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "const routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    params: thingParams,\n    response: thingResponse,\n    handler: () => readThing(),\n  }),\n];\n"
+  },
+  "expected": {
+    "fixtures/api/src/routes.ts:getThing": 1
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "signal": "wrapper-without-conformance",
+  "issue": "the-paper-wall",
+  "why": "An adapter binds a vendor to a core package that owns no conformance suite.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/capability\",\n      \"root\": \"packages/group/capability\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    },\n    {\n      \"name\": \"@fixture/binding-adapter\",\n      \"root\": \"packages/group/binding-adapter\",\n      \"kind\": \"adapter\",\n      \"allowedDependencies\": [\n        \"@fixture/capability\"\n      ]\n    }\n  ]\n}\n",
+    "packages/group/binding-adapter/src/bind.ts": "import Stripe from \"stripe\";\n\nconst client = Stripe;\n"
+  },
+  "expected": {
+    "@fixture/binding-adapter": 1
+  }
+}

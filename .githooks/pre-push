@@ -1,0 +1,4 @@
+#!/bin/sh
+# Git supplies the exact refs on stdin. The verifier preserves that input for
+# the optional local hook after the proof gate passes.
+exec node scripts/verify-pre-push.mjs "$@"

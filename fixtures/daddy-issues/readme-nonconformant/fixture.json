@@ -1,0 +1,13 @@
+{
+  "signal": "readme-nonconformant",
+  "issue": "avoidant-attachment",
+  "why": "A declared package carries a README, and the conformance list that would hold it to the template names nobody at all.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/name\",\n      \"root\": \"packages/group/name\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/name/README.md": "# @fixture/name\n\nThe package nothing holds to a template.\n",
+    "docs/readme-conformance.json": "{\n  \"packages\": []\n}\n"
+  },
+  "expected": {
+    "@fixture/name": 1
+  }
+}

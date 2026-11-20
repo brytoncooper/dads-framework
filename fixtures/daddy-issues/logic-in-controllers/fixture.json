@@ -1,0 +1,13 @@
+{
+  "signal": "logic-in-controllers",
+  "issue": "failure-to-launch",
+  "why": "A handler does the work itself, twenty-two statements past delegating it.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "const routes = [\n  getRoute({\n    operation: \"getThing\",\n    path: \"/things/:thingId\",\n    access: requireThing,\n    params: thingParams,\n    response: thingResponse,\n    handler: () => {\n      const step1 = 1;\n      const step2 = 2;\n      const step3 = 3;\n      const step4 = 4;\n      const step5 = 5;\n      const step6 = 6;\n      const step7 = 7;\n      const step8 = 8;\n      const step9 = 9;\n      const step10 = 10;\n      const step11 = 11;\n      const step12 = 12;\n      const step13 = 13;\n      const step14 = 14;\n      const step15 = 15;\n      const step16 = 16;\n      const step17 = 17;\n      const step18 = 18;\n      const step19 = 19;\n      const step20 = 20;\n      const step21 = 21;\n      return step1;\n    },\n  }),\n];\n",
+    "fixtures/api/src/denials.ts": "const denialProofRecorded = true;\n"
+  },
+  "expected": {
+    "fixtures/api/src/routes.ts:getThing": 22
+  }
+}

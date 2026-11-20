@@ -1,0 +1,11 @@
+{
+  "signal": "exempt-globs",
+  "issue": "gaslighting",
+  "why": "One exemption names a directory of hand-written code, so everything under it is absent from every count without being absent from the repository.",
+  "files": {
+    ".agents/source-budgets.json": "{\n  \"schemaVersion\": 1,\n  \"exempt\": [\"packages/group/name/src/legacy/**\"],\n  \"ceilings\": {},\n  \"floors\": {}\n}\n"
+  },
+  "expected": {
+    "packages/group/name/src/legacy/**": 1
+  }
+}

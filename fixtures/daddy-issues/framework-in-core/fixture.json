@@ -1,0 +1,12 @@
+{
+  "signal": "framework-in-core",
+  "issue": "you-are-looking-for-a-father-figure",
+  "why": "A core package imports an ORM, which then owns the words the domain uses.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/domain\",\n      \"root\": \"packages/group/domain\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/domain/src/rows.ts": "import { PrismaClient } from \"@prisma/client\";\n\nconst rows = PrismaClient;\n"
+  },
+  "expected": {
+    "@fixture/domain": 1
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "signal": "generated-tables-hand-edited",
+  "issue": "gaslighting",
+  "why": "A generated table module gains a column in a commit that changed no migration; the later brand annotation is the one hand edit the generator reads back.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "create orders and generate its table",
+      "date": "2026-07-01T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260701000000_create_orders.migration.ts": "export const up = \"create table orders (id text)\";\n",
+        "packages/store/src/tables/orders.ts": "// GENERATED - DO NOT EDIT\nimport { pgTable, text } from \"drizzle-orm/pg-core\";\n\nexport const orders = pgTable(\"orders\", {\n  id: text(\"id\"),\n});\n"
+      }
+    },
+    {
+      "message": "add a note column to the table",
+      "date": "2026-07-03T00:00:00Z",
+      "files": {
+        "packages/store/src/tables/orders.ts": "// GENERATED - DO NOT EDIT\nimport { pgTable, text } from \"drizzle-orm/pg-core\";\n\nexport const orders = pgTable(\"orders\", {\n  id: text(\"id\"),\n  note: text(\"note\"),\n});\n"
+      }
+    },
+    {
+      "message": "brand the order id",
+      "date": "2026-07-05T00:00:00Z",
+      "files": {
+        "packages/store/src/tables/orders.ts": "// GENERATED - DO NOT EDIT\nimport { pgTable, text } from \"drizzle-orm/pg-core\";\nimport type { OrderId } from \"./order-id.js\";\n\nexport const orders = pgTable(\"orders\", {\n  id: text(\"id\").$type<OrderId>(),\n  note: text(\"note\"),\n});\n"
+      }
+    }
+  ],
+  "expected": {
+    "packages/store/src/tables/orders.ts": 1
+  }
+}

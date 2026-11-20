@@ -1,0 +1,3 @@
+import { createInventory } from "@app/inventory";
+
+export const inventoryInsideOrders = createInventory({ "sample-product": 1 });

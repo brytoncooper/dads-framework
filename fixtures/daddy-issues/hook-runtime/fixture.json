@@ -1,0 +1,12 @@
+{
+  "signal": "hook-runtime",
+  "issue": "dad-has-issues-too",
+  "why": "Local timing samples compare median commit and cached-push durations with their respective budgets.",
+  "files": {
+    ".dads/hook-timings.jsonl": "{\"hook\":\"pre-commit\",\"durationMs\":9000}\n{\"hook\":\"pre-commit\",\"durationMs\":11000}\n{\"hook\":\"pre-push\",\"durationMs\":75000}\nmalformed sample\n"
+  },
+  "expected": {
+    "pre-commit": 100,
+    "pre-push": 125
+  }
+}

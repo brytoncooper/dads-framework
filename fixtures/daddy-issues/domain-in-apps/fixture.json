@@ -1,0 +1,12 @@
+{
+  "signal": "domain-in-apps",
+  "issue": "you-repeat-the-cycle",
+  "why": "An application module opens persistence and then runs a body of work.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "apps/service/src/orders.ts": "import type { Client } from \"pg\";\n\nfunction loadOrders(client: Client): number {\n  const first = 1;\n  const second = first + 1;\n  const third = second + 1;\n  const fourth = third + 1;\n  void client;\n  return fourth;\n}\n\nvoid loadOrders;\n"
+  },
+  "expected": {
+    "apps/service": 1
+  }
+}

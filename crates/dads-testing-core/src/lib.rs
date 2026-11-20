@@ -1,0 +1,26 @@
+//! The language-neutral testing core: one protocol-v1 request in, one plan or run out.
+//!
+//! The wire contract lives in `protocol`; everything else is how the answer is reached — the
+//! manifest that declares the workspace, the scope git resolves, the plan the evidence selects,
+//! and the scheduler that runs it.
+mod execute;
+mod git;
+pub mod graph;
+mod manifest;
+mod plan;
+mod protocol;
+mod scheduler;
+mod scope;
+mod task_causes;
+
+pub use execute::{
+    execute_request, execute_request_with_graph, graph_analysis_can_change_the_plan,
+};
+pub use protocol::{
+    IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
+    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope, RunCounts,
+    RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult,
+};
+
+#[cfg(test)]
+mod tests;

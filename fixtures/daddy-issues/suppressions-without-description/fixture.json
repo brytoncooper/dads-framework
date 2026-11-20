@@ -1,0 +1,11 @@
+{
+  "signal": "suppressions-without-description",
+  "issue": "gaslighting",
+  "why": "A negative type test suppresses the checker with four characters of explanation, which is the one place the suppression is legitimate and the description is the whole of what makes it so.",
+  "files": {
+    "apps/thing/type-tests/contract.ts": "// @ts-expect-error nope\nexport const value: number = \"one\";\n"
+  },
+  "expected": {
+    "apps/thing/type-tests/contract.ts": 1
+  }
+}

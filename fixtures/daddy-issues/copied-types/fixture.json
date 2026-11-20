@@ -1,0 +1,13 @@
+{
+  "signal": "copied-types",
+  "issue": "anxious-attachment",
+  "why": "Two packages export a type of the same name with the same fields.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/one/src/money.ts": "/** An amount of money. */\nexport type Money = {\n  readonly amount: number;\n  readonly currency: string;\n};\n",
+    "packages/group/two/src/money.ts": "/** An amount of money. */\nexport type Money = {\n  readonly amount: number;\n  readonly currency: string;\n};\n"
+  },
+  "expected": {
+    "Money": 1
+  }
+}

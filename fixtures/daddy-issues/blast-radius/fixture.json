@@ -1,0 +1,13 @@
+{
+  "signal": "blast-radius",
+  "issue": "anxious-attachment",
+  "why": "One package is imported by another, which is the whole of what this reports.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/core\",\n      \"root\": \"packages/group/core\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    },\n    {\n      \"name\": \"@fixture/consumer\",\n      \"root\": \"packages/group/consumer\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": [\n        \"@fixture/core\"\n      ]\n    }\n  ]\n}\n",
+    "packages/group/consumer/src/use.ts": "import \"@fixture/core\";\n"
+  },
+  "expected": {
+    "@fixture/core": 1,
+    "@fixture/consumer": 0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "signal": "soundness-cases",
+  "issue": "commitment-issues",
+  "why": "The sealed selection corpus declares two cases.",
+  "files": {
+    "fixtures/testing-soundness/cases.json": "{\n  \"cases\": [\n    {\n      \"id\": \"one\"\n    },\n    {\n      \"id\": \"two\"\n    }\n  ]\n}\n"
+  },
+  "expected": {
+    "cases": 2
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "signal": "vendor-outside-adapter",
+  "issue": "anxious-attachment",
+  "why": "A core package imports a vendor the integration package declares, and never declares it itself.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/keeper\",\n      \"root\": \"packages/group/keeper\",\n      \"kind\": \"adapter\",\n      \"allowedDependencies\": [\n        \"stripe\"\n      ]\n    },\n    {\n      \"name\": \"@fixture/reacher\",\n      \"root\": \"packages/group/reacher\",\n      \"kind\": \"core\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/reacher/src/reach.ts": "import Stripe from \"stripe\";\n\nconst client = Stripe;\n"
+  },
+  "expected": {
+    "@fixture/keeper": 0,
+    "@fixture/reacher": 1
+  }
+}

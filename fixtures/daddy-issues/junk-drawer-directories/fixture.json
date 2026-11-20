@@ -1,0 +1,11 @@
+{
+  "signal": "junk-drawer-directories",
+  "issue": "you-repeat-the-cycle",
+  "why": "One file has collected in a directory whose name says only that nobody owned it.",
+  "files": {
+    "packages/group/name/src/utils/format.ts": "export const format = \"iso\";\n"
+  },
+  "expected": {
+    "packages/group/name/src/utils": 1
+  }
+}

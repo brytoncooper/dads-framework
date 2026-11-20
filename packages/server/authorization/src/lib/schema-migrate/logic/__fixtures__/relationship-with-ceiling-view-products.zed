@@ -1,0 +1,17 @@
+definition user {}
+
+definition organizations/organization {
+  relation admin: user
+  relation member: user
+  permission view_products = admin + member
+  permission manage_orders = admin
+}
+
+definition organizations/relationship {
+  relation owner: organizations/organization
+  relation counterparty: organizations/organization
+  relation ceiling_create_orders: organizations/organization#member
+  relation ceiling_view_products: organizations/organization#member
+  permission create_orders = ceiling_create_orders & counterparty->manage_orders
+  permission view_exposed_products = owner->view_products + counterparty->view_products
+}

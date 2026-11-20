@@ -1,0 +1,66 @@
+{
+  "name": "@dads-framework/pdf",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./pdfmake": {
+      "types": "./dist/pdfmake.d.ts",
+      "default": "./dist/pdfmake.js"
+    }
+  },
+  "dadsConformance": {
+    "capability": "Fixed-page PDF output with portable Helvetica text and explicit dimensions",
+    "suite": "test-support/fixed-page-pdf-laws.ts",
+    "law": "runFixedPagePdfLaws",
+    "runs": [
+      {
+        "test": "src/lib/fixed-page-pdf-conformance.test.ts",
+        "provider": {
+          "module": "./pdfmake-fixed-page-renderer.js",
+          "name": "createFixedPagePdfRenderer"
+        }
+      },
+      {
+        "test": "src/lib/fixed-page-pdf-conformance.test.ts",
+        "provider": {
+          "module": "../../test-support/reference-page-pdf-writer.js",
+          "name": "openReferencePagePdfWriter"
+        }
+      }
+    ]
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@napi-rs/canvas": "0.1.100",
+    "pdfjs-dist": "5.4.530",
+    "pdfmake": "^0.3.11"
+  },
+  "devDependencies": {
+    "@types/pdfmake": "^0.3.3",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/pdf"
+  }
+}

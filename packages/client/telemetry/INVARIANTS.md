@@ -1,0 +1,13 @@
+# Client telemetry invariants
+
+Rules about reporting a fault from a client: what may be sent, and what
+reporting is never allowed to do.
+
+- INV-CLIENTTELEMETRY-1: Reporting never throws and never returns a promise a caller could await, so an error handler cannot fail while handling an error — enforced by the `void` return on `ClientTelemetry.reportError` and the wrapped bodies in `src/lib/local-client-telemetry.ts`, `src/lib/local-client-telemetry.test.ts`
+- INV-CLIENTTELEMETRY-2: An expected refusal is never reported — an expired session, any 4xx, and an aborted request are the product working, not faults — enforced by `src/lib/logic/should-report-failure.ts`, `src/lib/logic/should-report-failure.test.ts`
+- INV-CLIENTTELEMETRY-3: A fault's grouping key never depends on its message, so wording changes and interpolated values cannot fragment a group — enforced by `src/lib/logic/describe-client-error.ts`, `src/lib/logic/describe-client-error.test.ts`
+- INV-CLIENTTELEMETRY-4: A frame's file is the path only; query strings are stripped before a frame is reported — enforced by `src/lib/logic/describe-client-error.ts`, `src/lib/logic/describe-client-error.test.ts`
+- INV-CLIENTTELEMETRY-5: A client asserts no identity; the actor on a stored row is the one the server resolved for the reporting request — enforced by the absence of an `identify` member on `ClientTelemetry` and by `packages/server/audit/src/lib/client-diagnostics/logic/client-diagnostic-row.ts`, `packages/server/audit/src/lib/client-diagnostics/logic/client-diagnostic-row.test.ts`
+- INV-CLIENTTELEMETRY-6: Session replay masking is not per-call overridable — `sentryConfiguration` is the only source of the recorder's options, it takes no argument that can loosen them, and every text node, input and media element is masked with no request detail or body captured — enforced by `src/lib/logic/sentry-configuration.ts`, `src/lib/logic/sentry-configuration.test.ts`, `src/lib/sentry-client-telemetry.test.ts`
+- INV-CLIENTTELEMETRY-7: A vendor is an additional destination and never a replacement — every driver selection that includes a vendor also includes our own API, and a vendor that throws, hangs or never loads costs our own record nothing — enforced by `src/lib/create-client-telemetry.ts`, `src/lib/fan-out-client-telemetry.ts`, `src/lib/fan-out-client-telemetry.test.ts`
+- INV-CLIENTTELEMETRY-8: A vendor SDK is never fetched by a build that was not configured with one — the import is dynamic and reached only through a driver the factory does not construct without a DSN — enforced by `src/lib/sentry-client-telemetry.ts`

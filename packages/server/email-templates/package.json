@@ -1,0 +1,71 @@
+{
+  "name": "@dads-framework/email-templates",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dadsConformance": {
+    "capability": "Paired HTML and plain-text rendering of parsed email content",
+    "suite": "test-support/email-document-renderer-laws.ts",
+    "law": "runEmailDocumentRendererLaws",
+    "runs": [
+      {
+        "test": "src/lib/email-document-renderer-conformance.test.ts",
+        "provider": {
+          "module": "./email-document-renderer.js",
+          "name": "createReactEmailDocumentRenderer"
+        }
+      },
+      {
+        "test": "src/lib/email-document-renderer-conformance.test.ts",
+        "provider": {
+          "module": "../../test-support/preview-email-document-renderer.js",
+          "name": "openPreviewEmailDocumentRenderer"
+        }
+      }
+    ]
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "~22.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.23.12",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/email-templates"
+  }
+}

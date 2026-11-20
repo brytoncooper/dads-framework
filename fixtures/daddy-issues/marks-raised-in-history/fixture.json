@@ -1,0 +1,32 @@
+{
+  "signal": "marks-raised-in-history",
+  "issue": "gaslighting",
+  "why": "The file ceiling was recorded at 410 and the next commit records it at 420, which is the one move a ratchet is not allowed to make. Two floors fall in the same commit: one says where its count went and the key it names rose by as much, which is a split rather than a loosening, and one names a key that rose by half the fall, which is not.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "record the file ceiling and the suites",
+      "date": "2026-08-01T00:00:00Z",
+      "files": {
+        ".agents/source-budgets.json": "{\n  \"schemaVersion\": 1,\n  \"exempt\": [],\n  \"ceilings\": {\n    \"fileLines\": {\n      \"apps/api/src/handler.ts\": {\n        \"mark\": 410,\n        \"reason\": \"recorded 2026-08-01, split before the next change\"\n      }\n    }\n  },\n  \"floors\": {\n    \"typeTestNegativeCases\": {\n      \"packages/quiet\": {\n        \"floor\": 12,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      },\n      \"packages/short\": {\n        \"floor\": 30,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      },\n      \"packages/short-target\": {\n        \"floor\": 5,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      },\n      \"packages/split\": {\n        \"floor\": 27,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      },\n      \"packages/taken\": {\n        \"floor\": 4,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      }\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "message": "raise the ceiling the handler hit, and split a package",
+      "date": "2026-08-15T00:00:00Z",
+      "files": {
+        ".agents/source-budgets.json": "{\n  \"schemaVersion\": 1,\n  \"exempt\": [],\n  \"ceilings\": {\n    \"fileLines\": {\n      \"apps/api/src/handler.ts\": {\n        \"mark\": 420,\n        \"reason\": \"recorded 2026-08-15, split before the next change\"\n      }\n    }\n  },\n  \"floors\": {\n    \"typeTestNegativeCases\": {\n      \"packages/quiet\": {\n        \"floor\": 9,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      },\n      \"packages/short\": {\n        \"floor\": 10,\n        \"movedTo\": \"packages/short-target\",\n        \"reason\": \"20 cases moved to packages/short-target on 2026-08-15\"\n      },\n      \"packages/short-target\": {\n        \"floor\": 15,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      },\n      \"packages/split\": {\n        \"floor\": 4,\n        \"movedTo\": \"packages/taken\",\n        \"reason\": \"23 cases moved to packages/taken on 2026-08-15\"\n      },\n      \"packages/taken\": {\n        \"floor\": 27,\n        \"reason\": \"recorded 2026-08-01, the suite this package earned\"\n      }\n    }\n  }\n}\n"
+      }
+    }
+  ],
+  "expected": {
+    "ceilings/fileLines/apps/api/src/handler.ts": 1,
+    "floors/typeTestNegativeCases/packages/quiet": 1,
+    "floors/typeTestNegativeCases/packages/short": 1,
+    "floors/typeTestNegativeCases/packages/short-target": 0,
+    "floors/typeTestNegativeCases/packages/split": 0,
+    "floors/typeTestNegativeCases/packages/taken": 0
+  }
+}

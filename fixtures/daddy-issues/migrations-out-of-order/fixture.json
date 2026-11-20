@@ -1,0 +1,45 @@
+{
+  "signal": "migrations-out-of-order",
+  "issue": "disorganized-attachment",
+  "why": "A branch adds a migration stamped before the newest one its journal already holds on the base line, and another names a prerequisite that does not exist, so no database can say which order shipped.",
+  "files": {
+    ".githooks/pre-commit": "#!/bin/sh\nexit 0\n"
+  },
+  "history": [
+    {
+      "message": "create orders",
+      "date": "2026-07-01T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260701000000_create_orders.migration.ts": "export const up = \"create table orders\";\n"
+      }
+    },
+    {
+      "message": "add order totals",
+      "date": "2026-07-05T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260705000000_add_totals.migration.ts": "export const up = \"alter table orders add total\";\n"
+      },
+      "base": true
+    },
+    {
+      "message": "add order notes from an older branch",
+      "date": "2026-07-08T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260703000000_add_notes.migration.ts": "export const up = \"alter table orders add notes\";\n"
+      }
+    },
+    {
+      "message": "index orders after a migration nobody wrote",
+      "date": "2026-07-09T00:00:00Z",
+      "files": {
+        "packages/store/src/migrations/20260709000000_index_orders.migration.ts": "export const dependsOn = [\"20260601000000_missing_table.migration\"];\n\nexport const up = \"create index on orders\";\n"
+      }
+    }
+  ],
+  "expected": {
+    "packages/store/src/migrations/20260701000000_create_orders.migration.ts": 0,
+    "packages/store/src/migrations/20260705000000_add_totals.migration.ts": 0,
+    "packages/store/src/migrations/20260703000000_add_notes.migration.ts": 1,
+    "packages/store/src/migrations/20260709000000_index_orders.migration.ts": 1
+  }
+}

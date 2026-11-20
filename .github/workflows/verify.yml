@@ -1,0 +1,140 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  # Release evidence compares tool versions exactly across independent shards.
+  SOUNDNESS_NODE_VERSION: "24.22.3"
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every job runs every proof it owns on every push. Nothing is cached across
+# runs and nothing is skipped on the basis of what changed; the only cache is
+# rust-cache, which holds compiled dependencies and never a result. Wall clock
+# comes from running the independent proofs on separate runners at once and
+# from splitting the soundness corpus into shards.
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify
+        env:
+          DADS_VERIFY_JOBS: 2
+          VITEST_MAX_WORKERS: 2
+          DADS_VERIFY_TEST_PROGRESS: 1
+        run: npm run verify -- --no-cache --require-receipt
+      - name: Source budgets against the base
+        run: node scripts/checks/check-source-budgets.mjs --base origin/${{ github.base_ref || 'main' }}
+
+  # The adoption proofs pack every package, install it into throwaway
+  # projects, and use it the way an adopter would.
+  adoption:
+    name: adoption proofs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Adoption proofs
+        # The runner has four cores and mostly waits on npm; the auto budget
+        # would keep one in reserve, which buys nothing here.
+        env:
+          DADS_ADOPTION_JOBS: 4
+        run: npm run verify:adoption
+
+  rust:
+    name: rust
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.96.0"
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Rust formatting
+        run: cargo fmt --all --check
+      - name: Rust lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Rust tests
+        run: cargo test --workspace
+
+  # Each shard builds the engine itself (cached dependencies make that about
+  # fifteen seconds) and runs its third of the sealed corpus; the shards are
+  # partitioned deterministically by case id, and the evidence job refuses a
+  # union that does not cover every case.
+  corpus:
+    name: soundness corpus ${{ matrix.shard }}/3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.SOUNDNESS_NODE_VERSION }}
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@v2
+      - name: Install dependencies
+        run: npm ci
+      # A debug engine runs the corpus in the same time as a release one (the
+      # cases' cost is the child tool processes, not the engine), and it
+      # compiles in a fraction of the time; the corpus proves the engine's
+      # decisions, not its speed.
+      - name: Build dad-test
+        run: cargo build -p dad-test
+      - name: Testing soundness corpus
+        run: npm run testing:soundness -- --dad-test target/debug/dad-test --shard ${{ matrix.shard }}/3 --output soundness-${{ matrix.shard }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soundness-${{ matrix.shard }}
+          path: soundness-${{ matrix.shard }}.json
+          retention-days: 7
+
+  release-evidence:
+    name: testing release evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: corpus
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.SOUNDNESS_NODE_VERSION }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: soundness-*
+          merge-multiple: true
+      - name: Testing release evidence
+        run: node scripts/testing/verify-testing-release.mjs --soundness soundness-1.json --soundness soundness-2.json --soundness soundness-3.json

@@ -1,0 +1,11 @@
+{
+  "signal": "ts-suppressions",
+  "issue": "daddy-issues",
+  "why": "One module silences the type checker outside a type-tests directory.",
+  "files": {
+    "src/hatch.ts": "// @ts-expect-error the specimen is wrong on purpose\nexport const value: number = \"one\";\n"
+  },
+  "expected": {
+    "src/hatch.ts": 1
+  }
+}

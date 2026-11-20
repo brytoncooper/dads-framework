@@ -1,0 +1,243 @@
+//! The packed representation: one sorted intern table, u32 module/import IDs, packed reverse
+//! adjacency, and the lookups that read it back as public facts.
+use super::pack;
+use super::types::{
+    ChangedModuleEvidence, GraphUncertainty, GraphUncertaintyScope, ImportFact, ImportKind,
+    LineColumn, ModuleNode, SourceLocation, SourceSpan, SymbolFact,
+};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct CModule {
+    pub(super) path: u32,
+    pub(super) language: u32,
+    pub(super) declarations: Vec<(u32, SourceSpan)>,
+    pub(super) references: Vec<(u32, SourceSpan)>,
+    pub(super) start: u32,
+    pub(super) count: u32,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct CImport {
+    pub(super) source: u32,
+    pub(super) specifier: u32,
+    pub(super) span: SourceSpan,
+    pub(super) kind: ImportKind,
+    pub(super) type_only: bool,
+    pub(super) requested: Vec<u32>,
+    pub(super) namespace: bool,
+    #[serde(default)]
+    pub(super) reexport_all: bool,
+    pub(super) target: Option<u32>,
+    #[serde(default)]
+    pub(super) position: Option<LineColumn>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct CUncertainty {
+    pub(super) path: u32,
+    pub(super) code: u32,
+    pub(super) message: u32,
+    #[serde(default)]
+    pub(super) scope: GraphUncertaintyScope,
+    #[serde(default)]
+    pub(super) location: Option<SourceLocation>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct CChange {
+    pub(super) path: u32,
+    pub(super) exports: Vec<u32>,
+    pub(super) complete: bool,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DependencyGraph {
+    pub(super) strings: Vec<String>,
+    pub(super) modules: Vec<CModule>,
+    pub(super) imports: Vec<CImport>,
+    pub(super) reverse_offsets: Vec<u32>,
+    pub(super) reverse_edges: Vec<u32>,
+    pub(super) uncertainties: Vec<CUncertainty>,
+    pub(super) changes: Vec<CChange>,
+}
+
+impl DependencyGraph {
+    pub fn new(nodes: Vec<ModuleNode>, uncertainties: Vec<GraphUncertainty>) -> Self {
+        Self::pack(nodes, uncertainties, Vec::new())
+    }
+    pub fn with_changed_module_evidence(mut self, changes: Vec<ChangedModuleEvidence>) -> Self {
+        self.changes = self.pack_changes(changes);
+        self
+    }
+    pub fn contains_path(&self, path: &str) -> bool {
+        self.module_index(path).is_some()
+    }
+    pub fn has_uncertainty(&self) -> bool {
+        !self.uncertainties.is_empty()
+    }
+    pub fn materialize_modules(&self) -> Vec<ModuleNode> {
+        (0..self.modules.len())
+            .filter_map(|i| self.materialize(i as u32))
+            .collect()
+    }
+    pub fn patch_modules(
+        self,
+        nodes: Vec<ModuleNode>,
+        changes: Vec<ChangedModuleEvidence>,
+        uncertainties: Vec<GraphUncertainty>,
+    ) -> Self {
+        let mut all = self
+            .materialize_modules()
+            .into_iter()
+            .map(|n| (n.path.clone(), n))
+            .collect::<BTreeMap<_, _>>();
+        for n in nodes {
+            all.insert(n.path.clone(), n);
+        }
+        let mut us = Vec::new();
+        us.extend(uncertainties);
+        Self::pack(all.into_values().collect(), us, changes)
+    }
+    /// Returns the proven changed exports of a path, and nothing when the change evidence for that
+    /// path is incomplete. An incomplete change has no attributable export identity to explain.
+    pub fn changed_exports(&self, path: &str) -> Option<BTreeSet<String>> {
+        let change = self.change(path)?;
+        change.complete.then_some(change.exports)
+    }
+    pub(super) fn pack_changes(&self, changes: Vec<ChangedModuleEvidence>) -> Vec<CChange> {
+        changes
+            .into_iter()
+            .filter_map(|c| {
+                Some(CChange {
+                    path: self.id(&c.path)?,
+                    exports: c
+                        .changed_exports
+                        .iter()
+                        .map(|s| self.id(s))
+                        .collect::<Option<Vec<_>>>()?,
+                    complete: c.every_hunk_is_attributed,
+                })
+            })
+            .collect()
+    }
+    pub(super) fn id(&self, s: &str) -> Option<u32> {
+        pack::string_id(&self.strings, s)
+    }
+    pub(super) fn str(&self, id: u32) -> Option<&str> {
+        self.strings.get(id as usize).map(String::as_str)
+    }
+    pub(super) fn path(&self, m: u32) -> Option<&str> {
+        self.modules.get(m as usize).and_then(|x| self.str(x.path))
+    }
+    pub(super) fn module_index(&self, p: &str) -> Option<u32> {
+        let id = self.id(p)?;
+        self.modules
+            .binary_search_by_key(&id, |m| m.path)
+            .ok()
+            .and_then(|x| u32::try_from(x).ok())
+    }
+    pub(super) fn reverse(&self, m: u32) -> &[u32] {
+        let Some(a) = self
+            .reverse_offsets
+            .get(m as usize)
+            .and_then(|x| usize::try_from(*x).ok())
+        else {
+            return &[];
+        };
+        let Some(b) = self
+            .reverse_offsets
+            .get(m as usize + 1)
+            .and_then(|x| usize::try_from(*x).ok())
+        else {
+            return &[];
+        };
+        self.reverse_edges.get(a..b).unwrap_or(&[])
+    }
+    pub(super) fn exports(&self, m: u32) -> BTreeSet<String> {
+        self.modules
+            .get(m as usize)
+            .map(|x| {
+                x.declarations
+                    .iter()
+                    .filter_map(|(n, _)| self.str(*n).map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+    pub(super) fn change(&self, p: &str) -> Option<CChangeView> {
+        let id = self.id(p)?;
+        self.changes
+            .iter()
+            .find(|x| x.path == id)
+            .map(|x| CChangeView {
+                exports: x
+                    .exports
+                    .iter()
+                    .filter_map(|n| self.str(*n).map(str::to_owned))
+                    .collect(),
+                complete: x.complete,
+            })
+    }
+    pub(super) fn uncertainties(&self) -> Vec<GraphUncertainty> {
+        self.uncertainties
+            .iter()
+            .filter_map(|x| {
+                Some(GraphUncertainty {
+                    path: self.str(x.path)?.to_owned(),
+                    code: self.str(x.code)?.to_owned(),
+                    message: self.str(x.message)?.to_owned(),
+                    scope: x.scope,
+                    location: x.location.clone(),
+                })
+            })
+            .collect()
+    }
+    fn materialize(&self, i: u32) -> Option<ModuleNode> {
+        let m = self.modules.get(i as usize)?;
+        let start = usize::try_from(m.start).ok()?;
+        let end = start.checked_add(usize::try_from(m.count).ok()?)?;
+        Some(ModuleNode {
+            path: self.str(m.path)?.to_owned(),
+            language: self.str(m.language)?.to_owned(),
+            declarations: self.materialize_symbols(&m.declarations),
+            references: self.materialize_symbols(&m.references),
+            imports: self
+                .imports
+                .get(start..end)?
+                .iter()
+                .filter_map(|x| self.materialize_import(x))
+                .collect(),
+        })
+    }
+    fn materialize_symbols(&self, packed: &[(u32, SourceSpan)]) -> Vec<SymbolFact> {
+        packed
+            .iter()
+            .filter_map(|(n, s)| {
+                self.str(*n).map(|n| SymbolFact {
+                    name: n.to_owned(),
+                    span: s.clone(),
+                })
+            })
+            .collect()
+    }
+    fn materialize_import(&self, x: &CImport) -> Option<ImportFact> {
+        Some(ImportFact {
+            specifier: self.str(x.specifier)?.to_owned(),
+            span: x.span.clone(),
+            kind: x.kind,
+            type_only: x.type_only,
+            requested_symbols: x
+                .requested
+                .iter()
+                .filter_map(|n| self.str(*n).map(str::to_owned))
+                .collect(),
+            namespace_import: x.namespace,
+            reexport_all: x.reexport_all,
+            resolved_path: x.target.and_then(|t| self.path(t).map(str::to_owned)),
+            position: x.position,
+        })
+    }
+}
+
+pub(super) struct CChangeView {
+    pub(super) exports: BTreeSet<String>,
+    pub(super) complete: bool,
+}

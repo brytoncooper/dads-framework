@@ -1,0 +1,13 @@
+{
+  "signal": "ci-without-verify",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "The repository declares a gate and nothing runs it without a person present, so it holds for exactly as long as somebody remembers to type it.",
+  "files": {
+    "package.json": "{\n  \"name\": \"fixture-workspace\",\n  \"private\": true,\n  \"scripts\": {\n    \"verify\": \"node scripts/verify.mjs\"\n  }\n}\n",
+    "AGENTS.md": "# House rules\n\nRun the gate before you push.\n",
+    ".claude/settings.json": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\n        \"matcher\": \"Edit\",\n        \"hooks\": [{ \"type\": \"command\", \"command\": \"node scripts/guard.mjs\" }]\n      }\n    ]\n  }\n}\n"
+  },
+  "expected": {
+    "verify": 1
+  }
+}

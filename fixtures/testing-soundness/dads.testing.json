@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "workspace": {
+    "root": ".",
+    "fullFallback": {
+      "taskIds": [
+        "core:lint",
+        "core:typecheck",
+        "core:test",
+        "api:lint",
+        "api:typecheck",
+        "api:test",
+        "web:lint",
+        "web:typecheck",
+        "web:test"
+      ]
+    }
+  },
+  "projects": [
+    { "id": "core", "root": "packages/core", "fallbackDependencies": [] },
+    { "id": "api", "root": "apps/api", "fallbackDependencies": ["core"] },
+    { "id": "web", "root": "apps/web", "fallbackDependencies": ["core"] }
+  ],
+  "tasks": [
+    {
+      "id": "core:lint",
+      "project": "core",
+      "kind": "lint",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/oxlint/bin/oxlint", "packages/core/src"]
+      },
+      "dependsOn": [],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "core:typecheck",
+      "project": "core",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "--project",
+          "packages/core/tsconfig.json"
+        ]
+      },
+      "dependsOn": ["core:lint"],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "core:test",
+      "project": "core",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/core/src"]
+      },
+      "dependsOn": ["core:typecheck"],
+      "impact": { "mode": "reachability" }
+    },
+    {
+      "id": "api:lint",
+      "project": "api",
+      "kind": "lint",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/oxlint/bin/oxlint", "apps/api/src"]
+      },
+      "dependsOn": [],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "api:typecheck",
+      "project": "api",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "--project",
+          "apps/api/tsconfig.json"
+        ]
+      },
+      "dependsOn": ["core:test", "api:lint"],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "api:test",
+      "project": "api",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "apps/api/src"]
+      },
+      "dependsOn": ["api:typecheck"],
+      "impact": { "mode": "reachability" }
+    },
+    {
+      "id": "web:lint",
+      "project": "web",
+      "kind": "lint",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/oxlint/bin/oxlint", "apps/web/src"]
+      },
+      "dependsOn": [],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "web:typecheck",
+      "project": "web",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "--project",
+          "apps/web/tsconfig.json"
+        ]
+      },
+      "dependsOn": ["core:test", "web:lint"],
+      "impact": { "mode": "project" }
+    },
+    {
+      "id": "web:test",
+      "project": "web",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "apps/web/src"]
+      },
+      "dependsOn": ["web:typecheck"],
+      "impact": { "mode": "reachability" }
+    }
+  ]
+}

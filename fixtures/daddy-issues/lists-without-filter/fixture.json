@@ -1,0 +1,13 @@
+{
+  "signal": "lists-without-filter",
+  "issue": "failure-to-launch",
+  "why": "A list route takes no query, so it returns everything until the day it cannot.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/api\",\n      \"root\": \"fixtures/api\",\n      \"kind\": \"composition\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "fixtures/api/src/routes.ts": "const routes = [\n  listRoute({\n    operation: \"listThings\",\n    path: \"/things\",\n    access: listThings,\n    item: thingResponse,\n    meta: listMeta,\n    handler: () => readThings(),\n  }),\n];\n",
+    "fixtures/api/src/denials.ts": "const denialProofRecorded = true;\n"
+  },
+  "expected": {
+    "fixtures/api/src/routes.ts:listThings": 1
+  }
+}

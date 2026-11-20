@@ -1,0 +1,22 @@
+{
+  "name": "@dads-framework/design-tokens",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./default.tokens.json": "./default.tokens.json"
+  },
+  "files": [
+    "default.tokens.json",
+    "README.md"
+  ],
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/web/design-tokens"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs"
+  }
+}

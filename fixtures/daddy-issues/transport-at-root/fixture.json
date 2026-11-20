@@ -1,0 +1,12 @@
+{
+  "signal": "transport-at-root",
+  "issue": "you-stay-with-people-who-cannot-meet-you",
+  "why": "An edge package imports fastify, which only an adapter may name.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"packages\": [\n    {\n      \"name\": \"@fixture/gateway\",\n      \"root\": \"packages/group/gateway\",\n      \"kind\": \"edge\",\n      \"allowedDependencies\": []\n    }\n  ]\n}\n",
+    "packages/group/gateway/src/server.ts": "import fastify from \"fastify\";\n\nconst make = fastify;\n"
+  },
+  "expected": {
+    "@fixture/gateway": 1
+  }
+}

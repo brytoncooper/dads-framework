@@ -1,0 +1,63 @@
+/* ==========================================================================
+   Base — what every document gets before a single component renders.
+   ========================================================================== */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+
+  ::selection {
+    background-color: var(--selection);
+  }
+
+  /* Light-on-dark text blooms without smoothing. Light mode keeps the default
+     subpixel rendering, which is what holds 13–14px table text together. */
+  .dark body {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Numbers in a table are a column before they are a value. */
+  [data-slot="table"] {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* The work sits on the card, not the concrete page. Without this the rows
+     show through to --background and the table never lifts. */
+  [data-slot="table-container"] {
+    background-color: var(--card);
+  }
+
+  /* The header is the one row that is not data. Giving it a band — rather than
+     leaving it to a single hairline — is what stops a long table reading as one
+     undifferentiated field. Styled here, on the primitive's own data-slot,
+     because the token layer owns surfaces and the component owns structure. */
+  [data-slot="table-header"] {
+    background-color: var(--table-header);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

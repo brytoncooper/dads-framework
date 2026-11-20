@@ -1,0 +1,10 @@
+#!/bin/sh
+# Check staged content. Repository-wide proof runs at push.
+set -e
+
+node scripts/hooks/staged-checks.mjs
+
+LOCAL_HOOK=$(git rev-parse --git-path hooks/pre-commit.local)
+if [ -x "$LOCAL_HOOK" ]; then
+  "$LOCAL_HOOK" "$@"
+fi

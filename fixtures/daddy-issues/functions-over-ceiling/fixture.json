@@ -1,0 +1,12 @@
+{
+  "signal": "functions-over-ceiling",
+  "issue": "enmeshment",
+  "why": "One function nests four decisions where the ceiling is three.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/classify.ts": "function classify(a: number, b: number, c: number, d: number): number {\n  if (a > 0) {\n    if (b > 0) {\n      if (c > 0) {\n        if (d > 0) {\n          return 1;\n        }\n      }\n    }\n  }\n  return 0;\n}\n\nvoid classify;\n"
+  },
+  "expected": {
+    "packages/group/name/src/classify.ts:1 classify": 1
+  }
+}

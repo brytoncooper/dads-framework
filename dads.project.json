@@ -668,6 +668,16 @@
       "skills": ["dads-orient"]
     },
     {
+      "name": "@dads-fixture/feature-flag-migration-history",
+      "root": "packages/server/feature-flags-postgres",
+      "responsibility": "Preserves the 0.2 PostgreSQL feature flag migration for journal replay and verifies its packaged copy.",
+      "kind": "binding",
+      "published": false,
+      "allowedDependencies": ["node-pg-migrate"],
+      "verification": ["npm test -w @dads-fixture/plugin-notes"],
+      "skills": ["dads-orient"]
+    },
+    {
       "name": "@dads-framework/client-feature-flags",
       "root": "packages/client/feature-flags",
       "responsibility": "Context-keyed feature state in the browser and the React hooks that read it.",

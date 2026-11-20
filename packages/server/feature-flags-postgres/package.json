@@ -1,0 +1,9 @@
+{
+  "name": "@dads-fixture/feature-flag-migration-history",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "node-pg-migrate": "^9.0.0"
+  }
+}

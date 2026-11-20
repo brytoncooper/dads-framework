@@ -7,8 +7,8 @@ their feature state. The staff API selects tenant routes.
 
 ## Start
 
-With Node 24, npm, and Docker running, execute `npm start` from this project.
-Open the workbench URL printed by the command. Use `npm run dev:status`
+With Node 24, npm, and Docker running, execute `npm start` from the generated
+project. Open the workbench URL printed by the command. Use `npm run dev:status`
 to look up the URL and `npm run dev:down` to stop the stack. See
 [local development](./assembly/LOCAL-DEV.md) for ports, logs, and restart commands.
 
@@ -47,6 +47,10 @@ Leave it off when the connection uses transaction pooling.
 
 ## Call the customer API from the command line
 
+Use Bash, curl, and jq. Set `base` to the browser URL printed by
+`npm start`, or use the address below when running `npm run dev:web` on
+its default port.
+
 ```sh
 base=http://127.0.0.1:5173
 read -rs password
@@ -56,8 +60,9 @@ curl -fsS "$base/api/auth/sign-up/email" -H "Origin: $base" \
   -H 'Content-Type: application/json' -d "$signup"
 ```
 
-Open the `verify-email` link from the local server terminal. Sign in with
-the same email and password, then create a tenant and a note.
+Open the `verify-email` link from `npm run dev:mail` in the Compose stack
+or from the API's local mail output when using the manual setup. Sign in
+with the same email and password, then create a tenant and a note.
 
 ```sh
 signin=$(jq -cn --arg password "$password" \

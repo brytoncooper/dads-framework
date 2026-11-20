@@ -10,12 +10,18 @@ path-only and HMAC-signed with a key the box makes (`loadOrCreateDiskSigningKey`
 
 `DirectTransferStorage` is the browser-direct seam on the same bucket:
 server-chosen multipart uploads, presigned part and attachment-download URLs,
-and the reads that verify a finished upload. See
-docs/reference/object-storage.md.
+and the reads that verify a finished upload.
 
 The package re-exports the capability and in-memory implementation from
 [`@dads-framework/object-storage-core`](../object-storage-core/README.md).
 The core's conformance suite also runs against the disk and S3 implementations.
+
+## Choose a storage path
+
+Use `ObjectStorage.put` and `get` for server-owned bytes. For browser uploads,
+create a signed upload with the required size, content type, and checksum.
+Send the browser the returned URL and headers, then verify the stored object
+before associating it with an application record.
 
 ## Download delivery
 
@@ -29,5 +35,5 @@ and limits link validity to one hour. Its clock is injected.
 Uploads, object verification and server reads retain the configured S3 client.
 Without the download signer, local MinIO and staged AWS environments retain S3
 GET signatures. Browser download buttons navigate to attachment links; they do
-not fetch the file into application memory. Routing, trusted public keys and an
-ACTIVE qualified flat-rate plan must precede production signer cutover.
+not fetch the file into application memory. Before switching a deployment to the signer, configure CloudFront routing
+and trusted public keys.

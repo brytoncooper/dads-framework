@@ -10,26 +10,24 @@ application logic stays plain TypeScript.
 
 ## Start your own app
 
-Install Node 24 and start Docker with Compose. Then run:
+Use Node 24, npm, and Docker with Compose v2. When your registry has a
+published `create-dads` release, start Docker and run the creator from the
+parent directory for your new project.
 
 ```sh
 npm create dads@latest my-app
 ```
 
-Dads installs the capability packages, writes `package-lock.json`, starts
-PostgreSQL, applies migrations, and waits for the web app and both APIs.
-Open the printed browser URL to sign up, verify your email locally, create a
-tenant, and save a protected note. The customer and staff APIs each get an
-assigned loopback URL.
+The creator installs dependencies, starts PostgreSQL, applies migrations,
+and prints URLs for the browser app and both APIs. Open the browser URL.
+The [Quickstart](./docs/site/guides/quickstart.md) walks through local email
+verification and saving a protected note. From the generated directory,
+`npm start` starts the stack again and `npm run dev:down` stops it.
 
-From `my-app`, run `npm start` to start the stack again,
-`npm run dev:status` to see its URLs, and `npm run dev:down` to stop it.
-If the creator reports incomplete startup after installing, resolve the
-reported Docker problem and run `npm start` in the generated directory.
-
-Commit the lockfile. The generated `ci/verify.sh` runs `npm ci` and the app's
-checks. The [starter setup guide](./docs/site/guides/start.md) covers CI
-templates and the first sign-in.
+If `create-dads@latest` is unavailable from your npm registry, use the
+[reference Workbench below](#run-the-workbench) to try Dads from
+source. For a project you already run, see
+[adopt one capability](./docs/site/guides/adopt.md).
 
 Each API entrypoint selects its own routes and jobs. Share a domain's services
 across entrypoints and keep the composition visible in code.
@@ -57,13 +55,14 @@ npm ci
 npm run workbench:dev
 ```
 
-The launcher starts an isolated PostgreSQL instance, applies the Workbench
-schema, and prints the HTTP API and OpenAPI URLs. In the Workbench, workspace
-members can discover tasks, claim them, and read artifacts and activity.
-Revoking membership removes that access.
+This repository's Workbench is a task API. The launcher starts an isolated
+PostgreSQL instance, applies the schema, and prints the API and OpenAPI URLs.
+Workspace members can discover tasks, claim them, and read artifacts and
+activity. Revoking membership removes that access.
 
-Use [the Workbench guide](./apps/workbench/README.md) for commands, route and
-access ownership, and the local identity setup.
+Run `npm run workbench:stop` to stop it. Use the
+[Workbench guide](./apps/workbench/README.md) for the local identity setup
+and route ownership.
 
 ## Work with a Dads project
 
@@ -86,7 +85,9 @@ npx dad verify --changed --json
 - [Plugin composition](./packages/foundation/plugin/README.md) shows selective API entrypoints.
 - [Contributing](./CONTRIBUTING.md) describes verification for changing the framework.
 
-For the family history, read [Dad](./DAD.md). For the incident with the shrimp, read [Who let Gary back in?](./docs/go-ask-your-other-database.md).
+Read [Why Dads](./docs/site/guides/start.md) for the design tradeoffs, or
+[Dad](./DAD.md) and [Who let Gary back in?](./docs/go-ask-your-other-database.md)
+for the stories behind them.
 
 Licensed under [MIT](./LICENSE.md).
 

@@ -13,6 +13,28 @@ Workbooks written by this package store metadata in a hidden
 `_Workbook Metadata` sheet. The reader also opens ordinary workbooks and returns
 their requested sheets.
 
+## Try it
+
+Build a small workbook and read the same sheet back. App code validates the
+resulting row values before using them in business operations.
+
+```ts
+import { xlsxWorkbookCodec } from "@dads-framework/client-xlsx";
+
+const file = await xlsxWorkbookCodec.build({
+  sheets: [
+    {
+      sheetName: "Inventory",
+      columns: [{ header: "SKU", key: "sku", cellKind: "text" }],
+      exampleRows: [{ sku: "0012" }],
+    },
+  ],
+});
+
+const { sheets } = await xlsxWorkbookCodec.read(file, ["Inventory"]);
+console.log(sheets[0]?.rows[0]?.cells.SKU); // "0012"
+```
+
 ## Workbook contract
 
 `xlsxWorkbookCodec` bundles build, read, and update behind the `WorkbookCodec`

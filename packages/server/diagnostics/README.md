@@ -1,12 +1,26 @@
 # `@dads-framework/diagnostics`
 
-Where a server fault goes.
+Group recurring server faults by fingerprint and send them to the
+application logger or Sentry. Use the same reporter at the HTTP, job, and
+process boundaries so one failure leaves a comparable record everywhere.
 
-Today a 500 produces exactly one thing: a pino line at the HTTP error handler
-carrying the stack. Nothing groups it, nothing counts it, nothing notices when
-a new one starts, and it survives only as long as log retention.
-`request_log.error_code` says a request failed; it cannot say _what_ failed, or
-whether it is the same thing that failed yesterday.
+## Try it
+
+```ts
+import { createDiagnosticsReporter } from "@dads-framework/diagnostics";
+
+const reporter = createDiagnosticsReporter({ driver: "log", log: console });
+reporter.captureException({
+  source: "job",
+  jobName: "report.refresh",
+  error: new Error("Refresh failed"),
+});
+await reporter.close();
+```
+
+The logger receives a structured event with a fingerprint. Wire the
+reporter once in application composition. During shutdown, flush any
+buffered events with `flush(timeoutMs)` before closing it.
 
 ## The seam
 
@@ -23,8 +37,7 @@ already handling a failure and none of them can afford a second one.
 | `sentry` | the `log` line, plus one envelope to Sentry | production                           |
 
 `log` is more than a fallback. The line carries the same fingerprint an
-aggregator would group by, so a plant-local operator at 2am gets the same
-answer as someone with a dashboard — just with fewer clicks available.
+aggregator would group by, so operators can group faults using logs alone.
 
 `sentry` never replaces the line, and it needs no SDK: `sentry-envelope.ts`
 builds the event — type, message with emails replaced, frames, level, our
@@ -51,4 +64,4 @@ faults. "Application" means every frame except `node_modules` and `node:`
 internals — defined by exclusion because the production bundle is one file and
 offers no repository root to test against.
 
-See ADR-0117 and observability.
+See [the telemetry package](../telemetry/README.md) for request trace correlation.

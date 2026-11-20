@@ -1,6 +1,10 @@
 # Share an application contract with another repository
 
-Run these commands in an initialized Dads project named `catalog`.
+Choose a dependency library when two repositories need the same
+application-owned contract. This example lets a second project type-check
+an asset record independently of the catalog application's storage or HTTP
+implementation. Run these commands in an initialized Dads project named
+`catalog`.
 
 ```sh
 npx dad add library asset-records

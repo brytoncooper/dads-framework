@@ -1,6 +1,6 @@
 # @dads-framework/audit
 
-Stores database row changes with the actor and request that caused them.
+Find who changed an audited row, what changed, and which request caused it.
 The kit also records requests and client diagnostics. `composeAudit` wires
 their retention jobs and diagnostic route to the application's services.
 

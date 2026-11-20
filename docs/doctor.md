@@ -9,6 +9,19 @@ evidence, and prints each with the number, the threshold, and where the
 threshold came from. Dad judges, with receipts. A verdict a reader cannot check
 is one they will route around.
 
+Start with a read-only diagnosis. For example, if a report points to
+`enmeshment`, get the rule and repair guidance, then inspect the evidence
+for that issue alone:
+
+```sh
+dad doctor explain enmeshment
+dad doctor --issue enmeshment --json
+```
+
+Use the measured file and threshold to pick a repair. Rerun the same issue
+after editing to see whether the reading changed. Use the gate when you
+need the repository's baseline to decide whether verification passes.
+
 ## The command
 
 ```sh

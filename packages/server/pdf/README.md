@@ -7,7 +7,7 @@ alternate import of the same type.
 in PDF points for placing bounded text. Its metrics use the same font as rendering.
 Server processes and local desktop runtimes can both import it. Node
 only (`node:module`, `node:path`, the native `@napi-rs/canvas`): never import
-it from browser code. See `docs/reference/pdf.md`.
+it from browser code.
 
 ## Portable fixed-page output
 
@@ -16,6 +16,17 @@ dimensions in PDF points and printable ASCII lines in 12-point Helvetica.
 The renderer rejects text that would overflow a page. The shared laws check
 actual PDF bytes, page dimensions, and extracted text using both the pdfmake
 adapter and an independent test writer of standard PDF objects and streams.
+
+```ts
+import { createFixedPagePdfRenderer } from "@dads-framework/pdf";
+
+const pdf = await createFixedPagePdfRenderer().render({
+  width: 300,
+  height: 200,
+  pages: [["Daily report", "Ready for review"]],
+});
+console.log(new TextDecoder().decode(pdf.subarray(0, 5))); // %PDF-
+```
 
 Use `@dads-framework/pdf/pdfmake` for the vendor-specific document definition
 and renderer. That integration retains pdfmake features such as rich layout,

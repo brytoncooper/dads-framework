@@ -16,6 +16,13 @@ Supply an optional `EmailBranding` object to `renderEmailTemplate`,
 application's header or footer logo. Each image specifies an HTTPS URL,
 alternative text, and display dimensions in pixels.
 
+## Render a message
+
+Define the React template and its property schema in the owning domain. Pass
+the template and properties to `renderEmailTemplate(template, props)`, then
+give its `html` and `text` to your delivery code. Set optional branding at
+composition so every template uses the same logos and dimensions.
+
 ## Paired-body rendering
 
 The default `renderEmailTemplate` uses React Email. A caller can inject an

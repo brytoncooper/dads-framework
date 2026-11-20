@@ -4,8 +4,10 @@ Check the target release's package README and generated API reference before
 updating your dependencies. Keep first-party Dads packages on the same
 release version when upgrading the starter.
 
-1. Keep a verified baseline of the app and its lockfile. Upgrade one
-   capability and the bindings it needs.
+1. Save a passing `npm run verify` result from the current version and keep
+   the existing lockfile in Git. Update the selected capability and any
+   companion packages required by the target release, then review the
+   dependency and lockfile diff.
 2. Compare emitted contracts with the previous version. Regenerate clients
    with the app's current generation script and fix consumers of changed
    fields or exports.
@@ -13,6 +15,10 @@ release version when upgrading the starter.
    migration files intact.
 4. Run authorization denial tests and the app's complete verification
    command. Check the app's smoke test before promoting the new version.
+
+For example, if a list response adds a field, regenerate the client and run
+the screen's list test. If the change also touches query authorization, test
+the same request with a user outside the tenant before promotion.
 
 Package splits and incompatible public changes need version-specific notes.
 Consult the affected package README when moving between versions.

@@ -4,8 +4,13 @@ Read the repository's `AGENTS.md` before editing. In a generated app, use
 the shared `AGENTS.md` instructions and the skills the starter writes
 alongside its code. `CLAUDE.md` imports that same file.
 
-Run `dad orient <path> --json` for the owner, permitted dependencies,
-applicable skills, and suggested verification. Read
+Give the agent a concrete path and a behavior to preserve. For example, in a
+generated app, ask it to change the Notes route and keep the cross-tenant
+denial test passing. Find the owning workflow with
+`npx dad orient domains/notes/server/routes.ts --json`.
+
+Use the result to find the owner, permitted dependencies, applicable skills,
+and suggested verification. Read
 [the agent operating model](../../agent-operating-model.md) for the limits on
 cross-package changes. The JSON output includes a path to the owning guide. Use `dad doctor explain <issue-id>` and the
 [Doctor reference](../../doctor.md) to turn a diagnostic into a repair plan.

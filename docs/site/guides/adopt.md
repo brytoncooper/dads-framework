@@ -1,6 +1,12 @@
 # Adopt one capability
 
-Run `dad doctor` on the existing repository to see the current findings.
+Choose this path when an existing application already works and you want
+one narrower guarantee before adopting more. For a service with unclear
+request validation, start with one route and write a test for the malformed
+payload you want to reject. Keep serving the rest of the application as before.
+
+If the [toolbox](../../../packages/foundation/toolbox/README.md) is installed
+in the existing repository, run `npx dad doctor` to see its current findings.
 Use `dad doctor explain <issue-id>` to get the rule and the repair it expects.
 See the [Doctor command reference](../../doctor.md) for profiles and reports.
 
@@ -12,9 +18,10 @@ Use the creator's [existing-project mode](../../../packages/foundation/create-da
 to place a separate starter under the target's `dads/` directory. Preview it
 with `npm create dads@latest /path/to/your/project -- --existing --dry-run`.
 Remove `--dry-run` to write the files and install the starter's dependencies.
-Your existing project keeps its package manifest and runtime. When you're
-ready to try the isolated starter, start Docker with Compose and run
-`npm start` from its `dads/` directory.
+Your existing project keeps its package manifest and runtime. Start Docker,
+then run `npm start` from the new `dads/` directory. Open the web URL shown
+when the starter is ready. The [quickstart](./quickstart.md) walks through
+the sign-in and note flow in that starter.
 
 Commit the isolated starter's lockfile if you use its CI. Its generated
 `ci/verify.sh` runs `npm ci` before verification.

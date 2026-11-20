@@ -1,7 +1,8 @@
 # @dads-framework/migrations — the Postgres migration runner
 
-Applies `<utcTimestamp>_<slug>.migration.ts` files (node-pg-migrate builders)
-to a database and keeps a journal of what ran. It validates the checked-in
+Deploy schema changes in a repeatable order and check which migrations each
+database has applied. The runner applies `<utcTimestamp>_<slug>.migration.ts`
+files built with node-pg-migrate and records them in a journal. It validates the checked-in
 journal, keeps its immutable legacy prefix, checksums every applied file, takes
 an advisory lock, and applies pending dependency (`dependsOn`) migrations in one
 transaction. A file exporting `ownTransaction` commits alone; a file exporting

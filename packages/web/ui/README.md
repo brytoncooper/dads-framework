@@ -21,6 +21,11 @@ export function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
 }
 ```
 
+Pass a callback that refreshes a query or reloads the current view. Build
+the app to confirm that Tailwind found the installed component classes and
+then use Tab and Enter to check that the control is reachable and invokes
+that callback from the keyboard.
+
 ## Use it
 
 | Import path                             | Includes                                                  |

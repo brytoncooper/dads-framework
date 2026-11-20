@@ -1,10 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 
-import {
-  buildReport,
-  REGENERATE_HINT,
-} from "../checks/generate-api-report-lib.mjs";
+import { buildReport } from "../checks/generate-api-report-lib.mjs";
+import { apiPurpose, apiReferenceMarkdown } from "./site-api-reference.mjs";
 import { readPublicFile } from "./site-links.mjs";
 
 const CATALOG = "docs/site/catalog.json";
@@ -48,38 +46,45 @@ function referencePage(root, owners, name) {
   if (!owner) throw new Error(`Unknown API reference owner ${name}.`);
   const slug = `api-${name.replace(/^@dads-framework\//, "")}`;
   const manifest = readJson(root, `${owner.root}/package.json`);
+  const readme = `${owner.root}/README.md`;
+  readPublicFile(root, readme);
+  const purpose = apiPurpose(slug);
+  const report = buildReport(
+    { directory: join(root, owner.root), manifest, name },
+    owner.published === true,
+  );
   return {
     slug,
     title: name,
     owner: name,
     section: "API reference",
     path: `docs/site/reference/${slug}.md`,
-    markdown: buildReport(
-      {
-        directory: join(root, owner.root),
-        manifest,
-        name,
-      },
-      owner.published === true,
-    ).text.replace(
-      REGENERATE_HINT,
-      "Build this reference with `npm run docs:build` after compiling the workspace.",
-    ),
+    purpose,
+    sourceMarkdown: report.text,
+    markdown: apiReferenceMarkdown({
+      name,
+      purpose,
+      readme,
+      sections: report.sections,
+    }),
   };
 }
 
 function referenceIndex(pages) {
-  const links = pages.map(({ title, slug }) => `- [${title}](./${slug}.md)`);
+  const links = pages.map(
+    ({ title, slug, purpose }) => `- [${title}](./${slug}.md) — ${purpose}`,
+  );
   return {
     slug: "api",
     title: "API reference",
+    navigationGroup: "API reference",
     owner: "@dads-framework/toolbox",
     section: "Reference",
     path: "docs/site/reference/index.md",
     markdown: [
       "# API reference",
       "",
-      "These reports are built from the exported declarations in the current workspace.",
+      "Browse each package’s import paths and exported symbols. The reference uses the declarations emitted by this build. Follow a package’s registry link to check availability.",
       "",
       ...links,
       "",

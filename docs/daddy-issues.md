@@ -7,6 +7,12 @@ what holds the rule in this repository today. A question answered "yes" means
 the issue is present. The questions are the specification of `dad doctor`: each
 parenthetical names the signal that answers it.
 
+Use this page to interpret a signal from a Doctor report. For example, for
+`explicit-any`, start at [Daddy issues](#daddy-issues) for the test and cure,
+then run `dad doctor explain daddy-issues` for the active profile's thresholds
+and repair guidance. Use the [Doctor command reference](doctor.md) when
+turning a finding into a verification gate.
+
 ## Contents
 
 1. [Daddy issues](#daddy-issues)

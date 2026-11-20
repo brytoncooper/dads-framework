@@ -8,6 +8,27 @@ A plugin you cannot see is a plugin you cannot reason about. Every plugin here i
 
 ## Try it
 
+Start with a single plugin to see what composition returns:
+
+```ts
+import { composeApp, definePlugin } from "@dads-framework/plugin";
+
+const notes = definePlugin({
+  name: "notes",
+  setup: () => ({ provides: { countNotes: () => 0 } }),
+});
+
+const running = await composeApp([notes]).start();
+try {
+  console.log(running.read(notes).countNotes()); // 0
+} finally {
+  await running.stop();
+}
+```
+
+The next example shows how a larger Notes plugin uses a clock service and
+contributes migrations, access, flags, HTTP routes, and jobs.
+
 ```ts
 import { accessModel } from "@dads-framework/access";
 import {
@@ -313,24 +334,21 @@ Cordis (the cordiverse plugin kernel) was studied, not adopted.
 
 ### Converting audit, feature flags, and enterprise
 
-Not done yet; the kits are being changed in parallel.
+Compose audit and feature-flag providers at the host. Domain plugins can
+declare audit exclusions and flag definitions while the host supplies the
+persistence, clock, and logging. The kit starter passes its selected flags to
+its application services.
 
-- **Audit** becomes `auditPlugin`, built from what `composeAudit(deps)` returns
-  today: its migrations as a `migrations` folder, its retention jobs and
-  client-diagnostics route from `setup`, its request-log tables in
-  `audit.untrackedTables`, and `db`, `clock`, and `log` as services the host
-  provides. Other plugins then declare their own untracked tables instead of
-  editing one allowlist.
-- **Feature flags** becomes `featureFlagsPlugin`: its tables as a migration
-  folder, its routes and evaluator from `setup`. Every plugin's
-  `contributes.flags` are what `app.flags` hands it, so a flag is declared by
-  the plugin whose code it gates. The kernel only requires a `slug`, which
-  `FeatureFlagDefinition` already has.
-- **Access**: the host calls `accessModel(app.access)` with the composed
-  declarations. Use the model for schema generation and HTTP registration.
-- **Enterprise** (SSO, SCIM, impersonation) becomes one plugin package that
-  requires the identity plugin's service, contributes its migrations and
-  access definitions, and returns its routes and jobs from `setup`.
+- **Audit:** Use `contributes.audit.untrackedTables` for plugin-owned
+  exclusions. Composition exposes these alongside scope mappings.
+- **Feature flags:** Declare a flag under the plugin whose code it gates.
+  Pass the composed `app.flags` to the feature-flag provider.
+- **Access:** Compose `accessModel(app.access)` in the host. Use that model for
+  schema generation and HTTP registration.
+
+An application can use the same contract for an enterprise integration such
+as SSO. Declare the identity dependency through `requires` and contribute
+migrations, access definitions, and route or job bindings as needed.
 
 ## Daddy issues this prevents
 

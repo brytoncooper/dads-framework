@@ -1,11 +1,13 @@
 # @dads-framework/health — process probes
 
-`createHealthRoutes()` is `/api/health` and `/api/ready`. Logging and
-request-id live in `@dads-framework/http`
-(`docs/architecture/observability.md`). The HTML origin page belongs to the
-application's API composition root.
+Use `createHealthRoutes(checks)` to expose separate checks for processes and
+traffic routers. `/health` confirms the process responds. `/ready` evaluates
+the application's readiness probes. Register the routes during API composition
+and supply probes for dependencies required to serve traffic.
 
 ## Try it
+
+With the health routes registered under `/api`, run:
 
 ```sh
 curl --fail http://localhost:3000/api/health
@@ -14,3 +16,5 @@ curl --fail http://localhost:3000/api/health
 ## What it refuses to do
 
 Readiness is based on probes the application supplies. Health reporting cannot substitute for an application's tests.
+
+See [the HTTP package](../http/README.md) for request IDs and logging.

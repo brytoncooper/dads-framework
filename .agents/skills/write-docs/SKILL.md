@@ -23,8 +23,8 @@ Four rules:
    vendors (`DAD.md`).
 4. Jokes are about code, never about a reader.
 
-Copy the section order from `docs/package-readme-template.md`; the exact
-heading `## What it refuses to do` is required. `docs/style-guide.md` is the
-full rule.
+For package READMEs, use the section order in `docs/package-readme-template.md`
+and keep the exact heading `## What it refuses to do`. See `docs/style-guide.md`
+for the full rule.
 
 Then run `node scripts/checks/check-docs.mjs`.

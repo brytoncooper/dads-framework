@@ -4,8 +4,15 @@ The [`dad-dev` package](../packages/foundation/dev/README.md) currently manages
 worktree slots with separate ports, Postgres databases, and file roots. Use
 its documented commands for those workflows.
 
-This page describes a broader development-environment proposal. The
-`dad dev:*` commands below are examples of the proposed interface.
+For an existing Dads app with `dads.dev.json` and a local Postgres
+maintenance connection, start with `dad-dev ready`, then run `dad-dev up`.
+Inspect the assigned slot with `dad-dev status`. The kit starter ships its
+own local stack and starts with `npm start`.
+[Worktree setup](../packages/foundation/dev/README.md#try-it) ·
+[Starter setup](../apps/kit-workbench/README.md#start)
+
+The remaining sections describe the broader development-environment proposal.
+The `dad dev:*` commands below illustrate that proposal.
 
 ## The promise
 

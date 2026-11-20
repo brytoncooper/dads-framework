@@ -2,8 +2,8 @@
 
 The optional `dad` command line. It initializes and adopts Dads projects,
 explains which package owns a path, plans and runs the verification a change
-earns, and drives the authorization workflows a project has adopted. No runtime
-framework package depends on it.
+earns, and inspects HTTP and code-health rules. Application runtime packages can
+operate without it.
 
 ## What Dad does for you
 
@@ -292,7 +292,10 @@ paths, custom roots, and a two-API example.
 ### Generators
 
 `dad add --help` lists the nine commands for domains, endpoints, tables,
-access, flags, email, pages, resources, and dependency libraries.
+access, flags, email, pages, resources, and dependency libraries. In the
+starter, preview a domain on the staff API with
+`npx dad add domain inventory --api staff --dry-run --json`. The preview
+lists the planned files and registration without editing the project.
 [Generator guide](../../../docs/generators.md)
 
 ### Dependency libraries

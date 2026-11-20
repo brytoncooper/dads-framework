@@ -1,8 +1,8 @@
 # @dads-framework/email-sender
 
-Send outbound email. Callers hold one `EmailSender` and call `send()`; the
-composition root picks which driver that is from `MAIL_DRIVER`, so swapping
-vendors never touches a caller.
+Keep outbound mail code independent of the delivery provider. Callers use
+`EmailSender.send()`. The application chooses the driver when it creates
+the sender.
 
 ```ts
 const receipt = await emailSender.send({
@@ -45,10 +45,9 @@ Addresses are rendered for the wire by `formatEmailAddress` (`addr`, or
 `Name <addr>`, quoted when the name would otherwise break the header). Tags are
 plain ASCII labels (`[A-Za-z0-9_-]{1,256}`) for vendor-side delivery reporting.
 
-`createDatabaseAndSharedServices` builds it once as `shared.emailSender`. Who
-sends what — the message bodies themselves — belongs to the sending domain's
-assembly, not here; this library knows nothing about invitations or
-verification.
+Call `createEmailSender` once at the application's composition root using
+the chosen driver and its credentials. The domain that sends an invitation
+or verification email owns the message content.
 
 ## Drivers
 
@@ -56,7 +55,7 @@ verification.
 | ------------- | ----------------------- | ------ | -------------------- | ------------------------------------------------------------------------------------------------------- |
 | `log`         | `LogEmailSender`        | No     | `null`               | Default. Records `email.logged` and **withholds** the address and body.                                 |
 | `log-verbose` | `VerboseLogEmailSender` | No     | `null`               | A developer's own machine. Renders the whole email into the logs.                                       |
-| `capture`     | `CaptureEmailSender`    | No     | the `mail-N` id      | Development. Keeps whole messages in memory; read them at `GET /api/mail`.                              |
+| `capture`     | `CaptureEmailSender`    | No     | the `mail-N` id      | Development. The application can inspect captured messages in memory.                                   |
 | `resend`      | `ResendEmailSender`     | Yes    | Resend's message id  | Real delivery. Requires `RESEND_API_KEY`.                                                               |
 | `mailgun`     | `MailgunEmailSender`    | Yes    | Mailgun's message id | Real delivery. Requires `MAILGUN_API_KEY` + `MAILGUN_DOMAIN`; `MAILGUN_REGION` picks the US or EU host. |
 
@@ -80,8 +79,7 @@ and assert on `sent`; it never reaches a driver at all.
 
 ## Adding a driver
 
-A new vendor is one file plus one branch — the seam exists so this stays a
-composition change, never a caller change:
+Add a driver at the composition boundary using the shared sender contract.
 
 1. Add `<vendor>-email-sender.ts` — a class implementing `EmailSender` that
    translates `EmailMessage` into the vendor's call and throws on rejection.

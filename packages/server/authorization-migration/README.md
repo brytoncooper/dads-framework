@@ -1,6 +1,6 @@
 # @dads-framework/authorization-migration — the authorization schema journal
 
-Moves a SpiceDB schema forward the way the database migrator moves Postgres:
+Change a SpiceDB schema without interrupting live access. The runner applies
 an ordered journal of `NNNN_slug` entries, each holding the full `schema.zed`
 snapshot it writes and the relationship steps that keep access intact (backfill
 or move first, then delete). The runner refuses gaps, duplicates, folders
@@ -15,3 +15,14 @@ without renumbering a shared index. `scaffoldMigration` and
 entry that collided with another branch.
 
 The journal folder is the caller's: nothing here assumes where it lives.
+
+## Plan a change
+
+1. Keep the current schema and journal under version control. Use
+   `scaffoldAuthorizationChange` for a dependency-ordered patch, or
+   `scaffoldMigration` for an entry containing a complete schema snapshot.
+2. Put tuple moves or backfills before the schema removes the old relations.
+   Check the pending IDs with `pendingAuthorizationMigrationIds`.
+3. Run `runAuthorizationMigrations` from the deployment job with your journal,
+   its folder, the authorized SpiceDB store, and the deployment logger. Read
+   the applied markers before a repeat run.

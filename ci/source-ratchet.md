@@ -1,8 +1,9 @@
 # Standalone TypeScript ratchet
 
-A repository can adopt Dads' code-health ceilings by installing Toolbox as a
-development dependency. It needs a Git checkout and a tracked TypeScript
-project. It does not need a Dads project manifest or a starter.
+Use the standalone ratchet to hold existing TypeScript debt at its recorded
+level and reject new violations. Install `@dads-framework/toolbox` as a
+development dependency and run it from a Git checkout with a tracked
+TypeScript project.
 
 Stage the TypeScript files and their project config. From the repository root,
 run the locally installed command and review the result:

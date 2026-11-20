@@ -59,6 +59,6 @@ It runs less by making a narrower, inspectable selection before execution:
   workspace fallback. Neither path silently skips work.
 
 The exact reduction depends on the repository. The generated-workspace proof
-harness measures it against an emulated Nx closure, and an adopter's
-plan-only shadow job measures it for that repository before Dads replaces an
-existing gate.
+harness measures it against an emulated Nx closure. To compare the two on
+your repository, run the [plan-only shadow job](./README.md#adopters) before
+changing an existing gate.

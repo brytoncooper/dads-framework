@@ -14,14 +14,15 @@ Declare the resource permission on the route. For Postgres-backed
 authorization, recheck the permission inside the serializable transaction
 that writes the row. Use the [protected transaction helper](../../packages/server/postgres-access/README.md#protected-writes)
 to bind the decision and update to the same transaction. After authorization,
-run `updateAtRowVersion` from `@dads-framework/postgres` on that transaction. Supply a predicate for one row, including its scope when
-needed, and a changes object containing the editable fields. The helper
+run `updateAtRowVersion` from `@dads-framework/postgres` on that transaction.
+Supply a predicate for one row, including the tenant when the row is
+tenant-owned. Pass only the editable fields in the changes object. The helper
 matches the expected version and increments the stored version in one SQL
 statement. PostgreSQL serializes competing updates to the same row.
 
 ```ts
 const [saved] = await updateAtRowVersion(tx, notes, {
-  where: eq(notes.id, id),
+  where: and(eq(notes.id, id), eq(notes.tenantId, tenantId)),
   expectedRowVersion: input.expectedRowVersion,
   changes: { title: input.title },
 });
@@ -63,7 +64,9 @@ unrelated errors use the app's existing failure path.
 
 ## Resource generator
 
-When generating an editable Postgres resource:
+The resource generator wires the contract and conditional SQL described
+above. Use the same steps for an existing editable Postgres resource.
+[Generator guide](../generators.md)
 
 1. Add a non-null integer `rowVersion` column with default `1`. Include it
    in mapped read and save responses.

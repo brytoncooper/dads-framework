@@ -6,23 +6,25 @@ ever finds out which of you was right. This is that argument, settled once.
 
 ## 1. Install
 
-Install the npm package. npm selects the optional executable package for a
-supported platform.
+Use a built source checkout while the first public npm release is on hold.
+Follow the [native build instructions](../../packages/testing/core/README.md#native-packages),
+then make the checkout's `node_modules/.bin` available on your shell's `PATH`:
 
 ```sh
-npm install --save-dev @dads-framework/testing
+# Run from the built Dads framework checkout.
+export PATH="$PWD/node_modules/.bin:$PATH"
+export DADS_TEST_NATIVE_BINARY="$PWD/target/debug/dad-test"
 ```
 
-[Testing package and native support](../../packages/testing/core/README.md)
-
-The example below is a three-package npm workspace: `core`, plus `api` and
-`web` which both depend on it. Each package has `test` and `typecheck`
-scripts.
+The example starts from a committed three-package npm workspace with its own
+lockfile. `core` defines `test` and `typecheck`. `api` and `web` each
+define `test` and declare a workspace dependency on `core`. Run the remaining
+commands from that workspace root.
 
 ## 2. Write the manifest
 
 ```sh
-npx dad-test init
+dad-test init
 ```
 
 ```
@@ -31,8 +33,9 @@ report: dads.testing.init-report.json
 ```
 
 `init` read the workspace, turned the `test` and `typecheck` scripts into
-tasks, and validated the manifest through the native engine. Open
-`dads.testing.json` and correct anything it guessed wrong.
+tasks, and validated the manifest through the native engine. Review and commit
+`dads.testing.json`, then move the init report outside the working tree so
+the next plan sees only the source edit.
 
 ## 3. Make a change
 
@@ -45,7 +48,7 @@ export const pick = (name: string) => import(`./${name}.js`);
 ## 4. Ask why
 
 ```sh
-npx dad-test explain
+dad-test explain
 ```
 
 ```
@@ -87,8 +90,11 @@ the export that changed with it, and the import in `api` that reaches it.
 
 ## 6. Read the report
 
+To reproduce the metrics below, revert the function edit and reapply the
+dynamic-import change.
+
 ```sh
-npx dad-test plan --report dads-testing-report.json --json
+dad-test plan --report dads-testing-report.json --json
 ```
 
 For the dynamic-import change, `projectClosure` reports
@@ -100,13 +106,15 @@ much this time — the honest price of an import it could not resolve.
 
 ## 7. Wire it into CI
 
+Make the target branch available in the CI checkout. For a change targeting
+`main`, run:
+
 ```sh
-npx dad-test run --base origin/main --json
+dad-test run --base origin/main --json
 ```
 
 Archive the JSON per run. When a result surprises someone, `dad-test explain`
 with the same refs prints the reasoning behind it.
 
-That is the whole thing: the answer you would have gotten in the driveway in
-eleven seconds, with the file and line attached so nobody has to take your
-word for it.
+Use the [testing package reference](../../packages/testing/core/README.md)
+when you need the manifest fields, task flags, or report contract.

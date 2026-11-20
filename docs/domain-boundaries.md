@@ -39,6 +39,12 @@ Declare the interface in the domain that needs the capability. Give its
 factory the interface as a dependency. The providing domain owns its
 implementation and the composition root adapts it as needed.
 
+For example, if a file under `domains/orders` imports
+`../inventory/index.js`, the check fails even if the destination is Inventory's
+public entry. Replace the import with an Orders-owned input port and bind
+Inventory from `assembly`. Run `npx dad check boundaries` again to confirm
+the dependency now flows through composition.
+
 The [Orders and Inventory example](../fixtures/domain-boundaries/README.md)
 shows this with an Orders-owned `ReserveStock` port. Inventory fulfills the
 port and composition binds it. The two APIs expose different routes while the

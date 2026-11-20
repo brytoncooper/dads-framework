@@ -1,6 +1,8 @@
 # CI for Dads projects
 
-Run this from a clean checkout at the project root with Node 24 and npm.
+The CI adapters run a project's local verification command on the commit
+under review. Run the same entry point from a clean project checkout with
+Node 24 and npm.
 
 ```sh
 sh ci/verify.sh

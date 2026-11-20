@@ -1,8 +1,10 @@
 # Package README template
 
 Copy this skeleton into `packages/<group>/<name>/README.md`. Keep the section order.
-Register and requirement are given under each heading; see
-[`style-guide.md`](./style-guide.md) for what the registers are.
+The notes under each heading explain which register to use and whether the
+section is required. Replace those notes with package-specific content.
+Keep the applicable command or library section.
+[Documentation style guide](./style-guide.md)
 
 ---
 
@@ -20,8 +22,9 @@ package holds the boundary it holds. Delete the section rather than pad it.
 ## Try it
 
 _Reference. Required._ One fenced code block a reader can paste and run, with
-the output or effect they should see. The conformance check requires at least
-one fenced block somewhere in the file; put it here.
+the output or effect they should see. State prerequisites such as a running
+test database or an installed adapter before the block. The conformance check
+requires a fenced block, so include the example here.
 
 ## Commands
 

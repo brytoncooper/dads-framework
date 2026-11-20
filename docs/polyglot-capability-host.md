@@ -3,6 +3,10 @@
 Status: deferred design proposal. This is a possible future Dads capability,
 not part of the current framework milestone in [goals.md](./goals.md).
 
+For a capability you are adopting today, scope the vendor implementation
+behind the package's public contract and select it in your application.
+[Adoption model](./adoption-model.md)
+
 ## The idea
 
 Allow a server-side Dads application to implement an application-owned

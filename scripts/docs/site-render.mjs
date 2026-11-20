@@ -1,5 +1,6 @@
 import { Marked, Renderer } from "marked";
 
+import { sourceExcerpt } from "./site-excerpt.mjs";
 import { markdownLink } from "./site-links.mjs";
 
 const HTML_CHARS = new Map([
@@ -25,11 +26,22 @@ function anchor(text, counts) {
   return used === 0 ? slug : `${slug}-${String(used)}`;
 }
 
-function renderMarkdown(markdown, link) {
+function renderMarkdown(markdown, page, files, link) {
   const counts = new Map();
+  const linkedSources = new Set();
   const renderer = new Renderer();
-  renderer.html = (token) =>
-    token.text.trimStart().startsWith("<!--") ? "" : escape(token.text);
+  renderer.html = (token) => {
+    const excerpt = sourceExcerpt({
+      token: token.text,
+      page,
+      linkedSources,
+      files,
+    });
+    if (excerpt) {
+      return `<pre><code class="language-${excerpt.language}">${escape(excerpt.excerpt)}\n</code></pre>\n`;
+    }
+    return token.text.trimStart().startsWith("<!--") ? "" : escape(token.text);
+  };
   renderer.heading = function (token) {
     const id = anchor(token.text, counts);
     return `<h${token.depth} id="${escape(id)}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
@@ -37,16 +49,34 @@ function renderMarkdown(markdown, link) {
   const parser = new Marked({ renderer });
   parser.use({
     walkTokens(token) {
-      if (token.type === "link" || token.type === "image")
-        token.href = link(token.href);
+      if (token.type !== "link" && token.type !== "image") return;
+      token.href = link(
+        token.href,
+        token.type === "link" ? linkedSources : undefined,
+      );
     },
   });
   return parser.parse(markdown);
 }
 
+const NAVIGATION_GROUPS = [
+  "Get started",
+  "Build a feature",
+  "Operate & verify",
+  "Architecture",
+  "Reference",
+  "API reference",
+  "Essays",
+];
+
 function navigation(pages, current) {
-  const grouped = Map.groupBy(pages, (page) => page.section);
-  return [...grouped]
+  const grouped = Map.groupBy(
+    pages,
+    (page) => page.navigationGroup ?? page.section,
+  );
+  return [...new Set([...NAVIGATION_GROUPS, ...grouped.keys()])]
+    .filter((section) => grouped.has(section))
+    .map((section) => [section, grouped.get(section)])
     .map(([section, entries]) => {
       const links = entries.map((page) => {
         const active = page.slug === current.slug ? ' aria-current="page"' : "";
@@ -58,8 +88,19 @@ function navigation(pages, current) {
 }
 
 export function renderPage({ root, page, pages, byPath, files }) {
-  const article = renderMarkdown(page.markdown, (target) =>
-    markdownLink({ root, pages: byPath, files, source: page.path, target }),
+  const article = renderMarkdown(
+    page.markdown,
+    page.path,
+    files,
+    (target, linkedSources) =>
+      markdownLink({
+        root,
+        pages: byPath,
+        files,
+        linkedSources,
+        source: page.path,
+        target,
+      }),
   );
   return `<!doctype html>
 <html lang="en">

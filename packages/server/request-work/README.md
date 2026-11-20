@@ -34,16 +34,18 @@ charge into it and `@dads-framework/http` can read the result back out.
 - Work outside a request — jobs, the request-log sink's own flush, migrations —
   is counted nowhere. It is not a request's cost.
 
-See observability and
-ADR-0117.
+Use the [HTTP package](../http/README.md) to attach the tally to request records.
 
 ## Try it
 
 ```ts
-import { beginRequestWork } from "@dads-framework/request-work";
+import { chargeDatabaseQuery } from "@dads-framework/request-work";
+import { measureRequestWork } from "@dads-framework/request-work/testing";
 
-// Establish request work at the host boundary.
-beginRequestWork(request);
+const tally = await measureRequestWork(() =>
+  chargeDatabaseQuery(() => Promise.resolve("query result")),
+);
+console.log(tally.dbQueryCount); // 1
 ```
 
 ## What it refuses to do

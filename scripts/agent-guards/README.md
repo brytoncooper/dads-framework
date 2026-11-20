@@ -27,6 +27,6 @@ node scripts/agent-guards/guard-shell-commands.mjs --self-test
 node scripts/agent-guards/check-after-edit.mjs --self-test
 ```
 
-Run those after changing a guard. The rules they enforce are written down in
-`docs/house-rules.md`; these files are only how the rules arrive in time to
-matter.
+Run the self-tests from the repository root after editing a guard. Each
+command prints its case count and exits successfully when the matrix passes.
+The [house rules](../../docs/house-rules.md) define the checks these hooks apply.

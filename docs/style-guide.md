@@ -72,6 +72,12 @@ the section order and says which register each section is in and whether it is
 required. Section headings are part of the contract: the conformance check
 matches `## What it refuses to do` exactly.
 
+Try each quick start from the reader's stated starting point. Name the
+prerequisites, use the public entry point, and show the expected result.
+When an example is a fragment, identify the application code it assumes.
+Use plain status language to tell readers which environments or providers
+the evidence covers.
+
 ## Enforcement
 
 Documentation is part of done, in three places:

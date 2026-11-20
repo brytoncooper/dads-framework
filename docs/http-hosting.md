@@ -37,5 +37,14 @@ try {
 }
 ```
 
-The [Workbench](../apps/workbench/README.md) exercises a listening server,
-an authenticated request, and database-backed access in its integration tests.
+Here `routes` is the application's list of route cards. Supply a subject
+and seeded authorization port when testing a protected route. Prove the same
+request succeeds with its relationship and is refused without it, then close
+the test host in both cases.
+
+Use a listening server when the test is about network behavior. The
+[Workbench](../apps/workbench/README.md) exercises a listening server,
+an authenticated request, and database-backed access. The
+[kit starter](../apps/kit-workbench/assembly/start-app.ts) shows how a host
+mounts the identity protocol and registers the selected typed API beneath
+`/api`.

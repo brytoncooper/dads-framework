@@ -1,6 +1,7 @@
 # @dads-framework/postgres — the Postgres pool and Drizzle handle
 
-Owns the Postgres pool and the Drizzle instance (`createPostgresConnection`),
+Open and close Postgres connections in application wiring so database adapters
+can share one pool. This package owns the pool and the Drizzle instance (`createPostgresConnection`),
 plus pool lifecycle/teardown, and the adapter helpers `isUniqueViolation` and
 `loadPageAndTotal`/`sqlOffsetForPage`. Domain code never imports `drizzle-orm`
 directly — it talks to the per-domain `<entity>-reader`/`<entity>-writer`

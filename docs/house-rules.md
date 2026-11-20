@@ -6,9 +6,11 @@ remembering it. Two kinds of rule appear. A **gate** is locked at zero — the
 build fails the first time anything trips it. A **ratchet** records what is
 wrong today and refuses to let it get worse.
 
-The gates run at three speeds: while an agent edits a file, when you commit,
-and in CI. All three run the same checks, so a failure never waits for a pull
-request to appear.
+Checks run at several scopes. Edit guards and pre-commit checks catch local
+and staged-file issues. Push and CI verify wider changes. The
+[execution table](#where-the-rules-run) shows which checks run at each stage.
+After a source change, run `dad test:recommend --changed` to find focused
+proof, then `dad verify --changed` to record the result.
 
 ## Gates
 

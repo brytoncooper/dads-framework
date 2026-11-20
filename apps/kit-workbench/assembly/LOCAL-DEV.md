@@ -7,8 +7,9 @@ Linux dependency volume for the Compose services.
 From the project directory, run `npm install` if the lockfile is missing, then
 run `npm start`. The launcher starts PostgreSQL, applies migrations, and
 checks both APIs and the customer API through the web frontend. Open the browser
-URL it prints. Docker assigns separate loopback ports for the browser and the two APIs. Each project uses its
-own ports, database, and persistent application files.
+URL it prints. Docker assigns separate loopback ports for the browser and
+the two APIs. Each project uses its own ports, database, and persistent
+application files.
 
 | Command               | Result                                                                 |
 | --------------------- | ---------------------------------------------------------------------- |

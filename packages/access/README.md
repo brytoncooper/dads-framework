@@ -31,6 +31,9 @@ console.log(emitZed(model));
 ```
 
 The output includes `permission view = member` on the team definition.
+In a service using this model, test a team member and a user with no member
+relationship. The first should see the team's records. The second should
+receive a denial or an empty scoped list, according to the operation.
 
 ## Use it
 

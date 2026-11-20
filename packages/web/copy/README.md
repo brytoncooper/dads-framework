@@ -8,6 +8,24 @@ language is a column rather than a second file that can drift. Keys are derived
 from the catalog with `keyof typeof`, so a typo is a compile error rather than a
 screen that renders `orders.page.titel`.
 
+## Try it
+
+Keep the catalog in the owning feature and translate a typed key at render
+time.
+
+```ts
+import { defineCopy, translate } from "@dads-framework/copy";
+
+const notesCopy = defineCopy({
+  "notes.page.title": { en: "Notes" },
+});
+
+console.log(translate(notesCopy, "en", "notes.page.title")); // "Notes"
+```
+
+The renderer reads the feature's catalog. A misspelled key fails type
+checking.
+
 ## The law: mechanism here, words with the product
 
 **No file in this kit defines a glossary entry or a refused word.** Not one

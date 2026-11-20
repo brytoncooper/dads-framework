@@ -1,15 +1,10 @@
 # @dads-framework/client-request-transport
 
-The one HTTP chokepoint for `web`. Every call the app makes to its
-API goes through this lib, so the rules that must hold for all of them
-— contract-validated request bodies and query strings, envelope unwrapping,
-typed errors, the correlation header, cookie credentials, and the single
-reaction to an expired session — are written once and cannot drift per
-feature.
-
-Nothing here knows about a resource. Per-resource clients live in sibling libs
-in application domains and call its contract-aware verbs; feature libs
-consume those clients and never reach for the transport directly.
+Use the browser request transport when several resource clients share API
+credentials, response parsing, and session handling. It validates request
+bodies and query strings, unwraps response envelopes, and exposes typed
+errors. Put the calls in the domain's API client so browser views can work
+with application-specific operations.
 
 `requestBinary` accepts a bound route, validated body/query arguments, request-local
 headers, and an abort signal. It returns bytes and uses the same credentials,
@@ -48,6 +43,10 @@ await getFromApi({
   returns: z.object({ ok: z.boolean() }),
 });
 ```
+
+If the endpoint returns `{"data":{"ok":true}}`, the call resolves to
+`{ ok: true }`. Callers can handle network and API errors separately, and a
+malformed success payload fails schema validation.
 
 ## What it refuses to do
 

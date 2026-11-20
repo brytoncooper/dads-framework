@@ -321,11 +321,7 @@ scheduler implementation remain separate decisions.
 
 ## Documentation handoff
 
-This record captures the agreed product and technical direction. The checkpoint
-is complete when the document is linked, reviewed against the source and prior
-evidence, and checked for formatting, links, and private references.
-
-The recommended next development step is to turn the first two sequence items
-into a bounded implementation slice, beginning with independent expected impact
-reports. No runtime implementation or shipping is part of this documentation
-task. No additional planning-workflow handoff is required to finish this record.
+Begin implementation with independent expected impact reports, then carry
+those cases through the first two steps in [Sequence and tradeoffs](#sequence-and-tradeoffs).
+The existing [soundness gate](./README.md#release-gate) continues to cover the
+task-based implementation while the prototype is evaluated.

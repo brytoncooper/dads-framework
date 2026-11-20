@@ -1,17 +1,13 @@
 # Testing soundness evidence
 
-For the agreed product definition, source checkpoint, and next analysis-only
-prototype, read [change understanding before execution](./change-understanding-direction.md).
-This page describes the current task-based implementation and its release
-evidence; the planned prototype does not replace those gates yet.
+This guide explains how to run the Dads Testing soundness corpus and verify
+its release evidence. Use the [quickstart](./quickstart.md) to plan and run
+tasks in your own workspace.
 
-To use the package rather than verify it, start with the
-[quickstart](./quickstart.md).
-
-The release gate for `@dads-framework/testing` has one evidence input: the
-deterministic synthetic soundness corpus. A task is the unit of selection and
-execution. Dads v1 does not reuse test results; every selected task runs
-again.
+The release gate for `@dads-framework/testing` reads evidence from the
+deterministic synthetic soundness corpus. Selection operates on declared
+tasks. Every selected task runs. The [product direction](./change-understanding-direction.md)
+records the proposed analysis-only prototype and its acceptance criteria.
 
 ## Synthetic soundness corpus
 

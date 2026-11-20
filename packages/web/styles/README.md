@@ -17,7 +17,9 @@ installed UI package. Adjust the source path relative to your stylesheet.
 `index.css` imports the palette, semantic roles, dark overrides, Tailwind
 utilities, and fonts. Add `dark` to the application root for dark mode. To
 customize the theme, override semantic CSS variables in your application after
-the theme import.
+the theme import. An element with `className="bg-background text-foreground"`
+uses the same role names in both modes and changes colors when the root mode
+changes.
 
 ## Contract
 

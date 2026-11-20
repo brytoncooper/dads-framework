@@ -20,8 +20,9 @@ The document defines `palette`, `light`, and `dark` groups.
 `primary` and `background`. `dark` overrides roles for dark mode. Color role
 aliases point to the palette.
 
-For Tailwind applications, use the corresponding CSS in
-`@dads-framework/styles`.
+Use the JSON export when converting tokens to another platform or inspecting
+the raw palette. For a React app with Tailwind, the [styles package](../styles/README.md)
+provides the matching CSS roles and dark-mode overrides.
 
 ## Contract
 

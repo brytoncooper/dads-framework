@@ -18,7 +18,8 @@ Use `rowVersionSchema` on read and success responses and spread `expectedRowVers
 import { opaqueIdSchema } from "@dads-framework/contract";
 
 const accountId = opaqueIdSchema("AccountId", "Account identifier.");
-accountId.parse("account-1");
+const parsed = accountId.parse("account-1"); // branded AccountId
+accountId.safeParse(42).success; // false
 ```
 
 ## What it refuses to do

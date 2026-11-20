@@ -4,6 +4,11 @@ Dads source is licensed under the [MIT License](./LICENSE.md).
 
 ## Working on the code
 
+Read [AGENTS.md](./AGENTS.md) for ownership and verification rules. Use Node 24
+and npm, as the framework CI does. Start Docker with Compose v2 for PostgreSQL
+integration and starter adoption proofs. For native testing changes, use the
+Rust version in [rust-toolchain.toml](./rust-toolchain.toml).
+
 ```sh
 npm ci
 npm run verify
@@ -15,7 +20,8 @@ typechecks, tests, dependency boundaries, and the budgets. Use
 local tarballs, Rust checks, and testing soundness. `npm run verify:release`
 requires a clean committed checkout and adds uncached verification and package
 preflight. See the [release verification commands](./ci/README.md#framework-prerelease-verification).
-Submit contributions through a branch and pull request.
+Open a pull request from your branch. Include the commands you ran and any
+verification you could not complete.
 
 The rules `verify` enforces — the compiler flags, the lint scopes, the Rust
 denies, the package boundaries, the public-surface reports, and the
@@ -24,8 +30,6 @@ source-budget ratchet — are listed in
 `npm ci` also wires the tracked Git hooks. The commit hook checks staged
 changes. The push hook requires a verification receipt for the commit being
 pushed and runs verification if it needs a new receipt.
-
-Read `AGENTS.md` before changing anything. It is short and binding.
 
 ## Continuous integration
 
@@ -42,9 +46,14 @@ updates that package's README in the same change. Follow
 section order, and [`docs/style-guide.md`](./docs/style-guide.md) for the two
 registers the prose is written in.
 
-`node scripts/checks/check-docs.mjs` checks that structure, and that the
-`@dads-framework/testing` README still covers every `dad-test` command and
-option. It runs inside `npm run verify`.
+For a public guide, edit the Markdown source and update
+[`docs/site/catalog.json`](./docs/site/catalog.json) when adding a page.
+Keep existing page slugs and section anchors when other pages link to them.
+Link to runnable examples and their proof instead of duplicating code in guides.
+
+Run `npm run docs:build` to preview the generated pages in `dist/dads-docs`.
+The repository gate checks the docs site, package README structure, and
+`dad-test` option coverage.
 
 ## Licensing of contributions
 

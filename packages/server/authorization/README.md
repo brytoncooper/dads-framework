@@ -1,6 +1,8 @@
 # `@dads-framework/authorization`
 
-Check permissions, look up resources, and write relationship facts through an authorization port with a SpiceDB adapter.
+Keep access decisions tied to the same relationship model across route guards,
+list filters, and writes. This package exposes those operations and supplies
+a SpiceDB adapter, an outbox, and a fake for tests.
 
 ## Try it
 

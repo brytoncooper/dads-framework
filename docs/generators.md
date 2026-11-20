@@ -20,7 +20,13 @@ select the domain in that API. A resource requires an API selection. If a
 domain is already selected by multiple APIs, each selection includes its
 domain routes. Adding a new domain without an API leaves it unmounted.
 
-Use `--dry-run --json` to inspect the planned changes. Generators only write
+For a first resource in a fresh starter, create the domain with
+`npx dad add domain inventory`. Then preview the resource on the staff API
+with `npx dad add resource item --domain inventory --api staff --dry-run --json`.
+
+The preview lists planned changes, including the resource files and API
+registration. Remove the preview flags to apply it. Use `--dry-run --json`
+on other generators to inspect their planned changes. Generators only write
 new files or explicit registry entries, including those marked with comments
 in the starter. An unchanged rerun creates no duplicate entries. A file
 collision aborts before changes are written.

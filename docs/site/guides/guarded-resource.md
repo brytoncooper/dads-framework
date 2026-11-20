@@ -1,34 +1,50 @@
 # Add a guarded resource
 
-To scaffold a protected resource in a kit starter, run
-`dad add resource products --api staff`. See the
-[generator guide](../../generators.md) for dependency installation, migration,
-and web composition.
+Start with a resource that belongs to a workspace, such as a product catalog.
+A signed-in workspace member should be able to read it. A caller who belongs
+to a different workspace should get a 404, even with the workspace ID.
 
-To see how the contract, relationship, and API selection fit together, read
-the note fixture. It serves one note to its author and returns HTTP 404 for
-an unrelated caller.
+## Generate a resource
 
-1. Declare the resource kind and its relationship in the
-   [note access model](../../../fixtures/plugin-notes/src/notes-access.ts).
-   The permission derives from the author relationship.
-2. In the [route definition](../../../fixtures/plugin-notes/src/notes-routes.ts),
-   parse the resource ID from the path, use the access model's permission
-   handle, and give the success body a schema.
-3. Register the route in the API that needs it. The
-   [customer API](../../../fixtures/plugin-notes/src/apis/customer-api.ts)
-   selects its own route surface and no jobs. The
-   [staff API](../../../fixtures/plugin-notes/src/apis/staff-api.ts) selects
-   its own routes and the staff jobs. They share the notes storage service.
-   The [API isolation test](../../../fixtures/plugin-notes/src/apis/api-selection.test.ts)
-   proves that even a staff identity cannot reach a staff-only route through
-   the customer API.
-4. Run [the note fixture test](../../../fixtures/plugin-notes/src/notes-plugin.test.ts).
-   It injects two requests through the real HTTP kit and asserts both
-   successful access and refusal.
+From the root of an installed starter:
 
-From this workspace, run `npm run build` and
-`npm test -w @dads-fixture/plugin-notes` to execute the fixture.
+1. Run `npx dad add resource products --api staff --dry-run --json` and review the files and API entrypoint in the plan.
+2. Run `npx dad add resource products --api staff` to apply the change.
 
-Use `dad orient <path> --json` before editing an existing route to locate its
-owner, permitted dependencies, and suggested verification.
+The scaffold adds list, read, and update routes, plus the access model,
+database migration, and web-client exports. Install dependencies if the
+manifest changed, apply the migration, and run `npm run verify`. Your app
+supplies the product creation workflow and chooses where the generated
+components appear in the browser. [Generator guide](../../generators.md)
+
+## Follow a working request
+
+In the starter, sign in, create a workspace, and add a note. The notes API
+takes the workspace's tenant ID from the URL. Its access declaration selects
+the tenant view permission, and the route uses that same tenant ID in its
+database predicate. The create handler rechecks permission inside the
+transaction that inserts the note.
+[Start the kit](../../../apps/kit-workbench/README.md) ·
+[Notes access](../../../apps/kit-workbench/domains/notes/access/index.ts) ·
+[Notes routes](../../../apps/kit-workbench/domains/notes/server/routes.ts)
+
+Start your resource proof with a successful read. Then try reading without
+a session and as a signed-in caller from another workspace. Try updating as
+a caller without management permission. Write the denial assertions
+through the same API entry point your clients use. For lists, seed rows in
+both workspaces and assert which IDs come back.
+[Starter integration proof](../../../apps/kit-workbench/tests/starter.integration.test.ts)
+
+For a smaller example, the notes plugin fixture reads one note through its
+author relationship and refuses a request by an unrelated caller. Its
+customer and staff surfaces have their own composition tests. From the
+framework checkout, run `npm run build` and
+`npm test -w @dads-fixture/plugin-notes`.
+[Note fixture routes](../../../fixtures/plugin-notes/src/notes-routes.ts) ·
+[Customer API](../../../fixtures/plugin-notes/src/apis/customer-api.ts) ·
+[Staff API](../../../fixtures/plugin-notes/src/apis/staff-api.ts) ·
+[Note fixture test](../../../fixtures/plugin-notes/src/notes-plugin.test.ts) ·
+[API selection test](../../../fixtures/plugin-notes/src/apis/api-selection.test.ts)
+
+Before editing an existing route, run `dad orient <path> --json` to find its
+owner, allowed dependencies, and suggested verification.

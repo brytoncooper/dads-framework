@@ -1,14 +1,9 @@
 # cross-domain-references
 
-The reconciliation half of ADR-0023,
-as a kit every product runs.
-
-Domains can replace cross-domain foreign keys with explicit references. That trade keeps
-domain schemas on independent lifecycles, and the escape hatch it banks on is
-that an FK can always be added later — which is true only while the data is
-clean, because `ALTER TABLE … ADD FOREIGN KEY` fails on the first dangling row.
-So every product LEFT JOINs every reference it declares to the key that
-reference claims to point at, and reports the values that match nothing.
+Find dangling IDs after domains choose independent database schemas. Declare
+each cross-domain reference and run a read-only check against Postgres. The
+check reports stored IDs that have no target row, so you can clean up data
+before adding a foreign key or moving records.
 
 ## A declaration
 
@@ -16,7 +11,7 @@ A reference belongs to the domain whose table carries the id, so the
 declaration lives in that domain, never in a central file:
 
 ```ts
-// libs/<product>/domains/orders/server/src/lib/public-api/cross-domain-references.ts
+import { declareCrossDomainReferences } from "@dads-framework/cross-domain-references";
 export const ordersCrossDomainReferences = declareCrossDomainReferences([
   {
     id: "orders.managing_organization_id",
@@ -31,8 +26,8 @@ export const ordersCrossDomainReferences = declareCrossDomainReferences([
 ]);
 ```
 
-`classification` is ADR-0023's, and it travels with the finding so a report
-reads with the policy that governs its repair. A polymorphic column — one whose
+Each finding carries the reference's `classification` so an operator can
+apply the application's repair policy. A polymorphic column — one whose
 target table is chosen by a `*_kind` / `*_type` discriminator — is one
 declaration per arm, each narrowed by `filters`, or by `discriminatedByParent`
 when the discriminator sits on a parent row. `declareCrossDomainReferences`
@@ -53,7 +48,7 @@ contract. The checker validates the rows returned by that client.
 The product's composition root assembles one list:
 
 ```ts
-export const commandCrossDomainReferences = assembleCrossDomainReferences([
+export const applicationCrossDomainReferences = assembleCrossDomainReferences([
   ordersCrossDomainReferences,
   facilitiesCrossDomainReferences,
   // …one entry per domain that declares any
@@ -64,32 +59,20 @@ An empty list is valid and means what it says — this product declares no
 cross-domain reference yet. It is not silence: the check still runs and reports
 that it checked nothing.
 
-That list reaches two places:
-
-- **`npm run db:check-references -- --product <name>`** — `tools/check-cross-domain-references`,
-  for a database someone can already reach (local, CI, the nightly job). Exit
-  codes: `0` clean, `1` dangling references found, `2` the check could not run.
-- **The live-environment action `cross-domain-references.check`** — for the
-  environments nobody should have to shell into. Routine tier, read-only, its
-  handler delegating to this kit's `CheckCrossDomainReferences` query. The
-  product declares it, not this kit: the live-environment-actions kit declares
-  a loose reference of its own and therefore imports this one, so an action
-  defined here would close a cycle. The application declares its own beside
-  its API composition root.
+Pass the list to `checkCrossDomainReferences(client, references)` from a CI
+job or an operator command. Use `CheckCrossDomainReferences` when wiring a
+read-only diagnostic action in the application. The package provides report
+formatters for clean results and dangling references.
 
 ## What counts as dangling
 
 Existence, and only existence. A row naming a soft-deleted organization or
-facility is fine: ADR-0023 archives referenced registry rows rather than
-removing them, and status/scope validation belongs to the accepting mutation,
-not to reconciliation.
+facility still points to an existing row. The accepting mutation owns
+status and scope validation.
 
 ## What is deliberately not declared
 
-Registration is the only outcome for a loose cross-domain id column
-withdrew the exception hatch, which had been an empty array for its whole life.
-These are the cases the rule never sees at all, kept here so they are not
-rediscovered as false positives:
+Declare references whose target existence this query can check. These cases belong elsewhere.
 
 - **SpiceDB object references** over an open string vocabulary — they are not
   rows in this database.

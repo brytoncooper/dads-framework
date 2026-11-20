@@ -104,12 +104,11 @@ other. It must not become a generic integrations drawer.
 
 ## Progressive adoption
 
-The guided creator is the default discovery path, not a requirement. It applies
-versioned capability recipes and produces the same public package composition a
-team can assemble manually. Its first existing-application mode creates an
-isolated Dads project beside the host and deliberately does not claim to
-migrate legacy routes. Inventory, characterization, differential proof, and
-cutover remain separate later capabilities.
+Use the [creator](site/guides/quickstart.md) to see public packages assembled
+into a working app. For an existing app, the [adoption guide](site/guides/adopt.md)
+shows how to create an isolated starter under the host's `dads/` directory.
+Moving a route from the host is a separate change. Capture its current
+response and denial behavior in tests before changing which code serves it.
 
 One possible adoption path is:
 
@@ -235,8 +234,9 @@ standalone documentation must remain complete enough to succeed.
 
 ## Initial proof
 
-The first public framework slice should prove incremental adoption and strong
-profiles with at least three consumer fixtures:
+The [adoption harness](../scripts/adoption/verify-adoption.mjs) runs packed
+consumer checks. The three scenarios below describe the evidence expected
+from a standalone capability, a secured capability, and a full composition:
 
 1. A plain TypeScript application using only the initial HTTP package and its
    true foundational dependencies.

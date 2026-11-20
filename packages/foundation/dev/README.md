@@ -22,6 +22,10 @@ Add `dads.dev.json` at the root of the application. List each service's command,
 
 Set `DADS_DEV_POSTGRES_URL` to a loopback Postgres maintenance database. Its role needs permission to create databases. Install `psql` locally, then run `dad-dev ready` and `dad-dev up` in both checkouts. `dad-dev status` shows the local URLs, database names, and paths to owner-only settings files and file roots. `dad-dev down` stops the current checkout. A restart reuses its database and files.
 
+To check isolation, run `dad-dev status` after both worktrees are up. The
+slot records should show distinct API URLs, Postgres databases, and file
+roots. A stop and restart in one worktree should leave the other running.
+
 ## Commands
 
 | Command                               | Behavior                                                                                                                                                   |

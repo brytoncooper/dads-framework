@@ -11,8 +11,10 @@ the proof runs out he widens out loud, with a reason and a line number.
 
 ## Try it
 
-Use these commands from a built source checkout while the first public npm
-release is on hold.
+Use a built source checkout while the first public npm release is on hold.
+Follow the [native build instructions](#native-packages). In the target Git
+workspace, put the built checkout's `node_modules/.bin` on your `PATH` and
+choose a base ref available in that workspace.
 
 ```sh
 dad-test init
@@ -21,6 +23,10 @@ dad-test plan --base origin/main --report dads-testing-report.json --json
 dad-test run --base origin/main --json
 dad-test run --all --jobs 4 --json
 ```
+
+Review the tasks and skips in `dads.testing.init-report.json` before running
+the generated manifest. The [quickstart](../../../docs/testing/quickstart.md)
+walks through a widened plan and a proven skip.
 
 ## Commands
 

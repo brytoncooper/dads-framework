@@ -1,8 +1,8 @@
 # Dads guiding principles
 
-Status: initial design doctrine. These principles describe what Dads is
-intended to enforce; they are not a claim that the framework has already been
-extracted or proven independently of the origin application.
+This is the design reference for choosing where a change belongs. For the
+rules you can run in an application today, see [domain boundaries](domain-boundaries.md)
+and the [Doctor command reference](doctor.md).
 
 Dads is a TypeScript application framework for building systems around
 stable, application-owned capabilities. It keeps foreign dependencies outside

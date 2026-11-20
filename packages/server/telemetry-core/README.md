@@ -1,7 +1,9 @@
 # `@dads-framework/telemetry-core`
 
 Correlate server spans with request records using a bounded request ID and the
-audit actor's kind.
+audit actor's kind. Use this package at the host boundary when building a
+reporter or adapter. To export Node HTTP and Postgres spans to a collector,
+use [the telemetry package](../telemetry/README.md).
 
 ## Contract
 

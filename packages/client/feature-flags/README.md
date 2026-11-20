@@ -9,17 +9,23 @@ and reports response hashes from its own transport.
 ```tsx
 import {
   FeatureStateRuntime,
+  useActivateFeatureState,
   useFeatureEnabled,
 } from "@dads-framework/client-feature-flags";
+import { effectiveFeatureStateSchema } from "@dads-framework/feature-flags/contract";
+import { z } from "zod";
 
+const responseSchema = z.object({ data: effectiveFeatureStateSchema });
 const runtime = new FeatureStateRuntime(async (contextKey) => {
   const response = await fetch("/api/feature-state", {
     headers: { "x-feature-state-context": contextKey },
   });
-  return (await response.json()).data;
+  if (!response.ok) throw new Error("Could not load feature state.");
+  return responseSchema.parse(await response.json()).data;
 });
 
 function ExportButton({ tenantId }: { tenantId: string }) {
+  useActivateFeatureState(runtime, tenantId);
   const enabled = useFeatureEnabled(
     runtime,
     tenantId,
@@ -28,6 +34,10 @@ function ExportButton({ tenantId }: { tenantId: string }) {
   return enabled ? <button>Export</button> : null;
 }
 ```
+
+This example assumes the app serves the feature-state endpoint. The button
+appears after the active tenant's loaded flags include the export slug. Keep
+the permission and flag check on the export endpoint as well.
 
 ## Use it
 

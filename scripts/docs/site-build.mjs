@@ -16,7 +16,7 @@ function createSite(root) {
   const byPath = new Map(pages.map((page) => [page.path, page]));
   const files = new Map();
   for (const page of pages) {
-    files.set(`source/${page.path}`, page.markdown);
+    files.set(`source/${page.path}`, page.sourceMarkdown ?? page.markdown);
     files.set(
       `${page.slug}.html`,
       renderPage({ root, page, pages, byPath, files }),

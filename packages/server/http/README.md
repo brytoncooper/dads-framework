@@ -1,8 +1,9 @@
 # @dads-framework/http — HTTP routes
 
-The one way routes exist. You should be able to ship an endpoint from this
-page alone — no Fastify knowledge required (Fastify is an implementation
-detail inside this lib; importing it anywhere else is banned).
+Ship an endpoint with one declaration for the input schema, access policy,
+handler, response, and generated OpenAPI. Define the route in its domain,
+register it in the API, and test both allowed and denied requests. This
+package owns the Fastify integration.
 
 ## Define a route — the verb IS the function
 
@@ -140,22 +141,29 @@ observability.
 ## Testing
 
 ```ts
-import {
-  buildTestApp,
-  dataBodyOf,
-  errorBodyOf,
-} from "@dads-framework/http/testing";
+import { buildTestApp, dataBodyOf } from "@dads-framework/http/testing";
+import { FakeAuthorization } from "@dads-framework/access/testing";
+import { routeGroup } from "@dads-framework/http";
+
+const id = "ca498064-95f7-4334-8d66-12703cd044a9";
+const authorization = new FakeAuthorization();
+authorization.seed({
+  resource: { type: "organizations/organization", id },
+  subject: { type: "user", id: "u1" },
+  relation: "view",
+});
 
 const app = await buildTestApp({
   routes: routeGroup("Organizations", [getOrganization]),
-  authorization: seededFake,
+  authorization,
 });
 const res = await app.inject({
   method: "GET",
-  url: "/organizations/xyz",
+  url: `/organizations/${id}`,
   headers: { "x-test-subject": "u1" },
 });
-expect(dataBodyOf(res, organizationSchema).id).toBe("xyz");
+console.log(dataBodyOf(res, organizationSchema).id); // ca498064-95f7-4334-8d66-12703cd044a9
+await app.close();
 ```
 
 `buildTestApp` never opens a port (`listen` does not exist on it — pinned
@@ -178,9 +186,7 @@ an arbitrary schema) — `res.json()` is `any` and defeats the type walls.
 
 A surface that implements another party's protocol (Better Auth's
 `/api/auth/*`, the remote MCP endpoint) is not a route: it is a fetch-style
-handler mounted whole. That code is its own Nx project, `api-http-protocol-mount`
-in [`protocol-mount/`](./src/protocol-mounts/README.md), imported as
-`@dads-framework/http/protocol-mounts`.
+handler mounted whole. Import the bridge from [`@dads-framework/http/protocol-mounts`](./src/protocol-mounts/README.md) in the API composition root.
 `mountFetchHandler` is the one bridge for that — every content type arrives as
 raw bytes, the request crosses to a WHATWG `Request` whose clones never share
 a stream (`to-web-request.ts`, the Node 22 undici clone trap), and the

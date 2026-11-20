@@ -6,7 +6,10 @@ The **Prepare npm release artifacts** workflow on the public repository builds, 
 
 1. Run the workflow from `main`. Use the complete workflow when retrying so every artifact comes from the same run attempt.
 2. Download only the `dads-npm-release-<commit>-<attempt>` artifact from a successful run. Keep the 57 tarballs, their Sigstore bundles, and `release.json` together. Check out that public commit on the operator's workstation.
-3. Use Node 24 and npm 11.21.2. Verify the contents and provenance before using the archive filenames in npm commands.
+3. Use Node 24 and npm 11.21.2. From the release commit's checkout, set
+   `release_dir` to the absolute path of the extracted artifact directory
+   containing `release.json`. Verify the contents and provenance before
+   using the archive filenames in npm commands.
 
 ```bash
 tooling=$(mktemp -d)

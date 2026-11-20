@@ -3,6 +3,8 @@ import { posix, relative, resolve, sep } from "node:path";
 
 const EXTERNAL = /^(https?:|mailto:)/i;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+const REPOSITORY_BLOB =
+  "https://github.com/brytoncooper/dads-framework/blob/main/";
 const PRIVATE =
   /^(?:docs\/(?:private|plans|decisions|benchmarks|agents)\/|\.agents\/plans\/|\.git\/|node_modules\/|dist\/|\.env(?:\.|$))/;
 
@@ -39,7 +41,14 @@ function fileOrReadme(root, path) {
   return undefined;
 }
 
-export function markdownLink({ root, pages, files, source, target }) {
+export function markdownLink({
+  root,
+  pages,
+  files,
+  linkedSources,
+  source,
+  target,
+}) {
   if (target.startsWith("#") || EXTERNAL.test(target) || target === "")
     return target;
   if (SCHEME.test(target) || target.startsWith("//")) {
@@ -49,6 +58,7 @@ export function markdownLink({ root, pages, files, source, target }) {
   const path = split === -1 ? target : target.slice(0, split);
   const suffix = split === -1 ? "" : target.slice(split);
   const candidate = localTarget(source, path);
+  repositoryFile(root, candidate);
   const page = pages.get(candidate);
   if (page) return `${page.slug}.html${suffix}`;
   const file = fileOrReadme(root, candidate);
@@ -56,11 +66,17 @@ export function markdownLink({ root, pages, files, source, target }) {
     throw new Error(
       `${source}: link ${target} has no file or directory README.`,
     );
-  const relativeFile = `source/${file.split(sep).join("/")}`;
+  const readmePage = pages.get(file);
+  if (readmePage) return `${readmePage.slug}.html${suffix}`;
+
+  const relativeFile = `source/${file}`;
   if (!files.has(relativeFile)) {
     files.set(relativeFile, readPublicFile(root, file));
   }
-  return `${relativeFile.split("/").map(encodeURIComponent).join("/")}${suffix}`;
+  linkedSources?.add(relativeFile);
+  const encodedPath = file.split("/").map(encodeURIComponent).join("/");
+  if (/\.md$/i.test(file)) return `${REPOSITORY_BLOB}${encodedPath}${suffix}`;
+  return `source/${encodedPath}${suffix}`;
 }
 
 export function readPublicFile(root, path) {

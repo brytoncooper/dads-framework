@@ -27,3 +27,10 @@ Keep schema coercion explicit where parameters and query values arrive as
 text. A route card should describe what callers send and what handlers return.
 The [HTTP kit](../packages/server/http/README.md) builds OpenAPI from the card's
 request and response schemas.
+
+For an input change, test a valid payload, a missing required field, and a
+payload with an unfamiliar property when the schema is strict. For an output
+change, exercise the request transport against the new response. Treat the
+HTTP envelope and the application payload as separate contracts. The
+[starter notes walkthrough](./site/guides/http.md) traces both through a
+working route.

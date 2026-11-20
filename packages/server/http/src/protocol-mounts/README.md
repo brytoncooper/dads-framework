@@ -1,24 +1,29 @@
 # `@dads-framework/http/protocol-mounts`
 
-The fetch-handler bridge (`mountFetchHandler`, `toWebRequest`) and the remote
-MCP endpoint (`createMcpEndpoint`, its JSON-RPC methods and RFC 9728 metadata).
-Only composition roots mount these — an application's API wiring and its
-identity layer's auth mount. The MCP tool seam domains author against
-(`defineMcpTool`, `McpToolSet`) stays in the main [`@dads-framework/http`](../../README.md)
-barrel, and this project reaches the kit only through that barrel.
+Mount an existing Fetch protocol handler without translating its routes into
+Dads route cards. The API composition root owns the mount prefix. Domains
+define MCP tools with the main [HTTP package](../../README.md). Composition
+uses `createMcpEndpoint` to serve those tools over MCP.
+
+## Try it
+
+```ts
+import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
+
+await app.register(
+  mountFetchHandler({
+    handler: () => Promise.resolve(new Response("Ready")),
+  }),
+  { prefix: "/example" },
+);
+```
+
+Send a request to `/example` on the running app to receive `Ready`. Keep the
+prefix literal so the host can inspect the mount.
 
 ## Why this is its own project, nested inside the kit it belongs to
 
-Nx computes `affected` per **project**, so while these files sat in `api-http`,
-every MCP endpoint change re-ran all 65 projects that define an HTTP route (45
-of them with integration suites), none of which mounts a protocol. As its own
-node, a change here reaches only the roots that mount one and what depends on
-them.
-
-The alias was `@dads-framework/http/protocol-mount` (singular) while it pointed
-into `api-http`. It got a new name rather than a new target because Nx caches
-each file's resolved imports and only re-reads a file when the file changes —
-it never notices an alias pointing somewhere else (it reads the `paths` in
-`tsconfig.base.json` itself, and ours live in `tsconfig.paths.json` behind
-`extends`). Renaming the alias changes every importer, so every cache re-reads
-it.
+The separate export lets application route code use the HTTP contract without
+loading protocol handlers. The bridge converts incoming requests to WHATWG
+`Request` objects and forwards the handler's `Response`. The MCP endpoint owns
+JSON-RPC and its authorization metadata.

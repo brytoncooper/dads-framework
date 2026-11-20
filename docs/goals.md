@@ -399,6 +399,8 @@ it.
 
 ## Recommended next step
 
-Specify the first reference capability and its complete happy, denied, failure,
-integration, and replacement behaviors. Then turn that one slice into a small,
-verifiable implementation plan.
+Use the [starter](../apps/kit-workbench/README.md) as the reference slice for
+the next change. Add one guarded behavior, write down the allowed and denied
+outcomes, then prove the database and composition paths on which it depends.
+Use the [guarded resource guide](./site/guides/guarded-resource.md) to follow
+that workflow in an application.

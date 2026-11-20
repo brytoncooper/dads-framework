@@ -1,6 +1,8 @@
 # `@dads-framework/telemetry`
 
-Send Node HTTP and Postgres traces to an OpenTelemetry collector. The process starts without tracing when no exporter endpoint is configured.
+Trace an HTTP request through its Postgres calls and use the request ID to
+find the matching server record. The process starts without tracing if no
+exporter endpoint is configured.
 
 ## Try it
 

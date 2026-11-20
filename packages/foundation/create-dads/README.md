@@ -22,9 +22,11 @@ cd my-app
 
 Open the web URL printed by the creator. From the generated directory,
 `npm start` starts the stack again, `npm run dev:status` shows its state,
-and `npm run dev:down` stops it. For a separate API host, use
-`npm run start:api` and the environment in the generated deployment guide. Run `npm run verify` from the app root. The generated README lists
-the Docker requirements for its live PostgreSQL proof.
+and `npm run dev:down` stops it. Use the [quickstart](../../../docs/site/guides/quickstart.md)
+to read a verification email from the local mailbox, sign in, and save a note.
+For a separate API host, use `npm run start:api` and the environment in the
+generated deployment guide. Run `npm run verify` from the app root with Docker
+running for the live PostgreSQL checks.
 Commit the generated `package-lock.json`. The `ci/verify.sh` command runs
 `npm ci` before verification, and `ci/` contains templates for CI providers.
 

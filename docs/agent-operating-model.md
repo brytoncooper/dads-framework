@@ -5,6 +5,11 @@ run verification. [`dad-dev`](../packages/foundation/dev/README.md) can isolate
 local services for Git worktrees. Task claims and overlap detection remain
 product direction.
 
+For a route change, start with `dad orient <route-file> --json`. Follow the
+owner's workflow, then use `dad test:recommend --changed --json` for the
+checks affected by the diff. Finish with `dad verify --changed --json` and
+record any proof that still needs a real provider.
+
 ## The idea
 
 Dads should teach contributors how to work responsibly inside a Dads
@@ -141,7 +146,8 @@ resources its task owns. See
 
 ## Current proof and remaining proof
 
-The HTTP 0.1 workbench and benchmark fixtures prove that:
+The runnable [Workbench](../apps/workbench/README.md) and repository fixtures
+supply evidence for the implemented workflow, including the following:
 
 - A new agent can identify the owner and supported workflow for a small change.
 - The framework returns the focused verification declared by every affected

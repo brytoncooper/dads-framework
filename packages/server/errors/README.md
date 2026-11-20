@@ -1,11 +1,11 @@
 # @dads-framework/errors — typed failures
 
-`DomainError` (discriminated `kind` + stable SCREAMING_SNAKE `code`) with
-its shorthand constructors (`notFound`, `conflict`, `validation`, `forbidden`),
-the `Result` type for expected failures, and — under
-`@dads-framework/errors/map-error-to-http-response` — the pure
-`mapErrorToHttpResponse` table that turns errors into the HTTP error envelope
-in exactly one place (docs/architecture/type-safety.md).
+Give expected business failures stable codes that callers can handle without
+matching human messages. Use `Result` when the caller needs to handle success
+and failure explicitly. Construct a `DomainError` with `notFound`, `conflict`,
+`validation`, or `forbidden` when the boundary owns failure handling. The
+`@dads-framework/errors/map-error-to-http-response` export maps each error kind
+to its HTTP status and envelope.
 
 ## Version conflicts
 
@@ -14,9 +14,11 @@ Use `staleSave()` after an authorized conditional update fails to match the expe
 ## Try it
 
 ```ts
-import { ok } from "@dads-framework/errors";
+import { notFound } from "@dads-framework/errors";
+import { mapErrorToHttpResponse } from "@dads-framework/errors/map-error-to-http-response";
 
-const result = ok({ id: "document-1" });
+const error = notFound("DOCUMENT_NOT_FOUND", "The document was not found.");
+console.log(mapErrorToHttpResponse(error, "request-1").status); // 404
 ```
 
 ## What it refuses to do

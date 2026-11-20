@@ -19,7 +19,11 @@ the packages that have a generated API reference. The site check runs inside
 - [Generate application code](./generators.md)
 - [Keep domains independent](./domain-boundaries.md)
 - [Share an application contract with another repository](./dependency-libraries.md)
+- [Add a guarded resource](./site/guides/guarded-resource.md)
 - [Run the app's verification in CI](../ci/README.md)
+
+For a live example of the HTTP, identity and tenant kits together, follow
+the starter's local workbench walkthrough. [Kit starter](../apps/kit-workbench/README.md)
 
 ## Diagnosis
 

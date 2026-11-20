@@ -4,7 +4,7 @@ import { buildTestApp } from "@dads-framework/http/testing";
 import { TenantUnavailableError } from "@dads-framework/tenants";
 import { expect, it, vi } from "vitest";
 
-import { sessionSubjects } from "../assembly/session-subjects.js";
+import { sessionSubjects } from "./session-subjects.js";
 import { scimBindingRoutes } from "../domains/tenants/index.js";
 import { accountEntity, tenantAccess } from "../libraries/app-runtime/index.js";
 

@@ -1,0 +1,10 @@
+name = "dads_access_proofs"
+version = "0.1.0"
+defaultTargets = ["DadsAccess", "dads-access-oracle"]
+
+[[lean_lib]]
+name = "DadsAccess"
+
+[[lean_exe]]
+name = "dads-access-oracle"
+root = "DadsAccess.Oracle"

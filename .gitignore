@@ -4,6 +4,7 @@ coverage/
 *.tgz
 *.tsbuildinfo
 .dads/
+.lake/
 target/
 packages/testing/native/*/bin/
 testing-evidence/

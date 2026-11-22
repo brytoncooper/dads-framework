@@ -28,6 +28,36 @@
       "owner": "@dads-framework/postgres-access",
       "section": "Guides",
       "path": "docs/site/guides/permissions.md",
+      "examples": [
+        {
+          "source": "fixtures/standalone-access/src/authz/model.ts",
+          "proof": "fixtures/standalone-access/src/authz/model.test.ts"
+        },
+        {
+          "source": "fixtures/standalone-access/src/authz/setup.ts",
+          "proof": "fixtures/standalone-access/src/authz/model.test.ts"
+        },
+        {
+          "source": "fixtures/standalone-access/src/routes/documents.ts",
+          "proof": "fixtures/standalone-access/src/authz/model.test.ts"
+        },
+        {
+          "source": "fixtures/dads-app-access/domains/documents/access/index.ts",
+          "proof": "fixtures/dads-app-access/domains/documents/server/access.test.ts"
+        },
+        {
+          "source": "fixtures/dads-app-access/domains/documents/server/routes.ts",
+          "proof": "fixtures/dads-app-access/domains/documents/server/access.test.ts"
+        },
+        {
+          "source": "fixtures/dads-app-access/assembly/authorization.ts",
+          "proof": "fixtures/dads-app-access/domains/documents/server/access.test.ts"
+        },
+        {
+          "source": "fixtures/dads-app-access/apps/customer/app.ts",
+          "proof": "fixtures/dads-app-access/domains/documents/server/access.test.ts"
+        }
+      ],
       "navigationGroup": "Build a feature"
     },
     {

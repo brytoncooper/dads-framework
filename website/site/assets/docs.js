@@ -170,6 +170,53 @@ export function enableSearchModal(doc = document, win = window) {
   });
 }
 
+function enableFileGroups(article) {
+  if (!article) return;
+  for (const group of article.querySelectorAll("[data-file-group]")) {
+    const tabs = Array.from(group.querySelectorAll('[role="tab"]'));
+    const panels = Array.from(group.querySelectorAll('[role="tabpanel"]'));
+    if (tabs.length < 2) continue;
+
+    const activate = (nextTab, moveFocus = false) => {
+      const targetId = nextTab.getAttribute("aria-controls");
+      for (const tab of tabs) {
+        const selected = tab === nextTab;
+        tab.setAttribute("aria-selected", selected ? "true" : "false");
+        if (selected) tab.removeAttribute("tabindex");
+        else tab.setAttribute("tabindex", "-1");
+      }
+      for (const panel of panels) {
+        panel.setAttribute(
+          "data-active",
+          panel.id === targetId ? "true" : "false",
+        );
+      }
+      if (moveFocus) nextTab.focus();
+    };
+
+    for (const tab of tabs) {
+      tab.addEventListener("click", () => activate(tab));
+      tab.addEventListener("keydown", (event) => {
+        const current = tabs.indexOf(tab);
+        let nextIndex = -1;
+        if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+          nextIndex = (current + 1) % tabs.length;
+        } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+          nextIndex = (current - 1 + tabs.length) % tabs.length;
+        } else if (event.key === "Home") {
+          nextIndex = 0;
+        } else if (event.key === "End") {
+          nextIndex = tabs.length - 1;
+        }
+        if (nextIndex !== -1) {
+          event.preventDefault();
+          activate(tabs[nextIndex], true);
+        }
+      });
+    }
+  }
+}
+
 function enableTocScrollspy() {
   const toc = document.querySelector(".reader-toc");
   if (!toc) return;
@@ -265,6 +312,8 @@ if (typeof document !== "undefined" && typeof window !== "undefined") {
     for (const area of scrollAreas) resize.observe(area);
   }
 
-  enableExampleCopy(document.querySelector("article"));
+  const article = document.querySelector("article");
+  enableExampleCopy(article);
+  enableFileGroups(article);
   enableTocScrollspy();
 }

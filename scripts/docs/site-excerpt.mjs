@@ -37,16 +37,26 @@ export function sourceExcerpt({ token, page, readFile }) {
   } catch {
     fail("expected a JSON selection");
   }
-  const { path, language, from, through } = selection ?? {};
+  const {
+    path,
+    language,
+    from,
+    through,
+    all,
+    displayPath: customDisplayPath,
+    note,
+  } = selection ?? {};
   const extension = LANGUAGES.get(language);
+  const fullFile = all === true;
   if (
     typeof path !== "string" ||
     !extension ||
     !path.endsWith(extension) ||
-    typeof from !== "string" ||
-    typeof through !== "string"
+    (!fullFile && (typeof from !== "string" || typeof through !== "string"))
   ) {
-    fail("expected a source path, language, start line and end line");
+    fail(
+      "expected a source path, language, and start/end lines (or all: true)",
+    );
   }
   if (
     posix.isAbsolute(path) ||
@@ -59,18 +69,33 @@ export function sourceExcerpt({ token, page, readFile }) {
   const repositoryPath = page.startsWith(`${STARTER_ROOT}examples/`)
     ? `${STARTER_ROOT}${path}`
     : path;
-  const lines = readFile(repositoryPath).toString().split(/\r?\n/u);
-  const start = uniqueAnchor(lines, from, fail).first;
-  const end = uniqueAnchor(lines, through, fail).last;
-  if (end < start) fail("the end line precedes the start line");
-  const excerpt = lines
-    .slice(start, end + 1)
-    .join("\n")
-    .trimEnd();
-  const displayPath = repositoryPath.startsWith(STARTER_ROOT)
-    ? repositoryPath.slice(STARTER_ROOT.length)
-    : repositoryPath;
-  return { language, excerpt, path: displayPath };
+  const rawContent = readFile(repositoryPath).toString();
+  let excerpt;
+  if (fullFile) {
+    excerpt = rawContent.trimEnd();
+  } else {
+    const lines = rawContent.split(/\r?\n/u);
+    const start = uniqueAnchor(lines, from, fail).first;
+    const end = uniqueAnchor(lines, through, fail).last;
+    if (end < start) fail("the end line precedes the start line");
+    excerpt = lines
+      .slice(start, end + 1)
+      .join("\n")
+      .trimEnd();
+  }
+  const displayPath =
+    typeof customDisplayPath === "string" && customDisplayPath.length > 0
+      ? customDisplayPath
+      : repositoryPath.startsWith(STARTER_ROOT)
+        ? repositoryPath.slice(STARTER_ROOT.length)
+        : repositoryPath;
+  const summary =
+    typeof note === "string" && note.trim().length > 0
+      ? note.trim()
+      : undefined;
+  return summary
+    ? { language, excerpt, path: displayPath, note: summary }
+    : { language, excerpt, path: displayPath };
 }
 
 function fencedExcerpt({ language, excerpt }) {
@@ -103,7 +128,11 @@ export function expandPageExamples(page, readFile) {
             (inline) =>
               inline.type === "codespan" && inline.text === excerpt.path,
           );
-        const label = alreadyLabeled ? "" : `\`${excerpt.path}\`\n\n`;
+        const label = alreadyLabeled
+          ? ""
+          : excerpt.note
+            ? `\`${excerpt.path}\` — ${excerpt.note}\n\n`
+            : `\`${excerpt.path}\`\n\n`;
         excerpts.set(token, label + fencedExcerpt(excerpt));
       }
     }

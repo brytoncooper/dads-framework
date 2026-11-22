@@ -6,57 +6,60 @@ Dads lets you write your permission rules once in plain TypeScript and runs them
 
 - **Fast at any scale:** Sub-millisecond permission checks and instant paginated lists across millions of rows — using your existing tables and indexes.
 - **No sync bugs:** Permission checks and database writes run inside the same transaction, so revoking access takes effect immediately.
-- **Zero lock-in:** Start in SQLite or PostgreSQL today, import an existing SpiceDB setup, or migrate out to SpiceDB later without rewriting your app code.
+- **Zero lock-in:** Drop just the access packages into any existing Node app, use them inside the full Dads framework, or migrate to/from SpiceDB later without rewriting your app code.
 
 ---
 
-## 5-Minute Quickstart
+## Option A: Add Dads Access to an existing app (standalone)
 
-### 1. Define your model once in plain TypeScript
-
-Declare actors (`actor`), resources (`resource`), roles (`roles`), and permissions (`can`). Child resources declare `inherit` explicitly (`"all"`, `"none"`, or a list like `["manage"]`) so sensitive resources like `billing` stay fail-closed (`packages/access/src/core/dsl.test.ts`):
-
-<!-- dads:excerpt {"path":"packages/access/src/core/dsl.test.ts","language":"ts","from":"    const user = actor(\"user\");\n\n    const organization = resource(\"organization\", {\n      roles: {\n        admin: user,","through":"          can: ({ accountant }) => ({\n            view: accountant,\n          }),\n        },\n      },\n    });"} -->
-
-Compile once at startup with `compileAccess([organization])`. Inspect the resolved tree anytime with `formatAccessTree(model)` or `npx dad access tree src/access.ts`.
-
-### 2. Connect Postgres (plain `pg.Pool`, Drizzle, or SQLite)
-
-Install `@dads-framework/access` and `@dads-framework/postgres-access` (zero ORM required):
+Already have an Express, Fastify, Hono, Next.js, or plain Node + Postgres codebase? You do **not** need the rest of the Dads framework. Install the two access packages:
 
 ```sh
-npm install @dads-framework/access @dads-framework/postgres-access pg zod
+npm install @dads-framework/access @dads-framework/postgres-access pg
 ```
 
-Apply `relationshipSchemaMigration.sql`, bind any single-target foreign keys you already have on your tables (`documents.org_id`, `documents.owner_id`, `folders.parent_id`) with `columnRelations` so Postgres reads them directly with zero dual-writes, and verify columns/indexes at startup (`packages/server/postgres-access/src/column-relations.integration.test.ts`):
+Apply `relationshipSchemaMigration.sql` once, then organize permissions into **4 small files**—click any file in the explorer below to see how they import from each other:
 
-<!-- dads:excerpt {"path":"packages/server/postgres-access/src/column-relations.integration.test.ts","language":"ts","from":"function createColumnBindings(","through":"      targetIdColumn: \"owner_id\",\n    },\n  ];\n}"} -->
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/authz/model.ts","displayPath":"src/authz/model.ts","note":"1. Define actors, resources, roles & permissions once","language":"ts","all":true} -->
 
-Pass `columnRelations: bindings` and `executor: preparePostgresChecks(pool)` into `new PostgresAuthorization(...)`, run `columnRelationIndexSql(bindings)` in your migration, and call `await authz.verifyColumnRelations()` at boot so missing columns fail fast.
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/authz/setup.ts","displayPath":"src/authz/setup.ts","note":"2. Wire pg.Pool + columnRelations once at startup","language":"ts","all":true} -->
 
-> **Rule of thumb:** Put single-target foreign keys (`org_id`, `owner_id`, `parent_id`) in `columnRelations`. Keep dynamic grants (org memberships, groups, wildcards, expiring shares, bans, and multi-parent links) in the tuple table via `createAccessClient(authz).add(...)`.
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/routes/documents.ts","displayPath":"src/routes/documents.ts","note":"3. Filter SQL lists & guard writes in one transaction","language":"ts","all":true} -->
 
-Running local-first, edge, or single-node? Swap `PostgresAuthorization` for `SqliteAuthorization` from [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) using Node's built-in `node:sqlite` (`DatabaseSync`) — exact same model, exact same `columnRelations` API.
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/authz/model.test.ts","displayPath":"src/authz/model.test.ts","note":"4. Test inheritance, bans & revokes in <1 ms (no Docker)","language":"ts","all":true} -->
 
-### 3. Filter lists & guard writes in one transaction
+> **Rule of thumb:** Bind single-target foreign keys you already have (`documents.org_id`, `documents.owner_id`, `folders.parent_id`) in `columnRelations`. Store dynamic grants (org memberships, teams, wildcards, expiring shares, and bans) via `createAccessClient(authz).add(...)`.
+>
+> **Using SQLite instead of Postgres?** Swap `@dads-framework/postgres-access` for [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) (`SqliteAuthorization` on Node's built-in `node:sqlite`)—same `model.ts`, same `columnRelations` API.
 
-Embed `resolveFilter({ ..., scopeColumns: "auto" })` directly inside paginated SQL `SELECT ... LIMIT 50` queries, and wrap protected writes in `withProtectedPgTransaction({ pool, authorization, retries: 2 }, work)` so revokes and business updates share one `SERIALIZABLE` snapshot with automatic `40001` retries (`packages/server/postgres-access/src/column-relations.integration.test.ts`):
+---
 
-<!-- dads:excerpt {"path":"packages/server/postgres-access/src/column-relations.integration.test.ts","language":"ts","from":"    const resolvedFilter = await authz.resolveFilter({","through":"    expect(resolvedRows.rows.map((row) => row.id)).toEqual([\"doc-org\"]);"} -->
+## Option B: Inside a full Dads Framework app (opinionated layout)
 
-<!-- dads:excerpt {"path":"packages/server/postgres-access/src/column-relations.integration.test.ts","language":"ts","from":"    // Update inside a protected serializable transaction; scoped authz preserves columnRelations.","through":"            resource: { type: \"document\", id: \"doc-null\" },\n          }),\n        ).toBe(true);\n      },\n    );"} -->
+When you build with the full Dads framework, boundaries are enforced by folder structure so business logic never imports database drivers:
 
-Using Drizzle? Import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle` (`assembly/protected-write.ts`):
+- **`domains/<feature>/access/index.ts`** — Database-free permission model and typed `requires(...)` route guards. Never imports `pg` or `@dads-framework/postgres-access`.
+- **`domains/<feature>/server/routes.ts`** — Attaches those guards to every HTTP route; calls an injected repository interface.
+- **`assembly/authorization.ts`** — The **only** layer that imports `pg` and `@dads-framework/postgres-access` to wire `columnRelations` and prepared checks.
+- **`apps/<surface>/app.ts`** — Composes the assembled services and domain plugins into a runnable API.
 
-<!-- dads:excerpt {"path":"apps/kit-workbench/assembly/protected-write.ts","language":"ts","from":"export function createProtectedWrite(","through":"}"} -->
+Click through the 5 files below to trace how imports flow across boundaries:
 
-### 4. Test policies in microseconds (zero Docker, zero `await`)
+<!-- dads:excerpt {"path":"fixtures/dads-app-access/domains/documents/access/index.ts","displayPath":"domains/documents/access/index.ts","note":"Database-free model & HTTP guards (no pg import)","language":"ts","all":true} -->
 
-Import `createAccessHarness` from `@dads-framework/access/testing` to test full inheritance, cycles, groups, bans, and expiring grants synchronously in plain unit tests (`packages/access/src/testing/access-harness.test.ts`):
+<!-- dads:excerpt {"path":"fixtures/dads-app-access/domains/documents/server/routes.ts","displayPath":"domains/documents/server/routes.ts","note":"Routes attach guards & Zod schemas before handlers","language":"ts","all":true} -->
 
-<!-- dads:excerpt {"path":"packages/access/src/testing/access-harness.test.ts","language":"ts","from":"    const access = createAccessHarness(model);\n    const owner = access.actor(user, \"owner\");","through":"        [stranger, [\"deny\", \"deny\", \"deny\"]],\n      ],\n    });"} -->
+<!-- dads:excerpt {"path":"fixtures/dads-app-access/domains/documents/server/access.test.ts","displayPath":"domains/documents/server/access.test.ts","note":"Proves policy & route guards in microseconds (no Docker)","language":"ts","all":true} -->
 
-When an assertion fails, the harness prints the exact **decision explanation tree** showing which ban, expired grant, or missing parent edge caused the mismatch.
+<!-- dads:excerpt {"path":"fixtures/dads-app-access/assembly/authorization.ts","displayPath":"assembly/authorization.ts","note":"ONLY layer importing pg & postgres-access","language":"ts","all":true} -->
+
+<!-- dads:excerpt {"path":"fixtures/dads-app-access/apps/customer/app.ts","displayPath":"apps/customer/app.ts","note":"Composes assembled services + domain plugins","language":"ts","all":true} -->
+
+Every Dads HTTP route enforces access in strict order:
+
+1. Missing or invalid session → **`401 Unauthorized`**.
+2. Missing permission → **`404 Not Found`** before parsing the body or query (zero existence leaks).
+3. Only authorized callers reach Zod validation and your handler.
 
 ---
 
@@ -82,28 +85,14 @@ Most apps start with custom permission code scattered across API routes, then ou
 | Fast unit tests (no Docker)    | Yes             | No           | No                | Yes             |
 | Mathematically verified engine | No              | No           | No                | Yes (27 proofs) |
 
-Want to see the measured numbers, query plans, and formal proofs behind that table? Read **[Benchmarks & Proof](benchmarks-and-proof.md)**.
-
----
-
-## Attach permission guards to HTTP routes
-
-Export named permission tokens (such as `organization.task.can.edit`) from `domains/<feature>/access/index.ts` and attach them to routes (`domains/notes/access/index.ts`):
-
-<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/access/index.ts","language":"ts","from":"import { fromParam, requires } from \"@dads-framework/http\";","through":"export const notesAccess = requires(notesPermission, fromParam(\"tenantId\"));"} -->
-
-Every Dads HTTP route enforces access in strict order:
-
-1. Missing or invalid session → **`401 Unauthorized`**.
-2. Missing permission → **`404 Not Found`** before parsing the body or query (zero existence leaks).
-3. Only authorized callers reach Zod validation and your handler.
+Want the measured numbers, exact hardware, `EXPLAIN ANALYZE` plans, and formal proofs behind that table? Read **[Benchmarks & Proof](benchmarks-and-proof.md)**.
 
 ---
 
 ## Go deeper
 
-- **[Benchmarks & Proof](benchmarks-and-proof.md)** — How we measured, exact hardware & datasets, Postgres vs SpiceDB head-to-head results, 10M-row query plans, what you can support, and our 27 Lean 4 proofs.
-- **[Permissions Cookbook & Patterns](permissions-cookbook.md)** — Tested recipes for `columnRelations`, nested folders, teams, wildcards, expiring shares, bans, `every()`, and two-way SpiceDB migration.
+- **[Benchmarks & Proof](benchmarks-and-proof.md)** — Scientific benchmark report: 1-vCPU 10M-row Postgres baseline, how we tilted the head-to-head test in SpiceDB's favor and still won 2.0×–3.2×, SQLite scale, uncertainty/limitations, and 27 Lean 4 proofs.
+- **[Permissions Cookbook & Patterns](permissions-cookbook.md)** — Tested recipes for `columnRelations`, protecting `org_id`, nested folders, teams, wildcards, expiring shares, bans, `every()`, and two-way SpiceDB migration.
 - **[SDK Glossary & Options](sdk-reference.md)** — Every DSL combinator, adapter option, and CLI command.
 
 ## Related references

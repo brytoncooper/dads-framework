@@ -296,6 +296,41 @@
       "skills": ["dads-orient"]
     },
     {
+      "name": "@dads-fixture/standalone-access",
+      "root": "fixtures/standalone-access",
+      "responsibility": "Minimal 4-file standalone example showing how to adopt `@dads-framework/access` and `@dads-framework/postgres-access` inside an existing Node + Postgres codebase without the rest of the framework.",
+      "kind": "composition",
+      "published": false,
+      "allowedDependencies": [
+        "@dads-framework/access",
+        "@dads-framework/postgres-access",
+        "pg"
+      ],
+      "verification": [
+        "npx vitest run fixtures/standalone-access/src/authz/model.test.ts"
+      ],
+      "skills": ["dads-orient"]
+    },
+    {
+      "name": "@dads-fixture/dads-app-access",
+      "root": "fixtures/dads-app-access",
+      "responsibility": "Minimal 5-file opinionated Dads Framework example showing strict `domains/`, `assembly/`, and `apps/` boundaries for access models, route guards, and Postgres wiring.",
+      "kind": "composition",
+      "published": false,
+      "allowedDependencies": [
+        "@dads-framework/access",
+        "@dads-framework/http",
+        "@dads-framework/plugin",
+        "@dads-framework/postgres-access",
+        "pg",
+        "zod"
+      ],
+      "verification": [
+        "npx vitest run fixtures/dads-app-access/domains/documents/server/access.test.ts"
+      ],
+      "skills": ["dads-orient"]
+    },
+    {
       "name": "@dads-fixture/testing",
       "root": "fixtures/testing",
       "responsibility": "Proves a declared testing manifest plans and runs from a consumer's position without owning testing behavior.",

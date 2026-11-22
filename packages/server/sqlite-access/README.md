@@ -121,3 +121,13 @@ Permission checks, resource lookups, and `compileFilter` require a concrete subj
 `SqliteAuthorization` extends `Authorization` and implements `check`, `checkMany`, `checkEach`, `lookupResources`, `lookupSubjects`, `compileFilter`, `writeRelationships`, `deleteRelationships`, `relationshipExists`, `listDirectSubjects`, `applyChanges`, and `inTransaction`.
 
 Unknown permission names return `false`, `[]`, or `{ subjects: [], hasWildcard: false }`. Successful writes and deletes return an empty consistency token because SQLite reads observe committed writes directly. Database connection lifecycle and migration execution remain application-owned.
+
+## Testing (`@dads-framework/sqlite-access/testing`)
+
+Use `createSqliteTestAuthorization(model)` to open a disposable `:memory:`
+SQLite database with the relationship table, covering indexes, and a
+`ControllableClock` already installed (`using testEnv = createSqliteTestAuthorization(model)`).
+Pair it with `proveAccess(model, { authorization: testEnv.authorization, clock: testEnv.clock }, ...)`
+from `@dads-framework/access/testing` and `proveSqliteFilterParity(...)` to
+verify that `compileFilter` and `compileFilter({ scopeColumns })` select the
+exact same rows as `lookupResources` for every subject.

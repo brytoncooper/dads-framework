@@ -10,7 +10,8 @@ export function resourceProof(
   const record = pascal(name);
   plan.create(
     `domains/${domain}/server/${name}-resource.test.ts`,
-    `import { FakeAuthorization } from "@dads-framework/access/testing";
+    `import { compileAccess } from "@dads-framework/access";
+import { createAccessHarness } from "@dads-framework/access/testing";
 import { apiErrorSchema, ROW_VERSION_CONFLICT } from "@dads-framework/contract";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { expect, it } from "vitest";
@@ -22,19 +23,11 @@ import { ${item}Writer } from "./${name}-writer.js";
 
 it("denies a caller without an edit relationship and rejects a stale draft", async () => {
   let current: ${record} = { id: "sample", title: "Original", rowVersion: 1 };
-  const editor = { type: account.wireName, id: "editor" };
-  const outsider = { type: account.wireName, id: "outsider" };
   const tenantId = "838dc845-3883-43f7-8685-32acedbc29e5";
-  const edit = tenantAccess.tenant.permissions.manage_tenant;
-  const role = tenantAccess.tenant.roles.owner;
-  const authorization = new FakeAuthorization({
-    [edit.entityWireName]: { [edit.permissionName]: [role.roleName] },
-  });
-  authorization.seed({
-    resource: { type: edit.entityWireName, id: tenantId },
-    relation: role.roleName,
-    subject: editor,
-  });
+  const access = createAccessHarness(compileAccess([account, tenantAccess.tenant]));
+  const editor = access.actor(account, "editor");
+  const outsider = access.actor(account, "outsider");
+  access.grant(tenantAccess.tenant.roles.owner, tenantId).to(editor);
 
   const routes = create${record}Routes({
     list: () => Promise.resolve({ items: [current], total: 1 }),
@@ -53,7 +46,7 @@ it("denies a caller without an edit relationship and rejects a stale draft", asy
   try {
     registerRoutes(app, {
       routes,
-      authorization,
+      authorization: access.authorization,
       subjects: { resolve: (request) => Promise.resolve(request.headers["x-editor"] === "yes" ? editor : outsider) },
     });
 

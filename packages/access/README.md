@@ -157,8 +157,23 @@ emitters. Supply a concrete authorization provider when composing a server. The
 [SQLite adapter](../server/sqlite-access/README.md) evaluate the model against
 relationship facts in the application database. Use their protected transaction
 helpers when a permission decision guards a business write in that database.
-Tests can use `@dads-framework/access/testing` for in-memory calls (including
-optional `now` clocks for expiring tuples) and recorded answers.
+Tests can use `@dads-framework/access/testing` for zero-`await` unit tests
+against the real compiled model:
+
+- `createAccessHarness(model)` runs a synchronous pure-TypeScript evaluator
+  (`InMemoryAuthorization`) with fluent `grant(...).expiringIn(...).to(...)`,
+  `revoke`, `advanceTime`, `assertCan`, `assertCannot`, `assertVisible`, and
+  `assertMatrix`. Failed assertions print an `explain` decision tree showing
+  which branch allowed, which `unless` rule blocked, or which grant expired.
+  Pass `access.authorization` directly into HTTP route tests.
+- `proveAccess(model, { authorization }, (scenario) => ...)` executes the same
+  synchronous scenario steps against any async backend (SQLite or Postgres)
+  under a single `await`.
+- `proveWorldSync` / `proveWorld` execute `world()` definitions, and
+  `defineAccessScenario` / `proveScenarioSync` / `proveScenario` compose
+  reusable scenarios with `include()`.
+- `FakeAuthorization` and `RecordingAuthorization` remain available for
+  isolated plumbing stubs that do not load an `AccessModel`.
 
 Schema migration runners can use `@dads-framework/access/schema` to plan and
 apply a Zed schema through a supplied store. The authorization package binds

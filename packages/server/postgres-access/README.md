@@ -233,6 +233,15 @@ CONTAINER_PER_FILE=1 npm run test:integration -w @dads-framework/postgres-access
 
 The [benchmark notes](./BENCHMARK.md) explain which read paths were measured.
 
+### Testing (`@dads-framework/postgres-access/testing`)
+
+Use `provePostgresFilterParity({ db, authorization, table, idColumn, permission, scopeColumns?, subjects })`
+on a plain `pg.Pool` or client (no Drizzle required) to prove that
+`compileFilter`, `compileFilter({ scopeColumns })`, and `resolveFilter` return
+the exact same row IDs as `lookupResources` for every subject. Combine with
+`proveAccess` or `proveWorld` from `@dads-framework/access/testing` to run
+multi-step Postgres scenarios under a single `await`.
+
 ### Optimize point checks
 
 For a direct node-postgres pool, opt in by passing

@@ -13,6 +13,10 @@
     "./drizzle": {
       "types": "./dist/drizzle.d.ts",
       "default": "./dist/drizzle.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
     }
   },
   "files": [

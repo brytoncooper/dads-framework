@@ -12,9 +12,13 @@ soundness of Dads's ReBAC semantics and compiler optimizations:
 3. `throughAll_vacuous_fails_closed`
 4. `per_relation_userset_shortcut_sound`
 5. `forward_reverse_equiv` & `compileFilter_row_equiv`
-6. `scope_columns_through_sound` & `scope_columns_anyOf_unless_sound`
+6. `scope_columns_through_sound`, `scope_columns_anyOf_unless_sound`, & `multi_scope_columns_sound`
 7. `resolve_filter_branch_pruning_sound` & `resolve_filter_empty_false`
-8. `evalExprWith_monotone`, `stepPermVal_monotone`, & `iterPermVal_ascending`
+8. `evalExprWith_monotone`, `stepPermVal_monotone`, `iterPermVal_ascending`,
+   `iterPermVal_le_fixed_point`, & `iterPermVal_stabilizes`
+9. `unless_dominance` & `unless_dominates_anyOf`
+10. `revocation_no_escalation` & `revocation_check_no_escalation`
+11. `namespace_isolation_check` & `namespace_isolation_lookup`
 -/
 
 namespace DadsAccess
@@ -361,5 +365,366 @@ theorem iterPermVal_ascending (m : AccessModel) (store : List Tuple)
         (iterPermVal m store now a k)
         (iterPermVal m store now a (k + 1))
         (iterPermVal_ascending m store now a hmono k)
+
+/-- Monotonicity across any step count `k₁ ≤ k₂`. -/
+theorem iterPermVal_monotone_fuel (m : AccessModel) (store : List Tuple)
+    (now : Timestamp) (a : Actor) (hmono : ModelMonotonic m)
+    {k₁ k₂ : Nat} (hle : k₁ ≤ k₂) :
+    PermLe (iterPermVal m store now a k₁) (iterPermVal m store now a k₂) := by
+  induction hle with
+  | refl =>
+      intro e id p h
+      exact h
+  | @step n _ ih =>
+      intro e id p h
+      exact iterPermVal_ascending m store now a hmono n e id p (ih e id p h)
+
+/--
+Least fixed-point theorem: for any pre-fixed point `F` of `stepPermVal`, every
+Kleene iterate `iterPermVal ... k` is bounded above by `F`. Therefore any fixed
+point reached by `iterPermVal` is the unique least fixed point (cycles never
+self-justify).
+-/
+theorem iterPermVal_le_fixed_point (m : AccessModel) (store : List Tuple)
+    (now : Timestamp) (a : Actor) (hmono : ModelMonotonic m)
+    (F : EntityName → ObjId → PermName → Bool)
+    (hpre : PermLe (stepPermVal m store now a F) F) :
+    ∀ k, PermLe (iterPermVal m store now a k) F
+  | 0 => by
+      intro e id p h
+      exact Bool.noConfusion h
+  | k + 1 => by
+      intro e id p h
+      have hstep := stepPermVal_monotone m store now a hmono
+        (iterPermVal m store now a k) F
+        (iterPermVal_le_fixed_point m store now a hmono F hpre k)
+        e id p h
+      exact hpre e id p hstep
+
+/--
+Post-convergence stabilization: once `iterPermVal` reaches a fixed point at
+round `k`, all subsequent rounds `k + n` yield the exact same valuation.
+-/
+theorem iterPermVal_stabilizes (m : AccessModel) (store : List Tuple)
+    (now : Timestamp) (a : Actor) (k : Nat)
+    (hfp : iterPermVal m store now a (k + 1) = iterPermVal m store now a k) :
+    ∀ n, iterPermVal m store now a (k + n) = iterPermVal m store now a k
+  | 0 => rfl
+  | n + 1 => by
+      change stepPermVal m store now a (iterPermVal m store now a (k + n)) =
+        iterPermVal m store now a k
+      rw [iterPermVal_stabilizes m store now a k hfp n]
+      exact hfp
+
+/-! ## 9. Explicit `.unless()` dominance (bans always win) -/
+
+theorem unless_dominance (store : List Tuple) (now : Timestamp) (a : Actor)
+    (permVal : EntityName → ObjId → PermName → Bool)
+    (e : EntityName) (id : ObjId) (baseExpr banExpr : Expr)
+    (hbanned : evalExprWith store now a permVal e id banExpr = true) :
+    evalExprWith store now a permVal e id (.exclude baseExpr banExpr) = false := by
+  simp [evalExprWith, hbanned]
+
+theorem unless_dominates_anyOf (store : List Tuple) (now : Timestamp) (a : Actor)
+    (permVal : EntityName → ObjId → PermName → Bool)
+    (e : EntityName) (id : ObjId) (grantExprs : List Expr) (banExpr : Expr)
+    (hbanned : evalExprWith store now a permVal e id banExpr = true) :
+    evalExprWith store now a permVal e id (.exclude (.anyOf grantExprs) banExpr) = false :=
+  unless_dominance store now a permVal e id (.anyOf grantExprs) banExpr hbanned
+
+/-! ## 10. Multi-column `scopeColumns` rewrite soundness -/
+
+/--
+Generalization of `scope_columns_anyOf_unless_sound` to any number of parent
+foreign-key `scopeColumns` combined with an arbitrary direct expression and
+exclusion expression.
+-/
+theorem multi_scope_columns_sound (m : AccessModel) (store : List Tuple)
+    (now : Timestamp) (a : Actor)
+    (permVal : EntityName → ObjId → PermName → Bool)
+    (childEntity : EntityName) (r : ObjId)
+    (specs : List ScopeColumnSpec) (directExpr banExpr : Expr)
+    (hspecs : ∀ s ∈ specs,
+      ScopeColumnConsistent store now childEntity s.rel s.parentEntity s.fk ∧
+      s.fk r ∈ s.parentUniverse ∧
+      permVal s.parentEntity (s.fk r) s.parentPerm =
+        evalCheck m store now a s.parentEntity (s.fk r) s.parentPerm) :
+    evalExprWith store now a permVal childEntity r
+      (.exclude
+        (.anyOf (specs.map (fun s => .through s.rel [{ entity := s.parentEntity, perm := s.parentPerm }]) ++ [directExpr]))
+        banExpr) =
+    ((specs.any (fun s => evalScopedThrough m store now a s.parentEntity s.parentPerm s.parentUniverse s.fk r) ||
+      evalExprWith store now a permVal childEntity r directExpr) &&
+     !(evalExprWith store now a permVal childEntity r banExpr)) := by
+  have hany :
+      (specs.map (fun s => Expr.through s.rel [{ entity := s.parentEntity, perm := s.parentPerm }]) ++ [directExpr]).any
+        (evalExprWith store now a permVal childEntity r) =
+      (specs.any (fun s => evalScopedThrough m store now a s.parentEntity s.parentPerm s.parentUniverse s.fk r) ||
+        evalExprWith store now a permVal childEntity r directExpr) := by
+    induction specs with
+    | nil => simp
+    | cons hd tl ih =>
+        have hhd := hspecs hd (List.mem_cons_self ..)
+        have htl : ∀ s ∈ tl,
+            ScopeColumnConsistent store now childEntity s.rel s.parentEntity s.fk ∧
+            s.fk r ∈ s.parentUniverse ∧
+            permVal s.parentEntity (s.fk r) s.parentPerm =
+              evalCheck m store now a s.parentEntity (s.fk r) s.parentPerm :=
+          fun s hs => hspecs s (List.mem_cons_of_mem hd hs)
+        have hthrough := scope_columns_through_sound m store now a permVal childEntity
+          hd.rel hd.parentEntity hd.parentPerm hd.parentUniverse hd.fk r
+          hhd.1 hhd.2.1 hhd.2.2
+        simp only [List.map_cons, List.cons_append, List.any_cons, hthrough, ih htl, Bool.or_assoc]
+  simp only [evalExprWith, hany]
+
+/-! ## 11. Revocation monotonicity (deleting tuples never escalates positive access) -/
+
+/-- A positive model contains only monotonic, non-vacuous positive rules. -/
+def ModelPositive (m : AccessModel) : Prop :=
+  ∀ d ∈ m.permissions, d.expr.isPositive = true
+
+private theorem expr_positive_implies_monotonic :
+    ∀ expr : Expr, expr.isPositive = true → expr.isMonotonic = true
+  | .rel _, _ => by simp [Expr.isMonotonic]
+  | .anyOf cs, hpos => by
+      simp only [Expr.isPositive, List.all_eq_true] at hpos
+      simp only [Expr.isMonotonic, List.all_eq_true]
+      intro c hc
+      exact expr_positive_implies_monotonic c (hpos c hc)
+  | .allOf cs, hpos => by
+      simp only [Expr.isPositive, List.all_eq_true] at hpos
+      simp only [Expr.isMonotonic, List.all_eq_true]
+      intro c hc
+      exact expr_positive_implies_monotonic c (hpos c hc)
+  | .exclude _ _, hpos => by simp [Expr.isPositive] at hpos
+  | .through _ _, _ => by simp [Expr.isMonotonic]
+  | .throughAll _ _, hpos => by simp [Expr.isPositive] at hpos
+termination_by expr => sizeOf expr
+
+private theorem model_positive_implies_monotonic (m : AccessModel) (hpos : ModelPositive m) :
+    ModelMonotonic m :=
+  fun d hd => expr_positive_implies_monotonic d.expr (hpos d hd)
+
+private theorem mem_eraseDups_iff {α : Type} [BEq α] [LawfulBEq α] {x : α} {xs : List α} :
+    x ∈ xs.eraseDups ↔ x ∈ xs := by
+  induction xs with
+  | nil => simp [List.eraseDups]
+  | cons hd tl _ =>
+      have h := List.mem_eraseDups (a := x) (l := hd :: tl)
+      exact h
+
+private theorem subjectReachableStep_subset_self (active : List Tuple)
+    (reached : List (EntityName × ObjId × RelName)) (x : EntityName × ObjId × RelName) :
+    x ∈ reached → x ∈ subjectReachableStep active reached := by
+  intro hx
+  unfold subjectReachableStep
+  rw [List.mem_eraseDups]
+  exact List.mem_append_left _ hx
+
+private theorem subjectReachableFuel_monotone_fuel (active : List Tuple) (a : Actor)
+    {n₁ n₂ : Nat} (hle : n₁ ≤ n₂) :
+    ∀ x, x ∈ subjectReachableFuel active a n₁ → x ∈ subjectReachableFuel active a n₂ := by
+  induction hle with
+  | refl => intro x hx; exact hx
+  | @step k _ ih =>
+      intro x hx
+      exact subjectReachableStep_subset_self active (subjectReachableFuel active a k) x (ih x hx)
+
+private theorem subjectReachableStep_monotone (active₁ active₂ : List Tuple)
+    (hsub : ∀ t ∈ active₁, t ∈ active₂)
+    (r₁ r₂ : List (EntityName × ObjId × RelName))
+    (hr : ∀ x ∈ r₁, x ∈ r₂) :
+    ∀ x ∈ subjectReachableStep active₁ r₁, x ∈ subjectReachableStep active₂ r₂ := by
+  intro x hx
+  unfold subjectReachableStep at hx ⊢
+  rw [List.mem_eraseDups, List.mem_append] at hx ⊢
+  rcases hx with hx | hx
+  · exact Or.inl (hr x hx)
+  · right
+    rw [List.mem_filterMap] at hx ⊢
+    rcases hx with ⟨t, ht₁, hmap⟩
+    refine ⟨t, hsub t ht₁, ?_⟩
+    cases hs : t.subject with
+    | direct _ _ => rw [hs] at hmap; simp at hmap
+    | wildcard _ => rw [hs] at hmap; simp at hmap
+    | subjectSet sk sid sr =>
+        rw [hs] at hmap
+        dsimp only at hmap ⊢
+        split at hmap
+        · rename_i hcontains
+          have hmem₁ : (sk, sid, sr) ∈ r₁ := List.contains_iff_mem.mp hcontains
+          have hmem₂ : (sk, sid, sr) ∈ r₂ := hr _ hmem₁
+          have hcontains₂ : r₂.contains (sk, sid, sr) = true := List.contains_iff_mem.mpr hmem₂
+          simp only [hcontains₂, ↓reduceIte]
+          exact hmap
+        · simp at hmap
+
+private theorem subjectReachableFuel_monotone_store (active₁ active₂ : List Tuple) (a : Actor)
+    (hsub : ∀ t ∈ active₁, t ∈ active₂) :
+    ∀ n x, x ∈ subjectReachableFuel active₁ a n → x ∈ subjectReachableFuel active₂ a n
+  | 0, x, hx => by
+      simp only [subjectReachableFuel, List.mem_eraseDups, List.mem_filterMap] at hx ⊢
+      rcases hx with ⟨t, ht₁, hmap⟩
+      exact ⟨t, hsub t ht₁, hmap⟩
+  | n + 1, x, hx =>
+      subjectReachableStep_monotone active₁ active₂ hsub
+        (subjectReachableFuel active₁ a n)
+        (subjectReachableFuel active₂ a n)
+        (fun y hy => subjectReachableFuel_monotone_store active₁ active₂ a hsub n y hy)
+        x hx
+
+private theorem usersetMember_monotone_store (store₁ store₂ : List Tuple)
+    (now : Timestamp) (a : Actor) (e : EntityName) (id : ObjId) (r : RelName)
+    (hsub : ∀ t ∈ store₁, t ∈ store₂)
+    (hlen : (activeTuples store₁ now).length ≤ (activeTuples store₂ now).length) :
+    usersetMember store₁ now a e id r = true →
+    usersetMember store₂ now a e id r = true := by
+  intro h
+  unfold usersetMember subjectReachable at h ⊢
+  rw [List.contains_iff_mem] at h ⊢
+  have hactiveSub : ∀ t ∈ activeTuples store₁ now, t ∈ activeTuples store₂ now := by
+    intro t ht
+    unfold activeTuples at ht ⊢
+    rw [List.mem_filter] at ht ⊢
+    exact ⟨hsub t ht.1, ht.2⟩
+  have h1 := subjectReachableFuel_monotone_store
+    (activeTuples store₁ now) (activeTuples store₂ now) a hactiveSub
+    (activeTuples store₁ now).length (e, id, r) h
+  exact subjectReachableFuel_monotone_fuel (activeTuples store₂ now) a hlen (e, id, r) h1
+
+private theorem directEntityEdges_monotone_store (store₁ store₂ : List Tuple)
+    (now : Timestamp) (e : EntityName) (id : ObjId) (rel : RelName)
+    (hsub : ∀ t ∈ store₁, t ∈ store₂) :
+    ∀ edge ∈ directEntityEdges store₁ now e id rel, edge ∈ directEntityEdges store₂ now e id rel := by
+  intro edge hedge
+  unfold directEntityEdges activeTuples at hedge ⊢
+  rw [List.mem_filterMap] at hedge ⊢
+  rcases hedge with ⟨t, ht₁, hmap⟩
+  rw [List.mem_filter] at ht₁
+  refine ⟨t, List.mem_filter.mpr ⟨hsub t ht₁.1, ht₁.2⟩, hmap⟩
+
+private theorem evalExprWith_monotone_store (store₁ store₂ : List Tuple)
+    (now : Timestamp) (a : Actor)
+    (P Q : EntityName → ObjId → PermName → Bool)
+    (hsub : ∀ t ∈ store₁, t ∈ store₂)
+    (hlen : (activeTuples store₁ now).length ≤ (activeTuples store₂ now).length)
+    (hPQ : PermLe P Q)
+    (e : EntityName) (id : ObjId) :
+    ∀ expr : Expr, expr.isPositive = true →
+      evalExprWith store₁ now a P e id expr = true →
+      evalExprWith store₂ now a Q e id expr = true
+  | .rel r, _, h => by
+      simp only [evalExprWith] at h ⊢
+      exact usersetMember_monotone_store store₁ store₂ now a e id r hsub hlen h
+  | .anyOf cs, hpos, h => by
+      simp only [Expr.isPositive, List.all_eq_true] at hpos
+      simp only [evalExprWith] at h ⊢
+      exact list_any_monotone (fun c hc =>
+        evalExprWith_monotone_store store₁ store₂ now a P Q hsub hlen hPQ e id c (hpos c hc)) h
+  | .allOf cs, hpos, h => by
+      simp only [Expr.isPositive, List.all_eq_true] at hpos
+      simp only [evalExprWith] at h ⊢
+      exact list_all_monotone (fun c hc =>
+        evalExprWith_monotone_store store₁ store₂ now a P Q hsub hlen hPQ e id c (hpos c hc)) h
+  | .exclude _ _, hpos, _ => by simp [Expr.isPositive] at hpos
+  | .through rel targets, _, h => by
+      simp only [evalExprWith, List.any_eq_true] at h ⊢
+      rcases h with ⟨edge, hedge, htgt⟩
+      refine ⟨edge, directEntityEdges_monotone_store store₁ store₂ now e id rel hsub edge hedge, ?_⟩
+      rcases htgt with ⟨tgt, htgtMem, hmatch⟩
+      simp only [Bool.and_eq_true] at hmatch
+      exact ⟨tgt, htgtMem, by simp [hmatch.1, hPQ tgt.entity edge.2 tgt.perm hmatch.2]⟩
+  | .throughAll _ _, hpos, _ => by simp [Expr.isPositive] at hpos
+termination_by expr => sizeOf expr
+
+/--
+Revocation never escalates privileges: deleting any subset of tuples via
+`store.filter keep` can only preserve or reduce access on positive policies.
+-/
+theorem revocation_no_escalation (m : AccessModel) (store : List Tuple)
+    (keep : Tuple → Bool) (now : Timestamp) (a : Actor)
+    (hpos : ModelPositive m) :
+    ∀ k, PermLe (iterPermVal m (store.filter keep) now a k) (iterPermVal m store now a k)
+  | 0 => by
+      intro e id p h
+      exact Bool.noConfusion h
+  | k + 1 => by
+      intro e id p h
+      have hsub : ∀ t ∈ store.filter keep, t ∈ store := fun t ht => (List.mem_filter.mp ht).1
+      have hlen : (activeTuples (store.filter keep) now).length ≤ (activeTuples store now).length := by
+        unfold activeTuples
+        rw [List.filter_filter]
+        have hcomm : (fun t => tupleActive now t && keep t) = (fun t => keep t && tupleActive now t) := by
+          funext t
+          exact Bool.and_comm (tupleActive now t) (keep t)
+        rw [hcomm, ← List.filter_filter]
+        exact List.length_filter_le keep (store.filter (tupleActive now))
+      unfold iterPermVal stepPermVal at h ⊢
+      cases hfind : m.findPerm e p with
+      | none => rw [hfind] at h; exact Bool.noConfusion h
+      | some defn =>
+          rw [hfind] at h
+          dsimp only at h ⊢
+          have hmem : defn ∈ m.permissions := List.mem_of_find?_eq_some hfind
+          exact evalExprWith_monotone_store (store.filter keep) store now a
+            (iterPermVal m (store.filter keep) now a k)
+            (iterPermVal m store now a k)
+            hsub hlen
+            (revocation_no_escalation m store keep now a hpos k)
+            e id defn.expr (hpos defn hmem) h
+
+theorem revocation_check_no_escalation (m : AccessModel) (store : List Tuple)
+    (keep : Tuple → Bool) (now : Timestamp) (a : Actor)
+    (hpos : ModelPositive m) (e : EntityName) (id : ObjId) (p : PermName) :
+    evalCheck m (store.filter keep) now a e id p = true →
+    evalCheck m store now a e id p = true := by
+  intro h
+  unfold evalCheck evalPermFuel at h ⊢
+  have h1 := revocation_no_escalation m store keep now a hpos (defaultFuel m (store.filter keep)) e id p h
+  have hfuel : defaultFuel m (store.filter keep) ≤ defaultFuel m store := by
+    unfold defaultFuel
+    have hlen : (store.filter keep).length ≤ store.length := List.length_filter_le keep store
+    exact Nat.mul_le_mul_right (m.permissions.length + 1) (Nat.add_le_add_right hlen 1)
+  exact iterPermVal_monotone_fuel m store now a (model_positive_implies_monotonic m hpos) hfuel e id p h1
+
+/-! ## 12. Multi-tenant namespace isolation -/
+
+private theorem storeForNamespace_append_other (ns : String)
+    (table other : List NamespacedTuple)
+    (hdisjoint : ∀ row ∈ other, row.ns ≠ ns) :
+    storeForNamespace ns (table ++ other) = storeForNamespace ns table := by
+  unfold storeForNamespace
+  rw [List.filter_append, List.map_append]
+  have hnil : other.filter (fun row => row.ns == ns) = [] := by
+    rw [List.filter_eq_nil_iff]
+    intro row hrow
+    simp only [beq_iff_eq]
+    exact hdisjoint row hrow
+  rw [hnil, List.map_nil, List.append_nil]
+
+/--
+Adding arbitrary tuples in any other namespace (`row.ns ≠ ns`) cannot affect
+any permission check in namespace `ns`.
+-/
+theorem namespace_isolation_check (m : AccessModel) (ns : String)
+    (table other : List NamespacedTuple)
+    (hdisjoint : ∀ row ∈ other, row.ns ≠ ns)
+    (now : Timestamp) (a : Actor) (e : EntityName) (id : ObjId) (p : PermName) :
+    evalCheck m (storeForNamespace ns (table ++ other)) now a e id p =
+    evalCheck m (storeForNamespace ns table) now a e id p := by
+  rw [storeForNamespace_append_other ns table other hdisjoint]
+
+/--
+Adding arbitrary tuples in any other namespace (`row.ns ≠ ns`) cannot affect
+any `lookupResources` / `compileFilter` result in namespace `ns`.
+-/
+theorem namespace_isolation_lookup (m : AccessModel) (ns : String)
+    (table other : List NamespacedTuple)
+    (hdisjoint : ∀ row ∈ other, row.ns ≠ ns)
+    (now : Timestamp) (a : Actor) (e : EntityName) (p : PermName)
+    (candidates : List ObjId) :
+    lookupResourcesOver m (storeForNamespace ns (table ++ other)) now a e p candidates =
+    lookupResourcesOver m (storeForNamespace ns table) now a e p candidates := by
+  rw [storeForNamespace_append_other ns table other hdisjoint]
 
 end DadsAccess

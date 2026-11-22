@@ -120,4 +120,14 @@ def Expr.isMonotonic : Expr → Bool
   | .throughAll _ _ => true
 termination_by e => sizeOf e
 
+/-- Strictly positive expression: monotone in both permission valuation and tuple store (no `exclude`, no `throughAll`). -/
+def Expr.isPositive : Expr → Bool
+  | .rel _ => true
+  | .anyOf cs => cs.all Expr.isPositive
+  | .allOf cs => cs.all Expr.isPositive
+  | .exclude _ _ => false
+  | .through _ _ => true
+  | .throughAll _ _ => false
+termination_by e => sizeOf e
+
 end DadsAccess

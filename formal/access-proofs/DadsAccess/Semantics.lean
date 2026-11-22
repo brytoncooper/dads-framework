@@ -214,4 +214,22 @@ def evalResolvedFilter (includeBranches : List ((ObjId → ObjId) × List ObjId)
     let inc := evalBranchList activeIncludes r
     if excludedIds.isEmpty then inc else inc && !(excludedIds.contains r)
 
+/-- One `(namespace, tuple)` row in a multi-tenant relationship table. -/
+structure NamespacedTuple where
+  ns : String
+  tuple : Tuple
+  deriving DecidableEq, Repr, BEq
+
+/-- Projection of a multi-tenant table to a single namespace (`WHERE namespace = $1`). -/
+def storeForNamespace (ns : String) (table : List NamespacedTuple) : List Tuple :=
+  (table.filter (fun row => row.ns == ns)).map (fun row => row.tuple)
+
+/-- Specification for one foreign-key column in multi-column `scopeColumns`. -/
+structure ScopeColumnSpec where
+  rel : RelName
+  parentEntity : EntityName
+  parentPerm : PermName
+  parentUniverse : List ObjId
+  fk : ObjId → ObjId
+
 end DadsAccess

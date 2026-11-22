@@ -28,7 +28,7 @@ function replaceRequired(text, marker, content, page) {
   return text.replace(marker, () => content);
 }
 
-const themeInitScript = `<script>(function(){try{var t=localStorage.getItem("dads-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)t="light";document.documentElement.dataset.theme=t==="light"?"light":"dark";}catch(e){}})();</script>`;
+const themeInitScript = `<script src="/assets/theme-init.js"></script>`;
 
 const themeToggleButton = `<button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch to light mode" title="Switch to light mode" aria-pressed="false">
       <svg class="theme-icon theme-icon-sun" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 2.2v1.8M10 16v1.8M2.2 10H4M16 10h1.8M4.5 4.5l1.3 1.3M14.2 14.2l1.3 1.3M15.5 4.5l-1.3 1.3M5.8 14.2l-1.3 1.3"/></svg>

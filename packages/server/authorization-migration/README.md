@@ -87,6 +87,17 @@ To migrate a live SpiceDB datastore into Postgres, call
 `createAuthzedMigrationSource`) and a Postgres executor, then verify decision
 equivalence with `verifySpiceDbPostgresParity`.
 
+To migrate in the reverse direction — from Postgres (including any
+`columnRelations` foreign keys on application tables) out to SpiceDB — call
+`migratePostgresToSpiceDb({ model, postgres, spiceDb, namespace, columnRelations })`.
+It emits and writes the `.zed` schema, streams active tuples from
+`dad_authorization_relationship`, materializes every non-`NULL` `columnRelations`
+row via keyset pagination into idempotent SpiceDB `TOUCH` writes, and returns
+ready-to-apply `outboxTriggers` DDL (`columnRelationOutboxTriggerSql`) so future
+`INSERT`/`UPDATE`/`DELETE` statements on column-backed tables feed
+`authorization_outbox` automatically with zero app-code rewrites. Verify parity
+before cutover with `verifySpiceDbPostgresParity`.
+
 You can also run the same workflow from the command line with
 `npx dads-import-spicedb`:
 

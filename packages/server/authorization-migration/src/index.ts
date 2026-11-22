@@ -103,6 +103,23 @@ export {
   type SqliteSyncStatementLike,
 } from "./lib/access-migrations/index.js";
 export {
+  columnRelationOutboxTriggerSql,
+  createAuthzedMigrationTarget,
+  isAuthzedWriteClientLike,
+  migratePostgresToSpiceDb,
+  resolveExportColumnRelations,
+  type AuthzedRelationshipUpdateLike,
+  type AuthzedWriteClientLike,
+  type ColumnRelationOutboxTriggerDdl,
+  type ColumnRelationOutboxTriggerOptions,
+  type MigratePostgresToSpiceDbOptions,
+  type MigratePostgresToSpiceDbResult,
+  type PostgresColumnRelationExportBinding,
+  type ResolvedExportColumnRelation,
+  type SpiceDbMigrationTarget,
+  type SpiceDbWriteRelationshipsResult,
+} from "./lib/postgres-to-spicedb/index.js";
+export {
   IMPORT_SPICEDB_USAGE,
   buildAccessModelFromIr,
   buildPostgresRelationshipExpirationSql,

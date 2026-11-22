@@ -375,7 +375,7 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
       );
       expect(filteredRows.rows.map((row) => row.id)).toEqual(expectedDocs);
     }
-  });
+  }, 30_000);
 
   it("recovers automatically from a real concurrent PostgreSQL 40001 SSI write-skew conflict", async () => {
     const pool = requirePool();

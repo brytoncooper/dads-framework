@@ -319,7 +319,7 @@ describe("Live Postgres + SpiceDB parity for all 5 features", () => {
       ]);
       expect([...pgClassified].sort()).toEqual([...spiceClassified].sort());
     }
-  });
+  }, 30_000);
 
   it("terminates cleanly on cyclic folder data in Postgres", async () => {
     const cycAuth = new PostgresAuthorization({

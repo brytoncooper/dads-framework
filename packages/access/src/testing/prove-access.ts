@@ -247,6 +247,8 @@ export async function proveAccess(
   options: ProveAccessOptions,
   build: (scenario: AccessScenarioVerbs) => void,
 ): Promise<void> {
-  const steps = recordScenarioSteps((scenario) => { build(scenario); });
+  const steps = recordScenarioSteps((scenario) => {
+    build(scenario);
+  });
   await executeRecordedSteps(model, steps, options);
 }

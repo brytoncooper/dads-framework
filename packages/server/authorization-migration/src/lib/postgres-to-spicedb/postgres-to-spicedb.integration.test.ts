@@ -319,5 +319,5 @@ describe("Live Docker Postgres (with columnRelations) -> SpiceDB migration & par
     for (const statement of triggers.down) {
       await pool.query(statement);
     }
-  });
+  }, 30_000);
 });

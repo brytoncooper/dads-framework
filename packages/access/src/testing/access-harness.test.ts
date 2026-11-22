@@ -126,18 +126,21 @@ describe("createAccessHarness (zero-await policy testing)", () => {
     access.grant(document.roles.parent, "doc-1").to(workspace, "workspace-1");
     access.grant(document.roles.banned, "doc-1").to(alice);
 
-    expect(() => { access.assertCan(alice, document.permissions.view, "doc-1"); },
-    ).toThrow(/BLOCKED[\s\S]*app\/document:doc-1#banned@user:alice/);
+    expect(() => {
+      access.assertCan(alice, document.permissions.view, "doc-1");
+    }).toThrow(/BLOCKED[\s\S]*app\/document:doc-1#banned@user:alice/);
 
     access.grant(document.roles.viewer, "doc-2").expiringIn("30m").to(bob);
     access.advanceTime("90m");
 
-    expect(() => { access.assertCan(bob, document.permissions.view, "doc-2"); },
-    ).toThrow(/expired 1h ago: app\/document:doc-2#viewer@user:bob/);
+    expect(() => {
+      access.assertCan(bob, document.permissions.view, "doc-2");
+    }).toThrow(/expired 1h ago: app\/document:doc-2#viewer@user:bob/);
 
     // Non-vacuous every(parents) with zero parents
-    expect(() => { access.assertCan(alice, document.permissions.strict_view, "orphan-doc"); },
-    ).toThrow(/no active parent relationship/);
+    expect(() => {
+      access.assertCan(alice, document.permissions.strict_view, "orphan-doc");
+    }).toThrow(/no active parent relationship/);
   });
 
   it("verifies permission matrices and prints a diff table on mismatch", () => {
@@ -165,11 +168,12 @@ describe("createAccessHarness (zero-await policy testing)", () => {
       ],
     });
 
-    expect(() => { access.assertMatrix(document, "doc-1", {
+    expect(() => {
+      access.assertMatrix(document, "doc-1", {
         permissions: [document.permissions.view, document.permissions.publish],
         cases: [[owner, ["allow", "allow"]]],
-      }); },
-    ).toThrow(/allow \(got deny\)/);
+      });
+    }).toThrow(/allow \(got deny\)/);
   });
 });
 

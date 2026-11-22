@@ -299,7 +299,7 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
         resource: { type: "document", id: "doc_deep" },
       }),
     ).toBe(false);
-  });
+  }, 30_000);
 
   it("runs connected Postgres access migrations live and enforces assertAccessMigrationsUpToDate", async () => {
     const workspaceV2 = resource("workspace", {

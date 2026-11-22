@@ -43,9 +43,9 @@
               One TypeScript framework <span>for your entire backend.</span>
             </h1>
             <p class="hero-lede">
-              Typed API routes, relationship permissions in Postgres and SQLite,
-              auth, SSO, SCIM, and audit logs built in. Every route requires an
-              access rule to compile.
+              API routes, permissions, auth, and background jobs in one place.
+              Every route requires a permission rule before your code will even
+              compile.
             </p>
             <div class="hero-actions">
               <a class="primary-action" href="/docs/"
@@ -278,50 +278,38 @@
       <section class="code-showcase" aria-labelledby="rebac-heading">
         <div class="wrap showcase-layout">
           <div class="showcase-intro">
-            <p class="section-eyebrow">Relationship permissions</p>
+            <p class="section-eyebrow">Permissions</p>
             <h2 id="rebac-heading">
               The last permissions system you'll ever need.
             </h2>
             <p class="section-lede">
-              Write Zanzibar-style rules once in TypeScript and compile them
-              straight into PostgreSQL or SQLite — 8,274 checks/sec on 10M rows,
-              0.4–1.9 ms filtered lists, and 27 machine-checked Lean 4 proofs.
+              Write who can see what in plain TypeScript. It runs inside your
+              own Postgres or SQLite database — simple to learn in 5 minutes,
+              fast enough for 10 million rows.
             </p>
             <ul class="contrast-list">
               <li>
-                <strong
-                  >Zero dual-writes with <code>columnRelations</code></strong
-                >
+                <strong>Uses the tables you already have</strong>
                 <span>
-                  Bind existing foreign keys (<code>documents.org_id</code>,
-                  <code>owner_id</code>, <code>folders.parent_id</code>)
-                  directly. Shrinks the tuple table 91× (2.73 GB → 30 MB on 10M
-                  rows), eliminates drift, and keeps dynamic grants, groups,
-                  wildcards, bans, and expiry in one atomic transaction.
+                  Point Dad at your existing <code>org_id</code> or
+                  <code>owner_id</code> columns. No duplicate data, no syncing
+                  bugs, and revoking access takes effect instantly.
                 </span>
               </li>
               <li>
-                <strong
-                  >Sub-millisecond 10M-row SQL lists &amp; zero-await
-                  tests</strong
-                >
+                <strong>Fast at any scale</strong>
                 <span>
-                  Embed
-                  <code>resolveFilter({ scopeColumns: "auto" })</code> right
-                  inside <code>ORDER BY ... LIMIT 50</code> queries with zero
-                  sequential scans, and test full inheritance, cycles, and
-                  expiring grants synchronously with
-                  <code>createAccessHarness(model)</code>.
+                  Half-millisecond permission checks and instant filtered lists
+                  even on 10 million rows — with no extra permissions database
+                  to run.
                 </span>
               </li>
               <li>
-                <strong>Mathematically proved, zero lock-in</strong>
+                <strong>Proved correct, zero lock-in</strong>
                 <span>
-                  Backed by 27 zero-<code>sorry</code> Lean 4 theorems and
-                  differential fuzzing. Migrate in from SpiceDB with
-                  <code>dads-import-spicedb</code>, or export out to SpiceDB
-                  later with <code>migratePostgresToSpiceDb</code> and
-                  auto-generated outbox triggers.
+                  Mathematically verified for correctness, testable in
+                  milliseconds without Docker, and easy to move to or from
+                  SpiceDB if you ever need to.
                 </span>
               </li>
             </ul>
@@ -524,25 +512,24 @@
       <section class="wrap starter-section" aria-labelledby="multi-api-heading">
         <div class="starter-copy">
           <p class="section-eyebrow">Multiple API servers</p>
-          <h2 id="multi-api-heading">Separate entrypoints, shared domains.</h2>
+          <h2 id="multi-api-heading">Keep public and admin APIs separate.</h2>
           <p class="section-lede">
-            Pick which routes and background jobs each server exposes with
-            <code>composeApi</code>. Your customer and staff APIs share business
-            code, never each other's endpoints.
+            Share your business logic, never your endpoints. Your customer
+            server and internal admin server only load the routes you give them.
           </p>
           <ul class="contrast-list">
             <li>
-              <strong>Customer API serves product routes</strong>
+              <strong>Customer API</strong>
               <span>
-                Mounts sign-in, workspaces, notes, and background workers behind
-                permission checks.
+                Only loads routes meant for end users, protected by your
+                permission rules.
               </span>
             </li>
             <li>
-              <strong>Staff API never registers them</strong>
+              <strong>Staff API</strong>
               <span>
-                Mounts internal admin and audit routes only. Customer routes
-                aren't hidden behind a flag; they don't exist on the server.
+                Only loads internal admin tools. Customer routes don't even
+                exist on it.
               </span>
             </li>
           </ul>
@@ -705,37 +692,31 @@
         <div class="wrap starter-section">
           <div class="starter-copy">
             <p class="section-eyebrow">Automated CI checks</p>
-            <h2 id="boundaries-heading">
-              Rules checked by tools, not reviewer memory.
-            </h2>
+            <h2 id="boundaries-heading">Catch mistakes before code review.</h2>
             <p class="section-lede">
-              Whether a teammate or a coding agent opens the PR, Dads verifies
-              folder boundaries, strict types, and access denial tests
-              automatically.
+              Whether a teammate or an AI agent opens the PR, Dad automatically
+              checks folder rules, strict types, and permission tests.
             </p>
             <ul class="contrast-list">
               <li>
-                <strong>Domain boundaries in CI</strong>
+                <strong>Clean folder boundaries</strong>
                 <span>
-                  <code>npx dad check boundaries</code> stops features from
-                  importing another feature's database tables or internal files.
+                  Stops one feature from reaching into another feature's private
+                  files or database tables.
                 </span>
               </li>
               <li>
-                <strong>Automated code quality gate</strong>
+                <strong>No sneaky shortcuts</strong>
                 <span>
-                  <code>npx dad doctor --gate</code> catches <code>any</code>,
-                  unsafe casts, routes without access rules, and missing denial
-                  tests.
+                  Blocks <code>any</code>, unsafe casts, unprotected routes, and
+                  untested permission rules in CI.
                 </span>
               </li>
               <li>
-                <strong>Adopt one package at a time</strong>
+                <strong>Use only what you need</strong>
                 <span>
-                  Already have an app? Install
-                  <code>@dads-framework/postgres-access</code>,
-                  <code>sqlite-access</code>, or <code>http</code> standalone in
-                  any TypeScript backend.
+                  Already have an app? Drop in just the permissions or routes
+                  package — no rewrite required.
                 </span>
               </li>
             </ul>

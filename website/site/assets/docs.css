@@ -761,6 +761,36 @@ article :is(ul, ol) :is(p, ul, ol) {
 .reader-table td > code {
   overflow-wrap: break-word;
 }
+.reader-table-compare th:last-child {
+  color: var(--accent);
+  background: rgb(142 227 197 / 0.12);
+  border-inline-start: 1px solid rgb(142 227 197 / 0.28);
+}
+.reader-table-compare td:first-child {
+  color: #eef4f7;
+  font-weight: 560;
+}
+.reader-table-compare td.cmp-yes {
+  color: #93d9be;
+}
+.reader-table-compare td.cmp-warn {
+  color: #f0c68c;
+}
+.reader-table-compare td.cmp-no {
+  color: #e59aa3;
+}
+.reader-table-compare td:last-child {
+  background: rgb(142 227 197 / 0.055);
+  border-inline-start: 1px solid rgb(142 227 197 / 0.22);
+  color: #b7f2dc;
+  font-weight: 600;
+}
+.reader-table-compare td:last-child.cmp-yes {
+  color: #a3eed2;
+}
+.reader-table-compare td:last-child strong {
+  color: #b7f2dc;
+}
 
 @media (max-width: 35rem) {
   dialog.search-dialog {

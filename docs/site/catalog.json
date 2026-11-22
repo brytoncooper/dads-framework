@@ -39,6 +39,14 @@
       "navigationGroup": "Build a feature"
     },
     {
+      "slug": "benchmarks-and-proof",
+      "title": "Benchmarks & Proof",
+      "owner": "@dads-framework/postgres-access",
+      "section": "Guides",
+      "path": "docs/site/guides/benchmarks-and-proof.md",
+      "navigationGroup": "Build a feature"
+    },
+    {
       "slug": "routes-and-contracts",
       "title": "Routes, Contracts & Clients",
       "owner": "@dads-framework/http",

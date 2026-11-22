@@ -8,20 +8,6 @@ Dads lets you write your permission rules once in plain TypeScript and runs them
 - **No sync bugs:** Permission checks and database writes run inside the same transaction, so revoking access takes effect immediately.
 - **Zero lock-in:** Start in SQLite or PostgreSQL today, import an existing SpiceDB setup, or migrate out to SpiceDB later without rewriting your app code.
 
-![Transactional PostgreSQL ReBAC flow](../../../website/site/assets/diagrams/postgres-rebac-transaction.svg)
-
-## Why Dads beats the alternatives
-
-| What you care about             | `if` checks     | Postgres RLS | SpiceDB / OpenFGA | **Dads**            |
-| :------------------------------ | :-------------- | :----------- | :---------------- | :------------------ |
-| **Revoke access immediately**   | Manual          | Yes          | Sync lag          | **Yes (same tx)**   |
-| **Teams, folders & sharing**    | Gets messy fast | Hard SQL     | Yes               | **Yes**             |
-| **No extra service to run**     | Yes             | Yes          | No                | **Yes**             |
-| **Uses your existing tables**   | Yes             | Yes          | No (must copy)    | **Yes**             |
-| **Fast paginated lists**        | Manual          | Fragile      | Extra network hop | **Yes (1 query)**   |
-| **Fast unit tests (no Docker)** | Yes             | No           | No                | **Yes**             |
-| **Mathematically verified**     | No              | No           | No                | **Yes (27 proofs)** |
-
 ---
 
 ## 5-Minute Quickstart
@@ -74,6 +60,32 @@ When an assertion fails, the harness prints the exact **decision explanation tre
 
 ---
 
+## How Dads prevents stale permissions
+
+Because permissions live inside the same database as your app tables, a check and a write happen in one transaction — removing the background sync worker and lag window required by separate auth servers.
+
+![How Dads prevents stale permission bugs](../../../website/site/assets/diagrams/postgres-rebac-transaction.svg)
+
+---
+
+## How Dads compares
+
+Most apps start with custom permission code scattered across API routes, then outgrow it once teams, nested folders, and sharing show up. Usually you have to choose between hard-to-maintain database policies or running a separate permissions server — Dads gives you the simplicity and transactional safety of your database with the full power of a relationship engine:
+
+| What you care about            | Custom code     | Postgres RLS | SpiceDB / OpenFGA | Dads            |
+| :----------------------------- | :-------------- | :----------- | :---------------- | :-------------- |
+| Revoke access immediately      | Manual          | Yes          | Sync lag          | Yes (same tx)   |
+| Teams, folders & sharing       | Gets messy fast | Hard SQL     | Yes               | Yes             |
+| No extra service to run        | Yes             | Yes          | No                | Yes             |
+| Uses your existing tables      | Yes             | Yes          | No (must copy)    | Yes             |
+| Fast paginated lists           | Manual          | Fragile      | Extra network hop | Yes (1 query)   |
+| Fast unit tests (no Docker)    | Yes             | No           | No                | Yes             |
+| Mathematically verified engine | No              | No           | No                | Yes (27 proofs) |
+
+Want to see the measured numbers, query plans, and formal proofs behind that table? Read **[Benchmarks & Proof](benchmarks-and-proof.md)**.
+
+---
+
 ## Attach permission guards to HTTP routes
 
 Export named permission tokens (such as `organization.task.can.edit`) from `domains/<feature>/access/index.ts` and attach them to routes (`domains/notes/access/index.ts`):
@@ -88,22 +100,16 @@ Every Dads HTTP route enforces access in strict order:
 
 ---
 
-## Ready for advanced patterns, benchmarks & SpiceDB cutover?
+## Go deeper
 
-Read the **[Permissions Cookbook & Patterns](permissions-cookbook.md)** for source-backed recipes covering:
-
-- **`columnRelations` deep dive & 10M-row benchmarks** (`2.73 GB → 30 MB`, `8,274 RPS`, `EXPLAIN ANALYZE` proof)
-- **Nested folders (`recursive: true`), multi-parent DAGs, `group#member` usersets, wildcards (`user:*`), bans (`.unless()`), and `every()`**
-- **Two-way SpiceDB migration** (`npx dads-import-spicedb --verify` coming in, `migratePostgresToSpiceDb` + `columnRelationOutboxTriggerSql` going out)
-- **Connected `(from, to)` schema migrations** across Postgres, SQLite, and SpiceDB
-- **SQLite & Postgres filter parity proofs** (`createSqliteTestAuthorization`, `proveSqliteFilterParity`, `provePostgresFilterParity`) and our **27 Lean 4 formal proofs**
+- **[Benchmarks & Proof](benchmarks-and-proof.md)** — How we measured, exact hardware & datasets, Postgres vs SpiceDB head-to-head results, 10M-row query plans, what you can support, and our 27 Lean 4 proofs.
+- **[Permissions Cookbook & Patterns](permissions-cookbook.md)** — Tested recipes for `columnRelations`, nested folders, teams, wildcards, expiring shares, bans, `every()`, and two-way SpiceDB migration.
+- **[SDK Glossary & Options](sdk-reference.md)** — Every DSL combinator, adapter option, and CLI command.
 
 ## Related references
 
-- [Permissions Cookbook & Patterns](permissions-cookbook.md)
-- [SDK Glossary & Options](sdk-reference.md)
 - [`@dads-framework/access`](../../../packages/access/README.md)
-- [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) & [10M-Row Benchmark Report](../../../packages/server/postgres-access/BENCHMARK.md)
+- [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) & [Full Benchmark Log](../../../packages/server/postgres-access/BENCHMARK.md)
 - [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)
 - [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md)
 - [Formal Verification (`formal/access-proofs`)](../../../formal/access-proofs/README.md)

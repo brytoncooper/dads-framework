@@ -80,6 +80,51 @@ ${section}
   return `${html}\n${dialog}`;
 }
 
+function decorateComparisonTable(tableHtml) {
+  const theadMatch = tableHtml.match(/<thead>([\s\S]*?)<\/thead>/u);
+  if (!theadMatch) {
+    return `<div class="reader-table"><table>${tableHtml}</table></div>`;
+  }
+  const headers = Array.from(
+    theadMatch[1].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gu),
+    ([, cell]) => cell.replace(/<[^>]+>/gu, "").trim(),
+  );
+  if (headers.at(-1) !== "Dads") {
+    return `<div class="reader-table"><table>${tableHtml}</table></div>`;
+  }
+  const decorated = tableHtml.replace(
+    /<tbody>([\s\S]*?)<\/tbody>/u,
+    (_, body) => {
+      const styledBody = body.replace(/<tr>([\s\S]*?)<\/tr>/gu, (__, row) => {
+        let colIndex = 0;
+        const styledRow = row.replace(
+          /<td([^>]*)>([\s\S]*?)<\/td>/gu,
+          (___, attrs, content) => {
+            colIndex += 1;
+            if (colIndex === 1) {
+              return `<td${attrs}>${content}</td>`;
+            }
+            const plain = content.replace(/<[^>]+>/gu, "").trim();
+            let tone = "cmp-warn";
+            if (/^Yes\b/iu.test(plain)) {
+              tone = "cmp-yes";
+            } else if (/^No\b/iu.test(plain)) {
+              tone = "cmp-no";
+            }
+            const nextAttrs = attrs.includes('class="')
+              ? attrs.replace('class="', `class="${tone} `)
+              : `${attrs} class="${tone}"`;
+            return `<td${nextAttrs}>${content}</td>`;
+          },
+        );
+        return `<tr>${styledRow}</tr>`;
+      });
+      return `<tbody>${styledBody}</tbody>`;
+    },
+  );
+  return `<div class="reader-table reader-table-compare"><table>${decorated}</table></div>`;
+}
+
 function styleArticle(article, links) {
   if (links.length > 1) {
     article = article.replace(
@@ -95,9 +140,8 @@ function styleArticle(article, links) {
       (_, id) => `<h2 id="${id}" tabindex="-1">`,
     );
   }
-  return article.replace(
-    /<table>([\s\S]*?)<\/table>/gu,
-    (_, table) => `<div class="reader-table"><table>${table}</table></div>`,
+  return article.replace(/<table>([\s\S]*?)<\/table>/gu, (_, table) =>
+    decorateComparisonTable(table),
   );
 }
 

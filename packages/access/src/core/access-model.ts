@@ -1,13 +1,8 @@
-import {
-  allowVisibleOnRecordUntil,
-  type VisibleRecordException,
-} from "./visible-record-exceptions.js";
 import type { CatalogOnlyCapability } from "./catalog-only.js";
 import type { EntityHandle } from "./entity-handle.js";
-import type { AccessDefinition } from "./model.js";
-import type { ScopeBindings } from "./scope-bindings.js";
 import type { LifecycleTrigger } from "./lifecycle.js";
 import type { PermissionTerm, PermissionToken, RoleToken } from "./refs.js";
+import type { ScopeBindings } from "./scope-bindings.js";
 
 export type ResolvedGranting = {
   readonly requires: readonly PermissionToken[];
@@ -40,52 +35,85 @@ export type AccessMigrationMeta = {
 };
 
 /**
- * Explicit app composition. Declaration modules contribute definitions and
- * bindings without writing process-wide state.
+ * Explicit compiled authorization model. Declaration modules contribute
+ * definitions, scope bindings, and lookup allowlists without global state.
  */
 export type AccessModel = {
   readonly definitions: readonly ResolvedAccessDefinition[];
   readonly bindings: readonly ScopeBindings[];
-  readonly visibleRecordExceptions: readonly VisibleRecordException[];
+  readonly lookupResourceAllowlist?: readonly string[];
   readonly migrations?: readonly AccessMigrationMeta[];
 };
 
-export function accessModel(
-  declarations: readonly Pick<
-    AccessDefinition<unknown, unknown>,
-    "entity" | "resolve"
-  >[],
-  bindings: readonly ScopeBindings[] = [],
-  visibleRecordExceptions: readonly VisibleRecordException[] = [],
-): AccessModel {
-  const definitions = declarations.map((declaration) => declaration.resolve());
-  const wireNames = distinctWireNames(definitions);
-  distinctWireNames(bindings);
+export type FinalizeAccessModelOptions = {
+  readonly bindings?: readonly ScopeBindings[];
+  readonly allowLookupResourcesOn?: readonly (
+    { readonly wireName: string } | string
+  )[];
+  readonly migrations?: readonly AccessMigrationMeta[];
+};
+
+function validateBindings(
+  bindings: readonly ScopeBindings[],
+  wireNames: ReadonlySet<string>,
+): void {
+  const seen = new Set<string>();
   for (const binding of bindings) {
-    if (!wireNames.has(binding.entity.wireName)) {
-      throw new Error(
-        `scope bindings name missing access definition ${binding.entity.wireName}`,
-      );
+    const name = binding.entity.wireName;
+    if (seen.has(name)) {
+      throw new Error(`duplicate access model entry ${name}`);
+    }
+    seen.add(name);
+    if (!wireNames.has(name)) {
+      throw new Error(`scope bindings name missing access definition ${name}`);
     }
   }
+}
+
+function normalizeLookupAllowlist(
+  entries: readonly ({ readonly wireName: string } | string)[],
+  wireNames: ReadonlySet<string>,
+): readonly string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const entry of entries) {
+    const name = typeof entry === "string" ? entry : entry.wireName;
+    if (!wireNames.has(name)) {
+      throw new Error(
+        `allowLookupResourcesOn names missing access definition ${name}`,
+      );
+    }
+    if (!seen.has(name)) {
+      seen.add(name);
+      result.push(name);
+    }
+  }
+  return result;
+}
+
+/**
+ * Shared finalizer used by `compileAccess` and `compileAccessFromIr` to
+ * validate bindings, normalize `allowLookupResourcesOn`, and attach migrations.
+ */
+export function finalizeAccessModel(
+  definitions: readonly ResolvedAccessDefinition[],
+  options?: FinalizeAccessModelOptions,
+): AccessModel {
+  const wireNames = new Set(definitions.map((entry) => entry.entity.wireName));
+  const bindings = options?.bindings ?? [];
+  validateBindings(bindings, wireNames);
+
+  const allowlist =
+    options?.allowLookupResourcesOn === undefined
+      ? undefined
+      : normalizeLookupAllowlist(options.allowLookupResourcesOn, wireNames);
+
   return {
     definitions,
     bindings: [...bindings],
-    visibleRecordExceptions: visibleRecordExceptions.map((entry) =>
-      allowVisibleOnRecordUntil(entry.until, entry),
-    ),
+    ...(allowlist === undefined ? {} : { lookupResourceAllowlist: allowlist }),
+    ...(options?.migrations === undefined
+      ? {}
+      : { migrations: [...options.migrations] }),
   };
-}
-
-function distinctWireNames(
-  entries: readonly { readonly entity: EntityHandle }[],
-): Set<string> {
-  const names = new Set<string>();
-  for (const { entity } of entries) {
-    if (names.has(entity.wireName)) {
-      throw new Error(`duplicate access model entry ${entity.wireName}`);
-    }
-    names.add(entity.wireName);
-  }
-  return names;
 }

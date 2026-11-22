@@ -1,18 +1,21 @@
-import { through } from "../combinators.js";
-import { access } from "../model.js";
-import type { AccessDefinition } from "../model.js";
-import type { ThroughTerm } from "../refs.js";
+import {
+  resource,
+  type DslResource,
+  type ResourceSubjectRef,
+} from "../../index.js";
 import { alpha } from "./cycle-alpha.access.js";
-import { Alpha, Beta } from "./cycle-entities.js";
 
-type BetaRoles = { readonly peer: typeof Alpha };
-type BetaPermissions = { readonly view: readonly ThroughTerm[] };
+export type BetaResource = DslResource<
+  "test/beta",
+  { readonly peer: ResourceSubjectRef<"test/alpha"> },
+  "view"
+>;
 
-export const beta: AccessDefinition<BetaRoles, BetaPermissions> = access(Beta, {
+export const beta: BetaResource = resource("test/beta", {
   roles: {
-    peer: Alpha,
+    peer: () => alpha,
   },
-  permissions: (roles) => ({
-    view: [through(roles.peer, alpha.permissions.view)],
+  can: ({ peer }) => ({
+    view: peer.view,
   }),
 });

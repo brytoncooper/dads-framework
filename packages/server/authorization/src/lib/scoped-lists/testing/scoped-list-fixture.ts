@@ -12,17 +12,14 @@ import { boolean, pgTable, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 import {
-  access,
-  accessModel,
+  actor,
+  allOf,
+  compileAccess,
   emitAccessIr,
   emitZedForDefinitions,
-  entityHandle,
-  excluding,
-  gated,
-  scopeBindings,
-  through,
-  wildcard,
+  resource,
 } from "@dads-framework/access";
+import { scopeBindings } from "@dads-framework/access/scopes";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
 import { scopeSqlBindings, type ScopeSqlRoles } from "../scope-sql-bindings.js";
@@ -31,30 +28,10 @@ const idSchema = z.string();
 
 // ─── Access rules ────────────────────────────────────────────────────────────
 
-export const Member = entityHandle({
-  wireName: "listfixture/member",
-  idSchema,
-});
+export const Member = actor("listfixture/member", { id: idSchema });
 
-export const Site = entityHandle({
-  wireName: "listfixture/site",
-  idSchema,
-  kind: "scope",
-});
-
-export const Folder = entityHandle({
-  wireName: "listfixture/folder",
-  idSchema,
-  kind: "record",
-});
-
-export const Sheet = entityHandle({
-  wireName: "listfixture/sheet",
-  idSchema,
-  kind: "record",
-});
-
-export const site = access(Site, {
+export const site = resource("listfixture/site", {
+  id: idSchema,
   roles: {
     member: Member,
     manager: Member,
@@ -62,53 +39,52 @@ export const site = access(Site, {
     archivist: Member,
     blocked: Member,
   },
-  permissions: (roles) => ({
-    view_records: [roles.member, roles.manager],
-    manage_records: [roles.manager],
-    audit_records: [roles.auditor],
-    archive_records: [roles.archivist],
-    blocked_here: [roles.blocked],
+  can: ({ member, manager, auditor, archivist, blocked }) => ({
+    view_records: [member, manager],
+    manage_records: manager,
+    audit_records: auditor,
+    archive_records: archivist,
+    blocked_here: blocked,
   }),
 });
 
-export const folder = access(Folder, {
+export const Site = site;
+
+export const folder = resource("listfixture/folder", {
+  id: idSchema,
   roles: {
-    home_site: Site,
-    shared_site: Site,
+    home_site: site,
+    shared_site: site,
     // The home site while the folder is shared nowhere.
-    fallback_site: Site,
-    archived: wildcard(Member),
+    fallback_site: site,
+    archived: Member.anyone,
     assignee: Member,
   },
-  permissions: (roles) => ({
+  can: ({ home_site, shared_site, fallback_site, archived, assignee }) => ({
     view: [
-      through(roles.home_site, site.permissions.view_records),
-      through(roles.shared_site, site.permissions.view_records),
-      gated(
-        through(roles.fallback_site, site.permissions.archive_records),
-        roles.archived,
-      ),
-      excluding(
-        through(roles.shared_site, site.permissions.audit_records),
-        through(roles.shared_site, site.permissions.blocked_here),
-      ),
-      roles.assignee,
+      home_site.view_records,
+      shared_site.view_records,
+      allOf(fallback_site.archive_records, archived),
+      shared_site.audit_records.unless(shared_site.blocked_here),
+      assignee,
     ],
   }),
 });
 
-export const sheet = access(Sheet, {
-  roles: { folder: Folder, site: Site },
-  permissions: (roles) => ({
+export const Folder = folder;
+
+export const sheet = resource("listfixture/sheet", {
+  id: idSchema,
+  roles: { folder, site },
+  can: ({ folder: parentFolder, site: parentSite }) => ({
     view: [
-      excluding(
-        through(roles.folder, folder.permissions.view),
-        through(roles.site, site.permissions.blocked_here),
-      ),
-      through(roles.site, site.permissions.manage_records),
+      parentFolder.view.unless(parentSite.blocked_here),
+      parentSite.manage_records,
     ],
   }),
 });
+
+export const Sheet = sheet;
 
 export const folderScope = scopeBindings(folder, {
   home_site: { kind: "scope-column" },
@@ -123,14 +99,14 @@ export const sheetScope = scopeBindings(sheet, {
   site: { kind: "scope-column" },
 });
 
-export const fixtureAccess = accessModel(
-  [site, folder, sheet],
-  [folderScope, sheetScope],
-);
+export const fixtureAccess = compileAccess([Member, site, folder, sheet], {
+  bindings: [folderScope, sheetScope],
+  allowLookupResourcesOn: [site],
+});
 
 /** The SpiceDB schema for the fixture's definitions alone. */
 export function fixtureZed(): string {
-  return `definition ${Member.wireName} {}\n\n${emitZedForDefinitions(emitAccessIr(fixtureAccess))}`;
+  return emitZedForDefinitions(emitAccessIr(fixtureAccess));
 }
 
 // ─── Storage ─────────────────────────────────────────────────────────────────

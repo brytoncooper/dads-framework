@@ -4,7 +4,7 @@ const addCommands = [
 ];
 
 const accessCommands = [
-  "  access import <schema.zed> [--out <path>] [--style <ergonomic|classic>] [--dry-run] [--json]",
+  "  access import <schema.zed> [--out <path>] [--dry-run] [--json]",
   "  access tree <schema.ts|schema.zed> [--json]",
   "  access diff <before> <after> [--json]",
   "  access migrate <slug> --from <before> --to <after> [--out <dir>] [--dry-run] [--json]",

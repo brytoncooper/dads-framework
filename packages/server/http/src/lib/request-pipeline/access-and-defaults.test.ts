@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
-  access,
-  accessModel,
-  entityHandle,
+  actor,
+  compileAccess,
   permissionToken,
+  resource,
 } from "@dads-framework/access";
 import {
   requires,
@@ -371,21 +371,15 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
     }),
   ]);
 
-  const vocabularyUser = entityHandle({
-    wireName: "user",
-    idSchema: z.string(),
+  const vocabularyUser = actor("user", { id: z.string() });
+  const vocabularyTicket = resource("ticketing/ticket", {
+    id: z.string(),
+    roles: { owner: vocabularyUser },
+    can: ({ owner }) => ({ view: owner }),
   });
-  const vocabularyTicket = access(
-    entityHandle({
-      wireName: "ticketing/ticket",
-      idSchema: z.string(),
-      kind: "catalog",
-    }),
-    {
-      roles: { owner: vocabularyUser },
-      permissions: (roles) => ({ view: [roles.owner] }),
-    },
-  );
+  const vocabularyModel = compileAccess([vocabularyUser, vocabularyTicket], {
+    allowLookupResourcesOn: [vocabularyTicket],
+  });
 
   async function buildVocabularyApp() {
     denials.length = 0;
@@ -412,7 +406,7 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
     });
     registerRoutes(app, {
       routes: vocabularyRoutes,
-      accessModel: accessModel([vocabularyTicket]),
+      accessModel: vocabularyModel,
       subjects: subjectsFromHeader(),
       authorization,
       lookups: authorization,
@@ -582,7 +576,7 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
     });
     registerRoutes(app, {
       routes: vocabularyRoutes,
-      accessModel: accessModel([vocabularyTicket]),
+      accessModel: vocabularyModel,
       subjects: subjectsFromHeader(),
       authorization,
       // no lookups port — wired wrong on purpose

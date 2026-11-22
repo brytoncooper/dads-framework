@@ -4,6 +4,10 @@ export {
   type PostgresAccessExecutor,
 } from "./postgres-authorization.js";
 export type {
+  PostgresFilterQuery,
+  PostgresAccessFilter,
+} from "./policy/compile-filter.js";
+export type {
   PgClientLike,
   PgPoolLike,
   PostgresQuery,

@@ -1,4 +1,4 @@
-import { accessModel } from "@dads-framework/access";
+import { compileAccess } from "@dads-framework/access";
 /**
  * What: inside a scope, identical reads reach the vendor once; outside, or
  * after a write, every read reaches it.
@@ -451,7 +451,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
       new GuardedAuthorization(
         new TalliedAuthorization(inner),
         DEFAULT_AUTHORIZATION_GUARD_MARKS,
-        authorizationKinds(accessModel([])),
+        authorizationKinds(compileAccess([])),
       ),
     );
 

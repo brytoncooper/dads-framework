@@ -22,6 +22,12 @@ import {
   compileSqliteCheck,
   compileSqliteCheckMany,
 } from "./policy/compile-check.js";
+import {
+  compileSqliteFilter,
+  validateSqliteFilterQuery,
+  type SqliteAccessFilter,
+  type SqliteFilterQuery,
+} from "./policy/compile-filter.js";
 import { compileSqliteLookupResources } from "./policy/compile-lookup-resources.js";
 import { compileSqliteLookupSubjects } from "./policy/compile-lookup-subjects.js";
 import type { SqlitePermissionCheck } from "./policy/policy-model.js";
@@ -130,6 +136,33 @@ export class SqliteAuthorization extends Authorization {
       outcomes.push(...(await this.#checkEachBatch(slice, nowMs)));
     }
     return outcomes;
+  }
+
+  /** Compile a parameterized SQLite Boolean filter predicate for single-query resource listing. */
+  compileFilter(query: SqliteFilterQuery): SqliteAccessFilter {
+    requireConcreteSubject(query.subject);
+    const { idColumn, nowMs } = validateSqliteFilterQuery(
+      query,
+      this.currentTimeMs(),
+    );
+    const permission = this.#policy.permissionName(
+      query.resourceType,
+      query.permission,
+    );
+    if (permission === undefined) {
+      return Object.freeze({ sql: "0 = 1", values: [] });
+    }
+    return compileSqliteFilter(
+      this.#policy.model,
+      this.#namespace,
+      nowMs,
+      {
+        subject: { type: query.subject.type, id: query.subject.id },
+        permission,
+        resourceType: query.resourceType,
+      },
+      idColumn,
+    );
   }
 
   override async lookupResources(

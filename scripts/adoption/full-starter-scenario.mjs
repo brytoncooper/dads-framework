@@ -179,7 +179,7 @@ async function revokeMembership(container, tenantId, ownerId, guestId) {
     "tsx",
     "--input-type=module",
     "-e",
-    `import {accessModel} from "@dads-framework/access";
+    `import {compileAccess} from "@dads-framework/access";
      import {currentAuditActor, withSystemActor} from "@dads-framework/audit-actor";
      import {createPostgresConnection} from "@dads-framework/postgres";
      import {PostgresAuthorization, TransactionalAccessChanges} from "@dads-framework/postgres-access";
@@ -192,7 +192,9 @@ async function revokeMembership(container, tenantId, ownerId, guestId) {
      }, {error: () => undefined});
      try {
        const authorization = new PostgresAuthorization({
-         model: accessModel([accountAccess, tenantAccess.tenant]),
+         model: compileAccess([accountAccess, tenantAccess.tenant], {
+           allowLookupResourcesOn: [tenantAccess.tenant],
+         }),
          namespace: "starter",
          executor: connection.pool,
        });

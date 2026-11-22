@@ -10,7 +10,10 @@
  */
 import { getTableName, type Table } from "drizzle-orm";
 
-import type { EntityHandle } from "@dads-framework/access";
+/** Any authorization entity or resource carrying a wire name. */
+export type CatalogEntityRef = {
+  readonly wireName: string;
+};
 
 /** A catalog entity and the table its rows live in. */
 export type CatalogTable = {
@@ -26,16 +29,23 @@ export type CatalogWithoutTable = {
 
 export type CatalogTableDeclaration = CatalogTable | CatalogWithoutTable;
 
-export function catalogTable(entity: EntityHandle, table: Table): CatalogTable {
-  requireCatalog(entity);
+export function catalogTable(
+  entity: CatalogEntityRef,
+  table: Table,
+): CatalogTable {
+  if (entity.wireName.trim().length === 0) {
+    throw new Error("catalog table declaration requires a non-empty wireName");
+  }
   return { wireName: entity.wireName, tableName: getTableName(table) };
 }
 
 export function catalogWithoutTable(
-  entity: EntityHandle,
+  entity: CatalogEntityRef,
   reason: string,
 ): CatalogWithoutTable {
-  requireCatalog(entity);
+  if (entity.wireName.trim().length === 0) {
+    throw new Error("catalog table declaration requires a non-empty wireName");
+  }
   if (reason.trim().length === 0) {
     throw new Error(`${entity.wireName} has no table but gives no reason`);
   }
@@ -74,12 +84,4 @@ export function catalogTableFailures(
           "has a catalog table declaration but is not a registered catalog",
       })),
   ];
-}
-
-function requireCatalog(entity: EntityHandle): void {
-  if (entity.kind !== "catalog") {
-    throw new Error(
-      `${entity.wireName} is declared ${entity.kind ?? "with no kind"}, not catalog; only a catalog's table is size-audited`,
-    );
-  }
 }

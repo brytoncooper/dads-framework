@@ -6,12 +6,11 @@
  * re-checked one bulk call later, so a wrong plan can mis-count but never
  * leak a row.
  */
-import { emitAccessIr } from "./emit-ir.js";
-import type { EntityKind } from "./entity-handle.js";
-import type { AccessIrDefinition, AccessIrTerm } from "./ir.js";
 import type { AccessModel } from "./access-model.js";
-import { allOf, anyOf, notOf } from "./scope-plan-simplify.js";
+import { emitAccessIr } from "./emit-ir.js";
+import type { AccessIrDefinition, AccessIrTerm } from "./ir.js";
 import type { RoleBinding } from "./scope-bindings.js";
+import { allOf, anyOf, notOf } from "./scope-plan-simplify.js";
 
 // ─── Public shapes ───────────────────────────────────────────────────────────
 
@@ -59,12 +58,13 @@ export type ScopePlanFailure = {
 };
 
 /**
- * Everything the compiler reads: the rule trees, each entity's declared
- * kind, and each record's role bindings keyed by wire name.
+ * Everything the compiler reads: the rule trees, the explicit
+ * `allowLookupResourcesOn` set, and each record's role bindings keyed by wire
+ * name.
  */
 export type ScopeSchema = {
   readonly definitions: readonly AccessIrDefinition[];
-  readonly kinds: ReadonlyMap<string, EntityKind>;
+  readonly lookupAllowlist: ReadonlySet<string>;
   readonly bindings: ReadonlyMap<string, Readonly<Record<string, RoleBinding>>>;
 };
 
@@ -126,19 +126,14 @@ export function planScope(
   return { plan: failures.length === 0 ? plan : undefined, failures };
 }
 
-/** Lower the composed access definitions and bindings for the scope planner. */
+/** Lower the composed access definitions, allowlist, and bindings for the scope planner. */
 export function scopeSchema(model: AccessModel): ScopeSchema {
-  const kinds = new Map<string, EntityKind>();
-  for (const definition of model.definitions) {
-    if (definition.entity.kind !== undefined) {
-      kinds.set(definition.entity.wireName, definition.entity.kind);
-    }
-  }
+  const lookupAllowlist = new Set<string>(model.lookupResourceAllowlist ?? []);
   const bindings = new Map<string, Readonly<Record<string, RoleBinding>>>();
   for (const entry of model.bindings) {
     bindings.set(entry.entity.wireName, entry.roles);
   }
-  return { definitions: emitAccessIr(model), kinds, bindings };
+  return { definitions: emitAccessIr(model), lookupAllowlist, bindings };
 }
 
 // ─── Walk ────────────────────────────────────────────────────────────────────
@@ -360,13 +355,7 @@ function planTarget(
   targetType: string,
   targetPermission: string,
 ): ScopePlan | undefined {
-  const kind = entityKind(walk.schema, targetType);
-  // A catalog is bounded like a scope (by equipment or configuration), so its
-  // visible ids are asked for directly; the lookup size guards still watch it.
-  if (kind === "scope" || kind === "catalog") {
-    return { kind: "lookup", role: roleName, targetType, targetPermission };
-  }
-  if (kind === "record") {
+  if (walk.schema.bindings.has(targetType)) {
     const plan = planPermission(
       walk,
       targetType,
@@ -378,22 +367,15 @@ function planTarget(
       ? undefined
       : { kind: "via", role: roleName, targetType, plan };
   }
+  if (walk.schema.lookupAllowlist.has(targetType)) {
+    return { kind: "lookup", role: roleName, targetType, targetPermission };
+  }
   fail(
     walk,
     place.path,
-    `role ${roleName} points at ${targetType}, which is neither a declared scope or catalog nor a record with scope bindings`,
+    `role ${roleName} points at ${targetType}, which is neither in allowLookupResourcesOn nor a record with scope bindings`,
   );
   return undefined;
-}
-
-function entityKind(
-  schema: ScopeSchema,
-  wireName: string,
-): EntityKind | undefined {
-  if (schema.bindings.has(wireName)) {
-    return "record";
-  }
-  return schema.kinds.get(wireName);
 }
 
 export { describeScopePlan, distinctScopeLookups } from "./scope-plan-read.js";

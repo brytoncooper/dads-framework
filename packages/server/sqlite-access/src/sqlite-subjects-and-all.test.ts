@@ -1,17 +1,14 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import {
-  access,
-  accessModel,
-  both,
-  entityHandle,
-  excluding,
-  membersOf,
-  through,
-  throughAll,
-  wildcard,
-  withExpiration,
+  actor,
+  allOf,
+  anyOf,
+  compileAccess,
+  every,
+  permissionToken,
+  resource,
+  type AnyDslResource,
 } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 
@@ -22,103 +19,52 @@ import {
   type SqliteValue,
 } from "./index.js";
 
-const user = entityHandle({ wireName: "user", idSchema: z.string() });
-const group = entityHandle({ wireName: "group", idSchema: z.string() });
-const workspace = entityHandle({
-  wireName: "workspace",
-  idSchema: z.string(),
-  kind: "scope",
+const user = actor("user");
+const group = resource("group", {
+  roles: { member: [user.expiring, user.anyone] },
+  can: ({ member }) => ({ read: member }),
 });
-const folder = entityHandle({ wireName: "folder", idSchema: z.string() });
-const doc = entityHandle({ wireName: "doc", idSchema: z.string() });
-const strictDoc = entityHandle({
-  wireName: "strict_doc",
-  idSchema: z.string(),
-});
-
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-const groupAccess = access(group, {
-  roles: { member: [withExpiration(user), wildcard(user)] },
-  permissions: (roles) => ({ read: [roles.member] }),
-});
-const workspaceAccess = access(workspace, {
+const workspace = resource("workspace", {
   roles: {
-    owner: withExpiration(user),
-    member: [
-      withExpiration(user),
-      withExpiration(membersOf(groupAccess.roles.member)),
-      withExpiration(wildcard(user)),
-    ],
-    banned: [user, wildcard(user)],
+    owner: user.expiring,
+    member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
+    banned: [user, user.anyone],
   },
-  permissions: (roles) => ({
-    view: [excluding([roles.owner, roles.member], roles.banned)],
+  can: ({ owner, member, banned }) => ({
+    view: anyOf(owner, member).unless(banned),
   }),
 });
-const folderAccess = access(folder, {
+const folder = resource("folder", {
+  parents: [workspace],
+  recursive: true,
   roles: {
-    parent: [withExpiration(folder), withExpiration(workspace)],
-    viewer: [
-      withExpiration(user),
-      withExpiration(membersOf(groupAccess.roles.member)),
-      withExpiration(wildcard(user)),
-    ],
-    banned: [user, wildcard(user)],
+    viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
+    banned: [user, user.anyone],
   },
-  permissions: (roles) => ({
-    view: [
-      excluding(
-        [
-          roles.viewer,
-          through(roles.parent, {
-            kind: "permission",
-            entityWireName: "folder",
-            permissionName: "view",
-          }),
-        ],
-        roles.banned,
-      ),
-    ],
+  can: ({ parents, viewer, banned }) => ({
+    view: anyOf(viewer, parents.view).unless(banned),
   }),
 });
-const docAccess = access(doc, {
+const doc = resource("doc", {
+  parents: [workspace, folder],
   roles: {
-    parent: [withExpiration(workspace), withExpiration(folder)],
-    viewer: [
-      withExpiration(user),
-      withExpiration(membersOf(groupAccess.roles.member)),
-      withExpiration(wildcard(user)),
-    ],
-    required_clearance: [user, wildcard(user)],
-    banned: [user, wildcard(user)],
+    viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
+    required_clearance: [user, user.anyone],
+    banned: [user, user.anyone],
   },
-  permissions: (roles) => ({
-    view: [
-      excluding(
-        [roles.viewer, through(roles.parent, workspaceAccess.permissions.view)],
-        roles.banned,
-      ),
-    ],
-    restricted: [both(roles.viewer, roles.required_clearance)],
+  can: ({ parents, viewer, required_clearance, banned }) => ({
+    view: anyOf(viewer, parents.view).unless(banned),
+    restricted: allOf(viewer, required_clearance),
   }),
 });
-const strictDocAccess = access(strictDoc, {
-  roles: {
-    parent: [withExpiration(workspace), withExpiration(folder)],
-  },
-  permissions: (roles) => ({
-    view: [throughAll(roles.parent, workspaceAccess.permissions.view)],
+const strictDoc = resource("strict_doc", {
+  parents: [workspace, folder],
+  can: ({ parents }) => ({
+    view: every(parents).view,
   }),
 });
 
-const model = accessModel([
-  userAccess,
-  groupAccess,
-  workspaceAccess,
-  folderAccess,
-  docAccess,
-  strictDocAccess,
-]);
+const model = compileAccess([user, group, workspace, folder, doc, strictDoc]);
 
 function setupDb(initialTimeMs = 1_000) {
   let nowMs = initialTimeMs;
@@ -380,33 +326,28 @@ describe("SQLite SpiceDB parity: lookupSubjects, throughAll, and mutual recursio
   });
 
   it("evaluates mutually recursive multi-entity SCCs and async SqliteExecutor adapters", async () => {
-    const cabinet = entityHandle({ wireName: "cabinet", idSchema: z.string() });
-    const drawer = entityHandle({ wireName: "drawer", idSchema: z.string() });
-    const u = entityHandle({ wireName: "user", idSchema: z.string() });
-    const uAccess = access(u, { roles: {}, permissions: () => ({}) });
-    const cabinetAccess = access(cabinet, {
-      roles: { parent: drawer, viewer: u },
-      permissions: (roles) => ({
-        view: [
-          roles.viewer,
-          through(roles.parent, {
-            kind: "permission",
-            entityWireName: "drawer",
-            permissionName: "view",
-          }),
-        ],
+    const u = actor("user");
+    const cabinet: AnyDslResource = resource("cabinet", {
+      roles: { parent: (): AnyDslResource => drawer, viewer: u },
+      can: ({ parent, viewer }) => ({
+        view: anyOf(viewer, {
+          kind: "through",
+          role: parent.$roleToken,
+          target: permissionToken("drawer", "view"),
+        }),
       }),
     });
-    const drawerAccess = access(drawer, {
+    const drawer = resource("drawer", {
       roles: { parent: cabinet, viewer: u },
-      permissions: (roles) => ({
-        view: [
-          roles.viewer,
-          through(roles.parent, cabinetAccess.permissions.view),
-        ],
+      can: ({ parent, viewer }) => ({
+        view: anyOf(viewer, {
+          kind: "through",
+          role: parent.$roleToken,
+          target: permissionToken("cabinet", "view"),
+        }),
       }),
     });
-    const mutualModel = accessModel([uAccess, cabinetAccess, drawerAccess]);
+    const mutualModel = compileAccess([u, cabinet, drawer]);
 
     const db = new DatabaseSync(":memory:");
     db.exec(sqliteRelationshipSchemaMigration.sql);

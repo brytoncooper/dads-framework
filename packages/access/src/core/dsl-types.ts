@@ -1,8 +1,12 @@
 import type { z } from "zod";
 
-import type { ResolvedAccessDefinition } from "./access-model.js";
-import type { EntityHandle, EntityKind } from "./entity-handle.js";
-import type { SingleRoleValue } from "./holders.js";
+import type { EntityHandle } from "./entity-handle.js";
+import type {
+  SingleRoleValue,
+  UsersetHolder,
+  WildcardHolder,
+} from "./holders.js";
+import type { LifecycleTrigger } from "./lifecycle.js";
 import type { PermissionTerm, PermissionToken, RoleToken } from "./refs.js";
 
 /** Extracts the final path segment for an auto-generated parent relation name. */
@@ -15,10 +19,17 @@ export type ActorRef<WireName extends string = string> = {
   readonly id: string;
 };
 
+export type DslExpirableWildcardHolder<WireName extends string = string> = {
+  readonly kind: "expirable";
+  readonly holder: WildcardHolder;
+  readonly wireName: WireName;
+};
+
 export type DslWildcardActorHolder<WireName extends string = string> = {
   readonly kind: "wildcard";
   readonly entity: EntityHandle<WireName>;
   readonly wireName: WireName;
+  readonly expiring: DslExpirableWildcardHolder<WireName>;
 };
 
 export type DslExpirableActorHolder<WireName extends string = string> = {
@@ -27,9 +38,18 @@ export type DslExpirableActorHolder<WireName extends string = string> = {
   readonly actorWireName: WireName;
 };
 
+export type DslExpirableUsersetHolder<
+  WireName extends string = string,
+  RoleName extends string = string,
+> = {
+  readonly kind: "expirable";
+  readonly holder: UsersetHolder;
+  readonly entityWireName: WireName;
+  readonly roleName: RoleName;
+};
+
 export type DslActorOptions = {
   readonly id?: z.ZodType<string>;
-  readonly kind?: EntityKind;
 };
 
 export type DslActor<WireName extends string = string> = ((
@@ -40,7 +60,6 @@ export type DslActor<WireName extends string = string> = ((
   readonly idSchema: z.ZodType<string>;
   readonly handle: EntityHandle<WireName>;
   readonly entity: EntityHandle;
-  readonly resolve: () => ResolvedAccessDefinition;
   readonly expiring: DslExpirableActorHolder<WireName>;
   readonly anyone: DslWildcardActorHolder<WireName>;
 };
@@ -102,6 +121,7 @@ export type DslRoleToken<
 > = RoleToken & {
   readonly entityWireName: WireName;
   readonly roleName: RoleName;
+  readonly expiring: DslExpirableUsersetHolder<WireName, RoleName>;
   readonly __allowedSubject?: AllowedSubject;
 };
 
@@ -111,6 +131,11 @@ export type DslPermissionToken<
 > = PermissionToken & {
   readonly entityWireName: WireName;
   readonly permissionName: PermName;
+};
+
+export type DslGrantingSpec<PermName extends string = string> = {
+  readonly requires: readonly PermName[];
+  readonly removedWhen: readonly LifecycleTrigger[];
 };
 
 export type DslTermInput = DslTerm | PermissionTerm | readonly DslTermInput[];
@@ -142,7 +167,6 @@ export type AnyDslResource = {
   readonly idSchema: z.ZodType<string>;
   readonly handle: EntityHandle;
   readonly entity: EntityHandle;
-  readonly resolve: () => ResolvedAccessDefinition;
   readonly roles: Readonly<Record<string, RoleToken>>;
   readonly can: Readonly<Record<string, PermissionToken>>;
   readonly permissions: Readonly<Record<string, PermissionToken>>;
@@ -154,6 +178,8 @@ export type DslSingleRoleHolder =
   | DslActor
   | DslExpirableActorHolder
   | DslWildcardActorHolder
+  | DslExpirableWildcardHolder
+  | DslExpirableUsersetHolder
   | AnyDslResource
   | RoleToken
   | DslLazyResource
@@ -178,9 +204,16 @@ export type ResourcePermsOf<R> = R extends {
   ? keyof C & string
   : never;
 
+export type ResourceRolesOf<R> = R extends {
+  readonly kind: "dsl-resource";
+  readonly roles: infer Roles;
+}
+  ? keyof Roles & string
+  : never;
+
 export type TargetPermsOfSingleHolder<H> = H extends () => infer Target
-  ? ResourcePermsOf<Target>
-  : ResourcePermsOf<H>;
+  ? ResourcePermsOf<Target> | ResourceRolesOf<Target>
+  : ResourcePermsOf<H> | ResourceRolesOf<H>;
 
 export type IntersectHolderPerms<List extends readonly unknown[]> =
   List extends readonly []
@@ -202,22 +235,26 @@ export type AllowedSubjectForSingleHolder<H> =
       ? ActorRef<W>
       : H extends DslWildcardActorHolder<infer W>
         ? DslWildcardActorHolder<W>
-        : H extends {
-              readonly kind: "role";
-              readonly entityWireName: infer W extends string;
-              readonly roleName: infer R extends string;
-            }
-          ? DslUsersetSubject<W, R>
-          : H extends {
-                readonly kind: "dsl-resource";
-                readonly wireName: infer W extends string;
-              }
-            ? ResourceSubjectRef<W>
-            : H extends () => infer Target
-              ? AllowedSubjectForSingleHolder<Target>
-              : H extends EntityHandle<infer W>
-                ? ActorRef<W> | ResourceSubjectRef<W>
-                : DslSubjectInput;
+        : H extends DslExpirableWildcardHolder<infer W>
+          ? DslWildcardActorHolder<W>
+          : H extends DslExpirableUsersetHolder<infer W, infer R>
+            ? DslUsersetSubject<W, R>
+            : H extends {
+                  readonly kind: "role";
+                  readonly entityWireName: infer W extends string;
+                  readonly roleName: infer R extends string;
+                }
+              ? DslUsersetSubject<W, R>
+              : H extends {
+                    readonly kind: "dsl-resource";
+                    readonly wireName: infer W extends string;
+                  }
+                ? ResourceSubjectRef<W>
+                : H extends () => infer Target
+                  ? AllowedSubjectForSingleHolder<Target>
+                  : H extends EntityHandle<infer W>
+                    ? ActorRef<W> | ResourceSubjectRef<W>
+                    : DslSubjectInput;
 
 export type AllowedSubjectForHolder<H> = H extends readonly (infer Item)[]
   ? AllowedSubjectForSingleHolder<Item>

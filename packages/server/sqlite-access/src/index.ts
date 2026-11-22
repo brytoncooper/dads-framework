@@ -2,6 +2,10 @@ export {
   SqliteAuthorization,
   type SqliteAccessOptions,
 } from "./sqlite-authorization.js";
+export type {
+  SqliteAccessFilter,
+  SqliteFilterQuery,
+} from "./policy/compile-filter.js";
 export {
   createNodeSqliteExecutor,
   type SqliteDatabaseLike,

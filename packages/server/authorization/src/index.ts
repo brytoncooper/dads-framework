@@ -100,7 +100,7 @@ export {
   type AuthorizationGuardMarks,
   DEFAULT_AUTHORIZATION_GUARD_MARKS,
   authorizationKinds,
-  type EntityKindLookup,
+  type LookupResourcesPolicy,
   GuardedAuthorization,
   LookupOverHardCapError,
   RecordLookupRefusedError,

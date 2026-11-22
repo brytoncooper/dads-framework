@@ -50,7 +50,7 @@ migrations, access, flags, HTTP routes, and jobs. The fixture below contains
 the surrounding definitions and host wiring.
 
 ```ts
-import { accessModel } from "@dads-framework/access";
+import { compileAccess } from "@dads-framework/access";
 import {
   composeApp,
   definePlugin,
@@ -68,7 +68,7 @@ const notes = definePlugin({
     migrations: [
       { directory: fileURLToPath(new URL("./migrations/", import.meta.url)) },
     ],
-    access: [noteAccess], // the value access() returned
+    access: [noteResource], // the value resource() returned
     flags: [sharingFlag], // a feature-flag definition
     audit: { untrackedTables: ["notes_read_marks"] },
   },
@@ -91,7 +91,7 @@ const hostClock = providePlugin("host-clock", clockService, () => ({
 const app = composeApp([notes, hostClock]);
 app.plugins; // ["host-clock", "notes"]: setup order
 app.migrationSources(workspaceRoot); // append to the runner's MigrationWorkspace.sources
-const model = accessModel(app.access);
+const model = compileAccess(app.access);
 
 const running = await app.start();
 registerRoutes(http, {
@@ -107,7 +107,7 @@ await running.stop(); // the interval is cleared
 `fixtures/plugin-notes` is this example as a package, proven end to end: its
 route answers through `@dads-framework/http`, its job runs in the in-process
 job queue, `discoverDomainMigrations` finds its migration, and its access
-definitions compile through `emitAccessIr(accessModel(app.access))`.
+definitions compile through `emitAccessIr(compileAccess(app.access))`.
 
 ### Entry points
 
@@ -174,7 +174,7 @@ without starting anything, so the migration runner, `dad doctor`, and
 | Field        | Shape the kernel checks                     | Where the host sends it                                 |
 | ------------ | ------------------------------------------- | ------------------------------------------------------- |
 | `migrations` | `{ directory, required? }`, absolute folder | `app.migrationSources(root)` into `MigrationWorkspace`  |
-| `access`     | `{ entity: { wireName } }` (an `access()`)  | `accessModel(app.access)`                               |
+| `access`     | `{ entity: { wireName } }` (a `resource()`) | `compileAccess(app.access)`                             |
 | `flags`      | `{ slug }` (a feature-flag definition)      | `app.flags`, the flag kit's definition list             |
 | `audit`      | `{ untrackedTables }`                       | `app.untrackedAuditTables`, the audit trigger allowlist |
 
@@ -367,7 +367,7 @@ its application services.
   exclusions. Composition exposes these alongside scope mappings.
 - **Feature flags:** Declare a flag under the plugin whose code it gates.
   Pass the composed `app.flags` to the feature-flag provider.
-- **Access:** Compose `accessModel(app.access)` in the host. Use that model for
+- **Access:** Compose `compileAccess(app.access)` in the host. Use that model for
   schema generation and HTTP registration.
 
 An application can use the same contract for an enterprise integration such

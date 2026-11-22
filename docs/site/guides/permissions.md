@@ -56,11 +56,13 @@ npm install @dads-framework/access @dads-framework/postgres-access pg zod
 2. Create `new PostgresAuthorization({ model, namespace, executor: pool })`.
 3. For protected writes, call `withProtectedPgTransaction({ pool, authorization }, async ({ client, authorization: scoped }) => { ... })`. It opens a `SERIALIZABLE` transaction on the checked-out `pg` client, binds `scoped` to that transaction, closes the scope on exit, and maps PostgreSQL `40001` conflicts to `PostgresSerializationConflict`.
 
-If your application uses Drizzle, import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle`. Existing Dads apps using `@dads-framework/postgres` can continue calling `withProtectedPostgresTransaction` (`assembly/protected-write.ts`):
+If your application uses Drizzle, import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle` (`assembly/protected-write.ts`):
 
 <!-- dads:excerpt {"path":"apps/kit-workbench/assembly/protected-write.ts","language":"ts","from":"export function createProtectedWrite(","through":"}"} -->
 
 Both the permission check and the business write share one PostgreSQL transaction snapshot. Removing a member and deleting their business rows commit or roll back together, with zero authorization outbox lag.
+
+For paginated or sorted global list queries (`SELECT * FROM documents WHERE ... ORDER BY created_at DESC LIMIT 20`), call `authorization.compileFilter({ subject, permission, resourceType, idColumn, paramOffset? })` on either `PostgresAuthorization` or `SqliteAuthorization`. It returns `{ sql, values }` (`EXISTS` or recursive `IN`) that embeds directly into your `WHERE` clause in one round trip without loading ID arrays into Node.
 
 ### SQLite (Node built-in `node:sqlite`)
 

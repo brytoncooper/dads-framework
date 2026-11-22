@@ -1,4 +1,4 @@
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess } from "@dads-framework/access";
 import { createBetterAuthIdentity } from "@dads-framework/identity-better-auth";
 import { runNodePgMigrations } from "@dads-framework/migrations";
 import { readAppliedNodePgJournal } from "@dads-framework/migrations/journal-status";
@@ -93,13 +93,12 @@ it("runs the documented migration and preserves default identity and tenant data
     if (!session?.account.emailVerified)
       throw new Error("Expected a verified account.");
 
-    const account = entityHandle({ wireName: "account", idSchema: z.string() });
+    const account = actor("account", { id: z.string() });
     const tenantAccess = createTenantAccess(account);
     const authorization = new PostgresAuthorization({
-      model: accessModel([
-        access(account, { roles: {}, permissions: () => ({}) }),
-        tenantAccess.tenant,
-      ]),
+      model: compileAccess([account, tenantAccess.tenant], {
+        allowLookupResourcesOn: [tenantAccess.tenant],
+      }),
       namespace: "default-services",
       executor: connection.pool,
     });

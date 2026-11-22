@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import type { ResolvedAccessDefinition } from "./access-model.js";
 import type {
   ActorRef,
   AnyDslResource,
@@ -11,6 +10,7 @@ import type {
   DslWildcardActorHolder,
 } from "./dsl-types.js";
 import { entityHandle, type EntityHandle } from "./entity-handle.js";
+import type { WildcardHolder } from "./holders.js";
 
 const defaultIdSchema: z.ZodType<string> = z.string().min(1);
 
@@ -45,7 +45,6 @@ type DslActorMetadata<WireName extends string> = {
   readonly idSchema: z.ZodType<string>;
   readonly handle: DslActor<WireName>["handle"];
   readonly entity: EntityHandle;
-  readonly resolve: () => ResolvedAccessDefinition;
   readonly expiring: DslExpirableActorHolder<WireName>;
   readonly anyone: DslWildcardActorHolder<WireName>;
 };
@@ -59,35 +58,26 @@ export function actor<const WireName extends string>(
   options?: DslActorOptions,
 ): DslActor<WireName> {
   const idSchema = options?.id ?? defaultIdSchema;
-  const handle =
-    options?.kind === undefined
-      ? entityHandle({ wireName, idSchema })
-      : entityHandle({ wireName, idSchema, kind: options.kind });
-
-  let cachedDefinition: ResolvedAccessDefinition | undefined;
-  function resolve(): ResolvedAccessDefinition {
-    if (cachedDefinition === undefined) {
-      cachedDefinition = {
-        entity: handle,
-        roles: {},
-        permissions: {},
-        expressions: {},
-        granting: undefined,
-        catalogOnly: [],
-      };
-    }
-    return cachedDefinition;
-  }
+  const handle = entityHandle({ wireName, idSchema });
 
   const expiring: DslExpirableActorHolder<WireName> = {
     kind: "expirable",
     holder: handle,
     actorWireName: wireName,
   };
+  const wildcardBase: WildcardHolder = {
+    kind: "wildcard",
+    entity: handle,
+  };
   const anyone: DslWildcardActorHolder<WireName> = {
     kind: "wildcard",
     entity: handle,
     wireName,
+    expiring: {
+      kind: "expirable",
+      holder: wildcardBase,
+      wireName,
+    },
   };
 
   function makeActorRef(id: string): ActorRef<WireName> {
@@ -104,7 +94,6 @@ export function actor<const WireName extends string>(
     idSchema,
     handle,
     entity: handle,
-    resolve,
     expiring,
     anyone,
   };

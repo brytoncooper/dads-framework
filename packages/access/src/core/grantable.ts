@@ -1,5 +1,6 @@
-import type { UsersetHolder } from "./holders.js";
 import type { EntityHandle } from "./entity-handle.js";
+import type { UsersetHolder } from "./holders.js";
+import { isRoleToken, type RoleToken } from "./refs.js";
 
 export type GrantableLocalizedText = Readonly<Record<string, string>>;
 
@@ -9,6 +10,11 @@ export type GrantableScope = string;
 export type GrantableTargetKind = "NONE" | "RESOURCE";
 
 export type GrantableRisk = "STANDARD" | "DANGEROUS";
+
+export type GrantableDirectSubject =
+  EntityHandle | { readonly handle: EntityHandle };
+
+export type GrantableGroupSubject = RoleToken | UsersetHolder;
 
 /**
  * Editor placement for a grantable role. `null` means the capability is
@@ -46,12 +52,26 @@ export type GrantableRole = {
   readonly permission: string;
 };
 
+function toEntityHandle(subject: GrantableDirectSubject): EntityHandle {
+  return "handle" in subject ? subject.handle : subject;
+}
+
+function toUsersetHolder(subject: GrantableGroupSubject): UsersetHolder {
+  return isRoleToken(subject)
+    ? {
+        kind: "userset",
+        entityWireName: subject.entityWireName,
+        roleName: subject.roleName,
+      }
+    : subject;
+}
+
 /**
  * Declare a permission-set-grantable role. Also the catalog registration.
  */
 export function grantable(spec: {
-  readonly directSubject: EntityHandle;
-  readonly groupSubject?: UsersetHolder;
+  readonly directSubject: GrantableDirectSubject;
+  readonly groupSubject?: GrantableGroupSubject;
   readonly id: string;
   readonly label: GrantableLocalizedText;
   readonly description: GrantableLocalizedText;
@@ -67,10 +87,10 @@ export function grantable(spec: {
 }): GrantableRole {
   return {
     kind: "grantable",
-    directSubject: spec.directSubject,
+    directSubject: toEntityHandle(spec.directSubject),
     ...(spec.groupSubject === undefined
       ? {}
-      : { groupSubject: spec.groupSubject }),
+      : { groupSubject: toUsersetHolder(spec.groupSubject) }),
     id: spec.id,
     label: spec.label,
     description: spec.description,

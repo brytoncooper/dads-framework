@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ResolvedAccessDefinition } from "./access-model.js";
+import type { CatalogOnlyCapability } from "./catalog-only.js";
 import { parentRoleNameOf } from "./dsl-actor.js";
 import {
   buildRoleTokens,
@@ -20,12 +20,13 @@ import type {
 } from "./dsl-resource-types.js";
 import type {
   AnyDslResource,
+  DslGrantingSpec,
   DslPermissionExpr,
   DslRolesSpec,
   DslSubjectInput,
 } from "./dsl-types.js";
 import { entityHandle } from "./entity-handle.js";
-import type { EntityHandle, EntityKind } from "./entity-handle.js";
+import type { EntityHandle } from "./entity-handle.js";
 import type { RoleToken } from "./refs.js";
 
 const defaultIdSchema: z.ZodType<string> = z.string().min(1);
@@ -36,22 +37,11 @@ const RESERVED_RESOURCE_PROPS = new Set([
   "idSchema",
   "handle",
   "entity",
-  "resolve",
   "roles",
   "can",
   "permissions",
   "child",
 ]);
-
-type DslResourceResolver = (node: AnyDslResource) => ResolvedAccessDefinition;
-
-let resourceResolver: DslResourceResolver | undefined;
-
-export function registerDslResourceResolver(
-  resolver: DslResourceResolver,
-): void {
-  resourceResolver = resolver;
-}
 
 export type DslResourceRecord = {
   readonly resource: AnyDslResource;
@@ -68,11 +58,14 @@ export type DslResourceRecord = {
         context: Readonly<Record<string, unknown>>,
       ) => Record<string, InlineChildPermissionExpr>)
     | undefined;
+  readonly granting: DslGrantingSpec | undefined;
+  readonly catalogOnly: readonly CatalogOnlyCapability[];
   readonly childNodes: AnyDslResource[];
 };
 
 const resourceRecords = new WeakMap<object, DslResourceRecord>();
 const roleTokenOwners = new WeakMap<RoleToken, AnyDslResource>();
+const expirableUsersetOwners = new WeakMap<object, AnyDslResource>();
 
 export function getDslResourceRecord(
   node: AnyDslResource,
@@ -86,10 +79,15 @@ export function getRoleTokenOwner(
   return roleTokenOwners.get(token);
 }
 
+export function getExpirableUsersetOwner(
+  holder: object,
+): AnyDslResource | undefined {
+  return expirableUsersetOwners.get(holder);
+}
+
 type InternalResourceInit = {
   readonly wireName: string;
   readonly idSchema: z.ZodType<string>;
-  readonly kind: EntityKind | undefined;
   readonly declaredRoles: DslRolesSpec;
   readonly parentResource: AnyDslResource | undefined;
   readonly inherit: "all" | "none" | readonly string[];
@@ -100,6 +98,8 @@ type InternalResourceInit = {
         context: Readonly<Record<string, unknown>>,
       ) => Record<string, InlineChildPermissionExpr>)
     | undefined;
+  readonly granting: DslGrantingSpec | undefined;
+  readonly catalogOnly: readonly CatalogOnlyCapability[];
   readonly inlineChildren:
     Readonly<Record<string, AnyDslChildSpec>> | undefined;
 };
@@ -164,13 +164,14 @@ function createChildNode(
   const childNode = createInternalResource({
     wireName: childWireName,
     idSchema: childSpec.id ?? defaultIdSchema,
-    kind: childSpec.kind,
     declaredRoles: childSpec.roles ?? {},
     parentResource: parentNode,
     inherit: childSpec.inherit,
     parents: [],
     recursive: childSpec.recursive === true,
     canFn: isCanFn(childSpec.can) ? childSpec.can : undefined,
+    granting: childSpec.granting,
+    catalogOnly: childSpec.catalogOnly ?? [],
     inlineChildren: childSpec.children,
   });
   parentRecord.childNodes.push(childNode);
@@ -178,14 +179,10 @@ function createChildNode(
 }
 
 function createInternalResource(init: InternalResourceInit): AnyDslResource {
-  const handle =
-    init.kind === undefined
-      ? entityHandle({ wireName: init.wireName, idSchema: init.idSchema })
-      : entityHandle({
-          wireName: init.wireName,
-          idSchema: init.idSchema,
-          kind: init.kind,
-        });
+  const handle = entityHandle({
+    wireName: init.wireName,
+    idSchema: init.idSchema,
+  });
 
   const roles = buildRoleTokens(
     init.wireName,
@@ -208,27 +205,12 @@ function createInternalResource(init: InternalResourceInit): AnyDslResource {
       ? undefined
       : parentRoleNameOf(init.parentResource.wireName);
 
-  let cachedDefinition: ResolvedAccessDefinition | undefined;
-  function resolve(): ResolvedAccessDefinition {
-    if (cachedDefinition !== undefined) {
-      return cachedDefinition;
-    }
-    if (resourceResolver === undefined) {
-      throw new Error(
-        `DSL resource resolver is not registered for "${init.wireName}"`,
-      );
-    }
-    cachedDefinition = resourceResolver(node);
-    return cachedDefinition;
-  }
-
   const nodeBase = Object.assign(callResource, {
     kind: "dsl-resource",
     wireName: init.wireName,
     idSchema: init.idSchema,
     handle,
     entity: handle,
-    resolve,
     roles,
     can: permissions,
     permissions,
@@ -255,11 +237,14 @@ function createInternalResource(init: InternalResourceInit): AnyDslResource {
     parents: init.parents,
     recursive: init.recursive,
     canFn: init.canFn,
+    granting: init.granting,
+    catalogOnly: init.catalogOnly,
     childNodes,
   };
   resourceRecords.set(node, record);
   for (const token of Object.values(roles)) {
     roleTokenOwners.set(token, node);
+    expirableUsersetOwners.set(token.expiring, node);
   }
 
   if (init.inlineChildren !== undefined) {
@@ -271,7 +256,8 @@ function createInternalResource(init: InternalResourceInit): AnyDslResource {
 
 /**
  * Declare an authorization resource with roles, permission expressions,
- * optional multi-parent DAG links, recursion, and nested children.
+ * optional multi-parent DAG links, recursion, nested children, and
+ * optional catalog/granting metadata.
  */
 export function resource<
   const WireName extends string,
@@ -290,7 +276,6 @@ export function resource<
   wireName: WireName,
   spec: {
     readonly id?: z.ZodType<string>;
-    readonly kind?: EntityKind;
     readonly roles?: RolesSpec;
     readonly parents?: Parents;
     readonly recursive?: Recursive;
@@ -304,6 +289,8 @@ export function resource<
         Recursive
       >,
     ) => CanResult;
+    readonly granting?: DslGrantingSpec<keyof CanResult & string>;
+    readonly catalogOnly?: readonly CatalogOnlyCapability[];
     readonly children?: Children &
       Readonly<
         Record<
@@ -321,13 +308,14 @@ export function resource<
   const created = createInternalResource({
     wireName,
     idSchema: spec.id ?? defaultIdSchema,
-    kind: spec.kind,
     declaredRoles: spec.roles ?? {},
     parentResource: undefined,
     inherit: "none",
     parents: spec.parents ?? [],
     recursive: spec.recursive === true,
     canFn: isCanFn(spec.can) ? spec.can : undefined,
+    granting: spec.granting,
+    catalogOnly: spec.catalogOnly ?? [],
     inlineChildren: spec.children,
   });
 

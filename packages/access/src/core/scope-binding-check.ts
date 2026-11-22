@@ -7,9 +7,10 @@ const LIST_PERMISSION = "view";
 
 /**
  * Startup check over every registered record's scope bindings: its `view`
- * plan compiles, so every role it reaches is bound, every lookup lands on a
- * scope, every `via` lands on a bound record, and no rule loops. Opt-in by
- * presence: with no bindings registered it returns no failures.
+ * plan compiles, so every role it reaches is bound, every lookup lands on an
+ * entity in `allowLookupResourcesOn`, every `via` lands on a bound record,
+ * and no rule loops. Opt-in by presence: with no bindings registered it
+ * returns no failures.
  */
 export function checkScopeBindings(
   model: AccessModel,
@@ -34,11 +35,10 @@ export function checkScopeBindingsInSchema(
       });
       continue;
     }
-    const declaredKind = schema.kinds.get(wireName);
-    if (declaredKind === "scope" || declaredKind === "catalog") {
+    if (schema.lookupAllowlist.has(wireName)) {
       failures.push({
         path,
-        message: `${wireName} is declared a ${declaredKind} but has record bindings`,
+        message: `${wireName} is listed in allowLookupResourcesOn but also has scope bindings`,
       });
     }
     for (const roleName of Object.keys(roles)) {

@@ -1,23 +1,17 @@
-import { access, entityHandle } from "@dads-framework/access";
+import { actor, resource } from "@dads-framework/access";
 import { z } from "zod";
 
 const idSchema = z.string().min(1);
 
-export const userEntity = entityHandle({ wireName: "notes_user", idSchema });
+export const userAccess = actor("notes_user", { id: idSchema });
 
-export const noteEntity = entityHandle({
-  wireName: "notes/note",
-  idSchema,
-  kind: "record",
-});
-
-export const userAccess = access(userEntity, {
-  roles: {},
-  permissions: () => ({}),
-});
+export const userEntity = userAccess.handle;
 
 /** Who may read a note: its author. */
-export const noteAccess = access(noteEntity, {
-  roles: { author: userEntity },
-  permissions: (roles) => ({ view: [roles.author] }),
+export const noteAccess = resource("notes/note", {
+  id: idSchema,
+  roles: { author: userAccess },
+  can: ({ author }) => ({ view: author }),
 });
+
+export const noteEntity = noteAccess.handle;

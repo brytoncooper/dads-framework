@@ -7,7 +7,7 @@
  */
 import { join } from "node:path";
 
-import { accessModel, emitAccessIr } from "@dads-framework/access";
+import { compileAccess, emitAccessIr } from "@dads-framework/access";
 import { FakeAuthorization } from "@dads-framework/authorization/testing";
 import {
   buildTestApp,
@@ -112,7 +112,7 @@ describe("the notes plugin, composed", () => {
   });
 
   it("contributes its access definition, which the access kit emits", () => {
-    const model = accessModel(composeNotesApp().access);
+    const model = compileAccess(composeNotesApp().access);
     const emitted = emitAccessIr(model);
 
     expect(emitted.map((definition) => definition.wireName)).toEqual([

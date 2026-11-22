@@ -35,7 +35,6 @@ export const workbenchWorkspace: WorkbenchWorkspaceResource = resource(
   "workspace",
   {
     id: resourceId,
-    kind: "scope",
     roles: {
       owner: workbenchUser,
       member: workbenchUser,
@@ -47,7 +46,6 @@ export const workbenchWorkspace: WorkbenchWorkspaceResource = resource(
     children: {
       task: {
         id: resourceId,
-        kind: "record",
         inherit: "all",
       },
     },
@@ -57,7 +55,9 @@ export const workbenchWorkspace: WorkbenchWorkspaceResource = resource(
 export const workbenchTask: WorkbenchTaskResource = workbenchWorkspace.task;
 
 /** Task state, including claims, never grants independent access. */
-export const workbenchAccessModel = compileAccess([workbenchWorkspace]);
+export const workbenchAccessModel = compileAccess([workbenchWorkspace], {
+  allowLookupResourcesOn: [workbenchWorkspace],
+});
 
 export type WorkbenchAuthorization = Authorization;
 export type WorkbenchRelationship = RelationshipWrite;

@@ -1,17 +1,12 @@
 /** Import a SpiceDB `.zed` schema file into strict Dads TypeScript. */
 
 import { resolve } from "node:path";
-import {
-  emitTypeScript,
-  parseZed,
-  type EmitTypeScriptStyle,
-} from "@dads-framework/access";
+import { emitTypeScript, parseZed } from "@dads-framework/access";
 import { readZedFile, writeTextArtifact } from "./access-zed-io.js";
 
 export type ImportZedSchemaOptions = {
   readonly inputPath: string;
   readonly outPath?: string;
-  readonly style?: EmitTypeScriptStyle;
   readonly dryRun?: boolean;
   readonly cwd?: string;
 };
@@ -42,10 +37,7 @@ export function importZedSchema(
   const dryRun = options.dryRun === true;
   const source = readZedFile(inputPath);
   const definitions = parseZed(source);
-  const code = emitTypeScript(
-    definitions,
-    options.style !== undefined ? { style: options.style } : undefined,
-  );
+  const code = emitTypeScript(definitions);
   const written = writeTextArtifact(outPath, code, dryRun);
 
   return {

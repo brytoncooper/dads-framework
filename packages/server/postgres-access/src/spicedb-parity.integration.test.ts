@@ -1,23 +1,18 @@
 import {
-  access,
-  accessModel,
-  both,
+  actor,
+  allOf,
+  anyOf,
+  compileAccess,
   emitZed,
-  entityHandle,
-  excluding,
-  membersOf,
-  permissionToken,
+  every,
+  resource,
   roleToken,
-  through,
-  throughAll,
-  wildcard,
 } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "@dads-framework/authorization";
 import { startTestSpiceDb } from "@dads-framework/authorization/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import {
   PostgresAuthorization,
@@ -25,69 +20,61 @@ import {
   relationshipSchemaMigration,
 } from "./index.js";
 
-const idSchema = z.string();
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({ wireName: "group", idSchema });
-const workspace = entityHandle({ wireName: "workspace", idSchema });
-const folder = entityHandle({ wireName: "folder", idSchema });
-const document = entityHandle({ wireName: "document", idSchema });
-const label = entityHandle({ wireName: "label", idSchema });
-const classifiedDoc = entityHandle({ wireName: "classified_doc", idSchema });
-
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-const groupMemberRef = roleToken(group.wireName, "member", user);
-const groupAccess = access(group, {
-  roles: { member: [user, membersOf(groupMemberRef)] },
-  permissions: ({ member }) => ({ view: [member] }),
+const user = actor("user");
+const groupMemberRef = roleToken("group", "member", user.handle);
+const group = resource("group", {
+  roles: { member: [user, groupMemberRef] },
+  can: ({ member }) => ({ view: member }),
 });
-const workspaceAccess = access(workspace, {
+const workspace = resource("workspace", {
   roles: {
-    member: [user, membersOf(groupAccess.roles.member), wildcard(user)],
+    member: [user, group.roles.member, user.anyone],
     banned: user,
   },
-  permissions: ({ member, banned }) => ({
-    view: [excluding(member, banned)],
+  can: ({ member, banned }) => ({
+    view: member.unless(banned),
   }),
 });
-const folderAccess = access(folder, {
+const folder = resource("folder", {
+  parents: [workspace],
+  recursive: true,
   roles: {
-    parent: [workspace, folder],
-    viewer: [user, membersOf(groupAccess.roles.member), wildcard(user)],
+    viewer: [user, group.roles.member, user.anyone],
   },
-  permissions: ({ parent, viewer }) => ({
-    view: [viewer, through(parent, permissionToken(folder.wireName, "view"))],
+  can: ({ parents, viewer }) => ({
+    view: anyOf(viewer, parents.view),
   }),
 });
-const documentAccess = access(document, {
+const document = resource("document", {
+  parents: [workspace, folder],
   roles: {
-    parent: [workspace, folder],
     editor: user,
     approved: user,
   },
-  permissions: ({ parent, editor, approved }) => ({
-    view: [through(parent, permissionToken(folder.wireName, "view"))],
-    publish: [both(editor, approved)],
+  can: ({ parents, editor, approved }) => ({
+    view: parents.view,
+    publish: allOf(editor, approved),
   }),
 });
-const labelAccess = access(label, {
-  roles: { holder: [user, wildcard(user)] },
-  permissions: ({ holder }) => ({ hold: [holder] }),
+const label = resource("label", {
+  roles: { holder: [user, user.anyone] },
+  can: ({ holder }) => ({ hold: holder }),
 });
-const classifiedAccess = access(classifiedDoc, {
+const classifiedDoc = resource("classified_doc", {
   roles: { required_label: label },
-  permissions: ({ required_label }) => ({
-    read: [throughAll(required_label, labelAccess.permissions.hold)],
+  can: ({ required_label }) => ({
+    read: every(required_label).hold,
   }),
 });
 
-const parityModel = accessModel([
-  userAccess,
-  groupAccess,
-  workspaceAccess,
-  folderAccess,
-  documentAccess,
-  labelAccess,
-  classifiedAccess,
+const parityModel = compileAccess([
+  user,
+  group,
+  workspace,
+  folder,
+  document,
+  label,
+  classifiedDoc,
 ]);
 
 describe("Live Postgres + SpiceDB parity for all 5 features", () => {

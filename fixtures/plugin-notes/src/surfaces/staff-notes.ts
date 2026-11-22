@@ -1,27 +1,26 @@
-import { access, entityHandle } from "@dads-framework/access";
+import { resource, type DslNode } from "@dads-framework/access";
 import { fromFixed, getRoute, routeGroup } from "@dads-framework/http";
 import { definePlugin } from "@dads-framework/plugin";
 import { z } from "zod";
 
-import { userEntity } from "../notes-access.js";
+import { userAccess } from "../notes-access.js";
 import { notesData } from "../notes-data.js";
 
-export const staffDashboard = entityHandle({
-  wireName: "notes/staff_dashboard",
-  idSchema: z.literal("notes"),
+export const staffNotesAccess = resource("notes/staff_dashboard", {
+  id: z.literal("notes"),
+  roles: { operator: userAccess },
+  can: ({ operator }) => ({ inspect: operator }),
 });
 
-export const staffNotesAccess = access(staffDashboard, {
-  roles: { operator: userEntity },
-  permissions: ({ operator }) => ({ inspect: [operator] }),
-});
+export const staffDashboard = staffNotesAccess.handle;
 
 const inspect = staffNotesAccess.permissions.inspect;
+const staffAccess: readonly DslNode[] = [staffNotesAccess];
 
 export const staffNotes = definePlugin({
   name: "staff-notes",
   requires: [notesData],
-  contributes: { access: [staffNotesAccess] },
+  contributes: { access: staffAccess },
   setup: ({ use }) => {
     const notes = use(notesData);
     return {

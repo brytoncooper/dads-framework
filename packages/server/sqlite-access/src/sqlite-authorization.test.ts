@@ -1,14 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import {
-  access,
-  accessModel,
-  entityHandle,
-  membersOf,
-  through,
-  wildcard,
-  withExpiration,
+  actor,
+  anyOf,
+  compileAccess,
+  resource,
+  roleToken,
 } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 
@@ -20,65 +17,37 @@ import {
   withProtectedSqliteTransaction,
 } from "./index.js";
 
-const user = entityHandle({ wireName: "user", idSchema: z.string() });
-const group = entityHandle({ wireName: "group", idSchema: z.string() });
-const workspace = entityHandle({
-  wireName: "workspace",
-  idSchema: z.string(),
-  kind: "scope",
-});
-const doc = entityHandle({ wireName: "doc", idSchema: z.string() });
-
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-const groupAccess = access(group, {
+const user = actor("user");
+const groupMemberRef = roleToken("group", "member", user.handle);
+const group = resource("group", {
   roles: {
-    member: [user, wildcard(user)],
+    member: [user, user.anyone, groupMemberRef],
   },
-  permissions: (roles) => ({
-    read: [roles.member],
+  can: ({ member }) => ({
+    read: member,
   }),
 });
-const nestedGroupAccess = access(group, {
-  roles: {
-    member: [user, wildcard(user), membersOf(groupAccess.roles.member)],
-  },
-  permissions: (roles) => ({
-    read: [roles.member],
-  }),
-});
-const workspaceAccess = access(workspace, {
+const workspace = resource("workspace", {
   roles: {
     owner: user,
-    member: [
-      withExpiration(user),
-      membersOf(nestedGroupAccess.roles.member),
-      wildcard(user),
-    ],
+    member: [user.expiring, group.roles.member, user.anyone],
   },
-  permissions: (roles) => ({
-    manage: [roles.owner],
-    view: [roles.owner, roles.member],
+  can: ({ owner, member }) => ({
+    manage: owner,
+    view: anyOf(owner, member),
   }),
 });
-const docAccess = access(doc, {
+const doc = resource("doc", {
   roles: {
     parent: workspace,
-    viewer: [user, wildcard(user), membersOf(nestedGroupAccess.roles.member)],
+    viewer: [user, user.anyone, group.roles.member],
   },
-  permissions: (roles) => ({
-    view: [
-      roles.viewer,
-      through(roles.parent, workspaceAccess.permissions.view),
-    ],
+  can: ({ parent, viewer }) => ({
+    view: anyOf(viewer, parent.view),
   }),
 });
 
-const coreModel = accessModel([
-  userAccess,
-  nestedGroupAccess,
-  workspaceAccess,
-  docAccess,
-]);
+const coreModel = compileAccess([user, group, workspace, doc]);
 
 function setupDatabase(options?: {
   readonly namespace?: string;

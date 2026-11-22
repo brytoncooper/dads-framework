@@ -11,7 +11,7 @@ import type {
   RoleBinding,
   ScopeBindings,
   ScopeRoleBindings,
-} from "@dads-framework/access";
+} from "@dads-framework/access/scopes";
 
 /** `scope-column`: the record's own column holding the scope id. */
 export type ScopeColumnSql = {

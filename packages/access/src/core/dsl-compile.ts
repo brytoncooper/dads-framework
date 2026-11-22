@@ -1,10 +1,14 @@
-import type { AccessModel, ResolvedAccessDefinition } from "./access-model.js";
+import {
+  finalizeAccessModel,
+  type AccessModel,
+  type ResolvedAccessDefinition,
+  type ResolvedGranting,
+} from "./access-model.js";
 import { through } from "./combinators.js";
 import { isDslActor, isDslLazyResource, isDslResource } from "./dsl-actor.js";
 import { discoverDslGraph, isDslHolderList } from "./dsl-discover.js";
 import {
   getDslResourceRecord,
-  registerDslResourceResolver,
   type DslResourceRecord,
 } from "./dsl-resource.js";
 import type {
@@ -31,8 +35,6 @@ import {
 } from "./holders.js";
 import { isRoleToken, permissionToken, roleToken } from "./refs.js";
 import type { PermissionTerm, PermissionToken, RoleToken } from "./refs.js";
-import type { ScopeBindings } from "./scope-bindings.js";
-import { allowVisibleOnRecordUntil } from "./visible-record-exceptions.js";
 
 function targetWireNameOfSingle(
   entry: DslSingleRoleHolder,
@@ -257,6 +259,18 @@ function applyRecursiveInheritance(
   return updated;
 }
 
+function resolveGranting(
+  record: DslResourceRecord,
+): ResolvedGranting | undefined {
+  if (record.granting === undefined) return undefined;
+  return {
+    requires: record.granting.requires.map((permName) =>
+      permissionToken(record.wireName, permName),
+    ),
+    removedWhen: [...record.granting.removedWhen],
+  };
+}
+
 function resolveResourceRecord(
   record: DslResourceRecord,
   cache: Map<DslResourceRecord, ResolvedAccessDefinition>,
@@ -293,8 +307,8 @@ function resolveResourceRecord(
     roles,
     permissions,
     expressions,
-    granting: undefined,
-    catalogOnly: [],
+    granting: resolveGranting(record),
+    catalogOnly: [...record.catalogOnly],
   };
   resolving.delete(record);
   cache.set(record, definition);
@@ -310,23 +324,6 @@ function actorDefinition(handle: EntityHandle): ResolvedAccessDefinition {
     granting: undefined,
     catalogOnly: [],
   };
-}
-
-function validateBindings(
-  bindings: readonly ScopeBindings[],
-  wireNames: ReadonlySet<string>,
-): void {
-  const seen = new Set<string>();
-  for (const binding of bindings) {
-    const name = binding.entity.wireName;
-    if (seen.has(name)) {
-      throw new Error(`duplicate access model entry ${name}`);
-    }
-    seen.add(name);
-    if (!wireNames.has(name)) {
-      throw new Error(`scope bindings name missing access definition ${name}`);
-    }
-  }
 }
 
 /**
@@ -350,35 +347,7 @@ export function compileAccess(
     definitions.push(resolveResourceRecord(record, resolvedCache, resolving));
   }
 
-  const wireNames = new Set(definitions.map((entry) => entry.entity.wireName));
-  const bindings = options?.bindings ?? [];
-  validateBindings(bindings, wireNames);
-
-  const visibleRecordExceptions = (options?.visibleRecordExceptions ?? []).map(
-    (entry) => allowVisibleOnRecordUntil(entry.until, entry),
-  );
-
-  const baseModel: AccessModel = {
-    definitions,
-    bindings: [...bindings],
-    visibleRecordExceptions,
-  };
-  return options?.migrations === undefined
-    ? baseModel
-    : { ...baseModel, migrations: [...options.migrations] };
+  return finalizeAccessModel(definitions, options);
 }
-
-registerDslResourceResolver((node) => {
-  const model = compileAccess([node]);
-  const definition = model.definitions.find(
-    (entry) => entry.entity.wireName === node.wireName,
-  );
-  if (definition === undefined) {
-    throw new Error(
-      `failed to resolve DSL resource definition for "${node.wireName}"`,
-    );
-  }
-  return definition;
-});
 
 export type { DslActor, DslNode };

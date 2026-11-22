@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
+import { scopeBindings } from "../../scopes.js";
 import { sheet } from "../test-support/scope-plan.access.js";
-import { scopeBindings } from "../scope-bindings.js";
 
 describe("scopeBindings", () => {
   it("keeps each role's declared kind in the type and refuses unknown roles", () => {

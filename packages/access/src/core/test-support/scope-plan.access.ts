@@ -1,100 +1,65 @@
 /**
- * A small fake schema for the scope-plan compiler: one scope (`site`) and two
- * records (`folder`, `sheet`, where a sheet reaches its folder). Between them
- * the rules use every operator, a sibling permission, a repeated lookup, a tag
- * gate, a sparse direct grant, and a cross-record walk.
+ * A small fake schema for the scope-plan compiler: one lookup-allowlisted
+ * scope (`site`) and two bound records (`folder`, `sheet`, where a sheet
+ * reaches its folder). Between them the rules use every operator, a sibling
+ * permission, a repeated lookup, a tag gate, a sparse direct grant, and a
+ * cross-record walk.
  */
-import { z } from "zod";
-import { both, excluding, gated, through } from "../combinators.js";
-import { entityHandle } from "../entity-handle.js";
-import { wildcard } from "../holders.js";
-import { access } from "../model.js";
-import { permissionToken } from "../refs.js";
+import { actor, allOf, anyOf, permissionToken, resource } from "../../index.js";
 
-const idSchema = z.string();
+export const member = actor("test/member");
 
-export const Member = entityHandle({ wireName: "test/member", idSchema });
-
-export const Site = entityHandle({
-  wireName: "test/site",
-  idSchema,
-  kind: "scope",
-});
-
-export const Folder = entityHandle({
-  wireName: "test/folder",
-  idSchema,
-  kind: "record",
-});
-
-export const Sheet = entityHandle({
-  wireName: "test/sheet",
-  idSchema,
-  kind: "record",
-});
-
-export const site = access(Site, {
-  roles: { member: Member, manager: Member, blocked: Member },
-  permissions: (roles) => ({
-    view_records: [roles.member, roles.manager],
-    manage_records: [roles.manager],
-    blocked_here: [roles.blocked],
+export const site = resource("test/site", {
+  roles: { member, manager: member, blocked: member },
+  can: ({ member: siteMember, manager, blocked }) => ({
+    view_records: [siteMember, manager],
+    manage_records: manager,
+    blocked_here: blocked,
   }),
 });
 
-export const folder = access(Folder, {
+export const folder = resource("test/folder", {
   roles: {
-    home_site: Site,
-    shared_site: Site,
-    draft_site: Site,
-    archived: wildcard(Member),
-    assignee: Member,
-    reader: Member,
-    unbound_site: Site,
+    home_site: site,
+    shared_site: site,
+    draft_site: site,
+    archived: member.anyone,
+    assignee: member,
+    reader: member,
+    unbound_site: site,
   },
-  permissions: (roles) => ({
-    view_on_site: [
-      through(roles.home_site, site.permissions.view_records),
-      through(roles.shared_site, site.permissions.view_records),
-    ],
-    view: [
-      permissionToken(Folder.wireName, "view_on_site"),
+  can: ({
+    home_site,
+    shared_site,
+    draft_site,
+    archived,
+    assignee,
+    reader,
+    unbound_site,
+  }) => ({
+    view_on_site: [home_site.view_records, shared_site.view_records],
+    view: anyOf(
+      permissionToken("test/folder", "view_on_site"),
       // Repeats the first arm of view_on_site; the plan asks it once.
-      through(roles.home_site, site.permissions.view_records),
-      gated(
-        through(roles.draft_site, site.permissions.view_records),
-        roles.archived,
-      ),
-      excluding(
-        through(roles.shared_site, site.permissions.manage_records),
-        through(roles.shared_site, site.permissions.blocked_here),
-      ),
-      both(
-        through(roles.home_site, site.permissions.manage_records),
-        through(roles.draft_site, site.permissions.manage_records),
-      ),
-      roles.assignee,
-    ],
-    manage_on_home_site: [
-      through(roles.home_site, site.permissions.manage_records),
-    ],
-    read_directly: [roles.reader],
-    view_unbound: [through(roles.unbound_site, site.permissions.view_records)],
+      home_site.view_records,
+      allOf(draft_site.view_records, archived),
+      shared_site.manage_records.unless(shared_site.blocked_here),
+      allOf(home_site.manage_records, draft_site.manage_records),
+      assignee,
+    ),
+    manage_on_home_site: home_site.manage_records,
+    read_directly: reader,
+    view_unbound: unbound_site.view_records,
   }),
 });
 
-export const sheet = access(Sheet, {
-  roles: { folder: Folder, site: Site },
-  permissions: (roles) => ({
-    view: [
-      gated(
-        through(roles.folder, folder.permissions.view_on_site),
-        through(roles.site, site.permissions.view_records),
-      ),
-    ],
+export const sheet = resource("test/sheet", {
+  roles: { folder, site },
+  can: ({ folder: sheetFolder, site: sheetSite }) => ({
+    view: allOf(sheetFolder.view_on_site, sheetSite.view_records),
     view_or_manage_folder: [
-      through(roles.folder, folder.permissions.view_on_site),
-      through(roles.folder, folder.permissions.manage_on_home_site),
+      sheetFolder.view_on_site,
+      sheetFolder.manage_on_home_site,
     ],
   }),
 });

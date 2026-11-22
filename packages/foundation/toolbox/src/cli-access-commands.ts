@@ -20,7 +20,7 @@ import {
 import { writeOutput } from "./cli-io.js";
 
 const ACCESS_USAGE = [
-  "Usage: dad access import <schema.zed> [--out <path>] [--style <ergonomic|classic>] [--dry-run] [--json]",
+  "Usage: dad access import <schema.zed> [--out <path>] [--dry-run] [--json]",
   "       dad access tree <schema.ts|schema.zed> [--json]",
   "       dad access diff <before> <after> [--json]",
   "       dad access migrate <slug> --from <before> --to <after> [--out <dir>] [--dry-run] [--json]",
@@ -55,7 +55,6 @@ function runImport(rest: readonly string[], json: boolean): void {
   const result = importZedSchema({
     inputPath: parsed.inputPath,
     ...(parsed.outPath !== undefined ? { outPath: parsed.outPath } : {}),
-    ...(parsed.style !== undefined ? { style: parsed.style } : {}),
     dryRun: parsed.dryRun,
     cwd: process.cwd(),
   });

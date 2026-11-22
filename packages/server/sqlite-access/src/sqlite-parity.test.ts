@@ -1,16 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import {
-  access,
-  accessModel,
-  entityHandle,
-  excluding,
-  membersOf,
-  through,
-  throughAll,
-  wildcard,
-  withExpiration,
+  actor,
+  anyOf,
+  compileAccess,
+  permissionToken,
+  resource,
+  roleToken,
 } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 
@@ -21,94 +17,47 @@ import {
   sqliteRelationshipSchemaMigration,
 } from "./index.js";
 
-const user = entityHandle({ wireName: "user", idSchema: z.string() });
-const group = entityHandle({ wireName: "group", idSchema: z.string() });
-const workspace = entityHandle({
-  wireName: "workspace",
-  idSchema: z.string(),
-  kind: "scope",
-});
-const folder = entityHandle({ wireName: "folder", idSchema: z.string() });
-const doc = entityHandle({ wireName: "doc", idSchema: z.string() });
-
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-const groupBase = access(group, {
-  roles: { member: [withExpiration(user), wildcard(user)] },
-  permissions: (roles) => ({ read: [roles.member] }),
-});
-const groupAccess = access(group, {
+const user = actor("user");
+const groupMemberRef = roleToken("group", "member", user.handle);
+const group = resource("group", {
   roles: {
-    member: [
-      withExpiration(user),
-      wildcard(user),
-      withExpiration(membersOf(groupBase.roles.member)),
-    ],
+    member: [user.expiring, user.anyone, groupMemberRef],
   },
-  permissions: (roles) => ({ read: [roles.member] }),
+  can: ({ member }) => ({ read: member }),
 });
-const workspaceAccess = access(workspace, {
+const workspace = resource("workspace", {
   roles: {
-    owner: withExpiration(user),
-    member: [
-      withExpiration(user),
-      withExpiration(membersOf(groupAccess.roles.member)),
-      withExpiration(wildcard(user)),
-    ],
-    banned: [user, wildcard(user)],
+    owner: user.expiring,
+    member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
+    banned: [user, user.anyone],
   },
-  permissions: (roles) => ({
-    view: [excluding([roles.owner, roles.member], roles.banned)],
+  can: ({ owner, member, banned }) => ({
+    view: anyOf(owner, member).unless(banned),
   }),
 });
-const folderAccess = access(folder, {
+const folder = resource("folder", {
+  parents: [workspace],
+  recursive: true,
   roles: {
-    parent: [withExpiration(folder), withExpiration(workspace)],
-    viewer: [
-      withExpiration(user),
-      withExpiration(membersOf(groupAccess.roles.member)),
-      withExpiration(wildcard(user)),
-    ],
-    banned: [user, wildcard(user)],
+    viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
+    banned: [user, user.anyone],
   },
-  permissions: (roles) => ({
-    view: [
-      excluding(
-        [
-          roles.viewer,
-          through(roles.parent, {
-            kind: "permission",
-            entityWireName: "folder",
-            permissionName: "view",
-          }),
-        ],
-        roles.banned,
-      ),
-    ],
+  can: ({ parents, viewer, banned }) => ({
+    view: anyOf(viewer, parents.view).unless(banned),
   }),
 });
-const docAccess = access(doc, {
+const doc = resource("doc", {
+  parents: [workspace, folder],
   roles: {
-    parent: [withExpiration(workspace), withExpiration(folder)],
-    viewer: [withExpiration(user), wildcard(user)],
-    banned: [user, wildcard(user)],
+    viewer: [user.expiring, user.anyone],
+    banned: [user, user.anyone],
   },
-  permissions: (roles) => ({
-    view: [
-      excluding(
-        [roles.viewer, through(roles.parent, workspaceAccess.permissions.view)],
-        roles.banned,
-      ),
-    ],
+  can: ({ parents, viewer, banned }) => ({
+    view: anyOf(viewer, parents.view).unless(banned),
   }),
 });
 
-const parityModel = accessModel([
-  userAccess,
-  groupAccess,
-  workspaceAccess,
-  folderAccess,
-  docAccess,
-]);
+const parityModel = compileAccess([user, group, workspace, folder, doc]);
 
 function setupParity(initialTimeMs = 10_000) {
   let nowMs = initialTimeMs;
@@ -455,58 +404,46 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
   });
 
   it("Feature 3 (compile-time): rejects local self-cycles and non-monotonic cycles", () => {
-    const node = entityHandle({ wireName: "node", idSchema: z.string() });
-    const u = entityHandle({ wireName: "user", idSchema: z.string() });
-    const uAccess = access(u, { roles: {}, permissions: () => ({}) });
+    const u = actor("user");
 
-    const badExclude = access(node, {
-      roles: { parent: node, viewer: u },
-      permissions: (roles) => ({
-        view: [
-          excluding(
-            roles.viewer,
-            through(roles.parent, {
-              kind: "permission",
-              entityWireName: "node",
-              permissionName: "view",
-            }),
-          ),
-        ],
+    const badExclude = resource("node", {
+      recursive: true,
+      roles: { viewer: u },
+      can: ({ parent, viewer }) => ({
+        view: viewer.unless({
+          kind: "through",
+          role: parent.$roleToken,
+          target: permissionToken("node", "view"),
+        }),
+      }),
+    });
+    expect(() => compileAccessPolicy(compileAccess([u, badExclude]))).toThrow(
+      /non-monotonic cycle through excluding/,
+    );
+
+    const badThroughAll = resource("node", {
+      recursive: true,
+      roles: { viewer: u },
+      can: ({ parent, viewer }) => ({
+        view: anyOf(viewer, {
+          kind: "through-all",
+          role: parent.$roleToken,
+          target: permissionToken("node", "view"),
+        }),
       }),
     });
     expect(() =>
-      compileAccessPolicy(accessModel([uAccess, badExclude])),
-    ).toThrow(/non-monotonic cycle through excluding/);
-
-    const badThroughAll = access(node, {
-      roles: { parent: node, viewer: u },
-      permissions: (roles) => ({
-        view: [
-          roles.viewer,
-          throughAll(roles.parent, {
-            kind: "permission",
-            entityWireName: "node",
-            permissionName: "view",
-          }),
-        ],
-      }),
-    });
-    expect(() =>
-      compileAccessPolicy(accessModel([uAccess, badThroughAll])),
+      compileAccessPolicy(compileAccess([u, badThroughAll])),
     ).toThrow(/non-monotonic cycle/);
 
-    const badLocal = access(node, {
+    const badLocal = resource("node", {
       roles: { viewer: u },
-      permissions: () => ({
-        a: [
-          { kind: "permission", entityWireName: "node", permissionName: "b" },
-        ],
-        b: [
-          { kind: "permission", entityWireName: "node", permissionName: "a" },
-        ],
+      can: () => ({
+        a: [permissionToken("node", "b")],
+        b: [permissionToken("node", "a")],
       }),
     });
-    expect(() => compileAccessPolicy(accessModel([uAccess, badLocal]))).toThrow(
+    expect(() => compileAccessPolicy(compileAccess([u, badLocal]))).toThrow(
       /Cyclic permission reference/,
     );
   });

@@ -1,87 +1,64 @@
 /**
  * What/why: parseZed is the other half of the parity gate. A hand-written
- * fragment and an emitted document must lower to the same IR.
+ * fragment and an emitted document must lower to the same IR, and
+ * compileAccessFromIr must lower parsed IR straight back into an AccessModel.
  */
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
-import { excluding, gated, through } from "./combinators.js";
-import { accessIrDefinitionsDiff } from "./compare-access-ir.js";
-import { emitAccessIr } from "./emit-ir.js";
-import { emitZed } from "./emit-zed.js";
-import { entityHandle } from "./entity-handle.js";
-import { membersOf, wildcard } from "./holders.js";
-import { access } from "./model.js";
-import { parseZed } from "./parse-zed.js";
-import { accessModel } from "./access-model.js";
+import {
+  accessIrDefinitionsDiff,
+  actor,
+  allOf,
+  anyOf,
+  compileAccess,
+  compileAccessFromIr,
+  emitAccessIr,
+  emitZed,
+  parseZed,
+  resource,
+} from "../index.js";
 import { testGrantable } from "./test-support/test-grantable.js";
 
-const idSchema = z.string();
-
 describe("parseZed", () => {
-  it("round-trips emitted schema including nested unions and holder unions", () => {
-    const User = entityHandle({ wireName: "user", idSchema });
-    const Platform = entityHandle({ wireName: "platform", idSchema });
-    const Organization = entityHandle({
-      wireName: "organizations/organization",
-      idSchema,
+  it("round-trips emitted schema including nested unions, holder unions, and role-target arrows", () => {
+    const user = actor("user");
+    const platform = resource("platform", {
+      roles: { super_admin: user },
+      can: ({ super_admin }) => ({ administer: super_admin }),
     });
-    const Assignment = entityHandle({
-      wireName: "platform/work_assignment",
-      idSchema,
+    const assignment = resource("platform/work_assignment", {
+      roles: { assignee: user },
     });
-
-    const user = access(User, {
-      roles: {},
-      permissions: () => ({}),
-    });
-
-    const assignment = access(Assignment, {
-      roles: { assignee: User },
-      permissions: () => ({}),
-    });
-
-    const organization = access(Organization, {
+    const organization = resource("organizations/organization", {
       roles: {
-        admin: User,
-        custodian: User,
-        parent_platform: Platform,
+        admin: user,
+        custodian: user,
+        parent_platform: platform,
         formulator: testGrantable({}),
-        platform_tenancy: wildcard(User),
-        commissioner: membersOf(assignment.roles.assignee),
-        attached_user: [User, wildcard(User)],
+        platform_tenancy: user.anyone,
+        commissioner: assignment.roles.assignee,
+        attached_user: [user, user.anyone],
       },
-      permissions: (roles) => ({
-        administer_party: [
-          excluding(
-            [
-              roles.custodian,
-              roles.admin,
-              through(roles.parent_platform, {
-                kind: "permission",
-                entityWireName: "platform",
-                permissionName: "administer",
-              }),
-            ],
-            roles.platform_tenancy,
-          ),
-        ],
-        create_workspaces: [gated(roles.admin, roles.platform_tenancy)],
-        act: [
-          through(roles.parent_platform, {
-            kind: "role",
-            entityWireName: "platform",
-            roleName: "super_admin",
-            holder: User,
-          }),
-        ],
+      can: ({ admin, custodian, parent_platform, platform_tenancy }) => ({
+        administer_party: anyOf(
+          custodian,
+          admin,
+          parent_platform.administer,
+        ).unless(platform_tenancy),
+        create_workspaces: allOf(admin, platform_tenancy),
+        act: parent_platform.super_admin,
       }),
     });
 
-    const model = accessModel([user, assignment, organization]);
+    const model = compileAccess([user, assignment, organization]);
     const emitted = emitZed(model);
     const parsed = parseZed(emitted);
     expect(accessIrDefinitionsDiff(emitAccessIr(model), parsed)).toEqual([]);
+
+    const fromIr = compileAccessFromIr(parsed);
+    expect(
+      accessIrDefinitionsDiff(emitAccessIr(model), emitAccessIr(fromIr)),
+    ).toEqual([]);
   });
 
   it("parses a hand-written fragment with comments and empty user", () => {
@@ -162,6 +139,9 @@ describe("parseZed", () => {
         },
       ],
     });
+
+    const lowered = compileAccessFromIr(parsed);
+    expect(accessIrDefinitionsDiff(parsed, emitAccessIr(lowered))).toEqual([]);
   });
 
   it("detects expiration and through-all differences in accessIrDefinitionsDiff", () => {

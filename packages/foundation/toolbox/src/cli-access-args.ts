@@ -1,11 +1,8 @@
 /** Argument parsers for `dad access` subcommands. */
 
-import type { EmitTypeScriptStyle } from "@dads-framework/access";
-
 export type ParsedAccessImportArguments = {
   readonly inputPath: string;
   readonly outPath?: string;
-  readonly style?: EmitTypeScriptStyle;
   readonly dryRun: boolean;
 };
 
@@ -29,7 +26,6 @@ export type ParsedAccessMigrateArguments = {
 type PartialImportArguments = {
   inputPath: string | undefined;
   outPath: string | undefined;
-  style: EmitTypeScriptStyle | undefined;
   dryRun: boolean;
 };
 
@@ -47,7 +43,6 @@ export function parseAccessImportArguments(
   const parsed: PartialImportArguments = {
     inputPath: undefined,
     outPath: undefined,
-    style: undefined,
     dryRun: false,
   };
   const seenOptions = new Set<string>();
@@ -69,7 +64,6 @@ export function parseAccessImportArguments(
   return {
     inputPath: parsed.inputPath,
     ...(parsed.outPath !== undefined ? { outPath: parsed.outPath } : {}),
-    ...(parsed.style !== undefined ? { style: parsed.style } : {}),
     dryRun: parsed.dryRun,
   };
 }
@@ -204,14 +198,6 @@ function applyImportOption(
       optionIndex,
       option,
     );
-    return 1;
-  }
-  if (option === "--style") {
-    const value = readAccessOptionValue(commandArguments, optionIndex, option);
-    if (value !== "ergonomic" && value !== "classic") {
-      throw new Error("--style must be ergonomic or classic.");
-    }
-    parsed.style = value;
     return 1;
   }
   throw new Error(`Unknown option ${option}.`);

@@ -1,8 +1,8 @@
 /**
  * What/why: emitTypeScript / emitTypeScriptFromZed compile SpiceDB schemas into
- * strict Dads TypeScript (defaulting to ergonomic DSL, with classic opt-in).
- * This suite executes every emitted module, proves zero semantic IR diff on
- * round-trip back to Zed, and type-checks emitted ergonomic modules with `tsc --strict`.
+ * strict, ergonomic Dads TypeScript. This suite executes every emitted module,
+ * proves zero semantic IR diff on round-trip back to Zed, and type-checks every
+ * emitted module with `tsc --strict` against ONLY the clean core public exports.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -14,11 +14,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { AccessModel } from "./access-model.js";
 import { accessIrDefinitionsDiff } from "./compare-access-ir.js";
 import { emitAccessIr } from "./emit-ir.js";
-import {
-  emitTypeScript,
-  emitTypeScriptFromZed,
-  type EmitTypeScriptStyle,
-} from "./emit-typescript.js";
+import { emitTypeScript, emitTypeScriptFromZed } from "./emit-typescript.js";
 import { emitZed } from "./emit-zed.js";
 import type { AccessIrDefinition } from "./ir.js";
 import { parseZed } from "./parse-zed.js";
@@ -46,33 +42,20 @@ function isAccessModel(value: unknown): value is AccessModel {
   );
 }
 
-function extractModelExport(
-  loaded: unknown,
-  exportName: "access" | "model",
-): AccessModel {
+function extractModelExport(loaded: unknown): AccessModel {
   if (typeof loaded !== "object" || loaded === null) {
     throw new Error("emitted module did not load as an object");
   }
-  const exported: unknown =
-    exportName === "access"
-      ? "access" in loaded
-        ? loaded.access
-        : undefined
-      : "model" in loaded
-        ? loaded.model
-        : undefined;
+  const exported: unknown = "access" in loaded ? loaded.access : undefined;
   if (!isAccessModel(exported)) {
     throw new Error(
-      `emitted module export "${exportName}" is not a valid AccessModel`,
+      'emitted module export "access" is not a valid AccessModel',
     );
   }
   return exported;
 }
 
-async function evaluateEmittedModel(
-  tsSource: string,
-  exportName: "access" | "model",
-): Promise<AccessModel> {
+async function evaluateEmittedModel(tsSource: string): Promise<AccessModel> {
   moduleSerial += 1;
   const rewritten = tsSource.replaceAll(
     '"@dads-framework/access"',
@@ -83,27 +66,20 @@ async function evaluateEmittedModel(
   const loaded: unknown = await import(
     /* @vite-ignore */ pathToFileURL(filePath).href
   );
-  return extractModelExport(loaded, exportName);
+  return extractModelExport(loaded);
 }
 
-async function assertZedRoundTrip(
-  zed: string,
-  style?: EmitTypeScriptStyle,
-): Promise<{
+async function assertZedRoundTrip(zed: string): Promise<{
   readonly emittedTs: string;
   readonly model: AccessModel;
   readonly roundTrippedZed: string;
 }> {
   const originalIr = parseZed(zed);
-  const emittedTs =
-    style === undefined
-      ? emitTypeScriptFromZed(zed)
-      : emitTypeScriptFromZed(zed, { style });
+  const emittedTs = emitTypeScriptFromZed(zed);
   expect(emittedTs).not.toMatch(/\bany\b/);
   expect(emittedTs).not.toMatch(/\bas\s+[A-Z]/);
 
-  const exportName = style === "classic" ? "model" : "access";
-  const model = await evaluateEmittedModel(emittedTs, exportName);
+  const model = await evaluateEmittedModel(emittedTs);
   const roundTrippedIr = emitAccessIr(model);
   expect(accessIrDefinitionsDiff(originalIr, roundTrippedIr)).toEqual([]);
 
@@ -310,7 +286,7 @@ const RESERVED_COLLISION_IR: readonly AccessIrDefinition[] = [
   },
 ];
 
-describe("emitTypeScript & emitTypeScriptFromZed (ergonomic default)", () => {
+describe("emitTypeScript & emitTypeScriptFromZed", () => {
   it("emits minimal ergonomic DSL for workspace + task inheritance without zod", async () => {
     const { emittedTs } = await assertZedRoundTrip(WORKSPACE_TASK_ZED);
     expect(emittedTs).toContain(
@@ -348,14 +324,17 @@ describe("emitTypeScript & emitTypeScriptFromZed (ergonomic default)", () => {
     expect(partial.emittedTs).toContain("view: [viewer, parent.view],");
   });
 
-  it("round-trips expiring roles, wildcards, and expirable usersets", async () => {
+  it("round-trips expiring roles, wildcards, and expirable usersets using only core exports", async () => {
     const { emittedTs, roundTrippedZed } =
       await assertZedRoundTrip(EXPIRATION_ZED);
+    expect(emittedTs).toContain(
+      'import { actor, compileAccess, resource } from "@dads-framework/access";',
+    );
     expect(emittedTs).toContain("guest: [user, user.expiring],");
     expect(emittedTs).toContain(
-      "viewer: [user.expiring, withExpiration(membersOf(group.roles.member))],",
+      "viewer: [user.expiring, group.roles.member.expiring],",
     );
-    expect(emittedTs).toContain("public_share: withExpiration(user.anyone),");
+    expect(emittedTs).toContain("public_share: user.anyone.expiring,");
     expect(roundTrippedZed).toContain("use expiration");
     expect(roundTrippedZed).toContain(
       "relation guest: user | user with expiration",
@@ -365,12 +344,16 @@ describe("emitTypeScript & emitTypeScriptFromZed (ergonomic default)", () => {
     );
   });
 
-  it("round-trips intersection arrows (every), .any() arrows, and role-target arrows", async () => {
+  it("round-trips intersection arrows (every), .any() arrows, and role-target arrows cleanly", async () => {
     const { emittedTs, roundTrippedZed } = await assertZedRoundTrip(
       INTERSECTION_ARROW_ZED,
     );
+    expect(emittedTs).toContain(
+      'import { actor, compileAccess, every, resource } from "@dads-framework/access";',
+    );
     expect(emittedTs).toContain("read_all: every(required_group).is_member,");
     expect(emittedTs).toContain("read_any: any_group.is_member,");
+    expect(emittedTs).toContain("member_arrow: any_group.member,");
     expect(roundTrippedZed).toContain(
       "permission read_all = required_group.all(is_member)",
     );
@@ -422,7 +405,7 @@ describe("emitTypeScript & emitTypeScriptFromZed (ergonomic default)", () => {
       'export const workItem_2 = resource("work/item", {',
     );
 
-    const model = await evaluateEmittedModel(emittedTs, "access");
+    const model = await evaluateEmittedModel(emittedTs);
     expect(
       accessIrDefinitionsDiff(RESERVED_COLLISION_IR, emitAccessIr(model)),
     ).toEqual([]);
@@ -433,7 +416,7 @@ describe("emitTypeScript & emitTypeScriptFromZed (ergonomic default)", () => {
     expect(emittedTs).toBe(
       'import { compileAccess } from "@dads-framework/access";\n\nexport const access = compileAccess([]);\n',
     );
-    const model = await evaluateEmittedModel(emittedTs, "access");
+    const model = await evaluateEmittedModel(emittedTs);
     expect(model.definitions).toEqual([]);
   });
 
@@ -520,59 +503,5 @@ describe("emitTypeScript & emitTypeScriptFromZed (ergonomic default)", () => {
       "}",
     ].join("\n");
     expect(() => emitTypeScriptFromZed(withNil)).toThrow(/line 3:.*nil/);
-  });
-});
-
-describe('emitTypeScript & emitTypeScriptFromZed ({ style: "classic" })', () => {
-  it("preserves exact classic entityHandle + access + accessModel output across schemas", async () => {
-    const poly = await assertZedRoundTrip(POLYMORPHIC_ZED, "classic");
-    expect(poly.emittedTs).toContain("parent: [workspace, folder]");
-    expect(poly.emittedTs).toContain(
-      "through(roles.parent, workspaceAccess.permissions.view)",
-    );
-
-    const rec = await assertZedRoundTrip(RECURSIVE_ZED, "classic");
-    expect(rec.emittedTs).toContain(
-      'membersOf(roleToken(group.wireName, "member", group))',
-    );
-    expect(rec.emittedTs).toContain("membersOf(groupAccess.roles.member)");
-
-    const exp = await assertZedRoundTrip(EXPIRATION_ZED, "classic");
-    expect(exp.emittedTs).toContain("withExpiration(user)");
-    expect(exp.emittedTs).toContain(
-      "withExpiration(membersOf(groupAccess.roles.member))",
-    );
-    expect(exp.emittedTs).toContain("withExpiration(wildcard(user))");
-
-    const arrow = await assertZedRoundTrip(INTERSECTION_ARROW_ZED, "classic");
-    expect(arrow.emittedTs).toContain(
-      "throughAll(roles.required_group, groupAccess.permissions.is_member)",
-    );
-    expect(arrow.emittedTs).toContain(
-      "through(roles.any_group, groupAccess.permissions.is_member)",
-    );
-
-    const comb = await assertZedRoundTrip(COMBINATORS_FORWARD_ZED, "classic");
-    expect(comb.emittedTs).toContain(
-      "asPermissionTerm([roles.admin, roles.editor])",
-    );
-    expect(comb.emittedTs).toContain("excluding(roles.editor, roles.banned)");
-    expect(comb.emittedTs).toContain(
-      "export const model = accessModel([userAccess, documentAccess, teamAccess]);",
-    );
-
-    const b2b = await assertZedRoundTrip(NAMESPACED_B2B_ZED, "classic");
-    expect(b2b.emittedTs).toContain(
-      'export const organizationsOrganization = entityHandle({ wireName: "organizations/organization", idSchema: z.string().min(1) });',
-    );
-  });
-
-  it("emits minimal classic module for an empty definition list", async () => {
-    const emittedTs = emitTypeScript([], { style: "classic" });
-    expect(emittedTs).toBe(
-      'import { accessModel } from "@dads-framework/access";\n\nexport const model = accessModel([]);\n',
-    );
-    const model = await evaluateEmittedModel(emittedTs, "model");
-    expect(model.definitions).toEqual([]);
   });
 });

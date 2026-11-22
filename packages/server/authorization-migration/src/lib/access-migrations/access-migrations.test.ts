@@ -1,14 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 
-import {
-  access,
-  accessModel,
-  entityHandle,
-  membersOf,
-  through,
-  wildcard,
-  withExpiration,
-} from "@dads-framework/access";
+import { actor, compileAccess, resource } from "@dads-framework/access";
 import {
   relationshipWrite,
   type RelationshipWrite,
@@ -39,42 +31,31 @@ import type {
 } from "./sql-migration-types.js";
 
 const idSchema = z.string().min(1);
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({ wireName: "group", idSchema });
-const workspace = entityHandle({ wireName: "workspace", idSchema });
-const folder = entityHandle({ wireName: "folder", idSchema });
-const document = entityHandle({ wireName: "document", idSchema });
-
-const userDef = access(user, { roles: {}, permissions: () => ({}) });
-const groupDef = access(group, {
+const user = actor("user", { id: idSchema });
+const groupDef = resource("group", {
+  id: idSchema,
   roles: { member: user },
-  permissions: () => ({}),
+  can: () => ({}),
 });
 
-const workspaceV1 = access(workspace, {
+const workspaceV1 = resource("workspace", {
+  id: idSchema,
   roles: {
-    member: [
-      withExpiration(user),
-      membersOf(groupDef.roles.member),
-      wildcard(user),
-    ],
+    member: [user.expiring, groupDef.roles.member, user.anyone],
   },
-  permissions: ({ member }) => ({ view: [member] }),
+  can: ({ member }) => ({ view: member }),
 });
 
-const workspaceV2 = access(workspace, {
+const workspaceV2 = resource("workspace", {
+  id: idSchema,
   roles: {
-    editor: [
-      withExpiration(user),
-      membersOf(groupDef.roles.member),
-      wildcard(user),
-    ],
+    editor: [user.expiring, groupDef.roles.member, user.anyone],
   },
-  permissions: ({ editor }) => ({ view: [editor] }),
+  can: ({ editor }) => ({ view: editor }),
 });
 
-const modelV1 = accessModel([userDef, groupDef, workspaceV1]);
-const modelV2 = accessModel([userDef, groupDef, workspaceV2]);
+const modelV1 = compileAccess([user, groupDef, workspaceV1]);
+const modelV2 = compileAccess([user, groupDef, workspaceV2]);
 
 describe("defineAccessMigration & runSqliteAccessMigrations (node:sqlite)", () => {
   it("renames member -> editor while preserving access, usersets, wildcards, and expires_at, and is idempotent on rerun", async () => {
@@ -246,26 +227,29 @@ describe("defineAccessMigration & runSqliteAccessMigrations (node:sqlite)", () =
   });
 
   it("supports copyParent and dropParent helpers and reparents child resources", async () => {
-    const folderDef = access(folder, {
+    const folderDef = resource("folder", {
+      id: idSchema,
       roles: { viewer: user },
-      permissions: ({ viewer }) => ({ view: [viewer] }),
+      can: ({ viewer }) => ({ view: viewer }),
     });
-    const docBefore = access(document, {
-      roles: { folder: folder },
-      permissions: ({ folder: parentFolder }) => ({
-        view: [through(parentFolder, folderDef.permissions.view)],
+    const docBefore = resource("document", {
+      id: idSchema,
+      roles: { folder: folderDef },
+      can: ({ folder: parentFolder }) => ({
+        view: parentFolder.view,
       }),
     });
-    const docAfter = access(document, {
-      roles: { parent: folder },
-      permissions: ({ parent }) => ({
-        view: [through(parent, folderDef.permissions.view)],
+    const docAfter = resource("document", {
+      id: idSchema,
+      roles: { parent: folderDef },
+      can: ({ parent }) => ({
+        view: parent.view,
       }),
     });
 
     const migration = defineAccessMigration("0002_reparent_doc", {
-      from: accessModel([userDef, folderDef, docBefore]),
-      to: accessModel([userDef, folderDef, docAfter]),
+      from: compileAccess([user, folderDef, docBefore]),
+      to: compileAccess([user, folderDef, docAfter]),
       steps: [
         copyParent(docBefore.roles.folder, docAfter.roles.parent),
         dropParent(docBefore.roles.folder),

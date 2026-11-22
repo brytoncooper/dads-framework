@@ -4,17 +4,15 @@
  * Seeded violations prove the checker fails loudly before domain sweeps land.
  */
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+
 import {
   checkAccessConformance,
+  lifecycleTrigger,
   missingGrantingAdvisories,
-} from "../conformance.js";
-import { entityHandle } from "../entity-handle.js";
-import { lifecycleTrigger } from "../lifecycle.js";
-import { access } from "../model.js";
+} from "../../catalog.js";
+import { actor, compileAccess, resource } from "../../index.js";
 import { testGrantable } from "../test-support/test-grantable.js";
 
-const idSchema = z.string();
 let wireNameSerial = 0;
 
 function nextWireName(label: string): string {
@@ -26,47 +24,33 @@ const membershipEnds = lifecycleTrigger("membershipEnds");
 
 describe("checkAccessConformance()", () => {
   it("passes when grantable roles have label and group and granting requires real permissions", () => {
-    const Site = entityHandle({
-      wireName: nextWireName("site"),
-      idSchema,
-    });
-    const Person = entityHandle({
-      wireName: "user",
-      idSchema,
-    });
-
-    const site = access(Site, {
+    const user = actor("user");
+    const site = resource(nextWireName("site"), {
       roles: {
-        admin: Person,
+        admin: user,
         formulator: testGrantable({ label: { en: "Formulate recipes" } }),
       },
       granting: {
         requires: ["manage_direct_grants"],
         removedWhen: [membershipEnds],
       },
-      permissions: (roles) => ({
-        view: [roles.admin],
-        manage_direct_grants: [roles.admin, roles.formulator],
+      can: ({ admin, formulator }) => ({
+        view: admin,
+        manage_direct_grants: [admin, formulator],
       }),
     });
 
-    expect(checkAccessConformance([site.resolve()])).toEqual([]);
-    expect(missingGrantingAdvisories([site.resolve()])).toEqual([]);
+    const definitions = compileAccess([site]).definitions;
+    expect(checkAccessConformance(definitions)).toEqual([]);
+    expect(missingGrantingAdvisories(definitions)).toEqual([]);
   });
 
-  it("fails when granting.requires names a permission that permissions() does not declare", () => {
-    const Site = entityHandle({
-      wireName: nextWireName("site"),
-      idSchema,
-    });
-    const Person = entityHandle({
-      wireName: "user",
-      idSchema,
-    });
-
-    const site = access(Site, {
+  it("fails when granting.requires names a permission that can() does not declare", () => {
+    const user = actor("user");
+    const siteWireName = nextWireName("site");
+    const site = resource(siteWireName, {
       roles: {
-        admin: Person,
+        admin: user,
         formulator: testGrantable({ label: { en: "Formulate recipes" } }),
       },
       granting: {
@@ -74,33 +58,27 @@ describe("checkAccessConformance()", () => {
         requires: ["not_a_real_permission"],
         removedWhen: [membershipEnds],
       },
-      permissions: (roles) => ({
-        view: [roles.admin],
+      can: ({ admin }) => ({
+        view: admin,
       }),
     });
 
-    expect(checkAccessConformance([site.resolve()])).toEqual([
+    const definitions = compileAccess([site]).definitions;
+    expect(checkAccessConformance(definitions)).toEqual([
       {
-        fileHint: `${Site.wireName}.access.ts`,
+        fileHint: `${siteWireName}.access.ts`,
         role: "",
-        message: `Granting law on entity "${Site.wireName}" requires permission "not_a_real_permission", which is not declared in permissions().`,
+        message: `Granting law on entity "${siteWireName}" requires permission "not_a_real_permission", which is not declared in permissions().`,
       },
     ]);
   });
 
   it("fails when a grantable role is missing label or group", () => {
-    const Site = entityHandle({
-      wireName: nextWireName("site"),
-      idSchema,
-    });
-    const Person = entityHandle({
-      wireName: "user",
-      idSchema,
-    });
-
-    const site = access(Site, {
+    const user = actor("user");
+    const siteWireName = nextWireName("site");
+    const site = resource(siteWireName, {
       roles: {
-        admin: Person,
+        admin: user,
         unnamed: testGrantable({
           label: { en: "" },
         }),
@@ -109,52 +87,45 @@ describe("checkAccessConformance()", () => {
           group: { name: "", label: { en: "" } },
         }),
       },
-      permissions: (roles) => ({
-        view: [roles.admin],
+      can: ({ admin }) => ({
+        view: admin,
       }),
     });
 
-    expect(checkAccessConformance([site.resolve()])).toEqual([
+    const definitions = compileAccess([site]).definitions;
+    expect(checkAccessConformance(definitions)).toEqual([
       {
-        fileHint: `${Site.wireName}.access.ts`,
+        fileHint: `${siteWireName}.access.ts`,
         role: "unnamed",
-        message: `Grantable role "unnamed" on entity "${Site.wireName}" is missing a label.`,
+        message: `Grantable role "unnamed" on entity "${siteWireName}" is missing a label.`,
       },
       {
-        fileHint: `${Site.wireName}.access.ts`,
+        fileHint: `${siteWireName}.access.ts`,
         role: "ungrouped",
-        message: `Grantable role "ungrouped" on entity "${Site.wireName}" is missing a group.`,
+        message: `Grantable role "ungrouped" on entity "${siteWireName}" is missing a group.`,
       },
     ]);
   });
 
   it("advises but does not fail when grantable roles exist without granting", () => {
-    const Site = entityHandle({
-      wireName: nextWireName("site"),
-      idSchema,
-    });
-    const Person = entityHandle({
-      wireName: "user",
-      idSchema,
-    });
-
-    const site = access(Site, {
+    const user = actor("user");
+    const siteWireName = nextWireName("site");
+    const site = resource(siteWireName, {
       roles: {
-        admin: Person,
+        admin: user,
         formulator: testGrantable({ label: { en: "Formulate recipes" } }),
       },
-      permissions: (roles) => ({
-        view: [roles.admin],
+      can: ({ admin }) => ({
+        view: admin,
       }),
     });
 
-    const sealed = site.resolve();
-
-    expect(checkAccessConformance([sealed])).toEqual([]);
-    expect(missingGrantingAdvisories([sealed])).toEqual([
+    const definitions = compileAccess([site]).definitions;
+    expect(checkAccessConformance(definitions)).toEqual([]);
+    expect(missingGrantingAdvisories(definitions)).toEqual([
       {
-        fileHint: `${Site.wireName}.access.ts`,
-        message: `Entity "${Site.wireName}" has grantable roles but no granting block.`,
+        fileHint: `${siteWireName}.access.ts`,
+        message: `Entity "${siteWireName}" has grantable roles but no granting block.`,
       },
     ]);
   });

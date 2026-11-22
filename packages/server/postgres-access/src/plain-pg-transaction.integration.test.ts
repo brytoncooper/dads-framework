@@ -1,8 +1,7 @@
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess, resource } from "@dads-framework/access";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
 import {
   POSTGRES_CONFLICT,
@@ -16,20 +15,12 @@ import {
   type ProtectedPgTransaction,
 } from "./index.js";
 
-const idSchema = z.string();
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({
-  wireName: "pg-transaction/group",
-  kind: "scope",
-  idSchema,
+const user = actor("user");
+const group = resource("pg-transaction/group", {
+  roles: { member: user },
+  can: ({ member }) => ({ manage: member }),
 });
-const model = accessModel([
-  access(user, { roles: {}, permissions: () => ({}) }),
-  access(group, {
-    roles: { member: user },
-    permissions: (roles) => ({ manage: [roles.member] }),
-  }),
-]);
+const model = compileAccess([user, group]);
 
 function membership(groupId: string, userId: string) {
   return {

@@ -43,6 +43,25 @@ export function compileSqliteLookupResources(
   nowMs: number,
   request: SqliteResourceLookup,
 ): SqliteQuery {
+  const subquery = compileSqliteLookupSubquery(
+    model,
+    namespace,
+    nowMs,
+    request,
+  );
+  return Object.freeze({
+    sql: `${subquery.sql} ORDER BY allowed_resource.resource_id`,
+    params: subquery.params,
+  });
+}
+
+/** Compile reverse `lookupResources` as an unordered subquery suitable for `IN (...)`. */
+export function compileSqliteLookupSubquery(
+  model: SqliteAuthorizationModel,
+  namespace: string,
+  nowMs: number,
+  request: SqliteResourceLookup,
+): SqliteQuery {
   let aliasCount = 0;
   const nextAlias = (prefix: string) => `${prefix}_${aliasCount++}`;
   const subject: SqlSubject = {
@@ -74,7 +93,7 @@ export function compileSqliteLookupResources(
   const allCtes = joinChunks([reachCte, ...context.extraCtes], ", ");
   const b = new QueryBuilder();
   return b.finish(
-    `WITH RECURSIVE ${b.append(allCtes)} SELECT DISTINCT allowed_resource.resource_id FROM (${b.append(allowedIds)}) allowed_resource ORDER BY allowed_resource.resource_id`,
+    `WITH RECURSIVE ${b.append(allCtes)} SELECT DISTINCT allowed_resource.resource_id FROM (${b.append(allowedIds)}) allowed_resource`,
   );
 }
 

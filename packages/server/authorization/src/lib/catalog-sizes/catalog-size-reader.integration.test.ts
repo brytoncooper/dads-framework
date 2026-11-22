@@ -10,7 +10,7 @@ import { pgTable, text } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { entityHandle } from "@dads-framework/access";
+import { resource } from "@dads-framework/access";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 import {
   startUnmigratedTestPostgres,
@@ -22,16 +22,8 @@ import { PostgresCatalogSizeReader } from "./catalog-size-reader.js";
 import { catalogTable } from "./catalog-tables.js";
 
 const idSchema = z.string();
-const Machine = entityHandle({
-  wireName: "sizeaudit/machine",
-  idSchema,
-  kind: "catalog",
-});
-const Recipe = entityHandle({
-  wireName: "sizeaudit/recipe",
-  idSchema,
-  kind: "catalog",
-});
+const Machine = resource("sizeaudit/machine", { id: idSchema });
+const Recipe = resource("sizeaudit/recipe", { id: idSchema });
 const machines = pgTable("size_audit_machines", {
   id: text("id").primaryKey(),
 });

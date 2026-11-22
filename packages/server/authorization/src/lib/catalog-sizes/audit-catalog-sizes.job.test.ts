@@ -9,7 +9,7 @@ import { pgTable, text } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { entityHandle } from "@dads-framework/access";
+import { resource } from "@dads-framework/access";
 
 import type { CatalogOverSizeMarkError } from "./audit-catalog-sizes.job.js";
 import {
@@ -24,26 +24,10 @@ import {
 } from "./catalog-tables.js";
 
 const idSchema = z.string();
-const Machine = entityHandle({
-  wireName: "test/machine",
-  idSchema,
-  kind: "catalog",
-});
-const Recipe = entityHandle({
-  wireName: "test/recipe",
-  idSchema,
-  kind: "catalog",
-});
-const Library = entityHandle({
-  wireName: "test/library",
-  idSchema,
-  kind: "catalog",
-});
-const Ticket = entityHandle({
-  wireName: "test/ticket",
-  idSchema,
-  kind: "record",
-});
+const Machine = resource("test/machine", { id: idSchema });
+const Recipe = resource("test/recipe", { id: idSchema });
+const Library = resource("test/library", { id: idSchema });
+const Ticket = resource("test/ticket", { id: idSchema });
 
 const machines = pgTable("test_machines", { id: text("id").primaryKey() });
 const recipes = pgTable("test_recipes", { id: text("id").primaryKey() });
@@ -123,10 +107,22 @@ describe("auditCatalogSizes", () => {
 });
 
 describe("catalog table declarations", () => {
-  it("refuses a table for an entity that is not a catalog", () => {
-    expect(() => catalogTable(Ticket, machines)).toThrow(
-      "test/ticket is declared record, not catalog",
+  it("refuses a catalogWithoutTable with an empty reason and flags stray declarations", () => {
+    expect(() => catalogWithoutTable(Ticket, "   ")).toThrow(
+      "test/ticket has no table but gives no reason",
     );
+    expect(
+      catalogTableFailures(
+        ["test/machine"],
+        [catalogTable(Machine, machines), catalogTable(Ticket, machines)],
+      ),
+    ).toEqual([
+      {
+        path: "test/ticket",
+        message:
+          "has a catalog table declaration but is not a registered catalog",
+      },
+    ]);
   });
 
   it("names every catalog without a declaration and every stray declaration", () => {

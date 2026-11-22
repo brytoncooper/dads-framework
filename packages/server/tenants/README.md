@@ -29,7 +29,7 @@ Save as `create-tenant.mts` and run `npx tsx create-tenant.mts`.
 <!-- dads:check-example -->
 
 ```ts
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess } from "@dads-framework/access";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
@@ -45,12 +45,9 @@ import { z } from "zod";
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL.");
 
-const account = entityHandle({ wireName: "account", idSchema: z.string() });
+const account = actor("account", { id: z.string() });
 const tenantAccess = createTenantAccess(account);
-const model = accessModel([
-  access(account, { roles: {}, permissions: () => ({}) }),
-  tenantAccess.tenant,
-]);
+const model = compileAccess([account, tenantAccess.tenant]);
 
 const connection = createPostgresConnection(
   { connectionString, schema: {} },

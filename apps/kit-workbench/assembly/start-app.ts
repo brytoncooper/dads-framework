@@ -1,4 +1,4 @@
-import { accessModel } from "@dads-framework/access";
+import { compileAccess } from "@dads-framework/access";
 import { anonymousActor } from "@dads-framework/audit-actor";
 import { sql } from "drizzle-orm";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
@@ -8,6 +8,7 @@ import { IDENTITY_PATH } from "@dads-framework/identity-better-auth";
 import type { TelemetryRuntime } from "@dads-framework/telemetry";
 
 import { scimBindingRoutes } from "../domains/tenants/index.js";
+import { tenantAccess } from "../libraries/app-runtime/index.js";
 import { configureFeaturePreviews } from "./feature-previews.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";
 import { sessionSubjects } from "./session-subjects.js";
@@ -27,7 +28,9 @@ export async function startApp(
     return openServices(scope, config, model, composed.flags, name === "staff");
   });
   const composed = apiEntrypoints[name](provider);
-  const model = accessModel(composed.access);
+  const model = compileAccess(composed.access, {
+    allowLookupResourcesOn: [tenantAccess.tenant],
+  });
   const running = await composed.start();
   try {
     const {

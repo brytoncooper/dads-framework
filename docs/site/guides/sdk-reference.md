@@ -36,13 +36,21 @@ Plain-English definitions of Dads terms, packages, and SDK options for developer
 
 ### Building blocks
 
-| Function                      | Options / signature                                                        | What it does                                                                                                                                                        |
-| :---------------------------- | :------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `actor(name, options?)`       | `{ id? }`                                                                  | Declares an actor (`user`, `service_account`). Defaults to `z.string().min(1)`. Exposes `user(id)`, `user.expiring`, and `user.anyone`.                             |
-| `resource(name, spec)`        | `{ roles?, can?, children?, parents?, recursive?, id? }`                   | Declares a resource, its roles, permissions, nested children, multi-parent DAG links (`parents: [org, folder]`), or self-nesting (`recursive: true`).               |
-| `parent.child(name, spec)`    | `{ inherit, roles?, can?, children?, recursive?, id? }`                    | Splits a child resource into its own variable or file while keeping parent inheritance and auto-discovery in `compileAccess([parent])`.                             |
-| `compileAccess(nodes, opts?)` | `nodes: DslNode[]`, `{ migrations?, bindings?, visibleRecordExceptions? }` | Compiles roots into an `AccessModel`, auto-discovering children, parents, lazy thunks, and actors. Optional `bindings` (`scopeBindings`) helps scale SpiceDB lists. |
-| `formatAccessTree(model)`     | `AccessModel`                                                              | Renders a deterministic ASCII tree of actors, resources, roles, permissions, and `[inherited]` / `[local]` tags.                                                    |
+| Function                      | Options / signature                                                       | What it does                                                                                                                                                                                 |
+| :---------------------------- | :------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actor(name, options?)`       | `{ id? }`                                                                 | Declares an actor (`user`, `service_account`). Defaults to `z.string().min(1)`. Exposes `user(id)`, `user.expiring`, and `user.anyone`.                                                      |
+| `resource(name, spec)`        | `{ roles?, can?, children?, parents?, recursive?, id?, granting? }`       | Declares a resource, its roles, permissions, nested children, multi-parent DAG links (`parents: [org, folder]`), or self-nesting (`recursive: true`).                                        |
+| `parent.child(name, spec)`    | `{ inherit, roles?, can?, children?, recursive?, id?, granting? }`        | Splits a child resource into its own variable or file while keeping parent inheritance and auto-discovery in `compileAccess([parent])`.                                                      |
+| `compileAccess(nodes, opts?)` | `nodes: DslNode[]`, `{ migrations?, bindings?, allowLookupResourcesOn? }` | Compiles roots into an `AccessModel`, auto-discovering children, parents, lazy thunks, and actors. Use `allowLookupResourcesOn` and `bindings` (`@dads-framework/access/scopes`) on SpiceDB. |
+| `compileAccessFromIr(defs)`   | `AccessIrDefinition[]`, `CompileAccessOptions?`                           | Lowers parsed `.zed` IR directly into an `AccessModel`.                                                                                                                                      |
+| `formatAccessTree(model)`     | `AccessModel`                                                             | Renders a deterministic ASCII tree of actors, resources, roles, permissions, and `[inherited]` / `[local]` tags.                                                                             |
+
+### Optional subpaths (`@dads-framework/access/catalog` & `/scopes`)
+
+| Subpath                          | Exports                                                                               | Purpose                                                                                                                                 |
+| :------------------------------- | :------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| `@dads-framework/access/catalog` | `grantable`, `lifecycleTrigger`, `catalogOnly`, `checkAccessConformance`              | Customer-assignable role UI metadata (labels, groups, risk level) and lifecycle grant governance checks.                                |
+| `@dads-framework/access/scopes`  | `scopeBindings`, `isLookupResourcesAllowed`, `compileScopePlan`, `checkScopeBindings` | Fail-closed SpiceDB `lookupResources` allowlist checks (`allowLookupResourcesOn`) and scoped list planning for external SpiceDB stores. |
 
 ### Inheritance (`inherit`)
 
@@ -115,26 +123,28 @@ PostgreSQL, SQLite, SpiceDB, `ShadowAuthorization`, and test fakes all implement
 
 Drizzle is optional. Use the root entry point with plain `pg.Pool`, or import Drizzle helpers from `@dads-framework/postgres-access/drizzle`:
 
-| Export                                            | Entry point                               | Options & usage                                                                                                                                                                     |
-| :------------------------------------------------ | :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `new PostgresAuthorization(options)`              | `@dads-framework/postgres-access`         | `{ model, namespace, executor, queryTimeoutMs?, reuseLookupResultsOn? }`. Accepts a plain `pg.Pool` or prepared check executor.                                                     |
-| `withProtectedPgTransaction(options, work)`       | `@dads-framework/postgres-access`         | `{ pool, authorization }`. Runs `BEGIN ISOLATION LEVEL SERIALIZABLE` on a plain `pg.Pool`, passes `{ client, authorization }`, and maps `40001` to `PostgresSerializationConflict`. |
-| `preparePostgresChecks(pool)`                     | `@dads-framework/postgres-access`         | Optional prepared-statement wrapper for point checks on a direct `pg.Pool`.                                                                                                         |
-| `relationshipSchemaMigration`                     | `@dads-framework/postgres-access`         | Base SQL migration creating `dad_authorization_relationship` (with `expires_at` and indexes).                                                                                       |
-| `relationshipExpirationMigration`                 | `@dads-framework/postgres-access`         | Additive v2 SQL migration adding `expires_at` to older v1 tables.                                                                                                                   |
-| `lookupRevisionSchemaMigration`                   | `@dads-framework/postgres-access`         | Optional SQL migration for revision-validated lookup reuse (`reuseLookupResultsOn`).                                                                                                |
-| `withProtectedDrizzleTransaction(options, work)`  | `@dads-framework/postgres-access/drizzle` | `{ database, authorization }` or `{ transaction, authorization }`. Re-checks permissions and runs Drizzle writes in one serializable transaction.                                   |
-| `transactionExecutor(tx)`                         | `@dads-framework/postgres-access/drizzle` | Adapts a Drizzle transaction handle into a `PostgresAccessExecutor`.                                                                                                                |
-| `withProtectedPostgresTransaction(options, work)` | `@dads-framework/postgres-access`         | Backwards-compatible wrapper for apps using `@dads-framework/postgres` `DrizzleHandle`.                                                                                             |
+| Export                                            | Entry point                               | Options & usage                                                                                                                                                                                             |
+| :------------------------------------------------ | :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new PostgresAuthorization(options)`              | `@dads-framework/postgres-access`         | `{ model, namespace, executor, queryTimeoutMs?, reuseLookupResultsOn? }`. Accepts a plain `pg.Pool` or prepared check executor.                                                                             |
+| `authorization.compileFilter(query)`              | `@dads-framework/postgres-access`         | `{ subject, permission, resourceType, idColumn, paramOffset? }`. Compiles an inline SQL `EXISTS` / recursive `IN` filter (`{ sql, values }`) for single-query paginated `SELECT ... WHERE ... LIMIT` lists. |
+| `withProtectedPgTransaction(options, work)`       | `@dads-framework/postgres-access`         | `{ pool, authorization }`. Runs `BEGIN ISOLATION LEVEL SERIALIZABLE` on a plain `pg.Pool`, passes `{ client, authorization }`, and maps `40001` to `PostgresSerializationConflict`.                         |
+| `withProtectedPostgresTransaction(options, work)` | `@dads-framework/postgres-access`         | Alias for `withProtectedPgTransaction` (`{ pool, authorization }`, zero Drizzle dependency).                                                                                                                |
+| `preparePostgresChecks(pool)`                     | `@dads-framework/postgres-access`         | Optional prepared-statement wrapper for point checks on a direct `pg.Pool`.                                                                                                                                 |
+| `relationshipSchemaMigration`                     | `@dads-framework/postgres-access`         | Base SQL migration creating `dad_authorization_relationship` (with `expires_at` and indexes).                                                                                                               |
+| `relationshipExpirationMigration`                 | `@dads-framework/postgres-access`         | Additive v2 SQL migration adding `expires_at` to older v1 tables.                                                                                                                                           |
+| `lookupRevisionSchemaMigration`                   | `@dads-framework/postgres-access`         | Optional SQL migration for revision-validated lookup reuse (`reuseLookupResultsOn`).                                                                                                                        |
+| `withProtectedDrizzleTransaction(options, work)`  | `@dads-framework/postgres-access/drizzle` | `{ database, authorization }` or `{ transaction, authorization }`. Re-checks permissions and runs Drizzle writes in one serializable transaction.                                                           |
+| `transactionExecutor(tx)`                         | `@dads-framework/postgres-access/drizzle` | Adapts a Drizzle transaction handle into a `PostgresAccessExecutor`.                                                                                                                                        |
 
 ### SQLite (`@dads-framework/sqlite-access`)
 
-| Export                                          | Options & usage                                                                                                                               |
-| :---------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createNodeSqliteExecutor(db)`                  | Wraps Node's built-in `node:sqlite` `DatabaseSync` with zero native addons.                                                                   |
-| `sqliteRelationshipSchemaMigration`             | SQL migration creating `dad_authorization_relationship` (with `expires_at` built in).                                                         |
-| `new SqliteAuthorization(options)`              | `{ model, namespace, executor, now? }`. Full parity with PostgreSQL (`expiresAt`, recursive/polymorphic arrows, `every()`, `lookupSubjects`). |
-| `withProtectedSqliteTransaction(options, work)` | `{ executor, authorization, now? }`. Runs checks and writes inside `BEGIN IMMEDIATE` with one pinned clock timestamp.                         |
+| Export                                          | Options & usage                                                                                                                                                                              |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createNodeSqliteExecutor(db)`                  | Wraps Node's built-in `node:sqlite` `DatabaseSync` with zero native addons.                                                                                                                  |
+| `sqliteRelationshipSchemaMigration`             | SQL migration creating `dad_authorization_relationship` (with `expires_at` built in).                                                                                                        |
+| `new SqliteAuthorization(options)`              | `{ model, namespace, executor, now? }`. Full parity with PostgreSQL (`expiresAt`, recursive/polymorphic arrows, `every()`, `lookupSubjects`).                                                |
+| `authorization.compileFilter(query)`            | `{ subject, permission, resourceType, idColumn, now? }`. Compiles an inline SQLite `EXISTS` / recursive `IN` filter (`{ sql, values }`) for single-query paginated `SELECT ... WHERE` lists. |
+| `withProtectedSqliteTransaction(options, work)` | `{ executor, authorization, now? }`. Runs checks and writes inside `BEGIN IMMEDIATE` with one pinned clock timestamp.                                                                        |
 
 ### Migrations & SpiceDB cutover (`@dads-framework/authorization-migration`)
 
@@ -192,16 +202,16 @@ Use `getRoute`, `listRoute`, `postRoute`, `postNoContentRoute`, `patchRoute`, `p
 
 ## CLI commands (`@dads-framework/toolbox` & `@dads-framework/authorization-migration`)
 
-| Command                                                       | What it does                                                                  |
-| :------------------------------------------------------------ | :---------------------------------------------------------------------------- |
-| `dad access tree <file.ts\|file.zed>`                         | Prints the compiled permission inheritance tree using `formatAccessTree`.     |
-| `dad access diff <before.ts\|zed> <after.ts\|zed>`            | Compares two access models and flags safe versus breaking tuple changes.      |
-| `dad access migrate <slug> --from <before> --to <after>`      | Scaffolds a connected `(from, to)` migration file with typed copy/drop stubs. |
-| `dad access import <schema.zed> [--style ergonomic\|classic]` | Converts a SpiceDB `.zed` schema file into typed Dads TypeScript.             |
-| `dads-import-spicedb --endpoint <addr> --database-url <url>`  | Streams live schema and tuples from SpiceDB into Postgres with `--verify`.    |
-| `dad add resource <name> --api <api>`                         | Scaffolds a new guarded domain and registers it on one API entrypoint.        |
-| `dad check boundaries`                                        | Verifies domain import isolation rules in CI.                                 |
-| `dad doctor --gate`                                           | Enforces strict type rules, route access coverage, and denial tests.          |
+| Command                                                      | What it does                                                                  |
+| :----------------------------------------------------------- | :---------------------------------------------------------------------------- |
+| `dad access tree <file.ts\|file.zed>`                        | Prints the compiled permission inheritance tree using `formatAccessTree`.     |
+| `dad access diff <before.ts\|zed> <after.ts\|zed>`           | Compares two access models and flags safe versus breaking tuple changes.      |
+| `dad access migrate <slug> --from <before> --to <after>`     | Scaffolds a connected `(from, to)` migration file with typed copy/drop stubs. |
+| `dad access import <schema.zed> [--out <path>]`              | Converts a SpiceDB `.zed` schema file into typed Dads TypeScript.             |
+| `dads-import-spicedb --endpoint <addr> --database-url <url>` | Streams live schema and tuples from SpiceDB into Postgres with `--verify`.    |
+| `dad add resource <name> --api <api>`                        | Scaffolds a new guarded domain and registers it on one API entrypoint.        |
+| `dad check boundaries`                                       | Verifies domain import isolation rules in CI.                                 |
+| `dad doctor --gate`                                          | Enforces strict type rules, route access coverage, and denial tests.          |
 
 ```sh
 # Print the resolved access tree for your model (.ts or .zed)

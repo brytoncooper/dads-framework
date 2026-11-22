@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { accessModel } from "@dads-framework/access";
+import { compileAccess } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { withSystemActor } from "@dads-framework/audit-actor";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
@@ -35,7 +35,9 @@ it(
         openServices(scope, config, model, composed.flags),
       );
       const composed = apiEntrypoints.customer(provider);
-      const model = accessModel(composed.access);
+      const model = compileAccess(composed.access, {
+        allowLookupResourcesOn: [tenantAccess.tenant],
+      });
       const runtime = await composed.start();
       try {
         const { authorization, db, tenants, writeWithPermission } =

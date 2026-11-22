@@ -1,8 +1,6 @@
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import {
-  type PostgresAuthorization,
-  withProtectedPostgresTransaction,
-} from "@dads-framework/postgres-access";
+import type { PostgresAuthorization } from "@dads-framework/postgres-access";
+import { withProtectedDrizzleTransaction } from "@dads-framework/postgres-access/drizzle";
 import { sql } from "drizzle-orm";
 import { readPostgresTaskCandidates } from "./read-postgres-task-candidates.js";
 
@@ -109,7 +107,7 @@ export class PostgresWorkbenchStore
       state: WorkbenchState,
     ) => Promise<Result>,
   ): Promise<Result> {
-    return withProtectedPostgresTransaction(
+    return withProtectedDrizzleTransaction(
       {
         database: this.options.database,
         authorization: this.options.authorization,

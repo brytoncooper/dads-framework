@@ -1,6 +1,7 @@
 import { isDslActor, isDslLazyResource, isDslResource } from "./dsl-actor.js";
 import {
   getDslResourceRecord,
+  getExpirableUsersetOwner,
   getRoleTokenOwner,
   type DslResourceRecord,
 } from "./dsl-resource.js";
@@ -11,6 +12,7 @@ import type {
   DslSingleRoleHolder,
 } from "./dsl-types.js";
 import type { EntityHandle } from "./entity-handle.js";
+import { isGrantableRole } from "./grantable.js";
 import {
   isEntityHandleHolder,
   isExpirableHolder,
@@ -51,7 +53,16 @@ function discoverEntityHolder(
   entry: DslSingleRoleHolder,
 ): void {
   if (isExpirableHolder(entry)) {
+    const owner = getExpirableUsersetOwner(entry);
+    if (owner !== undefined) {
+      discoverResource(state, owner);
+      return;
+    }
     discoverSingleHolder(state, entry.holder);
+    return;
+  }
+  if (isGrantableRole(entry)) {
+    registerActorHandle(state, entry.directSubject);
     return;
   }
   if (isWildcardHolder(entry)) {

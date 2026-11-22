@@ -72,9 +72,7 @@ describe("GuardedAuthorization against SpiceDB (integration)", () => {
       new TalliedAuthorization(vendor),
       DEFAULT_AUTHORIZATION_GUARD_MARKS,
       {
-        kindOf: (resourceType) =>
-          resourceType === "guardtest/ticket" ? "record" : "catalog",
-        mayLookupRecord: () => false,
+        mayLookup: (resourceType) => resourceType === "guardtest/machine",
       },
     );
   }, 120_000);

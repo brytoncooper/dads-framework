@@ -1,4 +1,4 @@
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess } from "@dads-framework/access";
 import type {
   AuditLogScope,
   AuditTriggerConfiguration,
@@ -31,13 +31,9 @@ import {
   Tenants,
 } from "./index.js";
 
-const account = entityHandle({ wireName: "user", idSchema: z.string().min(1) });
+const account = actor("user", { id: z.string().min(1) });
 const definitions = createTenantAccess(account);
-const accountDefinition = access(account, {
-  roles: {},
-  permissions: () => ({}),
-});
-const model = accessModel([accountDefinition, definitions.tenant]);
+const model = compileAccess([account, definitions.tenant]);
 
 describe("two tenants on Postgres", () => {
   const cleanup: (() => Promise<void>)[] = [];

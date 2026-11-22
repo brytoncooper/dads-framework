@@ -18,7 +18,7 @@ import {
 
 export const account = actor("account");
 export const accountAccess = account;
-export const tenantAccess = createTenantAccess(account.handle);
+export const tenantAccess = createTenantAccess(account);
 
 type WriteTransaction = Parameters<
   Parameters<DrizzleHandle["transaction"]>[0]

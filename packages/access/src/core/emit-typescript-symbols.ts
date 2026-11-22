@@ -50,25 +50,6 @@ const JS_RESERVED_WORDS = new Set([
   "yield",
 ]);
 
-const RESERVED_IDENTIFIERS = new Set([
-  ...JS_RESERVED_WORDS,
-  "access",
-  "accessModel",
-  "asPermissionTerm",
-  "both",
-  "entityHandle",
-  "excluding",
-  "membersOf",
-  "model",
-  "permissionToken",
-  "roleToken",
-  "through",
-  "throughAll",
-  "wildcard",
-  "withExpiration",
-  "z",
-]);
-
 const ERGONOMIC_RESERVED_IDENTIFIERS = new Set([
   ...JS_RESERVED_WORDS,
   "access",
@@ -77,21 +58,9 @@ const ERGONOMIC_RESERVED_IDENTIFIERS = new Set([
   "anyOf",
   "compileAccess",
   "every",
-  "membersOf",
   "permissionToken",
   "resource",
-  "through",
-  "throughAll",
-  "wildcard",
-  "withExpiration",
 ]);
-
-export type EmittedSymbols = {
-  readonly allWireNames: readonly string[];
-  readonly entityVarByWireName: ReadonlyMap<string, string>;
-  readonly accessVarByWireName: ReadonlyMap<string, string>;
-  readonly definitionByWireName: ReadonlyMap<string, AccessIrDefinition>;
-};
 
 export type ErgonomicSymbols = {
   readonly allWireNames: readonly string[];
@@ -158,44 +127,6 @@ function collectWireNames(
   return ordered;
 }
 
-export function allocateSymbols(
-  definitions: readonly AccessIrDefinition[],
-): EmittedSymbols {
-  const allWireNames = collectWireNames(definitions);
-  const used = new Set<string>(RESERVED_IDENTIFIERS);
-  const entityVarByWireName = new Map<string, string>();
-  const accessVarByWireName = new Map<string, string>();
-  const definitionByWireName = new Map<string, AccessIrDefinition>();
-
-  for (const wireName of allWireNames) {
-    const entityVar = allocateUnique(
-      toCamelCase(wireName),
-      used,
-      RESERVED_IDENTIFIERS,
-      "Entity",
-    );
-    entityVarByWireName.set(wireName, entityVar);
-  }
-  for (const definition of definitions) {
-    definitionByWireName.set(definition.wireName, definition);
-    const entityVar = entityVarByWireName.get(definition.wireName) ?? "entity";
-    const accessVar = allocateUnique(
-      `${entityVar}Access`,
-      used,
-      RESERVED_IDENTIFIERS,
-      "Access",
-    );
-    accessVarByWireName.set(definition.wireName, accessVar);
-  }
-
-  return {
-    allWireNames,
-    entityVarByWireName,
-    accessVarByWireName,
-    definitionByWireName,
-  };
-}
-
 export function allocateErgonomicSymbols(
   definitions: readonly AccessIrDefinition[],
 ): ErgonomicSymbols {
@@ -233,25 +164,6 @@ export function allocateErgonomicSymbols(
   };
 }
 
-function usersetDependencies(
-  definition: AccessIrDefinition,
-  knownWireNames: ReadonlySet<string>,
-): readonly string[] {
-  const deps: string[] = [];
-  for (const role of definition.roles) {
-    for (const subject of role.subjects) {
-      if (
-        subject.kind === "userset" &&
-        subject.wireName !== definition.wireName &&
-        knownWireNames.has(subject.wireName)
-      ) {
-        deps.push(subject.wireName);
-      }
-    }
-  }
-  return deps;
-}
-
 function resourceSubjectDependencies(
   definition: AccessIrDefinition,
   resourceWireNames: ReadonlySet<string>,
@@ -268,35 +180,6 @@ function resourceSubjectDependencies(
     }
   }
   return deps;
-}
-
-/**
- * Order definitions so non-cyclic `membersOf(otherAccess.roles.x)` targets
- * are declared before the definitions that reference them.
- */
-export function orderDefinitionsForEmission(
-  definitions: readonly AccessIrDefinition[],
-): readonly AccessIrDefinition[] {
-  const byName = new Map(definitions.map((def) => [def.wireName, def]));
-  const known = new Set(byName.keys());
-  const visited = new Set<string>();
-  const ordered: AccessIrDefinition[] = [];
-
-  const visit = (wireName: string): void => {
-    if (visited.has(wireName)) return;
-    visited.add(wireName);
-    const definition = byName.get(wireName);
-    if (definition === undefined) return;
-    for (const dep of usersetDependencies(definition, known)) {
-      visit(dep);
-    }
-    ordered.push(definition);
-  };
-
-  for (const definition of definitions) {
-    visit(definition.wireName);
-  }
-  return ordered;
 }
 
 /**

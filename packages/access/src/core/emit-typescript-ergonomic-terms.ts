@@ -28,8 +28,6 @@ const CAN_HELPER_NAMES = new Set([
   "anyOf",
   "allOf",
   "every",
-  "through",
-  "throughAll",
   "permissionToken",
 ]);
 
@@ -145,7 +143,10 @@ function supportsDirectArrow(
     const targetDef = ctx.symbols.definitionByWireName.get(subject.wireName);
     return (
       targetDef !== undefined &&
-      targetDef.permissions.some((perm) => perm.name === targetPermission)
+      (targetDef.permissions.some((perm) => perm.name === targetPermission) ||
+        targetDef.roles.some(
+          (targetRole) => targetRole.name === targetPermission,
+        ))
     );
   });
 }
@@ -196,12 +197,10 @@ function emitArrowTerm(
       isDslTerm: true,
     };
   }
-  const helper = kind === "through" ? "through" : "throughAll";
-  ctx.valueImports.add(helper);
   ctx.valueImports.add("permissionToken");
   const targetWire = resolveFallbackTargetWire(scope.owner, roleName);
   return {
-    code: `${helper}(${roleVar}.$roleToken, permissionToken(${JSON.stringify(targetWire)}, ${JSON.stringify(targetPermission)}))`,
+    code: `{ kind: ${JSON.stringify(kind)}, role: ${roleVar}.$roleToken, target: permissionToken(${JSON.stringify(targetWire)}, ${JSON.stringify(targetPermission)}) }`,
     isDslTerm: false,
   };
 }

@@ -8,7 +8,7 @@
  */
 import { sql, type SQL } from "drizzle-orm";
 
-import type { ScopePlan } from "@dads-framework/access";
+import type { ScopePlan } from "@dads-framework/access/scopes";
 
 import {
   scopeQuestionKey,

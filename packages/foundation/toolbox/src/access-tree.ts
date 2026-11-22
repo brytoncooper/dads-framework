@@ -1,8 +1,11 @@
 /** Render a `.ts`/`.js` or `.zed` access schema as a deterministic ASCII hierarchy tree. */
 
 import { resolve } from "node:path";
-import { formatAccessTree, parseZed } from "@dads-framework/access";
-import { lowerIrToAccessModel } from "./access-ir-lowering.js";
+import {
+  compileAccessFromIr,
+  formatAccessTree,
+  parseZed,
+} from "@dads-framework/access";
 import { loadAccessSource } from "./access-source-loader.js";
 import { readZedFile } from "./access-zed-io.js";
 
@@ -48,7 +51,7 @@ export function renderZedAccessTree(
   const inputPath = resolve(baseDirectory, options.inputPath);
   const source = readZedFile(inputPath);
   const definitions = parseZed(source);
-  const model = lowerIrToAccessModel(definitions);
+  const model = compileAccessFromIr(definitions);
   const tree = formatAccessTree(model);
 
   return {

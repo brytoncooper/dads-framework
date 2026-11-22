@@ -1,42 +1,59 @@
 /**
  * What/why: the guard is what keeps a list from silently growing until it
  * fails. Each threshold is pinned with the fake client and the real tally: a
- * lookup on a record is refused unless it is a sparse direct grant or a dated
- * exception, a lookup past the warning mark succeeds and notes a fault, one
- * past the hard cap fails naming the type, and a request past the round-trip
- * budget notes a fault. None of it trusts the declared kind for the sizes.
+ * lookup is refused fail-closed unless the resource is in
+ * `allowLookupResourcesOn` (and not bound in `scopeBindings`) or the relation
+ * is a `sparse-direct` grant; a lookup past the warning mark succeeds and notes
+ * a fault, one past the hard cap fails naming the type, and a request past the
+ * round-trip budget notes a fault.
  */
 import { describe, expect, it } from "vitest";
 
+import { actor, compileAccess, resource } from "@dads-framework/access";
+import { scopeBindings } from "@dads-framework/access/scopes";
 import { measureWork } from "@dads-framework/runtime/request-work";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import {
+  authorizationKinds,
   GuardedAuthorization,
   LookupOverHardCapError,
   RecordLookupRefusedError,
-  type EntityKindLookup,
 } from "./guarded-authorization.js";
 import { TalliedAuthorization } from "./tallied-authorization.js";
 
 const user = { type: "user", id: "user-1" };
 
-const kinds: EntityKindLookup = {
-  kindOf: (resourceType) =>
-    (
-      ({
-        "test/site": "scope",
-        "test/machine": "catalog",
-        "test/ticket": "record",
-        "test/legacy-ticket": "record",
-      }) as const
-    )[resourceType],
-  mayLookupRecord: (resourceType, permission) =>
-    (resourceType === "test/ticket" && permission === "assignee") ||
-    resourceType === "test/legacy-ticket",
-};
+const User = actor("user");
+const Site = resource("test/site", {
+  roles: { viewer: User },
+  can: ({ viewer }) => ({ view: viewer }),
+});
+const Machine = resource("test/machine", {
+  roles: { viewer: User },
+  can: ({ viewer }) => ({ view: viewer }),
+});
+const Ticket = resource("test/ticket", {
+  roles: { site: Site, assignee: User },
+  can: ({ site, assignee }) => ({ view: [site.view, assignee] }),
+});
+const Unlisted = resource("test/unlisted", {
+  roles: { viewer: User },
+  can: ({ viewer }) => ({ view: viewer }),
+});
 
+const ticketBindings = scopeBindings(Ticket, {
+  site: { kind: "scope-column" },
+  assignee: { kind: "sparse-direct" },
+});
+
+const model = compileAccess([User, Site, Machine, Ticket, Unlisted], {
+  bindings: [ticketBindings],
+  allowLookupResourcesOn: [Site, Machine],
+});
+
+const policy = authorizationKinds(model);
 const marks = { warnLookupIds: 3, maxLookupIds: 6, warnRoundTrips: 4 };
 
 /** A fake holding `count` machines the user may view, guarded and tallied. */
@@ -44,8 +61,8 @@ function guardedWith(count: number) {
   const fake = new FakeAuthorization({
     "test/machine": { view: ["viewer"] },
     "test/site": { view: ["viewer"] },
-    "test/ticket": { view: ["viewer"], assignee: ["assignee"] },
-    "test/legacy-ticket": { view: ["viewer"] },
+    "test/ticket": { view: ["assignee"], assignee: ["assignee"] },
+    "test/unlisted": { view: ["viewer"] },
   });
   for (let index = 0; index < count; index += 1) {
     fake.seed(
@@ -56,7 +73,11 @@ function guardedWith(count: number) {
       ),
     );
   }
-  return new GuardedAuthorization(new TalliedAuthorization(fake), marks, kinds);
+  return new GuardedAuthorization(
+    new TalliedAuthorization(fake),
+    marks,
+    policy,
+  );
 }
 
 const machines = {
@@ -66,7 +87,7 @@ const machines = {
 };
 
 describe("GuardedAuthorization record lookups", () => {
-  it("refuses a lookup on a record, pointing at requiresScoped", async () => {
+  it("refuses a lookup on a scoped record and an unlisted resource fail-closed", async () => {
     await expect(
       guardedWith(0).lookupResources({
         subject: user,
@@ -81,11 +102,18 @@ describe("GuardedAuthorization record lookups", () => {
         permission: "view",
       }),
     ).rejects.toThrow(
-      "lookupResources on test/ticket#view refused: test/ticket is a record, and a record list must use requiresScoped",
+      "lookupResources on test/ticket#view refused: test/ticket is not in allowLookupResourcesOn",
     );
+    await expect(
+      guardedWith(0).lookupResources({
+        subject: user,
+        resourceType: "test/unlisted",
+        permission: "view",
+      }),
+    ).rejects.toThrow(RecordLookupRefusedError);
   });
 
-  it("lets a sparse direct grant and a dated exception through", async () => {
+  it("lets a sparse direct grant through on a scoped record", async () => {
     const guarded = guardedWith(0);
     await expect(
       guarded.lookupResources({
@@ -94,16 +122,9 @@ describe("GuardedAuthorization record lookups", () => {
         permission: "assignee",
       }),
     ).resolves.toEqual([]);
-    await expect(
-      guarded.lookupResources({
-        subject: user,
-        resourceType: "test/legacy-ticket",
-        permission: "view",
-      }),
-    ).resolves.toEqual([]);
   });
 
-  it("leaves scope and catalog lookups alone", async () => {
+  it("allows resources explicitly listed in allowLookupResourcesOn", async () => {
     const guarded = guardedWith(2);
     await expect(guarded.lookupResources(machines)).resolves.toHaveLength(2);
     await expect(
@@ -159,19 +180,19 @@ describe("GuardedAuthorization size marks", () => {
     const fake = new FakeAuthorization();
     expect(
       () =>
-        new GuardedAuthorization(fake, { ...marks, warnLookupIds: 6 }, kinds),
+        new GuardedAuthorization(fake, { ...marks, warnLookupIds: 6 }, policy),
     ).toThrow("must be below maxLookupIds");
     expect(
       () =>
         new GuardedAuthorization(
           fake,
           { ...marks, maxLookupIds: 70_000 },
-          kinds,
+          policy,
         ),
     ).toThrow("must stay below Postgres's 65535-parameter limit");
     expect(
       () =>
-        new GuardedAuthorization(fake, { ...marks, warnRoundTrips: 0 }, kinds),
+        new GuardedAuthorization(fake, { ...marks, warnRoundTrips: 0 }, policy),
     ).toThrow("warnRoundTrips must be a positive integer");
   });
 });

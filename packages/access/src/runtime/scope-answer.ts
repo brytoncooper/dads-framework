@@ -4,8 +4,8 @@
  * the answers by question. The SQL half (`scopePredicate`) renders the plan
  * against those answers; nothing here touches a table.
  */
-import { compileScopePlan } from "../index.js";
-import type { AccessModel, ScopePlan } from "../index.js";
+import type { AccessModel } from "../index.js";
+import { compileScopePlan, type ScopePlan } from "../scopes.js";
 
 import type { ResourceLookup, SubjectRef } from "./authorization.js";
 

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { accessModel, emitAccessIr } from "@dads-framework/access";
+import { compileAccess, emitAccessIr } from "@dads-framework/access";
 import { FakeAuthorization } from "@dads-framework/authorization/testing";
 import {
   buildTestApp,
@@ -98,12 +98,14 @@ it("reads only selected access and migrations before any service starts", async 
   });
   expect(migrations.map(({ owner }) => owner)).toEqual(["notes-data"]);
   expect(
-    emitAccessIr(accessModel(offlineApi.access)).map(
+    emitAccessIr(compileAccess(offlineApi.access)).map(
       ({ wireName }) => wireName,
     ),
   ).toEqual(["notes_user", "notes/note"]);
   expect(
-    emitAccessIr(accessModel(staffApi.access)).map(({ wireName }) => wireName),
+    emitAccessIr(compileAccess(staffApi.access)).map(
+      ({ wireName }) => wireName,
+    ),
   ).toContain(staffDashboard.wireName);
   expect(setup).not.toHaveBeenCalled();
 

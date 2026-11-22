@@ -1,3 +1,4 @@
+import type { DslNode } from "./dsl-resource-types.js";
 import type { EntityHandle } from "./entity-handle.js";
 import { isWildcardHolder, type WildcardHolder } from "./holders.js";
 import type { PermissionToken, RoleToken } from "./refs.js";
@@ -44,7 +45,7 @@ export type WorldWrite = {
 
 export type WorldVerbs = {
   readonly user: (id: string) => WorldPerson;
-  readonly entity: (handle: EntityHandle, id: string) => WorldEntity;
+  readonly entity: (target: EntityHandle | DslNode, id: string) => WorldEntity;
   readonly write: (role: RoleToken, resourceId: string) => WorldWrite;
   readonly members: (role: RoleToken, resourceId: string) => WorldMembers;
   readonly include: (other: AccessWorld) => void;
@@ -84,6 +85,10 @@ function assertionTuple(
   return `${permission.entityWireName}:${resourceId}#${permission.permissionName}@${subjectTuple(actor)}`;
 }
 
+function resolveEntityHandle(target: EntityHandle | DslNode): EntityHandle {
+  return "handle" in target ? target.handle : target;
+}
+
 export function world(
   title: string,
   build: (verbs: WorldVerbs) => void,
@@ -94,7 +99,11 @@ export function world(
 
   const verbs: WorldVerbs = {
     user: (id) => ({ kind: "person", id }),
-    entity: (handle, id) => ({ kind: "entity", handle, id }),
+    entity: (target, id) => ({
+      kind: "entity",
+      handle: resolveEntityHandle(target),
+      id,
+    }),
     write: (role, resourceId) => ({
       to: (subject) => {
         relationships.push(relationshipTuple(role, resourceId, subject));

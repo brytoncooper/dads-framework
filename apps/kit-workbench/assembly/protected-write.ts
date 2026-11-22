@@ -2,9 +2,9 @@ import { conflict, notFound } from "@dads-framework/errors";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 import {
   PostgresSerializationConflict,
-  withProtectedPostgresTransaction,
   type PostgresAuthorization,
 } from "@dads-framework/postgres-access";
+import { withProtectedDrizzleTransaction } from "@dads-framework/postgres-access/drizzle";
 
 import type { WriteWithPermission } from "../libraries/app-runtime/index.js";
 
@@ -14,7 +14,7 @@ export function createProtectedWrite(
 ): WriteWithPermission {
   return async ({ subject, permission, resourceId }, write) => {
     try {
-      return await withProtectedPostgresTransaction(
+      return await withProtectedDrizzleTransaction(
         { database, authorization },
         async ({ tx, authorization: scoped }) => {
           const allowed = await scoped.check({

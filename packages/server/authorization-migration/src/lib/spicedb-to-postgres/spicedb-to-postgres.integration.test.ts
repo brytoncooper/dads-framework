@@ -1,17 +1,11 @@
 import { v1 } from "@authzed/authzed-node";
 import {
-  access,
-  accessModel,
-  both,
+  actor,
+  allOf,
+  compileAccess,
   emitZed,
-  entityHandle,
-  excluding,
-  membersOf,
-  permissionToken,
+  resource,
   roleToken,
-  through,
-  wildcard,
-  withExpiration,
 } from "@dads-framework/access";
 import { SpiceDbAuthorization } from "@dads-framework/authorization";
 import { startTestSpiceDb } from "@dads-framework/authorization/testing";
@@ -30,55 +24,50 @@ import { migrateSpiceDbToPostgres } from "./migrate-spicedb-to-postgres.js";
 import { verifySpiceDbPostgresParity } from "./verify-parity.js";
 
 const idSchema = z.string().min(1);
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({ wireName: "group", idSchema });
-const workspace = entityHandle({ wireName: "workspace", idSchema });
-const folder = entityHandle({ wireName: "folder", idSchema });
-const document = entityHandle({ wireName: "document", idSchema });
+const user = actor("user", { id: idSchema });
 
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-const groupMemberRef = roleToken(group.wireName, "member", user);
-const groupAccess = access(group, {
-  roles: { member: [user, membersOf(groupMemberRef)] },
-  permissions: ({ member }) => ({ view: [member] }),
+const groupMemberRef = roleToken("group", "member", user.handle);
+const groupAccess = resource("group", {
+  id: idSchema,
+  roles: { member: [user, groupMemberRef] },
+  can: ({ member }) => ({ view: member }),
 });
-const workspaceAccess = access(workspace, {
+const workspaceAccess = resource("workspace", {
+  id: idSchema,
   roles: {
-    member: [
-      user,
-      withExpiration(user),
-      membersOf(groupAccess.roles.member),
-      wildcard(user),
-    ],
+    member: [user, user.expiring, groupAccess.roles.member, user.anyone],
     banned: user,
   },
-  permissions: ({ member, banned }) => ({
-    view: [excluding(member, banned)],
+  can: ({ member, banned }) => ({
+    view: member.unless(banned),
   }),
 });
-const folderAccess = access(folder, {
+const folderAccess = resource("folder", {
+  id: idSchema,
+  parents: [workspaceAccess],
+  recursive: true,
   roles: {
-    parent: [workspace, folder],
-    viewer: [user, withExpiration(user), membersOf(groupAccess.roles.member)],
+    viewer: [user, user.expiring, groupAccess.roles.member],
   },
-  permissions: ({ parent, viewer }) => ({
-    view: [viewer, through(parent, permissionToken(folder.wireName, "view"))],
+  can: ({ parents, viewer }) => ({
+    view: [viewer, parents.view],
   }),
 });
-const documentAccess = access(document, {
+const documentAccess = resource("document", {
+  id: idSchema,
+  parents: [workspaceAccess, folderAccess],
   roles: {
-    parent: [workspace, folder],
-    editor: [user, withExpiration(user)],
+    editor: [user, user.expiring],
     approved: user,
   },
-  permissions: ({ parent, editor, approved }) => ({
-    view: [through(parent, permissionToken(folder.wireName, "view"))],
-    publish: [both(editor, approved)],
+  can: ({ parents, editor, approved }) => ({
+    view: parents.view,
+    publish: allOf(editor, approved),
   }),
 });
 
-const liveModel = accessModel([
-  userAccess,
+const liveModel = compileAccess([
+  user,
   groupAccess,
   workspaceAccess,
   folderAccess,
@@ -313,26 +302,50 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
   });
 
   it("runs connected Postgres access migrations live and enforces assertAccessMigrationsUpToDate", async () => {
-    const workspaceV2 = access(workspace, {
+    const workspaceV2 = resource("workspace", {
+      id: idSchema,
       roles: {
         participant: [
           user,
-          withExpiration(user),
-          membersOf(groupAccess.roles.member),
-          wildcard(user),
+          user.expiring,
+          groupAccess.roles.member,
+          user.anyone,
         ],
         banned: user,
       },
-      permissions: ({ participant, banned }) => ({
-        view: [excluding(participant, banned)],
+      can: ({ participant, banned }) => ({
+        view: participant.unless(banned),
       }),
     });
-    const modelV2 = accessModel([
-      userAccess,
+    const folderV2 = resource("folder", {
+      id: idSchema,
+      parents: [workspaceV2],
+      recursive: true,
+      roles: {
+        viewer: [user, user.expiring, groupAccess.roles.member],
+      },
+      can: ({ parents, viewer }) => ({
+        view: [viewer, parents.view],
+      }),
+    });
+    const documentV2 = resource("document", {
+      id: idSchema,
+      parents: [workspaceV2, folderV2],
+      roles: {
+        editor: [user, user.expiring],
+        approved: user,
+      },
+      can: ({ parents, editor, approved }) => ({
+        view: parents.view,
+        publish: allOf(editor, approved),
+      }),
+    });
+    const modelV2 = compileAccess([
+      user,
       groupAccess,
       workspaceV2,
-      folderAccess,
-      documentAccess,
+      folderV2,
+      documentV2,
     ]);
 
     const migration = defineAccessMigration(

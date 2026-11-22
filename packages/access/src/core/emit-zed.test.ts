@@ -4,49 +4,39 @@
  * trust the emitter.
  */
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
-import { excluding, gated, through, throughAll } from "./combinators.js";
-import { accessIrDefinitionsDiff } from "./compare-access-ir.js";
-import { emitAccessIr } from "./emit-ir.js";
-import { emitZed } from "./emit-zed.js";
-import { entityHandle } from "./entity-handle.js";
-import { grantable } from "./grantable.js";
-import { membersOf, wildcard, withExpiration } from "./holders.js";
-import { access } from "./model.js";
-import { parseZed } from "./parse-zed.js";
-import { accessModel } from "./access-model.js";
+import {
+  accessIrDefinitionsDiff,
+  actor,
+  allOf,
+  compileAccess,
+  emitAccessIr,
+  emitZed,
+  every,
+  parseZed,
+  resource,
+} from "../index.js";
 import { testGrantable } from "./test-support/test-grantable.js";
-
-const idSchema = z.string();
 
 describe("emitZed", () => {
   it("keeps company-actor grants separate from identity-based technical grants", () => {
-    const CompanyActor = entityHandle({
-      wireName: "access_management/company_actor",
-      idSchema,
-    });
-    const Workspace = entityHandle({ wireName: "test/workspace", idSchema });
-    const companyGrant = {
-      ...testGrantable(),
-      directSubject: CompanyActor,
-    };
+    const companyActor = actor("access_management/company_actor");
 
-    const workspace = access(Workspace, {
+    const workspace = resource("test/workspace", {
       roles: {
-        order_manager: grantable(companyGrant),
+        order_manager: testGrantable({ directSubject: companyActor }),
         technician: testGrantable({
           id: "test.technical",
           permission: "setup",
         }),
       },
-      permissions: (roles) => ({
-        manage_orders: [roles.order_manager],
-        setup: [roles.technician],
+      can: ({ order_manager, technician }) => ({
+        manage_orders: order_manager,
+        setup: technician,
       }),
     });
 
-    const model = accessModel([workspace]);
+    const model = compileAccess([workspace]);
     expect(emitZed(model)).toContain(
       "relation order_manager: access_management/company_actor | access_management/permission_set#member",
     );
@@ -56,54 +46,38 @@ describe("emitZed", () => {
   });
 
   it("emits an empty definition, grantable subjects, arrows, and exclusions", () => {
-    const User = entityHandle({ wireName: "user", idSchema });
-    const Platform = entityHandle({ wireName: "platform", idSchema });
-    const Organization = entityHandle({
-      wireName: "organizations/organization",
-      idSchema,
+    const user = actor("user");
+    const platform = resource("platform", {
+      roles: { super_admin: user },
+      can: ({ super_admin }) => ({ administer: super_admin }),
     });
-    const Assignment = entityHandle({
-      wireName: "platform/work_assignment",
-      idSchema,
+    const assignment = resource("platform/work_assignment", {
+      roles: { assignee: user },
     });
-
-    const user = access(User, {
-      roles: {},
-      permissions: () => ({}),
-    });
-
-    const assignment = access(Assignment, {
+    const organization = resource("organizations/organization", {
       roles: {
-        assignee: User,
-      },
-      permissions: () => ({}),
-    });
-
-    const organization = access(Organization, {
-      roles: {
-        admin: User,
-        parent_platform: Platform,
+        admin: user,
+        parent_platform: platform,
         formulator: testGrantable({}),
-        platform_tenancy: wildcard(User),
-        commissioner: membersOf(assignment.roles.assignee),
+        platform_tenancy: user.anyone,
+        commissioner: assignment.roles.assignee,
       },
-      permissions: (roles) => ({
-        view: [
-          roles.admin,
-          through(roles.parent_platform, {
-            kind: "permission",
-            entityWireName: "platform",
-            permissionName: "administer",
-          }),
-        ],
-        manage_recipes: [roles.formulator],
-        create_workspaces: [gated(roles.admin, roles.platform_tenancy)],
-        administer_party: [excluding(roles.admin, roles.platform_tenancy)],
-        commission: [roles.commissioner],
+      can: ({
+        admin,
+        parent_platform,
+        formulator,
+        platform_tenancy,
+        commissioner,
+      }) => ({
+        view: [admin, parent_platform.administer],
+        manage_recipes: formulator,
+        create_workspaces: allOf(admin, platform_tenancy),
+        administer_party: admin.unless(platform_tenancy),
+        commission: commissioner,
       }),
     });
 
-    const model = accessModel([user, assignment, organization]);
+    const model = compileAccess([user, assignment, organization]);
     expect(emitZed(model)).toBe(
       [
         // The one place the banner's wording is spelled out beside the emitter
@@ -130,75 +104,53 @@ describe("emitZed", () => {
         "  permission commission = commissioner",
         "}",
         "",
+        "definition platform {",
+        "  relation super_admin: user",
+        "",
+        "  permission administer = super_admin",
+        "}",
+        "",
       ].join("\n"),
     );
   });
 
-  it("wraps a gated arm so SpiceDB does not bind & across the preceding union", () => {
-    const User = entityHandle({ wireName: "user", idSchema });
-    const Platform = entityHandle({ wireName: "platform", idSchema });
-    const Organization = entityHandle({
-      wireName: "organizations/organization",
-      idSchema,
+  it("wraps an intersected arm so SpiceDB does not bind & across the preceding union", () => {
+    const user = actor("user");
+    const platform = resource("platform", {
+      roles: { super_admin: user },
+      can: ({ super_admin }) => ({ administer: super_admin }),
     });
-
-    const user = access(User, {
-      roles: {},
-      permissions: () => ({}),
-    });
-
-    const organization = access(Organization, {
+    const organization = resource("organizations/organization", {
       roles: {
-        admin: User,
-        parent_platform: Platform,
-        platform_tenancy: wildcard(User),
+        admin: user,
+        parent_platform: platform,
+        platform_tenancy: user.anyone,
       },
-      permissions: (roles) => ({
+      can: ({ admin, parent_platform, platform_tenancy }) => ({
         enter_customer_workspace: [
-          roles.admin,
-          gated(
-            through(roles.parent_platform, {
-              kind: "permission",
-              entityWireName: "platform",
-              permissionName: "administer",
-            }),
-            roles.platform_tenancy,
-          ),
+          admin,
+          allOf(parent_platform.administer, platform_tenancy),
         ],
       }),
     });
 
-    const model = accessModel([user, organization]);
+    const model = compileAccess([user, organization]);
     expect(emitZed(model)).toContain(
       "permission enter_customer_workspace = admin + ((parent_platform->administer) & (platform_tenancy))",
     );
   });
 
   it("wraps an excluding arm beside others so SpiceDB does not subtract the rest of the union", () => {
-    const User = entityHandle({ wireName: "user", idSchema });
-    const Organization = entityHandle({
-      wireName: "organizations/organization",
-      idSchema,
-    });
-
-    const user = access(User, {
-      roles: {},
-      permissions: () => ({}),
-    });
-
-    const organization = access(Organization, {
-      roles: { admin: User, auditor: User, banned: User, assignee: User },
-      permissions: (roles) => ({
-        view: [
-          roles.admin,
-          excluding(roles.auditor, roles.banned),
-          roles.assignee,
-        ],
-        audit: [excluding(roles.auditor, roles.banned)],
+    const user = actor("user");
+    const organization = resource("organizations/organization", {
+      roles: { admin: user, auditor: user, banned: user, assignee: user },
+      can: ({ admin, auditor, banned, assignee }) => ({
+        view: [admin, auditor.unless(banned), assignee],
+        audit: auditor.unless(banned),
       }),
     });
 
-    const model = accessModel([user, organization]);
+    const model = compileAccess([user, organization]);
     const emitted = emitZed(model);
     expect(emitted).toContain(
       "permission view = admin + ((auditor) - (banned)) + assignee",
@@ -210,35 +162,24 @@ describe("emitZed", () => {
     ).toEqual([]);
   });
 
-  it("emits use expiration, with expiration, and throughAll (.all()) and round-trips cleanly", () => {
-    const User = entityHandle({ wireName: "user", idSchema });
-    const Group = entityHandle({ wireName: "group", idSchema });
-    const Folder = entityHandle({ wireName: "folder", idSchema });
-
-    const user = access(User, { roles: {}, permissions: () => ({}) });
-    const group = access(Group, {
-      roles: { member: User },
-      permissions: (roles) => ({ is_member: [roles.member] }),
+  it("emits use expiration, with expiration, and every() (.all()) and round-trips cleanly", () => {
+    const user = actor("user");
+    const group = resource("group", {
+      roles: { member: user },
+      can: ({ member }) => ({ is_member: member }),
     });
-    const folder = access(Folder, {
+    const folder = resource("folder", {
       roles: {
-        viewer: [
-          withExpiration(User),
-          withExpiration(membersOf(group.roles.member)),
-        ],
-        public_link: withExpiration(wildcard(User)),
-        required_group: Group,
+        viewer: [user.expiring, group.roles.member.expiring],
+        public_link: user.anyone.expiring,
+        required_group: group,
       },
-      permissions: (roles) => ({
-        view: [
-          roles.viewer,
-          roles.public_link,
-          throughAll(roles.required_group, group.permissions.is_member),
-        ],
+      can: ({ viewer, public_link, required_group }) => ({
+        view: [viewer, public_link, every(required_group).is_member],
       }),
     });
 
-    const model = accessModel([user, group, folder]);
+    const model = compileAccess([user, group, folder]);
     const emitted = emitZed(model);
     expect(emitted).toContain(
       "// GENERATED by the access kit — do not edit\n\nuse expiration\n\ndefinition user {}",

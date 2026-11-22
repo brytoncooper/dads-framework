@@ -1,5 +1,5 @@
 import type { EntityHandle } from "./entity-handle.js";
-import type { AccessDefinition } from "./model.js";
+import type { RoleToken } from "./refs.js";
 
 /**
  * What one role on a record is, in the record's own storage. Kind only: the
@@ -40,16 +40,20 @@ export type ScopeBindings<Roles extends ScopeRoleBindings = ScopeRoleBindings> =
 export type ScopeRoleBindings = Readonly<Record<string, RoleBinding>>;
 
 /**
- * Declare how a record's roles are stored, so its lists can be filtered by
- * scope. Role names are checked against the access definition at compile time.
+ * Declare how a record resource's roles are stored, so its lists can be
+ * filtered by scope. Role names are checked against the resource's declared
+ * roles at compile time.
  */
 export function scopeBindings<
-  RoleTable,
-  PermissionTable,
+  RoleTable extends Readonly<Record<string, RoleToken>>,
   const Roles extends ScopeRoleBindings,
 >(
-  definition: AccessDefinition<RoleTable, PermissionTable>,
-  roles: Roles & Readonly<Record<Exclude<keyof Roles, keyof RoleTable>, never>>,
+  definition: {
+    readonly entity: EntityHandle;
+    readonly roles: RoleTable;
+  },
+  roles: Roles &
+    Readonly<Record<Exclude<keyof Roles, keyof RoleTable & string>, never>>,
 ): ScopeBindings<Roles> {
   return { entity: definition.entity, kind: "record", roles };
 }

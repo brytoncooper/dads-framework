@@ -13,6 +13,12 @@ export function permissionIdentity(entity: string, permission: string): string {
   return `${entity}\u0000${permission}`;
 }
 
+/** Split a `permissionIdentity` key back into `[entity, permission]`. */
+export function splitIdentity(value: string): readonly [string, string] {
+  const index = value.indexOf("\u0000");
+  return [value.slice(0, index), value.slice(index + 1)];
+}
+
 /** True when a tuple has no expiration or expires strictly after transaction start. */
 export function notExpired(alias: string): string {
   return `(${alias}.expires_at IS NULL OR ${alias}.expires_at > now())`;
@@ -24,13 +30,19 @@ export function notExpired(alias: string): string {
  */
 export class QueryBuilder {
   readonly values: PostgresValue[] = [];
+  readonly #paramOffset: number;
   #throughAliasCount = 0;
   #cteAliasCount = 0;
   #hasRecursive = false;
 
+  constructor(paramOffset = 1) {
+    this.#paramOffset = paramOffset;
+  }
+
   value(value: PostgresValue): string {
+    const index = this.#paramOffset + this.values.length;
     this.values.push(value);
-    return `$${String(this.values.length)}`;
+    return `$${String(index)}`;
   }
 
   get throughCount(): number {

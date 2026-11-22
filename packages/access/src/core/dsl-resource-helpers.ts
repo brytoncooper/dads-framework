@@ -6,17 +6,19 @@ import {
 } from "./dsl-actor.js";
 import type {
   AnyDslResource,
+  DslExpirableUsersetHolder,
   DslPermissionTarget,
   DslRoleHolder,
   DslRoleSlot,
   DslRolesSpec,
+  DslRoleToken,
   DslSingleRoleHolder,
 } from "./dsl-types.js";
 import type { EntityHandle } from "./entity-handle.js";
 import { membersOf } from "./holders.js";
 import type { SingleRoleValue } from "./holders.js";
 import { isRoleToken, permissionToken } from "./refs.js";
-import type { PermissionToken, RoleHolder, RoleToken } from "./refs.js";
+import type { PermissionToken, RoleHolder } from "./refs.js";
 
 function isHolderArray(
   holder: DslRoleHolder,
@@ -50,7 +52,13 @@ function createLazyRoleToken(
   entityWireName: string,
   roleName: string,
   getHolder: () => RoleHolder,
-): RoleToken {
+): DslRoleToken {
+  const expiring: DslExpirableUsersetHolder = {
+    kind: "expirable",
+    holder: { kind: "userset", entityWireName, roleName },
+    entityWireName,
+    roleName,
+  };
   return {
     kind: "role",
     entityWireName,
@@ -58,6 +66,7 @@ function createLazyRoleToken(
     get holder(): RoleHolder {
       return getHolder();
     },
+    expiring,
   };
 }
 
@@ -92,8 +101,8 @@ function buildAutoParentRoles(
   parentResource: AnyDslResource | undefined,
   parents: readonly AnyDslResource[],
   recursive: boolean,
-): Record<string, RoleToken> {
-  const roles: Record<string, RoleToken> = {};
+): Record<string, DslRoleToken> {
+  const roles: Record<string, DslRoleToken> = {};
   const parentRoleName =
     parentResource === undefined
       ? undefined
@@ -123,7 +132,7 @@ export function buildRoleTokens(
   parentResource: AnyDslResource | undefined,
   parents: readonly AnyDslResource[],
   recursive: boolean,
-): Record<string, RoleToken> {
+): Record<string, DslRoleToken> {
   const roles = buildAutoParentRoles(
     wireName,
     handle,

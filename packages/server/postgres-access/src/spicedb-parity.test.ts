@@ -1,20 +1,16 @@
 import {
-  access,
-  accessModel,
-  both,
-  entityHandle,
-  excluding,
-  membersOf,
+  actor,
+  allOf,
+  anyOf,
+  compileAccess,
+  every,
   permissionToken,
+  resource,
   roleToken,
-  through,
-  throughAll,
-  wildcard,
-  withExpiration,
+  type AnyDslResource,
 } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
 import { compileAccessPolicy } from "./compile-access-policy.js";
 import {
@@ -50,73 +46,52 @@ function createRecordingExecutor(rows: readonly PostgresRow[] = []): {
 }
 
 function buildParityModel() {
-  const user = entityHandle({ wireName: "user", idSchema: z.string() });
-  const group = entityHandle({ wireName: "group", idSchema: z.string() });
-  const workspace = entityHandle({
-    wireName: "workspace",
-    idSchema: z.string(),
+  const user = actor("user");
+  const groupMemberRef = roleToken("group", "member", user.handle);
+  const group = resource("group", {
+    roles: { member: [user, groupMemberRef] },
+    can: ({ member }) => ({ view: member }),
   });
-  const folder = entityHandle({ wireName: "folder", idSchema: z.string() });
-  const document = entityHandle({ wireName: "document", idSchema: z.string() });
-
-  const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-  const groupMemberRef = roleToken(group.wireName, "member", user);
-  const groupAccess = access(group, {
-    roles: { member: [user, membersOf(groupMemberRef)] },
-    permissions: ({ member }) => ({ view: [member] }),
-  });
-  const workspaceAccess = access(workspace, {
+  const workspace = resource("workspace", {
     roles: {
-      member: [
-        withExpiration(user),
-        membersOf(groupAccess.roles.member),
-        wildcard(user),
-      ],
+      member: [user.expiring, group.roles.member, user.anyone],
       billing_admin: user,
     },
-    permissions: ({ member, billing_admin }) => ({
-      view: [member],
-      manage_billing: [billing_admin],
+    can: ({ member, billing_admin }) => ({
+      view: member,
+      manage_billing: billing_admin,
     }),
   });
-  const folderAccess = access(folder, {
+  const folder = resource("folder", {
+    parents: [workspace],
+    recursive: true,
     roles: {
-      parent: [workspace, folder],
-      viewer: [
-        withExpiration(user),
-        membersOf(groupAccess.roles.member),
-        wildcard(user),
-      ],
+      viewer: [user.expiring, group.roles.member, user.anyone],
     },
-    permissions: ({ parent, viewer }) => ({
-      view: [viewer, through(parent, permissionToken(folder.wireName, "view"))],
+    can: ({ parents, viewer }) => ({
+      view: anyOf(viewer, parents.view),
     }),
   });
-  const documentAccess = access(document, {
+  const document = resource("document", {
+    parents: [workspace, folder],
     roles: {
-      parent: [workspace, folder],
-      viewer: [withExpiration(user), wildcard(user)],
+      viewer: [user.expiring, user.anyone],
       approver: user,
       banned: user,
     },
-    permissions: ({ parent, viewer, approver, banned }) => ({
-      view: [
-        excluding(viewer, banned),
-        through(parent, workspaceAccess.permissions.view),
-      ],
-      billing: [through(parent, workspaceAccess.permissions.manage_billing)],
-      strict_view: [throughAll(parent, workspaceAccess.permissions.view)],
-      approved_view: [both(viewer, approver)],
+    can: ({ parents, viewer, approver, banned }) => ({
+      view: anyOf(viewer.unless(banned), parents.view),
+      billing: {
+        kind: "through",
+        role: parents.$roleToken,
+        target: workspace.can.manage_billing,
+      },
+      strict_view: every(parents).view,
+      approved_view: allOf(viewer, approver),
     }),
   });
 
-  return accessModel([
-    userAccess,
-    groupAccess,
-    workspaceAccess,
-    folderAccess,
-    documentAccess,
-  ]);
+  return compileAccess([user, group, workspace, folder, document]);
 }
 
 describe("expiring relationships (expires_at)", () => {
@@ -211,49 +186,29 @@ describe("expiring relationships (expires_at)", () => {
   });
 
   it("enforces expires_at predicate across linear, point, batch, reverse, shared, and subject SQL", () => {
-    const user = entityHandle({ wireName: "user", idSchema: z.string() });
-    const l1 = entityHandle({ wireName: "l1", idSchema: z.string() });
-    const l2 = entityHandle({ wireName: "l2", idSchema: z.string() });
-    const l3 = entityHandle({ wireName: "l3", idSchema: z.string() });
-    const l4 = entityHandle({ wireName: "l4", idSchema: z.string() });
-    const l5 = entityHandle({ wireName: "l5", idSchema: z.string() });
-    const l1Access = access(l1, {
+    const user = actor("user");
+    const l1 = resource("l1", {
       roles: { member: user },
-      permissions: ({ member }) => ({ view: [member] }),
+      can: ({ member }) => ({ view: member }),
     });
-    const l2Access = access(l2, {
+    const l2 = resource("l2", {
       roles: { p: l1 },
-      permissions: ({ p }) => ({
-        view: [through(p, l1Access.permissions.view)],
-      }),
+      can: ({ p }) => ({ view: p.view }),
     });
-    const l3Access = access(l3, {
+    const l3 = resource("l3", {
       roles: { p: l2 },
-      permissions: ({ p }) => ({
-        view: [through(p, l2Access.permissions.view)],
-      }),
+      can: ({ p }) => ({ view: p.view }),
     });
-    const l4Access = access(l4, {
+    const l4 = resource("l4", {
       roles: { p: l3 },
-      permissions: ({ p }) => ({
-        view: [through(p, l3Access.permissions.view)],
-      }),
+      can: ({ p }) => ({ view: p.view }),
     });
-    const l5Access = access(l5, {
+    const l5 = resource("l5", {
       roles: { p: l4 },
-      permissions: ({ p }) => ({
-        view: [through(p, l4Access.permissions.view)],
-      }),
+      can: ({ p }) => ({ view: p.view }),
     });
     const linearModel = compileAccessPolicy(
-      accessModel([
-        access(user, { roles: {}, permissions: () => ({}) }),
-        l1Access,
-        l2Access,
-        l3Access,
-        l4Access,
-        l5Access,
-      ]),
+      compileAccess([user, l1, l2, l3, l4, l5]),
     ).model;
 
     const linear = compileLinearCheck(linearModel, "ns", {
@@ -440,28 +395,28 @@ describe("recursive arrows (nested folders & mutual recursion)", () => {
   });
 
   it("compiles mutually recursive arrow cycles cleanly", () => {
-    const user = entityHandle({ wireName: "user", idSchema: z.string() });
-    const alpha = entityHandle({ wireName: "alpha", idSchema: z.string() });
-    const beta = entityHandle({ wireName: "beta", idSchema: z.string() });
-    const alphaAccess = access(alpha, {
-      roles: { viewer: user, parent_beta: beta },
-      permissions: ({ viewer, parent_beta }) => ({
-        view: [viewer, through(parent_beta, permissionToken("beta", "view"))],
+    const user = actor("user");
+    const alpha: AnyDslResource = resource("alpha", {
+      roles: { viewer: user, parent_beta: (): AnyDslResource => beta },
+      can: ({ viewer, parent_beta }) => ({
+        view: anyOf(viewer, {
+          kind: "through",
+          role: parent_beta.$roleToken,
+          target: permissionToken("beta", "view"),
+        }),
       }),
     });
-    const betaAccess = access(beta, {
+    const beta = resource("beta", {
       roles: { viewer: user, parent_alpha: alpha },
-      permissions: ({ viewer, parent_alpha }) => ({
-        view: [viewer, through(parent_alpha, permissionToken("alpha", "view"))],
+      can: ({ viewer, parent_alpha }) => ({
+        view: anyOf(viewer, {
+          kind: "through",
+          role: parent_alpha.$roleToken,
+          target: permissionToken("alpha", "view"),
+        }),
       }),
     });
-    const compiled = compileAccessPolicy(
-      accessModel([
-        access(user, { roles: {}, permissions: () => ({}) }),
-        alphaAccess,
-        betaAccess,
-      ]),
-    );
+    const compiled = compileAccessPolicy(compileAccess([user, alpha, beta]));
 
     const check = compilePostgresCheck(compiled.model, "ns", {
       subject: { type: "user", id: "alice" },

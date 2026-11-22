@@ -22,6 +22,7 @@ import {
   QueryBuilder,
   relationMembershipCheck,
   resolveArrowTargets,
+  splitIdentity,
   subjectReachability,
   TUPLES,
 } from "./policy-sql.js";
@@ -210,18 +211,22 @@ export function compilePostgresCandidatePredicate(
   model: AuthorizationModelDefinition,
   namespace: string,
   request: NormalizedResourceLookup,
+  options?: { readonly idColumn?: string; readonly paramOffset?: number },
 ): CompiledAuthorizationQuery {
-  const builder = new QueryBuilder();
+  const builder = new QueryBuilder(options?.paramOffset ?? 1);
   const context = createForwardContext(model, builder, namespace, {
     type: builder.value(request.subject.type),
     id: builder.value(request.subject.id),
     entity: request.subject.type,
   });
+  const idColumn =
+    options?.idColumn ??
+    `${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.tableAlias}.${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.resourceIdColumn}`;
   const expression = compileForwardPermission(
     context,
     {
       type: builder.value(request.resourceType),
-      id: `${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.tableAlias}.${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.resourceIdColumn}`,
+      id: idColumn,
       entity: request.resourceType,
     },
     request.permission,
@@ -390,9 +395,4 @@ function compileArrowTargetBranches(
     return `(${tupleAlias}.subject_kind = ${targetKindSql} AND (${child}))`;
   });
   return branches.join(" OR ");
-}
-
-function splitIdentity(value: string): readonly [string, string] {
-  const index = value.indexOf("\u0000");
-  return [value.slice(0, index), value.slice(index + 1)];
 }

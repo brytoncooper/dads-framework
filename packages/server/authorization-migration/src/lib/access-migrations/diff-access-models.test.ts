@@ -1,14 +1,9 @@
 import {
-  access,
-  accessModel,
-  both,
-  entityHandle,
-  excluding,
-  membersOf,
+  actor,
+  allOf,
+  compileAccess,
   parseZed,
-  through,
-  wildcard,
-  withExpiration,
+  resource,
 } from "@dads-framework/access";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -16,26 +11,24 @@ import { z } from "zod";
 import { diffAccessIr, diffAccessModels } from "./diff-access-models.js";
 
 const idSchema = z.string().min(1);
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({ wireName: "group", idSchema });
-const workspace = entityHandle({ wireName: "workspace", idSchema });
-const document = entityHandle({ wireName: "document", idSchema });
+const user = actor("user", { id: idSchema });
 
 describe("diffAccessModels", () => {
   it("reports no changes when two models are semantically identical (ignoring OR order)", () => {
-    const userDef = access(user, { roles: {}, permissions: () => ({}) });
-    const docA = access(document, {
+    const docA = resource("document", {
+      id: idSchema,
       roles: { owner: user, editor: user },
-      permissions: ({ owner, editor }) => ({ view: [owner, editor] }),
+      can: ({ owner, editor }) => ({ view: [owner, editor] }),
     });
-    const docB = access(document, {
+    const docB = resource("document", {
+      id: idSchema,
       roles: { owner: user, editor: user },
-      permissions: ({ owner, editor }) => ({ view: [editor, owner] }),
+      can: ({ owner, editor }) => ({ view: [editor, owner] }),
     });
 
     const diff = diffAccessModels(
-      accessModel([userDef, docA]),
-      accessModel([userDef, docB]),
+      compileAccess([user, docA]),
+      compileAccess([user, docB]),
     );
 
     expect(diff.requiresMigration).toBe(false);
@@ -46,33 +39,36 @@ describe("diffAccessModels", () => {
   });
 
   it("classifies added resources, added roles, widened roles, added expiration, and permission changes as safe", () => {
-    const userDef = access(user, { roles: {}, permissions: () => ({}) });
-    const groupDef = access(group, {
+    const groupDef = resource("group", {
+      id: idSchema,
       roles: { member: user },
-      permissions: () => ({}),
+      can: () => ({}),
     });
-    const docV1 = access(document, {
+    const docV1 = resource("document", {
+      id: idSchema,
       roles: { viewer: user },
-      permissions: ({ viewer }) => ({ view: [viewer] }),
+      can: ({ viewer }) => ({ view: viewer }),
     });
-    const docV2 = access(document, {
+    const docV2 = resource("document", {
+      id: idSchema,
       roles: {
-        viewer: [withExpiration(user), membersOf(groupDef.roles.member)],
+        viewer: [user.expiring, groupDef.roles.member],
         editor: user,
       },
-      permissions: ({ viewer, editor }) => ({
+      can: ({ viewer, editor }) => ({
         view: [viewer, editor],
-        edit: [editor],
+        edit: editor,
       }),
     });
-    const workspaceDef = access(workspace, {
+    const workspaceDef = resource("workspace", {
+      id: idSchema,
       roles: { member: user },
-      permissions: ({ member }) => ({ read: [member] }),
+      can: ({ member }) => ({ read: member }),
     });
 
     const diff = diffAccessModels(
-      accessModel([userDef, groupDef, docV1]),
-      accessModel([userDef, groupDef, docV2, workspaceDef]),
+      compileAccess([user, groupDef, docV1]),
+      compileAccess([user, groupDef, docV2, workspaceDef]),
     );
 
     expect(diff.requiresMigration).toBe(false);
@@ -135,35 +131,37 @@ describe("diffAccessModels", () => {
   });
 
   it("classifies removed resources, removed roles, narrowed role subject types, and removed expiration as breaking", () => {
-    const userDef = access(user, { roles: {}, permissions: () => ({}) });
-    const workspaceV1 = access(workspace, {
+    const workspaceV1 = resource("workspace", {
+      id: idSchema,
       roles: {
-        member: [withExpiration(user), wildcard(user)],
+        member: [user.expiring, user.anyone],
         legacy_admin: user,
       },
-      permissions: ({ member, legacy_admin }) => ({
+      can: ({ member, legacy_admin }) => ({
         view: [member, legacy_admin],
       }),
     });
-    const docV1 = access(document, {
-      roles: { parent: workspace },
-      permissions: ({ parent }) => ({
-        view: [through(parent, workspaceV1.permissions.view)],
+    const docV1 = resource("document", {
+      id: idSchema,
+      roles: { parent: workspaceV1 },
+      can: ({ parent }) => ({
+        view: parent.view,
       }),
     });
 
-    const workspaceV2 = access(workspace, {
+    const workspaceV2 = resource("workspace", {
+      id: idSchema,
       roles: {
         member: user,
       },
-      permissions: ({ member }) => ({
-        view: [member],
+      can: ({ member }) => ({
+        view: member,
       }),
     });
 
     const diff = diffAccessModels(
-      accessModel([userDef, workspaceV1, docV1]),
-      accessModel([userDef, workspaceV2]),
+      compileAccess([user, workspaceV1, docV1]),
+      compileAccess([user, workspaceV2]),
     );
 
     expect(diff.requiresMigration).toBe(true);
@@ -219,25 +217,26 @@ describe("diffAccessModels", () => {
   });
 
   it("handles removed permissions safely and notes them in permissionChanges", () => {
-    const userDef = access(user, { roles: {}, permissions: () => ({}) });
-    const docV1 = access(document, {
+    const docV1 = resource("document", {
+      id: idSchema,
       roles: { editor: user, approved: user },
-      permissions: ({ editor, approved }) => ({
-        view: [editor],
-        publish: [both(editor, approved)],
-        safe_view: [excluding(editor, approved)],
+      can: ({ editor, approved }) => ({
+        view: editor,
+        publish: allOf(editor, approved),
+        safe_view: editor.unless(approved),
       }),
     });
-    const docV2 = access(document, {
+    const docV2 = resource("document", {
+      id: idSchema,
       roles: { editor: user, approved: user },
-      permissions: ({ editor }) => ({
-        view: [editor],
+      can: ({ editor }) => ({
+        view: editor,
       }),
     });
 
     const diff = diffAccessModels(
-      accessModel([userDef, docV1]),
-      accessModel([userDef, docV2]),
+      compileAccess([user, docV1]),
+      compileAccess([user, docV2]),
     );
 
     expect(diff.requiresMigration).toBe(false);

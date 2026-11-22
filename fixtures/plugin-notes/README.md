@@ -7,7 +7,7 @@ clock service.
 `src/notes-plugin.test.ts` is the end-to-end proof of the plugin contract: the
 route answers through `@dads-framework/http`, the job runs in the in-process
 job queue, `discoverDomainMigrations` finds the migration under the plugin's
-name, the access definition is the one `emitAccessIr(accessModel(app.access))` emits, and stopping
+name, the access definition is the one `emitAccessIr(compileAccess(app.access))` emits, and stopping
 the app clears the timer.
 
 ```sh

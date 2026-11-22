@@ -83,16 +83,19 @@ for self-nested folders.
 
 At application startup, pass the root resources to `compileAccess([organization])`.
 `compileAccess` auto-discovers inline `children`, `.child()` branches, `parents`,
-lazy thunks, and actors into one `AccessModel`. Pass optional `bindings`
-(`scopeBindings`) when scaling SpiceDB record lists. Use the same compiled model
-for PostgreSQL, SQLite, SpiceDB `.zed` generation, and route guards.
+lazy thunks, and actors into one `AccessModel`. Use `compileAccessFromIr(definitions)`
+to lower parsed `.zed` IR directly into an `AccessModel`. Use the same compiled
+model for PostgreSQL, SQLite, SpiceDB `.zed` generation, and route guards.
 
-For permissions that customers may grant, `grantable` takes the app's scope
-names and direct subject handle. Use `membersOf` (or `team.roles.member` in the
-DSL) to declare an optional group subject. Use `lifecycleTrigger(name)` to name
-a grant removal event that the application handles. The lower-level
-`entityHandle`, `access`, and `accessModel` builders remain exported for
-existing callers.
+Optional subpaths keep advanced features out of the core API:
+
+- **`@dads-framework/access/catalog`:** Exports `grantable`, `lifecycleTrigger`,
+  `catalogOnly`, `checkAccessConformance`, and `missingGrantingAdvisories` for
+  customer-assignable role editors and lifecycle governance.
+- **`@dads-framework/access/scopes`:** Exports `scopeBindings`, `compileScopePlan`,
+  `checkScopeBindings`, `isSparseDirectGrant`, and `isLookupResourcesAllowed` for
+  fail-closed SpiceDB scoped list planning (`allowLookupResourcesOn` and `bindings`
+  on `compileAccess`).
 
 ## What it refuses to do
 
@@ -102,23 +105,23 @@ A scope plan with an unbound role or cyclic traversal fails to compile.
 
 ## Contract
 
-`compileAccess(nodes, options?)` builds an `AccessModel`, `formatAccessTree(model)`
-renders a deterministic ASCII tree with `[inherited]`, `[inherited+local]`, and
-`[local]` tags, `emitAccessIr(model)` returns plain IR data, and `emitZed(model)`
-produces SpiceDB schema text. `emitTypeScript(definitions, options?)` and
-`emitTypeScriptFromZed(zed, options?)` compile access IR or SpiceDB `.zed` text
-into typed Dads TypeScript declarations (`style: "ergonomic"` by default, or
-`style: "classic"` for `entityHandle` / `access` / `accessModel`). `checkAccessConformance(model.definitions)` checks
-grant metadata and requirements. `checkScopeBindings(model)` checks the default
-`view` permission of each bound record.
+`compileAccess(nodes, options?)` builds an `AccessModel`, `compileAccessFromIr(definitions, options?)`
+lowers parsed IR into an `AccessModel`, `formatAccessTree(model)` renders a
+deterministic ASCII tree with `[inherited]`, `[inherited+local]`, and `[local]`
+tags, `emitAccessIr(model)` returns plain IR data, and `emitZed(model)` produces
+SpiceDB schema text. `emitTypeScript(definitions)` and `emitTypeScriptFromZed(zed)`
+compile access IR or SpiceDB `.zed` text into ergonomic Dads TypeScript
+declarations. `checkAccessConformance(model.definitions)` checks grant metadata
+and requirements. `checkScopeBindings(model)` checks the default `view`
+permission of each bound resource.
 
 Permission expressions support unions (`anyOf` / `.or()` / arrays),
-intersections (`allOf` / `.and()` / `both`), exclusions (`.unless()` /
-`excluding`), parent traversal (`parent.view` / `through`), and universal
-intersection arrows (`every(link).approve` / `throughAll`, emitted as `.all()`).
-Use `user.expiring` (or `withExpiration(holder)`) for expiring grants and
-`user.anyone` (or `wildcard(holder)`) for wildcards. Contextual conditions,
-SpiceDB caveats, and `nil` are outside the compiler's supported syntax.
+intersections (`allOf` / `.and()`), exclusions (`.unless()`), parent traversal
+(`parent.view` / `parents.view`), and universal intersection arrows
+(`every(link).approve`, emitted as `.all()`). Use `user.expiring` for expiring
+grants, `user.anyone` for wildcards, and `team.roles.member` for usersets.
+Contextual conditions, SpiceDB caveats, and `nil` are outside the compiler's
+supported syntax.
 
 ### Checking a committed SpiceDB schema
 

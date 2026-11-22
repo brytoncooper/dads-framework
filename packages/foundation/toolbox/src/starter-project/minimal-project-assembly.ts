@@ -266,7 +266,7 @@ export function tenantFromParams(params: unknown): string | null | undefined {
 function startAppAssemblyFile(): StarterProjectFile {
   return {
     path: "assembly/start-app.ts",
-    content: `import { accessModel } from "@dads-framework/access";
+    content: `import { compileAccess } from "@dads-framework/access";
 import { anonymousActor } from "@dads-framework/audit-actor";
 import { sql } from "drizzle-orm";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
@@ -275,6 +275,7 @@ import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
 import { IDENTITY_PATH } from "@dads-framework/identity-better-auth";
 import type { TelemetryRuntime } from "@dads-framework/telemetry";
 
+import { tenantAccess } from "../libraries/app-runtime/index.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";
 import { sessionSubjects } from "./session-subjects.js";
 import {
@@ -292,7 +293,9 @@ export async function startApp(
     openServices(scope, config, model, composed.flags),
   );
   const composed = apiEntrypoints[name](provider);
-  const model = accessModel(composed.access);
+  const model = compileAccess(composed.access, {
+    allowLookupResourcesOn: [tenantAccess.tenant],
+  });
   const running = await composed.start();
   try {
     const { authorization, identity, db, local, mailJobs } =

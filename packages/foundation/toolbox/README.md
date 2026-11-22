@@ -305,16 +305,15 @@ workflow from an owning repository to a consuming repository.
 
 ### Access schemas
 
-`dad access import <schema.zed> [--out <path>] [--style <ergonomic|classic>] [--dry-run] [--json]`
+`dad access import <schema.zed> [--out <path>] [--dry-run] [--json]`
 
 Reads a SpiceDB `.zed` schema file, parses it with `@dads-framework/access`,
-and emits strict Dads TypeScript. By default `--style` is `ergonomic` (`actor`,
-`resource`, `compileAccess`); pass `--style classic` for `entityHandle`,
-`access`, and `accessModel`. Without `--out` or `--json`, the generated
-TypeScript prints directly to stdout so `npx dad access import schema.zed > access.ts`
-works out of the box. With `--out <path>`, Dad creates parent directories and
-writes the file unless `--dry-run` is set. Unsupported SpiceDB constructs such
-as `caveat` fail with a line-numbered error and exit `1`.
+and emits strict Dads TypeScript (`actor`, `resource`, `compileAccess`).
+Without `--out` or `--json`, the generated TypeScript prints directly to stdout
+so `npx dad access import schema.zed > access.ts` works out of the box. With
+`--out <path>`, Dad creates parent directories and writes the file unless
+`--dry-run` is set. Unsupported SpiceDB constructs such as `caveat` fail with a
+line-numbered error and exit `1`.
 
 `dad access tree <schema.ts|schema.zed> [--json]`
 
@@ -427,7 +426,6 @@ Errors, and when each happens:
 | `Unable to read the changed git scope[: <detail>]`                             | Git could not report the changed paths                  |
 | `Refusing to replace existing package script <name>. …`                        | A recipe script name is already taken                   |
 | `access import requires a path to a .zed schema file.`                         | `access import` with no schema path                     |
-| `--style must be ergonomic or classic.`                                        | `access import --style` with an unsupported style       |
 | `access tree requires a path to a .ts or .zed access file.`                    | `access tree` with no schema path                       |
 | `access diff requires <before> and <after> schema file paths (.ts or .zed).`   | `access diff` with fewer than two schema paths          |
 | `access migrate requires a migration slug.`                                    | `access migrate` with no slug                           |

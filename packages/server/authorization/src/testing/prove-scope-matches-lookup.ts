@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 
-import { describeScopePlan, type AccessModel } from "@dads-framework/access";
+import type { AccessModel } from "@dads-framework/access";
+import { describeScopePlan } from "@dads-framework/access/scopes";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";

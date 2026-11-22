@@ -1,5 +1,6 @@
-import type { AccessModel, ScopePlan } from "@dads-framework/access";
+import type { AccessModel } from "@dads-framework/access";
 import { answerScope, planScopedList } from "@dads-framework/access/runtime";
+import type { ScopePlan } from "@dads-framework/access/scopes";
 
 import { HttpWiringError } from "../http-errors.js";
 import type { ScopedAccess } from "../route/access.js";

@@ -45,10 +45,11 @@ If your app uses Drizzle, import `withProtectedDrizzleTransaction` (and
 `transactionExecutor`) from `@dads-framework/postgres-access/drizzle`. Pass
 `{ database, authorization }` to open a serializable Drizzle transaction, or
 `{ transaction: tx, authorization }` to join an existing serializable
-transaction. Existing Dads apps using `@dads-framework/postgres` can also keep
-using `withProtectedPostgresTransaction`. When joining an outer transaction,
-the caller still owns commit and rollback; propagate failures so the outer
-transaction rolls back (the helper does not create a savepoint).
+transaction. Core `withProtectedPostgresTransaction` and
+`withProtectedPgTransaction` both target plain `pg.Pool` with zero Drizzle
+dependency. When joining an outer transaction, the caller still owns commit and
+rollback; propagate failures so the outer transaction rolls back (the helper
+does not create a savepoint).
 
 ### Serialization conflicts and ordering
 
@@ -211,11 +212,12 @@ listing, and relationship existence reads. Unknown permission names give denied
 checks, empty resource lookups, and `{ subjects: [], hasWildcard: false }` for
 `lookupSubjects`. Invalid tuple writes and failed storage operations reject.
 
-- **Expiring relationships (`expiresAt`)**: `relationshipSchemaMigration` creates `expires_at timestamptz NULL` with a partial index (`dad_authorization_relationship_expires_at`). Existing v1 installations can apply the additive `relationshipExpirationMigration` (version 2). `writeRelationships` persists `expiresAt ?? null` with `ON CONFLICT (...) DO UPDATE SET expires_at = EXCLUDED.expires_at` so re-writing a tuple updates or clears its expiration. Every read (`check`, `checkMany`, `lookupResources`, `lookupSubjects`, `listDirectSubjects`, and `relationshipExists`) filters `(expires_at IS NULL OR expires_at > now())` using transaction-scoped Postgres `now()`.
-- **Polymorphic arrows**: Relations with multiple direct entity types (such as `parents: [organization, folder]`) lower `through` and `every()` across every target entity type that defines the target permission, matching `subject_kind` per branch across checks, resource lookups, shared point checks, and subject lookups.
-- **Recursive arrows**: Monotonic self-referential and mutually recursive arrow cycles (such as nested folders with `recursive: true`) compile to `WITH RECURSIVE` CTEs with `UNION` deduplication so cyclic tuple data terminates safely across `check`, `checkMany`, `lookupResources`, and `lookupSubjects`.
-- **Intersection arrows (`every()` / `throughAll`)**: Compiles to SpiceDB's non-vacuous `.all()` semantics (`EXISTS` at least one non-expired parent tuple `AND NOT EXISTS` a non-expired parent tuple failing the target permission) across `check`, `checkMany`, `lookupResources`, and `lookupSubjects`.
-- **Transitive `lookupSubjects`**: Evaluates a single parameterized SQL query returning sorted unique concrete `subjects` and `hasWildcard` across direct roles, recursive usersets, wildcards, `allOf` / `both`, `.unless()` / `excluding`, polymorphic arrows, recursive arrows, `every()` / `throughAll`, and `expires_at`. Available on root, `inTransaction`, `inDrizzleTransaction`, and protected transaction scopes.
+- **Compiled SQL list filters (`compileFilter`)**: `authorization.compileFilter({ subject, permission, resourceType, idColumn, paramOffset? })` returns `{ sql, values }` (`EXISTS` predicate or recursive `IN (WITH RECURSIVE ...)`) so paginated, sorted `SELECT ... WHERE ... LIMIT N` queries filter authorized rows in one database round trip without loading ID lists into Node. Validates `idColumn` strictly and fails closed to `FALSE` on unknown permissions.
+- **Expiring relationships (`expiresAt`)**: `relationshipSchemaMigration` creates `expires_at timestamptz NULL` with a partial index (`dad_authorization_relationship_expires_at`). Existing v1 installations can apply the additive `relationshipExpirationMigration` (version 2). `writeRelationships` persists `expiresAt ?? null` with `ON CONFLICT (...) DO UPDATE SET expires_at = EXCLUDED.expires_at` so re-writing a tuple updates or clears its expiration. Every read (`check`, `checkMany`, `lookupResources`, `lookupSubjects`, `compileFilter`, `listDirectSubjects`, and `relationshipExists`) filters `(expires_at IS NULL OR expires_at > now())` using transaction-scoped Postgres `now()`.
+- **Polymorphic arrows**: Relations with multiple direct entity types (such as `parents: [organization, folder]`) lower parent arrows and `every()` across every target entity type that defines the target permission, matching `subject_kind` per branch across checks, resource lookups, filters, shared point checks, and subject lookups.
+- **Recursive arrows**: Monotonic self-referential and mutually recursive arrow cycles (such as nested folders with `recursive: true`) compile to `WITH RECURSIVE` CTEs with `UNION` deduplication so cyclic tuple data terminates safely across `check`, `checkMany`, `lookupResources`, `compileFilter`, and `lookupSubjects`.
+- **Intersection arrows (`every()`)**: Compiles to SpiceDB's `.all()` semantics (`EXISTS` at least one non-expired parent tuple `AND NOT EXISTS` a non-expired parent tuple failing the target permission) across `check`, `checkMany`, `lookupResources`, `compileFilter`, and `lookupSubjects`.
+- **Transitive `lookupSubjects`**: Evaluates a single parameterized SQL query returning sorted unique concrete `subjects` and `hasWildcard` across direct roles, recursive usersets, wildcards, `allOf`, `.unless()`, polymorphic arrows, recursive arrows, `every()`, and `expires_at`. Available on root, `inTransaction`, `inDrizzleTransaction`, and protected transaction scopes.
 
 For operations on a root adapter, `queryTimeoutMs` defaults to 5,000 ms. It
 is a client deadline for executors that honor node-postgres query options.

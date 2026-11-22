@@ -9,14 +9,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
-  access,
-  accessModel,
-  entityHandle,
-  scopeBindings,
-  through,
-  wildcard,
+  actor,
+  compileAccess,
+  resource,
   type PermissionToken,
 } from "@dads-framework/access";
+import { scopeBindings } from "@dads-framework/access/scopes";
 import { requiresScoped } from "../route/route-guards.test-support.js";
 import type { ResourceLookup } from "@dads-framework/access/runtime";
 import { paginationQuerySchema } from "@dads-framework/contract";
@@ -31,40 +29,28 @@ import type { SubjectResolver } from "./enforce-access.js";
 import { registerRoutes } from "./register-routes.js";
 
 const idSchema = z.string();
-const User = entityHandle({ wireName: "scopedhttp/user", idSchema });
-const Team = entityHandle({
-  wireName: "scopedhttp/team",
-  idSchema,
-  kind: "scope",
-});
-const Note = entityHandle({
-  wireName: "scopedhttp/note",
-  idSchema,
-  kind: "record",
-});
-const Memo = entityHandle({
-  wireName: "scopedhttp/memo",
-  idSchema,
-  kind: "record",
-});
+const User = actor("scopedhttp/user", { id: idSchema });
 
-const team = access(Team, {
+const team = resource("scopedhttp/team", {
+  id: idSchema,
   roles: { member: User },
-  permissions: (roles) => ({ view: [roles.member] }),
+  can: ({ member }) => ({ view: member }),
 });
 
-const note = access(Note, {
-  roles: { team: Team, published: wildcard(User) },
-  permissions: (roles) => ({
-    view: [through(roles.team, team.permissions.view), roles.published],
+const note = resource("scopedhttp/note", {
+  id: idSchema,
+  roles: { team, published: User.anyone },
+  can: ({ team: parentTeam, published }) => ({
+    view: [parentTeam.view, published],
   }),
 });
 
 // Bound nowhere: a list scoped by memo.view cannot be compiled.
-const memo = access(Memo, {
-  roles: { team: Team },
-  permissions: (roles) => ({
-    view: [through(roles.team, team.permissions.view)],
+const memo = resource("scopedhttp/memo", {
+  id: idSchema,
+  roles: { team },
+  can: ({ team: parentTeam }) => ({
+    view: parentTeam.view,
   }),
 });
 
@@ -73,7 +59,10 @@ const noteBindings = scopeBindings(note, {
   published: { kind: "tag" },
 });
 
-const model = accessModel([team, note, memo], [noteBindings]);
+const model = compileAccess([User, team, note, memo], {
+  bindings: [noteBindings],
+  allowLookupResourcesOn: [team],
+});
 
 const subjects: SubjectResolver = {
   resolve: (request) => {

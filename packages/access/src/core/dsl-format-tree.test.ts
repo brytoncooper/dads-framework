@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  actor,
-  allowVisibleOnRecordUntil,
-  compileAccess,
-  formatAccessTree,
-  resource,
-  type ScopeBindings,
-} from "../index.js";
+import { actor, compileAccess, formatAccessTree, resource } from "../index.js";
+import { isLookupResourcesAllowed, scopeBindings } from "../scopes.js";
 
 describe("formatAccessTree and compileAccess options", () => {
   it("renders a deterministic ASCII tree via formatAccessTree(model)", () => {
@@ -107,34 +101,24 @@ describe("formatAccessTree and compileAccess options", () => {
     );
   });
 
-  it("attaches migrations, bindings, and visibleRecordExceptions in compileAccess", () => {
+  it("attaches migrations, bindings, and allowLookupResourcesOn in compileAccess", () => {
     const user = actor("user");
     const org = resource("organization", {
-      kind: "scope",
       roles: { admin: user },
       can: ({ admin }) => ({ view: admin }),
     });
     const record = resource("record", {
-      kind: "record",
       roles: { owner: org },
       can: ({ owner }) => ({ view: owner.view }),
     });
 
-    const binding: ScopeBindings = {
-      entity: record.handle,
-      kind: "record",
-      roles: {
-        owner: { kind: "scope-column" },
-      },
-    };
-    const exception = allowVisibleOnRecordUntil("2099-01-01", {
-      resourceType: record.wireName,
-      removedBy: "PR-123",
+    const binding = scopeBindings(record, {
+      owner: { kind: "scope-column" },
     });
 
     const model = compileAccess([org, record, org], {
       bindings: [binding],
-      visibleRecordExceptions: [exception],
+      allowLookupResourcesOn: [org, "organization"],
       migrations: [
         {
           id: "001-rename-owner",
@@ -147,7 +131,9 @@ describe("formatAccessTree and compileAccess options", () => {
     });
 
     expect(model.bindings).toHaveLength(1);
-    expect(model.visibleRecordExceptions).toHaveLength(1);
+    expect(model.lookupResourceAllowlist).toEqual(["organization"]);
+    expect(isLookupResourcesAllowed(model, "organization")).toBe(true);
+    expect(isLookupResourcesAllowed(model, "record")).toBe(false);
     expect(model.migrations).toEqual([
       {
         id: "001-rename-owner",

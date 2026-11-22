@@ -1,12 +1,11 @@
 import type { z } from "zod";
 
-import type {
-  AccessMigrationMeta,
-  ResolvedAccessDefinition,
-} from "./access-model.js";
+import type { AccessMigrationMeta } from "./access-model.js";
+import type { CatalogOnlyCapability } from "./catalog-only.js";
 import type {
   AnyDslResource,
   DslActor,
+  DslGrantingSpec,
   DslPermissionExpr,
   DslPermissionTarget,
   DslPermissionToken,
@@ -22,9 +21,8 @@ import type {
   SubjectMapFromRoles,
   TargetPermsOfHolder,
 } from "./dsl-types.js";
-import type { EntityHandle, EntityKind } from "./entity-handle.js";
+import type { EntityHandle } from "./entity-handle.js";
 import type { ScopeBindings } from "./scope-bindings.js";
-import type { VisibleRecordException } from "./visible-record-exceptions.js";
 
 export type DslInheritOption<ParentPerms extends string> =
   "all" | "none" | readonly ParentPerms[];
@@ -126,17 +124,17 @@ export type InlineChildPermissionExpr =
 
 export type AnyDslChildSpec = {
   readonly id?: z.ZodType<string>;
-  readonly kind?: EntityKind;
   readonly inherit: "all" | "none" | readonly string[];
   readonly recursive?: boolean;
   readonly roles?: DslRolesSpec;
   readonly can?: (context: never) => Record<string, InlineChildPermissionExpr>;
+  readonly granting?: DslGrantingSpec;
+  readonly catalogOnly?: readonly CatalogOnlyCapability[];
   readonly children?: Readonly<Record<string, AnyDslChildSpec>>;
 };
 
 export type ContextualInlineChildSpec<ParentPerms extends string> = {
   readonly id?: z.ZodType<string>;
-  readonly kind?: EntityKind;
   readonly inherit: "all" | "none" | readonly string[];
   readonly recursive?: boolean;
   readonly roles?: DslRolesSpec;
@@ -145,6 +143,8 @@ export type ContextualInlineChildSpec<ParentPerms extends string> = {
       readonly parent: DslRoleRef<ParentPerms>;
     },
   ) => Record<string, InlineChildPermissionExpr>;
+  readonly granting?: DslGrantingSpec;
+  readonly catalogOnly?: readonly CatalogOnlyCapability[];
   readonly children?: Readonly<
     Record<string, ContextualInlineChildSpec<string>>
   >;
@@ -161,7 +161,6 @@ export type DslChildSpec<
   Children extends Readonly<Record<string, AnyDslChildSpec>>,
 > = {
   readonly id?: z.ZodType<string>;
-  readonly kind?: EntityKind;
   readonly inherit: Inherit;
   readonly recursive?: Recursive;
   readonly roles?: RolesSpec;
@@ -175,6 +174,10 @@ export type DslChildSpec<
       Recursive
     >,
   ) => CanResult;
+  readonly granting?: DslGrantingSpec<
+    ResolvedInheritedPerms<ParentPerms, Inherit> | (keyof CanResult & string)
+  >;
+  readonly catalogOnly?: readonly CatalogOnlyCapability[];
   readonly children?: Children &
     Readonly<
       Record<
@@ -228,25 +231,27 @@ export type InvalidInlineChildrenError<ParentPerms extends string, Children> = [
   keyof Children & string,
 ] extends [never]
   ? never
-  : {
-      readonly [ChildWire in keyof Children & string]:
-        | InvalidInheritKeys<
-            ParentPerms,
-            ExtractInheritFromSpec<Children[ChildWire]>
-          >
-        | ([
-            keyof ExtractChildrenFromSpec<Children[ChildWire]> & string,
-          ] extends [never]
-            ? never
-            : InvalidInlineChildrenError<
-                | ResolvedInheritedPerms<
-                    ParentPerms,
-                    ExtractInheritFromSpec<Children[ChildWire]>
-                  >
-                | ExtractCanKeysFromSpec<Children[ChildWire]>,
-                ExtractChildrenFromSpec<Children[ChildWire]>
-              >);
-    }[keyof Children & string];
+  : string extends keyof Children
+    ? never
+    : {
+        readonly [ChildWire in keyof Children & string]:
+          | InvalidInheritKeys<
+              ParentPerms,
+              ExtractInheritFromSpec<Children[ChildWire]>
+            >
+          | ([
+              keyof ExtractChildrenFromSpec<Children[ChildWire]> & string,
+            ] extends [never]
+              ? never
+              : InvalidInlineChildrenError<
+                  | ResolvedInheritedPerms<
+                      ParentPerms,
+                      ExtractInheritFromSpec<Children[ChildWire]>
+                    >
+                  | ExtractCanKeysFromSpec<Children[ChildWire]>,
+                  ExtractChildrenFromSpec<Children[ChildWire]>
+                >);
+      }[keyof Children & string];
 
 export type MaterializeChildResource<
   ParentWire extends string,
@@ -317,7 +322,6 @@ export type DslResource<
   readonly idSchema: z.ZodType<string>;
   readonly handle: EntityHandle<WireName>;
   readonly entity: EntityHandle;
-  readonly resolve: () => ResolvedAccessDefinition;
   readonly roles: {
     readonly [R in keyof RoleSubjects & string]: DslRoleToken<
       WireName,
@@ -373,5 +377,5 @@ export type DslNode = DslActor | AnyDslResource;
 export type CompileAccessOptions = {
   readonly migrations?: readonly AccessMigrationMeta[];
   readonly bindings?: readonly ScopeBindings[];
-  readonly visibleRecordExceptions?: readonly VisibleRecordException[];
+  readonly allowLookupResourcesOn?: readonly (DslNode | string)[];
 };

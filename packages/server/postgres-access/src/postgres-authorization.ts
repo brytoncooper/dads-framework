@@ -23,6 +23,12 @@ import {
   compilePostgresCheckMany,
   compilePostgresLookup,
 } from "./policy/compile-postgres-policy.js";
+import {
+  compilePostgresFilter,
+  validatePostgresFilterQuery,
+  type PostgresFilterQuery,
+  type PostgresAccessFilter,
+} from "./policy/compile-filter.js";
 import { compileLinearCheck } from "./policy/compile-linear-check.js";
 import { compilePostgresSubjectLookup } from "./policy/compile-subject-lookup.js";
 import type { NormalizedPermissionCheck } from "./policy/policy-model.js";
@@ -36,7 +42,7 @@ import {
   type DrizzleExecuteLike,
 } from "./drizzle-structural.js";
 import {
-  readBooleanColumn,
+  parseSubjectLookupRows,
   readDecisionFlag,
   readTupleColumn,
 } from "./postgres-response.js";
@@ -235,6 +241,29 @@ export class PostgresAuthorization extends Authorization {
     return { subject: query.subject, resource: query.resource, permission };
   }
 
+  /** Compile a parameterized SQL Boolean filter predicate for single-query resource listing. */
+  compileFilter(query: PostgresFilterQuery): PostgresAccessFilter {
+    requireConcreteSubject(query.subject);
+    const validated = validatePostgresFilterQuery(query);
+    const permission = this.#policy.permissionName(
+      query.resourceType,
+      query.permission,
+    );
+    if (permission === undefined) {
+      return Object.freeze({ sql: "FALSE", values: [] });
+    }
+    return compilePostgresFilter(
+      this.#policy.model,
+      this.#options.namespace,
+      {
+        subject: { type: query.subject.type, id: query.subject.id },
+        permission,
+        resourceType: query.resourceType,
+      },
+      validated,
+    );
+  }
+
   override async lookupResources(
     query: ResourceLookup,
   ): Promise<readonly string[]> {
@@ -355,24 +384,4 @@ function requireSubjectLookupInput(query: SubjectLookup): void {
       "Postgres authorization subject lookup requires a subject type",
     );
   }
-}
-
-function parseSubjectLookupRows(
-  rows: readonly PostgresRow[],
-): SubjectLookupResult {
-  const subjects = new Set<string>();
-  let hasWildcard = false;
-  for (const row of rows) {
-    const isWildcard = readBooleanColumn(row, "is_wildcard");
-    if (isWildcard) {
-      hasWildcard = true;
-    } else {
-      const subjectId = readTupleColumn(row, "subject_id");
-      if (subjectId.length > 0) subjects.add(subjectId);
-    }
-  }
-  return {
-    subjects: [...subjects].sort(),
-    hasWildcard,
-  };
 }

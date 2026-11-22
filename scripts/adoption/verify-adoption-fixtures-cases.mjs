@@ -1,15 +1,17 @@
 /** Small programs that compile and run against the packed kit boundaries. */
 
-const documentModel = `import { access, accessModel, emitZed, entityHandle } from "@dads-framework/access";
+const documentModel = `import { actor, compileAccess, emitZed, resource } from "@dads-framework/access";
 import { z } from "zod";
 const idSchema = z.string().min(1);
-const user = entityHandle({ wireName: "user", idSchema });
-const document = entityHandle({ wireName: "document", idSchema });
-const users = access(user, { roles: {}, permissions: () => ({}) });
-const documents = access(document, { roles: { reader: user }, permissions: ({ reader }) => ({ view: [reader] }) });
-const model = accessModel([users, documents]);
+const user = actor("user", { id: idSchema });
+const documents = resource("document", {
+  id: idSchema,
+  roles: { reader: user },
+  can: ({ reader }) => ({ view: reader }),
+});
+const model = compileAccess([user, documents]);
 const alice = { type: user.wireName, id: "alice" };
-const example = { type: document.wireName, id: "example" };
+const example = { type: documents.wireName, id: "example" };
 `;
 
 export function createAdoptionFixtures() {
@@ -77,7 +79,7 @@ import { ACCESS_REFUSAL_HEADER, ACCESS_REFUSAL_VALUE } from "@dads-framework/con
 ` +
         documentModel +
         `if (!emitZed(model).includes("permission view = reader")) throw new Error("Access model projection lost");
-const authorization = new FakeAuthorization({ [document.wireName]: { view: ["reader"] } });
+const authorization = new FakeAuthorization({ [documents.wireName]: { view: ["reader"] } });
 const routes = routeGroup("Documents", [getRoute({
   route: { method: "GET", template: "/documents/:id" },
   summary: "Read document",

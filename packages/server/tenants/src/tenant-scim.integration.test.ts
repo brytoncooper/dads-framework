@@ -1,4 +1,4 @@
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess } from "@dads-framework/access";
 import type {
   ScimDirectory,
   ScimGroupDirectory,
@@ -27,12 +27,9 @@ import {
   type TenantsOptions,
 } from "./index.js";
 
-const account = entityHandle({ wireName: "user", idSchema: z.string().min(1) });
+const account = actor("user", { id: z.string().min(1) });
 const definitions = createTenantAccess(account);
-const model = accessModel([
-  access(account, { roles: {}, permissions: () => ({}) }),
-  definitions.tenant,
-]);
+const model = compileAccess([account, definitions.tenant]);
 const accountSession = {
   id: "member",
   email: "member@example.test",

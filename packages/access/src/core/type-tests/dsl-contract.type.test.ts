@@ -255,4 +255,41 @@ describe("DSL compile-time contracts", () => {
     expect(typeof validCalls).toBe("function");
     expect(typeof invalidCalls).toBe("function");
   });
+
+  it("rejects invalid access client checks, unknown role targets, and invalid compileAccess options", () => {
+    const user = actor("user");
+    const service = actor("service");
+
+    const workspace = resource("workspace", {
+      roles: {
+        owner: user,
+        member: user,
+      },
+      can: ({ owner, member }) => ({
+        manage: owner,
+        view: [owner, member],
+      }),
+    });
+
+    const client = createAccessClient(new FakeAuthorization());
+
+    const invalidSurfaceChecks = async () => {
+      // @ts-expect-error -- unknown permission name is rejected on resource instance
+      void workspace("w1").delete;
+      // @ts-expect-error -- non-permission role token is rejected by client.can
+      await client.can(user("u1"), workspace("w1").owner);
+      // @ts-expect-error -- raw string is rejected instead of a typed ActorRef
+      await client.can("user:u1", workspace("w1").view);
+      // @ts-expect-error -- raw string is rejected instead of a typed permission target
+      await client.can(user("u1"), "workspace:w1#view");
+      // @ts-expect-error -- unknown role name is rejected on resource.roles
+      void workspace.roles.nonexistent;
+      // @ts-expect-error -- non-resource actor ref is rejected in compileAccess allowLookupResourcesOn
+      compileAccess([workspace], { allowLookupResourcesOn: [user("u1")] });
+      // @ts-expect-error -- non-node value is rejected in compileAccess input list
+      compileAccess([service("s1")]);
+    };
+
+    expect(typeof invalidSurfaceChecks).toBe("function");
+  });
 });

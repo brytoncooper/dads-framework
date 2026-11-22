@@ -1,7 +1,6 @@
 export {
   assignableTenantRoleSchema,
   createTenantAccess,
-  tenantEntity,
   tenantIdSchema,
   tenantRoles,
   type TenantAccess,

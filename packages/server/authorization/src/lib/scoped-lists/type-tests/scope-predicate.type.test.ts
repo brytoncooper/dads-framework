@@ -8,7 +8,10 @@ import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
-import { describeScopePlan, type ScopeBindings } from "@dads-framework/access";
+import {
+  describeScopePlan,
+  type ScopeBindings,
+} from "@dads-framework/access/scopes";
 
 import {
   answerScope,

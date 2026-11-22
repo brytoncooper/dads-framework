@@ -2,9 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess, resource } from "@dads-framework/access";
 import { describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
 import {
   POSTGRES_CONFLICT,
@@ -19,16 +18,12 @@ import {
   type PostgresValue,
 } from "./index.js";
 
-const idSchema = z.string();
-const user = entityHandle({ wireName: "user", idSchema });
-const doc = entityHandle({ wireName: "doc", kind: "record", idSchema });
-const model = accessModel([
-  access(user, { roles: {}, permissions: () => ({}) }),
-  access(doc, {
-    roles: { editor: user },
-    permissions: (roles) => ({ edit: [roles.editor] }),
-  }),
-]);
+const user = actor("user");
+const doc = resource("doc", {
+  roles: { editor: user },
+  can: ({ editor }) => ({ edit: editor }),
+});
+const model = compileAccess([user, doc]);
 
 type RecordedQuery = {
   readonly text: string;

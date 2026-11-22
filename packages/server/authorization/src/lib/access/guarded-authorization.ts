@@ -3,14 +3,14 @@
  *
  * A list built from "every visible id, then `WHERE id IN (...)`" is fast with
  * ten ids and fails at sixty-five thousand, and nothing in between says so.
- * The entity kind declaration (`scope`, `catalog`, `record`) says which lists
- * may be built that way, but a declaration is only as true as whoever wrote
- * it. So this decorator watches every answer, whatever the declaration says:
+ * This decorator enforces a fail-closed `lookupResources` policy and watches
+ * every answer:
  *
- * - **A record is never looked up id by id.** `lookupResources` on a `record`
- *   throws, except for a role the record's scope bindings declare
- *   `sparse-direct` (named by relation, never by caller) and a record with a
- *   dated exception registered at boot. Record lists use `requiresScoped`.
+ * - **Fail-closed `lookupResources`.** `lookupResources` throws unless the
+ *   compiled model explicitly lists the resource type in
+ *   `allowLookupResourcesOn` (and does not bind it in `scopeBindings`) or the
+ *   queried relation is declared `sparse-direct` in the record's scope
+ *   bindings. Record lists use `requiresScoped`.
  * - **Warning mark.** A lookup past `warnLookupIds` succeeds and notes a
  *   warning on the request, which the request row records as a fault.
  * - **Hard cap.** A lookup past `maxLookupIds` fails with an error naming the
@@ -26,13 +26,11 @@
  * inside answer-once (so a repeated question is judged once).
  */
 
+import type { AccessModel } from "@dads-framework/access";
 import {
-  entityKindOf,
+  isLookupResourcesAllowed,
   isSparseDirectGrant,
-  visibleRecordException,
-  type AccessModel,
-  type EntityKind,
-} from "@dads-framework/access";
+} from "@dads-framework/access/scopes";
 import {
   currentRequestWork,
   countAuthorizationLookupSize,
@@ -71,32 +69,27 @@ export const DEFAULT_AUTHORIZATION_GUARD_MARKS: AuthorizationGuardMarks = {
 /** Postgres refuses a statement with more bind parameters than this. */
 const POSTGRES_PARAMETER_LIMIT = 65_535;
 
-/** Where the guard reads what an entity is; provided by the application. */
-export type EntityKindLookup = {
-  readonly kindOf: (resourceType: string) => EntityKind | undefined;
-  /** Whether a record may still be looked up for this permission or relation. */
-  readonly mayLookupRecord: (
-    resourceType: string,
-    permission: string,
-  ) => boolean;
+/** Policy deciding whether a `lookupResources` call is allowed. */
+export type LookupResourcesPolicy = {
+  /** Whether `lookupResources` may run for this resource type and permission/relation. */
+  readonly mayLookup: (resourceType: string, permission: string) => boolean;
 };
 
-/** Apply the composed model's record lookup rules. */
-export function authorizationKinds(model: AccessModel): EntityKindLookup {
+/** Apply the compiled model's fail-closed `lookupResources` policy. */
+export function authorizationKinds(model: AccessModel): LookupResourcesPolicy {
   return {
-    kindOf: (resourceType) => entityKindOf(model, resourceType),
-    mayLookupRecord: (resourceType, permission) =>
-      isSparseDirectGrant(model, resourceType, permission) ||
-      visibleRecordException(model, resourceType) !== undefined,
+    mayLookup: (resourceType, permission) =>
+      isLookupResourcesAllowed(model, resourceType) ||
+      isSparseDirectGrant(model, resourceType, permission),
   };
 }
 
-/** A `lookupResources` on a record kind, which record lists must never make. */
+/** A `lookupResources` on a resource type not allowed for unbounded lookup. */
 export class RecordLookupRefusedError extends Error {
   constructor(query: ResourceLookup) {
     super(
-      `lookupResources on ${query.resourceType}#${query.permission} refused: ${query.resourceType} is a record, ` +
-        `and a record list must use requiresScoped and declare scope bindings ` +
+      `lookupResources on ${query.resourceType}#${query.permission} refused: ${query.resourceType} is not in allowLookupResourcesOn ` +
+        `and ${query.permission} is not a sparse-direct scope binding; a record list must use requiresScoped and declare scope bindings ` +
         `(docs/architecture/authorization.md, "To move a record list onto a scope plan")`,
     );
     this.name = "RecordLookupRefusedError";
@@ -117,18 +110,18 @@ export class LookupOverHardCapError extends Error {
 export class GuardedAuthorization extends Authorization {
   readonly #inner: Authorization;
   readonly #marks: AuthorizationGuardMarks;
-  readonly #kinds: EntityKindLookup;
+  readonly #policy: LookupResourcesPolicy;
 
   constructor(
     inner: Authorization,
     marks: AuthorizationGuardMarks,
-    kinds: EntityKindLookup,
+    policy: LookupResourcesPolicy,
   ) {
     super();
     requireSaneMarks(marks);
     this.#inner = inner;
     this.#marks = marks;
-    this.#kinds = kinds;
+    this.#policy = policy;
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {
@@ -218,9 +211,7 @@ export class GuardedAuthorization extends Authorization {
   }
 
   #refuseRecordLookup(query: ResourceLookup): void {
-    if (this.#kinds.kindOf(query.resourceType) !== "record") return;
-    if (this.#kinds.mayLookupRecord(query.resourceType, query.permission))
-      return;
+    if (this.#policy.mayLookup(query.resourceType, query.permission)) return;
     throw new RecordLookupRefusedError(query);
   }
 

@@ -103,20 +103,21 @@ To evolve stored relationships across model revisions, use `runSqliteAccessMigra
 `SqliteAuthorization` compiles `@dads-framework/access` models into parameterized SQLite queries covering:
 
 - Direct relations, nested and cyclic `team#member` subject sets, and wildcards (`user:*`).
+- Compiled SQL list filters (`compileFilter({ subject, permission, resourceType, idColumn, now? })`) returning `{ sql, values }` (`EXISTS` or `IN (WITH RECURSIVE ...)`) for single-query paginated and sorted SQLite `SELECT` statements.
 - Expiring relationships (`expires_at` epoch milliseconds) evaluated consistently at a single timestamp across reads and updated via upsert.
 - Polymorphic arrows across multiple direct target entity types (`parents: [organization, folder]`).
 - Recursive monotonic arrows (nested folders with `recursive: true`) with cycle termination on cyclic graph data.
 - Transitive `lookupSubjects` returning concrete subject IDs and `hasWildcard`.
-- Intersection arrows (`every()` / `throughAll` / `.all()`) requiring at least one active target and satisfaction across every active target.
+- Intersection arrows (`every()` / `.all()`) requiring at least one active target and satisfaction across every active target.
 
 ## What it refuses to do
 
-Compilation rejects missing relation or permission targets, empty expressions, local permission self-cycles, non-monotonic recursive cycles through `excluding` / `.unless()` or `throughAll` / `every()`, and non-linear recursive intersections.
+Compilation rejects missing relation or permission targets, empty expressions, local permission self-cycles, non-monotonic recursive cycles through `.unless()` or `every()`, and non-linear recursive intersections.
 
-Permission checks and resource lookups require a concrete subject (`id` cannot be empty or `*`, and `relation` must be omitted). Relationship writes reject unknown relations, mismatched subject types, empty identifiers, and invalid `expiresAt` dates. Scoped transaction handles reject all calls after the transaction callback ends.
+Permission checks, resource lookups, and `compileFilter` require a concrete subject (`id` cannot be empty or `*`, and `relation` must be omitted), and `compileFilter` rejects invalid `idColumn` identifiers. Relationship writes reject unknown relations, mismatched subject types, empty identifiers, and invalid `expiresAt` dates. Scoped transaction handles reject all calls after the transaction callback ends.
 
 ## Contract
 
-`SqliteAuthorization` extends `Authorization` and implements `check`, `checkMany`, `checkEach`, `lookupResources`, `lookupSubjects`, `writeRelationships`, `deleteRelationships`, `relationshipExists`, `listDirectSubjects`, `applyChanges`, and `inTransaction`.
+`SqliteAuthorization` extends `Authorization` and implements `check`, `checkMany`, `checkEach`, `lookupResources`, `lookupSubjects`, `compileFilter`, `writeRelationships`, `deleteRelationships`, `relationshipExists`, `listDirectSubjects`, `applyChanges`, and `inTransaction`.
 
 Unknown permission names return `false`, `[]`, or `{ subjects: [], hasWildcard: false }`. Successful writes and deletes return an empty consistency token because SQLite reads observe committed writes directly. Database connection lifecycle and migration execution remain application-owned.

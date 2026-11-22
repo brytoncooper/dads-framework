@@ -1,4 +1,4 @@
-import { access, accessModel, entityHandle } from "@dads-framework/access";
+import { actor, compileAccess, resource } from "@dads-framework/access";
 import {
   createPostgresConnection,
   type DrizzleHandle,
@@ -6,32 +6,25 @@ import {
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
+import {
+  type ProtectedDrizzleTransaction,
+  withProtectedDrizzleTransaction,
+} from "./drizzle.js";
 import {
   POSTGRES_CONFLICT,
   PostgresAuthorization,
   PostgresSerializationConflict,
-  type ProtectedPostgresTransaction,
   readPostgresSerializationConflict,
   relationshipSchemaMigration,
-  withProtectedPostgresTransaction,
 } from "./index.js";
 
-const idSchema = z.string();
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({
-  wireName: "transaction/group",
-  kind: "scope",
-  idSchema,
+const user = actor("user");
+const group = resource("transaction/group", {
+  roles: { member: user },
+  can: ({ member }) => ({ manage: member }),
 });
-const model = accessModel([
-  access(user, { roles: {}, permissions: () => ({}) }),
-  access(group, {
-    roles: { member: user },
-    permissions: (roles) => ({ manage: [roles.member] }),
-  }),
-]);
+const model = compileAccess([user, group]);
 
 function membership(groupId: string, userId: string) {
   return {
@@ -103,7 +96,7 @@ describe("protected Postgres transaction", () => {
 
   async function addAlice(
     groupId: string,
-    { tx, authorization: scoped }: ProtectedPostgresTransaction,
+    { tx, authorization: scoped }: ProtectedDrizzleTransaction,
   ): Promise<void> {
     await tx.execute(
       sql`insert into protected_membership values (${groupId}, 'alice')`,
@@ -124,7 +117,7 @@ describe("protected Postgres transaction", () => {
     const rendezvous = twoReaders();
     const remove = vi.fn(
       async (
-        scope: ProtectedPostgresTransaction<DrizzleHandle>,
+        scope: ProtectedDrizzleTransaction<DrizzleHandle>,
         userId: string,
       ) => {
         expect(await scope.authorization.check(manage(groupId, userId))).toBe(
@@ -139,7 +132,7 @@ describe("protected Postgres transaction", () => {
       },
     );
     function attempt(userId: string) {
-      return withProtectedPostgresTransaction(
+      return withProtectedDrizzleTransaction(
         { database, authorization },
         (scope) => remove(scope, userId),
       ).catch((error: unknown) => {
@@ -185,7 +178,7 @@ describe("protected Postgres transaction", () => {
   it("rolls back application data and the authorization tuple together", async () => {
     const groupId = "rollback";
     const refused = new Error("Application rejected the write");
-    const callback = vi.fn(async (scope: ProtectedPostgresTransaction) => {
+    const callback = vi.fn(async (scope: ProtectedDrizzleTransaction) => {
       await addAlice(groupId, scope);
       expect(await scope.authorization.check(manage(groupId, "alice"))).toBe(
         true,
@@ -194,7 +187,7 @@ describe("protected Postgres transaction", () => {
     });
 
     await expect(
-      withProtectedPostgresTransaction({ database, authorization }, callback),
+      withProtectedDrizzleTransaction({ database, authorization }, callback),
     ).rejects.toBe(refused);
     expect(callback).toHaveBeenCalledOnce();
     expect(await members(groupId)).toEqual([]);
@@ -207,7 +200,7 @@ describe("protected Postgres transaction", () => {
     await expect(
       database.transaction(
         async (tx) => {
-          const expired = await withProtectedPostgresTransaction(
+          const expired = await withProtectedDrizzleTransaction(
             { transaction: tx, authorization },
             async (scope) => {
               expect(scope.tx).toBe(tx);
@@ -238,13 +231,13 @@ describe("protected Postgres transaction", () => {
       await database.transaction(
         async (tx) => {
           await expect(
-            withProtectedPostgresTransaction(
+            withProtectedDrizzleTransaction(
               { transaction: tx, authorization },
               callback,
             ),
           ).rejects.toThrow("require serializable isolation");
           await expect(
-            withProtectedPostgresTransaction(
+            withProtectedDrizzleTransaction(
               { database: tx, authorization },
               callback,
             ),
@@ -258,7 +251,7 @@ describe("protected Postgres transaction", () => {
 
   it("takes a snapshot before the callback can lower isolation", async () => {
     await expect(
-      withProtectedPostgresTransaction({ database, authorization }, ({ tx }) =>
+      withProtectedDrizzleTransaction({ database, authorization }, ({ tx }) =>
         tx.execute(sql`set transaction isolation level read committed`),
       ),
     ).rejects.toMatchObject({ cause: { code: "25001" } });
@@ -275,7 +268,7 @@ describe("protected Postgres transaction", () => {
     };
     const work = vi.fn(() => Promise.resolve());
     await expect(
-      withProtectedPostgresTransaction(
+      withProtectedDrizzleTransaction(
         { database: replaying, authorization },
         work,
       ),
@@ -284,7 +277,7 @@ describe("protected Postgres transaction", () => {
   });
 
   it("does not mislabel an ordinary PostgreSQL error", async () => {
-    const error = await withProtectedPostgresTransaction(
+    const error = await withProtectedDrizzleTransaction(
       { database, authorization },
       ({ tx }) => tx.execute(sql`select 1 / 0`),
     ).catch((failure: unknown) => failure);
@@ -294,7 +287,7 @@ describe("protected Postgres transaction", () => {
 
   it("expires authorization after a successful owned transaction", async () => {
     const groupId = "owned";
-    const expired = await withProtectedPostgresTransaction(
+    const expired = await withProtectedDrizzleTransaction(
       { database, authorization },
       async (scope) => {
         await addAlice(groupId, scope);
@@ -303,7 +296,7 @@ describe("protected Postgres transaction", () => {
     );
     const reuse = vi.fn(() => Promise.resolve());
     await expect(
-      withProtectedPostgresTransaction(
+      withProtectedDrizzleTransaction(
         { database, authorization: expired },
         reuse,
       ),

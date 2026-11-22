@@ -1,4 +1,4 @@
-import { access, entityHandle } from "@dads-framework/access";
+import { actor, resource } from "@dads-framework/access";
 import {
   expectedRowVersionFields,
   rowVersionSchema,
@@ -14,15 +14,11 @@ import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 const idSchema = z.string().min(1);
-export const editor = entityHandle({ wireName: "editor", idSchema });
-const note = entityHandle({
-  wireName: "stale_save_note",
-  idSchema,
-  kind: "record",
-});
-export const noteAccess = access(note, {
+export const editor = actor("editor", { id: idSchema });
+export const noteAccess = resource("stale_save_note", {
+  id: idSchema,
   roles: { editor },
-  permissions: (roles) => ({ edit: [roles.editor] }),
+  can: ({ editor: noteEditor }) => ({ edit: noteEditor }),
 });
 
 export const notes = pgTable("stale_save_notes", {

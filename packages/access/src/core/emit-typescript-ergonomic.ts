@@ -42,8 +42,7 @@ function emitTypeSubject(
   if (subject.expiration === true) {
     if (isActor) return `${targetVar}.expiring`;
     if (isDeclared) {
-      ctx.valueImports.add("withExpiration");
-      return `withExpiration(${targetVar}.handle)`;
+      return `{ kind: "expirable", holder: ${targetVar}.handle }`;
     }
     ctx.valueImports.add("actor");
     return `actor(${JSON.stringify(subject.wireName)}).expiring`;
@@ -62,22 +61,20 @@ function emitWildcardSubject(
   const isActor = ctx.symbols.actorWireNames.has(subject.wireName);
   const isDeclared = ctx.declared.has(subject.wireName);
 
-  let base: string;
   if (isActor) {
-    base = `${targetVar}.anyone`;
-  } else if (isDeclared) {
-    ctx.valueImports.add("wildcard");
-    base = `wildcard(${targetVar}.handle)`;
-  } else {
-    ctx.valueImports.add("actor");
-    base = `actor(${JSON.stringify(subject.wireName)}).anyone`;
+    return subject.expiration === true
+      ? `${targetVar}.anyone.expiring`
+      : `${targetVar}.anyone`;
   }
-
-  if (subject.expiration === true) {
-    ctx.valueImports.add("withExpiration");
-    return `withExpiration(${base})`;
+  if (isDeclared) {
+    const base = `{ kind: "wildcard", entity: ${targetVar}.handle }`;
+    return subject.expiration === true
+      ? `{ kind: "expirable", holder: ${base} }`
+      : base;
   }
-  return base;
+  ctx.valueImports.add("actor");
+  const base = `actor(${JSON.stringify(subject.wireName)}).anyone`;
+  return subject.expiration === true ? `${base}.expiring` : base;
 }
 
 function emitUsersetSubject(
@@ -96,20 +93,13 @@ function emitUsersetSubject(
 
   if (canRefDeclaredRole) {
     const roleExpr = formatPropAccess(`${targetVar}.roles`, subject.relation);
-    if (subject.expiration === true) {
-      ctx.valueImports.add("withExpiration");
-      ctx.valueImports.add("membersOf");
-      return `withExpiration(membersOf(${roleExpr}))`;
-    }
-    return roleExpr;
+    return subject.expiration === true ? `${roleExpr}.expiring` : roleExpr;
   }
 
   const literal = `{ kind: "userset", entityWireName: ${JSON.stringify(subject.wireName)}, roleName: ${JSON.stringify(subject.relation)} }`;
-  if (subject.expiration === true) {
-    ctx.valueImports.add("withExpiration");
-    return `withExpiration(${literal})`;
-  }
-  return literal;
+  return subject.expiration === true
+    ? `{ kind: "expirable", holder: ${literal} }`
+    : literal;
 }
 
 function emitSubject(

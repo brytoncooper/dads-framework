@@ -1,4 +1,4 @@
-import type { ScopePlan } from "@dads-framework/access";
+import type { ScopePlan } from "@dads-framework/access/scopes";
 import {
   evaluateRouteAccess,
   type AuthMethod,

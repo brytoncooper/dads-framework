@@ -4,31 +4,19 @@
  * permissions — implicit same-owner merge is replaced by include().
  */
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
-import { entityHandle } from "./entity-handle.js";
-import { wildcard } from "./holders.js";
-import { access } from "./model.js";
-import { world } from "./world.js";
 
-const idSchema = z.string();
+import { actor, resource, world } from "../index.js";
 
 describe("world()", () => {
-  const Person = entityHandle({
-    wireName: "user",
-    idSchema,
-  });
-  const Site = entityHandle({
-    wireName: "sites/site",
-    idSchema,
-  });
-  const site = access(Site, {
+  const person = actor("user");
+  const site = resource("sites/site", {
     roles: {
-      admin: Person,
-      tenancy: wildcard(Person),
+      admin: person,
+      tenancy: person.anyone,
     },
-    permissions: (roles) => ({
-      view: [roles.admin],
-      manage: [roles.admin],
+    can: ({ admin }) => ({
+      view: admin,
+      manage: admin,
     }),
   });
 
@@ -36,10 +24,10 @@ describe("world()", () => {
     const casey = world(
       "site view",
       ({ user, write, expect: expectAccess }) => {
-        const person = user("casey");
-        write(site.roles.admin, "north").to(person);
-        expectAccess(person).can(site.permissions.view, "north");
-        expectAccess(person).cannot(site.permissions.manage, "south");
+        const subject = user("casey");
+        write(site.roles.admin, "north").to(subject);
+        expectAccess(subject).can(site.permissions.view, "north");
+        expectAccess(subject).cannot(site.permissions.manage, "south");
       },
     );
 
@@ -55,9 +43,9 @@ describe("world()", () => {
 
   it("includes another world's facts and assertions without a receiver", () => {
     const base = world("base", ({ user, write, expect: expectAccess }) => {
-      const person = user("erin");
-      write(site.roles.admin, "north").to(person);
-      expectAccess(person).can(site.permissions.view, "north");
+      const subject = user("erin");
+      write(site.roles.admin, "north").to(subject);
+      expectAccess(subject).can(site.permissions.view, "north");
     });
     const combined = world(
       "combined",
@@ -80,27 +68,20 @@ describe("world()", () => {
   });
 
   it("writes wildcard and userset subjects", () => {
-    const SetHandle = entityHandle({
-      wireName: "sets/set",
-      idSchema,
-    });
-    const permissionSet = access(SetHandle, {
-      roles: {
-        member: Person,
-      },
-      permissions: () => ({}),
+    const permissionSet = resource("sets/set", {
+      roles: { member: person },
     });
 
     const authored = world(
       "holders",
       ({ user, write, members, expect: expectAccess }) => {
-        write(site.roles.tenancy, "north").to(wildcard(Person));
+        write(site.roles.tenancy, "north").to(person.anyone);
         write(site.roles.admin, "north").to(
           members(permissionSet.roles.member, "viewers"),
         );
-        const person = user("casey");
-        write(permissionSet.roles.member, "viewers").to(person);
-        expectAccess(person).can(site.permissions.view, "north");
+        const subject = user("casey");
+        write(permissionSet.roles.member, "viewers").to(subject);
+        expectAccess(subject).can(site.permissions.view, "north");
       },
     );
 
@@ -112,17 +93,10 @@ describe("world()", () => {
   });
 
   it("writes another entity as the subject", () => {
-    const Organization = entityHandle({
-      wireName: "organizations/organization",
-      idSchema,
-    });
-    access(Organization, {
-      roles: {},
-      permissions: () => ({}),
-    });
+    const organization = resource("organizations/organization", {});
 
     const authored = world("owner", ({ entity, write }) => {
-      write(site.roles.admin, "north").to(entity(Organization, "acme"));
+      write(site.roles.admin, "north").to(entity(organization, "acme"));
     });
 
     expect(authored.relationships).toEqual([
@@ -131,21 +105,15 @@ describe("world()", () => {
   });
 
   it("asserts a permission for an entity subject", () => {
-    const Organization = entityHandle({
-      wireName: "organizations/organization",
-      idSchema,
-    });
-    const organization = access(Organization, {
-      roles: {},
-      permissions: () => ({
-        view: [],
-      }),
+    const organization = resource("organizations/organization", {
+      roles: { admin: person },
+      can: ({ admin }) => ({ view: admin }),
     });
 
     const authored = world(
       "entity expect",
       ({ entity, expect: expectAccess }) => {
-        expectAccess(entity(Organization, "acme")).can(
+        expectAccess(entity(organization, "acme")).can(
           organization.permissions.view,
           "acme",
         );

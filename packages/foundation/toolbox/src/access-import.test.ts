@@ -95,28 +95,8 @@ describe("importZedSchema", () => {
     expect(result.code).toContain('resource("document",');
     expect(result.code).toContain("user.expiring");
     expect(result.code).toContain("user.anyone");
-    expect(result.code).toContain("throughAll(");
+    expect(result.code).toContain("every(");
     expect(result.code).toContain("export const access = compileAccess(");
-  });
-
-  it("emits classic entityHandle / access / accessModel code when style is classic", () => {
-    const workspace = createWorkspace();
-    writeFileSync(join(workspace, "schema.zed"), RICH_ZED_SCHEMA, "utf8");
-
-    const result = importZedSchema({
-      inputPath: "schema.zed",
-      style: "classic",
-      cwd: workspace,
-    });
-
-    expect(result.code).toContain('from "@dads-framework/access"');
-    expect(result.code).toContain("entityHandle(");
-    expect(result.code).toContain("withExpiration(");
-    expect(result.code).toContain("throughAll(");
-    expect(result.code).toContain("membersOf(");
-    expect(result.code).toContain("wildcard(");
-    expect(result.code).toContain("through(");
-    expect(result.code).toContain("export const model = accessModel(");
   });
 
   it("writes to outPath creating parent directories unless dryRun is true", () => {
@@ -148,7 +128,7 @@ describe("importZedSchema", () => {
 });
 
 describe("dad access import CLI", () => {
-  it("prints ergonomic TypeScript by default and classic TypeScript with --style classic", () => {
+  it("prints strict Dads TypeScript to stdout by default", () => {
     const workspace = createWorkspace();
     writeFileSync(join(workspace, "schema.zed"), RICH_ZED_SCHEMA, "utf8");
 
@@ -161,24 +141,8 @@ describe("dad access import CLI", () => {
     expect(completed.stdout).toContain('resource("folder",');
     expect(completed.stdout).toContain("user.expiring");
     expect(completed.stdout).toContain("user.anyone");
-    expect(completed.stdout).toContain("throughAll(");
+    expect(completed.stdout).toContain("every(");
     expect(completed.stdout).toContain("export const access = compileAccess(");
-
-    const classic = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--style",
-      "classic",
-    ]);
-
-    expect(classic.status).toBe(0);
-    expect(classic.stderr).toBe("");
-    expect(classic.stdout).toContain("entityHandle(");
-    expect(classic.stdout).toContain("withExpiration(");
-    expect(classic.stdout).toContain("membersOf(");
-    expect(classic.stdout).toContain("wildcard(");
-    expect(classic.stdout).toContain("export const model = accessModel(");
   });
 
   it("writes the generated TypeScript file when --out is given", () => {
@@ -328,18 +292,6 @@ describe("dad access import CLI", () => {
     expect(missingOutValue.status).toBe(1);
     expect(missingOutValue.stderr).toContain("Dad: --out requires a value.");
 
-    const invalidStyle = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--style",
-      "legacy",
-    ]);
-    expect(invalidStyle.status).toBe(1);
-    expect(invalidStyle.stderr).toContain(
-      "Dad: --style must be ergonomic or classic.",
-    );
-
     const unknownSubcommand = runDad(workspace, ["access", "export"]);
     expect(unknownSubcommand.status).toBe(1);
     expect(unknownSubcommand.stderr).toContain(
@@ -354,7 +306,7 @@ describe("dad access import CLI", () => {
     expect(accessHelp.status).toBe(0);
     expect(accessHelp.stdout).toContain("Usage: dad access <subcommand>");
     expect(accessHelp.stdout).toContain(
-      "access import <schema.zed> [--out <path>] [--style <ergonomic|classic>] [--dry-run] [--json]",
+      "access import <schema.zed> [--out <path>] [--dry-run] [--json]",
     );
 
     const importHelp = runDad(workspace, ["access", "import", "--help"]);

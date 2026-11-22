@@ -1,8 +1,7 @@
 import {
-  access,
-  accessModel,
-  entityHandle,
-  membersOf,
+  actor,
+  compileAccess,
+  resource,
   roleToken,
 } from "@dads-framework/access";
 import type {
@@ -11,31 +10,24 @@ import type {
 } from "@dads-framework/access/runtime";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
-import { z } from "zod";
 
 import { PostgresAuthorization, relationshipSchemaMigration } from "./index.js";
 
 const depths = [32, 128, 1_024, 10_000];
-const idSchema = z.string();
-const user = entityHandle({ wireName: "user", idSchema });
-const group = entityHandle({ wireName: "soak/group", idSchema });
-const document = entityHandle({ wireName: "soak/document", idSchema });
-const member = roleToken(group.wireName, "member", user);
-const groupMembers = membersOf(member);
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
-const groupAccess = access(group, {
-  roles: { member: [user, groupMembers] },
-  permissions: () => ({}),
+const user = actor("user");
+const member = roleToken("soak/group", "member", user.handle);
+const group = resource("soak/group", {
+  roles: { member: [user, member] },
 });
-const documentAccess = access(document, {
-  roles: { viewer: groupMembers },
-  permissions: ({ viewer }) => ({ view: [viewer] }),
+const document = resource("soak/document", {
+  roles: { viewer: group.roles.member },
+  can: ({ viewer }) => ({ view: viewer }),
 });
-const model = accessModel([userAccess, groupAccess, documentAccess]);
-const actor = { type: user.wireName, id: "actor" };
+const model = compileAccess([user, group, document]);
+const subjectActor = { type: user.wireName, id: "actor" };
 const outsider = { type: user.wireName, id: "outsider" };
-const resource = { type: document.wireName, id: "document" };
-const permission = documentAccess.permissions.view.permissionName;
+const docResource = { type: document.wireName, id: "document" };
+const permission = document.can.view.permissionName;
 
 it.skipIf(process.env["POSTGRES_ACCESS_DEEP_SOAK"] !== "1").each([
   { statistics: "before ANALYZE", refreshStatistics: false },
@@ -90,11 +82,15 @@ async function seedChain(adapter: PostgresAuthorization, depth: number) {
   const midpoint = links[Math.floor(depth / 2)];
   if (midpoint === undefined) throw new Error("Expected a midpoint membership");
   await adapter.writeRelationships([
-    { resource: groupResource(0), relation: member.roleName, subject: actor },
+    {
+      resource: groupResource(0),
+      relation: member.roleName,
+      subject: subjectActor,
+    },
     ...links,
     {
-      resource,
-      relation: documentAccess.roles.viewer.roleName,
+      resource: docResource,
+      relation: document.roles.viewer.roleName,
       subject: groupMembership(depth),
     },
   ]);
@@ -106,9 +102,17 @@ async function proveChain(
   depth: number,
   midpoint: RelationshipWrite,
 ) {
-  const check: PermissionQuery = { resource, permission, subject: actor };
+  const check: PermissionQuery = {
+    resource: docResource,
+    permission,
+    subject: subjectActor,
+  };
   const denied = { ...check, subject: outsider };
-  const lookup = { resourceType: resource.type, permission, subject: actor };
+  const lookup = {
+    resourceType: docResource.type,
+    permission,
+    subject: subjectActor,
+  };
   await expect(
     adapter.check(check),
     `allow at depth ${String(depth)}`,
@@ -120,7 +124,7 @@ async function proveChain(
   await expect(
     adapter.lookupResources(lookup),
     `lookup at depth ${String(depth)}`,
-  ).resolves.toEqual([resource.id]);
+  ).resolves.toEqual([docResource.id]);
   await adapter.deleteRelationships({
     resourceType: midpoint.resource.type,
     resourceId: midpoint.resource.id,
@@ -147,7 +151,7 @@ async function proveChain(
   await expect(
     adapter.lookupResources(lookup),
     `restored lookup at depth ${String(depth)}`,
-  ).resolves.toEqual([resource.id]);
+  ).resolves.toEqual([docResource.id]);
 }
 
 function groupResource(index: number): RelationshipWrite["resource"] {

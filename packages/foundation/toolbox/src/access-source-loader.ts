@@ -4,11 +4,10 @@ import { existsSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  accessModel,
   compileAccess,
+  compileAccessFromIr,
   emitAccessIr,
   parseZed,
-  type AccessDefinition,
   type AccessIrDefinition,
   type AccessModel,
   type AnyDslResource,
@@ -17,7 +16,6 @@ import {
   type EntityHandle,
   type ResolvedAccessDefinition,
 } from "@dads-framework/access";
-import { lowerIrToAccessModel } from "./access-ir-lowering.js";
 import { readZedFile } from "./access-zed-io.js";
 import { isRecord } from "./parse-guards.js";
 
@@ -35,16 +33,10 @@ export type LoadedAccessSource = {
   readonly definitions: readonly AccessIrDefinition[];
 };
 
-type ClassicAccessDeclaration = Pick<
-  AccessDefinition<unknown, unknown>,
-  "entity" | "resolve"
->;
-
 /**
  * Load an access schema from either a SpiceDB `.zed` file or a TypeScript /
- * JavaScript module (`.ts`, `.mts`, `.js`, `.mjs`) exporting an `AccessModel`,
- * DSL `actor(...)` / `resource(...)` definitions, or classic `access(...)`
- * declarations.
+ * JavaScript module (`.ts`, `.mts`, `.js`, `.mjs`) exporting an `AccessModel`
+ * or DSL `actor(...)` / `resource(...)` definitions.
  */
 export async function loadAccessSource(
   inputPath: string,
@@ -67,7 +59,7 @@ export async function loadAccessSource(
 function loadZedAccessSource(resolvedPath: string): LoadedAccessSource {
   const source = readZedFile(resolvedPath);
   const definitions = parseZed(source);
-  const model = lowerIrToAccessModel(definitions);
+  const model = compileAccessFromIr(definitions);
   return {
     path: resolvedPath,
     kind: "zed",
@@ -127,13 +119,8 @@ function extractAccessModel(
     return compileAccess(dslNodes);
   }
 
-  const classicDefinitions = collectClassicDefinitions(candidates);
-  if (classicDefinitions.length > 0) {
-    return accessModel(classicDefinitions);
-  }
-
   throw new Error(
-    `No access model or DSL definitions found in ${resolvedPath}. Export an AccessModel (from compileAccess(...) or accessModel(...)) or exported resource(...)/actor(...) definitions.`,
+    `No access model or DSL definitions found in ${resolvedPath}. Export an AccessModel (from compileAccess(...)) or exported resource(...)/actor(...) definitions.`,
   );
 }
 
@@ -181,34 +168,6 @@ function collectDslNodes(candidates: readonly unknown[]): readonly DslNode[] {
   return nodes;
 }
 
-function collectClassicDefinitions(
-  candidates: readonly unknown[],
-): readonly ClassicAccessDeclaration[] {
-  const declarations: ClassicAccessDeclaration[] = [];
-  const seen = new Set<ClassicAccessDeclaration>();
-
-  const addDeclaration = (declaration: ClassicAccessDeclaration): void => {
-    if (!seen.has(declaration)) {
-      seen.add(declaration);
-      declarations.push(declaration);
-    }
-  };
-
-  for (const candidate of candidates) {
-    if (isClassicAccessDeclaration(candidate)) {
-      addDeclaration(candidate);
-    } else if (
-      Array.isArray(candidate) &&
-      candidate.every(isClassicAccessDeclaration)
-    ) {
-      for (const entry of candidate) {
-        addDeclaration(entry);
-      }
-    }
-  }
-  return declarations;
-}
-
 function hasProperty<K extends string>(
   value: object,
   key: K,
@@ -245,12 +204,11 @@ function isAccessModel(value: unknown): value is AccessModel {
   if (!isRecord(value)) return false;
   const definitions = value["definitions"];
   const bindings = value["bindings"];
-  const exceptions = value["visibleRecordExceptions"];
-  if (
-    !Array.isArray(definitions) ||
-    !Array.isArray(bindings) ||
-    !Array.isArray(exceptions)
-  ) {
+  if (!Array.isArray(definitions) || !Array.isArray(bindings)) {
+    return false;
+  }
+  const allowlist = value["lookupResourceAllowlist"];
+  if (allowlist !== undefined && !Array.isArray(allowlist)) {
     return false;
   }
   return definitions.every(isResolvedAccessDefinition);
@@ -278,14 +236,4 @@ function isDslResourceNode(value: unknown): value is AnyDslResource {
 
 function isDslNode(value: unknown): value is DslNode {
   return isDslActorNode(value) || isDslResourceNode(value);
-}
-
-function isClassicAccessDeclaration(
-  value: unknown,
-): value is ClassicAccessDeclaration {
-  return (
-    isRecord(value) &&
-    isEntityHandle(value["entity"]) &&
-    typeof value["resolve"] === "function"
-  );
 }

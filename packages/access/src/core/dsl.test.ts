@@ -1,33 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 
+import { catalogOnly, lifecycleTrigger } from "../catalog.js";
 import {
-  access,
   accessIrDefinitionsDiff,
-  accessModel,
   actor,
   allOf,
   anyOf,
-  both,
   compileAccess,
+  compileAccessFromIr,
   emitAccessIr,
   emitTypeScript,
   emitZed,
-  entityHandle,
   every,
-  excluding,
   isPermissionToken,
   isRoleToken,
-  membersOf,
   parseZed,
   resource,
-  throughAll,
-  wildcard,
-  withExpiration,
   type ActorRef,
   type DslResource,
   type ResourceSubjectRef,
 } from "../index.js";
+import { testGrantable } from "./test-support/test-grantable.js";
 
 describe("ergonomic access DSL", () => {
   it("compiles top-down organization -> task -> photo, order, and fail-closed billing with exact Zed parity", () => {
@@ -165,15 +158,17 @@ describe("ergonomic access DSL", () => {
       "view",
     ]);
 
-    // Round-trip through parseZed + emitTypeScript compatibility.
-    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual(
-      [],
-    );
+    // Round-trip through parseZed, compileAccessFromIr, and emitTypeScript.
+    const parsedIr = parseZed(zed);
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), parsedIr)).toEqual([]);
+    expect(
+      accessIrDefinitionsDiff(
+        emitAccessIr(model),
+        emitAccessIr(compileAccessFromIr(parsedIr)),
+      ),
+    ).toEqual([]);
     expect(emitTypeScript(emitAccessIr(model))).toContain(
       "export const access = compileAccess(",
-    );
-    expect(emitTypeScript(emitAccessIr(model), { style: "classic" })).toContain(
-      "export const model",
     );
   });
 
@@ -293,7 +288,7 @@ describe("ergonomic access DSL", () => {
       }),
     });
 
-    // Auto-discovers organization, folder, and user from document alone!
+    // Auto-discovers organization, folder, and user from document alone.
     const model = compileAccess([document]);
     const zed = emitZed(model);
 
@@ -307,7 +302,7 @@ describe("ergonomic access DSL", () => {
     );
   });
 
-  it("compiles every(), expiring, anyone, userset roles, combinators, and matches manual access() IR", () => {
+  it("compiles every(), expiring actors/wildcards/usersets, combinators, and role-target arrows", () => {
     const user = actor("user");
 
     const team = resource("team", {
@@ -328,7 +323,9 @@ describe("ergonomic access DSL", () => {
         owner: user,
         guest: user.expiring,
         public_link: user.anyone,
+        temp_link: user.anyone.expiring,
         team_viewer: team.roles.member,
+        temp_team: team.roles.member.expiring,
         review_group: reviewGroup,
         active: user.anyone,
         banned: user,
@@ -337,7 +334,9 @@ describe("ergonomic access DSL", () => {
         owner,
         guest,
         public_link,
+        temp_link,
         team_viewer,
+        temp_team,
         review_group,
         active,
         banned,
@@ -346,8 +345,11 @@ describe("ergonomic access DSL", () => {
           owner,
           guest,
           public_link,
+          temp_link,
           team_viewer,
+          temp_team,
           every(review_group).view,
+          review_group.reviewer,
         ),
         publish: allOf(owner, active).unless(banned),
         approve: owner.and(every(review_group).approve),
@@ -357,75 +359,14 @@ describe("ergonomic access DSL", () => {
     const dslModel = compileAccess([doc]);
     const dslZed = emitZed(dslModel);
 
-    // Build the exact same schema using legacy hand-written access() API to prove IR parity.
-    const UserH = entityHandle({
-      wireName: "user",
-      idSchema: z.string().min(1),
-    });
-    const TeamH = entityHandle({
-      wireName: "team",
-      idSchema: z.string().min(1),
-    });
-    const GroupH = entityHandle({
-      wireName: "review_group",
-      idSchema: z.string().min(1),
-    });
-    const DocH = entityHandle({ wireName: "doc", idSchema: z.string().min(1) });
-
-    const manualUser = access(UserH, { roles: {}, permissions: () => ({}) });
-    const manualTeam = access(TeamH, {
-      roles: { member: UserH },
-      permissions: (r) => ({ view: [r.member] }),
-    });
-    const manualGroup = access(GroupH, {
-      roles: { reviewer: UserH },
-      permissions: (r) => ({ view: [r.reviewer], approve: [r.reviewer] }),
-    });
-    const manualDoc = access(DocH, {
-      roles: {
-        owner: UserH,
-        guest: withExpiration(UserH),
-        public_link: wildcard(UserH),
-        team_viewer: membersOf(manualTeam.roles.member),
-        review_group: GroupH,
-        active: wildcard(UserH),
-        banned: UserH,
-      },
-      permissions: (r) => ({
-        view: [
-          r.owner,
-          r.guest,
-          r.public_link,
-          r.team_viewer,
-          throughAll(r.review_group, manualGroup.permissions.view),
-        ],
-        publish: [excluding(both(r.owner, r.active), r.banned)],
-        approve: [
-          both(
-            r.owner,
-            throughAll(r.review_group, manualGroup.permissions.approve),
-          ),
-        ],
-      }),
-    });
-    const manualModel = accessModel([
-      manualUser,
-      manualTeam,
-      manualGroup,
-      manualDoc,
-    ]);
-
-    expect(
-      accessIrDefinitionsDiff(
-        emitAccessIr(dslModel),
-        emitAccessIr(manualModel),
-      ),
-    ).toEqual([]);
     expect(dslZed).toContain("use expiration");
     expect(dslZed).toContain("relation guest: user with expiration");
     expect(dslZed).toContain("relation public_link: user:*");
+    expect(dslZed).toContain("relation temp_link: user:* with expiration");
     expect(dslZed).toContain("relation team_viewer: team#member");
+    expect(dslZed).toContain("relation temp_team: team#member with expiration");
     expect(dslZed).toContain("review_group.all(view)");
+    expect(dslZed).toContain("review_group->reviewer");
     expect(dslZed).toContain("review_group.all(approve)");
     expect(
       accessIrDefinitionsDiff(emitAccessIr(dslModel), parseZed(dslZed)),
@@ -472,34 +413,53 @@ describe("ergonomic access DSL", () => {
     expect(zed).toContain("permission view = owner + linked_alpha->view");
   });
 
-  it("works directly with accessModel([actor, resource]) without entityHandle or wrapper objects", () => {
+  it("preserves optional granting and catalogOnly metadata on resource()", () => {
     const user = actor("user");
+    const membershipEnds = lifecycleTrigger("membershipEnds");
+    const systemOnly = catalogOnly({
+      id: "workspace.system_audit",
+      label: { en: "System audit" },
+      description: { en: "System-only audit capability" },
+      domainId: "workspaces",
+      domainLabel: { en: "Workspaces" },
+      scopes: ["ORGANIZATION"],
+      entityWireName: "workspace",
+      roleName: "system_auditor",
+      permission: "audit",
+    });
+
     const workspace = resource("workspace", {
       roles: {
         admin: user,
-        member: user,
+        editor: testGrantable({ id: "workspace.edit", permission: "edit" }),
       },
-      can: ({ admin, member }) => ({
-        manage: admin,
-        view: [admin, member],
+      can: ({ admin, editor }) => ({
+        manage_grants: admin,
+        edit: [admin, editor],
       }),
+      granting: {
+        requires: ["manage_grants"],
+        removedWhen: [membershipEnds],
+      },
+      catalogOnly: [systemOnly],
     });
 
-    const model = accessModel([user, workspace]);
-    expect(user.resolve()).toBe(user.resolve());
-    expect(workspace.resolve()).toBe(workspace.resolve());
+    const model = compileAccess([workspace]);
+    const def = model.definitions.find(
+      (entry) => entry.entity.wireName === "workspace",
+    );
+    expect(def?.granting).toEqual({
+      requires: [
+        {
+          kind: "permission",
+          entityWireName: "workspace",
+          permissionName: "manage_grants",
+        },
+      ],
+      removedWhen: [membershipEnds],
+    });
+    expect(def?.catalogOnly).toEqual([systemOnly]);
     expect(user.entity.wireName).toBe("user");
     expect(workspace.entity.wireName).toBe("workspace");
-
-    const zed = emitZed(model);
-    expect(zed).toContain("definition user {}");
-    expect(zed).toContain("definition workspace {");
-    expect(zed).toContain("relation admin: user");
-    expect(zed).toContain("relation member: user");
-    expect(zed).toContain("permission manage = admin");
-    expect(zed).toContain("permission view = admin + member");
-    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual(
-      [],
-    );
   });
 });

@@ -1,9 +1,11 @@
 import type {
   AuthorizationModelDefinition,
   CompiledArrowTarget,
+  CompiledColumnRelation,
   CompiledPermissionExpression,
 } from "./policy-model.js";
 import type { PostgresValue } from "../postgres-types.js";
+import { findColumnRelation } from "./column-relations.js";
 
 /** The single relationship table every compiled policy statement reads. */
 export const TUPLES = "dad_authorization_relationship";
@@ -162,9 +164,10 @@ export function relationTargetCapabilities(
   };
 }
 
-/** Dispatches to direct PK lookup when safe, else recursive userset membership. */
+/** Dispatches to column-backed FK lookup, direct PK lookup, or recursive userset membership. */
 export function compiledRelationCheck(
   model: AuthorizationModelDefinition,
+  builder: QueryBuilder,
   namespace: string,
   subjectKind: string,
   subjectId: string,
@@ -172,8 +175,19 @@ export function compiledRelationCheck(
   resourceKind: string,
   resourceId: string,
   relationName: string,
-  relationSql: string,
 ): string {
+  const columnRel = findColumnRelation(model, resourceEntity, relationName);
+  if (columnRel !== undefined) {
+    const entitySql = builder.value(columnRel.entity);
+    const targetKindSql = builder.value(columnRel.targetEntity);
+    return `EXISTS (SELECT 1
+      FROM ${columnRel.table} col_tuple
+      WHERE (${resourceKind})::text = ${entitySql}::text
+        AND (${subjectKind})::text = ${targetKindSql}::text
+        AND col_tuple.${columnRel.idColumn} = ${resourceId}
+        AND col_tuple.${columnRel.targetIdColumn} = ${subjectId})`;
+  }
+  const relationSql = builder.value(relationName);
   const { allowsUsersets, allowsWildcards } = relationTargetCapabilities(
     model,
     resourceEntity,
@@ -234,19 +248,53 @@ export function directRelationMembershipCheck(
       AND ${notExpired("tuple")})`;
 }
 
+function columnRelationDirectBranches(
+  columnRelations: readonly CompiledColumnRelation[] | undefined,
+  builder: QueryBuilder | undefined,
+  subjectKind: string,
+  subjectId: string,
+): string {
+  if (
+    columnRelations === undefined ||
+    columnRelations.length === 0 ||
+    builder === undefined
+  ) {
+    return "";
+  }
+  return columnRelations
+    .map((col) => {
+      const entitySql = builder.value(col.entity);
+      const relationSql = builder.value(col.relation);
+      const targetKindSql = builder.value(col.targetEntity);
+      return ` UNION ALL SELECT ${entitySql}::text, col_direct.${col.idColumn}, ${relationSql}::text
+        FROM ${col.table} col_direct
+        WHERE (${subjectKind})::text = ${targetKindSql}::text
+          AND col_direct.${col.targetIdColumn} = ${subjectId}`;
+    })
+    .join("");
+}
+
 /** Reach all non-expired direct and wildcard tuples for a subject (no userset recursion). */
 export function directSubjectReachability(
   namespace: string,
   subjectKind: string,
   subjectId: string,
+  columnRelations?: readonly CompiledColumnRelation[],
+  builder?: QueryBuilder,
 ): string {
+  const columnBranches = columnRelationDirectBranches(
+    columnRelations,
+    builder,
+    subjectKind,
+    subjectId,
+  );
   return `subject_reachable(resource_kind, resource_id, relation) AS (
       SELECT direct_tuple.resource_kind, direct_tuple.resource_id, direct_tuple.relation
       FROM ${TUPLES} direct_tuple
       WHERE direct_tuple.namespace = ${namespace}
         AND direct_tuple.subject_relation = ''
         AND ${notExpired("direct_tuple")}
-        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ''))
+        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ''))${columnBranches}
     )`;
 }
 
@@ -255,14 +303,22 @@ export function subjectReachability(
   namespace: string,
   subjectKind: string,
   subjectId: string,
+  columnRelations?: readonly CompiledColumnRelation[],
+  builder?: QueryBuilder,
 ): string {
+  const columnBranches = columnRelationDirectBranches(
+    columnRelations,
+    builder,
+    subjectKind,
+    subjectId,
+  );
   return `subject_reachable(resource_kind, resource_id, relation) AS (
       SELECT direct_tuple.resource_kind, direct_tuple.resource_id, direct_tuple.relation
       FROM ${TUPLES} direct_tuple
       WHERE direct_tuple.namespace = ${namespace}
         AND direct_tuple.subject_relation = ''
         AND ${notExpired("direct_tuple")}
-        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ''))
+        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ''))${columnBranches}
       UNION
       SELECT parent.resource_kind, parent.resource_id, parent.relation
       FROM subject_reachable child_relation

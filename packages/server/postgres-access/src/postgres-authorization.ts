@@ -1,4 +1,3 @@
-import type { AccessModel } from "@dads-framework/access";
 import {
   Authorization,
   type AccessChange,
@@ -12,12 +11,7 @@ import {
   type SubjectLookupResult,
   type SubjectRef,
 } from "@dads-framework/access/runtime";
-import {
-  type PgPoolLike,
-  type PostgresQuery,
-  type PostgresRow,
-  type PostgresQueryResult,
-} from "./postgres-types.js";
+import { type PostgresQuery, type PostgresRow } from "./postgres-types.js";
 import {
   compilePostgresCheck,
   compilePostgresCheckMany,
@@ -29,6 +23,10 @@ import {
   type PostgresFilterQuery,
   type PostgresAccessFilter,
 } from "./policy/compile-filter.js";
+import {
+  verifyPostgresColumnRelations,
+  type ColumnRelationCheckResult,
+} from "./policy/column-relations.js";
 import { resolvePostgresFilter } from "./policy/resolve-filter.js";
 import { compileLinearCheck } from "./policy/compile-linear-check.js";
 import { compilePostgresSubjectLookup } from "./policy/compile-subject-lookup.js";
@@ -49,47 +47,20 @@ import {
   requireConcreteSubject,
   requireSubjectLookupInput,
 } from "./postgres-response.js";
+import {
+  lazyDrizzleTransactionExecutor,
+  validatePostgresAccessOptions,
+  type PostgresAccessExecutor,
+  type PostgresAccessOptions,
+} from "./postgres-options.js";
 import { PostgresTuples } from "./postgres-tuples.js";
 import { assertProtectedAuthorizationActive } from "./protected-authorization-scope.js";
 import { RevisionedLookup } from "./revisioned-lookup.js";
 import { readFromLookupPrimary } from "./lookup-primary-pool.js";
-import { isPreparedCheckExecutorForPool } from "./prepared-check-executor.js";
+
+export type { PostgresAccessExecutor, PostgresAccessOptions };
 
 const CHECK_BATCH_SIZE = 2_048;
-
-type DrizzleExecutorModule = {
-  readonly transactionExecutor: (
-    transaction: DrizzleExecuteLike,
-  ) => PostgresAccessExecutor;
-};
-
-let drizzleExecutorModulePromise: Promise<DrizzleExecutorModule> | undefined;
-
-function lazyDrizzleTransactionExecutor(
-  transaction: DrizzleExecuteLike,
-): PostgresAccessExecutor {
-  return {
-    async query(query: PostgresQuery): Promise<PostgresQueryResult> {
-      drizzleExecutorModulePromise ??= import("./drizzle-executor.js");
-      const { transactionExecutor } = await drizzleExecutorModulePromise;
-      return transactionExecutor(transaction).query(query);
-    },
-  };
-}
-
-export type PostgresAccessExecutor = {
-  query(query: PostgresQuery): PromiseLike<PostgresQueryResult>;
-  queryCheck?(query: PostgresQuery): PromiseLike<PostgresQueryResult>;
-};
-
-export type PostgresAccessOptions = {
-  readonly model: AccessModel;
-  readonly namespace: string;
-  readonly executor: PostgresAccessExecutor;
-  readonly queryTimeoutMs?: number;
-  /** The same managed, primary autocommit pool passed as executor. Requires the optional revision migration. */
-  readonly reuseLookupResultsOn?: PgPoolLike;
-};
 
 /** Experimental authorization over the application's primary Postgres database. */
 export class PostgresAuthorization extends Authorization {
@@ -101,33 +72,17 @@ export class PostgresAuthorization extends Authorization {
 
   constructor(options: PostgresAccessOptions) {
     super();
-    if (options.namespace.trim() === "")
-      throw new Error("Postgres authorization namespace is required");
-    const timeout = options.queryTimeoutMs ?? 5_000;
-    if (!Number.isSafeInteger(timeout) || timeout < 1)
-      throw new Error(
-        "Postgres authorization queryTimeoutMs must be a positive integer",
-      );
+    const timeout = validatePostgresAccessOptions(options);
     this.#options = Object.freeze({ ...options });
     this.#executor = options.executor;
     const reusePool = options.reuseLookupResultsOn;
-    if (
-      reusePool !== undefined &&
-      (typeof reusePool.connect !== "function" ||
-        (reusePool !== options.executor &&
-          !isPreparedCheckExecutorForPool(reusePool, options.executor)))
-    ) {
-      throw new Error(
-        "Postgres lookup reuse requires the same primary pool as the executor",
-      );
-    }
     this.#revisionedLookup =
       reusePool === undefined
         ? undefined
         : new RevisionedLookup(options.namespace, (query) =>
             readFromLookupPrimary(reusePool, query, timeout),
           );
-    this.#policy = compileAccessPolicy(options.model);
+    this.#policy = compileAccessPolicy(options.model, options.columnRelations);
     this.#tuples = new PostgresTuples(
       this.#policy.model,
       options.namespace,
@@ -138,13 +93,25 @@ export class PostgresAuthorization extends Authorization {
   /** Bind every operation to an application-owned transaction client. */
   inTransaction(executor: PostgresAccessExecutor): PostgresAuthorization {
     assertProtectedAuthorizationActive(this);
-    const { model, namespace, queryTimeoutMs } = this.#options;
+    const { model, namespace, queryTimeoutMs, columnRelations } = this.#options;
     return new PostgresAuthorization({
       model,
       namespace,
       executor,
       ...(queryTimeoutMs === undefined ? {} : { queryTimeoutMs }),
+      ...(columnRelations === undefined ? {} : { columnRelations }),
     });
+  }
+
+  /**
+   * Verify every configured `columnRelations` table and column exists in
+   * PostgreSQL and report whether the recommended reverse-lookup index exists.
+   */
+  verifyColumnRelations(): Promise<readonly ColumnRelationCheckResult[]> {
+    return verifyPostgresColumnRelations(
+      this.#policy.model.columnRelations ?? [],
+      (query) => this.#query(query),
+    );
   }
 
   /** Bind reads and writes to an existing Drizzle transaction. */
@@ -249,7 +216,7 @@ export class PostgresAuthorization extends Authorization {
   /** Compile a parameterized SQL Boolean filter predicate for single-query resource listing. */
   compileFilter(query: PostgresFilterQuery): PostgresAccessFilter {
     requireConcreteSubject(query.subject);
-    const validated = validatePostgresFilterQuery(query);
+    const validated = validatePostgresFilterQuery(query, this.#policy.model);
     const permission = this.#policy.permissionName(
       query.resourceType,
       query.permission,
@@ -274,7 +241,7 @@ export class PostgresAuthorization extends Authorization {
     query: PostgresFilterQuery,
   ): Promise<PostgresAccessFilter> {
     requireConcreteSubject(query.subject);
-    const validated = validatePostgresFilterQuery(query);
+    const validated = validatePostgresFilterQuery(query, this.#policy.model);
     const permission = this.#policy.permissionName(
       query.resourceType,
       query.permission,

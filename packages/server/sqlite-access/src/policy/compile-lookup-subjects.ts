@@ -156,22 +156,51 @@ function buildReachCte(
   if (!hasArrows) {
     return `reach(entity, resource_id, perm) AS (${anchor})`;
   }
+  const columnRels = forward.model.columnRelations ?? [];
+  if (columnRels.length === 0) {
+    return `reach(entity, resource_id, perm) AS (
+      ${anchor}
+      UNION
+      SELECT ae.target_entity, t.subject_id, ae.target_perm
+      FROM reach r
+      JOIN arrow_edges ae
+        ON ae.entity = r.entity AND ae.perm = r.perm
+      JOIN ${TUPLES} t
+        ON t.namespace = ${b.value(forward.namespace)}
+        AND t.resource_kind = r.entity
+        AND t.resource_id = r.resource_id
+        AND t.relation = ae.relation
+        AND t.subject_kind = ae.target_entity
+        AND t.subject_is_wildcard = 0
+        AND t.subject_relation = ''
+        AND ${activeTupleCondition("t", b, forward.nowMs)}
+    )`;
+  }
+  const tupleEdgeSql = `SELECT t.resource_kind AS src_kind, t.resource_id AS src_id, t.relation AS rel, t.subject_kind AS tgt_kind, t.subject_id AS tgt_id
+    FROM ${TUPLES} t
+    WHERE t.namespace = ${b.value(forward.namespace)}
+      AND t.subject_is_wildcard = 0
+      AND t.subject_relation = ''
+      AND ${activeTupleCondition("t", b, forward.nowMs)}`;
+  const colEdgeParts = columnRels.map(
+    (
+      columnRel,
+    ) => `SELECT ${b.value(columnRel.entity)} AS src_kind, col_rel.${columnRel.idColumn} AS src_id, ${b.value(columnRel.relation)} AS rel, ${b.value(columnRel.targetEntity)} AS tgt_kind, col_rel.${columnRel.targetIdColumn} AS tgt_id
+      FROM ${columnRel.table} col_rel
+      WHERE col_rel.${columnRel.targetIdColumn} IS NOT NULL`,
+  );
   return `reach(entity, resource_id, perm) AS (
     ${anchor}
     UNION
-    SELECT ae.target_entity, t.subject_id, ae.target_perm
+    SELECT ae.target_entity, edge.tgt_id, ae.target_perm
     FROM reach r
     JOIN arrow_edges ae
       ON ae.entity = r.entity AND ae.perm = r.perm
-    JOIN ${TUPLES} t
-      ON t.namespace = ${b.value(forward.namespace)}
-      AND t.resource_kind = r.entity
-      AND t.resource_id = r.resource_id
-      AND t.relation = ae.relation
-      AND t.subject_kind = ae.target_entity
-      AND t.subject_is_wildcard = 0
-      AND t.subject_relation = ''
-      AND ${activeTupleCondition("t", b, forward.nowMs)}
+    JOIN (${[tupleEdgeSql, ...colEdgeParts].join(" UNION ALL ")}) edge
+      ON edge.src_kind = r.entity
+      AND edge.src_id = r.resource_id
+      AND edge.rel = ae.relation
+      AND edge.tgt_kind = ae.target_entity
   )`;
 }
 
@@ -202,8 +231,7 @@ function buildCandidatesCte(
   forward: ForwardCompileContext,
   subjectType: string,
 ): string {
-  return `candidates(subject_id) AS (
-    SELECT DISTINCT t.subject_id
+  const tupleSelect = `SELECT DISTINCT t.subject_id AS subject_id
     FROM subj_walk sw
     JOIN ${TUPLES} t
       ON t.namespace = ${b.value(forward.namespace)}
@@ -213,7 +241,20 @@ function buildCandidatesCte(
       AND t.subject_kind = ${b.value(subjectType)}
       AND t.subject_is_wildcard = 0
       AND t.subject_relation = ''
-      AND ${activeTupleCondition("t", b, forward.nowMs)}
+      AND ${activeTupleCondition("t", b, forward.nowMs)}`;
+  const colSelects = (forward.model.columnRelations ?? [])
+    .filter((columnRel) => columnRel.targetEntity === subjectType)
+    .map(
+      (columnRel) => `SELECT col_rel.${columnRel.targetIdColumn} AS subject_id
+      FROM subj_walk sw
+      JOIN ${columnRel.table} col_rel
+        ON col_rel.${columnRel.idColumn} = sw.resource_id
+        AND col_rel.${columnRel.targetIdColumn} IS NOT NULL
+      WHERE sw.resource_kind = ${b.value(columnRel.entity)}
+        AND sw.relation = ${b.value(columnRel.relation)}`,
+    );
+  return `candidates(subject_id) AS (
+    ${[tupleSelect, ...colSelects].join(" UNION ")}
   )`;
 }
 

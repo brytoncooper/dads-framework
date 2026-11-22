@@ -19,6 +19,7 @@ soundness of Dads's ReBAC semantics and compiler optimizations:
 9. `unless_dominance` & `unless_dominates_anyOf`
 10. `revocation_no_escalation` & `revocation_check_no_escalation`
 11. `namespace_isolation_check` & `namespace_isolation_lookup`
+12. `column_backed_relation_edges_equiv` & `column_backed_relation_direct_equiv`
 -/
 
 namespace DadsAccess
@@ -726,5 +727,137 @@ theorem namespace_isolation_lookup (m : AccessModel) (ns : String)
     lookupResourcesOver m (storeForNamespace ns (table ++ other)) now a e p candidates =
     lookupResourcesOver m (storeForNamespace ns table) now a e p candidates := by
   rw [storeForNamespace_append_other ns table other hdisjoint]
+
+/-! ## 13. Column-backed relation equivalence (zero duplicate tuples, zero drift) -/
+
+private theorem directEntityEdges_append (s₁ s₂ : List Tuple) (now : Timestamp)
+    (e : EntityName) (id : ObjId) (rel : RelName) :
+    directEntityEdges (s₁ ++ s₂) now e id rel =
+      directEntityEdges s₁ now e id rel ++ directEntityEdges s₂ now e id rel := by
+  unfold directEntityEdges activeTuples
+  rw [List.filter_append, List.filterMap_append]
+
+private theorem directEntityEdges_empty_when_absent (store : List Tuple)
+    (now : Timestamp) (e : EntityName) (id : ObjId) (rel : RelName)
+    (habsent : ∀ t ∈ store, ¬(t.resourceKind = e ∧ t.relation = rel)) :
+    directEntityEdges store now e id rel = [] := by
+  unfold directEntityEdges activeTuples
+  rw [List.filterMap_eq_nil_iff]
+  intro t ht
+  have htMem : t ∈ store := (List.mem_filter.mp ht).1
+  have hno := habsent t htMem
+  have hcond : (t.resourceKind == e && t.resourceId == id && t.relation == rel) = false := by
+    cases h1 : (t.resourceKind == e) <;> cases h2 : (t.relation == rel) <;> simp
+    exfalso; exact hno ⟨beq_iff_eq.mp h1, beq_iff_eq.mp h2⟩
+  simp [hcond]
+
+private theorem directEntityEdges_materialize (now : Timestamp) (e : EntityName)
+    (rel : RelName) (targetEntity : EntityName) (rows : List (ObjId × Option ObjId))
+    (id : ObjId) :
+    directEntityEdges (materializeColumnTable e rel targetEntity rows) now e id rel =
+      columnBackedEdges targetEntity rows id := by
+  induction rows with
+  | nil => rfl
+  | cons hd tl ih =>
+      rcases hd with ⟨rowId, optTarget⟩
+      cases optTarget with
+      | none =>
+          unfold materializeColumnTable directEntityEdges activeTuples columnBackedEdges at ih ⊢
+          rw [List.filterMap_cons, List.filterMap_cons]
+          simp only [ite_self]
+          exact ih
+      | some targetId =>
+          unfold materializeColumnTable directEntityEdges activeTuples columnBackedEdges at ih ⊢
+          rw [List.filterMap_cons, List.filterMap_cons]
+          dsimp only
+          rw [List.filter_cons]
+          simp only [tupleActive, ↓reduceIte, List.filterMap_cons,
+                     beq_self_eq_true, Bool.true_and, Bool.and_true]
+          cases hEq : (rowId == id)
+          · simp only [Bool.false_eq_true, ↓reduceIte]
+            exact ih
+          · simp only [↓reduceIte]
+            exact congrArg (List.cons (targetEntity, targetId)) ih
+
+/--
+Reading edges directly from a column-backed application table `(id, Option fk)`
+yields the exact same edge list as materializing non-expiring tuples into
+`dad_authorization_relationship` (when manual tuple writes to `(e, rel)` are
+prohibited).
+-/
+theorem column_backed_relation_edges_equiv (baseStore : List Tuple)
+    (now : Timestamp) (e : EntityName) (rel : RelName) (targetEntity : EntityName)
+    (rows : List (ObjId × Option ObjId)) (id : ObjId)
+    (hnoDup : ∀ t ∈ baseStore, ¬(t.resourceKind = e ∧ t.relation = rel)) :
+    directEntityEdges (baseStore ++ materializeColumnTable e rel targetEntity rows) now e id rel =
+      columnBackedEdges targetEntity rows id := by
+  rw [directEntityEdges_append, directEntityEdges_empty_when_absent baseStore now e id rel hnoDup,
+      List.nil_append]
+  exact directEntityEdges_materialize now e rel targetEntity rows id
+
+private theorem direct_subject_match_actor (targetEntity : EntityName) (targetId : ObjId) (a : Actor) :
+    ((Subject.direct targetEntity targetId == Subject.direct a.kind a.id) ||
+     (Subject.direct targetEntity targetId == Subject.wildcard a.kind)) =
+    (targetEntity == a.kind && targetId == a.id) := by
+  change ((targetEntity == a.kind && targetId == a.id) || false) =
+    (targetEntity == a.kind && targetId == a.id)
+  exact Bool.or_false _
+
+private theorem directMember_materialize (now : Timestamp) (a : Actor) (e : EntityName)
+    (rel : RelName) (targetEntity : EntityName) (rows : List (ObjId × Option ObjId))
+    (id : ObjId) :
+    directMember (materializeColumnTable e rel targetEntity rows) now a e id rel =
+      rows.any (fun (rowId, optTarget) =>
+        match optTarget with
+        | none => false
+        | some targetId => rowId == id && targetEntity == a.kind && targetId == a.id) := by
+  induction rows with
+  | nil => rfl
+  | cons hd tl ih =>
+      rcases hd with ⟨rowId, optTarget⟩
+      cases optTarget with
+      | none =>
+          unfold directMember activeTuples materializeColumnTable at ih ⊢
+          rw [List.filterMap_cons, List.any_cons]
+          simp only [Bool.false_or]
+          exact ih
+      | some targetId =>
+          unfold directMember activeTuples materializeColumnTable at ih ⊢
+          rw [List.filterMap_cons, List.any_cons]
+          dsimp only
+          rw [List.filter_cons]
+          simp only [tupleActive, ↓reduceIte, List.any_cons, beq_self_eq_true,
+                     Bool.true_and, direct_subject_match_actor]
+          rw [ih]
+          simp only [Bool.true_and, Bool.and_assoc]
+
+/--
+Direct actor membership against a column-backed FK table (`documents.owner_id`)
+is 100% equivalent to materializing non-expiring tuples into the relationship store.
+-/
+theorem column_backed_relation_direct_equiv (baseStore : List Tuple)
+    (now : Timestamp) (a : Actor) (e : EntityName) (rel : RelName)
+    (targetEntity : EntityName) (rows : List (ObjId × Option ObjId)) (id : ObjId)
+    (hnoDup : ∀ t ∈ baseStore, ¬(t.resourceKind = e ∧ t.relation = rel)) :
+    directMember (baseStore ++ materializeColumnTable e rel targetEntity rows) now a e id rel =
+      rows.any (fun (rowId, optTarget) =>
+        match optTarget with
+        | none => false
+        | some targetId => rowId == id && targetEntity == a.kind && targetId == a.id) := by
+  have hbaseFalse : directMember baseStore now a e id rel = false := by
+    unfold directMember activeTuples
+    rw [List.any_eq_false]
+    intro t ht
+    have htMem : t ∈ baseStore := (List.mem_filter.mp ht).1
+    have hno := hnoDup t htMem
+    cases h1 : (t.resourceKind == e) <;> cases h2 : (t.relation == rel) <;> simp
+    exfalso; exact hno ⟨beq_iff_eq.mp h1, beq_iff_eq.mp h2⟩
+  have hsplit : directMember (baseStore ++ materializeColumnTable e rel targetEntity rows) now a e id rel =
+      (directMember baseStore now a e id rel ||
+       directMember (materializeColumnTable e rel targetEntity rows) now a e id rel) := by
+    unfold directMember activeTuples
+    rw [List.filter_append, List.any_append]
+  rw [hsplit, hbaseFalse, Bool.false_or]
+  exact directMember_materialize now a e rel targetEntity rows id
 
 end DadsAccess

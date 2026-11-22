@@ -66,12 +66,22 @@ export type CompiledAuthorizationPermission = {
   readonly expression: CompiledPermissionExpression;
 };
 
+export type CompiledColumnRelation = {
+  readonly entity: string;
+  readonly relation: string;
+  readonly targetEntity: string;
+  readonly table: string;
+  readonly idColumn: string;
+  readonly targetIdColumn: string;
+};
+
 /** Internal, lowered SQL model. Access-kit definitions are the public model. */
 export type AuthorizationModelDefinition = {
   readonly entities: readonly CompiledAuthorizationEntity[];
   readonly relations: readonly CompiledAuthorizationRelation[];
   readonly permissions: readonly CompiledAuthorizationPermission[];
   readonly lifecycle: readonly { readonly name: string }[];
+  readonly columnRelations?: readonly CompiledColumnRelation[];
 };
 export type NormalizedAuthorizationReference = {
   readonly type: string;

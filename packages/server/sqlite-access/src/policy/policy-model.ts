@@ -86,6 +86,15 @@ export type CompiledCyclicScc = {
   readonly stepClauses: readonly RecursiveStepClause[];
 };
 
+export type CompiledSqliteColumnRelation = {
+  readonly entity: string;
+  readonly relation: string;
+  readonly targetEntity: string;
+  readonly table: string;
+  readonly idColumn: string;
+  readonly targetIdColumn: string;
+};
+
 /** Internal lowered SQLite model compiled from `@dads-framework/access` IR. */
 export type SqliteAuthorizationModel = {
   readonly entities: readonly SqliteAuthorizationEntity[];
@@ -93,6 +102,7 @@ export type SqliteAuthorizationModel = {
   readonly permissions: readonly SqliteAuthorizationPermission[];
   readonly permissionByKey: ReadonlyMap<string, SqliteAuthorizationPermission>;
   readonly cyclicSccsByKey: ReadonlyMap<string, CompiledCyclicScc>;
+  readonly columnRelations?: readonly CompiledSqliteColumnRelation[];
 };
 
 export type SqliteEntityRef = {

@@ -161,8 +161,8 @@ function shouldUseSharedBatchBranch(
     permission,
   );
   return (
-    Buffer.byteLength(probeSql) > 8 * 1024 ||
-    countRecursiveClauses(probeSql) > 2
+    Buffer.byteLength(probeSql) > 16 * 1024 ||
+    countRecursiveClauses(probeSql) > 6
   );
 }
 
@@ -243,7 +243,7 @@ export function compilePostgresLookup(
   // Flattening the LATERAL probe can scan the namespace once per iteration.
   return Object.freeze({
     kind: "lookup",
-    text: `WITH RECURSIVE ${subjectReachability(namespaceSql, subject.type, subject.id)} SELECT DISTINCT allowed_resource.resource_id FROM (${allowedResourceIds}) allowed_resource ORDER BY allowed_resource.resource_id`,
+    text: `WITH RECURSIVE ${subjectReachability(namespaceSql, subject.type, subject.id, model.columnRelations, builder)} SELECT DISTINCT allowed_resource.resource_id FROM (${allowedResourceIds}) allowed_resource ORDER BY allowed_resource.resource_id`,
     values: builder.values,
   });
 }

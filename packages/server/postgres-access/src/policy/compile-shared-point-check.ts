@@ -11,6 +11,7 @@ import {
   type RecursiveSccPlan,
 } from "./permission-cycles.js";
 import { compileRecursiveSharedBody } from "./compile-recursive-policy.js";
+import { findColumnRelation } from "./column-relations.js";
 import {
   isPolymorphicRelation,
   notExpired,
@@ -91,6 +92,8 @@ function compileSharedPointPlan(
     binding.namespace,
     binding.subjectKind,
     binding.subjectId,
+    model.columnRelations,
+    builder,
   );
   return {
     withClause: `WITH RECURSIVE ${reachable}, ${compiler.queries.join(",\n")}`,
@@ -173,6 +176,7 @@ class SharedPointCompiler {
     }
     const cteName = `rec_policy_${String(this.queries.length)}`;
     const body = compileRecursiveSharedBody({
+      model: this.model,
       builder: this.builder,
       namespace: this.namespace,
       cteName,
@@ -219,7 +223,7 @@ class SharedPointCompiler {
         entity,
         expression.relation,
       );
-      return this.#through(expression.relation, targets, polymorphic);
+      return this.#through(entity, expression.relation, targets, polymorphic);
     }
     if (expression.kind === "through-all") {
       const targets = resolveArrowTargets(this.model, entity, expression);
@@ -228,7 +232,12 @@ class SharedPointCompiler {
         entity,
         expression.relation,
       );
-      return this.#throughAll(expression.relation, targets, polymorphic);
+      return this.#throughAll(
+        entity,
+        expression.relation,
+        targets,
+        polymorphic,
+      );
     }
     if (expression.kind === "exclude") {
       const include = this.#expression(entity, expression.include);
@@ -245,12 +254,13 @@ class SharedPointCompiler {
   }
 
   #through(
+    entity: string,
     name: string,
     targets: readonly CompiledArrowTarget[],
     polymorphic: boolean,
   ): string {
     const branches = targets.map((target) =>
-      this.#throughBranch(name, target, polymorphic),
+      this.#throughBranch(entity, name, target, polymorphic),
     );
     return branches.length === 1 && branches[0] !== undefined
       ? branches[0]
@@ -258,11 +268,26 @@ class SharedPointCompiler {
   }
 
   #throughBranch(
+    entity: string,
     name: string,
     target: CompiledArrowTarget,
     polymorphic: boolean,
   ): string {
     const child = this.permission(target.entity, target.permission);
+    const columnRel = findColumnRelation(this.model, entity, name);
+    if (columnRel !== undefined) {
+      const entitySql = this.builder.value(columnRel.entity);
+      const targetKindSql = this.builder.value(columnRel.targetEntity);
+      return `SELECT DISTINCT ${entitySql}::text AS resource_kind, parent.resource_id
+        FROM ${child} reached
+        CROSS JOIN LATERAL (
+          SELECT col_tuple.${columnRel.idColumn} AS resource_id
+          FROM ${columnRel.table} col_tuple
+          WHERE reached.resource_kind = ${targetKindSql}
+            AND col_tuple.${columnRel.targetIdColumn} = reached.resource_id
+          OFFSET 0
+        ) parent`;
+    }
     const relation = this.builder.value(name);
     const kindMatch = polymorphic
       ? `reached.resource_kind = ${this.builder.value(target.entity)} AND tuple.subject_kind = reached.resource_kind`
@@ -284,10 +309,33 @@ class SharedPointCompiler {
   }
 
   #throughAll(
+    entity: string,
     name: string,
     targets: readonly CompiledArrowTarget[],
     polymorphic: boolean,
   ): string {
+    const columnRel = findColumnRelation(this.model, entity, name);
+    if (columnRel !== undefined && targets[0] !== undefined) {
+      const child = this.permission(targets[0].entity, targets[0].permission);
+      const entitySql = this.builder.value(columnRel.entity);
+      const targetKindSql = this.builder.value(columnRel.targetEntity);
+      return `SELECT DISTINCT ${entitySql}::text AS resource_kind, col_cand.${columnRel.idColumn} AS resource_id
+        FROM ${child} reached
+        JOIN ${columnRel.table} col_cand
+          ON reached.resource_kind = ${targetKindSql}
+          AND col_cand.${columnRel.targetIdColumn} = reached.resource_id
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM ${columnRel.table} col_all
+          WHERE col_all.${columnRel.idColumn} = col_cand.${columnRel.idColumn}
+            AND col_all.${columnRel.targetIdColumn} IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM ${child} allowed_parent
+              WHERE allowed_parent.resource_kind = ${targetKindSql}
+                AND allowed_parent.resource_id = col_all.${columnRel.targetIdColumn}
+            )
+        )`;
+    }
     const compiledTargets = targets.map((target) => ({
       target,
       child: this.permission(target.entity, target.permission),

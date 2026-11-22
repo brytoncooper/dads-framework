@@ -8,6 +8,7 @@ import {
   type PermissionCyclePlan,
 } from "./permission-cycles.js";
 import { compileRecursiveForwardCheck } from "./compile-recursive-policy.js";
+import { findColumnRelation } from "./column-relations.js";
 import {
   compiledRelationCheck,
   isPolymorphicRelation,
@@ -76,6 +77,7 @@ export function compileForwardPermission(
   const scc = context.cycles.sccFor(resource.entity, permissionName);
   if (scc !== undefined) {
     return compileRecursiveForwardCheck({
+      model: context.model,
       builder: context.builder,
       namespace: context.namespace,
       resource,
@@ -107,6 +109,7 @@ function compileForwardExpression(
   if (expression.kind === "relation") {
     return compiledRelationCheck(
       context.model,
+      context.builder,
       context.namespace,
       context.subject.type,
       context.subject.id,
@@ -114,7 +117,6 @@ function compileForwardExpression(
       resource.type,
       resource.id,
       expression.relation,
-      context.builder.value(expression.relation),
     );
   }
   if (expression.kind === "through")
@@ -138,6 +140,26 @@ function compileThrough(
     resource.entity,
     expression,
   );
+  const columnRel = findColumnRelation(
+    context.model,
+    resource.entity,
+    expression.relation,
+  );
+  if (columnRel !== undefined && targets[0] !== undefined) {
+    const throughAlias = builder.throughAlias();
+    const entitySql = builder.value(columnRel.entity);
+    const targetKindSql = builder.value(columnRel.targetEntity);
+    const child = compileForwardPermission(
+      context,
+      {
+        type: targetKindSql,
+        id: `${throughAlias}.${columnRel.targetIdColumn}`,
+        entity: targets[0].entity,
+      },
+      targets[0].permission,
+    );
+    return `EXISTS (SELECT 1 FROM ${columnRel.table} ${throughAlias} WHERE (${resource.type})::text = ${entitySql}::text AND ${throughAlias}.${columnRel.idColumn} = ${resource.id} AND ${throughAlias}.${columnRel.targetIdColumn} IS NOT NULL AND (${child}) OFFSET 0)`;
+  }
   const polymorphic = isPolymorphicRelation(
     context.model,
     resource.entity,
@@ -167,6 +189,29 @@ function compileThroughAll(
     resource.entity,
     expression,
   );
+  const columnRel = findColumnRelation(
+    context.model,
+    resource.entity,
+    expression.relation,
+  );
+  if (columnRel !== undefined && targets[0] !== undefined) {
+    const existsAlias = builder.throughAlias();
+    const checkAlias = builder.throughAlias();
+    const entitySql = builder.value(columnRel.entity);
+    const targetKindSql = builder.value(columnRel.targetEntity);
+    const child = compileForwardPermission(
+      context,
+      {
+        type: targetKindSql,
+        id: `${checkAlias}.${columnRel.targetIdColumn}`,
+        entity: targets[0].entity,
+      },
+      targets[0].permission,
+    );
+    const match = (alias: string) =>
+      `(${resource.type})::text = ${entitySql}::text AND ${alias}.${columnRel.idColumn} = ${resource.id} AND ${alias}.${columnRel.targetIdColumn} IS NOT NULL`;
+    return `(EXISTS (SELECT 1 FROM ${columnRel.table} ${existsAlias} WHERE ${match(existsAlias)}) AND NOT EXISTS (SELECT 1 FROM ${columnRel.table} ${checkAlias} WHERE ${match(checkAlias)} AND NOT (${child}) OFFSET 0))`;
+  }
   const polymorphic = isPolymorphicRelation(
     context.model,
     resource.entity,

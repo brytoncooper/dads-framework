@@ -13,6 +13,10 @@ import {
   lowerPermissions,
   type PermissionLowering,
 } from "./lower-permissions.js";
+import {
+  compileColumnRelations,
+  type ColumnRelationBinding,
+} from "./policy/column-relations.js";
 import { analyzePermissionCycles } from "./policy/permission-cycles.js";
 
 export type CompiledAccessPolicy = {
@@ -21,13 +25,16 @@ export type CompiledAccessPolicy = {
   permissionName(entity: string, name: string): string | undefined;
 };
 
-export function compileAccessPolicy(access: AccessModel): CompiledAccessPolicy {
+export function compileAccessPolicy(
+  access: AccessModel,
+  columnRelations?: readonly ColumnRelationBinding[],
+): CompiledAccessPolicy {
   const definitions = emitAccessIr(access);
   const byName = new Map(definitions.map((entry) => [entry.wireName, entry]));
   const generated = new Map(
     definitions.map((entry) => [entry.wireName, rolePermissions(entry)]),
   );
-  const model: AuthorizationModelDefinition = {
+  const baseModel: AuthorizationModelDefinition = {
     entities: definitions.map((entry, index) => ({
       wireName: entry.wireName,
       sourceName: `entity_${index}`,
@@ -38,6 +45,11 @@ export function compileAccessPolicy(access: AccessModel): CompiledAccessPolicy {
     ),
     lifecycle: [],
   };
+  const compiledColumns = compileColumnRelations(baseModel, columnRelations);
+  const model: AuthorizationModelDefinition =
+    compiledColumns.length === 0
+      ? baseModel
+      : { ...baseModel, columnRelations: compiledColumns };
   analyzePermissionCycles(model);
   return {
     model,

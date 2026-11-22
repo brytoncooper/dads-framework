@@ -2,6 +2,11 @@ export {
   SqliteAuthorization,
   type SqliteAccessOptions,
 } from "./sqlite-authorization.js";
+export {
+  sqliteColumnRelationIndexSql,
+  type SqliteColumnRelationBinding,
+  type SqliteColumnRelationCheckResult,
+} from "./policy/column-relations.js";
 export type {
   SqliteAccessFilter,
   SqliteFilterQuery,

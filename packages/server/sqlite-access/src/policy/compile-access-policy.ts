@@ -5,6 +5,10 @@ import {
   type AccessModel,
 } from "@dads-framework/access";
 
+import {
+  compileSqliteColumnRelations,
+  type SqliteColumnRelationBinding,
+} from "./column-relations.js";
 import { analyzePermissionCycles } from "./cycle-analysis.js";
 import {
   permissionKey,
@@ -29,6 +33,7 @@ type LoweringContext = {
 /** Compile an `@dads-framework/access` model into the lowered SQLite authorization model. */
 export function compileAccessPolicy(
   access: AccessModel,
+  columnRelations?: readonly SqliteColumnRelationBinding[],
 ): CompiledSqliteAccessPolicy {
   const definitions = emitAccessIr(access);
   const byName = new Map(definitions.map((entry) => [entry.wireName, entry]));
@@ -46,15 +51,23 @@ export function compileAccessPolicy(
     ]),
   );
   const cyclicSccsByKey = analyzePermissionCycles(permissions);
+  const relations = definitions.flatMap(lowerRelations);
+  const compiledColumns = compileSqliteColumnRelations(
+    { relations },
+    columnRelations,
+  );
   const model: SqliteAuthorizationModel = {
     entities: definitions.map((entry, index) => ({
       wireName: entry.wireName,
       sourceName: `entity_${index}`,
     })),
-    relations: definitions.flatMap(lowerRelations),
+    relations,
     permissions,
     permissionByKey,
     cyclicSccsByKey,
+    ...(compiledColumns.length === 0
+      ? {}
+      : { columnRelations: compiledColumns }),
   };
   return {
     model,

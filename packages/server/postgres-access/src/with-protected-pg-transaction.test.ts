@@ -301,6 +301,76 @@ describe("withProtectedPgTransaction", () => {
     ).rejects.toBe(divisionByZero);
   });
 
+  it("retries 40001 serialization conflicts automatically when retries is configured", async () => {
+    let attempts = 0;
+    const fake = createFakePgPool({
+      onQuery(text) {
+        if (text === "UPDATE docs SET title = 'retry'") {
+          attempts += 1;
+          if (attempts <= 2) {
+            throw pgError("40001", "could not serialize access");
+          }
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    const authorization = createAuth(fake.pool);
+
+    const outcome = await withProtectedPgTransaction(
+      { pool: fake.pool, authorization, retries: 3, retryBaseDelayMs: 0 },
+      async ({ client }) => {
+        await client.query("UPDATE docs SET title = 'retry'");
+        return "committed";
+      },
+    );
+
+    expect(outcome).toBe("committed");
+    expect(attempts).toBe(3);
+    expect(fake.getConnectCount()).toBe(3);
+  });
+
+  it("throws PostgresSerializationConflict after exhausting configured retries", async () => {
+    let attempts = 0;
+    const fake = createFakePgPool({
+      onQuery(text) {
+        if (text === "COMMIT") {
+          attempts += 1;
+          throw pgError("40001", "serialization failure on commit");
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    const authorization = createAuth(fake.pool);
+
+    const thrown = await withProtectedPgTransaction(
+      { pool: fake.pool, authorization, retries: 2, retryBaseDelayMs: 0 },
+      async ({ client }) => {
+        await client.query("SELECT 1");
+      },
+    ).catch((error: unknown) => error);
+
+    expect(thrown).toBeInstanceOf(PostgresSerializationConflict);
+    expect(attempts).toBe(3);
+  });
+
+  it("rejects invalid retries or retryBaseDelayMs values", async () => {
+    const fake = createFakePgPool();
+    const authorization = createAuth(fake.pool);
+
+    await expect(
+      withProtectedPgTransaction(
+        { pool: fake.pool, authorization, retries: -1 },
+        () => Promise.resolve(),
+      ),
+    ).rejects.toThrow("non-negative integer");
+    await expect(
+      withProtectedPgTransaction(
+        { pool: fake.pool, authorization, retryBaseDelayMs: -5 },
+        () => Promise.resolve(),
+      ),
+    ).rejects.toThrow("non-negative integer");
+  });
+
   it("closes scoped authorization after commit and blocks leaked post-commit use", async () => {
     const fake = createFakePgPool();
     const authorization = createAuth(fake.pool);

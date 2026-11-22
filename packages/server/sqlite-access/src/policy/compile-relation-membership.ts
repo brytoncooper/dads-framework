@@ -1,4 +1,5 @@
 import type { SqliteQuery } from "../sqlite-types.js";
+import { findSqliteColumnRelation } from "./column-relations.js";
 import type {
   ForwardCompileContext,
   SqlResource,
@@ -23,6 +24,26 @@ export function compileRelationMembership(
   resource: SqlResource,
   relation: string,
 ): SqliteQuery {
+  const columnRel = findSqliteColumnRelation(
+    context.model,
+    resource.entity,
+    relation,
+  );
+  if (columnRel !== undefined) {
+    if (subject.kind === "wildcard-only") {
+      return { sql: "0", params: [] };
+    }
+    const b = new QueryBuilder();
+    const alias = context.nextAlias("col");
+    return b.finish(`EXISTS (
+      SELECT 1 FROM ${columnRel.table} ${alias}
+      WHERE ${b.append(resource.typeExpr)} = ${b.value(columnRel.entity)}
+        AND ${alias}.${columnRel.idColumn} = ${b.append(resource.idExpr)}
+        AND ${b.append(subject.typeExpr)} = ${b.value(columnRel.targetEntity)}
+        AND ${alias}.${columnRel.targetIdColumn} = ${b.append(subject.idExpr)}
+        AND ${alias}.${columnRel.targetIdColumn} IS NOT NULL
+    )`);
+  }
   const relDef = context.model.relations.find(
     (candidate) =>
       candidate.entity === resource.entity && candidate.wireName === relation,

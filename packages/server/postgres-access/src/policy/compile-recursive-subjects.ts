@@ -1,4 +1,8 @@
-import type { CompiledPermissionExpression } from "./policy-model.js";
+import type {
+  AuthorizationModelDefinition,
+  CompiledPermissionExpression,
+} from "./policy-model.js";
+import { findColumnRelation } from "./column-relations.js";
 import type {
   RecursiveEdge,
   RecursiveNodePlan,
@@ -23,6 +27,7 @@ export type CompileSubjectAllOf = (
 ) => string;
 
 export type RecursiveSubjectInput = {
+  readonly model: AuthorizationModelDefinition;
   readonly builder: QueryBuilder;
   readonly namespace: string;
   readonly resource: SubjectResourceRef;
@@ -106,11 +111,32 @@ function compileGuardedSubjectEdge(
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
   const fromPerm = builder.value(edge.fromPermission);
-  const relation = builder.value(edge.relation);
   const toEntity = builder.value(edge.toEntity);
   const toPerm = builder.value(edge.toPermission);
   const guardJoin = compileGuardSubjectJoin(input, edge);
   const outSub = edge.guards.length > 0 ? "guarded" : "parent_sub";
+  const columnRel = findColumnRelation(
+    input.model,
+    edge.fromEntity,
+    edge.relation,
+  );
+  if (columnRel !== undefined) {
+    if (columnRel.targetEntity !== edge.toEntity) {
+      return `SELECT ''::text AS resource_kind, ''::text AS resource_id, ''::text AS permission_name, ''::text AS subject_id, false AS is_wildcard WHERE false`;
+    }
+    return `SELECT child_node.resource_kind, child_node.resource_id, ${fromPerm}::text AS permission_name, ${outSub}.subject_id, ${outSub}.is_wildcard
+      FROM ${walkAlias} child_node
+      JOIN ${columnRel.table} ${tupleAlias}
+        ON ${tupleAlias}.${columnRel.idColumn} = child_node.resource_id
+        AND ${tupleAlias}.${columnRel.targetIdColumn} = parent_sub.resource_id
+        AND ${tupleAlias}.${columnRel.targetIdColumn} IS NOT NULL
+      ${guardJoin}
+      WHERE child_node.resource_kind = ${fromEntity}
+        AND child_node.permission_name = ${fromPerm}
+        AND parent_sub.resource_kind = ${toEntity}
+        AND parent_sub.permission_name = ${toPerm}`;
+  }
+  const relation = builder.value(edge.relation);
   return `SELECT child_node.resource_kind, child_node.resource_id, ${fromPerm}::text AS permission_name, ${outSub}.subject_id, ${outSub}.is_wildcard
     FROM ${walkAlias} child_node
     JOIN ${TUPLES} ${tupleAlias}
@@ -177,9 +203,25 @@ function compileWalkEdge(
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
   const fromPerm = builder.value(edge.fromPermission);
-  const relation = builder.value(edge.relation);
   const toEntity = builder.value(edge.toEntity);
   const toPerm = builder.value(edge.toPermission);
+  const columnRel = findColumnRelation(
+    input.model,
+    edge.fromEntity,
+    edge.relation,
+  );
+  if (columnRel !== undefined) {
+    if (columnRel.targetEntity !== edge.toEntity) {
+      return `SELECT ''::text AS resource_kind, ''::text AS resource_id, ''::text AS permission_name WHERE false`;
+    }
+    return `SELECT ${toEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.targetIdColumn} AS resource_id, ${toPerm}::text AS permission_name
+      FROM ${columnRel.table} ${tupleAlias}
+      WHERE current_node.resource_kind = ${fromEntity}
+        AND current_node.permission_name = ${fromPerm}
+        AND ${tupleAlias}.${columnRel.idColumn} = current_node.resource_id
+        AND ${tupleAlias}.${columnRel.targetIdColumn} IS NOT NULL`;
+  }
+  const relation = builder.value(edge.relation);
   return `SELECT ${tupleAlias}.subject_kind AS resource_kind, ${tupleAlias}.subject_id AS resource_id, ${toPerm}::text AS permission_name
     FROM ${TUPLES} ${tupleAlias}
     WHERE current_node.resource_kind = ${fromEntity}

@@ -1,7 +1,12 @@
 import type { SqliteQuery } from "../sqlite-types.js";
 import {
+  compileSqliteThrough,
+  compileSqliteThroughAll,
+} from "./compile-check-through.js";
+import {
   columnChunk,
   compileArrowTargetDisjunction,
+  compileColumnArrowTargets,
   compileForwardCyclicScc,
   compileGuardConditions,
   literalChunk,
@@ -19,12 +24,7 @@ import {
   type SqlitePermissionCheck,
 } from "./policy-model.js";
 import { compileRelationMembership } from "./compile-relation-membership.js";
-import {
-  activeTupleCondition,
-  joinChunks,
-  QueryBuilder,
-  TUPLES,
-} from "./policy-sql.js";
+import { joinChunks, QueryBuilder } from "./policy-sql.js";
 
 export {
   columnChunk,
@@ -175,20 +175,22 @@ export function compileForwardExpression(
         expression.relation,
       );
     case "through":
-      return compileThrough(
+      return compileSqliteThrough(
         context,
         subject,
         resource,
         expression.relation,
         expression.targets,
+        compileForwardPermission,
       );
     case "through-all":
-      return compileThroughAll(
+      return compileSqliteThroughAll(
         context,
         subject,
         resource,
         expression.relation,
         expression.targets,
+        compileForwardPermission,
       );
     case "exclude":
       return compileExclude(context, subject, resource, expression);
@@ -209,6 +211,24 @@ export function compileForwardArrowTargets(
     context,
     subject,
     tupleAlias,
+    targets,
+    compileForwardPermission,
+  );
+}
+
+/** Compile a disjunction over column-backed arrow targets using forward permission checks. */
+export function compileForwardColumnArrowTargets(
+  context: ForwardCompileContext,
+  subject: SqlSubject,
+  targetEntity: string,
+  targetIdExpr: SqliteQuery,
+  targets: readonly SqliteArrowTarget[],
+): SqliteQuery {
+  return compileColumnArrowTargets(
+    context,
+    subject,
+    targetEntity,
+    targetIdExpr,
     targets,
     compileForwardPermission,
   );
@@ -273,76 +293,4 @@ function compileGroup(
   });
   const combined = joinChunks(parts, joiner);
   return { sql: `(${combined.sql})`, params: combined.params };
-}
-
-function compileThrough(
-  context: ForwardCompileContext,
-  subject: SqlSubject,
-  resource: SqlResource,
-  relation: string,
-  targets: readonly SqliteArrowTarget[],
-): SqliteQuery {
-  const alias = context.nextAlias("thr");
-  const targetMatch = compileForwardArrowTargets(
-    context,
-    subject,
-    alias,
-    targets,
-  );
-  const b = new QueryBuilder();
-  return b.finish(`EXISTS (
-    SELECT 1
-    FROM ${TUPLES} ${alias}
-    WHERE ${alias}.namespace = ${b.value(context.namespace)}
-      AND ${alias}.resource_kind = ${b.append(resource.typeExpr)}
-      AND ${alias}.resource_id = ${b.append(resource.idExpr)}
-      AND ${alias}.relation = ${b.value(relation)}
-      AND ${alias}.subject_is_wildcard = 0
-      AND ${alias}.subject_relation = ''
-      AND ${activeTupleCondition(alias, b, context.nowMs)}
-      AND (${b.append(targetMatch)})
-  )`);
-}
-
-function compileThroughAll(
-  context: ForwardCompileContext,
-  subject: SqlSubject,
-  resource: SqlResource,
-  relation: string,
-  targets: readonly SqliteArrowTarget[],
-): SqliteQuery {
-  const existsAlias = context.nextAlias("all_e");
-  const failAlias = context.nextAlias("all_n");
-  const targetMatch = compileForwardArrowTargets(
-    context,
-    subject,
-    failAlias,
-    targets,
-  );
-  const b = new QueryBuilder();
-  return b.finish(`(
-    EXISTS (
-      SELECT 1
-      FROM ${TUPLES} ${existsAlias}
-      WHERE ${existsAlias}.namespace = ${b.value(context.namespace)}
-        AND ${existsAlias}.resource_kind = ${b.append(resource.typeExpr)}
-        AND ${existsAlias}.resource_id = ${b.append(resource.idExpr)}
-        AND ${existsAlias}.relation = ${b.value(relation)}
-        AND ${existsAlias}.subject_is_wildcard = 0
-        AND ${existsAlias}.subject_relation = ''
-        AND ${activeTupleCondition(existsAlias, b, context.nowMs)}
-    )
-    AND NOT EXISTS (
-      SELECT 1
-      FROM ${TUPLES} ${failAlias}
-      WHERE ${failAlias}.namespace = ${b.value(context.namespace)}
-        AND ${failAlias}.resource_kind = ${b.append(resource.typeExpr)}
-        AND ${failAlias}.resource_id = ${b.append(resource.idExpr)}
-        AND ${failAlias}.relation = ${b.value(relation)}
-        AND ${failAlias}.subject_is_wildcard = 0
-        AND ${failAlias}.subject_relation = ''
-        AND ${activeTupleCondition(failAlias, b, context.nowMs)}
-        AND NOT (${b.append(targetMatch)})
-    )
-  )`);
 }

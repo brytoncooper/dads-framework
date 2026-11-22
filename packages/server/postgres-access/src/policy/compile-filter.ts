@@ -5,6 +5,7 @@ import type {
   CompiledPermissionExpression,
   NormalizedResourceLookup,
 } from "./policy-model.js";
+import { deriveAutoScopeColumns } from "./column-relations.js";
 import {
   compileReverseExpressionQuery,
   compileReversePermission,
@@ -33,11 +34,12 @@ export type PostgresFilterQuery = {
   readonly idColumn: string;
   /**
    * Optional mapping from parent relation wire name to foreign-key column on
-   * the queried table (e.g. `{ workspace: "d.workspace_id" }`). Lets
-   * `compileFilter` resolve scope permissions directly at the parent level
+   * the queried table (e.g. `{ workspace: "d.workspace_id" }`), or `"auto"` to
+   * derive mappings automatically from `columnRelations` on `resourceType`.
+   * Lets `compileFilter` resolve scope permissions directly at the parent level
    * instead of expanding every child tuple on broad lists.
    */
-  readonly scopeColumns?: Readonly<Record<string, string>>;
+  readonly scopeColumns?: Readonly<Record<string, string>> | "auto";
   /** Starting `$N` placeholder index (default `1`) so callers can embed after existing `$1..$k` params. */
   readonly paramOffset?: number;
 };
@@ -50,14 +52,23 @@ export type ValidatedPostgresFilterInput = {
 
 /** Validates `idColumn`, optional `scopeColumns`, and `paramOffset` before SQL compilation. */
 export function validatePostgresFilterQuery(
-  query: Pick<PostgresFilterQuery, "idColumn" | "scopeColumns" | "paramOffset">,
+  query: Pick<
+    PostgresFilterQuery,
+    "resourceType" | "idColumn" | "scopeColumns" | "paramOffset"
+  >,
+  model?: AuthorizationModelDefinition,
 ): ValidatedPostgresFilterInput {
   if (!SQL_ID_COLUMN_PATTERN.test(query.idColumn)) {
     throw new Error(
       `Invalid Postgres filter idColumn "${query.idColumn}": must be an unquoted identifier or table.column`,
     );
   }
-  const scopeColumns = validatePgScopeColumns(query.scopeColumns);
+  const scopeColumns =
+    query.scopeColumns === "auto"
+      ? model === undefined
+        ? undefined
+        : deriveAutoScopeColumns(model, query.resourceType, query.idColumn)
+      : validatePgScopeColumns(query.scopeColumns);
   const paramOffset = query.paramOffset ?? 1;
   if (!Number.isSafeInteger(paramOffset) || paramOffset < 1) {
     throw new Error(
@@ -104,8 +115,20 @@ export function compilePostgresFilter(
   const subjectIdSql = builder.value(request.subject.id);
   const usesUsersets = modelHasUsersetTargets(model);
   const reachCte = usesUsersets
-    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql)
-    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql);
+    ? subjectReachability(
+        namespaceSql,
+        subjectTypeSql,
+        subjectIdSql,
+        model.columnRelations,
+        builder,
+      )
+    : directSubjectReachability(
+        namespaceSql,
+        subjectTypeSql,
+        subjectIdSql,
+        model.columnRelations,
+        builder,
+      );
 
   const wrapSemiJoin = (
     column: string,

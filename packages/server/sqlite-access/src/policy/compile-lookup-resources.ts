@@ -1,21 +1,20 @@
 import type { SqliteQuery } from "../sqlite-types.js";
+import { findSqliteColumnRelation } from "./column-relations.js";
 import {
   columnChunk,
   compileForwardArrowTargets,
-  compileForwardGuards,
+  compileForwardColumnArrowTargets,
   literalChunk,
   type ForwardCompileContext,
   type SqlSubject,
 } from "./compile-check.js";
+import { ensureReverseSccCte } from "./compile-lookup-resources-scc.js";
 import {
   permissionKey,
   type SqliteAuthorizationModel,
   type SqliteArrowTarget,
-  type CompiledCyclicScc,
   type SqlitePermissionExpression,
   type SqliteResourceLookup,
-  type RecursiveBaseClause,
-  type RecursiveStepClause,
 } from "./policy-model.js";
 import {
   activeTupleCondition,
@@ -139,6 +138,7 @@ function compileSqliteReverseSubquery(
     subjectId: subjectRef.id,
     nowMs,
     includeSubjectSets,
+    columnRelations: model.columnRelations,
   });
   const allowedIds = compileBody(context);
   const allCtes = joinChunks([reachCte, ...context.extraCtes], ", ");
@@ -167,7 +167,9 @@ function compileReversePermission(
   }
   const scc = context.model.cyclicSccsByKey.get(key);
   if (scc !== undefined) {
-    const cteName = ensureSccCte(context, scc);
+    const cteName = ensureReverseSccCte(context, scc, (childEntity, expr) =>
+      compileReverseExpression(context, childEntity, expr),
+    );
     const b = new QueryBuilder();
     return b.finish(
       `SELECT resource_id FROM ${cteName} WHERE entity = ${b.value(entity)} AND perm = ${b.value(permissionName)}`,
@@ -220,7 +222,25 @@ function compileReverseThrough(
   targets: readonly SqliteArrowTarget[],
 ): SqliteQuery {
   const selectKeyword = context.deduplicate ? "SELECT DISTINCT" : "SELECT";
+  const columnRel = findSqliteColumnRelation(context.model, entity, relation);
   const branches = targets.map((target) => {
+    if (columnRel !== undefined) {
+      if (columnRel.targetEntity !== target.entity) {
+        return { sql: "SELECT '' AS resource_id WHERE 0", params: [] };
+      }
+      const edge = context.nextAlias("rev_thr");
+      const related = compileReversePermission(
+        context,
+        target.entity,
+        target.permission,
+      );
+      const b = new QueryBuilder();
+      return b.finish(`${selectKeyword} ${edge}.${columnRel.idColumn} AS resource_id
+        FROM (${b.append(related)}) rel_res
+        CROSS JOIN ${columnRel.table} ${edge}
+        WHERE ${edge}.${columnRel.targetIdColumn} = rel_res.resource_id
+          AND ${edge}.${columnRel.targetIdColumn} IS NOT NULL`);
+    }
     const edge = context.nextAlias("rev_thr");
     const related = compileReversePermission(
       context,
@@ -254,13 +274,32 @@ function compileReverseThroughAll(
 ): SqliteQuery {
   const candidates = compileReverseThrough(context, entity, relation, targets);
   const failAlias = context.nextAlias("rev_all");
+  const columnRel = findSqliteColumnRelation(context.model, entity, relation);
+  const b = new QueryBuilder();
+  if (columnRel !== undefined) {
+    const targetMatch = compileForwardColumnArrowTargets(
+      context.forward,
+      context.subject,
+      columnRel.targetEntity,
+      columnChunk(`${failAlias}.${columnRel.targetIdColumn}`),
+      targets,
+    );
+    return b.finish(`SELECT DISTINCT cand.resource_id
+      FROM (${b.append(candidates)}) cand
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM ${columnRel.table} ${failAlias}
+        WHERE ${failAlias}.${columnRel.idColumn} = cand.resource_id
+          AND ${failAlias}.${columnRel.targetIdColumn} IS NOT NULL
+          AND NOT (${b.append(targetMatch)})
+      )`);
+  }
   const targetMatch = compileForwardArrowTargets(
     context.forward,
     context.subject,
     failAlias,
     targets,
   );
-  const b = new QueryBuilder();
   return b.finish(`SELECT DISTINCT cand.resource_id
     FROM (${b.append(candidates)}) cand
     WHERE NOT EXISTS (
@@ -312,81 +351,4 @@ function compileReverseGroup(
     };
   });
   return joinChunks(branches, operator);
-}
-
-function ensureSccCte(context: ReverseContext, scc: CompiledCyclicScc): string {
-  const existing = context.sccCteNames.get(scc.id);
-  if (existing !== undefined) return existing;
-  const cteName = `scc_allowed_${scc.id}`;
-  context.sccCteNames.set(scc.id, cteName);
-
-  const baseBranches =
-    scc.baseClauses.length === 0
-      ? [
-          {
-            sql: "SELECT '' AS entity, '' AS resource_id, '' AS perm WHERE 0",
-            params: [],
-          },
-        ]
-      : scc.baseClauses.map((clause) =>
-          compileReverseBaseClause(context, clause),
-        );
-  const stepBranches = scc.stepClauses.map((step) =>
-    compileReverseStepClause(context, cteName, step),
-  );
-  const anchorChunk = joinChunks(baseBranches, " UNION ");
-  const stepsChunk = joinChunks(stepBranches, " UNION ");
-  const b = new QueryBuilder();
-  const cte = b.finish(
-    `${cteName}(entity, resource_id, perm) AS (${b.append(anchorChunk)}${stepBranches.length > 0 ? ` UNION ${b.append(stepsChunk)}` : ""})`,
-  );
-  context.extraCtes.push(cte);
-  return cteName;
-}
-
-function compileReverseBaseClause(
-  context: ReverseContext,
-  clause: RecursiveBaseClause,
-): SqliteQuery {
-  const ids = compileReverseExpression(
-    context,
-    clause.entity,
-    clause.expression,
-  );
-  const b = new QueryBuilder();
-  return b.finish(
-    `SELECT ${b.value(clause.entity)} AS entity, base_res.resource_id AS resource_id, ${b.value(clause.permission)} AS perm FROM (${b.append(ids)}) base_res`,
-  );
-}
-
-function compileReverseStepClause(
-  context: ReverseContext,
-  cteName: string,
-  step: RecursiveStepClause,
-): SqliteQuery {
-  const edge = context.nextAlias("scc_edge");
-  const guardSql = compileForwardGuards(
-    context.forward,
-    context.subject,
-    {
-      entity: step.entity,
-      typeExpr: literalChunk(step.entity),
-      idExpr: columnChunk(`${edge}.resource_id`),
-    },
-    step.guards,
-  );
-  const b = new QueryBuilder();
-  return b.finish(`SELECT ${b.value(step.entity)}, ${edge}.resource_id, ${b.value(step.permission)}
-    FROM ${cteName} prev
-    CROSS JOIN ${TUPLES} ${edge}
-    WHERE ${edge}.namespace = ${b.value(context.namespace)}
-      AND ${edge}.resource_kind = ${b.value(step.entity)}
-      AND ${edge}.relation = ${b.value(step.relation)}
-      AND ${edge}.subject_kind = prev.entity
-      AND ${edge}.subject_id = prev.resource_id
-      AND ${edge}.subject_is_wildcard = 0
-      AND ${edge}.subject_relation = ''
-      AND ${activeTupleCondition(edge, b, context.nowMs)}
-      AND prev.entity = ${b.value(step.targetEntity)}
-      AND prev.perm = ${b.value(step.targetPermission)}${guardSql === undefined ? "" : ` AND (${b.append(guardSql)})`}`);
 }

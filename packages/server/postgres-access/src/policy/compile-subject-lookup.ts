@@ -13,6 +13,7 @@ import {
   compileRecursiveSubjectLookup,
   type SubjectResourceRef,
 } from "./compile-recursive-subjects.js";
+import { findColumnRelation } from "./column-relations.js";
 import {
   notExpired,
   permissionIdentity,
@@ -78,6 +79,7 @@ function compileSubjectPermission(
   const scc = context.cycles.sccFor(resource.entity, permissionName);
   if (scc !== undefined) {
     return compileRecursiveSubjectLookup({
+      model: context.model,
       builder: context.builder,
       namespace: context.namespace,
       resource,
@@ -129,6 +131,22 @@ function compileRelationSubjects(
   relation: string,
 ): string {
   const { builder, namespace, subjectType } = context;
+  const columnRel = findColumnRelation(
+    context.model,
+    resource.entity,
+    relation,
+  );
+  if (columnRel !== undefined) {
+    const colAlias = builder.throughAlias();
+    const entitySql = builder.value(columnRel.entity);
+    const targetEntitySql = builder.value(columnRel.targetEntity);
+    return `SELECT DISTINCT ${colAlias}.${columnRel.targetIdColumn} AS subject_id, false AS is_wildcard
+      FROM ${columnRel.table} ${colAlias}
+      WHERE (${resource.type})::text = ${entitySql}::text
+        AND ${colAlias}.${columnRel.idColumn} = ${resource.id}
+        AND ${colAlias}.${columnRel.targetIdColumn} IS NOT NULL
+        AND (${subjectType})::text = ${targetEntitySql}::text`;
+  }
   const reqAlias = builder.cteAlias("req");
   const relationSql = builder.value(relation);
   return `WITH RECURSIVE ${reqAlias}(resource_kind, resource_id, relation) AS (
@@ -244,6 +262,27 @@ function compileThroughSubjects(
     expression,
   );
   const throughAlias = builder.throughAlias();
+  const columnRel = findColumnRelation(
+    context.model,
+    resource.entity,
+    expression.relation,
+  );
+  if (columnRel !== undefined) {
+    const entitySql = builder.value(columnRel.entity);
+    const targetKindSql = builder.value(columnRel.targetEntity);
+    const targetSql = compileTargetSubjectBranches(
+      context,
+      `${targetKindSql}::text`,
+      `${throughAlias}.${columnRel.targetIdColumn}`,
+      targets,
+    );
+    return `SELECT DISTINCT sub.subject_id, sub.is_wildcard
+      FROM ${columnRel.table} ${throughAlias}
+      CROSS JOIN LATERAL (${targetSql}) sub
+      WHERE (${resource.type})::text = ${entitySql}::text
+        AND ${throughAlias}.${columnRel.idColumn} = ${resource.id}
+        AND ${throughAlias}.${columnRel.targetIdColumn} IS NOT NULL`;
+  }
   const relationSql = builder.value(expression.relation);
   const targetSql = compileTargetSubjectBranches(
     context,
@@ -277,7 +316,27 @@ function compileThroughAllSubjects(
   const tupleAlias = builder.throughAlias();
   const parentsAlias = builder.cteAlias("all_parents");
   const subjectsAlias = builder.cteAlias("all_parent_subjects");
-  const relationSql = builder.value(expression.relation);
+  const columnRel = findColumnRelation(
+    context.model,
+    resource.entity,
+    expression.relation,
+  );
+  const parentsQuery =
+    columnRel !== undefined
+      ? `SELECT ${builder.value(columnRel.targetEntity)}::text AS parent_kind, ${tupleAlias}.${columnRel.targetIdColumn} AS parent_id
+      FROM ${columnRel.table} ${tupleAlias}
+      WHERE (${resource.type})::text = ${builder.value(columnRel.entity)}::text
+        AND ${tupleAlias}.${columnRel.idColumn} = ${resource.id}
+        AND ${tupleAlias}.${columnRel.targetIdColumn} IS NOT NULL`
+      : `SELECT ${tupleAlias}.subject_kind AS parent_kind, ${tupleAlias}.subject_id AS parent_id
+      FROM ${TUPLES} ${tupleAlias}
+      WHERE ${tupleAlias}.namespace = ${namespace}
+        AND ${tupleAlias}.resource_kind = ${resource.type}
+        AND ${tupleAlias}.resource_id = ${resource.id}
+        AND ${tupleAlias}.relation = ${builder.value(expression.relation)}
+        AND ${tupleAlias}.subject_is_wildcard = false
+        AND ${tupleAlias}.subject_relation = ''
+        AND ${notExpired(tupleAlias)}`;
   const targetSql = compileTargetSubjectBranches(
     context,
     "p.parent_kind",
@@ -285,15 +344,7 @@ function compileThroughAllSubjects(
     targets,
   );
   return `WITH ${parentsAlias} AS (
-      SELECT ${tupleAlias}.subject_kind AS parent_kind, ${tupleAlias}.subject_id AS parent_id
-      FROM ${TUPLES} ${tupleAlias}
-      WHERE ${tupleAlias}.namespace = ${namespace}
-        AND ${tupleAlias}.resource_kind = ${resource.type}
-        AND ${tupleAlias}.resource_id = ${resource.id}
-        AND ${tupleAlias}.relation = ${relationSql}
-        AND ${tupleAlias}.subject_is_wildcard = false
-        AND ${tupleAlias}.subject_relation = ''
-        AND ${notExpired(tupleAlias)}
+      ${parentsQuery}
     ),
     ${subjectsAlias} AS (
       SELECT p.parent_kind, p.parent_id, sub.subject_id, sub.is_wildcard
@@ -331,7 +382,7 @@ function compileTargetSubjectBranches(
         { type: kindExpr, id: idExpr, entity: target.entity },
         target.permission,
       );
-      return `SELECT s.subject_id, s.is_wildcard FROM (${childSql}) s WHERE ${kindExpr} = ${targetKindSql}`;
+      return `SELECT s.subject_id, s.is_wildcard FROM (${childSql}) s WHERE (${kindExpr})::text = ${targetKindSql}::text`;
     })
     .join(" UNION ");
 }

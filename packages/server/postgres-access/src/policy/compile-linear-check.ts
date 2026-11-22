@@ -1,8 +1,10 @@
 import type {
   AuthorizationModelDefinition,
+  CompiledPermissionExpression,
   NormalizedPermissionCheck,
 } from "./policy-model.js";
 import type { CompiledAuthorizationQuery } from "./compile-postgres-policy.js";
+import { findColumnRelation } from "./column-relations.js";
 import {
   notExpired,
   permissionIdentity,
@@ -106,6 +108,14 @@ type LinearStep =
       readonly nextPermission: string;
     };
 
+function isColumnBacked(
+  model: AuthorizationModelDefinition,
+  entity: string,
+  relation: string,
+): boolean {
+  return findColumnRelation(model, entity, relation) !== undefined;
+}
+
 function readLinearStep(
   model: AuthorizationModelDefinition,
   entity: string,
@@ -115,11 +125,28 @@ function readLinearStep(
     (candidate) => candidate.entity === entity && candidate.wireName === name,
   )?.expression;
   if (expression?.kind === "relation") {
-    return { kind: "leaf", relation: expression.relation };
+    return isColumnBacked(model, entity, expression.relation)
+      ? undefined
+      : { kind: "leaf", relation: expression.relation };
   }
   if (expression?.kind !== "through") return undefined;
-  if (!hasSingleEntityTarget(model, entity, expression.relation))
+  return readLinearArrowStep(model, entity, expression);
+}
+
+function readLinearArrowStep(
+  model: AuthorizationModelDefinition,
+  entity: string,
+  expression: Extract<
+    CompiledPermissionExpression,
+    { readonly kind: "through" }
+  >,
+): LinearStep | undefined {
+  if (
+    isColumnBacked(model, entity, expression.relation) ||
+    !hasSingleEntityTarget(model, entity, expression.relation)
+  ) {
     return undefined;
+  }
   const targets = resolveArrowTargets(model, entity, expression);
   const [only] = targets;
   if (targets.length !== 1 || only === undefined) return undefined;

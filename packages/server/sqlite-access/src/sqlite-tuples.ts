@@ -5,7 +5,9 @@ import type {
   SubjectRef,
 } from "@dads-framework/access/runtime";
 
+import { findSqliteColumnRelation } from "./policy/column-relations.js";
 import type {
+  CompiledSqliteColumnRelation,
   SqliteAuthorizationModel,
   SqliteRelationTarget,
 } from "./policy/policy-model.js";
@@ -85,6 +87,16 @@ export class SqliteTuples {
     if (filter.resourceType === "") {
       throw new Error("SQLite authorization requires a resource type");
     }
+    if (filter.relation !== undefined && filter.relation !== "") {
+      const columnRel = findSqliteColumnRelation(
+        this.#model,
+        filter.resourceType,
+        filter.relation,
+      );
+      if (columnRel !== undefined) {
+        throw sqliteColumnMutationError(columnRel);
+      }
+    }
     const b = new QueryBuilder();
     const clauses = [
       `namespace = ${b.value(this.#namespace)}`,
@@ -100,6 +112,18 @@ export class SqliteTuples {
 
   async exists(filter: ExactFilter, nowMs: number): Promise<boolean> {
     requireExact(filter.resourceType, filter.resourceId, filter.relation);
+    const columnRel = findSqliteColumnRelation(
+      this.#model,
+      filter.resourceType,
+      filter.relation,
+    );
+    if (columnRel !== undefined) {
+      const rows = await this.#executor.all(
+        `SELECT 1 AS present FROM ${columnRel.table} WHERE ${columnRel.idColumn} = ? AND ${columnRel.targetIdColumn} IS NOT NULL LIMIT 1`,
+        [filter.resourceId],
+      );
+      return rows.length > 0;
+    }
     const b = new QueryBuilder();
     const query = b.finish(
       `SELECT 1 AS present FROM ${TUPLES} t WHERE t.namespace = ${b.value(this.#namespace)} AND t.resource_kind = ${b.value(filter.resourceType)} AND t.resource_id = ${b.value(filter.resourceId)} AND t.relation = ${b.value(filter.relation)} AND ${activeTupleCondition("t", b, nowMs)} LIMIT 1`,
@@ -113,6 +137,21 @@ export class SqliteTuples {
     nowMs: number,
   ): Promise<readonly SubjectRef[]> {
     requireExact(query.resource.type, query.resource.id, query.relation);
+    const columnRel = findSqliteColumnRelation(
+      this.#model,
+      query.resource.type,
+      query.relation,
+    );
+    if (columnRel !== undefined) {
+      const rows = await this.#executor.all(
+        `SELECT DISTINCT ${columnRel.targetIdColumn} AS subject_id FROM ${columnRel.table} WHERE ${columnRel.idColumn} = ? AND ${columnRel.targetIdColumn} IS NOT NULL ORDER BY ${columnRel.targetIdColumn}`,
+        [query.resource.id],
+      );
+      return rows.map((row) => ({
+        type: columnRel.targetEntity,
+        id: readStringColumn(row, "subject_id"),
+      }));
+    }
     const b = new QueryBuilder();
     const compiled = b.finish(
       `SELECT t.subject_kind, CASE WHEN t.subject_is_wildcard = 1 THEN '*' ELSE t.subject_id END AS subject_id, t.subject_relation FROM ${TUPLES} t WHERE t.namespace = ${b.value(this.#namespace)} AND t.resource_kind = ${b.value(query.resource.type)} AND t.resource_id = ${b.value(query.resource.id)} AND t.relation = ${b.value(query.relation)} AND ${activeTupleCondition("t", b, nowMs)} ORDER BY t.subject_kind, subject_id, t.subject_relation`,
@@ -129,6 +168,14 @@ export class SqliteTuples {
   }
 
   #validateWrite(write: RelationshipWrite): RelationshipWrite {
+    const columnRel = findSqliteColumnRelation(
+      this.#model,
+      write.resource.type,
+      write.relation,
+    );
+    if (columnRel !== undefined) {
+      throw sqliteColumnMutationError(columnRel);
+    }
     const relation = this.#model.relations.find(
       (entry) =>
         entry.entity === write.resource.type &&
@@ -210,6 +257,14 @@ function matchesTarget(
   return target.kind === "subject-set"
     ? target.relation === subject.relation
     : subject.relation === undefined;
+}
+
+function sqliteColumnMutationError(
+  columnRel: CompiledSqliteColumnRelation,
+): Error {
+  return new Error(
+    `Relation ${columnRel.entity}#${columnRel.relation} is column-backed by ${columnRel.table}.${columnRel.targetIdColumn}; update the application table directly`,
+  );
 }
 
 function requireExact(

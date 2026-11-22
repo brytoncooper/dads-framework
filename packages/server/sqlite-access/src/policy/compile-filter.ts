@@ -1,6 +1,7 @@
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type { SqliteValue } from "../sqlite-types.js";
+import { deriveAutoSqliteScopeColumns } from "./column-relations.js";
 import {
   compileSqliteExpressionSubquery,
   compileSqliteLookupSubquery,
@@ -28,11 +29,12 @@ export type SqliteFilterQuery = {
   readonly idColumn: string;
   /**
    * Optional mapping from parent relation wire name to foreign-key column on
-   * the queried table (e.g. `{ workspace: "d.workspace_id" }`). Lets
-   * `compileFilter` resolve scope permissions directly at the parent level
+   * the queried table (e.g. `{ workspace: "d.workspace_id" }`), or `"auto"` to
+   * derive mappings automatically from `columnRelations` on `resourceType`.
+   * Lets `compileFilter` resolve scope permissions directly at the parent level
    * instead of expanding every child tuple on broad lists.
    */
-  readonly scopeColumns?: Readonly<Record<string, string>>;
+  readonly scopeColumns?: Readonly<Record<string, string>> | "auto";
   /** Optional timestamp override (defaults to `this.#now()`). */
   readonly now?: Date;
 };
@@ -45,15 +47,28 @@ export type ValidatedSqliteFilterInput = {
 
 /** Validates `idColumn`, optional `scopeColumns`, and optional `now` override before SQL compilation. */
 export function validateSqliteFilterQuery(
-  query: Pick<SqliteFilterQuery, "idColumn" | "scopeColumns" | "now">,
+  query: Pick<
+    SqliteFilterQuery,
+    "resourceType" | "idColumn" | "scopeColumns" | "now"
+  >,
   defaultNowMs: number,
+  model?: SqliteAuthorizationModel,
 ): ValidatedSqliteFilterInput {
   if (!SQL_ID_COLUMN_PATTERN.test(query.idColumn)) {
     throw new Error(
       `Invalid SQLite filter idColumn "${query.idColumn}": must be an unquoted identifier or table.column`,
     );
   }
-  const scopeColumns = validateScopeColumns(query.scopeColumns);
+  const scopeColumns =
+    query.scopeColumns === "auto"
+      ? model === undefined
+        ? undefined
+        : deriveAutoSqliteScopeColumns(
+            model,
+            query.resourceType,
+            query.idColumn,
+          )
+      : validateScopeColumns(query.scopeColumns);
   if (query.now !== undefined) {
     const nowMs = query.now.getTime();
     if (!Number.isFinite(nowMs)) {

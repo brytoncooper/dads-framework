@@ -1,4 +1,5 @@
 import type { SqliteQuery } from "../sqlite-types.js";
+import { findSqliteColumnRelation } from "./column-relations.js";
 import type {
   SqliteAuthorizationModel,
   SqliteArrowTarget,
@@ -91,6 +92,32 @@ export function compileArrowTargetDisjunction(
   return joinChunks(branches, " OR ");
 }
 
+/** Disjunction matching a column-backed target `(targetEntity, targetIdExpr)` against arrow targets. */
+export function compileColumnArrowTargets(
+  context: ForwardCompileContext,
+  subject: SqlSubject,
+  targetEntity: string,
+  targetIdExpr: SqliteQuery,
+  targets: readonly SqliteArrowTarget[],
+  compilePermission: ForwardPermissionCompiler,
+): SqliteQuery {
+  const matching = targets.filter((target) => target.entity === targetEntity);
+  if (matching.length === 0) return { sql: "0", params: [] };
+  const branches = matching.map((target) =>
+    compilePermission(
+      context,
+      subject,
+      {
+        entity: target.entity,
+        typeExpr: literalChunk(target.entity),
+        idExpr: targetIdExpr,
+      },
+      target.permission,
+    ),
+  );
+  return joinChunks(branches, " OR ");
+}
+
 /** Compile a forward recursive walk over a monotonic cyclic SCC. */
 export function compileForwardCyclicScc(
   context: ForwardCompileContext,
@@ -148,7 +175,27 @@ function compileForwardStepClause(
     step.guards,
     compileExpression,
   );
+  const columnRel = findSqliteColumnRelation(
+    context.model,
+    step.entity,
+    step.relation,
+  );
   const b = new QueryBuilder();
+  if (columnRel !== undefined) {
+    if (columnRel.targetEntity !== step.targetEntity) {
+      return {
+        sql: "SELECT '' AS entity, '' AS resource_id, '' AS perm WHERE 0",
+        params: [],
+      };
+    }
+    return b.finish(`SELECT ${b.value(step.targetEntity)}, ${edge}.${columnRel.targetIdColumn}, ${b.value(step.targetPermission)}
+      FROM ${walkAlias} w
+      JOIN ${columnRel.table} ${edge}
+        ON ${edge}.${columnRel.idColumn} = w.resource_id
+        AND ${edge}.${columnRel.targetIdColumn} IS NOT NULL
+      WHERE w.entity = ${b.value(step.entity)}
+        AND w.perm = ${b.value(step.permission)}${guardSql === undefined ? "" : ` AND (${b.append(guardSql)})`}`);
+  }
   return b.finish(`SELECT ${b.value(step.targetEntity)}, ${edge}.subject_id, ${b.value(step.targetPermission)}
     FROM ${walkAlias} w
     JOIN ${TUPLES} ${edge}

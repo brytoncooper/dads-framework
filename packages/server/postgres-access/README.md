@@ -57,8 +57,11 @@ A PostgreSQL serialization failure (`40001`) surfaces as
 `PostgresSerializationConflict` with code `POSTGRES_CONFLICT` and
 `retryable: true`. A caller that owns an outer commit can use
 `readPostgresSerializationConflict(error)` to classify a failure raised there.
-Retry the entire application transaction if retrying is appropriate. The helper
-invokes the callback at most once per call.
+Pass `retries` (and optional `retryBaseDelayMs`, default `15`) to
+`withProtectedPgTransaction({ pool, authorization, retries: 3 }, work)` to
+automatically retry idempotent callbacks with jittered exponential backoff on
+`40001` conflicts. By default `retries` is `0`, invoking the callback at most
+once per call.
 
 Serializable isolation makes the commit consistent with a serial ordering of
 transactions. A revoke committed before the permission check's transaction
@@ -212,7 +215,8 @@ listing, and relationship existence reads. Unknown permission names give denied
 checks, empty resource lookups, and `{ subjects: [], hasWildcard: false }` for
 `lookupSubjects`. Invalid tuple writes and failed storage operations reject.
 
-- **Compiled SQL list filters (`compileFilter`)**: `authorization.compileFilter({ subject, permission, resourceType, idColumn, paramOffset? })` returns `{ sql, values }` (`EXISTS` predicate or recursive `IN (WITH RECURSIVE ...)`) so paginated, sorted `SELECT ... WHERE ... LIMIT N` queries filter authorized rows in one database round trip without loading ID lists into Node. Validates `idColumn` strictly and fails closed to `FALSE` on unknown permissions.
+- **Compiled SQL list filters (`compileFilter` / `resolveFilter`)**: `authorization.compileFilter({ subject, permission, resourceType, idColumn, scopeColumns?, paramOffset? })` and `authorization.resolveFilter(...)` return `{ sql, values }` so paginated, sorted `SELECT ... WHERE ... LIMIT N` queries filter authorized rows in one database round trip without loading ID lists into Node. Pass `scopeColumns: "auto"` to derive parent foreign-key mappings automatically from `columnRelations`. Validates `idColumn` strictly and fails closed to `FALSE` on unknown permissions.
+- **Column-backed relations (`columnRelations`)**: Bind single-target FK relations directly to columns on application tables (parent FKs such as `documents.org_id`, recursive self-FKs such as `folders.parent_id`, or direct actor FKs such as `documents.owner_id`) so authorization reads them directly with zero dual-writes and zero duplicate tuple storage. `NULL` values mean no relationship. `writeRelationships` and `deleteRelationships` refuse manual mutations on column-backed relations to preserve a single source of truth. Run `await authorization.verifyColumnRelations()` at startup to verify live columns and check reverse-lookup indexes, and generate recommended index DDL with `columnRelationIndexSql(bindings)`. Cannot be combined with `reuseLookupResultsOn`.
 - **Expiring relationships (`expiresAt`)**: `relationshipSchemaMigration` creates `expires_at timestamptz NULL` with a partial index (`dad_authorization_relationship_expires_at`). Existing v1 installations can apply the additive `relationshipExpirationMigration` (version 2). `writeRelationships` persists `expiresAt ?? null` with `ON CONFLICT (...) DO UPDATE SET expires_at = EXCLUDED.expires_at` so re-writing a tuple updates or clears its expiration. Every read (`check`, `checkMany`, `lookupResources`, `lookupSubjects`, `compileFilter`, `listDirectSubjects`, and `relationshipExists`) filters `(expires_at IS NULL OR expires_at > now())` using transaction-scoped Postgres `now()`.
 - **Polymorphic arrows**: Relations with multiple direct entity types (such as `parents: [organization, folder]`) lower parent arrows and `every()` across every target entity type that defines the target permission, matching `subject_kind` per branch across checks, resource lookups, filters, shared point checks, and subject lookups.
 - **Recursive arrows**: Monotonic self-referential and mutually recursive arrow cycles (such as nested folders with `recursive: true`) compile to `WITH RECURSIVE` CTEs with `UNION` deduplication so cyclic tuple data terminates safely across `check`, `checkMany`, `lookupResources`, `compileFilter`, and `lookupSubjects`.

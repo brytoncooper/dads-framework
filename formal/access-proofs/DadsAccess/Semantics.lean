@@ -232,4 +232,33 @@ structure ScopeColumnSpec where
   parentUniverse : List ObjId
   fk : ObjId → ObjId
 
+/--
+A single-target column-backed relation stored directly on an application table
+`(id, Option targetId)` (`NULL` represents absence of a link).
+-/
+def materializeColumnTable (entity : EntityName) (rel : RelName)
+    (targetEntity : EntityName) (rows : List (ObjId × Option ObjId)) : List Tuple :=
+  rows.filterMap (fun (id, optTarget) =>
+    match optTarget with
+    | none => none
+    | some targetId =>
+        some {
+          resourceKind := entity
+          resourceId := id
+          relation := rel
+          subject := .direct targetEntity targetId
+          expiresAt := none
+        })
+
+/-- Direct lookup of active edges from a column-backed table without duplicating into `store`. -/
+def columnBackedEdges (targetEntity : EntityName)
+    (rows : List (ObjId × Option ObjId)) (id : ObjId) : List (EntityName × ObjId) :=
+  rows.filterMap (fun (rowId, optTarget) =>
+    if rowId == id then
+      match optTarget with
+      | none => none
+      | some targetId => some (targetEntity, targetId)
+    else
+      none)
+
 end DadsAccess

@@ -102,8 +102,20 @@ export function buildPostgresResolveFilterPlan(
 
   const usesUsersets = modelHasUsersetTargets(model);
   const reachCte = usesUsersets
-    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql)
-    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql);
+    ? subjectReachability(
+        namespaceSql,
+        subjectTypeSql,
+        subjectIdSql,
+        model.columnRelations,
+        builder,
+      )
+    : directSubjectReachability(
+        namespaceSql,
+        subjectTypeSql,
+        subjectIdSql,
+        model.columnRelations,
+        builder,
+      );
   const withKeyword =
     usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
   const tagged = branches.map(

@@ -3,6 +3,11 @@ export {
   type PostgresAccessOptions,
   type PostgresAccessExecutor,
 } from "./postgres-authorization.js";
+export {
+  columnRelationIndexSql,
+  type ColumnRelationBinding,
+  type ColumnRelationCheckResult,
+} from "./policy/column-relations.js";
 export type {
   PostgresFilterQuery,
   PostgresAccessFilter,

@@ -15,6 +15,11 @@ import {
 } from "@dads-framework/access/runtime";
 
 import {
+  verifySqliteColumnRelations,
+  type SqliteColumnRelationBinding,
+  type SqliteColumnRelationCheckResult,
+} from "./policy/column-relations.js";
+import {
   compileAccessPolicy,
   type CompiledSqliteAccessPolicy,
 } from "./policy/compile-access-policy.js";
@@ -33,11 +38,12 @@ import { compileSqliteLookupSubjects } from "./policy/compile-lookup-subjects.js
 import type { SqlitePermissionCheck } from "./policy/policy-model.js";
 import type { SqliteExecutor } from "./sqlite-executor.js";
 import { SqliteTuples } from "./sqlite-tuples.js";
+import { readDecisionFlag, readStringColumn } from "./sqlite-types.js";
 import {
-  readBooleanColumn,
-  readDecisionFlag,
-  readStringColumn,
-} from "./sqlite-types.js";
+  collectSubjectLookupResult,
+  requireConcreteSubject,
+  requireSubjectLookupInput,
+} from "./sqlite-validation.js";
 
 const CHECK_BATCH_SIZE = 64;
 const compiledPolicyCache = new WeakMap<
@@ -50,6 +56,11 @@ export type SqliteAccessOptions = {
   readonly namespace: string;
   readonly executor: SqliteExecutor;
   readonly now?: () => Date;
+  /**
+   * Bind single-target FK relations directly to columns on SQLite application
+   * tables so authorization reads those columns directly with zero dual-writes.
+   */
+  readonly columnRelations?: readonly SqliteColumnRelationBinding[];
 };
 
 type PreparedBatchItem =
@@ -65,6 +76,7 @@ export class SqliteAuthorization extends Authorization {
   readonly #namespace: string;
   readonly #now: () => Date;
   readonly #tuples: SqliteTuples;
+  readonly #columnRelations: readonly SqliteColumnRelationBinding[] | undefined;
 
   constructor(options: SqliteAccessOptions) {
     super();
@@ -75,7 +87,8 @@ export class SqliteAuthorization extends Authorization {
     this.#namespace = options.namespace;
     this.#executor = options.executor;
     this.#now = options.now ?? (() => new Date());
-    this.#policy = getOrCompilePolicy(options.model);
+    this.#columnRelations = options.columnRelations;
+    this.#policy = getOrCompilePolicy(options.model, options.columnRelations);
     this.#tuples = new SqliteTuples(
       this.#policy.model,
       this.#namespace,
@@ -98,7 +111,21 @@ export class SqliteAuthorization extends Authorization {
       namespace: this.#namespace,
       executor,
       now: now ?? this.#now,
+      ...(this.#columnRelations === undefined
+        ? {}
+        : { columnRelations: this.#columnRelations }),
     });
+  }
+
+  /**
+   * Verify every configured `columnRelations` table and column exists in SQLite
+   * and report whether the recommended reverse-lookup index exists.
+   */
+  verifyColumnRelations(): Promise<readonly SqliteColumnRelationCheckResult[]> {
+    return verifySqliteColumnRelations(
+      this.#policy.model.columnRelations ?? [],
+      this.#executor,
+    );
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {
@@ -144,6 +171,7 @@ export class SqliteAuthorization extends Authorization {
     const { idColumn, nowMs, scopeColumns } = validateSqliteFilterQuery(
       query,
       this.currentTimeMs(),
+      this.#policy.model,
     );
     const permission = this.#policy.permissionName(
       query.resourceType,
@@ -345,47 +373,16 @@ export class SqliteAuthorization extends Authorization {
   }
 }
 
-function getOrCompilePolicy(model: AccessModel): CompiledSqliteAccessPolicy {
+function getOrCompilePolicy(
+  model: AccessModel,
+  columnRelations?: readonly SqliteColumnRelationBinding[],
+): CompiledSqliteAccessPolicy {
+  if (columnRelations !== undefined && columnRelations.length > 0) {
+    return compileAccessPolicy(model, columnRelations);
+  }
   const cached = compiledPolicyCache.get(model);
   if (cached !== undefined) return cached;
   const compiled = compileAccessPolicy(model);
   compiledPolicyCache.set(model, compiled);
   return compiled;
-}
-
-function collectSubjectLookupResult(
-  rows: readonly Readonly<Record<string, unknown>>[],
-): SubjectLookupResult {
-  const subjects: string[] = [];
-  let hasWildcard = false;
-  for (const row of rows) {
-    if (readBooleanColumn(row, "is_wildcard")) {
-      hasWildcard = true;
-    } else {
-      subjects.push(readStringColumn(row, "subject_id"));
-    }
-  }
-  return { subjects, hasWildcard };
-}
-
-function requireConcreteSubject(subject: SubjectRef): void {
-  if (
-    subject.id.length === 0 ||
-    subject.id === "*" ||
-    subject.relation !== undefined
-  ) {
-    throw new Error("SQLite authorization reads require a concrete subject");
-  }
-}
-
-function requireSubjectLookupInput(query: SubjectLookup): void {
-  if (
-    query.resource.type.length === 0 ||
-    query.resource.id.length === 0 ||
-    query.subjectType.length === 0
-  ) {
-    throw new Error(
-      "SQLite lookupSubjects requires resource type, resource id, and subject type",
-    );
-  }
 }

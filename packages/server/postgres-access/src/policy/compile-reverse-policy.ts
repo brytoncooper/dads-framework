@@ -8,6 +8,7 @@ import {
   type PermissionCyclePlan,
 } from "./permission-cycles.js";
 import { compileRecursiveReverseLookup } from "./compile-recursive-policy.js";
+import { findColumnRelation } from "./column-relations.js";
 import {
   notExpired,
   permissionIdentity,
@@ -92,6 +93,7 @@ function compileReversePermissionNode(
   const scc = context.cycles.sccFor(entity, permissionName);
   if (scc !== undefined) {
     return compileRecursiveReverseLookup({
+      model: context.model,
       builder: context.builder,
       namespace: context.namespace,
       entryEntity: entity,
@@ -189,6 +191,23 @@ function compileReverseThroughBranch(
     target.entity,
     target.permission,
   );
+  const columnRel = findColumnRelation(context.model, entity, relationName);
+  if (columnRel !== undefined) {
+    if (!context.deduplicate) {
+      return `SELECT ${throughAlias}.${columnRel.idColumn} AS resource_id
+        FROM (${relatedResourceIds}) related_resource
+        JOIN ${columnRel.table} ${throughAlias}
+          ON ${throughAlias}.${columnRel.targetIdColumn} = related_resource.resource_id`;
+    }
+    return `SELECT DISTINCT match.resource_id
+      FROM (${relatedResourceIds}) related_resource
+      CROSS JOIN LATERAL (
+        SELECT ${throughAlias}.${columnRel.idColumn} AS resource_id
+        FROM ${columnRel.table} ${throughAlias}
+        WHERE ${throughAlias}.${columnRel.targetIdColumn} = related_resource.resource_id
+        OFFSET 0
+      ) match`;
+  }
   const resourceKind = builder.value(entity);
   const relation = builder.value(relationName);
   const relatedKind = builder.value(target.entity);
@@ -239,6 +258,26 @@ function compileReverseThroughAll(
     targets,
   );
   const allAlias = builder.throughAlias();
+  const columnRel = findColumnRelation(context.model, entity, relationName);
+  if (columnRel !== undefined && targets[0] !== undefined) {
+    const allowedIds = compileReversePermissionNode(
+      context,
+      targets[0].entity,
+      targets[0].permission,
+    );
+    return `SELECT DISTINCT candidate.resource_id
+      FROM (${candidates}) candidate
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM ${columnRel.table} ${allAlias}
+        WHERE ${allAlias}.${columnRel.idColumn} = candidate.resource_id
+          AND ${allAlias}.${columnRel.targetIdColumn} IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM (${allowedIds}) allowed_target
+            WHERE allowed_target.resource_id = ${allAlias}.${columnRel.targetIdColumn}
+          )
+      )`;
+  }
   const resourceKind = builder.value(entity);
   const relation = builder.value(relationName);
   const allowedChecks = targets.map((target) => {

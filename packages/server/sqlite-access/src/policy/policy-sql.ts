@@ -1,6 +1,9 @@
 import { SQLITE_RELATIONSHIP_TABLE } from "../sqlite-schema.js";
 import type { SqliteQuery, SqliteValue } from "../sqlite-types.js";
-import type { SqliteAuthorizationModel } from "./policy-model.js";
+import type {
+  CompiledSqliteColumnRelation,
+  SqliteAuthorizationModel,
+} from "./policy-model.js";
 
 /** The single relationship table every compiled SQLite statement reads. */
 export const TUPLES = SQLITE_RELATIONSHIP_TABLE;
@@ -74,6 +77,8 @@ export function subjectReachabilityCte(options: {
   readonly subjectId: string;
   readonly nowMs: number;
   readonly includeSubjectSets?: boolean;
+  readonly columnRelations?:
+    readonly CompiledSqliteColumnRelation[] | undefined;
 }): SqliteQuery {
   const b = new QueryBuilder();
   const directSql = `SELECT dt.resource_kind, dt.resource_id, dt.relation
@@ -92,9 +97,20 @@ export function subjectReachabilityCte(options: {
       AND wt.subject_is_wildcard = 1
       AND wt.subject_relation = ''
       AND ${activeTupleCondition("wt", b, options.nowMs)}`;
+  const columnParts = (options.columnRelations ?? [])
+    .filter((columnRel) => columnRel.targetEntity === options.subjectKind)
+    .map(
+      (
+        columnRel,
+      ) => `SELECT ${b.value(columnRel.entity)} AS resource_kind, col_rel.${columnRel.idColumn} AS resource_id, ${b.value(columnRel.relation)} AS relation
+      FROM ${columnRel.table} col_rel
+      WHERE col_rel.${columnRel.targetIdColumn} = ${b.value(options.subjectId)}
+        AND col_rel.${columnRel.targetIdColumn} IS NOT NULL`,
+    );
+  const baseParts = [directSql, wildcardSql, ...columnParts];
   if (options.includeSubjectSets === false) {
     return b.finish(
-      `subject_reachable(resource_kind, resource_id, relation) AS (${directSql} UNION ALL ${wildcardSql})`,
+      `subject_reachable(resource_kind, resource_id, relation) AS (${baseParts.join(" UNION ALL ")})`,
     );
   }
   const stepSql = `SELECT pt.resource_kind, pt.resource_id, pt.relation
@@ -108,6 +124,6 @@ export function subjectReachabilityCte(options: {
       AND pt.subject_relation <> ''
       AND ${activeTupleCondition("pt", b, options.nowMs)}`;
   return b.finish(
-    `subject_reachable(resource_kind, resource_id, relation) AS (${directSql} UNION ${wildcardSql} UNION ${stepSql})`,
+    `subject_reachable(resource_kind, resource_id, relation) AS (${[...baseParts, stepSql].join(" UNION ")})`,
   );
 }

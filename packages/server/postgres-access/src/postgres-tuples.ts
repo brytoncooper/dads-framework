@@ -6,9 +6,11 @@ import type {
   SubjectRef,
 } from "@dads-framework/access/runtime";
 import { type PostgresQuery, type PostgresRow } from "./postgres-types.js";
+import { findColumnRelation } from "./policy/column-relations.js";
 import type {
   AuthorizationModelDefinition,
   CompiledAuthorizationRelationTarget,
+  CompiledColumnRelation,
 } from "./policy/policy-model.js";
 import { readTupleColumn } from "./postgres-response.js";
 
@@ -78,6 +80,16 @@ export class PostgresTuples {
   }
 
   async delete(filter: RelationshipFilter): Promise<void> {
+    if (filter.relation !== undefined && filter.relation !== "") {
+      const columnRel = findColumnRelation(
+        this.model,
+        filter.resourceType,
+        filter.relation,
+      );
+      if (columnRel !== undefined) {
+        throw columnBackedMutationError(columnRel);
+      }
+    }
     await this.execute({
       text: `DELETE FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter} AND ${subjectFilter}`,
       values: [
@@ -91,6 +103,18 @@ export class PostgresTuples {
 
   async exists(filter: ExactFilter): Promise<boolean> {
     requireExact(filter.resourceId, filter.relation);
+    const columnRel = findColumnRelation(
+      this.model,
+      filter.resourceType,
+      filter.relation,
+    );
+    if (columnRel !== undefined) {
+      const rows = await this.execute({
+        text: `SELECT 1 FROM ${columnRel.table} WHERE ${columnRel.idColumn} = $1 AND ${columnRel.targetIdColumn} IS NOT NULL LIMIT 1`,
+        values: [filter.resourceId],
+      });
+      return rows.length > 0;
+    }
     const rows = await this.execute({
       text: `SELECT 1 FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter} AND ${notExpiredTuple} LIMIT 1`,
       values: this.#resourceFilter(filter),
@@ -100,6 +124,21 @@ export class PostgresTuples {
 
   async list(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     requireExact(query.resource.id, query.relation);
+    const columnRel = findColumnRelation(
+      this.model,
+      query.resource.type,
+      query.relation,
+    );
+    if (columnRel !== undefined) {
+      const rows = await this.execute({
+        text: `SELECT DISTINCT ${columnRel.targetIdColumn} AS subject_id FROM ${columnRel.table} WHERE ${columnRel.idColumn} = $1 AND ${columnRel.targetIdColumn} IS NOT NULL ORDER BY ${columnRel.targetIdColumn}`,
+        values: [query.resource.id],
+      });
+      return rows.map((row) => ({
+        type: columnRel.targetEntity,
+        id: readTupleColumn(row, "subject_id"),
+      }));
+    }
     const rows = await this.execute({
       text: `SELECT subject_kind, CASE WHEN subject_is_wildcard THEN '*' ELSE subject_id END AS subject_id, subject_relation
         FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter} AND ${notExpiredTuple}
@@ -132,6 +171,14 @@ export class PostgresTuples {
   }
 
   #validateWrite(write: RelationshipWrite): RelationshipWrite {
+    const columnRel = findColumnRelation(
+      this.model,
+      write.resource.type,
+      write.relation,
+    );
+    if (columnRel !== undefined) {
+      throw columnBackedMutationError(columnRel);
+    }
     const relation = this.model.relations.find(
       (entry) =>
         entry.entity === write.resource.type &&
@@ -196,6 +243,12 @@ function matchesTarget(
   return target.kind === "subject-set"
     ? target.relation === subject.relation
     : subject.relation === undefined;
+}
+
+function columnBackedMutationError(columnRel: CompiledColumnRelation): Error {
+  return new Error(
+    `Relation ${columnRel.entity}#${columnRel.relation} is column-backed by ${columnRel.table}.${columnRel.targetIdColumn}; update the application table directly`,
+  );
 }
 
 function requireExact(resourceId: string, relation: string): void {

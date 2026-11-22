@@ -28,6 +28,13 @@ function replaceRequired(text, marker, content, page) {
   return text.replace(marker, () => content);
 }
 
+const themeInitScript = `<script>(function(){try{var t=localStorage.getItem("dads-theme");if(!t&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)t="light";document.documentElement.dataset.theme=t==="light"?"light":"dark";}catch(e){}})();</script>`;
+
+const themeToggleButton = `<button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch to light mode" title="Switch to light mode" aria-pressed="false">
+      <svg class="theme-icon theme-icon-sun" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 2.2v1.8M10 16v1.8M2.2 10H4M16 10h1.8M4.5 4.5l1.3 1.3M14.2 14.2l1.3 1.3M15.5 4.5l-1.3 1.3M5.8 14.2l-1.3 1.3"/></svg>
+      <svg class="theme-icon theme-icon-moon" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.8 12.6A6.5 6.5 0 0 1 7.4 4.2a6.5 6.5 0 1 0 8.4 8.4Z"/></svg>
+    </button>`;
+
 const docsSearchTrigger = `<button type="button" class="header-search-trigger" id="docs-search-trigger" aria-haspopup="dialog" aria-controls="docs-search-dialog" aria-label="Search documentation">
       <svg class="header-search-icon" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8.75" cy="8.75" r="5.75"/><path d="M13 13l4.25 4.25" stroke-linecap="round"/></svg>
       <span class="header-search-label">Search</span>
@@ -38,10 +45,11 @@ export function siteHeader(currentPage) {
   const searchButton =
     currentPage === "docs" ? `\n    ${docsSearchTrigger}` : "";
   return `<header class="site-header"><div class="wrap">
-  <a href="/" class="brand"${currentPage === "home" ? ' aria-current="page"' : ""}><img src="/assets/dads-symbol-light.png" class="brand-symbol" alt="" width="26" height="26">Dads Framework</a>
+  <a href="/" class="brand"${currentPage === "home" ? ' aria-current="page"' : ""}><img src="/assets/dads-symbol-light.png" class="brand-symbol brand-symbol-on-dark" alt="" width="26" height="26"><img src="/assets/dads-symbol-dark.png" class="brand-symbol brand-symbol-on-light" alt="" width="26" height="26">Dads Framework</a>
   <nav aria-label="Main">${searchButton}
     <a href="/docs/"${currentPage === "docs" ? ' aria-current="page"' : ""}>Docs</a>
     <a href="${repository}">GitHub <span aria-hidden="true">↗</span></a>
+    ${themeToggleButton}
   </nav>
 </div></header>`;
 }
@@ -90,9 +98,12 @@ export function renderDocs(html, page) {
     `<meta name="theme-color" content="#0e1114">
 <link rel="canonical" href="${origin}${path}">
 <link rel="icon" href="/assets/dads-favicon.png" type="image/png">
+${themeInitScript}
 <link rel="stylesheet" href="/assets/base.css">
 <link rel="stylesheet" href="/assets/docs.css">
 <noscript><style>.header-search-trigger{display:none}</style></noscript>
+<noscript><style>.theme-toggle{display:none}</style></noscript>
+<script src="/assets/theme.js" defer></script>
 <script type="module" src="/assets/docs.js"></script>
 </head>`,
     page,

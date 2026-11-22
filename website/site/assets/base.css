@@ -30,8 +30,28 @@
   --accent-muted: #66ab93;
   --accent-surface: #182e29;
   --control-border: #738690;
+  --header-bg: rgb(14 17 20 / 0.9);
   --sans: "Instrument Sans", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --paper: #f8fafc;
+  --surface-subtle: #f1f5f9;
+  --surface: #ffffff;
+  --surface-elevated: #e2e8f0;
+  --ink: #0f172a;
+  --ink-secondary: #334155;
+  --muted: #64748b;
+  --rule: #cbd5e1;
+  --rule-subtle: #e2e8f0;
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-muted: #14b8a6;
+  --accent-surface: #e6f7f4;
+  --control-border: #94a3b8;
+  --header-bg: rgb(248 250 252 / 0.9);
 }
 
 *,
@@ -110,7 +130,7 @@ button {
   top: 0;
   z-index: 30;
   border-bottom: 1px solid var(--rule-subtle);
-  background: rgb(14 17 20 / 0.9);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
 }
 .site-header .wrap,
@@ -219,6 +239,45 @@ button {
   width: 1.55rem;
   height: 1.55rem;
   object-fit: contain;
+}
+.brand-symbol-on-light {
+  display: none;
+}
+:root[data-theme="light"] .brand-symbol-on-dark {
+  display: none;
+}
+:root[data-theme="light"] .brand-symbol-on-light {
+  display: block;
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 0.45rem;
+  background: var(--surface-subtle);
+  color: var(--ink-secondary);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+.theme-toggle:hover {
+  border-color: var(--control-border);
+  background: var(--surface);
+  color: var(--accent);
+}
+.theme-icon-moon {
+  display: none;
+}
+:root[data-theme="light"] .theme-icon-sun {
+  display: none;
+}
+:root[data-theme="light"] .theme-icon-moon {
+  display: block;
 }
 .site-footer {
   border-top: 1px solid var(--rule-subtle);

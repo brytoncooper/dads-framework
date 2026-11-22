@@ -16,7 +16,7 @@ npm install @dads-framework/access @dads-framework/postgres-access pg zod
 
 If your app already uses Drizzle, import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle`.
 
-See the **[4-file standalone walkthrough in Access & Permissions](permissions.md#option-a-add-dads-access-to-an-existing-app-standalone)** for a complete, copy-pasteable `src/authz/` + `src/routes/` layout, [Benchmarks & Proof](benchmarks-and-proof.md) for measured 1-vCPU 10M-row & SpiceDB numbers, or [Permissions Cookbook & Patterns](permissions-cookbook.md) for advanced recipes.
+See the **[4-file standalone walkthrough in Access & Permissions](permissions.md#option-a-add-dads-access-to-an-existing-app-standalone)** for a complete, copy-pasteable `src/access/` + `src/routes/` layout, [Benchmarks & Proof](benchmarks-and-proof.md) for measured 1-vCPU scaling & SpiceDB numbers, or [Permissions Cookbook & Patterns](permissions-cookbook.md) for advanced recipes.
 
 ## 2. Add standalone SQLite ReBAC (Node built-in `node:sqlite`)
 

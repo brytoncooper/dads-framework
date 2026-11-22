@@ -30,16 +30,16 @@
       "path": "docs/site/guides/permissions.md",
       "examples": [
         {
-          "source": "fixtures/standalone-access/src/authz/model.ts",
-          "proof": "fixtures/standalone-access/src/authz/model.test.ts"
+          "source": "fixtures/standalone-access/src/access/model.ts",
+          "proof": "fixtures/standalone-access/src/access/model.test.ts"
         },
         {
-          "source": "fixtures/standalone-access/src/authz/setup.ts",
-          "proof": "fixtures/standalone-access/src/authz/model.test.ts"
+          "source": "fixtures/standalone-access/src/access/postgres.ts",
+          "proof": "fixtures/standalone-access/src/access/model.test.ts"
         },
         {
           "source": "fixtures/standalone-access/src/routes/documents.ts",
-          "proof": "fixtures/standalone-access/src/authz/model.test.ts"
+          "proof": "fixtures/standalone-access/src/access/model.test.ts"
         },
         {
           "source": "fixtures/dads-app-access/domains/documents/access/index.ts",

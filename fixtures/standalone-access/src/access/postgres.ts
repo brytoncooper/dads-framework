@@ -38,9 +38,9 @@ export function createAuthorization(pool: Pool): PostgresAuthorization {
 
 /** Fail fast at boot if any column-backed table or index is missing. */
 export async function verifyAuthorizationAtBoot(
-  authz: PostgresAuthorization,
+  authorization: PostgresAuthorization,
 ): Promise<void> {
-  const checks = await authz.verifyColumnRelations();
+  const checks = await authorization.verifyColumnRelations();
   const missing = checks.filter((entry) => !entry.hasRecommendedIndex);
   if (missing.length > 0) {
     throw new Error(

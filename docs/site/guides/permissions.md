@@ -20,15 +20,15 @@ npm install @dads-framework/access @dads-framework/postgres-access pg
 
 Apply `relationshipSchemaMigration.sql` once, then organize permissions into **4 small files**—click any file in the explorer below to see how they import from each other:
 
-<!-- dads:excerpt {"path":"fixtures/standalone-access/src/authz/model.ts","displayPath":"src/authz/model.ts","note":"1. Define actors, resources, roles & permissions once","language":"ts","all":true} -->
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/access/model.ts","displayPath":"src/access/model.ts","note":"1. Define actors, resources, roles & permissions once","language":"ts","all":true} -->
 
-<!-- dads:excerpt {"path":"fixtures/standalone-access/src/authz/setup.ts","displayPath":"src/authz/setup.ts","note":"2. Wire pg.Pool + columnRelations once at startup","language":"ts","all":true} -->
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/access/postgres.ts","displayPath":"src/access/postgres.ts","note":"2. Wire pg.Pool + columnRelations once at startup","language":"ts","all":true} -->
 
 <!-- dads:excerpt {"path":"fixtures/standalone-access/src/routes/documents.ts","displayPath":"src/routes/documents.ts","note":"3. Filter SQL lists & guard writes in one transaction","language":"ts","all":true} -->
 
-<!-- dads:excerpt {"path":"fixtures/standalone-access/src/authz/model.test.ts","displayPath":"src/authz/model.test.ts","note":"4. Test inheritance, bans & revokes in <1 ms (no Docker)","language":"ts","all":true} -->
+<!-- dads:excerpt {"path":"fixtures/standalone-access/src/access/model.test.ts","displayPath":"src/access/model.test.ts","note":"4. Test inheritance, bans & revokes in <1 ms (no Docker)","language":"ts","all":true} -->
 
-> **Rule of thumb:** Bind single-target foreign keys you already have (`documents.org_id`, `documents.owner_id`, `folders.parent_id`) in `columnRelations`. Store dynamic grants (org memberships, teams, wildcards, expiring shares, and bans) via `createAccessClient(authz).add(...)`.
+> **Rule of thumb:** Bind single-target foreign keys you already have (`documents.org_id`, `documents.owner_id`, `folders.parent_id`) in `columnRelations`. Store dynamic grants (org memberships, teams, wildcards, expiring shares, and bans) via `createAccessClient(authorization).add(...)`.
 >
 > **Using SQLite instead of Postgres?** Swap `@dads-framework/postgres-access` for [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) (`SqliteAuthorization` on Node's built-in `node:sqlite`)—same `model.ts`, same `columnRelations` API.
 
@@ -91,7 +91,7 @@ Want the measured numbers, exact hardware, `EXPLAIN ANALYZE` plans, and formal p
 
 ## Go deeper
 
-- **[Benchmarks & Proof](benchmarks-and-proof.md)** — Scientific benchmark report: 1-vCPU 10M-row Postgres baseline, how we tilted the head-to-head test in SpiceDB's favor and still won 2.0×–3.2×, SQLite scale, uncertainty/limitations, and 27 Lean 4 proofs.
+- **[Benchmarks & Proof](benchmarks-and-proof.md)** — Full technical report: flat 10k → 100,000,000-row scaling on 1 vCPU, 10,000-hop nested groups in 15.8 ms, head-to-head vs SpiceDB (tilted in SpiceDB's favor), SQLite scale, uncertainty/limitations, and 27 Lean 4 proofs.
 - **[Permissions Cookbook & Patterns](permissions-cookbook.md)** — Tested recipes for `columnRelations`, protecting `org_id`, nested folders, teams, wildcards, expiring shares, bans, `every()`, and two-way SpiceDB migration.
 - **[SDK Glossary & Options](sdk-reference.md)** — Every DSL combinator, adapter option, and CLI command.
 

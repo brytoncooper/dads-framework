@@ -5,9 +5,34 @@ Measure the operation your application depends on. Point checks, paginated
 foreign-key relations (`columnRelations`), and concurrent mixed reads + writes
 all have distinct cost profiles.
 
-## 10,000,000-row PostgreSQL scale: 1 vCPU baseline & `columnRelations`
+## 10k → 100,000,000-row PostgreSQL scaling ladder & 10,000-hop test (1 vCPU, 2 GB RAM)
 
-### Hard-capped 1 vCPU, 2 GB RAM baseline (`--cpus=1 --memory=2g`)
+Measured inside a single hard-capped **1 vCPU, 2 GB RAM** PostgreSQL 16.16
+Linux container (`shared_buffers=512MB`, `effective_cache_size=1536MB`,
+`work_mem=8MB`, `max_parallel_workers_per_gather=0`) across five orders of
+magnitude (**10,000 to 100,000,000 documents**, up to **22 GB** total table +
+index size—11× larger than container RAM).
+
+### 10k → 100,000,000-row scaling curve (1 vCPU, 2 GB RAM)
+
+|   Documents | App table size | Extra auth storage | Point check: `org_id` (p50) | Point check: `owner_id` (p50) | Outsider deny (p50) | `LIMIT 50`: Org Member (p50) | `LIMIT 50`: Broad Admin, 10% (p50) | Seq scans | 8-worker sustained checks/s (0 errors) |
+| ----------: | -------------: | -----------------: | --------------------------: | ----------------------------: | ------------------: | ---------------------------: | ---------------------------------: | --------: | -------------------------------------: |
+|      10,000 |         2.2 MB |             144 kB |                 **0.44 ms** |                   **0.45 ms** |         **0.44 ms** |                  **0.44 ms** |                        **0.36 ms** |     **0** |                           **2,657 /s** |
+|     100,000 |          21 MB |             536 kB |                 **0.40 ms** |                   **0.39 ms** |         **0.40 ms** |                  **0.38 ms** |                        **0.47 ms** |     **0** |                           **2,672 /s** |
+|   1,000,000 |         220 MB |             4.1 MB |                 **0.41 ms** |                   **0.43 ms** |         **0.40 ms** |                  **0.37 ms** |                        **1.65 ms** |     **0** |                           **2,559 /s** |
+|  10,000,000 |         2.2 GB |              43 MB |                 **0.40 ms** |                   **0.40 ms** |         **0.39 ms** |                  **0.53 ms** |                        **2.04 ms** |     **0** |                           **2,615 /s** |
+| 100,000,000 |      **22 GB** |          **44 MB** |                 **0.50 ms** |                   **0.52 ms** |         **0.49 ms** |                  **1.19 ms** |                        **2.19 ms** |     **0** |                           **2,505 /s** |
+
+### 10,000-hop nested group chain (1 vCPU, 2 GB RAM)
+
+| Nested group hops | Allow check (p50 / p95) | Outsider deny (p50 / p95) | Reverse lookup (p50 / p95) | Mid-chain revoke verified |
+| ----------------: | ----------------------: | ------------------------: | -------------------------: | :------------------------ |
+|                32 |      **0.31 / 0.37 ms** |        **0.18 / 0.21 ms** |         **0.41 / 0.47 ms** | Yes                       |
+|               128 |      **1.46 / 1.55 ms** |        **0.31 / 0.36 ms** |         **0.45 / 0.51 ms** | Yes                       |
+|             1,024 |      **1.64 / 1.74 ms** |        **0.28 / 0.29 ms** |         **1.50 / 1.65 ms** | Yes                       |
+|            10,000 |    **15.76 / 16.06 ms** |        **0.34 / 0.40 ms** |       **14.34 / 14.50 ms** | Yes                       |
+
+### Hard-capped 1 vCPU, 2 GB RAM logged-table baseline (10M rows)
 
 Measured on a single `postgres:16-alpine` (PostgreSQL 16.16) Docker container
 hard-capped to **1 vCPU and 2 GiB RAM** (`NanoCpus=1000000000`,
@@ -82,7 +107,7 @@ The harness uses the same 5,000-leaf graph for each depth and engine. Both
 use the public Node authorization adapters over local TCP, with the opt-in prepared-check path against PostgreSQL 16.16 and fully consistent gRPC
 against the SpiceDB 1.57.0 in-memory testing datastore. It includes transport,
 encoding, SQL compilation, and decoding in the timed calls. The Linux VM
-has 32 vCPUs on an i9-13900KF and runs Node 24.20.0.
+runs Node 24.20.0.
 
 Each engine takes three rounds of 1,280 checks per depth and worker count,
 after 30 warmups per worker. Engine order alternates and each worker checks
@@ -220,7 +245,7 @@ current code and benchmark commands can produce different timings.
 
 ### Original forward and reverse baseline
 
-This early baseline was measured on 2026-11-19 Mountain Time. Both backends ran in containers on the same Linux development VM with a 32-vCPU Intel Core i9-13900KF and 25 GiB RAM. Postgres used the `postgres:16-alpine` image. SpiceDB v1.57.0 used its in-memory datastore and fully consistent reads. Node was v24.20.0.
+This early baseline was measured on 2026-11-19. Both backends ran in containers on the same Linux development VM. Postgres used the `postgres:16-alpine` image. SpiceDB v1.57.0 used its in-memory datastore and fully consistent reads. Node was v24.20.0.
 
 The fixture grants one actor access through a chain of parent relationships. A single check targets one leaf. A lookup returns every leaf the actor can see. The benchmark validates each answer and takes 15 sequential samples after one warm-up call. Timings include application-side query compilation, transport, and reading the response. They exclude schema installation and seeding. This run used a 4.9-second PostgreSQL statement deadline and a 5-second client deadline.
 

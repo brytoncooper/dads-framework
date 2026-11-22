@@ -22,9 +22,26 @@
     <meta property="og:image:alt" content="Dads Framework monogram" />
     <link rel="canonical" href="https://dadsframework.dev/" />
     <link rel="icon" href="/assets/dads-favicon.png" type="image/png" />
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("dads-theme");
+          if (
+            !theme &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: light)").matches
+          ) {
+            theme = "light";
+          }
+          document.documentElement.dataset.theme =
+            theme === "light" ? "light" : "dark";
+        } catch (error) {}
+      })();
+    </script>
     <link rel="stylesheet" href="/assets/base.css" />
     <link rel="stylesheet" href="/assets/home.css" />
     <link rel="stylesheet" href="/assets/composition-preview.css" />
+    <script src="/assets/theme.js" defer></script>
     <script src="/assets/home.js" defer></script>
     <script src="/assets/composition-preview.js" defer></script>
   </head>
@@ -404,11 +421,11 @@
       inherit: <span class="tok-str">"all"</span>,
       roles: { assignee: user, blocked: user },
       can: ({ assignee, blocked, parent }) =&gt; ({
-<span class="tok-hi">        edit: <span class="tok-fn">anyOf</span>(assignee, parent.manage).<span class="tok-fn">unless</span>(blocked),</span>
+        edit: <span class="tok-fn">anyOf</span>(assignee, parent.manage).<span class="tok-fn">unless</span>(blocked),
       }),
     },
     billing: {
-<span class="tok-hi">      inherit: [<span class="tok-str">"manage"</span>],</span>
+      inherit: [<span class="tok-str">"manage"</span>],
       roles: { accountant: user },
       can: ({ accountant }) =&gt; ({ view: accountant }),
     },
@@ -435,7 +452,7 @@
 <span class="tok-kw">export const</span> updateTask = <span class="tok-fn">patchRoute</span>({
   route: { method: <span class="tok-str">"PATCH"</span>, template: <span class="tok-str">"/tasks/:taskId"</span> },
   summary: <span class="tok-str">"Update a task"</span>,
-<span class="tok-hi">  access: <span class="tok-fn">requires</span>(task.can.edit, <span class="tok-fn">fromParam</span>(<span class="tok-str">"taskId"</span>)),</span>
+  access: <span class="tok-fn">requires</span>(task.can.edit, <span class="tok-fn">fromParam</span>(<span class="tok-str">"taskId"</span>)),
   rateLimit: { perMinute: <span class="tok-num">60</span> },
   params: taskParams,
   body: updateTaskBody,
@@ -503,7 +520,7 @@
   <span class="tok-kw">return</span> <span class="tok-fn">sendToApi</span>({
     route: updateTaskRoute.<span class="tok-fn">bind</span>(taskId),
     body: { schema: updateTaskBody, value: { title } },
-<span class="tok-hi">    returns: taskResponse,</span>
+    returns: taskResponse,
   });
 }</code></pre>
             </div>
@@ -595,7 +612,7 @@
   routes: [
     tenantsPlugin,
     tenantPermissionsPlugin,
-<span class="tok-hi">    notesPlugin,</span>
+    notesPlugin,
     <span class="tok-cmt">// dad:add domains</span>
   ],
   jobs: [notesAttachmentWorker],
@@ -615,7 +632,7 @@
   services: [provider, starterAccess],
   routes: [
     tenantsPlugin,
-<span class="tok-hi">    tenantAuditExportPlugin,</span>
+    tenantAuditExportPlugin,
     <span class="tok-cmt">// dad:add domains</span>
   ],
   jobs: [],

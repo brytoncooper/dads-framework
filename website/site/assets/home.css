@@ -351,10 +351,53 @@ main h2 {
   font-size: 0.84em;
   white-space: nowrap;
   color: var(--ink);
-  background: var(--surface);
-  padding: 0.12em 0.32em;
+  background: rgb(255 255 255 / 0.065);
+  padding: 0.08em 0.32em;
   border-radius: 0.25rem;
-  border: 1px solid var(--rule-subtle);
+  border: 0;
+}
+:root[data-theme="light"] .home-hero {
+  background: radial-gradient(
+    ellipse at 82% 24%,
+    rgb(20 184 166 / 0.14) 0,
+    transparent 56%
+  );
+}
+:root[data-theme="light"] .hero-intro h1 span {
+  color: #0f766e;
+}
+:root[data-theme="light"] .primary-action {
+  color: #ffffff;
+}
+:root[data-theme="light"] .preview-caption code,
+:root[data-theme="light"] .contrast-list code,
+:root[data-theme="light"] .starter-copy code {
+  background: rgb(15 23 42 / 0.065);
+  color: #0f172a;
+}
+:root[data-theme="light"] .feature-preview,
+:root[data-theme="light"] .code-box,
+:root[data-theme="light"] .composition-preview,
+:root[data-theme="light"] .terminal-box {
+  color: #ffffff;
+  --paper: #0e1114;
+  --surface: #171d21;
+  --surface-elevated: #1c2429;
+  --ink: #ffffff;
+  --ink-secondary: #eff4f7;
+  --muted: #c6d4dc;
+  --rule: #344149;
+  --rule-subtle: #283238;
+  --accent: #8ee3c5;
+  --accent-muted: #66ab93;
+  --accent-surface: #182e29;
+  box-shadow: 0 1.25rem 3rem rgb(15 23 42 / 0.14);
+}
+:root[data-theme="light"] .boundaries-section {
+  background: linear-gradient(180deg, #eef2f6 0%, var(--paper) 100%);
+}
+:root[data-theme="light"] .reading-list a:hover {
+  background: rgb(15 23 42 / 0.045);
 }
 
 /* Section 2: Relationship permissions + tabbed code box */
@@ -513,15 +556,6 @@ main h2 {
 .tok-cmt {
   color: #b0c3cb;
   font-style: italic;
-}
-.tok-hi {
-  display: inline-block;
-  min-width: calc(100% + 2.7rem);
-  margin-inline: -1.35rem;
-  padding-inline: 1.35rem;
-  background: rgb(142 227 197 / 0.11);
-  box-shadow: inset 2px 0 0 var(--accent);
-  color: #edfbf6;
 }
 
 /* Section 3 & 4: Two-column feature sections */

@@ -307,7 +307,7 @@
         "pg"
       ],
       "verification": [
-        "npx vitest run fixtures/standalone-access/src/authz/model.test.ts"
+        "npx vitest run fixtures/standalone-access/src/access/model.test.ts"
       ],
       "skills": ["dads-orient"]
     },

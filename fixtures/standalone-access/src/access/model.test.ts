@@ -2,7 +2,7 @@ import { createAccessHarness } from "@dads-framework/access/testing";
 import { describe, expect, it } from "vitest";
 
 import { accessModel, document, organization, user } from "./model.js";
-import { createAuthorization, recommendedIndexSql } from "./setup.js";
+import { createAuthorization, recommendedIndexSql } from "./postgres.js";
 import { listVisibleDocuments, renameDocument } from "../routes/documents.js";
 
 describe("standalone document permissions", () => {

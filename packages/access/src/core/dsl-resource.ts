@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ResolvedAccessDefinition } from "./access-model.js";
 import { parentRoleNameOf } from "./dsl-actor.js";
 import {
   buildRoleTokens,
@@ -34,11 +35,23 @@ const RESERVED_RESOURCE_PROPS = new Set([
   "wireName",
   "idSchema",
   "handle",
+  "entity",
+  "resolve",
   "roles",
   "can",
   "permissions",
   "child",
 ]);
+
+type DslResourceResolver = (node: AnyDslResource) => ResolvedAccessDefinition;
+
+let resourceResolver: DslResourceResolver | undefined;
+
+export function registerDslResourceResolver(
+  resolver: DslResourceResolver,
+): void {
+  resourceResolver = resolver;
+}
 
 export type DslResourceRecord = {
   readonly resource: AnyDslResource;
@@ -195,11 +208,27 @@ function createInternalResource(init: InternalResourceInit): AnyDslResource {
       ? undefined
       : parentRoleNameOf(init.parentResource.wireName);
 
+  let cachedDefinition: ResolvedAccessDefinition | undefined;
+  function resolve(): ResolvedAccessDefinition {
+    if (cachedDefinition !== undefined) {
+      return cachedDefinition;
+    }
+    if (resourceResolver === undefined) {
+      throw new Error(
+        `DSL resource resolver is not registered for "${init.wireName}"`,
+      );
+    }
+    cachedDefinition = resourceResolver(node);
+    return cachedDefinition;
+  }
+
   const nodeBase = Object.assign(callResource, {
     kind: "dsl-resource",
     wireName: init.wireName,
     idSchema: init.idSchema,
     handle,
+    entity: handle,
+    resolve,
     roles,
     can: permissions,
     permissions,

@@ -4,6 +4,7 @@ import { isDslActor, isDslLazyResource, isDslResource } from "./dsl-actor.js";
 import { discoverDslGraph, isDslHolderList } from "./dsl-discover.js";
 import {
   getDslResourceRecord,
+  registerDslResourceResolver,
   type DslResourceRecord,
 } from "./dsl-resource.js";
 import type {
@@ -366,5 +367,18 @@ export function compileAccess(
     ? baseModel
     : { ...baseModel, migrations: [...options.migrations] };
 }
+
+registerDslResourceResolver((node) => {
+  const model = compileAccess([node]);
+  const definition = model.definitions.find(
+    (entry) => entry.entity.wireName === node.wireName,
+  );
+  if (definition === undefined) {
+    throw new Error(
+      `failed to resolve DSL resource definition for "${node.wireName}"`,
+    );
+  }
+  return definition;
+});
 
 export type { DslActor, DslNode };

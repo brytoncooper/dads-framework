@@ -9,7 +9,7 @@ For a protected workspace request, [assembly/session-subjects.ts](../assembly/se
 reads the session under the policy for the tenant matched in the route.
 The resulting account still needs the workspace permission.
 
-<!-- dads:excerpt {"path":"assembly/session-subjects.ts","language":"ts","from":"      const tenantId = tenantFromParams(params);","through":"        : { type: accountEntity.wireName, id: session.account.id };"} -->
+<!-- dads:excerpt {"path":"assembly/session-subjects.ts","language":"ts","from":"      const tenantId = tenantFromParams(params);","through":"        : { type: account.wireName, id: session.account.id };"} -->
 
 ## Try it
 

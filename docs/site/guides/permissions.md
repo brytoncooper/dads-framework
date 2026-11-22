@@ -76,7 +76,7 @@ Wrap Node's built-in `DatabaseSync` with `createNodeSqliteExecutor(db)`, apply `
 
 Export named permission tokens (such as `organization.task.can.edit`) from `domains/<feature>/access/index.ts` and attach them to routes (`domains/notes/access/index.ts`):
 
-<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/access/index.ts","language":"ts","from":"import { fromParam, type PermissionAccess } from \"@dads-framework/http\";","through":"};"} -->
+<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/access/index.ts","language":"ts","from":"import { fromParam, requires } from \"@dads-framework/http\";","through":"export const notesAccess = requires(notesPermission, fromParam(\"tenantId\"));"} -->
 
 Route enforcement runs in strict order:
 

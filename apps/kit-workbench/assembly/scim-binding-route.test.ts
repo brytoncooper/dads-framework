@@ -6,14 +6,14 @@ import { expect, it, vi } from "vitest";
 
 import { sessionSubjects } from "./session-subjects.js";
 import { scimBindingRoutes } from "../domains/tenants/index.js";
-import { accountEntity, tenantAccess } from "../libraries/app-runtime/index.js";
+import { account, tenantAccess } from "../libraries/app-runtime/index.js";
 
 const origin = "http://127.0.0.1:3000";
 const alpha = "00000000-0000-4000-8000-000000000001";
 const beta = "00000000-0000-4000-8000-000000000002";
 const scimId = "00000000-0000-4000-8000-000000000003";
-const owner = { type: accountEntity.wireName, id: "owner" };
-const member = { type: accountEntity.wireName, id: "member" };
+const owner = { type: account.wireName, id: "owner" };
+const member = { type: account.wireName, id: "member" };
 const permission = tenantAccess.tenant.permissions.manage_tenant;
 
 it("binds an existing member only for an owner of an enabled tenant", async () => {

@@ -10,20 +10,20 @@ export function resourceProof(
   const record = pascal(name);
   plan.create(
     `domains/${domain}/server/${name}-resource.test.ts`,
-    `import { FakeAuthorization } from "@dads-framework/authorization/testing";
+    `import { FakeAuthorization } from "@dads-framework/access/testing";
 import { apiErrorSchema, ROW_VERSION_CONFLICT } from "@dads-framework/contract";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { expect, it } from "vitest";
 
-import { accountEntity, tenantAccess } from "../../../libraries/app-runtime/index.js";
+import { account, tenantAccess } from "../../../libraries/app-runtime/index.js";
 import { ${item}SaveRoute, type ${record} } from "../contract/${name}-resource.js";
 import { create${record}Routes } from "./${name}-resource.js";
 import { ${item}Writer } from "./${name}-writer.js";
 
 it("denies a caller without an edit relationship and rejects a stale draft", async () => {
   let current: ${record} = { id: "sample", title: "Original", rowVersion: 1 };
-  const editor = { type: accountEntity.wireName, id: "editor" };
-  const outsider = { type: accountEntity.wireName, id: "outsider" };
+  const editor = { type: account.wireName, id: "editor" };
+  const outsider = { type: account.wireName, id: "outsider" };
   const tenantId = "838dc845-3883-43f7-8685-32acedbc29e5";
   const edit = tenantAccess.tenant.permissions.manage_tenant;
   const role = tenantAccess.tenant.roles.owner;
@@ -78,7 +78,7 @@ it("denies a caller without an edit relationship and rejects a stale draft", asy
 });
 
 it("passes the caller and tenant edit permission to the protected writer", async () => {
-  const subject = { type: accountEntity.wireName, id: "editor" };
+  const subject = { type: account.wireName, id: "editor" };
   const tenantId = "838dc845-3883-43f7-8685-32acedbc29e5";
   const denied = new Error("Permission was revoked before the write");
   const writer = ${item}Writer((check) => {

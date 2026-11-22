@@ -30,7 +30,17 @@ export function ensureDomain(plan: GenerationPlan, domain: string): void {
 }
 
 function accessRegistry(): string {
-  return `import type { AccessDefinition } from "@dads-framework/access";\n\n// dad:add imports\n\nexport const accessDefinitions: AccessDefinition<unknown, unknown>[] = [\n  // dad:add access\n];\n`;
+  return `import type { AccessDefinition } from "@dads-framework/access";
+
+// dad:add imports
+
+export const accessDefinitions: Pick<
+  AccessDefinition<unknown, unknown>,
+  "entity" | "resolve"
+>[] = [
+  // dad:add access
+];
+`;
 }
 
 function routeRegistry(): string {

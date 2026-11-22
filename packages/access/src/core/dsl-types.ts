@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import type { ResolvedAccessDefinition } from "./access-model.js";
 import type { EntityHandle, EntityKind } from "./entity-handle.js";
 import type { SingleRoleValue } from "./holders.js";
 import type { PermissionTerm, PermissionToken, RoleToken } from "./refs.js";
@@ -38,6 +39,8 @@ export type DslActor<WireName extends string = string> = ((
   readonly wireName: WireName;
   readonly idSchema: z.ZodType<string>;
   readonly handle: EntityHandle<WireName>;
+  readonly entity: EntityHandle;
+  readonly resolve: () => ResolvedAccessDefinition;
   readonly expiring: DslExpirableActorHolder<WireName>;
   readonly anyone: DslWildcardActorHolder<WireName>;
 };
@@ -138,6 +141,8 @@ export type AnyDslResource = {
   readonly wireName: string;
   readonly idSchema: z.ZodType<string>;
   readonly handle: EntityHandle;
+  readonly entity: EntityHandle;
+  readonly resolve: () => ResolvedAccessDefinition;
   readonly roles: Readonly<Record<string, RoleToken>>;
   readonly can: Readonly<Record<string, PermissionToken>>;
   readonly permissions: Readonly<Record<string, PermissionToken>>;

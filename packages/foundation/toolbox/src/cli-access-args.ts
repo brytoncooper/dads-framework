@@ -173,7 +173,7 @@ function recordUniqueOption(seenOptions: Set<string>, option: string): void {
   seenOptions.add(option);
 }
 
-function readOptionValue(
+function readAccessOptionValue(
   commandArguments: readonly string[],
   optionIndex: number,
   option: string,
@@ -199,11 +199,15 @@ function applyImportOption(
     return 0;
   }
   if (option === "--out") {
-    parsed.outPath = readOptionValue(commandArguments, optionIndex, option);
+    parsed.outPath = readAccessOptionValue(
+      commandArguments,
+      optionIndex,
+      option,
+    );
     return 1;
   }
   if (option === "--style") {
-    const value = readOptionValue(commandArguments, optionIndex, option);
+    const value = readAccessOptionValue(commandArguments, optionIndex, option);
     if (value !== "ergonomic" && value !== "classic") {
       throw new Error("--style must be ergonomic or classic.");
     }
@@ -227,15 +231,27 @@ function applyMigrateOption(
     return 0;
   }
   if (option === "--from") {
-    parsed.fromPath = readOptionValue(commandArguments, optionIndex, option);
+    parsed.fromPath = readAccessOptionValue(
+      commandArguments,
+      optionIndex,
+      option,
+    );
     return 1;
   }
   if (option === "--to") {
-    parsed.toPath = readOptionValue(commandArguments, optionIndex, option);
+    parsed.toPath = readAccessOptionValue(
+      commandArguments,
+      optionIndex,
+      option,
+    );
     return 1;
   }
   if (option === "--out") {
-    parsed.outDir = readOptionValue(commandArguments, optionIndex, option);
+    parsed.outDir = readAccessOptionValue(
+      commandArguments,
+      optionIndex,
+      option,
+    );
     return 1;
   }
   throw new Error(`Unknown option ${option}.`);

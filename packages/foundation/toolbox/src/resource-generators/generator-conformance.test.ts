@@ -81,6 +81,20 @@ it("generates all individual artifacts with no implicit API registration", () =>
 
   expect(read("apps/customer/app.ts")).toBe(api);
   expect(read("apps/staff/app.ts")).toBe(api);
+
+  const generatedAccess = read("domains/inventory/access/warehouse.ts");
+  expect(generatedAccess).toContain('resource("inventory/warehouse"');
+  expect(generatedAccess).toContain("roles: { editor: account }");
+  expect(generatedAccess).not.toContain("entityHandle");
+  expect(generatedAccess).not.toContain('kind: "record"');
+  expect(generatedAccess).not.toContain("accountEntity");
+
+  const generatedEndpointTest = read(
+    "domains/inventory/server/status-endpoint.test.ts",
+  );
+  expect(generatedEndpointTest).toContain("account.wireName");
+  expect(generatedEndpointTest).not.toContain("accountEntity");
+
   add("domain", "inventory", "--api", "staff");
   expect(read("apps/staff/app.ts")).toContain("inventoryPlugin,");
   expect(read("apps/customer/app.ts")).toBe(api);
@@ -109,6 +123,19 @@ it("chains resource pieces, preserves migration identity, and selects only the r
   expect(read("domains/inventory/web-client/catalog-client.ts")).toContain(
     "saveWithRefresh",
   );
+  const generatedGuards = read("domains/inventory/access/catalog-guards.ts");
+  expect(generatedGuards).toContain("requires(");
+  expect(generatedGuards).not.toContain('kind: "permission"');
+  expect(generatedGuards).not.toContain("accountEntity");
+
+  const generatedProof = read(
+    "domains/inventory/server/catalog-resource.test.ts",
+  );
+  expect(generatedProof).toContain("@dads-framework/access/testing");
+  expect(generatedProof).toContain("account.wireName");
+  expect(generatedProof).not.toContain("accountEntity");
+  expect(generatedProof).not.toContain("@dads-framework/authorization/testing");
+
   expect(read("assembly/migrations.ts")).toContain("inventoryMigrations,");
   const web = read("domains/inventory/web-client/index.ts");
   expect(web).toContain(

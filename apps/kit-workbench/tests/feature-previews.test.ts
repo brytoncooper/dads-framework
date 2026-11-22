@@ -22,18 +22,18 @@ import {
   configureFeaturePreviews,
   readFeaturePreview,
 } from "../assembly/feature-previews.js";
-import { accountEntity, tenantAccess } from "../libraries/app-runtime/index.js";
+import { account, tenantAccess } from "../libraries/app-runtime/index.js";
 
 const tenantId = "a75cc305-ac6f-4a23-b5e4-537c7d18bd02";
 const otherTenantId = "b939ed9e-a211-4c68-ad7a-9a9f5f04d1c7";
-const account = { type: accountEntity.wireName, id: "test-account" };
+const subject = { type: account.wireName, id: "test-account" };
 const token = "local-test-fixture";
 
 it("requires membership and uses the actual route tenant for previews", async () => {
   const configuration = readFeaturePreview({
     DADS_FEATURE_PREVIEW: JSON.stringify({
       tenantId,
-      accountId: account.id,
+      accountId: subject.id,
       feature: "notes.export",
       active: true,
       tokenSha256: createHash("sha256").update(token).digest("hex"),
@@ -64,7 +64,7 @@ it("requires membership and uses the actual route tenant for previews", async ()
           flags.execute({ kind: "tenant", tenantId: params.tenantId }),
       }),
     ]),
-    subjects: { resolve: () => Promise.resolve(account) },
+    subjects: { resolve: () => Promise.resolve(subject) },
     featureState: configureFeaturePreviews({
       configuration,
       definitions: [definition],
@@ -89,7 +89,7 @@ it("requires membership and uses the actual route tenant for previews", async ()
       relationshipWrite(
         { type: view.entityWireName, id: tenantId },
         "member",
-        account,
+        subject,
       ),
     );
     const allowed = await app.inject({

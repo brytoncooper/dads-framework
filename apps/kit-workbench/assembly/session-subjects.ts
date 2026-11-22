@@ -3,7 +3,7 @@ import type { Identity } from "@dads-framework/identity";
 import type { EnterpriseBetterAuthIdentity } from "@dads-framework/identity-better-auth";
 import { tenantIdSchema } from "@dads-framework/tenants";
 
-import { accountEntity } from "../libraries/app-runtime/index.js";
+import { account } from "../libraries/app-runtime/index.js";
 
 export function sessionSubjects(
   identity: Identity,
@@ -23,7 +23,7 @@ export function sessionSubjects(
           : await identity.readSession(normalized);
       return session === null
         ? null
-        : { type: accountEntity.wireName, id: session.account.id };
+        : { type: account.wireName, id: session.account.id };
     },
   };
 }

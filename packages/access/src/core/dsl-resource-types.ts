@@ -1,6 +1,9 @@
 import type { z } from "zod";
 
-import type { AccessMigrationMeta } from "./access-model.js";
+import type {
+  AccessMigrationMeta,
+  ResolvedAccessDefinition,
+} from "./access-model.js";
 import type {
   AnyDslResource,
   DslActor,
@@ -313,6 +316,8 @@ export type DslResource<
   readonly wireName: WireName;
   readonly idSchema: z.ZodType<string>;
   readonly handle: EntityHandle<WireName>;
+  readonly entity: EntityHandle;
+  readonly resolve: () => ResolvedAccessDefinition;
   readonly roles: {
     readonly [R in keyof RoleSubjects & string]: DslRoleToken<
       WireName,

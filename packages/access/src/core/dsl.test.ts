@@ -471,4 +471,35 @@ describe("ergonomic access DSL", () => {
     expect(zed).toContain("permission view = owner + linked_beta->view");
     expect(zed).toContain("permission view = owner + linked_alpha->view");
   });
+
+  it("works directly with accessModel([actor, resource]) without entityHandle or wrapper objects", () => {
+    const user = actor("user");
+    const workspace = resource("workspace", {
+      roles: {
+        admin: user,
+        member: user,
+      },
+      can: ({ admin, member }) => ({
+        manage: admin,
+        view: [admin, member],
+      }),
+    });
+
+    const model = accessModel([user, workspace]);
+    expect(user.resolve()).toBe(user.resolve());
+    expect(workspace.resolve()).toBe(workspace.resolve());
+    expect(user.entity.wireName).toBe("user");
+    expect(workspace.entity.wireName).toBe("workspace");
+
+    const zed = emitZed(model);
+    expect(zed).toContain("definition user {}");
+    expect(zed).toContain("definition workspace {");
+    expect(zed).toContain("relation admin: user");
+    expect(zed).toContain("relation member: user");
+    expect(zed).toContain("permission manage = admin");
+    expect(zed).toContain("permission view = admin + member");
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual(
+      [],
+    );
+  });
 });

@@ -63,7 +63,7 @@ function endpointTest(domain: string, name: string): string {
   return `import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { expect, it } from "vitest";
 
-import { accountEntity } from "../../../libraries/app-runtime/index.js";
+import { account } from "../../../libraries/app-runtime/index.js";
 import { ${item}Path } from "../contract/${name}-endpoint.js";
 import { ${item}Endpoint } from "./${name}-endpoint.js";
 
@@ -74,7 +74,7 @@ it("serves a signed-in caller and denies an anonymous caller", async () => {
       routes: ${item}Endpoint(),
       authorization: { check: () => Promise.resolve(false) },
       subjects: {
-        resolve: (request) => Promise.resolve(request.headers["x-example-session"] === "yes" ? { type: accountEntity.wireName, id: "example" } : null),
+        resolve: (request) => Promise.resolve(request.headers["x-example-session"] === "yes" ? { type: account.wireName, id: "example" } : null),
       },
     });
     const allowed = await app.inject({ method: "GET", url: ${item}Path, headers: { "x-example-session": "yes" } });

@@ -22,7 +22,7 @@ export function ensureGeneratorDependencies(
       "Expected a Dads starter with @dads-framework/plugin installed.",
     );
   const required = runtimeDependencies(artifact, frameworkVersion);
-  const requiredDev = testingDependencies(artifact, frameworkVersion);
+  const requiredDev = { "@types/react": REACT };
   if (
     hasDependencies(dependencies, required) &&
     hasDependencies(devDependencies, requiredDev)
@@ -51,18 +51,10 @@ function runtimeDependencies(
     return { react: REACT, "@dads-framework/email-templates": version };
   return {
     react: REACT,
+    "@dads-framework/access": version,
     "@dads-framework/client-request-transport": version,
     "@dads-framework/errors": version,
   };
-}
-
-function testingDependencies(
-  artifact: "email" | "resource",
-  version: string,
-): Record<string, string> {
-  return artifact === "email"
-    ? { "@types/react": REACT }
-    : { "@types/react": REACT, "@dads-framework/authorization": version };
 }
 
 function hasDependencies(

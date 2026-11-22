@@ -19,6 +19,7 @@ import {
 } from "@dads-framework/access";
 import { lowerIrToAccessModel } from "./access-ir-lowering.js";
 import { readZedFile } from "./access-zed-io.js";
+import { isRecord } from "./parse-guards.js";
 
 const MODULE_EXTENSIONS = new Set([".ts", ".mts", ".js", ".mjs"]);
 const PRIORITY_EXPORT_NAMES = ["default", "access", "model"] as const;
@@ -206,10 +207,6 @@ function collectClassicDefinitions(
     }
   }
   return declarations;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function hasProperty<K extends string>(

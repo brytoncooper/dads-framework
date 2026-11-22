@@ -1,10 +1,5 @@
 import type { Authorization, SubjectRef } from "@dads-framework/access/runtime";
-import {
-  actor,
-  compileAccess,
-  type AccessDefinition,
-  type PermissionToken,
-} from "@dads-framework/access";
+import { actor, type PermissionToken } from "@dads-framework/access";
 import type { GetEffectiveFeatureState } from "@dads-framework/feature-flags";
 import type {
   Identity,
@@ -22,24 +17,7 @@ import {
 } from "@dads-framework/tenants";
 
 export const account = actor("account");
-export const accountEntity = account.handle;
-
-const accountModel = compileAccess([account]);
-const [accountDefinition] = accountModel.definitions;
-if (accountDefinition === undefined) {
-  throw new Error(
-    "Compiled account actor did not produce an access definition.",
-  );
-}
-
-export const accountAccess: Pick<
-  AccessDefinition<unknown, unknown>,
-  "entity" | "resolve"
-> = {
-  entity: account.handle,
-  resolve: () => accountDefinition,
-};
-
+export const accountAccess = account;
 export const tenantAccess = createTenantAccess(account.handle);
 
 type WriteTransaction = Parameters<

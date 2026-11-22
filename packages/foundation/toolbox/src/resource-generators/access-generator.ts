@@ -11,20 +11,16 @@ export function addAccess(
   const wireName = `${domain}/${name}`.replaceAll("-", "_");
   plan.create(
     `${directory}/${name}.ts`,
-    `import { access, entityHandle } from "@dads-framework/access";
-import { z } from "zod";
+    `import { resource } from "@dads-framework/access";
 
-import { accountEntity } from "../../../libraries/app-runtime/index.js";
+import { account } from "../../../libraries/app-runtime/index.js";
 
-const resource = entityHandle({
-  wireName: "${wireName}",
-  kind: "record",
-  idSchema: z.string().min(1),
-});
-
-export const ${access} = access(resource, {
-  roles: { editor: accountEntity },
-  permissions: (roles) => ({ view: [roles.editor], edit: [roles.editor] }),
+export const ${access} = resource("${wireName}", {
+  roles: { editor: account },
+  can: ({ editor }) => ({
+    view: editor,
+    edit: editor,
+  }),
 });
 `,
   );
@@ -45,26 +41,21 @@ export function addResourceGuards(
   const item = camel(name);
   plan.create(
     `domains/${domain}/access/${name}-guards.ts`,
-    `import { fromParam, type PermissionAccess } from "@dads-framework/http";
+    `import { fromParam, requires } from "@dads-framework/http";
 
 import { tenantAccess } from "../../../libraries/app-runtime/index.js";
 
-const view = tenantAccess.tenant.permissions.view;
 export const ${item}EditPermission = tenantAccess.tenant.permissions.manage_tenant;
 
-export const ${item}View: PermissionAccess = {
-  kind: "permission",
-  resourceType: view.entityWireName,
-  permission: view.permissionName,
-  resourceId: fromParam("tenantId"),
-};
+export const ${item}View = requires(
+  tenantAccess.tenant.permissions.view,
+  fromParam("tenantId"),
+);
 
-export const ${item}Edit: PermissionAccess = {
-  kind: "permission",
-  resourceType: ${item}EditPermission.entityWireName,
-  permission: ${item}EditPermission.permissionName,
-  resourceId: fromParam("tenantId"),
-};
+export const ${item}Edit = requires(
+  ${item}EditPermission,
+  fromParam("tenantId"),
+);
 `,
   );
 }

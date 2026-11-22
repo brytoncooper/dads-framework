@@ -1926,7 +1926,7 @@
     },
     "typeTestNegativeCases": {
       "packages/access": {
-        "floor": 8,
+        "floor": 23,
         "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
       },
       "packages/contract": {

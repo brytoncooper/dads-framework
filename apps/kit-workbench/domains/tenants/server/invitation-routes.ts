@@ -10,6 +10,7 @@ import {
   fromParam,
   postRoute,
   requireSession,
+  requires,
   routeGroup,
 } from "@dads-framework/http";
 import {
@@ -47,12 +48,7 @@ export function tenantInvitationRoutes(services: InvitationServices) {
     postRoute({
       route: { method: "POST", template: "/tenants/:tenantId/invitations" },
       summary: "Invite a verified email address to this tenant",
-      access: {
-        kind: "permission",
-        resourceType: permission.entityWireName,
-        permission: permission.permissionName,
-        resourceId: fromParam("tenantId"),
-      },
+      access: requires(permission, fromParam("tenantId")),
       params: tenantInvitationParams,
       body: tenantInvitationInput,
       response: tenantInvitationIssued,

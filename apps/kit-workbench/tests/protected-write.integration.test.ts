@@ -11,7 +11,7 @@ import { expect, it } from "vitest";
 import { apiEntrypoints } from "../assembly/api-entrypoints.js";
 import { migrate } from "../assembly/migrations.js";
 import { openServices, provideServices } from "../assembly/services.js";
-import { accountEntity, tenantAccess } from "../libraries/app-runtime/index.js";
+import { account, tenantAccess } from "../libraries/app-runtime/index.js";
 
 it(
   "rechecks permission after the HTTP gate and rolls back data and access together",
@@ -41,8 +41,8 @@ it(
         const { authorization, db, tenants, writeWithPermission } =
           runtime.read(provider);
         const notesPermission = tenantAccess.tenant.permissions.view;
-        const owner = { type: accountEntity.wireName, id: randomUUID() };
-        const subject = { type: accountEntity.wireName, id: randomUUID() };
+        const owner = { type: account.wireName, id: randomUUID() };
+        const subject = { type: account.wireName, id: randomUUID() };
         const tenant = await withSystemActor("test", () =>
           tenants.create(owner.id, "Test"),
         );

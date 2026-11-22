@@ -18,11 +18,11 @@ import type { FeatureStateProtocol } from "@dads-framework/http";
 import { tenantIdSchema } from "@dads-framework/tenants";
 import { z } from "zod";
 
-import { accountEntity, tenantAccess } from "../libraries/app-runtime/index.js";
+import { account, tenantAccess } from "../libraries/app-runtime/index.js";
 import { tenantFromParams } from "./session-subjects.js";
 
 const previewSetting = z.strictObject({
-  accountId: accountEntity.idSchema,
+  accountId: account.idSchema,
   tenantId: tenantIdSchema.transform((id) => id.toLowerCase()),
   feature: featureFlagSlugSchema,
   active: z.boolean(),
@@ -63,7 +63,7 @@ export function configureFeaturePreviews(options: {
     throw new Error("Configure feature previews for a defined customer flag.");
   }
   const record: FeatureFlagPreviewRecord = {
-    owner: { type: accountEntity.wireName, id: configuration.accountId },
+    owner: { type: account.wireName, id: configuration.accountId },
     context: { kind: "tenant", tenantId: configuration.tenantId },
     feature: configuration.feature,
     active: configuration.active,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ResolvedAccessDefinition } from "./access-model.js";
 import type {
   ActorRef,
   AnyDslResource,
@@ -9,7 +10,7 @@ import type {
   DslLazyResource,
   DslWildcardActorHolder,
 } from "./dsl-types.js";
-import { entityHandle } from "./entity-handle.js";
+import { entityHandle, type EntityHandle } from "./entity-handle.js";
 
 const defaultIdSchema: z.ZodType<string> = z.string().min(1);
 
@@ -43,6 +44,8 @@ type DslActorMetadata<WireName extends string> = {
   readonly wireName: WireName;
   readonly idSchema: z.ZodType<string>;
   readonly handle: DslActor<WireName>["handle"];
+  readonly entity: EntityHandle;
+  readonly resolve: () => ResolvedAccessDefinition;
   readonly expiring: DslExpirableActorHolder<WireName>;
   readonly anyone: DslWildcardActorHolder<WireName>;
 };
@@ -60,6 +63,21 @@ export function actor<const WireName extends string>(
     options?.kind === undefined
       ? entityHandle({ wireName, idSchema })
       : entityHandle({ wireName, idSchema, kind: options.kind });
+
+  let cachedDefinition: ResolvedAccessDefinition | undefined;
+  function resolve(): ResolvedAccessDefinition {
+    if (cachedDefinition === undefined) {
+      cachedDefinition = {
+        entity: handle,
+        roles: {},
+        permissions: {},
+        expressions: {},
+        granting: undefined,
+        catalogOnly: [],
+      };
+    }
+    return cachedDefinition;
+  }
 
   const expiring: DslExpirableActorHolder<WireName> = {
     kind: "expirable",
@@ -85,6 +103,8 @@ export function actor<const WireName extends string>(
     wireName,
     idSchema,
     handle,
+    entity: handle,
+    resolve,
     expiring,
     anyone,
   };

@@ -4,7 +4,7 @@
 
 Dads lets you write your permission rules once in plain TypeScript and runs them directly inside your existing PostgreSQL or SQLite database — **no extra auth server**, **no stale caches**, **no duplicating foreign keys**, and **mathematically verified** against 27 formal proofs.
 
-- **Fast at any scale:** **8,274 checks/sec** (0.5 ms median) and **0.4–1.9 ms** paginated lists across 10M rows — using your existing tables and indexes.
+- **Fast at any scale:** Sub-millisecond permission checks and instant paginated lists across millions of rows — using your existing tables and indexes.
 - **No sync bugs:** Permission checks and database writes run inside the same transaction, so revoking access takes effect immediately.
 - **Zero lock-in:** Start in SQLite or PostgreSQL today, import an existing SpiceDB setup, or migrate out to SpiceDB later without rewriting your app code.
 
@@ -52,7 +52,7 @@ Pass `columnRelations: bindings` and `executor: preparePostgresChecks(pool)` int
 
 Running local-first, edge, or single-node? Swap `PostgresAuthorization` for `SqliteAuthorization` from [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) using Node's built-in `node:sqlite` (`DatabaseSync`) — exact same model, exact same `columnRelations` API.
 
-### 3. Filter 10M-row lists & guard writes in one transaction
+### 3. Filter lists & guard writes in one transaction
 
 Embed `resolveFilter({ ..., scopeColumns: "auto" })` directly inside paginated SQL `SELECT ... LIMIT 50` queries, and wrap protected writes in `withProtectedPgTransaction({ pool, authorization, retries: 2 }, work)` so revokes and business updates share one `SERIALIZABLE` snapshot with automatic `40001` retries (`packages/server/postgres-access/src/column-relations.integration.test.ts`):
 

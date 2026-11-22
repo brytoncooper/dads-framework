@@ -1,10 +1,15 @@
+.site-header .wrap,
+.site-footer .wrap {
+  width: min(calc(100% - clamp(2rem, 6vw, 6rem)), 90rem);
+}
+
 .layout {
   display: grid;
-  width: min(calc(100% - clamp(2rem, 8vw, 8rem)), 78rem);
+  width: min(calc(100% - clamp(2rem, 6vw, 6rem)), 90rem);
   margin-inline: auto;
   padding-block: clamp(1.75rem, 3.5vw, 3rem) clamp(3.5rem, 7vw, 6.5rem);
-  grid-template-columns: minmax(12.5rem, 14.5rem) minmax(0, 1fr);
-  gap: clamp(1.75rem, 4vw, 3.5rem);
+  grid-template-columns: minmax(13rem, 15rem) minmax(0, 1fr);
+  gap: clamp(1.75rem, 3.5vw, 3.25rem);
 }
 
 .layout main,
@@ -398,9 +403,12 @@ article ol {
   padding-inline-start: 1.4rem;
 }
 article img {
+  display: block;
+  width: 100%;
   max-width: 100%;
   height: auto;
-  border-radius: 0.45rem;
+  margin-block: 1.5rem;
+  border-radius: 0.55rem;
 }
 article blockquote {
   max-width: 72ch;
@@ -588,12 +596,12 @@ article th {
 
 @media (min-width: 74rem) {
   .layout {
-    width: min(calc(100% - clamp(2rem, 8vw, 8rem)), 78rem);
-    grid-template-columns: minmax(12.5rem, 14rem) minmax(0, 1fr) minmax(
-        11rem,
-        13rem
+    width: min(calc(100% - clamp(2rem, 6vw, 6rem)), 90rem);
+    grid-template-columns: minmax(13rem, 15rem) minmax(0, 1fr) minmax(
+        11.5rem,
+        13.5rem
       );
-    gap: clamp(1.75rem, 2.8vw, 3rem);
+    gap: clamp(2rem, 3vw, 3.25rem);
   }
   .reader-outline {
     display: none;

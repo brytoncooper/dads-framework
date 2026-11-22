@@ -1,32 +1,33 @@
 # Benchmarks & Proof
 
-Every speed and correctness claim in Dads is backed by two things: **reproducible benchmarks** on real databases and **machine-checked mathematical proofs**. This page shows exactly how we measured, what the numbers are, what workloads you can run on them, and how to reproduce every result yourself.
+Every speed and correctness claim in Dads is backed by two things: **reproducible benchmarks** on real databases and **machine-checked mathematical proofs**. To keep sizing honest and concrete, our baseline PostgreSQL benchmark runs inside a hard-capped **1 vCPU, 2 GB RAM** container (`--cpus=1 --memory=2g`) holding **10,000,000 rows**—the smallest managed database tier you can rent.
 
 ---
 
 ## What you can support
 
-Raw milliseconds only matter when translated into real application capacity. Here is what each tier of Dads supports based on our measured runs:
+Here is what each tier of Dads supports based on our measured runs:
 
-| Deployment tier                    | Typical hardware                                            | Measured performance                                                                                  | What it supports in practice                                                               |
-| :--------------------------------- | :---------------------------------------------------------- | :---------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- |
-| **Embedded / single-node SQLite**  | Node 24 built-in `node:sqlite`, single file, 0 network hops | **0.03–0.04 ms** filtered lists on 100k rows; **0.11 ms** depth-100 folders; **1.83 ms** / 1k checks  | Desktop apps, local-first tools, edge services, and single-server SaaS up to ~1M rows.     |
-| **Modest single Postgres server**  | 3–4 vCPU, 6–8 GB RAM (comparable to a \$50–\$80/mo DB)      | **8,274 checks/sec** (0.5 ms p50); **6,802 mixed read+write ops/sec**; **0.39–1.88 ms** 10M-row lists | **~715M checks/day**, 10M+ app rows, and thousands of concurrent active users on one box.  |
-| **Dedicated Postgres + replicas**  | 8–32 vCPU Postgres primary (+ optional read replicas)       | **14,044–25,178 checks/sec** (0.18–0.44 ms p50) on 8 workers — **2.5×–3.2× faster than SpiceDB**      | High-traffic multi-tenant B2B/B2C SaaS with tens of millions of rows and deep hierarchies. |
-| **Global multi-region (optional)** | Dedicated SpiceDB cluster via `migratePostgresToSpiceDb`    | Live zero-rewrite cutover with auto-generated Postgres outbox triggers + 0-mismatch parity check      | Planetary multi-region deployments if you ever outgrow a single PostgreSQL primary.        |
+| Deployment tier                    | Hardware baseline                                            | Measured performance                                                                                          | What it supports in practice                                                             |
+| :--------------------------------- | :----------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------- |
+| **Embedded / single-node SQLite**  | Node 24 built-in `node:sqlite`, single file, 0 network hops  | **0.03–0.04 ms** filtered lists on 100k rows; **0.11 ms** depth-100 folders; **1.83 ms** / 1k checks          | Desktop apps, local-first tools, edge services, and single-server SaaS up to ~1M rows.   |
+| **1 vCPU PostgreSQL (baseline)**   | **1 vCPU, 2 GB RAM** (`--cpus=1 --memory=2g`, ~\$15/mo tier) | **2,492 checks/sec** (0.45–0.57 ms p50); **2,280 mixed read+write ops/sec**; **0.51–2.04 ms** 10M-row lists   | **~215M checks/day**, 10M+ app rows, and thousands of concurrent active users on 1 vCPU. |
+| **Multi-vCPU PostgreSQL**          | 3 vCPU (6 GB) up to 8–32 vCPU primary + optional replicas    | **8,274 checks/sec** on 3 vCPU; **14,044–25,178 checks/sec** on 8 workers (**2.5×–3.2× faster than SpiceDB**) | **700M–2B+ checks/day**, high-traffic multi-tenant SaaS, tens of millions of rows.       |
+| **Global multi-region (optional)** | Dedicated SpiceDB cluster via `migratePostgresToSpiceDb`     | Live zero-rewrite cutover with auto-generated Postgres outbox triggers + 0-mismatch parity check              | Planetary multi-region deployments if you ever outgrow PostgreSQL.                       |
 
-> **Storage footprint matters just as much as latency:** When you bind existing foreign keys (`org_id`, `owner_id`, `parent_id`) with `columnRelations`, a **10,000,000-document** app only needs **30 MB** in `dad_authorization_relationship` (for dynamic shares, memberships, and bans) instead of **2.73 GB** of duplicated tuples (**91× smaller**).
+> **Storage footprint matters just as much as CPU:** When you bind existing foreign keys (`org_id`, `owner_id`, `parent_id`) with `columnRelations`, a **10,000,000-document** app only needs **30 MB** in `dad_authorization_relationship` (for dynamic shares, memberships, and bans) instead of **2.73 GB** of duplicated tuples (**91× smaller**).
 
 ---
 
 ## How we measured
 
-We run isolated, repeatable benchmarks with real database drivers, full SQL compilation, transport, and result verification included in the timed paths:
+Every benchmark runs against real database drivers with full SQL compilation, parameter binding, network transport, and result verification included in the timed calls:
 
-1. **Run A — 10,000,000-row PostgreSQL scale (`Tuples-only` vs `columnRelations`)**
-   - **Environment:** Single Docker `postgres:16` container constrained to **3 vCPUs and 5.8 GiB RAM** on Apple M5 Pro, Node 24, local TCP.
-   - **Dataset:** **10,000,000 documents** across **10,000 organizations**, **100,000 direct viewer shares**, **10,000 explicit bans**, a **100-level deep recursive folder chain**, and a **broad admin with access to 1,000 organizations (1,000,000 visible documents = 10% of the table)**.
-   - **Workload:** Warmed up before timing; `preparePostgresChecks(pool)` for point checks; `resolveFilter({ ..., scopeColumns: "auto" })` for `ORDER BY updated_at DESC, id DESC LIMIT 50` paginated lists; `EXPLAIN (ANALYZE, BUFFERS)` captured for every list scenario; plus 16-worker 5-second sustained read and mixed read + live `UPDATE owner_id` write stress runs.
+1. **Run A — Hard-capped 1 vCPU, 2 GB RAM PostgreSQL 16 (10,000,000 rows)**
+   - **Environment:** Single `postgres:16-alpine` (PostgreSQL 16.16) Docker container strictly capped with `--cpus=1 --memory=2g --memory-swap=2g` (`NanoCpus=1000000000`, `Memory=2147483648`), realistic 1-vCPU settings (`shared_buffers=512MB`, `effective_cache_size=1536MB`, `work_mem=8MB`, `max_parallel_workers_per_gather=0`), Node 24.20.0 over local TCP.
+   - **Dataset:** **10,000,000 documents** across **10,000 organizations**, **100,000 direct viewer shares**, **10,000 explicit bans**, a **100-level deep recursive folder chain**, and a **broad admin holding 1,000 organizations (1,000,000 visible documents = 10% of the table)**.
+   - **Workload:** 5 warmups before timing; 50 iterations per point check via `preparePostgresChecks(pool)`; 30 iterations per paginated `ORDER BY updated_at DESC, id DESC LIMIT 50` query via `resolveFilter({ ..., scopeColumns: "auto" })`; `EXPLAIN (ANALYZE, BUFFERS)` verified on every list shape; plus 5-second sustained multi-worker check and mixed read + live `UPDATE owner_id` write stress runs.
+   - **Scaling reference:** Running the exact same 10M-row fixture on 3 vCPUs / 5.8 GiB RAM scaled linearly from **2,492 → 8,274 checks/sec** and **2,280 → 6,802 mixed read+write ops/sec** (0 errors), and confirmed the **2.73 GB → 30 MB (91×)** storage drop vs tuples-only.
 2. **Run B — Matched head-to-head: Dads (PostgreSQL) vs SpiceDB**
    - **Environment:** 32-vCPU Linux VM (Intel Core i9-13900KF), Node 24.20.0, PostgreSQL 16.16 vs SpiceDB 1.57.0 running its **in-memory datastore** with fully consistent gRPC reads (giving SpiceDB its fastest possible baseline without disk I/O).
    - **Workload:** Identical 5,000-leaf graphs at arrow depths **2, 8, and 16**. Three alternating rounds of 1,280 checks per depth and worker count (1 and 8 workers) after 30 warmups per worker (75% granted, 25% denied), followed by live revocation and re-grant verification.
@@ -36,9 +37,7 @@ We run isolated, repeatable benchmarks with real database drivers, full SQL comp
 
 ### Honest boundaries
 
-Benchmarks are never magic — here is what these runs do **not** claim:
-
-- Timings exclude HTTP routing, auth token parsing, and application business logic outside the authorization query.
+- Timings measure the authorization query end-to-end (SQL compile, driver round-trip, result decode) and exclude HTTP routing, auth token parsing, and unrelated app logic.
 - Extreme fanout edge cases (such as a single resource branching across 5,001 parents at depth 16) trigger the exact fallback and take hundreds of milliseconds on any graph engine.
 - Run B compares Dads on PostgreSQL against SpiceDB's in-memory testing datastore on the same host, not a distributed multi-region SpiceDB cluster.
 
@@ -46,9 +45,39 @@ Benchmarks are never magic — here is what these runs do **not** claim:
 
 ## Results
 
-### 1. Head-to-head: Dads (PostgreSQL) vs SpiceDB (in-memory)
+### 1. Single-vCPU PostgreSQL baseline on 10,000,000 rows (`--cpus=1 --memory=2g`)
 
-Measured over local TCP using each adapter's public Node client (medians across three alternating rounds):
+All measurements below ran inside one hard-capped **1 vCPU, 2 GB RAM** PostgreSQL 16.16 container holding **10,000,000 documents** (total `dad_authorization_relationship` size: **30 MB** across 111,027 non-FK rows):
+
+#### Single-operation latency & verified `EXPLAIN ANALYZE` plans
+
+| Operation                                            | p50 (ms) | p95 (ms) | p99 (ms) | Verified PostgreSQL plan (`EXPLAIN ANALYZE`)                   |
+| :--------------------------------------------------- | -------: | -------: | -------: | :------------------------------------------------------------- |
+| Point check: column-backed `owner_id` (allow)        | **0.48** |     0.60 |     0.63 | Index scan on PK                                               |
+| Point check: column-backed `org_id` (allow)          | **0.45** |     0.51 |     0.52 | Index scan on PK + tuple PK                                    |
+| Point check: outsider (deny)                         | **0.44** |     0.54 |     0.58 | Index scan on PK                                               |
+| Point check: depth-100 recursive `folders.parent_id` | **0.57** |     0.74 |     0.87 | Recursive PK index walk                                        |
+| `LIMIT 50` list: outsider (0 / 10M docs)             | **0.51** |     0.58 |     0.59 | Branch-pruned `FALSE` (table untouched)                        |
+| `LIMIT 50` list: `org_member` (1,000 / 10M docs)     | **0.59** |     0.62 |     0.63 | `Index Only Scan` (`Heap Fetches: 0`, 0.119 ms PG exec)        |
+| `LIMIT 50` list: `super_sparse` (20 direct / 10M)    | **0.57** |     0.62 |     0.63 | `Index Scan` on PK                                             |
+| `LIMIT 50` list: `owner_user` (20 owned / 10M)       | **0.58** |     0.87 |     1.04 | `Index Scan` on PK (0.107 ms PG exec)                          |
+| `LIMIT 50` list: `broad_admin` (1M / 10M docs)       | **2.04** |     2.53 |     2.63 | `Index Scan` + `Incremental Sort` (0.506 ms PG exec, 115 hits) |
+
+Every single 10M-row list query executed with **zero sequential scans**.
+
+#### Sustained throughput on 1 vCPU vs scaling to 3 vCPUs (10M rows)
+
+| Workload (5 s sustained, 10M documents)               |                       **1 vCPU, 2 GB RAM** (`columnRelations`) | **3 vCPUs, 5.8 GB RAM** (`columnRelations`) | **3 vCPUs, tuples-only** (no `columnRelations`) |
+| :---------------------------------------------------- | -------------------------------------------------------------: | ------------------------------------------: | ----------------------------------------------: |
+| Auth table size (`dad_authorization_relationship`)    |                                                      **30 MB** |                                   **30 MB** |                                         2.73 GB |
+| Sustained point checks (0 errors)                     | **2,479 checks/s** (8w, 1.00 ms p50, 2.84 ms p95; 2,492 @ 16w) |       **8,274 checks/s** (16w, 1.75 ms p50) |                            6,432 checks/s (16w) |
+| Mixed reads + live `UPDATE owner_id` flips (0 errors) |            **2,280 ops/s** (8w, 1.11 ms p50, 340 live flips/s) |     **6,802 ops/s** (16w, 835 live flips/s) |                               4,603 ops/s (16w) |
+
+---
+
+### 2. Head-to-head: Dads (PostgreSQL) vs SpiceDB (in-memory)
+
+Measured over local TCP using each adapter's public Node client (medians across three alternating rounds on the same 32-vCPU Linux VM):
 
 | Graph depth | Workers | Engine                |  p50 (ms) | p95 (ms) | p99 (ms) | Throughput (checks/s) | Speedup vs SpiceDB |
 | ----------: | ------: | :-------------------- | --------: | -------: | -------: | --------------------: | -----------------: |
@@ -61,34 +90,9 @@ Measured over local TCP using each adapter's public Node client (medians across 
 |     16 hops |       8 | **Dads (PostgreSQL)** | **0.381** |    0.491 |    0.544 |            **19,146** |    **3.2× faster** |
 |     16 hops |       8 | SpiceDB (in-memory)   |     1.268 |    1.986 |    2.885 |                 5,925 |                 1× |
 
-### 2. 10,000,000-row PostgreSQL scale: Tuples-only vs `columnRelations`
+---
 
-Single **3-vCPU, 5.8 GiB RAM** Docker Postgres 16 container holding 10,000,000 documents:
-
-| Metric                                      | Tuples-only (`dad_authorization_relationship`) | With `columnRelations` (`org_id`, `owner_id`, `parent_id`) |              Delta |
-| :------------------------------------------ | ---------------------------------------------: | ---------------------------------------------------------: | -----------------: |
-| `dad_authorization_relationship` rows       |                                     10,111,000 |                                                **111,027** | **91× fewer rows** |
-| `dad_authorization_relationship` total size |                                        2.73 GB |                                                  **30 MB** |    **91× smaller** |
-| 16-worker point checks (5 s sustained)      |                           6,432 RPS (0 errors) |                      **8,274 RPS** (0 errors, 1.75 ms p50) |    **+29% faster** |
-| 16-worker mixed reads + live writes (5 s)   |                         4,603 ops/s (0 errors) |      **6,802 ops/s** (0 errors, 835 live `UPDATE` flips/s) |    **+48% faster** |
-
-### 3. Single-operation latency & `EXPLAIN ANALYZE` plans on 10M rows
-
-Every single paginated `LIMIT 50` query on the 10,000,000-row table ran with **zero sequential scans**:
-
-| Operation                                            | p50 (ms) | p95 (ms) | p99 (ms) | Verified PostgreSQL plan (`EXPLAIN ANALYZE`)   |
-| :--------------------------------------------------- | -------: | -------: | -------: | :--------------------------------------------- |
-| Point check: column-backed `owner_id` (allow)        | **0.57** |     0.67 |     0.68 | Index scan on PK                               |
-| Point check: column-backed `org_id` (allow)          | **0.53** |     0.58 |     0.59 | Index scan on PK + tuple PK                    |
-| Point check: outsider (deny)                         | **0.50** |     0.58 |     0.58 | Index scan on PK                               |
-| Point check: depth-100 recursive `folders.parent_id` | **0.62** |     0.83 |     0.85 | Recursive PK index walk                        |
-| `LIMIT 50` list: outsider (0 / 10M docs)             | **0.39** |     0.44 |     0.44 | Branch-pruned `FALSE` (table untouched)        |
-| `LIMIT 50` list: `org_member` (1,000 / 10M docs)     | **0.62** |     0.72 |     0.72 | `Index Only Scan` (`Heap Fetches: 0`, 0.12 ms) |
-| `LIMIT 50` list: `super_sparse` (20 direct / 10M)    | **0.63** |     0.76 |     0.76 | `Index Scan` on PK                             |
-| `LIMIT 50` list: `owner_user` (20 owned / 10M)       | **0.77** |     0.98 |     0.98 | `Index Scan` on PK (0.09 ms)                   |
-| `LIMIT 50` list: `broad_admin` (1M / 10M docs)       | **1.88** |     2.09 |     2.09 | `Index Only Scan` (0.53 ms, 115 buffer hits)   |
-
-### 4. Embedded SQLite scale (`node:sqlite`)
+### 3. Embedded SQLite scale (`node:sqlite`)
 
 Measured in-process on Node 24 (`VITEST_TIER=benchmark`, 11 trials after warmup):
 

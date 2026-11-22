@@ -5,14 +5,38 @@ Measure the operation your application depends on. Point checks, paginated
 foreign-key relations (`columnRelations`), and concurrent mixed reads + writes
 all have distinct cost profiles.
 
-## 10,000,000-row PostgreSQL scale: Tuples-only vs `columnRelations`
+## 10,000,000-row PostgreSQL scale: 1 vCPU baseline & `columnRelations`
 
-Measured on live Docker PostgreSQL 16 (single container, local TCP, Node 24)
-with **10,000,000 documents** across **10,000 organizations**, 100,000 direct
-viewer grants, 10,000 explicit bans, a **depth-100 recursive folder chain**, and
-a broad admin holding 1,000 orgs (**1,000,000 visible documents = 10% of the
-table**). Both runs used `preparePostgresChecks(pool)` and
-`resolveFilter({ ..., scopeColumns: "auto" })` on `ORDER BY updated_at DESC, id DESC LIMIT 50`.
+### Hard-capped 1 vCPU, 2 GB RAM baseline (`--cpus=1 --memory=2g`)
+
+Measured on a single `postgres:16-alpine` (PostgreSQL 16.16) Docker container
+hard-capped to **1 vCPU and 2 GiB RAM** (`NanoCpus=1000000000`,
+`Memory=2147483648`, `shared_buffers=512MB`, `effective_cache_size=1536MB`,
+`work_mem=8MB`, `max_parallel_workers_per_gather=0`) with **10,000,000
+documents**, **10,000 organizations**, 100,000 direct viewer grants, 10,000
+explicit bans, a **depth-100 recursive folder chain**, and a broad admin
+holding 1,000 orgs (**1,000,000 visible documents = 10% of the table**).
+
+- Auth table (`dad_authorization_relationship`): **111,027 rows = 30 MB** (vs **2.73 GB** tuples-only — **91× smaller**)
+- Sustained 1-vCPU point checks (5 s, 0 errors): **2,479 checks/sec** (8 workers, 1.00 ms p50, 2.84 ms p95; **2,492 checks/sec** at 16 workers)
+- Sustained 1-vCPU mixed reads + live `UPDATE owner_id` flips (8 workers, 5 s, 0 errors): **2,280 ops/sec** (1.11 ms p50, 3.12 ms p95, **340 live flips/sec**)
+
+| Operation (1 vCPU, 2 GB RAM, 10M rows)               | p50 (ms) | p95 (ms) | p99 (ms) | Query plan (`EXPLAIN ANALYZE`)                          |
+| :--------------------------------------------------- | -------: | -------: | -------: | :------------------------------------------------------ |
+| Point check: column-backed `owner_id` (allow)        | **0.48** |     0.60 |     0.63 | Index scan on PK                                        |
+| Point check: column-backed `org_id` (allow)          | **0.45** |     0.51 |     0.52 | Index scan on PK + tuple PK                             |
+| Point check: outsider (deny)                         | **0.44** |     0.54 |     0.58 | Index scan on PK                                        |
+| Point check: depth-100 recursive `folders.parent_id` | **0.57** |     0.74 |     0.87 | Recursive PK index walk                                 |
+| `LIMIT 50` list: outsider (0 / 10M docs)             | **0.51** |     0.58 |     0.59 | Branch-pruned `FALSE`                                   |
+| `LIMIT 50` list: `org_member` (1,000 / 10M docs)     | **0.59** |     0.62 |     0.63 | `Index Only Scan` (`Heap Fetches: 0`, 0.119 ms PG exec) |
+| `LIMIT 50` list: `super_sparse` (20 direct / 10M)    | **0.57** |     0.62 |     0.63 | `Index Scan` on PK                                      |
+| `LIMIT 50` list: `owner_user` (20 owned / 10M)       | **0.58** |     0.87 |     1.04 | `Index Scan` on PK (0.107 ms PG exec)                   |
+| `LIMIT 50` list: `broad_admin` (1M / 10M docs)       | **2.04** |     2.53 |     2.63 | `Index Scan` + `Incremental Sort` (0.506 ms, 115 hits)  |
+
+### Scaling to 3 vCPUs (Tuples-only vs `columnRelations`)
+
+Same 10,000,000-row fixture on a 3-vCPU / 5.8 GiB Docker Postgres 16 container
+comparing tuples-only vs `columnRelations`:
 
 ### Storage & throughput comparison (10M documents)
 

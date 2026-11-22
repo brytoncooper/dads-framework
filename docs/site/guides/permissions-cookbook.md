@@ -27,11 +27,13 @@ At startup, verify live columns and index status with `verifyColumnRelations()`,
 | Recursive self-FKs (`folders.parent_id`) — cycles terminate safely | Expiring grants (`expiresAt`), explicit bans (`.unless(banned)`) |
 | Schema-qualified tables (`app.documents`)                          | Polymorphic multi-type links (`parents: [org, folder]`)          |
 
-### Safety guarantees built in
+### Safety guarantees & guardrails
 
 - **Impossible drift:** Calling `writeRelationships` or `deleteRelationships` on a column-backed relation throws immediately (`Relation document#org is column-backed by documents.org_id; update the application table directly`).
 - **`NULL` = absent:** Setting `documents.owner_id = NULL` revokes ownership immediately in the same SQL `UPDATE`.
-- **10M-row measured win:** On a live 10,000,000-row PostgreSQL database, enabling `columnRelations` shrank `dad_authorization_relationship` from **2.73 GB → 30 MB (91× smaller)**, jumped 16-worker point checks from **6,432 → 8,274 RPS (+29%)**, and jumped mixed reads + live `UPDATE` permission flips from **4,603 → 6,802 ops/sec (+48%)** with **0 errors**. See [BENCHMARK.md](../../../packages/server/postgres-access/BENCHMARK.md).
+- **Single-row moves & revokes:** Moving a folder with 100k child docs updates **1 row** (`folders.parent_id`), and revoking an org admin deletes **1 row** (`org#admin`) — zero 100k-row fan-out updates.
+- **Protecting permission-bearing columns:** Because `columnRelations` reads your table columns directly, exclude `org_id`, `owner_id`, and `parent_id` from general `PATCH` DTOs, put an immutability `BEFORE UPDATE` trigger on tenant columns like `org_id` that should never change after `INSERT`, and chunk intentional bulk transfers (1,000–5,000 rows per transaction).
+- **10M-row measured win:** On a live 10,000,000-row PostgreSQL database, enabling `columnRelations` shrank `dad_authorization_relationship` from **2.73 GB → 30 MB (91× smaller)**, sustained **2,492 checks/sec on 1 vCPU** (and **8,274 checks/sec on 3 vCPUs**), and jumped mixed reads + live `UPDATE` permission flips from **4,603 → 6,802 ops/sec (+48%)** with **0 errors**. See [Benchmarks & Proof](benchmarks-and-proof.md).
 
 ---
 

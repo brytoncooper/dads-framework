@@ -2,22 +2,25 @@
 
 **The last permissions system you'll ever need.**
 
-Dads compiles Zanzibar-style relationship permissions (ReBAC) directly into parameterized SQL inside your existing PostgreSQL or SQLite database — with **zero separate auth cluster**, **zero outbox lag**, **zero dual-writes** on foreign keys (`columnRelations`), and **27 machine-checked Lean 4 proofs** backing the engine.
+Dads lets you write your permission rules once in plain TypeScript and runs them directly inside your existing PostgreSQL or SQLite database — **no extra auth server**, **no stale caches**, **no duplicating foreign keys**, and **mathematically verified** against 27 formal proofs.
 
-- **Sub-millisecond at 10M rows:** **8,274 checks/sec** (0.5 ms p50), **0.39–1.88 ms** paginated `LIMIT 50` lists with zero sequential scans, and **91× smaller storage** (30 MB vs 2.73 GB) when binding foreign keys with `columnRelations`.
-- **Mathematically proved:** **27 zero-`sorry` Lean 4 theorems** verified differentially across live PostgreSQL, SQLite, SpiceDB, and our pure-TypeScript test engine (**0 mismatches** across 1,300 randomized schemas / 299,200 queries).
-- **Zero lock-in:** Start in SQLite or PostgreSQL today, migrate in from SpiceDB (`npx dads-import-spicedb`), or migrate out to SpiceDB later (`migratePostgresToSpiceDb` + auto-generated outbox triggers) without rewriting your model or client calls.
+- **Fast at any scale:** **8,274 checks/sec** (0.5 ms median) and **0.4–1.9 ms** paginated lists across 10M rows — using your existing tables and indexes.
+- **No sync bugs:** Permission checks and database writes run inside the same transaction, so revoking access takes effect immediately.
+- **Zero lock-in:** Start in SQLite or PostgreSQL today, import an existing SpiceDB setup, or migrate out to SpiceDB later without rewriting your app code.
 
 ![Transactional PostgreSQL ReBAC flow](../../../website/site/assets/diagrams/postgres-rebac-transaction.svg)
 
 ## Why Dads beats the alternatives
 
-| Approach                            | Transactional revokes? |  Nested orgs/folders/groups?  |    10M-row `LIMIT 50` SQL lists?     |  Zero dual-writes on FKs?   |      Formally proved?      |
-| :---------------------------------- | :--------------------: | :---------------------------: | :----------------------------------: | :-------------------------: | :------------------------: |
-| Scattered `if (user.role)`          |          Yes           |   No (turns into spaghetti)   |                Manual                |             Yes             |             No             |
-| Hand-written Postgres RLS           |          Yes           |  Hard / slow correlated SQL   |        Fragile planner traps         |             Yes             |             No             |
-| External SpiceDB / OpenFGA          |    No (outbox lag)     |              Yes              |     Extra network hop + ID fetch     |   No (must sync every FK)   |             No             |
-| **Dads Access (Postgres / SQLite)** |   **Yes (same tx)**    | **Yes (full Zanzibar graph)** | **Yes (0.4–1.9 ms `resolveFilter`)** | **Yes (`columnRelations`)** | **Yes (27 Lean 4 proofs)** |
+| What you care about             | `if` checks     | Postgres RLS | SpiceDB / OpenFGA | **Dads**            |
+| :------------------------------ | :-------------- | :----------- | :---------------- | :------------------ |
+| **Revoke access immediately**   | Manual          | Yes          | Sync lag          | **Yes (same tx)**   |
+| **Teams, folders & sharing**    | Gets messy fast | Hard SQL     | Yes               | **Yes**             |
+| **No extra service to run**     | Yes             | Yes          | No                | **Yes**             |
+| **Uses your existing tables**   | Yes             | Yes          | No (must copy)    | **Yes**             |
+| **Fast paginated lists**        | Manual          | Fragile      | Extra network hop | **Yes (1 query)**   |
+| **Fast unit tests (no Docker)** | Yes             | No           | No                | **Yes**             |
+| **Mathematically verified**     | No              | No           | No                | **Yes (27 proofs)** |
 
 ---
 

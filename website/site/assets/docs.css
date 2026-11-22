@@ -743,13 +743,15 @@ article :is(ul, ol) :is(p, ul, ol) {
 .reader-table table {
   width: 100%;
   min-width: 26rem;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .reader-table th,
 .reader-table td {
   vertical-align: top;
 }
 .reader-table td > code {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 35rem) {

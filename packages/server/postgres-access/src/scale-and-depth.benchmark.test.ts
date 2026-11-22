@@ -153,7 +153,7 @@ it.runIf(isBenchmark)(
     const pgAuth = new PostgresAuthorization({
       model,
       namespace,
-      executor: pool,
+      executor: preparePostgresChecks(pool),
     });
     await pgAuth.writeRelationships(memberWrites);
     await pool.query("VACUUM ANALYZE bench_documents");
@@ -171,20 +171,24 @@ it.runIf(isBenchmark)(
     );
     await spice.writeRelationships([...docWrites, ...memberWrites]);
 
-    const runPgCompileFilter = async (
+    const runPgFilter = async (
       subjectId: string,
       expectedCount: number,
-      scoped: boolean,
+      mode: "plain" | "scoped" | "resolved",
     ) => {
-      const filter = pgAuth.compileFilter({
+      const q = {
         subject: { type: "user", id: subjectId },
         permission: "view",
         resourceType: docType,
         idColumn: "d.id",
-        ...(scoped
-          ? { scopeColumns: { [docParentRel]: "d.workspace_id" } }
-          : {}),
-      });
+        ...(mode === "plain"
+          ? {}
+          : { scopeColumns: { [docParentRel]: "d.workspace_id" } }),
+      };
+      const filter =
+        mode === "resolved"
+          ? await pgAuth.resolveFilter(q)
+          : pgAuth.compileFilter(q);
       const sql = `SELECT d.id FROM bench_documents d WHERE ${filter.sql} ORDER BY d.updated_at DESC LIMIT 50`;
       const page = await pool.query<{ id: string }>(sql, [...filter.values]);
       expect(page.rows).toHaveLength(expectedCount);
@@ -253,54 +257,52 @@ it.runIf(isBenchmark)(
         expectedPage: 50,
       },
     ]) {
-      const pgFilter = await sample(() =>
-        runPgCompileFilter(scenario.userId, scenario.expectedPage, false),
-      );
-      const pgFilterScoped = await sample(() =>
-        runPgCompileFilter(scenario.userId, scenario.expectedPage, true),
-      );
-      const spiceDirectConsistent = await sample(
-        () =>
-          runSpiceDirectLookup(
-            scenario.userId,
-            scenario.expectedPage,
-            "fully-consistent",
-          ),
-        scenario.userId === "broad_admin" ? 3 : 7,
-      );
-      const spiceDirectCached = await sample(
-        () =>
-          runSpiceDirectLookup(
-            scenario.userId,
-            scenario.expectedPage,
-            "minimize-latency",
-          ),
-        scenario.userId === "broad_admin" ? 3 : 7,
-      );
-      const spiceScopedConsistent = await sample(() =>
-        runSpiceScopedBestPractice(
-          scenario.userId,
-          scenario.expectedPage,
-          "fully-consistent",
-        ),
-      );
-      const spiceScopedCached = await sample(() =>
-        runSpiceScopedBestPractice(
-          scenario.userId,
-          scenario.expectedPage,
-          "minimize-latency",
-        ),
-      );
+      const directTrials = scenario.userId === "broad_admin" ? 3 : 7;
       console.log(
         JSON.stringify({
           benchmark: "100k_paginated_list",
           scenario: scenario.name,
-          pgFilter,
-          pgFilterScoped,
-          spiceDirectConsistent,
-          spiceDirectCached,
-          spiceScopedConsistent,
-          spiceScopedCached,
+          pgFilter: await sample(() =>
+            runPgFilter(scenario.userId, scenario.expectedPage, "plain"),
+          ),
+          pgFilterScoped: await sample(() =>
+            runPgFilter(scenario.userId, scenario.expectedPage, "scoped"),
+          ),
+          pgResolveFilter: await sample(() =>
+            runPgFilter(scenario.userId, scenario.expectedPage, "resolved"),
+          ),
+          spiceDirectConsistent: await sample(
+            () =>
+              runSpiceDirectLookup(
+                scenario.userId,
+                scenario.expectedPage,
+                "fully-consistent",
+              ),
+            directTrials,
+          ),
+          spiceDirectCached: await sample(
+            () =>
+              runSpiceDirectLookup(
+                scenario.userId,
+                scenario.expectedPage,
+                "minimize-latency",
+              ),
+            directTrials,
+          ),
+          spiceScopedConsistent: await sample(() =>
+            runSpiceScopedBestPractice(
+              scenario.userId,
+              scenario.expectedPage,
+              "fully-consistent",
+            ),
+          ),
+          spiceScopedCached: await sample(() =>
+            runSpiceScopedBestPractice(
+              scenario.userId,
+              scenario.expectedPage,
+              "minimize-latency",
+            ),
+          ),
         }),
       );
     }

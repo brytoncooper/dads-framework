@@ -254,4 +254,68 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
     expect(filter.sql).toContain("d.id IN (");
     expect(filter.sql).toContain("d.id NOT IN (");
   });
+
+  it("resolveFilter prunes empty branches, returns FALSE on zero access, and applies exclusions with paramOffset", async () => {
+    const user = actor("user");
+    const workspace = resource("ws", {
+      roles: { member: user },
+      can: ({ member }) => ({ view: member }),
+    });
+    const doc = workspace.child("doc", {
+      inherit: "all",
+      roles: { viewer: user, banned: user },
+      can: ({ viewer, banned, parent }) => ({
+        view: anyOf(parent.view, viewer).unless(banned),
+      }),
+    });
+    const makeAuth = (rows: readonly Readonly<Record<string, unknown>>[]) =>
+      new PostgresAuthorization({
+        model: compileAccess([workspace, doc]),
+        namespace: "resolved-unit",
+        executor: {
+          query: () => Promise.resolve({ rows, rowCount: rows.length }),
+        },
+      });
+
+    // Zero access -> FALSE
+    const empty = await makeAuth([]).resolveFilter({
+      subject: { type: "user", id: "nobody" },
+      permission: "view",
+      resourceType: doc.wireName,
+      idColumn: "d.id",
+      scopeColumns: { ws: "d.workspace_id" },
+    });
+    expect(empty).toEqual({ sql: "FALSE", values: [] });
+
+    // Direct-only (workspace branch empty -> pruned!)
+    const directOnly = await makeAuth([
+      { branch: 1, resource_id: "doc_1" },
+      { branch: 1, resource_id: "doc_2" },
+    ]).resolveFilter({
+      subject: { type: "user", id: "sparse" },
+      permission: "view",
+      resourceType: doc.wireName,
+      idColumn: "d.id",
+      scopeColumns: { ws: "d.workspace_id" },
+      paramOffset: 3,
+    });
+    expect(directOnly.sql).toBe("(d.id = ANY($3::text[]))");
+    expect(directOnly.values).toEqual([["doc_1", "doc_2"]]);
+
+    // Scope + exclusion (direct branch empty -> pruned, exclusion retained!)
+    const scopedWithBan = await makeAuth([
+      { branch: 0, resource_id: "ws_1" },
+      { branch: 2, resource_id: "doc_banned" },
+    ]).resolveFilter({
+      subject: { type: "user", id: "alice" },
+      permission: "view",
+      resourceType: doc.wireName,
+      idColumn: "d.id",
+      scopeColumns: { ws: "d.workspace_id" },
+    });
+    expect(scopedWithBan.sql).toBe(
+      "((d.workspace_id = ANY($1::text[])) AND (NOT (d.id = ANY($2::text[]))))",
+    );
+    expect(scopedWithBan.values).toEqual([["ws_1"], ["doc_banned"]]);
+  });
 });

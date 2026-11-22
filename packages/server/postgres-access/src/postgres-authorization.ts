@@ -29,6 +29,7 @@ import {
   type PostgresFilterQuery,
   type PostgresAccessFilter,
 } from "./policy/compile-filter.js";
+import { resolvePostgresFilter } from "./policy/resolve-filter.js";
 import { compileLinearCheck } from "./policy/compile-linear-check.js";
 import { compilePostgresSubjectLookup } from "./policy/compile-subject-lookup.js";
 import type { NormalizedPermissionCheck } from "./policy/policy-model.js";
@@ -45,6 +46,8 @@ import {
   parseSubjectLookupRows,
   readDecisionFlag,
   readTupleColumn,
+  requireConcreteSubject,
+  requireSubjectLookupInput,
 } from "./postgres-response.js";
 import { PostgresTuples } from "./postgres-tuples.js";
 import { assertProtectedAuthorizationActive } from "./protected-authorization-scope.js";
@@ -214,12 +217,14 @@ export class PostgresAuthorization extends Authorization {
     const normalized = queries.map((query) => this.#normalizedCheck(query));
     const known = normalized.filter((query) => query !== undefined);
     if (known.length === 0) return normalized.map(() => false);
+    const compiled = compilePostgresCheckMany(
+      this.#policy.model,
+      this.#options.namespace,
+      known,
+    );
     const rows = await this.#query(
-      compilePostgresCheckMany(
-        this.#policy.model,
-        this.#options.namespace,
-        known,
-      ),
+      compiled,
+      compiled.canPrepare ? "check" : undefined,
     );
     if (rows.length !== known.length)
       throw new Error("Postgres authorization omitted a decision");
@@ -261,6 +266,40 @@ export class PostgresAuthorization extends Authorization {
         resourceType: query.resourceType,
       },
       validated,
+    );
+  }
+
+  /** Resolves a `scopeColumns`-assisted filter, pruning empty branches for optimal SQL plans. */
+  async resolveFilter(
+    query: PostgresFilterQuery,
+  ): Promise<PostgresAccessFilter> {
+    requireConcreteSubject(query.subject);
+    const validated = validatePostgresFilterQuery(query);
+    const permission = this.#policy.permissionName(
+      query.resourceType,
+      query.permission,
+    );
+    if (permission === undefined) {
+      return Object.freeze({ sql: "FALSE", values: [] });
+    }
+    const normalized = {
+      subject: { type: query.subject.type, id: query.subject.id },
+      permission,
+      resourceType: query.resourceType,
+    };
+    return resolvePostgresFilter(
+      this.#policy.model,
+      this.#options.namespace,
+      normalized,
+      validated,
+      (planQuery) => this.#query(planQuery, "check"),
+      () =>
+        compilePostgresFilter(
+          this.#policy.model,
+          this.#options.namespace,
+          normalized,
+          validated,
+        ),
     );
   }
 
@@ -358,30 +397,5 @@ export class PostgresAuthorization extends Authorization {
         ? await executor.queryCheck(config)
         : await executor.query(config);
     return result.rows;
-  }
-}
-
-function requireConcreteSubject(subject: SubjectRef): void {
-  if (
-    subject.id.length === 0 ||
-    subject.id === "*" ||
-    subject.relation !== undefined
-  ) {
-    throw new Error("Postgres authorization reads require a concrete subject");
-  }
-}
-
-function requireSubjectLookupInput(query: SubjectLookup): void {
-  if (
-    query.resource.type.length === 0 ||
-    query.resource.id.length === 0 ||
-    query.resource.id === "*"
-  ) {
-    throw new Error("Postgres authorization reads require a concrete resource");
-  }
-  if (query.subjectType.length === 0) {
-    throw new Error(
-      "Postgres authorization subject lookup requires a subject type",
-    );
   }
 }

@@ -347,7 +347,7 @@ describe("recursive arrows (nested folders & mutual recursion)", () => {
       resource: { type: "folder", id: "f-leaf" },
       permission: "view",
     });
-    expect(check.canPrepare).toBe(false);
+    expect(check.canPrepare).toBe(true);
     expect(check.text).toContain("WITH RECURSIVE rec_walk_");
     expect(check.text).toContain("UNION");
     expect(check.values).toContain("workspace");

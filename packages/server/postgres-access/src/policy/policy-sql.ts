@@ -162,7 +162,7 @@ export function relationTargetCapabilities(
   };
 }
 
-/** Dispatches to direct PK lookup when the model has no usersets, else recursive userset membership. */
+/** Dispatches to direct PK lookup when safe, else recursive userset membership. */
 export function compiledRelationCheck(
   model: AuthorizationModelDefinition,
   namespace: string,
@@ -174,12 +174,21 @@ export function compiledRelationCheck(
   relationName: string,
   relationSql: string,
 ): string {
-  if (!modelHasUsersetTargets(model)) {
-    const { allowsWildcards } = relationTargetCapabilities(
-      model,
-      resourceEntity,
-      relationName,
-    );
+  const { allowsUsersets, allowsWildcards } = relationTargetCapabilities(
+    model,
+    resourceEntity,
+    relationName,
+  );
+  // Top-level concrete checks (and checkMany input rows) always bind a declared
+  // entity wireName, so per-relation userset analysis is exact even when other
+  // relations in the model use subject-sets. Unchecked arrow subject_kind hops
+  // fall back to model-wide userset detection.
+  const isDeclaredEntityBinding =
+    resourceKind.startsWith("$") || resourceKind === "i.resource_kind";
+  const skipUsersetRecursion = isDeclaredEntityBinding
+    ? !allowsUsersets
+    : !modelHasUsersetTargets(model);
+  if (skipUsersetRecursion) {
     return directRelationMembershipCheck(
       namespace,
       subjectKind,

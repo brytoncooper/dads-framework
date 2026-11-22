@@ -1,4 +1,8 @@
-import type { SubjectLookupResult } from "@dads-framework/access/runtime";
+import type {
+  SubjectLookup,
+  SubjectLookupResult,
+  SubjectRef,
+} from "@dads-framework/access/runtime";
 import type { PostgresRow } from "./postgres-types.js";
 
 export function readDecisionFlag(row: PostgresRow | undefined): boolean {
@@ -40,4 +44,29 @@ export function parseSubjectLookupRows(
     subjects: [...subjects].sort(),
     hasWildcard,
   };
+}
+
+export function requireConcreteSubject(subject: SubjectRef): void {
+  if (
+    subject.id.length === 0 ||
+    subject.id === "*" ||
+    subject.relation !== undefined
+  ) {
+    throw new Error("Postgres authorization reads require a concrete subject");
+  }
+}
+
+export function requireSubjectLookupInput(query: SubjectLookup): void {
+  if (
+    query.resource.type.length === 0 ||
+    query.resource.id.length === 0 ||
+    query.resource.id === "*"
+  ) {
+    throw new Error("Postgres authorization reads require a concrete resource");
+  }
+  if (query.subjectType.length === 0) {
+    throw new Error(
+      "Postgres authorization subject lookup requires a subject type",
+    );
+  }
 }

@@ -91,12 +91,11 @@ export function compilePostgresCheck(
     kind: "check",
     text: `SELECT (${expression}) AS allowed`,
     values: builder.values,
-    // Five bindings describe the namespace and endpoints. Each remaining
-    // binding adds one relation or arrow to the ordinary permission plan.
-    canPrepare:
-      !builder.hasRecursive &&
-      builder.values.length <= 9 &&
-      builder.throughCount <= 2,
+    // Prepare bounded ordinary and recursive single-check plans so PostgreSQL
+    // reuses compiled execution plans across repeated checks.
+    canPrepare: builder.hasRecursive
+      ? builder.values.length <= 24 && builder.throughCount <= 2
+      : builder.values.length <= 9 && builder.throughCount <= 2,
   });
 }
 
@@ -105,7 +104,7 @@ export function compilePostgresCheckMany(
   model: AuthorizationModelDefinition,
   namespace: string,
   requests: readonly NormalizedPermissionCheck[],
-): CompiledAuthorizationQuery {
+): CompiledAuthorizationQuery & { readonly canPrepare: boolean } {
   const builder = new QueryBuilder();
   const namespaceSql = builder.value(namespace);
   const cycles = analyzePermissionCycles(model);
@@ -141,6 +140,7 @@ export function compilePostgresCheckMany(
     kind: "check-many",
     text: `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (${inputRows})${shared.map((query) => `, ${query}`).join("")} SELECT i.ordinal AS ordinal, CASE ${branches.join(" ")} ELSE false END AS allowed FROM input i${joinSql} ORDER BY i.ordinal`,
     values: builder.values,
+    canPrepare: identities.length <= 4,
   });
 }
 

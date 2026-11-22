@@ -20,6 +20,7 @@ import {
 import {
   activeTupleCondition,
   joinChunks,
+  modelHasSubjectSetTargets,
   QueryBuilder,
   subjectReachabilityCte,
   TUPLES,
@@ -34,6 +35,12 @@ type ReverseContext = {
   readonly sccCteNames: Map<number, string>;
   readonly extraCtes: SqliteQuery[];
   readonly nextAlias: (prefix: string) => string;
+  readonly deduplicate: boolean;
+};
+
+export type SqliteLookupSubqueryOptions = {
+  /** Skip redundant `DISTINCT`/`UNION` passes when evaluated inside `IN (...)`. */
+  readonly deduplicate?: boolean;
 };
 
 /** Compile reverse `lookupResources` returning all matching `resource_id`s in sorted order. */
@@ -61,13 +68,58 @@ export function compileSqliteLookupSubquery(
   namespace: string,
   nowMs: number,
   request: SqliteResourceLookup,
+  options?: SqliteLookupSubqueryOptions,
+): SqliteQuery {
+  return compileSqliteReverseSubquery(
+    model,
+    namespace,
+    nowMs,
+    request.subject,
+    options,
+    (context) =>
+      compileReversePermission(
+        context,
+        request.resourceType,
+        request.permission,
+      ),
+  );
+}
+
+/** Compile one reverse permission expression into an unordered subquery for `IN (...)`. */
+export function compileSqliteExpressionSubquery(
+  model: SqliteAuthorizationModel,
+  namespace: string,
+  nowMs: number,
+  subjectRef: SqliteResourceLookup["subject"],
+  entity: string,
+  expression: SqlitePermissionExpression,
+  options?: SqliteLookupSubqueryOptions,
+): SqliteQuery {
+  return compileSqliteReverseSubquery(
+    model,
+    namespace,
+    nowMs,
+    subjectRef,
+    options,
+    (context) => compileReverseExpression(context, entity, expression),
+  );
+}
+
+function compileSqliteReverseSubquery(
+  model: SqliteAuthorizationModel,
+  namespace: string,
+  nowMs: number,
+  subjectRef: SqliteResourceLookup["subject"],
+  options: SqliteLookupSubqueryOptions | undefined,
+  compileBody: (context: ReverseContext) => SqliteQuery,
 ): SqliteQuery {
   let aliasCount = 0;
   const nextAlias = (prefix: string) => `${prefix}_${aliasCount++}`;
+  const deduplicate = options?.deduplicate ?? true;
   const subject: SqlSubject = {
     kind: "concrete",
-    typeExpr: literalChunk(request.subject.type),
-    idExpr: literalChunk(request.subject.id),
+    typeExpr: literalChunk(subjectRef.type),
+    idExpr: literalChunk(subjectRef.id),
   };
   const context: ReverseContext = {
     model,
@@ -78,22 +130,26 @@ export function compileSqliteLookupSubquery(
     sccCteNames: new Map(),
     extraCtes: [],
     nextAlias,
+    deduplicate,
   };
+  const includeSubjectSets = modelHasSubjectSetTargets(model);
   const reachCte = subjectReachabilityCte({
     namespace,
-    subjectKind: request.subject.type,
-    subjectId: request.subject.id,
+    subjectKind: subjectRef.type,
+    subjectId: subjectRef.id,
     nowMs,
+    includeSubjectSets,
   });
-  const allowedIds = compileReversePermission(
-    context,
-    request.resourceType,
-    request.permission,
-  );
+  const allowedIds = compileBody(context);
   const allCtes = joinChunks([reachCte, ...context.extraCtes], ", ");
+  const withKeyword =
+    includeSubjectSets || context.extraCtes.length > 0
+      ? "WITH RECURSIVE"
+      : "WITH";
+  const selectKeyword = deduplicate ? "SELECT DISTINCT" : "SELECT";
   const b = new QueryBuilder();
   return b.finish(
-    `WITH RECURSIVE ${b.append(allCtes)} SELECT DISTINCT allowed_resource.resource_id FROM (${b.append(allowedIds)}) allowed_resource`,
+    `${withKeyword} ${b.append(allCtes)} ${selectKeyword} allowed_resource.resource_id FROM (${b.append(allowedIds)}) allowed_resource`,
   );
 }
 
@@ -163,6 +219,7 @@ function compileReverseThrough(
   relation: string,
   targets: readonly SqliteArrowTarget[],
 ): SqliteQuery {
+  const selectKeyword = context.deduplicate ? "SELECT DISTINCT" : "SELECT";
   const branches = targets.map((target) => {
     const edge = context.nextAlias("rev_thr");
     const related = compileReversePermission(
@@ -171,10 +228,13 @@ function compileReverseThrough(
       target.permission,
     );
     const b = new QueryBuilder();
-    return b.finish(`SELECT DISTINCT ${edge}.resource_id
+    // CROSS JOIN pins `rel_res` as the outer loop in SQLite so the planner
+    // always drives from the user's reached scopes via subject_lookup instead
+    // of scanning every resource row when `rel_res` is empty or small.
+    return b.finish(`${selectKeyword} ${edge}.resource_id
       FROM (${b.append(related)}) rel_res
-      JOIN ${TUPLES} ${edge}
-        ON ${edge}.namespace = ${b.value(context.namespace)}
+      CROSS JOIN ${TUPLES} ${edge}
+      WHERE ${edge}.namespace = ${b.value(context.namespace)}
         AND ${edge}.resource_kind = ${b.value(entity)}
         AND ${edge}.relation = ${b.value(relation)}
         AND ${edge}.subject_kind = ${b.value(target.entity)}
@@ -183,7 +243,7 @@ function compileReverseThrough(
         AND ${edge}.subject_relation = ''
         AND ${activeTupleCondition(edge, b, context.nowMs)}`);
   });
-  return joinChunks(branches, " UNION ");
+  return joinChunks(branches, context.deduplicate ? " UNION " : " UNION ALL ");
 }
 
 function compileReverseThroughAll(
@@ -238,7 +298,12 @@ function compileReverseGroup(
     { kind: "any-of" | "all-of" }
   >,
 ): SqliteQuery {
-  const operator = expression.kind === "any-of" ? " UNION " : " INTERSECT ";
+  const operator =
+    expression.kind === "any-of"
+      ? context.deduplicate
+        ? " UNION "
+        : " UNION ALL "
+      : " INTERSECT ";
   const branches = expression.expressions.map((child) => {
     const compiled = compileReverseExpression(context, entity, child);
     return {
@@ -313,8 +378,8 @@ function compileReverseStepClause(
   const b = new QueryBuilder();
   return b.finish(`SELECT ${b.value(step.entity)}, ${edge}.resource_id, ${b.value(step.permission)}
     FROM ${cteName} prev
-    JOIN ${TUPLES} ${edge}
-      ON ${edge}.namespace = ${b.value(context.namespace)}
+    CROSS JOIN ${TUPLES} ${edge}
+    WHERE ${edge}.namespace = ${b.value(context.namespace)}
       AND ${edge}.resource_kind = ${b.value(step.entity)}
       AND ${edge}.relation = ${b.value(step.relation)}
       AND ${edge}.subject_kind = prev.entity
@@ -322,6 +387,6 @@ function compileReverseStepClause(
       AND ${edge}.subject_is_wildcard = 0
       AND ${edge}.subject_relation = ''
       AND ${activeTupleCondition(edge, b, context.nowMs)}
-    WHERE prev.entity = ${b.value(step.targetEntity)}
+      AND prev.entity = ${b.value(step.targetEntity)}
       AND prev.perm = ${b.value(step.targetPermission)}${guardSql === undefined ? "" : ` AND (${b.append(guardSql)})`}`);
 }

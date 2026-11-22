@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS ${table} (
 );
 CREATE INDEX IF NOT EXISTS ${table}_subject_lookup
   ON ${table} (
-    namespace, subject_kind, subject_id, resource_kind, resource_id, relation
-  );
+    namespace, subject_kind, subject_id, resource_kind, relation, resource_id
+  ) INCLUDE (subject_is_wildcard, subject_relation, expires_at);
 CREATE INDEX IF NOT EXISTS ${table}_expires_at
   ON ${table} (namespace, expires_at)
   WHERE expires_at IS NOT NULL;

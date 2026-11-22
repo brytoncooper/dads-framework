@@ -141,7 +141,7 @@ export class SqliteAuthorization extends Authorization {
   /** Compile a parameterized SQLite Boolean filter predicate for single-query resource listing. */
   compileFilter(query: SqliteFilterQuery): SqliteAccessFilter {
     requireConcreteSubject(query.subject);
-    const { idColumn, nowMs } = validateSqliteFilterQuery(
+    const { idColumn, nowMs, scopeColumns } = validateSqliteFilterQuery(
       query,
       this.currentTimeMs(),
     );
@@ -162,6 +162,7 @@ export class SqliteAuthorization extends Authorization {
         resourceType: query.resourceType,
       },
       idColumn,
+      scopeColumns,
     );
   }
 

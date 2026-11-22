@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS dad_authorization_relationship (
 );
 CREATE INDEX IF NOT EXISTS dad_authorization_relationship_subject_lookup
   ON dad_authorization_relationship (
-    namespace, subject_kind, subject_id, resource_kind, resource_id, relation
-  );
+    namespace, subject_kind, subject_id, resource_kind, relation, resource_id
+  ) INCLUDE (subject_is_wildcard, subject_relation, expires_at);
 CREATE INDEX IF NOT EXISTS dad_authorization_relationship_expires_at
   ON dad_authorization_relationship (namespace, expires_at)
   WHERE expires_at IS NOT NULL;

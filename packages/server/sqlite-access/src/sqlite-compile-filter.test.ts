@@ -471,5 +471,15 @@ describe("SqliteAuthorization.compileFilter", () => {
         now: new Date("invalid"),
       }),
     ).toThrow(/valid Date/);
+
+    expect(() =>
+      authz.compileFilter({
+        subject: { type: "user", id: "alice" },
+        permission: "view",
+        resourceType: "document",
+        idColumn: "d.id",
+        scopeColumns: { workspace: "d.ws_id OR 1=1" },
+      }),
+    ).toThrow(/Invalid SQLite filter scopeColumns/);
   });
 });

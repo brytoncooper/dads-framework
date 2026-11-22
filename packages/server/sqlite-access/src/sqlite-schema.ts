@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS ${SQLITE_RELATIONSHIP_TABLE} (
 const createSubjectLookupIndexSql = `
 CREATE INDEX IF NOT EXISTS dad_authorization_relationship_subject_lookup
   ON ${SQLITE_RELATIONSHIP_TABLE} (
-    namespace, subject_kind, subject_id, resource_kind, resource_id, relation
+    namespace, subject_kind, subject_id, resource_kind, relation, resource_id,
+    subject_is_wildcard, subject_relation, expires_at
   );
 `.trim();
 

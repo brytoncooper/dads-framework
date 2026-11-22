@@ -34,6 +34,27 @@ export type ReverseCompileOptions = {
   readonly deduplicate?: boolean;
 };
 
+/** Compiles the set of resource IDs matching one permission expression. */
+export function compileReverseExpressionQuery(
+  model: AuthorizationModelDefinition,
+  builder: QueryBuilder,
+  namespace: string,
+  entity: string,
+  expression: CompiledPermissionExpression,
+  active: Set<string>,
+  options?: ReverseCompileOptions,
+): string {
+  const context: ReverseContext = {
+    model,
+    cycles: analyzePermissionCycles(model),
+    builder,
+    namespace,
+    active,
+    deduplicate: options?.deduplicate ?? true,
+  };
+  return compileReverseExpression(context, entity, expression);
+}
+
 /** Compiles the set of resource IDs a subject may use for one permission. */
 export function compileReversePermission(
   model: AuthorizationModelDefinition,

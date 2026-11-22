@@ -213,5 +213,45 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
         idColumn: "d.id",
       }),
     ).toThrow(/concrete subject/);
+
+    expect(() =>
+      auth.compileFilter({
+        subject: { type: "user", id: "alice" },
+        permission: "view",
+        resourceType: "document",
+        idColumn: "d.id",
+        scopeColumns: { workspace: "d.workspace_id; DROP TABLE docs" },
+      }),
+    ).toThrow(/Invalid Postgres filter scopeColumns/);
+  });
+
+  it("compiles scopeColumns directly against parent FK columns while preserving exclusions", () => {
+    const user = actor("user");
+    const workspace = resource("ws", {
+      roles: { member: user },
+      can: ({ member }) => ({ view: member }),
+    });
+    const doc = workspace.child("doc", {
+      inherit: "all",
+      roles: { viewer: user, banned: user },
+      can: ({ viewer, banned, parent }) => ({
+        view: anyOf(parent.view, viewer).unless(banned),
+      }),
+    });
+    const auth = new PostgresAuthorization({
+      model: compileAccess([workspace, doc]),
+      namespace: "scoped-unit",
+      executor: noopExecutor,
+    });
+    const filter = auth.compileFilter({
+      subject: { type: "user", id: "alice" },
+      permission: "view",
+      resourceType: doc.wireName,
+      idColumn: "d.id",
+      scopeColumns: { ws: "d.workspace_id" },
+    });
+    expect(filter.sql).toContain("d.workspace_id IN (");
+    expect(filter.sql).toContain("d.id IN (");
+    expect(filter.sql).toContain("d.id NOT IN (");
   });
 });

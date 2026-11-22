@@ -92,6 +92,8 @@ it.runIf(isBenchmark)(
         );
         CREATE INDEX bench_documents_updated_idx
           ON bench_documents (updated_at DESC, id);
+        CREATE INDEX bench_documents_ws_updated_idx
+          ON bench_documents (workspace_id, updated_at DESC, id);
       `);
       const insertDoc = db.prepare(
         "INSERT INTO bench_documents (id, workspace_id, updated_at) VALUES (?, ?, ?)",
@@ -169,12 +171,29 @@ it.runIf(isBenchmark)(
           expect(rows).toHaveLength(scenario.expectedPage);
           return Promise.resolve();
         });
+
+        const scopedFilter = auth.compileFilter({
+          subject: { type: "user", id: scenario.userId },
+          permission: "view",
+          resourceType: docType,
+          idColumn: "d.id",
+          scopeColumns: { [docParentRel]: "d.workspace_id" },
+        });
+        const scopedSql = `SELECT d.id FROM bench_documents d WHERE ${scopedFilter.sql} ORDER BY d.updated_at DESC LIMIT 50`;
+        const scopedStmt = db.prepare(scopedSql);
+        const compileFilterScopedResult = await sample(() => {
+          const rows = scopedStmt.all(...scopedFilter.values);
+          expect(rows).toHaveLength(scenario.expectedPage);
+          return Promise.resolve();
+        });
+
         console.log(
           JSON.stringify({
             engine: "sqlite",
             benchmark: "100k_paginated_list",
             scenario: scenario.name,
-            sqliteCompileFilter: compileFilterResult,
+            sqliteFilter: compileFilterResult,
+            sqliteFilterScoped: compileFilterScopedResult,
           }),
         );
       }
@@ -220,6 +239,7 @@ it.runIf(isBenchmark)(
           });
         }
         await treeAuth.writeRelationships(writes);
+        db.exec("ANALYZE;");
 
         const leafQuery = {
           resource: { type: fileType, id: `d${String(depth)}_file_0` },

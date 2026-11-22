@@ -11,4 +11,10 @@ export {
   startTestSpiceDb,
   type TestSpiceDb,
 } from "./start-test-spice-db.js";
+export {
+  createTunedSpiceDbClient,
+  startTunedSpiceDb,
+  type TunedSpiceDbClient,
+  type TunedSpiceDbConsistency,
+} from "./tuned-spice-db-benchmark.js";
 export { runOutsideHeldPartitions } from "@dads-framework/access/testing";

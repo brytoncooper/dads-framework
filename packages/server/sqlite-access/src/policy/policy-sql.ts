@@ -1,5 +1,6 @@
 import { SQLITE_RELATIONSHIP_TABLE } from "../sqlite-schema.js";
 import type { SqliteQuery, SqliteValue } from "../sqlite-types.js";
+import type { SqliteAuthorizationModel } from "./policy-model.js";
 
 /** The single relationship table every compiled SQLite statement reads. */
 export const TUPLES = SQLITE_RELATIONSHIP_TABLE;
@@ -53,15 +54,26 @@ export function activeTupleCondition(
   return `(${alias}.expires_at IS NULL OR ${alias}.expires_at > ${builder.value(nowMs)})`;
 }
 
+/** True when any relation in the SQLite model accepts a `subject-set` (`group#member`) target. */
+export function modelHasSubjectSetTargets(
+  model: SqliteAuthorizationModel,
+): boolean {
+  return model.relations.some((relation) =>
+    relation.targets.some((target) => target.kind === "subject-set"),
+  );
+}
+
 /**
- * Recursive CTE finding every `(resource_kind, resource_id, relation)` userset
- * reachable from a concrete subject (including wildcards and cyclic group chains).
+ * CTE finding every `(resource_kind, resource_id, relation)` reachable from a
+ * concrete subject. Omits the recursive userset step when `includeSubjectSets`
+ * is `false` so SQLite avoids recursive worktable overhead.
  */
 export function subjectReachabilityCte(options: {
   readonly namespace: string;
   readonly subjectKind: string;
   readonly subjectId: string;
   readonly nowMs: number;
+  readonly includeSubjectSets?: boolean;
 }): SqliteQuery {
   const b = new QueryBuilder();
   const directSql = `SELECT dt.resource_kind, dt.resource_id, dt.relation
@@ -80,10 +92,15 @@ export function subjectReachabilityCte(options: {
       AND wt.subject_is_wildcard = 1
       AND wt.subject_relation = ''
       AND ${activeTupleCondition("wt", b, options.nowMs)}`;
+  if (options.includeSubjectSets === false) {
+    return b.finish(
+      `subject_reachable(resource_kind, resource_id, relation) AS (${directSql} UNION ALL ${wildcardSql})`,
+    );
+  }
   const stepSql = `SELECT pt.resource_kind, pt.resource_id, pt.relation
     FROM subject_reachable sr
-    JOIN ${TUPLES} pt
-      ON pt.namespace = ${b.value(options.namespace)}
+    CROSS JOIN ${TUPLES} pt
+    WHERE pt.namespace = ${b.value(options.namespace)}
       AND pt.subject_kind = sr.resource_kind
       AND pt.subject_id = sr.resource_id
       AND pt.subject_relation = sr.relation

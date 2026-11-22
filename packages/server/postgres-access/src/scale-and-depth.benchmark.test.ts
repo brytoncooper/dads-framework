@@ -4,12 +4,13 @@ import {
   emitZed,
   resource,
 } from "@dads-framework/access";
+import type { RelationshipWrite } from "@dads-framework/authorization";
 import {
-  SpiceDbAuthorization,
-  type Authorization,
-  type RelationshipWrite,
-} from "@dads-framework/authorization";
-import { startTestSpiceDb } from "@dads-framework/authorization/testing";
+  createTunedSpiceDbClient,
+  startTunedSpiceDb,
+  type TunedSpiceDbClient,
+  type TunedSpiceDbConsistency,
+} from "@dads-framework/authorization/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, expect, it } from "vitest";
@@ -24,23 +25,10 @@ const isBenchmark = process.env["VITEST_TIER"] === "benchmark";
 const disposers: (() => Promise<void>)[] = [];
 let pool: Pool;
 
-async function startFreshSpiceDb() {
-  const spice = await startTestSpiceDb();
+async function startSpice(): Promise<TunedSpiceDbClient> {
+  const spice = await startTunedSpiceDb();
   disposers.push(spice.stop);
-  return {
-    consistent: new SpiceDbAuthorization({
-      endpoint: spice.endpoint,
-      presharedKey: spice.presharedKey,
-      insecure: true,
-      consistency: "fully-consistent",
-    }),
-    minLatency: new SpiceDbAuthorization({
-      endpoint: spice.endpoint,
-      presharedKey: spice.presharedKey,
-      insecure: true,
-      consistency: "minimize-latency",
-    }),
-  };
+  return createTunedSpiceDbClient(spice.endpoint, spice.presharedKey);
 }
 
 beforeAll(async () => {
@@ -60,6 +48,7 @@ afterAll(async () => {
 
 async function sample(work: () => Promise<unknown>, trials = 11) {
   await work();
+  await work();
   const times: number[] = [];
   for (let index = 0; index < trials; index += 1) {
     const start = performance.now();
@@ -76,25 +65,8 @@ async function sample(work: () => Promise<unknown>, trials = 11) {
   };
 }
 
-async function writeSpiceBatches(
-  spice: SpiceDbAuthorization,
-  writes: readonly RelationshipWrite[],
-) {
-  for (let offset = 0; offset < writes.length; offset += 1_000) {
-    await spice.writeRelationships(writes.slice(offset, offset + 1_000));
-  }
-}
-
-async function explainPlan(sql: string, values: readonly unknown[]) {
-  const result = await pool.query<{ "QUERY PLAN": string }>(
-    `EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${sql}`,
-    [...values],
-  );
-  return result.rows.map((row) => row["QUERY PLAN"]).slice(0, 8);
-}
-
 it.runIf(isBenchmark)(
-  "benchmarks 100k-row paginated compileFilter vs lookupResources (Postgres vs SpiceDB)",
+  "benchmarks 100k-row paginated lists (Postgres compileFilter + scopeColumns vs tuned SpiceDB)",
   async () => {
     const user = actor("user");
     const workspace = resource("scale/workspace", {
@@ -104,13 +76,16 @@ it.runIf(isBenchmark)(
         document: {
           inherit: "all",
           roles: { viewer: user },
-          can: ({ viewer, parent }) => ({ view: [parent.view, viewer] }),
+          can: ({ viewer, parent }) => ({
+            view: [parent.view, viewer],
+            direct_view: viewer,
+          }),
         },
       },
     });
     const model = compileAccess([workspace]);
-    const docType = workspace.document.wireName;
     const wsType = workspace.wireName;
+    const docType = workspace.document.wireName;
     const docParentRel = Object.keys(workspace.document.roles).find(
       (role) => role !== "viewer",
     );
@@ -127,9 +102,10 @@ it.runIf(isBenchmark)(
       );
       CREATE INDEX bench_documents_updated_idx
         ON bench_documents (updated_at DESC, id);
+      CREATE INDEX bench_documents_ws_updated_idx
+        ON bench_documents (workspace_id, updated_at DESC, id);
     `);
 
-    // 200 workspaces x 500 docs = 100,000 rows, spread across timestamps
     await pool.query(`
       INSERT INTO bench_documents (id, workspace_id, updated_at)
       SELECT
@@ -149,9 +125,6 @@ it.runIf(isBenchmark)(
       [namespace, docType, docParentRel, wsType],
     );
 
-    // Sparse user: member of ws_0 (500 visible out of 100,000 = 0.5%)
-    // Super-sparse user: direct viewer on 20 docs out of 100,000 = 0.02%
-    // Broad admin: member of ws_0..ws_159 (80,000 visible out of 100,000 = 80%)
     const memberWrites: RelationshipWrite[] = [
       {
         resource: { type: wsType, id: "ws_0" },
@@ -186,9 +159,8 @@ it.runIf(isBenchmark)(
     await pool.query("VACUUM ANALYZE bench_documents");
     await pool.query("VACUUM ANALYZE dad_authorization_relationship");
 
-    // Seed matching 100k tuples into SpiceDB
-    const spice = await startFreshSpiceDb();
-    await spice.consistent.writeSchema(emitZed(model));
+    const spice = await startSpice();
+    await spice.writeSchema(emitZed(model));
     const docWrites: RelationshipWrite[] = Array.from(
       { length: 100_000 },
       (_, index) => ({
@@ -197,40 +169,75 @@ it.runIf(isBenchmark)(
         subject: { type: wsType, id: `ws_${String(index % 200)}` },
       }),
     );
-    await writeSpiceBatches(spice.consistent, [...docWrites, ...memberWrites]);
+    await spice.writeRelationships([...docWrites, ...memberWrites]);
 
-    const runPaginatedViaLookup = async (
-      auth: Authorization,
+    const runPgCompileFilter = async (
       subjectId: string,
       expectedCount: number,
-    ) => {
-      const ids = await auth.lookupResources({
-        resourceType: docType,
-        permission: "view",
-        subject: { type: "user", id: subjectId },
-      });
-      const page = await pool.query<{ id: string }>(
-        `SELECT id FROM bench_documents WHERE id = ANY($1::text[]) ORDER BY updated_at DESC LIMIT 50`,
-        [ids],
-      );
-      expect(page.rows).toHaveLength(expectedCount);
-      return page.rows;
-    };
-
-    const runPaginatedViaCompileFilter = async (
-      subjectId: string,
-      expectedCount: number,
+      scoped: boolean,
     ) => {
       const filter = pgAuth.compileFilter({
         subject: { type: "user", id: subjectId },
         permission: "view",
         resourceType: docType,
         idColumn: "d.id",
+        ...(scoped
+          ? { scopeColumns: { [docParentRel]: "d.workspace_id" } }
+          : {}),
       });
       const sql = `SELECT d.id FROM bench_documents d WHERE ${filter.sql} ORDER BY d.updated_at DESC LIMIT 50`;
       const page = await pool.query<{ id: string }>(sql, [...filter.values]);
       expect(page.rows).toHaveLength(expectedCount);
-      return { sql, values: filter.values };
+    };
+
+    const runSpiceDirectLookup = async (
+      subjectId: string,
+      expectedCount: number,
+      mode: TunedSpiceDbConsistency,
+    ) => {
+      const ids = await spice.lookupResources(
+        {
+          resourceType: docType,
+          permission: "view",
+          subject: { type: "user", id: subjectId },
+        },
+        mode,
+      );
+      const page = await pool.query<{ id: string }>(
+        `SELECT id FROM bench_documents WHERE id = ANY($1::text[]) ORDER BY updated_at DESC LIMIT 50`,
+        [ids],
+      );
+      expect(page.rows).toHaveLength(expectedCount);
+    };
+
+    const runSpiceScopedBestPractice = async (
+      subjectId: string,
+      expectedCount: number,
+      mode: TunedSpiceDbConsistency,
+    ) => {
+      const [wsIds, directDocIds] = await Promise.all([
+        spice.lookupResources(
+          {
+            resourceType: wsType,
+            permission: "view",
+            subject: { type: "user", id: subjectId },
+          },
+          mode,
+        ),
+        spice.lookupResources(
+          {
+            resourceType: docType,
+            permission: "direct_view",
+            subject: { type: "user", id: subjectId },
+          },
+          mode,
+        ),
+      ]);
+      const page = await pool.query<{ id: string }>(
+        `SELECT id FROM bench_documents WHERE workspace_id = ANY($1::text[]) OR id = ANY($2::text[]) ORDER BY updated_at DESC LIMIT 50`,
+        [wsIds, directDocIds],
+      );
+      expect(page.rows).toHaveLength(expectedCount);
     };
 
     for (const scenario of [
@@ -246,44 +253,54 @@ it.runIf(isBenchmark)(
         expectedPage: 50,
       },
     ]) {
-      const compiled = await runPaginatedViaCompileFilter(
-        scenario.userId,
-        scenario.expectedPage,
+      const pgFilter = await sample(() =>
+        runPgCompileFilter(scenario.userId, scenario.expectedPage, false),
       );
-      const pgCompileFilter = await sample(() =>
-        runPaginatedViaCompileFilter(scenario.userId, scenario.expectedPage),
+      const pgFilterScoped = await sample(() =>
+        runPgCompileFilter(scenario.userId, scenario.expectedPage, true),
       );
-      const pgLookupPlusSql = await sample(() =>
-        runPaginatedViaLookup(pgAuth, scenario.userId, scenario.expectedPage),
-      );
-      const spiceConsistent = await sample(
+      const spiceDirectConsistent = await sample(
         () =>
-          runPaginatedViaLookup(
-            spice.consistent,
+          runSpiceDirectLookup(
             scenario.userId,
             scenario.expectedPage,
+            "fully-consistent",
           ),
         scenario.userId === "broad_admin" ? 3 : 7,
       );
-      const spiceMinLatency = await sample(
+      const spiceDirectCached = await sample(
         () =>
-          runPaginatedViaLookup(
-            spice.minLatency,
+          runSpiceDirectLookup(
             scenario.userId,
             scenario.expectedPage,
+            "minimize-latency",
           ),
         scenario.userId === "broad_admin" ? 3 : 7,
       );
-      const plan = await explainPlan(compiled.sql, compiled.values);
+      const spiceScopedConsistent = await sample(() =>
+        runSpiceScopedBestPractice(
+          scenario.userId,
+          scenario.expectedPage,
+          "fully-consistent",
+        ),
+      );
+      const spiceScopedCached = await sample(() =>
+        runSpiceScopedBestPractice(
+          scenario.userId,
+          scenario.expectedPage,
+          "minimize-latency",
+        ),
+      );
       console.log(
         JSON.stringify({
           benchmark: "100k_paginated_list",
           scenario: scenario.name,
-          pgCompileFilter,
-          pgLookupPlusSql,
-          spiceConsistent,
-          spiceMinLatency,
-          planHead: plan,
+          pgFilter,
+          pgFilterScoped,
+          spiceDirectConsistent,
+          spiceDirectCached,
+          spiceScopedConsistent,
+          spiceScopedCached,
         }),
       );
     }
@@ -292,7 +309,7 @@ it.runIf(isBenchmark)(
 );
 
 it.runIf(isBenchmark)(
-  "benchmarks deep recursive folder trees (depth 25, 50, 100) and 20-level diamond DAG",
+  "benchmarks deep recursive folder trees (depth 25, 50, 100) and 20-level diamond DAG (tuned SpiceDB max-depth=128)",
   async () => {
     const user = actor("user");
     const folder = resource("tree/folder", {
@@ -314,11 +331,12 @@ it.runIf(isBenchmark)(
       (role) => role !== "viewer",
     );
     if (!fileParentRel) throw new Error("Missing parent role on file");
-    const spice = await startFreshSpiceDb();
-    await spice.consistent.writeSchema(emitZed(model));
+    const spice = await startSpice();
+    await spice.writeSchema(emitZed(model));
 
     for (const depth of [25, 50, 100]) {
       const namespace = `recursive_${String(depth)}`;
+      const subjectId = `alice_d${String(depth)}`;
       await pool.query("TRUNCATE dad_authorization_relationship");
       const pgOrdinary = new PostgresAuthorization({
         model,
@@ -335,7 +353,7 @@ it.runIf(isBenchmark)(
         {
           resource: { type: folderType, id: `d${String(depth)}_f0` },
           relation: "viewer",
-          subject: { type: "user", id: "alice" },
+          subject: { type: "user", id: subjectId },
         },
       ];
       for (let level = 1; level <= depth; level += 1) {
@@ -367,59 +385,58 @@ it.runIf(isBenchmark)(
 
       await pgOrdinary.writeRelationships(writes);
       await pool.query("VACUUM ANALYZE dad_authorization_relationship");
-      await writeSpiceBatches(spice.consistent, writes);
+      await spice.writeRelationships(writes);
 
       const leafQuery = {
         resource: { type: fileType, id: `d${String(depth)}_file_0` },
         permission: "view",
-        subject: { type: "user", id: "alice" },
+        subject: { type: "user", id: subjectId },
       };
 
-      const pgCheckOrdinary = await sample(async () => {
-        expect(await pgOrdinary.check(leafQuery)).toBe(true);
-      });
       const pgCheckPrepared = await sample(async () => {
         expect(await pgPrepared.check(leafQuery)).toBe(true);
       });
-      const pgLookup = await sample(async () => {
+      const pgLookup1kFiles = await sample(async () => {
         expect(
           await pgOrdinary.lookupResources({
             resourceType: fileType,
             permission: "view",
-            subject: { type: "user", id: "alice" },
+            subject: { type: "user", id: subjectId },
           }),
         ).toHaveLength(1_000);
       });
-
-      const trySpice = async (auth: SpiceDbAuthorization) => {
-        try {
-          return await sample(async () => {
-            expect(await auth.check(leafQuery)).toBe(true);
-          });
-        } catch (error) {
-          return {
-            error:
-              error instanceof Error
-                ? error.message.slice(0, 120)
-                : String(error),
-          };
-        }
-      };
+      const spiceConsistentCheck = await sample(async () => {
+        expect(await spice.check(leafQuery, "fully-consistent")).toBe(true);
+      });
+      const spiceCachedCheck = await sample(async () => {
+        expect(await spice.check(leafQuery, "minimize-latency")).toBe(true);
+      });
+      const spiceLookup1kCached = await sample(async () => {
+        expect(
+          await spice.lookupResources(
+            {
+              resourceType: fileType,
+              permission: "view",
+              subject: { type: "user", id: subjectId },
+            },
+            "minimize-latency",
+          ),
+        ).toHaveLength(1_000);
+      });
 
       console.log(
         JSON.stringify({
           benchmark: "recursive_depth",
           depth,
-          pgCheckOrdinary,
           pgCheckPrepared,
-          pgLookup1kFiles: pgLookup,
-          spiceConsistentCheck: await trySpice(spice.consistent),
-          spiceMinLatencyCheck: await trySpice(spice.minLatency),
+          pgLookup1kFiles,
+          spiceConsistentCheck,
+          spiceCachedCheck,
+          spiceLookup1kCached,
         }),
       );
     }
 
-    // 20-level diamond DAG: 2^20 = 1,048,576 distinct paths through 42 folder nodes
     const dagNamespace = "diamond_dag_20";
     await pool.query("TRUNCATE dad_authorization_relationship");
     const pgDag = new PostgresAuthorization({
@@ -429,12 +446,12 @@ it.runIf(isBenchmark)(
     });
     const dagWrites: RelationshipWrite[] = [
       {
-        resource: { type: "tree/folder", id: "dag_0_a" },
+        resource: { type: folderType, id: "dag_0_a" },
         relation: "viewer",
         subject: { type: "user", id: "alice" },
       },
       {
-        resource: { type: "tree/folder", id: "dag_0_b" },
+        resource: { type: folderType, id: "dag_0_b" },
         relation: "viewer",
         subject: { type: "user", id: "alice" },
       },
@@ -444,12 +461,12 @@ it.runIf(isBenchmark)(
         for (const parentBranch of ["a", "b"]) {
           dagWrites.push({
             resource: {
-              type: "tree/folder",
+              type: folderType,
               id: `dag_${String(level)}_${branch}`,
             },
             relation: "parent",
             subject: {
-              type: "tree/folder",
+              type: folderType,
               id: `dag_${String(level - 1)}_${parentBranch}`,
             },
           });
@@ -458,10 +475,10 @@ it.runIf(isBenchmark)(
     }
     await pgDag.writeRelationships(dagWrites);
     await pool.query("VACUUM ANALYZE dad_authorization_relationship");
-    await writeSpiceBatches(spice.consistent, dagWrites);
+    await spice.writeRelationships(dagWrites);
 
     const dagQuery = {
-      resource: { type: "tree/folder", id: "dag_20_a" },
+      resource: { type: folderType, id: "dag_20_a" },
       permission: "view",
       subject: { type: "user", id: "alice" },
     };
@@ -469,17 +486,17 @@ it.runIf(isBenchmark)(
       expect(await pgDag.check(dagQuery)).toBe(true);
     });
     const spiceDagConsistent = await sample(async () => {
-      expect(await spice.consistent.check(dagQuery)).toBe(true);
+      expect(await spice.check(dagQuery, "fully-consistent")).toBe(true);
     });
-    const spiceDagMinLatency = await sample(async () => {
-      expect(await spice.minLatency.check(dagQuery)).toBe(true);
+    const spiceDagCached = await sample(async () => {
+      expect(await spice.check(dagQuery, "minimize-latency")).toBe(true);
     });
     console.log(
       JSON.stringify({
         benchmark: "diamond_dag_1M_paths",
         pgDagCheck,
         spiceDagConsistent,
-        spiceDagMinLatency,
+        spiceDagCached,
       }),
     );
   },
@@ -487,7 +504,7 @@ it.runIf(isBenchmark)(
 );
 
 it.runIf(isBenchmark)(
-  "benchmarks high-volume batch checkMany (100 and 1,000 items)",
+  "benchmarks batch checkMany (100 and 1,000 items: Postgres vs single-RPC SpiceDB)",
   async () => {
     const user = actor("user");
     const workspace = resource("batch/workspace", {
@@ -504,8 +521,8 @@ it.runIf(isBenchmark)(
     if (!itemParentRel) throw new Error("Missing parent role on item");
     const namespace = "batch_check_many";
     await pool.query("TRUNCATE dad_authorization_relationship");
-    const spice = await startFreshSpiceDb();
-    await spice.consistent.writeSchema(emitZed(model));
+    const spice = await startSpice();
+    await spice.writeSchema(emitZed(model));
 
     const writes: RelationshipWrite[] = [
       {
@@ -531,7 +548,7 @@ it.runIf(isBenchmark)(
     });
     await pgAuth.writeRelationships(writes);
     await pool.query("VACUUM ANALYZE dad_authorization_relationship");
-    await writeSpiceBatches(spice.consistent, writes);
+    await spice.writeRelationships(writes);
 
     for (const batchSize of [100, 1_000]) {
       const queries = Array.from({ length: batchSize }, (_, index) => ({
@@ -545,21 +562,31 @@ it.runIf(isBenchmark)(
         expect(result[0]).toBe(true);
         expect(result[1]).toBe(false);
       });
-      const spiceBatchConsistent = await sample(async () => {
-        const result = await spice.consistent.checkMany(queries);
+      const spiceSingleRpcConsistent = await sample(async () => {
+        const result = await spice.checkManySingleRpc(
+          queries,
+          "fully-consistent",
+        );
         expect(result).toHaveLength(batchSize);
+        expect(result[0]).toBe(true);
+        expect(result[1]).toBe(false);
       });
-      const spiceBatchMinLatency = await sample(async () => {
-        const result = await spice.minLatency.checkMany(queries);
+      const spiceSingleRpcCached = await sample(async () => {
+        const result = await spice.checkManySingleRpc(
+          queries,
+          "minimize-latency",
+        );
         expect(result).toHaveLength(batchSize);
+        expect(result[0]).toBe(true);
+        expect(result[1]).toBe(false);
       });
       console.log(
         JSON.stringify({
           benchmark: "batch_checkMany",
           batchSize,
           pgBatch,
-          spiceBatchConsistent,
-          spiceBatchMinLatency,
+          spiceSingleRpcConsistent,
+          spiceSingleRpcCached,
         }),
       );
     }

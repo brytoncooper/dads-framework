@@ -109,6 +109,13 @@ export function assertUniqueMigrationIds(ids: readonly string[]): void {
   }
 }
 
+export function assertPositiveInt(value: number, name: string): number {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${name} must be a positive integer, got ${value}`);
+  }
+  return value;
+}
+
 export function readStringField(
   row: Readonly<Record<string, unknown>>,
   column: string,

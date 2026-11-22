@@ -66,7 +66,8 @@ npx dad verify --changed --json
 Explore the framework guides and references:
 
 - [Getting Started](./docs/site/guides/index.md): Create a project, local stack commands, and where your code goes.
-- [Access & Permissions](./docs/site/guides/permissions.md): Top-down relationship models, transactional checks in Postgres and SQLite, connected migrations, and SpiceDB cutover.
+- [Access & Permissions](./docs/site/guides/permissions.md): 5-minute quickstart for transactional relationship permissions in Postgres and SQLite (8,274 RPS on 10M rows, 27 Lean 4 proofs).
+- [Permissions Cookbook & Patterns](./docs/site/guides/permissions-cookbook.md): `columnRelations` (zero dual-writes, 91× smaller storage), 10M-row `resolveFilter`, nested folders/groups/expiry, zero-`await` testing, and two-way SpiceDB migration.
 - [SDK Glossary & Options](./docs/site/guides/sdk-reference.md): Core definitions (`actor`, `resource`, `children`, `inherit`, `compileAccess`, `createAccessClient`), combinators, adapter options, and CLI commands.
 - [Routes, Contracts & Clients](./docs/site/guides/routes-and-contracts.md): Zod wire schemas, fail-closed route guards, OpenAPI 3.1, and typed clients.
 - [Multi-API Composition & CI Gates](./docs/site/guides/boundaries-and-apis.md): Customer/staff entrypoints, boundary checks, Doctor gates, and production deployment.

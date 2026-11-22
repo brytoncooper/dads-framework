@@ -1,133 +1,106 @@
 # Access & Permissions
 
-Dads splits authorization into two layers: a database-free permission model ([`@dads-framework/access`](../../../packages/access/README.md)) and an execution engine ([`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) for PostgreSQL, [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) for SQLite, or [`@dads-framework/authorization`](../../../packages/server/authorization/README.md) for SpiceDB).
+**The last permissions system you'll ever need.**
 
-Your domains import only `@dads-framework/access`. Business logic and unit tests stay database-free, while production checks execute inside your database transactions.
+Dads compiles Zanzibar-style relationship permissions (ReBAC) directly into parameterized SQL inside your existing PostgreSQL or SQLite database — with **zero separate auth cluster**, **zero outbox lag**, **zero dual-writes** on foreign keys (`columnRelations`), and **27 machine-checked Lean 4 proofs** backing the engine.
+
+- **Sub-millisecond at 10M rows:** **8,274 checks/sec** (0.5 ms p50), **0.39–1.88 ms** paginated `LIMIT 50` lists with zero sequential scans, and **91× smaller storage** (30 MB vs 2.73 GB) when binding foreign keys with `columnRelations`.
+- **Mathematically proved:** **27 zero-`sorry` Lean 4 theorems** verified differentially across live PostgreSQL, SQLite, SpiceDB, and our pure-TypeScript test engine (**0 mismatches** across 1,300 randomized schemas / 299,200 queries).
+- **Zero lock-in:** Start in SQLite or PostgreSQL today, migrate in from SpiceDB (`npx dads-import-spicedb`), or migrate out to SpiceDB later (`migratePostgresToSpiceDb` + auto-generated outbox triggers) without rewriting your model or client calls.
 
 ![Transactional PostgreSQL ReBAC flow](../../../website/site/assets/diagrams/postgres-rebac-transaction.svg)
 
-## Core definitions
+## Why Dads beats the alternatives
 
-Every access model uses six building blocks. See [SDK Glossary & Options](sdk-reference.md) for every combinator, adapter option, and CLI flag.
+| Approach                            | Transactional revokes? |  Nested orgs/folders/groups?  |    10M-row `LIMIT 50` SQL lists?     |  Zero dual-writes on FKs?   |      Formally proved?      |
+| :---------------------------------- | :--------------------: | :---------------------------: | :----------------------------------: | :-------------------------: | :------------------------: |
+| Scattered `if (user.role)`          |          Yes           |   No (turns into spaghetti)   |                Manual                |             Yes             |             No             |
+| Hand-written Postgres RLS           |          Yes           |  Hard / slow correlated SQL   |        Fragile planner traps         |             Yes             |             No             |
+| External SpiceDB / OpenFGA          |    No (outbox lag)     |              Yes              |     Extra network hop + ID fetch     |   No (must sync every FK)   |             No             |
+| **Dads Access (Postgres / SQLite)** |   **Yes (same tx)**    | **Yes (full Zanzibar graph)** | **Yes (0.4–1.9 ms `resolveFilter`)** | **Yes (`columnRelations`)** | **Yes (27 Lean 4 proofs)** |
 
-- **Actor (`actor`):** Who takes an action (such as `user` or `service_account`). Call `user("alice")` to reference a concrete actor.
-- **Resource (`resource`):** A protected thing in your app (such as `organization`, `task`, or `billing`). Call `task("t1")` to reference a concrete record and its typed role slots or permission targets.
-- **Roles (`roles`):** Stored relationships in your database, such as `admin`, `member`, `assignee`, or a parent link.
-- **Permissions (`can`):** Actions someone can take, such as `view`, `edit`, or `manage`. Routes check permissions (for example `organization.task.can.edit`), never raw roles.
-- **Hierarchy (`children`, `.child()`, and `inherit`):** Nest child resources under a parent and declare explicit inheritance (`"all"`, `"none"`, or a list such as `["manage"]`). Omitted parent permissions stay closed by default.
-- **Compiled model & client (`compileAccess`, `createAccessClient`):** `compileAccess([organization])` auto-discovers every child, parent, and actor into one `AccessModel`. `createAccessClient(authorization)` wraps any backend with symmetric typed `add`, `remove`, `can`, `list`, `whoCan`, and `listDirect` methods.
+---
 
-## 1. Declare actors, resources, and top-down inheritance
+## 5-Minute Quickstart
 
-Define your hierarchy once in TypeScript. Child resources declare `inherit` explicitly so sensitive resources like `billing` or `order` stay fail-closed (`packages/access/src/core/dsl.test.ts`):
+### 1. Define your model once in plain TypeScript
+
+Declare actors (`actor`), resources (`resource`), roles (`roles`), and permissions (`can`). Child resources declare `inherit` explicitly (`"all"`, `"none"`, or a list like `["manage"]`) so sensitive resources like `billing` stay fail-closed (`packages/access/src/core/dsl.test.ts`):
 
 <!-- dads:excerpt {"path":"packages/access/src/core/dsl.test.ts","language":"ts","from":"    const user = actor(\"user\");\n\n    const organization = resource(\"organization\", {\n      roles: {\n        admin: user,","through":"          can: ({ accountant }) => ({\n            view: accountant,\n          }),\n        },\n      },\n    });"} -->
 
-Pass the root resources to `compileAccess([organization])` to produce an `AccessModel`, and call `formatAccessTree(model)` to inspect the resolved inheritance tree.
+Compile once at startup with `compileAccess([organization])`. Inspect the resolved tree anytime with `formatAccessTree(model)` or `npx dad access tree src/access.ts`.
 
-Because `task` declares `inherit: "all"` and `photo` nests under `task`, revoking someone from `organization` revokes their access to every `task` and `photo` inside it. Meanwhile `order` (`inherit: "none"`) and `billing` (`inherit: ["manage"]`) never inherit `organization.edit` or `organization.view`.
+### 2. Connect Postgres (plain `pg.Pool`, Drizzle, or SQLite)
 
-Use `.child()` to split large trees across files, `parents: [organization, folder]` for multi-parent DAGs, `recursive: true` for nested folders, and combinators (`anyOf`, `allOf`, `.unless()`, `every(link).perm`) for custom rules.
-
-## 2. Check, grant, and list with `createAccessClient`
-
-Wrap any `Authorization` backend (PostgreSQL, SQLite, SpiceDB, or `FakeAuthorization`) with `createAccessClient(authorization)` from `@dads-framework/access/runtime`. Every `add` and `remove` call enforces allowed subject types at compile time:
-
-| Method                                      | What it does                                                                                               |
-| :------------------------------------------ | :--------------------------------------------------------------------------------------------------------- |
-| `client.add(subject, slot, { expiresAt? })` | Grants a role or links a parent (for example `client.add(user("alice"), organization("org-1").member)`).   |
-| `client.remove(subject, slot)`              | Revokes a direct role or parent link.                                                                      |
-| `client.can(subject, target, options?)`     | Returns `true` or `false` (for example `client.can(user("alice"), organization.task("t1").edit)`).         |
-| `client.list(subject, permission)`          | Returns all resource IDs the subject can access (for example `organization.task.can.edit`).                |
-| `client.whoCan(target, actorHandle)`        | Returns `{ subjects, hasWildcard }` listing everyone who can access a resource, including inherited paths. |
-| `client.listDirect(slot)`                   | Lists direct role holders on a single slot for member rosters and last-admin guards.                       |
-
-## 3. Guard writes inside a database transaction
-
-### PostgreSQL (Drizzle-free or Drizzle)
-
-`@dads-framework/postgres-access` works directly on a plain `pg.Pool` with zero ORM requirement (Node.js 22 or later):
+Install `@dads-framework/access` and `@dads-framework/postgres-access` (zero ORM required):
 
 ```sh
 npm install @dads-framework/access @dads-framework/postgres-access pg zod
 ```
 
-1. Apply `relationshipSchemaMigration.sql` through your migration runner.
-2. Create `new PostgresAuthorization({ model, namespace, executor: pool })`.
-3. For protected writes, call `withProtectedPgTransaction({ pool, authorization }, async ({ client, authorization: scoped }) => { ... })`. It opens a `SERIALIZABLE` transaction on the checked-out `pg` client, binds `scoped` to that transaction, closes the scope on exit, and maps PostgreSQL `40001` conflicts to `PostgresSerializationConflict`.
+Apply `relationshipSchemaMigration.sql`, bind any single-target foreign keys you already have on your tables (`documents.org_id`, `documents.owner_id`, `folders.parent_id`) with `columnRelations` so Postgres reads them directly with zero dual-writes, and verify columns/indexes at startup (`packages/server/postgres-access/src/column-relations.integration.test.ts`):
 
-If your application uses Drizzle, import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle` (`assembly/protected-write.ts`):
+<!-- dads:excerpt {"path":"packages/server/postgres-access/src/column-relations.integration.test.ts","language":"ts","from":"function createColumnBindings(","through":"      targetIdColumn: \"owner_id\",\n    },\n  ];\n}"} -->
+
+Pass `columnRelations: bindings` and `executor: preparePostgresChecks(pool)` into `new PostgresAuthorization(...)`, run `columnRelationIndexSql(bindings)` in your migration, and call `await authz.verifyColumnRelations()` at boot so missing columns fail fast.
+
+> **Rule of thumb:** Put single-target foreign keys (`org_id`, `owner_id`, `parent_id`) in `columnRelations`. Keep dynamic grants (org memberships, groups, wildcards, expiring shares, bans, and multi-parent links) in the tuple table via `createAccessClient(authz).add(...)`.
+
+Running local-first, edge, or single-node? Swap `PostgresAuthorization` for `SqliteAuthorization` from [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) using Node's built-in `node:sqlite` (`DatabaseSync`) — exact same model, exact same `columnRelations` API.
+
+### 3. Filter 10M-row lists & guard writes in one transaction
+
+Embed `resolveFilter({ ..., scopeColumns: "auto" })` directly inside paginated SQL `SELECT ... LIMIT 50` queries, and wrap protected writes in `withProtectedPgTransaction({ pool, authorization, retries: 2 }, work)` so revokes and business updates share one `SERIALIZABLE` snapshot with automatic `40001` retries (`packages/server/postgres-access/src/column-relations.integration.test.ts`):
+
+<!-- dads:excerpt {"path":"packages/server/postgres-access/src/column-relations.integration.test.ts","language":"ts","from":"    const resolvedFilter = await authz.resolveFilter({","through":"    expect(resolvedRows.rows.map((row) => row.id)).toEqual([\"doc-org\"]);"} -->
+
+<!-- dads:excerpt {"path":"packages/server/postgres-access/src/column-relations.integration.test.ts","language":"ts","from":"    // Update inside a protected serializable transaction; scoped authz preserves columnRelations.","through":"            resource: { type: \"document\", id: \"doc-null\" },\n          }),\n        ).toBe(true);\n      },\n    );"} -->
+
+Using Drizzle? Import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle` (`assembly/protected-write.ts`):
 
 <!-- dads:excerpt {"path":"apps/kit-workbench/assembly/protected-write.ts","language":"ts","from":"export function createProtectedWrite(","through":"}"} -->
 
-Both the permission check and the business write share one PostgreSQL transaction snapshot. Removing a member and deleting their business rows commit or roll back together, with zero authorization outbox lag.
+### 4. Test policies in microseconds (zero Docker, zero `await`)
 
-For paginated or sorted global list queries (`SELECT * FROM documents WHERE ... ORDER BY created_at DESC LIMIT 20`), call `authorization.compileFilter({ subject, permission, resourceType, idColumn, paramOffset? })` on either `PostgresAuthorization` or `SqliteAuthorization`. It returns `{ sql, values }` (`EXISTS` or recursive `IN`) that embeds directly into your `WHERE` clause in one round trip without loading ID arrays into Node.
+Import `createAccessHarness` from `@dads-framework/access/testing` to test full inheritance, cycles, groups, bans, and expiring grants synchronously in plain unit tests (`packages/access/src/testing/access-harness.test.ts`):
 
-### SQLite (Node built-in `node:sqlite`)
+<!-- dads:excerpt {"path":"packages/access/src/testing/access-harness.test.ts","language":"ts","from":"    const access = createAccessHarness(model);\n    const owner = access.actor(user, \"owner\");","through":"        [stranger, [\"deny\", \"deny\", \"deny\"]],\n      ],\n    });"} -->
 
-For local-first, edge, or single-node deployments, install [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md):
+When an assertion fails, the harness prints the exact **decision explanation tree** showing which ban, expired grant, or missing parent edge caused the mismatch.
 
-```sh
-npm install @dads-framework/access @dads-framework/sqlite-access zod
-```
+---
 
-Wrap Node's built-in `DatabaseSync` with `createNodeSqliteExecutor(db)`, apply `sqliteRelationshipSchemaMigration.sql`, instantiate `new SqliteAuthorization({ model, namespace, executor })`, and guard writes with `withProtectedSqliteTransaction({ executor, authorization }, work)` inside a `BEGIN IMMEDIATE` transaction with one pinned timestamp.
-
-## 4. Attach permission guards to HTTP routes
+## Attach permission guards to HTTP routes
 
 Export named permission tokens (such as `organization.task.can.edit`) from `domains/<feature>/access/index.ts` and attach them to routes (`domains/notes/access/index.ts`):
 
 <!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/access/index.ts","language":"ts","from":"import { fromParam, requires } from \"@dads-framework/http\";","through":"export const notesAccess = requires(notesPermission, fromParam(\"tenantId\"));"} -->
 
-Route enforcement runs in strict order:
+Every Dads HTTP route enforces access in strict order:
 
-1. Missing or invalid session returns **`401 Unauthorized`**.
-2. Missing relationship returns **`404 Not Found`** before body or query validation runs, preventing existence leaks.
-3. Only authorized requests reach Zod validation and your handler.
+1. Missing or invalid session → **`401 Unauthorized`**.
+2. Missing permission → **`404 Not Found`** before parsing the body or query (zero existence leaks).
+3. Only authorized callers reach Zod validation and your handler.
 
-## 5. Evolve models with connected `(from, to)` migrations
+---
 
-When a schema change renames or drops a stored role or reparents a child resource, use [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md) to classify changes and migrate stored relationships cleanly across PostgreSQL, SQLite, or SpiceDB:
+## Ready for advanced patterns, benchmarks & SpiceDB cutover?
 
-| Helper                                           | Purpose                                                                                                           |
-| :----------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
-| `diffAccessModels(before, after)`                | Classifies additions and computed permission edits as safe, and tuple-bearing removals or narrowings as breaking. |
-| `defineAccessMigration(id, { from, to, steps })` | Declares typed `copyRole`, `dropRole`, `copyParent`, and `dropParent` steps preserving wildcards and `expiresAt`. |
-| `runPostgresAccessMigrations(options)`           | Applies pending migrations inside per-migration Postgres transactions and records applied IDs idempotently.       |
-| `runSqliteAccessMigrations(options)`             | Applies pending migrations inside SQLite transactions and skips already-applied IDs on rerun.                     |
-| `runSpiceDbAccessMigrations(options)`            | Replays the same typed step operations against a SpiceDB migration store.                                         |
-| `assertAccessMigrationsUpToDate(options)`        | Startup check for Postgres or SQLite that throws an error naming every missing migration ID if the database lags. |
+Read the **[Permissions Cookbook & Patterns](permissions-cookbook.md)** for source-backed recipes covering:
 
-## 6. Migrate from SpiceDB to PostgreSQL (or keep `.zed` in sync)
-
-If you already operate SpiceDB, convert your `.zed` schema directly into typed Dads TypeScript:
-
-```sh
-npx @dads-framework/toolbox access import schema.zed --out src/access.ts
-```
-
-To migrate a live SpiceDB deployment into PostgreSQL without downtime:
-
-```sh
-npx dads-import-spicedb --endpoint localhost:50051 --token dev --database-url "$DATABASE_URL" --out src/access.ts --verify
-```
-
-1. **Export schema and tuples:** `dads-import-spicedb` (or `migrateSpiceDbToPostgres` from `@dads-framework/authorization-migration`) reads the live `.zed` schema, fails before touching Postgres if unsupported caveats appear, emits ergonomic Dads TypeScript, ensures the Postgres relationship table exists, and streams all tuples (`subject_relation`, wildcards, and `optional_expires_at`) in idempotent batches.
-2. **Verify decision parity:** Passing `--verify` (or calling `verifySpiceDbPostgresParity`) auto-derives positive and negative `check` and `lookupResources` queries and compares SpiceDB against PostgreSQL.
-3. **Cut over with zero downtime:** Wrap both backends in `new ShadowAuthorization({ primary: spiceDb, shadow: postgres, mode: "shadow-read", onMismatch, onShadowError })` from `@dads-framework/access/runtime`. It dual-writes relationships and compares reads while keeping SpiceDB authoritative. Once mismatches stay at zero, flip `mode` to `"primary-new"` to make PostgreSQL authoritative, then remove SpiceDB.
-
-To keep a `.zed` file generated from TypeScript instead, call `emitZed(model)` from `@dads-framework/access`. Domain files, route guards, and tests stay unchanged across PostgreSQL, SQLite, and SpiceDB.
-
-## 7. Test grants, denials, and revocations without Docker
-
-Use `@dads-framework/access/testing` (`FakeAuthorization`) for direct-grant unit tests, or pass `new DatabaseSync(":memory:")` to `SqliteAuthorization` to test full parent inheritance, nested folders, and `every(link).perm` in milliseconds. Every protected route should include at least one test verifying that a caller without a relationship receives `404`.
+- **`columnRelations` deep dive & 10M-row benchmarks** (`2.73 GB → 30 MB`, `8,274 RPS`, `EXPLAIN ANALYZE` proof)
+- **Nested folders (`recursive: true`), multi-parent DAGs, `group#member` usersets, wildcards (`user:*`), bans (`.unless()`), and `every()`**
+- **Two-way SpiceDB migration** (`npx dads-import-spicedb --verify` coming in, `migratePostgresToSpiceDb` + `columnRelationOutboxTriggerSql` going out)
+- **Connected `(from, to)` schema migrations** across Postgres, SQLite, and SpiceDB
+- **SQLite & Postgres filter parity proofs** (`createSqliteTestAuthorization`, `proveSqliteFilterParity`, `provePostgresFilterParity`) and our **27 Lean 4 formal proofs**
 
 ## Related references
 
-- [SDK Glossary & Options](sdk-reference.md) for every DSL helper, combinator, adapter option, migration helper, and CLI command
-- [`@dads-framework/access`](../../../packages/access/README.md) for `actor`, `resource`, `compileAccess`, `formatAccessTree`, `createAccessClient`, `ShadowAuthorization`, and `.zed` conversion
-- [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) for plain `pg.Pool` and Drizzle setup, expiring tuples, recursive/polymorphic arrows, `lookupSubjects`, and benchmarks
-- [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md) for local, edge, and in-memory SQLite deployments with `BEGIN IMMEDIATE` protected transactions
-- [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md) for `(from, to)` access migrations and SpiceDB to PostgreSQL cutover
-- [ADR 0001: Transactional PostgreSQL ReBAC](../../decisions/0001-transactional-postgres-rebac.md) and [ADR 0006: Permission-Aware Offline Sync](../../decisions/0006-permission-aware-offline-sync.md)
+- [Permissions Cookbook & Patterns](permissions-cookbook.md)
+- [SDK Glossary & Options](sdk-reference.md)
+- [`@dads-framework/access`](../../../packages/access/README.md)
+- [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) & [10M-Row Benchmark Report](../../../packages/server/postgres-access/BENCHMARK.md)
+- [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)
+- [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md)
+- [Formal Verification (`formal/access-proofs`)](../../../formal/access-proofs/README.md)

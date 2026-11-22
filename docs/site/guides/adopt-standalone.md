@@ -11,12 +11,12 @@ npm install @dads-framework/access @dads-framework/postgres-access pg zod
 ```
 
 1. Declare your actors, resources, `children`, and explicit `inherit` rules in TypeScript with `actor`, `resource`, and `compileAccess`.
-2. Apply `relationshipSchemaMigration.sql` through your existing migration runner.
-3. Instantiate `PostgresAuthorization` with your `pg.Pool`, wrap it with `createAccessClient(authorization)` for typed `add`, `remove`, `can`, `list`, and `whoCan` calls, and guard writes inside `withProtectedPgTransaction({ pool, authorization }, work)`.
+2. Apply `relationshipSchemaMigration.sql` through your existing migration runner, and optionally pass `columnRelations` (plus `columnRelationIndexSql(bindings)`) to read existing foreign keys like `documents.org_id` or `documents.owner_id` directly with zero dual-writes.
+3. Instantiate `PostgresAuthorization` with `executor: preparePostgresChecks(pool)` and call `await authorization.verifyColumnRelations()` at startup. Use `createAccessClient(authorization)` for typed grants/checks, `resolveFilter({ ..., scopeColumns: "auto" })` for 10M-row paginated SQL lists, and `withProtectedPgTransaction({ pool, authorization, retries: 3 }, work)` for serializable writes with automatic `40001` retries.
 
 If your app already uses Drizzle, import `withProtectedDrizzleTransaction` and `transactionExecutor` from `@dads-framework/postgres-access/drizzle`.
 
-See [Access & Permissions](permissions.md) for the complete walkthrough, [SDK Glossary & Options](sdk-reference.md) for every combinator and adapter option, or the [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) package page for a standalone runnable script.
+See [Access & Permissions](permissions.md) for the 5-minute quickstart, [Permissions Cookbook & Patterns](permissions-cookbook.md) for `columnRelations`, 10M-row filtering, testing, and two-way SpiceDB cutover, or [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) for a standalone runnable script.
 
 ## 2. Add standalone SQLite ReBAC (Node built-in `node:sqlite`)
 
@@ -30,19 +30,25 @@ npm install @dads-framework/access @dads-framework/sqlite-access zod
 2. Wrap Node's built-in `DatabaseSync` with `createNodeSqliteExecutor(db)` and execute `sqliteRelationshipSchemaMigration.sql`.
 3. Create `new SqliteAuthorization({ model, namespace, executor })`, wrap it with `createAccessClient`, and guard writes with `withProtectedSqliteTransaction`.
 
-## 3. Migrate a live SpiceDB database into PostgreSQL
+## 3. Migrate between SpiceDB and PostgreSQL (both directions)
 
-If your team already operates SpiceDB and wants to move permission storage into your existing PostgreSQL database without downtime, install `@dads-framework/authorization-migration` alongside `@dads-framework/postgres-access`:
+If your team already operates SpiceDB and wants to move permission storage into your existing PostgreSQL database without downtime — or starts in PostgreSQL and later wants to move out to SpiceDB — install `@dads-framework/authorization-migration` alongside `@dads-framework/postgres-access`:
 
 ```sh
 npm install @dads-framework/access @dads-framework/postgres-access @dads-framework/authorization-migration pg zod
 ```
 
-Follow a three-step cutover:
+**SpiceDB → PostgreSQL (zero downtime):**
 
-1. **Import your schema and backfill tuples:** Call `migrateSpiceDbToPostgres({ spiceDb, postgres: pool, namespace })`. It reads your live SpiceDB `.zed` schema, checks for unsupported caveats before touching Postgres, returns generated Dads TypeScript (`generatedTypeScript`), creates the Postgres relationship table if needed, and streams every tuple (including `subject_relation`, wildcards, and `optional_expires_at`) in idempotent batches.
+1. **Import your schema and backfill tuples:** Run `npx dads-import-spicedb --verify` (or call `migrateSpiceDbToPostgres({ spiceDb, postgres: pool, namespace })`). It reads your live SpiceDB `.zed` schema, checks for unsupported caveats before touching Postgres, returns generated Dads TypeScript (`generatedTypeScript`), creates the Postgres relationship table if needed, and streams every tuple (including `subject_relation`, wildcards, and `optional_expires_at`) in idempotent batches.
 2. **Verify decision parity:** Call `verifySpiceDbPostgresParity({ spiceDb, postgres, definitions, tuples })` to auto-derive positive and negative `check` and `lookupResources` queries and confirm PostgreSQL matches SpiceDB.
 3. **Dual-write and shadow-read in production:** Wrap both backends in `new ShadowAuthorization({ primary: spiceDb, shadow: postgres, mode: "shadow-read", onMismatch, onShadowError })` from `@dads-framework/access/runtime`. Once shadow reads report zero mismatches, switch `mode` to `"primary-new"` so PostgreSQL serves authoritative reads while keeping SpiceDB warm as a fallback, then retire SpiceDB.
+
+**PostgreSQL (including `columnRelations`) → SpiceDB (painless exit ramp):**
+
+1. Apply `columnRelationOutboxTriggerSql(model, bindings).up` so future `INSERT`/`UPDATE`/`DELETE` writes to column-backed tables automatically feed `authorization_outbox` with zero app-code rewrites.
+2. Call `migratePostgresToSpiceDb({ model, postgres: pool, spiceDb, namespace, columnRelations: bindings })` to emit/write `.zed` and stream both `dad_authorization_relationship` and every non-`NULL` `columnRelations` row into SpiceDB in idempotent `TOUCH` batches.
+3. Verify 0 mismatches with `verifySpiceDbPostgresParity` and cut over.
 
 If you want to keep SpiceDB and only replace hand-written `.zed` files with typed TypeScript, install `@dads-framework/access` alone and convert your schema with the CLI:
 

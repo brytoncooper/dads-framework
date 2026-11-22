@@ -123,48 +123,58 @@ PostgreSQL, SQLite, SpiceDB, `ShadowAuthorization`, and test fakes all implement
 
 Drizzle is optional. Use the root entry point with plain `pg.Pool`, or import Drizzle helpers from `@dads-framework/postgres-access/drizzle`:
 
-| Export                                            | Entry point                               | Options & usage                                                                                                                                                                                             |
-| :------------------------------------------------ | :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `new PostgresAuthorization(options)`              | `@dads-framework/postgres-access`         | `{ model, namespace, executor, queryTimeoutMs?, reuseLookupResultsOn? }`. Accepts a plain `pg.Pool` or prepared check executor.                                                                             |
-| `authorization.compileFilter(query)`              | `@dads-framework/postgres-access`         | `{ subject, permission, resourceType, idColumn, paramOffset? }`. Compiles an inline SQL `EXISTS` / recursive `IN` filter (`{ sql, values }`) for single-query paginated `SELECT ... WHERE ... LIMIT` lists. |
-| `withProtectedPgTransaction(options, work)`       | `@dads-framework/postgres-access`         | `{ pool, authorization }`. Runs `BEGIN ISOLATION LEVEL SERIALIZABLE` on a plain `pg.Pool`, passes `{ client, authorization }`, and maps `40001` to `PostgresSerializationConflict`.                         |
-| `withProtectedPostgresTransaction(options, work)` | `@dads-framework/postgres-access`         | Alias for `withProtectedPgTransaction` (`{ pool, authorization }`, zero Drizzle dependency).                                                                                                                |
-| `preparePostgresChecks(pool)`                     | `@dads-framework/postgres-access`         | Optional prepared-statement wrapper for point checks on a direct `pg.Pool`.                                                                                                                                 |
-| `relationshipSchemaMigration`                     | `@dads-framework/postgres-access`         | Base SQL migration creating `dad_authorization_relationship` (with `expires_at` and indexes).                                                                                                               |
-| `relationshipExpirationMigration`                 | `@dads-framework/postgres-access`         | Additive v2 SQL migration adding `expires_at` to older v1 tables.                                                                                                                                           |
-| `lookupRevisionSchemaMigration`                   | `@dads-framework/postgres-access`         | Optional SQL migration for revision-validated lookup reuse (`reuseLookupResultsOn`).                                                                                                                        |
-| `withProtectedDrizzleTransaction(options, work)`  | `@dads-framework/postgres-access/drizzle` | `{ database, authorization }` or `{ transaction, authorization }`. Re-checks permissions and runs Drizzle writes in one serializable transaction.                                                           |
-| `transactionExecutor(tx)`                         | `@dads-framework/postgres-access/drizzle` | Adapts a Drizzle transaction handle into a `PostgresAccessExecutor`.                                                                                                                                        |
+| Export                                            | Entry point                               | Options & usage                                                                                                                                                                                       |
+| :------------------------------------------------ | :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `new PostgresAuthorization(options)`              | `@dads-framework/postgres-access`         | `{ model, namespace, executor, columnRelations?, queryTimeoutMs?, reuseLookupResultsOn? }`. Accepts a plain `pg.Pool` or `preparePostgresChecks(pool)`.                                               |
+| `authorization.verifyColumnRelations()`           | `@dads-framework/postgres-access`         | Checks live PostgreSQL `information_schema.columns` and `pg_indexes` for every `columnRelations` binding; throws if a column is missing.                                                              |
+| `columnRelationIndexSql(bindings)`                | `@dads-framework/postgres-access`         | Generates `CREATE INDEX IF NOT EXISTS` DDL for `(targetIdColumn, idColumn)` reverse lookups on every column-backed table.                                                                             |
+| `authorization.compileFilter(query)`              | `@dads-framework/postgres-access`         | `{ subject, permission, resourceType, idColumn, scopeColumns?: Record<string, string> \| "auto", paramOffset? }`. Compiles a single-query SQL `WHERE` predicate (`{ sql, values }`).                  |
+| `authorization.resolveFilter(query)`              | `@dads-framework/postgres-access`         | Executes one tagged reverse-index probe and prunes empty `scopeColumns` branches to minimal `= ANY($N::text[])` predicates (0.39–1.88 ms on 10M rows). Supports `scopeColumns: "auto"`.               |
+| `withProtectedPgTransaction(options, work)`       | `@dads-framework/postgres-access`         | `{ pool, authorization, retries?, retryBaseDelayMs? }`. Runs `BEGIN ISOLATION LEVEL SERIALIZABLE` on a plain `pg.Pool`, automatically retrying `40001` conflicts up to `retries` times (default `0`). |
+| `withProtectedPostgresTransaction(options, work)` | `@dads-framework/postgres-access`         | Alias for `withProtectedPgTransaction` (`{ pool, authorization }`, zero Drizzle dependency).                                                                                                          |
+| `preparePostgresChecks(pool)`                     | `@dads-framework/postgres-access`         | Optional prepared-statement wrapper for point checks on a direct `pg.Pool`.                                                                                                                           |
+| `relationshipSchemaMigration`                     | `@dads-framework/postgres-access`         | Base SQL migration creating `dad_authorization_relationship` (with `expires_at` and indexes).                                                                                                         |
+| `relationshipExpirationMigration`                 | `@dads-framework/postgres-access`         | Additive v2 SQL migration adding `expires_at` to older v1 tables.                                                                                                                                     |
+| `lookupRevisionSchemaMigration`                   | `@dads-framework/postgres-access`         | Optional SQL migration for revision-validated lookup reuse (`reuseLookupResultsOn`).                                                                                                                  |
+| `withProtectedDrizzleTransaction(options, work)`  | `@dads-framework/postgres-access/drizzle` | `{ database, authorization }` or `{ transaction, authorization }`. Re-checks permissions and runs Drizzle writes in one serializable transaction.                                                     |
+| `transactionExecutor(tx)`                         | `@dads-framework/postgres-access/drizzle` | Adapts a Drizzle transaction handle into a `PostgresAccessExecutor`.                                                                                                                                  |
 
 ### SQLite (`@dads-framework/sqlite-access`)
 
-| Export                                          | Options & usage                                                                                                                                                                              |
-| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createNodeSqliteExecutor(db)`                  | Wraps Node's built-in `node:sqlite` `DatabaseSync` with zero native addons.                                                                                                                  |
-| `sqliteRelationshipSchemaMigration`             | SQL migration creating `dad_authorization_relationship` (with `expires_at` built in).                                                                                                        |
-| `new SqliteAuthorization(options)`              | `{ model, namespace, executor, now? }`. Full parity with PostgreSQL (`expiresAt`, recursive/polymorphic arrows, `every()`, `lookupSubjects`).                                                |
-| `authorization.compileFilter(query)`            | `{ subject, permission, resourceType, idColumn, now? }`. Compiles an inline SQLite `EXISTS` / recursive `IN` filter (`{ sql, values }`) for single-query paginated `SELECT ... WHERE` lists. |
-| `withProtectedSqliteTransaction(options, work)` | `{ executor, authorization, now? }`. Runs checks and writes inside `BEGIN IMMEDIATE` with one pinned clock timestamp.                                                                        |
+| Export                                          | Options & usage                                                                                                                                                                    |
+| :---------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createNodeSqliteExecutor(db)`                  | Wraps Node's built-in `node:sqlite` `DatabaseSync` with zero native addons.                                                                                                        |
+| `sqliteRelationshipSchemaMigration`             | SQL migration creating `dad_authorization_relationship` (with `expires_at` built in).                                                                                              |
+| `new SqliteAuthorization(options)`              | `{ model, namespace, executor, columnRelations?, now? }`. Full parity with PostgreSQL (`columnRelations`, `expiresAt`, recursive/polymorphic arrows, `every()`, `lookupSubjects`). |
+| `authorization.verifyColumnRelations()`         | Verifies live SQLite `PRAGMA table_info` columns and reports leading target index status for every `columnRelations` binding.                                                      |
+| `sqliteColumnRelationIndexSql(bindings)`        | Generates `CREATE INDEX IF NOT EXISTS` DDL for `(targetIdColumn, idColumn)` reverse lookups on SQLite column-backed tables.                                                        |
+| `authorization.compileFilter(query)`            | `{ subject, permission, resourceType, idColumn, scopeColumns?: Record<string, string> \| "auto", now? }`. Compiles a single-query SQLite `WHERE` filter (`{ sql, values }`).       |
+| `withProtectedSqliteTransaction(options, work)` | `{ executor, authorization, now? }`. Runs checks and writes inside `BEGIN IMMEDIATE` with one pinned clock timestamp.                                                              |
 
 ### Migrations & SpiceDB cutover (`@dads-framework/authorization-migration`)
 
-| Export                                           | Options & usage                                                                                                                                         |
-| :----------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `diffAccessModels(before, after)`                | Returns `{ safe, breaking, permissionChanges, requiresMigration, summary }` classifying every schema change between two compiled models.                |
-| `defineAccessMigration(id, { from, to, steps })` | Compiles typed `copyRole`, `dropRole`, `copyParent`, and `dropParent` steps into portable data ops runnable on PostgreSQL, SQLite, or SpiceDB.          |
-| `runPostgresAccessMigrations(options)`           | `{ executor, namespace, migrations, relationshipTable?, migrationsTable? }`. Applies pending migrations in Postgres transactions and skips applied IDs. |
-| `runSqliteAccessMigrations(options)`             | `{ executor, namespace, migrations, relationshipTable?, migrationsTable? }`. Applies pending migrations in SQLite transactions idempotently.            |
-| `runSpiceDbAccessMigrations(options)`            | Replays `(from, to)` migration step ops against a SpiceDB migration store.                                                                              |
-| `assertAccessMigrationsUpToDate(options)`        | `{ dialect: "postgres" \| "sqlite", executor, namespace, migrations }`. Fails startup with missing migration IDs if the database is behind.             |
-| `migrateSpiceDbToPostgres(options)`              | `{ spiceDb, postgres, namespace, batchSize?, exportPageSize? }`. Reads live `.zed`, emits TypeScript, ensures Postgres DDL, and streams all tuples.     |
-| `verifySpiceDbPostgresParity(options)`           | `{ spiceDb, postgres, definitions?, tuples?, checkQueries?, lookupQueries? }`. Compares `check` and `lookupResources` parity across both engines.       |
+| Export                                            | Options & usage                                                                                                                                                               |
+| :------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `diffAccessModels(before, after)`                 | Returns `{ safe, breaking, permissionChanges, requiresMigration, summary }` classifying every schema change between two compiled models.                                      |
+| `defineAccessMigration(id, { from, to, steps })`  | Compiles typed `copyRole`, `dropRole`, `copyParent`, and `dropParent` steps into portable data ops runnable on PostgreSQL, SQLite, or SpiceDB.                                |
+| `runPostgresAccessMigrations(options)`            | `{ executor, namespace, migrations, relationshipTable?, migrationsTable? }`. Applies pending migrations in Postgres transactions and skips applied IDs.                       |
+| `runSqliteAccessMigrations(options)`              | `{ executor, namespace, migrations, relationshipTable?, migrationsTable? }`. Applies pending migrations in SQLite transactions idempotently.                                  |
+| `runSpiceDbAccessMigrations(options)`             | Replays `(from, to)` migration step ops against a SpiceDB migration store.                                                                                                    |
+| `assertAccessMigrationsUpToDate(options)`         | `{ dialect: "postgres" \| "sqlite", executor, namespace, migrations }`. Fails startup with missing migration IDs if the database is behind.                                   |
+| `migrateSpiceDbToPostgres(options)`               | `{ spiceDb, postgres, namespace, batchSize?, exportPageSize? }`. Reads live `.zed`, emits TypeScript, ensures Postgres DDL, and streams all tuples.                           |
+| `migratePostgresToSpiceDb(options)`               | `{ model, postgres, spiceDb, namespace, columnRelations?, batchSize?, pageSize? }`. Writes `.zed` and streams tuple table + `columnRelations` into SpiceDB `TOUCH` writes.    |
+| `columnRelationOutboxTriggerSql(model, bindings)` | Generates `{ up, down }` Postgres trigger DDL so future `INSERT`/`UPDATE`/`DELETE` writes on `columnRelations` tables enqueue rows into `authorization_outbox` automatically. |
+| `verifySpiceDbPostgresParity(options)`            | `{ spiceDb, postgres, definitions?, tuples?, checkQueries?, lookupQueries? }`. Compares `check` and `lookupResources` parity across both engines.                             |
 
-### Unit testing (`@dads-framework/access/testing`)
+### Unit & parity testing (`@dads-framework/access/testing`, `sqlite-access/testing`, `postgres-access/testing`)
 
-| Option                                          | When to use                                                                                                                        |
-| :---------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
-| `new FakeAuthorization(permissions?, { now? })` | In-memory map for testing direct grants, denials, and expiry via `seed(...)`. Does not walk parent arrows.                         |
-| `SqliteAuthorization` on `":memory:"`           | Pass `new DatabaseSync(":memory:")` to test full parent inheritance, nested folders, and `every()` in milliseconds without Docker. |
+| Option                                                  | When to use                                                                                                                                    |
+| :------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createAccessHarness(model)`                            | Zero-`await`, Lean-4-verified pure-TS test harness (`grant`, `revoke`, `advanceTime`, `assertCan`, `assertCannot`, `assertMatrix`, `explain`). |
+| `new InMemoryAuthorization(model, { clock? })`          | Full Zanzibar-semantics pure-TS `Authorization` engine for unit tests with deterministic `ControllableClock`.                                  |
+| `proveAccess` / `proveWorld` / `defineAccessScenario`   | Write one portable scenario and replay it across in-memory, SQLite, Postgres, or SpiceDB in a single `await`.                                  |
+| `createSqliteTestAuthorization(model)`                  | Disposable `:memory:` SQLite database with schema, indexes, and `ControllableClock` (`using env = createSqliteTestAuthorization(model)`).      |
+| `proveSqliteFilterParity` / `provePostgresFilterParity` | Proves `compileFilter` and `resolveFilter` (with or without `scopeColumns`) return the exact same rows as `lookupResources` for every subject. |
 
 ## HTTP routes & contracts
 
@@ -240,6 +250,7 @@ npx dad doctor --gate
 ## Related guides
 
 - [Access & Permissions](permissions.md)
+- [Permissions Cookbook & Patterns](permissions-cookbook.md)
 - [Routes, Contracts & Clients](routes-and-contracts.md)
 - [Multi-API Composition & CI Gates](boundaries-and-apis.md)
 - [Adopt One Package at a Time](adopt-standalone.md)

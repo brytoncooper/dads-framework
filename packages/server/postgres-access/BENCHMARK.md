@@ -1,8 +1,47 @@
-# Experimental authorization benchmark
+# PostgreSQL authorization benchmark
 
-Measure the operation your application depends on. Point checks, fresh
-resource discovery, revision-validated lookup reuse, and protected
-transactions have different costs.
+Measure the operation your application depends on. Point checks, paginated
+10M-row filtered lists (`resolveFilter` / `compileFilter`), column-backed
+foreign-key relations (`columnRelations`), and concurrent mixed reads + writes
+all have distinct cost profiles.
+
+## 10,000,000-row PostgreSQL scale: Tuples-only vs `columnRelations`
+
+Measured on live Docker PostgreSQL 16 (single container, local TCP, Node 24)
+with **10,000,000 documents** across **10,000 organizations**, 100,000 direct
+viewer grants, 10,000 explicit bans, a **depth-100 recursive folder chain**, and
+a broad admin holding 1,000 orgs (**1,000,000 visible documents = 10% of the
+table**). Both runs used `preparePostgresChecks(pool)` and
+`resolveFilter({ ..., scopeColumns: "auto" })` on `ORDER BY updated_at DESC, id DESC LIMIT 50`.
+
+### Storage & throughput comparison (10M documents)
+
+| Metric                                      | Tuples-only (`dad_authorization_relationship`) | With `columnRelations` (`org_id`, `owner_id`, `parent_id`) |              Delta |
+| :------------------------------------------ | ---------------------------------------------: | ---------------------------------------------------------: | -----------------: |
+| `dad_authorization_relationship` rows       |                                     10,111,000 |                                                **111,027** | **91× fewer rows** |
+| `dad_authorization_relationship` total size |                                        2.73 GB |                                                  **30 MB** |    **91× smaller** |
+| 16-worker concurrent point checks (5 s)     |                           6,432 RPS (0 errors) |                      **8,274 RPS** (0 errors, 1.75 ms p50) |    **+29% faster** |
+| 16-worker mixed reads + live writes (5 s)   |                         4,603 ops/s (0 errors) |      **6,802 ops/s** (0 errors, 835 live `UPDATE` flips/s) |    **+48% faster** |
+
+### Single-operation latency on 10,000,000 rows (`columnRelations` enabled)
+
+| Operation                                            | p50 (ms) | p95 (ms) | p99 (ms) | Query plan (`EXPLAIN ANALYZE`)                 |
+| :--------------------------------------------------- | -------: | -------: | -------: | :--------------------------------------------- |
+| Point check: column-backed `owner_id` (allow)        | **0.57** |     0.67 |     0.68 | Index scan on PK                               |
+| Point check: column-backed `org_id` (allow)          | **0.53** |     0.58 |     0.59 | Index scan on PK + tuple PK                    |
+| Point check: outsider (deny)                         | **0.50** |     0.58 |     0.58 | Index scan on PK                               |
+| Point check: depth-100 recursive `folders.parent_id` | **0.62** |     0.83 |     0.85 | Recursive PK index walk                        |
+| `LIMIT 50` list: outsider (0 / 10M docs)             | **0.39** |     0.44 |     0.44 | Branch-pruned `FALSE`                          |
+| `LIMIT 50` list: `org_member` (1,000 / 10M docs)     | **0.62** |     0.72 |     0.72 | `Index Only Scan` (`Heap Fetches: 0`, 0.12 ms) |
+| `LIMIT 50` list: `super_sparse` (20 direct / 10M)    | **0.63** |     0.76 |     0.76 | `Index Scan` on PK                             |
+| `LIMIT 50` list: `owner_user` (20 owned / 10M)       | **0.77** |     0.98 |     0.98 | `Index Scan` on PK (0.09 ms)                   |
+| `LIMIT 50` list: `broad_admin` (1M / 10M docs)       | **1.88** |     2.09 |     2.09 | `Index Only Scan` (0.53 ms, 115 buffer hits)   |
+
+Every single 10M-row list query executed with **zero sequential scans**.
+
+---
+
+## Matched point checks against SpiceDB
 
 These are Linux development VM measurements with both engines accessed
 locally. The SpiceDB comparison used the fully consistent in-memory
@@ -10,8 +49,6 @@ datastore. The figures apply to the listed fixtures and configurations.
 They do not set a production latency target or compare persistent
 SpiceDB deployments. The benchmarks do not include HTTP, application
 writes, or serializable transaction overhead.
-
-## Matched point checks against SpiceDB
 
 ```sh
 CONTAINER_PER_FILE=1 npm run benchmark -w @dads-framework/postgres-access -- src/point-check-comparison.benchmark.test.ts

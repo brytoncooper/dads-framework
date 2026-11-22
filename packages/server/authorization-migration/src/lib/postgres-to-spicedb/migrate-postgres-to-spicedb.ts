@@ -7,6 +7,7 @@ import {
 
 import {
   assertNamespace,
+  assertPositiveInt,
   assertSqlIdentifier,
   DEFAULT_RELATIONSHIP_TABLE,
   type PgMigrationClient,
@@ -311,11 +312,4 @@ function readOptionalDate(value: unknown): Date | undefined {
     if (!Number.isNaN(parsed.getTime())) return parsed;
   }
   throw new Error("Invalid expires_at timestamp read from Postgres");
-}
-
-function assertPositiveInt(value: number, name: string): number {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`${name} must be a positive integer, got ${value}`);
-  }
-  return value;
 }

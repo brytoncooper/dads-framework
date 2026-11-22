@@ -31,6 +31,14 @@
       "navigationGroup": "Build a feature"
     },
     {
+      "slug": "permissions-cookbook",
+      "title": "Permissions Cookbook & Patterns",
+      "owner": "@dads-framework/postgres-access",
+      "section": "Guides",
+      "path": "docs/site/guides/permissions-cookbook.md",
+      "navigationGroup": "Build a feature"
+    },
+    {
       "slug": "routes-and-contracts",
       "title": "Routes, Contracts & Clients",
       "owner": "@dads-framework/http",

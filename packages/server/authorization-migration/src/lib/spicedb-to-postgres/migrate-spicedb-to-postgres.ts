@@ -6,6 +6,7 @@ import {
 
 import {
   assertNamespace,
+  assertPositiveInt,
   assertSqlIdentifier,
   DEFAULT_RELATIONSHIP_TABLE,
   type PgMigrationClient,
@@ -228,11 +229,4 @@ function deduplicateTuples(
     byKey.set(key, tuple);
   }
   return [...byKey.values()];
-}
-
-function assertPositiveInt(value: number, name: string): number {
-  if (!Number.isInteger(value) || value < 1) {
-    throw new Error(`${name} must be a positive integer, got ${value}`);
-  }
-  return value;
 }

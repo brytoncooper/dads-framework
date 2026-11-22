@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 548" width="840" height="548" role="img" aria-labelledby="multi-api-title multi-api-desc">
+  <title id="multi-api-title">Multi-API Composition from Shared Domains and Services</title>
+  <desc id="multi-api-desc">Shared domains (tenants, notes, audit) and shared services (PostgreSQL, Auth, Access) feed through composeApi into two isolated API entrypoints: Customer API in apps/customer/app.ts mounts tenants, notes, and attachmentWorker and serves GET /api/tenants/:id/notes with 200; Staff API in apps/staff/app.ts mounts tenants and auditExport, omits notes and background jobs, and returns 404 for GET /api/tenants/:id/notes.</desc>
+  <defs>
+    <marker id="arrow-mint" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#8ee3c5" />
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 8.5 5 L 1 8.5 z" fill="#9ecffa" />
+    </marker>
+  </defs>
+
+  <style>
+    .title { font: 600 16px/1.2 "Instrument Sans", system-ui, -apple-system, sans-serif; fill: #edf1f2; }
+    .panel-title { font: 600 15px/1.2 "Instrument Sans", system-ui, -apple-system, sans-serif; fill: #edf1f2; }
+    .subtitle { font: 400 11.5px/1.2 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #afb9bf; }
+    .card-title { font: 600 13px/1.2 "Instrument Sans", system-ui, -apple-system, sans-serif; fill: #edf1f2; }
+    .card-sub { font: 400 11px/1.3 "Instrument Sans", system-ui, -apple-system, sans-serif; fill: #afb9bf; }
+    .mono-sub { font: 400 10.5px/1.35 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #afb9bf; }
+    .eyebrow-mint { font: 600 10px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #8ee3c5; letter-spacing: 0.05em; }
+    .eyebrow-blue { font: 600 10px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #9ecffa; letter-spacing: 0.05em; }
+    .section-label { font: 600 10.5px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #afb9bf; }
+    .bus-code { font: 500 12px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #8ee3c5; }
+    .pill-mint { font: 500 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #8ee3c5; }
+    .pill-blue { font: 500 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #9ecffa; }
+    .pill-muted { font: 500 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #afb9bf; }
+    .pill-ink { font: 500 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #cdd5d9; }
+    .pill-coral { font: 600 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; fill: #f5a6ae; }
+  </style>
+
+  <!-- Canvas -->
+  <rect x="0" y="0" width="840" height="548" rx="14" fill="#0e1114" />
+
+  <!-- Header -->
+  <text x="24" y="38" class="title">Multi-API Composition</text>
+  <text x="816" y="38" text-anchor="end" class="subtitle">@dads-framework/plugin · build-time surface isolation</text>
+
+  <!-- TOP LEFT: Shared domains/ -->
+  <rect x="20" y="56" width="444" height="136" rx="12" fill="#12171b" stroke="#333c42" stroke-width="1" />
+  <text x="38" y="79" class="eyebrow-mint">SHARED DOMAINS</text>
+  <text x="446" y="79" text-anchor="end" class="subtitle">domains/</text>
+
+  <!-- Domain 1: tenants -->
+  <rect x="38" y="94" width="128" height="82" rx="8" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="50" y="116" class="card-title">tenants</text>
+  <text x="50" y="138" class="mono-sub">tenantsPlugin</text>
+  <text x="50" y="156" class="mono-sub">permissions</text>
+
+  <!-- Domain 2: notes -->
+  <rect x="178" y="94" width="128" height="82" rx="8" fill="#171d21" stroke="#4b7d6c" stroke-width="1" />
+  <text x="190" y="116" class="card-title">notes</text>
+  <text x="190" y="138" class="mono-sub" style="fill: #8ee3c5;">notesPlugin</text>
+  <text x="190" y="156" class="mono-sub" style="fill: #8ee3c5;">attachmentWorker</text>
+
+  <!-- Domain 3: audit -->
+  <rect x="318" y="94" width="128" height="82" rx="8" fill="#171d21" stroke="#3e5f7a" stroke-width="1" />
+  <text x="330" y="116" class="card-title">audit</text>
+  <text x="330" y="138" class="mono-sub" style="fill: #9ecffa;">auditExport</text>
+  <text x="330" y="156" class="mono-sub">audit records</text>
+
+  <!-- TOP RIGHT: Shared services -->
+  <rect x="484" y="56" width="336" height="136" rx="12" fill="#12171b" stroke="#333c42" stroke-width="1" />
+  <text x="502" y="79" class="eyebrow-blue">SHARED SERVICES</text>
+  <text x="802" y="79" text-anchor="end" class="subtitle">assembly/services.ts</text>
+
+  <!-- Service 1: PostgreSQL -->
+  <rect x="502" y="94" width="94" height="82" rx="8" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="549" y="124" text-anchor="middle" class="card-title">PostgreSQL</text>
+  <text x="549" y="144" text-anchor="middle" class="card-sub">DB pool</text>
+  <text x="549" y="160" text-anchor="middle" class="card-sub">&amp; Drizzle</text>
+
+  <!-- Service 2: Auth -->
+  <rect x="606" y="94" width="94" height="82" rx="8" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="653" y="124" text-anchor="middle" class="card-title">Auth</text>
+  <text x="653" y="144" text-anchor="middle" class="card-sub">Sessions</text>
+  <text x="653" y="160" text-anchor="middle" class="card-sub">&amp; tokens</text>
+
+  <!-- Service 3: Access -->
+  <rect x="710" y="94" width="94" height="82" rx="8" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="757" y="124" text-anchor="middle" class="card-title">Access</text>
+  <text x="757" y="144" text-anchor="middle" class="card-sub">ReBAC</text>
+  <text x="757" y="160" text-anchor="middle" class="card-sub">model</text>
+
+  <!-- Connectors INTO composeApi Bus -->
+  <line x1="242" y1="192" x2="242" y2="218" stroke="#8ee3c5" stroke-width="1.75" marker-end="url(#arrow-mint)" />
+  <line x1="652" y1="192" x2="652" y2="218" stroke="#9ecffa" stroke-width="1.75" marker-end="url(#arrow-blue)" />
+
+  <!-- MIDDLE BUS: composeApi -->
+  <rect x="20" y="222" width="800" height="36" rx="8" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="420" y="244" text-anchor="middle" class="bus-code">composeApi(name, { services, routes, jobs })</text>
+
+  <!-- Connectors OUT OF composeApi Bus -->
+  <line x1="214" y1="258" x2="214" y2="284" stroke="#8ee3c5" stroke-width="1.75" marker-end="url(#arrow-mint)" />
+  <line x1="626" y1="258" x2="626" y2="284" stroke="#9ecffa" stroke-width="1.75" marker-end="url(#arrow-blue)" />
+
+  <!-- BOTTOM LEFT: Customer API -->
+  <rect x="20" y="288" width="388" height="240" rx="12" fill="#12171b" stroke="#4b7d6c" stroke-width="1.5" />
+
+  <text x="38" y="318" class="panel-title">Customer API</text>
+  <rect x="218" y="300" width="172" height="24" rx="5" fill="#1c3430" stroke="#4b7d6c" stroke-width="1" />
+  <text x="304" y="316" text-anchor="middle" class="pill-mint">apps/customer/app.ts</text>
+
+  <line x1="38" y1="336" x2="390" y2="336" stroke="#232b30" stroke-width="1" />
+
+  <!-- Customer services -->
+  <text x="38" y="357" class="section-label">services:</text>
+  <text x="112" y="357" class="pill-ink">PostgreSQL · Auth · Access</text>
+
+  <!-- Customer routes -->
+  <text x="38" y="384" class="section-label">routes:</text>
+  <rect x="112" y="368" width="76" height="24" rx="5" fill="#1c3430" stroke="#4b7d6c" stroke-width="1" />
+  <text x="150" y="384" text-anchor="middle" class="pill-mint">tenants</text>
+
+  <rect x="196" y="368" width="68" height="24" rx="5" fill="#1c3430" stroke="#4b7d6c" stroke-width="1" />
+  <text x="230" y="384" text-anchor="middle" class="pill-mint">notes</text>
+
+  <rect x="272" y="368" width="104" height="24" rx="5" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="324" y="384" text-anchor="middle" class="pill-ink">permissions</text>
+
+  <!-- Customer jobs -->
+  <text x="38" y="424" class="section-label">jobs:</text>
+  <rect x="112" y="408" width="146" height="24" rx="5" fill="#1c3430" stroke="#4b7d6c" stroke-width="1" />
+  <text x="185" y="424" text-anchor="middle" class="pill-mint">attachmentWorker</text>
+
+  <!-- Customer route proof strip -->
+  <rect x="38" y="454" width="352" height="54" rx="8" fill="#171d21" stroke="#4b7d6c" stroke-width="1" />
+  <text x="52" y="476" class="pill-ink">GET /api/tenants/:id/notes</text>
+  <text x="52" y="495" class="card-sub">Mounted in Customer API surface</text>
+  <rect x="314" y="469" width="62" height="24" rx="5" fill="#1c3430" stroke="#4b7d6c" stroke-width="1" />
+  <text x="345" y="485" text-anchor="middle" class="pill-mint">200 OK</text>
+
+  <!-- BOTTOM RIGHT: Staff API -->
+  <rect x="432" y="288" width="388" height="240" rx="12" fill="#12171b" stroke="#3e5f7a" stroke-width="1.5" />
+
+  <text x="450" y="318" class="panel-title">Staff API</text>
+  <rect x="654" y="300" width="148" height="24" rx="5" fill="#17232e" stroke="#3e5f7a" stroke-width="1" />
+  <text x="728" y="316" text-anchor="middle" class="pill-blue">apps/staff/app.ts</text>
+
+  <line x1="450" y1="336" x2="802" y2="336" stroke="#232b30" stroke-width="1" />
+
+  <!-- Staff services -->
+  <text x="450" y="357" class="section-label">services:</text>
+  <text x="524" y="357" class="pill-ink">PostgreSQL · Auth · Access</text>
+
+  <!-- Staff routes -->
+  <text x="450" y="384" class="section-label">routes:</text>
+  <rect x="524" y="368" width="76" height="24" rx="5" fill="#17232e" stroke="#3e5f7a" stroke-width="1" />
+  <text x="562" y="384" text-anchor="middle" class="pill-blue">tenants</text>
+
+  <rect x="608" y="368" width="102" height="24" rx="5" fill="#17232e" stroke="#3e5f7a" stroke-width="1" />
+  <text x="659" y="384" text-anchor="middle" class="pill-blue">auditExport</text>
+
+  <rect x="718" y="368" width="84" height="24" rx="5" fill="#12171b" stroke="#5a6970" stroke-width="1" stroke-dasharray="3 3" />
+  <text x="760" y="384" text-anchor="middle" class="pill-muted">no notes</text>
+
+  <!-- Staff jobs -->
+  <text x="450" y="424" class="section-label">jobs:</text>
+  <rect x="524" y="408" width="174" height="24" rx="5" fill="#171d21" stroke="#333c42" stroke-width="1" />
+  <text x="611" y="424" text-anchor="middle" class="pill-muted">[] (no workers mounted)</text>
+
+  <!-- Staff route proof strip -->
+  <rect x="450" y="454" width="352" height="54" rx="8" fill="#2a191c" stroke="#7a3e46" stroke-width="1" />
+  <text x="464" y="476" class="pill-coral">GET /api/tenants/:id/notes</text>
+  <text x="464" y="495" class="card-sub" style="fill: #e0b4b9;">Route absent from Staff composition</text>
+  <rect x="738" y="469" width="50" height="24" rx="5" fill="#0e1114" stroke="#7a3e46" stroke-width="1" />
+  <text x="763" y="485" text-anchor="middle" class="pill-coral">404</text>
+</svg>

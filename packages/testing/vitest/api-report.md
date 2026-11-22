@@ -1,6 +1,6 @@
 # API report: @dads-framework/testing-vitest
 
-Published: no
+Published: yes
 
 Regenerate with `npm run api-report`.
 

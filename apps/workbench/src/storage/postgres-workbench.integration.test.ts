@@ -6,12 +6,14 @@ import {
 } from "@dads-framework/postgres-access";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { workbenchAccessModel } from "../access.js";
 import { startWorkbenchServer } from "../server.js";
 import { createPostgresWorkbench } from "../create-workbench.js";
 import { initializePostgresWorkbenchSchema } from "./postgres-workbench-schema.js";
 import { PostgresWorkbenchStore } from "./postgres-workbench-store.js";
+import type { PendingAuthorizationChange } from "./workbench-state.js";
 
 const alice = { type: "user", id: "alice" };
 const bob = { type: "user", id: "bob" };
@@ -210,25 +212,26 @@ describe.runIf(process.env["WORKBENCH_POSTGRES_INTEGRATION"] === "1")(
           workspaceInput,
         );
         const before = await app.store.read();
+        const invalidChange = z
+          .custom<PendingAuthorizationChange>(() => true)
+          .parse({
+            version: 1,
+            operationId: "bad-fact",
+            writes: [
+              {
+                resource: { type: "workspace", id: created.id },
+                relation: "unknown_relation",
+                subject: alice,
+              },
+            ],
+            deletes: [],
+          });
         await expect(
           app.store.commitMutation((state) => {
             state.workspaces = [];
             return {
               result: undefined,
-              authorizationChanges: [
-                {
-                  version: 1,
-                  operationId: "bad-fact",
-                  writes: [
-                    {
-                      resource: { type: "workspace", id: created.id },
-                      relation: "unknown_relation",
-                      subject: alice,
-                    },
-                  ],
-                  deletes: [],
-                },
-              ],
+              authorizationChanges: [invalidChange],
             };
           }),
         ).rejects.toThrow("Invalid authorization relationship");

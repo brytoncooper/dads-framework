@@ -108,4 +108,102 @@ describe("parseZed", () => {
       },
     ]);
   });
+
+  it("parses block comments, use expiration, with expiration, .all(), and .any()", () => {
+    const parsed = parseZed(`
+      /* Top-level block comment
+         spanning multiple lines */
+      use expiration
+
+      definition user {}
+
+      definition group {
+        relation member: user
+        permission read = member
+      }
+
+      definition doc {
+        relation viewer: user with expiration | group#member with expiration | user:* with expiration
+        relation parent: group
+        permission view = viewer + parent.all(read) + parent.any(read)
+      }
+    `);
+
+    expect(parsed[2]).toEqual({
+      wireName: "doc",
+      roles: [
+        {
+          name: "viewer",
+          subjects: [
+            { kind: "type", wireName: "user", expiration: true },
+            {
+              kind: "userset",
+              wireName: "group",
+              relation: "member",
+              expiration: true,
+            },
+            { kind: "wildcard", wireName: "user", expiration: true },
+          ],
+        },
+        { name: "parent", subjects: [{ kind: "type", wireName: "group" }] },
+      ],
+      permissions: [
+        {
+          name: "view",
+          terms: [
+            { kind: "role", name: "viewer" },
+            {
+              kind: "through-all",
+              roleName: "parent",
+              targetPermission: "read",
+            },
+            { kind: "through", roleName: "parent", targetPermission: "read" },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("detects expiration and through-all differences in accessIrDefinitionsDiff", () => {
+    const withExp = parseZed(`
+      use expiration
+      definition doc {
+        relation viewer: user with expiration
+        relation parent: group
+        permission view = viewer + parent.all(read)
+      }
+    `);
+    const withoutExp = parseZed(`
+      definition doc {
+        relation viewer: user
+        relation parent: group
+        permission view = viewer + parent->read
+      }
+    `);
+
+    const diff = accessIrDefinitionsDiff(withExp, withoutExp);
+    expect(diff.length).toBeGreaterThan(0);
+    expect(diff.some((entry) => entry.includes("expiration"))).toBe(true);
+    expect(diff.some((entry) => entry.includes("through-all"))).toBe(true);
+  });
+
+  it("reports accurate 1-based line numbers on unsupported constructs", () => {
+    expect(() =>
+      parseZed(
+        "/*\nline 2\n*/\ncaveat ip_check(ip string) { ip == '1.1.1.1' }",
+      ),
+    ).toThrow(/line 4:.*caveat/);
+
+    expect(() =>
+      parseZed("definition doc {\n  relation viewer: user with ip_check\n}"),
+    ).toThrow(/line 2:.*with ip_check/);
+
+    expect(() =>
+      parseZed("definition doc {\n  permission empty = nil\n}"),
+    ).toThrow(/line 2:.*nil/);
+
+    expect(() => parseZed("use unknown_pragma\ndefinition user {}")).toThrow(
+      /line 1:.*use unknown_pragma/,
+    );
+  });
 });

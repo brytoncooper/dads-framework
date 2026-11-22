@@ -1,7 +1,8 @@
 import type { Authorization, SubjectRef } from "@dads-framework/access/runtime";
 import {
-  access,
-  entityHandle,
+  actor,
+  compileAccess,
+  type AccessDefinition,
   type PermissionToken,
 } from "@dads-framework/access";
 import type { GetEffectiveFeatureState } from "@dads-framework/feature-flags";
@@ -19,19 +20,27 @@ import {
   type TenantId,
   type Tenants,
 } from "@dads-framework/tenants";
-import { z } from "zod";
 
-export const accountEntity = entityHandle({
-  wireName: "account",
-  idSchema: z.string().min(1),
-});
+export const account = actor("account");
+export const accountEntity = account.handle;
 
-export const accountAccess = access(accountEntity, {
-  roles: {},
-  permissions: () => ({}),
-});
+const accountModel = compileAccess([account]);
+const [accountDefinition] = accountModel.definitions;
+if (accountDefinition === undefined) {
+  throw new Error(
+    "Compiled account actor did not produce an access definition.",
+  );
+}
 
-export const tenantAccess = createTenantAccess(accountEntity);
+export const accountAccess: Pick<
+  AccessDefinition<unknown, unknown>,
+  "entity" | "resolve"
+> = {
+  entity: account.handle,
+  resolve: () => accountDefinition,
+};
+
+export const tenantAccess = createTenantAccess(account.handle);
 
 type WriteTransaction = Parameters<
   Parameters<DrizzleHandle["transaction"]>[0]

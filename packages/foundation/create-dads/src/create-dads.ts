@@ -66,6 +66,7 @@ export async function createDads(
     targetDirectory: request.targetDirectory,
     mode: request.mode,
     projectName,
+    template: request.template,
     dryRun: request.dryRun,
   });
   const installed =

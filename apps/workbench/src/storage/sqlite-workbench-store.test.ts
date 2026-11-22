@@ -73,7 +73,7 @@ describe("SQLite workbench storage", () => {
           subject: { type: workbenchUser.wireName, id: "alice" },
           relation: workbenchWorkspace.roles.owner.roleName,
           resource: {
-            type: workbenchWorkspace.entity.wireName,
+            type: workbenchWorkspace.wireName,
             id: workspace.id,
           },
         }),

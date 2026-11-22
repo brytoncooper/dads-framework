@@ -1,7 +1,8 @@
 # `@dads-framework/access`
 
-Define relationship-based permissions in TypeScript. Use the composed model
-to enforce permissions, generate a SpiceDB schema, or build scoped lists.
+Define relationship-based permissions in TypeScript. Compile your model once to
+enforce permissions in PostgreSQL, SQLite, or SpiceDB, render an access tree,
+or generate a `.zed` schema.
 
 ## Try it
 
@@ -10,63 +11,114 @@ defines account and tenant access handles shared by the domains.
 [`assembly/start-app.ts`](../../apps/kit-workbench/assembly/start-app.ts) composes the selected API's declarations into one
 model before opening its services.
 
-Use Node.js 22 or later. This example emits schema text locally and needs no
-authorization datastore.
+Use Node.js 22 or later. This example compiles a top-down hierarchy, prints the
+resolved permission tree, and emits SpiceDB `.zed` text locally with no
+database required.
 
 ```sh
-npm install @dads-framework/access zod
+npm install @dads-framework/access
 npm install -D tsx
 ```
 
-Save as `team-schema.mts` and run `npx tsx team-schema.mts`.
+Save as `access-model.mts` and run `npx tsx access-model.mts`.
 
 <!-- dads:check-example -->
 
 ```ts
 import {
-  access,
-  accessModel,
+  actor,
+  anyOf,
+  compileAccess,
   emitZed,
-  entityHandle,
+  formatAccessTree,
+  resource,
 } from "@dads-framework/access";
-import { z } from "zod";
 
-const user = entityHandle({ wireName: "user", idSchema: z.string() });
-const team = entityHandle({
-  wireName: "team",
-  idSchema: z.string(),
-  kind: "scope",
-});
-const teamAccess = access(team, {
-  roles: { member: user },
-  permissions: (roles) => ({ view: [roles.member] }),
-});
-const userAccess = access(user, { roles: {}, permissions: () => ({}) });
+const user = actor("user");
 
-const model = accessModel([userAccess, teamAccess]);
+const organization = resource("organization", {
+  roles: { admin: user, member: user },
+  can: ({ admin, member }) => ({
+    manage: admin,
+    view: [admin, member],
+  }),
+  children: {
+    task: {
+      inherit: "all",
+      roles: { assignee: user, blocked: user },
+      can: ({ assignee, blocked, parent }) => ({
+        edit: anyOf(assignee, parent.manage).unless(blocked),
+      }),
+    },
+    billing: {
+      inherit: ["manage"],
+      roles: { accountant: user },
+      can: ({ accountant }) => ({ view: accountant }),
+    },
+  },
+});
+
+const model = compileAccess([organization]);
+console.log(formatAccessTree(model));
 console.log(emitZed(model));
 ```
 
-The output includes `permission view = member` on the team definition.
-In a service using this model, test a team member and a user with no member
-relationship. The first should see the team's records. The second should
-receive a denial or an empty scoped list, according to the operation.
+The output prints the resolved inheritance tree (`organization -> task`,
+`billing`) followed by SpiceDB `.zed` definitions where `task` inherits
+`organization->view` and `organization->manage`, while `billing` inherits only
+`manage` and stays fail-closed on every other parent permission.
+
+In a service using this model, test an authorized member and a user with no
+relationship. The first sees the resource; the second receives a denial or an
+empty list, according to the operation.
 
 ## Use it
 
-Define handles and permissions in the packages that own them. At application startup, pass their declarations and optional `scopeBindings` to `accessModel`. The model resolves permission expressions after the declaration modules have loaded. Use the same model for schema generation, route registration, and record lookup guards.
+Declare actors with `actor(name)` and resources with `resource(name, spec)`.
+Nest child resources inline under `children` or split them into separate files
+with `parent.child(name, spec)`. Every child declares `inherit` explicitly
+(`"all"`, `"none"`, or a list of parent permission names such as `["manage"]`).
+Use `parents: [organization, folder]` for multi-parent DAGs and `recursive: true`
+for self-nested folders.
 
-For permissions that customers may grant, `grantable` takes the app's scope names and direct subject handle. Use `membersOf` to declare an optional group subject. Use `lifecycleTrigger(name)` to name a grant removal event. The application handles the event and removes the grant.
+At application startup, pass the root resources to `compileAccess([organization])`.
+`compileAccess` auto-discovers inline `children`, `.child()` branches, `parents`,
+lazy thunks, and actors into one `AccessModel`. Pass optional `bindings`
+(`scopeBindings`) when scaling SpiceDB record lists. Use the same compiled model
+for PostgreSQL, SQLite, SpiceDB `.zed` generation, and route guards.
+
+For permissions that customers may grant, `grantable` takes the app's scope
+names and direct subject handle. Use `membersOf` (or `team.roles.member` in the
+DSL) to declare an optional group subject. Use `lifecycleTrigger(name)` to name
+a grant removal event that the application handles. The lower-level
+`entityHandle`, `access`, and `accessModel` builders remain exported for
+existing callers.
 
 ## What it refuses to do
 
-Composition rejects duplicate entity names or scope bindings for an omitted definition. A scope plan with an unbound role or cyclic traversal fails to compile.
+Compilation rejects duplicate entity names, missing inherited parent permission
+names, cyclic parent inheritance, and scope bindings for an omitted definition.
+A scope plan with an unbound role or cyclic traversal fails to compile.
 
 ## Contract
 
-`emitAccessIr(model)` returns plain data and `emitZed(model)` produces SpiceDB schema text. `checkAccessConformance(model.definitions)` checks grant metadata and grant requirements. `checkScopeBindings(model)` checks the default `view` permission of each bound record.
+`compileAccess(nodes, options?)` builds an `AccessModel`, `formatAccessTree(model)`
+renders a deterministic ASCII tree with `[inherited]`, `[inherited+local]`, and
+`[local]` tags, `emitAccessIr(model)` returns plain IR data, and `emitZed(model)`
+produces SpiceDB schema text. `emitTypeScript(definitions, options?)` and
+`emitTypeScriptFromZed(zed, options?)` compile access IR or SpiceDB `.zed` text
+into typed Dads TypeScript declarations (`style: "ergonomic"` by default, or
+`style: "classic"` for `entityHandle` / `access` / `accessModel`). `checkAccessConformance(model.definitions)` checks
+grant metadata and requirements. `checkScopeBindings(model)` checks the default
+`view` permission of each bound record.
 
-Permission expressions support relationship traversal, unions, intersections, and exclusions. Contextual conditions and SpiceDB caveats are outside the compiler's supported syntax.
+Permission expressions support unions (`anyOf` / `.or()` / arrays),
+intersections (`allOf` / `.and()` / `both`), exclusions (`.unless()` /
+`excluding`), parent traversal (`parent.view` / `through`), and universal
+intersection arrows (`every(link).approve` / `throughAll`, emitted as `.all()`).
+Use `user.expiring` (or `withExpiration(holder)`) for expiring grants and
+`user.anyone` (or `wildcard(holder)`) for wildcards. Contextual conditions,
+SpiceDB caveats, and `nil` are outside the compiler's supported syntax.
 
 ### Checking a committed SpiceDB schema
 
@@ -80,18 +132,30 @@ expect(readFileSync(schemaPath, "utf8")).toBe(emitZed(model));
 
 Run the test in CI. Doctor's generated-access check covers edits in Git history.
 The test checks the file against the model. Apps that emit directly to SpiceDB
-or run the Postgres adapter need no checked-in Zed file.
+or run the Postgres or SQLite adapters need no checked-in Zed file.
 
 ### Enforcing access in Node
 
-Use `@dads-framework/access/runtime` for the authorization port, route decisions,
-scope answers, and request-local consistency. The runtime entry point keeps
-Node request context separate from the model and emitters. Supply a concrete
-authorization provider when composing a server. The [Postgres adapter](../server/postgres-access/README.md)
-uses the model with relationship facts in the application database. Use its
-protected transaction helper when a permission decision guards a business
-write in that database. Tests can use `@dads-framework/access/testing` for
-in-memory calls and recorded answers.
+Use `@dads-framework/access/runtime` for:
+
+- `createAccessClient(authorization)`: Symmetric typed runtime client (`add`,
+  `remove`, `can`, `list`, `whoCan`, `listDirect`) that enforces allowed subject
+  types for every role slot at compile time.
+- `ShadowAuthorization`: Dual-writing, shadow-comparing `Authorization` wrapper
+  (`mode: "shadow-read" | "primary-new"`) for zero-downtime backend cutover.
+- `Authorization`: Base runtime port (`check`, `checkMany`, `lookupResources`,
+  optional transitive `lookupSubjects`, `listDirectSubjects`, and relationship
+  writes with optional `expiresAt`), route decisions, scope answers, and
+  request-local consistency.
+
+The runtime entry point keeps Node request context separate from the model and
+emitters. Supply a concrete authorization provider when composing a server. The
+[Postgres adapter](../server/postgres-access/README.md) and
+[SQLite adapter](../server/sqlite-access/README.md) evaluate the model against
+relationship facts in the application database. Use their protected transaction
+helpers when a permission decision guards a business write in that database.
+Tests can use `@dads-framework/access/testing` for in-memory calls (including
+optional `now` clocks for expiring tuples) and recorded answers.
 
 Schema migration runners can use `@dads-framework/access/schema` to plan and
 apply a Zed schema through a supplied store. The authorization package binds

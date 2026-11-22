@@ -24,14 +24,27 @@ type LintProbe = {
 };
 
 const PROBES: readonly LintProbe[] = [
-  { scope: "source", path: "packages/http/core/src/index.ts" },
+  {
+    scope: "source",
+    path: "packages/http/core/src/index.ts",
+    fallback:
+      /^packages\/(?:[^/]+\/){1,2}src\/(?!.*(?:^|\/)type-tests\/)(?!.*\.test\.tsx?$)(?!.*\.generated\.ts$).+\.ts$/,
+  },
   {
     scope: "test",
     path: "packages/http/core/src/index.test.ts",
-    fallback: /^packages\/http\/core\/src\/.+\.test\.ts$/,
+    fallback: /^packages\/(?:[^/]+\/){1,2}src\/.+\.test\.ts$/,
   },
-  { scope: "type-tests", path: "packages/http/core/type-tests/route-cards.ts" },
-  { scope: "scripts", path: "scripts/checks/check-docs.mjs" },
+  {
+    scope: "type-tests",
+    path: "packages/http/core/type-tests/route-cards.ts",
+    fallback: /^packages\/[^/]+\/[^/]+\/type-tests\/(?!.*\.test\.tsx?$).+\.ts$/,
+  },
+  {
+    scope: "scripts",
+    path: "scripts/checks/check-docs.mjs",
+    fallback: /^scripts\/.+\.m?js$/,
+  },
 ];
 
 /** The severities a rule can be held at; anything else is off. */
@@ -58,7 +71,7 @@ export function resolveLintScopes(
     const path = resolveProbe(context, probe);
     if (path === undefined) return [];
     const printed = context.exec("npx", ["eslint", "--print-config", path]);
-    if (printed.status !== 0) return [];
+    if (printed.status !== 0 || printed.stdout.trim().length === 0) return [];
     resolved.push({
       scope: probe.scope,
       path,

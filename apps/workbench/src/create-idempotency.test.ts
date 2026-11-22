@@ -242,7 +242,7 @@ describe("durable create idempotency", () => {
     await backing.deleteExact({
       subject: { type: workbenchUser.wireName, id: alice.id },
       relation: workbenchWorkspace.roles.owner.roleName,
-      resource: { type: workbenchWorkspace.entity.wireName, id: workspace.id },
+      resource: { type: workbenchWorkspace.wireName, id: workspace.id },
     });
     await expect(
       app.operations.createWorkspace(alice, workspaceBody),

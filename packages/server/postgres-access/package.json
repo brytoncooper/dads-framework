@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./drizzle": {
+      "types": "./dist/drizzle.d.ts",
+      "default": "./dist/drizzle.js"
     }
   },
   "files": [
@@ -17,12 +21,26 @@
     "BENCHMARK.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.3.0",
+    "@dads-framework/access": "0.3.0"
+  },
+  "peerDependencies": {
     "@dads-framework/postgres": "0.3.0",
     "drizzle-orm": "^0.45.2"
   },
+  "peerDependenciesMeta": {
+    "@dads-framework/postgres": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@dads-framework/authorization": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@types/pg": "^8.20.0",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.21.0",
     "vitest": "~4.1.0",
     "zod": "^4.4.3"
   },

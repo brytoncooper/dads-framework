@@ -7,7 +7,7 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const REPOSITORY_BLOB =
   "https://github.com/brytoncooper/dads-framework/blob/main/";
 const PRIVATE =
-  /^(?:docs\/(?:private|plans|decisions|benchmarks|agents)\/|\.agents\/plans\/|\.git\/|node_modules\/|dist\/|\.env(?:\.|$))/;
+  /^(?:docs\/(?:private|plans|benchmarks|agents)\/|\.agents\/plans\/|\.git\/|node_modules\/|dist\/|\.env(?:\.|$))/;
 
 function localTarget(source, path) {
   const value = decodeURIComponent(path);

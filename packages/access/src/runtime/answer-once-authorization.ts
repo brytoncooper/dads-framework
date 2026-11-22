@@ -37,11 +37,14 @@ import {
   type RelationshipWrite,
   type ResourceLookup,
   type SpiceDbConsistencyToken,
+  type SubjectLookup,
+  type SubjectLookupResult,
   type SubjectRef,
 } from "./authorization.js";
 import {
   lookupQuestionIdentity,
   permissionQuestionIdentity,
+  subjectLookupQuestionIdentity,
 } from "./question-identity.js";
 
 const PERMISSION_BATCH_SIZE = 128;
@@ -56,6 +59,7 @@ export class AnswerOnceAuthorization extends Authorization {
   readonly #inner: Authorization;
   readonly #checks = new AnswersOncePerScope<boolean>();
   readonly #lookups = new AnswersOncePerScope<readonly string[]>();
+  readonly #subjectLookups = new AnswersOncePerScope<SubjectLookupResult>();
   /** This tick's gathered checks in the current scope, by consistency group. */
   readonly #gathering = new OneValuePerScope<Map<string, GatheredChecks>>();
 
@@ -176,6 +180,18 @@ export class AnswerOnceAuthorization extends Authorization {
     );
   }
 
+  override lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
+    const innerLookup = this.#inner.lookupSubjects?.bind(this.#inner);
+    if (innerLookup === undefined) {
+      return Promise.reject(
+        new Error("underlying Authorization does not implement lookupSubjects"),
+      );
+    }
+    return this.#subjectLookups.answer(subjectLookupKey(query), () =>
+      innerLookup(query),
+    );
+  }
+
   override writeRelationships(
     writes: readonly RelationshipWrite[],
   ): Promise<SpiceDbConsistencyToken> {
@@ -220,6 +236,7 @@ export class AnswerOnceAuthorization extends Authorization {
   #forgetAnswers(): void {
     this.#checks.forget();
     this.#lookups.forget();
+    this.#subjectLookups.forget();
   }
 }
 
@@ -243,6 +260,13 @@ function consistencyKey(query: PermissionQuery): string {
 function lookupKey(query: ResourceLookup): string {
   return JSON.stringify([
     ...lookupQuestionIdentity(query),
+    query.consistencyToken ?? null,
+  ]);
+}
+
+function subjectLookupKey(query: SubjectLookup): string {
+  return JSON.stringify([
+    ...subjectLookupQuestionIdentity(query),
     query.consistencyToken ?? null,
   ]);
 }

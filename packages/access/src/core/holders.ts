@@ -14,6 +14,11 @@ export type UsersetHolder = {
   readonly roleName: string;
 };
 
+export type ExpirableHolder = {
+  readonly kind: "expirable";
+  readonly holder: SingleRoleValue;
+};
+
 /**
  * Every subject of this type (`user:*`). Used for tenancy gates.
  */
@@ -30,6 +35,14 @@ export function membersOf(role: RoleToken): UsersetHolder {
     entityWireName: role.entityWireName,
     roleName: role.roleName,
   };
+}
+
+/**
+ * Marks a subject type as supporting SpiceDB relationship expiration
+ * (`user with expiration`).
+ */
+export function withExpiration(holder: SingleRoleValue): ExpirableHolder {
+  return isExpirableHolder(holder) ? holder : { kind: "expirable", holder };
 }
 
 export function isWildcardHolder(value: unknown): value is WildcardHolder {
@@ -50,6 +63,15 @@ export function isUsersetHolder(value: unknown): value is UsersetHolder {
   );
 }
 
+export function isExpirableHolder(value: unknown): value is ExpirableHolder {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "kind" in value &&
+    value.kind === "expirable"
+  );
+}
+
 export function isEntityHandleHolder(value: unknown): value is EntityHandle {
   return (
     typeof value === "object" &&
@@ -57,11 +79,16 @@ export function isEntityHandleHolder(value: unknown): value is EntityHandle {
     "wireName" in value &&
     !isGrantableRole(value) &&
     !isWildcardHolder(value) &&
-    !isUsersetHolder(value)
+    !isUsersetHolder(value) &&
+    !isExpirableHolder(value)
   );
 }
 
 export type SingleRoleValue =
-  EntityHandle | GrantableRole | WildcardHolder | UsersetHolder;
+  | EntityHandle
+  | GrantableRole
+  | WildcardHolder
+  | UsersetHolder
+  | ExpirableHolder;
 
 export type RoleValue = SingleRoleValue | readonly SingleRoleValue[];

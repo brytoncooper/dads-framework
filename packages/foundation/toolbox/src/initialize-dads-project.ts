@@ -6,6 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+import type { DadsProjectTemplate } from "./dads-initialization-arguments.js";
 import {
   renderStarterProjectFiles,
   type StarterProjectFile,
@@ -24,6 +25,7 @@ export type InitializeDadsProjectOptions = {
   readonly targetDirectory: string;
   readonly mode: "new" | "existing";
   readonly projectName: string;
+  readonly template?: DadsProjectTemplate;
   readonly dryRun?: boolean;
 };
 
@@ -37,7 +39,10 @@ export function initializeDadsProject(
   options: InitializeDadsProjectOptions,
 ): DadsProjectInitialization {
   const projectRoot = resolveProjectRoot(options);
-  const files = renderStarterProjectFiles({ projectName: options.projectName });
+  const files = renderStarterProjectFiles({
+    projectName: options.projectName,
+    ...(options.template === undefined ? {} : { template: options.template }),
+  });
   assertRecognizedProjectRoot(projectRoot);
   const agentSkillSynchronization =
     inspectAgentSkillSynchronization(projectRoot);

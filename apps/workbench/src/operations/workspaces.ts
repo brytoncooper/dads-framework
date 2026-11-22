@@ -52,7 +52,7 @@ function deletedWorkspaceRelationships(
   )) {
     relationships.push(
       workbenchFact(workbenchTask.roles.workspace, task.id, {
-        type: workbenchWorkspace.entity.wireName,
+        type: workbenchWorkspace.wireName,
         id: workspaceId,
       }),
     );

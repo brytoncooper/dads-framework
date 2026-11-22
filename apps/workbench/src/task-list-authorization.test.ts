@@ -59,7 +59,7 @@ async function startTaskList() {
     }
   });
   const elsewhere = {
-    type: workbenchWorkspace.entity.wireName,
+    type: workbenchWorkspace.wireName,
     id: otherWorkspaceId,
   };
   await authorization.writeRelationships([

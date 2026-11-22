@@ -1,6 +1,7 @@
 import type {
   PermissionQuery,
   ResourceLookup,
+  SubjectLookup,
   SubjectRef,
 } from "./authorization.js";
 
@@ -24,4 +25,15 @@ export function lookupQuestionIdentity(
   query: ResourceLookup,
 ): readonly [readonly string[], string, string] {
   return [subjectIdentity(query.subject), query.permission, query.resourceType];
+}
+
+export function subjectLookupQuestionIdentity(
+  query: SubjectLookup,
+): readonly [string, string, string, string] {
+  return [
+    query.resource.type,
+    query.resource.id,
+    query.permission,
+    query.subjectType,
+  ];
 }

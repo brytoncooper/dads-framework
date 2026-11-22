@@ -184,6 +184,39 @@ describe("create-dads executable", () => {
     expect(existsSync(join(targetDirectory, "package.json"))).toBe(false);
     expect(existsSync(npm.invocationLog)).toBe(false);
   });
+
+  it("scaffolds --template minimal through the shipped executable and rejects invalid templates", () => {
+    const targetDirectory = join(temporaryDirectory(), "minimal-cli");
+    const npm = failingNpmShim();
+
+    const completed = runCreateDads(
+      [targetDirectory, "--template", "minimal", "--json", "--skip-install"],
+      npm.pathValue,
+    );
+
+    expect(completed.status).toBe(0);
+    expect(completed.stderr).toBe("");
+    expect(parsedJsonObject(completed.stdout)).toMatchObject({
+      ok: true,
+      installed: false,
+      initialization: { projectRoot: targetDirectory },
+    });
+    expect(existsSync(join(targetDirectory, "apps/customer/app.ts"))).toBe(
+      true,
+    );
+    expect(existsSync(join(targetDirectory, "domains/notes"))).toBe(false);
+
+    const rejectedDirectory = join(temporaryDirectory(), "bad-template-cli");
+    const rejected = runCreateDads(
+      [rejectedDirectory, "--template", "unknown", "--skip-install"],
+      npm.pathValue,
+    );
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toBe(
+      "Dads: --template must be minimal or example.\n",
+    );
+    expect(existsSync(rejectedDirectory)).toBe(false);
+  });
 });
 
 function runCreateDads(commandArguments: readonly string[], pathValue: string) {

@@ -59,7 +59,7 @@ it("replays the same creation key after failed authorization and SQLite restart"
       expect((await reopened.read()).pendingAuthorizationChanges).toEqual([]);
       expect(
         await authorization.listDirectSubjects({
-          resource: { type: workbenchWorkspace.entity.wireName, id: retry.id },
+          resource: { type: workbenchWorkspace.wireName, id: retry.id },
           relation: workbenchWorkspace.roles.owner.roleName,
         }),
       ).toEqual([{ type: workbenchUser.wireName, id: subject.id }]);

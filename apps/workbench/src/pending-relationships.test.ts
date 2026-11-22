@@ -102,7 +102,7 @@ describe("pending relationship recovery", () => {
     expect(
       await authorization.listDirectSubjects({
         resource: {
-          type: workbenchWorkspace.entity.wireName,
+          type: workbenchWorkspace.wireName,
           id: "same-store-failure",
         },
         relation: workbenchWorkspace.roles.owner.roleName,
@@ -154,7 +154,7 @@ describe("pending relationship recovery", () => {
     expect(
       await authorization.listDirectSubjects({
         resource: {
-          type: workbenchWorkspace.entity.wireName,
+          type: workbenchWorkspace.wireName,
           id: workspace.id,
         },
         relation: workbenchWorkspace.roles.owner.roleName,
@@ -165,7 +165,7 @@ describe("pending relationship recovery", () => {
     expect(
       await authorization.listDirectSubjects({
         resource: {
-          type: workbenchWorkspace.entity.wireName,
+          type: workbenchWorkspace.wireName,
           id: workspace.id,
         },
         relation: workbenchWorkspace.roles.owner.roleName,
@@ -198,7 +198,7 @@ describe("pending relationship recovery", () => {
     expect(
       await authorization.listDirectSubjects({
         resource: {
-          type: workbenchWorkspace.entity.wireName,
+          type: workbenchWorkspace.wireName,
           id: workspace.id,
         },
         relation: workbenchWorkspace.roles.owner.roleName,
@@ -293,9 +293,9 @@ describe("pending relationship recovery", () => {
     );
     expect(
       await authorization.listDirectSubjects({
-        resource: { type: workbenchTask.entity.wireName, id: task.id },
+        resource: { type: workbenchTask.wireName, id: task.id },
         relation: workbenchTask.roles.workspace.roleName,
       }),
-    ).toEqual([{ type: workbenchWorkspace.entity.wireName, id: workspace.id }]);
+    ).toEqual([{ type: workbenchWorkspace.wireName, id: workspace.id }]);
   });
 });

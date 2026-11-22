@@ -3,20 +3,25 @@ import {
   EnqueueAccessChanges,
   type AccessChange,
 } from "@dads-framework/access/runtime";
-import type { DrizzleHandle } from "@dads-framework/postgres";
-import { is } from "drizzle-orm";
-import { PgTransaction } from "drizzle-orm/pg-core";
 
+import {
+  isDrizzlePgTransaction,
+  type DrizzleDatabaseLike,
+  type DrizzleExecuteLike,
+} from "./drizzle-structural.js";
 import type { PostgresAuthorization } from "./postgres-authorization.js";
 
-type OutboxTx = Pick<DrizzleHandle, "insert" | "update"> &
-  Partial<Pick<DrizzleHandle, "execute">>;
+type OutboxTx = Partial<DrizzleExecuteLike>;
+
+function hasExecute(value: OutboxTx): value is DrizzleExecuteLike {
+  return typeof value.execute === "function";
+}
 
 /** Binds the existing relationship-fact port to the same transaction as the business write. */
 export class TransactionalAccessChanges extends EnqueueAccessChanges<OutboxTx> {
   constructor(
     private readonly authorization: PostgresAuthorization,
-    private readonly database: Pick<DrizzleHandle, "transaction">,
+    private readonly database: DrizzleDatabaseLike,
   ) {
     super();
   }
@@ -26,7 +31,7 @@ export class TransactionalAccessChanges extends EnqueueAccessChanges<OutboxTx> {
     tx: OutboxTx,
   ): Promise<void> {
     if (entries.length === 0) return Promise.resolve();
-    if (tx.execute === undefined || !is(tx, PgTransaction)) {
+    if (!hasExecute(tx) || !isDrizzlePgTransaction(tx)) {
       throw new Error(
         "Postgres access changes require the caller's Drizzle transaction",
       );

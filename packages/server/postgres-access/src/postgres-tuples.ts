@@ -21,6 +21,9 @@ const tupleFilter =
   "namespace = $1 AND resource_kind = $2 AND ($3::text IS NULL OR resource_id = $3) AND ($4::text IS NULL OR relation = $4)";
 const subjectFilter =
   "($5::text IS NULL OR subject_kind = $5) AND ($6::text IS NULL OR (CASE WHEN subject_is_wildcard THEN '*' ELSE subject_id END) = $6) AND ($7::text IS NULL OR subject_relation = $7)";
+const notExpiredTuple = "(expires_at IS NULL OR expires_at > now())";
+const relationshipPrimaryKey =
+  "(namespace, resource_kind, resource_id, relation, subject_kind, subject_id, subject_relation, subject_is_wildcard)";
 
 export class PostgresTuples {
   constructor(
@@ -31,12 +34,15 @@ export class PostgresTuples {
 
   async write(writes: readonly RelationshipWrite[]): Promise<void> {
     if (writes.length === 0) return;
-    const rows = writes.map((write) => this.#validateWrite(write));
+    const rows = deduplicateWrites(
+      writes.map((write) => this.#validateWrite(write)),
+    );
     await this.execute({
-      text: `INSERT INTO ${RELATIONSHIP_TABLE} (namespace, resource_kind, resource_id, relation, subject_kind, subject_id, subject_relation, subject_is_wildcard)
-        SELECT $1, kind, resource, relation, subject, subject_id, subject_relation, wildcard
-        FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::boolean[])
-        AS input(kind, resource, relation, subject, subject_id, subject_relation, wildcard) ON CONFLICT DO NOTHING`,
+      text: `INSERT INTO ${RELATIONSHIP_TABLE} (namespace, resource_kind, resource_id, relation, subject_kind, subject_id, subject_relation, subject_is_wildcard, expires_at)
+        SELECT $1, kind, resource, relation, subject, subject_id, subject_relation, wildcard, expires_at
+        FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::boolean[], $9::timestamptz[])
+        AS input(kind, resource, relation, subject, subject_id, subject_relation, wildcard, expires_at)
+        ON CONFLICT ${relationshipPrimaryKey} DO UPDATE SET expires_at = EXCLUDED.expires_at`,
       values: [
         this.namespace,
         rows.map(({ resource }) => resource.type),
@@ -46,6 +52,7 @@ export class PostgresTuples {
         rows.map(({ subject }) => (subject.id === "*" ? "" : subject.id)),
         rows.map(({ subject }) => subject.relation ?? ""),
         rows.map(({ subject }) => subject.id === "*"),
+        rows.map(({ expiresAt }) => expiresAt ?? null),
       ],
     });
   }
@@ -85,7 +92,7 @@ export class PostgresTuples {
   async exists(filter: ExactFilter): Promise<boolean> {
     requireExact(filter.resourceId, filter.relation);
     const rows = await this.execute({
-      text: `SELECT 1 FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter} LIMIT 1`,
+      text: `SELECT 1 FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter} AND ${notExpiredTuple} LIMIT 1`,
       values: this.#resourceFilter(filter),
     });
     return rows.length > 0;
@@ -95,7 +102,7 @@ export class PostgresTuples {
     requireExact(query.resource.id, query.relation);
     const rows = await this.execute({
       text: `SELECT subject_kind, CASE WHEN subject_is_wildcard THEN '*' ELSE subject_id END AS subject_id, subject_relation
-        FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter}
+        FROM ${RELATIONSHIP_TABLE} WHERE ${tupleFilter} AND ${notExpiredTuple}
         ORDER BY subject_kind, subject_id, subject_relation`,
       values: this.#resourceFilter({
         resourceType: query.resource.type,
@@ -147,8 +154,35 @@ export class PostgresTuples {
         "An authorization relationship requires resource and subject identifiers",
       );
     }
+    if (
+      write.expiresAt !== undefined &&
+      Number.isNaN(write.expiresAt.getTime())
+    ) {
+      throw new Error(
+        "An authorization relationship expiration must be a valid Date",
+      );
+    }
     return write;
   }
+}
+
+function deduplicateWrites(
+  writes: readonly RelationshipWrite[],
+): readonly RelationshipWrite[] {
+  const byKey = new Map<string, RelationshipWrite>();
+  for (const write of writes) {
+    const key = [
+      write.resource.type,
+      write.resource.id,
+      write.relation,
+      write.subject.type,
+      write.subject.id === "*" ? "" : write.subject.id,
+      write.subject.relation ?? "",
+      write.subject.id === "*" ? "1" : "0",
+    ].join("\u0000");
+    byKey.set(key, write);
+  }
+  return [...byKey.values()];
 }
 
 function matchesTarget(

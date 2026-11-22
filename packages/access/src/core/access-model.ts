@@ -23,6 +23,22 @@ export type ResolvedAccessDefinition = {
   readonly catalogOnly: readonly CatalogOnlyCapability[];
 };
 
+export type AccessMigrationKind =
+  | "rename-relation"
+  | "rename-permission"
+  | "rename-type"
+  | "backfill"
+  | "drop-relation"
+  | "custom";
+
+export type AccessMigrationMeta = {
+  readonly id: string;
+  readonly description?: string;
+  readonly kind?: AccessMigrationKind;
+  readonly from?: string;
+  readonly to?: string;
+};
+
 /**
  * Explicit app composition. Declaration modules contribute definitions and
  * bindings without writing process-wide state.
@@ -31,6 +47,7 @@ export type AccessModel = {
   readonly definitions: readonly ResolvedAccessDefinition[];
   readonly bindings: readonly ScopeBindings[];
   readonly visibleRecordExceptions: readonly VisibleRecordException[];
+  readonly migrations?: readonly AccessMigrationMeta[];
 };
 
 export function accessModel(

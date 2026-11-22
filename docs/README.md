@@ -15,11 +15,11 @@ the packages that have a generated API reference. The site check runs inside
 
 ## Build and verify an app
 
-- [Start a Dads project](./site/guides/start.md)
+- [Start a Dads project](./site/guides/index.md)
 - [Generate application code](./generators.md)
 - [Keep domains independent](./domain-boundaries.md)
 - [Share an application contract with another repository](./dependency-libraries.md)
-- [Add a guarded resource](./site/guides/guarded-resource.md)
+- [Routes, contracts, and clients](./site/guides/routes-and-contracts.md)
 - [Run the app's verification in CI](../ci/README.md)
 
 For a live example of the HTTP, identity and tenant kits together, follow
@@ -47,6 +47,8 @@ the Postgres adapter keeps records and permissions together.
 | [`http-hosting.md`](./http-hosting.md)                   | Registering typed routes and testing the HTTP pipeline.                  |
 | [`adoption-model.md`](./adoption-model.md)               | How a team adopts and trusts one capability at a time.                   |
 | [`agent-operating-model.md`](./agent-operating-model.md) | What coding agents are given, and what they are held to.                 |
+| [`decisions/README.md`](./decisions/README.md)           | Architecture decision records covering core trade-offs and file paths.   |
+| [`CHANGELOG.md`](../CHANGELOG.md)                        | Release history, consolidated package paths, and notable changes.        |
 
 ## Writing
 

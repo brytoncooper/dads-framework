@@ -1,3 +1,8 @@
+import {
+  Alert,
+  AlertDescription,
+  StatusBadge,
+} from "@dads-framework/ui/display";
 import { Badge, Button } from "@dads-framework/ui/elements";
 import { useEffect, useState } from "react";
 import {
@@ -48,34 +53,48 @@ export function Notes({ tenant }: { readonly tenant: Tenant }) {
   }
 
   const exportEnabled = features?.includes(notesExport) === true;
+
   return (
     <section className="notes" aria-labelledby="workspace-heading">
       <div className="section-heading">
-        <div>
-          <p className="eyebrow">{t("workbench.notes.eyebrow")}</p>
-          <h2 id="workspace-heading">{tenant.name}</h2>
+        <div className="section-heading-group">
+          <h3 id="workspace-heading" className="section-subheading">
+            {t("workbench.notes.eyebrow")}
+          </h3>
+          {notes && (
+            <Badge variant="secondary">
+              {t("workbench.notes.count", {
+                shown: notes.items.length,
+                total: notes.meta.total,
+              })}
+            </Badge>
+          )}
         </div>
         {features && (
-          <Badge variant="outline">
+          <StatusBadge tone={exportEnabled ? "positive" : "neutral"}>
             {t(
               exportEnabled
                 ? "workbench.notes.export.on"
                 : "workbench.notes.export.off",
             )}
-          </Badge>
+          </StatusBadge>
         )}
       </div>
       <NewNote tenantId={tenant.id} onSaved={refresh} />
       {loadError && (
-        <p className="error" role="alert">
-          {t(loadError)}{" "}
-          <Button variant="outline" size="sm" onClick={refresh}>
-            {t("workbench.retry")}
-          </Button>
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <span>{t(loadError)}</span>
+            <Button variant="outline" size="xs" onClick={refresh}>
+              {t("workbench.retry")}
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
       {notes === undefined && loadError === undefined && (
-        <p role="status">{t("workbench.notes.loading")}</p>
+        <p className="field-hint" role="status">
+          {t("workbench.notes.loading")}
+        </p>
       )}
       {notes && (
         <NoteList

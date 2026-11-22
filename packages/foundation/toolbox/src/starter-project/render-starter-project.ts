@@ -1,4 +1,6 @@
+import type { DadsProjectTemplate } from "../dads-initialization-arguments.js";
 import { kitStarterFiles } from "./kit-starter.generated.js";
+import { renderMinimalProjectFiles } from "./render-minimal-project.js";
 import { renderStarterVerificationFiles } from "./render-starter-verification-files.js";
 
 export type StarterProjectFile = {
@@ -10,7 +12,11 @@ export type StarterProjectFile = {
 /** Render the tested kit app with the adopter's package name and CI templates. */
 export function renderStarterProjectFiles(options: {
   readonly projectName: string;
+  readonly template?: DadsProjectTemplate;
 }): readonly StarterProjectFile[] {
+  if (options.template === "minimal") {
+    return renderMinimalProjectFiles({ projectName: options.projectName });
+  }
   if (!/^[a-z0-9][a-z0-9._-]*$/.test(options.projectName)) {
     throw new Error(
       "Dads project names must use lowercase letters, numbers, dots, dashes, or underscores.",

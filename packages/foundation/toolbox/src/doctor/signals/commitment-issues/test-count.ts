@@ -9,9 +9,9 @@
  *
  * The input is a Vitest JSON report. It is a build product, not a tracked
  * file, so it is read from disk rather than from the file list, and it is
- * often simply absent — a fast offline run does not execute the suites. An
- * absent report yields nothing at all, which is reported as not measured and
- * never as zero.
+ * often absent during a fast offline run that skips the suites. An absent
+ * report throws so the doctor marks this signal as not measured instead of
+ * printing zero.
  */
 
 import { isRecord, isString, isUnknownArray } from "../../../parse-guards.js";
@@ -86,10 +86,14 @@ function suitePath(suite: unknown, root: string): string {
 }
 
 function countTestsPerPackage(context: DoctorContext): SignalReadings {
-  if (!context.exists(REPORT_FILE)) return new Map();
+  if (!context.exists(REPORT_FILE)) {
+    throw new Error("run npm test first");
+  }
   const parsed: unknown = JSON.parse(context.read(REPORT_FILE));
   const suites: unknown = isRecord(parsed) ? parsed["testResults"] : undefined;
-  if (!isUnknownArray(suites)) return new Map();
+  if (!isUnknownArray(suites)) {
+    throw new Error("invalid test report");
+  }
 
   const owners = packageDirectories(context);
   const readings = new Map<string, SignalReading>();

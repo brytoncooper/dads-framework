@@ -5,8 +5,10 @@ import type {
   RelationshipFilter,
   RelationshipWrite,
   ResourceLookup,
-  SubjectRef,
   SpiceDbConsistencyToken,
+  SubjectLookup,
+  SubjectLookupResult,
+  SubjectRef,
 } from "./authorization.js";
 
 /**
@@ -26,7 +28,8 @@ import type {
  * missing tuple.
  */
 export class FakeAuthorization implements Authorization {
-  private readonly tuples = new Set<string>();
+  private readonly tuples = new Map<string, Date | undefined>();
+  private readonly now: () => Date;
   private writeCounter = 0;
 
   constructor(
@@ -35,18 +38,21 @@ export class FakeAuthorization implements Authorization {
       string,
       Record<string, readonly string[]>
     > = {},
-  ) {}
+    options?: { readonly now?: () => Date },
+  ) {
+    this.now = options?.now ?? (() => new Date());
+  }
 
   seed(...writes: readonly RelationshipWrite[]): void {
     for (const write of writes) {
-      this.tuples.add(key(write));
+      this.tuples.set(key(write), write.expiresAt);
     }
   }
 
   check(query: PermissionQuery): Promise<boolean> {
     const relations = this.relationsFor(query.resource.type, query.permission);
     const allowed = relations.some((relation) =>
-      this.tuples.has(
+      this.hasActiveTuple(
         key({
           resource: query.resource,
           relation,
@@ -64,7 +70,7 @@ export class FakeAuthorization implements Authorization {
       (relation) =>
         `#${relation}@${query.subject.type}:${query.subject.id}${query.subject.relation ? `#${query.subject.relation}` : ""}`,
     );
-    const ids = [...this.tuples]
+    const ids = this.activeTuples()
       .filter(
         (tuple) =>
           tuple.startsWith(prefix) &&
@@ -73,6 +79,24 @@ export class FakeAuthorization implements Authorization {
       .map((tuple) => tuple.slice(prefix.length).split("#")[0])
       .filter((id): id is string => id !== undefined);
     return Promise.resolve([...new Set(ids)]);
+  }
+
+  lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
+    const relations = new Set(
+      this.relationsFor(query.resource.type, query.permission),
+    );
+    const subjectIds = new Set<string>();
+    let hasWildcard = false;
+    for (const tuple of this.activeTuples()) {
+      const match = subjectForLookup(tuple, query, relations);
+      if (match === undefined) continue;
+      if (match === "*") {
+        hasWildcard = true;
+      } else {
+        subjectIds.add(match);
+      }
+    }
+    return Promise.resolve({ subjects: [...subjectIds], hasWildcard });
   }
 
   writeRelationships(
@@ -86,7 +110,7 @@ export class FakeAuthorization implements Authorization {
   deleteRelationships(
     filter: RelationshipFilter,
   ): Promise<SpiceDbConsistencyToken> {
-    for (const tuple of [...this.tuples]) {
+    for (const tuple of [...this.tuples.keys()]) {
       if (!tupleMatchesFilter(tuple, filter)) continue;
       this.tuples.delete(tuple);
     }
@@ -101,7 +125,7 @@ export class FakeAuthorization implements Authorization {
   }): Promise<boolean> {
     const prefix = `${filter.resourceType}:${filter.resourceId}#${filter.relation}@`;
     return Promise.resolve(
-      [...this.tuples].some((tuple) => tuple.startsWith(prefix)),
+      this.activeTuples().some((tuple) => tuple.startsWith(prefix)),
     );
   }
 
@@ -110,22 +134,31 @@ export class FakeAuthorization implements Authorization {
   ): Promise<readonly SubjectRef[]> {
     const prefix = `${query.resource.type}:${query.resource.id}#${query.relation}@`;
     const subjects: SubjectRef[] = [];
-    for (const tuple of this.tuples) {
+    for (const tuple of this.activeTuples()) {
       if (!tuple.startsWith(prefix)) continue;
-      const subjectPart = tuple.slice(prefix.length);
-      const hash = subjectPart.indexOf("#");
-      const objectPart = hash === -1 ? subjectPart : subjectPart.slice(0, hash);
-      const subjectRelation =
-        hash === -1 ? undefined : subjectPart.slice(hash + 1);
-      const colon = objectPart.indexOf(":");
-      if (colon === -1) continue;
-      subjects.push({
-        type: objectPart.slice(0, colon),
-        id: objectPart.slice(colon + 1),
-        ...(subjectRelation ? { relation: subjectRelation } : {}),
-      });
+      const parsed = parseSubjectPart(tuple.slice(prefix.length));
+      if (parsed !== undefined) subjects.push(parsed);
     }
     return Promise.resolve(subjects);
+  }
+
+  private hasActiveTuple(tupleKey: string): boolean {
+    if (!this.tuples.has(tupleKey)) return false;
+    return !this.isExpired(this.tuples.get(tupleKey));
+  }
+
+  private isExpired(expiresAt: Date | undefined): boolean {
+    return (
+      expiresAt !== undefined && expiresAt.getTime() <= this.now().getTime()
+    );
+  }
+
+  private activeTuples(): string[] {
+    const active: string[] = [];
+    for (const [tuple, expiresAt] of this.tuples) {
+      if (!this.isExpired(expiresAt)) active.push(tuple);
+    }
+    return active;
   }
 
   private relationsFor(
@@ -134,6 +167,40 @@ export class FakeAuthorization implements Authorization {
   ): readonly string[] {
     return this.permissions[resourceType]?.[permission] ?? [permission];
   }
+}
+
+function parseSubjectPart(subjectPart: string): SubjectRef | undefined {
+  const hash = subjectPart.indexOf("#");
+  const objectPart = hash === -1 ? subjectPart : subjectPart.slice(0, hash);
+  const subjectRelation = hash === -1 ? undefined : subjectPart.slice(hash + 1);
+  const colon = objectPart.indexOf(":");
+  if (colon === -1) return undefined;
+  return {
+    type: objectPart.slice(0, colon),
+    id: objectPart.slice(colon + 1),
+    ...(subjectRelation ? { relation: subjectRelation } : {}),
+  };
+}
+
+function subjectForLookup(
+  tuple: string,
+  query: SubjectLookup,
+  relations: ReadonlySet<string>,
+): string | undefined {
+  const parts = splitTuple(tuple);
+  if (
+    parts === undefined ||
+    parts.resourceType !== query.resource.type ||
+    parts.resourceId !== query.resource.id ||
+    !relations.has(parts.relation)
+  ) {
+    return undefined;
+  }
+  if (parts.subject.includes("#")) return undefined;
+  const colon = parts.subject.indexOf(":");
+  if (colon === -1) return undefined;
+  if (parts.subject.slice(0, colon) !== query.subjectType) return undefined;
+  return parts.subject.slice(colon + 1);
 }
 
 function key(write: RelationshipWrite): string {

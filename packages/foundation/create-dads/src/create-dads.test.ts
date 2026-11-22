@@ -311,6 +311,56 @@ describe("create Dads", () => {
       today: "2026-09-07",
     });
   });
+
+  it("scaffolds the lean minimal template when --template minimal is requested", async () => {
+    const targetDirectory = join(temporaryDirectory(), "minimal-api");
+    const creation = await createDads(
+      [targetDirectory, "--template", "minimal", "--skip-install"],
+      dependencies(),
+    );
+
+    expect(creation.initialization.created).toContain("apps/customer/app.ts");
+    expect(creation.initialization.created).toContain("apps/staff/app.ts");
+    expect(creation.initialization.created).toContain(
+      "domains/tenants/index.ts",
+    );
+    expect(
+      creation.initialization.created.some((path) =>
+        path.startsWith("domains/notes/"),
+      ),
+    ).toBe(false);
+    expect(
+      creation.initialization.created.some((path) =>
+        path.startsWith("domains/support/"),
+      ),
+    ).toBe(false);
+    expect(
+      creation.initialization.created.some((path) =>
+        path.startsWith("examples/"),
+      ),
+    ).toBe(false);
+    expect(existsSync(join(targetDirectory, "domains/notes"))).toBe(false);
+  });
+
+  it("keeps --template example identical to the default starter and rejects unknown templates", async () => {
+    const exampleDirectory = join(temporaryDirectory(), "example-api");
+    const creation = await createDads(
+      [exampleDirectory, "--template", "example", "--skip-install"],
+      dependencies(),
+    );
+    expect(creation.initialization.created).toContain(
+      "domains/notes/server/routes.ts",
+    );
+
+    const invalidDirectory = join(temporaryDirectory(), "invalid-template");
+    await expect(
+      createDads(
+        [invalidDirectory, "--template", "blank", "--skip-install"],
+        dependencies(),
+      ),
+    ).rejects.toThrow("--template must be minimal or example.");
+    expect(existsSync(invalidDirectory)).toBe(false);
+  });
 });
 
 /** A directory that already holds an application, for the doctor to read. */

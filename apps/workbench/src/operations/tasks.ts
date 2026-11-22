@@ -81,7 +81,7 @@ export function taskOperations(coordinator: OperationCoordinator) {
             state.tasks.push(task);
             coordinator.enqueue(state, "write", [
               workbenchFact(workbenchTask.roles.workspace, task.id, {
-                type: workbenchWorkspace.entity.wireName,
+                type: workbenchWorkspace.wireName,
                 id: workspaceId,
               }),
             ]);
@@ -179,7 +179,7 @@ export function taskOperations(coordinator: OperationCoordinator) {
             state.artifacts = artifactsOutsideTask(state.artifacts, id);
             coordinator.enqueue(state, "delete", [
               workbenchFact(workbenchTask.roles.workspace, id, {
-                type: workbenchWorkspace.entity.wireName,
+                type: workbenchWorkspace.wireName,
                 id: task.workspaceId,
               }),
             ]);

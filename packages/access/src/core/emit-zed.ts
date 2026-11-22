@@ -3,11 +3,12 @@ import { emitAccessIr } from "./emit-ir.js";
 import { GENERATED_ZED_HEADER } from "./generated-header.js";
 import type {
   AccessIrDefinition,
+  AccessIrRole,
   AccessIrSubject,
   AccessIrTerm,
 } from "./ir.js";
 
-function subjectText(subject: AccessIrSubject): string {
+function baseSubjectText(subject: AccessIrSubject): string {
   if (subject.kind === "type") {
     return subject.wireName;
   }
@@ -17,12 +18,20 @@ function subjectText(subject: AccessIrSubject): string {
   return `${subject.wireName}#${subject.relation}`;
 }
 
+function subjectText(subject: AccessIrSubject): string {
+  const base = baseSubjectText(subject);
+  return subject.expiration === true ? `${base} with expiration` : base;
+}
+
 function termText(term: AccessIrTerm): string {
   if (term.kind === "role" || term.kind === "permission") {
     return term.name;
   }
   if (term.kind === "through") {
     return `${term.roleName}->${term.targetPermission}`;
+  }
+  if (term.kind === "through-all") {
+    return `${term.roleName}.all(${term.targetPermission})`;
   }
   if (term.kind === "or") {
     return unionText(term.terms);
@@ -90,7 +99,18 @@ export function emitZedForDefinitions(
   return joinZedDocument(definitions);
 }
 
+function roleUsesExpiration(role: AccessIrRole): boolean {
+  return role.subjects.some((subject) => subject.expiration === true);
+}
+
+function usesExpiration(definitions: readonly AccessIrDefinition[]): boolean {
+  return definitions.some((definition) =>
+    definition.roles.some(roleUsesExpiration),
+  );
+}
+
 function joinZedDocument(definitions: readonly AccessIrDefinition[]): string {
   const bodies = definitions.map(emitDefinition);
-  return `${GENERATED_ZED_HEADER}\n\n${bodies.join("\n\n")}\n`;
+  const pragma = usesExpiration(definitions) ? "use expiration\n\n" : "";
+  return `${GENERATED_ZED_HEADER}\n\n${pragma}${bodies.join("\n\n")}\n`;
 }

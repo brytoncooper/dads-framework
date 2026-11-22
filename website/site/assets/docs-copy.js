@@ -15,6 +15,7 @@ export function enableExampleCopy(article) {
       try {
         await navigator.clipboard.writeText(code.textContent);
         button.textContent = "Copied";
+        button.dataset.copied = "true";
         feedback.textContent = "Code copied.";
       } catch {
         button.textContent = "Copy failed";
@@ -23,8 +24,9 @@ export function enableExampleCopy(article) {
       }
       reset = setTimeout(() => {
         button.textContent = "Copy";
+        delete button.dataset.copied;
         feedback.textContent = "";
-      }, 3000);
+      }, 2400);
     });
   }
 }

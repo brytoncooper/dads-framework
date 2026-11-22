@@ -59,6 +59,20 @@ export type RelationshipWrite = {
   /** relation (noun), e.g. "owner", "admin" */
   relation: string;
   subject: SubjectRef;
+  /** Optional relationship expiration timestamp (SpiceDB `use expiration`). */
+  expiresAt?: Date;
+};
+
+export type SubjectLookup = {
+  resource: WireResourceRef;
+  permission: string;
+  subjectType: string;
+  consistencyToken?: SpiceDbConsistencyToken;
+};
+
+export type SubjectLookupResult = {
+  readonly subjects: readonly string[];
+  readonly hasWildcard: boolean;
 };
 
 export type RelationshipFilter = {
@@ -120,6 +134,8 @@ export abstract class Authorization {
   ): Promise<readonly PermissionCheckOutcome[]>;
   /** Authorized collection; never a union from before a revocation the server wrote. */
   abstract lookupResources(query: ResourceLookup): Promise<readonly string[]>;
+  /** Transitive subjects of `subjectType` holding `permission` on `resource`. */
+  lookupSubjects?(query: SubjectLookup): Promise<SubjectLookupResult>;
   abstract writeRelationships(
     writes: readonly RelationshipWrite[],
   ): Promise<SpiceDbConsistencyToken>;
@@ -160,11 +176,14 @@ export async function checkOutcome(
   }
 }
 
-/** Helper for tuple literals: relationshipWrite(resource, relation, subject). */
+/** Helper for tuple literals: relationshipWrite(resource, relation, subject, options). */
 export function relationshipWrite(
   resource: WireResourceRef,
   relation: string,
   subject: SubjectRef,
+  options?: { readonly expiresAt?: Date },
 ): RelationshipWrite {
-  return { resource, relation, subject };
+  return options?.expiresAt === undefined
+    ? { resource, relation, subject }
+    : { resource, relation, subject, expiresAt: options.expiresAt };
 }

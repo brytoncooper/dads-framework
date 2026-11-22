@@ -26,9 +26,8 @@ docs/private/
 # Private scan patterns stay beside the checkout; never commit them.
 scripts/checks/private-references.local.json
 
-# Internal documentation stays private: plans, decisions, benchmark evidence, agent ledgers.
+# Internal documentation stays private: plans, benchmark evidence, agent ledgers.
 docs/plans/
-docs/decisions/
 docs/benchmarks/
 docs/agents/
 

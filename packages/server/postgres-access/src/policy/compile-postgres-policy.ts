@@ -1,8 +1,9 @@
-import {
-  type AuthorizationModelDefinition,
-  type CompiledPermissionExpression,
-  type NormalizedPermissionCheck,
-  type NormalizedResourceLookup,
+import type {
+  AuthorizationModelDefinition,
+  CompiledArrowTarget,
+  CompiledPermissionExpression,
+  NormalizedPermissionCheck,
+  NormalizedResourceLookup,
 } from "./policy-model.js";
 import type { PostgresQuery } from "../postgres-types.js";
 import { readLinearPath } from "./compile-linear-check.js";
@@ -10,14 +11,28 @@ import { compileLinearBatchBranch } from "./compile-linear-batch.js";
 import { compileSharedPointCheck } from "./compile-shared-point-check.js";
 import { compileReversePermission } from "./compile-reverse-policy.js";
 import {
+  analyzePermissionCycles,
+  type PermissionCyclePlan,
+} from "./permission-cycles.js";
+import { compileRecursiveForwardCheck } from "./compile-recursive-policy.js";
+import {
+  isPolymorphicRelation,
+  notExpired,
+  permissionIdentity,
   QueryBuilder,
-  relatedEntity,
+  relationMembershipCheck,
+  resolveArrowTargets,
   subjectReachability,
   TUPLES,
 } from "./policy-sql.js";
 
 export type CompiledAuthorizationQuery = PostgresQuery & {
-  readonly kind: "check" | "check-many" | "lookup" | "candidate-predicate";
+  readonly kind:
+    | "check"
+    | "check-many"
+    | "lookup"
+    | "subject-lookup"
+    | "candidate-predicate";
 };
 
 export type PostgresAuthorizationCandidateBinding = {
@@ -38,6 +53,15 @@ type SqlReference = {
   readonly entity: string;
 };
 
+type ForwardContext = {
+  readonly model: AuthorizationModelDefinition;
+  readonly cycles: PermissionCyclePlan;
+  readonly builder: QueryBuilder;
+  readonly namespace: string;
+  readonly subject: SqlReference;
+  readonly active: Set<string>;
+};
+
 /** Compiles one permission decision into a parameterized Postgres Boolean query. */
 export function compilePostgresCheck(
   model: AuthorizationModelDefinition,
@@ -45,23 +69,20 @@ export function compilePostgresCheck(
   request: NormalizedPermissionCheck,
 ): CompiledAuthorizationQuery & { readonly canPrepare: boolean } {
   const builder = new QueryBuilder();
-  const namespaceSql = builder.value(namespace);
-  const expression = compilePermission(
-    model,
-    builder,
-    namespaceSql,
-    {
-      type: builder.value(request.subject.type),
-      id: builder.value(request.subject.id),
-      entity: request.subject.type,
-    },
-    {
-      type: builder.value(request.resource.type),
-      id: builder.value(request.resource.id),
-      entity: request.resource.type,
-    },
+  const context = createForwardContext(model, builder, namespace, {
+    type: builder.value(request.subject.type),
+    id: builder.value(request.subject.id),
+    entity: request.subject.type,
+  });
+  const resource: SqlReference = {
+    type: builder.value(request.resource.type),
+    id: builder.value(request.resource.id),
+    entity: request.resource.type,
+  };
+  const expression = compileForwardPermission(
+    context,
+    resource,
     request.permission,
-    new Set(),
   );
   if (Buffer.byteLength(expression) > 64 * 1024)
     return compileSharedPointCheck(model, namespace, request);
@@ -71,7 +92,10 @@ export function compilePostgresCheck(
     values: builder.values,
     // Five bindings describe the namespace and endpoints. Each remaining
     // binding adds one relation or arrow to the ordinary permission plan.
-    canPrepare: builder.values.length <= 9 && builder.throughCount <= 2,
+    canPrepare:
+      !builder.hasRecursive &&
+      builder.values.length <= 9 &&
+      builder.throughCount <= 2,
   });
 }
 
@@ -83,45 +107,66 @@ export function compilePostgresCheckMany(
 ): CompiledAuthorizationQuery {
   const builder = new QueryBuilder();
   const namespaceSql = builder.value(namespace);
+  const cycles = analyzePermissionCycles(model);
   const tuples = requests.map(
     (request, ordinal) =>
       `(${builder.value(ordinal)}, ${builder.value(request.subject.type)}, ${builder.value(request.subject.id)}, ${builder.value(request.resource.type)}, ${builder.value(request.resource.id)}, ${builder.value(request.permission)})`,
   );
   const shared: string[] = [];
-  const branches = [
+  const identities = [
     ...new Set(
-      requests.map(
-        (request) => `${request.resource.type}\u0000${request.permission}`,
+      requests.map((request) =>
+        permissionIdentity(request.resource.type, request.permission),
       ),
     ),
-  ].map((identity) => {
-    const [resourceType, permission] = splitIdentity(identity);
-    if (readLinearPath(model, resourceType, permission) !== undefined) {
-      const branch = compileLinearBatchBranch(model, builder, {
-        namespace: namespaceSql,
-        resourceType,
-        permission,
-        index: shared.length,
-      });
-      shared.push(branch.hits);
-      return branch.decision;
-    }
-    const expression = compilePermission(
-      model,
-      builder,
-      namespaceSql,
-      { type: "i.subject_kind", id: "i.subject_id", entity: resourceType },
-      { type: "i.resource_kind", id: "i.resource_id", entity: resourceType },
-      permission,
-      new Set(),
-    );
-    return `WHEN i.resource_kind = ${builder.value(resourceType)} AND i.permission = ${builder.value(permission)} THEN (${expression})`;
-  });
+  ];
+  const branches = identities.map((identity) =>
+    compileBatchBranch(model, cycles, builder, namespaceSql, identity, shared),
+  );
   return Object.freeze({
     kind: "check-many",
     text: `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (VALUES ${tuples.join(", ")})${shared.map((query) => `, ${query}`).join("")} SELECT i.ordinal::integer AS ordinal, CASE ${branches.join(" ")} ELSE false END AS allowed FROM input i ORDER BY i.ordinal::integer`,
     values: builder.values,
   });
+}
+
+function compileBatchBranch(
+  model: AuthorizationModelDefinition,
+  cycles: PermissionCyclePlan,
+  builder: QueryBuilder,
+  namespaceSql: string,
+  identity: string,
+  shared: string[],
+): string {
+  const [resourceType, permission] = splitIdentity(identity);
+  if (readLinearPath(model, resourceType, permission) !== undefined) {
+    const branch = compileLinearBatchBranch(model, builder, {
+      namespace: namespaceSql,
+      resourceType,
+      permission,
+      index: shared.length,
+    });
+    shared.push(branch.hits);
+    return branch.decision;
+  }
+  const context: ForwardContext = {
+    model,
+    cycles,
+    builder,
+    namespace: namespaceSql,
+    subject: {
+      type: "i.subject_kind",
+      id: "i.subject_id",
+      entity: resourceType,
+    },
+    active: new Set(),
+  };
+  const expression = compileForwardPermission(
+    context,
+    { type: "i.resource_kind", id: "i.resource_id", entity: resourceType },
+    permission,
+  );
+  return `WHEN i.resource_kind = ${builder.value(resourceType)} AND i.permission = ${builder.value(permission)} THEN (${expression})`;
 }
 
 /**
@@ -167,23 +212,19 @@ export function compilePostgresCandidatePredicate(
   request: NormalizedResourceLookup,
 ): CompiledAuthorizationQuery {
   const builder = new QueryBuilder();
-  const namespaceSql = builder.value(namespace);
-  const expression = compilePermission(
-    model,
-    builder,
-    namespaceSql,
-    {
-      type: builder.value(request.subject.type),
-      id: builder.value(request.subject.id),
-      entity: request.subject.type,
-    },
+  const context = createForwardContext(model, builder, namespace, {
+    type: builder.value(request.subject.type),
+    id: builder.value(request.subject.id),
+    entity: request.subject.type,
+  });
+  const expression = compileForwardPermission(
+    context,
     {
       type: builder.value(request.resourceType),
       id: `${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.tableAlias}.${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.resourceIdColumn}`,
       entity: request.resourceType,
     },
     request.permission,
-    new Set(),
   );
   return Object.freeze({
     kind: "candidate-predicate",
@@ -192,16 +233,28 @@ export function compilePostgresCandidatePredicate(
   });
 }
 
-function compilePermission(
+function createForwardContext(
   model: AuthorizationModelDefinition,
   builder: QueryBuilder,
   namespace: string,
   subject: SqlReference,
+): ForwardContext {
+  return {
+    model,
+    cycles: analyzePermissionCycles(model),
+    builder,
+    namespace: builder.value(namespace),
+    subject,
+    active: new Set(),
+  };
+}
+
+function compileForwardPermission(
+  context: ForwardContext,
   resource: SqlReference,
   permissionName: string,
-  active: Set<string>,
 ): string {
-  const definition = model.permissions.find(
+  const definition = context.model.permissions.find(
     (candidate) =>
       candidate.wireName === permissionName &&
       candidate.entity === resource.entity,
@@ -210,136 +263,133 @@ function compilePermission(
     throw new Error(
       `Postgres policy cannot find permission ${permissionName}.`,
     );
-  const identity = `${resource.entity}\u0000${permissionName}`;
-  if (active.has(identity))
-    throw new Error(
-      "Postgres SQL compilation does not yet support a cycle through permissions. Subject-set cycles are supported by recursive relation SQL; rewrite this permission-through cycle or add a dedicated recursive permission compiler.",
-    );
-  active.add(identity);
-  try {
-    return compileExpression(
-      model,
-      builder,
-      namespace,
-      subject,
+  const scc = context.cycles.sccFor(resource.entity, permissionName);
+  if (scc !== undefined) {
+    return compileRecursiveForwardCheck({
+      builder: context.builder,
+      namespace: context.namespace,
       resource,
-      definition.expression,
-      active,
+      entryEntity: resource.entity,
+      entryPermission: permissionName,
+      scc,
+      compileExpression: (nodeResource, expression) =>
+        compileForwardExpression(context, nodeResource, expression),
+    });
+  }
+  const identity = permissionIdentity(resource.entity, permissionName);
+  if (context.active.has(identity))
+    throw new Error(
+      "Postgres SQL compilation does not support a cycle through permissions.",
     );
+  context.active.add(identity);
+  try {
+    return compileForwardExpression(context, resource, definition.expression);
   } finally {
-    active.delete(identity);
+    context.active.delete(identity);
   }
 }
 
-function compileExpression(
-  model: AuthorizationModelDefinition,
-  builder: QueryBuilder,
-  namespace: string,
-  subject: SqlReference,
+function compileForwardExpression(
+  context: ForwardContext,
   resource: SqlReference,
   expression: CompiledPermissionExpression,
-  active: Set<string>,
 ): string {
   if (expression.kind === "relation")
-    return compileRelationMembership(
-      builder,
-      namespace,
-      subject,
-      resource,
-      expression.relation,
+    return relationMembershipCheck(
+      context.namespace,
+      context.subject.type,
+      context.subject.id,
+      resource.type,
+      resource.id,
+      context.builder.value(expression.relation),
     );
-  if (expression.kind === "through") {
-    const relationSql = builder.value(expression.relation);
-    const throughAlias = builder.throughAlias();
-    const related: SqlReference = {
-      type: `${throughAlias}.subject_kind`,
-      id: `${throughAlias}.subject_id`,
-      entity: relatedEntity(model, resource.entity, expression.relation),
-    };
-    const child = compilePermissionForRelated(
-      model,
-      builder,
-      namespace,
-      subject,
-      related,
-      expression.permission,
-      active,
-    );
-    // OFFSET 0 keeps each arrow a correlated subplan. Pulling arrows up
-    // into semijoins can repeatedly execute the nested membership query.
-    return `EXISTS (SELECT 1 FROM ${TUPLES} ${throughAlias} WHERE ${throughAlias}.namespace = ${namespace} AND ${throughAlias}.resource_kind = ${resource.type} AND ${throughAlias}.resource_id = ${resource.id} AND ${throughAlias}.relation = ${relationSql} AND ${throughAlias}.subject_is_wildcard = false AND ${throughAlias}.subject_relation = '' AND (${child}) OFFSET 0)`;
-  }
+  if (expression.kind === "through")
+    return compileThrough(context, resource, expression);
+  if (expression.kind === "through-all")
+    return compileThroughAll(context, resource, expression);
   if (expression.kind === "exclude")
-    return `((${compileExpression(model, builder, namespace, subject, resource, expression.include, active)}) AND NOT (${compileExpression(model, builder, namespace, subject, resource, expression.exclude, active)}))`;
+    return `((${compileForwardExpression(context, resource, expression.include)}) AND NOT (${compileForwardExpression(context, resource, expression.exclude)}))`;
   const joiner = expression.kind === "any-of" ? " OR " : " AND ";
-  return `(${expression.expressions.map((child) => `(${compileExpression(model, builder, namespace, subject, resource, child, active)})`).join(joiner)})`;
+  return `(${expression.expressions.map((child) => `(${compileForwardExpression(context, resource, child)})`).join(joiner)})`;
 }
 
-function compilePermissionForRelated(
-  model: AuthorizationModelDefinition,
-  builder: QueryBuilder,
-  namespace: string,
-  subject: SqlReference,
+function compileThrough(
+  context: ForwardContext,
   resource: SqlReference,
-  permission: string,
-  active: Set<string>,
+  expression: Extract<CompiledPermissionExpression, { kind: "through" }>,
 ): string {
-  const definition = model.permissions.find(
-    (candidate) =>
-      candidate.wireName === permission && candidate.entity === resource.entity,
+  const { builder, namespace } = context;
+  const targets = resolveArrowTargets(
+    context.model,
+    resource.entity,
+    expression,
   );
-  if (!definition)
-    throw new Error("Postgres policy is missing a through permission.");
-  return compilePermission(
-    model,
-    builder,
-    namespace,
-    subject,
-    resource,
-    permission,
-    active,
+  const polymorphic = isPolymorphicRelation(
+    context.model,
+    resource.entity,
+    expression.relation,
   );
+  const relationSql = builder.value(expression.relation);
+  const throughAlias = builder.throughAlias();
+  const branchSql = compileArrowTargetBranches(
+    context,
+    throughAlias,
+    targets,
+    polymorphic,
+  );
+  // OFFSET 0 keeps each arrow a correlated subplan. Pulling arrows up
+  // into semijoins can repeatedly execute the nested membership query.
+  return `EXISTS (SELECT 1 FROM ${TUPLES} ${throughAlias} WHERE ${throughAlias}.namespace = ${namespace} AND ${throughAlias}.resource_kind = ${resource.type} AND ${throughAlias}.resource_id = ${resource.id} AND ${throughAlias}.relation = ${relationSql} AND ${throughAlias}.subject_is_wildcard = false AND ${throughAlias}.subject_relation = '' AND ${notExpired(throughAlias)} AND (${branchSql}) OFFSET 0)`;
 }
 
-/**
- * The recursive UNION deduplicates usersets, including cycles and diamonds.
- * Keep each hop correlated so stale statistics cannot select a repeated
- * namespace scan in place of a tuple key lookup.
- */
-function compileRelationMembership(
-  builder: QueryBuilder,
-  namespace: string,
-  subject: SqlReference,
+function compileThroughAll(
+  context: ForwardContext,
   resource: SqlReference,
-  relation: string,
+  expression: Extract<CompiledPermissionExpression, { kind: "through-all" }>,
 ): string {
-  const relationSql = builder.value(relation);
-  return `EXISTS (WITH RECURSIVE requested(resource_kind, resource_id, relation) AS (
-    VALUES (${resource.type}, ${resource.id}, ${relationSql})
-    UNION
-    SELECT child.subject_kind, child.subject_id, child.subject_relation
-    FROM requested requested_relation
-    CROSS JOIN LATERAL (
-      SELECT tuple.subject_kind, tuple.subject_id, tuple.subject_relation
-      FROM ${TUPLES} tuple
-      WHERE tuple.namespace = ${namespace}
-        AND tuple.resource_kind = requested_relation.resource_kind
-        AND tuple.resource_id = requested_relation.resource_id
-        AND tuple.relation = requested_relation.relation
-        AND tuple.subject_is_wildcard = false
-        AND tuple.subject_relation <> ''
-      OFFSET 0
-    ) child
-  )
-  SELECT 1
-  FROM ${TUPLES} tuple
-  JOIN requested requested_relation
-    ON requested_relation.resource_kind = tuple.resource_kind
-    AND requested_relation.resource_id = tuple.resource_id
-    AND requested_relation.relation = tuple.relation
-  WHERE tuple.namespace = ${namespace}
-    AND ((tuple.subject_is_wildcard = false AND tuple.subject_relation = '' AND tuple.subject_kind = ${subject.type} AND tuple.subject_id = ${subject.id}) OR (tuple.subject_is_wildcard = true AND tuple.subject_kind = ${subject.type}))
-  LIMIT 1)`;
+  const { builder, namespace } = context;
+  const targets = resolveArrowTargets(
+    context.model,
+    resource.entity,
+    expression,
+  );
+  const polymorphic = isPolymorphicRelation(
+    context.model,
+    resource.entity,
+    expression.relation,
+  );
+  const relationSql = builder.value(expression.relation);
+  const existsAlias = builder.throughAlias();
+  const checkAlias = builder.throughAlias();
+  const branchSql = compileArrowTargetBranches(
+    context,
+    checkAlias,
+    targets,
+    polymorphic,
+  );
+  const parentMatch = (alias: string) =>
+    `${alias}.namespace = ${namespace} AND ${alias}.resource_kind = ${resource.type} AND ${alias}.resource_id = ${resource.id} AND ${alias}.relation = ${relationSql} AND ${alias}.subject_is_wildcard = false AND ${alias}.subject_relation = '' AND ${notExpired(alias)}`;
+  return `(EXISTS (SELECT 1 FROM ${TUPLES} ${existsAlias} WHERE ${parentMatch(existsAlias)}) AND NOT EXISTS (SELECT 1 FROM ${TUPLES} ${checkAlias} WHERE ${parentMatch(checkAlias)} AND NOT (${branchSql}) OFFSET 0))`;
+}
+
+function compileArrowTargetBranches(
+  context: ForwardContext,
+  tupleAlias: string,
+  targets: readonly CompiledArrowTarget[],
+  polymorphic: boolean,
+): string {
+  const branches = targets.map((target) => {
+    const related: SqlReference = {
+      type: `${tupleAlias}.subject_kind`,
+      id: `${tupleAlias}.subject_id`,
+      entity: target.entity,
+    };
+    const child = compileForwardPermission(context, related, target.permission);
+    if (!polymorphic && targets.length === 1) return child;
+    const targetKindSql = context.builder.value(target.entity);
+    return `(${tupleAlias}.subject_kind = ${targetKindSql} AND (${child}))`;
+  });
+  return branches.join(" OR ");
 }
 
 function splitIdentity(value: string): readonly [string, string] {

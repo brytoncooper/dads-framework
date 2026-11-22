@@ -5,6 +5,9 @@
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "dads-import-spicedb": "./bin/dads-import-spicedb.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -12,6 +15,7 @@
     }
   },
   "files": [
+    "bin",
     "dist",
     "README.md"
   ],
@@ -21,6 +25,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@authzed/authzed-node": "^1.6.1",
+    "@dads-framework/authorization": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@dads-framework/postgres-access": "0.3.0",
+    "@dads-framework/sqlite-access": "0.3.0",
     "vitest": "~4.1.0"
   },
   "scripts": {

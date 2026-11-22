@@ -1,7 +1,9 @@
 # `@dads-framework/postgres-access`
 
 Check permissions, list the resources a user can access, and commit relationship
-changes alongside business data in the application's Postgres database.
+changes alongside business data in the application's Postgres database. Works
+directly with a plain `pg.Pool` (zero ORM required) or with Drizzle via
+`@dads-framework/postgres-access/drizzle`.
 
 ## Trusted experimental
 
@@ -16,41 +18,54 @@ during which a committed revoke would still be waiting for delivery.
 
 Its access decisions and visible resource lists have been checked against
 SpiceDB. The [live transaction tests](./src/protected-transaction.integration.test.ts)
+and [plain pg transaction tests](./src/plain-pg-transaction.integration.test.ts)
 cover revocation and rollback. The [graph tests](./src/recursive-subject-set.integration.test.ts)
 also exercise nested memberships up to 10,000 links.
 
-Start with one protected operation and test a grant, a denial and a
+Start with one protected operation and test a grant, a denial, and a
 revocation with your own policy. Measure checks and lists while permissions
 are changing. Sustained production performance under that mix is still open.
 See the [benchmark results](./BENCHMARK.md) for measured workloads.
 
 ## Protected writes
 
-Use `withProtectedPostgresTransaction({ database, authorization }, work)`
-when a decision protects a write. The helper opens a serializable Drizzle
-transaction and passes `{ tx, authorization }` to the callback. Check access
-again inside the callback, even if the route already authorized the request.
-Use these same handles for the application writes and relationship changes. Await all work before leaving the callback.
-The authorization handle expires on return or error.
+### Plain `pg.Pool` (Drizzle-free)
 
-To join an existing transaction, pass `{ transaction: tx, authorization }`.
-The helper verifies that it is already serializable and uses the same
-transaction. The caller still owns commit and rollback. Propagate failures so
-the outer transaction can roll back. The helper does not create a savepoint.
+Use `withProtectedPgTransaction({ pool, authorization }, work)` when a decision
+protects a write on a standard node-postgres pool. The helper checks out a
+client, starts `BEGIN ISOLATION LEVEL SERIALIZABLE`, and passes
+`{ client, authorization }` bound to that client. Check access again inside the
+callback (for example via `createAccessClient(authorization)`), run application
+SQL on `client`, and await all work before returning. The authorization handle
+expires as soon as the callback finishes or throws.
 
-A PostgreSQL serialization failure surfaces as `PostgresSerializationConflict`
-with code `POSTGRES_CONFLICT` and `retryable: true`. A caller that owns the
-outer commit can use `readPostgresSerializationConflict(error)` to classify
-a failure raised there. Retry the entire application transaction if retrying
-is appropriate. The helper invokes the callback at most once per call.
+### Drizzle (`@dads-framework/postgres-access/drizzle`)
+
+If your app uses Drizzle, import `withProtectedDrizzleTransaction` (and
+`transactionExecutor`) from `@dads-framework/postgres-access/drizzle`. Pass
+`{ database, authorization }` to open a serializable Drizzle transaction, or
+`{ transaction: tx, authorization }` to join an existing serializable
+transaction. Existing Dads apps using `@dads-framework/postgres` can also keep
+using `withProtectedPostgresTransaction`. When joining an outer transaction,
+the caller still owns commit and rollback; propagate failures so the outer
+transaction rolls back (the helper does not create a savepoint).
+
+### Serialization conflicts and ordering
+
+A PostgreSQL serialization failure (`40001`) surfaces as
+`PostgresSerializationConflict` with code `POSTGRES_CONFLICT` and
+`retryable: true`. A caller that owns an outer commit can use
+`readPostgresSerializationConflict(error)` to classify a failure raised there.
+Retry the entire application transaction if retrying is appropriate. The helper
+invokes the callback at most once per call.
 
 Serializable isolation makes the commit consistent with a serial ordering of
 transactions. A revoke committed before the permission check's transaction
 snapshot is visible to that check. An overlapping revoke may serialize after
 the protected write. If an operation requires revocation to take precedence
 over an overlapping write, coordinate both operations through an application
-lock or equivalent ordering mechanism. For reads and explicit tuple changes
-in an existing transaction, use `inTransaction` or `inDrizzleTransaction`.
+lock or equivalent ordering mechanism. For reads and explicit tuple changes in
+an existing transaction, use `inTransaction` or `inDrizzleTransaction`.
 
 ## Try it
 
@@ -66,8 +81,8 @@ namespace per run. In an application, apply the SQL through your migration
 runner and use a stable namespace.
 
 ```sh
-npm install @dads-framework/access @dads-framework/postgres @dads-framework/postgres-access zod
-npm install -D tsx
+npm install @dads-framework/access @dads-framework/postgres-access pg
+npm install -D tsx @types/pg
 ```
 
 Save as `check-postgres-access.mts` and run `npx tsx check-postgres-access.mts`.
@@ -76,98 +91,131 @@ Save as `check-postgres-access.mts` and run `npx tsx check-postgres-access.mts`.
 
 ```ts
 import { randomUUID } from "node:crypto";
-import { access, accessModel, entityHandle } from "@dads-framework/access";
-import { relationshipWrite } from "@dads-framework/access/runtime";
-import { createPostgresConnection } from "@dads-framework/postgres";
+import { actor, compileAccess, resource } from "@dads-framework/access";
+import { createAccessClient } from "@dads-framework/access/runtime";
 import {
   PostgresAuthorization,
   relationshipSchemaMigration,
+  withProtectedPgTransaction,
 } from "@dads-framework/postgres-access";
-import { z } from "zod";
+import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("Set DATABASE_URL.");
 
-const user = entityHandle({ wireName: "user", idSchema: z.string() });
-const team = entityHandle({
-  wireName: "team",
-  idSchema: z.string(),
-  kind: "scope",
+const user = actor("user");
+const organization = resource("organization", {
+  roles: { admin: user, member: user },
+  can: ({ admin, member }) => ({
+    manage: admin,
+    view: [admin, member],
+  }),
+  children: {
+    task: {
+      inherit: "all",
+      roles: { assignee: user },
+      can: ({ assignee }) => ({ edit: assignee }),
+    },
+  },
 });
-const teamAccess = access(team, {
-  roles: { member: user },
-  permissions: (roles) => ({ view: [roles.member] }),
-});
-const model = accessModel([
-  access(user, { roles: {}, permissions: () => ({}) }),
-  teamAccess,
-]);
+const model = compileAccess([organization]);
 
-const connection = createPostgresConnection(
-  { connectionString, schema: {} },
-  console,
-);
+const pool = new Pool({ connectionString });
 try {
-  await connection.pool.query(relationshipSchemaMigration.sql);
+  await pool.query(relationshipSchemaMigration.sql);
   const authorization = new PostgresAuthorization({
     model,
     namespace: randomUUID(),
-    executor: connection.pool,
+    executor: pool,
   });
-  const resource = { type: team.wireName, id: "team-1" };
-  const subject = { type: user.wireName, id: "alice" };
-  const relation = teamAccess.roles.member.roleName;
-  const query = {
-    resource,
-    subject,
-    permission: teamAccess.permissions.view.permissionName,
-  };
+  const access = createAccessClient(authorization);
 
-  console.log(await authorization.check(query));
-  await authorization.writeRelationships([
-    relationshipWrite(resource, relation, subject),
-  ]);
-  console.log(await authorization.check(query));
-  await authorization.deleteRelationships({
-    resourceType: resource.type,
-    resourceId: resource.id,
-    relation,
-    subject,
-  });
-  console.log(await authorization.check(query));
+  console.log(
+    await access.can(user("alice"), organization.task("task-1").view),
+  );
+  await withProtectedPgTransaction(
+    { pool, authorization },
+    async ({ authorization: scoped }) => {
+      const txAccess = createAccessClient(scoped);
+      await txAccess.add(user("alice"), organization("org-1").member);
+      await txAccess.add(
+        organization("org-1"),
+        organization.task("task-1").organization,
+      );
+    },
+  );
+  console.log(
+    await access.can(user("alice"), organization.task("task-1").view),
+  );
+  await access.remove(user("alice"), organization("org-1").member);
+  console.log(
+    await access.can(user("alice"), organization.task("task-1").view),
+  );
 } finally {
-  await connection.close();
+  await pool.end();
 }
 ```
 
-The script prints `false`, `true`, and `false` as the membership is granted
-and revoked.
+The script prints `false`, `true`, and `false` as organization membership is
+granted and revoked while `task` inherits `view` from `organization`.
 
 ## Use it
 
-Choose Postgres for an app that already uses Postgres and can keep relationship facts beside its data. Install the relationship schema through the app's migration runner. Configure a stable namespace for this model, and select the backend at application composition. Use the same model for Postgres policy compilation and HTTP scope planning.
+Choose Postgres for an app that already uses Postgres and can keep relationship
+facts beside its data. Install `relationshipSchemaMigration.sql` through the
+app's migration runner. Configure a stable namespace for this model, and pass a
+plain `pg.Pool` as `executor` when constructing `PostgresAuthorization`. Use
+`createAccessClient(authorization)` from `@dads-framework/access/runtime` for
+typed `add`, `remove`, `can`, `list`, `whoCan`, and `listDirect` calls.
 
-Bind `TransactionalAccessChanges` as the enqueue port and
-`AlreadyAppliedAccessChanges` as the after-commit dispatcher. The
-application passes its active transaction to `enqueue(entries, tx)`.
-Relationship facts and the business row then commit or roll back together.
+When integrating with Dads outbox ports, bind `TransactionalAccessChanges` as
+the enqueue port and `AlreadyAppliedAccessChanges` as the after-commit
+dispatcher. Pass the active transaction to `enqueue(entries, tx)` so
+relationship facts and business rows commit or roll back together.
 
-In Postgres mode, start neither the access-change projector nor the SpiceDB migration runner. Successful writes return an empty consistency token. Data visibility follows the caller's Postgres transaction. The after-commit dispatcher is a no-op because committed facts are already visible. Keep any application locks that coordinate work beyond projecting authorization facts.
+In Postgres mode, start neither the access-change projector nor the SpiceDB
+migration runner. Successful writes return an empty consistency token. Data
+visibility follows the caller's Postgres transaction. The after-commit
+dispatcher is a no-op because committed facts are already visible. Keep any
+application locks that coordinate work beyond projecting authorization facts.
 
-Choose the backend based on the model features the application needs, its
-transaction requirements, and measurements with its own data and traffic.
-The [SpiceDB adapter](../authorization/README.md) provides a separate graph
-store, with a Postgres outbox for writes.
+To evolve stored relationships between model revisions or migrate a live
+SpiceDB deployment into PostgreSQL, use
+[`@dads-framework/authorization-migration`](../authorization-migration/README.md).
+The [SpiceDB adapter](../authorization/README.md) remains available when you
+need a separate graph store with a Postgres outbox.
 
 ## What it refuses to do
 
-Compilation rejects missing relation or permission targets, empty expressions, and local permission cycles. Cross-entity permission cycles are unsupported by the SQL engine. Each arrow needs one direct target entity type. Permission checks require a concrete subject; relationship writes can contain wildcard and subject-set tuples.
+Compilation rejects missing relation or permission targets, empty expressions,
+local same-entity permission cycles, non-monotonic arrow cycles (cycles passing
+through `excluding` / `.unless()` or `throughAll` / `every()`), non-linear
+multi-branch cycles, and unproductive cycles with no base case. Arrows need at
+least one direct target entity type that defines the requested permission;
+target types on a polymorphic relation that do not define the permission are
+skipped. Permission checks and resource lookups require a concrete subject;
+`lookupSubjects` requires a concrete resource and a non-empty subject type;
+relationship writes can contain wildcard and subject-set tuples.
 
-The enqueue port rejects a database handle in place of an application transaction. Its transaction-bound changes are exact tuple writes or deletes. A broad revocation sweep needs its filters passed to a transaction-bound adapter if it must commit with the business update.
+The enqueue port rejects a database handle in place of an application
+transaction. Its transaction-bound changes are exact tuple writes or deletes. A
+broad revocation sweep needs its filters passed to a transaction-bound adapter
+if it must commit with the business update.
 
 ## Contract
 
-`PostgresAuthorization` implements the authorization port's checks, ordered bulk checks, discovery, relationship writes and filtered deletes, direct-subject listing, and relationship existence reads. Unknown permission names give denied checks and empty lookup results. Invalid tuple writes and failed storage operations reject.
+`PostgresAuthorization` implements the authorization port's checks, ordered bulk
+checks, resource discovery (`lookupResources`), transitive subject discovery
+(`lookupSubjects`), relationship writes and filtered deletes, direct-subject
+listing, and relationship existence reads. Unknown permission names give denied
+checks, empty resource lookups, and `{ subjects: [], hasWildcard: false }` for
+`lookupSubjects`. Invalid tuple writes and failed storage operations reject.
+
+- **Expiring relationships (`expiresAt`)**: `relationshipSchemaMigration` creates `expires_at timestamptz NULL` with a partial index (`dad_authorization_relationship_expires_at`). Existing v1 installations can apply the additive `relationshipExpirationMigration` (version 2). `writeRelationships` persists `expiresAt ?? null` with `ON CONFLICT (...) DO UPDATE SET expires_at = EXCLUDED.expires_at` so re-writing a tuple updates or clears its expiration. Every read (`check`, `checkMany`, `lookupResources`, `lookupSubjects`, `listDirectSubjects`, and `relationshipExists`) filters `(expires_at IS NULL OR expires_at > now())` using transaction-scoped Postgres `now()`.
+- **Polymorphic arrows**: Relations with multiple direct entity types (such as `parents: [organization, folder]`) lower `through` and `every()` across every target entity type that defines the target permission, matching `subject_kind` per branch across checks, resource lookups, shared point checks, and subject lookups.
+- **Recursive arrows**: Monotonic self-referential and mutually recursive arrow cycles (such as nested folders with `recursive: true`) compile to `WITH RECURSIVE` CTEs with `UNION` deduplication so cyclic tuple data terminates safely across `check`, `checkMany`, `lookupResources`, and `lookupSubjects`.
+- **Intersection arrows (`every()` / `throughAll`)**: Compiles to SpiceDB's non-vacuous `.all()` semantics (`EXISTS` at least one non-expired parent tuple `AND NOT EXISTS` a non-expired parent tuple failing the target permission) across `check`, `checkMany`, `lookupResources`, and `lookupSubjects`.
+- **Transitive `lookupSubjects`**: Evaluates a single parameterized SQL query returning sorted unique concrete `subjects` and `hasWildcard` across direct roles, recursive usersets, wildcards, `allOf` / `both`, `.unless()` / `excluding`, polymorphic arrows, recursive arrows, `every()` / `throughAll`, and `expires_at`. Available on root, `inTransaction`, `inDrizzleTransaction`, and protected transaction scopes.
 
 For operations on a root adapter, `queryTimeoutMs` defaults to 5,000 ms. It
 is a client deadline for executors that honor node-postgres query options.
@@ -186,12 +234,12 @@ The [benchmark notes](./BENCHMARK.md) explain which read paths were measured.
 ### Optimize point checks
 
 For a direct node-postgres pool, opt in by passing
-`executor: preparePostgresChecks(connection.pool)`. Share the wrapper across
-authorization namespaces. The wrapper can admit up to 64 distinct SQL shapes
-of at most 4 KiB each and 32 KiB total per pool lifetime. Other shapes execute
-unnamed, as do bulk checks, lookups, and writes. PostgreSQL decides when each
-connection can reuse a generic plan. New connections and the first checks on
-each connection still pay planning costs.
+`executor: preparePostgresChecks(pool)`. Share the wrapper across authorization
+namespaces. The wrapper can admit up to 64 distinct SQL shapes of at most 4 KiB
+each and 32 KiB total per pool lifetime. Other shapes execute unnamed, as do
+bulk checks, lookups, and writes. PostgreSQL decides when each connection can
+reuse a generic plan. New connections and the first checks on each connection
+still pay planning costs.
 
 Checks always read the facts visible to the executing transaction. The wrapper
 stores statement names and SQL shapes, and PostgreSQL stores plans per
@@ -248,17 +296,17 @@ GRANT SELECT ON dad_lookup_revision.epoch, dad_lookup_revision.namespace
 const authorization = new PostgresAuthorization({
   model,
   namespace: "workspace",
-  executor: connection.pool,
-  reuseLookupResultsOn: connection.pool,
+  executor: pool,
+  reuseLookupResultsOn: pool,
 });
 ```
 
-You can pass `preparePostgresChecks(connection.pool)` as the executor with the
-same pool. Write and read-only transaction clients do not qualify. Remove the
-option before rolling the optional migration back. Failed validation rejects
-the operation and clears retained answers. Table-wide tuple `SELECT` is checked
-for every reuse, so revoking it prevents reuse even if revision metadata is
-still readable.
+You can pass `preparePostgresChecks(pool)` as the executor with the same pool.
+Write and read-only transaction clients do not qualify. Remove the option
+before rolling the optional migration back. Failed validation rejects the
+operation and clears retained answers. Table-wide tuple `SELECT` is checked for
+every reuse, so revoking it prevents reuse even if revision metadata is still
+readable.
 
 The migration marks each touched namespace in the same transaction as
 INSERT, DELETE, or UPDATE. Moving a tuple marks both namespaces, and

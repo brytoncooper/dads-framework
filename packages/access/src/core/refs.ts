@@ -21,6 +21,12 @@ export type ThroughTerm = {
   readonly target: PermissionToken | RoleToken;
 };
 
+export type ThroughAllTerm = {
+  readonly kind: "through-all";
+  readonly role: RoleToken;
+  readonly target: PermissionToken | RoleToken;
+};
+
 export type GatedTerm = {
   readonly kind: "gated";
   readonly term: PermissionTerm;
@@ -48,6 +54,7 @@ export type PermissionTerm =
   | RoleToken
   | PermissionToken
   | ThroughTerm
+  | ThroughAllTerm
   | GatedTerm
   | ExcludingTerm
   | BothTerm

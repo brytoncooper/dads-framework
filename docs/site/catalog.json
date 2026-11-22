@@ -2,18 +2,10 @@
   "pages": [
     {
       "slug": "index",
-      "title": "Why Dads",
-      "owner": "create-dads",
+      "title": "Getting Started",
+      "owner": "@dads-framework/toolbox",
       "section": "Guides",
-      "path": "docs/site/guides/start.md",
-      "navigationGroup": "Get started"
-    },
-    {
-      "slug": "quickstart",
-      "title": "Quickstart",
-      "owner": "create-dads",
-      "section": "Guides",
-      "path": "docs/site/guides/quickstart.md",
+      "path": "docs/site/guides/index.md",
       "examples": [
         {
           "source": "packages/foundation/create-dads/src/cli.test.ts",
@@ -23,44 +15,35 @@
       "navigationGroup": "Get started"
     },
     {
-      "slug": "vocabulary",
-      "title": "Dads vocabulary",
+      "slug": "adopt-standalone",
+      "title": "Adopt One Package at a Time",
       "owner": "@dads-framework/toolbox",
       "section": "Guides",
-      "path": "docs/site/guides/vocabulary.md",
+      "path": "docs/site/guides/adopt-standalone.md",
       "navigationGroup": "Get started"
-    },
-    {
-      "slug": "adopt",
-      "title": "Adopt one capability",
-      "owner": "@dads-framework/toolbox",
-      "section": "Guides",
-      "path": "docs/site/guides/adopt.md",
-      "navigationGroup": "Get started"
-    },
-    {
-      "slug": "http",
-      "title": "HTTP and contracts",
-      "owner": "@dads-framework/contract",
-      "section": "Guides",
-      "path": "docs/site/guides/http.md",
-      "navigationGroup": "Build a feature"
     },
     {
       "slug": "permissions",
-      "title": "Permissions are relationships",
-      "owner": "@dads-framework/access",
+      "title": "Access & Permissions",
+      "owner": "@dads-framework/postgres-access",
       "section": "Guides",
       "path": "docs/site/guides/permissions.md",
       "navigationGroup": "Build a feature"
     },
     {
-      "slug": "composition",
-      "title": "Compose APIs and plugins",
-      "owner": "@dads-framework/plugin",
+      "slug": "routes-and-contracts",
+      "title": "Routes, Contracts & Clients",
+      "owner": "@dads-framework/http",
       "section": "Guides",
-      "path": "docs/site/guides/composition.md",
-      "navigationGroup": "Build a feature",
+      "path": "docs/site/guides/routes-and-contracts.md",
+      "navigationGroup": "Build a feature"
+    },
+    {
+      "slug": "boundaries-and-apis",
+      "title": "Multi-API Composition & CI Gates",
+      "owner": "@dads-framework/toolbox",
+      "section": "Guides",
+      "path": "docs/site/guides/boundaries-and-apis.md",
       "examples": [
         {
           "source": "fixtures/plugin-notes/src/notes-routes.ts",
@@ -74,263 +57,17 @@
           "source": "fixtures/plugin-notes/src/apis/staff-api.ts",
           "proof": "fixtures/plugin-notes/src/apis/api-selection.test.ts"
         }
-      ]
-    },
-    {
-      "slug": "guarded-resource",
-      "title": "Add a guarded resource",
-      "owner": "@dads-framework/http",
-      "section": "Guides",
-      "path": "docs/site/guides/guarded-resource.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "generators",
-      "title": "Generate application code",
-      "owner": "@dads-framework/toolbox",
-      "section": "Guides",
-      "path": "docs/generators.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "identity-tenants",
-      "title": "Sign-in and tenant boundaries",
-      "owner": "@dads-framework/identity",
-      "section": "Guides",
-      "path": "docs/site/guides/identity-tenants.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "company-access",
-      "title": "Connect a company directory",
-      "owner": "@dads-framework/identity",
-      "section": "Guides",
-      "path": "docs/site/guides/company-access.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "flags",
-      "title": "Feature flags",
-      "owner": "@dads-framework/feature-flags",
-      "section": "Guides",
-      "path": "docs/site/guides/flags.md",
-      "examples": [
-        {
-          "source": "packages/server/feature-flags/src/lib/compose-feature-flags.test.ts",
-          "proof": "packages/server/feature-flags/src/lib/compose-feature-flags.test.ts"
-        }
       ],
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "ui",
-      "title": "UI, forms, and tables",
-      "owner": "@dads-framework/ui",
-      "section": "Guides",
-      "path": "docs/site/guides/ui.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "audit-migrations",
-      "title": "Audit and migrations",
-      "owner": "@dads-framework/migrations",
-      "section": "Guides",
-      "path": "docs/site/guides/audit-migrations.md",
-      "navigationGroup": "Build a feature"
-    },
-    {
-      "slug": "run",
-      "title": "Run the starter outside development",
-      "owner": "create-dads",
-      "section": "Guides",
-      "path": "apps/kit-workbench/DEPLOY.md",
       "navigationGroup": "Operate & verify"
     },
     {
-      "slug": "verification",
-      "title": "Verification and code health",
-      "owner": "@dads-framework/testing",
+      "slug": "sdk-reference",
+      "title": "SDK Glossary & Options",
+      "owner": "@dads-framework/access",
       "section": "Guides",
-      "path": "docs/site/guides/verification.md",
-      "navigationGroup": "Operate & verify"
-    },
-    {
-      "slug": "testing",
-      "title": "Testing quickstart",
-      "owner": "@dads-framework/testing",
-      "section": "Reference",
-      "path": "docs/testing/quickstart.md",
-      "navigationGroup": "Operate & verify"
-    },
-    {
-      "slug": "ci",
-      "title": "CI templates",
-      "owner": "@dads-framework/toolbox",
-      "section": "Reference",
-      "path": "ci/README.md",
-      "navigationGroup": "Operate & verify"
-    },
-    {
-      "slug": "ratchet",
-      "title": "Standalone code-health ratchet",
-      "owner": "@dads-framework/toolbox",
-      "section": "Reference",
-      "path": "ci/source-ratchet.md",
-      "navigationGroup": "Operate & verify"
-    },
-    {
-      "slug": "upgrade",
-      "title": "Upgrade a Dads project",
-      "owner": "@dads-framework/toolbox",
-      "section": "Guides",
-      "path": "docs/site/guides/upgrade.md",
-      "navigationGroup": "Operate & verify"
-    },
-    {
-      "slug": "agents",
-      "title": "Work with a coding agent",
-      "owner": "@dads-framework/toolbox",
-      "section": "Guides",
-      "path": "docs/site/guides/agents.md",
-      "navigationGroup": "Operate & verify"
-    },
-    {
-      "slug": "starter-examples",
-      "title": "Try the starter examples",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/README.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "example-permissions",
-      "title": "Inspect effective permissions",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/permissions-dashboard.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "example-audit-export",
-      "title": "Export audit metadata",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/audit-export.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "example-flag-preview",
-      "title": "Preview a feature flag",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/flag-preview.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "example-impersonation",
-      "title": "Try staff impersonation",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/staff-impersonation.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "example-scim",
-      "title": "Provision users and groups",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/directory-sync.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "example-sso",
-      "title": "Set up company sign-in",
-      "owner": "@dads-fixture/kit-workbench",
-      "section": "Guides",
-      "path": "apps/kit-workbench/examples/company-sso.md",
-      "navigationGroup": "Starter examples"
-    },
-    {
-      "slug": "principles",
-      "title": "Independent Evolution Principle",
-      "owner": "@dads-framework/toolbox",
-      "section": "Concepts",
-      "path": "docs/principles.md",
-      "navigationGroup": "Architecture"
-    },
-    {
-      "slug": "domain-boundaries",
-      "title": "Keep domains independent",
-      "owner": "@dads-framework/toolbox",
-      "section": "Reference",
-      "path": "docs/domain-boundaries.md",
-      "navigationGroup": "Architecture"
-    },
-    {
-      "slug": "adoption-model",
-      "title": "Adoption model",
-      "owner": "@dads-framework/toolbox",
-      "section": "Concepts",
-      "path": "docs/adoption-model.md",
-      "navigationGroup": "Architecture"
-    },
-    {
-      "slug": "dependency-libraries",
-      "title": "Dependency libraries",
-      "owner": "@dads-framework/toolbox",
-      "section": "Concepts",
-      "path": "docs/dependency-libraries.md",
-      "navigationGroup": "Architecture"
-    },
-    {
-      "slug": "starter",
-      "title": "Starter command reference",
-      "owner": "create-dads",
-      "section": "Reference",
-      "path": "apps/kit-workbench/README.md"
-    },
-    {
-      "slug": "doctor",
-      "title": "Doctor command reference",
-      "owner": "@dads-framework/toolbox",
-      "section": "Reference",
-      "path": "docs/doctor.md"
-    },
-    {
-      "slug": "diagnostics",
-      "title": "Diagnostic issues",
-      "owner": "@dads-framework/toolbox",
-      "section": "Reference",
-      "path": "docs/daddy-issues.md"
-    },
-    {
-      "slug": "dad",
-      "title": "Dad",
-      "owner": "@dads-framework/toolbox",
-      "section": "Essays",
-      "path": "DAD.md"
-    },
-    {
-      "slug": "go-ask-your-other-database",
-      "title": "Who let Gary back in?",
-      "owner": "@dads-framework/postgres-access",
-      "section": "Essays",
-      "path": "docs/go-ask-your-other-database.md"
+      "path": "docs/site/guides/sdk-reference.md",
+      "navigationGroup": "Reference"
     }
   ],
-  "apiPackages": [
-    "@dads-framework/access",
-    "@dads-framework/authorization",
-    "@dads-framework/contract",
-    "@dads-framework/http",
-    "@dads-framework/migrations",
-    "@dads-framework/audit",
-    "@dads-framework/feature-flags",
-    "@dads-framework/plugin",
-    "@dads-framework/ui",
-    "@dads-framework/identity",
-    "@dads-framework/identity-better-auth",
-    "@dads-framework/tenants",
-    "@dads-framework/postgres-access"
-  ]
+  "apiPackages": []
 }

@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { helpFor, usage } from "../bin/usage.js";
+import { installBrokenPipeHandler, isBrokenPipeError } from "./cli-io.js";
+
+installBrokenPipeHandler();
 
 const args = process.argv.slice(2);
 const [command, subject, detail] = args;
@@ -52,6 +55,9 @@ try {
   } else if (command === "add") {
     const { addProjectArtifact } = await import("./cli-generator-commands.js");
     addProjectArtifact(args.slice(1), wantsJson);
+  } else if (command === "access") {
+    const { accessCommand } = await import("./cli-access-commands.js");
+    await accessCommand(args.slice(1), wantsJson);
   } else if (command === "check" && subject === "boundaries") {
     const { checkBoundaries } = await import("./cli-boundary-commands.js");
     checkBoundaries(args.slice(2), wantsJson);
@@ -59,11 +65,17 @@ try {
     throw new Error(usage);
   }
 } catch (error: unknown) {
-  const message = error instanceof Error ? error.message : "Unknown failure.";
-  if (wantsJson) {
-    process.stderr.write(`${JSON.stringify({ ok: false, error: message })}\n`);
+  if (isBrokenPipeError(error)) {
+    process.exitCode = 0;
   } else {
-    process.stderr.write(`Dad: ${message}\n`);
+    const message = error instanceof Error ? error.message : "Unknown failure.";
+    if (wantsJson) {
+      process.stderr.write(
+        `${JSON.stringify({ ok: false, error: message })}\n`,
+      );
+    } else {
+      process.stderr.write(`Dad: ${message}\n`);
+    }
+    process.exitCode = 1;
   }
-  process.exitCode = 1;
 }

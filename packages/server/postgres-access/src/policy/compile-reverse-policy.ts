@@ -1,8 +1,28 @@
-import {
-  type AuthorizationModelDefinition,
-  type CompiledPermissionExpression,
+import type {
+  AuthorizationModelDefinition,
+  CompiledArrowTarget,
+  CompiledPermissionExpression,
 } from "./policy-model.js";
-import { relatedEntity, TUPLES, type QueryBuilder } from "./policy-sql.js";
+import {
+  analyzePermissionCycles,
+  type PermissionCyclePlan,
+} from "./permission-cycles.js";
+import { compileRecursiveReverseLookup } from "./compile-recursive-policy.js";
+import {
+  notExpired,
+  permissionIdentity,
+  resolveArrowTargets,
+  TUPLES,
+  type QueryBuilder,
+} from "./policy-sql.js";
+
+type ReverseContext = {
+  readonly model: AuthorizationModelDefinition;
+  readonly cycles: PermissionCyclePlan;
+  readonly builder: QueryBuilder;
+  readonly namespace: string;
+  readonly active: Set<string>;
+};
 
 /** Compiles the set of resource IDs a subject may use for one permission. */
 export function compileReversePermission(
@@ -13,7 +33,22 @@ export function compileReversePermission(
   permissionName: string,
   active: Set<string>,
 ): string {
-  const definition = model.permissions.find(
+  const context: ReverseContext = {
+    model,
+    cycles: analyzePermissionCycles(model),
+    builder,
+    namespace,
+    active,
+  };
+  return compileReversePermissionNode(context, entity, permissionName);
+}
+
+function compileReversePermissionNode(
+  context: ReverseContext,
+  entity: string,
+  permissionName: string,
+): string {
+  const definition = context.model.permissions.find(
     (candidate) =>
       candidate.wireName === permissionName && candidate.entity === entity,
   );
@@ -21,95 +56,160 @@ export function compileReversePermission(
     throw new Error(
       `Postgres policy cannot find permission ${permissionName}.`,
     );
-  const identity = `${entity}\u0000${permissionName}`;
-  if (active.has(identity))
+  const scc = context.cycles.sccFor(entity, permissionName);
+  if (scc !== undefined) {
+    return compileRecursiveReverseLookup({
+      builder: context.builder,
+      namespace: context.namespace,
+      entryEntity: entity,
+      entryPermission: permissionName,
+      scc,
+      compileExpression: (nodeEntity, expression) =>
+        compileReverseExpression(context, nodeEntity, expression),
+    });
+  }
+  const identity = permissionIdentity(entity, permissionName);
+  if (context.active.has(identity))
     throw new Error(
-      "Postgres SQL compilation does not yet support a cycle through permissions. Subject-set cycles are supported by recursive relation SQL; rewrite this permission-through cycle or add a dedicated recursive permission compiler.",
+      "Postgres SQL compilation does not support a cycle through permissions.",
     );
-  active.add(identity);
+  context.active.add(identity);
   try {
-    return compileReverseExpression(
-      model,
-      builder,
-      namespace,
-      entity,
-      definition.expression,
-      active,
-    );
+    return compileReverseExpression(context, entity, definition.expression);
   } finally {
-    active.delete(identity);
+    context.active.delete(identity);
   }
 }
 
 function compileReverseExpression(
-  model: AuthorizationModelDefinition,
-  builder: QueryBuilder,
-  namespace: string,
+  context: ReverseContext,
   entity: string,
   expression: CompiledPermissionExpression,
-  active: Set<string>,
 ): string {
   if (expression.kind === "relation") {
-    const resourceKind = builder.value(entity);
-    const relation = builder.value(expression.relation);
+    const resourceKind = context.builder.value(entity);
+    const relation = context.builder.value(expression.relation);
     return `SELECT subject_reachable.resource_id FROM subject_reachable WHERE subject_reachable.resource_kind = ${resourceKind} AND subject_reachable.relation = ${relation}`;
   }
   if (expression.kind === "through") {
-    const throughAlias = builder.throughAlias();
-    const related = relatedEntity(model, entity, expression.relation);
-    const relatedResourceIds = compileReversePermission(
-      model,
-      builder,
-      namespace,
-      related,
-      expression.permission,
-      active,
+    const targets = resolveArrowTargets(context.model, entity, expression);
+    return compileReverseThrough(context, entity, expression.relation, targets);
+  }
+  if (expression.kind === "through-all") {
+    const targets = resolveArrowTargets(context.model, entity, expression);
+    return compileReverseThroughAll(
+      context,
+      entity,
+      expression.relation,
+      targets,
     );
-    const resourceKind = builder.value(entity);
-    const relation = builder.value(expression.relation);
-    const relatedKind = builder.value(related);
-    // Keep the reached IDs on the outer side of this hop. Without the
-    // fence Postgres can re-run the inner permission chain for each found
-    // resource, particularly when tuple statistics lag writes.
-    return `SELECT DISTINCT match.resource_id
-      FROM (${relatedResourceIds}) related_resource
-      CROSS JOIN LATERAL (
-        SELECT ${throughAlias}.resource_id
-        FROM ${TUPLES} ${throughAlias}
-        WHERE ${throughAlias}.namespace = ${namespace}
-          AND ${throughAlias}.resource_kind = ${resourceKind}
-          AND ${throughAlias}.relation = ${relation}
-          AND ${throughAlias}.subject_kind = ${relatedKind}
-          AND ${throughAlias}.subject_id = related_resource.resource_id
-          AND ${throughAlias}.subject_is_wildcard = false
-          AND ${throughAlias}.subject_relation = ''
-        OFFSET 0
-      ) match`;
   }
   if (expression.kind === "exclude") {
     const include = compileReverseExpression(
-      model,
-      builder,
-      namespace,
+      context,
       entity,
       expression.include,
-      active,
     );
     const exclude = compileReverseExpression(
-      model,
-      builder,
-      namespace,
+      context,
       entity,
       expression.exclude,
-      active,
     );
     return `(${include}) EXCEPT (${exclude})`;
   }
   const operator = expression.kind === "any-of" ? "UNION" : "INTERSECT";
   return expression.expressions
-    .map(
-      (child) =>
-        `(${compileReverseExpression(model, builder, namespace, entity, child, active)})`,
-    )
+    .map((child) => `(${compileReverseExpression(context, entity, child)})`)
     .join(` ${operator} `);
+}
+
+function compileReverseThrough(
+  context: ReverseContext,
+  entity: string,
+  relationName: string,
+  targets: readonly CompiledArrowTarget[],
+): string {
+  const branches = targets.map((target) =>
+    compileReverseThroughBranch(context, entity, relationName, target),
+  );
+  return branches.length === 1 && branches[0] !== undefined
+    ? branches[0]
+    : branches.map((branch) => `(${branch})`).join(" UNION ");
+}
+
+function compileReverseThroughBranch(
+  context: ReverseContext,
+  entity: string,
+  relationName: string,
+  target: CompiledArrowTarget,
+): string {
+  const { builder, namespace } = context;
+  const throughAlias = builder.throughAlias();
+  const relatedResourceIds = compileReversePermissionNode(
+    context,
+    target.entity,
+    target.permission,
+  );
+  const resourceKind = builder.value(entity);
+  const relation = builder.value(relationName);
+  const relatedKind = builder.value(target.entity);
+  // Keep the reached IDs on the outer side of this hop. Without the
+  // fence Postgres can re-run the inner permission chain for each found
+  // resource, particularly when tuple statistics lag writes.
+  return `SELECT DISTINCT match.resource_id
+    FROM (${relatedResourceIds}) related_resource
+    CROSS JOIN LATERAL (
+      SELECT ${throughAlias}.resource_id
+      FROM ${TUPLES} ${throughAlias}
+      WHERE ${throughAlias}.namespace = ${namespace}
+        AND ${throughAlias}.resource_kind = ${resourceKind}
+        AND ${throughAlias}.relation = ${relation}
+        AND ${throughAlias}.subject_kind = ${relatedKind}
+        AND ${throughAlias}.subject_id = related_resource.resource_id
+        AND ${throughAlias}.subject_is_wildcard = false
+        AND ${throughAlias}.subject_relation = ''
+        AND ${notExpired(throughAlias)}
+      OFFSET 0
+    ) match`;
+}
+
+function compileReverseThroughAll(
+  context: ReverseContext,
+  entity: string,
+  relationName: string,
+  targets: readonly CompiledArrowTarget[],
+): string {
+  const { builder, namespace } = context;
+  const candidates = compileReverseThrough(
+    context,
+    entity,
+    relationName,
+    targets,
+  );
+  const allAlias = builder.throughAlias();
+  const resourceKind = builder.value(entity);
+  const relation = builder.value(relationName);
+  const allowedChecks = targets.map((target) => {
+    const targetKind = builder.value(target.entity);
+    const allowedIds = compileReversePermissionNode(
+      context,
+      target.entity,
+      target.permission,
+    );
+    return `(${allAlias}.subject_kind = ${targetKind} AND EXISTS (SELECT 1 FROM (${allowedIds}) allowed_target WHERE allowed_target.resource_id = ${allAlias}.subject_id))`;
+  });
+  return `SELECT DISTINCT candidate.resource_id
+    FROM (${candidates}) candidate
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM ${TUPLES} ${allAlias}
+      WHERE ${allAlias}.namespace = ${namespace}
+        AND ${allAlias}.resource_kind = ${resourceKind}
+        AND ${allAlias}.resource_id = candidate.resource_id
+        AND ${allAlias}.relation = ${relation}
+        AND ${allAlias}.subject_is_wildcard = false
+        AND ${allAlias}.subject_relation = ''
+        AND ${notExpired(allAlias)}
+        AND NOT (${allowedChecks.join(" OR ")})
+    )`;
 }

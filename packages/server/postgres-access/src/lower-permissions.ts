@@ -1,5 +1,6 @@
 import type { AccessIrDefinition, AccessIrTerm } from "@dads-framework/access";
 import type {
+  CompiledArrowTarget,
   CompiledAuthorizationPermission,
   CompiledPermissionExpression,
 } from "./policy/policy-model.js";
@@ -10,6 +11,7 @@ export type PermissionLowering = {
 };
 
 type LowerTerm = (term: AccessIrTerm) => CompiledPermissionExpression;
+type ArrowTerm = Extract<AccessIrTerm, { kind: "through" | "through-all" }>;
 
 export function lowerPermissions(
   definition: AccessIrDefinition,
@@ -40,7 +42,8 @@ export function lowerPermissions(
 
   function lower(term: AccessIrTerm): CompiledPermissionExpression {
     if (term.kind === "permission") return permission(term.name);
-    if (term.kind === "through") return lowerArrow(definition, context, term);
+    if (term.kind === "through" || term.kind === "through-all")
+      return lowerArrow(definition, context, term);
     return lowerLocal(term, lower);
   }
 
@@ -55,33 +58,76 @@ export function lowerPermissions(
 function lowerArrow(
   definition: AccessIrDefinition,
   context: PermissionLowering,
-  term: Extract<AccessIrTerm, { kind: "through" }>,
+  term: ArrowTerm,
 ): CompiledPermissionExpression {
   const role = definition.roles.find(({ name }) => name === term.roleName);
-  const types =
-    role?.subjects.filter((subject) => subject.kind === "type") ?? [];
-  const [target] = types;
-  if (target === undefined || types.length !== 1) {
+  const entityNames = uniqueDirectEntityNames(role?.subjects ?? []);
+  if (entityNames.length === 0) {
     throw new Error(
-      `Postgres arrow ${definition.wireName}#${term.roleName} requires one direct entity type`,
+      `Postgres arrow ${definition.wireName}#${term.roleName} requires at least one direct entity type`,
     );
   }
-  const targetDefinition = context.byName.get(target.wireName);
-  const name = targetDefinition?.permissions.some(
-    ({ name }) => name === term.targetPermission,
+  const targets = resolveTargetPermissions(
+    entityNames,
+    term.targetPermission,
+    context,
+  );
+  if (targets.length === 0) {
+    throw new Error(
+      `Unknown arrow target ${definition.wireName}#${term.roleName}->${term.targetPermission}`,
+    );
+  }
+  return {
+    kind: term.kind,
+    relation: term.roleName,
+    permission: term.targetPermission,
+    targets,
+  };
+}
+
+function uniqueDirectEntityNames(
+  subjects: AccessIrDefinition["roles"][number]["subjects"],
+): readonly string[] {
+  const names = new Set<string>();
+  for (const subject of subjects) {
+    if (subject.kind === "type") names.add(subject.wireName);
+  }
+  return [...names];
+}
+
+function resolveTargetPermissions(
+  entityNames: readonly string[],
+  targetPermission: string,
+  context: PermissionLowering,
+): readonly CompiledArrowTarget[] {
+  const targets: CompiledArrowTarget[] = [];
+  for (const entity of entityNames) {
+    const resolved = findTargetPermission(entity, targetPermission, context);
+    if (resolved !== undefined) {
+      targets.push({ entity, permission: resolved });
+    }
+  }
+  return targets;
+}
+
+function findTargetPermission(
+  entity: string,
+  targetPermission: string,
+  context: PermissionLowering,
+): string | undefined {
+  const targetDefinition = context.byName.get(entity);
+  if (
+    targetDefinition?.permissions.some(({ name }) => name === targetPermission)
   )
-    ? term.targetPermission
-    : context.generated.get(target.wireName)?.get(term.targetPermission);
-  if (name === undefined) {
-    throw new Error(
-      `Unknown arrow target ${target.wireName}#${term.targetPermission}`,
-    );
-  }
-  return { kind: "through", relation: term.roleName, permission: name };
+    return targetPermission;
+  return context.generated.get(entity)?.get(targetPermission);
 }
 
 function lowerLocal(
-  term: Exclude<AccessIrTerm, { kind: "permission" | "through" }>,
+  term: Exclude<
+    AccessIrTerm,
+    { kind: "permission" | "through" | "through-all" }
+  >,
   lower: LowerTerm,
 ): CompiledPermissionExpression {
   switch (term.kind) {

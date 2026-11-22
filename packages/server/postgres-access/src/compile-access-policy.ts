@@ -13,6 +13,7 @@ import {
   lowerPermissions,
   type PermissionLowering,
 } from "./lower-permissions.js";
+import { analyzePermissionCycles } from "./policy/permission-cycles.js";
 
 export type CompiledAccessPolicy = {
   readonly model: AuthorizationModelDefinition;
@@ -37,6 +38,7 @@ export function compileAccessPolicy(access: AccessModel): CompiledAccessPolicy {
     ),
     lifecycle: [],
   };
+  analyzePermissionCycles(model);
   return {
     model,
     permissionName: (entity, name) => {

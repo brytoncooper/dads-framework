@@ -4,6 +4,7 @@ export {
   excluding,
   gated,
   through,
+  throughAll,
 } from "./core/combinators.js";
 export type { PermissionTermInput } from "./core/combinators.js";
 export {
@@ -21,6 +22,14 @@ export {
 export { catalogOnly, isCatalogOnlyCapability } from "./core/catalog-only.js";
 export type { CatalogOnlyCapability } from "./core/catalog-only.js";
 export { emitAccessIr } from "./core/emit-ir.js";
+export {
+  emitTypeScript,
+  emitTypeScriptFromZed,
+} from "./core/emit-typescript.js";
+export type {
+  EmitTypeScriptOptions,
+  EmitTypeScriptStyle,
+} from "./core/emit-typescript.js";
 export { emitZed, emitZedForDefinitions } from "./core/emit-zed.js";
 export { entityHandle } from "./core/entity-handle.js";
 export type { EntityHandle, EntityKind } from "./core/entity-handle.js";
@@ -74,8 +83,9 @@ export type {
   GrantableScope,
   GrantableTargetKind,
 } from "./core/grantable.js";
-export { membersOf, wildcard } from "./core/holders.js";
+export { membersOf, wildcard, withExpiration } from "./core/holders.js";
 export type {
+  ExpirableHolder,
   RoleValue,
   SingleRoleValue,
   UsersetHolder,
@@ -113,14 +123,62 @@ export type {
   PermissionToken,
   RoleHolder,
   RoleToken,
+  ThroughAllTerm,
   ThroughTerm,
 } from "./core/refs.js";
 export { accessModel } from "./core/access-model.js";
 export type {
+  AccessMigrationKind,
+  AccessMigrationMeta,
   AccessModel,
   ResolvedAccessDefinition,
   ResolvedGranting,
 } from "./core/access-model.js";
+export { actor } from "./core/dsl-actor.js";
+export { compileAccess } from "./core/dsl-compile.js";
+export { formatAccessTree } from "./core/dsl-format-tree.js";
+export { resource } from "./core/dsl-resource.js";
+export { allOf, anyOf, every } from "./core/dsl-terms.js";
+export type {
+  AnyDslChildSpec,
+  CompileAccessOptions,
+  DslCanContext,
+  DslChildSpec,
+  DslInheritOption,
+  DslNode,
+  DslResource,
+  DslResourceInstance,
+  MaterializeChildResource,
+  ResolvedInheritedPerms,
+} from "./core/dsl-resource-types.js";
+export type {
+  ActorRef,
+  AllowedSubjectForHolder,
+  AnyDslResource,
+  AnyDslRoleSlot,
+  DslActor,
+  DslActorOptions,
+  DslEveryProxy,
+  DslExpirableActorHolder,
+  DslLazyResource,
+  DslPermissionExpr,
+  DslPermissionTarget,
+  DslPermissionToken,
+  DslRoleHolder,
+  DslRoleRef,
+  DslRoleSlot,
+  DslRoleToken,
+  DslRolesSpec,
+  DslSubjectInput,
+  DslTerm,
+  DslTermInput,
+  DslUsersetSubject,
+  DslWildcardActorHolder,
+  ParentRoleName,
+  ResourceSubjectRef,
+  SharedParentPermissions,
+  SubjectMapFromRoles,
+} from "./core/dsl-types.js";
 export { world } from "./core/world.js";
 export type {
   AccessWorld,

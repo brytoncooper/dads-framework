@@ -1,98 +1,105 @@
-import type { DrizzleHandle } from "@dads-framework/postgres";
-import { is, sql } from "drizzle-orm";
-import { PgTransaction } from "drizzle-orm/pg-core";
-
+import type { DrizzleExecuteLike } from "./drizzle-structural.js";
+import type { PgClientLike } from "./postgres-types.js";
+import type {
+  ProtectedDrizzleTransaction,
+  ProtectedDrizzleTransactionOptions,
+  withProtectedDrizzleTransaction as withProtectedDrizzleTransactionFn,
+} from "./with-protected-drizzle-transaction.js";
 import {
-  assertProtectedAuthorizationCanJoin,
-  openProtectedAuthorization,
-} from "./protected-authorization-scope.js";
-import type { PostgresAuthorization } from "./postgres-authorization.js";
-import { readPostgresSerializationConflict } from "./postgres-serialization-conflict.js";
-
-type Schema = Record<string, unknown>;
-type Database<TSchema extends Schema> = Pick<
-  DrizzleHandle<TSchema>,
-  "transaction"
->;
-type Transaction<TSchema extends Schema> = Parameters<
-  Parameters<Database<TSchema>["transaction"]>[0]
->[0];
+  withProtectedPgTransaction,
+  type ProtectedPgTransaction,
+  type ProtectedPgTransactionOptions,
+} from "./with-protected-pg-transaction.js";
 
 export type ProtectedPostgresTransactionOptions<
-  TSchema extends Schema = Schema,
-> = {
-  readonly authorization: PostgresAuthorization;
-} & (
-  | { readonly database: Database<TSchema>; readonly transaction?: never }
-  | { readonly transaction: Transaction<TSchema>; readonly database?: never }
-);
+  Tx extends DrizzleExecuteLike = DrizzleExecuteLike,
+  Client extends PgClientLike = PgClientLike,
+> =
+  | (ProtectedPgTransactionOptions<Client> & {
+      readonly database?: never;
+      readonly transaction?: never;
+    })
+  | (ProtectedDrizzleTransactionOptions<Tx> & {
+      readonly pool?: never;
+    });
 
-export type ProtectedPostgresTransaction<TSchema extends Schema = Schema> = {
-  readonly tx: Transaction<TSchema>;
-  readonly authorization: PostgresAuthorization;
+export type ProtectedPostgresTransaction<
+  Tx extends DrizzleExecuteLike = DrizzleExecuteLike,
+> = ProtectedDrizzleTransaction<Tx>;
+
+type PgTransactionCall<Client extends PgClientLike, Result> = readonly [
+  options: ProtectedPgTransactionOptions<Client> & {
+    readonly database?: never;
+    readonly transaction?: never;
+  },
+  work: (scope: ProtectedPgTransaction<Client>) => PromiseLike<Result>,
+];
+
+type DrizzleTransactionCall<Tx extends DrizzleExecuteLike, Result> = readonly [
+  options: ProtectedDrizzleTransactionOptions<Tx> & {
+    readonly pool?: never;
+  },
+  work: (scope: ProtectedDrizzleTransaction<Tx>) => Promise<Result>,
+];
+
+type DrizzleTransactionModule = {
+  readonly withProtectedDrizzleTransaction: typeof withProtectedDrizzleTransactionFn;
 };
 
-/** Run one protected write with authorization and application data on the same client. */
-export async function withProtectedPostgresTransaction<
-  TSchema extends Schema,
-  Result,
->(
-  options: ProtectedPostgresTransactionOptions<TSchema>,
-  work: (scope: ProtectedPostgresTransaction<TSchema>) => Promise<Result>,
-): Promise<Result> {
-  try {
-    assertProtectedAuthorizationCanJoin(
-      options.authorization,
-      options.transaction,
-    );
-    if (options.transaction !== undefined) {
-      return await runProtectedWork(
-        options.transaction,
-        options.authorization,
-        work,
-      );
-    }
+let drizzleTransactionModulePromise:
+  Promise<DrizzleTransactionModule> | undefined;
 
-    if (is(options.database, PgTransaction)) {
-      throw new Error("Pass an existing Postgres transaction as transaction");
-    }
-    let started = false;
-    return await options.database.transaction(
-      (tx) => {
-        if (started)
-          throw new Error("Protected Postgres callbacks cannot be replayed");
-        started = true;
-        return runProtectedWork(tx, options.authorization, work);
-      },
-      { isolationLevel: "serializable" },
-    );
-  } catch (error) {
-    const conflict = readPostgresSerializationConflict(error);
-    if (conflict !== undefined) throw conflict;
-    throw error;
-  }
+function loadDrizzleTransactionModule(): Promise<DrizzleTransactionModule> {
+  drizzleTransactionModulePromise ??=
+    import("./with-protected-drizzle-transaction.js");
+  return drizzleTransactionModulePromise;
 }
 
-async function runProtectedWork<TSchema extends Schema, Result>(
-  tx: Transaction<TSchema>,
-  authorization: PostgresAuthorization,
-  work: (scope: ProtectedPostgresTransaction<TSchema>) => Promise<Result>,
-): Promise<Result> {
-  if (!is(tx, PgTransaction)) {
-    throw new Error("Protected Postgres writes require a Drizzle transaction");
-  }
-  // A SELECT takes the transaction snapshot, so isolation cannot later be lowered.
-  const isolation = await tx.execute<{ isolation: unknown }>(
-    sql`select current_setting('transaction_isolation') as isolation`,
-  );
-  if (isolation.rows[0]?.isolation !== "serializable") {
-    throw new Error("Protected Postgres writes require serializable isolation");
-  }
+function isPgTransactionCall<
+  Client extends PgClientLike,
+  Tx extends DrizzleExecuteLike,
+  Result,
+>(
+  args: PgTransactionCall<Client, Result> | DrizzleTransactionCall<Tx, Result>,
+): args is PgTransactionCall<Client, Result> {
+  return args[0].pool !== undefined;
+}
 
-  const scope = openProtectedAuthorization(authorization, tx);
-  try {
-    return await work({ tx, authorization: scope.authorization });
-  } finally {
-    scope.close();
+/** Run one protected write on a plain `pg.Pool` with `BEGIN ISOLATION LEVEL SERIALIZABLE`. */
+export function withProtectedPostgresTransaction<
+  Client extends PgClientLike,
+  Result,
+>(
+  options: ProtectedPgTransactionOptions<Client> & {
+    readonly database?: never;
+    readonly transaction?: never;
+  },
+  work: (scope: ProtectedPgTransaction<Client>) => PromiseLike<Result>,
+): Promise<Result>;
+
+/** Run one protected write with authorization and application data on the same Drizzle client. */
+export function withProtectedPostgresTransaction<
+  Tx extends DrizzleExecuteLike,
+  Result,
+>(
+  options: ProtectedDrizzleTransactionOptions<Tx> & {
+    readonly pool?: never;
+  },
+  work: (scope: ProtectedDrizzleTransaction<Tx>) => Promise<Result>,
+): Promise<Result>;
+
+export async function withProtectedPostgresTransaction<
+  Client extends PgClientLike,
+  Tx extends DrizzleExecuteLike,
+  Result,
+>(
+  ...args:
+    PgTransactionCall<Client, Result> | DrizzleTransactionCall<Tx, Result>
+): Promise<Result> {
+  if (isPgTransactionCall(args)) {
+    return withProtectedPgTransaction(args[0], args[1]);
   }
+  const { withProtectedDrizzleTransaction } =
+    await loadDrizzleTransactionModule();
+  return withProtectedDrizzleTransaction(args[0], args[1]);
 }

@@ -16,7 +16,7 @@ const userSubject = z.strictObject({
   id: resourceId,
 });
 const workspaceSubject = z.strictObject({
-  type: z.literal(workbenchWorkspace.entity.wireName),
+  type: z.literal(workbenchWorkspace.wireName),
   id: resourceId,
 });
 const relationship = z.union([
@@ -27,7 +27,7 @@ const relationship = z.union([
       workbenchWorkspace.roles.member.roleName,
     ]),
     resource: z.strictObject({
-      type: z.literal(workbenchWorkspace.entity.wireName),
+      type: z.literal(workbenchWorkspace.wireName),
       id: resourceId,
     }),
   }),
@@ -35,7 +35,7 @@ const relationship = z.union([
     subject: workspaceSubject,
     relation: z.literal(workbenchTask.roles.workspace.roleName),
     resource: z.strictObject({
-      type: z.literal(workbenchTask.entity.wireName),
+      type: z.literal(workbenchTask.wireName),
       id: resourceId,
     }),
   }),

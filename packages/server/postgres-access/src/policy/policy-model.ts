@@ -1,3 +1,8 @@
+export type CompiledArrowTarget = {
+  readonly entity: string;
+  readonly permission: string;
+};
+
 export type CompiledPermissionExpression =
   | { readonly kind: "relation"; readonly relation: string }
   | {
@@ -8,6 +13,13 @@ export type CompiledPermissionExpression =
       readonly kind: "through";
       readonly relation: string;
       readonly permission: string;
+      readonly targets?: readonly CompiledArrowTarget[];
+    }
+  | {
+      readonly kind: "through-all";
+      readonly relation: string;
+      readonly permission: string;
+      readonly targets?: readonly CompiledArrowTarget[];
     }
   | {
       readonly kind: "exclude";
@@ -86,4 +98,10 @@ export type NormalizedResourceLookup = {
   readonly subject: NormalizedAuthorizationReference;
   readonly permission: string;
   readonly resourceType: string;
+};
+
+export type NormalizedSubjectLookup = {
+  readonly resource: NormalizedAuthorizationReference;
+  readonly permission: string;
+  readonly subjectType: string;
 };

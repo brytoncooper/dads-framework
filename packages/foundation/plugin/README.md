@@ -206,7 +206,10 @@ with `use(dependency)`, which accepts only what `requires` lists.
 - A service dependency means "whatever plugin implements this":
   `requires: [clockService]`. A plugin claims a service with
   `implements: clockService`, and its `provides` must fit the service's type
-  or the definition does not compile.
+  or the definition does not compile. When the host builds that value with
+  `providePlugin(name, service, create)`, `create` may return a subtype of the
+  service's value: consumers of the service see the service type, while direct
+  readers of the provider plugin keep the narrower type.
 
 Write `requires` inline (`requires: [accounts]`), so it is inferred as a
 tuple of literal names. A list typed as a plain `AnyDependency[]` loses the

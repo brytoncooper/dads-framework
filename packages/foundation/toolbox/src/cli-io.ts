@@ -6,6 +6,29 @@
  * rather than as argument bookkeeping.
  */
 
+type ErrorEmittingStream = {
+  on(event: "error", listener: (error: Error) => void): unknown;
+};
+
+export function isBrokenPipeError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "EPIPE";
+}
+
+export function installBrokenPipeHandler(
+  stream: ErrorEmittingStream = process.stdout,
+  onBrokenPipe: () => void = () => {
+    process.exit(0);
+  },
+): void {
+  stream.on("error", (error: Error) => {
+    if (isBrokenPipeError(error)) {
+      onBrokenPipe();
+      return;
+    }
+    throw error;
+  });
+}
+
 export function writeOutput(value: object, json: boolean): void {
   process.stdout.write(
     json ? `${JSON.stringify(value)}\n` : `${formatHumanOutput(value)}\n`,

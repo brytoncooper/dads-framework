@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dads Framework — Start with a working backend.</title>
+    <title>Dads Framework · TypeScript backends with firm boundaries</title>
     <meta
       name="description"
-      content="Start a TypeScript app with sign-in, PostgreSQL, and a typed API in one command."
+      content="TypeScript backend framework with Zanzibar-style relationship permissions compiled into PostgreSQL transactions, typed HTTP contracts, multi-API composition, and enforced domain boundaries."
     />
     <meta name="theme-color" content="#0e1114" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Dads Framework" />
     <meta
       property="og:description"
-      content="Start a TypeScript app with sign-in, PostgreSQL, and a typed API in one command."
+      content="TypeScript backend framework with Zanzibar-style relationship permissions compiled into PostgreSQL transactions, typed HTTP contracts, multi-API composition, and enforced domain boundaries."
     />
     <meta
       property="og:image"
@@ -35,28 +35,66 @@
       <section class="home-hero">
         <div class="wrap hero-layout">
           <div class="hero-intro">
-            <p class="product-type">TypeScript backend framework</p>
-            <h1>Start with a <span>working backend.</span></h1>
+            <p class="product-type">
+              Your agents don't care about boundaries.
+              <strong>Dad does.</strong>
+            </p>
+            <h1>
+              One TypeScript framework <span>for your entire backend.</span>
+            </h1>
             <p class="hero-lede">
-              One command starts a TypeScript app with sign-in, PostgreSQL, and
-              a typed API. Follow a working feature from browser to database,
-              then build yours alongside it.
+              Typed API routes, relationship permissions in Postgres and SQLite,
+              auth, SSO, SCIM, and audit logs built in. Every route requires an
+              access rule to compile.
             </p>
             <div class="hero-actions">
-              <a class="primary-action" href="/docs/quickstart.html"
-                >Build your first app <span aria-hidden="true">→</span></a
+              <a class="primary-action" href="/docs/"
+                >Read the docs <span aria-hidden="true">→</span></a
               >
-              <a class="text-action" href="/docs/">Why Dads?</a>
+              <a class="text-action" href="/docs/packages.html"
+                >Browse all packages</a
+              >
             </div>
           </div>
+
           <section
             class="feature-preview"
             aria-labelledby="feature-preview-title"
           >
-            <h2 id="feature-preview-title">Create your app</h2>
+            <div class="preview-header">
+              <h2 id="feature-preview-title">Start a project</h2>
+              <div
+                class="template-switch"
+                role="tablist"
+                aria-label="Starter template"
+                hidden
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  id="template-tab-minimal"
+                  data-template="minimal"
+                  aria-selected="true"
+                >
+                  Minimal
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="template-tab-example"
+                  data-template="example"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Example
+                </button>
+              </div>
+            </div>
             <div class="install">
               <span class="prompt-sign" aria-hidden="true">$</span>
-              <code id="install-command">npm create dads@latest my-app</code>
+              <code id="install-command"
+                >npm create dads@latest my-app -- --template minimal</code
+              >
               <button
                 id="copy-command"
                 type="button"
@@ -67,133 +105,479 @@
               </button>
               <span id="copy-status" class="sr" role="status"></span>
             </div>
-            <pre aria-label="Selected files from the starter"><code>my-app/
-  apps/web/
-  domains/notes/
-    contract/
-    server/
-      routes.ts
-      tables.ts
-    web-client/
-  assembly/</code></pre>
-            <a
-              href="https://github.com/brytoncooper/dads-framework/tree/main/apps/kit-workbench/domains/notes"
-              >Open the notes feature on GitHub ↗</a
+            <ul
+              class="file-tree"
+              id="template-tree"
+              aria-label="Generated project layout"
             >
+              <li class="ft-row" data-depth="0" data-kind="dir">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M1.75 3.5A1.25 1.25 0 0 1 3 2.25h3.1c.33 0 .65.13.88.37l.9.9H13A1.25 1.25 0 0 1 14.25 4.77v6.98A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25V3.5Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">my-app/</code></span
+                >
+              </li>
+              <li class="ft-row" data-depth="1" data-kind="dir">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M1.75 3.5A1.25 1.25 0 0 1 3 2.25h3.1c.33 0 .65.13.88.37l.9.9H13A1.25 1.25 0 0 1 14.25 4.77v6.98A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25V3.5Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">apps/</code></span
+                >
+                <span class="ft-note">Entrypoints that expose routes</span>
+              </li>
+              <li class="ft-row" data-depth="2" data-kind="ts">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M3.5 2.25h5.75L12.5 5.5v8.25a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V3.25a1 1 0 0 1 1-1Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M9.25 2.25V5.5h3.25"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">customer/app.ts</code></span
+                >
+                <span class="ft-note">Public API for your users</span>
+              </li>
+              <li class="ft-row" data-depth="2" data-kind="ts">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M3.5 2.25h5.75L12.5 5.5v8.25a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V3.25a1 1 0 0 1 1-1Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M9.25 2.25V5.5h3.25"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">staff/app.ts</code></span
+                >
+                <span class="ft-note">Internal API for your team</span>
+              </li>
+              <li class="ft-row" data-depth="1" data-kind="dir">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M1.75 3.5A1.25 1.25 0 0 1 3 2.25h3.1c.33 0 .65.13.88.37l.9.9H13A1.25 1.25 0 0 1 14.25 4.77v6.98A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25V3.5Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">domains/</code></span
+                >
+                <span class="ft-note">Your isolated features</span>
+              </li>
+              <li class="ft-row" data-depth="2" data-kind="dir">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M1.75 3.5A1.25 1.25 0 0 1 3 2.25h3.1c.33 0 .65.13.88.37l.9.9H13A1.25 1.25 0 0 1 14.25 4.77v6.98A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25V3.5Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">tenants/</code></span
+                >
+                <span class="ft-note"
+                  >Built-in auth, users &amp; workspaces</span
+                >
+              </li>
+              <li class="ft-row" data-depth="1" data-kind="dir">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M1.75 3.5A1.25 1.25 0 0 1 3 2.25h3.1c.33 0 .65.13.88.37l.9.9H13A1.25 1.25 0 0 1 14.25 4.77v6.98A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25V3.5Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">assembly/</code></span
+                >
+                <span class="ft-note">Server startup, Postgres &amp; env</span>
+              </li>
+              <li class="ft-row" data-depth="1" data-kind="json">
+                <span class="ft-node"
+                  ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <path
+                      d="M3.5 2.25h5.75L12.5 5.5v8.25a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V3.25a1 1 0 0 1 1-1Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M9.25 2.25V5.5h3.25"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.25"
+                      stroke-linejoin="round"
+                    /></svg
+                  ><code class="ft-name">dads.project.json</code></span
+                >
+                <span class="ft-note">Import rules enforced in CI</span>
+              </li>
+            </ul>
+            <div class="preview-footer">
+              <div class="batteries-block">
+                <p class="batteries-label">Batteries included</p>
+                <ul
+                  class="batteries-list"
+                  aria-label="Included framework packages"
+                >
+                  <li>Postgres ReBAC</li>
+                  <li>Auth &amp; SSO</li>
+                  <li>SCIM</li>
+                  <li>OpenAPI 3.1</li>
+                  <li>Audit Log</li>
+                  <li>Migrations</li>
+                  <li>Feature Flags</li>
+                  <li>Job Queue</li>
+                  <li>Object Storage</li>
+                  <li>Email</li>
+                  <li>PDF &amp; CSV</li>
+                  <li>React UI</li>
+                </ul>
+              </div>
+              <p class="preview-caption" id="template-caption">
+                Full backend shape, zero demo code. Add your first resource with
+                <code>npx dad add resource</code>.
+              </p>
+            </div>
           </section>
         </div>
       </section>
 
-      <section class="route-section">
-        <div class="wrap">
-          <div class="section-heading">
-            <h2>Follow a request.</h2>
-            <a
-              class="route-path"
-              href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/domains/notes/server/routes.ts"
-              ><b>GET</b> <code>/tenants/:tenantId/notes</code>
-              <span aria-hidden="true">↗</span></a
-            >
+      <section class="code-showcase" aria-labelledby="rebac-heading">
+        <div class="wrap showcase-layout">
+          <div class="showcase-intro">
+            <p class="section-eyebrow">Relationship permissions</p>
+            <h2 id="rebac-heading">
+              Permissions that live inside your database transactions.
+            </h2>
+            <p class="section-lede">
+              Write who can access what in plain TypeScript. Remove someone from
+              a workspace and every task, note, and file inside it locks down in
+              the same PostgreSQL or SQLite transaction.
+            </p>
+            <ul class="contrast-list">
+              <li>
+                <strong>No scattered <code>if (user.role)</code> checks</strong>
+                <span>
+                  Declare top-down <code>children</code> and explicit
+                  <code>inherit</code> rules once. Routes will not compile
+                  without an <code>access</code> rule, and unauthorized calls
+                  return <code>404</code> before parsing input.
+                </span>
+              </li>
+              <li>
+                <strong>No brittle SQL RLS policy strings</strong>
+                <span>
+                  Typed TypeScript models with autocomplete, in-memory tests,
+                  and zero hand-written Postgres or SQLite policy SQL.
+                </span>
+              </li>
+              <li>
+                <strong>No extra auth database or ORM lock-in</strong>
+                <span>
+                  Runs directly on plain <code>pg.Pool</code>, Drizzle, or
+                  SQLite with sub-millisecond checks. Already on SpiceDB? Import
+                  <code>.zed</code> schemas and cut over live tuples into
+                  PostgreSQL with parity checks.
+                </span>
+              </li>
+            </ul>
           </div>
-          <ol class="request-steps">
-            <li>
-              <h3><a href="/docs/http.html">Validate the input</a></h3>
-              <p>
-                The route declares the tenant ID, pagination parameters, and
-                response item. Those schemas also describe the endpoint in
-                OpenAPI.
-              </p>
-            </li>
-            <li>
-              <h3>
-                <a href="/docs/permissions.html">Check the relationship</a>
-              </h3>
-              <p>
-                A session identifies the caller. The tenant’s view permission
-                decides whether that caller can read notes in this workspace.
-              </p>
-            </li>
-            <li>
-              <h3><a href="/docs/guarded-resource.html">Scope the query</a></h3>
-              <p>
-                The handler filters by the authorized tenant ID before it counts
-                or returns rows. Another workspace’s notes stay out of the
-                result.
-              </p>
-            </li>
-          </ol>
-        </div>
-      </section>
 
-      <section class="starter-section wrap" id="starter">
-        <div class="starter-copy">
-          <h2>Run the whole starter.</h2>
-          <p>
-            Docker brings up PostgreSQL, a web app, and both APIs. Sign in,
-            invite someone to a workspace, and see which notes they can read.
-          </p>
-          <a class="text-action" href="/docs/quickstart.html"
-            >Walk through your first note <span aria-hidden="true">→</span></a
-          >
-        </div>
-        <div class="setup">
-          <p class="setup-label">
-            Local setup <span>Node 24 · Docker Compose</span>
-          </p>
-          <p>
-            <code>npm run dev:mail</code> prints the local verification link.
-            Save a note, then follow the request into the notes domain.
-          </p>
-          <p class="requirements">
-            Run the creator with Node 24 and Docker Compose.
-            <a
-              href="https://github.com/brytoncooper/dads-framework/tree/main/apps/kit-workbench"
-              >Read the starter source</a
-            >.
-          </p>
+          <div class="code-box" data-code-tabs>
+            <div class="code-box-bar">
+              <div
+                class="code-box-tabs"
+                role="tablist"
+                aria-label="Relationship permission files"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  id="code-tab-model"
+                  aria-controls="code-panel-model"
+                  aria-selected="true"
+                >
+                  Access model
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="code-tab-route"
+                  aria-controls="code-panel-route"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Route
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="code-tab-contract"
+                  aria-controls="code-panel-contract"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Contract
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="code-tab-client"
+                  aria-controls="code-panel-client"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Typed client
+                </button>
+              </div>
+              <div class="code-box-meta">
+                <span class="code-box-file" id="code-box-file"
+                  >domains/tasks/access/index.ts</span
+                >
+                <button
+                  type="button"
+                  class="code-box-copy"
+                  id="code-box-copy"
+                  aria-label="Copy code snippet"
+                  hidden
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="code-box-panel"
+              id="code-panel-model"
+              role="tabpanel"
+              aria-labelledby="code-tab-model"
+              data-file="domains/tasks/access/index.ts"
+            >
+              <pre
+                tabindex="0"
+              ><code class="language-ts"><span class="tok-kw">import</span> { actor, anyOf, compileAccess, resource } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/access"</span>;
+
+<span class="tok-kw">export const</span> user = <span class="tok-fn">actor</span>(<span class="tok-str">"user"</span>);
+
+<span class="tok-kw">export const</span> workspace = <span class="tok-fn">resource</span>(<span class="tok-str">"workspace"</span>, {
+  roles: { admin: user, member: user },
+  can: ({ admin, member }) =&gt; ({
+    manage: admin,
+    view: [admin, member],
+  }),
+  children: {
+    task: {
+      inherit: <span class="tok-str">"all"</span>,
+      roles: { assignee: user, blocked: user },
+      can: ({ assignee, blocked, parent }) =&gt; ({
+<span class="tok-hi">        edit: <span class="tok-fn">anyOf</span>(assignee, parent.manage).<span class="tok-fn">unless</span>(blocked),</span>
+      }),
+    },
+    billing: {
+<span class="tok-hi">      inherit: [<span class="tok-str">"manage"</span>],</span>
+      roles: { accountant: user },
+      can: ({ accountant }) =&gt; ({ view: accountant }),
+    },
+  },
+});
+
+<span class="tok-kw">export const</span> task = workspace.task;
+<span class="tok-kw">export const</span> model = <span class="tok-fn">compileAccess</span>([workspace]);</code></pre>
+            </div>
+
+            <div
+              class="code-box-panel"
+              id="code-panel-route"
+              role="tabpanel"
+              aria-labelledby="code-tab-route"
+              data-file="domains/tasks/server/routes.ts"
+              hidden
+            >
+              <pre
+                tabindex="0"
+              ><code class="language-ts"><span class="tok-kw">import</span> { fromParam, patchRoute, requires } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/http"</span>;
+<span class="tok-kw">import</span> { task } <span class="tok-kw">from</span> <span class="tok-str">"../access/index.js"</span>;
+
+<span class="tok-kw">export const</span> updateTask = <span class="tok-fn">patchRoute</span>({
+  route: { method: <span class="tok-str">"PATCH"</span>, template: <span class="tok-str">"/tasks/:taskId"</span> },
+  summary: <span class="tok-str">"Update a task"</span>,
+<span class="tok-hi">  access: <span class="tok-fn">requires</span>(task.can.edit, <span class="tok-fn">fromParam</span>(<span class="tok-str">"taskId"</span>)),</span>
+  rateLimit: { perMinute: <span class="tok-num">60</span> },
+  params: taskParams,
+  body: updateTaskBody,
+  response: taskResponse,
+  handler: ({ params, body, subject }) =&gt;
+    <span class="tok-cmt">// Rechecks access and writes in one PostgreSQL transaction.</span>
+    <span class="tok-fn">writeWithPermission</span>(
+      { subject, permission: task.can.edit, resourceId: params.taskId },
+      (tx) =&gt; tasksStore.<span class="tok-fn">update</span>(tx, params.taskId, body),
+    ),
+});</code></pre>
+            </div>
+
+            <div
+              class="code-box-panel"
+              id="code-panel-contract"
+              role="tabpanel"
+              aria-labelledby="code-tab-contract"
+              data-file="domains/tasks/contract/wire.ts"
+              hidden
+            >
+              <pre
+                tabindex="0"
+              ><code class="language-ts"><span class="tok-kw">import</span> { entityIdSchema } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/contract"</span>;
+<span class="tok-kw">import</span> { workspaceId } <span class="tok-kw">from</span> <span class="tok-str">"../../../libraries/app-runtime/index.js"</span>;
+<span class="tok-kw">import</span> { z } <span class="tok-kw">from</span> <span class="tok-str">"zod"</span>;
+
+<span class="tok-cmt">// Owns the wire shapes for tasks: validation, OpenAPI 3.1, and clients.</span>
+<span class="tok-kw">export const</span> taskId = <span class="tok-fn">entityIdSchema</span>(<span class="tok-str">"TaskId"</span>, <span class="tok-str">"Task id"</span>);
+<span class="tok-kw">export const</span> taskParams = z.<span class="tok-fn">strictObject</span>({ taskId });
+
+<span class="tok-kw">export const</span> updateTaskBody = z.<span class="tok-fn">strictObject</span>({
+  title: z.<span class="tok-fn">string</span>().<span class="tok-fn">trim</span>().<span class="tok-fn">min</span>(<span class="tok-num">1</span>).<span class="tok-fn">max</span>(<span class="tok-num">200</span>),
+});
+
+<span class="tok-kw">export const</span> taskResponse = z.<span class="tok-fn">object</span>({
+  id: taskId,
+  workspaceId,
+  title: z.<span class="tok-fn">string</span>(),
+});</code></pre>
+            </div>
+
+            <div
+              class="code-box-panel"
+              id="code-panel-client"
+              role="tabpanel"
+              aria-labelledby="code-tab-client"
+              data-file="domains/tasks/web-client/index.ts"
+              hidden
+            >
+              <pre
+                tabindex="0"
+              ><code class="language-ts"><span class="tok-kw">import</span> { sendToApi } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/client-request-transport"</span>;
+<span class="tok-kw">import</span> { defineRoute } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/contract"</span>;
+<span class="tok-kw">import</span> { taskResponse, updateTaskBody } <span class="tok-kw">from</span> <span class="tok-str">"../contract/wire.js"</span>;
+
+<span class="tok-kw">const</span> updateTaskRoute = <span class="tok-fn">defineRoute</span>(
+  <span class="tok-str">"PATCH"</span>,
+  <span class="tok-str">"/tasks/:taskId"</span>,
+  (id: <span class="tok-type">string</span>) =&gt; <span class="tok-str">`/tasks/${encodeURIComponent(id)}`</span>,
+);
+
+<span class="tok-cmt">// Works in React, Next.js, Vue, Svelte, or Node.</span>
+<span class="tok-kw">export function</span> <span class="tok-fn">updateTask</span>(taskId: <span class="tok-type">string</span>, title: <span class="tok-type">string</span>) {
+  <span class="tok-kw">return</span> <span class="tok-fn">sendToApi</span>({
+    route: updateTaskRoute.<span class="tok-fn">bind</span>(taskId),
+    body: { schema: updateTaskBody, value: { title } },
+<span class="tok-hi">    returns: taskResponse,</span>
+  });
+}</code></pre>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="wrap starter-section" aria-labelledby="multi-api-heading">
         <div class="starter-copy">
-          <h2 id="multi-api-heading">When you need a second API.</h2>
-          <p>
-            The customer API exposes notes. The staff API exposes audit exports.
-            Each entrypoint chooses its routes and can share domain services.
+          <p class="section-eyebrow">Multiple API servers</p>
+          <h2 id="multi-api-heading">Separate entrypoints, shared domains.</h2>
+          <p class="section-lede">
+            Pick which routes and background jobs each server exposes with
+            <code>composeApi</code>. Your customer and staff APIs share business
+            code, never each other's endpoints.
           </p>
-          <a class="text-action" href="/docs/composition.html"
-            >See how API composition works</a
-          >
+          <ul class="contrast-list">
+            <li>
+              <strong>Customer API serves product routes</strong>
+              <span>
+                Mounts sign-in, workspaces, notes, and background workers behind
+                permission checks.
+              </span>
+            </li>
+            <li>
+              <strong>Staff API never registers them</strong>
+              <span>
+                Mounts internal admin and audit routes only. Customer routes
+                aren't hidden behind a flag; they don't exist on the server.
+              </span>
+            </li>
+          </ul>
         </div>
         <section
           class="composition-preview"
           aria-label="Starter API composition example"
         >
-          <div
-            class="composition-tabs"
-            role="tablist"
-            aria-label="API entrypoint"
-            hidden
-          >
-            <button
-              type="button"
-              role="tab"
-              id="composition-tab-customer"
-              aria-controls="composition-customer"
-              aria-selected="true"
+          <div class="composition-bar">
+            <div
+              class="composition-tabs"
+              role="tablist"
+              aria-label="API entrypoint"
+              hidden
             >
-              Customer API
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="composition-tab-staff"
-              aria-controls="composition-staff"
-              aria-selected="false"
-              tabindex="-1"
+              <button
+                type="button"
+                role="tab"
+                id="composition-tab-customer"
+                aria-controls="composition-customer"
+                aria-selected="true"
+                data-file-label="apps/customer/app.ts"
+                data-file-href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/customer/app.ts"
+              >
+                Customer API
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="composition-tab-staff"
+                aria-controls="composition-staff"
+                aria-selected="false"
+                tabindex="-1"
+                data-file-label="apps/staff/app.ts"
+                data-file-href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/staff/app.ts"
+              >
+                Staff API
+              </button>
+            </div>
+            <a
+              class="composition-file-link"
+              id="composition-file-link"
+              href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/customer/app.ts"
+              hidden
+              >apps/customer/app.ts <span aria-hidden="true">↗</span></a
             >
-              Staff API
-            </button>
           </div>
           <div class="composition-editor">
             <section class="composition-pane" id="composition-customer">
@@ -206,16 +590,16 @@
               </div>
               <pre
                 tabindex="0"
-              ><code class="language-ts">  <span class="composition-syntax">return</span> composeApi(<span class="composition-string">"customer"</span>, {
-    services: [provider, starterAccess],
-    routes: [
-      tenantsPlugin,
-      tenantPermissionsPlugin,
-      <strong class="mount">notesPlugin</strong>,
-      <span class="composition-comment">// dad:add domains</span>
-    ],
-    jobs: [notesAttachmentWorker],
-  });</code></pre>
+              ><code class="language-ts"><span class="tok-kw">return</span> <span class="tok-fn">composeApi</span>(<span class="tok-str">"customer"</span>, {
+  services: [provider, starterAccess],
+  routes: [
+    tenantsPlugin,
+    tenantPermissionsPlugin,
+<span class="tok-hi">    notesPlugin,</span>
+    <span class="tok-cmt">// dad:add domains</span>
+  ],
+  jobs: [notesAttachmentWorker],
+});</code></pre>
             </section>
             <section class="composition-pane" id="composition-staff">
               <div class="composition-source">
@@ -227,21 +611,41 @@
               </div>
               <pre
                 tabindex="0"
-              ><code class="language-ts">  <span class="composition-syntax">return</span> composeApi(<span class="composition-string">"staff"</span>, {
-    services: [provider, starterAccess],
-    routes: [
-      <strong class="mount">tenantsPlugin</strong>,
-      tenantAuditExportPlugin,
-      <span class="composition-comment">// dad:add domains</span>
-    ],
-    jobs: [],
-  });</code></pre>
+              ><code class="language-ts"><span class="tok-kw">return</span> <span class="tok-fn">composeApi</span>(<span class="tok-str">"staff"</span>, {
+  services: [provider, starterAccess],
+  routes: [
+    tenantsPlugin,
+<span class="tok-hi">    tenantAuditExportPlugin,</span>
+    <span class="tok-cmt">// dad:add domains</span>
+  ],
+  jobs: [],
+});</code></pre>
             </section>
           </div>
           <div class="composition-request">
             <div class="composition-request-head">
-              <p>Example request</p>
-              <code>GET /api/tenants/:tenantId/notes</code>
+              <div class="composition-endpoint">
+                <span class="http-method">GET</span>
+                <code>/api/tenants/:tenantId/notes</code>
+              </div>
+              <div
+                class="access-switch"
+                id="composition-access-switch"
+                role="group"
+                aria-label="Workspace access"
+                hidden
+              >
+                <button type="button" data-access="member" aria-pressed="true">
+                  Member
+                </button>
+                <button
+                  type="button"
+                  data-access="revoked"
+                  aria-pressed="false"
+                >
+                  Revoked
+                </button>
+              </div>
             </div>
             <table
               id="preview-cases"
@@ -273,11 +677,6 @@
               </tbody>
             </table>
             <div class="composition-controls" hidden>
-              <label for="composition-access">Workspace access</label>
-              <select id="composition-access">
-                <option value="member">Member</option>
-                <option value="revoked">Revoked</option>
-              </select>
               <div class="composition-result" role="status">
                 <strong id="composition-status" data-outcome="allowed"
                   >200 OK</strong
@@ -291,25 +690,90 @@
         </section>
       </section>
 
+      <section class="boundaries-section" aria-labelledby="boundaries-heading">
+        <div class="wrap starter-section">
+          <div class="starter-copy">
+            <p class="section-eyebrow">Automated CI checks</p>
+            <h2 id="boundaries-heading">
+              Rules checked by tools, not reviewer memory.
+            </h2>
+            <p class="section-lede">
+              Whether a teammate or a coding agent opens the PR, Dads verifies
+              folder boundaries, strict types, and access denial tests
+              automatically.
+            </p>
+            <ul class="contrast-list">
+              <li>
+                <strong>Domain boundaries in CI</strong>
+                <span>
+                  <code>npx dad check boundaries</code> stops features from
+                  importing another feature's database tables or internal files.
+                </span>
+              </li>
+              <li>
+                <strong>Automated code quality gate</strong>
+                <span>
+                  <code>npx dad doctor --gate</code> catches <code>any</code>,
+                  unsafe casts, routes without access rules, and missing denial
+                  tests.
+                </span>
+              </li>
+              <li>
+                <strong>Adopt one package at a time</strong>
+                <span>
+                  Already have an app? Install
+                  <code>@dads-framework/postgres-access</code>,
+                  <code>sqlite-access</code>, or <code>http</code> standalone in
+                  any TypeScript backend.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="terminal-box" aria-label="Dad CLI boundary check output">
+            <div class="terminal-bar">
+              <span class="terminal-prompt-badge" aria-hidden="true"
+                >&gt;_</span
+              >
+              <span class="terminal-title">npx dad verify</span>
+              <span class="terminal-tag">CI gate</span>
+            </div>
+            <pre
+              tabindex="0"
+            ><code><span class="term-prompt">$</span> npx dad check boundaries
+<span class="term-fail">FAIL</span> domains/billing/server/routes.ts
+     imports private module <span class="term-path">domains/shipping/server/tables.ts</span>
+     <span class="term-hint">Fix: pass a typed port from assembly/ instead of crossing domains.</span>
+
+<span class="term-prompt">$</span> npx dad doctor --gate
+<span class="term-pass">PASS</span> explicit-any             0 over (Dad: 0)
+<span class="term-pass">PASS</span> routes-without-access    0 over (Dad: 0)
+<span class="term-pass">PASS</span> access-without-denial    0 over (Dad: 0)
+<span class="term-pass">PASS</span> boundaries               0 violations</code></pre>
+          </div>
+        </div>
+      </section>
+
       <section class="further">
         <div class="wrap further-grid">
-          <div class="further-title"><h2>Where to go next</h2></div>
+          <div class="further-title"><h2>Keep reading</h2></div>
           <div class="reading-list">
-            <a href="/docs/adopt.html"
-              ><span>Bring Dads into an existing app</span
-              ><small>Adoption guide</small><i aria-hidden="true">↗</i></a
+            <a href="/docs/"
+              ><span>Documentation</span><small>Guides</small
+              ><i aria-hidden="true">↗</i></a
             >
-            <a href="/docs/verification.html"
-              ><span>Choose the checks a change needs</span
-              ><small>Verification guide</small><i aria-hidden="true">↗</i></a
+            <a href="/docs/packages.html"
+              ><span>Adopt one package in any TypeScript app</span
+              ><small>Packages</small><i aria-hidden="true">↗</i></a
             >
             <a href="<!-- dad-url -->"
-              ><span>Meet Tess and her “temporary” flag</span
-              ><small>Dad’s field notes</small><i aria-hidden="true">↗</i></a
+              ><span>Your friends approved the PR</span
+              ><small>Read DAD.md</small><i aria-hidden="true">↗</i></a
             >
             <a href="<!-- gary-url -->"
               ><span>Who let Gary back in?</span
-              ><small>A revocation story</small><i aria-hidden="true">↗</i></a
+              ><small>Why permissions live in Postgres</small
+              ><i aria-hidden="true">↗</i></a
             >
           </div>
         </div>

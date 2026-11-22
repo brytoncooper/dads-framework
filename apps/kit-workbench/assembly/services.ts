@@ -6,7 +6,7 @@ import {
 } from "@dads-framework/feature-flags";
 import { readFeatureFlagPreview } from "@dads-framework/feature-flags/http";
 import { DrizzleFeatureFlagStore } from "@dads-framework/feature-flags/postgres";
-import { definePlugin, type PluginScope } from "@dads-framework/plugin";
+import { providePlugin, type PluginScope } from "@dads-framework/plugin";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
@@ -43,19 +43,7 @@ type HostServices = StarterServices &
 export function provideServices(
   create: (scope: PluginScope) => Promise<HostServices>,
 ) {
-  return definePlugin<
-    "host-services",
-    [],
-    HostServices,
-    never,
-    never,
-    never,
-    "starter-services"
-  >({
-    name: "host-services",
-    implements: starterServices,
-    setup: async ({ scope }) => ({ provides: await create(scope) }),
-  });
+  return providePlugin("host-services", starterServices, create);
 }
 
 export type ServiceProvider = ReturnType<typeof provideServices>;

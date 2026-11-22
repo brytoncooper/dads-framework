@@ -123,7 +123,10 @@ describe("protected Postgres transaction", () => {
 
     const rendezvous = twoReaders();
     const remove = vi.fn(
-      async (scope: ProtectedPostgresTransaction, userId: string) => {
+      async (
+        scope: ProtectedPostgresTransaction<DrizzleHandle>,
+        userId: string,
+      ) => {
         expect(await scope.authorization.check(manage(groupId, userId))).toBe(
           true,
         );

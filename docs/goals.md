@@ -402,5 +402,5 @@ it.
 Use the [starter](../apps/kit-workbench/README.md) as the reference slice for
 the next change. Add one guarded behavior, write down the allowed and denied
 outcomes, then prove the database and composition paths on which it depends.
-Use the [guarded resource guide](./site/guides/guarded-resource.md) to follow
+Use the [routes and contracts guide](./site/guides/routes-and-contracts.md) to follow
 that workflow in an application.

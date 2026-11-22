@@ -11,7 +11,7 @@ function pageLink(page, direction, label) {
   if (page === undefined) return "";
   return `<a href="${page.href}" rel="${direction}" class="reader-page-link">
     <span class="reader-page-direction">${label}</span>
-    <span>${page.title}</span>
+    <span class="reader-page-title">${page.title}</span>
   </a>`;
 }
 
@@ -30,8 +30,57 @@ function pagination(links, page) {
   return `<nav class="reader-pages" aria-label="Documentation pages">${previous}${next}</nav>`;
 }
 
-function styleArticle(article) {
-  const links = sectionLinks(article);
+function enhanceSearch(html) {
+  const match = html.match(/<section class="search"[^>]*>[\s\S]*?<\/section>/u);
+  if (!match) return html;
+
+  let section = match[0];
+  section = section.replace(
+    /<label for="docs-search">/u,
+    '<label for="docs-search" class="sr">',
+  );
+  section = section.replace(
+    /<input id="docs-search"([^>]*)>/u,
+    (inputMatch, attrs) => {
+      const enhancedInput = /\bautofocus\b/u.test(attrs)
+        ? inputMatch
+        : `<input id="docs-search"${attrs} autofocus>`;
+      return `<div class="search-field">
+  <svg class="search-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8.75" cy="8.75" r="5.75"/><path d="M13 13l4.25 4.25" stroke-linecap="round"/></svg>
+  ${enhancedInput}
+  <button type="button" class="search-close" aria-label="Close search"><kbd aria-hidden="true">Esc</kbd></button>
+</div>`;
+    },
+  );
+  section = section.replace(
+    /<\/section>/u,
+    `<p class="search-hint">Type to search guides, APIs, and commands.</p>
+<div class="search-footer" aria-hidden="true">
+  <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+  <span><kbd>↵</kbd> open</span>
+  <span><kbd>Esc</kbd> close</span>
+</div>
+</section>`,
+  );
+
+  const dialog = `<dialog id="docs-search-dialog" class="search-dialog" closedby="any" aria-label="Search documentation">
+${section}
+</dialog>`;
+
+  html = html.replace(
+    /<section class="search"[^>]*>[\s\S]*?<\/section>\s*/u,
+    "",
+  );
+  if (html.includes("</body>")) {
+    return html.replace("</body>", () => `${dialog}\n</body>`);
+  }
+  if (html.includes("</main>")) {
+    return html.replace("</main>", () => `</main>\n${dialog}`);
+  }
+  return `${html}\n${dialog}`;
+}
+
+function styleArticle(article, links) {
   if (links.length > 1) {
     article = article.replace(
       "</h1>",
@@ -43,7 +92,7 @@ function styleArticle(article) {
     );
     article = article.replace(
       /<h2 id="([^"]+)">/gu,
-      '<h2 id="$1" tabindex="-1">',
+      (_, id) => `<h2 id="${id}" tabindex="-1">`,
     );
   }
   return article.replace(
@@ -52,13 +101,32 @@ function styleArticle(article) {
   );
 }
 
+function tableOfContents(links) {
+  if (links.length <= 1) return "";
+  return `\n<aside class="reader-toc" aria-labelledby="reader-toc-title">
+  <p class="reader-toc-title" id="reader-toc-title">On this page</p>
+  <ul>${links.join("")}</ul>
+</aside>`;
+}
+
 export function addDocsReader(html, page) {
-  const links =
+  const navLinks =
     html.match(/<nav aria-label="Documentation">([\s\S]*?)<\/nav>/u)?.[1] ?? "";
-  const pager = pagination(links, page);
-  return html.replace(
+  const pager = pagination(navLinks, page);
+  let toc = "";
+
+  html = enhanceSearch(html);
+  html = html.replace(
     /(<article(?: [^>]*)?>)([\s\S]*?)<\/article>/u,
-    (_, opening, article) =>
-      `${opening}${styleArticle(article)}</article>\n${pager}`,
+    (_, opening, article) => {
+      const headings = sectionLinks(article);
+      toc = tableOfContents(headings);
+      return `${opening}${styleArticle(article, headings)}</article>\n${pager}`;
+    },
   );
+
+  if (toc) {
+    html = html.replace("</main>", () => `</main>${toc}`);
+  }
+  return html;
 }

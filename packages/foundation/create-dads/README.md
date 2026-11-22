@@ -20,11 +20,19 @@ npm create dads@0.3.0 my-app
 cd my-app
 ```
 
+To start without the notes domain, staff impersonation, or example walkthroughs,
+pass `--template minimal`:
+
+```sh
+npm create dads@0.3.0 my-app -- --template minimal
+cd my-app
+```
+
 The creator installs dependencies, waits for the Docker stack to become
 healthy, and prints the web URL. Open that URL to reach the sign-in screen.
 From the generated directory,
 `npm start` starts the stack again, `npm run dev:status` shows its state,
-and `npm run dev:down` stops it. Use the [quickstart](../../../docs/site/guides/quickstart.md)
+and `npm run dev:down` stops it. Read the [documentation](../../../docs/site/guides/index.md)
 to read a verification email from the local mailbox, sign in, and save a note.
 For a separate API host, use `npm run start:api` and the environment in the
 generated deployment guide. Run `npm run verify` from the app root with Docker
@@ -38,6 +46,7 @@ The links open the starter source in this repo.
 
 ## Commands
 
+- `--template <minimal|example>` chooses the project template. `example` (the default) includes the notes domain, permissions dashboard, and walkthroughs. `minimal` keeps the full framework layout (Compose stack, PostgreSQL migrations, Better Auth identity, tenants, named customer and staff APIs, and the React workspace shell) with no example domains.
 - `--name <name>` sets the npm package name.
 - `--existing` creates an isolated project under the target's `dads/` folder.
 - `--dry-run` lists files without writing them.

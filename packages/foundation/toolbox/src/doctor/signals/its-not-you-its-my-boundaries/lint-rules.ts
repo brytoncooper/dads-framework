@@ -25,8 +25,12 @@ import {
 } from "../scanners/lint-configuration.js";
 
 function countErrorLevelRules(context: DoctorContext): SignalReadings {
+  const scopes = resolveLintScopes(context);
+  if (scopes.length === 0) {
+    throw new Error("no lint config scopes");
+  }
   const readings = new Map<string, SignalReading>();
-  for (const scope of resolveLintScopes(context)) {
+  for (const scope of scopes) {
     for (const rule of rulesAtSeverity(scope, "error")) {
       readings.set(`${scope.scope}:${rule}`, {
         value: 1,

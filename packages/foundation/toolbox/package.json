@@ -20,6 +20,7 @@
     "README.md"
   ],
   "dependencies": {
+    "@dads-framework/access": "0.3.0",
     "@dads-framework/testing": "0.3.0",
     "typescript": "6.0.3"
   },

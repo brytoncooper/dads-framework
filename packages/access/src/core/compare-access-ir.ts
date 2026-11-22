@@ -7,13 +7,14 @@ import type {
 } from "./ir.js";
 
 function subjectKey(subject: AccessIrSubject): string {
+  const suffix = subject.expiration === true ? ":expiration" : "";
   if (subject.kind === "type") {
-    return `type:${subject.wireName}`;
+    return `type:${subject.wireName}${suffix}`;
   }
   if (subject.kind === "wildcard") {
-    return `wildcard:${subject.wireName}`;
+    return `wildcard:${subject.wireName}${suffix}`;
   }
-  return `userset:${subject.wireName}#${subject.relation}`;
+  return `userset:${subject.wireName}#${subject.relation}${suffix}`;
 }
 
 function normalizeTerm(term: AccessIrTerm): AccessIrTerm {
@@ -49,11 +50,14 @@ function normalizeTerm(term: AccessIrTerm): AccessIrTerm {
 
 function termKey(term: AccessIrTerm): string {
   const normalized = normalizeTerm(term);
-  if (normalized.kind === "role") {
+  if (normalized.kind === "role" || normalized.kind === "permission") {
     return `role:${normalized.name}`;
   }
   if (normalized.kind === "through") {
     return `through:${normalized.roleName}->${normalized.targetPermission}`;
+  }
+  if (normalized.kind === "through-all") {
+    return `through-all:${normalized.roleName}.all(${normalized.targetPermission})`;
   }
   if (normalized.kind === "both") {
     return `both:(${termKey(normalized.left)}&${termKey(normalized.right)})`;
@@ -63,9 +67,6 @@ function termKey(term: AccessIrTerm): string {
   }
   if (normalized.kind === "or") {
     return `or:(${normalized.terms.map(termKey).join("+")})`;
-  }
-  if (normalized.kind === "permission") {
-    return `role:${normalized.name}`;
   }
   return `gated:(${termKey(normalized.term)}&${termKey(normalized.condition)})`;
 }

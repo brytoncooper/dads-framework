@@ -61,11 +61,11 @@ describe("bounded relationship cleanup", () => {
         });
         taskRelationships.push({
           subject: {
-            type: workbenchWorkspace.entity.wireName,
+            type: workbenchWorkspace.wireName,
             id: workspace.id,
           },
           relation: workbenchTask.roles.workspace.roleName,
-          resource: { type: workbenchTask.entity.wireName, id },
+          resource: { type: workbenchTask.wireName, id },
         });
       }
     });
@@ -94,7 +94,7 @@ describe("bounded relationship cleanup", () => {
       await backing.lookupResources({
         subject: { type: workbenchUser.wireName, id: subject.id },
         permission: workbenchTask.permissions.view.permissionName,
-        resourceType: workbenchTask.entity.wireName,
+        resourceType: workbenchTask.wireName,
       }),
     ).toEqual([]);
     for (const relationship of taskRelationships)

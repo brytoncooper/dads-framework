@@ -5,6 +5,7 @@ import type {
   PermissionTerm,
   PermissionToken,
   RoleToken,
+  ThroughAllTerm,
   ThroughTerm,
 } from "./refs.js";
 
@@ -46,6 +47,17 @@ export function through(
   target: PermissionToken | RoleToken,
 ): ThroughTerm {
   return { kind: "through", role, target };
+}
+
+/**
+ * Intersection arrow: the subject must hold `target` on every object held
+ * by `role` (`role.all(target)`). `target` may be a permission or a role.
+ */
+export function throughAll(
+  role: RoleToken,
+  target: PermissionToken | RoleToken,
+): ThroughAllTerm {
+  return { kind: "through-all", role, target };
 }
 
 /**

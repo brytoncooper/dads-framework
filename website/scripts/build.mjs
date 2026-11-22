@@ -19,32 +19,6 @@ import { exportMarkdown } from "./markdown-export.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const source = join(root, "site");
 const output = join(root, "dist");
-const docsArg = process.argv[2] || process.env.DADS_DOCS_DIR;
-if (!docsArg)
-  throw new Error(
-    "Pass the generated docs folder to npm run build -- <docs-folder>.",
-  );
-const docs = resolve(docsArg);
-const outputRelativeDocs = relative(output, docs);
-if (
-  docs === output ||
-  (!outputRelativeDocs.startsWith("..") && !isAbsolute(outputRelativeDocs))
-) {
-  throw new Error("The input docs must live outside the output folder.");
-}
-
-const required = [
-  "index.html",
-  "search-index.js",
-  "assets/search.js",
-  "assets/site.css",
-  "source",
-  "llms.txt",
-];
-await Promise.all(required.map((path) => stat(join(docs, path))));
-const pages = (await readdir(docs))
-  .filter((file) => file.endsWith(".html"))
-  .sort();
 const origin = "https://dadsframework.dev";
 const repository = "https://github.com/brytoncooper/dads-framework";
 
@@ -54,10 +28,18 @@ function replaceRequired(text, marker, content, page) {
   return text.replace(marker, () => content);
 }
 
-function siteHeader(currentPage) {
+const docsSearchTrigger = `<button type="button" class="header-search-trigger" id="docs-search-trigger" aria-haspopup="dialog" aria-controls="docs-search-dialog" aria-label="Search documentation">
+      <svg class="header-search-icon" viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8.75" cy="8.75" r="5.75"/><path d="M13 13l4.25 4.25" stroke-linecap="round"/></svg>
+      <span class="header-search-label">Search</span>
+      <kbd class="header-search-shortcut" aria-hidden="true">⌘K</kbd>
+    </button>`;
+
+export function siteHeader(currentPage) {
+  const searchButton =
+    currentPage === "docs" ? `\n    ${docsSearchTrigger}` : "";
   return `<header class="site-header"><div class="wrap">
   <a href="/" class="brand"${currentPage === "home" ? ' aria-current="page"' : ""}><img src="/assets/dads-symbol-light.png" class="brand-symbol" alt="" width="26" height="26">Dads Framework</a>
-  <nav aria-label="Main">
+  <nav aria-label="Main">${searchButton}
     <a href="/docs/"${currentPage === "docs" ? ' aria-current="page"' : ""}>Docs</a>
     <a href="${repository}">GitHub <span aria-hidden="true">↗</span></a>
   </nav>
@@ -92,7 +74,7 @@ function markdownAlternate(html, path) {
   );
 }
 
-function renderDocs(html, page) {
+export function renderDocs(html, page) {
   html = addDocsReader(html, page);
   const file = `docs/${page}`;
   const path = canonicalPath(file);
@@ -110,6 +92,7 @@ function renderDocs(html, page) {
 <link rel="icon" href="/assets/dads-favicon.png" type="image/png">
 <link rel="stylesheet" href="/assets/base.css">
 <link rel="stylesheet" href="/assets/docs.css">
+<noscript><style>.header-search-trigger{display:none}</style></noscript>
 <script type="module" src="/assets/docs.js"></script>
 </head>`,
     page,
@@ -148,105 +131,150 @@ function renderDocs(html, page) {
   return markdownAlternate(html, file);
 }
 
-const renderedPages = await Promise.all(
-  pages.map(async (page) => [
-    page,
-    renderDocs(await readFile(join(docs, page), "utf8"), page),
-  ]),
-);
-const storyLink = (title, fallback) => {
-  const matched = renderedPages.find(([, html]) => {
-    const heading = html.match(/<article><h1[^>]*>([^<]*)<\/h1>/u)?.[1];
-    return heading?.trim().toLowerCase() === title.toLowerCase();
-  });
-  return matched
-    ? `/docs/${matched[0]}`
-    : `${repository}/blob/main/${fallback}`;
-};
-
-let home = await readFile(join(source, "index.html"), "utf8");
-home = replaceRequired(
-  home,
-  "<!-- site-header -->",
-  siteHeader("home"),
-  "home",
-);
-home = replaceRequired(
-  home,
-  "<!-- site-footer -->",
-  siteFooter(markdownPath("index.html")),
-  "home",
-);
-home = replaceRequired(
-  home,
-  "<!-- dad-url -->",
-  storyLink("Dad", "DAD.md"),
-  "home",
-);
-home = replaceRequired(
-  home,
-  "<!-- gary-url -->",
-  storyLink("Who let Gary back in?", "docs/go-ask-your-other-database.md"),
-  "home",
-);
-const supportingPages = await Promise.all(
-  ["credits.html", "404.html"].map(async (page) => {
-    let html = await readFile(join(source, page), "utf8");
-    html = replaceRequired(html, "<!-- site-header -->", siteHeader(""), page);
-    html = replaceRequired(
-      html,
-      "<!-- site-footer -->",
-      siteFooter(markdownPath(page)),
-      page,
+async function buildSite() {
+  const docsArg = process.argv[2] || process.env.DADS_DOCS_DIR;
+  if (!docsArg)
+    throw new Error(
+      "Pass the generated docs folder to npm run build -- <docs-folder>.",
     );
-    return [page, markdownAlternate(html, page)];
-  }),
-);
+  const docs = resolve(docsArg);
+  const outputRelativeDocs = relative(output, docs);
+  if (
+    docs === output ||
+    (!outputRelativeDocs.startsWith("..") && !isAbsolute(outputRelativeDocs))
+  ) {
+    throw new Error("The input docs must live outside the output folder.");
+  }
 
-const sitePages = [
-  ["index.html", markdownAlternate(home, "index.html")],
-  ...supportingPages,
-  ...renderedPages.map(([page, html]) => [`docs/${page}`, html]),
-];
-const canonicalPaths = new Map(
-  sitePages.map(([path]) => [`/${path}`, canonicalPath(path)]),
-);
-const { rootIndex, docsIndex } = createAgentIndexes({ origin, renderedPages });
-const companions = sitePages.map(([path, html]) => [
-  markdownPath(path).slice(1),
-  exportMarkdown(html, `${origin}${canonicalPath(path)}`, canonicalPaths),
-]);
+  const required = [
+    "index.html",
+    "search-index.js",
+    "assets/search.js",
+    "assets/site.css",
+    "source",
+    "llms.txt",
+  ];
+  await Promise.all(required.map((path) => stat(join(docs, path))));
+  const pages = (await readdir(docs))
+    .filter((file) => file.endsWith(".html"))
+    .sort();
 
-await rm(output, { recursive: true, force: true });
-await mkdir(output);
-const retiredAssets = new Set([
-  "dads.png",
-  "house-key.webp",
-  "serif.woff2",
-  "serif-italic.woff2",
-  "OFL-Instrument-Serif.txt",
-]);
-await cp(source, output, {
-  recursive: true,
-  filter: (path) => !retiredAssets.has(relative(join(source, "assets"), path)),
-});
-await cp(docs, join(output, "docs"), { recursive: true });
-await Promise.all([
-  writeFile(join(output, "llms.txt"), rootIndex),
-  writeFile(join(output, "docs", "llms.txt"), docsIndex),
-  ...[...sitePages, ...companions].map(([file, content]) =>
-    writeFile(
-      join(output, file),
-      file.startsWith("docs/") && file.endsWith(".html")
-        ? renderDocsCode(content)
-        : content,
+  const renderedPages = await Promise.all(
+    pages.map(async (page) => [
+      page,
+      renderDocs(await readFile(join(docs, page), "utf8"), page),
+    ]),
+  );
+  const storyLink = (title, fallback) => {
+    const matched = renderedPages.find(([, html]) => {
+      const heading = html.match(/<article><h1[^>]*>([^<]*)<\/h1>/u)?.[1];
+      return heading?.trim().toLowerCase() === title.toLowerCase();
+    });
+    return matched
+      ? `/docs/${matched[0]}`
+      : `${repository}/blob/main/${fallback}`;
+  };
+
+  let home = await readFile(join(source, "index.html"), "utf8");
+  home = replaceRequired(
+    home,
+    "<!-- site-header -->",
+    siteHeader("home"),
+    "home",
+  );
+  home = replaceRequired(
+    home,
+    "<!-- site-footer -->",
+    siteFooter(markdownPath("index.html")),
+    "home",
+  );
+  home = replaceRequired(
+    home,
+    "<!-- dad-url -->",
+    storyLink("Dad", "DAD.md"),
+    "home",
+  );
+  home = replaceRequired(
+    home,
+    "<!-- gary-url -->",
+    storyLink("Who let Gary back in?", "docs/go-ask-your-other-database.md"),
+    "home",
+  );
+  const supportingPages = await Promise.all(
+    ["credits.html", "404.html"].map(async (page) => {
+      let html = await readFile(join(source, page), "utf8");
+      html = replaceRequired(
+        html,
+        "<!-- site-header -->",
+        siteHeader(""),
+        page,
+      );
+      html = replaceRequired(
+        html,
+        "<!-- site-footer -->",
+        siteFooter(markdownPath(page)),
+        page,
+      );
+      return [page, markdownAlternate(html, page)];
+    }),
+  );
+
+  const sitePages = [
+    ["index.html", markdownAlternate(home, "index.html")],
+    ...supportingPages,
+    ...renderedPages.map(([page, html]) => [`docs/${page}`, html]),
+  ];
+  const canonicalPaths = new Map(
+    sitePages.map(([path]) => [`/${path}`, canonicalPath(path)]),
+  );
+  const { rootIndex, docsIndex } = createAgentIndexes({
+    origin,
+    renderedPages,
+  });
+  const companions = sitePages.map(([path, html]) => [
+    markdownPath(path).slice(1),
+    exportMarkdown(html, `${origin}${canonicalPath(path)}`, canonicalPaths),
+  ]);
+
+  await rm(output, { recursive: true, force: true });
+  await mkdir(output);
+  const retiredAssets = new Set([
+    "dads.png",
+    "house-key.webp",
+    "serif.woff2",
+    "serif-italic.woff2",
+    "OFL-Instrument-Serif.txt",
+  ]);
+  await cp(source, output, {
+    recursive: true,
+    filter: (path) =>
+      !retiredAssets.has(relative(join(source, "assets"), path)),
+  });
+  await cp(docs, join(output, "docs"), { recursive: true });
+  await Promise.all([
+    writeFile(join(output, "llms.txt"), rootIndex),
+    writeFile(join(output, "docs", "llms.txt"), docsIndex),
+    ...[...sitePages, ...companions].map(([file, content]) =>
+      writeFile(
+        join(output, file),
+        file.startsWith("docs/") && file.endsWith(".html")
+          ? renderDocsCode(content)
+          : content,
+      ),
     ),
-  ),
-  writeFile(
-    join(output, "sitemap.xml"),
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", ...pages.map((page) => (page === "index.html" ? "/docs/" : `/docs/${page.slice(0, -5)}`))].map((path) => `  <url><loc>https://dadsframework.dev${path}</loc></url>`).join("\n")}\n</urlset>\n`,
-  ),
-]);
-console.log(
-  `Built landing page and ${pages.length} documentation pages in dist/.`,
-);
+    writeFile(
+      join(output, "sitemap.xml"),
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", ...pages.map((page) => (page === "index.html" ? "/docs/" : `/docs/${page.slice(0, -5)}`))].map((path) => `  <url><loc>https://dadsframework.dev${path}</loc></url>`).join("\n")}\n</urlset>\n`,
+    ),
+  ]);
+  console.log(
+    `Built landing page and ${pages.length} documentation pages in dist/.`,
+  );
+}
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  await buildSite();
+}

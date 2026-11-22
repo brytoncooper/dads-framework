@@ -1,12 +1,22 @@
 import type { CompiledAuthorizationQuery } from "./compile-postgres-policy.js";
 import type {
   AuthorizationModelDefinition,
+  CompiledArrowTarget,
   CompiledPermissionExpression,
   NormalizedPermissionCheck,
 } from "./policy-model.js";
 import {
+  analyzePermissionCycles,
+  type PermissionCyclePlan,
+  type RecursiveSccPlan,
+} from "./permission-cycles.js";
+import { compileRecursiveSharedBody } from "./compile-recursive-policy.js";
+import {
+  isPolymorphicRelation,
+  notExpired,
+  permissionIdentity,
   QueryBuilder,
-  relatedEntity,
+  resolveArrowTargets,
   subjectReachability,
   TUPLES,
 } from "./policy-sql.js";
@@ -66,7 +76,13 @@ function compileSharedPointPlan(
   builder: QueryBuilder,
   binding: SharedPointBinding,
 ): { readonly withClause: string; readonly allowed: string } {
-  const compiler = new SharedPointCompiler(model, builder, binding.namespace);
+  const cycles = analyzePermissionCycles(model);
+  const compiler = new SharedPointCompiler(
+    model,
+    cycles,
+    builder,
+    binding.namespace,
+  );
   const allowed = compiler.permission(
     binding.resourceEntity,
     binding.permission,
@@ -88,10 +104,13 @@ class SharedPointCompiler {
     string,
     Map<CompiledPermissionExpression, string>
   >();
+  readonly #sccAliases = new Map<string, string>();
+  readonly #sccNodeAliases = new Map<string, string>();
   readonly #active = new Set<string>();
 
   constructor(
     private readonly model: AuthorizationModelDefinition,
+    private readonly cycles: PermissionCyclePlan,
     private readonly builder: QueryBuilder,
     private readonly namespace: string,
   ) {}
@@ -102,7 +121,9 @@ class SharedPointCompiler {
     );
     if (!definition)
       throw new Error(`Postgres policy cannot find permission ${name}.`);
-    const identity = `${entity}\u0000${name}`;
+    const scc = this.cycles.sccFor(entity, name);
+    if (scc !== undefined) return this.#sccPermission(scc, entity, name);
+    const identity = permissionIdentity(entity, name);
     if (this.#active.has(identity))
       throw new Error(
         "Postgres SQL compilation does not support a cycle through permissions.",
@@ -113,6 +134,57 @@ class SharedPointCompiler {
     } finally {
       this.#active.delete(identity);
     }
+  }
+
+  #sccPermission(scc: RecursiveSccPlan, entity: string, name: string): string {
+    const identity = permissionIdentity(entity, name);
+    const existing = this.#sccNodeAliases.get(identity);
+    if (existing !== undefined) return existing;
+    const cteName = this.#compileScc(scc);
+    const alias = `point_policy_${String(this.queries.length)}`;
+    const entitySql = this.builder.value(entity);
+    const permSql = this.builder.value(name);
+    this.queries.push(
+      `${alias}(resource_kind, resource_id) AS MATERIALIZED (SELECT resource_kind, resource_id FROM ${cteName} WHERE resource_kind = ${entitySql} AND permission_name = ${permSql})`,
+    );
+    this.#sccNodeAliases.set(identity, alias);
+    return alias;
+  }
+
+  #compileScc(scc: RecursiveSccPlan): string {
+    const existing = this.#sccAliases.get(scc.id);
+    if (existing !== undefined) return existing;
+    const baseAliases = new Map<string, string>();
+    for (const node of scc.nodes) {
+      if (node.base !== undefined) {
+        baseAliases.set(
+          node.identity,
+          this.#expression(node.entity, node.base),
+        );
+      }
+    }
+    const guardAliases = new Map<CompiledPermissionExpression, string>();
+    for (const edge of scc.edges) {
+      for (const guard of edge.guards) {
+        if (!guardAliases.has(guard)) {
+          guardAliases.set(guard, this.#expression(edge.fromEntity, guard));
+        }
+      }
+    }
+    const cteName = `rec_policy_${String(this.queries.length)}`;
+    const body = compileRecursiveSharedBody({
+      builder: this.builder,
+      namespace: this.namespace,
+      cteName,
+      scc,
+      baseAliases,
+      guardAliases,
+    });
+    this.queries.push(
+      `${cteName}(resource_kind, resource_id, permission_name) AS (${body})`,
+    );
+    this.#sccAliases.set(scc.id, cteName);
+    return cteName;
   }
 
   #expression(
@@ -141,7 +213,22 @@ class SharedPointCompiler {
       return `SELECT resource_kind, resource_id FROM subject_reachable WHERE relation = ${relation}`;
     }
     if (expression.kind === "through") {
-      return this.#through(entity, expression.relation, expression.permission);
+      const targets = resolveArrowTargets(this.model, entity, expression);
+      const polymorphic = isPolymorphicRelation(
+        this.model,
+        entity,
+        expression.relation,
+      );
+      return this.#through(expression.relation, targets, polymorphic);
+    }
+    if (expression.kind === "through-all") {
+      const targets = resolveArrowTargets(this.model, entity, expression);
+      const polymorphic = isPolymorphicRelation(
+        this.model,
+        entity,
+        expression.relation,
+      );
+      return this.#throughAll(expression.relation, targets, polymorphic);
     }
     if (expression.kind === "exclude") {
       const include = this.#expression(entity, expression.include);
@@ -157,26 +244,94 @@ class SharedPointCompiler {
       .join(` ${operator} `);
   }
 
-  #through(entity: string, name: string, permission: string): string {
-    const related = relatedEntity(this.model, entity, name);
-    const child = this.permission(related, permission);
-    const relation = this.builder.value(name);
+  #through(
+    name: string,
+    targets: readonly CompiledArrowTarget[],
+    polymorphic: boolean,
+  ): string {
+    const branches = targets.map((target) =>
+      this.#throughBranch(name, target, polymorphic),
+    );
+    return branches.length === 1 && branches[0] !== undefined
+      ? branches[0]
+      : branches.map((branch) => `(${branch})`).join(" UNION ");
+  }
 
-    // A stored direct edge determines the actual target kind in a point
-    // check. Keep both columns through the set algebra and constrain the
-    // final kind only at the requested resource.
+  #throughBranch(
+    name: string,
+    target: CompiledArrowTarget,
+    polymorphic: boolean,
+  ): string {
+    const child = this.permission(target.entity, target.permission);
+    const relation = this.builder.value(name);
+    const kindMatch = polymorphic
+      ? `reached.resource_kind = ${this.builder.value(target.entity)} AND tuple.subject_kind = reached.resource_kind`
+      : "tuple.subject_kind = reached.resource_kind";
     return `SELECT DISTINCT parent.resource_kind, parent.resource_id
       FROM ${child} reached
       CROSS JOIN LATERAL (
         SELECT tuple.resource_kind, tuple.resource_id
         FROM ${TUPLES} tuple
         WHERE tuple.namespace = ${this.namespace}
-          AND tuple.subject_kind = reached.resource_kind
+          AND ${kindMatch}
           AND tuple.subject_id = reached.resource_id
           AND tuple.relation = ${relation}
           AND tuple.subject_is_wildcard = false
           AND tuple.subject_relation = ''
+          AND ${notExpired("tuple")}
         OFFSET 0
       ) parent`;
+  }
+
+  #throughAll(
+    name: string,
+    targets: readonly CompiledArrowTarget[],
+    polymorphic: boolean,
+  ): string {
+    const compiledTargets = targets.map((target) => ({
+      target,
+      child: this.permission(target.entity, target.permission),
+    }));
+    const relation = this.builder.value(name);
+    const candidateBranches = compiledTargets.map(({ target, child }) => {
+      const kindMatch = polymorphic
+        ? `reached.resource_kind = ${this.builder.value(target.entity)} AND tuple.subject_kind = reached.resource_kind`
+        : "tuple.subject_kind = reached.resource_kind";
+      return `SELECT DISTINCT parent.resource_kind, parent.resource_id
+        FROM ${child} reached
+        CROSS JOIN LATERAL (
+          SELECT tuple.resource_kind, tuple.resource_id
+          FROM ${TUPLES} tuple
+          WHERE tuple.namespace = ${this.namespace}
+            AND ${kindMatch}
+            AND tuple.subject_id = reached.resource_id
+            AND tuple.relation = ${relation}
+            AND tuple.subject_is_wildcard = false
+            AND tuple.subject_relation = ''
+            AND ${notExpired("tuple")}
+          OFFSET 0
+        ) parent`;
+    });
+    const allowedParentChecks = compiledTargets.map(({ target, child }) => {
+      if (!polymorphic) {
+        return `EXISTS (SELECT 1 FROM ${child} allowed_parent WHERE allowed_parent.resource_kind = all_tuple.subject_kind AND allowed_parent.resource_id = all_tuple.subject_id)`;
+      }
+      const targetKind = this.builder.value(target.entity);
+      return `(all_tuple.subject_kind = ${targetKind} AND EXISTS (SELECT 1 FROM ${child} allowed_parent WHERE allowed_parent.resource_kind = ${targetKind} AND allowed_parent.resource_id = all_tuple.subject_id))`;
+    });
+    return `SELECT DISTINCT candidate.resource_kind, candidate.resource_id
+      FROM (${candidateBranches.join(" UNION ")}) candidate
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM ${TUPLES} all_tuple
+        WHERE all_tuple.namespace = ${this.namespace}
+          AND all_tuple.resource_kind = candidate.resource_kind
+          AND all_tuple.resource_id = candidate.resource_id
+          AND all_tuple.relation = ${relation}
+          AND all_tuple.subject_is_wildcard = false
+          AND all_tuple.subject_relation = ''
+          AND ${notExpired("all_tuple")}
+          AND NOT (${allowedParentChecks.join(" OR ")})
+      )`;
   }
 }

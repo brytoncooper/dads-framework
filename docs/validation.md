@@ -32,5 +32,5 @@ For an input change, test a valid payload, a missing required field, and a
 payload with an unfamiliar property when the schema is strict. For an output
 change, exercise the request transport against the new response. Treat the
 HTTP envelope and the application payload as separate contracts. The
-[starter notes walkthrough](./site/guides/http.md) traces both through a
+[routes and contracts guide](./site/guides/routes-and-contracts.md) traces both through a
 working route.

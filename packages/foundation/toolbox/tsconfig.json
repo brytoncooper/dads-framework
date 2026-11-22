@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "dist/toolbox.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../../testing/core" }],
+  "references": [{ "path": "../../access" }, { "path": "../../testing/core" }],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

@@ -303,6 +303,44 @@ update workspace links and the lockfile. See the
 [dependency library guide](../../../docs/dependency-libraries.md) for the
 workflow from an owning repository to a consuming repository.
 
+### Access schemas
+
+`dad access import <schema.zed> [--out <path>] [--style <ergonomic|classic>] [--dry-run] [--json]`
+
+Reads a SpiceDB `.zed` schema file, parses it with `@dads-framework/access`,
+and emits strict Dads TypeScript. By default `--style` is `ergonomic` (`actor`,
+`resource`, `compileAccess`); pass `--style classic` for `entityHandle`,
+`access`, and `accessModel`. Without `--out` or `--json`, the generated
+TypeScript prints directly to stdout so `npx dad access import schema.zed > access.ts`
+works out of the box. With `--out <path>`, Dad creates parent directories and
+writes the file unless `--dry-run` is set. Unsupported SpiceDB constructs such
+as `caveat` fail with a line-numbered error and exit `1`.
+
+`dad access tree <schema.ts|schema.zed> [--json]`
+
+Loads a TypeScript/JavaScript access module (`.ts`, `.mts`, `.js`, `.mjs`)
+exporting an `AccessModel` or `actor`/`resource` definitions, or a SpiceDB
+`.zed` schema file, and renders the deterministic ASCII hierarchy tree showing
+actors, resources, roles, permissions, and inherited children.
+
+`dad access diff <before> <after> [--json]`
+
+Loads both access sources (`.ts`, `.mts`, `.js`, `.mjs`, or `.zed`, including
+mixing `.ts` and `.zed`) and compares resources, roles, subject types,
+expiration flags, and computed permissions. Every change is classified as either
+`safe` or `breaking` (`removed-resource`, `removed-role`, `narrowed-role`,
+`removed-expiration`), with `requiresMigration` indicating whether stored
+relationships must be migrated before writing the new schema.
+
+`dad access migrate <slug> --from <before> --to <after> [--out <dir>] [--dry-run] [--json]`
+
+Computes the schema diff between `<before>` and `<after>` (`.ts`, `.mts`,
+`.js`, `.mjs`, or `.zed`), assigns the next sequential `NNNN_<slug>` identifier
+in `--out` (defaulting to `./access/migrations`), and scaffolds a connected
+`(from, to)` migration file using `defineAccessMigration` pre-populated with
+typed `copyRole` / `dropRole` stubs and snapshot metadata. Pass `--dry-run` to
+preview without writing. Run `dad access --help` for subcommand usage.
+
 ## Use it
 
 The package also exports the surface the CLI is built from, which is how
@@ -314,6 +352,10 @@ The package also exports the surface the CLI is built from, which is how
 - Orientation: `loadDadsProject`, `findDadsProjectRoot`, `parseDadsProject`,
   `orientProjectPath`, `recommendChangedVerification`,
   `synchronizeAgentSkills`.
+- Access: `loadAccessSource`, `importZedSchema`, `renderAccessTree`,
+  `renderZedAccessTree`, `diffAccessSources`, `diffZedSchemas`,
+  `diffAccessIrDefinitions`, `scaffoldAccessMigrationFromSources`,
+  `scaffoldAccessMigration`, `DEFAULT_ACCESS_MIGRATIONS_DIR`.
 
 ## What it refuses to do
 
@@ -341,6 +383,14 @@ positional argument.
 
 A successful `--json` run prints one line beginning `{"ok":true,…}`. `init`
 reports `initialization` and `installed`. `add library` reports `result`.
+`access import` reports `inputPath`, `outPath`, `definitionCount`,
+`definitions`, `dryRun`, `written`, and `code`.
+`access tree` reports `inputPath`, `definitionCount`, `definitions`, and
+`tree`.
+`access diff` reports `beforePath`, `afterPath`, `safe`, `breaking`,
+`permissionChanges`, `requiresMigration`, and `summary`.
+`access migrate` reports `id`, `slug`, `fromPath`, `toPath`, `outDir`,
+`filePath`, `dryRun`, `written`, `requiresMigration`, `diff`, and `code`.
 `test:recommend` prints `changedScope`, `recommendation`, and `notApplicable`;
 `verify` prints those plus `report`. A failure prints
 `{"ok":false,"error":"<message>"}` on stderr and exits `1`; without `--json`
@@ -358,25 +408,32 @@ followed by
 
 Errors, and when each happens:
 
-| Message                                                                     | When                                                    |
-| --------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `Could not find dads.project.json from <path>.`                             | No Dads project above the working directory             |
-| `orient requires a project-relative path.`                                  | `orient` or `explain` with no path                      |
-| `No declared package owns <path>.`                                          | `orient`, `explain`, on an unowned path                 |
-| `inspect requires http-operation "<METHOD /path>".`                         | A malformed `inspect` invocation                        |
-| `--profile must be standard or strict.`                                     | `doctor` with any other profile                         |
-| `No daddy issue is named <id>.`                                             | `doctor --issue` or `doctor explain` with an unknown id |
-| `--today must be a date written YYYY-MM-DD.`                                | `doctor --today` with anything else                     |
-| `doctor takes at most one path.` / `doctor explain requires an issue id.`   | A malformed `doctor` invocation                         |
-| `No literal HTTP operation named <name> was found.`                         | `inspect` matched nothing                               |
-| `Refusing to initialize non-empty directory <path>. …`                      | `init` target holds files and no `dads.project.json`    |
-| `Refusing to overwrite conflicting file <path>.`                            | An owned file exists with different content             |
-| `Unknown option <option>.` / `Option <option> was provided more than once.` | A bad `init` argument list                              |
-| `<option> requires a value.` / `<option> may only be provided once.`        | A value option given wrongly                            |
-| `Invalid verification base <ref>.`                                          | `--base` names no commit                                |
-| `Unable to read the changed git scope[: <detail>]`                          | Git could not report the changed paths                  |
-| `Refusing to replace existing package script <name>. …`                     | A recipe script name is already taken                   |
-| `npm install failed[: <detail>]`                                            | Dependency installation failed                          |
+| Message                                                                        | When                                                    |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `Could not find dads.project.json from <path>.`                                | No Dads project above the working directory             |
+| `orient requires a project-relative path.`                                     | `orient` or `explain` with no path                      |
+| `No declared package owns <path>.`                                             | `orient`, `explain`, on an unowned path                 |
+| `inspect requires http-operation "<METHOD /path>".`                            | A malformed `inspect` invocation                        |
+| `--profile must be standard or strict.`                                        | `doctor` with any other profile                         |
+| `No daddy issue is named <id>.`                                                | `doctor --issue` or `doctor explain` with an unknown id |
+| `--today must be a date written YYYY-MM-DD.`                                   | `doctor --today` with anything else                     |
+| `doctor takes at most one path.` / `doctor explain requires an issue id.`      | A malformed `doctor` invocation                         |
+| `No literal HTTP operation named <name> was found.`                            | `inspect` matched nothing                               |
+| `Refusing to initialize non-empty directory <path>. …`                         | `init` target holds files and no `dads.project.json`    |
+| `Refusing to overwrite conflicting file <path>.`                               | An owned file exists with different content             |
+| `Unknown option <option>.` / `Option <option> was provided more than once.`    | A bad `init` argument list                              |
+| `<option> requires a value.` / `<option> may only be provided once.`           | A value option given wrongly                            |
+| `Invalid verification base <ref>.`                                             | `--base` names no commit                                |
+| `Unable to read the changed git scope[: <detail>]`                             | Git could not report the changed paths                  |
+| `Refusing to replace existing package script <name>. …`                        | A recipe script name is already taken                   |
+| `access import requires a path to a .zed schema file.`                         | `access import` with no schema path                     |
+| `--style must be ergonomic or classic.`                                        | `access import --style` with an unsupported style       |
+| `access tree requires a path to a .ts or .zed access file.`                    | `access tree` with no schema path                       |
+| `access diff requires <before> and <after> schema file paths (.ts or .zed).`   | `access diff` with fewer than two schema paths          |
+| `access migrate requires a migration slug.`                                    | `access migrate` with no slug                           |
+| `access migrate requires --from <before>.` / `--to <after>.`                   | `access migrate` missing `--from` or `--to`             |
+| `Zed schema file not found: <path>.` / `Access schema file not found: <path>.` | `access` command with a missing schema file             |
+| `npm install failed[: <detail>]`                                               | Dependency installation failed                          |
 
 The package requires Node.js 22 or newer.
 

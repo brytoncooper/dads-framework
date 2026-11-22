@@ -10,7 +10,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { initialize } from "./cli-project-commands.js";
 import { initializeDadsProject } from "./initialize-dads-project.js";
 
 const temporaryDirectories: string[] = [];
@@ -146,6 +147,62 @@ describe("initialize Dads project", () => {
     expect(result.created).toContain("dads.project.json");
     expect(() =>
       readFileSync(join(targetDirectory, "dads.project.json"), "utf8"),
+    ).toThrow();
+  });
+
+  it("creates the minimal template without example domains and keeps reruns unchanged", () => {
+    const targetDirectory = temporaryDirectory();
+    const first = initializeDadsProject({
+      targetDirectory,
+      mode: "new",
+      projectName: "lean-api",
+      template: "minimal",
+    });
+    const second = initializeDadsProject({
+      targetDirectory,
+      mode: "new",
+      projectName: "lean-api",
+      template: "minimal",
+    });
+
+    expect(first.created).toContain("apps/customer/app.ts");
+    expect(first.created).toContain("apps/staff/app.ts");
+    expect(first.created).toContain("domains/tenants/index.ts");
+    expect(
+      first.created.filter((path) => path.startsWith("domains/notes/")),
+    ).toEqual([]);
+    expect(
+      first.created.filter((path) => path.startsWith("domains/support/")),
+    ).toEqual([]);
+    expect(
+      first.created.filter((path) => path.startsWith("examples/")),
+    ).toEqual([]);
+    expect(second.created).toEqual([]);
+    expect(second.unchanged).toEqual(first.created);
+  });
+
+  it("forwards --template minimal through the dad init command entrypoint", () => {
+    const targetDirectory = join(temporaryDirectory(), "cli-minimal");
+    const stdout = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    try {
+      initialize(
+        [targetDirectory, "--template", "minimal", "--skip-install", "--json"],
+        true,
+      );
+    } finally {
+      stdout.mockRestore();
+    }
+
+    expect(
+      readFileSync(join(targetDirectory, "apps/customer/app.ts"), "utf8"),
+    ).toContain("// dad:add domains");
+    expect(() =>
+      readFileSync(
+        join(targetDirectory, "domains/notes/server/routes.ts"),
+        "utf8",
+      ),
     ).toThrow();
   });
 });

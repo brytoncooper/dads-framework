@@ -13,3 +13,10 @@ export function readTupleColumn(row: PostgresRow, column: string): string {
     throw new Error(`Postgres authorization returned invalid ${column}`);
   return value;
 }
+
+export function readBooleanColumn(row: PostgresRow, column: string): boolean {
+  const value = row[column];
+  if (typeof value !== "boolean")
+    throw new Error(`Postgres authorization returned invalid ${column}`);
+  return value;
+}

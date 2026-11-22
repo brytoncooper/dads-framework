@@ -24,6 +24,7 @@ export function initialize(
     targetDirectory: request.targetDirectory,
     mode: request.mode,
     projectName,
+    template: request.template,
     dryRun: request.dryRun,
   });
   const shouldInstall =

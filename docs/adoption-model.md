@@ -104,8 +104,8 @@ other. It must not become a generic integrations drawer.
 
 ## Progressive adoption
 
-Use the [creator](site/guides/quickstart.md) to see public packages assembled
-into a working app. For an existing app, the [adoption guide](site/guides/adopt.md)
+Use the [Getting Started guide](site/guides/index.md) to see public packages assembled
+into a working app. For an existing app, the [adoption guide](site/guides/adopt-standalone.md)
 shows how to create an isolated starter under the host's `dads/` directory.
 Moving a route from the host is a separate change. Capture its current
 response and denial behavior in tests before changing which code serves it.

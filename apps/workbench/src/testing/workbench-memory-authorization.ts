@@ -10,8 +10,8 @@ import {
   type WorkbenchRelationship,
 } from "../access.js";
 
-const workspaceType = workbenchWorkspace.entity.wireName;
-const taskType = workbenchTask.entity.wireName;
+const workspaceType = workbenchWorkspace.wireName;
+const taskType = workbenchTask.wireName;
 const parent = workbenchTask.roles.workspace.roleName;
 const workspacePermissions = {
   [workbenchWorkspace.permissions.view.permissionName]: [

@@ -1,6 +1,7 @@
 import { isGrantableRole } from "./grantable.js";
 import {
   isEntityHandleHolder,
+  isExpirableHolder,
   isUsersetHolder,
   isWildcardHolder,
 } from "./holders.js";
@@ -13,7 +14,12 @@ import type {
   AccessIrTerm,
 } from "./ir.js";
 import { isPermissionToken, isRoleToken } from "./refs.js";
-import type { PermissionTerm, RoleHolder } from "./refs.js";
+import type {
+  PermissionTerm,
+  RoleHolder,
+  ThroughAllTerm,
+  ThroughTerm,
+} from "./refs.js";
 import type { AccessModel, ResolvedAccessDefinition } from "./access-model.js";
 
 function isHolderList(
@@ -22,9 +28,16 @@ function isHolderList(
   return Array.isArray(holder);
 }
 
+function markExpirable(subject: AccessIrSubject): AccessIrSubject {
+  return { ...subject, expiration: true };
+}
+
 function subjectsForHolder(holder: RoleHolder): readonly AccessIrSubject[] {
   if (isHolderList(holder)) {
     return holder.flatMap((entry) => subjectsForHolder(entry));
+  }
+  if (isExpirableHolder(holder)) {
+    return subjectsForHolder(holder.holder).map(markExpirable);
   }
   if (isGrantableRole(holder)) {
     const direct = subjectsForHolder(holder.directSubject);
@@ -50,6 +63,16 @@ function subjectsForHolder(holder: RoleHolder): readonly AccessIrSubject[] {
   throw new Error("unknown role holder");
 }
 
+function irArrowTerm(term: ThroughTerm | ThroughAllTerm): AccessIrTerm {
+  return {
+    kind: term.kind,
+    roleName: term.role.roleName,
+    targetPermission: isPermissionToken(term.target)
+      ? term.target.permissionName
+      : term.target.roleName,
+  };
+}
+
 function irTerm(term: PermissionTerm, ownerWireName: string): AccessIrTerm {
   if (isRoleToken(term)) {
     return { kind: "role", name: term.roleName };
@@ -62,14 +85,8 @@ function irTerm(term: PermissionTerm, ownerWireName: string): AccessIrTerm {
     }
     return { kind: "permission", name: term.permissionName };
   }
-  if (term.kind === "through") {
-    return {
-      kind: "through",
-      roleName: term.role.roleName,
-      targetPermission: isPermissionToken(term.target)
-        ? term.target.permissionName
-        : term.target.roleName,
-    };
+  if (term.kind === "through" || term.kind === "through-all") {
+    return irArrowTerm(term);
   }
   if (term.kind === "gated") {
     return {

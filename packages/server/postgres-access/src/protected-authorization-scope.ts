@@ -1,42 +1,51 @@
-import type { DrizzleHandle } from "@dads-framework/postgres";
-
-import { transactionExecutor } from "./drizzle-executor.js";
 import type {
   PostgresAccessExecutor,
   PostgresAuthorization,
 } from "./postgres-authorization.js";
 
-type TransactionIdentity = Pick<DrizzleHandle, "execute">;
 type Lifetime = {
-  transaction: TransactionIdentity | undefined;
+  owner: object | undefined;
   active(): boolean;
 };
 
 const lifetimes = new WeakMap<PostgresAuthorization, Lifetime>();
 
+export function assertProtectedAuthorizationActive(
+  authorization: PostgresAuthorization,
+): void {
+  const scope = lifetimes.get(authorization);
+  if (scope !== undefined && !scope.active()) {
+    throw scopeEnded();
+  }
+}
+
 export function assertProtectedAuthorizationCanJoin(
   authorization: PostgresAuthorization,
-  tx: TransactionIdentity | undefined,
+  owner: object | undefined,
 ): void {
   const scope = lifetimes.get(authorization);
   if (scope === undefined) return;
   if (!scope.active()) throw scopeEnded();
-  if (scope.transaction !== tx) {
+  if (scope.owner !== owner) {
     throw new Error(
       "Protected authorization can only join its own Postgres transaction",
     );
   }
 }
 
-export function openProtectedAuthorization(
+export function openProtectedAuthorizationScope(
   authorization: PostgresAuthorization,
-  tx: TransactionIdentity,
-) {
-  assertProtectedAuthorizationCanJoin(authorization, tx);
+  owner: object,
+  innerExecutor: PostgresAccessExecutor,
+): {
+  readonly authorization: PostgresAuthorization;
+  readonly close: () => void;
+} {
+  assertProtectedAuthorizationCanJoin(authorization, owner);
   const parent = lifetimes.get(authorization);
-  let executor: PostgresAccessExecutor | undefined = transactionExecutor(tx);
+  let executor: PostgresAccessExecutor | undefined = innerExecutor;
   const scope: Lifetime = {
-    transaction: tx,
+    owner,
     active: () => executor !== undefined && (parent?.active() ?? true),
   };
   const scoped = authorization.inTransaction({
@@ -52,7 +61,7 @@ export function openProtectedAuthorization(
     authorization: scoped,
     close() {
       executor = undefined;
-      scope.transaction = undefined;
+      scope.owner = undefined;
     },
   };
 }

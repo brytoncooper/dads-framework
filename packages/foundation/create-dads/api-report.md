@@ -1,6 +1,6 @@
 # API report: create-dads
 
-Published: no
+Published: yes
 
 Regenerate with `npm run api-report`.
 

@@ -25,3 +25,22 @@ export type PostgresQueryResult<Row extends PostgresRow = PostgresRow> = {
   readonly rows: readonly Row[];
   readonly rowCount: number | null;
 };
+
+/** Minimal structural node-postgres client boundary (`pg.PoolClient` satisfies this). */
+export type PgClientLike = {
+  query(
+    query: string | PostgresQuery,
+    values?: PostgresValue[],
+  ): PromiseLike<PostgresQueryResult>;
+  release(destroy?: Error | boolean): void;
+  getTransactionStatus?(): string | null;
+};
+
+/** Minimal structural node-postgres pool boundary (`pg.Pool` satisfies this). */
+export type PgPoolLike<Client extends PgClientLike = PgClientLike> = {
+  query(
+    query: string | PostgresQuery,
+    values?: PostgresValue[],
+  ): PromiseLike<PostgresQueryResult>;
+  connect(): PromiseLike<Client>;
+};

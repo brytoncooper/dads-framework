@@ -11,6 +11,8 @@ describe("Dads initialization arguments", () => {
         "host-app",
         "--name",
         "host-http",
+        "--template",
+        "minimal",
         "--yes",
         "--dry-run",
         "--skip-install",
@@ -20,11 +22,45 @@ describe("Dads initialization arguments", () => {
       targetDirectory: "host-app",
       mode: "existing",
       projectName: "host-http",
+      template: "minimal",
       acceptDefaults: true,
       dryRun: true,
       skipInstall: true,
       json: true,
     });
+  });
+
+  it("defaults the template to example and accepts explicit template values", () => {
+    expect(parseDadsInitializationArguments(["api"]).template).toBe("example");
+    expect(
+      parseDadsInitializationArguments(["api", "--template", "example"])
+        .template,
+    ).toBe("example");
+    expect(
+      parseDadsInitializationArguments(["api", "--template", "minimal"])
+        .template,
+    ).toBe("minimal");
+  });
+
+  it("rejects unknown, missing, or duplicate --template options", () => {
+    expect(() =>
+      parseDadsInitializationArguments(["api", "--template", "blank"]),
+    ).toThrow("--template must be minimal or example.");
+    expect(() =>
+      parseDadsInitializationArguments(["api", "--template"]),
+    ).toThrow("--template requires a value.");
+    expect(() =>
+      parseDadsInitializationArguments(["api", "--template", "--json"]),
+    ).toThrow("--template requires a value.");
+    expect(() =>
+      parseDadsInitializationArguments([
+        "api",
+        "--template",
+        "minimal",
+        "--template",
+        "example",
+      ]),
+    ).toThrow("Option --template was provided more than once.");
   });
 
   it("rejects unknown options instead of silently applying defaults", () => {

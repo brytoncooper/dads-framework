@@ -15,7 +15,7 @@ describe("workbench access model", () => {
 definition workspace {
   relation owner: user
   relation member: user
-  permission view = (owner + member)
+  permission view = owner + member
   permission manage = owner
 }
 

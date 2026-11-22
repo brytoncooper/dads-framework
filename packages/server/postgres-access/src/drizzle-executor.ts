@@ -1,15 +1,15 @@
-import type { PostgresQuery, PostgresRow } from "./postgres-types.js";
-import type { DrizzleHandle } from "@dads-framework/postgres";
 import { sql, type SQL } from "drizzle-orm";
+import type { DrizzleExecuteLike } from "./drizzle-structural.js";
 import type { PostgresAccessExecutor } from "./postgres-authorization.js";
+import type { PostgresQuery } from "./postgres-types.js";
 
 /** Bridge compiled, numbered placeholders to the transaction's bound Drizzle parameters. */
 export function transactionExecutor(
-  transaction: Pick<DrizzleHandle, "execute">,
+  transaction: DrizzleExecuteLike,
 ): PostgresAccessExecutor {
   return {
     query(query: PostgresQuery) {
-      return transaction.execute<PostgresRow>(parameterized(query));
+      return transaction.execute(parameterized(query));
     },
   };
 }

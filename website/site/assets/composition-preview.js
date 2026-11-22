@@ -4,7 +4,11 @@ const preview = document.querySelector(".composition-preview");
 if (preview) {
   const tabList = preview.querySelector(".composition-tabs");
   const tabs = [...tabList.querySelectorAll('[role="tab"]')];
-  const access = preview.querySelector("#composition-access");
+  const fileLink = preview.querySelector("#composition-file-link");
+  const accessSwitch = preview.querySelector("#composition-access-switch");
+  const accessButtons = accessSwitch
+    ? [...accessSwitch.querySelectorAll("button[data-access]")]
+    : [];
   const response = preview.querySelector("#composition-status");
   const detail = preview.querySelector("#composition-detail");
   const cases = {
@@ -25,15 +29,28 @@ if (preview) {
     },
   };
   let activeTab = tabs[0];
+  let activeAccess = "member";
 
   function updateResponse() {
-    const example =
-      activeTab.id === "composition-tab-staff"
-        ? cases.staff
-        : cases[access.value];
+    const isStaff = activeTab.id === "composition-tab-staff";
+    const example = isStaff ? cases.staff : cases[activeAccess];
     response.textContent = example.status;
     response.dataset.outcome = example.outcome;
     detail.textContent = example.detail;
+    if (accessSwitch) {
+      accessSwitch.dataset.disabled = String(isStaff);
+    }
+  }
+
+  function selectAccess(next) {
+    activeAccess = next;
+    for (const button of accessButtons) {
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.access === next),
+      );
+    }
+    updateResponse();
   }
 
   function selectTab(selected) {
@@ -45,6 +62,10 @@ if (preview) {
       const panel = document.getElementById(tab.getAttribute("aria-controls"));
       panel.hidden = !active;
     }
+    if (fileLink && selected.dataset.fileHref && selected.dataset.fileLabel) {
+      fileLink.href = selected.dataset.fileHref;
+      fileLink.innerHTML = `${selected.dataset.fileLabel} <span aria-hidden="true">↗</span>`;
+    }
     updateResponse();
   }
 
@@ -53,6 +74,15 @@ if (preview) {
     panel.setAttribute("role", "tabpanel");
     panel.setAttribute("aria-labelledby", tab.id);
     tab.addEventListener("click", () => selectTab(tab));
+  }
+
+  for (const button of accessButtons) {
+    button.addEventListener("click", () => {
+      if (activeTab.id === "composition-tab-staff") {
+        selectTab(tabs[0]);
+      }
+      selectAccess(button.dataset.access);
+    });
   }
 
   tabList.addEventListener("keydown", (event) => {
@@ -79,12 +109,14 @@ if (preview) {
     selectTab(target);
     target.focus();
   });
-  access.addEventListener("change", updateResponse);
+
   window.addEventListener("pageshow", updateResponse);
 
   selectTab(activeTab);
   preview.querySelector("#preview-cases").hidden = true;
   preview.querySelector(".composition-controls").hidden = false;
+  if (accessSwitch) accessSwitch.hidden = false;
+  if (fileLink) fileLink.hidden = false;
   tabList.hidden = false;
   preview.classList.add("composition-enhanced");
 }

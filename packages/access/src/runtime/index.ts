@@ -10,6 +10,8 @@ export {
   type ResourceLookup,
   type ResourceRef,
   type SpiceDbConsistencyToken,
+  type SubjectLookup,
+  type SubjectLookupResult,
   type SubjectRef,
   type WireResourceRef,
 } from "./authorization.js";
@@ -62,6 +64,22 @@ export type {
   RelationshipPageRequest,
 } from "./relationship-page.js";
 export { AnswerOnceAuthorization } from "./answer-once-authorization.js";
+export {
+  createAccessClient,
+  type AccessClient,
+  type AccessClientAddOptions,
+  type AccessClientCheckOptions,
+  type AccessClientDirectOptions,
+  type AccessClientLookupOptions,
+} from "./access-client.js";
+export {
+  ShadowAuthorization,
+  type ShadowAuthorizationMode,
+  type ShadowAuthorizationOptions,
+  type ShadowErrorEvent,
+  type ShadowErrorOperation,
+  type ShadowMismatchEvent,
+} from "./shadow-authorization.js";
 export {
   resolveReadConsistency,
   type ReadConsistencyDecision,

@@ -292,7 +292,7 @@ async function waitForAuthorization(
           subject: { type: workbenchUser.wireName, id: "local-readiness" },
           permission: workbenchWorkspace.permissions.view.permissionName,
           resource: {
-            type: workbenchWorkspace.entity.wireName,
+            type: workbenchWorkspace.wireName,
             id: "local-readiness",
           },
         })

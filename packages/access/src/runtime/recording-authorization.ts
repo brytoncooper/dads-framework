@@ -6,18 +6,26 @@ import type {
   RelationshipWrite,
   ResourceLookup,
   SpiceDbConsistencyToken,
+  SubjectLookup,
+  SubjectLookupResult,
   SubjectRef,
 } from "./authorization.js";
 import {
   lookupQuestionIdentity,
   permissionQuestionIdentity,
+  subjectLookupQuestionIdentity,
 } from "./question-identity.js";
 
 type CheckAnswer = { query: PermissionQuery; answer: boolean };
 type LookupAnswer = { query: ResourceLookup; answer: readonly string[] };
+type SubjectLookupAnswer = {
+  query: SubjectLookup;
+  answer: SubjectLookupResult;
+};
 type RecordingAuthorizationOptions = {
   checks?: readonly CheckAnswer[];
   lookups?: readonly LookupAnswer[];
+  subjectLookups?: readonly SubjectLookupAnswer[];
 };
 
 /** An explicit-answer fake for decision tests; it records questions but never evaluates tuples or arrows. */
@@ -25,6 +33,7 @@ export class RecordingAuthorization implements Authorization {
   readonly questions: (
     | { kind: "check"; query: PermissionQuery }
     | { kind: "lookup"; query: ResourceLookup }
+    | { kind: "subject-lookup"; query: SubjectLookup }
   )[] = [];
   constructor(private readonly answers: RecordingAuthorizationOptions = {}) {
     this.rejectDuplicateAnswers(answers.checks ?? [], permissionKey, "check");
@@ -32,6 +41,11 @@ export class RecordingAuthorization implements Authorization {
       answers.lookups ?? [],
       lookupAnswerKey,
       "lookup",
+    );
+    this.rejectDuplicateAnswers(
+      answers.subjectLookups ?? [],
+      subjectLookupAnswerKey,
+      "subject-lookup",
     );
   }
   check(query: PermissionQuery): Promise<boolean> {
@@ -48,6 +62,18 @@ export class RecordingAuthorization implements Authorization {
       () =>
         this.find(this.answers.lookups ?? [], lookupAnswerKey, query, "lookup")
           .answer,
+    );
+  }
+  lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
+    this.questions.push({ kind: "subject-lookup", query });
+    return Promise.resolve().then(
+      () =>
+        this.find(
+          this.answers.subjectLookups ?? [],
+          subjectLookupAnswerKey,
+          query,
+          "subject-lookup",
+        ).answer,
     );
   }
   writeRelationships(
@@ -121,4 +147,8 @@ function permissionKey(query: PermissionQuery): string {
 
 function lookupAnswerKey(query: ResourceLookup): string {
   return JSON.stringify(lookupQuestionIdentity(query));
+}
+
+function subjectLookupAnswerKey(query: SubjectLookup): string {
+  return JSON.stringify(subjectLookupQuestionIdentity(query));
 }

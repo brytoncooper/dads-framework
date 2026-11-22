@@ -1,7 +1,10 @@
+export type DadsProjectTemplate = "minimal" | "example";
+
 export type DadsInitializationArguments = {
   readonly targetDirectory: string;
   readonly mode: "new" | "existing";
   readonly projectName?: string;
+  readonly template: DadsProjectTemplate;
   readonly acceptDefaults: boolean;
   readonly dryRun: boolean;
   readonly skipInstall: boolean;
@@ -13,6 +16,7 @@ type PartialInitializationArguments = {
   targetDirectory: string | undefined;
   mode: "new" | "existing";
   projectName: string | undefined;
+  template: DadsProjectTemplate;
   acceptDefaults: boolean;
   dryRun: boolean;
   skipInstall: boolean;
@@ -26,6 +30,7 @@ export function parseDadsInitializationArguments(
     targetDirectory: undefined,
     mode: "new",
     projectName: undefined,
+    template: "example",
     acceptDefaults: false,
     dryRun: false,
     skipInstall: false,
@@ -96,13 +101,26 @@ function applyInitializationValue(
   optionIndex: number,
   option: string,
 ): void {
-  if (option === "--name")
+  if (option === "--name") {
     parsed.projectName = readOptionValue(
       argumentsAfterCommand,
       optionIndex,
       option,
     );
-  else throw new Error(`Unknown option ${option}.`);
+    return;
+  }
+  if (option === "--template") {
+    parsed.template = parseProjectTemplate(
+      readOptionValue(argumentsAfterCommand, optionIndex, option),
+    );
+    return;
+  }
+  throw new Error(`Unknown option ${option}.`);
+}
+
+function parseProjectTemplate(value: string): DadsProjectTemplate {
+  if (value === "minimal" || value === "example") return value;
+  throw new Error("--template must be minimal or example.");
 }
 
 function createInitializationArguments(
@@ -117,6 +135,7 @@ function createInitializationArguments(
     targetDirectory,
     mode: parsed.mode,
     ...(parsed.projectName ? { projectName: parsed.projectName } : {}),
+    template: parsed.template,
     acceptDefaults: parsed.acceptDefaults,
     dryRun: parsed.dryRun,
     skipInstall: parsed.skipInstall,

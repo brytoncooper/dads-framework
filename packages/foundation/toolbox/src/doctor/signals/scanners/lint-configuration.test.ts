@@ -81,4 +81,38 @@ describe("the resolved lint configuration", () => {
 
     expect(scopes).toStrictEqual([]);
   });
+
+  it("resolves probes through fallback patterns for the standalone package layout", () => {
+    const asked: string[] = [];
+    const standaloneProbes = [
+      "packages/access/src/core/access-model.ts",
+      "packages/access/src/core/emit-zed.test.ts",
+      "packages/server/http/type-tests/verb-execution.test.ts",
+      "packages/server/http/type-tests/verb-fixture.ts",
+      "scripts/checks/custom-check.mjs",
+    ];
+    const scopes = resolveLintScopes(contextOver(standaloneProbes, asked));
+
+    expect(asked).toStrictEqual([
+      "packages/access/src/core/access-model.ts",
+      "packages/access/src/core/emit-zed.test.ts",
+      "packages/server/http/type-tests/verb-fixture.ts",
+      "scripts/checks/custom-check.mjs",
+    ]);
+    expect(scopes.map((scope) => scope.scope)).toStrictEqual([
+      "source",
+      "test",
+      "type-tests",
+      "scripts",
+    ]);
+  });
+
+  it("answers nothing when eslint --print-config returns empty stdout", () => {
+    const context: DoctorContext = {
+      ...contextOver(PROBES, []),
+      exec: () => ({ status: 0, stdout: "" }),
+    };
+
+    expect(resolveLintScopes(context)).toStrictEqual([]);
+  });
 });

@@ -1,4 +1,38 @@
 export {
+  loadAccessSource,
+  type AccessSourceKind,
+  type LoadedAccessSource,
+} from "./access-source-loader.js";
+export {
+  importZedSchema,
+  type ImportZedSchemaOptions,
+  type ZedSchemaImportResult,
+} from "./access-import.js";
+export {
+  renderAccessTree,
+  renderZedAccessTree,
+  type AccessTreeResult,
+  type RenderAccessTreeOptions,
+} from "./access-tree.js";
+export {
+  diffAccessIrDefinitions,
+  diffAccessSources,
+  diffZedSchemas,
+  type AccessDiffBreakingChange,
+  type AccessDiffSafeChange,
+  type AccessPermissionChangeSummary,
+  type AccessSchemaDiff,
+  type DiffZedSchemasOptions,
+  type ZedSchemaDiffResult,
+} from "./access-diff.js";
+export {
+  DEFAULT_ACCESS_MIGRATIONS_DIR,
+  scaffoldAccessMigration,
+  scaffoldAccessMigrationFromSources,
+  type AccessMigrationScaffoldResult,
+  type ScaffoldAccessMigrationOptions,
+} from "./access-migrate.js";
+export {
   orientProjectPath,
   parseDadsProject,
   type DadsCapabilityInstallation,

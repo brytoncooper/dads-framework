@@ -75,11 +75,47 @@ pass their directory as `changesFolder` on the same runner. Each patch
 records the definitions it changes and the changes it depends on.
 `renumberMigration` moves a snapshot entry that collided with another branch.
 
+For connected `(from, to)` access model migrations across Postgres, SQLite,
+and SpiceDB, classify changes with `diffAccessModels` or `diffAccessIr`,
+declare portable steps with `defineAccessMigration` (`copyRole`, `dropRole`,
+`copyParent`, `dropParent`), apply them with `runPostgresAccessMigrations`,
+`runSqliteAccessMigrations`, or `runSpiceDbAccessMigrations`, and gate startup
+with `assertAccessMigrationsUpToDate`.
+
+To migrate a live SpiceDB datastore into Postgres, call
+`migrateSpiceDbToPostgres` with a `@authzed/authzed-node` v1 client (or
+`createAuthzedMigrationSource`) and a Postgres executor, then verify decision
+equivalence with `verifySpiceDbPostgresParity`.
+
+You can also run the same workflow from the command line with
+`npx dads-import-spicedb`:
+
+```sh
+npx dads-import-spicedb \
+  --endpoint localhost:50051 \
+  --token "$SPICEDB_TOKEN" \
+  --database-url "$DATABASE_URL" \
+  --namespace acme \
+  --out ./src/access-model.ts \
+  --verify
+```
+
+`--token` falls back to `SPICEDB_TOKEN` and `--database-url` falls back to
+`DATABASE_URL`. Pass `--insecure` for local plaintext SpiceDB instances,
+`--dry-run` to preview the generated TypeScript without touching Postgres or
+disk, `--batch-size <n>` to control upsert batching, and `--json` for
+machine-readable output. The CLI loads `@authzed/authzed-node`, `pg`, and (for
+`--verify`) `@dads-framework/postgres-access` dynamically at runtime.
+
 ## What it refuses to do
 
 The runner rejects gaps, duplicate entries, unregistered folders, and snapshots
 that drop the journal definition. A destructive entry after the baseline
 requires the relationship steps that make its schema write legal.
+`migrateSpiceDbToPostgres` fails fast with line-numbered errors on unsupported
+`caveat` declarations or caveated relationships before writing to Postgres.
+`assertAccessMigrationsUpToDate` throws listing every missing migration ID
+when a database is behind.
 
 ## Contract
 

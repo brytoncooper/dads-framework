@@ -156,7 +156,11 @@ type Place = {
   readonly visiting: readonly string[];
 };
 
-function fail(walk: Walk, path: readonly string[], message: string): void {
+function fail(
+  walk: Walk,
+  path: readonly string[],
+  message: string,
+): ScopePlan | undefined {
   const failure = { path: path.join(" → "), message };
   const alreadyReported = walk.failures.some(
     (entry) => entry.path === failure.path && entry.message === message,
@@ -164,6 +168,7 @@ function fail(walk: Walk, path: readonly string[], message: string): void {
   if (!alreadyReported) {
     walk.failures.push(failure);
   }
+  return undefined;
 }
 
 function planPermission(
@@ -176,31 +181,23 @@ function planPermission(
   const step = `${wireName}.${permissionName}`;
   const here = [...path, step];
   if (visiting.includes(step)) {
-    fail(walk, here, "cycle: the rules reach this permission again");
-    return undefined;
+    return fail(walk, here, "cycle: the rules reach this permission again");
   }
 
   const definition = walk.schema.definitions.find(
     (entry) => entry.wireName === wireName,
   );
   if (definition === undefined) {
-    fail(walk, here, `no access definition named ${wireName}`);
-    return undefined;
+    return fail(walk, here, `no access definition named ${wireName}`);
   }
   const roles = walk.schema.bindings.get(wireName);
   if (roles === undefined) {
-    fail(walk, here, `${wireName} is not a record with scope bindings`);
-    return undefined;
+    return fail(walk, here, `${wireName} is not a record with scope bindings`);
   }
 
   return planAtPlace(
     walk,
-    {
-      definition,
-      roles,
-      path: here,
-      visiting: [...visiting, step],
-    },
+    { definition, roles, path: here, visiting: [...visiting, step] },
     permissionName,
   );
 }
@@ -218,14 +215,28 @@ function planAtPlace(
     if (definition.roles.some((role) => role.name === permissionName)) {
       return planRole(walk, place, permissionName);
     }
-    fail(
+    return fail(
       walk,
       place.path,
       `${definition.wireName} has no permission ${permissionName}`,
     );
-    return undefined;
   }
   return anyOf(permission.terms.map((term) => planTerm(walk, place, term)));
+}
+
+function planNameRef(walk: Walk, place: Place, name: string) {
+  const isPermission = place.definition.permissions.some(
+    (permission) => permission.name === name,
+  );
+  return isPermission
+    ? planPermission(
+        walk,
+        place.definition.wireName,
+        name,
+        place.path,
+        place.visiting,
+      )
+    : planRole(walk, place, name);
 }
 
 function planTerm(
@@ -233,25 +244,18 @@ function planTerm(
   place: Place,
   term: AccessIrTerm,
 ): ScopePlan | undefined {
-  // A bare name is a sibling permission or a role; schema text parsed back
-  // with parseZed cannot tell them apart, so the definition decides.
   if (term.kind === "role" || term.kind === "permission") {
-    const isPermission = place.definition.permissions.some(
-      (permission) => permission.name === term.name,
-    );
-    if (!isPermission) {
-      return planRole(walk, place, term.name);
-    }
-    return planPermission(
-      walk,
-      place.definition.wireName,
-      term.name,
-      place.path,
-      place.visiting,
-    );
+    return planNameRef(walk, place, term.name);
   }
   if (term.kind === "through") {
     return planThrough(walk, place, term.roleName, term.targetPermission);
+  }
+  if (term.kind === "through-all") {
+    return fail(
+      walk,
+      place.path,
+      `role ${term.roleName}.all(${term.targetPermission}) cannot be compiled to a scope plan`,
+    );
   }
   if (term.kind === "or") {
     return anyOf(term.terms.map((entry) => planTerm(walk, place, entry)));
@@ -283,8 +287,7 @@ function planRole(
 ): ScopePlan | undefined {
   const binding = place.roles[roleName];
   if (binding === undefined) {
-    fail(walk, place.path, `role ${roleName} is not bound`);
-    return undefined;
+    return fail(walk, place.path, `role ${roleName} is not bound`);
   }
   if (binding.kind === "tag") {
     return { kind: "tag", role: roleName };
@@ -292,12 +295,11 @@ function planRole(
   if (binding.kind === "sparse-direct") {
     return { kind: "direct", role: roleName };
   }
-  fail(
+  return fail(
     walk,
     place.path,
     `role ${roleName} is bound as ${binding.kind} but used directly; a direct role must be bound as tag or sparse-direct`,
   );
-  return undefined;
 }
 
 /** `role->targetPermission`: a scope lookup, or a walk into another record. */

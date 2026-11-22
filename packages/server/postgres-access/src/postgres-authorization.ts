@@ -1,9 +1,3 @@
-import type {
-  DrizzleHandle,
-  PostgresConnection,
-} from "@dads-framework/postgres";
-import { is } from "drizzle-orm";
-import { PgTransaction } from "drizzle-orm/pg-core";
 import type { AccessModel } from "@dads-framework/access";
 import {
   Authorization,
@@ -14,9 +8,12 @@ import {
   type RelationshipWrite,
   type ResourceLookup,
   type SpiceDbConsistencyToken,
+  type SubjectLookup,
+  type SubjectLookupResult,
   type SubjectRef,
 } from "@dads-framework/access/runtime";
 import {
+  type PgPoolLike,
   type PostgresQuery,
   type PostgresRow,
   type PostgresQueryResult,
@@ -27,20 +24,49 @@ import {
   compilePostgresLookup,
 } from "./policy/compile-postgres-policy.js";
 import { compileLinearCheck } from "./policy/compile-linear-check.js";
+import { compilePostgresSubjectLookup } from "./policy/compile-subject-lookup.js";
 import type { NormalizedPermissionCheck } from "./policy/policy-model.js";
 
 import {
   compileAccessPolicy,
   type CompiledAccessPolicy,
 } from "./compile-access-policy.js";
-import { transactionExecutor } from "./drizzle-executor.js";
-import { readDecisionFlag, readTupleColumn } from "./postgres-response.js";
+import {
+  isDrizzlePgTransaction,
+  type DrizzleExecuteLike,
+} from "./drizzle-structural.js";
+import {
+  readBooleanColumn,
+  readDecisionFlag,
+  readTupleColumn,
+} from "./postgres-response.js";
 import { PostgresTuples } from "./postgres-tuples.js";
+import { assertProtectedAuthorizationActive } from "./protected-authorization-scope.js";
 import { RevisionedLookup } from "./revisioned-lookup.js";
 import { readFromLookupPrimary } from "./lookup-primary-pool.js";
 import { isPreparedCheckExecutorForPool } from "./prepared-check-executor.js";
 
 const CHECK_BATCH_SIZE = 128;
+
+type DrizzleExecutorModule = {
+  readonly transactionExecutor: (
+    transaction: DrizzleExecuteLike,
+  ) => PostgresAccessExecutor;
+};
+
+let drizzleExecutorModulePromise: Promise<DrizzleExecutorModule> | undefined;
+
+function lazyDrizzleTransactionExecutor(
+  transaction: DrizzleExecuteLike,
+): PostgresAccessExecutor {
+  return {
+    async query(query: PostgresQuery): Promise<PostgresQueryResult> {
+      drizzleExecutorModulePromise ??= import("./drizzle-executor.js");
+      const { transactionExecutor } = await drizzleExecutorModulePromise;
+      return transactionExecutor(transaction).query(query);
+    },
+  };
+}
 
 export type PostgresAccessExecutor = {
   query(query: PostgresQuery): PromiseLike<PostgresQueryResult>;
@@ -53,7 +79,7 @@ export type PostgresAccessOptions = {
   readonly executor: PostgresAccessExecutor;
   readonly queryTimeoutMs?: number;
   /** The same managed, primary autocommit pool passed as executor. Requires the optional revision migration. */
-  readonly reuseLookupResultsOn?: PostgresConnection["pool"];
+  readonly reuseLookupResultsOn?: PgPoolLike;
 };
 
 /** Experimental authorization over the application's primary Postgres database. */
@@ -102,6 +128,7 @@ export class PostgresAuthorization extends Authorization {
 
   /** Bind every operation to an application-owned transaction client. */
   inTransaction(executor: PostgresAccessExecutor): PostgresAuthorization {
+    assertProtectedAuthorizationActive(this);
     const { model, namespace, queryTimeoutMs } = this.#options;
     return new PostgresAuthorization({
       model,
@@ -112,13 +139,11 @@ export class PostgresAuthorization extends Authorization {
   }
 
   /** Bind reads and writes to an existing Drizzle transaction. */
-  inDrizzleTransaction(
-    transaction: Pick<DrizzleHandle, "execute">,
-  ): PostgresAuthorization {
-    if (!is(transaction, PgTransaction)) {
+  inDrizzleTransaction(transaction: DrizzleExecuteLike): PostgresAuthorization {
+    if (!isDrizzlePgTransaction(transaction)) {
       throw new Error("Postgres authorization requires a Drizzle transaction");
     }
-    return this.inTransaction(transactionExecutor(transaction));
+    return this.inTransaction(lazyDrizzleTransactionExecutor(transaction));
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {
@@ -228,6 +253,28 @@ export class PostgresAuthorization extends Authorization {
     return rows.map((row) => readTupleColumn(row, "resource_id"));
   }
 
+  override async lookupSubjects(
+    query: SubjectLookup,
+  ): Promise<SubjectLookupResult> {
+    requireSubjectLookupInput(query);
+    const permission = this.#policy.permissionName(
+      query.resource.type,
+      query.permission,
+    );
+    if (permission === undefined) return { subjects: [], hasWildcard: false };
+    const compiled = compilePostgresSubjectLookup(
+      this.#policy.model,
+      this.#options.namespace,
+      {
+        resource: query.resource,
+        permission,
+        subjectType: query.subjectType,
+      },
+    );
+    const rows = await this.#query(compiled);
+    return parseSubjectLookupRows(rows);
+  }
+
   /** Apply exact facts to this executor. Bind to the caller's transaction first. */
   async applyChanges(entries: readonly AccessChange[]): Promise<void> {
     for (const entry of entries) {
@@ -293,4 +340,39 @@ function requireConcreteSubject(subject: SubjectRef): void {
   ) {
     throw new Error("Postgres authorization reads require a concrete subject");
   }
+}
+
+function requireSubjectLookupInput(query: SubjectLookup): void {
+  if (
+    query.resource.type.length === 0 ||
+    query.resource.id.length === 0 ||
+    query.resource.id === "*"
+  ) {
+    throw new Error("Postgres authorization reads require a concrete resource");
+  }
+  if (query.subjectType.length === 0) {
+    throw new Error(
+      "Postgres authorization subject lookup requires a subject type",
+    );
+  }
+}
+
+function parseSubjectLookupRows(
+  rows: readonly PostgresRow[],
+): SubjectLookupResult {
+  const subjects = new Set<string>();
+  let hasWildcard = false;
+  for (const row of rows) {
+    const isWildcard = readBooleanColumn(row, "is_wildcard");
+    if (isWildcard) {
+      hasWildcard = true;
+    } else {
+      const subjectId = readTupleColumn(row, "subject_id");
+      if (subjectId.length > 0) subjects.add(subjectId);
+    }
+  }
+  return {
+    subjects: [...subjects].sort(),
+    hasWildcard,
+  };
 }

@@ -1,11 +1,20 @@
 export type AccessIrSubject =
-  | { readonly kind: "type"; readonly wireName: string }
+  | {
+      readonly kind: "type";
+      readonly wireName: string;
+      readonly expiration?: true;
+    }
   | {
       readonly kind: "userset";
       readonly wireName: string;
       readonly relation: string;
+      readonly expiration?: true;
     }
-  | { readonly kind: "wildcard"; readonly wireName: string };
+  | {
+      readonly kind: "wildcard";
+      readonly wireName: string;
+      readonly expiration?: true;
+    };
 
 export type AccessIrRole = {
   readonly name: string;
@@ -17,6 +26,11 @@ export type AccessIrTerm =
   | { readonly kind: "permission"; readonly name: string }
   | {
       readonly kind: "through";
+      readonly roleName: string;
+      readonly targetPermission: string;
+    }
+  | {
+      readonly kind: "through-all";
       readonly roleName: string;
       readonly targetPermission: string;
     }

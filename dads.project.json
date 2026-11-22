@@ -15,7 +15,7 @@
       "root": "packages/foundation/create-dads",
       "responsibility": "Guides new and existing applications through deterministic Dads initialization.",
       "kind": "tooling",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/toolbox"],
       "verification": ["npm run verify:creator"],
       "skills": ["dads-orient"]
@@ -25,7 +25,7 @@
       "root": "packages/testing/core",
       "responsibility": "Bootstraps, plans, runs, and explains declared verification tasks through a native JSON boundary. Its Nx adapter imports recipes and adapts live targets.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/testing-native-darwin-arm64",
         "@dads-framework/testing-native-darwin-x64",
@@ -84,7 +84,7 @@
       "root": "packages/testing/path-aliases",
       "responsibility": "Resolves the TypeScript path aliases declared across one tsconfig extends chain to files, over a file system port two providers implement.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": ["npm run verify:path-aliases"],
       "skills": ["dads-orient"]
@@ -94,7 +94,7 @@
       "root": "packages/testing/vitest",
       "responsibility": "Binds the Dads alias resolver to Vite and Vitest as a pre-resolution plugin, without an Nx runtime dependency.",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/path-aliases", "vite"],
       "verification": [
         "npm test -w @dads-framework/testing-vitest",
@@ -167,7 +167,7 @@
       "root": "packages/foundation/dev",
       "responsibility": "Local development slots and conservative Git worktree lifecycle.",
       "kind": "tooling",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["zod"],
       "verification": ["npm test -w @dads-framework/dev"],
       "skills": ["dads-orient"]
@@ -177,8 +177,12 @@
       "root": "packages/foundation/toolbox",
       "responsibility": "Explains Dads ownership and runs deterministic agent workflows.",
       "kind": "tooling",
-      "published": false,
-      "allowedDependencies": ["@dads-framework/testing", "typescript"],
+      "published": true,
+      "allowedDependencies": [
+        "@dads-framework/access",
+        "@dads-framework/testing",
+        "typescript"
+      ],
       "verification": ["npm test -w @dads-framework/toolbox"],
       "skills": ["dads-orient"]
     },
@@ -187,7 +191,7 @@
       "root": "packages/foundation/plugin",
       "responsibility": "The build-time plugin contract: `definePlugin` declares what a plugin contributes and depends on, `composeApp` orders and checks a plugin list and returns what the host wires, and every effect a plugin starts is disposed with its scope.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": ["npm test -w @dads-framework/plugin"],
       "skills": ["dads-orient"]
@@ -314,7 +318,7 @@
       "root": "packages/server/errors",
       "responsibility": "`DomainError` (discriminated `kind` + stable SCREAMING_SNAKE `code`) with",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/contract"],
       "verification": ["npm test -w @dads-framework/errors"],
       "skills": ["dads-orient"]
@@ -324,7 +328,7 @@
       "root": "packages/server/runtime",
       "responsibility": "Provides the clock, request work accounting, and diagnostic sinks used across server kits.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": ["npm test -w @dads-framework/runtime"],
       "skills": ["dads-orient"]
@@ -334,7 +338,7 @@
       "root": "packages/server/telemetry",
       "responsibility": "Opt-in OpenTelemetry trace export for Node HTTP and Postgres.",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@opentelemetry/api",
         "@opentelemetry/exporter-trace-otlp-proto",
@@ -353,7 +357,7 @@
       "root": "packages/server/http",
       "responsibility": "Defines HTTP routes and assembles liveness and readiness probes over application-provided checks.",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/access",
         "@dads-framework/audit-actor",
@@ -374,7 +378,7 @@
       "root": "packages/server/postgres",
       "responsibility": "Owns the Postgres pool and the Drizzle instance (`createPostgresConnection`),",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/audit-actor",
         "@dads-framework/runtime",
@@ -391,7 +395,7 @@
       "root": "packages/server/postgres-access",
       "responsibility": "Postgres backend for the composed access model and transactional relationship facts. Status: Trusted experimental.",
       "kind": "binding",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/access",
         "@dads-framework/postgres",
@@ -401,11 +405,21 @@
       "skills": ["dads-orient"]
     },
     {
+      "name": "@dads-framework/sqlite-access",
+      "root": "packages/server/sqlite-access",
+      "responsibility": "SQLite backend for the composed access model and transactional relationship facts using Node built-in SQLite or compatible executors.",
+      "kind": "binding",
+      "published": true,
+      "allowedDependencies": ["@dads-framework/access"],
+      "verification": ["npm test -w @dads-framework/sqlite-access"],
+      "skills": ["dads-orient"]
+    },
+    {
       "name": "@dads-framework/authorization",
       "root": "packages/server/authorization",
       "responsibility": "SpiceDB checks and snapshots, Postgres outbox and catalog.",
       "kind": "binding",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@authzed/authzed-node",
         "@dads-framework/access",
@@ -427,7 +441,7 @@
       "root": "packages/server/migrations",
       "responsibility": "The Postgres migration runner: discovers `*.migration.ts` files in the folders a `MigrationWorkspace` names, applies pending ones in dependency order under an advisory lock, and journals and checksums what ran. Also ships the `dads-migrate` bins and the compatibility rehearsal.",
       "kind": "binding",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/audit-actor",
         "@dads-framework/postgres",
@@ -444,7 +458,7 @@
       "root": "packages/server/authorization-migration",
       "responsibility": "The authorization schema journal: ordered `NNNN_slug` schema snapshots with the relationship steps that keep access intact, applied once each, plus the patch-form authorization changes and their scaffolding.",
       "kind": "binding",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/access", "jiti", "zod"],
       "verification": ["npm test -w @dads-framework/authorization-migration"],
       "skills": ["dads-orient"]
@@ -454,7 +468,7 @@
       "root": "packages/server/audit-actor",
       "responsibility": "Who is acting, in one dependency-free place: the `AuditActor` vocabulary, the exact JSON the Postgres `dads.audit_actor` setting carries, and the `AsyncLocalStorage` context that carries it. It lives apart from `@dads-framework/audit` because the postgres kit (attributed pool), the http kit (request scope), and the job-queue kit (system actor per job) all need the actor and none of them may depend on the audit kit to get it. **Read the rest when:** establishing an actor context at a new seam, or asking how an actor reaches the database.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/contract", "zod"],
       "verification": ["npm test -w @dads-framework/audit-actor"],
       "skills": ["dads-orient"]
@@ -464,7 +478,7 @@
       "root": "packages/server/event-bus",
       "responsibility": "The `EventBus` seam for asynchronous cross-domain communication: domains",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": ["npm test -w @dads-framework/event-bus"],
       "skills": ["dads-orient"]
@@ -474,7 +488,7 @@
       "root": "packages/server/job-queue",
       "responsibility": "`JobQueue`: register typed definitions, start recurring schedules, enqueue",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/audit-actor",
         "@dads-framework/runtime",
@@ -489,7 +503,7 @@
       "root": "packages/server/csv",
       "responsibility": "Encodes rows as CSV using RFC-style field quoting and LF line endings.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": ["npm test -w @dads-framework/csv"],
       "skills": ["dads-orient"]
@@ -499,7 +513,7 @@
       "root": "packages/server/pdf",
       "responsibility": "`PdfRenderer` turns a declarative pdfmake definition into bytes. No Chrome.",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@napi-rs/canvas", "pdfjs-dist", "pdfmake"],
       "verification": ["npm test -w @dads-framework/pdf"],
       "skills": ["dads-orient"]
@@ -509,7 +523,7 @@
       "root": "packages/server/object-storage",
       "responsibility": "Put, get, delete, and sign download or single-PUT upload URLs for object bytes. The composition",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@aws-sdk/client-s3",
         "@aws-sdk/cloudfront-signer",
@@ -523,7 +537,7 @@
       "root": "packages/server/email-sender",
       "responsibility": "Send outbound email. Callers hold one `EmailSender` and call `send()`; the",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["resend"],
       "verification": ["npm test -w @dads-framework/email-sender"],
       "skills": ["dads-orient"]
@@ -533,7 +547,7 @@
       "root": "packages/server/email-templates",
       "responsibility": "Turns a declarative email template into the HTML and plain-text pair a message",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@react-email/components",
         "@react-email/render",
@@ -549,7 +563,7 @@
       "root": "packages/server/email-delivery",
       "responsibility": "Binds the Postgres adapter to the durable email outbox and composes the delivery and sweep jobs over it.",
       "kind": "binding",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/contract",
         "@dads-framework/email-sender",
@@ -569,7 +583,7 @@
       "root": "packages/server/cross-domain-references",
       "responsibility": "Builds reconciliation queries and reports dangling references using the database client supplied by the application.",
       "kind": "edge",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/errors"],
       "verification": ["npm test -w @dads-framework/cross-domain-references"],
       "skills": ["dads-orient"]
@@ -579,7 +593,7 @@
       "root": "packages/server/audit",
       "responsibility": "Assembles row-level audit, request retention, and client diagnostics with the HTTP, jobs, and Postgres packages. Applications configure the tables, exclusions, and scope dimensions captured by the audit trigger.",
       "kind": "profile",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/audit-actor",
         "@dads-framework/authorization",
@@ -605,7 +619,7 @@
       "root": "packages/server/tenants",
       "responsibility": "Tenant lifecycle, membership authorization, and verified-account invitations.",
       "kind": "binding",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/identity",
         "@dads-framework/access",
@@ -622,7 +636,7 @@
       "root": "packages/server/identity",
       "responsibility": "Owns vendor-neutral account, session, and email delivery contracts.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": ["npm test -w @dads-framework/identity"],
       "skills": ["verify-http-work"]
@@ -632,7 +646,7 @@
       "root": "packages/server/identity-better-auth",
       "responsibility": "Binds identity HTTP requests to Better Auth, PostgreSQL sessions, and account invitations.",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@better-auth/core",
         "@better-auth/sso",
@@ -651,7 +665,7 @@
       "root": "packages/server/feature-flags",
       "responsibility": "Defines feature flags, per-tenant audiences, revision-checked changes, and effective access. Its HTTP and PostgreSQL bindings expose and persist flag state.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/access",
         "@dads-framework/contract",
@@ -682,7 +696,7 @@
       "root": "packages/client/feature-flags",
       "responsibility": "Context-keyed feature state in the browser and the React hooks that read it.",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/feature-flags", "react"],
       "verification": ["npm test -w @dads-framework/client-feature-flags"],
       "skills": ["dads-orient"]
@@ -692,7 +706,7 @@
       "root": "packages/contract",
       "responsibility": "HTTP-kit wire vocabulary every surface shares: the request-id header name,",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["zod"],
       "verification": ["npm test -w @dads-framework/contract"],
       "skills": ["dads-orient"]
@@ -702,7 +716,7 @@
       "root": "packages/access",
       "responsibility": "The TypeScript authoring kit for relationship-based authorization: `access()`, entity handles, combinators, and the emitter that writes committed `generated/*.zed` fragments. SpiceDB schema is generated from these definitions.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/runtime", "zod"],
       "verification": ["npm test -w @dads-framework/access"],
       "skills": ["dads-orient"]
@@ -712,7 +726,7 @@
       "root": "packages/client/request-transport",
       "responsibility": "The one HTTP chokepoint for `web`. Every call the app makes to the",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["@dads-framework/contract", "zod"],
       "verification": ["npm test -w @dads-framework/client-request-transport"],
       "skills": ["dads-orient"]
@@ -722,7 +736,7 @@
       "root": "packages/client/telemetry",
       "responsibility": "Where a client reports a fault that never became a request: a render that",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@dads-framework/client-request-transport",
         "@dads-framework/contract",
@@ -736,7 +750,7 @@
       "root": "packages/client/xlsx",
       "responsibility": "The one .xlsx seam for the web app. Features describe a workbook as a",
       "kind": "adapter",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["exceljs"],
       "verification": ["npm test -w @dads-framework/client-xlsx"],
       "skills": ["dads-orient"]
@@ -746,7 +760,7 @@
       "root": "packages/web/ui",
       "responsibility": "Composable React controls, display primitives, tables, page layouts, and navigation.",
       "kind": "composition",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@base-ui/react",
         "@dads-framework/copy",
@@ -780,7 +794,7 @@
       "root": "packages/web/copy",
       "responsibility": "The machinery every word a product says goes through, and no product's words.",
       "kind": "core",
-      "published": false,
+      "published": true,
       "allowedDependencies": ["react", "react-dom"],
       "verification": ["npm test -w @dads-framework/copy"],
       "skills": ["dads-orient"]
@@ -790,7 +804,7 @@
       "root": "packages/web/styles",
       "responsibility": "Default web theme, exposed as CSS and Tailwind utilities.",
       "kind": "artifact",
-      "published": false,
+      "published": true,
       "allowedDependencies": [
         "@fontsource/ibm-plex-mono",
         "@fontsource/ibm-plex-sans",
@@ -805,7 +819,7 @@
       "root": "packages/web/design-tokens",
       "responsibility": "Default palette and semantic roles in the DTCG design token format.",
       "kind": "artifact",
-      "published": false,
+      "published": true,
       "allowedDependencies": [],
       "verification": [],
       "skills": ["dads-orient"]

@@ -40,8 +40,7 @@ export function loadSiteCatalog(root) {
     ...pages,
     packageIndex(packagePages),
     ...packagePages,
-    referenceIndex(api),
-    ...api,
+    ...(api.length > 0 ? [referenceIndex(api), ...api] : []),
   ];
   validatePages(allPages, owners);
   return allPages;

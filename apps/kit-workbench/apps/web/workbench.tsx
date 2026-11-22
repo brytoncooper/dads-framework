@@ -1,4 +1,13 @@
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@dads-framework/ui/display";
 import { Button, Card, CardContent } from "@dads-framework/ui/elements";
+import { Building2, ExternalLink } from "@dads-framework/ui/icons";
 import { useEffect, useState } from "react";
 import {
   listTenants,
@@ -12,6 +21,7 @@ import {
 import { Notes } from "./notes.js";
 import { PermissionsDashboard } from "./permissions-dashboard.js";
 import { AcceptInvitation, WorkspacePicker } from "./workspace-controls.js";
+import { WorkspaceHeader, type WorkspaceView } from "./workspace-header.js";
 
 type WorkbenchProps = {
   readonly invitation: string | null;
@@ -24,7 +34,7 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
   const [selected, setSelected] = useState<Tenant["id"]>();
   const [loadError, setLoadError] = useState<WorkbenchCopyKey>();
   const [reload, setReload] = useState(0);
-  const [view, setView] = useState<"notes" | "permissions">("notes");
+  const [view, setView] = useState<WorkspaceView>("notes");
   const tenant =
     tenants?.find((entry) => entry.id === selected) ?? tenants?.[0];
 
@@ -46,6 +56,12 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
   function refresh() {
     setLoadError(undefined);
     setReload((previous) => previous + 1);
+  }
+
+  function handleCreated(created: Tenant) {
+    setTenants((previous) => [...(previous ?? []), created]);
+    setSelected(created.id);
+    refresh();
   }
 
   return (
@@ -70,38 +86,12 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
           loadError={loadError}
           onRetry={refresh}
           onSelect={setSelected}
-          onCreated={(created) => {
-            setTenants((previous) => [...(previous ?? []), created]);
-            setSelected(created.id);
-            refresh();
-          }}
+          onCreated={handleCreated}
         />
       </aside>
       {tenant ? (
         <div className="workspace-content">
-          <nav
-            className="workspace-views"
-            aria-label={t("workbench.permissions.navigation")}
-          >
-            <Button
-              variant={view === "notes" ? "default" : "outline"}
-              aria-pressed={view === "notes"}
-              onClick={() => {
-                setView("notes");
-              }}
-            >
-              {t("workbench.permissions.notes")}
-            </Button>
-            <Button
-              variant={view === "permissions" ? "default" : "outline"}
-              aria-pressed={view === "permissions"}
-              onClick={() => {
-                setView("permissions");
-              }}
-            >
-              {t("workbench.permissions.title")}
-            </Button>
-          </nav>
+          <WorkspaceHeader tenant={tenant} view={view} onViewChange={setView} />
           {view === "notes" ? (
             <Notes key={tenant.id} tenant={tenant} />
           ) : (
@@ -109,13 +99,43 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
           )}
         </div>
       ) : (
-        <Card className="empty-workspace">
-          <CardContent>
-            <h2>{t("workbench.tenant.emptyTitle")}</h2>
-            <p>{t("workbench.tenant.emptyBody")}</p>
-          </CardContent>
-        </Card>
+        <EmptyWorkspaceCard />
       )}
     </div>
+  );
+}
+
+function EmptyWorkspaceCard() {
+  const t = useWorkbenchCopy();
+  return (
+    <Card className="empty-workspace">
+      <CardContent>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Building2 aria-hidden="true" />
+            </EmptyMedia>
+            <p className="eyebrow">{t("workbench.tenant.emptyEyebrow")}</p>
+            <EmptyTitle>{t("workbench.tenant.emptyTitle")}</EmptyTitle>
+            <EmptyDescription>
+              {t("workbench.tenant.emptyBody")}
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent className="onboarding-content">
+            <ol className="onboarding-steps">
+              <li>{t("workbench.tenant.emptyStepCreate")}</li>
+              <li>{t("workbench.tenant.emptyStepInvite")}</li>
+              <li>{t("workbench.tenant.emptyStepExercises")}</li>
+            </ol>
+            <Button asChild variant="outline" size="sm">
+              <a href="/examples.html" className="workspace-exercises-link">
+                {t("workbench.workspace.exercises")}
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+              </a>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </CardContent>
+    </Card>
   );
 }

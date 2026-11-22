@@ -14,7 +14,7 @@ export function compileLinearBatchBranch(
   model: AuthorizationModelDefinition,
   builder: QueryBuilder,
   { namespace, resourceType, permission, index }: LinearBatchBranch,
-): { readonly hits: string; readonly decision: string } {
+): { readonly hits: string; readonly join: string; readonly decision: string } {
   const resourceKind = builder.value(resourceType);
   const permissionName = builder.value(permission);
   const branch = `i.resource_kind = ${resourceKind} AND i.permission = ${permissionName}`;
@@ -28,7 +28,7 @@ export function compileLinearBatchBranch(
   });
   return {
     hits: `${hits} AS MATERIALIZED (
-      SELECT actor.subject_kind, actor.subject_id, permitted.resource_id
+      SELECT DISTINCT actor.subject_kind, actor.subject_id, permitted.resource_id
       FROM (
         SELECT subject_kind, subject_id, array_agg(DISTINCT resource_id) AS resource_ids
         FROM input i WHERE ${branch}
@@ -38,10 +38,7 @@ export function compileLinearBatchBranch(
       WHERE permitted.resource_kind = ${resourceKind}
         AND permitted.resource_id = ANY(actor.resource_ids)
     )`,
-    decision: `WHEN ${branch} THEN EXISTS (
-      SELECT 1 FROM ${hits}
-      WHERE subject_kind = i.subject_kind AND subject_id = i.subject_id
-        AND resource_id = i.resource_id
-    )`,
+    join: `LEFT JOIN ${hits} ON ${branch} AND ${hits}.subject_kind = i.subject_kind AND ${hits}.subject_id = i.subject_id AND ${hits}.resource_id = i.resource_id`,
+    decision: `WHEN ${branch} THEN (${hits}.resource_id IS NOT NULL)`,
   };
 }

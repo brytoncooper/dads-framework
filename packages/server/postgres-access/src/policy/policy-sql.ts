@@ -130,6 +130,117 @@ export function resolveArrowTargets(
   return resolved;
 }
 
+/** True when any relation in the model accepts a userset (`entity#relation`) subject. */
+export function modelHasUsersetTargets(
+  model: AuthorizationModelDefinition,
+): boolean {
+  return model.relations.some((relation) =>
+    relation.targets.some((target) => target.kind === "subject-set"),
+  );
+}
+
+/** Describes whether a specific `(entity, relation)` accepts userset or wildcard subjects. */
+export function relationTargetCapabilities(
+  model: AuthorizationModelDefinition,
+  entity: string,
+  relation: string,
+): { readonly allowsUsersets: boolean; readonly allowsWildcards: boolean } {
+  const definition = model.relations.find(
+    (candidate) =>
+      candidate.entity === entity && candidate.wireName === relation,
+  );
+  if (definition === undefined) {
+    return { allowsUsersets: true, allowsWildcards: true };
+  }
+  return {
+    allowsUsersets: definition.targets.some(
+      (target) => target.kind === "subject-set",
+    ),
+    allowsWildcards: definition.targets.some(
+      (target) => target.kind === "wildcard",
+    ),
+  };
+}
+
+/** Dispatches to direct PK lookup when the model has no usersets, else recursive userset membership. */
+export function compiledRelationCheck(
+  model: AuthorizationModelDefinition,
+  namespace: string,
+  subjectKind: string,
+  subjectId: string,
+  resourceEntity: string,
+  resourceKind: string,
+  resourceId: string,
+  relationName: string,
+  relationSql: string,
+): string {
+  if (!modelHasUsersetTargets(model)) {
+    const { allowsWildcards } = relationTargetCapabilities(
+      model,
+      resourceEntity,
+      relationName,
+    );
+    return directRelationMembershipCheck(
+      namespace,
+      subjectKind,
+      subjectId,
+      resourceKind,
+      resourceId,
+      relationSql,
+      allowsWildcards,
+    );
+  }
+  return relationMembershipCheck(
+    namespace,
+    subjectKind,
+    subjectId,
+    resourceKind,
+    resourceId,
+    relationSql,
+  );
+}
+
+/** Direct primary-key membership check when a relation has no userset targets. */
+export function directRelationMembershipCheck(
+  namespace: string,
+  subjectKind: string,
+  subjectId: string,
+  resourceKind: string,
+  resourceId: string,
+  relationSql: string,
+  allowsWildcards: boolean,
+): string {
+  const subjectCondition = allowsWildcards
+    ? `((tuple.subject_id = ${subjectId} AND tuple.subject_is_wildcard = false) OR (tuple.subject_id = '' AND tuple.subject_is_wildcard = true))`
+    : `tuple.subject_id = ${subjectId} AND tuple.subject_is_wildcard = false`;
+  return `EXISTS (SELECT 1
+    FROM ${TUPLES} tuple
+    WHERE tuple.namespace = ${namespace}
+      AND tuple.resource_kind = ${resourceKind}
+      AND tuple.resource_id = ${resourceId}
+      AND tuple.relation = ${relationSql}
+      AND tuple.subject_kind = ${subjectKind}
+      AND tuple.subject_relation = ''
+      AND ${subjectCondition}
+      AND ${notExpired("tuple")})`;
+}
+
+/** Reach all non-expired direct and wildcard tuples for a subject (no userset recursion). */
+export function directSubjectReachability(
+  namespace: string,
+  subjectKind: string,
+  subjectId: string,
+): string {
+  return `subject_reachable(resource_kind, resource_id, relation) AS (
+      SELECT direct_tuple.resource_kind, direct_tuple.resource_id, direct_tuple.relation
+      FROM ${TUPLES} direct_tuple
+      WHERE direct_tuple.namespace = ${namespace}
+        AND direct_tuple.subject_relation = ''
+        AND ${notExpired("direct_tuple")}
+        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ''))
+    )`;
+}
+
 /** Reach all non-expired relationship usersets containing a concrete subject. */
 export function subjectReachability(
   namespace: string,
@@ -142,7 +253,7 @@ export function subjectReachability(
       WHERE direct_tuple.namespace = ${namespace}
         AND direct_tuple.subject_relation = ''
         AND ${notExpired("direct_tuple")}
-        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind}))
+        AND ((direct_tuple.subject_is_wildcard = false AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ${subjectId}) OR (direct_tuple.subject_is_wildcard = true AND direct_tuple.subject_kind = ${subjectKind} AND direct_tuple.subject_id = ''))
       UNION
       SELECT parent.resource_kind, parent.resource_id, parent.relation
       FROM subject_reachable child_relation

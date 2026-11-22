@@ -2,19 +2,13 @@ import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type {
   AuthorizationModelDefinition,
-  CompiledPermissionExpression,
   NormalizedResourceLookup,
 } from "./policy-model.js";
-import { compilePostgresCandidatePredicate } from "./compile-postgres-policy.js";
 import { compileReversePermission } from "./compile-reverse-policy.js";
 import {
-  analyzePermissionCycles,
-  type PermissionCyclePlan,
-} from "./permission-cycles.js";
-import {
-  permissionIdentity,
+  directSubjectReachability,
+  modelHasUsersetTargets,
   QueryBuilder,
-  resolveArrowTargets,
   subjectReachability,
 } from "./policy-sql.js";
 
@@ -63,39 +57,13 @@ export function validatePostgresFilterQuery(
  * Compiles one permission into a self-contained SQL Boolean predicate for
  * embedding inside an application `WHERE (...)` clause.
  *
- * Acyclic rules compile to correlated `EXISTS` predicates; rules reaching a
- * recursive permission cycle compile to `(idColumn IN (WITH RECURSIVE ...))`.
+ * Uses a single pullable actor-first semi-join (`idColumn IN (...)`) backed by
+ * `dad_authorization_relationship_subject_lookup` so PostgreSQL never falls
+ * back to row-by-row correlated `EXISTS (...) OR EXISTS (...)` scans on large
+ * tables, while still supporting recursive permissions, wildcards, exclusions,
+ * and intersections.
  */
 export function compilePostgresFilter(
-  model: AuthorizationModelDefinition,
-  namespace: string,
-  request: NormalizedResourceLookup,
-  options: ValidatedPostgresFilterInput,
-): PostgresAccessFilter {
-  const cycles = analyzePermissionCycles(model);
-  if (
-    permissionInvolvesCycle(
-      model,
-      cycles,
-      request.resourceType,
-      request.permission,
-    )
-  ) {
-    return compileRecursiveFilter(model, namespace, request, options);
-  }
-  const compiled = compilePostgresCandidatePredicate(
-    model,
-    namespace,
-    request,
-    options,
-  );
-  return Object.freeze({
-    sql: compiled.text,
-    values: compiled.values ?? [],
-  });
-}
-
-function compileRecursiveFilter(
   model: AuthorizationModelDefinition,
   namespace: string,
   request: NormalizedResourceLookup,
@@ -105,6 +73,10 @@ function compileRecursiveFilter(
   const namespaceSql = builder.value(namespace);
   const subjectTypeSql = builder.value(request.subject.type);
   const subjectIdSql = builder.value(request.subject.id);
+  const usesUsersets = modelHasUsersetTargets(model);
+  const reachCte = usesUsersets
+    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql)
+    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql);
   const allowedResourceIds = compileReversePermission(
     model,
     builder,
@@ -112,76 +84,12 @@ function compileRecursiveFilter(
     request.resourceType,
     request.permission,
     new Set(),
+    { deduplicate: false },
   );
+  const withKeyword =
+    usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
   return Object.freeze({
-    sql: `(${options.idColumn} IN (WITH RECURSIVE ${subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql)} SELECT DISTINCT allowed_resource.resource_id FROM (${allowedResourceIds}) allowed_resource))`,
+    sql: `(${options.idColumn} IN (${withKeyword} ${reachCte} SELECT allowed_resource.resource_id FROM (${allowedResourceIds}) allowed_resource))`,
     values: builder.values,
   });
-}
-
-function permissionInvolvesCycle(
-  model: AuthorizationModelDefinition,
-  cycles: PermissionCyclePlan,
-  entity: string,
-  permissionName: string,
-  visited: Set<string> = new Set(),
-): boolean {
-  const identity = permissionIdentity(entity, permissionName);
-  if (visited.has(identity)) return false;
-  visited.add(identity);
-  if (cycles.sccFor(entity, permissionName) !== undefined) return true;
-  const definition = model.permissions.find(
-    (candidate) =>
-      candidate.wireName === permissionName && candidate.entity === entity,
-  );
-  if (definition === undefined) return false;
-  return expressionInvolvesCycle(
-    model,
-    cycles,
-    entity,
-    definition.expression,
-    visited,
-  );
-}
-
-function expressionInvolvesCycle(
-  model: AuthorizationModelDefinition,
-  cycles: PermissionCyclePlan,
-  entity: string,
-  expression: CompiledPermissionExpression,
-  visited: Set<string>,
-): boolean {
-  if (expression.kind === "relation") return false;
-  if (expression.kind === "through" || expression.kind === "through-all") {
-    return resolveArrowTargets(model, entity, expression).some((target) =>
-      permissionInvolvesCycle(
-        model,
-        cycles,
-        target.entity,
-        target.permission,
-        visited,
-      ),
-    );
-  }
-  if (expression.kind === "exclude") {
-    return (
-      expressionInvolvesCycle(
-        model,
-        cycles,
-        entity,
-        expression.include,
-        visited,
-      ) ||
-      expressionInvolvesCycle(
-        model,
-        cycles,
-        entity,
-        expression.exclude,
-        visited,
-      )
-    );
-  }
-  return expression.expressions.some((child) =>
-    expressionInvolvesCycle(model, cycles, entity, child, visited),
-  );
 }

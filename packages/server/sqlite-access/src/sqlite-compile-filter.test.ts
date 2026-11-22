@@ -169,7 +169,7 @@ describe("SqliteAuthorization.compileFilter", () => {
       resourceType: "document",
       idColumn: "d.id",
     });
-    expect(directFilter.sql).toContain("EXISTS");
+    expect(directFilter.sql).toContain("d.id IN (");
     expect(queryDocs(1, directFilter.sql, directFilter.values)).toEqual([
       { id: "d1", title: "Alpha" },
       { id: "d2", title: "Bravo" },

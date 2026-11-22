@@ -1,18 +1,10 @@
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type { SqliteValue } from "../sqlite-types.js";
-import {
-  columnChunk,
-  compileForwardPermission,
-  literalChunk,
-  type ForwardCompileContext,
-} from "./compile-check.js";
 import { compileSqliteLookupSubquery } from "./compile-lookup-resources.js";
-import {
-  permissionKey,
-  type SqliteAuthorizationModel,
-  type SqlitePermissionExpression,
-  type SqliteResourceLookup,
+import type {
+  SqliteAuthorizationModel,
+  SqliteResourceLookup,
 } from "./policy-model.js";
 
 const SQL_ID_COLUMN_PATTERN =
@@ -56,8 +48,9 @@ export function validateSqliteFilterQuery(
  * Compiles one permission into a self-contained SQLite Boolean predicate for
  * embedding inside an application `WHERE (...)` clause.
  *
- * Acyclic rules compile to correlated `EXISTS` predicates; rules reaching a
- * recursive permission cycle compile to `(idColumn IN (WITH RECURSIVE ...))`.
+ * Uses a single actor-first semi-join (`idColumn IN (...)`) backed by
+ * `dad_authorization_relationship_subject_lookup` so SQLite avoids scanning
+ * every candidate row via correlated `EXISTS (...) OR EXISTS (...)` predicates.
  */
 export function compileSqliteFilter(
   model: SqliteAuthorizationModel,
@@ -66,80 +59,14 @@ export function compileSqliteFilter(
   request: SqliteResourceLookup,
   idColumn: string,
 ): SqliteAccessFilter {
-  if (
-    permissionInvolvesCycle(model, request.resourceType, request.permission)
-  ) {
-    const subquery = compileSqliteLookupSubquery(
-      model,
-      namespace,
-      nowMs,
-      request,
-    );
-    return Object.freeze({
-      sql: `(${idColumn} IN (${subquery.sql}))`,
-      values: subquery.params,
-    });
-  }
-  let aliasCount = 0;
-  const context: ForwardCompileContext = {
+  const subquery = compileSqliteLookupSubquery(
     model,
     namespace,
     nowMs,
-    nextAlias: (prefix) => `${prefix}_${aliasCount++}`,
-  };
-  const predicate = compileForwardPermission(
-    context,
-    {
-      kind: "concrete",
-      typeExpr: literalChunk(request.subject.type),
-      idExpr: literalChunk(request.subject.id),
-    },
-    {
-      entity: request.resourceType,
-      typeExpr: literalChunk(request.resourceType),
-      idExpr: columnChunk(idColumn),
-    },
-    request.permission,
+    request,
   );
   return Object.freeze({
-    sql: `(${predicate.sql})`,
-    values: predicate.params,
+    sql: `(${idColumn} IN (${subquery.sql}))`,
+    values: subquery.params,
   });
-}
-
-function permissionInvolvesCycle(
-  model: SqliteAuthorizationModel,
-  entity: string,
-  permissionName: string,
-  visited: Set<string> = new Set(),
-): boolean {
-  const key = permissionKey(entity, permissionName);
-  if (visited.has(key)) return false;
-  visited.add(key);
-  if (model.cyclicSccsByKey.has(key)) return true;
-  const definition = model.permissionByKey.get(key);
-  if (definition === undefined) return false;
-  return expressionInvolvesCycle(model, definition.expression, visited);
-}
-
-function expressionInvolvesCycle(
-  model: SqliteAuthorizationModel,
-  expression: SqlitePermissionExpression,
-  visited: Set<string>,
-): boolean {
-  if (expression.kind === "relation") return false;
-  if (expression.kind === "through" || expression.kind === "through-all") {
-    return expression.targets.some((target) =>
-      permissionInvolvesCycle(model, target.entity, target.permission, visited),
-    );
-  }
-  if (expression.kind === "exclude") {
-    return (
-      expressionInvolvesCycle(model, expression.include, visited) ||
-      expressionInvolvesCycle(model, expression.exclude, visited)
-    );
-  }
-  return expression.expressions.some((child) =>
-    expressionInvolvesCycle(model, child, visited),
-  );
 }

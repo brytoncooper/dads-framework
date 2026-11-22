@@ -18,6 +18,7 @@ import {
   type GuardCondition,
   type SqlitePermissionCheck,
 } from "./policy-model.js";
+import { compileRelationMembership } from "./compile-relation-membership.js";
 import {
   activeTupleCondition,
   joinChunks,
@@ -272,55 +273,6 @@ function compileGroup(
   });
   const combined = joinChunks(parts, joiner);
   return { sql: `(${combined.sql})`, params: combined.params };
-}
-
-function compileRelationMembership(
-  context: ForwardCompileContext,
-  subject: SqlSubject,
-  resource: SqlResource,
-  relation: string,
-): SqliteQuery {
-  const b = new QueryBuilder();
-  const cte = context.nextAlias("req");
-  const subjectMatch = compileSubjectMatch(subject);
-  return b.finish(`EXISTS (
-    WITH RECURSIVE ${cte}(resource_kind, resource_id, relation) AS (
-      SELECT ${b.append(resource.typeExpr)}, ${b.append(resource.idExpr)}, ${b.value(relation)}
-      UNION
-      SELECT t.subject_kind, t.subject_id, t.subject_relation
-      FROM ${cte} r
-      JOIN ${TUPLES} t
-        ON t.namespace = ${b.value(context.namespace)}
-        AND t.resource_kind = r.resource_kind
-        AND t.resource_id = r.resource_id
-        AND t.relation = r.relation
-        AND t.subject_is_wildcard = 0
-        AND t.subject_relation <> ''
-        AND ${activeTupleCondition("t", b, context.nowMs)}
-    )
-    SELECT 1
-    FROM ${cte} r
-    JOIN ${TUPLES} m
-      ON m.namespace = ${b.value(context.namespace)}
-      AND m.resource_kind = r.resource_kind
-      AND m.resource_id = r.resource_id
-      AND m.relation = r.relation
-      AND ${activeTupleCondition("m", b, context.nowMs)}
-    WHERE ${b.append(subjectMatch)}
-    LIMIT 1
-  )`);
-}
-
-function compileSubjectMatch(subject: SqlSubject): SqliteQuery {
-  const b = new QueryBuilder();
-  if (subject.kind === "wildcard-only") {
-    return b.finish(
-      `(m.subject_is_wildcard = 1 AND m.subject_kind = ${b.append(subject.typeExpr)})`,
-    );
-  }
-  return b.finish(
-    `((m.subject_is_wildcard = 0 AND m.subject_relation = '' AND m.subject_kind = ${b.append(subject.typeExpr)} AND m.subject_id = ${b.append(subject.idExpr)}) OR (m.subject_is_wildcard = 1 AND m.subject_kind = ${b.append(subject.typeExpr)}))`,
-  );
 }
 
 function compileThrough(

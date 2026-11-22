@@ -22,6 +22,16 @@ type ReverseContext = {
   readonly builder: QueryBuilder;
   readonly namespace: string;
   readonly active: Set<string>;
+  readonly deduplicate: boolean;
+};
+
+export type ReverseCompileOptions = {
+  /**
+   * When `false`, skips redundant `DISTINCT`/`UNION` deduplication on positive
+   * branches because the caller evaluates the subquery inside an `IN (...)`
+   * semi-join. Defaults to `true`.
+   */
+  readonly deduplicate?: boolean;
 };
 
 /** Compiles the set of resource IDs a subject may use for one permission. */
@@ -32,6 +42,7 @@ export function compileReversePermission(
   entity: string,
   permissionName: string,
   active: Set<string>,
+  options?: ReverseCompileOptions,
 ): string {
   const context: ReverseContext = {
     model,
@@ -39,6 +50,7 @@ export function compileReversePermission(
     builder,
     namespace,
     active,
+    deduplicate: options?.deduplicate ?? true,
   };
   return compileReversePermissionNode(context, entity, permissionName);
 }
@@ -117,7 +129,12 @@ function compileReverseExpression(
     );
     return `(${include}) EXCEPT (${exclude})`;
   }
-  const operator = expression.kind === "any-of" ? "UNION" : "INTERSECT";
+  const operator =
+    expression.kind === "any-of"
+      ? context.deduplicate
+        ? "UNION"
+        : "UNION ALL"
+      : "INTERSECT";
   return expression.expressions
     .map((child) => `(${compileReverseExpression(context, entity, child)})`)
     .join(` ${operator} `);
@@ -132,9 +149,10 @@ function compileReverseThrough(
   const branches = targets.map((target) =>
     compileReverseThroughBranch(context, entity, relationName, target),
   );
+  const joiner = context.deduplicate ? " UNION " : " UNION ALL ";
   return branches.length === 1 && branches[0] !== undefined
     ? branches[0]
-    : branches.map((branch) => `(${branch})`).join(" UNION ");
+    : branches.map((branch) => `(${branch})`).join(joiner);
 }
 
 function compileReverseThroughBranch(
@@ -153,6 +171,19 @@ function compileReverseThroughBranch(
   const resourceKind = builder.value(entity);
   const relation = builder.value(relationName);
   const relatedKind = builder.value(target.entity);
+  if (!context.deduplicate) {
+    return `SELECT ${throughAlias}.resource_id
+      FROM (${relatedResourceIds}) related_resource
+      JOIN ${TUPLES} ${throughAlias}
+        ON ${throughAlias}.namespace = ${namespace}
+        AND ${throughAlias}.resource_kind = ${resourceKind}
+        AND ${throughAlias}.relation = ${relation}
+        AND ${throughAlias}.subject_kind = ${relatedKind}
+        AND ${throughAlias}.subject_id = related_resource.resource_id
+        AND ${throughAlias}.subject_is_wildcard = false
+        AND ${throughAlias}.subject_relation = ''
+        AND ${notExpired(throughAlias)}`;
+  }
   // Keep the reached IDs on the outer side of this hop. Without the
   // fence Postgres can re-run the inner permission chain for each found
   // resource, particularly when tuple statistics lag writes.

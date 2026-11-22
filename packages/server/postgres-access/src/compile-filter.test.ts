@@ -61,7 +61,7 @@ function createTestAuthorization(): PostgresAuthorization {
 }
 
 describe("PostgresAuthorization.compileFilter (unit)", () => {
-  it("compiles acyclic rules to correlated EXISTS with $1-based placeholders by default", () => {
+  it("compiles acyclic rules to an actor-first semi-join with $1-based placeholders by default", () => {
     const auth = createTestAuthorization();
     const filter = auth.compileFilter({
       subject: { type: "user", id: "alice" },
@@ -70,7 +70,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "documents.id",
     });
 
-    expect(filter.sql).toContain("EXISTS");
+    expect(filter.sql.startsWith("(documents.id IN (")).toBe(true);
     expect(filter.sql).toContain("documents.id");
     expect(filter.sql).toContain("expires_at IS NULL OR");
     expect(filter.sql).toContain("$1");

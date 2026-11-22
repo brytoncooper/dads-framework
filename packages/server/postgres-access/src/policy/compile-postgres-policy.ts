@@ -16,11 +16,11 @@ import {
 } from "./permission-cycles.js";
 import { compileRecursiveForwardCheck } from "./compile-recursive-policy.js";
 import {
+  compiledRelationCheck,
   isPolymorphicRelation,
   notExpired,
   permissionIdentity,
   QueryBuilder,
-  relationMembershipCheck,
   resolveArrowTargets,
   splitIdentity,
   subjectReachability,
@@ -109,11 +109,15 @@ export function compilePostgresCheckMany(
   const builder = new QueryBuilder();
   const namespaceSql = builder.value(namespace);
   const cycles = analyzePermissionCycles(model);
-  const tuples = requests.map(
-    (request, ordinal) =>
-      `(${builder.value(ordinal)}, ${builder.value(request.subject.type)}, ${builder.value(request.subject.id)}, ${builder.value(request.resource.type)}, ${builder.value(request.resource.id)}, ${builder.value(request.permission)})`,
-  );
+  const ordinals = requests.map((_, ordinal) => ordinal);
+  const subjectKinds = requests.map((request) => request.subject.type);
+  const subjectIds = requests.map((request) => request.subject.id);
+  const resourceKinds = requests.map((request) => request.resource.type);
+  const resourceIds = requests.map((request) => request.resource.id);
+  const permissions = requests.map((request) => request.permission);
+  const inputRows = `SELECT * FROM unnest(${builder.value(ordinals)}::integer[], ${builder.value(subjectKinds)}::text[], ${builder.value(subjectIds)}::text[], ${builder.value(resourceKinds)}::text[], ${builder.value(resourceIds)}::text[], ${builder.value(permissions)}::text[])`;
   const shared: string[] = [];
+  const joins: string[] = [];
   const identities = [
     ...new Set(
       requests.map((request) =>
@@ -122,11 +126,20 @@ export function compilePostgresCheckMany(
     ),
   ];
   const branches = identities.map((identity) =>
-    compileBatchBranch(model, cycles, builder, namespaceSql, identity, shared),
+    compileBatchBranch(
+      model,
+      cycles,
+      builder,
+      namespaceSql,
+      identity,
+      shared,
+      joins,
+    ),
   );
+  const joinSql = joins.length === 0 ? "" : ` ${joins.join(" ")}`;
   return Object.freeze({
     kind: "check-many",
-    text: `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (VALUES ${tuples.join(", ")})${shared.map((query) => `, ${query}`).join("")} SELECT i.ordinal::integer AS ordinal, CASE ${branches.join(" ")} ELSE false END AS allowed FROM input i ORDER BY i.ordinal::integer`,
+    text: `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (${inputRows})${shared.map((query) => `, ${query}`).join("")} SELECT i.ordinal AS ordinal, CASE ${branches.join(" ")} ELSE false END AS allowed FROM input i${joinSql} ORDER BY i.ordinal`,
     values: builder.values,
   });
 }
@@ -138,6 +151,7 @@ function compileBatchBranch(
   namespaceSql: string,
   identity: string,
   shared: string[],
+  joins: string[],
 ): string {
   const [resourceType, permission] = splitIdentity(identity);
   if (readLinearPath(model, resourceType, permission) !== undefined) {
@@ -148,6 +162,7 @@ function compileBatchBranch(
       index: shared.length,
     });
     shared.push(branch.hits);
+    joins.push(branch.join);
     return branch.decision;
   }
   const context: ForwardContext = {
@@ -299,15 +314,19 @@ function compileForwardExpression(
   resource: SqlReference,
   expression: CompiledPermissionExpression,
 ): string {
-  if (expression.kind === "relation")
-    return relationMembershipCheck(
+  if (expression.kind === "relation") {
+    return compiledRelationCheck(
+      context.model,
       context.namespace,
       context.subject.type,
       context.subject.id,
+      resource.entity,
       resource.type,
       resource.id,
+      expression.relation,
       context.builder.value(expression.relation),
     );
+  }
   if (expression.kind === "through")
     return compileThrough(context, resource, expression);
   if (expression.kind === "through-all")

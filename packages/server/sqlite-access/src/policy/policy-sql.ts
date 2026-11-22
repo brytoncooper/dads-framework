@@ -64,15 +64,22 @@ export function subjectReachabilityCte(options: {
   readonly nowMs: number;
 }): SqliteQuery {
   const b = new QueryBuilder();
-  const anchorSql = `SELECT dt.resource_kind, dt.resource_id, dt.relation
+  const directSql = `SELECT dt.resource_kind, dt.resource_id, dt.relation
     FROM ${TUPLES} dt
     WHERE dt.namespace = ${b.value(options.namespace)}
+      AND dt.subject_kind = ${b.value(options.subjectKind)}
+      AND dt.subject_id = ${b.value(options.subjectId)}
+      AND dt.subject_is_wildcard = 0
       AND dt.subject_relation = ''
-      AND ${activeTupleCondition("dt", b, options.nowMs)}
-      AND (
-        (dt.subject_is_wildcard = 0 AND dt.subject_kind = ${b.value(options.subjectKind)} AND dt.subject_id = ${b.value(options.subjectId)})
-        OR (dt.subject_is_wildcard = 1 AND dt.subject_kind = ${b.value(options.subjectKind)})
-      )`;
+      AND ${activeTupleCondition("dt", b, options.nowMs)}`;
+  const wildcardSql = `SELECT wt.resource_kind, wt.resource_id, wt.relation
+    FROM ${TUPLES} wt
+    WHERE wt.namespace = ${b.value(options.namespace)}
+      AND wt.subject_kind = ${b.value(options.subjectKind)}
+      AND wt.subject_id = ''
+      AND wt.subject_is_wildcard = 1
+      AND wt.subject_relation = ''
+      AND ${activeTupleCondition("wt", b, options.nowMs)}`;
   const stepSql = `SELECT pt.resource_kind, pt.resource_id, pt.relation
     FROM subject_reachable sr
     JOIN ${TUPLES} pt
@@ -84,6 +91,6 @@ export function subjectReachabilityCte(options: {
       AND pt.subject_relation <> ''
       AND ${activeTupleCondition("pt", b, options.nowMs)}`;
   return b.finish(
-    `subject_reachable(resource_kind, resource_id, relation) AS (${anchorSql} UNION ${stepSql})`,
+    `subject_reachable(resource_kind, resource_id, relation) AS (${directSql} UNION ${wildcardSql} UNION ${stepSql})`,
   );
 }

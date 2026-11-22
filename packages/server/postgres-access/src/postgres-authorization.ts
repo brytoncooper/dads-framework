@@ -52,7 +52,7 @@ import { RevisionedLookup } from "./revisioned-lookup.js";
 import { readFromLookupPrimary } from "./lookup-primary-pool.js";
 import { isPreparedCheckExecutorForPool } from "./prepared-check-executor.js";
 
-const CHECK_BATCH_SIZE = 128;
+const CHECK_BATCH_SIZE = 2_048;
 
 type DrizzleExecutorModule = {
   readonly transactionExecutor: (

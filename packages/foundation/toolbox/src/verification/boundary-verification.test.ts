@@ -25,11 +25,7 @@ import type {
 import { formatVerificationReport } from "./format-verification-report.js";
 import { environmentWithoutGitVariables } from "./git-environment.js";
 import { verifyTaskGraph } from "./verify-task-graph.js";
-import {
-  captureWorkspaceSnapshot,
-  discardWorkspaceSnapshot,
-  readWorkspaceIdentity,
-} from "./workspace-snapshot.js";
+import { captureWorkspaceSnapshot, discardWorkspaceSnapshot, readWorkspaceIdentity } from "./workspace-snapshot.js";
 
 const temporaryProjects: string[] = [];
 
@@ -54,10 +50,7 @@ describe("boundary verification graph", () => {
     });
     expect(baseline.ok).toBe(true);
 
-    writeFileSync(
-      join(projectRoot, "authoring.txt"),
-      "# source-only extraction\nreader\n",
-    );
+    writeFileSync(join(projectRoot, "authoring.txt"), "# source-only extraction\nreader\n");
     const unchangedArtifact = verifyAuthoringChange(projectRoot, project);
     expect(resultStates(unchangedArtifact.results)).toEqual({
       "policy:check": "executed",
@@ -68,9 +61,7 @@ describe("boundary verification graph", () => {
 
     writeFileSync(join(projectRoot, "authoring.txt"), "writer\n");
     const changedArtifact = verifyAuthoringChange(projectRoot, project);
-    expect(resultStates(changedArtifact.results)["consumer:test"]).toBe(
-      "executed",
-    );
+    expect(resultStates(changedArtifact.results)["consumer:test"]).toBe("executed");
   });
 
   it.each([
@@ -144,14 +135,10 @@ describe("boundary verification graph", () => {
     writeFileSync(findConsumerReceipt(projectRoot), "{corrupt\n");
 
     const corruptEvidence = verifyAuthoringChange(projectRoot, project);
-    expect(resultStates(corruptEvidence.results)["consumer:test"]).toBe(
-      "executed",
-    );
+    expect(resultStates(corruptEvidence.results)["consumer:test"]).toBe("executed");
 
     const invalidProject = boundaryProject({ cycle: true });
-    const invalidRecommendation = recommendChangedVerification(invalidProject, [
-      "authoring.txt",
-    ]);
+    const invalidRecommendation = recommendChangedVerification(invalidProject, ["authoring.txt"]);
     expect(invalidRecommendation.complete).toBe(false);
     const invalid = verifyTaskGraph({
       projectRoot,
@@ -161,23 +148,17 @@ describe("boundary verification graph", () => {
       captureOutput: true,
     });
     expect(invalid.ok).toBe(false);
-    expect(invalid.results.every((result) => result.status === "blocked")).toBe(
-      true,
-    );
+    expect(invalid.results.every((result) => result.status === "blocked")).toBe(true);
 
     const unknownScope = verifyTaskGraph({
       projectRoot,
       project,
-      recommendation: recommendChangedVerification(project, [
-        "tools/unknown-input.mjs",
-      ]),
+      recommendation: recommendChangedVerification(project, ["tools/unknown-input.mjs"]),
       full: false,
       captureOutput: true,
     });
     expect(unknownScope.ok).toBe(true);
-    expect(resultStates(unknownScope.results)["consumer:test"]).toBe(
-      "executed",
-    );
+    expect(resultStates(unknownScope.results)["consumer:test"]).toBe("executed");
   });
 
   it("removes invalid evidence instead of leaving it to be read again", () => {
@@ -190,9 +171,7 @@ describe("boundary verification graph", () => {
     const report = verifyAuthoringChange(projectRoot, project);
 
     expect(resultStates(report.results)["consumer:test"]).toBe("executed");
-    const republished: unknown = JSON.parse(
-      readFileSync(consumerReceipt, "utf8"),
-    );
+    const republished: unknown = JSON.parse(readFileSync(consumerReceipt, "utf8"));
     expect(republished).toMatchObject({ taskId: "consumer:test" });
   });
 
@@ -219,9 +198,7 @@ describe("boundary verification graph", () => {
 
     expect(report.ok).toBe(false);
     expect(report.results).toEqual([]);
-    expect(report.issues).toEqual([
-      "Captured manifest does not match the planned task graph.",
-    ]);
+    expect(report.issues).toEqual(["Captured manifest does not match the planned task graph."]);
   });
 
   it("publishes nothing when any task in the graph fails", () => {
@@ -243,9 +220,7 @@ describe("boundary verification graph", () => {
   it("requires schema version 3 for controlled execution semantics", () => {
     const versionThree = boundaryProjectInput();
 
-    expect(() =>
-      parseDadsProject({ ...versionThree, schemaVersion: 2 }),
-    ).toThrow(/schemaVersion 3/i);
+    expect(() => parseDadsProject({ ...versionThree, schemaVersion: 2 })).toThrow(/schemaVersion 3/i);
   });
 
   it("rejects self-declared controlled runners outside the mechanical adapter contract", () => {
@@ -302,9 +277,7 @@ describe("boundary verification graph", () => {
     const report = verifyAuthoringChange(projectRoot, boundaryProject());
 
     expect(report.ok).toBe(false);
-    expect(report.issues).toContain(
-      "Checkout identity changed while verification was running.",
-    );
+    expect(report.issues).toContain("Checkout identity changed while verification was running.");
   });
 
   it("rejects consumed artifact bytes that differ from the producer fingerprint", () => {
@@ -314,10 +287,9 @@ describe("boundary verification graph", () => {
     const report = verifyAuthoringChange(projectRoot, project);
 
     expect(resultStates(report.results)["consumer:test"]).toBe("failed");
-    expect(
-      report.results.find((result) => result.taskId === "consumer:test")
-        ?.reason,
-    ).toMatch(/does not match producer/i);
+    expect(report.results.find((result) => result.taskId === "consumer:test")?.reason).toMatch(
+      /does not match producer/i,
+    );
   });
 
   it("preserves internal symlinks and rejects graph inputs outside the workspace", () => {
@@ -330,16 +302,11 @@ describe("boundary verification graph", () => {
 
     const identity = readWorkspaceIdentity(projectRoot);
     const snapshot = captureWorkspaceSnapshot(projectRoot, identity);
-    expect(
-      lstatSync(join(snapshot.root, "internal-link")).isSymbolicLink(),
-    ).toBe(true);
+    expect(lstatSync(join(snapshot.root, "internal-link")).isSymbolicLink()).toBe(true);
     discardWorkspaceSnapshot(snapshot);
 
     writeFileSync(join(externalRoot, "outside.txt"), "outside\n");
-    symlinkSync(
-      join(externalRoot, "outside.txt"),
-      join(projectRoot, "outside-link"),
-    );
+    symlinkSync(join(externalRoot, "outside.txt"), join(projectRoot, "outside-link"));
 
     expect(() => readWorkspaceIdentity(projectRoot)).toThrow(/outside/i);
   });
@@ -369,16 +336,11 @@ function runGit(projectRoot: string, argumentsAfterGit: readonly string[]) {
     env: environmentWithoutGitVariables(),
   });
   if (completed.status !== 0) {
-    throw new Error(
-      `Git failed: ${completed.stderr.trim() || completed.stdout.trim()}`,
-    );
+    throw new Error(`Git failed: ${completed.stderr.trim() || completed.stdout.trim()}`);
   }
 }
 
-function verifyAuthoringChange(
-  projectRoot: string,
-  project: ReturnType<typeof boundaryProject>,
-) {
+function verifyAuthoringChange(projectRoot: string, project: ReturnType<typeof boundaryProject>) {
   return verifyTaskGraph({
     projectRoot,
     project,
@@ -388,11 +350,7 @@ function verifyAuthoringChange(
   });
 }
 
-function verifyConsumerChange(
-  projectRoot: string,
-  project: ReturnType<typeof boundaryProject>,
-  changedPath: string,
-) {
+function verifyConsumerChange(projectRoot: string, project: ReturnType<typeof boundaryProject>, changedPath: string) {
   return verifyTaskGraph({
     projectRoot,
     project,
@@ -405,9 +363,7 @@ function verifyConsumerChange(
 function resultStates(
   results: readonly VerificationTaskResult[],
 ): Readonly<Record<string, VerificationTaskResult["status"]>> {
-  return Object.fromEntries(
-    results.map((result) => [result.taskId, result.status]),
-  );
+  return Object.fromEntries(results.map((result) => [result.taskId, result.status]));
 }
 
 function boundaryProject(
@@ -481,22 +437,13 @@ function boundaryProjectInput(
           id: "consumer:test",
           packageName: "boundary",
           command: "node consumer.mjs",
-          dependsOn: [
-            "policy:build",
-            ...(options.tamperArtifact ? ["artifact:tamper"] : []),
-          ],
+          dependsOn: ["policy:build", ...(options.tamperArtifact ? ["artifact:tamper"] : [])],
           sourceInputs: ["consumer-source.txt", "consumer.test.txt"],
-          nonSourceInputs: [
-            "consumer.config.json",
-            "engine.mjs",
-            "binding.mjs",
-            "toolchain.lock",
-          ],
+          nonSourceInputs: ["consumer.config.json", "engine.mjs", "binding.mjs", "toolchain.lock"],
           reusePolicy: "candidate",
           execution: controlledExecution({
             runnerEntrypoint: "consumer.mjs",
-            runnerVersion:
-              options.consumerRunnerVersion ?? "boundary-runner-v1",
+            runnerVersion: options.consumerRunnerVersion ?? "boundary-runner-v1",
             inputFiles: [
               { path: "consumer.mjs", role: "test" },
               { path: "consumer-source.txt", role: "source" },
@@ -537,12 +484,7 @@ function boundaryProjectInput(
           execution: { kind: "shell" },
         },
       ],
-      fullFallbackTaskIds: [
-        "policy:check",
-        "policy:build",
-        "consumer:test",
-        "authorization:live",
-      ],
+      fullFallbackTaskIds: ["policy:check", "policy:build", "consumer:test", "authorization:live"],
     },
   };
 }
@@ -561,10 +503,7 @@ function controlledExecution(options: {
 }): VerificationControlledExecution {
   return {
     kind: "controlled-node",
-    adapter:
-      (options.prerequisiteOutputTaskIds ?? []).length === 0
-        ? "artifact-provider-v1"
-        : "artifact-consumer-v1",
+    adapter: (options.prerequisiteOutputTaskIds ?? []).length === 0 ? "artifact-provider-v1" : "artifact-consumer-v1",
     workingDirectory: ".",
     runnerEntrypoint: options.runnerEntrypoint,
     runnerArguments: [],
@@ -620,11 +559,10 @@ function createBoundaryProject(): string {
 }
 
 function findConsumerReceipt(projectRoot: string): string {
-  const receiptPath = listFiles(
-    join(projectRoot, ".dads", "verification", "receipts"),
-  ).find((file) => readFileSync(file, "utf8").includes('"consumer:test"'));
-  if (!receiptPath)
-    throw new Error("Expected a consumer verification receipt.");
+  const receiptPath = listFiles(join(projectRoot, ".dads", "verification", "receipts")).find((file) =>
+    readFileSync(file, "utf8").includes('"consumer:test"'),
+  );
+  if (!receiptPath) throw new Error("Expected a consumer verification receipt.");
   return receiptPath;
 }
 

@@ -8,18 +8,11 @@ export type PatchOperation = {
 
 function parseOperation(input: unknown): PatchOperation {
   const operation = attributes(input);
-  const action =
-    typeof operation["op"] === "string"
-      ? operation["op"].toLowerCase()
-      : undefined;
+  const action = typeof operation["op"] === "string" ? operation["op"].toLowerCase() : undefined;
   const path = operation["path"];
   const value = operation["value"];
   if (action !== "add" && action !== "replace" && action !== "remove") {
-    throw new ScimError(
-      400,
-      "Expected an add, replace, or remove operation.",
-      "invalidSyntax",
-    );
+    throw new ScimError(400, "Expected an add, replace, or remove operation.", "invalidSyntax");
   }
   if (path !== undefined && (typeof path !== "string" || !path)) {
     throw new ScimError(400, "Invalid operation path.", "invalidPath");
@@ -28,33 +21,19 @@ function parseOperation(input: unknown): PatchOperation {
   return { action, ...(path === undefined ? {} : { path }), value };
 }
 
-function validateTarget(
-  action: PatchOperation["action"],
-  path: string | undefined,
-  value: unknown,
-): void {
+function validateTarget(action: PatchOperation["action"], path: string | undefined, value: unknown): void {
   if (action === "remove" && path === undefined) {
     throw new ScimError(400, "Remove requires a path.", "noTarget");
   }
   if (action !== "remove" && value === undefined) {
-    throw new ScimError(
-      400,
-      "This operation requires a value.",
-      "invalidValue",
-    );
+    throw new ScimError(400, "This operation requires a value.", "invalidValue");
   }
 }
 
-export function parsePatchOperations(
-  body: Record<string, unknown>,
-): readonly PatchOperation[] {
+export function parsePatchOperations(body: Record<string, unknown>): readonly PatchOperation[] {
   const operations = body["operations"];
   if (!isArray(operations) || operations.length === 0) {
-    throw new ScimError(
-      400,
-      "Expected a non-empty Operations list.",
-      "invalidSyntax",
-    );
+    throw new ScimError(400, "Expected a non-empty Operations list.", "invalidSyntax");
   }
   return operations.map(parseOperation);
 }

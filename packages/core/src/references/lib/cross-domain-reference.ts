@@ -24,8 +24,7 @@
  * action is valid. A dangling id is a live integrity break and belongs to the
  * consuming domain's repair path.
  */
-export type ReferenceClassification =
-  "historical-document" | "live-association";
+export type ReferenceClassification = "historical-document" | "live-association";
 
 /** One `<column> = '<value>'` condition that narrows which rows a row applies to. */
 export type ReferenceFilter = {

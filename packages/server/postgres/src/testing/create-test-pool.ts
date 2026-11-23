@@ -1,9 +1,5 @@
 import { Pool } from "pg";
-import {
-  currentAuditActor,
-  systemActor,
-  type AuditActor,
-} from "@dads-framework/core/audit-actor";
+import { currentAuditActor, systemActor, type AuditActor } from "@dads-framework/core/audit-actor";
 import { createAttributedPool } from "../lib/attributed-pool.js";
 import { listenForCheckedOutClientErrors } from "../lib/checked-out-client-errors.js";
 
@@ -45,20 +41,12 @@ export type CreateTestPoolOptions = {
   readonly maxConnections?: number;
 };
 
-export function createTestPool(
-  connectionString: string,
-  options: CreateTestPoolOptions = {},
-): Pool {
+export function createTestPool(connectionString: string, options: CreateTestPoolOptions = {}): Pool {
   const config = {
     connectionString,
-    ...(options.maxConnections === undefined
-      ? {}
-      : { max: options.maxConnections }),
+    ...(options.maxConnections === undefined ? {} : { max: options.maxConnections }),
   };
-  const pool =
-    options.attributed === false
-      ? new Pool(config)
-      : createAttributedPool(config, testAuditActor);
+  const pool = options.attributed === false ? new Pool(config) : createAttributedPool(config, testAuditActor);
   // Idle and checked-out clients alike: a test database stopped under a
   // client must fail that client's query, never the whole test worker.
   pool.on("error", ignoreTeardownError);

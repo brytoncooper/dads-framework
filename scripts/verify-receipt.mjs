@@ -1,37 +1,19 @@
 /** Local records of complete verification over a commit and its history inputs. */
 
 import { createHash, randomUUID } from "node:crypto";
-import {
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { relevantEnvironment } from "./verify-cache.mjs";
-import {
-  captureFingerprint,
-  captureHistory,
-  git,
-  sameFingerprint,
-  sameHistory,
-} from "./verify-fingerprint.mjs";
+import { captureFingerprint, captureHistory, git, sameFingerprint, sameHistory } from "./verify-fingerprint.mjs";
 import { verifySteps } from "./verify-graph.mjs";
 
 const VERSION = 2;
 const OBJECT_ID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u;
 
 function committedTree(root, revision) {
-  const tree = git(root, [
-    "rev-parse",
-    "--verify",
-    "--end-of-options",
-    `${revision}^{commit}^{tree}`,
-  ]).trim();
-  if (!OBJECT_ID.test(tree))
-    throw new Error("Git returned an invalid tree ID.");
+  const tree = git(root, ["rev-parse", "--verify", "--end-of-options", `${revision}^{commit}^{tree}`]).trim();
+  if (!OBJECT_ID.test(tree)) throw new Error("Git returned an invalid tree ID.");
   return tree;
 }
 
@@ -58,19 +40,8 @@ export function proofKey(committed, ignored) {
 }
 
 function receiptPath(root, tree, key, full) {
-  const gitDirectory = git(root, [
-    "rev-parse",
-    "--path-format=absolute",
-    "--git-common-dir",
-  ]).trim();
-  return resolve(
-    gitDirectory,
-    "dads",
-    "verify-receipts",
-    tree,
-    key,
-    full ? "full.json" : "verify.json",
-  );
+  const gitDirectory = git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim();
+  return resolve(gitDirectory, "dads", "verify-receipts", tree, key, full ? "full.json" : "verify.json");
 }
 
 /** The real index and the working files must both be the committed tree. */
@@ -78,29 +49,17 @@ export function captureProof(root, knownFingerprint) {
   try {
     const committed = committedProofContext(root, "HEAD");
     const indexEntries = git(root, ["ls-files", "-v", "-z"]).split("\0");
-    if (indexEntries.some((entry) => entry !== "" && !entry.startsWith("H ")))
-      return null;
-    if (
-      git(root, [
-        "status",
-        "--porcelain=v1",
-        "-z",
-        "--untracked-files=all",
-        "--ignore-submodules=none",
-      ]) !== ""
-    )
+    if (indexEntries.some((entry) => entry !== "" && !entry.startsWith("H "))) return null;
+    if (git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=none"]) !== "")
       return null;
     const fingerprint = knownFingerprint ?? captureFingerprint(root);
     if (
       fingerprint.tree !== committed.tree ||
       !sameHistory(fingerprint.history, committed.history) ||
-      Object.values(fingerprint.entries).some((entry) =>
-        entry.startsWith("commit:"),
-      )
+      Object.values(fingerprint.entries).some((entry) => entry.startsWith("commit:"))
     )
       return null;
-    if (fingerprint.ignored.some(([, hash]) => hash.startsWith("link:")))
-      return null;
+    if (fingerprint.ignored.some(([, hash]) => hash.startsWith("link:"))) return null;
     return {
       fingerprint,
       committed,
@@ -115,25 +74,13 @@ function graphIds(full) {
   return verifySteps({ full }).map((step) => step.id);
 }
 
-export function recordProof(
-  root,
-  before,
-  run,
-  { full, uncached },
-  knownFingerprint,
-) {
-  if (before === null || run.exitCode !== 0 || (full && !uncached))
-    return false;
+export function recordProof(root, before, run, { full, uncached }, knownFingerprint) {
+  if (before === null || run.exitCode !== 0 || (full && !uncached)) return false;
   const after = captureProof(root, knownFingerprint);
-  if (
-    after === null ||
-    after.key !== before.key ||
-    !sameFingerprint(before.fingerprint, after.fingerprint)
-  )
+  if (after === null || after.key !== before.key || !sameFingerprint(before.fingerprint, after.fingerprint))
     return false;
   if (run.results.some((result) => result.status !== "passed")) return false;
-  if (uncached && run.results.some((result) => result.cache != null))
-    return false;
+  if (uncached && run.results.some((result) => result.cache != null)) return false;
   const steps = run.results.map((result) => result.step.id);
   if (JSON.stringify(steps) !== JSON.stringify(graphIds(full))) return false;
   const { tree, history } = after.committed;
@@ -163,9 +110,7 @@ export function recordProof(
 
 function readProof(root, { tree, history }, key, full) {
   try {
-    const receipt = JSON.parse(
-      readFileSync(receiptPath(root, tree, key, full), "utf8"),
-    );
+    const receipt = JSON.parse(readFileSync(receiptPath(root, tree, key, full), "utf8"));
     return (
       receipt.version === VERSION &&
       receipt.tree === tree &&
@@ -184,8 +129,5 @@ function readProof(root, { tree, history }, key, full) {
 }
 
 export function hasProof(root, committed, key, full = false) {
-  return (
-    readProof(root, committed, key, true) ||
-    (!full && readProof(root, committed, key, false))
-  );
+  return readProof(root, committed, key, true) || (!full && readProof(root, committed, key, false));
 }

@@ -1,4 +1,1 @@
-export {
-  decideWorktreeRemoval,
-  type WorktreeRemovalFacts,
-} from "./worktree-decision.js";
+export { decideWorktreeRemoval, type WorktreeRemovalFacts } from "./worktree-decision.js";

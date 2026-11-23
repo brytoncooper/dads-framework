@@ -34,9 +34,7 @@ function sentBody(init: RequestInit | undefined): unknown {
 }
 
 function accepting() {
-  return vi.fn<typeof fetch>(() =>
-    Promise.resolve(new Response(null, { status: 200 })),
-  );
+  return vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status: 200 })));
 }
 
 describe("LocalClientTelemetry", () => {
@@ -50,9 +48,7 @@ describe("LocalClientTelemetry", () => {
     expect(send).toHaveBeenCalledTimes(1);
     const [, init] = send.mock.calls[0] ?? [];
     const body: unknown = sentBody(init);
-    expect(reportClientDiagnosticsBodySchema.safeParse(body).success).toBe(
-      true,
-    );
+    expect(reportClientDiagnosticsBodySchema.safeParse(body).success).toBe(true);
   });
 
   it("coalesces a burst into one request", async () => {
@@ -116,11 +112,7 @@ describe("LocalClientTelemetry", () => {
   });
 
   it("answers false, and never throws, when the report could not be sent", async () => {
-    const telemetry = telemetryWith(
-      vi.fn<typeof fetch>(() =>
-        Promise.reject(new TypeError("Failed to fetch")),
-      ),
-    );
+    const telemetry = telemetryWith(vi.fn<typeof fetch>(() => Promise.reject(new TypeError("Failed to fetch"))));
 
     telemetry.reportError(new TypeError("boom"), { kind: "render" });
 
@@ -150,9 +142,7 @@ describe("LocalClientTelemetry", () => {
 
   it("drops a failed batch rather than growing a buffer forever", async () => {
     // Offline is a design state here; re-buffering would grow without bound.
-    const send = vi.fn<typeof fetch>(() =>
-      Promise.reject(new TypeError("offline")),
-    );
+    const send = vi.fn<typeof fetch>(() => Promise.reject(new TypeError("offline")));
     const telemetry = telemetryWith(send);
 
     telemetry.reportError(new TypeError("boom"), { kind: "render" });

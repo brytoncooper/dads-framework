@@ -1,11 +1,6 @@
 import type { PermissionQuery } from "@dads-framework/spicedb-access";
 import { expect, it } from "vitest";
-import {
-  workbenchFact,
-  workbenchTask,
-  workbenchUser,
-  workbenchWorkspace,
-} from "./access.js";
+import { workbenchFact, workbenchTask, workbenchUser, workbenchWorkspace } from "./access.js";
 import { startWorkbenchServer } from "./server.js";
 import { MemoryWorkbenchStore } from "./storage/memory-workbench-store.js";
 import { testAuthorizationFault } from "./testing/authorization-double.js";
@@ -14,24 +9,16 @@ import { WorkbenchMemoryAuthorization } from "./testing/workbench-memory-authori
 const actor = { type: workbenchUser.wireName, id: "alice" };
 const workspaceId = "task-list-workspace";
 const otherWorkspaceId = "other-workspace";
-const grant = workbenchFact(
-  workbenchWorkspace.roles.member,
-  workspaceId,
-  actor,
-);
+const grant = workbenchFact(workbenchWorkspace.roles.member, workspaceId, actor);
 const time = "2026-11-19T12:00:00.000Z";
 
 class TaskListAuthorization extends WorkbenchMemoryAuthorization {
   readonly batches: string[][] = [];
-  afterBatch: (
-    answers: readonly boolean[],
-  ) => readonly boolean[] | Promise<readonly boolean[]> = (answers) => answers;
+  afterBatch: (answers: readonly boolean[]) => readonly boolean[] | Promise<readonly boolean[]> = (answers) => answers;
 
   async checkMany(queries: readonly PermissionQuery[]) {
     this.batches.push(queries.map((query) => query.resource.id));
-    const answers = await Promise.all(
-      queries.map((query) => this.check(query)),
-    );
+    const answers = await Promise.all(queries.map((query) => this.check(query)));
     return this.afterBatch(answers);
   }
 }
@@ -85,9 +72,7 @@ it("checks workspace task candidates in one ordered batch before paginating", as
   try {
     const response = await app.list();
     expect(response.status).toBe(200);
-    expect(app.authorization.batches).toEqual([
-      ["visible-first", "missing-relationship", "visible-second"],
-    ]);
+    expect(app.authorization.batches).toEqual([["visible-first", "missing-relationship", "visible-second"]]);
     expect(await response.json()).toMatchObject({
       data: [{ id: "visible-second" }],
       meta: { page: 2, perPage: 1, total: 2 },
@@ -122,8 +107,7 @@ it.each([
   const app = await startTaskList();
   try {
     app.authorization.afterBatch = () => {
-      if (failure === "outage")
-        throw testAuthorizationFault("UNAVAILABLE", "Private diagnostic");
+      if (failure === "outage") throw testAuthorizationFault("UNAVAILABLE", "Private diagnostic");
       return [true];
     };
     const response = await app.list();

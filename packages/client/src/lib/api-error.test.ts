@@ -39,8 +39,7 @@ async function loadWithReplacedErrorConstructor() {
 
 describe("transport errors under a replaced Error constructor", () => {
   it("keep an API refusal recognisable as an ApiError", async () => {
-    const { ApiError, readClientFailure, toApiError } =
-      await loadWithReplacedErrorConstructor();
+    const { ApiError, readClientFailure, toApiError } = await loadWithReplacedErrorConstructor();
 
     const refusal = toApiError(
       409,
@@ -62,8 +61,7 @@ describe("transport errors under a replaced Error constructor", () => {
   });
 
   it("keep a missing session recognisable as an UnauthorizedError", async () => {
-    const { UnauthorizedError, readClientFailure, toApiError } =
-      await loadWithReplacedErrorConstructor();
+    const { UnauthorizedError, readClientFailure, toApiError } = await loadWithReplacedErrorConstructor();
 
     const missingSession = toApiError(
       401,
@@ -85,8 +83,6 @@ describe("transport errors under a replaced Error constructor", () => {
   it("keep an unanswered request recognisable as a NetworkError", async () => {
     const { NetworkError } = await loadWithReplacedErrorConstructor();
 
-    expect(new NetworkError(new TypeError("offline"))).toBeInstanceOf(
-      NetworkError,
-    );
+    expect(new NetworkError(new TypeError("offline"))).toBeInstanceOf(NetworkError);
   });
 });

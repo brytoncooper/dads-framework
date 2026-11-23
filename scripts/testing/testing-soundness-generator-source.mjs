@@ -35,19 +35,13 @@ export function writeBaseline(root, model) {
   for (const project of model.projects) {
     const upstream = project.dependsOn[0];
     const importLine =
-      upstream === undefined
-        ? ""
-        : `import { value as upstreamValue } from "../../${upstream}/src/value.js";\n`;
+      upstream === undefined ? "" : `import { value as upstreamValue } from "../../${upstream}/src/value.js";\n`;
     write(
       root,
       `${project.root}/src/value.ts`,
       `${importLine}export const value: number = ${upstream === undefined ? project.ownIncrement : `upstreamValue + ${project.ownIncrement}`};\n`,
     );
-    write(
-      root,
-      `${project.root}/src/unused.ts`,
-      `export const unused: number = ${project.unusedValue};\n`,
-    );
+    write(root, `${project.root}/src/unused.ts`, `export const unused: number = ${project.unusedValue};\n`);
     write(
       root,
       `${project.root}/src/value.test.ts`,
@@ -76,23 +70,16 @@ export function writeBaseline(root, model) {
 }
 
 export function mutationSource(model, projectId, kind) {
-  const project = model.projects.find(
-    (candidate) => candidate.id === projectId,
-  );
-  if (project === undefined)
-    throw new Error(`Unknown generated project ${projectId}.`);
+  const project = model.projects.find((candidate) => candidate.id === projectId);
+  if (project === undefined) throw new Error(`Unknown generated project ${projectId}.`);
   const upstream = project.dependsOn[0];
   const importLine =
-    upstream === undefined
-      ? ""
-      : `import { value as upstreamValue } from "../../${upstream}/src/value.js";\n`;
+    upstream === undefined ? "" : `import { value as upstreamValue } from "../../${upstream}/src/value.js";\n`;
   if (kind === "value-export") {
     return `${importLine}export const value: number = ${upstream === undefined ? project.ownIncrement + 1 : `upstreamValue + ${project.ownIncrement + 1}`};\n`;
   }
-  if (kind === "unused-number")
-    return `export const unused: number = ${project.unusedValue + 1};\n`;
-  if (kind === "unused-string")
-    return `export const unused: number = "invalid";\n`;
+  if (kind === "unused-number") return `export const unused: number = ${project.unusedValue + 1};\n`;
+  if (kind === "unused-string") return `export const unused: number = "invalid";\n`;
   if (kind === "unused-console")
     return `export const unused: number = ${project.unusedValue};\nconsole.log("generated mutation");\n`;
   throw new Error(`Unknown generated mutation kind ${kind}.`);

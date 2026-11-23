@@ -20,12 +20,7 @@
  */
 
 import type { DoctorContext, DoctorPackage } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   importedBindings,
@@ -37,12 +32,7 @@ import {
   type DoctorModule,
 } from "../scanners/typescript-program.js";
 
-const COMPOSITION_ROOTS = new Set([
-  "main.ts",
-  "composition-root.ts",
-  "container.ts",
-  "bootstrap.ts",
-]);
+const COMPOSITION_ROOTS = new Set(["main.ts", "composition-root.ts", "container.ts", "bootstrap.ts"]);
 const VENDOR_HOMES = new Set(["adapter", "integration"]);
 const APPLICATION_ROOT = "apps/";
 const HANDLER_PATH = /route|handler|controller/i;
@@ -72,10 +62,7 @@ function vendorConstructions(
     if (specifier === undefined || isLocalSpecifier(specifier)) return;
     const dependency = packageOfSpecifier(specifier);
     if (workspace.has(dependency)) return;
-    if (
-      owner?.kind === "binding" &&
-      owner.allowedDependencies.includes(dependency)
-    ) {
+    if (owner?.kind === "binding" && owner.allowedDependencies.includes(dependency)) {
       return;
     }
     found.push(evidenceAt(module, node, `new ${name ?? ""} from ${specifier}`));
@@ -102,8 +89,7 @@ function countProvidersOutsideRoot(context: DoctorContext): SignalReadings {
 export const providerChosenOutsideRootSignal: DoctorSignal = {
   id: "provider-chosen-outside-root",
   issue: "the-paper-wall",
-  question:
-    "Is the provider constructed anywhere other than the composition root?",
+  question: "Is the provider constructed anywhere other than the composition root?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

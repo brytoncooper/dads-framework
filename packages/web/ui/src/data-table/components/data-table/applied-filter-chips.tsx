@@ -3,11 +3,7 @@ import { X } from "lucide-react";
 import { cn } from "../../../elements/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
-import {
-  type FilterGroup,
-  listAppliedFilterValues,
-  removeFilterValue,
-} from "../../lib/filter-groups.js";
+import { type FilterGroup, listAppliedFilterValues, removeFilterValue } from "../../lib/filter-groups.js";
 
 type AppliedFilterChipsProps = {
   readonly groups: readonly FilterGroup[];
@@ -25,11 +21,7 @@ type AppliedFilterChipsProps = {
  * Clear All. Renders nothing while no value is applied. Chips wrap on wide
  * screens and scroll in one row on phones.
  */
-export function AppliedFilterChips({
-  groups,
-  onClearAll,
-  className,
-}: AppliedFilterChipsProps) {
+export function AppliedFilterChips({ groups, onClearAll, className }: AppliedFilterChipsProps) {
   const t = useDataTableCopy();
   const applied = listAppliedFilterValues(groups);
   if (applied.length === 0) return null;
@@ -53,9 +45,7 @@ export function AppliedFilterChips({
       )}
     >
       {applied.map((value) => {
-        const group = groups.find(
-          (candidate) => candidate.id === value.groupId,
-        );
+        const group = groups.find((candidate) => candidate.id === value.groupId);
         const names = {
           filterLabel: value.groupLabel,
           valueLabel: value.valueLabel,
@@ -71,9 +61,7 @@ export function AppliedFilterChips({
               type="button"
               aria-label={t("dataTable.action.removeAppliedFilter", names)}
               className="inline-flex size-6 items-center justify-center rounded-full outline-none hover:bg-primary/15 focus-visible:ring-2 focus-visible:ring-ring/50 [@media(pointer:coarse)]:size-8"
-              onClick={() =>
-                group?.onSelectedChange(removeFilterValue(group, value.value))
-              }
+              onClick={() => group?.onSelectedChange(removeFilterValue(group, value.value))}
             >
               <X aria-hidden="true" className="size-3.5" />
             </button>

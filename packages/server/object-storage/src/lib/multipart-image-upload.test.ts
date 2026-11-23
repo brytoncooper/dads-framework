@@ -26,12 +26,8 @@ async function fixture() {
 describe("MultipartImageUpload", () => {
   it("binds the image part URL to the declared byte count", async () => {
     const f = await fixture();
-    expect(() =>
-      f.transfers.receivePart(f.upload, 1, new Uint8Array(4)),
-    ).toThrow();
-    expect(() =>
-      f.transfers.receivePart(f.upload, 1, new Uint8Array(2)),
-    ).toThrow();
+    expect(() => f.transfers.receivePart(f.upload, 1, new Uint8Array(4))).toThrow();
+    expect(() => f.transfers.receivePart(f.upload, 1, new Uint8Array(2))).toThrow();
   });
   it("refuses extra parts before completing or reading an oversized object", async () => {
     const f = await fixture();

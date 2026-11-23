@@ -9,16 +9,12 @@ import { describe, expect, it } from "vitest";
 describe("Dad CLI package", () => {
   it("ships an executable wrapper that survives a TypeScript rebuild", () => {
     const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-    const packageManifest: unknown = JSON.parse(
-      readFileSync(join(packageRoot, "package.json"), "utf8"),
-    );
+    const packageManifest: unknown = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
     const executablePath = readDadExecutable(packageManifest);
 
     expect(readPackageName(packageManifest)).toBe("@dads-framework/toolbox");
     expect(executablePath).toBe("./bin/dad.js");
-    expect(statSync(join(packageRoot, executablePath)).mode & 0o111).not.toBe(
-      0,
-    );
+    expect(statSync(join(packageRoot, executablePath)).mode & 0o111).not.toBe(0);
   });
 
   it("lists registered workflows and examples in CLI help", () => {
@@ -48,9 +44,7 @@ describe("Dad CLI package", () => {
     });
     expect(help).toContain("Usage: dad add <generator>");
     expect(help).toContain("add library <name>");
-    expect(help).toContain(
-      "add domain|endpoint|table|access|flag|email|page|resource <name>",
-    );
+    expect(help).toContain("add domain|endpoint|table|access|flag|email|page|resource <name>");
   });
 });
 

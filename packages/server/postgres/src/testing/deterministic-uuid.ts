@@ -12,9 +12,6 @@ export function deterministicUuid(namespace: string, counter: number): string {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   }
   const ns = hash.toString(16).padStart(8, "0");
-  const count = counter
-    .toString(16)
-    .padStart(NAMESPACE_HEX_LENGTH, "0")
-    .slice(-NAMESPACE_HEX_LENGTH);
+  const count = counter.toString(16).padStart(NAMESPACE_HEX_LENGTH, "0").slice(-NAMESPACE_HEX_LENGTH);
   return `${ns}-0000-7000-8000-${count}`;
 }

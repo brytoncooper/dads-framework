@@ -1,16 +1,13 @@
 import type { VerificationGraphReport } from "./verification-contract.js";
 
-export function formatVerificationReport(
-  report: VerificationGraphReport,
-): string {
+export function formatVerificationReport(report: VerificationGraphReport): string {
   if (report.results.length === 0) {
     return report.ok
       ? "Verification not-applicable: no tasks were selected."
       : `Verification failed: ${report.issues.join(" ")}`;
   }
   const lines = report.results.map(
-    (result) =>
-      `${result.taskId.padEnd(28)} ${result.status.padEnd(14)} ${result.reason}`,
+    (result) => `${result.taskId.padEnd(28)} ${result.status.padEnd(14)} ${result.reason}`,
   );
   const summary = [
     `executed=${String(report.counts.executed)}`,

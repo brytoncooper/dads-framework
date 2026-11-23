@@ -22,15 +22,7 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import {
@@ -63,10 +55,7 @@ export function cacheDecision(options, environment) {
 /** The variables a tool reads that a key must see; ours are not among them. */
 export function relevantEnvironment(environment) {
   return Object.entries(environment)
-    .filter(
-      ([name]) =>
-        READ_ENVIRONMENT.test(name) && !name.startsWith("DADS_VERIFY_"),
-    )
+    .filter(([name]) => READ_ENVIRONMENT.test(name) && !name.startsWith("DADS_VERIFY_"))
     .sort(([left], [right]) => (left < right ? -1 : 1));
 }
 
@@ -79,10 +68,7 @@ export function cacheKey(context, scope, command) {
   if (inputs === null) return null;
   const history = scope.history ? context.fingerprint.history : undefined;
   if (scope.history && history?.commit == null) return null;
-  const files = (scope.files ?? []).map((path) => [
-    path,
-    hashPathOrAbsent(context.root, path),
-  ]);
+  const files = (scope.files ?? []).map((path) => [path, hashPathOrAbsent(context.root, path)]);
   const material = JSON.stringify({
     version: KEY_VERSION,
     node: process.version,
@@ -119,10 +105,7 @@ export function writeRecord(context, kind, id, record) {
   const path = recordPath(context, kind, id);
   mkdirSync(join(context.directory, kind), { recursive: true });
   const partial = `${path}.${randomUUID()}.partial`;
-  writeFileSync(
-    partial,
-    `${JSON.stringify({ ...record, runId: context.runId })}\n`,
-  );
+  writeFileSync(partial, `${JSON.stringify({ ...record, runId: context.runId })}\n`);
   renameSync(partial, path);
 }
 
@@ -141,10 +124,7 @@ export function openRunCache(root, environment) {
   const runDirectory = join(context.directory, "runs", context.runId);
   mkdirSync(runDirectory, { recursive: true });
   context.runFile = join(runDirectory, "fingerprint.json");
-  writeFileSync(
-    context.runFile,
-    JSON.stringify({ runId: context.runId, fingerprint }),
-  );
+  writeFileSync(context.runFile, JSON.stringify({ runId: context.runId, fingerprint }));
   return context;
 }
 
@@ -217,10 +197,7 @@ export async function runThroughCache(context, step, run) {
 
 function historyUnchanged(context) {
   try {
-    return sameHistory(
-      context.fingerprint.history,
-      captureHistory(context.root),
-    );
+    return sameHistory(context.fingerprint.history, captureHistory(context.root));
   } catch {
     return false;
   }
@@ -228,9 +205,7 @@ function historyUnchanged(context) {
 
 /** The last `verify-cache:` line a step printed about its own partitions. */
 function stepCacheNote(output) {
-  const lines = output
-    .split("\n")
-    .filter((line) => line.startsWith("verify-cache: "));
+  const lines = output.split("\n").filter((line) => line.startsWith("verify-cache: "));
   const last = lines.at(-1);
   if (last === undefined) return null;
   const note = last.slice("verify-cache: ".length).trim();
@@ -241,10 +216,7 @@ function stepCacheNote(output) {
  * Keeps this run's records only if the checkout is what it was when the run
  * started. Returns a sentence for the summary.
  */
-export function finishRunCache(
-  context,
-  after = captureFingerprint(context.root),
-) {
+export function finishRunCache(context, after = captureFingerprint(context.root)) {
   rmSync(join(context.directory, "runs", context.runId), {
     force: true,
     recursive: true,
@@ -253,8 +225,7 @@ export function finishRunCache(
     discardRunRecords(context);
     return "the checkout changed while verify ran, so nothing was recorded";
   }
-  for (const { id, key } of context.pending)
-    writeRecord(context, "steps", id, { key });
+  for (const { id, key } of context.pending) writeRecord(context, "steps", id, { key });
   return "";
 }
 
@@ -265,8 +236,7 @@ function discardRunRecords(context) {
     for (const name of readdirSync(join(context.directory, kind))) {
       const path = join(context.directory, kind, name);
       try {
-        if (JSON.parse(readFileSync(path, "utf8")).runId === context.runId)
-          rmSync(path);
+        if (JSON.parse(readFileSync(path, "utf8")).runId === context.runId) rmSync(path);
       } catch {
         rmSync(path, { force: true });
       }

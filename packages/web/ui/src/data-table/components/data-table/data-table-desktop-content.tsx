@@ -1,24 +1,10 @@
 import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import * as React from "react";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../display/index.js";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../display/index.js";
 
-import {
-  getColumnPinningStyle,
-  readColumnWidth,
-  readPinnedAttribute,
-} from "../../lib/data-table.js";
-import {
-  type DataTableRowGroupOf,
-  startsRowGroup,
-} from "../../lib/row-groups.js";
+import { getColumnPinningStyle, readColumnWidth, readPinnedAttribute } from "../../lib/data-table.js";
+import { type DataTableRowGroupOf, startsRowGroup } from "../../lib/row-groups.js";
 import { DataTableBodyRow } from "./data-table-body-row.js";
 
 export function DataTableDesktopContent<TData>({
@@ -56,18 +42,10 @@ export function DataTableDesktopContent<TData>({
                       column: header.column,
                       withBorder: true,
                     }),
-                    width: readColumnWidth(
-                      header.column,
-                      table.getVisibleLeafColumns(),
-                    ),
+                    width: readColumnWidth(header.column, table.getVisibleLeafColumns()),
                   }}
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -77,8 +55,7 @@ export function DataTableDesktopContent<TData>({
           {hasRows ? (
             table.getRowModel().rows.map((row, index, rows) => (
               <React.Fragment key={row.id}>
-                {rowGroupOf !== undefined &&
-                startsRowGroup(rows, index, rowGroupOf) ? (
+                {rowGroupOf !== undefined && startsRowGroup(rows, index, rowGroupOf) ? (
                   <TableRow data-slot="data-table-group-row">
                     <TableCell
                       colSpan={table.getVisibleLeafColumns().length}
@@ -93,10 +70,7 @@ export function DataTableDesktopContent<TData>({
             ))
           ) : (
             <TableRow>
-              <TableCell
-                colSpan={table.getVisibleLeafColumns().length}
-                className="h-24 text-center"
-              >
+              <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
                 {emptyState}
               </TableCell>
             </TableRow>

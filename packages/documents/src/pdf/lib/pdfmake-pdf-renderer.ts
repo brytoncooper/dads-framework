@@ -1,10 +1,6 @@
 import type * as PdfmakeNamespace from "pdfmake";
 import { loadOptionalPeer } from "../../optional-peer.js";
-import type {
-  PdfmakeDefinition,
-  PdfRenderer,
-  PdfTextMetrics,
-} from "./pdf-renderer.js";
+import type { PdfmakeDefinition, PdfRenderer, PdfTextMetrics } from "./pdf-renderer.js";
 
 type PdfmakeModule = typeof PdfmakeNamespace;
 
@@ -25,25 +21,14 @@ function configure(pdfmake: PdfmakeModule): void {
   });
   // Standard-font names route through the local policy too — allow exactly
   // those four identifiers; anything path-like (real file access) is denied.
-  const standardFonts = new Set([
-    "Helvetica",
-    "Helvetica-Bold",
-    "Helvetica-Oblique",
-    "Helvetica-BoldOblique",
-  ]);
+  const standardFonts = new Set(["Helvetica", "Helvetica-Bold", "Helvetica-Oblique", "Helvetica-BoldOblique"]);
   pdfmake.setLocalAccessPolicy((path) => standardFonts.has(path));
   pdfmake.setUrlAccessPolicy(() => false);
   configuredInstances.add(pdfmake);
 }
 
-export async function loadPdfmake(
-  load: () => Promise<unknown> = () => import("pdfmake"),
-): Promise<PdfmakeModule> {
-  const loaded = await loadOptionalPeer(
-    "@dads-framework/documents/pdf",
-    "pdfmake",
-    load,
-  );
+export async function loadPdfmake(load: () => Promise<unknown> = () => import("pdfmake")): Promise<PdfmakeModule> {
+  const loaded = await loadOptionalPeer("@dads-framework/documents/pdf", "pdfmake", load);
   const pdfmake = unwrapPdfmake(loaded);
   configure(pdfmake);
   return pdfmake;
@@ -68,21 +53,11 @@ function hasPdfmakePolicies(value: object): boolean {
 }
 
 function isPdfmakeApi(value: unknown): value is PdfmakeModule {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    hasPdfmakeCore(value) &&
-    hasPdfmakePolicies(value)
-  );
+  return typeof value === "object" && value !== null && hasPdfmakeCore(value) && hasPdfmakePolicies(value);
 }
 
 function unwrapPdfmake(loaded: unknown): PdfmakeModule {
-  if (
-    typeof loaded === "object" &&
-    loaded !== null &&
-    "default" in loaded &&
-    isPdfmakeApi(loaded.default)
-  ) {
+  if (typeof loaded === "object" && loaded !== null && "default" in loaded && isPdfmakeApi(loaded.default)) {
     return loaded.default;
   }
   if (isPdfmakeApi(loaded)) {
@@ -96,9 +71,7 @@ export class PdfmakePdfRenderer implements PdfRenderer {
 
   async render(definition: PdfmakeDefinition): Promise<Uint8Array> {
     const pdfmake = await loadPdfmake();
-    const buffer = await pdfmake
-      .createPdf({ defaultStyle: { font: "Helvetica" }, ...definition })
-      .getBuffer();
+    const buffer = await pdfmake.createPdf({ defaultStyle: { font: "Helvetica" }, ...definition }).getBuffer();
     return new Uint8Array(buffer);
   }
 
@@ -112,9 +85,7 @@ export class PdfmakePdfRenderer implements PdfRenderer {
 
   async #loadTextMetrics(): Promise<PdfTextMetrics> {
     const pdfmake = await loadPdfmake();
-    const document = await pdfmake
-      .createPdf({ content: [], defaultStyle: { font: "Helvetica" } })
-      .getStream();
+    const document = await pdfmake.createPdf({ content: [], defaultStyle: { font: "Helvetica" } }).getStream();
     try {
       document.font("Helvetica").fontSize(1);
       const regular = readHelveticaFont(document);
@@ -169,10 +140,7 @@ function isHelveticaFont(value: unknown): value is HelveticaFont {
   );
 }
 
-function createTextMetrics(
-  fonts: { regular: HelveticaFont; bold: HelveticaFont },
-  lineHeight: number,
-): PdfTextMetrics {
+function createTextMetrics(fonts: { regular: HelveticaFont; bold: HelveticaFont }, lineHeight: number): PdfTextMetrics {
   return {
     width: (text, fontSizePt, bold = false) => {
       const font = bold ? fonts.bold : fonts.regular;

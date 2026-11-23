@@ -56,10 +56,7 @@ describe("dad-test explain", () => {
     const workspace = makeWorkspace();
     const harness = createHarness(workspace.directory, workspace.nativeBinary);
 
-    const exitCode = await runDadTestCli(
-      ["explain", "--all", "--json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["explain", "--all", "--json"], harness.io);
 
     expect(exitCode).toBe(0);
     expect(harness.stderr()).toBe("");
@@ -78,9 +75,7 @@ describe("dad-test explain", () => {
             project: "core",
             decision: "run",
             reasonText: "a changed path is owned by this project",
-            causes: [
-              { kind: "changed-path", path: "packages/core/src/leaf.ts" },
-            ],
+            causes: [{ kind: "changed-path", path: "packages/core/src/leaf.ts" }],
           },
         ],
       },
@@ -99,9 +94,7 @@ describe("dad-test explain", () => {
     const exitCode = await runDadTestCli(["explain", "--all"], harness.io);
 
     expect(exitCode).toBe(0);
-    expect(harness.stdout().split("\n")[0]).toBe(
-      "explain: 1 of 1 tasks selected, 0 skipped, 0 widened detail=derived",
-    );
+    expect(harness.stdout().split("\n")[0]).toBe("explain: 1 of 1 tasks selected, 0 skipped, 0 widened detail=derived");
     expect(harness.stdout()).not.toContain("completed");
   });
 
@@ -109,10 +102,7 @@ describe("dad-test explain", () => {
     const workspace = makeWorkspace({ writeManifest: false });
     const harness = createHarness(workspace.directory, workspace.nativeBinary);
 
-    const exitCode = await runDadTestCli(
-      ["explain", "--all", "--json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["explain", "--all", "--json"], harness.io);
 
     expect(exitCode).toBe(1);
     expect(harness.stdout()).toBe("");
@@ -130,11 +120,7 @@ function makeWorkspace(options: { readonly writeManifest?: boolean } = {}): {
   const directory = mkdtempSync(join(tmpdir(), "dads-testing-explain-"));
   temporaryDirectories.push(directory);
   if (options.writeManifest !== false) {
-    writeFileSync(
-      join(directory, "dads.testing.json"),
-      JSON.stringify(manifestDocument),
-      "utf8",
-    );
+    writeFileSync(join(directory, "dads.testing.json"), JSON.stringify(manifestDocument), "utf8");
   }
   const fixture = createFakeNativeBinary(directory, {
     schemaVersion: 1,

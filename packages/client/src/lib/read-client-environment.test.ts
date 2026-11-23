@@ -30,10 +30,7 @@ const FULL_NAVIGATOR: ClientNavigatorLike = {
   hardwareConcurrency: 10,
 };
 
-function readWith(
-  window: ClientWindowLike,
-  navigator: ClientNavigatorLike,
-): ReturnType<typeof readClientEnvironment> {
+function readWith(window: ClientWindowLike, navigator: ClientNavigatorLike): ReturnType<typeof readClientEnvironment> {
   return readClientEnvironment({
     build: "2026.09.10-abc1234",
     window,
@@ -89,10 +86,7 @@ describe("reading what this tab can say about itself", () => {
   });
 
   it("drops a viewport the browser only half answered", () => {
-    const environment = readWith(
-      { innerWidth: 1440, screen: { width: 2560 } },
-      FULL_NAVIGATOR,
-    );
+    const environment = readWith({ innerWidth: 1440, screen: { width: 2560 } }, FULL_NAVIGATOR);
 
     expect(environment.viewport).toBeUndefined();
     expect(environment.screen).toBeUndefined();
@@ -115,9 +109,7 @@ describe("reading what this tab can say about itself", () => {
   it("reports the route the app last said the reader was on", () => {
     setCurrentRouteId("/orders/$orderId");
 
-    expect(readWith(FULL_WINDOW, FULL_NAVIGATOR).routeId).toBe(
-      "/orders/$orderId",
-    );
+    expect(readWith(FULL_WINDOW, FULL_NAVIGATOR).routeId).toBe("/orders/$orderId");
   });
 
   it("stops reporting a route once the app clears it", () => {

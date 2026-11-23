@@ -20,11 +20,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   addFinding,
   containsNode,
@@ -34,8 +30,7 @@ import {
   type DoctorModule,
 } from "../scanners/typescript-program.js";
 
-const TENANT_FILTER =
-  /\bwhere\b[\s\S]{0,200}?\b(?:organization_id|tenant_id|account_id|workspace_id)\b\s*(?:=|in\b)/i;
+const TENANT_FILTER = /\bwhere\b[\s\S]{0,200}?\b(?:organization_id|tenant_id|account_id|workspace_id)\b\s*(?:=|in\b)/i;
 const TENANT_PROPERTY = /^(?:organizationId|tenantId|accountId|workspaceId)$/;
 const FILTER_CALLS = new Set(["where", "andWhere", "and", "eq"]);
 const SQL_SUFFIX = ".sql";
@@ -57,9 +52,7 @@ function calledName(expression: ts.Expression): string {
 function isTenantFilterCall(node: ts.Node): boolean {
   if (!ts.isCallExpression(node)) return false;
   if (!FILTER_CALLS.has(calledName(node.expression))) return false;
-  return node.arguments.some((argument) =>
-    containsNode(argument, isTenantProperty),
-  );
+  return node.arguments.some((argument) => containsNode(argument, isTenantProperty));
 }
 
 function isTenantSql(node: ts.Node): boolean {
@@ -71,20 +64,14 @@ function isTenantSql(node: ts.Node): boolean {
   return TENANT_FILTER.test([node.head.text, ...spans].join(" ? "));
 }
 
-function collectTenantFilters(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function collectTenantFilters(module: DoctorModule, readings: Map<string, SignalReading>): void {
   visitNodes(module.source, (node) => {
     if (!isTenantSql(node) && !isTenantFilterCall(node)) return;
     addFinding(readings, module.packageRoot, evidenceAt(module, node, FOUND));
   });
 }
 
-function collectSqlFiles(
-  context: DoctorContext,
-  readings: Map<string, SignalReading>,
-): void {
+function collectSqlFiles(context: DoctorContext, readings: Map<string, SignalReading>): void {
   for (const path of context.files()) {
     if (!path.endsWith(SQL_SUFFIX)) continue;
     if (!TENANT_FILTER.test(context.read(path))) continue;

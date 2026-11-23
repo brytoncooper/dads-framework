@@ -3,8 +3,7 @@ export const reasonTexts: Readonly<Record<string, string>> = {
   "direct-task-input": "requested explicitly with --task",
   "full-fallback": "complete workspace fallback selected",
   "impact-always": "declared impact.mode always",
-  "graph-uncertainty-project-fallback":
-    "graph proof incomplete; widened through fallback dependencies",
+  "graph-uncertainty-project-fallback": "graph proof incomplete; widened through fallback dependencies",
   "selected-prerequisite": "prerequisite of a selected task",
   "graph-changed-export": "an exported symbol in this project changed",
   "graph-symbol-importer": "imports a changed symbol",

@@ -5,11 +5,7 @@ export {
   type SignedUploadRequest,
   type StoredObject,
 } from "./core.js";
-export {
-  S3ObjectStorage,
-  type S3ObjectStorageOptions,
-  type S3StaticCredentials,
-} from "./lib/s3-object-storage.js";
+export { S3ObjectStorage, type S3ObjectStorageOptions, type S3StaticCredentials } from "./lib/s3-object-storage.js";
 export {
   DiskObjectStorage,
   InvalidObjectKey,
@@ -28,10 +24,7 @@ export {
   type SignedPartUpload,
   type SignedPartUploadQuery,
 } from "./lib/disk-part-links.js";
-export {
-  createObjectStorage,
-  type CreateObjectStorageOptions,
-} from "./lib/create-object-storage.js";
+export { createObjectStorage, type CreateObjectStorageOptions } from "./lib/create-object-storage.js";
 export {
   DirectTransferStorage,
   type MultipartUploadRef,
@@ -42,17 +35,8 @@ export {
 } from "./lib/direct-transfer-storage.js";
 export { S3DirectTransferStorage } from "./lib/s3-direct-transfer-storage.js";
 export { InMemoryDirectTransferStorage } from "./lib/in-memory-direct-transfer-storage.js";
-export {
-  DiskDirectTransferStorage,
-  type ReceivedPart,
-} from "./lib/disk-direct-transfer-storage.js";
+export { DiskDirectTransferStorage, type ReceivedPart } from "./lib/disk-direct-transfer-storage.js";
 export { createDirectTransferStorage } from "./lib/create-direct-transfer-storage.js";
 
-export {
-  CloudFrontDownloadSigner,
-  type CloudFrontDownloadSignerOptions,
-} from "./lib/cloudfront-download-signer.js";
-export {
-  MultipartImageUpload,
-  type ImageMultipartReceipt,
-} from "./lib/multipart-image-upload.js";
+export { CloudFrontDownloadSigner, type CloudFrontDownloadSignerOptions } from "./lib/cloudfront-download-signer.js";
+export { MultipartImageUpload, type ImageMultipartReceipt } from "./lib/multipart-image-upload.js";

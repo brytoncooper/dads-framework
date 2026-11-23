@@ -1,12 +1,5 @@
-import type {
-  EmailMessage,
-  EmailSender,
-  EmailSendReceipt,
-} from "../core/index.js";
-import {
-  formatEmailAddress,
-  formatEmailAddresses,
-} from "./logic/format-email-address.js";
+import type { EmailMessage, EmailSender, EmailSendReceipt } from "../core/index.js";
+import { formatEmailAddress, formatEmailAddresses } from "./logic/format-email-address.js";
 
 /**
  * Developer-readability driver (`MAIL_DRIVER=log-verbose`): renders the WHOLE
@@ -33,20 +26,11 @@ export class VerboseLogEmailSender implements EmailSender {
     this.log.info(
       {
         event: "email.rendered",
-        from:
-          message.from === undefined
-            ? this.from
-            : formatEmailAddress(message.from),
+        from: message.from === undefined ? this.from : formatEmailAddress(message.from),
         to: formatEmailAddresses(message.to),
-        ...(message.cc === undefined
-          ? {}
-          : { cc: formatEmailAddresses(message.cc) }),
-        ...(message.bcc === undefined
-          ? {}
-          : { bcc: formatEmailAddresses(message.bcc) }),
-        ...(message.replyTo === undefined
-          ? {}
-          : { replyTo: formatEmailAddress(message.replyTo) }),
+        ...(message.cc === undefined ? {} : { cc: formatEmailAddresses(message.cc) }),
+        ...(message.bcc === undefined ? {} : { bcc: formatEmailAddresses(message.bcc) }),
+        ...(message.replyTo === undefined ? {} : { replyTo: formatEmailAddress(message.replyTo) }),
         subject: message.subject,
         text: message.text,
         ...(message.html === undefined ? {} : { html: message.html }),
@@ -59,9 +43,7 @@ export class VerboseLogEmailSender implements EmailSender {
                 sizeBytes: attachment.content.byteLength,
               })),
             }),
-        ...(message.headers === undefined
-          ? {}
-          : { headers: { ...message.headers } }),
+        ...(message.headers === undefined ? {} : { headers: { ...message.headers } }),
         ...(message.tags === undefined ? {} : { tags: [...message.tags] }),
       },
       "email not sent (MAIL_DRIVER=log-verbose) — rendered above",

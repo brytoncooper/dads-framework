@@ -60,11 +60,7 @@ export class PostgresEnqueueAccessChanges implements EnqueueAccessChanges {
       });
   }
 
-  async enqueueReplacingOpposite(
-    entries: readonly AccessChange[],
-    tx: OutboxTx,
-    lease: OwnerLockLease,
-  ): Promise<void> {
+  async enqueueReplacingOpposite(entries: readonly AccessChange[], tx: OutboxTx, lease: OwnerLockLease): Promise<void> {
     if (entries.length === 0) return;
     if (entries.some((entry) => entry.ownerPartitionId === null)) {
       throw new Error("replacement facts require an owner partition");
@@ -88,10 +84,7 @@ export class PostgresEnqueueAccessChanges implements EnqueueAccessChanges {
         })
         .where(
           and(
-            eq(
-              authorizationOutbox.operation,
-              entry.operation === "WRITE" ? "DELETE" : "WRITE",
-            ),
+            eq(authorizationOutbox.operation, entry.operation === "WRITE" ? "DELETE" : "WRITE"),
             eq(authorizationOutbox.resourceType, resource.type),
             eq(authorizationOutbox.resourceId, resource.id),
             eq(authorizationOutbox.relation, relation),

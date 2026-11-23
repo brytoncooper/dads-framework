@@ -15,10 +15,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 import { deterministicUuid } from "@dads-framework/postgres/testing/deterministic-uuid";
 
 import type { CrossDomainReference } from "../cross-domain-reference.js";
@@ -133,9 +130,7 @@ describe("cross-domain reference check (integration)", () => {
   it("names a document whose owner does not exist", async () => {
     await seedDocument(postgres, { ownerId: ABSENT_OWNER });
 
-    const findings = await checkCrossDomainReferences(postgres.pool, [
-      DOCUMENT_OWNER,
-    ]);
+    const findings = await checkCrossDomainReferences(postgres.pool, [DOCUMENT_OWNER]);
 
     expect(findings).toEqual([
       {
@@ -151,9 +146,7 @@ describe("cross-domain reference check (integration)", () => {
     await seedDocument(postgres, { ownerId: ABSENT_OWNER });
     await seedDocument(postgres, { ownerId: ABSENT_OWNER });
 
-    const [finding] = await checkCrossDomainReferences(postgres.pool, [
-      DOCUMENT_OWNER,
-    ]);
+    const [finding] = await checkCrossDomainReferences(postgres.pool, [DOCUMENT_OWNER]);
 
     expect(finding?.rows).toBe(2);
     expect(finding?.distinctValues).toBe(1);
@@ -161,15 +154,10 @@ describe("cross-domain reference check (integration)", () => {
 
   it("accepts a reference whose provider row exists", async () => {
     const present = deterministicUuid("present-owner", 1);
-    await postgres.pool.query(
-      `INSERT INTO reference_check_owners (id) VALUES ($1)`,
-      [present],
-    );
+    await postgres.pool.query(`INSERT INTO reference_check_owners (id) VALUES ($1)`, [present]);
     await seedDocument(postgres, { ownerId: present });
 
-    const findings = await checkCrossDomainReferences(postgres.pool, [
-      DOCUMENT_OWNER,
-    ]);
+    const findings = await checkCrossDomainReferences(postgres.pool, [DOCUMENT_OWNER]);
 
     expect(findings).toEqual([]);
   });
@@ -177,9 +165,7 @@ describe("cross-domain reference check (integration)", () => {
   it("skips a null reference — absence is a valid state, not a break", async () => {
     await seedDocument(postgres, { ownerId: null });
 
-    const findings = await checkCrossDomainReferences(postgres.pool, [
-      DOCUMENT_OWNER,
-    ]);
+    const findings = await checkCrossDomainReferences(postgres.pool, [DOCUMENT_OWNER]);
 
     expect(findings).toEqual([]);
   });
@@ -195,9 +181,7 @@ describe("cross-domain reference check (integration)", () => {
       subjectKind: "SOMETHING-ELSE",
     });
 
-    const findings = await checkCrossDomainReferences(postgres.pool, [
-      DOCUMENT_OWNER_SUBJECT,
-    ]);
+    const findings = await checkCrossDomainReferences(postgres.pool, [DOCUMENT_OWNER_SUBJECT]);
 
     expect(findings).toEqual([]);
   });
@@ -210,16 +194,10 @@ describe("cross-domain reference check (integration)", () => {
   it("resolves an arm through its parent's scope", async () => {
     await seedSetMember(postgres, "ORGANIZATION", ABSENT_MEMBER);
 
-    const organizationArm = await checkCrossDomainReferences(postgres.pool, [
-      memberThroughSetScope("ORGANIZATION"),
-    ]);
-    const facilityArm = await checkCrossDomainReferences(postgres.pool, [
-      memberThroughSetScope("FACILITY"),
-    ]);
+    const organizationArm = await checkCrossDomainReferences(postgres.pool, [memberThroughSetScope("ORGANIZATION")]);
+    const facilityArm = await checkCrossDomainReferences(postgres.pool, [memberThroughSetScope("FACILITY")]);
 
-    expect(organizationArm.map((finding) => finding.sampleIds)).toEqual([
-      [ABSENT_MEMBER],
-    ]);
+    expect(organizationArm.map((finding) => finding.sampleIds)).toEqual([[ABSENT_MEMBER]]);
     expect(facilityArm).toEqual([]);
   });
 
@@ -230,18 +208,14 @@ describe("cross-domain reference check (integration)", () => {
    */
   it("checks each element of an array column, and an empty array holds nothing", async () => {
     const present = deterministicUuid("present-owner", 1);
-    await postgres.pool.query(
-      `INSERT INTO reference_check_owners (id) VALUES ($1)`,
-      [present],
-    );
-    await postgres.pool.query(
-      `INSERT INTO reference_check_bundles (owner_ids) VALUES ($1), ($2), ($3)`,
-      [[present, ABSENT_OWNER], [ABSENT_OWNER], []],
-    );
-
-    const findings = await checkCrossDomainReferences(postgres.pool, [
-      BUNDLE_OWNERS,
+    await postgres.pool.query(`INSERT INTO reference_check_owners (id) VALUES ($1)`, [present]);
+    await postgres.pool.query(`INSERT INTO reference_check_bundles (owner_ids) VALUES ($1), ($2), ($3)`, [
+      [present, ABSENT_OWNER],
+      [ABSENT_OWNER],
+      [],
     ]);
+
+    const findings = await checkCrossDomainReferences(postgres.pool, [BUNDLE_OWNERS]);
 
     expect(findings).toEqual([
       {
@@ -255,9 +229,7 @@ describe("cross-domain reference check (integration)", () => {
 
   it("refuses a declaration the database cannot answer", async () => {
     await expect(
-      checkCrossDomainReferences(postgres.pool, [
-        { ...DOCUMENT_OWNER, consumerColumn: "owner_id_renamed_away" },
-      ]),
+      checkCrossDomainReferences(postgres.pool, [{ ...DOCUMENT_OWNER, consumerColumn: "owner_id_renamed_away" }]),
     ).rejects.toThrow(/could not be checked/);
   });
 });
@@ -277,18 +249,11 @@ async function seedDocument(
   );
 }
 
-async function seedSetMember(
-  postgres: TestPostgres,
-  scope: string,
-  memberId: string,
-): Promise<void> {
+async function seedSetMember(postgres: TestPostgres, scope: string, memberId: string): Promise<void> {
   const setId = deterministicUuid(`set-${scope}`, 1);
-  await postgres.pool.query(
-    `INSERT INTO reference_check_sets (id, scope_type) VALUES ($1, $2)`,
-    [setId, scope],
-  );
-  await postgres.pool.query(
-    `INSERT INTO reference_check_set_members (set_id, member_id) VALUES ($1, $2)`,
-    [setId, memberId],
-  );
+  await postgres.pool.query(`INSERT INTO reference_check_sets (id, scope_type) VALUES ($1, $2)`, [setId, scope]);
+  await postgres.pool.query(`INSERT INTO reference_check_set_members (set_id, member_id) VALUES ($1, $2)`, [
+    setId,
+    memberId,
+  ]);
 }

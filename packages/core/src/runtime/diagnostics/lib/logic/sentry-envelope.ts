@@ -56,10 +56,7 @@ export function sentryAuthHeader(destination: SentryDestination): string {
   return `Sentry sentry_version=7, sentry_key=${destination.publicKey}, sentry_client=${SENTRY_CLIENT}`;
 }
 
-export function buildSentryEnvelope(
-  event: FaultEvent,
-  context: SentryEnvelopeContext,
-): string {
+export function buildSentryEnvelope(event: FaultEvent, context: SentryEnvelopeContext): string {
   const payload = buildSentryEvent(event, context);
   return [
     JSON.stringify({
@@ -71,10 +68,7 @@ export function buildSentryEnvelope(
   ].join("\n");
 }
 
-export function buildSentryEvent(
-  event: FaultEvent,
-  context: SentryEnvelopeContext,
-): Record<string, unknown> {
+export function buildSentryEvent(event: FaultEvent, context: SentryEnvelopeContext): Record<string, unknown> {
   const described = describeException(event.error);
   const severity = severityOf(event);
   const release = event.release ?? context.release;
@@ -86,13 +80,9 @@ export function buildSentryEvent(
     platform: "node",
     logger: "dads-diagnostics",
     level: severity,
-    ...(context.environment === undefined
-      ? {}
-      : { environment: context.environment }),
+    ...(context.environment === undefined ? {} : { environment: context.environment }),
     ...(release === undefined ? {} : { release }),
-    ...(event.instanceId === undefined
-      ? {}
-      : { server_name: event.instanceId }),
+    ...(event.instanceId === undefined ? {} : { server_name: event.instanceId }),
     exception: {
       values: [
         {
@@ -112,9 +102,7 @@ export function buildSentryEvent(
 function tagsOf(event: FaultEvent): Record<string, string> {
   return {
     source: event.source,
-    ...(event.routeId === undefined
-      ? {}
-      : { route: withoutQuery(event.routeId) }),
+    ...(event.routeId === undefined ? {} : { route: withoutQuery(event.routeId) }),
     ...(event.requestId === undefined ? {} : { request_id: event.requestId }),
     ...(event.jobName === undefined ? {} : { job_name: event.jobName }),
     ...(event.actor === undefined ? {} : { actor_kind: event.actor.kind }),

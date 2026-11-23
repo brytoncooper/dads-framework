@@ -1,13 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
-import {
-  type PermissionQuery,
-  relationshipWrite,
-} from "@dads-framework/access/runtime";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
+import { type PermissionQuery, relationshipWrite } from "@dads-framework/access/runtime";
 import { runWithAuthorizationConsistency } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
@@ -110,9 +104,7 @@ describe("SpiceDbAuthorization (integration)", () => {
 
   it("denies a subject with no relationship path — the denial case", async () => {
     // Reads only the immutable baseline; STRANGER is never granted anywhere.
-    await expect(
-      adapter.check({ subject: STRANGER, permission: "view", resource: DOC }),
-    ).resolves.toBe(false);
+    await expect(adapter.check({ subject: STRANGER, permission: "view", resource: DOC })).resolves.toBe(false);
   });
 
   it("bulk checks preserve the individual grant and denial answers in order", async () => {
@@ -145,9 +137,7 @@ describe("SpiceDbAuthorization (integration)", () => {
       permission: "view",
       consistencyToken: oldToken,
     }));
-    await expect(defaultConsistencyAdapter.checkMany(queries)).resolves.toEqual(
-      [true, true],
-    );
+    await expect(defaultConsistencyAdapter.checkMany(queries)).resolves.toEqual([true, true]);
 
     await adapter.deleteRelationships({
       resourceType: revoked.type,
@@ -157,9 +147,7 @@ describe("SpiceDbAuthorization (integration)", () => {
     });
 
     await runWithAuthorizationConsistency(oldToken, async () => {
-      await expect(
-        defaultConsistencyAdapter.checkMany(queries),
-      ).resolves.toEqual([false, true]);
+      await expect(defaultConsistencyAdapter.checkMany(queries)).resolves.toEqual([false, true]);
     });
   });
 
@@ -170,17 +158,13 @@ describe("SpiceDbAuthorization (integration)", () => {
       permission: "view",
     }));
 
-    await expect(adapter.checkMany(queries)).resolves.toEqual(
-      queries.map((_, index) => index % 3 === 0),
-    );
+    await expect(adapter.checkMany(queries)).resolves.toEqual(queries.map((_, index) => index % 3 === 0));
   });
 
   it("lookupResources returns exactly the reachable ids", async () => {
     // VIEWER's grants are exactly: the baseline doc-1 + this test's doc-2 —
     // no other test writes for VIEWER, so this set is exact under any order.
-    await adapter.writeRelationships([
-      relationshipWrite({ ...DOC, id: "doc-2" }, "viewer", VIEWER),
-    ]);
+    await adapter.writeRelationships([relationshipWrite({ ...DOC, id: "doc-2" }, "viewer", VIEWER)]);
     const viewerDocs = await adapter.lookupResources({
       subject: VIEWER,
       permission: "view",
@@ -200,9 +184,7 @@ describe("SpiceDbAuthorization (integration)", () => {
     // Own subject + resource: the delete can never unseat another test's grant.
     const deleteViewer = { type: "user", id: "viewer-delete" };
     const deleteDoc = { ...DOC, id: "doc-3" };
-    await adapter.writeRelationships([
-      relationshipWrite(deleteDoc, "viewer", deleteViewer),
-    ]);
+    await adapter.writeRelationships([relationshipWrite(deleteDoc, "viewer", deleteViewer)]);
     await adapter.deleteRelationships({
       resourceType: "test/document",
       resourceId: "doc-3",
@@ -240,9 +222,7 @@ describe("SpiceDbAuthorization (integration)", () => {
   it("lookupResources at the write token sees the new grant under minimize-latency", async () => {
     const owner = { type: "user", id: "owner-fresh" };
     const doc = { type: "test/document", id: "doc-fresh" };
-    const token = await defaultConsistencyAdapter.writeRelationships([
-      relationshipWrite(doc, "owner", owner),
-    ]);
+    const token = await defaultConsistencyAdapter.writeRelationships([relationshipWrite(doc, "owner", owner)]);
     expect(token.length).toBeGreaterThan(0);
 
     const visible = await defaultConsistencyAdapter.lookupResources({

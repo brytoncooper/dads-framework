@@ -21,11 +21,7 @@ import {
   FixedClock,
   verifyFeatureFlagStoreConformance,
 } from "../testing/index.js";
-import {
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startUnmigratedTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 
 import { DrizzleFeatureFlagStore } from "./drizzle-feature-flag-store.js";
 import { up } from "./migrations/20261119180000_feature_flags.migration.js";
@@ -104,11 +100,7 @@ describe("DrizzleFeatureFlagStore", () => {
 
   it("stores the state's revision as row_version on a first write and a later one", async () => {
     const counters = async () =>
-      (
-        await postgres.pool.query<{ row_version: number }>(
-          "SELECT row_version FROM feature_flag_states",
-        )
-      ).rows;
+      (await postgres.pool.query<{ row_version: number }>("SELECT row_version FROM feature_flag_states")).rows;
     await updateAt(DAY_ONE).execute({
       actorId: "user-1",
       request: {
@@ -123,9 +115,7 @@ describe("DrizzleFeatureFlagStore", () => {
       },
     });
     expect(await counters()).toEqual([{ row_version: 2 }]);
-    await expect(store.listStates([FIRST.slug])).resolves.toMatchObject([
-      { revision: 2 },
-    ]);
+    await expect(store.listStates([FIRST.slug])).resolves.toMatchObject([{ revision: 2 }]);
   });
 
   it("retains SELECTED_TENANTS targets and pages history newest-first", async () => {

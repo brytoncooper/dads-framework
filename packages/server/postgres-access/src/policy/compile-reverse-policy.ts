@@ -3,19 +3,10 @@ import type {
   CompiledArrowTarget,
   CompiledPermissionExpression,
 } from "./policy-model.js";
-import {
-  analyzePermissionCycles,
-  type PermissionCyclePlan,
-} from "./permission-cycles.js";
+import { analyzePermissionCycles, type PermissionCyclePlan } from "./permission-cycles.js";
 import { compileRecursiveReverseLookup } from "./compile-recursive-policy.js";
 import { findColumnRelation } from "./column-relations.js";
-import {
-  notExpired,
-  permissionIdentity,
-  resolveArrowTargets,
-  TUPLES,
-  type QueryBuilder,
-} from "./policy-sql.js";
+import { notExpired, permissionIdentity, resolveArrowTargets, TUPLES, type QueryBuilder } from "./policy-sql.js";
 
 type ReverseContext = {
   readonly model: AuthorizationModelDefinition;
@@ -77,19 +68,11 @@ export function compileReversePermission(
   return compileReversePermissionNode(context, entity, permissionName);
 }
 
-function compileReversePermissionNode(
-  context: ReverseContext,
-  entity: string,
-  permissionName: string,
-): string {
+function compileReversePermissionNode(context: ReverseContext, entity: string, permissionName: string): string {
   const definition = context.model.permissions.find(
-    (candidate) =>
-      candidate.wireName === permissionName && candidate.entity === entity,
+    (candidate) => candidate.wireName === permissionName && candidate.entity === entity,
   );
-  if (!definition)
-    throw new Error(
-      `Postgres policy cannot find permission ${permissionName}.`,
-    );
+  if (!definition) throw new Error(`Postgres policy cannot find permission ${permissionName}.`);
   const scc = context.cycles.sccFor(entity, permissionName);
   if (scc !== undefined) {
     return compileRecursiveReverseLookup({
@@ -99,15 +82,12 @@ function compileReversePermissionNode(
       entryEntity: entity,
       entryPermission: permissionName,
       scc,
-      compileExpression: (nodeEntity, expression) =>
-        compileReverseExpression(context, nodeEntity, expression),
+      compileExpression: (nodeEntity, expression) => compileReverseExpression(context, nodeEntity, expression),
     });
   }
   const identity = permissionIdentity(entity, permissionName);
   if (context.active.has(identity))
-    throw new Error(
-      "Postgres SQL compilation does not support a cycle through permissions.",
-    );
+    throw new Error("Postgres SQL compilation does not support a cycle through permissions.");
   context.active.add(identity);
   try {
     return compileReverseExpression(context, entity, definition.expression);
@@ -132,32 +112,14 @@ function compileReverseExpression(
   }
   if (expression.kind === "through-all") {
     const targets = resolveArrowTargets(context.model, entity, expression);
-    return compileReverseThroughAll(
-      context,
-      entity,
-      expression.relation,
-      targets,
-    );
+    return compileReverseThroughAll(context, entity, expression.relation, targets);
   }
   if (expression.kind === "exclude") {
-    const include = compileReverseExpression(
-      context,
-      entity,
-      expression.include,
-    );
-    const exclude = compileReverseExpression(
-      context,
-      entity,
-      expression.exclude,
-    );
+    const include = compileReverseExpression(context, entity, expression.include);
+    const exclude = compileReverseExpression(context, entity, expression.exclude);
     return `(${include}) EXCEPT (${exclude})`;
   }
-  const operator =
-    expression.kind === "any-of"
-      ? context.deduplicate
-        ? "UNION"
-        : "UNION ALL"
-      : "INTERSECT";
+  const operator = expression.kind === "any-of" ? (context.deduplicate ? "UNION" : "UNION ALL") : "INTERSECT";
   return expression.expressions
     .map((child) => `(${compileReverseExpression(context, entity, child)})`)
     .join(` ${operator} `);
@@ -169,9 +131,7 @@ function compileReverseThrough(
   relationName: string,
   targets: readonly CompiledArrowTarget[],
 ): string {
-  const branches = targets.map((target) =>
-    compileReverseThroughBranch(context, entity, relationName, target),
-  );
+  const branches = targets.map((target) => compileReverseThroughBranch(context, entity, relationName, target));
   const joiner = context.deduplicate ? " UNION " : " UNION ALL ";
   return branches.length === 1 && branches[0] !== undefined
     ? branches[0]
@@ -186,11 +146,7 @@ function compileReverseThroughBranch(
 ): string {
   const { builder, namespace } = context;
   const throughAlias = builder.throughAlias();
-  const relatedResourceIds = compileReversePermissionNode(
-    context,
-    target.entity,
-    target.permission,
-  );
+  const relatedResourceIds = compileReversePermissionNode(context, target.entity, target.permission);
   const columnRel = findColumnRelation(context.model, entity, relationName);
   if (columnRel !== undefined) {
     if (!context.deduplicate) {
@@ -251,20 +207,11 @@ function compileReverseThroughAll(
   targets: readonly CompiledArrowTarget[],
 ): string {
   const { builder, namespace } = context;
-  const candidates = compileReverseThrough(
-    context,
-    entity,
-    relationName,
-    targets,
-  );
+  const candidates = compileReverseThrough(context, entity, relationName, targets);
   const allAlias = builder.throughAlias();
   const columnRel = findColumnRelation(context.model, entity, relationName);
   if (columnRel !== undefined && targets[0] !== undefined) {
-    const allowedIds = compileReversePermissionNode(
-      context,
-      targets[0].entity,
-      targets[0].permission,
-    );
+    const allowedIds = compileReversePermissionNode(context, targets[0].entity, targets[0].permission);
     return `SELECT DISTINCT candidate.resource_id
       FROM (${candidates}) candidate
       WHERE NOT EXISTS (
@@ -282,11 +229,7 @@ function compileReverseThroughAll(
   const relation = builder.value(relationName);
   const allowedChecks = targets.map((target) => {
     const targetKind = builder.value(target.entity);
-    const allowedIds = compileReversePermissionNode(
-      context,
-      target.entity,
-      target.permission,
-    );
+    const allowedIds = compileReversePermissionNode(context, target.entity, target.permission);
     return `(${allAlias}.subject_kind = ${targetKind} AND EXISTS (SELECT 1 FROM (${allowedIds}) allowed_target WHERE allowed_target.resource_id = ${allAlias}.subject_id))`;
   });
   return `SELECT DISTINCT candidate.resource_id

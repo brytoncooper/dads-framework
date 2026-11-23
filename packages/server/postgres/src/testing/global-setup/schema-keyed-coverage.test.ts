@@ -12,10 +12,8 @@ import {
 } from "./schema-keyed-coverage.js";
 import { privateDatabaseName } from "./verify-schema-keyed-suite.js";
 
-const ORDERS =
-  "apps/example/domains/orders/server/src/lib/database/generated-tables";
-const FACILITIES =
-  "apps/example/domains/facilities/server/src/lib/database/generated-tables";
+const ORDERS = "apps/example/domains/orders/server/src/lib/database/generated-tables";
+const FACILITIES = "apps/example/domains/facilities/server/src/lib/database/generated-tables";
 const AUDIT = "packages/server/audit/src/lib/database/generated-tables";
 
 const owners = new Map([
@@ -41,9 +39,7 @@ describe("readSchemaKeyedDeclaration", () => {
   });
 
   it("treats the all-migrations input as not schema-keyed", () => {
-    expect(
-      readSchemaKeyedDeclaration(["default", "databaseMigrations"]).schemaKeyed,
-    ).toBe(false);
+    expect(readSchemaKeyedDeclaration(["default", "databaseMigrations"]).schemaKeyed).toBe(false);
     expect(readSchemaKeyedDeclaration(undefined).schemaKeyed).toBe(false);
   });
 });
@@ -78,9 +74,7 @@ describe("checkSchemaKeyedCoverage", () => {
       unmigratedDatabases: 0,
     });
     expect(report.missingFolders).toEqual([FACILITIES]);
-    expect(describeCoverageFailure("domain-orders", report)).toContain(
-      `"${tableModuleInput(FACILITIES)}",`,
-    );
+    expect(describeCoverageFailure("domain-orders", report)).toContain(`"${tableModuleInput(FACILITIES)}",`);
   });
 
   it("sends a suite that reads the journal or migrates its own database back to all migrations", () => {
@@ -96,9 +90,7 @@ describe("checkSchemaKeyedCoverage", () => {
       unmigratedDatabases: 1,
     });
     expect(report.needsAllMigrations).toHaveLength(2);
-    expect(describeCoverageFailure("domain-orders", report)).toContain(
-      'list "databaseMigrations" instead',
-    );
+    expect(describeCoverageFailure("domain-orders", report)).toContain('list "databaseMigrations" instead');
   });
 });
 

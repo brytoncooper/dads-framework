@@ -59,25 +59,17 @@ describe("the resolved lint configuration", () => {
     const scopes = resolveLintScopes(contextOver(PROBES, asked));
 
     expect(asked).toStrictEqual(PROBES);
-    expect(scopes.map((scope) => scope.scope)).toStrictEqual([
-      "source",
-      "test",
-      "type-tests",
-      "scripts",
+    expect(scopes.map((scope) => scope.scope)).toStrictEqual(["source", "test", "type-tests", "scripts"]);
+    expect(rulesAtSeverity(scopes[0] ?? { scope: "", path: "", rules: {} }, "error")).toStrictEqual([
+      "@typescript-eslint/no-explicit-any",
+      "no-undef",
     ]);
-    expect(
-      rulesAtSeverity(scopes[0] ?? { scope: "", path: "", rules: {} }, "error"),
-    ).toStrictEqual(["@typescript-eslint/no-explicit-any", "no-undef"]);
-    expect(
-      rulesAtSeverity(scopes[0] ?? { scope: "", path: "", rules: {} }, "warn"),
-    ).toStrictEqual(["prefer-const"]);
+    expect(rulesAtSeverity(scopes[0] ?? { scope: "", path: "", rules: {} }, "warn")).toStrictEqual(["prefer-const"]);
   });
 
   it("answers nothing at all when a probe cannot be resolved", () => {
     const asked: string[] = [];
-    const scopes = resolveLintScopes(
-      contextOver(["packages/http/core/src/index.ts"], asked),
-    );
+    const scopes = resolveLintScopes(contextOver(["packages/http/core/src/index.ts"], asked));
 
     expect(scopes).toStrictEqual([]);
   });
@@ -99,12 +91,7 @@ describe("the resolved lint configuration", () => {
       "packages/server/http/type-tests/verb-fixture.ts",
       "scripts/checks/custom-check.mjs",
     ]);
-    expect(scopes.map((scope) => scope.scope)).toStrictEqual([
-      "source",
-      "test",
-      "type-tests",
-      "scripts",
-    ]);
+    expect(scopes.map((scope) => scope.scope)).toStrictEqual(["source", "test", "type-tests", "scripts"]);
   });
 
   it("answers nothing when eslint --print-config returns empty stdout", () => {

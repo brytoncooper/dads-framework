@@ -3,13 +3,8 @@ type QueryKey = readonly unknown[];
 /** The query-cache operations needed to patch and restore optimistic reads. */
 export type OptimisticQueryCache = {
   cancelQueries(filters: { readonly queryKey: QueryKey }): Promise<void>;
-  getQueriesData(filters: {
-    readonly queryKey: QueryKey;
-  }): readonly (readonly [QueryKey, unknown])[];
-  setQueriesData(
-    filters: { readonly queryKey: QueryKey },
-    updater: (cached: unknown) => unknown,
-  ): void;
+  getQueriesData(filters: { readonly queryKey: QueryKey }): readonly (readonly [QueryKey, unknown])[];
+  setQueriesData(filters: { readonly queryKey: QueryKey }, updater: (cached: unknown) => unknown): void;
   setQueryData(key: QueryKey, data: unknown): void;
   invalidateQueries(filters: { readonly queryKey: QueryKey }): Promise<void>;
 };
@@ -27,10 +22,7 @@ export type OptimisticQueryCache = {
 export type OptimisticRecordEffect = {
   readonly id: string;
   readonly key?: string;
-} & (
-  | { readonly change: Readonly<Record<string, unknown>> }
-  | { readonly remove: true }
-);
+} & ({ readonly change: Readonly<Record<string, unknown>> } | { readonly remove: true });
 
 /** What `onMutate` hands back so a refused write can be put back. */
 export type OptimisticSnapshot = {
@@ -40,11 +32,7 @@ export type OptimisticSnapshot = {
 /** The mutation options an optimistic write spreads into its factory. */
 export type OptimisticRecordWriteOptions<TVariables> = {
   readonly onMutate: (variables: TVariables) => Promise<OptimisticSnapshot>;
-  readonly onError: (
-    error: Error,
-    variables: TVariables,
-    snapshot: OptimisticSnapshot | undefined,
-  ) => void;
+  readonly onError: (error: Error, variables: TVariables, snapshot: OptimisticSnapshot | undefined) => void;
   readonly onSettled: () => Promise<void>;
 };
 
@@ -62,11 +50,7 @@ export function optimisticRecordWriteWithoutInput(
   scope: QueryKey,
   effect: OptimisticRecordEffect | null,
 ) {
-  const write = optimisticRecordWrite<undefined>(
-    queryClient,
-    scope,
-    () => effect,
-  );
+  const write = optimisticRecordWrite<undefined>(queryClient, scope, () => effect);
   let latest: OptimisticSnapshot | undefined;
   return {
     onMutate: async (): Promise<OptimisticSnapshot> => {
@@ -108,16 +92,10 @@ export function optimisticRecordWrite<TVariables>(
       if (effect === null) return { entries: [] };
       await queryClient.cancelQueries({ queryKey: scope });
       const entries = queryClient.getQueriesData({ queryKey: scope });
-      queryClient.setQueriesData({ queryKey: scope }, (cached: unknown) =>
-        applyRecordEffect(cached, effect),
-      );
+      queryClient.setQueriesData({ queryKey: scope }, (cached: unknown) => applyRecordEffect(cached, effect));
       return { entries };
     },
-    onError: (
-      _error: Error,
-      _variables: TVariables,
-      snapshot: OptimisticSnapshot | undefined,
-    ) => {
+    onError: (_error: Error, _variables: TVariables, snapshot: OptimisticSnapshot | undefined) => {
       for (const [queryKey, data] of snapshot?.entries ?? []) {
         queryClient.setQueryData(queryKey, data);
       }
@@ -130,10 +108,7 @@ export function optimisticRecordWrite<TVariables>(
  * One cached read with the effect applied; the same reference when the read
  * does not hold the record, so untouched views do not re-render.
  */
-export function applyRecordEffect(
-  cached: unknown,
-  effect: OptimisticRecordEffect,
-): unknown {
+export function applyRecordEffect(cached: unknown, effect: OptimisticRecordEffect): unknown {
   if (Array.isArray(cached)) {
     return applyToRecords(cached, effect) ?? cached;
   }
@@ -144,10 +119,7 @@ export function applyRecordEffect(
     return {
       ...cached,
       items,
-      meta: decrementPageTotal(
-        cached["meta"],
-        cached["items"].length - items.length,
-      ),
+      meta: decrementPageTotal(cached["meta"], cached["items"].length - items.length),
     };
   }
   if (isTarget(cached, effect)) {
@@ -156,20 +128,12 @@ export function applyRecordEffect(
   return applyToNestedRows(cached, effect);
 }
 
-function decrementPageTotal(
-  meta: Record<string, unknown>,
-  removed: number,
-): Record<string, unknown> {
+function decrementPageTotal(meta: Record<string, unknown>, removed: number): Record<string, unknown> {
   const total = meta["total"];
-  return typeof total === "number" && removed > 0
-    ? { ...meta, total: Math.max(0, total - removed) }
-    : meta;
+  return typeof total === "number" && removed > 0 ? { ...meta, total: Math.max(0, total - removed) } : meta;
 }
 
-function applyToNestedRows(
-  record: Readonly<Record<string, unknown>>,
-  effect: OptimisticRecordEffect,
-): unknown {
+function applyToNestedRows(record: Readonly<Record<string, unknown>>, effect: OptimisticRecordEffect): unknown {
   let patched: Record<string, unknown> | null = null;
   for (const [field, value] of Object.entries(record)) {
     const next = Array.isArray(value)
@@ -183,23 +147,15 @@ function applyToNestedRows(
   return patched ?? record;
 }
 
-function applyToRecords(
-  records: readonly unknown[],
-  effect: OptimisticRecordEffect,
-): unknown[] | null {
+function applyToRecords(records: readonly unknown[], effect: OptimisticRecordEffect): unknown[] | null {
   if (!records.some((record) => isTarget(record, effect))) return null;
   if ("remove" in effect) {
     return records.filter((record) => !isTarget(record, effect));
   }
-  return records.map((record) =>
-    isTarget(record, effect) ? { ...record, ...effect.change } : record,
-  );
+  return records.map((record) => (isTarget(record, effect) ? { ...record, ...effect.change } : record));
 }
 
-function isTarget(
-  record: unknown,
-  effect: OptimisticRecordEffect,
-): record is Record<string, unknown> {
+function isTarget(record: unknown, effect: OptimisticRecordEffect): record is Record<string, unknown> {
   return isObject(record) && record[effect.key ?? "id"] === effect.id;
 }
 

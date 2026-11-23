@@ -80,9 +80,7 @@ describe("authorization consistency cookie", () => {
     expect(created.statusCode).toBe(201);
     const setCookie = created.headers["set-cookie"];
     const cookie = Array.isArray(setCookie) ? setCookie.join(";") : setCookie;
-    expect(cookie).toContain(
-      `${AUTHORIZATION_CONSISTENCY_COOKIE}=written-at-3`,
-    );
+    expect(cookie).toContain(`${AUTHORIZATION_CONSISTENCY_COOKIE}=written-at-3`);
 
     const listed = await app.inject({
       method: "GET",

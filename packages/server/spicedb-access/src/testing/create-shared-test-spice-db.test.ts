@@ -9,10 +9,7 @@ describe("createSharedTestSpiceDb", () => {
     const createUniqueToken = () => `datastore-${++tokenSequence}`;
 
     const first = createSharedTestSpiceDb("127.0.0.1:50051", createUniqueToken);
-    const second = createSharedTestSpiceDb(
-      "127.0.0.1:50051",
-      createUniqueToken,
-    );
+    const second = createSharedTestSpiceDb("127.0.0.1:50051", createUniqueToken);
 
     expect(first.endpoint).toBe("127.0.0.1:50051");
     expect(second.endpoint).toBe(first.endpoint);

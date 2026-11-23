@@ -14,12 +14,7 @@ import type {
   SqliteAuthorizationModel,
   SqlitePermissionExpression,
 } from "./policy-model.js";
-import {
-  activeTupleCondition,
-  joinChunks,
-  QueryBuilder,
-  TUPLES,
-} from "./policy-sql.js";
+import { activeTupleCondition, joinChunks, QueryBuilder, TUPLES } from "./policy-sql.js";
 
 export type ReverseSccContext = {
   readonly model: SqliteAuthorizationModel;
@@ -32,10 +27,7 @@ export type ReverseSccContext = {
   readonly nextAlias: (prefix: string) => string;
 };
 
-export type CompileReverseExprFn = (
-  entity: string,
-  expression: SqlitePermissionExpression,
-) => SqliteQuery;
+export type CompileReverseExprFn = (entity: string, expression: SqlitePermissionExpression) => SqliteQuery;
 
 /** Ensure a recursive reverse-lookup CTE exists for `scc` and return its CTE name. */
 export function ensureReverseSccCte(
@@ -56,12 +48,8 @@ export function ensureReverseSccCte(
             params: [],
           },
         ]
-      : scc.baseClauses.map((clause) =>
-          compileReverseBaseClause(clause, compileExpr),
-        );
-  const stepBranches = scc.stepClauses.map((step) =>
-    compileReverseStepClause(context, cteName, step),
-  );
+      : scc.baseClauses.map((clause) => compileReverseBaseClause(clause, compileExpr));
+  const stepBranches = scc.stepClauses.map((step) => compileReverseStepClause(context, cteName, step));
   const anchorChunk = joinChunks(baseBranches, " UNION ");
   const stepsChunk = joinChunks(stepBranches, " UNION ");
   const b = new QueryBuilder();
@@ -72,10 +60,7 @@ export function ensureReverseSccCte(
   return cteName;
 }
 
-function compileReverseBaseClause(
-  clause: RecursiveBaseClause,
-  compileExpr: CompileReverseExprFn,
-): SqliteQuery {
+function compileReverseBaseClause(clause: RecursiveBaseClause, compileExpr: CompileReverseExprFn): SqliteQuery {
   const ids = compileExpr(clause.entity, clause.expression);
   const b = new QueryBuilder();
   return b.finish(
@@ -83,17 +68,9 @@ function compileReverseBaseClause(
   );
 }
 
-function compileReverseStepClause(
-  context: ReverseSccContext,
-  cteName: string,
-  step: RecursiveStepClause,
-): SqliteQuery {
+function compileReverseStepClause(context: ReverseSccContext, cteName: string, step: RecursiveStepClause): SqliteQuery {
   const edge = context.nextAlias("scc_edge");
-  const columnRel = findSqliteColumnRelation(
-    context.model,
-    step.entity,
-    step.relation,
-  );
+  const columnRel = findSqliteColumnRelation(context.model, step.entity, step.relation);
   if (columnRel !== undefined) {
     if (columnRel.targetEntity !== step.targetEntity) {
       return {

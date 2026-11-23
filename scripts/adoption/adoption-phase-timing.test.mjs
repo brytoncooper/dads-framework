@@ -23,9 +23,7 @@ test("serial runs of a phase spend exactly the wall clock they occupy", () => {
     end();
   }
 
-  assert.deepEqual(timer.report(), [
-    { phase: "pack", runs: 3, totalMs: 300, spanMs: 300 },
-  ]);
+  assert.deepEqual(timer.report(), [{ phase: "pack", runs: 3, totalMs: 300, spanMs: 300 }]);
 });
 
 test("overlapping runs spend more than the wall clock they occupy", () => {
@@ -38,9 +36,7 @@ test("overlapping runs spend more than the wall clock they occupy", () => {
   first();
   second();
 
-  assert.deepEqual(timer.report(), [
-    { phase: "install", runs: 2, totalMs: 200, spanMs: 100 },
-  ]);
+  assert.deepEqual(timer.report(), [{ phase: "install", runs: 2, totalMs: 200, spanMs: 100 }]);
 });
 
 test("phases keep the order they were first opened in", async () => {

@@ -10,10 +10,7 @@ export const tenantsPlugin = definePlugin({
   setup: ({ use }) => {
     const services = use(starterServices);
     return {
-      routes: [
-        ...tenantRoutes(services.tenants),
-        ...tenantInvitationRoutes(services),
-      ],
+      routes: [...tenantRoutes(services.tenants), ...tenantInvitationRoutes(services)],
     };
   },
 });

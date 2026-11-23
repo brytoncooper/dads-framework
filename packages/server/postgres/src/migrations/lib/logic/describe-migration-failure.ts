@@ -18,8 +18,6 @@ export function describeMigrationFailure(error: unknown): MigrationFailure {
   }
   return {
     name: parsed.data.name ?? "Error",
-    ...(parsed.data.code === undefined
-      ? {}
-      : { driverCode: String(parsed.data.code) }),
+    ...(parsed.data.code === undefined ? {} : { driverCode: String(parsed.data.code) }),
   };
 }

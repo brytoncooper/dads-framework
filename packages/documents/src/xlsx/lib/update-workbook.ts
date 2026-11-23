@@ -26,14 +26,11 @@ export async function updateWorkbookCells(
   const headerColumnsBySheet = new Map<string, ReadonlyMap<string, number>>();
   for (const update of updates) {
     const sheet = requiredSheet(workbook, update.sheetName);
-    const headerColumns =
-      headerColumnsBySheet.get(update.sheetName) ?? readHeaderColumns(sheet);
+    const headerColumns = headerColumnsBySheet.get(update.sheetName) ?? readHeaderColumns(sheet);
     headerColumnsBySheet.set(update.sheetName, headerColumns);
     const columnNumber = headerColumns.get(update.columnHeader);
     if (columnNumber === undefined) {
-      throw new Error(
-        `The "${update.sheetName}" sheet has no "${update.columnHeader}" column.`,
-      );
+      throw new Error(`The "${update.sheetName}" sheet has no "${update.columnHeader}" column.`);
     }
     writeUpdatedCell(sheet.getCell(update.rowNumber, columnNumber), update);
   }
@@ -55,9 +52,7 @@ function readHeaderColumns(sheet: Worksheet): ReadonlyMap<string, number> {
     const header = cell.text.trim();
     if (header === "") return;
     if (columns.has(header)) {
-      throw new Error(
-        `The header row names "${header}" twice — every column header must be unique.`,
-      );
+      throw new Error(`The header row names "${header}" twice — every column header must be unique.`);
     }
     columns.set(header, columnNumber);
   });

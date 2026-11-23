@@ -46,15 +46,7 @@ type SwitchFieldProps = Omit<
  * 44-pixel row target. The track keeps Switch's visual size; the label owns the
  * larger pointer target.
  */
-function SwitchField({
-  className,
-  description,
-  disabled,
-  id,
-  label,
-  switchClassName,
-  ...props
-}: SwitchFieldProps) {
+function SwitchField({ className, description, disabled, id, label, switchClassName, ...props }: SwitchFieldProps) {
   const labelId = `${id}-label`;
   const descriptionId = `${id}-description`;
 
@@ -71,10 +63,7 @@ function SwitchField({
       <span className="grid gap-1 leading-snug">
         <span id={labelId}>{label}</span>
         {description !== undefined && (
-          <span
-            id={descriptionId}
-            className="text-sm font-normal text-muted-foreground"
-          >
+          <span id={descriptionId} className="text-sm font-normal text-muted-foreground">
             {description}
           </span>
         )}

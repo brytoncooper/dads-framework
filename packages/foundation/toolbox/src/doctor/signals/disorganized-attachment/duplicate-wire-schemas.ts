@@ -20,18 +20,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  evidenceAt,
-  exportedStatements,
-  ts,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { evidenceAt, exportedStatements, ts, type DoctorModule } from "../scanners/typescript-program.js";
 
 /** Below this, two declarations share a field set by accident. */
 const MINIMUM_FIELDS = 3;
@@ -57,9 +47,7 @@ function signatureOf(members: readonly ts.Node[]): string | undefined {
     const name = nameOf(member);
     return name === undefined ? [] : [name];
   });
-  return names.length < MINIMUM_FIELDS
-    ? undefined
-    : [...names].sort().join(",");
+  return names.length < MINIMUM_FIELDS ? undefined : [...names].sort().join(",");
 }
 
 /** The object literal a `z.object({…})` call describes, when that is what it is. */
@@ -69,9 +57,7 @@ function schemaObject(node: ts.Node): ts.ObjectLiteralExpression | undefined {
   if (!ts.isPropertyAccessExpression(callee)) return undefined;
   if (callee.name.text !== "object") return undefined;
   const argument = node.arguments[0];
-  return argument !== undefined && ts.isObjectLiteralExpression(argument)
-    ? argument
-    : undefined;
+  return argument !== undefined && ts.isObjectLiteralExpression(argument) ? argument : undefined;
 }
 
 function declaredShape(statement: ts.Statement): string | undefined {
@@ -79,22 +65,16 @@ function declaredShape(statement: ts.Statement): string | undefined {
     return signatureOf([...statement.members]);
   }
   if (ts.isTypeAliasDeclaration(statement)) {
-    return ts.isTypeLiteralNode(statement.type)
-      ? signatureOf([...statement.type.members])
-      : undefined;
+    return ts.isTypeLiteralNode(statement.type) ? signatureOf([...statement.type.members]) : undefined;
   }
   if (!ts.isVariableStatement(statement)) return undefined;
   const declared = statement.declarationList.declarations[0];
   const initializer = declared?.initializer;
-  const object =
-    initializer === undefined ? undefined : schemaObject(initializer);
+  const object = initializer === undefined ? undefined : schemaObject(initializer);
   return object === undefined ? undefined : signatureOf([...object.properties]);
 }
 
-function collectShapes(
-  module: DoctorModule,
-  shapes: Map<string, DeclaredWireShape[]>,
-): void {
+function collectShapes(module: DoctorModule, shapes: Map<string, DeclaredWireShape[]>): void {
   for (const statement of exportedStatements(module)) {
     const signature = declaredShape(statement);
     if (signature === undefined) continue;
@@ -113,10 +93,7 @@ function spansModules(group: readonly DeclaredWireShape[]): boolean {
   return new Set(group.map((shape) => shape.evidence.path)).size > 1;
 }
 
-function recordDuplicate(
-  readings: Map<string, SignalReading>,
-  group: readonly DeclaredWireShape[],
-): void {
+function recordDuplicate(readings: Map<string, SignalReading>, group: readonly DeclaredWireShape[]): void {
   const first = group[0];
   if (first === undefined) return;
   const found = readings.get(first.packageRoot);

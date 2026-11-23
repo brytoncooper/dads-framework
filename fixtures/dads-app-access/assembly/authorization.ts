@@ -5,10 +5,7 @@ import {
 } from "@dads-framework/postgres-access";
 import type { Pool } from "pg";
 
-import {
-  document,
-  documentsAccessModel,
-} from "../domains/documents/access/index.js";
+import { document, documentsAccessModel } from "../domains/documents/access/index.js";
 
 /**
  * assembly/ is the ONLY layer allowed to import `pg` and

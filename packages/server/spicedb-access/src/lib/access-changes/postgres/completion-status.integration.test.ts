@@ -4,18 +4,11 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { ok } from "@dads-framework/core/errors";
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import { InMemoryOwnerLock } from "../../../testing/in-memory-owner-lock.js";
-import type {
-  RelationshipWrite,
-  SpiceDbConsistencyToken,
-} from "@dads-framework/access/runtime";
+import type { RelationshipWrite, SpiceDbConsistencyToken } from "@dads-framework/access/runtime";
 import { ApplyAccessChanges } from "../apply.js";
 import { createCompleteAccessChanges } from "../complete.js";
 import type { OutboxStatus } from "../enqueue.js";
@@ -29,9 +22,7 @@ const NOW = new Date("2026-09-09T12:00:00Z");
 const PERMISSIONS = { organization: { view: ["member"] } };
 
 class RefusingAuthorization extends FakeAuthorization {
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     void writes;
     return Promise.reject(new Error("graph unavailable"));
   }
@@ -80,8 +71,7 @@ describe("PostgresAccessChangeCompletionStatus", () => {
       lastError: status === "FAILED" ? "Previous projection failed" : null,
       projectedAt: status === "PROJECTED" ? NOW : null,
       supersededAt: status === "SUPERSEDED" ? NOW : null,
-      supersededByIdempotencyKey:
-        status === "SUPERSEDED" ? "replacement" : null,
+      supersededByIdempotencyKey: status === "SUPERSEDED" ? "replacement" : null,
     });
   }
 
@@ -106,12 +96,7 @@ describe("PostgresAccessChangeCompletionStatus", () => {
         elapsedMs += milliseconds;
         return Promise.resolve();
       },
-      projector: new ApplyAccessChanges(
-        claims,
-        authorization,
-        () => NOW,
-        ownerLock,
-      ),
+      projector: new ApplyAccessChanges(claims, authorization, () => NOW, ownerLock),
     });
   }
 
@@ -126,13 +111,8 @@ describe("PostgresAccessChangeCompletionStatus", () => {
     const unfinished = await statusReader.readUnfinished({
       ownerPartitionIds: [ORGANIZATION, ORGANIZATION],
     });
-    expect(unfinished.map((fact) => fact.idempotencyKey).sort()).toEqual([
-      "failed",
-      "pending",
-    ]);
-    expect(
-      await statusReader.readUnfinished({ ownerPartitionIds: [] }),
-    ).toEqual([]);
+    expect(unfinished.map((fact) => fact.idempotencyKey).sort()).toEqual(["failed", "pending"]);
+    expect(await statusReader.readUnfinished({ ownerPartitionIds: [] })).toEqual([]);
   });
 
   it("names only the asked resources that still hold a pending fact", async () => {
@@ -183,14 +163,7 @@ describe("PostgresAccessChangeCompletionStatus", () => {
     await ownerLock.run(ORGANIZATION, (lease) =>
       statusReader.retryFailed({
         ownerPartitionId: ORGANIZATION,
-        idempotencyKeys: [
-          "retry",
-          "other",
-          "superseded",
-          "projected",
-          "claimed",
-          "locked-failed",
-        ],
+        idempotencyKeys: ["retry", "other", "superseded", "projected", "claimed", "locked-failed"],
         lease,
       }),
     );
@@ -224,19 +197,16 @@ describe("PostgresAccessChangeCompletionStatus", () => {
 
   it("refuses an unrelated or released owner lease", async () => {
     await seed("failed", ORGANIZATION, "FAILED");
-    const releasedLease = await ownerLock.run(
-      OTHER_ORGANIZATION,
-      async (lease) => {
-        await expect(
-          statusReader.retryFailed({
-            ownerPartitionId: ORGANIZATION,
-            idempotencyKeys: ["failed"],
-            lease,
-          }),
-        ).rejects.toThrow();
-        return lease;
-      },
-    );
+    const releasedLease = await ownerLock.run(OTHER_ORGANIZATION, async (lease) => {
+      await expect(
+        statusReader.retryFailed({
+          ownerPartitionId: ORGANIZATION,
+          idempotencyKeys: ["failed"],
+          lease,
+        }),
+      ).rejects.toThrow();
+      return lease;
+    });
     await expect(
       statusReader.retryFailed({
         ownerPartitionId: OTHER_ORGANIZATION,
@@ -265,9 +235,7 @@ describe("PostgresAccessChangeCompletionStatus", () => {
       status: "PENDING",
       attempts: 1,
     });
-    expect(
-      await completion().complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toEqual(ok(undefined));
+    expect(await completion().complete({ ownerPartitionIds: [ORGANIZATION] })).toEqual(ok(undefined));
     expect(await stored("failed")).toMatchObject({ status: "PROJECTED" });
   });
 

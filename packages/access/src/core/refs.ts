@@ -51,19 +51,9 @@ export type OrTerm = {
 };
 
 export type PermissionTerm =
-  | RoleToken
-  | PermissionToken
-  | ThroughTerm
-  | ThroughAllTerm
-  | GatedTerm
-  | ExcludingTerm
-  | BothTerm
-  | OrTerm;
+  RoleToken | PermissionToken | ThroughTerm | ThroughAllTerm | GatedTerm | ExcludingTerm | BothTerm | OrTerm;
 
-export function permissionToken(
-  entityWireName: string,
-  permissionName: string,
-): PermissionToken {
+export function permissionToken(entityWireName: string, permissionName: string): PermissionToken {
   return {
     kind: "permission",
     entityWireName,
@@ -71,11 +61,7 @@ export function permissionToken(
   };
 }
 
-export function roleToken(
-  entityWireName: string,
-  roleName: string,
-  holder: RoleHolder,
-): RoleToken {
+export function roleToken(entityWireName: string, roleName: string, holder: RoleHolder): RoleToken {
   return {
     kind: "role",
     entityWireName,
@@ -85,19 +71,9 @@ export function roleToken(
 }
 
 export function isPermissionToken(value: unknown): value is PermissionToken {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "permission"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "permission";
 }
 
 export function isRoleToken(value: unknown): value is RoleToken {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "role"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "role";
 }

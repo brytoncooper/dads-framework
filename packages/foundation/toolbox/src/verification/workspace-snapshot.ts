@@ -1,13 +1,5 @@
 import { createHash, type Hash } from "node:crypto";
-import {
-  lstatSync,
-  mkdtempSync,
-  readFileSync,
-  readlinkSync,
-  realpathSync,
-  readdirSync,
-  rmSync,
-} from "node:fs";
+import { lstatSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, sep } from "node:path";
 import {
@@ -36,37 +28,24 @@ export function readWorkspaceIdentity(projectRoot: string): string {
       hash.update(`${projectPath}\0missing\0`);
       continue;
     }
-    const contents = status.isSymbolicLink()
-      ? Buffer.from(readlinkSync(absolutePath))
-      : readFileSync(absolutePath);
-    hash.update(
-      `${projectPath}\0${status.isSymbolicLink() ? "link" : "file"}\0`,
-    );
+    const contents = status.isSymbolicLink() ? Buffer.from(readlinkSync(absolutePath)) : readFileSync(absolutePath);
+    hash.update(`${projectPath}\0${status.isSymbolicLink() ? "link" : "file"}\0`);
     hash.update(contents);
   }
   return hash.digest("hex");
 }
 
-function hashGitContext(
-  hash: Hash,
-  context: WorkspaceGitContext | undefined,
-  paths: number,
-): void {
+function hashGitContext(hash: Hash, context: WorkspaceGitContext | undefined, paths: number): void {
   hash.update(`git-context\0${context ? "repository" : "filesystem"}\0`);
   hash.update(`git-head\0${context?.head ?? "unborn-or-no-head"}\0`);
   hash.update(`git-evidence\0${JSON.stringify(context?.evidence ?? null)}\0`);
   hash.update(`git-inventory\0${paths}\0`);
 }
 
-export function captureWorkspaceSnapshot(
-  projectRoot: string,
-  expectedIdentity: string,
-): VerificationWorkspaceSnapshot {
+export function captureWorkspaceSnapshot(projectRoot: string, expectedIdentity: string): VerificationWorkspaceSnapshot {
   const identity = readWorkspaceIdentity(projectRoot);
   if (identity !== expectedIdentity) {
-    throw new Error(
-      "Checkout identity changed between planning and verification.",
-    );
+    throw new Error("Checkout identity changed between planning and verification.");
   }
   const root = mkdtempSync(join(tmpdir(), "dads-verification-graph-"));
   try {
@@ -77,14 +56,10 @@ export function captureWorkspaceSnapshot(
       copyWorkspaceFiles(projectRoot, root);
     }
     if (readWorkspaceIdentity(projectRoot) !== expectedIdentity) {
-      throw new Error(
-        "Checkout identity changed while the graph snapshot was captured.",
-      );
+      throw new Error("Checkout identity changed while the graph snapshot was captured.");
     }
     const gitEvidenceIdentity = gitContext
-      ? createHash("sha256")
-          .update(JSON.stringify(gitContext.evidence))
-          .digest("hex")
+      ? createHash("sha256").update(JSON.stringify(gitContext.evidence)).digest("hex")
       : undefined;
     return {
       root,
@@ -97,10 +72,7 @@ export function captureWorkspaceSnapshot(
   }
 }
 
-function assertWorkspaceSymlinksStayInsideRoot(
-  projectRoot: string,
-  projectPaths: readonly string[],
-): void {
+function assertWorkspaceSymlinksStayInsideRoot(projectRoot: string, projectPaths: readonly string[]): void {
   const canonicalRoot = realpathSync(projectRoot);
   for (const projectPath of projectPaths) {
     const absolutePath = join(projectRoot, projectPath);
@@ -108,41 +80,28 @@ function assertWorkspaceSymlinksStayInsideRoot(
     if (!status || !status.isSymbolicLink()) continue;
     const linkTarget = readlinkSync(absolutePath);
     if (isAbsolute(linkTarget)) {
-      throw new Error(
-        `Workspace symlink points outside the captured workspace: ${projectPath}.`,
-      );
+      throw new Error(`Workspace symlink points outside the captured workspace: ${projectPath}.`);
     }
     const canonicalTarget = realpathSync(absolutePath);
     const pathFromRoot = relative(canonicalRoot, canonicalTarget);
     if (pathFromRoot === ".." || pathFromRoot.startsWith(`..${sep}`)) {
-      throw new Error(
-        `Workspace symlink points outside the captured workspace: ${projectPath}.`,
-      );
+      throw new Error(`Workspace symlink points outside the captured workspace: ${projectPath}.`);
     }
   }
 }
 
-function readOptionalStatus(
-  path: string,
-): ReturnType<typeof lstatSync> | undefined {
+function readOptionalStatus(path: string): ReturnType<typeof lstatSync> | undefined {
   try {
     return lstatSync(path);
   } catch (error: unknown) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "ENOENT"
-    ) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
       return undefined;
     }
     throw error;
   }
 }
 
-export function discardWorkspaceSnapshot(
-  snapshot: VerificationWorkspaceSnapshot,
-): void {
+export function discardWorkspaceSnapshot(snapshot: VerificationWorkspaceSnapshot): void {
   rmSync(snapshot.root, { force: true, recursive: true });
 }
 

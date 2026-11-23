@@ -3,9 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseWorkbookContents, parseWorkbookRows } from "./parse-workbook.js";
 
-async function writtenWorkbook(
-  build: (workbook: Workbook) => void,
-): Promise<ArrayBuffer> {
+async function writtenWorkbook(build: (workbook: Workbook) => void): Promise<ArrayBuffer> {
   const workbook = new Workbook();
   build(workbook);
   return workbook.xlsx.writeBuffer();
@@ -35,12 +33,7 @@ describe("parseWorkbookRows", () => {
     const data = await writtenWorkbook((workbook) => {
       const sheet = workbook.addWorksheet("Upload");
       sheet.addRow(["Name", "", "Amount", "Ordered On"]);
-      sheet.addRow([
-        "  Almonds  ",
-        "ignored — its header is blank",
-        1234.5,
-        new Date(Date.UTC(2026, 0, 15)),
-      ]);
+      sheet.addRow(["  Almonds  ", "ignored — its header is blank", 1234.5, new Date(Date.UTC(2026, 0, 15))]);
     });
 
     const rows = await parseWorkbookRows(data, "Upload");
@@ -64,9 +57,7 @@ describe("parseWorkbookRows", () => {
       sheet.addRow(["a", "b"]);
     });
 
-    await expect(parseWorkbookRows(data, "Upload")).rejects.toThrow(
-      'names "Name" twice',
-    );
+    await expect(parseWorkbookRows(data, "Upload")).rejects.toThrow('names "Name" twice');
   });
 
   it("throws when the named sheet is missing", async () => {
@@ -74,9 +65,7 @@ describe("parseWorkbookRows", () => {
       workbook.addWorksheet("Upload");
     });
 
-    await expect(parseWorkbookRows(data, "Orders")).rejects.toThrow(
-      'no worksheet named "Orders"',
-    );
+    await expect(parseWorkbookRows(data, "Orders")).rejects.toThrow('no worksheet named "Orders"');
   });
 });
 
@@ -93,9 +82,7 @@ describe("parseWorkbookContents", () => {
       orders.addRow(["ORDER-1"]);
       workbook.addWorksheet("Unrelated").addRow(["keep me"]);
     });
-    await expect(
-      parseWorkbookContents(data, ["Orders", "Releases"]),
-    ).resolves.toEqual({
+    await expect(parseWorkbookContents(data, ["Orders", "Releases"])).resolves.toEqual({
       metadata: {
         formatId: "example.order-import",
         formatVersion: "2",

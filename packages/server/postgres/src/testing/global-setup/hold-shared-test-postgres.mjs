@@ -16,12 +16,7 @@ function processIsAlive(pid) {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    return (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "EPERM"
-    );
+    return typeof error === "object" && error !== null && "code" in error && error.code === "EPERM";
   }
 }
 

@@ -2,19 +2,10 @@ import { v1 } from "@authzed/authzed-node";
 
 import { noteAuthorizationWarning } from "@dads-framework/core/runtime/request-work";
 
-import type {
-  PermissionCheckOutcome,
-  PermissionQuery,
-  SubjectRef,
-} from "@dads-framework/access/runtime";
+import type { PermissionCheckOutcome, PermissionQuery, SubjectRef } from "@dads-framework/access/runtime";
 
-export type SpiceDbPermissionClient = Pick<
-  ReturnType<typeof v1.NewClient>["promises"],
-  "checkPermission"
-> &
-  Partial<
-    Pick<ReturnType<typeof v1.NewClient>["promises"], "checkBulkPermissions">
-  >;
+export type SpiceDbPermissionClient = Pick<ReturnType<typeof v1.NewClient>["promises"], "checkPermission"> &
+  Partial<Pick<ReturnType<typeof v1.NewClient>["promises"], "checkBulkPermissions">>;
 
 const PERMISSION_BATCH_SIZE = 128;
 
@@ -35,10 +26,7 @@ export async function checkSpiceDbPermission(
       consistency,
     }),
   );
-  return (
-    response.permissionship ===
-    v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION
-  );
+  return response.permissionship === v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION;
 }
 
 /**
@@ -62,11 +50,7 @@ export async function checkSpiceDbPermissions(
     }
     return outcomes;
   }
-  for (
-    let offset = 0;
-    offset < queries.length;
-    offset += PERMISSION_BATCH_SIZE
-  ) {
+  for (let offset = 0; offset < queries.length; offset += PERMISSION_BATCH_SIZE) {
     const batch = queries.slice(offset, offset + PERMISSION_BATCH_SIZE);
     const response = await client.checkBulkPermissions(
       v1.CheckBulkPermissionsRequest.create({
@@ -116,17 +100,12 @@ export function denyingFailedItems(
 type BulkItemResponse = v1.CheckBulkPermissionsPair["response"] | undefined;
 
 /** Names wire types and the permission only, never an id. */
-function bulkItemOutcome(
-  query: PermissionQuery,
-  response: BulkItemResponse,
-): PermissionCheckOutcome {
+function bulkItemOutcome(query: PermissionQuery, response: BulkItemResponse): PermissionCheckOutcome {
   const asked = `${query.permission} on ${query.resource.type} for a ${query.subject.type}`;
   if (response?.oneofKind === "item") {
     return {
       kind: "answered",
-      allowed:
-        response.item.permissionship ===
-        v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION,
+      allowed: response.item.permissionship === v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION,
     };
   }
   if (response?.oneofKind === "error") {

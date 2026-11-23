@@ -1,9 +1,4 @@
-import {
-  createCopyHook,
-  defineCopy,
-  type CopyKey,
-  type CopyTranslator,
-} from "../../copy/index.js";
+import { createCopyHook, defineCopy, type CopyKey, type CopyTranslator } from "../../copy/index.js";
 
 export const overlaysCopy = defineCopy({
   "overlays.action.close": { en: "Close" },

@@ -6,5 +6,4 @@ export const AUDIT_TRIGGER_ALLOWLIST = [
   "known_fault_fingerprints",
 ] as const;
 
-export type AuditTriggerAllowlistEntry =
-  (typeof AUDIT_TRIGGER_ALLOWLIST)[number];
+export type AuditTriggerAllowlistEntry = (typeof AUDIT_TRIGGER_ALLOWLIST)[number];

@@ -46,13 +46,8 @@ export class Tenants {
     };
     return tenantTransaction(this.options, async (tx) => {
       await tx.insert(tenantTable).values(tenant);
-      await tx
-        .insert(tenantMembership)
-        .values({ tenantId: tenant.id, accountId: actor.id, role: "owner" });
-      await this.options.changes.enqueue(
-        [membershipFact(this.options, tenant.id, actor.id, "owner", "WRITE")],
-        tx,
-      );
+      await tx.insert(tenantMembership).values({ tenantId: tenant.id, accountId: actor.id, role: "owner" });
+      await this.options.changes.enqueue([membershipFact(this.options, tenant.id, actor.id, "owner", "WRITE")], tx);
       return tenant;
     });
   }
@@ -68,31 +63,15 @@ export class Tenants {
       });
       if (visible.length === 0) return [];
       const ids = visible.map((id) => tenantIdSchema.parse(id));
-      return tx
-        .select()
-        .from(tenantTable)
-        .where(inArray(tenantTable.id, ids))
-        .orderBy(tenantTable.id);
+      return tx.select().from(tenantTable).where(inArray(tenantTable.id, ids)).orderBy(tenantTable.id);
     });
   }
 
   context(actorId: string, tenantId: TenantId): Promise<TenantContext> {
     const actor = accountSubject(this.options, actorId);
     return tenantTransaction(this.options, async (tx) => {
-      if (
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          actor,
-          tenantId,
-          "view",
-        ))
-      )
-        throw new TenantUnavailableError();
-      const [tenant] = await tx
-        .select()
-        .from(tenantTable)
-        .where(eq(tenantTable.id, tenantId));
+      if (!(await checkTenantPermission(this.options, tx, actor, tenantId, "view"))) throw new TenantUnavailableError();
+      const [tenant] = await tx.select().from(tenantTable).where(eq(tenantTable.id, tenantId));
       if (tenant === undefined) throw new TenantUnavailableError();
       return {
         tenant,
@@ -103,38 +82,15 @@ export class Tenants {
   }
 
   /** Link a verified local account mapping supplied by the application. */
-  bindScimUser(
-    actorId: string,
-    tenantId: TenantId,
-    userId: string,
-    accountId: string,
-  ): Promise<void> {
-    return bindTenantScimUser(
-      this.options,
-      actorId,
-      tenantId,
-      userId,
-      accountId,
-    );
+  bindScimUser(actorId: string, tenantId: TenantId, userId: string, accountId: string): Promise<void> {
+    return bindTenantScimUser(this.options, actorId, tenantId, userId, accountId);
   }
 
-  rename(
-    actorId: string,
-    tenantId: TenantId,
-    name: string,
-  ): Promise<TenantRecord> {
+  rename(actorId: string, tenantId: TenantId, name: string): Promise<TenantRecord> {
     const actor = accountSubject(this.options, actorId);
     const checkedName = tenantName.parse(name);
     return tenantTransaction(this.options, async (tx) => {
-      if (
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          actor,
-          tenantId,
-          "manage_tenant",
-        ))
-      )
+      if (!(await checkTenantPermission(this.options, tx, actor, tenantId, "manage_tenant")))
         throw new TenantUnavailableError();
       const [changed] = await tx
         .update(tenantTable)

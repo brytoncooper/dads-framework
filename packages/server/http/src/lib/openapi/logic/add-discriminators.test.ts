@@ -19,9 +19,7 @@ function componentNames(document: Record<string, unknown>): string[] {
   const components = document["components"];
   if (typeof components !== "object" || components === null) return [];
   const schemas: unknown = Reflect.get(components, "schemas");
-  return typeof schemas === "object" && schemas !== null
-    ? Object.keys(schemas)
-    : [];
+  return typeof schemas === "object" && schemas !== null ? Object.keys(schemas) : [];
 }
 
 const timeSchedule = z.object({
@@ -38,32 +36,26 @@ describe("addDiscriminators", () => {
     const document = documentWith({
       TaskResponse: schemaOf(
         z.object({
-          schedule: z.discriminatedUnion("basis", [
-            timeSchedule,
-            meterSchedule,
-          ]),
+          schedule: z.discriminatedUnion("basis", [timeSchedule, meterSchedule]),
         }),
       ),
     });
 
     const tagged = addDiscriminators(document);
 
-    expect(tagged).toHaveProperty(
-      ["components", "schemas", "TaskResponse", "properties", "schedule"],
-      {
-        oneOf: [
-          { $ref: "#/components/schemas/TaskResponseScheduleTime" },
-          { $ref: "#/components/schemas/TaskResponseScheduleMeter" },
-        ],
-        discriminator: {
-          propertyName: "basis",
-          mapping: {
-            time: "#/components/schemas/TaskResponseScheduleTime",
-            meter: "#/components/schemas/TaskResponseScheduleMeter",
-          },
+    expect(tagged).toHaveProperty(["components", "schemas", "TaskResponse", "properties", "schedule"], {
+      oneOf: [
+        { $ref: "#/components/schemas/TaskResponseScheduleTime" },
+        { $ref: "#/components/schemas/TaskResponseScheduleMeter" },
+      ],
+      discriminator: {
+        propertyName: "basis",
+        mapping: {
+          time: "#/components/schemas/TaskResponseScheduleTime",
+          meter: "#/components/schemas/TaskResponseScheduleMeter",
         },
       },
-    );
+    });
     expect(tagged).toHaveProperty(
       ["components", "schemas", "TaskResponseScheduleMeter", "required"],
       ["basis", "meterId"],
@@ -80,20 +72,11 @@ describe("addDiscriminators", () => {
     });
 
     const tagged = addDiscriminators(document);
-    const schedule = [
-      "components",
-      "schemas",
-      "Task",
-      "properties",
-      "schedule",
-    ];
+    const schedule = ["components", "schemas", "Task", "properties", "schedule"];
 
     expect(tagged).not.toHaveProperty([...schedule, "anyOf"]);
     expect(tagged).toHaveProperty([...schedule, "nullable"], true);
-    expect(tagged).toHaveProperty(
-      [...schedule, "discriminator", "propertyName"],
-      "basis",
-    );
+    expect(tagged).toHaveProperty([...schedule, "discriminator", "propertyName"], "basis");
   });
 
   it("names array items and upper-case tag values readably", () => {
@@ -126,9 +109,7 @@ describe("addDiscriminators", () => {
               {
                 name: "filter",
                 in: "query",
-                schema: schemaOf(
-                  z.discriminatedUnion("basis", [timeSchedule, meterSchedule]),
-                ),
+                schema: schemaOf(z.discriminatedUnion("basis", [timeSchedule, meterSchedule])),
               },
             ],
             responses: { "200": { description: "" } },
@@ -140,17 +121,7 @@ describe("addDiscriminators", () => {
     const tagged = addDiscriminators(document);
 
     expect(tagged).toHaveProperty(
-      [
-        "paths",
-        "/tasks",
-        "get",
-        "parameters",
-        "0",
-        "schema",
-        "discriminator",
-        "mapping",
-        "time",
-      ],
+      ["paths", "/tasks", "get", "parameters", "0", "schema", "discriminator", "mapping", "time"],
       "#/components/schemas/GetTasksFilterParameterTime",
     );
   });
@@ -163,25 +134,14 @@ describe("addDiscriminators", () => {
         type: "object",
         properties: {
           schedule: {
-            oneOf: [
-              { $ref: "#/components/schemas/Time" },
-              { $ref: "#/components/schemas/Meter" },
-            ],
+            oneOf: [{ $ref: "#/components/schemas/Time" }, { $ref: "#/components/schemas/Meter" }],
           },
         },
       },
     });
 
     expect(addDiscriminators(document)).toHaveProperty(
-      [
-        "components",
-        "schemas",
-        "Task",
-        "properties",
-        "schedule",
-        "discriminator",
-        "mapping",
-      ],
+      ["components", "schemas", "Task", "properties", "schedule", "discriminator", "mapping"],
       {
         time: "#/components/schemas/Time",
         meter: "#/components/schemas/Meter",
@@ -214,17 +174,12 @@ describe("addDiscriminators", () => {
     const document = documentWith({
       Task: schemaOf(
         z.object({
-          schedule: z.discriminatedUnion("basis", [
-            timeSchedule,
-            meterSchedule,
-          ]),
+          schedule: z.discriminatedUnion("basis", [timeSchedule, meterSchedule]),
         }),
       ),
       TaskScheduleTime: { type: "string" },
     });
 
-    expect(() => addDiscriminators(document)).toThrow(
-      /"TaskScheduleTime" already exists/,
-    );
+    expect(() => addDiscriminators(document)).toThrow(/"TaskScheduleTime" already exists/);
   });
 });

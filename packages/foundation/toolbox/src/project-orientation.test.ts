@@ -73,13 +73,10 @@ describe("project orientation", () => {
       ],
     });
 
-    expect(
-      orientProjectPath(nested, "packages/toolbox/src/verification/run.ts")
-        ?.packageName,
-    ).toBe("@dads-framework/toolbox-verification");
-    expect(
-      orientProjectPath(nested, "packages/toolbox/src/cli.ts")?.packageName,
-    ).toBe("@dads-framework/toolbox");
+    expect(orientProjectPath(nested, "packages/toolbox/src/verification/run.ts")?.packageName).toBe(
+      "@dads-framework/toolbox-verification",
+    );
+    expect(orientProjectPath(nested, "packages/toolbox/src/cli.ts")?.packageName).toBe("@dads-framework/toolbox");
     expect(orientProjectPath(nested, "docs/README.md")).toBeUndefined();
   });
 

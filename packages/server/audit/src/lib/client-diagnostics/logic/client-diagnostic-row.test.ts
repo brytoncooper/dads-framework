@@ -15,15 +15,9 @@ import { clientDiagnosticEventIdSchema } from "../client-diagnostic-event.ids.js
 import { clientDiagnosticRow } from "./client-diagnostic-row.js";
 
 /** A deterministic, valid-shaped id per label — the format the schema requires. */
-const ID_1 = clientDiagnosticEventIdSchema.parse(
-  "00000001-0000-7000-8000-000000000001",
-);
-const ID_2 = clientDiagnosticEventIdSchema.parse(
-  "00000001-0000-7000-8000-000000000002",
-);
-const MINTED_BY_THE_SERVER = clientDiagnosticEventIdSchema.parse(
-  "00000001-0000-7000-8000-0000000000f1",
-);
+const ID_1 = clientDiagnosticEventIdSchema.parse("00000001-0000-7000-8000-000000000001");
+const ID_2 = clientDiagnosticEventIdSchema.parse("00000001-0000-7000-8000-000000000002");
+const MINTED_BY_THE_SERVER = clientDiagnosticEventIdSchema.parse("00000001-0000-7000-8000-0000000000f1");
 
 const EVENT: ClientDiagnosticEvent = {
   version: 1,

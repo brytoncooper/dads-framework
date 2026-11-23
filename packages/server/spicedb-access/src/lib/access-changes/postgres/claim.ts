@@ -17,10 +17,7 @@ import { authorizationOutbox } from "./access-changes.tables.js";
 function claimable(leaseCutoff: Date) {
   return and(
     eq(authorizationOutbox.status, "PENDING"),
-    or(
-      isNull(authorizationOutbox.lockedAt),
-      lte(authorizationOutbox.lockedAt, leaseCutoff),
-    ),
+    or(isNull(authorizationOutbox.lockedAt), lte(authorizationOutbox.lockedAt, leaseCutoff)),
   );
 }
 
@@ -42,23 +39,13 @@ export class PostgresClaimAccessChanges implements ClaimAccessChanges {
   constructor(private readonly db: DrizzleHandle) {}
 
   async claim(claim: OutboxClaim): Promise<readonly ClaimedOutboxRow[]> {
-    return this.take(
-      claimable(claim.leaseCutoff),
-      claim.batchSize,
-      claim.workerId,
-      claim.now,
-    );
+    return this.take(claimable(claim.leaseCutoff), claim.batchSize, claim.workerId, claim.now);
   }
 
-  async claimByKeys(
-    claim: OutboxKeyClaim,
-  ): Promise<readonly ClaimedOutboxRow[]> {
+  async claimByKeys(claim: OutboxKeyClaim): Promise<readonly ClaimedOutboxRow[]> {
     if (claim.idempotencyKeys.length === 0) return [];
     return this.take(
-      and(
-        claimable(claim.leaseCutoff),
-        inArray(authorizationOutbox.idempotencyKey, [...claim.idempotencyKeys]),
-      ),
+      and(claimable(claim.leaseCutoff), inArray(authorizationOutbox.idempotencyKey, [...claim.idempotencyKeys])),
       claim.idempotencyKeys.length,
       claim.workerId,
       claim.now,
@@ -107,18 +94,14 @@ export class PostgresClaimAccessChanges implements ClaimAccessChanges {
    * One read on the idempotency-key unique index: no `FOR UPDATE`, so it
    * never waits on, nor takes, another worker's claim.
    */
-  async heldByLiveClaim(
-    query: OutboxHeldKeysQuery,
-  ): Promise<readonly string[]> {
+  async heldByLiveClaim(query: OutboxHeldKeysQuery): Promise<readonly string[]> {
     if (query.idempotencyKeys.length === 0) return [];
     const rows = await this.db
       .select({ idempotencyKey: authorizationOutbox.idempotencyKey })
       .from(authorizationOutbox)
       .where(
         and(
-          inArray(authorizationOutbox.idempotencyKey, [
-            ...query.idempotencyKeys,
-          ]),
+          inArray(authorizationOutbox.idempotencyKey, [...query.idempotencyKeys]),
           eq(authorizationOutbox.status, "PENDING"),
           gt(authorizationOutbox.lockedAt, query.leaseCutoff),
         ),
@@ -141,11 +124,7 @@ export class PostgresClaimAccessChanges implements ClaimAccessChanges {
     return rows[0] !== undefined;
   }
 
-  async markProjected(
-    ids: readonly AccessChangeId[],
-    at: Date,
-    workerId: string,
-  ): Promise<boolean> {
+  async markProjected(ids: readonly AccessChangeId[], at: Date, workerId: string): Promise<boolean> {
     if (ids.length === 0) return false;
     const settled = await this.db
       .update(authorizationOutbox)
@@ -202,15 +181,9 @@ export class PostgresClaimAccessChanges implements ClaimAccessChanges {
         total: count(),
       })
       .from(authorizationOutbox)
-      .where(
-        or(
-          eq(authorizationOutbox.status, "PENDING"),
-          eq(authorizationOutbox.status, "FAILED"),
-        ),
-      )
+      .where(or(eq(authorizationOutbox.status, "PENDING"), eq(authorizationOutbox.status, "FAILED")))
       .groupBy(authorizationOutbox.status);
-    const of = (status: string): number =>
-      rows.find((row) => row.status === status)?.total ?? 0;
+    const of = (status: string): number => rows.find((row) => row.status === status)?.total ?? 0;
     return { pending: of("PENDING"), failed: of("FAILED") };
   }
 }

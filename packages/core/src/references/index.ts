@@ -26,10 +26,7 @@ export {
   checkCrossDomainReferences,
   type CrossDomainReferenceQueryClient,
 } from "./lib/database/check-cross-domain-references.js";
-export {
-  formatCleanReport,
-  formatDanglingReferenceReport,
-} from "./lib/logic/format-dangling-reference-report.js";
+export { formatCleanReport, formatDanglingReferenceReport } from "./lib/logic/format-dangling-reference-report.js";
 export {
   CheckCrossDomainReferences,
   type CheckCrossDomainReferencesDependencies,

@@ -40,10 +40,7 @@ const guides = [
 ] as const;
 
 function escapeText(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
 function createGuideParser() {
@@ -78,10 +75,7 @@ type GuideContent = {
   readonly label: string;
 };
 
-function renderGuide(
-  markup: string,
-  { id, label, body }: GuideContent,
-): string {
+function renderGuide(markup: string, { id, label, body }: GuideContent): string {
   return markup
     .replaceAll("{{id}}", id)
     .replace("{{label}}", () => label)
@@ -91,8 +85,7 @@ function renderGuide(
 function renderGuides(html: string, guides: readonly GuideContent[]): string {
   return html.replace(
     /<template id="guide-(?:link|article)">([\s\S]*?)<\/template>/g,
-    (_template: string, markup: string) =>
-      guides.map((guide) => renderGuide(markup, guide)).join("\n"),
+    (_template: string, markup: string) => guides.map((guide) => renderGuide(markup, guide)).join("\n"),
   );
 }
 
@@ -107,18 +100,12 @@ const createExamplesPlugin: () => Plugin = () => {
 
         const sections = await Promise.all(
           guides.map(async ({ id, file, copyKey }) => {
-            const path = fileURLToPath(
-              new URL(`../examples/${file}`, import.meta.url),
-            );
+            const path = fileURLToPath(new URL(`../examples/${file}`, import.meta.url));
             context.server?.watcher.add(path);
             const source = await readFile(path, "utf8");
-            const expanded = await expandGuideExcerpts(
-              source,
-              file,
-              (sourcePath) => {
-                context.server?.watcher.add(sourcePath);
-              },
-            );
+            const expanded = await expandGuideExcerpts(source, file, (sourcePath) => {
+              context.server?.watcher.add(sourcePath);
+            });
             const body = await markdown.parse(expanded);
             return { id, body, label: escapeText(workbenchCopy[copyKey].en) };
           }),

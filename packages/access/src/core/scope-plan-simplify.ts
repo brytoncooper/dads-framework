@@ -3,9 +3,7 @@ import { describeScopePlan } from "./scope-plan-read.js";
 
 /** Flatten same-kind children and drop repeats, keeping first-seen order. */
 function uniqueChildren(kind: "any" | "all", plans: readonly ScopePlan[]) {
-  const flat = plans.flatMap((plan) =>
-    plan.kind === kind ? plan.plans : [plan],
-  );
+  const flat = plans.flatMap((plan) => (plan.kind === kind ? plan.plans : [plan]));
   const unique = new Map<string, ScopePlan>();
   for (const child of flat) {
     const text = describeScopePlan(child);
@@ -14,18 +12,13 @@ function uniqueChildren(kind: "any" | "all", plans: readonly ScopePlan[]) {
   return [...unique.values()];
 }
 
-function joined(
-  kind: "any" | "all",
-  plans: readonly (ScopePlan | undefined)[],
-): ScopePlan | undefined {
+function joined(kind: "any" | "all", plans: readonly (ScopePlan | undefined)[]): ScopePlan | undefined {
   const present = plans.filter((plan) => plan !== undefined);
   if (present.length !== plans.length) return undefined;
   const flat = uniqueChildren(kind, present);
   const merged = kind === "any" ? mergedVias(flat) : flat;
   const only = merged[0];
-  return merged.length === 1 && only !== undefined
-    ? only
-    : { kind, plans: merged };
+  return merged.length === 1 && only !== undefined ? only : { kind, plans: merged };
 }
 
 /**

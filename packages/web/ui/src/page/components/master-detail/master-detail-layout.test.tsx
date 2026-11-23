@@ -3,11 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  MasterDetailLayout,
-  MasterDetailNoSelection,
-  useInMasterDetailPane,
-} from "./master-detail-layout.js";
+import { MasterDetailLayout, MasterDetailNoSelection, useInMasterDetailPane } from "./master-detail-layout.js";
 
 afterEach(cleanup);
 
@@ -17,21 +13,14 @@ function PaneProbe() {
 
 function panes() {
   const rail = screen.getByRole("complementary", { name: "Assets" });
-  const record = rail.parentElement?.querySelector(
-    '[data-slot="master-detail-record-pane"]',
-  );
+  const record = rail.parentElement?.querySelector('[data-slot="master-detail-record-pane"]');
   return { rail, record };
 }
 
 describe("MasterDetailLayout", () => {
   it("shows only the list on a phone at the index address, and both panes on desktop", () => {
     render(
-      <MasterDetailLayout
-        label="Assets"
-        selected={false}
-        listSearch={{}}
-        rail={<p>rows</p>}
-      >
+      <MasterDetailLayout label="Assets" selected={false} listSearch={{}} rail={<p>rows</p>}>
         <MasterDetailNoSelection />
       </MasterDetailLayout>,
     );
@@ -44,12 +33,7 @@ describe("MasterDetailLayout", () => {
 
   it("shows only the record on a phone once the address names one", () => {
     render(
-      <MasterDetailLayout
-        label="Assets"
-        selected
-        listSearch={{}}
-        rail={<p>rows</p>}
-      >
+      <MasterDetailLayout label="Assets" selected listSearch={{}} rail={<p>rows</p>}>
         <p>record</p>
       </MasterDetailLayout>,
     );
@@ -61,12 +45,7 @@ describe("MasterDetailLayout", () => {
 
   it("fills the space the workspace shell leaves it instead of sizing itself to the viewport", () => {
     const { container } = render(
-      <MasterDetailLayout
-        label="Assets"
-        selected={false}
-        listSearch={{}}
-        rail={<p>rows</p>}
-      >
+      <MasterDetailLayout label="Assets" selected={false} listSearch={{}} rail={<p>rows</p>}>
         <p>record</p>
       </MasterDetailLayout>,
     );
@@ -87,38 +66,22 @@ describe("MasterDetailLayout", () => {
 
   it("gives the rail the sidebar's 18rem column on desktop", () => {
     const { container } = render(
-      <MasterDetailLayout
-        label="Assets"
-        selected={false}
-        listSearch={{}}
-        rail={<p>rows</p>}
-      >
+      <MasterDetailLayout label="Assets" selected={false} listSearch={{}} rail={<p>rows</p>}>
         <p>record</p>
       </MasterDetailLayout>,
     );
     const frame = container.querySelector('[data-slot="master-detail"]');
-    expect(frame?.className.split(" ")).toContain(
-      "lg:grid-cols-[18rem_minmax(0,1fr)]",
-    );
+    expect(frame?.className.split(" ")).toContain("lg:grid-cols-[18rem_minmax(0,1fr)]");
   });
 
   it("asks the shell for the whole viewport, with the record pane scrolling on a phone too", () => {
     for (const selected of [false, true]) {
       const { container, unmount } = render(
-        <MasterDetailLayout
-          label="Assets"
-          selected={selected}
-          listSearch={{}}
-          rail={<p>rows</p>}
-        >
+        <MasterDetailLayout label="Assets" selected={selected} listSearch={{}} rail={<p>rows</p>}>
           <p>record</p>
         </MasterDetailLayout>,
       );
-      expect(
-        container
-          .querySelector('[data-slot="master-detail"]')
-          ?.hasAttribute("data-fills-viewport"),
-      ).toBe(true);
+      expect(container.querySelector('[data-slot="master-detail"]')?.hasAttribute("data-fills-viewport")).toBe(true);
       expect(panes().record?.className.split(" ")).toEqual(
         expect.arrayContaining(["flex-1", "overflow-y-auto", "p-4"]),
       );
@@ -129,12 +92,7 @@ describe("MasterDetailLayout", () => {
   it("tells the record pane's children they are inside it", () => {
     render(
       <>
-        <MasterDetailLayout
-          label="Assets"
-          selected
-          listSearch={{}}
-          rail={<PaneProbe />}
-        >
+        <MasterDetailLayout label="Assets" selected listSearch={{}} rail={<PaneProbe />}>
           <PaneProbe />
         </MasterDetailLayout>
         <PaneProbe />

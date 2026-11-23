@@ -44,9 +44,7 @@ describe("importNxTestingWorkspace", () => {
         },
       ],
     });
-    expect(
-      result.report.tasks.map((task) => [task.target, task.classification]),
-    ).toEqual([
+    expect(result.report.tasks.map((task) => [task.target, task.classification])).toEqual([
       ["lint", "native-adapter-needed"],
       ["shell", "opaque"],
       ["test", "converted"],
@@ -58,16 +56,9 @@ describe("importNxTestingWorkspace", () => {
       expectedGitSha: fixtureSha,
       resolvedGitSha: fixtureSha,
     });
-    expect(result.report.nx.plugins).toEqual([
-      "@nx/eslint/plugin",
-      "@nx/vite/plugin",
-    ]);
-    expect(JSON.parse(await readFile(result.manifestPath, "utf8"))).toEqual(
-      result.manifest,
-    );
-    expect(JSON.parse(await readFile(result.reportPath, "utf8"))).toEqual(
-      result.report,
-    );
+    expect(result.report.nx.plugins).toEqual(["@nx/eslint/plugin", "@nx/vite/plugin"]);
+    expect(JSON.parse(await readFile(result.manifestPath, "utf8"))).toEqual(result.manifest);
+    expect(JSON.parse(await readFile(result.reportPath, "utf8"))).toEqual(result.report);
   });
 
   it("refuses a dirty source workspace before querying Nx", async () => {
@@ -93,13 +84,10 @@ describe("importNxTestingWorkspace", () => {
   it("refuses a caller snapshot that differs from clean HEAD before querying Nx", async () => {
     const workspaceRoot = await createWorkspace();
     const runner: NxCommandRunner = ({ executable, args }) => {
-      if (executable === "git" && args[0] === "status")
-        return Promise.resolve({ stdout: "", stderr: "" });
+      if (executable === "git" && args[0] === "status") return Promise.resolve({ stdout: "", stderr: "" });
       if (executable === "git" && args[0] === "rev-parse")
         return Promise.resolve({ stdout: `${fixtureSha}\n`, stderr: "" });
-      throw new Error(
-        "Nx must not be queried for a mismatched source snapshot.",
-      );
+      throw new Error("Nx must not be queried for a mismatched source snapshot.");
     };
 
     await expect(
@@ -121,9 +109,7 @@ describe("importNxTestingWorkspace", () => {
 
     const written = await readFile(result.manifestPath);
 
-    expect(result.report.importer.manifestChecksum).toBe(
-      createHash("sha256").update(written).digest("hex"),
-    );
+    expect(result.report.importer.manifestChecksum).toBe(createHash("sha256").update(written).digest("hex"));
   });
 
   it("leaves the unsupported-graph report behind when Nx cannot produce a graph", async () => {
@@ -135,9 +121,7 @@ describe("importNxTestingWorkspace", () => {
         expectedGitSha: fixtureSha,
         runner: nxFixtureRunner(workspaceRoot, { graphFails: true }),
       }),
-    ).rejects.toThrow(
-      "Unsupported Nx interface: could not collect a machine-readable project graph",
-    );
+    ).rejects.toThrow("Unsupported Nx interface: could not collect a machine-readable project graph");
 
     const report = await readReport(workspaceRoot);
     expect(report.importer.manifestChecksum).toBeNull();
@@ -145,9 +129,7 @@ describe("importNxTestingWorkspace", () => {
     expect(report.failures).toHaveLength(1);
     expect(report.failures[0]?.stage).toBe("graph");
     expect(report.failures[0]?.subject).toBe("nx graph --file");
-    expect(report.failures[0]?.message).toContain(
-      "could not collect a machine-readable project graph",
-    );
+    expect(report.failures[0]?.message).toContain("could not collect a machine-readable project graph");
     await expect(readManifest(workspaceRoot)).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -175,16 +157,12 @@ describe("importNxTestingWorkspace", () => {
     const report = await readReport(workspaceRoot);
     expect(report.importer.manifestChecksum).toBeNull();
     expect(report.nx.projectGraph).toEqual(unsupported);
-    expect(report.nx.resolvedProjects.map((entry) => entry.name)).toEqual([
-      "app",
-      "util",
-    ]);
+    expect(report.nx.resolvedProjects.map((entry) => entry.name)).toEqual(["app", "util"]);
     expect(report.failures).toEqual([
       {
         stage: "graph",
         subject: "nx graph --file",
-        message:
-          "Unsupported Nx graph shape: dependency edge for app does not declare matching source and target.",
+        message: "Unsupported Nx graph shape: dependency edge for app does not declare matching source and target.",
       },
     ]);
     await expect(readManifest(workspaceRoot)).rejects.toMatchObject({
@@ -211,9 +189,7 @@ describe("importNxTestingWorkspace", () => {
         expectedGitSha: fixtureSha,
         runner: nxFixtureRunner(workspaceRoot, { app: onlyOpaque }),
       }),
-    ).rejects.toThrow(
-      "No standalone Nx tasks were convertible; see dads.testing.import-report.json.",
-    );
+    ).rejects.toThrow("No standalone Nx tasks were convertible; see dads.testing.import-report.json.");
 
     const report = await readReport(workspaceRoot);
     expect(report.importer.manifestChecksum).toBeNull();
@@ -236,13 +212,9 @@ describe("importNxTestingWorkspace", () => {
 });
 
 async function readReport(workspaceRoot: string): Promise<NxImportReport> {
-  const contents = await readFile(
-    path.join(workspaceRoot, "dads.testing.import-report.json"),
-    "utf8",
-  );
+  const contents = await readFile(path.join(workspaceRoot, "dads.testing.import-report.json"), "utf8");
   const parsed: unknown = JSON.parse(contents);
-  if (!isImportReport(parsed))
-    throw new Error("The import report is not the shape this package writes.");
+  if (!isImportReport(parsed)) throw new Error("The import report is not the shape this package writes.");
   return parsed;
 }
 
@@ -255,9 +227,7 @@ async function readManifest(workspaceRoot: string): Promise<string> {
 }
 
 async function createWorkspace(): Promise<string> {
-  const workspaceRoot = await mkdtemp(
-    path.join(tmpdir(), "dads-testing-import-nx-"),
-  );
+  const workspaceRoot = await mkdtemp(path.join(tmpdir(), "dads-testing-import-nx-"));
   await mkdir(path.join(workspaceRoot, "node_modules/nx/bin"), {
     recursive: true,
   });
@@ -267,18 +237,9 @@ async function createWorkspace(): Promise<string> {
   );
   await mkdir(path.join(workspaceRoot, "apps/app"), { recursive: true });
   await mkdir(path.join(workspaceRoot, "libs/util"), { recursive: true });
-  await writeFile(
-    path.join(workspaceRoot, "node_modules/nx/bin/nx.js"),
-    "// fixture local Nx CLI\n",
-  );
-  await writeFile(
-    path.join(workspaceRoot, "package-lock.json"),
-    '{"lockfileVersion":3}\n',
-  );
-  await writeFile(
-    path.join(workspaceRoot, "package.json"),
-    '{"name":"fixture"}\n',
-  );
+  await writeFile(path.join(workspaceRoot, "node_modules/nx/bin/nx.js"), "// fixture local Nx CLI\n");
+  await writeFile(path.join(workspaceRoot, "package-lock.json"), '{"lockfileVersion":3}\n');
+  await writeFile(path.join(workspaceRoot, "package.json"), '{"name":"fixture"}\n');
   await writeFile(
     path.join(workspaceRoot, "nx.json"),
     '{"plugins":["@nx/vite/plugin",{"plugin":"@nx/eslint/plugin","options":{"quiet":true}}]}\n',
@@ -297,46 +258,32 @@ type FixtureOverrides = {
   readonly app?: object;
 };
 
-function nxFixtureRunner(
-  workspaceRoot: string,
-  overrides: FixtureOverrides = {},
-): NxCommandRunner {
+function nxFixtureRunner(workspaceRoot: string, overrides: FixtureOverrides = {}): NxCommandRunner {
   return async ({ executable, args, cwd }) => {
-    if (executable === "git" && args[0] === "status")
-      return { stdout: "", stderr: "" };
-    if (executable === "git" && args[0] === "rev-parse")
-      return { stdout: `${fixtureSha}\n`, stderr: "" };
+    if (executable === "git" && args[0] === "status") return { stdout: "", stderr: "" };
+    if (executable === "git" && args[0] === "rev-parse") return { stdout: `${fixtureSha}\n`, stderr: "" };
     if (executable === "npm") return { stdout: "11.19.0\n", stderr: "" };
     if (args[0] === "--version") return { stdout: "v22.20.0\n", stderr: "" };
     if (args[1] === "--version") return { stdout: "Nx: 21.0.0\n", stderr: "" };
-    if (args.includes("show") && args.includes("projects"))
-      return { stdout: '["app","util"]\n', stderr: "" };
+    if (args.includes("show") && args.includes("projects")) return { stdout: '["app","util"]\n', stderr: "" };
     if (args.includes("show") && args.includes("project"))
       return {
         stdout: JSON.stringify(
-          args.includes("app")
-            ? (overrides.app ?? appProjectDefinition())
-            : utilProjectDefinition(),
+          args.includes("app") ? (overrides.app ?? appProjectDefinition()) : utilProjectDefinition(),
         ),
         stderr: "",
       };
     if (args.includes("graph")) {
-      if (overrides.graphFails === true)
-        throw new Error("nx graph exited 1: daemon unavailable");
-      const destination = args.find((argument) =>
-        argument.startsWith("--file="),
-      );
-      if (!destination)
-        throw new Error("Fixture graph command was missing --file.");
+      if (overrides.graphFails === true) throw new Error("nx graph exited 1: daemon unavailable");
+      const destination = args.find((argument) => argument.startsWith("--file="));
+      if (!destination) throw new Error("Fixture graph command was missing --file.");
       await writeFile(
         path.join(cwd, destination.slice("--file=".length)),
         JSON.stringify(overrides.graph ?? supportedGraph()),
       );
       return { stdout: "", stderr: "" };
     }
-    throw new Error(
-      `Unexpected fixture command ${executable} ${args.join(" ")} in ${cwd}; expected ${workspaceRoot}.`,
-    );
+    throw new Error(`Unexpected fixture command ${executable} ${args.join(" ")} in ${cwd}; expected ${workspaceRoot}.`);
   };
 }
 

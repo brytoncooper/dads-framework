@@ -11,16 +11,8 @@ import { isHardcodedCopy, renderedCopySpans } from "./rendered-copy.js";
 import { ts } from "./typescript-program.js";
 
 function spansOf(text: string): readonly string[] {
-  const source = ts.createSourceFile(
-    "view.tsx",
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  return renderedCopySpans(source).map(
-    (span) => `${span.seam}: ${span.text.replace(/\s+/g, " ").trim()}`,
-  );
+  const source = ts.createSourceFile("view.tsx", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  return renderedCopySpans(source).map((span) => `${span.seam}: ${span.text.replace(/\s+/g, " ").trim()}`);
 }
 
 describe("rendered copy", () => {
@@ -48,13 +40,7 @@ describe("rendered copy", () => {
   it("counts words and leaves data alone", () => {
     expect(isHardcodedCopy("No orders yet")).toBe(true);
     expect(isHardcodedCopy("Save")).toBe(true);
-    for (const data of [
-      "orders.empty.title",
-      "primary",
-      "NOT_FOUND",
-      "/orders",
-      "42",
-    ]) {
+    for (const data of ["orders.empty.title", "primary", "NOT_FOUND", "/orders", "42"]) {
       expect({ data, copy: isHardcodedCopy(data) }).toStrictEqual({
         data,
         copy: false,

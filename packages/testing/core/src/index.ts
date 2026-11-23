@@ -10,11 +10,7 @@ export {
   type TestingTaskOutput,
   type TestingTaskRunResult,
 } from "./testing-api.js";
-export {
-  listDadTestCommands,
-  runDadTestCli,
-  type DadTestCliIo,
-} from "./dad-test-cli.js";
+export { listDadTestCommands, runDadTestCli, type DadTestCliIo } from "./dad-test-cli.js";
 export {
   parseTestingManifest,
   readTestingManifest,
@@ -24,11 +20,7 @@ export {
   type TestingManifestTask,
 } from "./testing-manifest.js";
 export { owningProjectForPath, pathIsInside } from "./path-ownership.js";
-export {
-  formatIssueLocation,
-  issueScope,
-  issueSeverity,
-} from "./plan-issues.js";
+export { formatIssueLocation, issueScope, issueSeverity } from "./plan-issues.js";
 export { writeFilesAtomically } from "./write-files-atomically.js";
 export {
   explainPlan,
@@ -39,11 +31,7 @@ export {
   type ExplanationCause,
   type PlanExplanation,
 } from "./explain-plan.js";
-export {
-  buildTestingReport,
-  type ReportIssue,
-  type TestingReport,
-} from "./testing-report.js";
+export { buildTestingReport, type ReportIssue, type TestingReport } from "./testing-report.js";
 export {
   initTestingManifest,
   type InitTestingManifestOptions,
@@ -56,7 +44,4 @@ export {
   type InitUnsupported,
 } from "./init/infer-testing-manifest.js";
 export { checkTestingManifest } from "./init/check-testing-manifest.js";
-export {
-  detectWorkspace,
-  type DetectedWorkspace,
-} from "./init/detect-workspace.js";
+export { detectWorkspace, type DetectedWorkspace } from "./init/detect-workspace.js";

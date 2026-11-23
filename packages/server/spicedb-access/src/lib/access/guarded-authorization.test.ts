@@ -65,19 +65,9 @@ function guardedWith(count: number) {
     "test/unlisted": { view: ["viewer"] },
   });
   for (let index = 0; index < count; index += 1) {
-    fake.seed(
-      relationshipWrite(
-        { type: "test/machine", id: `m-${index}` },
-        "viewer",
-        user,
-      ),
-    );
+    fake.seed(relationshipWrite({ type: "test/machine", id: `m-${index}` }, "viewer", user));
   }
-  return new GuardedAuthorization(
-    new TalliedAuthorization(fake),
-    marks,
-    policy,
-  );
+  return new GuardedAuthorization(new TalliedAuthorization(fake), marks, policy);
 }
 
 const machines = {
@@ -101,9 +91,7 @@ describe("GuardedAuthorization record lookups", () => {
         resourceType: "test/ticket",
         permission: "view",
       }),
-    ).rejects.toThrow(
-      "lookupResources on test/ticket#view refused: test/ticket is not in allowLookupResourcesOn",
-    );
+    ).rejects.toThrow("lookupResources on test/ticket#view refused: test/ticket is not in allowLookupResourcesOn");
     await expect(
       guardedWith(0).lookupResources({
         subject: user,
@@ -139,24 +127,19 @@ describe("GuardedAuthorization record lookups", () => {
 
 describe("GuardedAuthorization size marks", () => {
   it("keeps the largest lookup on the request and notes nothing at the mark", async () => {
-    const { tally } = await measureWork(() =>
-      guardedWith(3).lookupResources(machines),
-    );
+    const { tally } = await measureWork(() => guardedWith(3).lookupResources(machines));
     expect(tally.authzLargestLookupCount).toBe(3);
     expect(tally.authzWarning).toBeUndefined();
   });
 
   it("succeeds past the warning mark and notes a fault naming type, permission and count", async () => {
-    const { result, tally } = await measureWork(() =>
-      guardedWith(4).lookupResources(machines),
-    );
+    const { result, tally } = await measureWork(() => guardedWith(4).lookupResources(machines));
     expect(result).toHaveLength(4);
     expect(tally.authzLargestLookupCount).toBe(4);
     expect(tally.authzWarning).toEqual({
       type: "AuthorizationLookupOverWarningMark",
       fingerprint: "authz.lookup-size:test/machine#view",
-      detail:
-        "lookupResources on test/machine#view for a user returned 4 ids, over the 3 mark (AUTHZ_LOOKUP_WARN_IDS)",
+      detail: "lookupResources on test/machine#view for a user returned 4 ids, over the 3 mark (AUTHZ_LOOKUP_WARN_IDS)",
     });
   });
 
@@ -178,22 +161,15 @@ describe("GuardedAuthorization size marks", () => {
 
   it("refuses marks that are out of order or past Postgres's parameter limit", () => {
     const fake = new FakeAuthorization();
-    expect(
-      () =>
-        new GuardedAuthorization(fake, { ...marks, warnLookupIds: 6 }, policy),
-    ).toThrow("must be below maxLookupIds");
-    expect(
-      () =>
-        new GuardedAuthorization(
-          fake,
-          { ...marks, maxLookupIds: 70_000 },
-          policy,
-        ),
-    ).toThrow("must stay below Postgres's 65535-parameter limit");
-    expect(
-      () =>
-        new GuardedAuthorization(fake, { ...marks, warnRoundTrips: 0 }, policy),
-    ).toThrow("warnRoundTrips must be a positive integer");
+    expect(() => new GuardedAuthorization(fake, { ...marks, warnLookupIds: 6 }, policy)).toThrow(
+      "must be below maxLookupIds",
+    );
+    expect(() => new GuardedAuthorization(fake, { ...marks, maxLookupIds: 70_000 }, policy)).toThrow(
+      "must stay below Postgres's 65535-parameter limit",
+    );
+    expect(() => new GuardedAuthorization(fake, { ...marks, warnRoundTrips: 0 }, policy)).toThrow(
+      "warnRoundTrips must be a positive integer",
+    );
   });
 });
 
@@ -222,8 +198,7 @@ describe("GuardedAuthorization round-trip budget", () => {
     expect(tally.authzWarning).toEqual({
       type: "AuthorizationRoundTripsOverBudget",
       fingerprint: "authz.round-trips",
-      detail:
-        "request made more than 4 authorization round trips (AUTHZ_ROUND_TRIPS_WARN)",
+      detail: "request made more than 4 authorization round trips (AUTHZ_ROUND_TRIPS_WARN)",
     });
   });
 });

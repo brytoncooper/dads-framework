@@ -39,9 +39,7 @@ export const jobQueueConformance: readonly JobQueueConformanceCase[] = [
         queue.register([job]);
       }, /already|duplicate/i);
       const inspection = await queue.inspect();
-      deepEqual(inspection.jobs, [
-        { name: job.name, retry: job.retry, schedules: [] },
-      ]);
+      deepEqual(inspection.jobs, [{ name: job.name, retry: job.retry, schedules: [] }]);
     },
   },
   {
@@ -50,10 +48,7 @@ export const jobQueueConformance: readonly JobQueueConformanceCase[] = [
       const job = exampleJob(() => Promise.reject(new Error("Unexpected job")));
       queue.register([job]);
 
-      await rejects(
-        async () => queue.enqueue("unknown", "payload"),
-        /No handler registered/,
-      );
+      await rejects(async () => queue.enqueue("unknown", "payload"), /No handler registered/);
     },
   },
   {

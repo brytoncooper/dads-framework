@@ -8,9 +8,7 @@ function objectValue(value: unknown): value is Record<string, unknown> {
 const failureStatuses = [404, 409, 503];
 
 function workbenchFailure(status: number) {
-  const errors = workbenchRouteErrors.filter(
-    (error) => error.status === status,
-  );
+  const errors = workbenchRouteErrors.filter((error) => error.status === status);
   return {
     description: errors.map(({ description }) => description).join(" "),
     content: {
@@ -48,19 +46,15 @@ export function workbenchOpenApi(routes: readonly HttpRoute[]) {
     title: "Dads workbench API",
     description: "Workspace membership and task workflows.",
     version: "0.1.0",
-    tags: [
-      { name: "Workbench", description: "Workspace and task operations." },
-    ],
+    tags: [{ name: "Workbench", description: "Workspace and task operations." }],
     pathPrefix: "",
   });
   const paths = document["paths"];
-  if (!objectValue(paths))
-    throw new Error("Workbench OpenAPI paths are missing.");
+  if (!objectValue(paths)) throw new Error("Workbench OpenAPI paths are missing.");
   for (const path of Object.values(paths)) {
     if (!objectValue(path)) continue;
     for (const operation of Object.values(path)) {
-      if (!objectValue(operation) || !objectValue(operation["responses"]))
-        continue;
+      if (!objectValue(operation) || !objectValue(operation["responses"])) continue;
       for (const status of failureStatuses) {
         operation["responses"][String(status)] = workbenchFailure(status);
       }

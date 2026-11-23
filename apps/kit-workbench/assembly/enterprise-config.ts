@@ -2,10 +2,7 @@ import type { EnterpriseSsoProvider } from "@dads-framework/identity/better-auth
 import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
-import {
-  staffImpersonationConfiguration,
-  type StaffImpersonationConfiguration,
-} from "../domains/support/index.js";
+import { staffImpersonationConfiguration, type StaffImpersonationConfiguration } from "../domains/support/index.js";
 
 const provider = z.strictObject({
   id: z.string(),
@@ -24,9 +21,7 @@ const providers = z
         authorizationEndpoint: z.url(),
         tokenEndpoint: z.url(),
         jwksEndpoint: z.url(),
-        tokenEndpointAuthentication: z
-          .enum(["client_secret_basic", "client_secret_post"])
-          .optional(),
+        tokenEndpointAuthentication: z.enum(["client_secret_basic", "client_secret_post"]).optional(),
       }),
       provider.extend({
         protocol: z.literal("saml"),
@@ -51,34 +46,24 @@ export type EnterpriseConfiguration = {
   readonly staffImpersonation?: StaffImpersonationConfiguration;
 };
 
-export function readEnterpriseConfiguration(
-  source: NodeJS.ProcessEnv,
-): EnterpriseConfiguration {
-  const ssoProviders = readSetting(
-    source,
-    "DADS_ENTERPRISE_SSO_PROVIDERS",
-    providers,
-  )?.map((entry): EnterpriseSsoProvider => {
-    if (entry.protocol === "oidc") {
-      const { tokenEndpointAuthentication, ...config } = entry;
+export function readEnterpriseConfiguration(source: NodeJS.ProcessEnv): EnterpriseConfiguration {
+  const ssoProviders = readSetting(source, "DADS_ENTERPRISE_SSO_PROVIDERS", providers)?.map(
+    (entry): EnterpriseSsoProvider => {
+      if (entry.protocol === "oidc") {
+        const { tokenEndpointAuthentication, ...config } = entry;
+        return {
+          ...config,
+          ...(tokenEndpointAuthentication === undefined ? {} : { tokenEndpointAuthentication }),
+        };
+      }
+      const { emailAttribute, ...config } = entry;
       return {
         ...config,
-        ...(tokenEndpointAuthentication === undefined
-          ? {}
-          : { tokenEndpointAuthentication }),
+        ...(emailAttribute === undefined ? {} : { emailAttribute }),
       };
-    }
-    const { emailAttribute, ...config } = entry;
-    return {
-      ...config,
-      ...(emailAttribute === undefined ? {} : { emailAttribute }),
-    };
-  });
-  const scimConfig = readSetting(
-    source,
-    "DADS_ENTERPRISE_SCIM",
-    z.array(scim).min(1),
+    },
   );
+  const scimConfig = readSetting(source, "DADS_ENTERPRISE_SCIM", z.array(scim).min(1));
   const staffImpersonation = readSetting(
     source,
     "DADS_ENTERPRISE_STAFF_IMPERSONATION",
@@ -91,11 +76,7 @@ export function readEnterpriseConfiguration(
   };
 }
 
-function readSetting<Value>(
-  source: NodeJS.ProcessEnv,
-  key: string,
-  schema: z.ZodType<Value>,
-): Value | undefined {
+function readSetting<Value>(source: NodeJS.ProcessEnv, key: string, schema: z.ZodType<Value>): Value | undefined {
   const raw = source[key];
   if (raw === undefined) return undefined;
   try {

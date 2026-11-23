@@ -13,9 +13,7 @@ export function refuseDuplicates(what: string, claims: readonly Claim[]): void {
   for (const claim of claims) {
     const owner = owners.get(claim.key);
     if (owner !== undefined) {
-      throw new PluginCompositionError(
-        `${what} ${claim.key} is contributed by both ${owner} and ${claim.pluginName}`,
-      );
+      throw new PluginCompositionError(`${what} ${claim.key} is contributed by both ${owner} and ${claim.pluginName}`);
     }
     owners.set(claim.key, claim.pluginName);
   }

@@ -1,18 +1,11 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  truncateAuditLog,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, truncateAuditLog, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { makeAuditLog } from "../../../testing/audit-log.factory.js";
 import { auditLog } from "../generated-tables/audit-log.tables.js";
-import type {
-  AuditLogRecord,
-  AuditLogScope,
-} from "./audit-log-reader.interface.js";
+import type { AuditLogRecord, AuditLogScope } from "./audit-log-reader.interface.js";
 import { DrizzleAuditLogReader } from "./drizzle-audit-log-reader.js";
 
 const WORKSPACE_A = "0192a3b4-0000-7000-8000-00000000000a";
@@ -43,15 +36,12 @@ describe("DrizzleAuditLogReader keyset reads", () => {
   });
 
   /** Rows inserted as the trigger would write them, at chosen instants. */
-  async function seed(
-    rows: readonly Parameters<typeof makeAuditLog>[0][],
-  ): Promise<void> {
+  async function seed(rows: readonly Parameters<typeof makeAuditLog>[0][]): Promise<void> {
     await db.insert(auditLog).values(rows.map((row) => makeAuditLog(row)));
   }
 
   const at = (iso: string) => new Date(iso);
-  const requestsOf = (rows: readonly AuditLogRecord[]) =>
-    rows.map((row) => row.requestId);
+  const requestsOf = (rows: readonly AuditLogRecord[]) => rows.map((row) => row.requestId);
 
   it("lists newest first and resumes strictly after the cursor", async () => {
     await seed([
@@ -63,12 +53,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
     const first = await reader.listRows({ kind: "platform" }, {}, null, 2);
     const last = first.at(-1);
     if (last === undefined) throw new Error("expected a first page");
-    const second = await reader.listRows(
-      { kind: "platform" },
-      {},
-      last.cursor,
-      2,
-    );
+    const second = await reader.listRows({ kind: "platform" }, {}, last.cursor, 2);
 
     expect(requestsOf(first)).toEqual(["newest", "middle"]);
     expect(requestsOf(second)).toEqual(["oldest"]);
@@ -122,12 +107,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       { requestId: "no-scope" },
     ]);
 
-    const company = await reader.listRows(
-      { kind: "application", values: { workspace: WORKSPACE_A } },
-      {},
-      null,
-      10,
-    );
+    const company = await reader.listRows({ kind: "application", values: { workspace: WORKSPACE_A } }, {}, null, 10);
     const atPlant = await reader.listRows(
       {
         kind: "application",
@@ -138,11 +118,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       10,
     );
 
-    expect(requestsOf(company).sort()).toEqual([
-      "a-company",
-      "a-plant-1",
-      "a-plant-2",
-    ]);
+    expect(requestsOf(company).sort()).toEqual(["a-company", "a-plant-1", "a-plant-2"]);
     expect(requestsOf(atPlant)).toEqual(["a-plant-1"]);
   });
 
@@ -153,12 +129,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       { requestId: "company", scopeValues: { workspace: WORKSPACE_A } },
     ]);
 
-    const rows = await reader.listRows(
-      { kind: "application", values: { group: GROUP_A1 } },
-      {},
-      null,
-      10,
-    );
+    const rows = await reader.listRows({ kind: "application", values: { group: GROUP_A1 } }, {}, null, 10);
 
     expect(requestsOf(rows)).toEqual(["plant-1"]);
   });
@@ -170,18 +141,8 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       { requestId: "none" },
     ]);
 
-    const everything = await reader.listRows(
-      { kind: "platform" },
-      {},
-      null,
-      10,
-    );
-    const companyB = await reader.listRows(
-      { kind: "application", values: { workspace: WORKSPACE_B } },
-      {},
-      null,
-      10,
-    );
+    const everything = await reader.listRows({ kind: "platform" }, {}, null, 10);
+    const companyB = await reader.listRows({ kind: "application", values: { workspace: WORKSPACE_B } }, {}, null, 10);
 
     expect(requestsOf(everything).sort()).toEqual(["a", "b", "none"]);
     expect(requestsOf(companyB)).toEqual(["b"]);
@@ -217,18 +178,8 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       { requestId: "device", actorKind: "device" },
     ]);
 
-    const alice = await reader.listRows(
-      { kind: "platform" },
-      { userId: "alice" },
-      null,
-      10,
-    );
-    const devices = await reader.listRows(
-      { kind: "platform" },
-      { actorKinds: ["device"] },
-      null,
-      10,
-    );
+    const alice = await reader.listRows({ kind: "platform" }, { userId: "alice" }, null, 10);
+    const devices = await reader.listRows({ kind: "platform" }, { actorKinds: ["device"] }, null, 10);
 
     expect(requestsOf(alice).sort()).toEqual(["alice", "alice-for-company"]);
     expect(requestsOf(devices)).toEqual(["device"]);
@@ -241,12 +192,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       { requestId: "flags", tableName: "feature_flags" },
     ]);
 
-    const included = await reader.listRows(
-      { kind: "platform" },
-      { tableNames: ["orders", "order_lines"] },
-      null,
-      10,
-    );
+    const included = await reader.listRows({ kind: "platform" }, { tableNames: ["orders", "order_lines"] }, null, 10);
     const excluded = await reader.listRows(
       { kind: "platform" },
       { excludeTableNames: ["orders", "order_lines"] },
@@ -304,13 +250,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
         scopeValues: { workspace: WORKSPACE_B },
       },
     ]);
-    const expected = [
-      "order-same-3",
-      "line-same-2",
-      "order-same-1",
-      "line-mid",
-      "order-old",
-    ];
+    const expected = ["order-same-3", "line-same-2", "order-same-1", "line-mid", "order-old"];
 
     const scopes: readonly AuditLogScope[] = [
       { kind: "application", values: { workspace: WORKSPACE_A } },
@@ -368,10 +308,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
     if (first === undefined) throw new Error("expected the request's rows");
     const single = await reader.rowAt(first.position);
 
-    expect(request.map((row) => row.tableName)).toEqual([
-      "orders",
-      "order_lines",
-    ]);
+    expect(request.map((row) => row.tableName)).toEqual(["orders", "order_lines"]);
     expect(single?.requestId).toBe("shared");
     expect(single?.tableName).toBe("orders");
   });
@@ -391,27 +328,14 @@ describe("DrizzleAuditLogReader keyset reads", () => {
       { requestId: "other", tableName: "orders" },
     ]);
 
-    const rest = await reader.listRows(
-      { kind: "platform" },
-      { excludeRequestId: "bulk" },
-      null,
-      10,
-    );
+    const rest = await reader.listRows({ kind: "platform" }, { excludeRequestId: "bulk" }, null, 10);
 
     expect(requestsOf(rest)).toEqual(["other"]);
+    expect(await reader.countRecordsForRequest({ kind: "platform" }, "bulk", {})).toBe(4);
     expect(
-      await reader.countRecordsForRequest({ kind: "platform" }, "bulk", {}),
-    ).toBe(4);
-    expect(
-      await reader.countRecordsForRequest(
-        { kind: "application", values: { workspace: WORKSPACE_A } },
-        "bulk",
-        {},
-      ),
+      await reader.countRecordsForRequest({ kind: "application", values: { workspace: WORKSPACE_A } }, "bulk", {}),
     ).toBe(1);
-    expect(
-      await reader.countRecordsForRequest({ kind: "platform" }, "nobody", {}),
-    ).toBe(0);
+    expect(await reader.countRecordsForRequest({ kind: "platform" }, "nobody", {})).toBe(0);
   });
 
   it("leaves out an update that changed none of its table's shown columns, and pages past it", async () => {
@@ -464,12 +388,7 @@ describe("DrizzleAuditLogReader keyset reads", () => {
     const first = await reader.listRows({ kind: "platform" }, filter, null, 1);
     const firstRow = first.at(-1);
     if (firstRow === undefined) throw new Error("expected a first page");
-    const second = await reader.listRows(
-      { kind: "platform" },
-      filter,
-      firstRow.cursor,
-      1,
-    );
+    const second = await reader.listRows({ kind: "platform" }, filter, firstRow.cursor, 1);
 
     expect(requestsOf(all)).toEqual(["other-table", "status-moved", "created"]);
     expect(requestsOf(first)).toEqual(["other-table"]);
@@ -508,31 +427,17 @@ describe("DrizzleAuditLogReader keyset reads", () => {
     ]);
     const filter = { shownUpdateColumns: { orders: ["status", "name"] } };
 
-    const listed = await reader.listRows(
-      { kind: "platform" },
-      filter,
-      null,
-      10,
-    );
-    const counted = await reader.countRecordsForRequest(
-      { kind: "platform" },
-      "bulk",
-      filter,
-    );
+    const listed = await reader.listRows({ kind: "platform" }, filter, null, 10);
+    const counted = await reader.countRecordsForRequest({ kind: "platform" }, "bulk", filter);
 
     // o2 changed only updated_at, so neither the page nor the count has it.
     expect(counted).toBe(3);
     expect(counted).toBe(listed.length);
-    expect(
-      await reader.countRecordsForRequest({ kind: "platform" }, "bulk", {}),
-    ).toBe(4);
+    expect(await reader.countRecordsForRequest({ kind: "platform" }, "bulk", {})).toBe(4);
   });
 
   it("answers null for a position no row holds", async () => {
-    const [row] = await db
-      .insert(auditLog)
-      .values(makeAuditLog())
-      .returning({ position: auditLog.position });
+    const [row] = await db.insert(auditLog).values(makeAuditLog()).returning({ position: auditLog.position });
     if (row === undefined) throw new Error("expected a row");
 
     expect(await reader.rowAt(row.position)).not.toBeNull();

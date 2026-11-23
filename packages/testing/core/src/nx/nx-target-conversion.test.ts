@@ -15,11 +15,7 @@ import { convertTarget } from "./nx-target-conversion.js";
 const workspaces: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    workspaces
-      .splice(0)
-      .map((root) => rm(root, { recursive: true, force: true })),
-  );
+  await Promise.all(workspaces.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 describe("convertTarget refusals", () => {
@@ -63,10 +59,7 @@ describe("convertTarget refusals", () => {
   });
 
   it("refuses a command with an unclosed quote", async () => {
-    await expectOpaque(
-      { command: "node tools/test.mjs --label 'hello world" },
-      "command contains an unclosed quote",
-    );
+    await expectOpaque({ command: "node tools/test.mjs --label 'hello world" }, "command contains an unclosed quote");
   });
 
   it("refuses a command that uses shell escapes", async () => {
@@ -88,10 +81,7 @@ describe("convertTarget refusals", () => {
       "node tools/test.mjs > out.txt",
       "node tools/test.mjs\nnode tools/lint.mjs",
     ]) {
-      await expectOpaque(
-        { command },
-        "command uses shell control syntax and cannot become standalone argv",
-      );
+      await expectOpaque({ command }, "command uses shell control syntax and cannot become standalone argv");
     }
   });
 
@@ -102,19 +92,13 @@ describe("convertTarget refusals", () => {
       "node_modules/nx/bin/nx.js run app:test",
       "./tools/nx run app:test",
     ]) {
-      await expectOpaque(
-        { command },
-        "command invokes Nx and would retain a hidden Nx runtime dependency",
-      );
+      await expectOpaque({ command }, "command invokes Nx and would retain a hidden Nx runtime dependency");
     }
   });
 
   it("refuses an empty command and a target with no resolved command at all", async () => {
     await expectOpaque({ command: "   " }, "command is empty");
-    await expectOpaque(
-      {},
-      "nx:run-commands target has no single resolved command",
-    );
+    await expectOpaque({}, "nx:run-commands target has no single resolved command");
   });
 });
 
@@ -123,9 +107,7 @@ async function convert(options: {
   readonly command?: string;
   readonly cwd?: string;
 }): Promise<Awaited<ReturnType<typeof convertTarget>>> {
-  const workspaceRoot = await mkdtemp(
-    path.join(tmpdir(), "dads-target-conversion-"),
-  );
+  const workspaceRoot = await mkdtemp(path.join(tmpdir(), "dads-target-conversion-"));
   workspaces.push(workspaceRoot);
   const project: NxProject = {
     name: "app",

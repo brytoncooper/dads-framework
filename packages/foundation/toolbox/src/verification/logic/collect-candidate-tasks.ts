@@ -34,37 +34,20 @@ export function collectCandidateTasks(
   } = {},
 ): VerificationPlan {
   const taskDependencies = addAllowedPackageDependencies(project);
-  const selection = selectTasksForChangedPaths(
-    project,
-    normalizeChangedPaths(changedPaths),
-  );
-  includeDependentTasks(
-    project.verificationPolicy.tasks,
-    taskDependencies,
-    selection.selectedTasks,
-  );
+  const selection = selectTasksForChangedPaths(project, normalizeChangedPaths(changedPaths));
+  includeDependentTasks(project.verificationPolicy.tasks, taskDependencies, selection.selectedTasks);
   includeTaskDependencies(taskDependencies, selection.selectedTasks);
 
-  const usedFullFallback =
-    selection.unknownPaths.length > 0 || options.forceFullFallback === true;
+  const usedFullFallback = selection.unknownPaths.length > 0 || options.forceFullFallback === true;
   if (usedFullFallback) {
     selectFullFallbackTasks(project, selection, options.fallbackReason);
     includeTaskDependencies(taskDependencies, selection.selectedTasks);
   }
 
   const order = orderSelectedTasks(selection.selectedTasks, taskDependencies);
-  const issues = describePlanIssues(
-    project,
-    usedFullFallback,
-    order.hasDependencyCycle,
-  );
+  const issues = describePlanIssues(project, usedFullFallback, order.hasDependencyCycle);
   return {
-    tasks: toRecommendations(
-      project,
-      order.taskIds,
-      selection,
-      taskDependencies,
-    ),
+    tasks: toRecommendations(project, order.taskIds, selection, taskDependencies),
     unownedPaths: selection.unownedPaths,
     unknownPaths: selection.unknownPaths,
     usedFullFallback,
@@ -73,17 +56,12 @@ export function collectCandidateTasks(
   };
 }
 
-function selectTasksForChangedPaths(
-  project: DadsProject,
-  changedPaths: readonly string[],
-): CandidateSelection {
+function selectTasksForChangedPaths(project: DadsProject, changedPaths: readonly string[]): CandidateSelection {
   const selectedTasks = new Map<string, SelectedTask>();
   const unownedPaths: string[] = [];
   const unknownPaths: string[] = [];
   for (const changedPath of changedPaths) {
-    const matchingTasks = project.verificationPolicy.tasks.filter((task) =>
-      taskMatchesPath(task, changedPath),
-    );
+    const matchingTasks = project.verificationPolicy.tasks.filter((task) => taskMatchesPath(task, changedPath));
     if (!findOwningPackageName(project, changedPath)) {
       unownedPaths.push(changedPath);
     }
@@ -108,12 +86,7 @@ function selectFullFallbackTasks(
       ? `The changed scope includes ${selection.unknownPaths.join(", ")}.`
       : (fallbackReason ?? "Conservative full fallback required.");
   for (const fallbackTaskId of project.verificationPolicy.fullFallbackTaskIds) {
-    selectTask(
-      selection.selectedTasks,
-      fallbackTaskId,
-      "unknown-scope",
-      reason,
-    );
+    selectTask(selection.selectedTasks, fallbackTaskId, "unknown-scope", reason);
   }
 }
 
@@ -121,10 +94,7 @@ function orderSelectedTasks(
   selectedTasks: ReadonlyMap<string, SelectedTask>,
   dependenciesByTask: ReadonlyMap<string, ReadonlySet<string>>,
 ): SelectedTaskOrder {
-  const sortedTaskIds = sortTasksByDependencies(
-    selectedTasks,
-    dependenciesByTask,
-  );
+  const sortedTaskIds = sortTasksByDependencies(selectedTasks, dependenciesByTask);
   if (sortedTaskIds === undefined) {
     return {
       taskIds: [...selectedTasks.keys()].sort(),
@@ -140,9 +110,7 @@ function toRecommendations(
   selection: CandidateSelection,
   dependenciesByTask: ReadonlyMap<string, ReadonlySet<string>>,
 ): readonly VerificationTaskRecommendation[] {
-  const taskById = new Map(
-    project.verificationPolicy.tasks.map((task) => [task.id, task]),
-  );
+  const taskById = new Map(project.verificationPolicy.tasks.map((task) => [task.id, task]));
   return taskIds.flatMap((taskId) => {
     const task = taskById.get(taskId);
     const selectedTask = selection.selectedTasks.get(taskId);
@@ -156,22 +124,14 @@ function describePlanIssues(
   usedFullFallback: boolean,
   hasDependencyCycle: boolean,
 ): readonly string[] {
-  const fallbackIsSafe =
-    !usedFullFallback ||
-    project.verificationPolicy.fullFallbackTaskIds.length > 0;
+  const fallbackIsSafe = !usedFullFallback || project.verificationPolicy.fullFallbackTaskIds.length > 0;
   return [
-    ...(hasDependencyCycle
-      ? ["The verification task graph contains a dependency cycle."]
-      : []),
-    ...(!fallbackIsSafe
-      ? ["Unknown changed paths have no configured full fallback task."]
-      : []),
+    ...(hasDependencyCycle ? ["The verification task graph contains a dependency cycle."] : []),
+    ...(!fallbackIsSafe ? ["Unknown changed paths have no configured full fallback task."] : []),
   ];
 }
 
-function addAllowedPackageDependencies(
-  project: DadsProject,
-): ReadonlyMap<string, ReadonlySet<string>> {
+function addAllowedPackageDependencies(project: DadsProject): ReadonlyMap<string, ReadonlySet<string>> {
   const tasksByPackage = new Map<string, VerificationTaskDefinition[]>();
   for (const task of project.verificationPolicy.tasks) {
     const packageTasks = tasksByPackage.get(task.packageName) ?? [];
@@ -182,12 +142,9 @@ function addAllowedPackageDependencies(
   const dependenciesByTask = new Map<string, ReadonlySet<string>>();
   for (const task of project.verificationPolicy.tasks) {
     const dependencies = new Set(task.dependsOn);
-    const owningPackage = project.packages.find(
-      (packageDeclaration) => packageDeclaration.name === task.packageName,
-    );
+    const owningPackage = project.packages.find((packageDeclaration) => packageDeclaration.name === task.packageName);
     for (const allowedDependency of owningPackage?.allowedDependencies ?? []) {
-      for (const dependencyTask of tasksByPackage.get(allowedDependency) ??
-        []) {
+      for (const dependencyTask of tasksByPackage.get(allowedDependency) ?? []) {
         dependencies.add(dependencyTask.id);
       }
     }
@@ -206,9 +163,9 @@ function includeDependentTasks(
     addedTask = false;
     for (const candidate of tasks) {
       if (selectedTasks.has(candidate.id)) continue;
-      const changedDependencies = [
-        ...(dependenciesByTask.get(candidate.id) ?? []),
-      ].filter((dependencyId) => selectedTasks.has(dependencyId));
+      const changedDependencies = [...(dependenciesByTask.get(candidate.id) ?? [])].filter((dependencyId) =>
+        selectedTasks.has(dependencyId),
+      );
       if (changedDependencies.length === 0) continue;
       selectTask(
         selectedTasks,
@@ -229,12 +186,7 @@ function includeTaskDependencies(
   while (addedTask) {
     addedTask = false;
     for (const [taskId, selectedTask] of [...selectedTasks]) {
-      const added = selectMissingDependencies(
-        dependenciesByTask,
-        selectedTasks,
-        taskId,
-        selectedTask,
-      );
+      const added = selectMissingDependencies(dependenciesByTask, selectedTasks, taskId, selectedTask);
       if (added) addedTask = true;
     }
   }
@@ -269,9 +221,7 @@ function sortTasksByDependencies(
   while (remainingTaskIds.size > 0) {
     const readyTaskIds = [...remainingTaskIds]
       .filter((taskId) =>
-        [...(dependenciesByTask.get(taskId) ?? [])].every(
-          (dependencyId) => !remainingTaskIds.has(dependencyId),
-        ),
+        [...(dependenciesByTask.get(taskId) ?? [])].every((dependencyId) => !remainingTaskIds.has(dependencyId)),
       )
       .sort();
     if (readyTaskIds.length === 0) return undefined;
@@ -304,15 +254,8 @@ function chooseMoreConservativeState(
   firstState: VerificationTaskState,
   secondState: VerificationTaskState,
 ): VerificationTaskState {
-  const priority: readonly VerificationTaskState[] = [
-    "reuse-candidate",
-    "pending-provider",
-    "run",
-    "unknown-scope",
-  ];
-  return priority.indexOf(firstState) >= priority.indexOf(secondState)
-    ? firstState
-    : secondState;
+  const priority: readonly VerificationTaskState[] = ["reuse-candidate", "pending-provider", "run", "unknown-scope"];
+  return priority.indexOf(firstState) >= priority.indexOf(secondState) ? firstState : secondState;
 }
 
 function toRecommendation(
@@ -330,33 +273,18 @@ function toRecommendation(
   };
 }
 
-function taskMatchesPath(
-  task: VerificationTaskDefinition,
-  changedPath: string,
-): boolean {
-  return [...task.sourceInputs, ...task.nonSourceInputs].some((inputPath) =>
-    pathIsInsideInput(changedPath, inputPath),
-  );
+function taskMatchesPath(task: VerificationTaskDefinition, changedPath: string): boolean {
+  return [...task.sourceInputs, ...task.nonSourceInputs].some((inputPath) => pathIsInsideInput(changedPath, inputPath));
 }
 
 function pathIsInsideInput(changedPath: string, inputPath: string): boolean {
   return changedPath === inputPath || changedPath.startsWith(`${inputPath}/`);
 }
 
-function findOwningPackageName(
-  project: DadsProject,
-  changedPath: string,
-): string | undefined {
+function findOwningPackageName(project: DadsProject, changedPath: string): string | undefined {
   return project.packages
-    .filter(
-      (candidate) =>
-        changedPath === candidate.root ||
-        changedPath.startsWith(`${candidate.root}/`),
-    )
-    .sort(
-      (firstPackage, secondPackage) =>
-        secondPackage.root.length - firstPackage.root.length,
-    )[0]?.name;
+    .filter((candidate) => changedPath === candidate.root || changedPath.startsWith(`${candidate.root}/`))
+    .sort((firstPackage, secondPackage) => secondPackage.root.length - firstPackage.root.length)[0]?.name;
 }
 
 function normalizeChangedPaths(changedPaths: readonly string[]): string[] {
@@ -365,15 +293,8 @@ function normalizeChangedPaths(changedPaths: readonly string[]): string[] {
 
 function normalizeChangedPath(changedPath: string): string {
   const normalized = posix.normalize(changedPath.replaceAll("\\", "/"));
-  if (
-    normalized === "." ||
-    normalized === ".." ||
-    normalized.startsWith("../") ||
-    normalized.startsWith("/")
-  ) {
-    throw new Error(
-      `Expected a project-relative changed path, received ${changedPath}.`,
-    );
+  if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.startsWith("/")) {
+    throw new Error(`Expected a project-relative changed path, received ${changedPath}.`);
   }
   return normalized.replace(/^\.\//, "").replace(/\/$/, "");
 }

@@ -28,10 +28,7 @@ export function MasterDetailRail({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div
-      data-slot="master-detail-rail"
-      className="flex min-h-0 min-w-0 flex-1 flex-col"
-    >
+    <div data-slot="master-detail-rail" className="flex min-h-0 min-w-0 flex-1 flex-col">
       {header}
       <div
         data-slot="master-detail-rail-controls"
@@ -59,9 +56,7 @@ export function MasterDetailRailHeader({
       className="flex min-h-12 items-center justify-between gap-2 border-b border-border px-3 py-2"
     >
       <h2 className="min-w-0 truncate font-semibold text-base">{title}</h2>
-      {actions ? (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
-      ) : null}
+      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
@@ -102,10 +97,7 @@ export function MasterDetailSortHeader({
       className="flex min-h-9 w-full cursor-pointer items-center gap-1 border-b border-border px-3 text-left font-medium text-muted-foreground text-xs uppercase tracking-wide outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
     >
       {text}
-      <Chevron
-        aria-hidden
-        className={cn("size-3.5", direction === null && "opacity-40")}
-      />
+      <Chevron aria-hidden className={cn("size-3.5", direction === null && "opacity-40")} />
     </button>
   );
 }
@@ -147,14 +139,8 @@ export function MasterDetailSegmentedFilter<TValue extends string>({
       className="w-full"
     >
       {options.map((option) => (
-        <ToggleGroupItem
-          key={option.value}
-          value={option.value}
-          className="flex-1"
-        >
-          {option.count === undefined
-            ? option.label
-            : `${option.label} (${option.count})`}
+        <ToggleGroupItem key={option.value} value={option.value} className="flex-1">
+          {option.count === undefined ? option.label : `${option.label} (${option.count})`}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>

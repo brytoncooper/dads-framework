@@ -12,10 +12,7 @@
  * declaration that cannot be checked correctly fails the BOOT of anything that
  * imports it rather than quietly reporting the wrong rows.
  */
-import type {
-  CrossDomainBrandOwner,
-  CrossDomainReference,
-} from "./cross-domain-reference.js";
+import type { CrossDomainBrandOwner, CrossDomainReference } from "./cross-domain-reference.js";
 
 /**
  * One domain's loose cross-domain references.
@@ -36,9 +33,7 @@ export function declareCrossDomainReferences(
   for (const reference of references) {
     const column = `${reference.consumerTable}.${reference.consumerColumn}`;
     const arms = references.filter(
-      (other) =>
-        other.consumerTable === reference.consumerTable &&
-        other.consumerColumn === reference.consumerColumn,
+      (other) => other.consumerTable === reference.consumerTable && other.consumerColumn === reference.consumerColumn,
     );
     if (arms.length === 1 || isNarrowed(reference)) continue;
     throw new Error(
@@ -72,28 +67,18 @@ export function declareCrossDomainBrandOwners(
   owners: readonly CrossDomainBrandOwner[],
 ): readonly CrossDomainBrandOwner[] {
   const brands = owners.map((owner) => owner.brand);
-  const duplicate = brands.find(
-    (brand, index) => brands.indexOf(brand) !== index,
-  );
+  const duplicate = brands.find((brand, index) => brands.indexOf(brand) !== index);
   if (duplicate !== undefined) {
-    throw new Error(
-      `brand \`${duplicate}\` is declared by two tables — a brand has one minting table or none`,
-    );
+    throw new Error(`brand \`${duplicate}\` is declared by two tables — a brand has one minting table or none`);
   }
   return owners;
 }
 
 function isNarrowed(reference: CrossDomainReference): boolean {
-  return (
-    (reference.filters ?? []).length > 0 ||
-    reference.discriminatedByParent !== undefined
-  );
+  return (reference.filters ?? []).length > 0 || reference.discriminatedByParent !== undefined;
 }
 
-function refuseDuplicateIds(
-  references: readonly CrossDomainReference[],
-  scope: string,
-): void {
+function refuseDuplicateIds(references: readonly CrossDomainReference[], scope: string): void {
   const ids = references.map((reference) => reference.id);
   const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
   if (duplicate !== undefined) {

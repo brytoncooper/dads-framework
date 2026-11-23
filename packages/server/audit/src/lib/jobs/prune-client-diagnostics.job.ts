@@ -1,19 +1,11 @@
 import { z } from "zod";
 
 import type { Clock } from "@dads-framework/core/runtime/clock";
-import {
-  cronSchedule,
-  defineJob,
-  type JobDefinition,
-  type JobLog,
-} from "@dads-framework/job-queue";
+import { cronSchedule, defineJob, type JobDefinition, type JobLog } from "@dads-framework/job-queue";
 
 import type { ClientDiagnosticWriter } from "../database/writers/client-diagnostic-writer.interface.js";
 
-import {
-  requirePositiveIntegerRetentionDays,
-  retentionCutoff,
-} from "./retention-window.js";
+import { requirePositiveIntegerRetentionDays, retentionCutoff } from "./retention-window.js";
 
 export const PRUNE_CLIENT_DIAGNOSTICS_JOB = "audit.prune-client-diagnostics";
 
@@ -37,9 +29,7 @@ export type CreatePruneClientDiagnosticsJobDeps = {
  * Runs an hour after the request-log sweep so the two never contend for the
  * same connections, and under the job system actor like every other job.
  */
-export function createPruneClientDiagnosticsJob(
-  deps: CreatePruneClientDiagnosticsJobDeps,
-): JobDefinition {
+export function createPruneClientDiagnosticsJob(deps: CreatePruneClientDiagnosticsJobDeps): JobDefinition {
   requirePositiveIntegerRetentionDays(deps.retentionDays);
   return defineJob({
     name: PRUNE_CLIENT_DIAGNOSTICS_JOB,
@@ -56,10 +46,7 @@ export function createPruneClientDiagnosticsJob(
     run: async () => {
       const cutoff = retentionCutoff(deps.clock.now(), deps.retentionDays);
       const deleted = await deps.writer.deleteRecordedBefore(cutoff);
-      deps.log.info(
-        { event: "client-diagnostics.pruned", deleted, cutoff },
-        "client_diagnostic_events rows pruned",
-      );
+      deps.log.info({ event: "client-diagnostics.pruned", deleted, cutoff }, "client_diagnostic_events rows pruned");
     },
   });
 }

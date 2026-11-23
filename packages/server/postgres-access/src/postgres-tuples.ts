@@ -15,9 +15,7 @@ import type {
 import { readTupleColumn } from "./postgres-response.js";
 
 type Execute = (query: PostgresQuery) => Promise<readonly PostgresRow[]>;
-type ExactFilter = Required<
-  Pick<RelationshipFilter, "resourceType" | "resourceId" | "relation">
->;
+type ExactFilter = Required<Pick<RelationshipFilter, "resourceType" | "resourceId" | "relation">>;
 
 const tupleFilter =
   "namespace = $1 AND resource_kind = $2 AND ($3::text IS NULL OR resource_id = $3) AND ($4::text IS NULL OR relation = $4)";
@@ -36,9 +34,7 @@ export class PostgresTuples {
 
   async write(writes: readonly RelationshipWrite[]): Promise<void> {
     if (writes.length === 0) return;
-    const rows = deduplicateWrites(
-      writes.map((write) => this.#validateWrite(write)),
-    );
+    const rows = deduplicateWrites(writes.map((write) => this.#validateWrite(write)));
     await this.execute({
       text: `INSERT INTO ${RELATIONSHIP_TABLE} (namespace, resource_kind, resource_id, relation, subject_kind, subject_id, subject_relation, subject_is_wildcard, expires_at)
         SELECT $1, kind, resource, relation, subject, subject_id, subject_relation, wildcard, expires_at
@@ -81,11 +77,7 @@ export class PostgresTuples {
 
   async delete(filter: RelationshipFilter): Promise<void> {
     if (filter.relation !== undefined && filter.relation !== "") {
-      const columnRel = findColumnRelation(
-        this.model,
-        filter.resourceType,
-        filter.relation,
-      );
+      const columnRel = findColumnRelation(this.model, filter.resourceType, filter.relation);
       if (columnRel !== undefined) {
         throw columnBackedMutationError(columnRel);
       }
@@ -103,11 +95,7 @@ export class PostgresTuples {
 
   async exists(filter: ExactFilter): Promise<boolean> {
     requireExact(filter.resourceId, filter.relation);
-    const columnRel = findColumnRelation(
-      this.model,
-      filter.resourceType,
-      filter.relation,
-    );
+    const columnRel = findColumnRelation(this.model, filter.resourceType, filter.relation);
     if (columnRel !== undefined) {
       const rows = await this.execute({
         text: `SELECT 1 FROM ${columnRel.table} WHERE ${columnRel.idColumn} = $1 AND ${columnRel.targetIdColumn} IS NOT NULL LIMIT 1`,
@@ -124,11 +112,7 @@ export class PostgresTuples {
 
   async list(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     requireExact(query.resource.id, query.relation);
-    const columnRel = findColumnRelation(
-      this.model,
-      query.resource.type,
-      query.relation,
-    );
+    const columnRel = findColumnRelation(this.model, query.resource.type, query.relation);
     if (columnRel !== undefined) {
       const rows = await this.execute({
         text: `SELECT DISTINCT ${columnRel.targetIdColumn} AS subject_id FROM ${columnRel.table} WHERE ${columnRel.idColumn} = $1 AND ${columnRel.targetIdColumn} IS NOT NULL ORDER BY ${columnRel.targetIdColumn}`,
@@ -160,62 +144,32 @@ export class PostgresTuples {
   }
 
   #resourceFilter(filter: RelationshipFilter): (string | null)[] {
-    if (filter.resourceType === "")
-      throw new Error("Postgres authorization requires a resource type");
-    return [
-      this.namespace,
-      filter.resourceType,
-      filter.resourceId || null,
-      filter.relation || null,
-    ];
+    if (filter.resourceType === "") throw new Error("Postgres authorization requires a resource type");
+    return [this.namespace, filter.resourceType, filter.resourceId || null, filter.relation || null];
   }
 
   #validateWrite(write: RelationshipWrite): RelationshipWrite {
-    const columnRel = findColumnRelation(
-      this.model,
-      write.resource.type,
-      write.relation,
-    );
+    const columnRel = findColumnRelation(this.model, write.resource.type, write.relation);
     if (columnRel !== undefined) {
       throw columnBackedMutationError(columnRel);
     }
     const relation = this.model.relations.find(
-      (entry) =>
-        entry.entity === write.resource.type &&
-        entry.wireName === write.relation,
+      (entry) => entry.entity === write.resource.type && entry.wireName === write.relation,
     );
-    if (
-      relation === undefined ||
-      !relation.targets.some((target) => matchesTarget(target, write.subject))
-    ) {
-      throw new Error(
-        `Invalid authorization relationship ${write.resource.type}#${write.relation}`,
-      );
+    if (relation === undefined || !relation.targets.some((target) => matchesTarget(target, write.subject))) {
+      throw new Error(`Invalid authorization relationship ${write.resource.type}#${write.relation}`);
     }
-    if (
-      write.resource.id === "" ||
-      write.resource.id === "*" ||
-      write.subject.id === ""
-    ) {
-      throw new Error(
-        "An authorization relationship requires resource and subject identifiers",
-      );
+    if (write.resource.id === "" || write.resource.id === "*" || write.subject.id === "") {
+      throw new Error("An authorization relationship requires resource and subject identifiers");
     }
-    if (
-      write.expiresAt !== undefined &&
-      Number.isNaN(write.expiresAt.getTime())
-    ) {
-      throw new Error(
-        "An authorization relationship expiration must be a valid Date",
-      );
+    if (write.expiresAt !== undefined && Number.isNaN(write.expiresAt.getTime())) {
+      throw new Error("An authorization relationship expiration must be a valid Date");
     }
     return write;
   }
 }
 
-function deduplicateWrites(
-  writes: readonly RelationshipWrite[],
-): readonly RelationshipWrite[] {
+function deduplicateWrites(writes: readonly RelationshipWrite[]): readonly RelationshipWrite[] {
   const byKey = new Map<string, RelationshipWrite>();
   for (const write of writes) {
     const key = [
@@ -232,17 +186,11 @@ function deduplicateWrites(
   return [...byKey.values()];
 }
 
-function matchesTarget(
-  target: CompiledAuthorizationRelationTarget,
-  subject: SubjectRef,
-): boolean {
+function matchesTarget(target: CompiledAuthorizationRelationTarget, subject: SubjectRef): boolean {
   if (target.entity !== subject.type) return false;
-  if (target.kind === "wildcard")
-    return subject.id === "*" && subject.relation === undefined;
+  if (target.kind === "wildcard") return subject.id === "*" && subject.relation === undefined;
   if (subject.id === "*") return false;
-  return target.kind === "subject-set"
-    ? target.relation === subject.relation
-    : subject.relation === undefined;
+  return target.kind === "subject-set" ? target.relation === subject.relation : subject.relation === undefined;
 }
 
 function columnBackedMutationError(columnRel: CompiledColumnRelation): Error {
@@ -252,8 +200,5 @@ function columnBackedMutationError(columnRel: CompiledColumnRelation): Error {
 }
 
 function requireExact(resourceId: string, relation: string): void {
-  if (!resourceId || !relation)
-    throw new Error(
-      "Postgres authorization requires an exact resource id and relation",
-    );
+  if (!resourceId || !relation) throw new Error("Postgres authorization requires an exact resource id and relation");
 }

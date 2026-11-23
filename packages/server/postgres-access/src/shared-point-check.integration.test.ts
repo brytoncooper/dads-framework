@@ -12,15 +12,7 @@ const noteKind = "parity/note";
 const folderKind = "parity/folder";
 const teamKind = "parity/team";
 const userKind = "user";
-type Edge = readonly [
-  string,
-  string,
-  string,
-  string,
-  string,
-  string?,
-  boolean?,
-];
+type Edge = readonly [string, string, string, string, string, string?, boolean?];
 
 it("matches forward checks on varying graphs, raw edges, and revocations", async () => {
   const postgres = await startUnmigratedTestPostgres({ attributed: false });
@@ -46,13 +38,7 @@ it("matches forward checks on varying graphs, raw edges, and revocations", async
       for (const edge of rawEdges) await insert(namespace, edge);
       const point = check("target", "actor_0");
       expect(await compare(namespace, point)).toBe(true);
-      await insert(namespace, [
-        noteKind,
-        "target",
-        "restricted",
-        userKind,
-        "actor_0",
-      ]);
+      await insert(namespace, [noteKind, "target", "restricted", userKind, "actor_0"]);
       expect(await compare(namespace, point)).toBe(false);
       await client.query(
         "DELETE FROM dad_authorization_relationship WHERE namespace = $1 AND relation = 'restricted'",
@@ -64,18 +50,11 @@ it("matches forward checks on varying graphs, raw edges, and revocations", async
         [namespace],
       );
       expect(await compare(namespace, point)).toBe(false);
-      await insert(namespace, [
-        "raw_team",
-        "same",
-        "member",
-        userKind,
-        "actor_0",
-      ]);
+      await insert(namespace, ["raw_team", "same", "member", userKind, "actor_0"]);
       expect(await compare(namespace, point)).toBe(true);
 
       const definition = policy.permissions.find(
-        (permission) =>
-          permission.entity === noteKind && permission.wireName === "view",
+        (permission) => permission.entity === noteKind && permission.wireName === "view",
       );
       if (!definition) throw new Error("Missing test permission");
       const wide = {
@@ -87,10 +66,7 @@ it("matches forward checks on varying graphs, raw edges, and revocations", async
             wireName: "wide",
             expression: {
               kind: "any-of" as const,
-              expressions: Array.from(
-                { length: 80 },
-                () => definition.expression,
-              ),
+              expressions: Array.from({ length: 80 }, () => definition.expression),
             },
           },
         ],
@@ -102,58 +78,30 @@ it("matches forward checks on varying graphs, raw edges, and revocations", async
       expect(dispatched.canPrepare).toBe(false);
       expect(dispatched.text).toContain("point_policy_");
       expect(Buffer.byteLength(dispatched.text)).toBeLessThan(10_000);
-      expect(
-        readDecisionFlag(
-          (await client.query<{ allowed: unknown }>(dispatched)).rows[0],
-        ),
-      ).toBe(true);
+      expect(readDecisionFlag((await client.query<{ allowed: unknown }>(dispatched)).rows[0])).toBe(true);
     } finally {
       client.release();
     }
 
     async function insert(
       namespace: string,
-      [
-        kind,
-        id,
-        relation,
-        subjectKind,
-        subjectId,
-        subjectRelation = "",
-        wildcard = false,
-      ]: Edge,
+      [kind, id, relation, subjectKind, subjectId, subjectRelation = "", wildcard = false]: Edge,
     ) {
       await client.query(
         `INSERT INTO dad_authorization_relationship
           (namespace, resource_kind, resource_id, relation, subject_kind, subject_id, subject_relation, subject_is_wildcard)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
           ON CONFLICT DO NOTHING`,
-        [
-          namespace,
-          kind,
-          id,
-          relation,
-          subjectKind,
-          subjectId,
-          subjectRelation,
-          wildcard,
-        ],
+        [namespace, kind, id, relation, subjectKind, subjectId, subjectRelation, wildcard],
       );
     }
 
-    async function compare(
-      namespace: string,
-      request: NormalizedPermissionCheck,
-    ) {
+    async function compare(namespace: string, request: NormalizedPermissionCheck) {
       const ordinary = compilePostgresCheck(policy, namespace, request);
       const compact = compileSharedPointCheck(policy, namespace, request);
       expect(ordinary.text).not.toContain("point_policy_");
-      const expected = readDecisionFlag(
-        (await client.query<{ allowed: unknown }>(ordinary)).rows[0],
-      );
-      const actual = readDecisionFlag(
-        (await client.query<{ allowed: unknown }>(compact)).rows[0],
-      );
+      const expected = readDecisionFlag((await client.query<{ allowed: unknown }>(ordinary)).rows[0]);
+      const actual = readDecisionFlag((await client.query<{ allowed: unknown }>(compact)).rows[0]);
       expect(actual).toBe(expected);
       return actual;
     }
@@ -198,10 +146,8 @@ function randomEdges(seed: number): readonly Edge[] {
       [noteKind, id, "folder", folderKind, node(choose(4))],
       [noteKind, id, "folder", folderKind, node(choose(4))],
     );
-    if (choose(3) !== 0)
-      result.push([noteKind, id, "shared", userKind, "", "", true]);
-    if (choose(3) === 0)
-      result.push([noteKind, id, "restricted", userKind, "actor_0"]);
+    if (choose(3) !== 0) result.push([noteKind, id, "shared", userKind, "", "", true]);
+    if (choose(3) === 0) result.push([noteKind, id, "restricted", userKind, "actor_0"]);
   }
   return result;
 }

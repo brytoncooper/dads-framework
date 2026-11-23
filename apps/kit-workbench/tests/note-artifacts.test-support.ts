@@ -68,19 +68,7 @@ async function proveExports(
   });
   expect(csv.statusCode).toBe(200);
   expect(pdf.statusCode).toBe(200);
-  expect(
-    Buffer.from(
-      exportResponse.parse(csv.json()).data.base64,
-      "base64",
-    ).toString(),
-  ).toContain("Alpha's note");
-  expect(
-    Buffer.from(exportResponse.parse(pdf.json()).data.base64, "base64")
-      .subarray(0, 5)
-      .toString(),
-  ).toBe("%PDF-");
-  expect(
-    (await app.inject({ url: `${note}/exports/pdf`, headers: denied }))
-      .statusCode,
-  ).toBe(404);
+  expect(Buffer.from(exportResponse.parse(csv.json()).data.base64, "base64").toString()).toContain("Alpha's note");
+  expect(Buffer.from(exportResponse.parse(pdf.json()).data.base64, "base64").subarray(0, 5).toString()).toBe("%PDF-");
+  expect((await app.inject({ url: `${note}/exports/pdf`, headers: denied })).statusCode).toBe(404);
 }

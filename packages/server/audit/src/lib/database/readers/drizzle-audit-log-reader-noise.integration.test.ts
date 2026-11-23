@@ -2,18 +2,11 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  truncateAuditLog,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, truncateAuditLog, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { makeAuditLog } from "../../../testing/audit-log.factory.js";
 import { auditLog } from "../generated-tables/audit-log.tables.js";
-import type {
-  AuditLogRowFilter,
-  AuditLogScope,
-} from "./audit-log-reader.interface.js";
+import type { AuditLogRowFilter, AuditLogScope } from "./audit-log-reader.interface.js";
 import { DrizzleAuditLogReader } from "./drizzle-audit-log-reader.js";
 
 const WORKSPACE = "0192a3b4-0000-7000-8000-00000000000a";
@@ -94,48 +87,27 @@ describe("DrizzleAuditLogReader under noise the page never shows", () => {
   };
 
   it.each<[string, AuditLogScope, string]>([
-    [
-      "workspace",
-      { kind: "application", values: { workspace: WORKSPACE } },
-      "audit_log_scope_table_idx",
-    ],
-    [
-      "group",
-      { kind: "application", values: { group: GROUP } },
-      "audit_log_scope_table_idx",
-    ],
-  ])(
-    "reads the %s page's shown rows without reading past the noise",
-    async (_page, scope, seekIndex) => {
-      sent.length = 0;
-      const rows = await reader.listRows(scope, customerFilter, null, 50);
+    ["workspace", { kind: "application", values: { workspace: WORKSPACE } }, "audit_log_scope_table_idx"],
+    ["group", { kind: "application", values: { group: GROUP } }, "audit_log_scope_table_idx"],
+  ])("reads the %s page's shown rows without reading past the noise", async (_page, scope, seekIndex) => {
+    sent.length = 0;
+    const rows = await reader.listRows(scope, customerFilter, null, 50);
 
-      expect(rows.map((row) => row.requestId)).toEqual([
-        "shown-0",
-        "shown-1",
-        "shown-2",
-      ]);
-      const read = sent.at(-1);
-      if (read === undefined) throw new Error("the reader sent no query");
-      const plan = await explain(read);
-      expect(rowsReadPast(plan)).toBeLessThan(MOST_ROWS_A_READ_MAY_PASS);
-      expect(plan).toContain(`"Index Name":"${seekIndex}"`);
-    },
-  );
+    expect(rows.map((row) => row.requestId)).toEqual(["shown-0", "shown-1", "shown-2"]);
+    const read = sent.at(-1);
+    if (read === undefined) throw new Error("the reader sent no query");
+    const plan = await explain(read);
+    expect(rowsReadPast(plan)).toBeLessThan(MOST_ROWS_A_READ_MAY_PASS);
+    expect(plan).toContain(`"Index Name":"${seekIndex}"`);
+  });
 
   async function explain(query: SentQuery): Promise<string> {
-    const result = await postgres.pool.query(
-      `EXPLAIN (ANALYZE, FORMAT JSON) ${query.sql}`,
-      query.params,
-    );
+    const result = await postgres.pool.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${query.sql}`, query.params);
     return JSON.stringify(result.rows);
   }
 });
 
 /** Every row a plan node fetched and then threw away. */
 function rowsReadPast(plan: string): number {
-  return [...plan.matchAll(/"Rows Removed by Filter":(\d+)/g)].reduce(
-    (total, match) => total + Number(match[1]),
-    0,
-  );
+  return [...plan.matchAll(/"Rows Removed by Filter":(\d+)/g)].reduce((total, match) => total + Number(match[1]), 0);
 }

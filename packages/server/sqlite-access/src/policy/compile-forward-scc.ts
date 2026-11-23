@@ -9,12 +9,7 @@ import type {
   RecursiveBaseClause,
   RecursiveStepClause,
 } from "./policy-model.js";
-import {
-  activeTupleCondition,
-  joinChunks,
-  QueryBuilder,
-  TUPLES,
-} from "./policy-sql.js";
+import { activeTupleCondition, joinChunks, QueryBuilder, TUPLES } from "./policy-sql.js";
 
 export type SqlSubject =
   | {
@@ -79,15 +74,8 @@ export function compileArrowTargetDisjunction(
       typeExpr: columnChunk(`${tupleAlias}.subject_kind`),
       idExpr: columnChunk(`${tupleAlias}.subject_id`),
     };
-    const child = compilePermission(
-      context,
-      subject,
-      targetResource,
-      target.permission,
-    );
-    return b.finish(
-      `(${tupleAlias}.subject_kind = ${b.value(target.entity)} AND (${b.append(child)}))`,
-    );
+    const child = compilePermission(context, subject, targetResource, target.permission);
+    return b.finish(`(${tupleAlias}.subject_kind = ${b.value(target.entity)} AND (${b.append(child)}))`);
   });
   return joinChunks(branches, " OR ");
 }
@@ -130,13 +118,7 @@ export function compileForwardCyclicScc(
   if (scc.baseClauses.length === 0) return { sql: "0", params: [] };
   const walkAlias = context.nextAlias("walk");
   const stepChunks = scc.stepClauses.map((step) =>
-    compileForwardStepClause(
-      context,
-      walkAlias,
-      subject,
-      step,
-      compileExpression,
-    ),
+    compileForwardStepClause(context, walkAlias, subject, step, compileExpression),
   );
   const baseChunks = scc.baseClauses.map((clause) =>
     compileForwardBaseClause(context, subject, clause, compileExpression),
@@ -175,11 +157,7 @@ function compileForwardStepClause(
     step.guards,
     compileExpression,
   );
-  const columnRel = findSqliteColumnRelation(
-    context.model,
-    step.entity,
-    step.relation,
-  );
+  const columnRel = findSqliteColumnRelation(context.model, step.entity, step.relation);
   const b = new QueryBuilder();
   if (columnRel !== undefined) {
     if (columnRel.targetEntity !== step.targetEntity) {
@@ -243,12 +221,7 @@ export function compileGuardConditions(
 ): SqliteQuery | undefined {
   if (guards.length === 0) return undefined;
   const parts = guards.map((guard) => {
-    const compiled = compileExpression(
-      context,
-      subject,
-      resource,
-      guard.expression,
-    );
+    const compiled = compileExpression(context, subject, resource, guard.expression);
     return guard.positive
       ? { sql: `(${compiled.sql})`, params: compiled.params }
       : { sql: `NOT (${compiled.sql})`, params: compiled.params };

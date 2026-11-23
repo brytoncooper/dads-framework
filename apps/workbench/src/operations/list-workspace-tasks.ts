@@ -10,10 +10,7 @@ import {
 } from "../access.js";
 import type { ListQuery, Task } from "../contracts.js";
 import { isSameStoreAuthorizingWorkbenchStore } from "../storage/workbench-store.js";
-import {
-  paginate,
-  type OperationDependencies,
-} from "./operation-coordinator.js";
+import { paginate, type OperationDependencies } from "./operation-coordinator.js";
 import {
   checkWorkbenchPermission,
   checkWorkbenchPermissions,
@@ -21,10 +18,7 @@ import {
 } from "./workbench-authorization.js";
 
 export async function listWorkspaceTasks(
-  {
-    authorization,
-    store,
-  }: Pick<OperationDependencies, "authorization" | "store">,
+  { authorization, store }: Pick<OperationDependencies, "authorization" | "store">,
   requestSubject: WorkbenchRequestSubject,
   workspaceId: string,
   allowedIds: WorkbenchTaskIds | undefined,
@@ -36,16 +30,12 @@ export async function listWorkspaceTasks(
     ...workbenchTarget(workbenchWorkspace.permissions.view, workspaceId),
     subject,
   };
-  if (!(await checkWorkbenchPermission(authorization, parent)))
-    return paginate([], query);
+  if (!(await checkWorkbenchPermission(authorization, parent))) return paginate([], query);
 
   const workspaceTasks = await store.readTaskCandidates(workspaceId);
-  const requestedIds =
-    allowedIds === undefined ? undefined : new Set(allowedIds);
+  const requestedIds = allowedIds === undefined ? undefined : new Set(allowedIds);
   const candidates =
-    requestedIds === undefined
-      ? workspaceTasks
-      : workspaceTasks.filter((task) => requestedIds.has(task.id));
+    requestedIds === undefined ? workspaceTasks : workspaceTasks.filter((task) => requestedIds.has(task.id));
   if (candidates.length === 0) return paginate([], query);
 
   const visible =
@@ -55,8 +45,7 @@ export async function listWorkspaceTasks(
   if (visible.length === 0) return paginate([], query);
 
   // Workspace access can change during the snapshot read or task authorization.
-  if (!(await checkWorkbenchPermission(authorization, parent)))
-    return paginate([], query);
+  if (!(await checkWorkbenchPermission(authorization, parent))) return paginate([], query);
   return paginate(visible, query);
 }
 

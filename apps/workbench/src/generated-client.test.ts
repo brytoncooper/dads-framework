@@ -32,9 +32,7 @@ describe("workbench generated SDK", () => {
         params: workspaceParams,
         body: { name: "Updated workspace" },
       });
-      expect(
-        await alice.getWorkspace({ params: workspaceParams }),
-      ).toMatchObject({ name: "Updated workspace" });
+      expect(await alice.getWorkspace({ params: workspaceParams })).toMatchObject({ name: "Updated workspace" });
       const task = await alice.createTask({
         params: workspaceParams,
         body: { requestKey: "sdk-task-key-0001", title: "Verify the API" },
@@ -47,18 +45,12 @@ describe("workbench generated SDK", () => {
         params: workspaceParams,
         body: { userId: "bob" },
       });
-      expect(
-        await alice.listMembers({ params: workspaceParams, query: {} }),
-      ).toHaveLength(2);
-      expect(
-        await bob.listTasks({ params: workspaceParams, query: { page: "1" } }),
-      ).toHaveLength(1);
-      expect(
-        await bob.claimTask({ params: taskParams, body: {} }),
-      ).toMatchObject({ claimedBy: "bob" });
-      await expect(
-        bob.updateTask({ params: taskParams, body: { title: "Not allowed" } }),
-      ).rejects.toMatchObject({ status: 404 });
+      expect(await alice.listMembers({ params: workspaceParams, query: {} })).toHaveLength(2);
+      expect(await bob.listTasks({ params: workspaceParams, query: { page: "1" } })).toHaveLength(1);
+      expect(await bob.claimTask({ params: taskParams, body: {} })).toMatchObject({ claimedBy: "bob" });
+      await expect(bob.updateTask({ params: taskParams, body: { title: "Not allowed" } })).rejects.toMatchObject({
+        status: 404,
+      });
       await alice.createArtifact({
         params: taskParams,
         body: {
@@ -67,37 +59,22 @@ describe("workbench generated SDK", () => {
           content: "Actual HTTP",
         },
       });
-      expect(
-        await bob.listArtifacts({ params: taskParams, query: {} }),
-      ).toHaveLength(1);
-      expect(
-        (await alice.listActivity({ params: workspaceParams, query: {} }))
-          .length,
-      ).toBeGreaterThan(0);
+      expect(await bob.listArtifacts({ params: taskParams, query: {} })).toHaveLength(1);
+      expect((await alice.listActivity({ params: workspaceParams, query: {} })).length).toBeGreaterThan(0);
       await alice.revokeMember({
         params: { ...workspaceParams, userId: "bob" },
       });
-      expect(
-        await bob.listTasks({ params: workspaceParams, query: {} }),
-      ).toEqual([]);
+      expect(await bob.listTasks({ params: workspaceParams, query: {} })).toEqual([]);
       await expect(bob.getTask({ params: taskParams })).rejects.toMatchObject({
         status: 404,
       });
       expect(await bob.listWorkspaces({ query: {} })).toEqual([]);
-      expect(
-        await bob.listArtifacts({ params: taskParams, query: {} }),
-      ).toEqual([]);
-      expect(
-        await bob.listActivity({ params: workspaceParams, query: {} }),
-      ).toEqual([]);
-      await expect(
-        bob.claimTask({ params: taskParams, body: {} }),
-      ).rejects.toMatchObject({ status: 404 });
+      expect(await bob.listArtifacts({ params: taskParams, query: {} })).toEqual([]);
+      expect(await bob.listActivity({ params: workspaceParams, query: {} })).toEqual([]);
+      await expect(bob.claimTask({ params: taskParams, body: {} })).rejects.toMatchObject({ status: 404 });
       await alice.updateTask({ params: taskParams, body: { status: "done" } });
       await alice.deleteTask({ params: taskParams });
-      expect(
-        await alice.listTasks({ params: workspaceParams, query: {} }),
-      ).toEqual([]);
+      expect(await alice.listTasks({ params: workspaceParams, query: {} })).toEqual([]);
       await alice.deleteWorkspace({ params: workspaceParams });
       expect(await alice.listWorkspaces({ query: {} })).toEqual([]);
     } finally {

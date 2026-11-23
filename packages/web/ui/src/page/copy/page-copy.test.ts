@@ -11,9 +11,7 @@ import { pageCopy } from "./page-copy.js";
 
 describe("pageCopy", () => {
   it("names the open and download buttons after the file", () => {
-    expect(
-      translate(pageCopy, "en", "page.attachments.open", { name: "a.pdf" }),
-    ).toBe("Open a.pdf");
+    expect(translate(pageCopy, "en", "page.attachments.open", { name: "a.pdf" })).toBe("Open a.pdf");
     expect(
       translate(pageCopy, "en", "page.attachments.download", {
         name: "a.pdf",

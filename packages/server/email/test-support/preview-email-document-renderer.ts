@@ -7,9 +7,7 @@ class PreviewEmailDocumentRenderer implements EmailDocumentRenderer {
   render(document: ReactElement) {
     const html = `<!doctype html>${renderToStaticMarkup(document)}`;
     const preview = new DOMParser().parseFromString(html, "text/html");
-    for (const hidden of preview.querySelectorAll(
-      "style, script, [data-skip-in-text]",
-    )) {
+    for (const hidden of preview.querySelectorAll("style, script, [data-skip-in-text]")) {
       hidden.remove();
     }
     for (const link of preview.querySelectorAll("a[href]")) {

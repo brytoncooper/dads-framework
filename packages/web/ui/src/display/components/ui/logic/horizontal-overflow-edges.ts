@@ -25,8 +25,7 @@ const END_TOLERANCE_PX = 1;
  * Neither when nothing overflows.
  */
 export function hiddenEdges(metrics: HorizontalScrollMetrics): HiddenEdges {
-  const hiddenOnRight =
-    metrics.scrollWidth - metrics.clientWidth - metrics.scrollLeft;
+  const hiddenOnRight = metrics.scrollWidth - metrics.clientWidth - metrics.scrollLeft;
   return {
     left: metrics.scrollLeft > END_TOLERANCE_PX,
     right: hiddenOnRight > END_TOLERANCE_PX,

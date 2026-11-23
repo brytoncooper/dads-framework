@@ -21,18 +21,11 @@ const REASON = "23 cases moved to b on 2026-09-07";
 type Written = { floor: number; reason?: string; movedTo?: string };
 
 /** One revision of the baseline, as a document rather than as a map. */
-function revision(
-  floors: Record<string, Written>,
-): ReadonlyMap<string, BaselineEntry> {
-  return readBaselineEntries(
-    JSON.stringify({ ceilings: {}, floors: { testCount: floors } }),
-  );
+function revision(floors: Record<string, Written>): ReadonlyMap<string, BaselineEntry> {
+  return readBaselineEntries(JSON.stringify({ ceilings: {}, floors: { testCount: floors } }));
 }
 
-function entryOf(
-  entries: ReadonlyMap<string, BaselineEntry>,
-  key: string,
-): BaselineEntry {
+function entryOf(entries: ReadonlyMap<string, BaselineEntry>, key: string): BaselineEntry {
   const entry = entries.get(key);
   if (entry === undefined) throw new Error(`${key} is not recorded.`);
   return entry;
@@ -68,9 +61,7 @@ describe("a floor that fell between two revisions", () => {
     });
     const fell = entryOf(later, "floors/testCount/a");
 
-    expect(
-      transferCoversFall(fell, 23, later, revision({ a: { floor: 27 } })),
-    ).toBe(true);
+    expect(transferCoversFall(fell, 23, later, revision({ a: { floor: 27 } }))).toBe(true);
   });
 
   it("is a loosening when the receipt names itself, or a key nobody records", () => {
@@ -83,44 +74,20 @@ describe("a floor that fell between two revisions", () => {
       b: { floor: 27 },
     });
 
-    expect(
-      transferCoversFall(
-        entryOf(itself, "floors/testCount/a"),
-        23,
-        itself,
-        earlier,
-      ),
-    ).toBe(false);
-    expect(
-      transferCoversFall(
-        entryOf(elsewhere, "floors/testCount/a"),
-        23,
-        elsewhere,
-        earlier,
-      ),
-    ).toBe(false);
+    expect(transferCoversFall(entryOf(itself, "floors/testCount/a"), 23, itself, earlier)).toBe(false);
+    expect(transferCoversFall(entryOf(elsewhere, "floors/testCount/a"), 23, elsewhere, earlier)).toBe(false);
   });
 
   it("is a loosening when the entry never said why", () => {
     const later = revision({ a: { floor: 4, movedTo: "b" }, b: { floor: 27 } });
 
-    expect(
-      transferCoversFall(
-        entryOf(later, "floors/testCount/a"),
-        23,
-        later,
-        earlier,
-      ),
-    ).toBe(false);
+    expect(transferCoversFall(entryOf(later, "floors/testCount/a"), 23, later, earlier)).toBe(false);
   });
 });
 
 /** A mark is the one number a split cannot move: the file it names is still there. */
 describe("a ceiling that rose", () => {
-  const marks = (
-    a: Record<string, unknown>,
-    b: number,
-  ): ReadonlyMap<string, BaselineEntry> =>
+  const marks = (a: Record<string, unknown>, b: number): ReadonlyMap<string, BaselineEntry> =>
     readBaselineEntries(
       JSON.stringify({
         ceilings: {
@@ -131,10 +98,7 @@ describe("a ceiling that rose", () => {
     );
 
   it("never transfers, whatever the entry beside it says", () => {
-    const raised = marks(
-      { mark: 420, movedTo: "src/b.ts", reason: REASON },
-      900,
-    );
+    const raised = marks({ mark: 420, movedTo: "src/b.ts", reason: REASON }, 900);
     const before = marks({ mark: 410, reason: REASON }, 10);
     const rose = entryOf(raised, "ceilings/fileLines/src/a.ts");
 

@@ -33,8 +33,7 @@ test("immutable migrations fail while match contents remain unreported", (t) => 
     "LICENSE.md": notice,
     "package.json": "{}",
     "src/lib/migrations/legacy.migration.ts": 'const column = "mock_finch_id";',
-    "dist/lib/migrations/legacy.migration.js":
-      'const column = "impersonation_id";',
+    "dist/lib/migrations/legacy.migration.js": 'const column = "impersonation_id";',
     "dist/probe.js": "// Sample private rule match: Mock Finch.",
   });
   const findings = auditPackage(root, entries, notice, [
@@ -83,10 +82,7 @@ test("a retained held-back declaration blocks the entire packed candidate", (t) 
   const { root, entries } = packageFixture(t, {
     "LICENSE.md": notice,
     "package.json": "{}",
-    "dist/index.d.ts":
-      "export type SubjectImpersonation = { readonly id: string };",
+    "dist/index.d.ts": "export type SubjectImpersonation = { readonly id: string };",
   });
-  assert.deepEqual(auditPackage(root, entries, notice, []), [
-    ["held-back-api-surface", 1],
-  ]);
+  assert.deepEqual(auditPackage(root, entries, notice, []), [["held-back-api-surface", 1]]);
 });

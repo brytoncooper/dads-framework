@@ -30,10 +30,7 @@ const declarations: Exclude<RouteAccess, { kind: "public" }>[] = [
 describe("technical-or-business context", () => {
   it("lets facilities/edge_device subjects skip business context entirely", async () => {
     const device = { type: "facilities/edge_device", id: "device-1" };
-    const access = withTechnicalOrBusinessAuthorizationContext(
-      requireSession(),
-      fromHeader("x-test-caller-context"),
-    );
+    const access = withTechnicalOrBusinessAuthorizationContext(requireSession(), fromHeader("x-test-caller-context"));
     const ports: AccessPorts = {
       subjects: { resolve: () => Promise.resolve(device) },
       authorization: { check: () => Promise.resolve(true) },
@@ -41,9 +38,7 @@ describe("technical-or-business context", () => {
         execute: () => Promise.resolve({ subject: ACTOR }),
       },
     };
-    expect(
-      await enforceAccess(access, { headers: {}, params: {} }, ports),
-    ).toEqual({
+    expect(await enforceAccess(access, { headers: {}, params: {} }, ports)).toEqual({
       outcome: "allow",
       subject: device,
       authenticatedSubject: device,
@@ -52,27 +47,18 @@ describe("technical-or-business context", () => {
   });
 
   it("distinguishes an absent SSE context query from a malformed or unauthorized supplied value", async () => {
-    const access = withTechnicalOrBusinessAuthorizationContext(
-      requireSession(),
-      fromQuery("authorizationContext"),
-    );
+    const access = withTechnicalOrBusinessAuthorizationContext(requireSession(), fromQuery("authorizationContext"));
     const ports: AccessPorts = {
       subjects: { resolve: () => Promise.resolve(USER) },
       authorization: { check: () => Promise.resolve(true) },
       authorizationContexts: {
-        execute: (_identity, value) =>
-          Promise.resolve(
-            value === "company:valid" ? { subject: ACTOR } : null,
-          ),
+        execute: (_identity, value) => Promise.resolve(value === "company:valid" ? { subject: ACTOR } : null),
       },
     };
-    expect(
-      await enforceAccess(
-        access,
-        { headers: {}, params: {}, query: {} },
-        ports,
-      ),
-    ).toMatchObject({ outcome: "allow", subject: USER });
+    expect(await enforceAccess(access, { headers: {}, params: {}, query: {} }, ports)).toMatchObject({
+      outcome: "allow",
+      subject: USER,
+    });
     expect(
       await enforceAccess(
         access,
@@ -84,18 +70,9 @@ describe("technical-or-business context", () => {
         ports,
       ),
     ).toMatchObject({ outcome: "allow", subject: ACTOR });
-    for (const value of [
-      "",
-      "company:invalid",
-      ["company:valid", "company:other"],
-      null,
-    ]) {
+    for (const value of ["", "company:invalid", ["company:valid", "company:other"], null]) {
       expect(
-        await enforceAccess(
-          access,
-          { headers: {}, params: {}, query: { authorizationContext: value } },
-          ports,
-        ),
+        await enforceAccess(access, { headers: {}, params: {}, query: { authorizationContext: value } }, ports),
       ).toEqual({
         outcome: "not-found",
         subject: null,
@@ -108,10 +85,7 @@ describe("technical-or-business context", () => {
       getRoute({
         path: "/technical",
         summary: "Technical or selected business",
-        access: withTechnicalOrBusinessAuthorizationContext(
-          requireSession(),
-          fromHeader("x-test-caller-context"),
-        ),
+        access: withTechnicalOrBusinessAuthorizationContext(requireSession(), fromHeader("x-test-caller-context")),
         response: z.object({ ok: z.boolean() }),
         handler: () => ({ ok: true }),
       }),
@@ -141,74 +115,52 @@ describe("technical-or-business context", () => {
       },
     });
   });
-  it.each(declarations)(
-    "selects one subject for $kind and retains real audit identity",
-    async (declaration) => {
-      const checked: unknown[] = [];
-      const ports: AccessPorts = {
-        subjects: { resolve: () => Promise.resolve(USER) },
-        authorization: {
-          check: (query) => {
-            checked.push(query.subject);
-            return Promise.resolve(true);
-          },
+  it.each(declarations)("selects one subject for $kind and retains real audit identity", async (declaration) => {
+    const checked: unknown[] = [];
+    const ports: AccessPorts = {
+      subjects: { resolve: () => Promise.resolve(USER) },
+      authorization: {
+        check: (query) => {
+          checked.push(query.subject);
+          return Promise.resolve(true);
         },
-        lookups: {
-          lookupResources: (query) => {
-            checked.push(query.subject);
-            return Promise.resolve(["machine"]);
-          },
+      },
+      lookups: {
+        lookupResources: (query) => {
+          checked.push(query.subject);
+          return Promise.resolve(["machine"]);
         },
-        authorizationContexts: {
-          execute: (_identity, input) =>
-            Promise.resolve(
-              input === "company:valid" ? { subject: ACTOR } : null,
-            ),
-        },
-      };
-      const access = withTechnicalOrBusinessAuthorizationContext(
-        declaration,
-        fromHeader("x-test-caller-context"),
-      );
-      expect(
-        await enforceAccess(access, { headers: {}, params: {} }, ports),
-      ).toMatchObject({
-        outcome: "allow",
-        subject: USER,
+      },
+      authorizationContexts: {
+        execute: (_identity, input) => Promise.resolve(input === "company:valid" ? { subject: ACTOR } : null),
+      },
+    };
+    const access = withTechnicalOrBusinessAuthorizationContext(declaration, fromHeader("x-test-caller-context"));
+    expect(await enforceAccess(access, { headers: {}, params: {} }, ports)).toMatchObject({
+      outcome: "allow",
+      subject: USER,
+      authenticatedSubject: USER,
+    });
+    expect(
+      await enforceAccess(access, { headers: { "x-test-caller-context": "company:valid" }, params: {} }, ports),
+    ).toMatchObject({
+      outcome: "allow",
+      subject: ACTOR,
+      authenticatedSubject: USER,
+    });
+    if (declaration.kind !== "session") expect(checked).toEqual([USER, ACTOR]);
+    for (const value of [
+      "company:invalid",
+      "",
+      " ",
+      "company:valid, company:other",
+      ["company:valid", "company:other"],
+    ]) {
+      expect(await enforceAccess(access, { headers: { "x-test-caller-context": value }, params: {} }, ports)).toEqual({
+        outcome: "not-found",
+        subject: null,
         authenticatedSubject: USER,
       });
-      expect(
-        await enforceAccess(
-          access,
-          { headers: { "x-test-caller-context": "company:valid" }, params: {} },
-          ports,
-        ),
-      ).toMatchObject({
-        outcome: "allow",
-        subject: ACTOR,
-        authenticatedSubject: USER,
-      });
-      if (declaration.kind !== "session")
-        expect(checked).toEqual([USER, ACTOR]);
-      for (const value of [
-        "company:invalid",
-        "",
-        " ",
-        "company:valid, company:other",
-        ["company:valid", "company:other"],
-      ]) {
-        expect(
-          await enforceAccess(
-            access,
-            { headers: { "x-test-caller-context": value }, params: {} },
-            ports,
-          ),
-        ).toEqual({
-          outcome: "not-found",
-          subject: null,
-          authenticatedSubject: USER,
-        });
-      }
-    },
-  );
+    }
+  });
 });

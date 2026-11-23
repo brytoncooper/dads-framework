@@ -4,9 +4,7 @@ import { entityResponses } from "./entity-responses.js";
 import { apiResponseSchema } from "./envelope.schema.js";
 import { paginatedResponseSchema } from "./pagination.schema.js";
 
-const thingSchema = z
-  .strictObject({ id: z.uuidv7(), name: z.string().min(1) })
-  .meta({ description: "A thing" });
+const thingSchema = z.strictObject({ id: z.uuidv7(), name: z.string().min(1) }).meta({ description: "A thing" });
 
 const responses = entityResponses(thingSchema);
 
@@ -32,9 +30,7 @@ describe("entityResponses", () => {
   });
 
   it("still STRIPS on the way out, which is what stops a wide row leaking", () => {
-    const wideResponses = entityResponses(
-      z.object({ id: z.uuidv7(), name: z.string().min(1) }),
-    );
+    const wideResponses = entityResponses(z.object({ id: z.uuidv7(), name: z.string().min(1) }));
     const parsed = wideResponses.one.parse({
       data: {
         id: "0192f2a0-0000-7000-8000-000000000000",

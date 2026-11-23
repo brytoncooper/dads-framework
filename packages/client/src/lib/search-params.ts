@@ -7,9 +7,7 @@
  * serializer has never been taught, and it says so rather than sending
  * `[object Object]` to the API.
  */
-export function toSearchParams(
-  query: Record<string, unknown>,
-): URLSearchParams {
+export function toSearchParams(query: Record<string, unknown>): URLSearchParams {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     appendValue(params, key, value);
@@ -17,11 +15,7 @@ export function toSearchParams(
   return params;
 }
 
-function appendValue(
-  params: URLSearchParams,
-  key: string,
-  value: unknown,
-): void {
+function appendValue(params: URLSearchParams, key: string, value: unknown): void {
   if (value === undefined || value === null) {
     return;
   }
@@ -44,7 +38,5 @@ function serializeScalar(key: string, value: unknown): string {
   if (value instanceof Date) {
     return value.toISOString();
   }
-  throw new Error(
-    `Query parameter "${key}" is not serializable as a query string value`,
-  );
+  throw new Error(`Query parameter "${key}" is not serializable as a query string value`);
 }

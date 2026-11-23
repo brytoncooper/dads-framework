@@ -1,14 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { v1 } from "@authzed/authzed-node";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-  ResourceLookup,
-} from "@dads-framework/access/runtime";
-import {
-  testSpiceDbMemoryLimitGb,
-  type TestSpiceDb,
-} from "./start-test-spice-db.js";
+import type { PermissionQuery, RelationshipWrite, ResourceLookup } from "@dads-framework/access/runtime";
+import { testSpiceDbMemoryLimitGb, type TestSpiceDb } from "./start-test-spice-db.js";
 
 const SPICE_DB_IMAGE = "authzed/spicedb:v1.57.0";
 const SPICE_DB_GRPC_PORT = 50051;
@@ -17,21 +10,13 @@ export type TunedSpiceDbConsistency = "fully-consistent" | "minimize-latency";
 
 export type TunedSpiceDbClient = {
   readonly writeSchema: (zed: string) => Promise<void>;
-  readonly writeRelationships: (
-    writes: readonly RelationshipWrite[],
-  ) => Promise<void>;
-  readonly check: (
-    query: PermissionQuery,
-    consistency: TunedSpiceDbConsistency,
-  ) => Promise<boolean>;
+  readonly writeRelationships: (writes: readonly RelationshipWrite[]) => Promise<void>;
+  readonly check: (query: PermissionQuery, consistency: TunedSpiceDbConsistency) => Promise<boolean>;
   readonly checkManySingleRpc: (
     queries: readonly PermissionQuery[],
     consistency: TunedSpiceDbConsistency,
   ) => Promise<readonly boolean[]>;
-  readonly lookupResources: (
-    query: ResourceLookup,
-    consistency: TunedSpiceDbConsistency,
-  ) => Promise<readonly string[]>;
+  readonly lookupResources: (query: ResourceLookup, consistency: TunedSpiceDbConsistency) => Promise<readonly string[]>;
 };
 
 /**
@@ -69,15 +54,8 @@ export async function startTunedSpiceDb(): Promise<TestSpiceDb> {
  * Raw v1 gRPC benchmark client supporting true `minimize_latency` reads and
  * single-RPC `CheckBulkPermissions` so SpiceDB runs without client-side limits.
  */
-export function createTunedSpiceDbClient(
-  endpoint: string,
-  presharedKey: string,
-): TunedSpiceDbClient {
-  const client = v1.NewClient(
-    presharedKey,
-    endpoint,
-    v1.ClientSecurity.INSECURE_LOCALHOST_ALLOWED,
-  );
+export function createTunedSpiceDbClient(endpoint: string, presharedKey: string): TunedSpiceDbClient {
+  const client = v1.NewClient(presharedKey, endpoint, v1.ClientSecurity.INSECURE_LOCALHOST_ALLOWED);
   let latestToken: v1.ZedToken | undefined;
   const toConsistency = (mode: TunedSpiceDbConsistency): v1.Consistency =>
     mode === "fully-consistent"
@@ -100,14 +78,10 @@ export function createTunedSpiceDbClient(
 
   return {
     async writeSchema(zed: string): Promise<void> {
-      const response = await client.promises.writeSchema(
-        v1.WriteSchemaRequest.create({ schema: zed }),
-      );
+      const response = await client.promises.writeSchema(v1.WriteSchemaRequest.create({ schema: zed }));
       if (response.writtenAt !== undefined) latestToken = response.writtenAt;
     },
-    async writeRelationships(
-      writes: readonly RelationshipWrite[],
-    ): Promise<void> {
+    async writeRelationships(writes: readonly RelationshipWrite[]): Promise<void> {
       for (let offset = 0; offset < writes.length; offset += 1_000) {
         const slice = writes.slice(offset, offset + 1_000);
         const response = await client.promises.writeRelationships(
@@ -154,15 +128,9 @@ export function createTunedSpiceDbClient(
           consistency: toConsistency(consistency),
         }),
       );
-      return (
-        response.permissionship ===
-        v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION
-      );
+      return response.permissionship === v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION;
     },
-    async checkManySingleRpc(
-      queries,
-      consistency,
-    ): Promise<readonly boolean[]> {
+    async checkManySingleRpc(queries, consistency): Promise<readonly boolean[]> {
       const response = await client.promises.checkBulkPermissions(
         v1.CheckBulkPermissionsRequest.create({
           consistency: toConsistency(consistency),
@@ -187,8 +155,7 @@ export function createTunedSpiceDbClient(
       return response.pairs.map(
         (pair) =>
           pair.response.oneofKind === "item" &&
-          pair.response.item.permissionship ===
-            v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION,
+          pair.response.item.permissionship === v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION,
       );
     },
     async lookupResources(query, consistency): Promise<readonly string[]> {

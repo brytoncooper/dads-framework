@@ -1,7 +1,4 @@
-import type {
-  VerificationPolicy,
-  VerificationTaskDefinition,
-} from "./verification/verification-contract.js";
+import type { VerificationPolicy, VerificationTaskDefinition } from "./verification/verification-contract.js";
 import { isRecord } from "./parse-guards.js";
 import {
   assertExecutionReferences,
@@ -49,9 +46,7 @@ export type ProjectOrientation = {
 export function parseDadsProject(input: unknown): DadsProject {
   if (
     !isRecord(input) ||
-    (input["schemaVersion"] !== 1 &&
-      input["schemaVersion"] !== 2 &&
-      input["schemaVersion"] !== 3)
+    (input["schemaVersion"] !== 1 && input["schemaVersion"] !== 2 && input["schemaVersion"] !== 3)
   ) {
     throw new Error("Dads project schemaVersion must be 1, 2, or 3.");
   }
@@ -74,21 +69,11 @@ export function parseDadsProject(input: unknown): DadsProject {
   return { schemaVersion, capabilities, packages, verificationPolicy };
 }
 
-export function orientProjectPath(
-  project: DadsProject,
-  requestedPath: string,
-): ProjectOrientation | undefined {
+export function orientProjectPath(project: DadsProject, requestedPath: string): ProjectOrientation | undefined {
   const normalizedPath = normalizeProjectPath(requestedPath);
   const owningPackages = project.packages
-    .filter(
-      (candidate) =>
-        normalizedPath === candidate.root ||
-        normalizedPath.startsWith(`${candidate.root}/`),
-    )
-    .sort(
-      (firstPackage, secondPackage) =>
-        secondPackage.root.length - firstPackage.root.length,
-    );
+    .filter((candidate) => normalizedPath === candidate.root || normalizedPath.startsWith(`${candidate.root}/`))
+    .sort((firstPackage, secondPackage) => secondPackage.root.length - firstPackage.root.length);
   const owner = owningPackages[0];
   if (!owner) {
     return undefined;
@@ -119,9 +104,7 @@ function parsePackageDeclaration(input: unknown): DadsPackageDeclaration {
   };
 }
 
-function createLegacyVerificationPolicy(
-  packages: readonly DadsPackageDeclaration[],
-): VerificationPolicy {
+function createLegacyVerificationPolicy(packages: readonly DadsPackageDeclaration[]): VerificationPolicy {
   const tasks = packages.flatMap((packageDeclaration) =>
     packageDeclaration.verification.map((command, commandIndex) =>
       createLegacyVerificationTask(packageDeclaration, command, commandIndex),
@@ -165,9 +148,7 @@ function parseVerificationPolicy(
     throw new Error("Dads project verification tasks must be an array.");
   }
   const packageNames = new Set(packages.map((entry) => entry.name));
-  const tasks = taskInputs.map((taskInput) =>
-    parseVerificationTask(taskInput, packageNames, schemaVersion),
-  );
+  const tasks = taskInputs.map((taskInput) => parseVerificationTask(taskInput, packageNames, schemaVersion));
   assertUniqueTaskIds(tasks);
   const taskById = new Map(tasks.map((task) => [task.id, task]));
   const taskIds = new Set(taskById.keys());
@@ -179,10 +160,7 @@ function parseVerificationPolicy(
   assertKnownTaskIds(fullFallbackTaskIds, taskIds, "full fallback tasks");
   return {
     kind: "task-graph",
-    projectId:
-      schemaVersion === 3
-        ? readNonEmptyString(input, "projectId")
-        : "version-2-project",
+    projectId: schemaVersion === 3 ? readNonEmptyString(input, "projectId") : "version-2-project",
     tasks,
     fullFallbackTaskIds,
   };
@@ -198,37 +176,24 @@ function parseVerificationTask(
   }
   const packageName = readNonEmptyString(input, "packageName");
   if (!packageNames.has(packageName)) {
-    throw new Error(
-      `Dads verification task references unknown package ${packageName}.`,
-    );
+    throw new Error(`Dads verification task references unknown package ${packageName}.`);
   }
   if (schemaVersion === 2 && input["execution"] !== undefined) {
-    throw new Error(
-      "Verification execution semantics require Dads project schemaVersion 3.",
-    );
+    throw new Error("Verification execution semantics require Dads project schemaVersion 3.");
   }
   return {
     id: readNonEmptyString(input, "id"),
     packageName,
     command: readNonEmptyString(input, "command"),
     dependsOn: readStringArray(input, "dependsOn"),
-    sourceInputs: readStringArray(input, "sourceInputs").map(
-      normalizeProjectPath,
-    ),
-    nonSourceInputs: readStringArray(input, "nonSourceInputs").map(
-      normalizeProjectPath,
-    ),
+    sourceInputs: readStringArray(input, "sourceInputs").map(normalizeProjectPath),
+    nonSourceInputs: readStringArray(input, "nonSourceInputs").map(normalizeProjectPath),
     reusePolicy: readReusePolicy(input),
-    execution:
-      schemaVersion === 3
-        ? parseVerificationExecution(input["execution"])
-        : { kind: "shell" },
+    execution: schemaVersion === 3 ? parseVerificationExecution(input["execution"]) : { kind: "shell" },
   };
 }
 
-function assertUniqueTaskIds(
-  tasks: readonly VerificationTaskDefinition[],
-): void {
+function assertUniqueTaskIds(tasks: readonly VerificationTaskDefinition[]): void {
   const taskIds = new Set<string>();
   for (const task of tasks) {
     if (taskIds.has(task.id)) {
@@ -238,9 +203,7 @@ function assertUniqueTaskIds(
   }
 }
 
-function parseCapabilities(
-  input: unknown,
-): readonly DadsCapabilityInstallation[] {
+function parseCapabilities(input: unknown): readonly DadsCapabilityInstallation[] {
   if (input === undefined) return [];
   if (!Array.isArray(input)) {
     throw new Error("Dads project capabilities must be an array.");
@@ -250,23 +213,15 @@ function parseCapabilities(
       throw new Error("Every Dads capability must be an object.");
     }
     const recipeVersion = capability["recipeVersion"];
-    if (
-      typeof recipeVersion !== "number" ||
-      !Number.isInteger(recipeVersion) ||
-      recipeVersion < 1
-    ) {
-      throw new Error(
-        "Dads capability recipeVersion must be a positive integer.",
-      );
+    if (typeof recipeVersion !== "number" || !Number.isInteger(recipeVersion) || recipeVersion < 1) {
+      throw new Error("Dads capability recipeVersion must be a positive integer.");
     }
     return {
       name: readNonEmptyString(capability, "name"),
       recipeVersion,
       profile: readNonEmptyString(capability, "profile"),
       client: readNonEmptyString(capability, "client"),
-      ownedFiles: readStringArray(capability, "ownedFiles").map(
-        normalizeProjectPath,
-      ),
+      ownedFiles: readStringArray(capability, "ownedFiles").map(normalizeProjectPath),
     };
   });
 }
@@ -287,9 +242,7 @@ function assertUniquePackageValues(
   }
 }
 
-function assertUniqueCapabilityNames(
-  capabilities: readonly DadsCapabilityInstallation[],
-): void {
+function assertUniqueCapabilityNames(capabilities: readonly DadsCapabilityInstallation[]): void {
   const names = new Set<string>();
   for (const capability of capabilities) {
     if (names.has(capability.name)) {

@@ -9,11 +9,7 @@ export function isExecutableOnlyAdoptionPackage(manifest) {
   if (!isRecord(manifest)) return false;
   const exportsField = manifest.exports;
   const binTargets = readBinTargets(manifest.bin);
-  if (
-    !isRecord(exportsField) ||
-    typeof exportsField["."] !== "string" ||
-    binTargets === undefined
-  ) {
+  if (!isRecord(exportsField) || typeof exportsField["."] !== "string" || binTargets === undefined) {
     return false;
   }
   return binTargets.includes(exportsField["."]);

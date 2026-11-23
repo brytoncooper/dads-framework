@@ -6,12 +6,7 @@ import { join } from "node:path";
 import type { Duplex } from "node:stream";
 import { z } from "zod";
 import { readPrivateJson } from "./local-state.js";
-import {
-  controlProtocol,
-  matchesProof,
-  serverProof,
-  stopProof,
-} from "./control-proof.js";
+import { controlProtocol, matchesProof, serverProof, stopProof } from "./control-proof.js";
 
 const controlRecord = z.strictObject({
   port: z.number().int().min(1).max(65_535),
@@ -21,25 +16,17 @@ const controlRecord = z.strictObject({
 /** The client's single-use challenge, or undefined when it is missing or malformed. */
 function readChallengeNonce(request: IncomingMessage): string | undefined {
   const nonce = request.headers["x-dads-challenge"];
-  return typeof nonce === "string" && /^[a-f0-9]{64}$/.test(nonce)
-    ? nonce
-    : undefined;
+  return typeof nonce === "string" && /^[a-f0-9]{64}$/.test(nonce) ? nonce : undefined;
 }
 
 /** The exact loopback authority this server answers to, once it is listening. */
 function expectedControlHost(server: Server): string | undefined {
   const address = server.address();
-  return address && typeof address !== "string"
-    ? `127.0.0.1:${String(address.port)}`
-    : undefined;
+  return address && typeof address !== "string" ? `127.0.0.1:${String(address.port)}` : undefined;
 }
 
 /** A control upgrade is a bodiless loopback GET for this protocol alone, with no browser origin. */
-function isControlUpgrade(
-  request: IncomingMessage,
-  head: Buffer,
-  expectedHost: string | undefined,
-): boolean {
+function isControlUpgrade(request: IncomingMessage, head: Buffer, expectedHost: string | undefined): boolean {
   return (
     request.method === "GET" &&
     request.url === "/control" &&
@@ -48,8 +35,7 @@ function isControlUpgrade(
     request.headers.origin === undefined &&
     head.length === 0 &&
     request.headers["transfer-encoding"] === undefined &&
-    (request.headers["content-length"] === undefined ||
-      request.headers["content-length"] === "0")
+    (request.headers["content-length"] === undefined || request.headers["content-length"] === "0")
   );
 }
 
@@ -65,11 +51,7 @@ export async function startDevelopmentControl(onStop: () => void) {
   server.maxConnections = 16;
   server.on("upgrade", (request, socket, head) => {
     const nonce = readChallengeNonce(request);
-    if (
-      nonce === undefined ||
-      sockets.size >= 8 ||
-      !isControlUpgrade(request, head, expectedControlHost(server))
-    ) {
+    if (nonce === undefined || sockets.size >= 8 || !isControlUpgrade(request, head, expectedControlHost(server))) {
       socket.destroy();
       return;
     }
@@ -90,10 +72,7 @@ export async function startDevelopmentControl(onStop: () => void) {
     let frame = "";
     socket.on("data", (chunk: Buffer) => {
       frame += chunk.toString("utf8");
-      if (
-        frame.length > 70 ||
-        (frame.includes("\n") && !/^STOP [a-f0-9]{64}\n$/.test(frame))
-      ) {
+      if (frame.length > 70 || (frame.includes("\n") && !/^STOP [a-f0-9]{64}\n$/.test(frame))) {
         socket.destroy();
         return;
       }
@@ -117,8 +96,7 @@ export async function startDevelopmentControl(onStop: () => void) {
     server.listen(0, "127.0.0.1", resolve);
   });
   const address = server.address();
-  if (!address || typeof address === "string")
-    throw new Error("Control port unavailable.");
+  if (!address || typeof address === "string") throw new Error("Control port unavailable.");
   return {
     port: address.port,
     key,
@@ -134,15 +112,9 @@ export async function startDevelopmentControl(onStop: () => void) {
   };
 }
 
-export function writeControlRecord(
-  directory: string,
-  value: { port: number; key: string },
-): void {
+export function writeControlRecord(directory: string, value: { port: number; key: string }): void {
   const validated = controlRecord.parse({ port: value.port, key: value.key });
-  const temporary = join(
-    directory,
-    `control-${randomBytes(8).toString("hex")}.tmp`,
-  );
+  const temporary = join(directory, `control-${randomBytes(8).toString("hex")}.tmp`);
   writeFileSync(temporary, JSON.stringify(validated), {
     flag: "wx",
     mode: 0o600,
@@ -151,7 +123,5 @@ export function writeControlRecord(
 }
 
 export function readControlRecord(directory: string) {
-  return readPrivateJson(join(directory, "control.json"), (value) =>
-    controlRecord.parse(value),
-  );
+  return readPrivateJson(join(directory, "control.json"), (value) => controlRecord.parse(value));
 }

@@ -14,10 +14,7 @@ describe("row version contract", () => {
     expect(save.safeParse({ title: "Draft" }).success).toBe(false);
   });
 
-  it.each([-1, 0.5, "1", 2_147_483_648])(
-    "rejects invalid revision %s",
-    (input) => {
-      expect(rowVersionSchema.safeParse(input).success).toBe(false);
-    },
-  );
+  it.each([-1, 0.5, "1", 2_147_483_648])("rejects invalid revision %s", (input) => {
+    expect(rowVersionSchema.safeParse(input).success).toBe(false);
+  });
 });

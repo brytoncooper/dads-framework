@@ -45,22 +45,16 @@ export function migrationJournal(path: string): string {
 /** The name another migration's `dependsOn` uses for this one. */
 export function migrationName(path: string): string {
   const base = path.slice(path.lastIndexOf("/") + 1);
-  return base.endsWith(MODULE_SUFFIX)
-    ? base.slice(0, -MODULE_SUFFIX.length)
-    : base;
+  return base.endsWith(MODULE_SUFFIX) ? base.slice(0, -MODULE_SUFFIX.length) : base;
 }
 
 function isExportedConst(statement: ts.VariableStatement): boolean {
-  const exported = (statement.modifiers ?? []).some(
-    (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-  );
+  const exported = (statement.modifiers ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
   const constant = (statement.declarationList.flags & ts.NodeFlags.Const) !== 0;
   return exported && constant;
 }
 
-function readDependencyList(
-  initializer: ts.Expression | undefined,
-): MigrationPrerequisites {
+function readDependencyList(initializer: ts.Expression | undefined): MigrationPrerequisites {
   if (initializer === undefined) return { kind: "invalid" };
   if (!ts.isArrayLiteralExpression(initializer)) return { kind: "invalid" };
   const dependencies: string[] = [];
@@ -75,21 +69,15 @@ function readDependencyList(
   return { kind: "graph", dependencies };
 }
 
-function dependsOnDeclaration(
-  statement: ts.Statement,
-): ts.VariableDeclaration | undefined {
+function dependsOnDeclaration(statement: ts.Statement): ts.VariableDeclaration | undefined {
   if (!ts.isVariableStatement(statement)) return undefined;
   return statement.declarationList.declarations.find(
-    (declaration) =>
-      ts.isIdentifier(declaration.name) && declaration.name.text === DEPENDS_ON,
+    (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === DEPENDS_ON,
   );
 }
 
 /** How one migration's source declares its prerequisites. */
-export function readPrerequisites(
-  path: string,
-  text: string,
-): MigrationPrerequisites {
+export function readPrerequisites(path: string, text: string): MigrationPrerequisites {
   const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
   for (const statement of source.statements) {
     const declaration = dependsOnDeclaration(statement);

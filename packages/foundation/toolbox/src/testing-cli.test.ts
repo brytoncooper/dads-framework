@@ -1,21 +1,11 @@
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const packageDirectory = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "..",
-);
+const packageDirectory = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 describe("dad test composition", () => {
   it("advertises the standalone testing commands in help", () => {
@@ -169,18 +159,10 @@ function createTestingWorkspace(): string {
   return directory;
 }
 
-function runDad(
-  argumentsToPass: readonly string[],
-  env?: Record<string, string>,
-  cwd?: string,
-) {
-  return spawnSync(
-    process.execPath,
-    [join(packageDirectory, "bin", "dad.js"), ...argumentsToPass],
-    {
-      cwd: cwd ?? join(packageDirectory, "..", ".."),
-      encoding: "utf8",
-      env: { ...process.env, ...env },
-    },
-  );
+function runDad(argumentsToPass: readonly string[], env?: Record<string, string>, cwd?: string) {
+  return spawnSync(process.execPath, [join(packageDirectory, "bin", "dad.js"), ...argumentsToPass], {
+    cwd: cwd ?? join(packageDirectory, "..", ".."),
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  });
 }

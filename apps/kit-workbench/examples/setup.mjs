@@ -1,15 +1,7 @@
 import console from "node:console";
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import {
-  chmod,
-  lstat,
-  mkdir,
-  readFile,
-  rename,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import process from "node:process";
 import { setTimeout } from "node:timers/promises";
@@ -20,8 +12,7 @@ const examples = join(root, ".dads", "examples");
 const roles = ["owner", "member", "outsider"];
 
 try {
-  if (process.argv[2] === "--origins")
-    process.stdout.write(shellExports(localOrigins()));
+  if (process.argv[2] === "--origins") process.stdout.write(shellExports(localOrigins()));
   else await setup();
 } catch (error) {
   console.error(error.message);
@@ -38,10 +29,7 @@ async function setup() {
     await mkdir(pending, { mode: 0o700 });
   } catch (error) {
     if (error.code === "EEXIST") {
-      throw new Error(
-        "Example setup is already running or was interrupted (.dads/examples/.setup).",
-        { cause: error },
-      );
+      throw new Error("Example setup is already running or was interrupted (.dads/examples/.setup).", { cause: error });
     }
     throw error;
   }
@@ -52,62 +40,33 @@ async function setup() {
   } finally {
     await rm(pending, { recursive: true, force: true });
   }
-  console.log(
-    "Example accounts and cookie jars are ready. Enter the examples directory and load the environment:",
-  );
+  console.log("Example accounts and cookie jars are ready. Enter the examples directory and load the environment:");
   console.log("  cd .dads/examples && . ./env.sh");
-  console.log(
-    '  curl -fsS -b owner.cookies "$customer/api/tenants/$tenant/notes"',
-  );
+  console.log('  curl -fsS -b owner.cookies "$customer/api/tenants/$tenant/notes"');
 }
 
 async function makeOutputDirectory() {
   const parents = [join(root, ".dads"), examples];
   for (const directory of parents) {
     await mkdir(directory, { recursive: true, mode: 0o700 });
-    if (!(await lstat(directory)).isDirectory())
-      throw new Error(".dads and .dads/examples must be directories.");
+    if (!(await lstat(directory)).isDirectory()) throw new Error(".dads and .dads/examples must be directories.");
   }
-  if (((await lstat(examples)).mode & 0o077) !== 0)
-    throw new Error("Keep .dads/examples private (mode 0700).");
+  if (((await lstat(examples)).mode & 0o077) !== 0) throw new Error("Keep .dads/examples private (mode 0700).");
 }
 
 async function provision(web, pending) {
   const run = randomBytes(8).toString("hex");
   const accounts = [];
-  for (const role of roles)
-    accounts.push(await createAccount(web, pending, role, run));
+  for (const role of roles) accounts.push(await createAccount(web, pending, role, run));
   const [owner, member] = accounts;
-  const created = await post(
-    web,
-    "/api/tenants",
-    { name: `Examples ${run}` },
-    owner.jar,
-    201,
-  );
+  const created = await post(web, "/api/tenants", { name: `Examples ${run}` }, owner.jar, 201);
   const tenant = identifier(created.data?.id);
-  await post(
-    web,
-    `/api/tenants/${tenant}/invitations`,
-    { email: member.email },
-    owner.jar,
-    201,
-  );
-  const invitation = await mailLink(
-    web,
-    member.email,
-    "/accept-tenant-invitation",
-  );
+  await post(web, `/api/tenants/${tenant}/invitations`, { email: member.email }, owner.jar, 201);
+  const invitation = await mailLink(web, member.email, "/accept-tenant-invitation");
   const token = new URLSearchParams(invitation.hash.slice(1)).get("token");
   if (!token) throw new Error("The invitation email did not include a token.");
-  const accepted = await post(
-    web,
-    "/api/tenants/invitations/accept",
-    { token },
-    member.jar,
-  );
-  if (accepted.data?.tenantId !== tenant)
-    throw new Error("The member did not join the example tenant.");
+  const accepted = await post(web, "/api/tenants/invitations/accept", { token }, member.jar);
+  if (accepted.data?.tenantId !== tenant) throw new Error("The member did not join the example tenant.");
   return { tenant, accounts };
 }
 
@@ -129,11 +88,7 @@ async function publish(pending, tenant, accounts) {
     email,
     password,
   }));
-  await writePrivate(
-    pending,
-    "accounts.json",
-    JSON.stringify(credentials, null, 2) + "\n",
-  );
+  await writePrivate(pending, "accounts.json", JSON.stringify(credentials, null, 2) + "\n");
   for (const file of [...roles.map(cookieFile), "accounts.json", "env.sh"])
     await rename(join(pending, file), join(examples, file));
 }
@@ -155,13 +110,8 @@ function shellExports(values) {
 }
 
 function localOrigin(value) {
-  if (
-    typeof value !== "string" ||
-    !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(value)
-  )
-    throw new Error(
-      "Example setup requires loopback Compose URLs from dev:status.",
-    );
+  if (typeof value !== "string" || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(value))
+    throw new Error("Example setup requires loopback Compose URLs from dev:status.");
   return new URL(value).origin;
 }
 
@@ -184,10 +134,7 @@ function command(program, args, action, input) {
 
 function dev(action) {
   const label = `Read local stack ${action}`;
-  return parseJson(
-    command(process.execPath, ["assembly/dev.mjs", action, "--json"], label),
-    label,
-  );
+  return parseJson(command(process.execPath, ["assembly/dev.mjs", action, "--json"], label), label);
 }
 
 function cookieFile(role) {
@@ -210,27 +157,14 @@ async function createAccount(web, pending, role, run) {
     name: `Example ${role}`,
   });
   const verification = await mailLink(web, email, "/api/auth/verify-email");
-  curl(
-    web,
-    ["--config", "-"],
-    "Verify account",
-    [200, 302],
-    `url = ${JSON.stringify(verification.href)}\n`,
-  );
+  curl(web, ["--config", "-"], "Verify account", [200, 302], `url = ${JSON.stringify(verification.href)}\n`);
   const jar = join(pending, cookieFile(role));
   await writePrivate(pending, cookieFile(role), "");
   await post(web, "/api/auth/sign-in/email", { email, password }, jar);
   await chmod(jar, 0o600);
   const action = "Read verified session";
-  const session = parseJson(
-    curl(web, ["--cookie", jar, web + "/api/auth/get-session"], action, [200]),
-    action,
-  );
-  if (
-    session?.account?.emailVerified !== true ||
-    session.account.email !== email ||
-    !(await hasLocalCookie(jar))
-  )
+  const session = parseJson(curl(web, ["--cookie", jar, web + "/api/auth/get-session"], action, [200]), action);
+  if (session?.account?.emailVerified !== true || session.account.email !== email || !(await hasLocalCookie(jar)))
     throw new Error("Sign-in did not save a verified session.");
   return { role, email, password, jar, id: identifier(session.account.id) };
 }
@@ -241,24 +175,10 @@ async function hasLocalCookie(jar) {
 }
 
 function post(web, path, payload, jar, expected = 200) {
-  const args = [
-    "--header",
-    "Content-Type: application/json",
-    "--data-binary",
-    "@-",
-  ];
+  const args = ["--header", "Content-Type: application/json", "--data-binary", "@-"];
   if (jar) args.push("--cookie", jar, "--cookie-jar", jar);
   const action = `POST ${path}`;
-  return parseJson(
-    curl(
-      web,
-      [...args, web + path],
-      action,
-      [expected],
-      JSON.stringify(payload),
-    ),
-    action,
-  );
+  return parseJson(curl(web, [...args, web + path], action, [expected], JSON.stringify(payload)), action);
 }
 
 function parseJson(text, action) {
@@ -289,16 +209,13 @@ function curl(web, args, action, expected, input) {
     input,
   );
   const status = Number(output.slice(-3));
-  if (!expected.includes(status))
-    throw new Error(`${action} returned HTTP ${status}.`);
+  if (!expected.includes(status)) throw new Error(`${action} returned HTTP ${status}.`);
   return output.slice(0, -4);
 }
 
 async function mailLink(web, email, pathname) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const messages = dev("mail").mail.filter(({ to }) =>
-      to.some(({ address }) => address === email),
-    );
+    const messages = dev("mail").mail.filter(({ to }) => to.some(({ address }) => address === email));
     for (const message of messages) {
       const link = findLink(message.text, web, pathname);
       if (link) return link;
@@ -312,12 +229,6 @@ function findLink(text, web, pathname) {
   for (const [href] of text.matchAll(/https?:\/\/[^\s<>]+/g)) {
     if (!URL.canParse(href)) continue;
     const url = new URL(href);
-    if (
-      url.origin === web &&
-      !url.username &&
-      !url.password &&
-      url.pathname === pathname
-    )
-      return url;
+    if (url.origin === web && !url.username && !url.password && url.pathname === pathname) return url;
   }
 }

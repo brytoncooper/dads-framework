@@ -15,12 +15,7 @@ import { spawn } from "node:child_process";
 import { isRecord, isUnknownArray } from "../parse-guards.js";
 import { dadsIdentifier } from "./dads-identifier.js";
 import { parseNxConfiguration } from "./nx-installation.js";
-import type {
-  GitSnapshot,
-  NxCommandRunner,
-  NxProject,
-  NxTarget,
-} from "./import-nx-types.js";
+import type { GitSnapshot, NxCommandRunner, NxProject, NxTarget } from "./import-nx-types.js";
 import {
   isJsonRecord,
   parseJson,
@@ -34,11 +29,7 @@ import {
 /** Target fields this importer resolves; every other field is dropped. */
 const carriedTargetFields = ["executor", "options", "continuous"];
 const carriedOptionFields = ["command", "cwd"];
-const executionAffectingFields = [
-  "dependsOn",
-  "defaultConfiguration",
-  "configurations",
-];
+const executionAffectingFields = ["dependsOn", "defaultConfiguration", "configurations"];
 
 // --- The source tree -----------------------------------------------------
 
@@ -59,9 +50,7 @@ export async function requireCleanCommittedWorkspace(
     cwd: workspaceRoot,
   });
   if (status.stdout.trim() !== "") {
-    throw new Error(
-      "Refusing Nx import: source workspace has uncommitted or untracked changes.",
-    );
+    throw new Error("Refusing Nx import: source workspace has uncommitted or untracked changes.");
   }
   const revision = await runner({
     executable: "git",
@@ -70,14 +59,10 @@ export async function requireCleanCommittedWorkspace(
   });
   const resolved = revision.stdout.trim().toLowerCase();
   if (!/^[0-9a-f]{40,64}$/.test(resolved)) {
-    throw new Error(
-      "Refusing Nx import: source workspace does not have an immutable Git HEAD SHA.",
-    );
+    throw new Error("Refusing Nx import: source workspace does not have an immutable Git HEAD SHA.");
   }
   if (resolved !== expected) {
-    throw new Error(
-      `Refusing Nx import: expected Git SHA ${expected} does not match clean HEAD ${resolved}.`,
-    );
+    throw new Error(`Refusing Nx import: expected Git SHA ${expected} does not match clean HEAD ${resolved}.`);
   }
   return { expected, resolved };
 }
@@ -85,15 +70,11 @@ export async function requireCleanCommittedWorkspace(
 /** The caller's SHA, normalized, or a refusal naming what was wrong with it. */
 function readApprovedSha(expectedGitSha: string): string {
   if (typeof expectedGitSha !== "string") {
-    throw new Error(
-      "Refusing Nx import: expectedGitSha is required and must be a full Git object ID.",
-    );
+    throw new Error("Refusing Nx import: expectedGitSha is required and must be a full Git object ID.");
   }
   const expected = expectedGitSha.trim().toLowerCase();
   if (!/^[0-9a-f]{40,64}$/.test(expected)) {
-    throw new Error(
-      "Refusing Nx import: expectedGitSha must be a full 40- or 64-character Git object ID.",
-    );
+    throw new Error("Refusing Nx import: expectedGitSha must be a full 40- or 64-character Git object ID.");
   }
   return expected;
 }
@@ -132,20 +113,9 @@ export async function readProjects(
   nxExecutable: string,
   runner: NxCommandRunner,
 ): Promise<readonly string[]> {
-  const result = await runNxJson(
-    workspaceRoot,
-    nxExecutable,
-    runner,
-    ["show", "projects", "--json"],
-    "project list",
-  );
-  if (
-    !Array.isArray(result) ||
-    !result.every((entry) => typeof entry === "string")
-  ) {
-    throw new Error(
-      "Unsupported Nx interface: `nx show projects --json` did not return a JSON string array.",
-    );
+  const result = await runNxJson(workspaceRoot, nxExecutable, runner, ["show", "projects", "--json"], "project list");
+  if (!Array.isArray(result) || !result.every((entry) => typeof entry === "string")) {
+    throw new Error("Unsupported Nx interface: `nx show projects --json` did not return a JSON string array.");
   }
   return [...result].sort();
 }
@@ -157,13 +127,7 @@ export async function readNxProjectConfiguration(
   runner: NxCommandRunner,
   name: string,
 ): Promise<JsonValue> {
-  return runNxJson(
-    workspaceRoot,
-    nxExecutable,
-    runner,
-    ["show", "project", name, "--json"],
-    `project ${name}`,
-  );
+  return runNxJson(workspaceRoot, nxExecutable, runner, ["show", "project", name, "--json"], `project ${name}`);
 }
 
 /**
@@ -187,14 +151,10 @@ export async function readProjectGraph(
     const raw = await fs.readFile(graphPath, "utf8");
     return parseJson(raw, "Nx project graph");
   } catch (error: unknown) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unknown graph collection failure.";
-    throw new Error(
-      `Unsupported Nx interface: could not collect a machine-readable project graph (${message}).`,
-      { cause: error },
-    );
+    const message = error instanceof Error ? error.message : "Unknown graph collection failure.";
+    throw new Error(`Unsupported Nx interface: could not collect a machine-readable project graph (${message}).`, {
+      cause: error,
+    });
   } finally {
     await fs.rm(graphPath, { force: true });
   }
@@ -216,8 +176,7 @@ async function runNxJson(
     });
     return parseJson(result.stdout, `Nx ${subject}`);
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Unknown Nx command failure.";
+    const message = error instanceof Error ? error.message : "Unknown Nx command failure.";
     throw new Error(`Unable to read Nx ${subject}: ${message}`, {
       cause: error,
     });
@@ -227,14 +186,9 @@ async function runNxJson(
 // --- nx.json -------------------------------------------------------------
 
 /** Parses a JSONC configuration file, or `undefined` when it is absent. */
-export async function readOptionalJson(
-  filePath: string,
-): Promise<Readonly<Record<string, unknown>> | undefined> {
+export async function readOptionalJson(filePath: string): Promise<Readonly<Record<string, unknown>> | undefined> {
   try {
-    const value = parseNxConfiguration(
-      await fs.readFile(filePath, "utf8"),
-      filePath,
-    );
+    const value = parseNxConfiguration(await fs.readFile(filePath, "utf8"), filePath);
     if (!isRecord(value)) throw new Error(`${filePath} must be a JSON object.`);
     return value;
   } catch (error: unknown) {
@@ -244,15 +198,11 @@ export async function readOptionalJson(
 }
 
 /** Every plugin name `nx.json` declares, in either supported spelling. */
-export function readNxPlugins(
-  record: Readonly<Record<string, unknown>> | undefined,
-): readonly string[] {
+export function readNxPlugins(record: Readonly<Record<string, unknown>> | undefined): readonly string[] {
   const value = record?.["plugins"];
   if (value === undefined) return [];
   if (!isUnknownArray(value))
-    throw new Error(
-      "Invalid nx.json plugins: plugins must be an array of names or plugin objects.",
-    );
+    throw new Error("Invalid nx.json plugins: plugins must be an array of names or plugin objects.");
   const names = new Set<string>();
   for (const entry of value) names.add(readNxPluginName(entry));
   return [...names].sort();
@@ -263,26 +213,18 @@ function readNxPluginName(entry: unknown): string {
   if (typeof entry === "string" && entry.trim() !== "") return entry;
   const plugin = isRecord(entry) ? entry["plugin"] : undefined;
   if (typeof plugin === "string" && plugin.trim() !== "") return plugin;
-  throw new Error(
-    "Invalid nx.json plugins: every plugin object must provide a non-empty string plugin field.",
-  );
+  throw new Error("Invalid nx.json plugins: every plugin object must provide a non-empty string plugin field.");
 }
 
 // --- Projects and targets ------------------------------------------------
 
 /** Turns one `nx show project` answer into the project shape Dads imports. */
-export function parseProject(
-  value: JsonValue,
-  fallbackName: string,
-): NxProject {
-  if (!isJsonRecord(value))
-    throw new Error(`Nx project ${fallbackName} is not an object.`);
+export function parseProject(value: JsonValue, fallbackName: string): NxProject {
+  if (!isJsonRecord(value)) throw new Error(`Nx project ${fallbackName} is not an object.`);
   const name = readOptionalString(value, "name") ?? fallbackName;
   const root = readOptionalString(value, "root") ?? ".";
   const targetRecord = readOptionalJsonRecord(value, "targets") ?? {};
-  const targets = Object.entries(targetRecord).map(
-    ([targetName, targetValue]) => parseTarget(targetName, targetValue),
-  );
+  const targets = Object.entries(targetRecord).map(([targetName, targetValue]) => parseTarget(targetName, targetValue));
   return {
     name,
     id: dadsIdentifier(name),
@@ -328,31 +270,19 @@ function unreadableTarget(name: string): NxTarget {
 }
 
 /** Fields that change what running a target does, so it cannot be imported. */
-function unresolvedExecutionFields(
-  value: JsonRecord,
-  options: JsonRecord | undefined,
-): readonly string[] {
-  const configuration = Object.keys(value).filter((key) =>
-    executionAffectingFields.includes(key),
-  );
+function unresolvedExecutionFields(value: JsonRecord, options: JsonRecord | undefined): readonly string[] {
+  const configuration = Object.keys(value).filter((key) => executionAffectingFields.includes(key));
   return [...configuration, ...unsupportedOptionFields(options)].sort();
 }
 
 /** Every field of the target that the imported recipe does not carry. */
-function droppedTargetFields(
-  value: JsonRecord,
-  options: JsonRecord | undefined,
-): readonly string[] {
-  const topLevel = Object.keys(value).filter(
-    (key) => !carriedTargetFields.includes(key),
-  );
+function droppedTargetFields(value: JsonRecord, options: JsonRecord | undefined): readonly string[] {
+  const topLevel = Object.keys(value).filter((key) => !carriedTargetFields.includes(key));
   return [...topLevel, ...unsupportedOptionFields(options)].sort();
 }
 
 /** The `options.*` fields other than the command and its directory. */
-function unsupportedOptionFields(
-  options: JsonRecord | undefined,
-): readonly string[] {
+function unsupportedOptionFields(options: JsonRecord | undefined): readonly string[] {
   if (!options) return [];
   return Object.keys(options)
     .filter((key) => !carriedOptionFields.includes(key))
@@ -368,10 +298,7 @@ export function normalizeRoot(value: string): string {
 }
 
 /** Where `candidate` sits relative to the workspace root. */
-export function relativeLocation(
-  workspaceRoot: string,
-  candidate: string,
-): string {
+export function relativeLocation(workspaceRoot: string, candidate: string): string {
   const absolute = path.resolve(workspaceRoot, candidate);
   const relative = path.relative(workspaceRoot, absolute);
   return relative === "" ? "." : normalizeRoot(relative);
@@ -379,12 +306,7 @@ export function relativeLocation(
 
 /** True for the one read failure that means "this file simply is not here". */
 export function isMissingFile(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error["code"] === "ENOENT"
-  );
+  return typeof error === "object" && error !== null && "code" in error && error["code"] === "ENOENT";
 }
 
 // --- Running commands ----------------------------------------------------
@@ -419,11 +341,7 @@ export async function runProcess(input: {
         return;
       }
       const exitStatus = code === null ? "without a status" : String(code);
-      reject(
-        new Error(
-          `${input.executable} ${input.args.join(" ")} exited ${exitStatus}: ${stderr.trim()}`,
-        ),
-      );
+      reject(new Error(`${input.executable} ${input.args.join(" ")} exited ${exitStatus}: ${stderr.trim()}`));
     });
   });
 }

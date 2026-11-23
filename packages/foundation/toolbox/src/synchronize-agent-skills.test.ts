@@ -1,20 +1,10 @@
 /** Proves skill synchronization never overwrites agent instructions it did not create. */
 
-import {
-  mkdirSync,
-  mkdtempSync,
-  readlinkSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  inspectAgentSkillSynchronization,
-  synchronizeAgentSkills,
-} from "./synchronize-agent-skills.js";
+import { inspectAgentSkillSynchronization, synchronizeAgentSkills } from "./synchronize-agent-skills.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -33,9 +23,7 @@ describe("agent skill synchronization", () => {
       { harness: ".claude", status: "created" },
       { harness: ".codex", status: "created" },
     ]);
-    expect(readlinkSync(join(projectRoot, ".claude/skills"))).toBe(
-      "../.agents/skills",
-    );
+    expect(readlinkSync(join(projectRoot, ".claude/skills"))).toBe("../.agents/skills");
     expect(synchronizeAgentSkills(projectRoot)).toEqual([
       { harness: ".cursor", status: "correct" },
       { harness: ".claude", status: "correct" },
@@ -52,9 +40,7 @@ describe("agent skill synchronization", () => {
     expect(() => inspectAgentSkillSynchronization(projectRoot)).toThrow(
       `${skillsPath} is a real path; refusing to overwrite agent instructions.`,
     );
-    expect(() => synchronizeAgentSkills(projectRoot)).toThrow(
-      "refusing to overwrite agent instructions",
-    );
+    expect(() => synchronizeAgentSkills(projectRoot)).toThrow("refusing to overwrite agent instructions");
   });
 
   it("refuses a skills link that points at an unexpected source", () => {
@@ -63,9 +49,7 @@ describe("agent skill synchronization", () => {
     mkdirSync(join(projectRoot, ".codex"), { recursive: true });
     symlinkSync("../vendor/skills", skillsPath, "dir");
 
-    expect(() => synchronizeAgentSkills(projectRoot)).toThrow(
-      `${skillsPath} points to an unexpected skill source.`,
-    );
+    expect(() => synchronizeAgentSkills(projectRoot)).toThrow(`${skillsPath} points to an unexpected skill source.`);
     expect(readlinkSync(skillsPath)).toBe("../vendor/skills");
   });
 });

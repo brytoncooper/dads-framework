@@ -1,10 +1,4 @@
-import {
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 
 import { isMissingPathError } from "../missing-path-error.js";
@@ -32,19 +26,15 @@ export class GenerationPlan {
     if (existing !== undefined && existing !== content) {
       throw new Error(`File already exists with other content: ${path}`);
     }
-    if (existing === undefined)
-      this.edits.set(path, { before: undefined, after: content });
+    if (existing === undefined) this.edits.set(path, { before: undefined, after: content });
   }
 
   appendLine(path: string, marker: string, line: string): void {
     const content = this.read(path);
-    if (content === undefined)
-      throw new Error(`Required registry does not exist: ${path}`);
+    if (content === undefined) throw new Error(`Required registry does not exist: ${path}`);
     const lines = content.split("\n");
     if (lines.some((candidate) => candidate.trim() === line.trim())) return;
-    const matches = lines.flatMap((candidate, index) =>
-      candidate.trim() === marker ? [index] : [],
-    );
+    const matches = lines.flatMap((candidate, index) => (candidate.trim() === marker ? [index] : []));
     const [index] = matches;
     if (matches.length !== 1 || index === undefined) {
       throw new Error(`Expected one "${marker}" marker in ${path}`);
@@ -59,8 +49,7 @@ export class GenerationPlan {
 
   rewrite(path: string, after: string): void {
     const before = this.readDisk(path);
-    if (before === undefined)
-      throw new Error(`Cannot update missing file: ${path}`);
+    if (before === undefined) throw new Error(`Cannot update missing file: ${path}`);
     if (before !== after) this.edits.set(path, { before, after });
   }
 
@@ -97,11 +86,9 @@ export class GenerationPlan {
     const segments = relative(this.root, target).split(sep);
     let current = this.root;
     for (const segment of segments) {
-      if (segment === ".." || segment === "")
-        throw new Error(`Invalid generator path: ${path}`);
+      if (segment === ".." || segment === "") throw new Error(`Invalid generator path: ${path}`);
       current = join(current, segment);
-      if (isSymbolicLink(current))
-        throw new Error(`Generator path contains a symbolic link: ${path}`);
+      if (isSymbolicLink(current)) throw new Error(`Generator path contains a symbolic link: ${path}`);
     }
     return target;
   }

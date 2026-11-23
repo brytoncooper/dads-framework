@@ -15,10 +15,7 @@
       property="og:description"
       content="TypeScript backend framework with Zanzibar-style relationship permissions compiled into PostgreSQL transactions, typed HTTP contracts, multi-API composition, and enforced domain boundaries."
     />
-    <meta
-      property="og:image"
-      content="https://dadsframework.dev/assets/dads-social.png"
-    />
+    <meta property="og:image" content="https://dadsframework.dev/assets/dads-social.png" />
     <meta property="og:image:alt" content="Dads Framework monogram" />
     <link rel="canonical" href="https://dadsframework.dev/" />
     <link rel="icon" href="/assets/dads-favicon.png" type="image/png" />
@@ -41,43 +38,22 @@
               Your agents don't care about boundaries.
               <strong>Dad does.</strong>
             </p>
-            <h1>
-              One TypeScript framework <span>for your entire backend.</span>
-            </h1>
+            <h1>One TypeScript framework <span>for your entire backend.</span></h1>
             <p class="hero-lede">
-              API routes, permissions, auth, and background jobs in one place.
-              Every route requires a permission rule before your code will even
-              compile.
+              API routes, permissions, auth, and background jobs in one place. Every route requires a permission rule
+              before your code will even compile.
             </p>
             <div class="hero-actions">
-              <a class="primary-action" href="/docs/"
-                >Read the docs <span aria-hidden="true">→</span></a
-              >
-              <a class="text-action" href="/docs/packages.html"
-                >Browse all packages</a
-              >
+              <a class="primary-action" href="/docs/">Read the docs <span aria-hidden="true">→</span></a>
+              <a class="text-action" href="/docs/packages.html">Browse all packages</a>
             </div>
           </div>
 
-          <section
-            class="feature-preview"
-            aria-labelledby="feature-preview-title"
-          >
+          <section class="feature-preview" aria-labelledby="feature-preview-title">
             <div class="preview-header">
               <h2 id="feature-preview-title">Start a project</h2>
-              <div
-                class="template-switch"
-                role="tablist"
-                aria-label="Starter template"
-                hidden
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  id="template-tab-minimal"
-                  data-template="minimal"
-                  aria-selected="true"
-                >
+              <div class="template-switch" role="tablist" aria-label="Starter template" hidden>
+                <button type="button" role="tab" id="template-tab-minimal" data-template="minimal" aria-selected="true">
                   Minimal
                 </button>
                 <button
@@ -94,24 +70,11 @@
             </div>
             <div class="install">
               <span class="prompt-sign" aria-hidden="true">$</span>
-              <code id="install-command"
-                >npm create dads@latest my-app -- --template minimal</code
-              >
-              <button
-                id="copy-command"
-                type="button"
-                aria-label="Copy install command"
-                hidden
-              >
-                Copy
-              </button>
+              <code id="install-command">npm create dads@latest my-app -- --template minimal</code>
+              <button id="copy-command" type="button" aria-label="Copy install command" hidden>Copy</button>
               <span id="copy-status" class="sr" role="status"></span>
             </div>
-            <ul
-              class="file-tree"
-              id="template-tree"
-              aria-label="Generated project layout"
-            >
+            <ul class="file-tree" id="template-tree" aria-label="Generated project layout">
               <li class="ft-row" data-depth="0" data-kind="dir">
                 <span class="ft-node"
                   ><svg class="ft-icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -207,9 +170,7 @@
                     /></svg
                   ><code class="ft-name">tenants/</code></span
                 >
-                <span class="ft-note"
-                  >Built-in auth, users &amp; workspaces</span
-                >
+                <span class="ft-note">Built-in auth, users &amp; workspaces</span>
               </li>
               <li class="ft-row" data-depth="1" data-kind="dir">
                 <span class="ft-node"
@@ -250,10 +211,7 @@
             <div class="preview-footer">
               <div class="batteries-block">
                 <p class="batteries-label">Batteries included</p>
-                <ul
-                  class="batteries-list"
-                  aria-label="Included framework packages"
-                >
+                <ul class="batteries-list" aria-label="Included framework packages">
                   <li>Postgres ReBAC</li>
                   <li>Auth &amp; SSO</li>
                   <li>SCIM</li>
@@ -281,39 +239,32 @@
         <div class="wrap showcase-layout">
           <div class="showcase-intro">
             <p class="section-eyebrow">Permissions</p>
-            <h2 id="rebac-heading">
-              Relationship permissions inside your database.
-            </h2>
+            <h2 id="rebac-heading">Relationship permissions inside your database.</h2>
             <p class="section-lede">
-              Write who can see what in plain TypeScript. It runs inside your
-              own Postgres or SQLite database — simple to learn in 5 minutes,
-              fast across millions of rows.
+              Write who can see what in plain TypeScript. It runs inside your own Postgres or SQLite database — simple
+              to learn in 5 minutes, fast across millions of rows.
             </p>
             <ul class="contrast-list">
               <li>
                 <strong>Uses the tables you already have</strong>
                 <span>
-                  Point Dad at your existing <code>org_id</code> or
-                  <code>owner_id</code> columns. No duplicate data, no syncing
-                  bugs, and revoking access takes effect instantly.
+                  Point Dad at your existing <code>org_id</code> or <code>owner_id</code> columns. No duplicate data, no
+                  syncing bugs, and revoking access takes effect instantly.
                 </span>
               </li>
               <li>
                 <strong>Fast at any scale</strong>
                 <span>
-                  Half-millisecond permission checks and instant filtered lists
-                  at scale — with no extra permissions database to run.
+                  Half-millisecond permission checks and instant filtered lists at scale — with no extra permissions
+                  database to run.
                 </span>
               </li>
               <li>
                 <strong>Formally proved semantics, zero lock-in</strong>
                 <span>
-                  Semantics proved in Lean 4 (27 theorems), differentially
-                  tested across 299k queries with 0 mismatches, and easy to move
-                  to or from SpiceDB if you ever need to.
-                  <a href="/docs/benchmarks-and-proof.html"
-                    >See the benchmarks &amp; proof →</a
-                  >
+                  Semantics proved in Lean 4 (27 theorems), differentially tested across 299k queries with 0 mismatches,
+                  and easy to move to or from SpiceDB if you ever need to.
+                  <a href="/docs/benchmarks-and-proof.html">See the benchmarks &amp; proof →</a>
                 </span>
               </li>
             </ul>
@@ -321,11 +272,7 @@
 
           <div class="code-box" data-code-tabs>
             <div class="code-box-bar">
-              <div
-                class="code-box-tabs"
-                role="tablist"
-                aria-label="Relationship permission files"
-              >
+              <div class="code-box-tabs" role="tablist" aria-label="Relationship permission files">
                 <button
                   type="button"
                   role="tab"
@@ -367,16 +314,8 @@
                 </button>
               </div>
               <div class="code-box-meta">
-                <span class="code-box-file" id="code-box-file"
-                  >domains/tasks/access/index.ts</span
-                >
-                <button
-                  type="button"
-                  class="code-box-copy"
-                  id="code-box-copy"
-                  aria-label="Copy code snippet"
-                  hidden
-                >
+                <span class="code-box-file" id="code-box-file">domains/tasks/access/index.ts</span>
+                <button type="button" class="code-box-copy" id="code-box-copy" aria-label="Copy code snippet" hidden>
                   Copy
                 </button>
               </div>
@@ -518,37 +457,23 @@
           <p class="section-eyebrow">Multiple API servers</p>
           <h2 id="multi-api-heading">Keep public and admin APIs separate.</h2>
           <p class="section-lede">
-            Share your business logic, never your endpoints. Your customer
-            server and internal admin server only load the routes you give them.
+            Share your business logic, never your endpoints. Your customer server and internal admin server only load
+            the routes you give them.
           </p>
           <ul class="contrast-list">
             <li>
               <strong>Customer API</strong>
-              <span>
-                Only loads routes meant for end users, protected by your
-                permission rules.
-              </span>
+              <span> Only loads routes meant for end users, protected by your permission rules. </span>
             </li>
             <li>
               <strong>Staff API</strong>
-              <span>
-                Only loads internal admin tools. Customer routes don't even
-                exist on it.
-              </span>
+              <span> Only loads internal admin tools. Customer routes don't even exist on it. </span>
             </li>
           </ul>
         </div>
-        <section
-          class="composition-preview"
-          aria-label="Starter API composition example"
-        >
+        <section class="composition-preview" aria-label="Starter API composition example">
           <div class="composition-bar">
-            <div
-              class="composition-tabs"
-              role="tablist"
-              aria-label="API entrypoint"
-              hidden
-            >
+            <div class="composition-tabs" role="tablist" aria-label="API entrypoint" hidden>
               <button
                 type="button"
                 role="tab"
@@ -606,8 +531,7 @@
             <section class="composition-pane" id="composition-staff">
               <div class="composition-source">
                 <h2>Staff API</h2>
-                <a
-                  href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/staff/app.ts"
+                <a href="https://github.com/brytoncooper/dads-framework/blob/main/apps/kit-workbench/apps/staff/app.ts"
                   >apps/staff/app.ts <span aria-hidden="true">↗</span></a
                 >
               </div>
@@ -637,22 +561,11 @@
                 aria-label="Workspace access"
                 hidden
               >
-                <button type="button" data-access="member" aria-pressed="true">
-                  Member
-                </button>
-                <button
-                  type="button"
-                  data-access="revoked"
-                  aria-pressed="false"
-                >
-                  Revoked
-                </button>
+                <button type="button" data-access="member" aria-pressed="true">Member</button>
+                <button type="button" data-access="revoked" aria-pressed="false">Revoked</button>
               </div>
             </div>
-            <table
-              id="preview-cases"
-              aria-label="Example notes request outcomes"
-            >
+            <table id="preview-cases" aria-label="Example notes request outcomes">
               <thead>
                 <tr>
                   <th scope="col">API</th>
@@ -680,12 +593,8 @@
             </table>
             <div class="composition-controls" hidden>
               <div class="composition-result" role="status">
-                <strong id="composition-status" data-outcome="allowed"
-                  >200 OK</strong
-                >
-                <span id="composition-detail"
-                  >The tenant member can list notes.</span
-                >
+                <strong id="composition-status" data-outcome="allowed">200 OK</strong>
+                <span id="composition-detail">The tenant member can list notes.</span>
               </div>
             </div>
           </div>
@@ -698,29 +607,24 @@
             <p class="section-eyebrow">Automated CI checks</p>
             <h2 id="boundaries-heading">Catch mistakes before code review.</h2>
             <p class="section-lede">
-              Whether a teammate or an AI agent opens the PR, Dad automatically
-              checks folder rules, strict types, and permission tests.
+              Whether a teammate or an AI agent opens the PR, Dad automatically checks folder rules, strict types, and
+              permission tests.
             </p>
             <ul class="contrast-list">
               <li>
                 <strong>Clean folder boundaries</strong>
-                <span>
-                  Stops one feature from reaching into another feature's private
-                  files or database tables.
-                </span>
+                <span> Stops one feature from reaching into another feature's private files or database tables. </span>
               </li>
               <li>
                 <strong>No sneaky shortcuts</strong>
                 <span>
-                  Blocks <code>any</code>, unsafe casts, unprotected routes, and
-                  untested permission rules in CI.
+                  Blocks <code>any</code>, unsafe casts, unprotected routes, and untested permission rules in CI.
                 </span>
               </li>
               <li>
                 <strong>Use only what you need</strong>
                 <span>
-                  Already have an app? Drop in just the permissions or routes
-                  package — no rewrite required.
+                  Already have an app? Drop in just the permissions or routes package — no rewrite required.
                 </span>
               </li>
             </ul>
@@ -728,15 +632,11 @@
 
           <div class="terminal-box" aria-label="Dad CLI boundary check output">
             <div class="terminal-bar">
-              <span class="terminal-prompt-badge" aria-hidden="true"
-                >&gt;_</span
-              >
+              <span class="terminal-prompt-badge" aria-hidden="true">&gt;_</span>
               <span class="terminal-title">npx dad verify</span>
               <span class="terminal-tag">CI gate</span>
             </div>
-            <pre
-              tabindex="0"
-            ><code><span class="term-prompt">$</span> npx dad check boundaries
+            <pre tabindex="0"><code><span class="term-prompt">$</span> npx dad check boundaries
 <span class="term-fail">FAIL</span> domains/billing/server/routes.ts
      imports private module <span class="term-path">domains/shipping/server/tables.ts</span>
      <span class="term-hint">Fix: pass a typed port from assembly/ instead of crossing domains.</span>
@@ -754,21 +654,15 @@
         <div class="wrap further-grid">
           <div class="further-title"><h2>Keep reading</h2></div>
           <div class="reading-list">
-            <a href="/docs/"
-              ><span>Documentation</span><small>Guides</small
-              ><i aria-hidden="true">↗</i></a
-            >
+            <a href="/docs/"><span>Documentation</span><small>Guides</small><i aria-hidden="true">↗</i></a>
             <a href="/docs/packages.html"
-              ><span>Adopt one package in any TypeScript app</span
-              ><small>Packages</small><i aria-hidden="true">↗</i></a
+              ><span>Adopt one package in any TypeScript app</span><small>Packages</small><i aria-hidden="true">↗</i></a
             >
             <a href="<!-- dad-url -->"
-              ><span>Your friends approved the PR</span
-              ><small>Read DAD.md</small><i aria-hidden="true">↗</i></a
+              ><span>Your friends approved the PR</span><small>Read DAD.md</small><i aria-hidden="true">↗</i></a
             >
             <a href="<!-- gary-url -->"
-              ><span>Who let Gary back in?</span
-              ><small>Why permissions live in Postgres</small
+              ><span>Who let Gary back in?</span><small>Why permissions live in Postgres</small
               ><i aria-hidden="true">↗</i></a
             >
           </div>

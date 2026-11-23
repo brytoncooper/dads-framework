@@ -42,9 +42,7 @@ describe("single-line form-control density", () => {
     expectCompactControlHeight(screen.getByLabelText("Compact Input"));
     expectCoarsePointerHeight(screen.getByLabelText("Default Input"));
     expectCoarsePointerHeight(screen.getByLabelText("Compact Input"));
-    expect(screen.getByLabelText("Compact Input").hasAttribute("size")).toBe(
-      false,
-    );
+    expect(screen.getByLabelText("Compact Input").hasAttribute("size")).toBe(false);
   });
 
   it("keeps Select on the same default and compact size contract", () => {

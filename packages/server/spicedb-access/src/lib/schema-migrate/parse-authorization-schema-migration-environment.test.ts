@@ -22,16 +22,14 @@ describe("parseAuthorizationSchemaMigrationEnvironment", () => {
         SPICEDB_PRESHARED_KEY: "plant-key",
         SPICEDB_INSECURE: "false",
         AUTHZ_JOURNAL_FOLDER: "/srv/authz-journal",
-        SPICEDB_DATASTORE_CONN_URI:
-          "postgres://postgres:secret@postgres:5432/spicedb?sslmode=disable",
+        SPICEDB_DATASTORE_CONN_URI: "postgres://postgres:secret@postgres:5432/spicedb?sslmode=disable",
       }),
     ).toEqual({
       endpoint: "spicedb:50051",
       presharedKey: "plant-key",
       insecure: false,
       journalFolder: "/srv/authz-journal",
-      datastorePostgresUrl:
-        "postgres://postgres:secret@postgres:5432/spicedb?sslmode=disable",
+      datastorePostgresUrl: "postgres://postgres:secret@postgres:5432/spicedb?sslmode=disable",
       datastoreAdminUrl: undefined,
     });
   });

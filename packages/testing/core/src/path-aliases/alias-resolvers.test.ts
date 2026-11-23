@@ -1,12 +1,6 @@
 /** Proves both file systems obey every law of one suite, law by named law. */
 
-import {
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -24,8 +18,7 @@ import { nodeFileSystem } from "./node-file-system.js";
 const temporaryDirectories: string[] = [];
 
 afterAll(() => {
-  for (const directory of temporaryDirectories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
+  for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
 /**
@@ -94,14 +87,9 @@ describe("the conformance suite over a provider that lies", () => {
     });
 
     expect(findings.map((one) => one.law)).toEqual(
-      expect.arrayContaining([
-        "resolves-package-entry",
-        "refuses-missing-tsconfig",
-      ]),
+      expect.arrayContaining(["resolves-package-entry", "refuses-missing-tsconfig"]),
     );
-    expect(findings.some((one) => one.law === "refuses-blank-tsconfig")).toBe(
-      false,
-    );
+    expect(findings.some((one) => one.law === "refuses-blank-tsconfig")).toBe(false);
   });
 });
 
@@ -119,12 +107,10 @@ describe("the in-memory file system", () => {
       "/workspace/node_modules/vendor/config.json": "{}",
     });
 
-    expect(
-      fileSystem.resolvePackage("vendor/config.json", "/workspace/deep/a.json"),
-    ).toBe(resolve("/workspace/node_modules/vendor/config.json"));
-    expect(
-      fileSystem.resolvePackage("absent", "/workspace/a.json"),
-    ).toBeUndefined();
+    expect(fileSystem.resolvePackage("vendor/config.json", "/workspace/deep/a.json")).toBe(
+      resolve("/workspace/node_modules/vendor/config.json"),
+    );
+    expect(fileSystem.resolvePackage("absent", "/workspace/a.json")).toBeUndefined();
   });
 });
 
@@ -142,17 +128,14 @@ describe("the Node file system", () => {
     const tsconfig = join(root, "tsconfig.json");
     writeFileSync(tsconfig, "{}\n");
 
-    expect(
-      nodeFileSystem.resolvePackage("@dads-framework/absent", tsconfig),
-    ).toBeUndefined();
+    expect(nodeFileSystem.resolvePackage("@dads-framework/absent", tsconfig)).toBeUndefined();
   });
 });
 
 describe("a resolver built over one file system", () => {
   it("resolves an alias declared by the tsconfig it was named", () => {
     const files = {
-      "/project/tsconfig.json":
-        '{ "compilerOptions": { "paths": { "@app/*": ["./src/*"] } } }',
+      "/project/tsconfig.json": '{ "compilerOptions": { "paths": { "@app/*": ["./src/*"] } } }',
       "/project/src/ui/button.tsx": "export {};\n",
     };
 
@@ -161,15 +144,12 @@ describe("a resolver built over one file system", () => {
       fileSystem: inMemoryFileSystem(files),
     });
 
-    expect(resolveAlias("@app/ui/button")).toBe(
-      resolve("/project/src/ui/button.tsx"),
-    );
+    expect(resolveAlias("@app/ui/button")).toBe(resolve("/project/src/ui/button.tsx"));
   });
 
   it("resolves alias targets from the baseUrl the declaring config sets", () => {
     const files = {
-      "/project/tsconfig.json":
-        '{ "compilerOptions": { "baseUrl": "./generated", "paths": { "@app/*": ["./*"] } } }',
+      "/project/tsconfig.json": '{ "compilerOptions": { "baseUrl": "./generated", "paths": { "@app/*": ["./*"] } } }',
       "/project/generated/client.ts": "export {};\n",
     };
 
@@ -178,9 +158,7 @@ describe("a resolver built over one file system", () => {
       fileSystem: inMemoryFileSystem(files),
     });
 
-    expect(resolveAlias("@app/client")).toBe(
-      resolve("/project/generated/client.ts"),
-    );
+    expect(resolveAlias("@app/client")).toBe(resolve("/project/generated/client.ts"));
   });
 });
 

@@ -8,11 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  bundleRouteCatalogParts,
-  compareCatalogRoutes,
-  splitRouteCatalog,
-} from "./route-catalog-parts.js";
+import { bundleRouteCatalogParts, compareCatalogRoutes, splitRouteCatalog } from "./route-catalog-parts.js";
 
 function route(method: string, path: string, tag: string) {
   return { method, path, tag, status: 200, site: "cloud_only" };
@@ -42,19 +38,12 @@ describe("route catalog parts", () => {
   it("puts each tag's routes in its own file and the rest in the shared one", () => {
     const parts = splitRouteCatalog(baseCatalog);
 
-    expect([...parts.keys()]).toEqual([
-      "_shared.json",
-      "health.json",
-      "products-recipes.json",
-    ]);
+    expect([...parts.keys()]).toEqual(["_shared.json", "health.json", "products-recipes.json"]);
     expect(parts.get("_shared.json")).not.toHaveProperty("routes");
     expect(parts.get("_shared.json")).toHaveProperty("domainConnections");
     expect(parts.get("products-recipes.json")).toEqual({
       tag: "Products recipes",
-      routes: [
-        route("GET", "/recipes", "Products recipes"),
-        route("POST", "/recipes", "Products recipes"),
-      ],
+      routes: [route("GET", "/recipes", "Products recipes"), route("POST", "/recipes", "Products recipes")],
     });
   });
 
@@ -62,16 +51,11 @@ describe("route catalog parts", () => {
     const before = splitRouteCatalog(baseCatalog);
     const after = splitRouteCatalog({
       ...baseCatalog,
-      routes: [
-        ...baseRoutes,
-        route("GET", "/recipes/archived", "Products recipes"),
-      ],
+      routes: [...baseRoutes, route("GET", "/recipes/archived", "Products recipes")],
     });
 
     const changed = [...after.keys()].filter(
-      (fileName) =>
-        JSON.stringify(before.get(fileName)) !==
-        JSON.stringify(after.get(fileName)),
+      (fileName) => JSON.stringify(before.get(fileName)) !== JSON.stringify(after.get(fileName)),
     );
     expect(changed).toEqual(["products-recipes.json"]);
   });
@@ -83,8 +67,6 @@ describe("route catalog parts", () => {
       routes: [route("GET", "/recipes/stray", "Products recipes")],
     });
 
-    expect(() => bundleRouteCatalogParts(parts)).toThrow(
-      /tagged "Products recipes"/,
-    );
+    expect(() => bundleRouteCatalogParts(parts)).toThrow(/tagged "Products recipes"/);
   });
 });

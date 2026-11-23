@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { IdentitySession } from "../identity-types.js";
 import { ImpersonationAuditError, createImpersonation } from "./index.js";
-import type {
-  ImpersonationAuditEvent,
-  ImpersonationStoredGrant,
-} from "./index.js";
+import type { ImpersonationAuditEvent, ImpersonationStoredGrant } from "./index.js";
 
 const scope = { tenantId: "tenant", effectiveAccountId: "customer" };
 const staff = new Headers({ "x-test-account": "staff" });
@@ -14,27 +11,23 @@ function setup() {
   let now = 1_000;
   const grants = new Map<string, ImpersonationStoredGrant>();
   const authorize = vi.fn(() => Promise.resolve(true));
-  const writeAudit = vi.fn<(event: ImpersonationAuditEvent) => Promise<void>>(
-    () => Promise.resolve(),
-  );
-  const readSession = vi.fn(
-    (headers: Headers): Promise<IdentitySession | null> => {
-      const id = headers.get("x-test-account");
-      return Promise.resolve(
-        id
-          ? {
-              account: {
-                id,
-                email: "example@example.test",
-                emailVerified: true,
-              },
-              sessionId: headers.get("x-test-session") ?? id,
-              expiresAt: new Date(2_000),
-            }
-          : null,
-      );
-    },
-  );
+  const writeAudit = vi.fn<(event: ImpersonationAuditEvent) => Promise<void>>(() => Promise.resolve());
+  const readSession = vi.fn((headers: Headers): Promise<IdentitySession | null> => {
+    const id = headers.get("x-test-account");
+    return Promise.resolve(
+      id
+        ? {
+            account: {
+              id,
+              email: "example@example.test",
+              emailVerified: true,
+            },
+            sessionId: headers.get("x-test-session") ?? id,
+            expiresAt: new Date(2_000),
+          }
+        : null,
+    );
+  });
   const impersonation = createImpersonation({
     identity: { readSession },
     store: {
@@ -122,13 +115,10 @@ describe("staff impersonation", () => {
   });
 
   it("denies use in another tenant, by another account, or after role or session revocation", async () => {
-    const { impersonation, start, authorize, readSession, writeAudit } =
-      setup();
+    const { impersonation, start, authorize, readSession, writeAudit } = setup();
     const grant = await start();
     const input = { tenantId: scope.tenantId, grantId: grant.id };
-    expect(
-      await impersonation.use(staff, { ...input, tenantId: "another-tenant" }),
-    ).toBeNull();
+    expect(await impersonation.use(staff, { ...input, tenantId: "another-tenant" })).toBeNull();
     expect(await impersonation.use(admin, input)).toBeNull();
     authorize.mockResolvedValueOnce(false);
     expect(await impersonation.use(staff, input)).toBeNull();
@@ -174,9 +164,7 @@ describe("staff impersonation", () => {
         grantId: grant.id,
       }),
     ).toBeNull();
-    expect(writeAudit).toHaveBeenLastCalledWith(
-      expect.objectContaining({ action: "use", outcome: "denied" }),
-    );
+    expect(writeAudit).toHaveBeenLastCalledWith(expect.objectContaining({ action: "use", outcome: "denied" }));
   });
 
   it("allows the owner to stop and requires explicit permission for administrative revocation", async () => {
@@ -229,21 +217,17 @@ describe("staff impersonation", () => {
   it("fails closed when audit is unavailable", async () => {
     const { impersonation, start, grants, writeAudit } = setup();
     writeAudit.mockRejectedValueOnce(new Error("audit unavailable"));
-    await expect(impersonation.start(staff, scope)).rejects.toThrow(
-      "audit unavailable",
-    );
+    await expect(impersonation.start(staff, scope)).rejects.toThrow("audit unavailable");
     expect(grants.size).toBe(0);
 
     const grant = await start();
     writeAudit.mockRejectedValueOnce(new Error("audit unavailable"));
-    await expect(
-      impersonation.use(staff, { tenantId: scope.tenantId, grantId: grant.id }),
-    ).rejects.toBeInstanceOf(ImpersonationAuditError);
+    await expect(impersonation.use(staff, { tenantId: scope.tenantId, grantId: grant.id })).rejects.toBeInstanceOf(
+      ImpersonationAuditError,
+    );
 
     writeAudit.mockRejectedValueOnce(new Error("audit unavailable"));
-    await expect(impersonation.stop(staff, grant.id)).rejects.toThrow(
-      "audit unavailable",
-    );
+    await expect(impersonation.stop(staff, grant.id)).rejects.toThrow("audit unavailable");
     expect(grants.size).toBe(1);
   });
 
@@ -252,9 +236,7 @@ describe("staff impersonation", () => {
     const grant = await start();
     const failure = new Error("tenant policy unavailable");
     authorize.mockRejectedValueOnce(failure);
-    await expect(
-      impersonation.use(staff, { tenantId: scope.tenantId, grantId: grant.id }),
-    ).rejects.toBe(failure);
+    await expect(impersonation.use(staff, { tenantId: scope.tenantId, grantId: grant.id })).rejects.toBe(failure);
     expect(writeAudit).toHaveBeenLastCalledWith(
       expect.objectContaining({
         action: "use",

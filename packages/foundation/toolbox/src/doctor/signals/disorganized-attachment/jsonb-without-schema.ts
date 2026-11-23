@@ -21,12 +21,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   isProductionModule,
@@ -40,10 +35,7 @@ const COLUMN_BUILDER = "jsonb";
 const TABLE_BUILDER = /Table$/;
 const TYPE_METHOD = "$type";
 
-function addImportedNames(
-  statement: ts.ImportDeclaration,
-  names: Set<string>,
-): void {
+function addImportedNames(statement: ts.ImportDeclaration, names: Set<string>): void {
   const clause = statement.importClause;
   if (clause === undefined) return;
   if (clause.name !== undefined) names.add(clause.name.text);
@@ -55,11 +47,7 @@ function addImportedNames(
 
 function isNamedDeclaration(
   statement: ts.Statement,
-): statement is
-  | ts.TypeAliasDeclaration
-  | ts.InterfaceDeclaration
-  | ts.EnumDeclaration
-  | ts.ClassDeclaration {
+): statement is ts.TypeAliasDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration | ts.ClassDeclaration {
   return (
     ts.isTypeAliasDeclaration(statement) ||
     ts.isInterfaceDeclaration(statement) ||
@@ -81,34 +69,23 @@ function declaredTypeNames(source: ts.SourceFile): ReadonlySet<string> {
 }
 
 /** True when a type argument names a schema the module can see. */
-export function namesItsSchema(
-  node: ts.TypeNode | undefined,
-  declared: ReadonlySet<string>,
-): boolean {
+export function namesItsSchema(node: ts.TypeNode | undefined, declared: ReadonlySet<string>): boolean {
   if (node === undefined) return false;
   if (ts.isParenthesizedTypeNode(node)) {
     return namesItsSchema(node.type, declared);
   }
   if (ts.isTypeOperatorNode(node)) {
-    return (
-      node.operator === ts.SyntaxKind.ReadonlyKeyword &&
-      namesItsSchema(node.type, declared)
-    );
+    return node.operator === ts.SyntaxKind.ReadonlyKeyword && namesItsSchema(node.type, declared);
   }
   if (ts.isArrayTypeNode(node)) {
     return namesItsSchema(node.elementType, declared);
   }
-  return (
-    ts.isTypeReferenceNode(node) &&
-    declared.has(leftmostTypeName(node.typeName))
-  );
+  return ts.isTypeReferenceNode(node) && declared.has(leftmostTypeName(node.typeName));
 }
 
 function firstStringArgument(call: ts.CallExpression): string | undefined {
   const first = call.arguments[0];
-  return first !== undefined && ts.isStringLiteralLike(first)
-    ? first.text
-    : undefined;
+  return first !== undefined && ts.isStringLiteralLike(first) ? first.text : undefined;
 }
 
 function isColumnCall(node: ts.Node): node is ts.CallExpression {
@@ -146,9 +123,7 @@ function chainedType(column: ts.CallExpression): ts.TypeNode | undefined {
   }
 }
 
-function unnamedColumns(
-  module: DoctorModule,
-): readonly SignalEvidence[] | undefined {
+function unnamedColumns(module: DoctorModule): readonly SignalEvidence[] | undefined {
   if (!module.source.text.includes(COLUMN_BUILDER)) return undefined;
   const declared = declaredTypeNames(module.source);
   let columns = 0;

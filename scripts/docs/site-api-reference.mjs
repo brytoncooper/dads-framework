@@ -1,34 +1,23 @@
 const purposes = {
-  access:
-    "Define and compose relationship-based authorization models in TypeScript.",
-  authorization:
-    "Check permissions, look up authorized resources, and apply relationship changes with SpiceDB.",
-  contract:
-    "Share route, pagination, response, and error schemas between HTTP clients and servers.",
+  access: "Define and compose relationship-based authorization models in TypeScript.",
+  authorization: "Check permissions, look up authorized resources, and apply relationship changes with SpiceDB.",
+  contract: "Share route, pagination, response, and error schemas between HTTP clients and servers.",
   http: "Register typed HTTP routes with runtime validation and authorization.",
-  migrations:
-    "Apply PostgreSQL migrations in dependency order and inspect the journal of applied files.",
-  audit:
-    "Record database changes, HTTP requests, and client diagnostics with application-owned audit scope.",
-  "feature-flags":
-    "Define flags in code, change their audience, and evaluate the flags enabled in a context.",
-  plugin:
-    "Compose typed application plugins and control how their services start and stop.",
+  migrations: "Apply PostgreSQL migrations in dependency order and inspect the journal of applied files.",
+  audit: "Record database changes, HTTP requests, and client diagnostics with application-owned audit scope.",
+  "feature-flags": "Define flags in code, change their audience, and evaluate the flags enabled in a context.",
+  plugin: "Compose typed application plugins and control how their services start and stop.",
   ui: "Build React forms, tables, and application layouts from separately importable UI kits.",
-  identity:
-    "Share account, session, and email contracts across identity adapters.",
-  "identity-better-auth":
-    "Connect account and session contracts to Better Auth and PostgreSQL.",
-  tenants:
-    "Manage tenants, memberships, and single-use invitations with relationship authorization.",
+  identity: "Share account, session, and email contracts across identity adapters.",
+  "identity-better-auth": "Connect account and session contracts to Better Auth and PostgreSQL.",
+  tenants: "Manage tenants, memberships, and single-use invitations with relationship authorization.",
   "postgres-access":
     "Check permissions, look up authorized resources, and write relationship changes in PostgreSQL transactions.",
 };
 
 export function apiPurpose(slug) {
   const purpose = purposes[slug.slice(4)];
-  if (!purpose)
-    throw new Error(`Missing API reference introduction for ${slug}.`);
+  if (!purpose) throw new Error(`Missing API reference introduction for ${slug}.`);
   return purpose;
 }
 
@@ -47,9 +36,7 @@ function backticks(text, minimum) {
 
 function inlineCode(text) {
   const fence = backticks(text, 1);
-  return fence.length > 1
-    ? `${fence} ${text} ${fence}`
-    : `${fence}${text}${fence}`;
+  return fence.length > 1 ? `${fence} ${text} ${fence}` : `${fence}${text}${fence}`;
 }
 
 const DETAIL_LIMIT = 200;
@@ -69,26 +56,22 @@ function symbolLink({ label, anchor }) {
 
 function exportHeading(specifier, name) {
   const subpath = specifier.split("/").slice(2).join("/");
-  return subpath
-    ? `${inlineCode(name)} · ${inlineCode(subpath)}`
-    : inlineCode(name);
+  return subpath ? `${inlineCode(name)} · ${inlineCode(subpath)}` : inlineCode(name);
 }
 
 function indexedSection(section, anchorFor) {
   const title = `Import ${inlineCode(section.specifier)}`;
   const anchor = anchorFor(title);
   if (section.exports.length > DETAIL_LIMIT) {
-    const alphabet = alphabetGroups(section.exports).map(
-      ([initial, entries]) => {
-        const groupTitle = `Symbols ${initial} · ${inlineCode(section.specifier)}`;
-        return {
-          label: initial,
-          title: groupTitle,
-          anchor: anchorFor(groupTitle),
-          entries,
-        };
-      },
-    );
+    const alphabet = alphabetGroups(section.exports).map(([initial, entries]) => {
+      const groupTitle = `Symbols ${initial} · ${inlineCode(section.specifier)}`;
+      return {
+        label: initial,
+        title: groupTitle,
+        anchor: anchorFor(groupTitle),
+        entries,
+      };
+    });
     return { ...section, title, anchor, alphabet };
   }
   const symbols = section.exports.map((entry) => {
@@ -105,16 +88,7 @@ function indexedSection(section, anchorFor) {
 
 function renderSymbol(entry) {
   const fence = backticks(entry.signature, 3);
-  return [
-    `### ${entry.title}`,
-    "",
-    inlineCode(entry.kind),
-    "",
-    `${fence}ts`,
-    entry.signature,
-    fence,
-    "",
-  ];
+  return [`### ${entry.title}`, "", inlineCode(entry.kind), "", `${fence}ts`, entry.signature, fence, ""];
 }
 
 function renderAlphabet(alphabet) {
@@ -138,14 +112,8 @@ function renderAlphabet(alphabet) {
 function renderSection(section) {
   const title = [`## ${section.title}`, ""];
   if (section.alphabet) return [...title, ...renderAlphabet(section.alphabet)];
-  if (section.symbols.length === 0)
-    return [...title, "This entry point declares no exported symbols.", ""];
-  return [
-    ...title,
-    section.symbols.map(symbolLink).join(" · "),
-    "",
-    ...section.symbols.flatMap(renderSymbol),
-  ];
+  if (section.symbols.length === 0) return [...title, "This entry point declares no exported symbols.", ""];
+  return [...title, section.symbols.map(symbolLink).join(" · "), "", ...section.symbols.flatMap(renderSymbol)];
 }
 
 export function apiReferenceMarkdown({ name, purpose, readme, sections }) {

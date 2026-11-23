@@ -2,9 +2,7 @@ import type { FastifyReply } from "fastify";
 
 const ACCEPT_LANGUAGE_VARY_FIELD = "Accept-Language";
 
-function varyFieldNames(
-  header: string | number | readonly string[] | undefined,
-): readonly string[] {
+function varyFieldNames(header: string | number | readonly string[] | undefined): readonly string[] {
   if (header === undefined) return [];
   const text = Array.isArray(header) ? header.join(",") : String(header);
   return text
@@ -13,9 +11,7 @@ function varyFieldNames(
     .filter((field) => field !== "");
 }
 
-function uniqueVaryFieldNames(
-  ...headers: readonly (string | number | readonly string[] | undefined)[]
-): string[] {
+function uniqueVaryFieldNames(...headers: readonly (string | number | readonly string[] | undefined)[]): string[] {
   const fieldNames: string[] = [];
   const seen = new Set<string>();
   for (const fieldName of headers.flatMap(varyFieldNames)) {
@@ -39,18 +35,9 @@ function uniqueVaryFieldNames(
  * one truthful representation language across current endpoints.
  */
 export function addRequestLanguageVaryHeader(reply: FastifyReply): void {
-  const fields = uniqueVaryFieldNames(
-    reply.raw.getHeader("vary"),
-    reply.getHeader("vary"),
-  );
+  const fields = uniqueVaryFieldNames(reply.raw.getHeader("vary"), reply.getHeader("vary"));
   const hasWildcard = fields.some((field) => field === "*");
-  if (
-    !hasWildcard &&
-    !fields.some(
-      (field) =>
-        field.toLowerCase() === ACCEPT_LANGUAGE_VARY_FIELD.toLowerCase(),
-    )
-  ) {
+  if (!hasWildcard && !fields.some((field) => field.toLowerCase() === ACCEPT_LANGUAGE_VARY_FIELD.toLowerCase())) {
     fields.push(ACCEPT_LANGUAGE_VARY_FIELD);
   }
   const next = hasWildcard ? "*" : fields.join(", ");

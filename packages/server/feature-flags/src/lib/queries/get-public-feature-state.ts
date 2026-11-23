@@ -1,7 +1,4 @@
-import type {
-  FeatureFlagDefinition,
-  PublicFeatureState,
-} from "../../contract/index.js";
+import type { FeatureFlagDefinition, PublicFeatureState } from "../../contract/index.js";
 import { evaluateFeatureFlags } from "../logic/evaluate-feature-flags.js";
 import type { FeatureFlagStore } from "../ports/feature-flag-store.js";
 
@@ -17,9 +14,7 @@ export class GetPublicFeatureState {
   ) {}
 
   async execute(): Promise<PublicFeatureState> {
-    const states = await this.store.listStates(
-      this.publicFlags.map((definition) => definition.slug),
-    );
+    const states = await this.store.listStates(this.publicFlags.map((definition) => definition.slug));
     const features = evaluateFeatureFlags({
       definitions: this.publicFlags,
       states,

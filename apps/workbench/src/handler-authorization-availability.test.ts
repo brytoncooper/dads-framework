@@ -14,10 +14,7 @@ afterEach(async () => {
   await Promise.all(shutdowns.splice(0).map((stop) => stop()));
 });
 
-async function startWithSecondFailure(
-  method: "check" | "lookup",
-  error: Error,
-) {
+async function startWithSecondFailure(method: "check" | "lookup", error: Error) {
   const store = new MemoryWorkbenchStore();
   const backing = new WorkbenchMemoryAuthorization();
   let sequence = 0;
@@ -74,10 +71,7 @@ const cases: readonly {
   },
   {
     method: "check",
-    error: testAuthorizationFault(
-      "LIMIT_EXCEEDED",
-      "Private adapter diagnostic",
-    ),
+    error: testAuthorizationFault("LIMIT_EXCEEDED", "Private adapter diagnostic"),
     status: 503,
     code: "AUTHORIZATION_UNAVAILABLE",
   },
@@ -89,28 +83,19 @@ const cases: readonly {
   },
   {
     method: "lookup",
-    error: testAuthorizationFault(
-      "LIMIT_EXCEEDED",
-      "Private adapter diagnostic",
-    ),
+    error: testAuthorizationFault("LIMIT_EXCEEDED", "Private adapter diagnostic"),
     status: 503,
     code: "AUTHORIZATION_UNAVAILABLE",
   },
   {
     method: "check",
-    error: testAuthorizationFault(
-      "INVALID_MODEL",
-      "Private adapter diagnostic",
-    ),
+    error: testAuthorizationFault("INVALID_MODEL", "Private adapter diagnostic"),
     status: 500,
     code: "INTERNAL_ERROR",
   },
   {
     method: "lookup",
-    error: testAuthorizationFault(
-      "INVALID_MODEL",
-      "Private adapter diagnostic",
-    ),
+    error: testAuthorizationFault("INVALID_MODEL", "Private adapter diagnostic"),
     status: 500,
     code: "INTERNAL_ERROR",
   },
@@ -148,35 +133,32 @@ describe("handler authorization availability", () => {
   it.each([
     testAuthorizationFault("UNAVAILABLE", "Private replay diagnostic"),
     testAuthorizationFault("LIMIT_EXCEEDED", "Private replay diagnostic"),
-  ])(
-    "returns 503 when a creation replay cannot recheck access: %s",
-    async (error) => {
-      const running = await startWithSecondFailure("check", error);
-      const request = {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-workbench-user": "alice",
-        },
-        body: JSON.stringify({
-          requestKey: "handler-proof-request",
-          name: "Private workspace",
-        }),
-      };
-      const firstReplay = await fetch(running.createUrl, request);
-      expect(firstReplay.status).toBe(201);
-      await firstReplay.json();
-      const unavailableReplay = await fetch(running.createUrl, request);
-      const body: unknown = await unavailableReplay.json();
-      expect(running.attempts()).toBe(2);
-      expect(unavailableReplay.status).toBe(503);
-      expect(body).toMatchObject({
-        error: { code: "AUTHORIZATION_UNAVAILABLE" },
-      });
-      expect(JSON.stringify(body)).not.toContain("Private replay diagnostic");
-      expect(JSON.stringify(body)).not.toContain("Private workspace");
-    },
-  );
+  ])("returns 503 when a creation replay cannot recheck access: %s", async (error) => {
+    const running = await startWithSecondFailure("check", error);
+    const request = {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-workbench-user": "alice",
+      },
+      body: JSON.stringify({
+        requestKey: "handler-proof-request",
+        name: "Private workspace",
+      }),
+    };
+    const firstReplay = await fetch(running.createUrl, request);
+    expect(firstReplay.status).toBe(201);
+    await firstReplay.json();
+    const unavailableReplay = await fetch(running.createUrl, request);
+    const body: unknown = await unavailableReplay.json();
+    expect(running.attempts()).toBe(2);
+    expect(unavailableReplay.status).toBe(503);
+    expect(body).toMatchObject({
+      error: { code: "AUTHORIZATION_UNAVAILABLE" },
+    });
+    expect(JSON.stringify(body)).not.toContain("Private replay diagnostic");
+    expect(JSON.stringify(body)).not.toContain("Private workspace");
+  });
 
   it("keeps missing-relationship denial at 404 without running a handler recheck", async () => {
     const running = await startWithSecondFailure(
@@ -209,8 +191,7 @@ describe("handler authorization availability", () => {
     const document = schema.parse(await response.json());
     for (const route of running.routes) {
       const path = route.path.replace(/:(\w+)/g, "{$1}");
-      const unavailable =
-        document.paths[path]?.[route.method.toLowerCase()]?.responses["503"];
+      const unavailable = document.paths[path]?.[route.method.toLowerCase()]?.responses["503"];
       const responseSchema = z.object({
         content: z.object({
           "application/json": z.object({
@@ -227,11 +208,8 @@ describe("handler authorization availability", () => {
         }),
       });
       const responseCodes =
-        responseSchema.parse(unavailable).content["application/json"].schema
-          .properties.error.properties.code.enum;
-      expect(responseCodes, operationOf(route)).toContain(
-        "AUTHORIZATION_UNAVAILABLE",
-      );
+        responseSchema.parse(unavailable).content["application/json"].schema.properties.error.properties.code.enum;
+      expect(responseCodes, operationOf(route)).toContain("AUTHORIZATION_UNAVAILABLE");
     }
   });
 });

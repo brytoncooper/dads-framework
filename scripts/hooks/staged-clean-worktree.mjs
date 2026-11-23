@@ -6,14 +6,7 @@ import process from "node:process";
 import { git } from "./staged-snapshot.mjs";
 
 // Installed dependencies and ordinary build output are shared with snapshots.
-const ignoredOutputs = [
-  "node_modules/",
-  "dist/",
-  "coverage/",
-  "target/",
-  ".dads/",
-  "*.tsbuildinfo",
-];
+const ignoredOutputs = ["node_modules/", "dist/", "coverage/", "target/", ".dads/", "*.tsbuildinfo"];
 
 function gitConfig(root, key) {
   const result = spawnSync("git", ["config", "--get", key], {
@@ -36,11 +29,7 @@ function systemAttributesPath(root) {
 function hasCheckoutTransforms(root, entries) {
   const eol = gitConfig(root, "core.autocrlf");
   if (eol !== "" && eol !== "false") return true;
-  const localAttributes = git(
-    root,
-    ["rev-parse", "--git-path", "info/attributes"],
-    { encoding: "utf8" },
-  ).trim();
+  const localAttributes = git(root, ["rev-parse", "--git-path", "info/attributes"], { encoding: "utf8" }).trim();
   const attributePath = gitConfig(root, "core.attributesFile");
   const systemAttributes = systemAttributesPath(root);
   const configHome = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
@@ -61,12 +50,7 @@ export function isCleanWorktree(root) {
     return false;
   }
   if (hasCheckoutTransforms(root, entries)) return false;
-  const unstaged = git(root, [
-    "diff-files",
-    "--name-only",
-    "--ignore-submodules=none",
-    "-z",
-  ]);
+  const unstaged = git(root, ["diff-files", "--name-only", "--ignore-submodules=none", "-z"]);
   if (unstaged.length > 0) return false;
   const untracked = git(root, [
     "ls-files",

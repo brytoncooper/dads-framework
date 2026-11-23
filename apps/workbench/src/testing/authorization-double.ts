@@ -2,10 +2,7 @@ import type { Authorization } from "@dads-framework/spicedb-access";
 import type { WorkbenchAuthorization } from "../access.js";
 
 type AuthorizationOverrides = Partial<
-  Pick<
-    Authorization,
-    "check" | "lookupResources" | "writeRelationships" | "deleteRelationships"
-  >
+  Pick<Authorization, "check" | "lookupResources" | "writeRelationships" | "deleteRelationships">
 >;
 
 /** Decorates queries and writes while leaving other operations delegated. */
@@ -15,13 +12,9 @@ export function createAuthorizationDouble(
 ): WorkbenchAuthorization {
   return {
     check: overrides.check ?? backing.check.bind(backing),
-    lookupResources:
-      overrides.lookupResources ?? backing.lookupResources.bind(backing),
-    writeRelationships:
-      overrides.writeRelationships ?? backing.writeRelationships.bind(backing),
-    deleteRelationships:
-      overrides.deleteRelationships ??
-      backing.deleteRelationships.bind(backing),
+    lookupResources: overrides.lookupResources ?? backing.lookupResources.bind(backing),
+    writeRelationships: overrides.writeRelationships ?? backing.writeRelationships.bind(backing),
+    deleteRelationships: overrides.deleteRelationships ?? backing.deleteRelationships.bind(backing),
     relationshipExists: backing.relationshipExists.bind(backing),
     listDirectSubjects: backing.listDirectSubjects.bind(backing),
   };

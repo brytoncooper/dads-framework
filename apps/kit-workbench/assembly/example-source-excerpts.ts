@@ -32,25 +32,17 @@ function parseSelection(comment: string) {
 
 function findAnchor(lines: readonly string[], text: string) {
   const anchor = text.split(/\r?\n/u);
-  const matchesAt = (_line: string, index: number) =>
-    anchor.every((line, offset) => lines[index + offset] === line);
+  const matchesAt = (_line: string, index: number) => anchor.every((line, offset) => lines[index + offset] === line);
   const first = lines.findIndex(matchesAt);
   if (first < 0 || first !== lines.findLastIndex(matchesAt)) {
-    throw new Error(
-      `Expected one source anchor matching ${JSON.stringify(text)}.`,
-    );
+    throw new Error(`Expected one source anchor matching ${JSON.stringify(text)}.`);
   }
   return { first, last: first + anchor.length - 1 };
 }
 
-async function renderExcerpt(
-  comment: string,
-  watchSource: (path: string) => void,
-): Promise<string> {
+async function renderExcerpt(comment: string, watchSource: (path: string) => void): Promise<string> {
   const selection = parseSelection(comment);
-  const starter = await realpath(
-    fileURLToPath(new URL("../", import.meta.url)),
-  );
+  const starter = await realpath(fileURLToPath(new URL("../", import.meta.url)));
   const path = resolve(starter, selection.path);
   if ((await realpath(path)) !== path) {
     throw new Error("The excerpt source must be a file in the starter.");
@@ -64,21 +56,8 @@ async function renderExcerpt(
     .slice(start, end + 1)
     .join("\n")
     .trimEnd();
-  const fence = "`".repeat(
-    (excerpt.match(/`+/gu) ?? []).reduce(
-      (length, run) => Math.max(length, run.length + 1),
-      3,
-    ),
-  );
-  return [
-    `\`${selection.path}\``,
-    "",
-    fence + selection.language,
-    excerpt,
-    fence,
-    "",
-    "",
-  ].join("\n");
+  const fence = "`".repeat((excerpt.match(/`+/gu) ?? []).reduce((length, run) => Math.max(length, run.length + 1), 3));
+  return [`\`${selection.path}\``, "", fence + selection.language, excerpt, fence, "", ""].join("\n");
 }
 
 export async function expandGuideExcerpts(
@@ -99,20 +78,14 @@ export async function expandGuideExcerpts(
   );
   try {
     void parser.walkTokens(tokens, (token) => {
-      if (
-        token.type === "html" &&
-        token.raw.trimStart().startsWith(directive) &&
-        !excerpts.has(token)
-      ) {
+      if (token.type === "html" && token.raw.trimStart().startsWith(directive) && !excerpts.has(token)) {
         throw new Error("Place source excerpts in their own Markdown block.");
       }
     });
     if (excerpts.size === 0) return markdown;
     const blocks = await Promise.all(
       tokens.map((token) =>
-        excerpts.has(token)
-          ? renderExcerpt(token.raw.trim(), watchSource)
-          : Promise.resolve(token.raw),
+        excerpts.has(token) ? renderExcerpt(token.raw.trim(), watchSource) : Promise.resolve(token.raw),
       ),
     );
     return blocks.join("");

@@ -1,8 +1,4 @@
-import {
-  LOCALE_HEADER,
-  SUPPORTED_LOCALES,
-  type Locale,
-} from "@dads-framework/core/contract";
+import { LOCALE_HEADER, SUPPORTED_LOCALES, type Locale } from "@dads-framework/core/contract";
 
 /**
  * Which language this request is answered in.
@@ -28,10 +24,7 @@ type WeightedTag = {
 };
 
 function isStringArray(value: unknown): value is readonly string[] {
-  return (
-    Array.isArray(value) &&
-    value.every((item: unknown) => typeof item === "string")
-  );
+  return Array.isArray(value) && value.every((item: unknown) => typeof item === "string");
 }
 
 /** Fastify hands a repeated header through as an array; both spellings parse. */
@@ -71,10 +64,7 @@ function parseAcceptLanguage(header: string): readonly WeightedTag[] {
 }
 
 /** `es-MX` is Spanish: a reader asking for a region wants its language. */
-function supportedLocaleForTag<T extends string>(
-  tag: string,
-  supported: readonly T[],
-): T | undefined {
+function supportedLocaleForTag<T extends string>(tag: string, supported: readonly T[]): T | undefined {
   const normalized = tag.trim().toLowerCase();
   if (normalized === "" || normalized === "*") return undefined;
   const exact = supported.find((locale) => locale.toLowerCase() === normalized);
@@ -96,10 +86,7 @@ function supportedLocaleForTag<T extends string>(
  * `requestLocaleOf` and nothing outside this file has a supported list of its
  * own to pass.
  */
-export function preferredLocaleOf<T extends string>(
-  header: unknown,
-  supported: readonly T[],
-): T | undefined {
+export function preferredLocaleOf<T extends string>(header: unknown, supported: readonly T[]): T | undefined {
   const wanted = parseAcceptLanguage(headerText(header))
     .filter((entry) => entry.quality > 0)
     .sort((left, right) => right.quality - left.quality);
@@ -116,8 +103,6 @@ export function resolveRequestLocale(header: unknown): Locale {
 }
 
 /** The language one request asked for — the pipeline's single read. */
-export function requestLocaleOf(request: {
-  readonly headers: Record<string, unknown>;
-}): Locale {
+export function requestLocaleOf(request: { readonly headers: Record<string, unknown> }): Locale {
   return resolveRequestLocale(request.headers[LOCALE_HEADER]);
 }

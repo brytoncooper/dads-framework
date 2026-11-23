@@ -10,25 +10,14 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import process from "node:process";
 
 import { readJson, requireFile } from "./verify-testing-package-lib.mjs";
 
-export function installCleanConsumer(
-  consumerDirectory,
-  facadeTarball,
-  nativeTarball,
-  nativePackageName,
-) {
+export function installCleanConsumer(consumerDirectory, facadeTarball, nativeTarball, nativePackageName) {
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
   const cleanEnvironment = cleanConsumerEnvironment();
   execFileSync(npm, ["init", "--yes"], {
@@ -54,28 +43,17 @@ export function installCleanConsumer(
       env: cleanEnvironment,
     },
   );
-  const scopeDirectory = join(
-    consumerDirectory,
-    "node_modules",
-    "@dads-framework",
-  );
+  const scopeDirectory = join(consumerDirectory, "node_modules", "@dads-framework");
   const installedNativePackages = existsSync(scopeDirectory)
-    ? readdirSync(scopeDirectory).filter((entry) =>
-        entry.startsWith("testing-native-"),
-      )
+    ? readdirSync(scopeDirectory).filter((entry) => entry.startsWith("testing-native-"))
     : [];
   const expectedDirectory = nativePackageName.replace("@dads-framework/", "");
-  if (
-    installedNativePackages.length !== 1 ||
-    installedNativePackages[0] !== expectedDirectory
-  ) {
+  if (installedNativePackages.length !== 1 || installedNativePackages[0] !== expectedDirectory) {
     throw new Error(
       `Clean consumer installed unexpected native packages: ${installedNativePackages.join(", ") || "none"}.`,
     );
   }
-  const consumerRequire = createRequire(
-    join(consumerDirectory, "consumer-entry.mjs"),
-  );
+  const consumerRequire = createRequire(join(consumerDirectory, "consumer-entry.mjs"));
   let resolvedNativeBinary;
   try {
     resolvedNativeBinary = consumerRequire.resolve(nativePackageName);
@@ -85,21 +63,10 @@ export function installCleanConsumer(
       { cause: error },
     );
   }
-  const consumerNodeModules = realpathSync(
-    resolve(consumerDirectory, "node_modules"),
-  );
-  const relativeResolvedBinary = relative(
-    consumerNodeModules,
-    realpathSync(resolvedNativeBinary),
-  );
-  if (
-    !relativeResolvedBinary ||
-    relativeResolvedBinary.startsWith("..") ||
-    isAbsolute(relativeResolvedBinary)
-  ) {
-    throw new Error(
-      `Clean consumer resolved ${nativePackageName} outside its node_modules: ${resolvedNativeBinary}`,
-    );
+  const consumerNodeModules = realpathSync(resolve(consumerDirectory, "node_modules"));
+  const relativeResolvedBinary = relative(consumerNodeModules, realpathSync(resolvedNativeBinary));
+  if (!relativeResolvedBinary || relativeResolvedBinary.startsWith("..") || isAbsolute(relativeResolvedBinary)) {
+    throw new Error(`Clean consumer resolved ${nativePackageName} outside its node_modules: ${resolvedNativeBinary}`);
   }
 }
 
@@ -130,11 +97,10 @@ export function runCleanConsumerPlan(consumerDirectory) {
     cwd: consumerDirectory,
     stdio: "ignore",
   });
-  execFileSync(
-    "git",
-    ["config", "user.email", "dads-testing-proof@example.invalid"],
-    { cwd: consumerDirectory, stdio: "ignore" },
-  );
+  execFileSync("git", ["config", "user.email", "dads-testing-proof@example.invalid"], {
+    cwd: consumerDirectory,
+    stdio: "ignore",
+  });
   execFileSync("git", ["config", "user.name", "Dads Testing Proof"], {
     cwd: consumerDirectory,
     stdio: "ignore",
@@ -168,71 +134,31 @@ export function runCleanConsumerPlan(consumerDirectory) {
  * for a workspace package it discovers itself.
  */
 export function runCleanConsumerCli(consumerDirectory) {
-  const cliPath = join(
-    consumerDirectory,
-    "node_modules",
-    "@dads-framework",
-    "testing",
-    "bin",
-    "dad-test.js",
-  );
+  const cliPath = join(consumerDirectory, "node_modules", "@dads-framework", "testing", "bin", "dad-test.js");
   requireFile(cliPath, "installed dad-test CLI");
 
-  const explained = runConsumerCli(consumerDirectory, cliPath, [
-    "explain",
-    "--all",
-    "--json",
-  ]);
-  if (
-    explained.result.tasks?.[0]?.id !== "consumer:test" ||
-    explained.result.summary?.selected !== 1
-  ) {
-    throw new Error(
-      describeConsumerCli(explained, "did not explain the one consumer task"),
-    );
+  const explained = runConsumerCli(consumerDirectory, cliPath, ["explain", "--all", "--json"]);
+  if (explained.result.tasks?.[0]?.id !== "consumer:test" || explained.result.summary?.selected !== 1) {
+    throw new Error(describeConsumerCli(explained, "did not explain the one consumer task"));
   }
 
-  const planned = runConsumerCli(consumerDirectory, cliPath, [
-    "plan",
-    "--all",
-    "--report",
-    "report.json",
-    "--json",
-  ]);
+  const planned = runConsumerCli(consumerDirectory, cliPath, ["plan", "--all", "--report", "report.json", "--json"]);
   if (!existsSync(join(consumerDirectory, "report.json"))) {
     throw new Error(describeConsumerCli(planned, "did not write report.json"));
   }
   if (planned.result.report?.projectClosure?.closureTaskCount !== 1) {
-    throw new Error(
-      describeConsumerCli(planned, "reported an unexpected project closure"),
-    );
+    throw new Error(describeConsumerCli(planned, "reported an unexpected project closure"));
   }
 
   writeConsumerWorkspacePackage(consumerDirectory);
 
-  const initialized = runConsumerCli(consumerDirectory, cliPath, [
-    "init",
-    "--force",
-    "--json",
-  ]);
-  const generatedTaskIds = (initialized.result.manifest?.tasks ?? []).map(
-    (task) => task?.id,
-  );
+  const initialized = runConsumerCli(consumerDirectory, cliPath, ["init", "--force", "--json"]);
+  const generatedTaskIds = (initialized.result.manifest?.tasks ?? []).map((task) => task?.id);
   if (!generatedTaskIds.includes("lib:test")) {
-    throw new Error(
-      describeConsumerCli(
-        initialized,
-        "did not generate a lib:test task for the workspace package",
-      ),
-    );
+    throw new Error(describeConsumerCli(initialized, "did not generate a lib:test task for the workspace package"));
   }
   if (initialized.result.report?.validation?.method !== "native") {
-    throw new Error(
-      describeConsumerCli(
-        initialized,
-        "did not validate the generated manifest with the native engine",
-      ),
-    );
+    throw new Error(describeConsumerCli(initialized, "did not validate the generated manifest with the native engine"));
   }
 }
 
@@ -255,35 +181,18 @@ export function runCleanConsumerNx(consumerDirectory) {
   ]);
   for (const [name, expectedStatus] of bins) {
     const executable = process.platform === "win32" ? `${name}.cmd` : name;
-    requireFile(
-      join(consumerDirectory, "node_modules", ".bin", executable),
-      `installed ${name} executable`,
-    );
+    requireFile(join(consumerDirectory, "node_modules", ".bin", executable), `installed ${name} executable`);
     const completed = spawnSync(
       process.execPath,
-      [
-        join(
-          consumerDirectory,
-          "node_modules",
-          "@dads-framework",
-          "testing",
-          "bin",
-          `${name}.js`,
-        ),
-      ],
+      [join(consumerDirectory, "node_modules", "@dads-framework", "testing", "bin", `${name}.js`)],
       {
         cwd: consumerDirectory,
         encoding: "utf8",
         env: cleanConsumerEnvironment(),
       },
     );
-    if (
-      completed.status !== expectedStatus ||
-      !completed.stderr?.startsWith(`Usage: ${name} `)
-    ) {
-      throw new Error(
-        `Unexpected packed ${name} response: ${completed.stderr}`,
-      );
+    if (completed.status !== expectedStatus || !completed.stderr?.startsWith(`Usage: ${name} `)) {
+      throw new Error(`Unexpected packed ${name} response: ${completed.stderr}`);
     }
   }
 }
@@ -293,31 +202,20 @@ function writeConsumerWorkspacePackage(consumerDirectory) {
   mkdirSync(join(consumerDirectory, "packages", "lib"), { recursive: true });
   writeFileSync(
     join(consumerDirectory, "packages", "lib", "package.json"),
-    `${JSON.stringify(
-      { name: "lib", private: true, scripts: { test: "node --version" } },
-      null,
-      2,
-    )}\n`,
+    `${JSON.stringify({ name: "lib", private: true, scripts: { test: "node --version" } }, null, 2)}\n`,
   );
   const consumerManifestPath = join(consumerDirectory, "package.json");
   const consumerManifest = readJson(consumerManifestPath);
   consumerManifest.workspaces = ["packages/*"];
-  writeFileSync(
-    consumerManifestPath,
-    `${JSON.stringify(consumerManifest, null, 2)}\n`,
-  );
+  writeFileSync(consumerManifestPath, `${JSON.stringify(consumerManifest, null, 2)}\n`);
 }
 
 function runConsumerCli(consumerDirectory, cliPath, commandArguments) {
-  const completed = spawnSync(
-    process.execPath,
-    [cliPath, ...commandArguments],
-    {
-      cwd: consumerDirectory,
-      encoding: "utf8",
-      env: cleanConsumerEnvironment(),
-    },
-  );
+  const completed = spawnSync(process.execPath, [cliPath, ...commandArguments], {
+    cwd: consumerDirectory,
+    encoding: "utf8",
+    env: cleanConsumerEnvironment(),
+  });
   const invocation = {
     label: `dad-test ${commandArguments.join(" ")}`,
     stdout: completed.stdout ?? "",
@@ -325,21 +223,12 @@ function runConsumerCli(consumerDirectory, cliPath, commandArguments) {
     result: undefined,
   };
   if (completed.error) {
-    throw new Error(
-      describeConsumerCli(
-        invocation,
-        `could not be spawned: ${completed.error.message}`,
-      ),
-      { cause: completed.error },
-    );
+    throw new Error(describeConsumerCli(invocation, `could not be spawned: ${completed.error.message}`), {
+      cause: completed.error,
+    });
   }
   if (completed.status !== 0) {
-    throw new Error(
-      describeConsumerCli(
-        invocation,
-        `exited ${String(completed.status)} instead of 0`,
-      ),
-    );
+    throw new Error(describeConsumerCli(invocation, `exited ${String(completed.status)} instead of 0`));
   }
   let parsed;
   try {
@@ -350,9 +239,7 @@ function runConsumerCli(consumerDirectory, cliPath, commandArguments) {
     });
   }
   if (parsed?.ok !== true || parsed.result === undefined) {
-    throw new Error(
-      describeConsumerCli(invocation, "returned a failure envelope"),
-    );
+    throw new Error(describeConsumerCli(invocation, "returned a failure envelope"));
   }
   invocation.result = parsed.result;
   return invocation;

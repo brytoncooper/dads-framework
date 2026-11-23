@@ -16,19 +16,9 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  declaredImportersOf,
-  readPackageGraph,
-} from "../scanners/package-graph.js";
+import { declaredImportersOf, readPackageGraph } from "../scanners/package-graph.js";
 
-const CATCHALL_NAMES = new Set([
-  "shared",
-  "common",
-  "utils",
-  "util",
-  "helpers",
-  "misc",
-]);
+const CATCHALL_NAMES = new Set(["shared", "common", "utils", "util", "helpers", "misc"]);
 const ALLOWED_IMPORTERS = 3;
 
 /** True when the last segment of a package name or root says nothing. */
@@ -58,8 +48,7 @@ function countCatchallImporters(context: DoctorContext) {
 export const sharedCatchallSignal: DoctorSignal = {
   id: "shared-catchall",
   issue: "you-stay-with-people-who-cannot-meet-you",
-  question:
-    "Is there a package named `shared`, `common`, or `utils` with more than three importers?",
+  question: "Is there a package named `shared`, `common`, or `utils` with more than three importers?",
   reads: "packages",
   unit: "count",
   direction: "ceiling",

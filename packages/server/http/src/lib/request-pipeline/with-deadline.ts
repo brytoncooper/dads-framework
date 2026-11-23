@@ -33,16 +33,9 @@ function startDeadline(ms: number, routePath: string): Deadline {
  * eventual rejection must land in the log, never as an unhandled rejection
  * that kills the process.
  */
-function drainOrphan(
-  work: Promise<unknown>,
-  routePath: string,
-  log: OrphanLog,
-): void {
+function drainOrphan(work: Promise<unknown>, routePath: string, log: OrphanLog): void {
   void work.catch((error: unknown) => {
-    log.warn(
-      { event: "handler.orphaned-rejection", routePath, err: error },
-      "timed-out handler eventually rejected",
-    );
+    log.warn({ event: "handler.orphaned-rejection", routePath, err: error }, "timed-out handler eventually rejected");
   });
 }
 
@@ -56,12 +49,7 @@ function toError(value: unknown): Error {
  * holds the event loop; on timeout the orphaned work is drained into the
  * log and a `HandlerTimeoutError` propagates to the error handler (503).
  */
-export async function withDeadline<T>(
-  work: Promise<T>,
-  ms: number,
-  routePath: string,
-  log: OrphanLog,
-): Promise<T> {
+export async function withDeadline<T>(work: Promise<T>, ms: number, routePath: string, log: OrphanLog): Promise<T> {
   const deadline = startDeadline(ms, routePath);
   try {
     return await Promise.race([work, deadline.promise]);

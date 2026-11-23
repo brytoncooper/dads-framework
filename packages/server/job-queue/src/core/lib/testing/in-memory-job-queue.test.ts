@@ -44,9 +44,7 @@ describe("FakeJobQueue", () => {
   it("refuses a name no job was registered under", () => {
     const queue = new FakeJobQueue();
 
-    expect(() => queue.enqueue("email.deliver", {})).toThrow(
-      'No handler registered for job "email.deliver"',
-    );
+    expect(() => queue.enqueue("email.deliver", {})).toThrow('No handler registered for job "email.deliver"');
     expect(queue.enqueued).toEqual([]);
   });
 
@@ -65,16 +63,12 @@ describe("FakeJobQueue", () => {
 
   it("counts a failing job instead of letting it escape the drain", async () => {
     const queue = new FakeJobQueue();
-    queue.register([
-      countingJob(() => Promise.reject(new Error("vendor unavailable"))),
-    ]);
+    queue.register([countingJob(() => Promise.reject(new Error("vendor unavailable")))]);
     await queue.enqueue("email.deliver", { id: "one" });
 
     await expect(queue.runEnqueued()).resolves.toBeUndefined();
 
-    expect(queue.failures.map((failure) => failure.message)).toEqual([
-      "vendor unavailable",
-    ]);
+    expect(queue.failures.map((failure) => failure.message)).toEqual(["vendor unavailable"]);
     expect((await queue.inspect()).counts).toMatchObject({
       waiting: 0,
       completed: 0,

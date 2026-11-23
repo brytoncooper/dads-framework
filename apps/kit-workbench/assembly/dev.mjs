@@ -11,28 +11,18 @@ const [command = "up", option, ...extra] = process.argv.slice(2);
 const json = option === "--json";
 
 try {
-  if (
-    !["up", "down", "status", "restart", "mail"].includes(command) ||
-    (option && !json) ||
-    extra.length
-  ) {
-    throw new Error(
-      "Usage: node assembly/dev.mjs up|down|status|restart|mail [--json]",
-    );
+  if (!["up", "down", "status", "restart", "mail"].includes(command) || (option && !json) || extra.length) {
+    throw new Error("Usage: node assembly/dev.mjs up|down|status|restart|mail [--json]");
   }
   if (command === "up" || command === "restart") {
     if (!existsSync(join(root, "package-lock.json"))) {
-      throw new Error(
-        "Run npm install to create package-lock.json before starting the local stack.",
-      );
+      throw new Error("Run npm install to create package-lock.json before starting the local stack.");
     }
     diagnoseDocker();
   }
   const state = readLocalState(root, command === "up" || command === "restart");
   if (!state && command === "mail") {
-    throw new Error(
-      "Start the local stack with npm start before reading mail.",
-    );
+    throw new Error("Start the local stack with npm start before reading mail.");
   }
   if (!state && command !== "down" && command !== "status") {
     throw new Error("Could not initialize local development state.");
@@ -45,18 +35,9 @@ try {
     await start(state);
   }
   if (command === "mail") {
-    compose(
-      state,
-      [
-        "exec",
-        "-T",
-        "api",
-        "node",
-        "assembly/read-local-mail.mjs",
-        ...(json ? ["--json"] : []),
-      ],
-      { stdout: 1 },
-    );
+    compose(state, ["exec", "-T", "api", "node", "assembly/read-local-mail.mjs", ...(json ? ["--json"] : [])], {
+      stdout: 1,
+    });
   }
   if (command === "status") {
     const urls = state ? serviceUrls(state) : undefined;
@@ -64,28 +45,17 @@ try {
     finish(running ? { ok: true, running, ...urls } : { ok: true, running });
   }
 } catch (error) {
-  const message =
-    error instanceof Error ? error.message : "Local stack failed.";
-  if (json)
-    process.stdout.write(JSON.stringify({ ok: false, error: message }) + "\n");
+  const message = error instanceof Error ? error.message : "Local stack failed.";
+  if (json) process.stdout.write(JSON.stringify({ ok: false, error: message }) + "\n");
   else process.stderr.write(message + "\n");
   process.exitCode = 1;
 }
 
 async function start(state) {
   compose(state, ["run", "--rm", "--no-deps", "dependencies"]);
-  compose(state, [
-    "up",
-    "-d",
-    "--wait",
-    "--wait-timeout",
-    "120",
-    "database",
-    "web",
-  ]);
+  compose(state, ["up", "-d", "--wait", "--wait-timeout", "120", "database", "web"]);
   const webUrl = serviceUrl(state, "web", "5173");
-  if (!webUrl)
-    throw new Error("Docker did not publish the local browser port.");
+  if (!webUrl) throw new Error("Docker did not publish the local browser port.");
   compose(state, ["run", "--rm", "--no-deps", "api", "npm", "run", "migrate"], {
     webUrl,
   });
@@ -95,9 +65,7 @@ async function start(state) {
     if (await ready(urls)) return finish({ ok: true, running: true, ...urls });
     await setTimeout(1000);
   }
-  throw new Error(
-    "The local stack did not become ready. Run npm run dev:status and inspect docker logs.",
-  );
+  throw new Error("The local stack did not become ready. Run npm run dev:status and inspect docker logs.");
 }
 
 async function ready({ webUrl, apiUrl, staffUrl }) {
@@ -115,8 +83,7 @@ async function endpointIsReady(url, health = false) {
     const response = await globalThis.fetch(url, {
       signal: globalThis.AbortSignal.timeout(1500),
     });
-    if (response.ok && health)
-      return (await response.json())?.data?.status === "ok";
+    if (response.ok && health) return (await response.json())?.data?.status === "ok";
     await response.body?.cancel();
     return response.ok;
   } catch {
@@ -127,9 +94,7 @@ async function endpointIsReady(url, health = false) {
 function finish(result) {
   if (json) process.stdout.write(JSON.stringify(result) + "\n");
   else if (result.running) {
-    process.stdout.write(
-      `Open ${result.webUrl}\nCustomer API ${result.apiUrl}\nStaff API ${result.staffUrl}\n`,
-    );
+    process.stdout.write(`Open ${result.webUrl}\nCustomer API ${result.apiUrl}\nStaff API ${result.staffUrl}\n`);
   } else process.stdout.write("The local stack is stopped.\n");
 }
 
@@ -143,33 +108,19 @@ function serviceUrls(state) {
 function serviceUrl(state, service, port) {
   const output = compose(state, ["port", service, port], { capture: true });
   const address = /^127\.0\.0\.1:(\d{1,5})$/.exec(output);
-  return address && Number(address[1]) >= 1 && Number(address[1]) <= 65535
-    ? `http://${address[0]}`
-    : undefined;
+  return address && Number(address[1]) >= 1 && Number(address[1]) <= 65535 ? `http://${address[0]}` : undefined;
 }
 
 function diagnoseDocker() {
   const version = spawnSync("docker", ["compose", "version"], {
     stdio: "ignore",
   });
-  if (version.status !== 0)
-    throw new Error("Docker with the Compose v2 plugin is required.");
-  const daemon = spawnSync(
-    "docker",
-    ["info", "--format", "{{.ServerVersion}}"],
-    { stdio: "ignore" },
-  );
-  if (daemon.status !== 0)
-    throw new Error(
-      "Start Docker and confirm that your shell can access its daemon.",
-    );
+  if (version.status !== 0) throw new Error("Docker with the Compose v2 plugin is required.");
+  const daemon = spawnSync("docker", ["info", "--format", "{{.ServerVersion}}"], { stdio: "ignore" });
+  if (daemon.status !== 0) throw new Error("Start Docker and confirm that your shell can access its daemon.");
 }
 
-function compose(
-  state,
-  args,
-  { capture = false, webUrl = "", stdout = 2 } = {},
-) {
+function compose(state, args, { capture = false, webUrl = "", stdout = 2 } = {}) {
   const result = spawnSync(
     "docker",
     [
@@ -195,6 +146,5 @@ function compose(
     },
   );
   if (capture) return result.status === 0 ? result.stdout.trim() : "";
-  if (result.status !== 0)
-    throw new Error(`Docker Compose ${args[0]} failed. See its output above.`);
+  if (result.status !== 0) throw new Error(`Docker Compose ${args[0]} failed. See its output above.`);
 }

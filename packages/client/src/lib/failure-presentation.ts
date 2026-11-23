@@ -23,9 +23,6 @@ export const FAILURE_PRESENTED_INLINE: FailurePresentationMeta = {
 /** True when a mutation's `meta` says its screen presents the failure. */
 export function isFailurePresentedInline(meta: unknown): boolean {
   return (
-    typeof meta === "object" &&
-    meta !== null &&
-    "failurePresentation" in meta &&
-    meta.failurePresentation === "inline"
+    typeof meta === "object" && meta !== null && "failurePresentation" in meta && meta.failurePresentation === "inline"
   );
 }

@@ -4,10 +4,7 @@ import * as React from "react";
 import { Button, Skeleton } from "../../../elements/index.js";
 
 import { usePageCopy } from "../../copy/page-copy.js";
-import {
-  isRailPartiallyLoaded,
-  shouldLoadMoreRailRows,
-} from "./logic/rail-list.js";
+import { isRailPartiallyLoaded, shouldLoadMoreRailRows } from "./logic/rail-list.js";
 import { useIsMasterDetailDesktop } from "./master-detail-layout.js";
 
 /** First-render height guess for one two-line row; rows are measured once drawn. */
@@ -101,26 +98,13 @@ export function MasterDetailList<TItem>({
   useRevealSelectedRowOnce({ items, getKey, selectedKey, virtualizer });
 
   if (items.length === 0) {
-    return (
-      <EmptyRail
-        status={status}
-        onRetry={onRetry}
-        labels={{ loadingLabel, errorLabel, emptyLabel }}
-      />
-    );
+    return <EmptyRail status={status} onRetry={onRetry} labels={{ loadingLabel, errorLabel, emptyLabel }} />;
   }
 
   return (
     <>
-      <div
-        ref={scrollRef}
-        data-slot="master-detail-list"
-        className="min-h-0 flex-1 overflow-y-auto"
-      >
-        <ul
-          className="relative m-0 list-none p-0"
-          style={{ height: `${virtualizer.getTotalSize()}px` }}
-        >
+      <div ref={scrollRef} data-slot="master-detail-list" className="min-h-0 flex-1 overflow-y-auto">
+        <ul className="relative m-0 list-none p-0" style={{ height: `${virtualizer.getTotalSize()}px` }}>
           {virtualRows.map((row) => {
             const item = items[row.index];
             if (item === undefined) return null;
@@ -146,9 +130,7 @@ export function MasterDetailList<TItem>({
               disabled={isFetchingNextPage}
               onClick={fetchNextPage}
             >
-              {isFetchingNextPage
-                ? t("page.masterDetail.loadingMore")
-                : t("page.masterDetail.loadMore")}
+              {isFetchingNextPage ? t("page.masterDetail.loadingMore") : t("page.masterDetail.loadMore")}
             </Button>
           </div>
         ) : null}
@@ -238,10 +220,7 @@ function usePrefetchAhead({
   const requestedAtLength = React.useRef<number | null>(null);
   React.useEffect(() => {
     // A new search or filter starts again from an empty list.
-    if (
-      requestedAtLength.current !== null &&
-      loadedCount < requestedAtLength.current
-    ) {
+    if (requestedAtLength.current !== null && loadedCount < requestedAtLength.current) {
       requestedAtLength.current = null;
     }
     if (requestedAtLength.current === loadedCount) return;
@@ -258,13 +237,7 @@ function usePrefetchAhead({
     }
     requestedAtLength.current = loadedCount;
     latestFetchNextPage.current();
-  }, [
-    lastVisibleIndex,
-    loadedCount,
-    pageSize,
-    hasNextPage,
-    isFetchingNextPage,
-  ]);
+  }, [lastVisibleIndex, loadedCount, pageSize, hasNextPage, isFetchingNextPage]);
 }
 
 /** Opens the first row once per visit to the index address, on desktop only. */
@@ -294,10 +267,7 @@ function useAutoOpenFirstRow<TItem>({
 
 /** The part of the virtualizer the reveal reads: its visible band and rows, and the scroll request. */
 type RevealVirtualizer = {
-  readonly scrollToIndex: (
-    index: number,
-    options: { readonly align: "center" },
-  ) => void;
+  readonly scrollToIndex: (index: number, options: { readonly align: "center" }) => void;
   readonly range: {
     readonly startIndex: number;
     readonly endIndex: number;
@@ -353,14 +323,9 @@ function useRevealSelectedRowOnce<TItem>({
 }
 
 /** Whether the row sits wholly inside the scroll container's visible band (a taller-than-band row counts once it fills it). */
-function isRowFullyVisible(
-  virtualizer: RevealVirtualizer,
-  index: number,
-): boolean {
+function isRowFullyVisible(virtualizer: RevealVirtualizer, index: number): boolean {
   if (!isInVisibleRange(virtualizer.range, index)) return false;
-  const row = virtualizer
-    .getVirtualItems()
-    .find((item) => item.index === index);
+  const row = virtualizer.getVirtualItems().find((item) => item.index === index);
   if (row === undefined) return false;
   const bandStart = virtualizer.scrollOffset ?? 0;
   const bandEnd = bandStart + (virtualizer.scrollRect?.height ?? 0);
@@ -368,9 +333,6 @@ function isRowFullyVisible(
   return fillsBand || (row.start >= bandStart && row.end <= bandEnd);
 }
 
-function isInVisibleRange(
-  range: RevealVirtualizer["range"],
-  index: number,
-): boolean {
+function isInVisibleRange(range: RevealVirtualizer["range"], index: number): boolean {
   return range !== null && index >= range.startIndex && index <= range.endIndex;
 }

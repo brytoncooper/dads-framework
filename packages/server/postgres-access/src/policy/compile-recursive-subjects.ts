@@ -1,13 +1,6 @@
-import type {
-  AuthorizationModelDefinition,
-  CompiledPermissionExpression,
-} from "./policy-model.js";
+import type { AuthorizationModelDefinition, CompiledPermissionExpression } from "./policy-model.js";
 import { findColumnRelation } from "./column-relations.js";
-import type {
-  RecursiveEdge,
-  RecursiveNodePlan,
-  RecursiveSccPlan,
-} from "./permission-cycles.js";
+import type { RecursiveEdge, RecursiveNodePlan, RecursiveSccPlan } from "./permission-cycles.js";
 import { notExpired, TUPLES, type QueryBuilder } from "./policy-sql.js";
 
 export type SubjectResourceRef = {
@@ -16,10 +9,7 @@ export type SubjectResourceRef = {
   readonly entity: string;
 };
 
-export type CompileSubjectExpr = (
-  resource: SubjectResourceRef,
-  expression: CompiledPermissionExpression,
-) => string;
+export type CompileSubjectExpr = (resource: SubjectResourceRef, expression: CompiledPermissionExpression) => string;
 
 export type CompileSubjectAllOf = (
   resource: SubjectResourceRef,
@@ -42,9 +32,7 @@ export type RecursiveSubjectInput = {
  * Uses top-down `UNION` walk for unguarded SCCs, and bounded bottom-up
  * propagation when edges carry non-recursive guards.
  */
-export function compileRecursiveSubjectLookup(
-  input: RecursiveSubjectInput,
-): string {
+export function compileRecursiveSubjectLookup(input: RecursiveSubjectInput): string {
   input.builder.markRecursive();
   if (input.scc.edges.some((edge) => edge.guards.length > 0)) {
     return compileGuardedRecursiveSubjects(input);
@@ -68,9 +56,7 @@ function compileGuardedRecursiveSubjects(input: RecursiveSubjectInput): string {
   const baseAnchors = scc.nodes
     .filter((node) => node.base !== undefined)
     .map((node) => compileGuardedAnchor(input, walkAlias, node));
-  const stepSelects = scc.edges.map((edge) =>
-    compileGuardedSubjectEdge(input, walkAlias, edge),
-  );
+  const stepSelects = scc.edges.map((edge) => compileGuardedSubjectEdge(input, walkAlias, edge));
   const entryEntitySql = builder.value(resource.entity);
   const entryPermSql = builder.value(entryPermission);
   return `WITH RECURSIVE ${walkSql},
@@ -88,11 +74,7 @@ function compileGuardedRecursiveSubjects(input: RecursiveSubjectInput): string {
       AND permission_name = ${entryPermSql}`;
 }
 
-function compileGuardedAnchor(
-  input: RecursiveSubjectInput,
-  walkAlias: string,
-  node: RecursiveNodePlan,
-): string {
+function compileGuardedAnchor(input: RecursiveSubjectInput, walkAlias: string, node: RecursiveNodePlan): string {
   const entitySql = input.builder.value(node.entity);
   const permSql = input.builder.value(node.permission);
   const branch = compileBaseSubjectBranch(input, node, "reached");
@@ -102,11 +84,7 @@ function compileGuardedAnchor(
     WHERE reached.resource_kind = ${entitySql} AND reached.permission_name = ${permSql}`;
 }
 
-function compileGuardedSubjectEdge(
-  input: RecursiveSubjectInput,
-  walkAlias: string,
-  edge: RecursiveEdge,
-): string {
+function compileGuardedSubjectEdge(input: RecursiveSubjectInput, walkAlias: string, edge: RecursiveEdge): string {
   const { builder, namespace } = input;
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
@@ -115,11 +93,7 @@ function compileGuardedSubjectEdge(
   const toPerm = builder.value(edge.toPermission);
   const guardJoin = compileGuardSubjectJoin(input, edge);
   const outSub = edge.guards.length > 0 ? "guarded" : "parent_sub";
-  const columnRel = findColumnRelation(
-    input.model,
-    edge.fromEntity,
-    edge.relation,
-  );
+  const columnRel = findColumnRelation(input.model, edge.fromEntity, edge.relation);
   if (columnRel !== undefined) {
     if (columnRel.targetEntity !== edge.toEntity) {
       return `SELECT ''::text AS resource_kind, ''::text AS resource_id, ''::text AS permission_name, ''::text AS subject_id, false AS is_wildcard WHERE false`;
@@ -156,10 +130,7 @@ function compileGuardedSubjectEdge(
       AND parent_sub.permission_name = ${toPerm}`;
 }
 
-function compileGuardSubjectJoin(
-  input: RecursiveSubjectInput,
-  edge: RecursiveEdge,
-): string {
+function compileGuardSubjectJoin(input: RecursiveSubjectInput, edge: RecursiveEdge): string {
   if (edge.guards.length === 0) return "";
   const guardRef: SubjectResourceRef = {
     type: "child_node.resource_kind",
@@ -177,10 +148,7 @@ function compileGuardSubjectJoin(
     ) guarded`;
 }
 
-function compileRecursiveWalkCte(
-  input: RecursiveSubjectInput,
-  walkAlias: string,
-): string {
+function compileRecursiveWalkCte(input: RecursiveSubjectInput, walkAlias: string): string {
   const { builder, resource, entryPermission, scc } = input;
   const entryEntitySql = builder.value(resource.entity);
   const entryPermSql = builder.value(entryPermission);
@@ -195,21 +163,14 @@ function compileRecursiveWalkCte(
   )`;
 }
 
-function compileWalkEdge(
-  input: RecursiveSubjectInput,
-  edge: RecursiveEdge,
-): string {
+function compileWalkEdge(input: RecursiveSubjectInput, edge: RecursiveEdge): string {
   const { builder, namespace } = input;
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
   const fromPerm = builder.value(edge.fromPermission);
   const toEntity = builder.value(edge.toEntity);
   const toPerm = builder.value(edge.toPermission);
-  const columnRel = findColumnRelation(
-    input.model,
-    edge.fromEntity,
-    edge.relation,
-  );
+  const columnRel = findColumnRelation(input.model, edge.fromEntity, edge.relation);
   if (columnRel !== undefined) {
     if (columnRel.targetEntity !== edge.toEntity) {
       return `SELECT ''::text AS resource_kind, ''::text AS resource_id, ''::text AS permission_name WHERE false`;
@@ -236,11 +197,7 @@ function compileWalkEdge(
       AND ${notExpired(tupleAlias)}`;
 }
 
-function compileBaseSubjectBranch(
-  input: RecursiveSubjectInput,
-  node: RecursiveNodePlan,
-  nodeAlias: string,
-): string {
+function compileBaseSubjectBranch(input: RecursiveSubjectInput, node: RecursiveNodePlan, nodeAlias: string): string {
   if (node.base === undefined) {
     return "SELECT ''::text AS subject_id, false AS is_wildcard WHERE false";
   }

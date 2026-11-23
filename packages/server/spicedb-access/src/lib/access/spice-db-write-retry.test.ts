@@ -5,9 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
-type SpiceDbClient = NonNullable<
-  ConstructorParameters<typeof SpiceDbAuthorization>[1]
->;
+type SpiceDbClient = NonNullable<ConstructorParameters<typeof SpiceDbAuthorization>[1]>;
 
 const FACT = {
   resource: { type: "organizations/workspace", id: "north-terminal" },
@@ -20,18 +18,13 @@ function grpcError(code: number, details: string): Error {
   return Object.assign(new Error(`${code} ${details}`), { code, details });
 }
 
-const SERIALIZATION_CONFLICT = grpcError(
-  4,
-  "serialization max retries exceeded; please reduce your parallel writes",
-);
+const SERIALIZATION_CONFLICT = grpcError(4, "serialization max retries exceeded; please reduce your parallel writes");
 
 function clientFailingWith(failures: readonly Error[]) {
   const calls = { write: 0, delete: 0 };
   const respond = <T>(answer: T): Promise<T> => {
     const failure = failures[calls.write + calls.delete - 1];
-    return failure === undefined
-      ? Promise.resolve(answer)
-      : Promise.reject(failure);
+    return failure === undefined ? Promise.resolve(answer) : Promise.reject(failure);
   };
   const unexpected = (): never => {
     throw new Error("Unexpected call in write-retry proof");
@@ -66,14 +59,9 @@ function clientFailingWith(failures: readonly Error[]) {
 
 describe("SpiceDB write retry", () => {
   it("retries a write that lost a serialization race, then succeeds", async () => {
-    const { authorization, calls } = clientFailingWith([
-      SERIALIZATION_CONFLICT,
-      SERIALIZATION_CONFLICT,
-    ]);
+    const { authorization, calls } = clientFailingWith([SERIALIZATION_CONFLICT, SERIALIZATION_CONFLICT]);
 
-    await expect(authorization.writeRelationships([FACT])).resolves.toBe(
-      "written",
-    );
+    await expect(authorization.writeRelationships([FACT])).resolves.toBe("written");
     expect(calls.write).toBe(3);
   });
 
@@ -88,9 +76,7 @@ describe("SpiceDB write retry", () => {
   });
 
   it("retries a delete that lost a serialization race", async () => {
-    const { authorization, calls } = clientFailingWith([
-      SERIALIZATION_CONFLICT,
-    ]);
+    const { authorization, calls } = clientFailingWith([SERIALIZATION_CONFLICT]);
 
     await expect(
       authorization.deleteRelationships({
@@ -102,26 +88,17 @@ describe("SpiceDB write retry", () => {
   });
 
   it("does not retry a write SpiceDB refused", async () => {
-    const refused = grpcError(
-      9,
-      "object definition `sample_requests/terminal` not found",
-    );
+    const refused = grpcError(9, "object definition `sample_requests/terminal` not found");
     const { authorization, calls } = clientFailingWith([refused]);
 
-    await expect(authorization.writeRelationships([FACT])).rejects.toBe(
-      refused,
-    );
+    await expect(authorization.writeRelationships([FACT])).rejects.toBe(refused);
     expect(calls.write).toBe(1);
   });
 
   it("gives up after a bounded number of attempts", async () => {
-    const { authorization, calls } = clientFailingWith(
-      Array.from({ length: 10 }, () => SERIALIZATION_CONFLICT),
-    );
+    const { authorization, calls } = clientFailingWith(Array.from({ length: 10 }, () => SERIALIZATION_CONFLICT));
 
-    await expect(authorization.writeRelationships([FACT])).rejects.toBe(
-      SERIALIZATION_CONFLICT,
-    );
+    await expect(authorization.writeRelationships([FACT])).rejects.toBe(SERIALIZATION_CONFLICT);
     expect(calls.write).toBe(4);
   });
 });

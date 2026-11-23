@@ -1,9 +1,5 @@
 import { emitZed } from "@dads-framework/access";
-import {
-  SpiceDbAuthorization,
-  type Authorization,
-  type PermissionQuery,
-} from "@dads-framework/spicedb-access";
+import { SpiceDbAuthorization, type Authorization, type PermissionQuery } from "@dads-framework/spicedb-access";
 import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, expect, it } from "vitest";
@@ -46,8 +42,7 @@ it.runIf(process.env["VITEST_TIER"] === "benchmark")(
       [8, 5_000],
       [16, 5_000],
     ]) {
-      if (depth === undefined || size === undefined)
-        throw new Error("Benchmark scenario is incomplete");
+      if (depth === undefined || size === undefined) throw new Error("Benchmark scenario is incomplete");
       const { model, facts, check } = makeChain(depth, size);
       const adapter = new PostgresAuthorization({
         model,
@@ -77,11 +72,7 @@ it.runIf(process.env["VITEST_TIER"] === "benchmark")(
   120_000,
 );
 
-async function measure(
-  authorization: Authorization,
-  check: PermissionQuery,
-  size: number,
-) {
+async function measure(authorization: Authorization, check: PermissionQuery, size: number) {
   const lookup = {
     resourceType: check.resource.type,
     permission: check.permission,
@@ -104,10 +95,7 @@ async function measured(work: () => Promise<unknown>) {
   } catch (error) {
     if (
       !(error instanceof Error) ||
-      ![
-        "Query read timeout",
-        "canceling statement due to statement timeout",
-      ].includes(error.message)
+      !["Query read timeout", "canceling statement due to statement timeout"].includes(error.message)
     )
       throw error;
     return { timedOut: true };

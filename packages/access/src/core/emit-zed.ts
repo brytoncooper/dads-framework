@@ -1,12 +1,7 @@
 import type { AccessModel } from "./access-model.js";
 import { emitAccessIr } from "./emit-ir.js";
 import { GENERATED_ZED_HEADER } from "./generated-header.js";
-import type {
-  AccessIrDefinition,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./ir.js";
 
 function baseSubjectText(subject: AccessIrSubject): string {
   if (subject.kind === "type") {
@@ -55,11 +50,7 @@ function unionText(terms: readonly AccessIrTerm[]): string {
   if (terms.length === 1) {
     return terms.map(termText).join("");
   }
-  return terms
-    .map((term) =>
-      term.kind === "excluding" ? `(${termText(term)})` : termText(term),
-    )
-    .join(" + ");
+  return terms.map((term) => (term.kind === "excluding" ? `(${termText(term)})` : termText(term))).join(" + ");
 }
 
 function emitDefinition(definition: AccessIrDefinition): string {
@@ -68,17 +59,13 @@ function emitDefinition(definition: AccessIrDefinition): string {
   }
   const lines = [`definition ${definition.wireName} {`];
   for (const role of definition.roles) {
-    lines.push(
-      `  relation ${role.name}: ${role.subjects.map(subjectText).join(" | ")}`,
-    );
+    lines.push(`  relation ${role.name}: ${role.subjects.map(subjectText).join(" | ")}`);
   }
   if (definition.roles.length > 0 && definition.permissions.length > 0) {
     lines.push("");
   }
   for (const permission of definition.permissions) {
-    lines.push(
-      `  permission ${permission.name} = ${unionText(permission.terms)}`,
-    );
+    lines.push(`  permission ${permission.name} = ${unionText(permission.terms)}`);
   }
   lines.push("}");
   return lines.join("\n");
@@ -93,9 +80,7 @@ export function emitZed(model: AccessModel): string {
   return joinZedDocument(definitions);
 }
 
-export function emitZedForDefinitions(
-  definitions: readonly AccessIrDefinition[],
-): string {
+export function emitZedForDefinitions(definitions: readonly AccessIrDefinition[]): string {
   return joinZedDocument(definitions);
 }
 
@@ -104,9 +89,7 @@ function roleUsesExpiration(role: AccessIrRole): boolean {
 }
 
 function usesExpiration(definitions: readonly AccessIrDefinition[]): boolean {
-  return definitions.some((definition) =>
-    definition.roles.some(roleUsesExpiration),
-  );
+  return definitions.some((definition) => definition.roles.some(roleUsesExpiration));
 }
 
 function joinZedDocument(definitions: readonly AccessIrDefinition[]): string {

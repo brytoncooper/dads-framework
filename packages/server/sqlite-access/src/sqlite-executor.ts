@@ -1,21 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import type {
-  SqliteRow,
-  SqliteRunResult,
-  SqliteValue,
-} from "./sqlite-types.js";
+import type { SqliteRow, SqliteRunResult, SqliteValue } from "./sqlite-types.js";
 
 /** Minimal SQLite port implemented by Node SQLite, better-sqlite3, Drizzle, or libSQL wrappers. */
 export type SqliteExecutor = {
-  all(
-    sql: string,
-    params?: readonly SqliteValue[],
-  ): PromiseLike<readonly SqliteRow[]> | readonly SqliteRow[];
-  run(
-    sql: string,
-    params?: readonly SqliteValue[],
-  ): PromiseLike<SqliteRunResult> | SqliteRunResult;
+  all(sql: string, params?: readonly SqliteValue[]): PromiseLike<readonly SqliteRow[]> | readonly SqliteRow[];
+  run(sql: string, params?: readonly SqliteValue[]): PromiseLike<SqliteRunResult> | SqliteRunResult;
   exec(sql: string): PromiseLike<void> | void;
 };
 
@@ -34,9 +24,7 @@ export type SqliteDatabaseLike = {
 const MAX_CACHED_STATEMENTS = 128;
 
 /** Wrap a Node built-in `DatabaseSync` (or compatible sync database such as `better-sqlite3`). */
-export function createNodeSqliteExecutor(
-  database: DatabaseSync | SqliteDatabaseLike,
-): SqliteExecutor {
+export function createNodeSqliteExecutor(database: DatabaseSync | SqliteDatabaseLike): SqliteExecutor {
   const cache = new Map<string, SqliteStatement>();
   const prepared = (sql: string): SqliteStatement => {
     const existing = cache.get(sql);

@@ -9,9 +9,7 @@ describe("tenant access", () => {
     const account = actor("accounts/user", { id: z.string() });
     const tenant = createTenantAccess(account);
     const model = compileAccess([account, tenant.tenant]);
-    const definition = emitAccessIr(model).find(
-      (entry) => entry.wireName === tenant.tenant.wireName,
-    );
+    const definition = emitAccessIr(model).find((entry) => entry.wireName === tenant.tenant.wireName);
     expect(definition?.roles.map((role) => role.subjects)).toEqual([
       [{ kind: "type", wireName: account.wireName }],
       [{ kind: "type", wireName: account.wireName }],
@@ -19,9 +17,7 @@ describe("tenant access", () => {
     ]);
     expect(
       definition?.permissions.find(
-        (permission) =>
-          permission.name ===
-          tenant.tenant.permissions.manage_tenant.permissionName,
+        (permission) => permission.name === tenant.tenant.permissions.manage_tenant.permissionName,
       )?.terms,
     ).toEqual([{ kind: "role", name: tenant.tenant.roles.owner.roleName }]);
   });

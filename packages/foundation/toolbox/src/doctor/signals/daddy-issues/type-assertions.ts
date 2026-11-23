@@ -15,10 +15,7 @@
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReadings } from "../../doctor-signal.js";
 import { isTestSource } from "../scanners/source-classification.js";
-import {
-  countOccurrences,
-  isWideningAssertion,
-} from "../scanners/typescript-program.js";
+import { countOccurrences, isWideningAssertion } from "../scanners/typescript-program.js";
 
 function countTypeAssertions(context: DoctorContext): SignalReadings {
   return countOccurrences({
@@ -32,8 +29,7 @@ function countTypeAssertions(context: DoctorContext): SignalReadings {
 export const typeAssertionsSignal: DoctorSignal = {
   id: "type-assertions",
   issue: "daddy-issues",
-  question:
-    "Does any hand-written file use `as` other than `as const`, or a postfix `!`?",
+  question: "Does any hand-written file use `as` other than `as const`, or a postfix `!`?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

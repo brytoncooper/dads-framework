@@ -3,11 +3,7 @@ import type { Column } from "@tanstack/react-table";
 import type { LocaleFormatting } from "../../../copy/index.js";
 
 import type { DataTableCopyTranslator } from "../../copy/data-table-copy.js";
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-  FilterVariant,
-} from "../../lib/data-table-types.js";
+import type { ExtendedColumnFilter, FilterOperator, FilterVariant } from "../../lib/data-table-types.js";
 
 /** Keys that remove a filter when pressed on an empty input or a filter chip. */
 export const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
@@ -30,9 +26,7 @@ export type FilterMenuInputProps<TData> = {
 };
 
 /** A column's filter variant; columns that name none filter as text. */
-export function readColumnFilterVariant<TData>(
-  column: Column<TData>,
-): FilterVariant {
+export function readColumnFilterVariant<TData>(column: Column<TData>): FilterVariant {
   return column.columnDef.meta?.variant ?? "text";
 }
 

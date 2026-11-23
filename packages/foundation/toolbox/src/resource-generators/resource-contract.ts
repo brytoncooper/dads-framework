@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, pascal } from "./names.js";
 
-export function resourceContract(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function resourceContract(plan: GenerationPlan, domain: string, name: string): void {
   const id = camel(name);
   const kind = pascal(name);
   const file = `domains/${domain}/contract/${name}-resource.ts`;

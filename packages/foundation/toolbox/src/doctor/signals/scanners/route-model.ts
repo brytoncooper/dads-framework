@@ -1,7 +1,4 @@
-import {
-  readRouteSource,
-  type SourceRoute,
-} from "../../../route-inspection/read-route-source.js";
+import { readRouteSource, type SourceRoute } from "../../../route-inspection/read-route-source.js";
 import type { DoctorContext } from "../../doctor-context.js";
 import { readPackageGraph, type GraphPackage } from "./package-graph.js";
 
@@ -34,10 +31,7 @@ export function readRouteModel(context: DoctorContext): RouteModel {
   return model;
 }
 
-function readPackageRoutes(
-  context: DoctorContext,
-  owner: GraphPackage,
-): readonly RouteOperation[] {
+function readPackageRoutes(context: DoctorContext, owner: GraphPackage): readonly RouteOperation[] {
   return owner.sources.flatMap((path) => {
     if (!/\.tsx?$/.test(path)) return [];
     return readRouteSource(context.read(path), path).map((route) => ({

@@ -3,11 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { ClientContext } from "@dads-framework/core/contract";
 import { requestIdSchema } from "@dads-framework/http";
-import {
-  startTestPostgres,
-  truncateRequestLog,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, truncateRequestLog, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { makeRequestLog } from "../../../testing/request-log.factory.js";
 import { requestLog } from "../generated-tables/request-log.tables.js";
@@ -129,10 +125,7 @@ describe("DrizzleRequestLogReader", () => {
 
     const refusals = await reader.listRefusals({ since: SINCE }, null, 10);
 
-    expect(refusals.map((row) => row.requestId)).toEqual([
-      "device",
-      "signed-in",
-    ]);
+    expect(refusals.map((row) => row.requestId)).toEqual(["device", "signed-in"]);
   });
 
   it("never lists a refusal row a remote instance uploaded, only this API's own and rows with no instance", async () => {
@@ -162,10 +155,7 @@ describe("DrizzleRequestLogReader", () => {
 
     const refusals = await reader.listRefusals({ since: SINCE }, null, 10);
 
-    expect(refusals.map((row) => row.requestId)).toEqual([
-      "no-instance",
-      "api-instance",
-    ]);
+    expect(refusals.map((row) => row.requestId)).toEqual(["no-instance", "api-instance"]);
   });
 
   it("lists a signed-in user's denial under the actor enforcement recorded, never an unauthenticated refusal", async () => {
@@ -190,11 +180,7 @@ describe("DrizzleRequestLogReader", () => {
     ]);
 
     const refusals = await reader.listRefusals({ since: SINCE }, null, 10);
-    const bobs = await reader.listRefusals(
-      { since: SINCE, userId: "bob" },
-      null,
-      10,
-    );
+    const bobs = await reader.listRefusals({ since: SINCE, userId: "bob" }, null, 10);
 
     expect(refusals.map((row) => row.requestId)).toEqual(["user-denied"]);
     expect(refusals[0]).toMatchObject({
@@ -253,11 +239,7 @@ describe("DrizzleRequestLogReader", () => {
       }),
     ]);
 
-    const alice = await reader.listRefusals(
-      { since: SINCE, userId: "alice" },
-      null,
-      10,
-    );
+    const alice = await reader.listRefusals({ since: SINCE, userId: "alice" }, null, 10);
 
     expect(alice.map((row) => row.requestId)).toEqual(["alice-direct"]);
   });

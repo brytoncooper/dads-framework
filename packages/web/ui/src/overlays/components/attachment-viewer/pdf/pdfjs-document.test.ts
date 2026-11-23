@@ -18,11 +18,7 @@ describe("openPdfDocument", () => {
       isEvalSupported: false,
       wasmUrl: "/pdfjs/wasm/",
     });
-    if (
-      typeof options !== "object" ||
-      options === null ||
-      !("data" in options)
-    ) {
+    if (typeof options !== "object" || options === null || !("data" in options)) {
       throw new Error("PDF.js did not receive document data");
     }
     expect(options.data).not.toBe(original);

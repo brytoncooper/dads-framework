@@ -1,14 +1,6 @@
-import {
-  ApplyAccessChangesAfterCommit,
-  EnqueueAccessChanges,
-  type AccessChange,
-} from "@dads-framework/access/runtime";
+import { ApplyAccessChangesAfterCommit, EnqueueAccessChanges, type AccessChange } from "@dads-framework/access/runtime";
 
-import {
-  isDrizzlePgTransaction,
-  type DrizzleDatabaseLike,
-  type DrizzleExecuteLike,
-} from "./drizzle-structural.js";
+import { isDrizzlePgTransaction, type DrizzleDatabaseLike, type DrizzleExecuteLike } from "./drizzle-structural.js";
 import type { PostgresAuthorization } from "./postgres-authorization.js";
 
 type OutboxTx = Partial<DrizzleExecuteLike>;
@@ -26,23 +18,15 @@ export class TransactionalAccessChanges extends EnqueueAccessChanges<OutboxTx> {
     super();
   }
 
-  override enqueue(
-    entries: readonly AccessChange[],
-    tx: OutboxTx,
-  ): Promise<void> {
+  override enqueue(entries: readonly AccessChange[], tx: OutboxTx): Promise<void> {
     if (entries.length === 0) return Promise.resolve();
     if (!hasExecute(tx) || !isDrizzlePgTransaction(tx)) {
-      throw new Error(
-        "Postgres access changes require the caller's Drizzle transaction",
-      );
+      throw new Error("Postgres access changes require the caller's Drizzle transaction");
     }
     return this.authorization.inDrizzleTransaction(tx).applyChanges(entries);
   }
 
-  override enqueueReplacingOpposite(
-    entries: readonly AccessChange[],
-    tx: OutboxTx,
-  ): Promise<void> {
+  override enqueueReplacingOpposite(entries: readonly AccessChange[], tx: OutboxTx): Promise<void> {
     // There are no queued facts to supersede. Apply this change in the caller's transaction.
     return this.enqueue(entries, tx);
   }

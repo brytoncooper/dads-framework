@@ -38,27 +38,17 @@ export function buildNativeNxManifest(input: BuildInput): {
   readonly coverage: NativeNxCoverage;
 } {
   const projects = readNativeProjects(input.graph);
-  if (input.targetNames?.some((name) => !name.trim()))
-    throw new Error("Requested target names must be nonempty.");
+  if (input.targetNames?.some((name) => !name.trim())) throw new Error("Requested target names must be nonempty.");
   const tasks: TestingManifestTask[] = [];
   const audits: TaskAudit[] = [];
   for (const project of projects.values()) {
-    for (const [name, value] of Object.entries(project.targets).sort(
-      ([left], [right]) => left.localeCompare(right),
-    )) {
-      const registration = registerTarget(
-        project,
-        name,
-        value,
-        projects,
-        input,
-      );
+    for (const [name, value] of Object.entries(project.targets).sort(([left], [right]) => left.localeCompare(right))) {
+      const registration = registerTarget(project, name, value, projects, input);
       audits.push(registration.audit);
       if (registration.task) tasks.push(registration.task);
     }
   }
-  if (tasks.length === 0)
-    throw new Error("No non-continuous verification targets were registered.");
+  if (tasks.length === 0) throw new Error("No non-continuous verification targets were registered.");
   return {
     manifest: {
       schemaVersion: 1,
@@ -92,10 +82,7 @@ function registerTarget(
   input: BuildInput,
 ): TaskRegistration {
   const target = readTarget(project.name, name, value);
-  const chosen =
-    input.targetNames === undefined
-      ? verificationTarget(name)
-      : input.targetNames.includes(name);
+  const chosen = input.targetNames === undefined ? verificationTarget(name) : input.targetNames.includes(name);
   if (target["continuous"] === true || !chosen) {
     return {
       audit: {
@@ -103,20 +90,12 @@ function registerTarget(
         target: name,
         classification: "excluded",
         reason:
-          target["continuous"] === true
-            ? "Continuous targets are excluded."
-            : "Outside requested verification scope.",
+          target["continuous"] === true ? "Continuous targets are excluded." : "Outside requested verification scope.",
       },
     };
   }
   const id = `${dadsIdentifier(project.name)}:${dadsIdentifier(name)}`;
-  const impact = inputScope(
-    project,
-    name,
-    target,
-    projects,
-    input.nxConfiguration,
-  );
+  const impact = inputScope(project, name, target, projects, input.nxConfiguration);
   return {
     task: {
       id,
@@ -124,12 +103,7 @@ function registerTarget(
       kind: nativeTaskKind(name),
       execution: {
         executable: process.execPath,
-        args: [
-          input.nxCli,
-          "run",
-          `--project=${project.name}`,
-          `--target=${name}`,
-        ],
+        args: [input.nxCli, "run", `--project=${project.name}`, `--target=${name}`],
         cwd: ".",
       },
       dependsOn: [],
@@ -146,32 +120,16 @@ function registerTarget(
   };
 }
 
-function readTarget(
-  project: string,
-  name: string,
-  value: unknown,
-): Readonly<Record<string, unknown>> {
-  if (
-    !name.trim() ||
-    name !== name.trim() ||
-    /\s/.test(name) ||
-    name.includes("\0") ||
-    !isRecord(value)
-  )
+function readTarget(project: string, name: string, value: unknown): Readonly<Record<string, unknown>> {
+  if (!name.trim() || name !== name.trim() || /\s/.test(name) || name.includes("\0") || !isRecord(value))
     throw new Error(`Invalid target ${project}:${name}.`);
-  if (
-    value["continuous"] !== undefined &&
-    typeof value["continuous"] !== "boolean"
-  )
+  if (value["continuous"] !== undefined && typeof value["continuous"] !== "boolean")
     throw new Error(`Invalid continuous flag for ${project}:${name}.`);
   return value;
 }
 
 function verificationTarget(name: string): boolean {
-  return (
-    /^(test|typecheck|lint|build)$/.test(name) ||
-    /^(test:|typecheck[:-]|lint[:-])/.test(name)
-  );
+  return /^(test|typecheck|lint|build)$/.test(name) || /^(test:|typecheck[:-]|lint[:-])/.test(name);
 }
 
 /** What an anchored target name says the task is for; `nx-target-conversion.ts` has `taskKind` for a substring reading. */

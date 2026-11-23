@@ -14,13 +14,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -58,11 +52,7 @@ function buildRepository(): string {
   write(root, join(".agents", "source-budgets.json"), BASELINE);
   write(root, "tsconfig.json", '{ "compilerOptions": { "strict": true } }\n');
   write(root, join(TOOLBOX, "bin", "dad.js"), 'import "../dist/cli.js";\n');
-  write(
-    root,
-    join(TOOLBOX, "dist", "cli.js"),
-    `import ${JSON.stringify(pathToFileURL(BUILT_CLI).href)};\n`,
-  );
+  write(root, join(TOOLBOX, "dist", "cli.js"), `import ${JSON.stringify(pathToFileURL(BUILT_CLI).href)};\n`);
   write(
     root,
     OVER_CEILING,
@@ -72,64 +62,50 @@ function buildRepository(): string {
   return root;
 }
 
-function runWrapper(
-  root: string,
-  commandArguments: readonly string[],
-): { status: number | null; stdout: string } {
-  const finished = spawnSync(
-    process.execPath,
-    [join(root, WRAPPER), ...commandArguments],
-    { cwd: root, encoding: "utf8" },
-  );
+function runWrapper(root: string, commandArguments: readonly string[]): { status: number | null; stdout: string } {
+  const finished = spawnSync(process.execPath, [join(root, WRAPPER), ...commandArguments], {
+    cwd: root,
+    encoding: "utf8",
+  });
   return { status: finished.status, stdout: finished.stdout };
 }
 
 describe("check-source-budgets, the wrapper", () => {
-  it(
-    "gates a repository through the built doctor and reports one file over its ceiling",
-    { timeout: TIMEOUT },
-    () => {
-      const root = buildRepository();
-      try {
-        const over = runWrapper(root, ["--file", OVER_CEILING]);
-        expect(over.stdout).toContain(
-          "401 lines over the 400 ceiling and not listed",
-        );
-        expect(over.status).toBe(1);
+  it("gates a repository through the built doctor and reports one file over its ceiling", { timeout: TIMEOUT }, () => {
+    const root = buildRepository();
+    try {
+      const over = runWrapper(root, ["--file", OVER_CEILING]);
+      expect(over.stdout).toContain("401 lines over the 400 ceiling and not listed");
+      expect(over.status).toBe(1);
 
-        const under = runWrapper(root, ["--file", UNDER_CEILING]);
-        expect(under.stdout).toMatch(/source budgets: 0 listed, 0 errors/);
-        expect(under.status).toBe(0);
+      const under = runWrapper(root, ["--file", UNDER_CEILING]);
+      expect(under.stdout).toMatch(/source budgets: 0 listed, 0 errors/);
+      expect(under.status).toBe(0);
 
-        // No mode flag at all means `--gate`, so a plain run judges the whole
-        // repository rather than describing it.
-        const plain = runWrapper(root, []);
-        expect(plain.stdout).toMatch(/source budgets: \d+ listed/);
-      } finally {
-        rmSync(root, { recursive: true, force: true });
-      }
-    },
-  );
+      // No mode flag at all means `--gate`, so a plain run judges the whole
+      // repository rather than describing it.
+      const plain = runWrapper(root, []);
+      expect(plain.stdout).toMatch(/source budgets: \d+ listed/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 
-  it(
-    "fails open in --file mode when the doctor is not built, and closed otherwise",
-    { timeout: TIMEOUT },
-    () => {
-      const root = buildRepository();
-      try {
-        rmSync(join(root, TOOLBOX, "dist", "cli.js"));
+  it("fails open in --file mode when the doctor is not built, and closed otherwise", { timeout: TIMEOUT }, () => {
+    const root = buildRepository();
+    try {
+      rmSync(join(root, TOOLBOX, "dist", "cli.js"));
 
-        const guarded = runWrapper(root, ["--file", OVER_CEILING]);
-        expect(guarded.status).toBe(0);
-        expect(guarded.stdout).toContain("dad doctor is not built");
-        expect(guarded.stdout).toContain("skipping this file");
+      const guarded = runWrapper(root, ["--file", OVER_CEILING]);
+      expect(guarded.status).toBe(0);
+      expect(guarded.stdout).toContain("dad doctor is not built");
+      expect(guarded.stdout).toContain("skipping this file");
 
-        const gated = runWrapper(root, []);
-        expect(gated.status).toBe(1);
-        expect(gated.stdout).toContain("Run npm run build first.");
-      } finally {
-        rmSync(root, { recursive: true, force: true });
-      }
-    },
-  );
+      const gated = runWrapper(root, []);
+      expect(gated.status).toBe(1);
+      expect(gated.stdout).toContain("Run npm run build first.");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -8,13 +8,8 @@ const environment = readEnvironment(process.env);
 const enterprise = readEnterpriseConfiguration(process.env);
 const featurePreview = readFeaturePreview(process.env);
 const logMail = environment.DADS_DEV_LOG_MAIL === "1";
-if (
-  logMail &&
-  (environment.NODE_ENV === "production" || environment.HOST !== "127.0.0.1")
-) {
-  throw new Error(
-    "Local mail logging requires a development server on 127.0.0.1.",
-  );
+if (logMail && (environment.NODE_ENV === "production" || environment.HOST !== "127.0.0.1")) {
+  throw new Error("Local mail logging requires a development server on 127.0.0.1.");
 }
 
 const telemetry = await startTelemetry({
@@ -30,8 +25,7 @@ try {
       secret: environment.DADS_IDENTITY_SECRET,
       enterprise,
       ...(featurePreview === undefined ? {} : { featurePreview }),
-      preparePermissionChecks:
-        environment.DADS_PREPARE_PERMISSION_CHECKS === "1",
+      preparePermissionChecks: environment.DADS_PREPARE_PERMISSION_CHECKS === "1",
       fileStorageDirectory: environment.DADS_FILE_STORAGE_DIR,
       ...(logMail || environment.NODE_ENV === "production"
         ? { enqueueEmail: developmentMail(logMail) }

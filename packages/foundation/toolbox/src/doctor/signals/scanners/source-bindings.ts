@@ -15,10 +15,7 @@ type SourceBinding = {
 };
 
 /** A core can ship a binding only behind its own export and optional peers. */
-export function readSourceBindings(
-  context: DoctorContext,
-  owner: BindingOwner,
-): readonly SourceBinding[] {
+export function readSourceBindings(context: DoctorContext, owner: BindingOwner): readonly SourceBinding[] {
   const path = `${owner.root}/package.json`;
   if (owner.kind !== "core" || !context.exists(path)) return [];
   const manifest: unknown = JSON.parse(context.read(path));
@@ -37,9 +34,7 @@ export function readSourceBindings(
       dependencies.length === 0 ||
       new Set(dependencies).size !== dependencies.length ||
       !dependencies.every(
-        (dependency) =>
-          owner.allowedDependencies.includes(dependency) &&
-          isOptionalPeer(manifest, dependency),
+        (dependency) => owner.allowedDependencies.includes(dependency) && isOptionalPeer(manifest, dependency),
       )
     ) {
       throw invalidBinding(owner.name, name);
@@ -58,10 +53,7 @@ function hasMatchingExport(exports: unknown, name: string): boolean {
   );
 }
 
-function isOptionalPeer(
-  manifest: Record<string, unknown>,
-  dependency: string,
-): boolean {
+function isOptionalPeer(manifest: Record<string, unknown>, dependency: string): boolean {
   const peers = manifest["peerDependencies"];
   const metadata = manifest["peerDependenciesMeta"];
   if (!isRecord(peers) || !isRecord(metadata)) return false;

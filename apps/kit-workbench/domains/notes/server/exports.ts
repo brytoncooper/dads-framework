@@ -16,10 +16,7 @@ const exportPath = inTenant.extend({
   format: z.enum(["csv", "pdf"]),
 });
 
-export function noteExportRoutes({
-  db,
-  flags,
-}: Pick<StarterServices, "db" | "flags">) {
+export function noteExportRoutes({ db, flags }: Pick<StarterServices, "db" | "flags">) {
   const pdf = createPdfRenderer();
   return routeGroup("Notes", [
     getRoute({
@@ -36,26 +33,18 @@ export function noteExportRoutes({
           kind: "tenant",
           tenantId: params.tenantId,
         });
-        if (!state.features.includes(notesExportFlag.slug))
-          throw notFound("NOT_FOUND", "Note export not available");
+        if (!state.features.includes(notesExportFlag.slug)) throw notFound("NOT_FOUND", "Note export not available");
         const [note] = await db
           .select({ text: noteTable.text })
           .from(noteTable)
-          .where(
-            and(
-              eq(noteTable.id, params.noteId),
-              eq(noteTable.tenantId, params.tenantId),
-            ),
-          )
+          .where(and(eq(noteTable.id, params.noteId), eq(noteTable.tenantId, params.tenantId)))
           .limit(1);
         if (!note) throw notFound("NOT_FOUND", "Note not found");
         return params.format === "csv"
           ? csvExport(note.text)
           : {
               contentType: "application/pdf",
-              base64: Buffer.from(
-                await pdf.render({ content: ["Note", note.text] }),
-              ).toString("base64"),
+              base64: Buffer.from(await pdf.render({ content: ["Note", note.text] })).toString("base64"),
             };
       },
     }),

@@ -2,17 +2,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { actor, anyOf, compileAccess, resource, roleToken } from "@dads-framework/access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/access/runtime";
 import { describe, expect, it } from "vitest";
 
 import { compileAccessPolicy } from "./policy/compile-access-policy.js";
@@ -39,11 +30,7 @@ function buildMixedColumnModel() {
   });
   const org = resource("edge/org", {
     roles: {
-      member: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
     },
     can: ({ member }) => ({ view: member }),
   });
@@ -51,11 +38,7 @@ function buildMixedColumnModel() {
     recursive: true,
     roles: {
       org,
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
     },
     can: ({ org: orgRole, viewer }) => ({
       view: anyOf(viewer, orgRole.view),
@@ -66,11 +49,7 @@ function buildMixedColumnModel() {
       org,
       folder,
       owner: user,
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       banned: user,
     },
     can: ({ org: orgRole, folder: folderRole, owner, viewer, banned }) => ({
@@ -120,13 +99,7 @@ function runOracle(
   docs: readonly string[],
   folders: readonly string[],
 ) {
-  const columnTuples: readonly (readonly [
-    string,
-    string,
-    string,
-    string,
-    string,
-  ])[] = [
+  const columnTuples: readonly (readonly [string, string, string, string, string])[] = [
     ["edge/folder", "f-cycle-a", "parent", "edge/folder", "f-cycle-b"],
     ["edge/folder", "f-cycle-b", "parent", "edge/folder", "f-cycle-c"],
     ["edge/folder", "f-cycle-c", "org", "edge/org", "org-team"],
@@ -150,18 +123,16 @@ function runOracle(
       subjectIsWildcard: entry.subject.id === "*",
       expiresAt: entry.expiresAt?.getTime() ?? null,
     })),
-    ...columnTuples.map(
-      ([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
-        resourceKind,
-        resourceId,
-        relation,
-        subjectKind,
-        subjectId,
-        subjectRelation: "",
-        subjectIsWildcard: false,
-        expiresAt: null,
-      }),
-    ),
+    ...columnTuples.map(([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
+      resourceKind,
+      resourceId,
+      relation,
+      subjectKind,
+      subjectId,
+      subjectRelation: "",
+      subjectIsWildcard: false,
+      expiresAt: null,
+    })),
   ];
   const lookups = [
     ...actors.map((actorId) => ({
@@ -222,14 +193,8 @@ function runOracle(
     if (actorId === undefined) continue;
     const rawDoc = rawLookups[index];
     const rawFolder = rawLookups[actors.length + index];
-    docLookups.set(
-      actorId,
-      Array.isArray(rawDoc) ? rawDoc.map(String).sort() : [],
-    );
-    folderLookups.set(
-      actorId,
-      Array.isArray(rawFolder) ? rawFolder.map(String).sort() : [],
-    );
+    docLookups.set(actorId, Array.isArray(rawDoc) ? rawDoc.map(String).sort() : []);
+    folderLookups.set(actorId, Array.isArray(rawFolder) ? rawFolder.map(String).sort() : []);
   }
   return { checks: rawChecks.map(Boolean), docLookups, folderLookups };
 }
@@ -336,14 +301,7 @@ describe("SQLite column-backed edge cases", () => {
       const compiled = compileAccessPolicy(schema.model, bindings);
       const actors = ["alice", "bob", "carol", "nobody"];
       const docs = ["doc-cycle", "doc-exp", "doc-self", "doc-wild"];
-      const folders = [
-        "f-branch",
-        "f-cycle-a",
-        "f-cycle-b",
-        "f-cycle-c",
-        "f-open",
-        "f-self",
-      ];
+      const folders = ["f-branch", "f-cycle-a", "f-cycle-b", "f-cycle-c", "f-open", "f-self"];
       const queries: PermissionQuery[] = [];
       for (const actorId of actors) {
         for (const docId of docs) {
@@ -362,15 +320,7 @@ describe("SQLite column-backed edge cases", () => {
         }
       }
 
-      const oracle = runOracle(
-        compiled.model,
-        writes,
-        nowMs,
-        queries,
-        actors,
-        docs,
-        folders,
-      );
+      const oracle = runOracle(compiled.model, writes, nowMs, queries, actors, docs, folders);
       expect(await authz.checkMany(queries)).toEqual(oracle.checks);
       for (let index = 0; index < queries.length; index += 1) {
         const query = queries[index];
@@ -404,9 +354,7 @@ describe("SQLite column-backed edge cases", () => {
           scopeColumns: "auto",
         });
         const filteredIds = db
-          .prepare(
-            `SELECT doc.id FROM documents doc WHERE ${filter.sql} ORDER BY doc.id`,
-          )
+          .prepare(`SELECT doc.id FROM documents doc WHERE ${filter.sql} ORDER BY doc.id`)
           .all(...filter.values)
           .map((row) => String(row["id"]));
         expect(filteredIds).toEqual(expectedDocs);

@@ -12,9 +12,7 @@ it("rejects reflected server proofs and wrong client keys", async () => {
     stops += 1;
   });
   try {
-    await expect(
-      requestDevelopmentStop({ port: control.port, key: "a".repeat(64) }),
-    ).rejects.toThrow();
+    await expect(requestDevelopmentStop({ port: control.port, key: "a".repeat(64) })).rejects.toThrow();
     const session = await openSession(control.port);
     const closed = new Promise<void>((resolve) => {
       session.socket.once("close", () => {

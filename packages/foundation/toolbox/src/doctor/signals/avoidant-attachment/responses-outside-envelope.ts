@@ -19,12 +19,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  operationEvidence,
-  operationKey,
-  readRouteModel,
-  type RouteOperation,
-} from "../scanners/route-model.js";
+import { operationEvidence, operationKey, readRouteModel, type RouteOperation } from "../scanners/route-model.js";
 
 /** Writing to the transport's reply, in the shapes the common frameworks use. */
 const TRANSPORT_WRITES = [
@@ -41,9 +36,7 @@ const BARE_ARRAY_RETURN = /\breturn\s*\[/;
 
 function escapesFrom(operation: RouteOperation): readonly string[] {
   const text = operation.handlerText;
-  const found = TRANSPORT_WRITES.filter((pattern) => pattern.test(text)).map(
-    (pattern) => pattern.source,
-  );
+  const found = TRANSPORT_WRITES.filter((pattern) => pattern.test(text)).map((pattern) => pattern.source);
   return BARE_ARRAY_RETURN.test(text) ? [...found, "return []"] : found;
 }
 
@@ -63,8 +56,7 @@ function countEnvelopeEscapes(context: DoctorContext) {
 export const responsesOutsideEnvelopeSignal: DoctorSignal = {
   id: "responses-outside-envelope",
   issue: "avoidant-attachment",
-  question:
-    "Does any handler return a raw array or object rather than the envelope?",
+  question: "Does any handler return a raw array or object rather than the envelope?",
   reads: "routes",
   unit: "count",
   direction: "ceiling",

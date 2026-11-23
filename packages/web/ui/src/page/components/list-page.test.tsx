@@ -10,12 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { Button } from "../../elements/index.js";
 
-import {
-  ListEmptyState,
-  ListPageActions,
-  ListPageHeader,
-  ListPageShell,
-} from "./list-page.js";
+import { ListEmptyState, ListPageActions, ListPageHeader, ListPageShell } from "./list-page.js";
 
 afterEach(cleanup);
 
@@ -39,10 +34,7 @@ describe("list-page composition", () => {
 
   it("stacks a page heading and feature-owned actions at narrow widths", () => {
     render(
-      <ListPageHeader
-        title="Products"
-        description="Materials this organization recognizes."
-      >
+      <ListPageHeader title="Products" description="Materials this organization recognizes.">
         <ListPageActions aria-label="Product Actions">
           <Button>New Product</Button>
         </ListPageActions>
@@ -54,9 +46,7 @@ describe("list-page composition", () => {
       name: "Products",
     });
     const header = heading.closest("header");
-    const description = screen.getByText(
-      "Materials this organization recognizes.",
-    );
+    const description = screen.getByText("Materials this organization recognizes.");
     const actions = screen.getByLabelText("Product Actions");
 
     expect(heading.className).toContain("text-3xl");
@@ -94,9 +84,7 @@ describe("list-page composition", () => {
       level: 2,
       name: "No Products Yet",
     });
-    const description = screen.getByText(
-      "Create the first material in this catalog.",
-    );
+    const description = screen.getByText("Create the first material in this catalog.");
     const media = screen.getByTestId("product-icon").parentElement;
     const action = screen.getByRole("button", { name: "Create Product" });
 
@@ -114,9 +102,7 @@ describe("list-page composition", () => {
   });
 
   it("omits empty-state regions for content the feature did not supply", () => {
-    const { container } = render(
-      <ListEmptyState title="Nothing to Commission" />,
-    );
+    const { container } = render(<ListEmptyState title="Nothing to Commission" />);
 
     expect(
       screen.getByRole("heading", {
@@ -125,9 +111,7 @@ describe("list-page composition", () => {
       }),
     ).toBeDefined();
     expect(container.querySelector('[data-slot="empty-icon"]')).toBeNull();
-    expect(
-      container.querySelector('[data-slot="empty-description"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-slot="empty-description"]')).toBeNull();
     expect(container.querySelector('[data-slot="empty-content"]')).toBeNull();
   });
 });

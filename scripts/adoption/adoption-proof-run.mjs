@@ -59,7 +59,5 @@ export function writeReceipt(receipt) {
 
 export function reportFatal(error) {
   process.exitCode = 1;
-  process.stderr.write(
-    `${error instanceof Error ? error.message : String(error)}\n`,
-  );
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
 }

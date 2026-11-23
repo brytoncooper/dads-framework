@@ -1,10 +1,5 @@
 import type { SqliteQuery } from "../sqlite-types.js";
-import {
-  columnChunk,
-  compileForwardPermission,
-  literalChunk,
-  type ForwardCompileContext,
-} from "./compile-check.js";
+import { columnChunk, compileForwardPermission, literalChunk, type ForwardCompileContext } from "./compile-check.js";
 import {
   permissionKey,
   type SqliteAuthorizationModel,
@@ -42,11 +37,7 @@ export function compileSqliteLookupSubjects(
   nowMs: number,
   request: SqliteSubjectLookup,
 ): SqliteQuery {
-  const graph = collectReachablePositiveGraph(
-    model,
-    request.resource.type,
-    request.permission,
-  );
+  const graph = collectReachablePositiveGraph(model, request.resource.type, request.permission);
   if (graph.relations.length === 0) {
     return Object.freeze({
       sql: "SELECT '' AS subject_id, 0 AS is_wildcard WHERE 0",
@@ -124,10 +115,7 @@ function buildCandidateCtes(
   return parts.join(", ");
 }
 
-function buildArrowEdgesCte(
-  b: QueryBuilder,
-  arrows: readonly ArrowEdge[],
-): string {
+function buildArrowEdgesCte(b: QueryBuilder, arrows: readonly ArrowEdge[]): string {
   const rows = arrows.map(
     (edge) =>
       `(${b.value(edge.entity)}, ${b.value(edge.permission)}, ${b.value(edge.relation)}, ${b.value(edge.targetEntity)}, ${b.value(edge.targetPermission)})`,
@@ -135,13 +123,9 @@ function buildArrowEdgesCte(
   return `arrow_edges(entity, perm, relation, target_entity, target_perm) AS (VALUES ${rows.join(", ")})`;
 }
 
-function buildPositiveRelationsCte(
-  b: QueryBuilder,
-  relations: readonly PositiveRelation[],
-): string {
+function buildPositiveRelationsCte(b: QueryBuilder, relations: readonly PositiveRelation[]): string {
   const rows = relations.map(
-    (entry) =>
-      `(${b.value(entry.entity)}, ${b.value(entry.permission)}, ${b.value(entry.relation)})`,
+    (entry) => `(${b.value(entry.entity)}, ${b.value(entry.permission)}, ${b.value(entry.relation)})`,
   );
   return `pos_relations(entity, perm, relation) AS (VALUES ${rows.join(", ")})`;
 }
@@ -204,10 +188,7 @@ function buildReachCte(
   )`;
 }
 
-function buildSubjectWalkCte(
-  b: QueryBuilder,
-  forward: ForwardCompileContext,
-): string {
+function buildSubjectWalkCte(b: QueryBuilder, forward: ForwardCompileContext): string {
   return `subj_walk(resource_kind, resource_id, relation) AS (
     SELECT r.entity, r.resource_id, pr.relation
     FROM reach r
@@ -226,11 +207,7 @@ function buildSubjectWalkCte(
   )`;
 }
 
-function buildCandidatesCte(
-  b: QueryBuilder,
-  forward: ForwardCompileContext,
-  subjectType: string,
-): string {
+function buildCandidatesCte(b: QueryBuilder, forward: ForwardCompileContext, subjectType: string): string {
   const tupleSelect = `SELECT DISTINCT t.subject_id AS subject_id
     FROM subj_walk sw
     JOIN ${TUPLES} t
@@ -278,14 +255,7 @@ function collectReachablePositiveGraph(
     visited.add(key);
     const definition = model.permissionByKey.get(key);
     if (definition === undefined) continue;
-    collectPositiveFromExpression(
-      current.entity,
-      current.permission,
-      definition.expression,
-      arrows,
-      relations,
-      queue,
-    );
+    collectPositiveFromExpression(current.entity, current.permission, definition.expression, arrows, relations, queue);
   }
   return { arrows: [...arrows.values()], relations: [...relations.values()] };
 }
@@ -300,14 +270,11 @@ function collectPositiveFromExpression(
 ): void {
   switch (expression.kind) {
     case "relation":
-      relations.set(
-        `${entity}\u0000${permission}\u0000${expression.relation}`,
-        {
-          entity,
-          permission,
-          relation: expression.relation,
-        },
-      );
+      relations.set(`${entity}\u0000${permission}\u0000${expression.relation}`, {
+        entity,
+        permission,
+        relation: expression.relation,
+      });
       return;
     case "through":
     case "through-all":
@@ -324,26 +291,12 @@ function collectPositiveFromExpression(
       }
       return;
     case "exclude":
-      collectPositiveFromExpression(
-        entity,
-        permission,
-        expression.include,
-        arrows,
-        relations,
-        queue,
-      );
+      collectPositiveFromExpression(entity, permission, expression.include, arrows, relations, queue);
       return;
     case "any-of":
     case "all-of":
       for (const child of expression.expressions) {
-        collectPositiveFromExpression(
-          entity,
-          permission,
-          child,
-          arrows,
-          relations,
-          queue,
-        );
+        collectPositiveFromExpression(entity, permission, child, arrows, relations, queue);
       }
       return;
   }

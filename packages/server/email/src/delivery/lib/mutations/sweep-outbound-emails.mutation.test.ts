@@ -13,10 +13,7 @@ import type { Clock } from "@dads-framework/core/runtime/clock";
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
 import { FakeOutboundEmailStore } from "../testing/fake-outbound-email-store.js";
-import {
-  STALE_CLAIM_WINDOW_MS,
-  SweepOutboundEmails,
-} from "./sweep-outbound-emails.mutation.js";
+import { STALE_CLAIM_WINDOW_MS, SweepOutboundEmails } from "./sweep-outbound-emails.mutation.js";
 
 const NOW = new Date("2026-09-11T12:00:00.000Z");
 const LONG_AGO = new Date(NOW.getTime() - STALE_CLAIM_WINDOW_MS - 60_000);
@@ -119,8 +116,6 @@ describe("SweepOutboundEmails", () => {
 
     await build().execute();
 
-    expect(captured.entries).toEqual([
-      { event: "email.sweep.completed", enqueued: 1, staleFailed: 0 },
-    ]);
+    expect(captured.entries).toEqual([{ event: "email.sweep.completed", enqueued: 1, staleFailed: 0 }]);
   });
 });

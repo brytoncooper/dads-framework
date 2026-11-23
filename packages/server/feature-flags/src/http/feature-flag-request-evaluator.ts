@@ -1,9 +1,6 @@
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import type { FeatureFlagContext, GetEffectiveFeatureState } from "../index.js";
-import type {
-  FeatureStateRequestEvaluator,
-  FeatureStateSnapshot,
-} from "@dads-framework/http";
+import type { FeatureStateRequestEvaluator, FeatureStateSnapshot } from "@dads-framework/http";
 
 /**
  * The application's answer to "whose flags does this request see?". Return a

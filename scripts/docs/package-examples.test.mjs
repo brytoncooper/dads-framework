@@ -1,19 +1,10 @@
 import assert from "node:assert/strict";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import {
-  checkPackageExamples,
-  readReadmeExamples,
-} from "./package-examples.mjs";
+import { checkPackageExamples, readReadmeExamples } from "./package-examples.mjs";
 
 const marker = "<!-- dads:check-example -->";
 
@@ -64,24 +55,16 @@ test("checks marked TS and TSX while allowing supplemental fragments", () => {
 test("requires real setup or usage and a marked TypeScript example", () => {
   assert.match(readReadmeExamples("# Package").errors[0], /missing/u);
   assert.match(
-    readReadmeExamples(
-      tryIt("See the example elsewhere.", "## Usage", fence("sh", "npm help")),
-    ).errors[0],
+    readReadmeExamples(tryIt("See the example elsewhere.", "## Usage", fence("sh", "npm help"))).errors[0],
     /needs a labeled/u,
   );
+  assert.match(readReadmeExamples(tryIt(fence("ts", "const sample = 1;"))).errors[0], /mark a TypeScript/u);
   assert.match(
-    readReadmeExamples(tryIt(fence("ts", "const sample = 1;"))).errors[0],
-    /mark a TypeScript/u,
-  );
-  assert.match(
-    readReadmeExamples(
-      tryIt(marker, "Intervening text.", fence("ts", "const sample = 1;")),
-    ).errors[0],
+    readReadmeExamples(tryIt(marker, "Intervening text.", fence("ts", "const sample = 1;"))).errors[0],
     /needs a following/u,
   );
   assert.match(
-    readReadmeExamples(tryIt(fence("sh", ""), fence("unrecognized", "example")))
-      .errors[0],
+    readReadmeExamples(tryIt(fence("sh", ""), fence("unrecognized", "example"))).errors[0],
     /needs a labeled/u,
   );
 });
@@ -115,14 +98,8 @@ function repository(t) {
       }),
     );
   }
-  write(
-    "packages/example/README.md",
-    tryIt(marker, fence("ts", "const sample = 1;")),
-  );
-  write(
-    "packages/testing/native/linux-x64-gnu/README.md",
-    tryIt(fence("sh", "dad-test --help")),
-  );
+  write("packages/example/README.md", tryIt(marker, fence("ts", "const sample = 1;")));
+  write("packages/testing/native/linux-x64-gnu/README.md", tryIt(fence("sh", "dad-test --help")));
   return { root, write };
 }
 
@@ -133,10 +110,7 @@ test("checks declared public packages, including nested natives", (t) => {
   assert.deepEqual(readdirSync(join(root, ".dads")), []);
 
   write("packages/testing/native/linux-x64-gnu/README.md", "# Missing example");
-  assert.throws(
-    () => checkPackageExamples(root),
-    /@dads-framework\/native: missing a ## Try it/u,
-  );
+  assert.throws(() => checkPackageExamples(root), /@dads-framework\/native: missing a ## Try it/u);
 });
 
 test("labels compiler errors and cleans the workspace on failure", (t) => {

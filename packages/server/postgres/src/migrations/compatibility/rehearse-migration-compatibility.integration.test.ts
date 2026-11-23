@@ -3,15 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "pg";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { defaultMigrationWorkspace } from "../index.js";
 
 import { RehearsalPostgres } from "../../testing/index.js";
@@ -25,16 +17,10 @@ const B = "20260102000000_beta.migration";
 describe("real migration arrival compatibility", () => {
   let postgres: RehearsalPostgres;
   let workspaceRoot: string;
-  const write = async (
-    name: string,
-    sql: string,
-    dependsOn?: readonly string[],
-  ) => {
+  const write = async (name: string, sql: string, dependsOn?: readonly string[]) => {
     await writeFile(
       join(workspaceRoot, FOLDER, `${name}.ts`),
-      (dependsOn === undefined
-        ? ""
-        : `export const dependsOn = ${JSON.stringify(dependsOn)};\n`) +
+      (dependsOn === undefined ? "" : `export const dependsOn = ${JSON.stringify(dependsOn)};\n`) +
         `export function up(pgm) { pgm.sql(${JSON.stringify(sql)}); }\nexport const down = false;\n`,
     );
   };
@@ -107,27 +93,17 @@ describe("real migration arrival compatibility", () => {
   });
 
   it("checks every order when two samples would conceal a three-way data conflict", async () => {
-    await write(
-      LEGACY,
-      "CREATE TABLE kept (value integer); INSERT INTO kept VALUES (0)",
-    );
+    await write(LEGACY, "CREATE TABLE kept (value integer); INSERT INTO kept VALUES (0)");
     await write(A, "UPDATE kept SET value = value + 1", []);
     await write(B, "UPDATE kept SET value = value * 2", []);
-    await write(
-      "20260103000000_gamma.migration",
-      "UPDATE kept SET value = value + 1",
-      [],
-    );
+    await write("20260103000000_gamma.migration", "UPDATE kept SET value = value + 1", []);
     await expect(rehearse()).rejects.toThrow(/compatibility differs/);
   });
 
   it("resolves a directory support import without changing its source", async () => {
     const support = join(workspaceRoot, FOLDER, "support");
     await mkdir(support);
-    await writeFile(
-      join(support, "index.ts"),
-      'export const sql = "CREATE TABLE alpha (value integer)";',
-    );
+    await writeFile(join(support, "index.ts"), 'export const sql = "CREATE TABLE alpha (value integer)";');
     await writeFile(
       join(workspaceRoot, FOLDER, `${A}.ts`),
       'import { sql } from "./support"; export const dependsOn = []; export function up(pgm) { pgm.sql(sql); } export const down = false;',
@@ -154,8 +130,6 @@ describe("real migration arrival compatibility", () => {
   });
 
   it("refuses a template outside the owned rehearsal databases", async () => {
-    await expect(postgres.createDatabase("postgres")).rejects.toThrow(
-      /isolated run/,
-    );
+    await expect(postgres.createDatabase("postgres")).rejects.toThrow(/isolated run/);
   });
 });

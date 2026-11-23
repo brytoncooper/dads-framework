@@ -26,8 +26,7 @@ export const ALL_MIGRATIONS_INPUT = "databaseMigrations";
 /** The migration runner records its journal in this schema. */
 const MIGRATION_JOURNAL_SCHEMA = "dads_migration";
 
-const TABLE_MODULE_GLOB =
-  /^\{workspaceRoot\}\/(.+\/generated-tables)\/\*\.tables\.ts$/;
+const TABLE_MODULE_GLOB = /^\{workspaceRoot\}\/(.+\/generated-tables)\/\*\.tables\.ts$/;
 
 export type TouchedTable = {
   readonly schemaName: string;
@@ -42,12 +41,8 @@ export type SchemaKeyedDeclaration = {
 };
 
 /** Reads a `test:integration` target's `inputs` as a declaration. */
-export function readSchemaKeyedDeclaration(
-  inputs: readonly unknown[] | undefined,
-): SchemaKeyedDeclaration {
-  const strings = (inputs ?? []).filter(
-    (input): input is string => typeof input === "string",
-  );
+export function readSchemaKeyedDeclaration(inputs: readonly unknown[] | undefined): SchemaKeyedDeclaration {
+  const strings = (inputs ?? []).filter((input): input is string => typeof input === "string");
   return {
     schemaKeyed: strings.includes(SCHEMA_KEYED_INPUT),
     tableModuleFolders: strings
@@ -92,9 +87,7 @@ export function checkSchemaKeyedCoverage(input: CoverageInput): CoverageReport {
   }
   for (const table of input.touched) {
     if (table.schemaName === MIGRATION_JOURNAL_SCHEMA) {
-      needsAllMigrations.push(
-        `it read the migration journal (${table.schemaName}.${table.tableName})`,
-      );
+      needsAllMigrations.push(`it read the migration journal (${table.schemaName}.${table.tableName})`);
       continue;
     }
     const folder = input.tableOwners.get(table.tableName);
@@ -111,10 +104,7 @@ export function checkSchemaKeyedCoverage(input: CoverageInput): CoverageReport {
 }
 
 /** The failure a schema-keyed suite reports, with the exact fix. */
-export function describeCoverageFailure(
-  project: string,
-  report: CoverageReport,
-): string | null {
+export function describeCoverageFailure(project: string, report: CoverageReport): string | null {
   if (report.needsAllMigrations.length > 0) {
     return [
       `${project}:test:integration is schema-keyed (it lists "${SCHEMA_KEYED_INPUT}"), but ${report.needsAllMigrations.join("; ")}.`,
@@ -126,9 +116,7 @@ export function describeCoverageFailure(
   return [
     `${project}:test:integration touched tables whose generated modules its Nx hash does not cover,`,
     "so a migration to them would replay this suite's cached pass. Add to its test:integration inputs:",
-    ...report.missingFolders.map(
-      (folder) => `  "${tableModuleInput(folder)}",`,
-    ),
+    ...report.missingFolders.map((folder) => `  "${tableModuleInput(folder)}",`),
     "See docs/testing/speed.md#schema-keyed-integration-suites.",
   ].join("\n");
 }

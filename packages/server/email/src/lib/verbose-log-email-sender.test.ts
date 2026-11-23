@@ -12,10 +12,7 @@ describe("VerboseLogEmailSender", () => {
   it("logs every field of a text email", async () => {
     const logInfo = vi.fn();
 
-    await new VerboseLogEmailSender(
-      { info: logInfo },
-      "Example App <dev@local>",
-    ).send({
+    await new VerboseLogEmailSender({ info: logInfo }, "Example App <dev@local>").send({
       to: [{ address: "alice@example.com" }],
       subject: "Your invitation",
       text: "Accept your invitation: http://localhost:4200/x#token=abc",
@@ -57,10 +54,7 @@ describe("VerboseLogEmailSender", () => {
     const logInfo = vi.fn();
 
     await new VerboseLogEmailSender({ info: logInfo }, "d@local").send({
-      to: [
-        { address: "alice@example.com", name: "Alice" },
-        { address: "bob@example.com" },
-      ],
+      to: [{ address: "alice@example.com", name: "Alice" }, { address: "bob@example.com" }],
       cc: [{ address: "cc@example.com" }],
       bcc: [{ address: "bcc@example.com" }],
       replyTo: { address: "reply@example.com" },

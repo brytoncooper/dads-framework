@@ -37,18 +37,13 @@ function readManifest(context: DoctorContext, path: string): unknown {
 
 /** True when the directory's own manifest names the directory. */
 function isCase(context: DoctorContext, name: string): boolean {
-  const manifest = readManifest(
-    context,
-    `${CORPUS_DIRECTORY}/${name}/${MANIFEST}`,
-  );
+  const manifest = readManifest(context, `${CORPUS_DIRECTORY}/${name}/${MANIFEST}`);
   const signal: unknown = isRecord(manifest) ? manifest["signal"] : undefined;
   return isString(signal) && signal === name;
 }
 
 function countDoctorCases(context: DoctorContext): SignalReadings {
-  const cases = context
-    .directories(CORPUS_DIRECTORY)
-    .filter((name) => isCase(context, name));
+  const cases = context.directories(CORPUS_DIRECTORY).filter((name) => isCase(context, name));
   if (cases.length === 0) return new Map();
   return new Map([
     [

@@ -38,9 +38,7 @@ export type FeatureFlagRoutesOptions = {
 };
 
 /** Management, effective-state and public-state routes for one composed set of flags. */
-export function createFeatureFlagRoutes(
-  options: FeatureFlagRoutesOptions,
-): HttpRoute[] {
+export function createFeatureFlagRoutes(options: FeatureFlagRoutesOptions): HttpRoute[] {
   return routeGroup(options.tag ?? "Feature flags", [
     ...managementRoutes(options),
     ...stateRoutes(options.featureFlags),
@@ -98,18 +96,13 @@ function stateRoutes(featureFlags: FeatureFlags): RouteBlueprint[] {
       access: requireSession(),
       response: effectiveFeatureStateSchema,
       // A session whose context resolves to nothing reads the platform answer.
-      handler: async ({ featureState }) =>
-        featureState ??
-        (await featureFlags.effective.execute({ kind: "platform" })),
+      handler: async ({ featureState }) => featureState ?? (await featureFlags.effective.execute({ kind: "platform" })),
     }),
     publicStateRoute(featureFlags),
   ];
 }
 
-export function createPublicFeatureFlagRoutes(
-  featureFlags: FeatureFlags,
-  tag = "Feature flags",
-): HttpRoute[] {
+export function createPublicFeatureFlagRoutes(featureFlags: FeatureFlags, tag = "Feature flags"): HttpRoute[] {
   return routeGroup(tag, [publicStateRoute(featureFlags)]);
 }
 

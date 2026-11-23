@@ -1,11 +1,7 @@
-import type {
-  DeclaredVerificationEnvironment,
-  VerificationInputRole,
-} from "./verification-inputs.js";
+import type { DeclaredVerificationEnvironment, VerificationInputRole } from "./verification-inputs.js";
 import type { VerificationOutputFingerprint } from "./verification-receipt.js";
 
-export type VerificationTaskState =
-  "run" | "pending-provider" | "reuse-candidate" | "unknown-scope";
+export type VerificationTaskState = "run" | "pending-provider" | "reuse-candidate" | "unknown-scope";
 
 export type VerificationReusePolicy = "never" | "candidate";
 
@@ -38,8 +34,7 @@ export type VerificationControlledExecution = {
   readonly timeoutMilliseconds: number;
 };
 
-export type VerificationTaskExecution =
-  VerificationShellExecution | VerificationControlledExecution;
+export type VerificationTaskExecution = VerificationShellExecution | VerificationControlledExecution;
 
 export type VerificationTaskDefinition = {
   readonly id: string;
@@ -82,8 +77,7 @@ export type VerificationPlan = {
   readonly issues: readonly string[];
 };
 
-export type VerificationTaskResultStatus =
-  "executed" | "reused" | "failed" | "blocked" | "not-applicable";
+export type VerificationTaskResultStatus = "executed" | "reused" | "failed" | "blocked" | "not-applicable";
 
 export type VerificationTaskResult = {
   readonly taskId: string;
@@ -95,9 +89,7 @@ export type VerificationTaskResult = {
   readonly outputs: readonly VerificationOutputFingerprint[];
 };
 
-export type VerificationReportCounts = Readonly<
-  Record<VerificationTaskResultStatus, number>
->;
+export type VerificationReportCounts = Readonly<Record<VerificationTaskResultStatus, number>>;
 
 export type VerificationGraphReport = {
   readonly ok: boolean;

@@ -12,11 +12,7 @@ import {
   type PendingAuthorizationChange,
   type WorkbenchState,
 } from "../storage/workbench-state.js";
-import type {
-  WorkbenchMutation,
-  WorkbenchPermissionTarget,
-  WorkbenchStore,
-} from "../storage/workbench-store.js";
+import type { WorkbenchMutation, WorkbenchPermissionTarget, WorkbenchStore } from "../storage/workbench-store.js";
 import { isSameStoreAuthorizingWorkbenchStore } from "../storage/workbench-store.js";
 import {
   applyWorkbenchRelationships,
@@ -25,11 +21,7 @@ import {
   workbenchAuthorizationReadError,
 } from "./workbench-authorization.js";
 import { WorkbenchError } from "./workbench-error.js";
-import {
-  findCreateRequest,
-  requireCreateCapacity,
-  type CreateRequest,
-} from "./create-request.js";
+import { findCreateRequest, requireCreateCapacity, type CreateRequest } from "./create-request.js";
 
 export type OperationDependencies = {
   readonly store: WorkbenchStore;
@@ -43,25 +35,18 @@ type CreateAuthorization =
       /** A new workspace has no resource to authorize yet; its replay is always protected. */
       readonly kind: "unprotected-workspace-create";
       readonly createTarget: undefined;
-      readonly replayTarget: (
-        state: WorkbenchState,
-        resourceId: string,
-      ) => WorkbenchPermissionTarget;
+      readonly replayTarget: (state: WorkbenchState, resourceId: string) => WorkbenchPermissionTarget;
     }
   | {
       readonly kind: "protected-create";
       readonly createTarget: WorkbenchPermissionTarget;
-      readonly replayTarget: (
-        state: WorkbenchState,
-        resourceId: string,
-      ) => WorkbenchPermissionTarget;
+      readonly replayTarget: (state: WorkbenchState, resourceId: string) => WorkbenchPermissionTarget;
     };
 
 /** Serializes checks and changes in the one local app process; the durable queue survives a restart. */
 export class OperationCoordinator {
   private tail: Promise<void> = Promise.resolve();
-  private capturedAuthorizationChanges:
-    PendingAuthorizationChange[] | undefined;
+  private capturedAuthorizationChanges: PendingAuthorizationChange[] | undefined;
 
   constructor(readonly dependencies: OperationDependencies) {}
 
@@ -81,12 +66,8 @@ export class OperationCoordinator {
     return this.run(() => undefined);
   }
 
-  async change<Result>(
-    mutation: (state: WorkbenchState) => Result,
-  ): Promise<Result> {
-    const result = await this.dependencies.store.commitMutation((state) =>
-      this.captureMutation(state, mutation),
-    );
+  async change<Result>(mutation: (state: WorkbenchState) => Result): Promise<Result> {
+    const result = await this.dependencies.store.commitMutation((state) => this.captureMutation(state, mutation));
     await this.applyPendingRelationships();
     return result;
   }
@@ -129,9 +110,7 @@ export class OperationCoordinator {
           kind: "fresh-create",
           target: (state) => {
             const previous = findCreateRequest(state, request);
-            return previous
-              ? authorization.replayTarget(state, previous.resourceId)
-              : authorization.createTarget;
+            return previous ? authorization.replayTarget(state, previous.resourceId) : authorization.createTarget;
           },
         },
         mutation: (state) => {
@@ -153,14 +132,10 @@ export class OperationCoordinator {
     const state = await store.read();
     const previous = findCreateRequest(state, request);
     if (previous) {
-      await this.requirePermission(
-        subject,
-        authorization.replayTarget(state, previous.resourceId),
-      );
+      await this.requirePermission(subject, authorization.replayTarget(state, previous.resourceId));
       return replay(state, previous.resourceId);
     }
-    if (authorization.createTarget)
-      await this.requirePermission(subject, authorization.createTarget);
+    if (authorization.createTarget) await this.requirePermission(subject, authorization.createTarget);
     requireCreateCapacity(state);
     return this.change((next) => {
       const resource = mutation(next);
@@ -169,10 +144,7 @@ export class OperationCoordinator {
     });
   }
 
-  async requirePermission(
-    subject: WorkbenchRequestSubject,
-    target: WorkbenchPermissionTarget,
-  ): Promise<void> {
+  async requirePermission(subject: WorkbenchRequestSubject, target: WorkbenchPermissionTarget): Promise<void> {
     const boundSubject = requireUser(subject);
     if (
       !(await checkWorkbenchPermission(this.dependencies.authorization, {
@@ -209,24 +181,17 @@ export class OperationCoordinator {
   ): Promise<readonly string[]> {
     const bound = bindWorkbenchSubject(subject);
     if (bound === undefined) return [];
-    const visible = await lookupWorkbenchResources(
-      this.dependencies.authorization,
-      {
-        subject: bound,
-        resourceType: permission.entityWireName,
-        permission: permission.permissionName,
-      },
-    );
+    const visible = await lookupWorkbenchResources(this.dependencies.authorization, {
+      subject: bound,
+      resourceType: permission.entityWireName,
+      permission: permission.permissionName,
+    });
     if (candidates === undefined) return visible;
     const allowed = new Set(visible);
     return candidates.filter((id) => allowed.has(id));
   }
 
-  enqueue(
-    _state: WorkbenchState,
-    action: "write" | "delete",
-    relationships: readonly WorkbenchRelationship[],
-  ): void {
+  enqueue(_state: WorkbenchState, action: "write" | "delete", relationships: readonly WorkbenchRelationship[]): void {
     if (relationships.length === 0) return;
     const changeSet = pendingAuthorizationChange.parse({
       version: 1,
@@ -235,10 +200,7 @@ export class OperationCoordinator {
       deletes: action === "delete" ? relationships : [],
     });
     const captured = this.capturedAuthorizationChanges;
-    if (!captured)
-      throw new Error(
-        "Workbench authorization changes must be attached to a storage mutation.",
-      );
+    if (!captured) throw new Error("Workbench authorization changes must be attached to a storage mutation.");
     captured.push(changeSet);
   }
 
@@ -272,10 +234,9 @@ export class OperationCoordinator {
         throw cause;
       }
       await store.transaction((state) => {
-        state.pendingAuthorizationChanges =
-          state.pendingAuthorizationChanges.filter(
-            (pending) => pending.operationId !== change.operationId,
-          );
+        state.pendingAuthorizationChanges = state.pendingAuthorizationChanges.filter(
+          (pending) => pending.operationId !== change.operationId,
+        );
       });
     }
   }
@@ -284,8 +245,7 @@ export class OperationCoordinator {
     state: WorkbenchState,
     mutation: (state: WorkbenchState) => Result,
   ): WorkbenchMutation<Result> {
-    if (this.capturedAuthorizationChanges)
-      throw new Error("Workbench storage mutations cannot be nested.");
+    if (this.capturedAuthorizationChanges) throw new Error("Workbench storage mutations cannot be nested.");
     const authorizationChanges: PendingAuthorizationChange[] = [];
     this.capturedAuthorizationChanges = authorizationChanges;
     try {

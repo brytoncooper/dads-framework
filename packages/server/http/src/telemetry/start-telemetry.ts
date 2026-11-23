@@ -16,9 +16,7 @@ export type TelemetryRuntime = {
 let started: Promise<TelemetryRuntime> | undefined;
 
 /** Start instrumentation before importing HTTP servers and database clients. */
-export async function startTelemetry(
-  options: TelemetryOptions,
-): Promise<TelemetryRuntime | undefined> {
+export async function startTelemetry(options: TelemetryOptions): Promise<TelemetryRuntime | undefined> {
   const endpoint = otlpTraceEndpoint(process.env);
   if (endpoint === undefined) return undefined;
   started ??= import("./node-telemetry.js")

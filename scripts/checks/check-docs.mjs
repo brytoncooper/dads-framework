@@ -113,9 +113,7 @@ export function checkCommandCoverage(text, commands) {
   }
 
   for (const [option, accepting] of commandsByMissingOption) {
-    problems.push(
-      `does not document ${option} (accepted by ${accepting.join(", ")})`,
-    );
+    problems.push(`does not document ${option} (accepted by ${accepting.join(", ")})`);
   }
   return problems;
 }
@@ -146,9 +144,7 @@ function readConformancePackages(root) {
     names.every((name) => typeof name === "string" && name.length > 0) &&
     new Set(names).size === names.length;
   if (!isNameList) {
-    throw new Error(
-      `${CONFORMANCE_FILE} must contain a "packages" array of unique package names or export subpaths`,
-    );
+    throw new Error(`${CONFORMANCE_FILE} must contain a "packages" array of unique package names or export subpaths`);
   }
   return names;
 }
@@ -184,10 +180,7 @@ function readPackageDirectories(root) {
     try {
       manifest = JSON.parse(raw);
     } catch (error) {
-      throw new Error(
-        `packages/${directory}/package.json is not valid JSON: ${error.message}`,
-        { cause: error },
-      );
+      throw new Error(`packages/${directory}/package.json is not valid JSON: ${error.message}`, { cause: error });
     }
 
     if (typeof manifest?.name === "string") {
@@ -204,9 +197,7 @@ function readPackageDirectories(root) {
 
 function readmePathFor(name, directoriesByName) {
   const segments = name.split("/");
-  const packageName = segments
-    .splice(0, name.startsWith("@") ? 2 : 1)
-    .join("/");
+  const packageName = segments.splice(0, name.startsWith("@") ? 2 : 1).join("/");
   const owner = directoriesByName.get(packageName);
   if (!owner) return undefined;
   if (segments.length === 0) return `packages/${owner.directory}/README.md`;
@@ -230,9 +221,7 @@ export function checkDocs({ root, commands }) {
   for (const packageName of packageNames) {
     const readmePath = readmePathFor(packageName, directoriesByName);
     if (readmePath === undefined) {
-      problems.push(
-        `${CONFORMANCE_FILE}: no package or exported subpath under packages/ is named ${packageName}`,
-      );
+      problems.push(`${CONFORMANCE_FILE}: no package or exported subpath under packages/ is named ${packageName}`);
       continue;
     }
 
@@ -308,9 +297,7 @@ export async function main(argv) {
   }
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const result = await main(process.argv.slice(2));

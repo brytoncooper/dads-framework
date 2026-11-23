@@ -8,11 +8,7 @@ import {
   type ResourceSubjectRef,
   type RoleToken,
 } from "@dads-framework/access";
-import {
-  type Authorization,
-  type PermissionQuery,
-  type RelationshipWrite,
-} from "@dads-framework/spicedb-access";
+import { type Authorization, type PermissionQuery, type RelationshipWrite } from "@dads-framework/spicedb-access";
 
 import { resourceId } from "./contracts.js";
 
@@ -31,26 +27,23 @@ type WorkbenchWorkspaceResource = DslResource<
 
 export const workbenchUser = actor("user", { id: resourceId });
 
-export const workbenchWorkspace: WorkbenchWorkspaceResource = resource(
-  "workspace",
-  {
-    id: resourceId,
-    roles: {
-      owner: workbenchUser,
-      member: workbenchUser,
-    },
-    can: ({ owner, member }) => ({
-      view: [owner, member],
-      manage: owner,
-    }),
-    children: {
-      task: {
-        id: resourceId,
-        inherit: "all",
-      },
+export const workbenchWorkspace: WorkbenchWorkspaceResource = resource("workspace", {
+  id: resourceId,
+  roles: {
+    owner: workbenchUser,
+    member: workbenchUser,
+  },
+  can: ({ owner, member }) => ({
+    view: [owner, member],
+    manage: owner,
+  }),
+  children: {
+    task: {
+      id: resourceId,
+      inherit: "all",
     },
   },
-);
+});
 
 export const workbenchTask: WorkbenchTaskResource = workbenchWorkspace.task;
 
@@ -66,30 +59,21 @@ export type WorkbenchRequestSubject = WorkbenchSubject;
 export type WorkbenchWorkspaceIds = readonly string[];
 export type WorkbenchTaskIds = readonly string[];
 
-export function bindWorkbenchSubject(
-  subject: WorkbenchRequestSubject,
-): WorkbenchSubject | undefined {
+export function bindWorkbenchSubject(subject: WorkbenchRequestSubject): WorkbenchSubject | undefined {
   const id = resourceId.safeParse(subject.id);
   return subject.type === workbenchUser.wireName && id.success
     ? { type: workbenchUser.wireName, id: id.data }
     : undefined;
 }
 
-export function workbenchTarget(
-  token: PermissionToken,
-  id: string,
-): Omit<PermissionQuery, "subject"> {
+export function workbenchTarget(token: PermissionToken, id: string): Omit<PermissionQuery, "subject"> {
   return {
     permission: token.permissionName,
     resource: { type: token.entityWireName, id },
   };
 }
 
-export function workbenchFact(
-  role: RoleToken,
-  id: string,
-  subject: WorkbenchSubject,
-): WorkbenchRelationship {
+export function workbenchFact(role: RoleToken, id: string, subject: WorkbenchSubject): WorkbenchRelationship {
   return {
     resource: { type: role.entityWireName, id },
     relation: role.roleName,

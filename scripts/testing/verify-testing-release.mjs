@@ -3,20 +3,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 
-import {
-  mergeSoundnessShards,
-  sameIds,
-  stableIds,
-} from "./verify-testing-release-merge.mjs";
+import { mergeSoundnessShards, sameIds, stableIds } from "./verify-testing-release-merge.mjs";
 
-const SEALED_CORPUS = resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "fixtures",
-  "testing-soundness",
-  "cases.json",
-);
+const SEALED_CORPUS = resolve(import.meta.dirname, "..", "..", "fixtures", "testing-soundness", "cases.json");
 
 /**
  * Reads the one supported option. `--soundness` may be repeated, once per
@@ -24,17 +13,14 @@ const SEALED_CORPUS = resolve(
  * judged.
  */
 export function parseTestingReleaseArguments(argumentsList) {
-  if (!Array.isArray(argumentsList))
-    throw new ReleaseUsageError("arguments must be an array");
+  if (!Array.isArray(argumentsList)) throw new ReleaseUsageError("arguments must be an array");
   const soundness = [];
   for (let index = 0; index < argumentsList.length; index += 2) {
     const option = argumentsList[index];
-    if (option !== "--soundness")
-      throw new ReleaseUsageError(`unsupported option: ${String(option)}`);
+    if (option !== "--soundness") throw new ReleaseUsageError(`unsupported option: ${String(option)}`);
     soundness.push(soundnessPath(argumentsList[index + 1], soundness));
   }
-  if (soundness.length === 0)
-    throw new ReleaseUsageError("--soundness is required");
+  if (soundness.length === 0) throw new ReleaseUsageError("--soundness is required");
   return { "--soundness": soundness };
 }
 
@@ -42,8 +28,7 @@ function soundnessPath(value, taken) {
   if (typeof value !== "string" || value === "" || value.startsWith("--"))
     throw new ReleaseUsageError("--soundness requires a value");
   const path = resolve(value);
-  if (taken.includes(path))
-    throw new ReleaseUsageError(`duplicate --soundness file: ${path}`);
+  if (taken.includes(path)) throw new ReleaseUsageError(`duplicate --soundness file: ${path}`);
   return path;
 }
 
@@ -100,10 +85,7 @@ function judge(merged) {
   const shards = merged.evidence.shards;
   return {
     code: result.ok ? 0 : 1,
-    result:
-      shards === undefined
-        ? result
-        : { ...result, shards: shards.map(shardCount) },
+    result: shards === undefined ? result : { ...result, shards: shards.map(shardCount) },
   };
 }
 
@@ -125,40 +107,28 @@ function sealedCorpusCaseIds() {
 }
 
 function validateSoundness(soundness, failures) {
-  if (soundness?.kind !== "dads-testing-soundness")
-    failures.push("soundness evidence has the wrong kind");
-  if (soundness?.schemaVersion !== 2)
-    failures.push("soundness evidence is not executed-proof schema version 2");
+  if (soundness?.kind !== "dads-testing-soundness") failures.push("soundness evidence has the wrong kind");
+  if (soundness?.schemaVersion !== 2) failures.push("soundness evidence is not executed-proof schema version 2");
   if (
     soundness?.summary?.status !== "pass" ||
     Number(soundness?.summary?.falseNegatives) !== 0 ||
     (soundness?.falseNegatives?.length ?? 0) !== 0
   )
     failures.push("soundness corpus contains a false-negative or did not pass");
-  if (
-    Number(soundness?.summary?.unexpectedSelections) !== 0 ||
-    (soundness?.unexpectedSelections?.length ?? 0) !== 0
-  )
-    failures.push(
-      "soundness corpus detected a precision-case selection mismatch",
-    );
+  if (Number(soundness?.summary?.unexpectedSelections) !== 0 || (soundness?.unexpectedSelections?.length ?? 0) !== 0)
+    failures.push("soundness corpus detected a precision-case selection mismatch");
   if (
     Number(soundness?.summary?.fallbackPolicyFailures) !== 0 ||
     (soundness?.fallbackPolicyFailures?.length ?? 0) !== 0
   )
-    failures.push(
-      "soundness corpus detected an unexpected precision collapse or missing conservative fallback",
-    );
+    failures.push("soundness corpus detected an unexpected precision collapse or missing conservative fallback");
   if (
     Number(soundness?.summary?.skippedChangedOutcomes) !== 0 ||
     (soundness?.skippedChangedOutcomes?.length ?? 0) !== 0
   ) {
     failures.push("soundness corpus skipped a task with a changed outcome");
   }
-  if (
-    Number(soundness?.summary?.executionFailures) !== 0 ||
-    (soundness?.executionFailures?.length ?? 0) !== 0
-  ) {
+  if (Number(soundness?.summary?.executionFailures) !== 0 || (soundness?.executionFailures?.length ?? 0) !== 0) {
     failures.push("soundness corpus has an incomplete executed case");
   }
   validateExecutedCases(soundness, failures);
@@ -174,20 +144,10 @@ function validateExecutedCases(soundness, failures) {
   if (Number(soundness?.summary?.cases) !== cases.length)
     failures.push("soundness summary does not match executed case count");
   const caseIds = cases.map((testCase) => testCase?.id);
-  if (
-    !sameIds(caseIds, soundness?.corpus?.caseIds) ||
-    new Set(caseIds).size !== cases.length
-  )
-    failures.push(
-      "soundness corpus case inventory is incomplete or duplicated",
-    );
-  const dependencies = dependencyMap(
-    soundness?.corpus?.tasks,
-    taskIds,
-    failures,
-  );
-  for (const testCase of cases)
-    validateExecutedCase(testCase, taskIds, dependencies, failures);
+  if (!sameIds(caseIds, soundness?.corpus?.caseIds) || new Set(caseIds).size !== cases.length)
+    failures.push("soundness corpus case inventory is incomplete or duplicated");
+  const dependencies = dependencyMap(soundness?.corpus?.tasks, taskIds, failures);
+  for (const testCase of cases) validateExecutedCase(testCase, taskIds, dependencies, failures);
 }
 
 function validateExecutedCase(testCase, taskIds, dependencies, failures) {
@@ -196,30 +156,10 @@ function validateExecutedCase(testCase, taskIds, dependencies, failures) {
     return;
   }
   const label = `soundness case ${testCase.id}`;
-  const baseline = taskMap(
-    testCase?.outcomes?.baseline,
-    taskIds,
-    `${label} baseline`,
-    failures,
-  );
-  const mutated = taskMap(
-    testCase?.outcomes?.mutated,
-    taskIds,
-    `${label} mutation`,
-    failures,
-  );
-  const decisions = taskMap(
-    testCase?.taskDecisions,
-    taskIds,
-    `${label} decisions`,
-    failures,
-  );
-  const receipts = taskMap(
-    testCase?.nativeRun?.tasks,
-    taskIds,
-    `${label} native receipts`,
-    failures,
-  );
+  const baseline = taskMap(testCase?.outcomes?.baseline, taskIds, `${label} baseline`, failures);
+  const mutated = taskMap(testCase?.outcomes?.mutated, taskIds, `${label} mutation`, failures);
+  const decisions = taskMap(testCase?.taskDecisions, taskIds, `${label} decisions`, failures);
+  const receipts = taskMap(testCase?.nativeRun?.tasks, taskIds, `${label} native receipts`, failures);
   if (!baseline || !mutated || !decisions || !receipts) return;
   const changed = [];
   const failed = [];
@@ -228,18 +168,12 @@ function validateExecutedCase(testCase, taskIds, dependencies, failures) {
     const after = mutated.get(id);
     if (before.status !== "passed" || before.exitCode !== 0)
       failures.push(`${label} has an invalid baseline outcome for ${id}`);
-    if (!validObservedOutcome(after))
-      failures.push(`${label} has an incomplete mutation outcome for ${id}`);
-    if (
-      `${before.status}:${String(before.exitCode)}` !==
-      `${after.status}:${String(after.exitCode)}`
-    )
-      changed.push(id);
+    if (!validObservedOutcome(after)) failures.push(`${label} has an incomplete mutation outcome for ${id}`);
+    if (`${before.status}:${String(before.exitCode)}` !== `${after.status}:${String(after.exitCode)}`) changed.push(id);
     if (after.status === "failed") failed.push(id);
     const selected = decisions.get(id).decision === "run";
     const receipt = receipts.get(id);
-    if (!selected && receipt.status !== "not-applicable")
-      failures.push(`${label} executed skipped task ${id}`);
+    if (!selected && receipt.status !== "not-applicable") failures.push(`${label} executed skipped task ${id}`);
     if (selected && !["executed", "failed", "blocked"].includes(receipt.status))
       failures.push(`${label} lacks a valid selected-run receipt for ${id}`);
   }
@@ -248,12 +182,7 @@ function validateExecutedCase(testCase, taskIds, dependencies, failures) {
   if (!sameIds(failed, testCase.failedTaskIds))
     failures.push(`${label} failed outcomes do not match recorded failures`);
   const selected = taskIds.filter((id) => decisions.get(id).decision === "run");
-  if (
-    taskIds.some(
-      (id) =>
-        !["run", "skip-proven-unaffected"].includes(decisions.get(id).decision),
-    )
-  ) {
+  if (taskIds.some((id) => !["run", "skip-proven-unaffected"].includes(decisions.get(id).decision))) {
     failures.push(`${label} has an invalid decision`);
   }
   if (!["breaking", "control"].includes(testCase.classification))
@@ -263,21 +192,11 @@ function validateExecutedCase(testCase, taskIds, dependencies, failures) {
   if (testCase.classification === "breaking" && changed.length === 0)
     failures.push(`${label} breaking case observed no changed task outcome`);
   if (!sameIds(changed, testCase.expectedChangedTaskIds))
-    failures.push(
-      `${label} changed outcomes differ from its declared expectation`,
-    );
-  if (!sameIds([], testCase.skippedChangedOutcomes))
-    failures.push(`${label} skipped a changed task outcome`);
+    failures.push(`${label} changed outcomes differ from its declared expectation`);
+  if (!sameIds([], testCase.skippedChangedOutcomes)) failures.push(`${label} skipped a changed task outcome`);
   if (changed.some((id) => !selected.includes(id)))
     failures.push(`${label} selected plan omitted a changed task outcome`);
-  validateNativeRun(
-    testCase?.nativeRun,
-    selected,
-    dependencies,
-    mutated,
-    label,
-    failures,
-  );
+  validateNativeRun(testCase?.nativeRun, selected, dependencies, mutated, label, failures);
 }
 
 function dependencyMap(tasks, taskIds, failures) {
@@ -287,29 +206,17 @@ function dependencyMap(tasks, taskIds, failures) {
   }
   const result = new Map();
   for (const task of tasks) {
-    if (
-      typeof task?.id !== "string" ||
-      !Array.isArray(task.dependsOn) ||
-      result.has(task.id)
-    ) {
+    if (typeof task?.id !== "string" || !Array.isArray(task.dependsOn) || result.has(task.id)) {
       failures.push("soundness task dependency inventory is invalid");
       return new Map();
     }
     result.set(task.id, task.dependsOn);
   }
-  if (!sameIds([...result.keys()], taskIds))
-    failures.push("soundness task dependency inventory does not cover tasks");
+  if (!sameIds([...result.keys()], taskIds)) failures.push("soundness task dependency inventory does not cover tasks");
   return result;
 }
 
-function validateNativeRun(
-  nativeRun,
-  selected,
-  dependencies,
-  outcomes,
-  label,
-  failures,
-) {
+function validateNativeRun(nativeRun, selected, dependencies, outcomes, label, failures) {
   const receipts = new Map(nativeRun?.tasks?.map((task) => [task.id, task]));
   let failed = 0;
   let blocked = 0;
@@ -331,16 +238,11 @@ function validateNativeRun(
     if (!selected.includes(id) || receipt.status === "blocked") continue;
     const outcome = outcomes.get(id);
     const expectedStatus = outcome.status === "passed" ? "executed" : "failed";
-    if (
-      receipt.status !== expectedStatus ||
-      receipt.exitCode !== outcome.exitCode
-    )
+    if (receipt.status !== expectedStatus || receipt.exitCode !== outcome.exitCode)
       failures.push(`${label} native receipt disagrees with outcome for ${id}`);
     for (const dependency of dependencies.get(id) ?? []) {
       if (!selected.includes(dependency))
-        failures.push(
-          `${label} selected task ${id} omitted prerequisite ${dependency}`,
-        );
+        failures.push(`${label} selected task ${id} omitted prerequisite ${dependency}`);
     }
   }
   if (
@@ -376,8 +278,7 @@ function taskMap(values, taskIds, label, failures) {
 function validObservedOutcome(outcome) {
   return (
     Number.isInteger(outcome.exitCode) &&
-    ((outcome.status === "passed" && outcome.exitCode === 0) ||
-      (outcome.status === "failed" && outcome.exitCode !== 0))
+    ((outcome.status === "passed" && outcome.exitCode === 0) || (outcome.status === "failed" && outcome.exitCode !== 0))
   );
 }
 
@@ -402,10 +303,7 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === resolve(import.meta.filename)
-) {
+if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
   const response = main(process.argv.slice(2));
   process.stdout.write(`${JSON.stringify(response.result)}\n`);
   process.exitCode = response.code;

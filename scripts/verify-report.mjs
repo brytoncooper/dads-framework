@@ -41,8 +41,7 @@ function statusLabel(result) {
 export function finishLine(result) {
   const label = statusLabel(result);
   const duration = formatDuration(result.durationMs);
-  const code =
-    result.status === "failed" ? ` (exit ${String(result.exitCode)})` : "";
+  const code = result.status === "failed" ? ` (exit ${String(result.exitCode)})` : "";
   return `  ${label === "ok" ? "ok " : label} ${result.step.id} ${duration}${code}${cacheSuffix(result)}`;
 }
 
@@ -53,9 +52,7 @@ export function blockedLine(result) {
 /** The failing step's whole stdout and stderr, fenced so it reads as one. */
 export function failureBlock(result) {
   const rule = "-".repeat(72);
-  const body = result.output.endsWith("\n")
-    ? result.output
-    : `${result.output}\n`;
+  const body = result.output.endsWith("\n") ? result.output : `${result.output}\n`;
   return [
     rule,
     `${result.step.id} failed with exit ${String(result.exitCode)}: ${commandOf(result.step)}`,
@@ -98,11 +95,10 @@ export function criticalPath(results) {
       chain: [...longest.chain, step.id],
     });
   }
-  return [...best.values()].reduce(
-    (longest, candidate) =>
-      candidate.total > longest.total ? candidate : longest,
-    { total: 0, chain: [] },
-  );
+  return [...best.values()].reduce((longest, candidate) => (candidate.total > longest.total ? candidate : longest), {
+    total: 0,
+    chain: [],
+  });
 }
 
 function longestNeed(step, best) {
@@ -122,17 +118,11 @@ function cacheSentence(results, cacheState) {
   if (!cacheState.enabled) return [`  cache off: ${cacheState.reason}`];
   const hits = results.filter((result) => result.cache === "hit");
   const partial = results.filter(
-    (result) =>
-      result.cache !== null &&
-      result.cache !== undefined &&
-      result.cache !== "hit",
+    (result) => result.cache !== null && result.cache !== undefined && result.cache !== "hit",
   );
   const names = hits.map((result) => result.step.id).join(", ") || "none";
-  const lines = [
-    `  cached ${String(hits.length)} of ${String(results.length)} steps: ${names}`,
-  ];
-  for (const result of partial)
-    lines.push(`  partly cached: ${result.step.id} (${result.cache})`);
+  const lines = [`  cached ${String(hits.length)} of ${String(results.length)} steps: ${names}`];
+  for (const result of partial) lines.push(`  partly cached: ${result.step.id} (${result.cache})`);
   if (cacheState.note !== "") lines.push(`  cache: ${cacheState.note}`);
   return lines;
 }
@@ -155,9 +145,7 @@ export function summaryBlock({ results, wallMs, receipt, budget, cacheState }) {
 
 function failureSentence(failures, results) {
   if (failures.length === 0) return "  verify passed";
-  const blocked = results.filter(
-    (result) => result.status === "blocked",
-  ).length;
+  const blocked = results.filter((result) => result.status === "blocked").length;
   const names = failures.map((result) => result.step.id).join(", ");
   const tail = blocked === 0 ? "" : `, ${blocked} blocked behind them`;
   return `  verify failed: ${names}${tail}`;

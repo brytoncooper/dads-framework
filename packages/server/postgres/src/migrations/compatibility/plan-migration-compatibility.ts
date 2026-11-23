@@ -17,13 +17,9 @@ export function planMigrationCompatibility(
   baselineNames: readonly string[],
 ): MigrationCompatibilityPlan {
   const baseline = new Set(baselineNames);
-  const pending = planMigrationOrder(migrations, baselineNames).filter(
-    (entry) => !baseline.has(entry.journalName),
-  );
+  const pending = planMigrationOrder(migrations, baselineNames).filter((entry) => !baseline.has(entry.journalName));
   if (pending.some((entry) => entry.dependsOn === undefined)) {
-    throw new Error(
-      "pending migrations must declare prerequisites before rehearsal",
-    );
+    throw new Error("pending migrations must declare prerequisites before rehearsal");
   }
   if (pending.length === 0) return { baseline: baselineNames, orders: [] };
   const orders: string[][] = [];
@@ -46,19 +42,9 @@ function enumerateOrders(
     return;
   }
   const eligible = pending
-    .filter(
-      (entry) =>
-        !applied.has(entry.journalName) &&
-        (entry.dependsOn ?? []).every((name) => applied.has(name)),
-    )
+    .filter((entry) => !applied.has(entry.journalName) && (entry.dependsOn ?? []).every((name) => applied.has(name)))
     .sort((left, right) => left.journalName.localeCompare(right.journalName));
-  if (eligible.length === 0)
-    throw new Error("no valid migration compatibility order");
+  if (eligible.length === 0) throw new Error("no valid migration compatibility order");
   for (const next of eligible)
-    enumerateOrders(
-      pending,
-      new Set([...applied, next.journalName]),
-      [...prefix, next.journalName],
-      orders,
-    );
+    enumerateOrders(pending, new Set([...applied, next.journalName]), [...prefix, next.journalName], orders);
 }

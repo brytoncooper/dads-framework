@@ -1,12 +1,4 @@
-import {
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  readlinkSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { collectPackageClosure, tarballFor } from "./adoption-packing.mjs";
 import { buildInternalDependencyOverrides } from "./generated-project-installation.mjs";
@@ -15,29 +7,20 @@ import { readJson, runCreator } from "./verify-generated-project-workspace.mjs";
 export function assertGeneratedArtifacts(projectRoot) {
   for (const name of ["customer", "staff"]) {
     const entrypoint = join(projectRoot, "apps", name, "app.ts");
-    if (!statSync(entrypoint).isFile())
-      throw new Error(`Missing API entrypoint ${name}.`);
+    if (!statSync(entrypoint).isFile()) throw new Error(`Missing API entrypoint ${name}.`);
   }
   const manifest = readJson(join(projectRoot, "package.json"));
   const packages = manifest.dependencies ?? {};
   for (const name of ["http", "postgres-access", "identity"]) {
-    if (packages[`@dads-framework/${name}`] === undefined)
-      throw new Error(`Missing kit dependency ${name}.`);
+    if (packages[`@dads-framework/${name}`] === undefined) throw new Error(`Missing kit dependency ${name}.`);
   }
   for (const harness of [".claude", ".codex", ".cursor"]) {
     const skills = join(projectRoot, harness, "skills");
-    if (
-      !lstatSync(skills).isSymbolicLink() ||
-      readlinkSync(skills) !== "../.agents/skills"
-    ) {
+    if (!lstatSync(skills).isSymbolicLink() || readlinkSync(skills) !== "../.agents/skills") {
       throw new Error(`${harness} does not use canonical Dads skills.`);
     }
   }
-  if (
-    !statSync(
-      join(projectRoot, ".agents", "skills", "add-domain", "SKILL.md"),
-    ).isFile()
-  ) {
+  if (!statSync(join(projectRoot, ".agents", "skills", "add-domain", "SKILL.md")).isFile()) {
     throw new Error("Missing domain skill.");
   }
 }
@@ -51,31 +34,16 @@ export async function lockGeneratedProject(transcript, projectRoot, context) {
     ...manifest.devDependencies,
   }).filter((name) => context.packages.has(name));
   const closure = [];
-  for (const name of direct)
-    collectPackageClosure(name, context.packages, closure);
-  manifest.overrides = buildInternalDependencyOverrides(
-    closure,
-    context.packages,
-    context.tarballs,
-  );
+  for (const name of direct) collectPackageClosure(name, context.packages, closure);
+  manifest.overrides = buildInternalDependencyOverrides(closure, context.packages, context.tarballs);
   for (const name of closure) {
-    const section =
-      manifest.devDependencies?.[name] === undefined
-        ? manifest.dependencies
-        : manifest.devDependencies;
+    const section = manifest.devDependencies?.[name] === undefined ? manifest.dependencies : manifest.devDependencies;
     section[name] = `file:${tarballFor(context.tarballs, name)}`;
   }
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   await transcript.run(
     "npm",
-    [
-      "install",
-      "--package-lock-only",
-      "--ignore-scripts",
-      "--prefer-offline",
-      "--no-audit",
-      "--no-fund",
-    ],
+    ["install", "--package-lock-only", "--ignore-scripts", "--prefer-offline", "--no-audit", "--no-fund"],
     {
       cwd: projectRoot,
     },
@@ -85,50 +53,27 @@ export async function lockGeneratedProject(transcript, projectRoot, context) {
     const resolved = lock.packages?.[`node_modules/${name}`]?.resolved;
     if (
       !resolved?.startsWith("file:") ||
-      realpathSync(resolve(projectRoot, resolved.slice(5))) !==
-        realpathSync(specifier.slice(5))
+      realpathSync(resolve(projectRoot, resolved.slice(5))) !== realpathSync(specifier.slice(5))
     ) {
-      throw new Error(
-        `The generated lock did not use the packed tarball for ${name}.`,
-      );
+      throw new Error(`The generated lock did not use the packed tarball for ${name}.`);
     }
   }
 }
 
-export async function verifyExistingProjectSafety({
-  transcript,
-  context,
-  creator,
-}) {
+export async function verifyExistingProjectSafety({ transcript, context, creator }) {
   const existingRoot = join(context.workRoot, "existing-api");
   mkdirSync(existingRoot);
   const existingPackage = '{"name":"existing-api","private":true}\n';
   writeFileSync(join(existingRoot, "package.json"), existingPackage);
-  const argumentsAfterExecutable = [
-    existingRoot,
-    "--existing",
-    "--yes",
-    "--skip-install",
-    "--json",
-  ];
+  const argumentsAfterExecutable = [existingRoot, "--existing", "--yes", "--skip-install", "--json"];
   await context.time("project-generate", async () => {
     await runCreator(transcript, creator, argumentsAfterExecutable);
     await runCreator(transcript, creator, argumentsAfterExecutable);
   });
-  if (
-    readFileSync(join(existingRoot, "package.json"), "utf8") !== existingPackage
-  ) {
-    throw new Error(
-      "Existing-project initialization changed the host package.",
-    );
+  if (readFileSync(join(existingRoot, "package.json"), "utf8") !== existingPackage) {
+    throw new Error("Existing-project initialization changed the host package.");
   }
-  await assertExistingProjectConflictRefused(
-    transcript,
-    context,
-    creator,
-    existingRoot,
-    argumentsAfterExecutable,
-  );
+  await assertExistingProjectConflictRefused(transcript, context, creator, existingRoot, argumentsAfterExecutable);
 }
 
 async function assertExistingProjectConflictRefused(
@@ -145,12 +90,7 @@ async function assertExistingProjectConflictRefused(
       cwd: creator.host,
     }),
   );
-  if (
-    conflict.status === 0 ||
-    !conflict.stderr.includes("Refusing to overwrite")
-  ) {
-    throw new Error(
-      "Existing-project initialization did not refuse a conflict.",
-    );
+  if (conflict.status === 0 || !conflict.stderr.includes("Refusing to overwrite")) {
+    throw new Error("Existing-project initialization did not refuse a conflict.");
   }
 }

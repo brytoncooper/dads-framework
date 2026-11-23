@@ -37,15 +37,13 @@ function state(waiting: FakeEnqueueAccessChanges, ids: readonly string[]) {
       ids,
       outbox: {
         enqueue: (entries) => waiting.enqueue(entries),
-        enqueueReplacingOpposite: (entries, _tx, lease) =>
-          waiting.replaceOpposite(entries, lease),
+        enqueueReplacingOpposite: (entries, _tx, lease) => waiting.replaceOpposite(entries, lease),
       },
       partitions: new InMemoryOwnerLock(),
       relationshipsOf: (_tx, _table, id) => {
         const workspace = STORED.get(id);
         return Promise.resolve({
-          relationships:
-            workspace === undefined ? [] : [memberOf(workspace, id)],
+          relationships: workspace === undefined ? [] : [memberOf(workspace, id)],
           ownerPartitionId: workspace ?? null,
         });
       },
@@ -65,11 +63,7 @@ describe("stateSyncedRowRelationships", () => {
 
     expect(recorded).toBe(2);
     expect(
-      waiting.enqueued.map((fact) => [
-        fact.operation,
-        fact.relationship.resource.id,
-        fact.ownerPartitionId,
-      ]),
+      waiting.enqueued.map((fact) => [fact.operation, fact.relationship.resource.id, fact.ownerPartitionId]),
     ).toEqual([
       ["WRITE", "plant", "plant"],
       ["WRITE", "yard", "yard"],

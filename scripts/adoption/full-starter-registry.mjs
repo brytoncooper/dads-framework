@@ -16,8 +16,7 @@ export async function startStarterRegistry(context, directory, host) {
     packages.set(name, {
       manifest: context.packages.get(name).manifest,
       tarball,
-      integrity:
-        "sha512-" + createHash("sha512").update(bytes).digest("base64"),
+      integrity: "sha512-" + createHash("sha512").update(bytes).digest("base64"),
       shasum: createHash("sha1").update(bytes).digest("hex"),
     });
   }

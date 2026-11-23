@@ -2,17 +2,11 @@
 
 import { spawn } from "node:child_process";
 import { dirname, isAbsolute, resolve } from "node:path";
-import {
-  createDads,
-  type DadsDevelopmentUrls,
-  type DadsProjectCreation,
-} from "./create-dads.js";
+import { createDads, type DadsDevelopmentUrls, type DadsProjectCreation } from "./create-dads.js";
 
 const argumentsAfterExecutable = process.argv.slice(2);
 const wantsJson = argumentsAfterExecutable.includes("--json");
-const wantsHelp =
-  argumentsAfterExecutable.includes("--help") ||
-  argumentsAfterExecutable.includes("-h");
+const wantsHelp = argumentsAfterExecutable.includes("--help") || argumentsAfterExecutable.includes("-h");
 
 const usageText = [
   "Usage: create-dads <directory> [options]",
@@ -53,11 +47,7 @@ if (wantsHelp) {
     reportCreation(creation);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown failure.";
-    process.stderr.write(
-      wantsJson
-        ? `${JSON.stringify({ ok: false, error: message })}\n`
-        : `Dads: ${message}\n`,
-    );
+    process.stderr.write(wantsJson ? `${JSON.stringify({ ok: false, error: message })}\n` : `Dads: ${message}\n`);
     process.exitCode = 1;
   }
 }
@@ -67,11 +57,7 @@ function reportCreation(creation: DadsProjectCreation): void {
   const projectRoot = initialization.projectRoot;
   if (development.status === "deferred") {
     const error = `Project installed in ${projectRoot}. Development startup is incomplete. ${development.reason}\nStart Docker with Compose, then run npm start from the project directory.`;
-    process.stderr.write(
-      wantsJson
-        ? `${JSON.stringify({ ok: false, ...creation, error })}\n`
-        : `Dads: ${error}\n`,
-    );
+    process.stderr.write(wantsJson ? `${JSON.stringify({ ok: false, ...creation, error })}\n` : `Dads: ${error}\n`);
     process.exitCode = 1;
     return;
   }
@@ -82,18 +68,13 @@ function reportCreation(creation: DadsProjectCreation): void {
       `\nDads is ready in ${projectRoot}.\nOpen ${development.webUrl}\nCustomer API ${development.apiUrl}\nStaff API ${development.staffUrl}\nRun npm start from the project directory to start it again.\n`,
     );
   } else {
-    const action = argumentsAfterExecutable.includes("--dry-run")
-      ? "preview"
-      : "files";
+    const action = argumentsAfterExecutable.includes("--dry-run") ? "preview" : "files";
     process.stdout.write(`\nDads project ${action} in ${projectRoot}.\n`);
   }
 }
 
-async function startDevelopment(
-  projectRoot: string,
-): Promise<DadsDevelopmentUrls> {
-  if (!wantsJson)
-    process.stdout.write("Starting the local Docker application…\n");
+async function startDevelopment(projectRoot: string): Promise<DadsDevelopmentUrls> {
+  if (!wantsJson) process.stdout.write("Starting the local Docker application…\n");
   const output = await runNpm(
     projectRoot,
     ["run", "--silent", "dev:up", "--", "--json"],
@@ -114,9 +95,7 @@ function readyUrls(result: unknown): DadsDevelopmentUrls {
     !("apiUrl" in result) ||
     !("staffUrl" in result)
   ) {
-    throw new Error(
-      "The local launcher did not report ready application URLs.",
-    );
+    throw new Error("The local launcher did not report ready application URLs.");
   }
   return {
     webUrl: localUrl(result.webUrl),
@@ -126,15 +105,8 @@ function readyUrls(result: unknown): DadsDevelopmentUrls {
 }
 
 function localUrl(value: unknown): string {
-  const url =
-    typeof value === "string" && URL.canParse(value)
-      ? new URL(value)
-      : undefined;
-  if (
-    typeof value !== "string" ||
-    url?.protocol !== "http:" ||
-    url.hostname !== "127.0.0.1"
-  ) {
+  const url = typeof value === "string" && URL.canParse(value) ? new URL(value) : undefined;
+  if (typeof value !== "string" || url?.protocol !== "http:" || url.hostname !== "127.0.0.1") {
     throw new Error("The local launcher reported an invalid application URL.");
   }
   return value;
@@ -146,12 +118,7 @@ function npmCliPath(): string {
   return resolve(dirname(process.execPath), "node_modules/npm/bin/npm-cli.js");
 }
 
-async function runNpm(
-  projectRoot: string,
-  args: readonly string[],
-  label: string,
-  capture: boolean,
-): Promise<string> {
+async function runNpm(projectRoot: string, args: readonly string[], label: string, capture: boolean): Promise<string> {
   const windows = process.platform === "win32";
   const command = windows ? process.execPath : "npm";
   const commandArgs = windows ? [npmCliPath(), ...args] : args;

@@ -17,12 +17,7 @@
 import { spawn } from "node:child_process";
 import process from "node:process";
 
-export function createBoundaryExpectations({
-  projectRoot,
-  cliPath,
-  typescriptBin,
-  vitestBin,
-}) {
+export function createBoundaryExpectations({ projectRoot, cliPath, typescriptBin, vitestBin }) {
   const scenarioCounts = [];
 
   function recordCounts(name, report) {
@@ -30,9 +25,7 @@ export function createBoundaryExpectations({
   }
 
   function taskStates(report) {
-    return Object.fromEntries(
-      report.results.map((result) => [result.taskId, result.status]),
-    );
+    return Object.fromEntries(report.results.map((result) => [result.taskId, result.status]));
   }
 
   async function runVerification(options = {}) {
@@ -43,13 +36,7 @@ export function createBoundaryExpectations({
     if (options.ci === true) environment.CI = "true";
     const completed = await runCli({
       projectRoot,
-      arguments: [
-        cliPath,
-        "verify",
-        "--changed",
-        "--json",
-        ...(options.full ? ["--full"] : []),
-      ],
+      arguments: [cliPath, "verify", "--changed", "--json", ...(options.full ? ["--full"] : [])],
       environment: {
         ...environment,
         DADS_TYPESCRIPT_BIN: typescriptBin,
@@ -74,9 +61,7 @@ export function createBoundaryExpectations({
       const report = await runVerification();
       const states = taskStates(report);
       if (states["consumer:artifact-check"] !== "executed") {
-        throw new Error(
-          `${name}: consumer did not execute: ${JSON.stringify(states)}`,
-        );
+        throw new Error(`${name}: consumer did not execute: ${JSON.stringify(states)}`);
       }
       recordCounts(name, report);
     },
@@ -84,9 +69,7 @@ export function createBoundaryExpectations({
     expectConsumerFailed(name, report) {
       const states = taskStates(report);
       if (states["consumer:artifact-check"] !== "failed") {
-        throw new Error(
-          `${name}: consumer did not fail: ${JSON.stringify(states)}`,
-        );
+        throw new Error(`${name}: consumer did not fail: ${JSON.stringify(states)}`);
       }
       recordCounts(name, report);
     },
@@ -94,38 +77,24 @@ export function createBoundaryExpectations({
     expectTaskFailed(name, taskId, report) {
       const states = taskStates(report);
       if (states[taskId] !== "failed") {
-        throw new Error(
-          `${name}: ${taskId} did not fail: ${JSON.stringify(states)}`,
-        );
+        throw new Error(`${name}: ${taskId} did not fail: ${JSON.stringify(states)}`);
       }
       recordCounts(name, report);
     },
 
     expectAllExecuted(name, report) {
       const states = taskStates(report);
-      if (
-        Object.keys(states).length !== 6 ||
-        Object.values(states).some((status) => status !== "executed")
-      ) {
-        throw new Error(
-          `${name}: expected every fallback task to execute: ${JSON.stringify(states)}`,
-        );
+      if (Object.keys(states).length !== 6 || Object.values(states).some((status) => status !== "executed")) {
+        throw new Error(`${name}: expected every fallback task to execute: ${JSON.stringify(states)}`);
       }
       recordCounts(name, report);
     },
 
     expectStates(name, report, expected) {
       const actual = taskStates(report);
-      const mismatches = Object.entries(expected).filter(
-        ([taskId, status]) => actual[taskId] !== status,
-      );
-      if (
-        mismatches.length > 0 ||
-        Object.keys(actual).length !== Object.keys(expected).length
-      ) {
-        throw new Error(
-          `${name}: expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
-        );
+      const mismatches = Object.entries(expected).filter(([taskId, status]) => actual[taskId] !== status);
+      if (mismatches.length > 0 || Object.keys(actual).length !== Object.keys(expected).length) {
+        throw new Error(`${name}: expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
       }
       recordCounts(name, report);
     },

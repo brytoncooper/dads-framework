@@ -4,15 +4,9 @@ import { withProtectedDrizzleTransaction } from "@dads-framework/postgres-access
 import { sql } from "drizzle-orm";
 import { readPostgresTaskCandidates } from "./read-postgres-task-candidates.js";
 
-import {
-  applyWorkbenchRelationships,
-  checkWorkbenchPermission,
-} from "../operations/workbench-authorization.js";
+import { applyWorkbenchRelationships, checkWorkbenchPermission } from "../operations/workbench-authorization.js";
 import { WorkbenchError } from "../operations/workbench-error.js";
-import {
-  POSTGRES_WORKBENCH_SCHEMA_VERSION,
-  POSTGRES_WORKBENCH_STATE_TABLE,
-} from "./postgres-workbench-schema.js";
+import { POSTGRES_WORKBENCH_SCHEMA_VERSION, POSTGRES_WORKBENCH_STATE_TABLE } from "./postgres-workbench-schema.js";
 import {
   SnapshotWorkbenchStore,
   type SameStoreAuthorizedWorkbenchMutation,
@@ -32,10 +26,7 @@ export type PostgresWorkbenchStoreOptions = {
 const stateTable = sql.identifier(POSTGRES_WORKBENCH_STATE_TABLE);
 
 /** Application state and relationship facts use one primary-database transaction. */
-export class PostgresWorkbenchStore
-  extends SnapshotWorkbenchStore
-  implements SameStoreAuthorizingWorkbenchStore
-{
+export class PostgresWorkbenchStore extends SnapshotWorkbenchStore implements SameStoreAuthorizingWorkbenchStore {
   constructor(private readonly options: PostgresWorkbenchStoreOptions) {
     super();
   }
@@ -45,16 +36,10 @@ export class PostgresWorkbenchStore
   }
 
   override readTaskCandidates(workspaceId: string) {
-    return readPostgresTaskCandidates(
-      this.options.database,
-      this.options.namespace,
-      workspaceId,
-    );
+    return readPostgresTaskCandidates(this.options.database, this.options.namespace, workspaceId);
   }
 
-  override transaction<Result>(
-    change: (state: WorkbenchState) => Result,
-  ): Promise<Result> {
+  override transaction<Result>(change: (state: WorkbenchState) => Result): Promise<Result> {
     return this.withLockedState(async (tx, _authorization, state) => {
       const result = change(state);
       await writeState(tx, this.options.namespace, state);
@@ -62,26 +47,17 @@ export class PostgresWorkbenchStore
     });
   }
 
-  override commitMutation<Result>(
-    mutation: (state: WorkbenchState) => WorkbenchMutation<Result>,
-  ): Promise<Result> {
+  override commitMutation<Result>(mutation: (state: WorkbenchState) => WorkbenchMutation<Result>): Promise<Result> {
     return this.withLockedState((tx, authorization, state) =>
       this.persistMutation(tx, authorization, state, mutation(state)),
     );
   }
 
-  commitAuthorizedMutation<Result>(
-    request: SameStoreAuthorizedWorkbenchMutation<Result>,
-  ): Promise<Result> {
+  commitAuthorizedMutation<Result>(request: SameStoreAuthorizedWorkbenchMutation<Result>): Promise<Result> {
     return this.withLockedState(async (tx, authorization, state) => {
       const target = request.authorization.target(state);
-      if (
-        target === undefined &&
-        request.authorization.kind !== "fresh-create"
-      ) {
-        throw new Error(
-          "A protected Workbench mutation must resolve an authorization target.",
-        );
+      if (target === undefined && request.authorization.kind !== "fresh-create") {
+        throw new Error("A protected Workbench mutation must resolve an authorization target.");
       }
       if (
         target !== undefined &&
@@ -91,33 +67,19 @@ export class PostgresWorkbenchStore
         }))
       )
         throw new WorkbenchError("NOT_FOUND");
-      return this.persistMutation(
-        tx,
-        authorization,
-        state,
-        request.mutation(state),
-      );
+      return this.persistMutation(tx, authorization, state, request.mutation(state));
     });
   }
 
   private withLockedState<Result>(
-    work: (
-      tx: Transaction,
-      authorization: PostgresAuthorization,
-      state: WorkbenchState,
-    ) => Promise<Result>,
+    work: (tx: Transaction, authorization: PostgresAuthorization, state: WorkbenchState) => Promise<Result>,
   ): Promise<Result> {
     return withProtectedDrizzleTransaction(
       {
         database: this.options.database,
         authorization: this.options.authorization,
       },
-      async ({ tx, authorization }) =>
-        work(
-          tx,
-          authorization,
-          await readState(tx, this.options.namespace, true),
-        ),
+      async ({ tx, authorization }) => work(tx, authorization, await readState(tx, this.options.namespace, true)),
     );
   }
 
@@ -148,16 +110,10 @@ async function readState(
     ${lock ? sql`FOR UPDATE` : sql.empty()}
   `);
   const row = result.rows[0];
-  if (
-    row === undefined ||
-    row.schema_version !== POSTGRES_WORKBENCH_SCHEMA_VERSION
-  ) {
-    throw new Error(
-      "Postgres Workbench state is missing or has an unsupported schema version.",
-    );
+  if (row === undefined || row.schema_version !== POSTGRES_WORKBENCH_SCHEMA_VERSION) {
+    throw new Error("Postgres Workbench state is missing or has an unsupported schema version.");
   }
-  const document: unknown =
-    typeof row.document === "string" ? JSON.parse(row.document) : row.document;
+  const document: unknown = typeof row.document === "string" ? JSON.parse(row.document) : row.document;
   return workbenchState.parse(document);
 }
 
@@ -171,8 +127,5 @@ async function writeState(
     UPDATE ${stateTable} SET document = ${document}::jsonb
     WHERE namespace = ${namespace} AND schema_version = ${POSTGRES_WORKBENCH_SCHEMA_VERSION}
   `);
-  if (result.rowCount !== 1)
-    throw new Error(
-      "Postgres Workbench state disappeared during its transaction.",
-    );
+  if (result.rowCount !== 1) throw new Error("Postgres Workbench state disappeared during its transaction.");
 }

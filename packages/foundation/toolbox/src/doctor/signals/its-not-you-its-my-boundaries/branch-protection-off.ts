@@ -34,9 +34,7 @@ const OK = 200;
 const NOT_FOUND = 404;
 const GITHUB = "https://github.com";
 
-async function measureBranchProtection(
-  context: DoctorContext,
-): Promise<SignalReadings> {
+async function measureBranchProtection(context: DoctorContext): Promise<SignalReadings> {
   requireOnline(context);
   const named = requireOriginRepository(context);
   const repository = repositoryUrl(named);
@@ -63,20 +61,14 @@ async function measureBranchProtection(
  * status is a failure that names it, so a repository nobody may read about is
  * never reported as a repository nobody protects.
  */
-async function readProtectionValue(
-  context: DoctorContext,
-  url: string,
-): Promise<number> {
+async function readProtectionValue(context: DoctorContext, url: string): Promise<number> {
   const answered = await context.fetch(url);
   if (answered.status === OK) return 0;
   if (answered.status === NOT_FOUND) return 1;
   throw new Error(`${url} answered ${answered.status}`);
 }
 
-async function readDefaultBranch(
-  context: DoctorContext,
-  repository: string,
-): Promise<string> {
+async function readDefaultBranch(context: DoctorContext, repository: string): Promise<string> {
   const document = await readJsonObject(context, repository);
   const branch = readStringField(document, "default_branch");
   if (branch === undefined) {

@@ -1,10 +1,4 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -13,10 +7,7 @@ import type { RelationshipWrite } from "@dads-framework/access/runtime";
 
 import { FakeSchemaStore } from "../testing/fake-schema-store.js";
 import { readAuthorizationMigrationStatus } from "./journal/read-authorization-migration-status.js";
-import {
-  runAuthorizationMigrations,
-  type AuthorizationMigrationsLog,
-} from "./run-authorization-migrations.js";
+import { runAuthorizationMigrations, type AuthorizationMigrationsLog } from "./run-authorization-migrations.js";
 
 const BASELINE = "0001_baseline";
 const A = "20261023090000_aaaaaaaa_alpha";
@@ -64,24 +55,15 @@ function writeChange(
         {
           name,
           before: options.before ?? null,
-          after:
-            options.after === undefined
-              ? `definition ${name} { relation owner: user }`
-              : options.after,
+          after: options.after === undefined ? `definition ${name} { relation owner: user }` : options.after,
         },
       ],
     }),
   );
-  writeFileSync(
-    join(folder, id, "migration.ts"),
-    options.hooks ?? "export const migration = {};\n",
-  );
+  writeFileSync(join(folder, id, "migration.ts"), options.hooks ?? "export const migration = {};\n");
 }
 
-function run(
-  input: ReturnType<typeof fixture>,
-  log: AuthorizationMigrationsLog = silentLog,
-) {
+function run(input: ReturnType<typeof fixture>, log: AuthorizationMigrationsLog = silentLog) {
   return runAuthorizationMigrations({
     journal: [{ id: BASELINE }],
     journalFolder: input.journalFolder,
@@ -119,9 +101,7 @@ describe("authorization definition changes", () => {
     const input = fixture();
     writeChange(input.changesFolder, A);
     input.store.failNextStartedDelete = true;
-    await expect(run(input)).rejects.toThrow(
-      "started marker cleanup unavailable",
-    );
+    await expect(run(input)).rejects.toThrow("started marker cleanup unavailable");
     const records: object[] = [];
     await run(input, {
       info: (context) => {
@@ -137,11 +117,7 @@ describe("authorization definition changes", () => {
       applied: 0,
       alreadyApplied: 2,
     });
-    expect(
-      input.store.appliedMarkers.some((marker) =>
-        marker.startsWith("authz_started_"),
-      ),
-    ).toBe(false);
+    expect(input.store.appliedMarkers.some((marker) => marker.startsWith("authz_started_"))).toBe(false);
   });
 
   it("applies a later independent change before an earlier sibling without losing either definition", async () => {
@@ -165,8 +141,7 @@ describe("authorization definition changes", () => {
     writeChange(input.changesFolder, A, {
       name: "test/beta",
       before: "definition test/beta { relation owner: user }",
-      after:
-        "definition test/beta { relation owner: user permission view = owner }",
+      after: "definition test/beta { relation owner: user permission view = owner }",
       dependsOn: [B],
     });
     await run(input);
@@ -257,9 +232,7 @@ describe("authorization definition changes", () => {
     const input = fixture();
     writeChange(input.changesFolder, A);
     await run(input);
-    await input.store.writeSchema(
-      `${await input.store.readSchema()}\ndefinition test/drift {}`,
-    );
+    await input.store.writeSchema(`${await input.store.readSchema()}\ndefinition test/drift {}`);
     await expect(run(input)).rejects.toMatchObject({
       code: "AUTHZ_CHANGE_DRIFT",
     });
@@ -269,8 +242,7 @@ describe("authorization definition changes", () => {
     const input = fixture();
     writeChange(input.changesFolder, A, {
       name: "authz/migration_journal",
-      before:
-        "definition authz/migration_journal { relation applied: authz/migration_version }",
+      before: "definition authz/migration_journal { relation applied: authz/migration_version }",
       after: "definition authz/migration_journal {}",
     });
     await expect(run(input)).rejects.toMatchObject({
@@ -283,14 +255,8 @@ describe("authorization definition changes", () => {
     const input = fixture();
     writeChange(input.changesFolder, A);
     writeChange(input.changesFolder, B);
-    const first = readFileSync(
-      join(input.changesFolder, A, "patch.json"),
-      "utf8",
-    );
-    const second = readFileSync(
-      join(input.changesFolder, B, "patch.json"),
-      "utf8",
-    );
+    const first = readFileSync(join(input.changesFolder, A, "patch.json"), "utf8");
+    const second = readFileSync(join(input.changesFolder, B, "patch.json"), "utf8");
     expect(first).toContain(`"dependsOn":["${BASELINE}"]`);
     expect(second).toContain(`"dependsOn":["${BASELINE}"]`);
     expect(first).not.toEqual(second);
@@ -306,33 +272,17 @@ describe("authorization definition changes", () => {
     });
     input.store.failBackfillOnce = true;
     await expect(run(input)).rejects.toThrow("backfill unavailable");
-    expect(
-      input.store.appliedMarkers.some((id) => id.startsWith("authz_started_")),
-    ).toBe(true);
+    expect(input.store.appliedMarkers.some((id) => id.startsWith("authz_started_"))).toBe(true);
     await expect(readAuthorizationMigrationStatus(input)).resolves.toEqual({
       shippedIds: [BASELINE, A],
       appliedIds: [BASELINE],
     });
-    const writes = input.store.operations.filter((operation) =>
-      operation.startsWith("writeSchema:"),
-    ).length;
+    const writes = input.store.operations.filter((operation) => operation.startsWith("writeSchema:")).length;
     await run(input);
-    expect(
-      input.store.operations.filter((operation) =>
-        operation.startsWith("writeSchema:"),
-      ),
-    ).toHaveLength(writes);
-    expect(
-      input.store.operations.filter(
-        (operation) => operation === "delete:test/retired",
-      ),
-    ).toHaveLength(1);
-    expect(input.store.operations).toContain(
-      "write:test/alpha:one:owner:alice",
-    );
-    expect(
-      input.store.appliedMarkers.some((id) => id.startsWith("authz_started_")),
-    ).toBe(false);
+    expect(input.store.operations.filter((operation) => operation.startsWith("writeSchema:"))).toHaveLength(writes);
+    expect(input.store.operations.filter((operation) => operation === "delete:test/retired")).toHaveLength(1);
+    expect(input.store.operations).toContain("write:test/alpha:one:owner:alice");
+    expect(input.store.appliedMarkers.some((id) => id.startsWith("authz_started_"))).toBe(false);
   });
 
   it("refuses unrecorded post-write schema drift during a backfill retry", async () => {
@@ -342,9 +292,7 @@ describe("authorization definition changes", () => {
     });
     input.store.failBackfillOnce = true;
     await expect(run(input)).rejects.toThrow("backfill unavailable");
-    await input.store.writeSchema(
-      `${await input.store.readSchema()}\ndefinition test/unrecorded {}`,
-    );
+    await input.store.writeSchema(`${await input.store.readSchema()}\ndefinition test/unrecorded {}`);
     await expect(run(input)).rejects.toMatchObject({
       code: "AUTHZ_CHANGE_DRIFT",
     });
@@ -397,9 +345,7 @@ describe("authorization definition changes", () => {
       appliedIds: [BASELINE],
     });
     rmSync(join(input.changesFolder, A, "migration.ts"));
-    await expect(readAuthorizationMigrationStatus(input)).rejects.toMatchObject(
-      { code: "ENOENT" },
-    );
+    await expect(readAuthorizationMigrationStatus(input)).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 
@@ -408,23 +354,15 @@ class RetryBackfillStore extends FakeSchemaStore {
   failNextStartedDelete = false;
 
   override deleteExactRelationship(fact: RelationshipWrite): Promise<string> {
-    if (
-      this.failNextStartedDelete &&
-      fact.subject.id.startsWith("authz_started_")
-    ) {
+    if (this.failNextStartedDelete && fact.subject.id.startsWith("authz_started_")) {
       this.failNextStartedDelete = false;
       return Promise.reject(new Error("started marker cleanup unavailable"));
     }
     return super.deleteExactRelationship(fact);
   }
 
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<string> {
-    if (
-      this.failBackfillOnce &&
-      writes.some((write) => write.resource.type === "test/alpha")
-    ) {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<string> {
+    if (this.failBackfillOnce && writes.some((write) => write.resource.type === "test/alpha")) {
       this.failBackfillOnce = false;
       return Promise.reject(new Error("backfill unavailable"));
     }

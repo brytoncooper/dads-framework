@@ -2,12 +2,7 @@ import { describe, expect, it } from "vitest";
 import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-work";
 
 import { AnswerOnceAuthorization } from "./answer-once-authorization.js";
-import {
-  Authorization,
-  relationshipWrite,
-  type SpiceDbConsistencyToken,
-  type SubjectRef,
-} from "./authorization.js";
+import { Authorization, relationshipWrite, type SpiceDbConsistencyToken, type SubjectRef } from "./authorization.js";
 import { FakeAuthorization } from "./fake-authorization.js";
 import { RecordingAuthorization } from "./recording-authorization.js";
 
@@ -73,9 +68,7 @@ describe("FakeAuthorization expiration & lookupSubjects", () => {
       relationshipWrite(doc, "editor", bob),
     ]);
 
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: doc }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: doc })).toBe(true);
     expect(
       await authz.lookupResources({
         subject: alice,
@@ -97,19 +90,13 @@ describe("FakeAuthorization expiration & lookupSubjects", () => {
         relation: "viewer",
       }),
     ).toBe(true);
-    expect(
-      await authz.listDirectSubjects({ resource: doc, relation: "viewer" }),
-    ).toEqual([alice]);
+    expect(await authz.listDirectSubjects({ resource: doc, relation: "viewer" })).toEqual([alice]);
 
     // Advance clock to exact expiration boundary: alice's grant is now expired.
     currentTime = new Date("2026-06-01T13:00:00Z");
 
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: doc }),
-    ).toBe(false);
-    expect(
-      await authz.check({ subject: bob, permission: "view", resource: doc }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: doc })).toBe(false);
+    expect(await authz.check({ subject: bob, permission: "view", resource: doc })).toBe(true);
     expect(
       await authz.lookupResources({
         subject: alice,
@@ -131,9 +118,7 @@ describe("FakeAuthorization expiration & lookupSubjects", () => {
         relation: "viewer",
       }),
     ).toBe(false);
-    expect(
-      await authz.listDirectSubjects({ resource: doc, relation: "viewer" }),
-    ).toEqual([]);
+    expect(await authz.listDirectSubjects({ resource: doc, relation: "viewer" })).toEqual([]);
   });
 
   it("reports wildcard grants via hasWildcard and filters by subjectType without usersets", async () => {
@@ -178,9 +163,7 @@ describe("RecordingAuthorization.lookupSubjects", () => {
       subjectType: "user",
     };
     const recording = new RecordingAuthorization({
-      subjectLookups: [
-        { query, answer: { subjects: ["u1", "u2"], hasWildcard: false } },
-      ],
+      subjectLookups: [{ query, answer: { subjects: ["u1", "u2"], hasWildcard: false } }],
     });
 
     const result = await recording.lookupSubjects(query);
@@ -214,9 +197,7 @@ describe("AnswerOnceAuthorization.lookupSubjects", () => {
       subjectType: "user",
     };
     const fake = new FakeAuthorization({ document: { view: ["viewer"] } });
-    fake.seed(
-      relationshipWrite(query.resource, "viewer", { type: "user", id: "u1" }),
-    );
+    fake.seed(relationshipWrite(query.resource, "viewer", { type: "user", id: "u1" }));
 
     let calls = 0;
     const originalLookup = fake.lookupSubjects.bind(fake);
@@ -237,9 +218,7 @@ describe("AnswerOnceAuthorization.lookupSubjects", () => {
       });
       expect(calls).toBe(1);
 
-      await cached.writeRelationships([
-        relationshipWrite(query.resource, "viewer", { type: "user", id: "u2" }),
-      ]);
+      await cached.writeRelationships([relationshipWrite(query.resource, "viewer", { type: "user", id: "u2" })]);
       expect(await cached.lookupSubjects(query)).toEqual({
         subjects: ["u1", "u2"],
         hasWildcard: false,

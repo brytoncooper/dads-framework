@@ -1,10 +1,4 @@
-import type {
-  AnyDslRoleSlot,
-  DslActor,
-  DslPermissionTarget,
-  DslRoleSlot,
-  DslSubjectInput,
-} from "../core/dsl-types.js";
+import type { AnyDslRoleSlot, DslActor, DslPermissionTarget, DslRoleSlot, DslSubjectInput } from "../core/dsl-types.js";
 import type { EntityHandle } from "../core/entity-handle.js";
 import type { PermissionToken } from "../core/refs.js";
 import {
@@ -62,10 +56,7 @@ export type AccessClient = {
     actorHandle: DslActor | EntityHandle,
     options?: AccessClientLookupOptions,
   ) => Promise<SubjectLookupResult>;
-  readonly listDirect: (
-    slot: AnyDslRoleSlot,
-    options?: AccessClientDirectOptions,
-  ) => Promise<readonly SubjectRef[]>;
+  readonly listDirect: (slot: AnyDslRoleSlot, options?: AccessClientDirectOptions) => Promise<readonly SubjectRef[]>;
 };
 
 function toSubjectRef(subject: DslSubjectInput): SubjectRef {
@@ -97,12 +88,8 @@ function buildPermissionQuery(
     subject: toSubjectRef(subject),
     permission: target.permissionName,
     resource: target.resource,
-    ...(options?.consistencyToken !== undefined
-      ? { consistencyToken: options.consistencyToken }
-      : {}),
-    ...(options?.consistency !== undefined
-      ? { consistency: options.consistency }
-      : {}),
+    ...(options?.consistencyToken !== undefined ? { consistencyToken: options.consistencyToken } : {}),
+    ...(options?.consistency !== undefined ? { consistency: options.consistency } : {}),
   };
 }
 
@@ -115,9 +102,7 @@ function buildResourceLookup(
     subject: toSubjectRef(subject),
     permission: permission.permissionName,
     resourceType: permission.entityWireName,
-    ...(options?.consistencyToken !== undefined
-      ? { consistencyToken: options.consistencyToken }
-      : {}),
+    ...(options?.consistencyToken !== undefined ? { consistencyToken: options.consistencyToken } : {}),
   };
 }
 
@@ -130,25 +115,16 @@ function buildSubjectLookup(
     resource: target.resource,
     permission: target.permissionName,
     subjectType: actorHandle.wireName,
-    ...(options?.consistencyToken !== undefined
-      ? { consistencyToken: options.consistencyToken }
-      : {}),
+    ...(options?.consistencyToken !== undefined ? { consistencyToken: options.consistencyToken } : {}),
   };
 }
 
-function buildDirectLookup(
-  slot: AnyDslRoleSlot,
-  options?: AccessClientDirectOptions,
-): DirectSubjectLookup {
+function buildDirectLookup(slot: AnyDslRoleSlot, options?: AccessClientDirectOptions): DirectSubjectLookup {
   return {
     resource: slot.resource,
     relation: slot.roleName,
-    ...(options?.consistency !== undefined
-      ? { consistency: options.consistency }
-      : {}),
-    ...(options?.consistencyToken !== undefined
-      ? { consistencyToken: options.consistencyToken }
-      : {}),
+    ...(options?.consistency !== undefined ? { consistency: options.consistency } : {}),
+    ...(options?.consistencyToken !== undefined ? { consistencyToken: options.consistencyToken } : {}),
   };
 }
 
@@ -159,12 +135,7 @@ function buildDirectLookup(
 export function createAccessClient(authorization: Authorization): AccessClient {
   return {
     add(subject, slot, options) {
-      const write = relationshipWrite(
-        slot.resource,
-        slot.roleName,
-        toSubjectRef(subject),
-        options,
-      );
+      const write = relationshipWrite(slot.resource, slot.roleName, toSubjectRef(subject), options);
       return authorization.writeRelationships([write]);
     },
     remove(subject, slot) {
@@ -175,24 +146,15 @@ export function createAccessClient(authorization: Authorization): AccessClient {
         subject: toSubjectRef(subject),
       });
     },
-    can: (subject, target, options) =>
-      authorization.check(buildPermissionQuery(subject, target, options)),
+    can: (subject, target, options) => authorization.check(buildPermissionQuery(subject, target, options)),
     list(subject, permission, options) {
-      return authorization.lookupResources(
-        buildResourceLookup(subject, permission, options),
-      );
+      return authorization.lookupResources(buildResourceLookup(subject, permission, options));
     },
     whoCan(target, actorHandle, options) {
       if (authorization.lookupSubjects === undefined) {
-        return Promise.reject(
-          new Error(
-            "underlying Authorization does not implement lookupSubjects",
-          ),
-        );
+        return Promise.reject(new Error("underlying Authorization does not implement lookupSubjects"));
       }
-      return authorization.lookupSubjects(
-        buildSubjectLookup(target, actorHandle, options),
-      );
+      return authorization.lookupSubjects(buildSubjectLookup(target, actorHandle, options));
     },
     listDirect(slot, options) {
       return authorization.listDirectSubjects(buildDirectLookup(slot, options));

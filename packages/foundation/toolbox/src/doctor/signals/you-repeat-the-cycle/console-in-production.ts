@@ -13,19 +13,13 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReadings } from "../../doctor-signal.js";
-import {
-  countOccurrences,
-  isProductionModule,
-  ts,
-} from "../scanners/typescript-program.js";
+import { countOccurrences, isProductionModule, ts } from "../scanners/typescript-program.js";
 
 function isConsoleCall(node: ts.Node): boolean {
   if (!ts.isCallExpression(node)) return false;
   const callee = node.expression;
   if (!ts.isPropertyAccessExpression(callee)) return false;
-  return (
-    ts.isIdentifier(callee.expression) && callee.expression.text === "console"
-  );
+  return ts.isIdentifier(callee.expression) && callee.expression.text === "console";
 }
 
 function countConsoleCalls(context: DoctorContext): SignalReadings {
@@ -46,7 +40,6 @@ export const consoleInProductionSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "Latchkey routes. Nobody home. No access declaration. Dinner is `console.log`.",
+  sentence: "Latchkey routes. Nobody home. No access declaration. Dinner is `console.log`.",
   run: (context) => Promise.resolve(countConsoleCalls(context)),
 };

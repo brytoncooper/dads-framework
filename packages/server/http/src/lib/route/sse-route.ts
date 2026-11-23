@@ -68,9 +68,7 @@ export function sseRoute(config: SseRouteConfig): RawRouteBlueprint {
     path: config.path,
     summary: config.summary,
     access: config.access,
-    ...(config.capabilities === undefined
-      ? {}
-      : { capabilities: config.capabilities }),
+    ...(config.capabilities === undefined ? {} : { capabilities: config.capabilities }),
     openapi: config.openapi,
     handler: async (ctx) => {
       const open = (onOpen: (stream: SseStream) => SseCleanup): void => {
@@ -78,9 +76,7 @@ export function sseRoute(config: SseRouteConfig): RawRouteBlueprint {
         reply.hijack();
         reply.raw.writeHead(200, {
           "content-type": "text/event-stream",
-          "cache-control": String(
-            reply.getHeader("cache-control") ?? "no-cache",
-          ),
+          "cache-control": String(reply.getHeader("cache-control") ?? "no-cache"),
           connection: "keep-alive",
         });
 

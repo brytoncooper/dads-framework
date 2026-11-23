@@ -1,11 +1,5 @@
-export {
-  describeMigrationFailure,
-  type MigrationFailure,
-} from "./lib/logic/describe-migration-failure.js";
-export {
-  parseMigrationEnvironment,
-  type MigrationEnvironment,
-} from "./lib/logic/parse-migration-environment.js";
+export { describeMigrationFailure, type MigrationFailure } from "./lib/logic/describe-migration-failure.js";
+export { parseMigrationEnvironment, type MigrationEnvironment } from "./lib/logic/parse-migration-environment.js";
 export { discoverDomainMigrations } from "./lib/node-pg/discover-domain-migrations.js";
 export type {
   DiscoverDomainMigrationsInput,

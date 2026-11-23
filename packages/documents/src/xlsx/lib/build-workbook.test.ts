@@ -19,9 +19,7 @@ const orderTemplateSpec: WorkbookSpec = {
         },
         { header: "Quantity", key: "quantity", widthChars: 12 },
       ],
-      exampleRows: [
-        { orderRef: "PO-1001", productCode: "ALM-27", quantity: "44000" },
-      ],
+      exampleRows: [{ orderRef: "PO-1001", productCode: "ALM-27", quantity: "44000" }],
     },
   ],
 };
@@ -92,9 +90,7 @@ describe("buildWorkbook", () => {
       sheets: [
         {
           sheetName: "Orders",
-          columns: [
-            { header: "Start Date", key: "startDate", cellKind: "date" },
-          ],
+          columns: [{ header: "Start Date", key: "startDate", cellKind: "date" }],
           exampleRows: [{ startDate: "2026-09-15" }],
         },
       ],
@@ -166,11 +162,7 @@ describe("buildWorkbook", () => {
     expect(releases.getCell("A4").value).toBe("Ab-01/XY");
 
     const parsed = await parseWorkbookRows(built, "Releases");
-    expect(parsed.map((row) => row.cells["Release Number"])).toEqual([
-      "000001",
-      "12345678901234567890",
-      "Ab-01/XY",
-    ]);
+    expect(parsed.map((row) => row.cells["Release Number"])).toEqual(["000001", "12345678901234567890", "Ab-01/XY"]);
   });
 
   it("writes instructions, metadata, required markers, filters, frozen keys, and a custom validation extent", async () => {
@@ -186,9 +178,7 @@ describe("buildWorkbook", () => {
           kind: "instructions",
           title: "Import Orders",
           introduction: "Use one key across the three data sheets.",
-          instructions: [
-            { heading: "1. Orders", text: "Add one row per order." },
-          ],
+          instructions: [{ heading: "1. Orders", text: "Add one row per order." }],
         },
         {
           sheetName: "Orders",
@@ -215,11 +205,7 @@ describe("buildWorkbook", () => {
     const readMe = workbook.getWorksheet("Read Me");
     const orders = workbook.getWorksheet("Orders");
     const metadata = workbook.getWorksheet("_Workbook Metadata");
-    if (
-      readMe === undefined ||
-      orders === undefined ||
-      metadata === undefined
-    ) {
+    if (readMe === undefined || orders === undefined || metadata === undefined) {
       throw new Error("Expected workbook sheets are missing");
     }
 
@@ -241,16 +227,12 @@ describe("buildWorkbook", () => {
       sheets: [
         {
           sheetName: "Orders",
-          columns: [
-            { header: "Start Date", key: "startDate", cellKind: "date" },
-          ],
+          columns: [{ header: "Start Date", key: "startDate", cellKind: "date" }],
           exampleRows: [{ startDate: "2026-09-15" }],
         },
       ],
     });
 
-    expect(await parseWorkbookRows(built, "Orders")).toEqual([
-      { rowNumber: 2, cells: { "Start Date": "2026-09-15" } },
-    ]);
+    expect(await parseWorkbookRows(built, "Orders")).toEqual([{ rowNumber: 2, cells: { "Start Date": "2026-09-15" } }]);
   });
 });

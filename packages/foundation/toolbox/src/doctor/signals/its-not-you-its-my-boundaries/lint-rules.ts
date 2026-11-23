@@ -14,15 +14,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  resolveLintScopes,
-  rulesAtSeverity,
-} from "../scanners/lint-configuration.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { resolveLintScopes, rulesAtSeverity } from "../scanners/lint-configuration.js";
 
 function countErrorLevelRules(context: DoctorContext): SignalReadings {
   const scopes = resolveLintScopes(context);

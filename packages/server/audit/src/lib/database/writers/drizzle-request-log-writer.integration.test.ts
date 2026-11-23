@@ -55,22 +55,14 @@ describe("DrizzleRequestLogWriter", () => {
     const deletedCount = await writer.deleteRecordedBefore(cutoff);
 
     expect(deletedCount).toBe(1);
-    const remaining = await db
-      .select({ requestId: requestLog.requestId })
-      .from(requestLog);
-    expect(remaining.map((row) => row.requestId).sort()).toEqual(
-      [atCutoff.requestId, recent.requestId].sort(),
-    );
+    const remaining = await db.select({ requestId: requestLog.requestId }).from(requestLog);
+    expect(remaining.map((row) => row.requestId).sort()).toEqual([atCutoff.requestId, recent.requestId].sort());
   });
 
   it("returns 0 and deletes nothing when every row is newer than the cutoff", async () => {
-    await db
-      .insert(requestLog)
-      .values(makeRequestLog({ recordedAt: new Date() }));
+    await db.insert(requestLog).values(makeRequestLog({ recordedAt: new Date() }));
 
-    const deletedCount = await writer.deleteRecordedBefore(
-      new Date("2000-01-01T00:00:00.000Z"),
-    );
+    const deletedCount = await writer.deleteRecordedBefore(new Date("2000-01-01T00:00:00.000Z"));
 
     expect(deletedCount).toBe(0);
     const remaining = await db.select().from(requestLog);
@@ -78,17 +70,11 @@ describe("DrizzleRequestLogWriter", () => {
   });
 
   it("produces no audit_log row — request_log is allowlisted, not audited", async () => {
-    await db
-      .insert(requestLog)
-      .values(
-        makeRequestLog({ recordedAt: new Date("2025-01-01T00:00:00.000Z") }),
-      );
+    await db.insert(requestLog).values(makeRequestLog({ recordedAt: new Date("2025-01-01T00:00:00.000Z") }));
 
     await writer.deleteRecordedBefore(new Date());
 
-    const audited = await postgres.pool.query(
-      `SELECT 1 FROM audit_log WHERE table_name = 'request_log'`,
-    );
+    const audited = await postgres.pool.query(`SELECT 1 FROM audit_log WHERE table_name = 'request_log'`);
     expect(audited.rows).toHaveLength(0);
   });
 });

@@ -43,42 +43,25 @@ export function gateModeName(mode: GateMode): string {
 
 export function summarizeGate(outcome: GateOutcome): GateSummary {
   return {
-    listed:
-      countEntries(outcome.baseline.ceilings) +
-      countEntries(outcome.baseline.floors),
+    listed: countEntries(outcome.baseline.ceilings) + countEntries(outcome.baseline.floors),
     errors: outcome.findings.filter((item) => item.level === "error").length,
-    warnings: outcome.findings.filter((item) => item.level === "warning")
-      .length,
+    warnings: outcome.findings.filter((item) => item.level === "warning").length,
     overCeiling: outcome.inventory
-      .filter(
-        (row) =>
-          row.direction === "ceiling" && row.value > (row.threshold ?? 0),
-      )
+      .filter((row) => row.direction === "ceiling" && row.value > (row.threshold ?? 0))
       .reduce((total, row) => total + row.value - (row.threshold ?? 0), 0),
   };
 }
 
 function describeFinding(item: GateFinding): string {
   const subject = [item.measure, item.key].filter(Boolean).join(" ");
-  return subject.length > 0
-    ? `${item.level}: ${subject}: ${item.message}`
-    : `${item.level}: ${item.message}`;
+  return subject.length > 0 ? `${item.level}: ${subject}: ${item.message}` : `${item.level}: ${item.message}`;
 }
 
 /** Every listed or over-threshold key, largest first. */
-function renderInventory(
-  inventory: readonly GateInventoryRow[],
-): readonly string[] {
+function renderInventory(inventory: readonly GateInventoryRow[]): readonly string[] {
   return inventory
-    .filter(
-      (row) =>
-        row.mark !== undefined ||
-        (row.direction === "ceiling" && row.value > (row.threshold ?? 0)),
-    )
-    .sort(
-      (left, right) =>
-        right.value - left.value || compareStrings(left.key, right.key),
-    )
+    .filter((row) => row.mark !== undefined || (row.direction === "ceiling" && row.value > (row.threshold ?? 0)))
+    .sort((left, right) => right.value - left.value || compareStrings(left.key, right.key))
     .map(
       (row) =>
         `${row.measure} ${row.key}: ${row.value} ${row.unit} (mark ${row.mark ?? "none"}, ${row.direction} ${row.threshold ?? "current"}${describeMove(row)})`,
@@ -91,10 +74,7 @@ function describeMove(row: GateInventoryRow): string {
 }
 
 /** The human lines, in the order a reader needs them. */
-export function renderGateOutput(
-  outcome: GateOutcome,
-  summary: GateSummary,
-): string {
+export function renderGateOutput(outcome: GateOutcome, summary: GateSummary): string {
   if (outcome.mode.json) return renderGateJson(outcome, summary);
 
   const lines = [...outcome.notes];

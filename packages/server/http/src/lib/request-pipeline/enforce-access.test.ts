@@ -8,15 +8,8 @@
  * enforces exactly as it did before.
  */
 import { describe, expect, it } from "vitest";
-import type {
-  ResolvedSubject,
-  SubjectRef,
-} from "@dads-framework/access/runtime";
-import {
-  publicAccess,
-  requireSession,
-  type RouteAccess,
-} from "../route/access.js";
+import type { ResolvedSubject, SubjectRef } from "@dads-framework/access/runtime";
+import { publicAccess, requireSession, type RouteAccess } from "../route/access.js";
 import {
   enforceAccess,
   type AccessDecision,
@@ -60,25 +53,17 @@ function methodlessSubjects(): SubjectResolver {
   return { resolve: () => Promise.resolve(USER) };
 }
 
-function portsFor(
-  subjects: SubjectResolver,
-  checkResult: boolean,
-  denials?: AccessDenial[],
-): AccessPorts {
+function portsFor(subjects: SubjectResolver, checkResult: boolean, denials?: AccessDenial[]): AccessPorts {
   return {
     subjects,
     authorization: { check: () => Promise.resolve(checkResult) },
     lookups: { lookupResources: () => Promise.resolve(["ticket-1"]) },
-    ...(denials === undefined
-      ? {}
-      : { onDenied: (denial: AccessDenial) => denials.push(denial) }),
+    ...(denials === undefined ? {} : { onDenied: (denial: AccessDenial) => denials.push(denial) }),
   };
 }
 
 /** Narrow to the allow arm so the breadcrumbs can be read directly. */
-function allowOf(
-  decision: AccessDecision,
-): Extract<AccessDecision, { outcome: "allow" }> {
+function allowOf(decision: AccessDecision): Extract<AccessDecision, { outcome: "allow" }> {
   if (decision.outcome !== "allow") {
     throw new Error(`expected an allow decision, got ${decision.outcome}`);
   }
@@ -87,13 +72,7 @@ function allowOf(
 
 describe("enforceAccess decision breadcrumbs", () => {
   it("reports the settled permission, resource and auth method on a permission route", async () => {
-    const decision = allowOf(
-      await enforceAccess(
-        permissionAccess,
-        request,
-        portsFor(reportingSubjects(), true),
-      ),
-    );
+    const decision = allowOf(await enforceAccess(permissionAccess, request, portsFor(reportingSubjects(), true)));
 
     expect(decision.accessKind).toBe("permission");
     expect(decision.permission).toBe("manage");
@@ -102,13 +81,7 @@ describe("enforceAccess decision breadcrumbs", () => {
   });
 
   it("reports a session route as session-decided, with no permission settled", async () => {
-    const decision = allowOf(
-      await enforceAccess(
-        requireSession(),
-        request,
-        portsFor(reportingSubjects(), true),
-      ),
-    );
+    const decision = allowOf(await enforceAccess(requireSession(), request, portsFor(reportingSubjects(), true)));
 
     expect(decision.accessKind).toBe("session");
     expect(decision.permission).toBeUndefined();
@@ -117,13 +90,7 @@ describe("enforceAccess decision breadcrumbs", () => {
   });
 
   it("reports the visibility permission on a set question, with no single resource", async () => {
-    const decision = allowOf(
-      await enforceAccess(
-        visibilityAccess,
-        request,
-        portsFor(reportingSubjects(), true),
-      ),
-    );
+    const decision = allowOf(await enforceAccess(visibilityAccess, request, portsFor(reportingSubjects(), true)));
 
     expect(decision.accessKind).toBe("visibility");
     expect(decision.permission).toBe("view");
@@ -132,13 +99,7 @@ describe("enforceAccess decision breadcrumbs", () => {
   });
 
   it("names a public route without resolving a subject or an auth method", async () => {
-    const decision = allowOf(
-      await enforceAccess(
-        publicAccess(),
-        request,
-        portsFor(reportingSubjects(), true),
-      ),
-    );
+    const decision = allowOf(await enforceAccess(publicAccess(), request, portsFor(reportingSubjects(), true)));
 
     expect(decision.accessKind).toBe("public");
     expect(decision.subject).toBeNull();
@@ -146,13 +107,7 @@ describe("enforceAccess decision breadcrumbs", () => {
   });
 
   it("still enforces through a resolver that cannot report a method", async () => {
-    const decision = allowOf(
-      await enforceAccess(
-        permissionAccess,
-        request,
-        portsFor(methodlessSubjects(), true),
-      ),
-    );
+    const decision = allowOf(await enforceAccess(permissionAccess, request, portsFor(methodlessSubjects(), true)));
 
     expect(decision.permission).toBe("manage");
     expect(decision.authMethod).toBeUndefined();
@@ -164,20 +119,16 @@ describe("enforceAccess decision breadcrumbs", () => {
       resolveWithMethod: () => Promise.resolve(null),
     };
 
-    await expect(
-      enforceAccess(permissionAccess, request, portsFor(contradictory, true)),
-    ).resolves.toEqual({ outcome: "unauthenticated" });
+    await expect(enforceAccess(permissionAccess, request, portsFor(contradictory, true))).resolves.toEqual({
+      outcome: "unauthenticated",
+    });
   });
 
   it("carries the auth method on the denial breadcrumb", async () => {
     const denials: AccessDenial[] = [];
 
     await expect(
-      enforceAccess(
-        permissionAccess,
-        request,
-        portsFor(reportingSubjects(), false, denials),
-      ),
+      enforceAccess(permissionAccess, request, portsFor(reportingSubjects(), false, denials)),
     ).resolves.toEqual({
       outcome: "not-found",
       subject: USER,

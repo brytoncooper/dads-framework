@@ -6,10 +6,7 @@
  * a vendor, so turning Sentry on must never turn the log off.
  */
 
-import {
-  DiagnosticsReporter,
-  type FaultEvent,
-} from "./diagnostics-reporter.js";
+import { DiagnosticsReporter, type FaultEvent } from "./diagnostics-reporter.js";
 
 export class CombinedDiagnosticsReporter extends DiagnosticsReporter {
   constructor(private readonly reporters: readonly DiagnosticsReporter[]) {
@@ -28,17 +25,11 @@ export class CombinedDiagnosticsReporter extends DiagnosticsReporter {
 
   /** True only when every reporter delivered within the deadline. */
   override async flush(timeoutMs: number): Promise<boolean> {
-    const results = await Promise.all(
-      this.reporters.map((reporter) =>
-        reporter.flush(timeoutMs).catch(() => false),
-      ),
-    );
+    const results = await Promise.all(this.reporters.map((reporter) => reporter.flush(timeoutMs).catch(() => false)));
     return results.every(Boolean);
   }
 
   override async close(): Promise<void> {
-    await Promise.allSettled(
-      this.reporters.map((reporter) => reporter.close()),
-    );
+    await Promise.allSettled(this.reporters.map((reporter) => reporter.close()));
   }
 }

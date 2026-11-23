@@ -14,12 +14,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  isListOperation,
-  operationEvidence,
-  operationKey,
-  readRouteModel,
-} from "../scanners/route-model.js";
+import { isListOperation, operationEvidence, operationKey, readRouteModel } from "../scanners/route-model.js";
 
 function countUnfilteredLists(context: DoctorContext) {
   const readings = new Map<string, SignalReading>();
@@ -41,7 +36,6 @@ export const listsWithoutFilterSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You said you were fine. You shipped the list with no filter. You were not fine.",
+  sentence: "You said you were fine. You shipped the list with no filter. You were not fine.",
   run: (context) => Promise.resolve(countUnfilteredLists(context)),
 };

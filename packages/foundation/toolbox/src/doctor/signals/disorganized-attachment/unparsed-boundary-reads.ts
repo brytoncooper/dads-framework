@@ -28,11 +28,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   addFinding,
   evidenceAt,
@@ -48,9 +44,7 @@ const REQUEST_NAMES = new Set(["request", "req"]);
 function calleeName(expression: ts.Expression): string {
   if (ts.isIdentifier(expression)) return expression.text;
   if (!ts.isPropertyAccessExpression(expression)) return "";
-  const receiver = ts.isIdentifier(expression.expression)
-    ? expression.expression.text
-    : "";
+  const receiver = ts.isIdentifier(expression.expression) ? expression.expression.text : "";
   return `${receiver}.${expression.name.text}`;
 }
 
@@ -119,10 +113,7 @@ function unparsedTarget(node: ts.Node): string | undefined {
   return isUnparsed(node.expression) ? "read returned as typed" : undefined;
 }
 
-function collectUnparsedReads(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function collectUnparsedReads(module: DoctorModule, readings: Map<string, SignalReading>): void {
   visitNodes(module.source, (node) => {
     const target = unparsedTarget(node);
     if (target === undefined) return;

@@ -20,10 +20,7 @@ import { readOption, writeOutput } from "./cli-io.js";
 export function orient(requestedPath: string | undefined, json: boolean): void {
   const cwd = process.cwd();
   if (!requestedPath) {
-    throw documentedError(
-      "orient requires a project-relative path.",
-      orientationGuide(cwd),
-    );
+    throw documentedError("orient requires a project-relative path.", orientationGuide(cwd));
   }
   const loaded = loadOrientationProject(cwd);
   const projectPath = relative(loaded.root, requestedPath).startsWith("..")
@@ -31,10 +28,7 @@ export function orient(requestedPath: string | undefined, json: boolean): void {
     : relative(loaded.root, requestedPath);
   const orientation = orientProjectPath(loaded.project, projectPath);
   if (!orientation) {
-    throw documentedError(
-      `No declared package owns ${projectPath}.`,
-      orientationGuide(loaded.root),
-    );
+    throw documentedError(`No declared package owns ${projectPath}.`, orientationGuide(loaded.root));
   }
 
   const documentation = commandDocumentation(
@@ -45,9 +39,7 @@ export function orient(requestedPath: string | undefined, json: boolean): void {
     "AGENTS.md",
   );
   if (json) {
-    process.stdout.write(
-      `${JSON.stringify({ ok: true, orientation, documentation })}\n`,
-    );
+    process.stdout.write(`${JSON.stringify({ ok: true, orientation, documentation })}\n`);
     return;
   }
   process.stdout.write(
@@ -56,12 +48,7 @@ export function orient(requestedPath: string | undefined, json: boolean): void {
 }
 
 function orientationGuide(root: string): string {
-  return commandDocumentation(
-    root,
-    "docs/agent-operating-model.md",
-    "README.md",
-    "AGENTS.md",
-  );
+  return commandDocumentation(root, "docs/agent-operating-model.md", "README.md", "AGENTS.md");
 }
 
 function loadOrientationProject(root: string) {
@@ -72,17 +59,12 @@ function loadOrientationProject(root: string) {
   }
 }
 
-export function recommendTests(
-  commandArguments: readonly string[],
-  json: boolean,
-): void {
+export function recommendTests(commandArguments: readonly string[], json: boolean): void {
   const loaded = loadDadsProject(process.cwd());
   const changedScope = readCommandChangedScope(loaded.root, commandArguments);
-  const recommendation = recommendChangedVerification(
-    loaded.project,
-    changedScope.paths,
-    { trustEmptyScope: commandArguments.includes("--base") },
-  );
+  const recommendation = recommendChangedVerification(loaded.project, changedScope.paths, {
+    trustEmptyScope: commandArguments.includes("--base"),
+  });
   writeOutput(
     {
       ok: recommendation.complete,
@@ -95,17 +77,12 @@ export function recommendTests(
   if (!recommendation.complete) process.exitCode = 1;
 }
 
-export function verifyChanged(
-  commandArguments: readonly string[],
-  json: boolean,
-): void {
+export function verifyChanged(commandArguments: readonly string[], json: boolean): void {
   const loaded = loadDadsProject(process.cwd());
   const changedScope = readCommandChangedScope(loaded.root, commandArguments);
-  const recommendation = recommendChangedVerification(
-    loaded.project,
-    changedScope.paths,
-    { trustEmptyScope: commandArguments.includes("--base") },
-  );
+  const recommendation = recommendChangedVerification(loaded.project, changedScope.paths, {
+    trustEmptyScope: commandArguments.includes("--base"),
+  });
   const report = verifyTaskGraph({
     projectRoot: loaded.root,
     project: loaded.project,
@@ -126,19 +103,12 @@ export function verifyChanged(
 /** `CI` set (to anything but empty) or `--no-cache`: never read a receipt. */
 function verificationCacheOff(commandArguments: readonly string[]): boolean {
   const ci = process.env["CI"];
-  return (
-    commandArguments.includes("--no-cache") || (ci !== undefined && ci !== "")
-  );
+  return commandArguments.includes("--no-cache") || (ci !== undefined && ci !== "");
 }
 
-function readCommandChangedScope(
-  projectRoot: string,
-  commandArguments: readonly string[],
-) {
+function readCommandChangedScope(projectRoot: string, commandArguments: readonly string[]) {
   const baseRef = readOption(commandArguments, "--base");
-  return baseRef
-    ? readChangedScope(projectRoot, { baseRef })
-    : readChangedScope(projectRoot);
+  return baseRef ? readChangedScope(projectRoot, { baseRef }) : readChangedScope(projectRoot);
 }
 
 export function synchronize(json: boolean): void {

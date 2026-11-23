@@ -22,9 +22,7 @@ import {
 
 describe("locale formatting", () => {
   it("returns the calendar date an instant belongs to in a named business timezone", () => {
-    expect(
-      formatCalendarDateKey("2026-08-28T05:59:59.999Z", "America/Boise"),
-    ).toBe("2026-08-27");
+    expect(formatCalendarDateKey("2026-08-28T05:59:59.999Z", "America/Boise")).toBe("2026-08-27");
   });
 
   it("formats one instant in the explicitly chosen time zone", () => {
@@ -49,9 +47,7 @@ describe("locale formatting", () => {
   });
 
   it("localizes an exact decimal without passing it through Number", () => {
-    expect(formatExactDecimal("9007199254740993.5000", "de-DE")).toBe(
-      "9.007.199.254.740.993,5000",
-    );
+    expect(formatExactDecimal("9007199254740993.5000", "de-DE")).toBe("9.007.199.254.740.993,5000");
   });
 
   it("requires the currency code at the formatting call", () => {
@@ -76,15 +72,9 @@ describe("locale formatting", () => {
   it("names a time zone in the reader locale", () => {
     const at = "2026-10-28T12:00:00.000Z";
 
-    expect(formatTimeZoneName("America/Los_Angeles", "en-US", at)).toBe(
-      "Pacific Time",
-    );
-    expect(formatTimeZoneName("America/Boise", "en-US", at)).toBe(
-      "Mountain Time",
-    );
-    expect(formatTimeZoneName("America/Boise", "es-ES", at)).not.toBe(
-      "Mountain Time",
-    );
+    expect(formatTimeZoneName("America/Los_Angeles", "en-US", at)).toBe("Pacific Time");
+    expect(formatTimeZoneName("America/Boise", "en-US", at)).toBe("Mountain Time");
+    expect(formatTimeZoneName("America/Boise", "es-ES", at)).not.toBe("Mountain Time");
   });
 
   it("gives no name for a zone known only by its offset, or not known at all", () => {
@@ -95,11 +85,16 @@ describe("locale formatting", () => {
   });
 
   it("selects the reader locale's ordinal form for a position", () => {
-    expect(
-      [1, 2, 3, 4, 11, 21, 22, 23].map((n) =>
-        selectOrdinalCategory(n, "en-US"),
-      ),
-    ).toEqual(["one", "two", "few", "other", "other", "one", "two", "few"]);
+    expect([1, 2, 3, 4, 11, 21, 22, 23].map((n) => selectOrdinalCategory(n, "en-US"))).toEqual([
+      "one",
+      "two",
+      "few",
+      "other",
+      "other",
+      "one",
+      "two",
+      "few",
+    ]);
     expect(selectOrdinalCategory(2, "es-ES")).toBe("other");
   });
 });
@@ -108,11 +103,7 @@ describe("human text and stable codes", () => {
   it("sorts human labels with the reader locale", () => {
     const labels = ["Äpple", "Zebra"];
 
-    expect(
-      [...labels].sort((left, right) =>
-        compareHumanLabels(left, right, "sv-SE"),
-      ),
-    ).toEqual(["Zebra", "Äpple"]);
+    expect([...labels].sort((left, right) => compareHumanLabels(left, right, "sv-SE"))).toEqual(["Zebra", "Äpple"]);
   });
 
   it("folds human search text with the reader locale", () => {

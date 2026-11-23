@@ -26,9 +26,7 @@ function contextOver(files: readonly string[], stdout: string): DoctorContext {
 
 describe("lint-rules signal", () => {
   it("throws when lint scopes cannot be resolved so doctor marks it not measured", () => {
-    expect(() => lintRulesSignal.run(contextOver(["README.md"], ""))).toThrow(
-      "no lint config scopes",
-    );
+    expect(() => lintRulesSignal.run(contextOver(["README.md"], ""))).toThrow("no lint config scopes");
   });
 
   it("counts error-level rules across all four resolved scopes", async () => {

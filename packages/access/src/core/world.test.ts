@@ -21,15 +21,12 @@ describe("world()", () => {
   });
 
   it("emits written tuples and can/cannot assertions in authored order", () => {
-    const casey = world(
-      "site view",
-      ({ user, write, expect: expectAccess }) => {
-        const subject = user("casey");
-        write(site.roles.admin, "north").to(subject);
-        expectAccess(subject).can(site.permissions.view, "north");
-        expectAccess(subject).cannot(site.permissions.manage, "south");
-      },
-    );
+    const casey = world("site view", ({ user, write, expect: expectAccess }) => {
+      const subject = user("casey");
+      write(site.roles.admin, "north").to(subject);
+      expectAccess(subject).can(site.permissions.view, "north");
+      expectAccess(subject).cannot(site.permissions.manage, "south");
+    });
 
     expect(casey).toEqual({
       title: "site view",
@@ -47,24 +44,15 @@ describe("world()", () => {
       write(site.roles.admin, "north").to(subject);
       expectAccess(subject).can(site.permissions.view, "north");
     });
-    const combined = world(
-      "combined",
-      ({ include, user, expect: expectAccess }) => {
-        include(base);
-        const stranger = user("stranger");
-        expectAccess(stranger).cannot(site.permissions.view, "north");
-      },
-    );
+    const combined = world("combined", ({ include, user, expect: expectAccess }) => {
+      include(base);
+      const stranger = user("stranger");
+      expectAccess(stranger).cannot(site.permissions.view, "north");
+    });
 
-    expect(combined.relationships).toEqual([
-      "sites/site:north#admin@user:erin",
-    ]);
-    expect(combined.assertions.true).toEqual([
-      "sites/site:north#view@user:erin",
-    ]);
-    expect(combined.assertions.false).toEqual([
-      "sites/site:north#view@user:stranger",
-    ]);
+    expect(combined.relationships).toEqual(["sites/site:north#admin@user:erin"]);
+    expect(combined.assertions.true).toEqual(["sites/site:north#view@user:erin"]);
+    expect(combined.assertions.false).toEqual(["sites/site:north#view@user:stranger"]);
   });
 
   it("writes wildcard and userset subjects", () => {
@@ -72,18 +60,13 @@ describe("world()", () => {
       roles: { member: person },
     });
 
-    const authored = world(
-      "holders",
-      ({ user, write, members, expect: expectAccess }) => {
-        write(site.roles.tenancy, "north").to(person.anyone);
-        write(site.roles.admin, "north").to(
-          members(permissionSet.roles.member, "viewers"),
-        );
-        const subject = user("casey");
-        write(permissionSet.roles.member, "viewers").to(subject);
-        expectAccess(subject).can(site.permissions.view, "north");
-      },
-    );
+    const authored = world("holders", ({ user, write, members, expect: expectAccess }) => {
+      write(site.roles.tenancy, "north").to(person.anyone);
+      write(site.roles.admin, "north").to(members(permissionSet.roles.member, "viewers"));
+      const subject = user("casey");
+      write(permissionSet.roles.member, "viewers").to(subject);
+      expectAccess(subject).can(site.permissions.view, "north");
+    });
 
     expect(authored.relationships).toEqual([
       "sites/site:north#tenancy@user:*",
@@ -99,9 +82,7 @@ describe("world()", () => {
       write(site.roles.admin, "north").to(entity(organization, "acme"));
     });
 
-    expect(authored.relationships).toEqual([
-      "sites/site:north#admin@organizations/organization:acme",
-    ]);
+    expect(authored.relationships).toEqual(["sites/site:north#admin@organizations/organization:acme"]);
   });
 
   it("asserts a permission for an entity subject", () => {
@@ -110,18 +91,10 @@ describe("world()", () => {
       can: ({ admin }) => ({ view: admin }),
     });
 
-    const authored = world(
-      "entity expect",
-      ({ entity, expect: expectAccess }) => {
-        expectAccess(entity(organization, "acme")).can(
-          organization.permissions.view,
-          "acme",
-        );
-      },
-    );
+    const authored = world("entity expect", ({ entity, expect: expectAccess }) => {
+      expectAccess(entity(organization, "acme")).can(organization.permissions.view, "acme");
+    });
 
-    expect(authored.assertions.true).toEqual([
-      "organizations/organization:acme#view@organizations/organization:acme",
-    ]);
+    expect(authored.assertions.true).toEqual(["organizations/organization:acme#view@organizations/organization:acme"]);
   });
 });

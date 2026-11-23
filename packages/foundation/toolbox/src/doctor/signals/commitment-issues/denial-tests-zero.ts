@@ -19,20 +19,10 @@ import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
 import { packageFiles, type GraphPackage } from "../scanners/package-graph.js";
 import { readRouteModel } from "../scanners/route-model.js";
 
-const DENIAL_MARKS = [
-  "proveMissingRelationshipDenial",
-  "denial",
-  "denies",
-  "denied",
-  "forbidden",
-  "unauthorized",
-];
+const DENIAL_MARKS = ["proveMissingRelationshipDenial", "denial", "denies", "denied", "forbidden", "unauthorized"];
 const READABLE = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 
-function denialProofIn(
-  context: DoctorContext,
-  declared: GraphPackage,
-): string | undefined {
+function denialProofIn(context: DoctorContext, declared: GraphPackage): string | undefined {
   for (const path of packageFiles(context, declared)) {
     if (!READABLE.some((extension) => path.endsWith(extension))) continue;
     const text = context.read(path).toLowerCase();
@@ -49,18 +39,14 @@ function countPackagesWithoutDenial(context: DoctorContext) {
   for (const declared of model.packagesWithRoutes) {
     const protectedRoutes = model.operations.filter(
       (operation) =>
-        operation.packageName === declared.name &&
-        operation.declaresAccess &&
-        operation.explicitlyPublic !== true,
+        operation.packageName === declared.name && operation.declaresAccess && operation.explicitlyPublic !== true,
     );
     if (protectedRoutes.length === 0) continue;
     const proof = denialProofIn(context, declared);
     readings.set(declared.name, {
       value: proof === undefined ? 1 : 0,
       evidence:
-        proof === undefined
-          ? [{ path: declared.root, name: declared.name }]
-          : [{ path: proof, name: declared.name }],
+        proof === undefined ? [{ path: declared.root, name: declared.name }] : [{ path: proof, name: declared.name }],
     });
   }
   return readings;
@@ -69,8 +55,7 @@ function countPackagesWithoutDenial(context: DoctorContext) {
 export const denialTestsZeroSignal: DoctorSignal = {
   id: "denial-tests-zero",
   issue: "commitment-issues",
-  question:
-    "Does a package with protected routes have no denial test or denial proof?",
+  question: "Does a package with protected routes have no denial test or denial proof?",
   reads: "routes",
   unit: "count",
   direction: "ceiling",

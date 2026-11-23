@@ -28,8 +28,7 @@ function anchor(text, counts) {
 function renderMarkdown(markdown, link) {
   const counts = new Map();
   const renderer = new Renderer();
-  renderer.html = (token) =>
-    token.text.trimStart().startsWith("<!--") ? "" : escape(token.text);
+  renderer.html = (token) => (token.text.trimStart().startsWith("<!--") ? "" : escape(token.text));
   renderer.heading = function (token) {
     const id = anchor(token.text, counts);
     return `<h${token.depth} id="${escape(id)}">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
@@ -74,9 +73,7 @@ function navigation(pages, current) {
 
 function packageLinks(page) {
   if (!page.packagePage) return "";
-  const reference = page.apiSlug
-    ? `<a href="${page.apiSlug}.html">API reference</a>`
-    : "";
+  const reference = page.apiSlug ? `<a href="${page.apiSlug}.html">API reference</a>` : "";
   return `<div class="package-links"><a href="packages.html">All packages</a><a href="#try-it">Try it</a>${reference}</div>`;
 }
 

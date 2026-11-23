@@ -38,15 +38,9 @@ describe("standard dialog actions", () => {
     const actions = footer?.querySelectorAll("button");
 
     expect(footer?.className).toContain("sm:justify-end");
-    expect(
-      Array.from(actions ?? []).map((action) => action.textContent),
-    ).toEqual(["Cancel", "Save"]);
-    expect(
-      screen.getByRole("button", { name: "Cancel" }).dataset["variant"],
-    ).toBe("outline");
-    expect(
-      screen.getByRole("button", { name: "Save" }).dataset["variant"],
-    ).toBe("default");
+    expect(Array.from(actions ?? []).map((action) => action.textContent)).toEqual(["Cancel", "Save"]);
+    expect(screen.getByRole("button", { name: "Cancel" }).dataset["variant"]).toBe("outline");
+    expect(screen.getByRole("button", { name: "Save" }).dataset["variant"]).toBe("default");
   });
 
   it("closes through the dialog contract without submitting a form", () => {
@@ -89,10 +83,9 @@ describe("standard dialog actions", () => {
     );
 
     const footer = document.querySelector('[data-slot="dialog-footer"]');
-    expect(
-      Array.from(footer?.querySelectorAll("button") ?? []).map(
-        (action) => action.textContent,
-      ),
-    ).toEqual(["Close", "Save"]);
+    expect(Array.from(footer?.querySelectorAll("button") ?? []).map((action) => action.textContent)).toEqual([
+      "Close",
+      "Save",
+    ]);
   });
 });

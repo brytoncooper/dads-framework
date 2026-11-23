@@ -1,28 +1,13 @@
 import { apiResponseSchema } from "@dads-framework/core/contract";
-import {
-  forbidden,
-  notFound,
-  unauthorized,
-  validation,
-} from "@dads-framework/core/errors";
-import {
-  defineRawRoute,
-  fromParam,
-  postRoute,
-  requireSession,
-  requires,
-  routeGroup,
-} from "@dads-framework/http";
+import { forbidden, notFound, unauthorized, validation } from "@dads-framework/core/errors";
+import { defineRawRoute, fromParam, postRoute, requireSession, requires, routeGroup } from "@dads-framework/http";
 import {
   TenantInvitationUnavailableError,
   TenantUnavailableError,
   type TenantId,
 } from "@dads-framework/identity/tenants";
 
-import {
-  tenantAccess,
-  type StarterServices,
-} from "../../../libraries/app-runtime/index.js";
+import { tenantAccess, type StarterServices } from "../../../libraries/app-runtime/index.js";
 import {
   tenantInvitationAcceptance,
   tenantInvitationAccepted,
@@ -34,11 +19,7 @@ import { tenantInvitationOpenApiCopy } from "../copy/invitation-openapi.js";
 
 type InvitationServices = Pick<
   StarterServices,
-  | "tenants"
-  | "identity"
-  | "readTenantSessionPolicy"
-  | "invitationOrigin"
-  | "enqueueTenantInvitation"
+  "tenants" | "identity" | "readTenantSessionPolicy" | "invitationOrigin" | "enqueueTenantInvitation"
 >;
 
 const permission = tenantAccess.tenant.permissions.manage_members;
@@ -53,12 +34,7 @@ export function tenantInvitationRoutes(services: InvitationServices) {
       body: tenantInvitationInput,
       response: tenantInvitationIssued,
       handler: async ({ body, params, subject }) => {
-        const issued = await requestInvitation(
-          services,
-          subject.id,
-          params.tenantId,
-          body.email,
-        );
+        const issued = await requestInvitation(services, subject.id, params.tenantId, body.email);
         try {
           await services.enqueueTenantInvitation(body.email, issued.token);
         } catch {
@@ -71,12 +47,7 @@ export function tenantInvitationRoutes(services: InvitationServices) {
   ]);
 }
 
-async function requestInvitation(
-  { tenants }: InvitationServices,
-  actor: string,
-  tenant: TenantId,
-  email: string,
-) {
+async function requestInvitation({ tenants }: InvitationServices, actor: string, tenant: TenantId, email: string) {
   try {
     return await tenants.invitations.issue(actor, tenant, email);
   } catch (error) {
@@ -87,12 +58,7 @@ async function requestInvitation(
   }
 }
 
-function acceptRoute({
-  tenants,
-  identity,
-  invitationOrigin,
-  readTenantSessionPolicy,
-}: InvitationServices) {
+function acceptRoute({ tenants, identity, invitationOrigin, readTenantSessionPolicy }: InvitationServices) {
   // Acceptance re-reads the verified identity from its cookie. Typed route
   // handlers intentionally receive an authorization subject, not headers.
   return defineRawRoute({
@@ -111,8 +77,7 @@ function acceptRoute({
       },
       responses: {
         "200": {
-          description:
-            tenantInvitationOpenApiCopy["tenants.invitation.joined"].en,
+          description: tenantInvitationOpenApiCopy["tenants.invitation.joined"].en,
           content: {
             "application/json": {
               schema: { $ref: "#/components/schemas/TenantInvitationAccepted" },
@@ -127,42 +92,18 @@ function acceptRoute({
     },
     handler: async ({ request, reply, subject }) => {
       if (request.headers.origin !== invitationOrigin)
-        throw forbidden(
-          "INVITATION_ORIGIN",
-          "The request origin is not allowed.",
-        );
-      const policy = await invitationSession(
-        identity,
-        readTenantSessionPolicy,
-        request.headers.cookie,
-      );
+        throw forbidden("INVITATION_ORIGIN", "The request origin is not allowed.");
+      const policy = await invitationSession(identity, readTenantSessionPolicy, request.headers.cookie);
       const signedIn = policy?.session ?? null;
-      if (
-        signedIn === null ||
-        !signedIn.account.emailVerified ||
-        signedIn.account.id !== subject?.id
-      ) {
-        throw unauthorized(
-          "IDENTITY_REQUIRED",
-          "Sign in with a verified account.",
-        );
+      if (signedIn === null || !signedIn.account.emailVerified || signedIn.account.id !== subject?.id) {
+        throw unauthorized("IDENTITY_REQUIRED", "Sign in with a verified account.");
       }
       const input = tenantInvitationAcceptance.safeParse(request.body);
-      if (!input.success)
-        throw validation(
-          "INVALID_INVITATION_INPUT",
-          "Supply an invitation token.",
-        );
-      const tenantId = await redeemInvitation(
-        tenants,
-        input.data.token,
-        signedIn.account,
-        ({ tenantId }) =>
-          Promise.resolve(policy?.allowsTenant(tenantId) === true),
+      if (!input.success) throw validation("INVALID_INVITATION_INPUT", "Supply an invitation token.");
+      const tenantId = await redeemInvitation(tenants, input.data.token, signedIn.account, ({ tenantId }) =>
+        Promise.resolve(policy?.allowsTenant(tenantId) === true),
       );
-      await reply
-        .header("cache-control", "no-store")
-        .send({ data: { tenantId } });
+      await reply.header("cache-control", "no-store").send({ data: { tenantId } });
     },
   });
 }
@@ -174,8 +115,7 @@ async function invitationSession(
 ) {
   if (typeof cookie !== "string") return null;
   const headers = new Headers({ cookie });
-  if (readTenantSessionPolicy !== undefined)
-    return readTenantSessionPolicy(headers);
+  if (readTenantSessionPolicy !== undefined) return readTenantSessionPolicy(headers);
   const session = await identity.readSession(headers);
   return session === null ? null : { session, allowsTenant: () => true };
 }
@@ -183,21 +123,14 @@ async function invitationSession(
 async function redeemInvitation(
   tenants: InvitationServices["tenants"],
   token: string,
-  account: Parameters<
-    InvitationServices["tenants"]["invitations"]["accept"]
-  >[1],
-  authorize: Parameters<
-    InvitationServices["tenants"]["invitations"]["accept"]
-  >[2],
+  account: Parameters<InvitationServices["tenants"]["invitations"]["accept"]>[1],
+  authorize: Parameters<InvitationServices["tenants"]["invitations"]["accept"]>[2],
 ) {
   try {
     return await tenants.invitations.accept(token, account, authorize);
   } catch (error) {
     if (error instanceof TenantInvitationUnavailableError) {
-      throw notFound(
-        "TENANT_INVITATION_UNAVAILABLE",
-        "The invitation is unavailable.",
-      );
+      throw notFound("TENANT_INVITATION_UNAVAILABLE", "The invitation is unavailable.");
     }
     throw error;
   }

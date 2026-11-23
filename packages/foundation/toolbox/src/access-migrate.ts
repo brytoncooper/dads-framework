@@ -3,15 +3,8 @@
 import { readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseZed, type AccessIrDefinition } from "@dads-framework/access";
-import {
-  diffAccessIrDefinitions,
-  type AccessDiffBreakingChange,
-  type AccessSchemaDiff,
-} from "./access-diff.js";
-import {
-  formatBreakingChange,
-  formatSafeChange,
-} from "./access-diff-format.js";
+import { diffAccessIrDefinitions, type AccessDiffBreakingChange, type AccessSchemaDiff } from "./access-diff.js";
+import { formatBreakingChange, formatSafeChange } from "./access-diff-format.js";
 import { loadAccessSource } from "./access-source-loader.js";
 import { readZedFile, writeTextArtifact } from "./access-zed-io.js";
 import { isMissingPathError } from "./missing-path-error.js";
@@ -67,10 +60,7 @@ export async function scaffoldAccessMigrationFromSources(
     toPath: after.path,
     beforeDefs: before.definitions,
     afterDefs: after.definitions,
-    outDir: resolve(
-      baseDirectory,
-      options.outDir ?? DEFAULT_ACCESS_MIGRATIONS_DIR,
-    ),
+    outDir: resolve(baseDirectory, options.outDir ?? DEFAULT_ACCESS_MIGRATIONS_DIR),
     dryRun: options.dryRun === true,
   });
 }
@@ -80,9 +70,7 @@ export async function scaffoldAccessMigrationFromSources(
  * `NNNN_<slug>` identifier in `outDir`, and scaffold a `defineAccessMigration`
  * module pre-populated with typed `copyRole` / `dropRole` stubs and metadata.
  */
-export function scaffoldAccessMigration(
-  options: ScaffoldAccessMigrationOptions,
-): AccessMigrationScaffoldResult {
+export function scaffoldAccessMigration(options: ScaffoldAccessMigrationOptions): AccessMigrationScaffoldResult {
   const slug = validateSlug(options.slug);
   const baseDirectory = options.cwd ?? process.cwd();
   const fromPath = resolve(baseDirectory, options.fromPath);
@@ -93,10 +81,7 @@ export function scaffoldAccessMigration(
     toPath,
     beforeDefs: parseZed(readZedFile(fromPath)),
     afterDefs: parseZed(readZedFile(toPath)),
-    outDir: resolve(
-      baseDirectory,
-      options.outDir ?? DEFAULT_ACCESS_MIGRATIONS_DIR,
-    ),
+    outDir: resolve(baseDirectory, options.outDir ?? DEFAULT_ACCESS_MIGRATIONS_DIR),
     dryRun: options.dryRun === true,
   });
 }
@@ -161,12 +146,8 @@ function readHighestMigrationNumber(outDir: string): number {
     if (isMissingPathError(error)) {
       return 0;
     }
-    const detail =
-      error instanceof Error ? error.message : "Unable to read directory.";
-    throw new Error(
-      `Unable to read migrations directory ${outDir}: ${detail}`,
-      { cause: error },
-    );
+    const detail = error instanceof Error ? error.message : "Unable to read directory.";
+    throw new Error(`Unable to read migrations directory ${outDir}: ${detail}`, { cause: error });
   }
 
   let highest = 0;
@@ -191,13 +172,8 @@ function renderMigrationModule(input: {
 }): string {
   const stepRender = renderMigrationSteps(input.beforeDefs, input.diff);
   const snapshotLines = renderSnapshotMetadata(input);
-  const stepsHeader = stepRender.usesOps
-    ? "steps: (ops) => ["
-    : "steps: () => [";
-  const bodyLines =
-    stepRender.lines.length === 0
-      ? ["      // No breaking tuple changes detected."]
-      : stepRender.lines;
+  const stepsHeader = stepRender.usesOps ? "steps: (ops) => [" : "steps: () => [";
+  const bodyLines = stepRender.lines.length === 0 ? ["      // No breaking tuple changes detected."] : stepRender.lines;
 
   return [
     `/** Access migration ${input.id}. */`,
@@ -253,21 +229,14 @@ function renderSnapshotMetadata(input: {
   ];
 }
 
-function renderMigrationSteps(
-  beforeDefs: readonly AccessIrDefinition[],
-  diff: AccessSchemaDiff,
-): MigrationStepRender {
+function renderMigrationSteps(beforeDefs: readonly AccessIrDefinition[], diff: AccessSchemaDiff): MigrationStepRender {
   const beforeByName = new Map(beforeDefs.map((def) => [def.wireName, def]));
   const addedRolesByResource = collectAddedRoles(diff);
   const lines: string[] = [];
   let usesOps = false;
 
   for (const change of diff.breaking) {
-    const rendered = renderBreakingChangeStep(
-      change,
-      beforeByName,
-      addedRolesByResource,
-    );
+    const rendered = renderBreakingChangeStep(change, beforeByName, addedRolesByResource);
     lines.push(...rendered.lines);
     if (rendered.usesOps) {
       usesOps = true;
@@ -276,9 +245,7 @@ function renderMigrationSteps(
   return { lines, usesOps };
 }
 
-function collectAddedRoles(
-  diff: AccessSchemaDiff,
-): ReadonlyMap<string, readonly string[]> {
+function collectAddedRoles(diff: AccessSchemaDiff): ReadonlyMap<string, readonly string[]> {
   const map = new Map<string, string[]>();
   for (const change of diff.safe) {
     if (change.kind !== "added-role") continue;
@@ -296,16 +263,9 @@ function renderBreakingChangeStep(
 ): MigrationStepRender {
   switch (change.kind) {
     case "removed-role":
-      return renderRemovedRoleStep(
-        change.resource,
-        change.role,
-        addedRolesByResource.get(change.resource),
-      );
+      return renderRemovedRoleStep(change.resource, change.role, addedRolesByResource.get(change.resource));
     case "removed-resource":
-      return renderRemovedResourceStep(
-        change.resource,
-        beforeByName.get(change.resource),
-      );
+      return renderRemovedResourceStep(change.resource, beforeByName.get(change.resource));
     case "narrowed-role":
       return {
         usesOps: false,
@@ -350,9 +310,7 @@ function renderRemovedResourceStep(
   if (roles.length === 0) {
     return {
       usesOps: false,
-      lines: [
-        `      // Breaking: removed resource ${resource} (no direct roles declared on resource).`,
-      ],
+      lines: [`      // Breaking: removed resource ${resource} (no direct roles declared on resource).`],
     };
   }
   const lines: string[] = [`      // Breaking: removed resource ${resource}`];

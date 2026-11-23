@@ -16,11 +16,7 @@ export async function cloneSpiceDbDatastore(input: {
   const connection = createPostgresConnection(
     { connectionString: input.adminUrl, schema: {}, maxConnections: 1 },
     {
-      error: (context, message) =>
-        input.log?.info(
-          context,
-          message ?? "Postgres snapshot connection error",
-        ),
+      error: (context, message) => input.log?.info(context, message ?? "Postgres snapshot connection error"),
     },
   );
   try {
@@ -29,9 +25,7 @@ export async function cloneSpiceDbDatastore(input: {
       [PREVIOUS_DATABASE],
     );
     await connection.pool.query(`DROP DATABASE IF EXISTS ${PREVIOUS_DATABASE}`);
-    await connection.pool.query(
-      `CREATE DATABASE ${PREVIOUS_DATABASE} TEMPLATE ${input.sourceDatabase}`,
-    );
+    await connection.pool.query(`CREATE DATABASE ${PREVIOUS_DATABASE} TEMPLATE ${input.sourceDatabase}`);
     input.log?.info(
       {
         event: "authorization.schema.snapshot.cloned",

@@ -72,8 +72,7 @@ describe("S3ObjectStorage.getSignedUpload", () => {
       credentials: { accessKeyId: "minioadmin", secretAccessKey: "minioadmin" },
       useBucketInPath: true,
     });
-    const sha256 =
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    const sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
     const upload = await storage.getSignedUpload("photos/one", {
       contentType: "image/png",
@@ -85,9 +84,7 @@ describe("S3ObjectStorage.getSignedUpload", () => {
 
     expect(url.pathname).toBe("/example-application-objects/photos/one");
     expect(url.searchParams.get("X-Amz-Expires")).toBe("600");
-    expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe(
-      "content-length;content-type;host;x-amz-checksum-sha256",
-    );
+    expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe("content-length;content-type;host;x-amz-checksum-sha256");
     expect(url.searchParams.has("x-amz-checksum-sha256")).toBe(false);
     expect(url.searchParams.has("x-amz-checksum-crc32")).toBe(false);
     expect(upload.headers).toEqual({

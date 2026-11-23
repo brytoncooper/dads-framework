@@ -13,12 +13,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import type { ts } from "../scanners/typescript-program.js";
 import {
   declaredNames,
@@ -69,47 +64,28 @@ function deprecationsIn(module: DoctorModule): readonly Deprecation[] {
  * True when a module imports that name from the module that declared it —
  * either by the relative path, or by the name of the package that owns it.
  */
-function importsDeprecation(
-  importer: DoctorModule,
-  deprecated: Deprecation,
-  publishedAs: string | undefined,
-): boolean {
+function importsDeprecation(importer: DoctorModule, deprecated: Deprecation, publishedAs: string | undefined): boolean {
   if (importer.path === deprecated.module.path) return false;
   const specifier = importedBindings(importer).get(deprecated.name);
   if (specifier === undefined) return false;
-  if (
-    resolveRelativeImport(importer.path, specifier).includes(
-      deprecated.module.path,
-    )
-  ) {
+  if (resolveRelativeImport(importer.path, specifier).includes(deprecated.module.path)) {
     return true;
   }
-  return (
-    publishedAs !== undefined && packageOfSpecifier(specifier) === publishedAs
-  );
+  return publishedAs !== undefined && packageOfSpecifier(specifier) === publishedAs;
 }
 
 function countStillConsumed(context: DoctorContext): SignalReadings {
-  const modules = context
-    .program()
-    .modules.filter((module) => isProductionModule(module.path));
-  const publishedAs = new Map(
-    context.packages().map((declared) => [declared.root, declared.name]),
-  );
+  const modules = context.program().modules.filter((module) => isProductionModule(module.path));
+  const publishedAs = new Map(context.packages().map((declared) => [declared.root, declared.name]));
   const deprecations = modules.flatMap(deprecationsIn);
   const readings = new Map<string, SignalReading>();
   for (const deprecated of deprecations) {
     const owner = publishedAs.get(deprecated.module.packageRoot);
-    const importers = modules.filter((module) =>
-      importsDeprecation(module, deprecated, owner),
-    );
+    const importers = modules.filter((module) => importsDeprecation(module, deprecated, owner));
     if (importers.length === 0) continue;
     readings.set(`${deprecated.module.path} ${deprecated.name}`, {
       value: importers.length,
-      evidence: [
-        deprecated.evidence,
-        ...importers.map((module) => ({ path: module.path })),
-      ],
+      evidence: [deprecated.evidence, ...importers.map((module) => ({ path: module.path }))],
     });
   }
   return readings;

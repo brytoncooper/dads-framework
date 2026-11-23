@@ -2,10 +2,7 @@ import { getTableColumns } from "drizzle-orm";
 import { MigrationBuilder } from "node-pg-migrate";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startUnmigratedTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { attachAuditTrigger } from "../attach-audit-trigger.js";
 import { requestLog } from "../generated-tables/request-log.tables.js";
@@ -18,8 +15,7 @@ describe("fresh product audit foundation", () => {
     postgres = await startUnmigratedTestPostgres({ attributed: false });
     const builder = new MigrationBuilder(
       {
-        query: () =>
-          Promise.reject(new Error("Schema assembly performs no I/O")),
+        query: () => Promise.reject(new Error("Schema assembly performs no I/O")),
         select: () => Promise.resolve([]),
       },
       undefined,
@@ -40,11 +36,9 @@ describe("fresh product audit foundation", () => {
   });
 
   it("refuses writes without attribution", async () => {
-    await expect(
-      postgres.pool.query(
-        "INSERT INTO approval_proof(id) VALUES ('unattributed')",
-      ),
-    ).rejects.toMatchObject({ code: "42501" });
+    await expect(postgres.pool.query("INSERT INTO approval_proof(id) VALUES ('unattributed')")).rejects.toMatchObject({
+      code: "42501",
+    });
   });
 
   it("records the actor, reason, and row and refuses audit edits", async () => {
@@ -58,9 +52,7 @@ describe("fresh product audit foundation", () => {
           reason: "Accepted damaged shipment",
         }),
       ]);
-      await client.query(
-        "INSERT INTO approval_proof(id, value) VALUES ('approved', 'yes')",
-      );
+      await client.query("INSERT INTO approval_proof(id, value) VALUES ('approved', 'yes')");
     } finally {
       await client.query("SELECT set_config('dads.audit_actor', '', false)");
       client.release();
@@ -77,23 +69,21 @@ describe("fresh product audit foundation", () => {
         row_after: { id: "approved", value: "yes" },
       },
     ]);
-    await expect(
-      postgres.pool.query("UPDATE audit_log SET actor_id = 'other'"),
-    ).rejects.toMatchObject({ code: "42501" });
+    await expect(postgres.pool.query("UPDATE audit_log SET actor_id = 'other'")).rejects.toMatchObject({
+      code: "42501",
+    });
   });
 
   it("installs the current request and client diagnostic columns", async () => {
     await expect(
-      postgres.pool.query(
-        "SELECT trace_id, exception_fingerprint, db_query_count FROM request_log",
-      ),
+      postgres.pool.query("SELECT trace_id, exception_fingerprint, db_query_count FROM request_log"),
     ).resolves.toMatchObject({ rows: [] });
-    await expect(
-      postgres.pool.query("SELECT fingerprint FROM client_diagnostic_events"),
-    ).resolves.toMatchObject({ rows: [] });
-    await expect(
-      postgres.pool.query("SELECT fingerprint FROM known_fault_fingerprints"),
-    ).resolves.toMatchObject({ rows: [] });
+    await expect(postgres.pool.query("SELECT fingerprint FROM client_diagnostic_events")).resolves.toMatchObject({
+      rows: [],
+    });
+    await expect(postgres.pool.query("SELECT fingerprint FROM known_fault_fingerprints")).resolves.toMatchObject({
+      rows: [],
+    });
   });
 
   // The shared request-log sink inserts every column of the kit's table
@@ -103,9 +93,7 @@ describe("fresh product audit foundation", () => {
       "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'request_log'",
     );
     const columns = new Set(installed.rows.map((row) => row.column_name));
-    const written = Object.values(getTableColumns(requestLog)).map(
-      (column) => column.name,
-    );
+    const written = Object.values(getTableColumns(requestLog)).map((column) => column.name);
     expect(written.filter((name) => !columns.has(name))).toEqual([]);
   });
 });

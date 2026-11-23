@@ -3,10 +3,7 @@ import { join, relative, sep } from "node:path";
 
 import type { ShippedDatabaseMigrationFile } from "./domain-migration.js";
 import { fileSha256 } from "./migration-checksum.js";
-import type {
-  MigrationSource,
-  MigrationWorkspace,
-} from "./migration-workspace.js";
+import type { MigrationSource, MigrationWorkspace } from "./migration-workspace.js";
 
 /**
  * Where migration files live and what each one's path says — owner, journal
@@ -30,9 +27,7 @@ export async function listShippedDatabaseMigrations(
   const relativePaths = (await listMigrationRelativePaths(workspace)).toSorted(
     (left, right) =>
       idFromFileName(left).localeCompare(idFromFileName(right)) ||
-      journalNameFromRelativePath(left).localeCompare(
-        journalNameFromRelativePath(right),
-      ),
+      journalNameFromRelativePath(left).localeCompare(journalNameFromRelativePath(right)),
   );
   return Promise.all(
     relativePaths.map(async (relativePath) => ({
@@ -49,9 +44,7 @@ export async function listShippedDatabaseMigrations(
  * A missing required source throws rather than reading as "nothing to apply":
  * the runner would otherwise apply nothing and log success.
  */
-export async function listMigrationRelativePaths(
-  workspace: MigrationWorkspace,
-): Promise<string[]> {
+export async function listMigrationRelativePaths(workspace: MigrationWorkspace): Promise<string[]> {
   const files: string[] = [];
   for (const source of workspace.sources) {
     const directory = join(workspace.root, source.root);
@@ -66,15 +59,10 @@ export async function listMigrationRelativePaths(
     }
     await walkDirectory(workspace.root, directory, files);
   }
-  return files.filter(
-    (relativePath) => sourceOf(workspace, relativePath) !== undefined,
-  );
+  return files.filter((relativePath) => sourceOf(workspace, relativePath) !== undefined);
 }
 
-function sourceOf(
-  workspace: MigrationWorkspace,
-  relativePath: string,
-): MigrationSource | undefined {
+function sourceOf(workspace: MigrationWorkspace, relativePath: string): MigrationSource | undefined {
   return workspace.sources.find((source) => source.files.test(relativePath));
 }
 
@@ -87,11 +75,7 @@ async function directoryExists(directory: string): Promise<boolean> {
   }
 }
 
-async function walkDirectory(
-  workspaceRoot: string,
-  directory: string,
-  files: string[],
-): Promise<void> {
+async function walkDirectory(workspaceRoot: string, directory: string, files: string[]): Promise<void> {
   let entries;
   try {
     entries = await readdir(directory, { withFileTypes: true });
@@ -113,10 +97,7 @@ async function walkDirectory(
   );
 }
 
-export function ownerFromRelativePath(
-  workspace: MigrationWorkspace,
-  relativePath: string,
-): string {
+export function ownerFromRelativePath(workspace: MigrationWorkspace, relativePath: string): string {
   const source = sourceOf(workspace, relativePath);
   if (source?.owner !== undefined) return source.owner;
   const owner = source?.files.exec(relativePath)?.[1];
@@ -139,9 +120,7 @@ export function idFromFileName(relativePath: string): string {
   }
   const match = MIGRATION_FILE_NAME.exec(fileName);
   if (match?.[1] === undefined) {
-    throw new Error(
-      `migration ${relativePath} must be named <utcTimestamp>_<slug>.migration.ts`,
-    );
+    throw new Error(`migration ${relativePath} must be named <utcTimestamp>_<slug>.migration.ts`);
   }
   return match[1];
 }

@@ -12,11 +12,7 @@
 
 import type { AuditActor } from "@dads-framework/core/audit-actor";
 import type { RequestWorkTally } from "@dads-framework/core/runtime/request-work";
-import {
-  CLIENT_CONTEXT_HEADER,
-  decodeClientContext,
-  type ClientContext,
-} from "@dads-framework/core/contract";
+import { CLIENT_CONTEXT_HEADER, decodeClientContext, type ClientContext } from "@dads-framework/core/contract";
 
 /**
  * How the request ended, in the vocabulary `request_log.decision` stores.
@@ -25,8 +21,7 @@ import {
  * only place the difference survives); `not-found` is nothing there to say no
  * about; `error` is every other unhappy status, the server's own 5xx included.
  */
-export type RequestDecision =
-  "allow" | "denied" | "not-found" | "unauthenticated" | "error";
+export type RequestDecision = "allow" | "denied" | "not-found" | "unauthenticated" | "error";
 
 /** What access settled, as the capture hook stashed it during the request. */
 export type RequestAccessFacts = {
@@ -40,9 +35,7 @@ export type RequestAccessFacts = {
 };
 
 /** Fastify's header bag, narrowed to what a pure function can be handed. */
-export type RequestRecordHeaders = Readonly<
-  Record<string, string | readonly string[] | undefined>
->;
+export type RequestRecordHeaders = Readonly<Record<string, string | readonly string[] | undefined>>;
 
 export type RequestRecordInput = {
   readonly requestId: string;
@@ -77,8 +70,7 @@ export type RequestRecordInput = {
    * and stack stay in the log line keyed by this request id, because a message
    * can quote whatever a user typed and this table is bounded by retention.
    */
-  readonly exception:
-    { readonly type: string; readonly fingerprint: string } | undefined;
+  readonly exception: { readonly type: string; readonly fingerprint: string } | undefined;
 };
 
 /**
@@ -237,9 +229,7 @@ function whatFailed(exception: RequestRecordInput["exception"]): {
 }
 
 /** The actor in force, or nobody — a request outside any context is anonymous. */
-function whoAsked(
-  actor: AuditActor | undefined,
-): Pick<RequestRecord, "actorKind" | "actorId"> {
+function whoAsked(actor: AuditActor | undefined): Pick<RequestRecord, "actorKind" | "actorId"> {
   if (actor === undefined) {
     return {
       actorKind: "anonymous",
@@ -255,10 +245,7 @@ function whoAsked(
 /** Nulls throughout for a response that never reached access enforcement. */
 function whatAccessSettled(
   access: RequestAccessFacts | undefined,
-): Pick<
-  RequestRecord,
-  "authMethod" | "accessKind" | "permission" | "resourceType" | "resourceId"
-> {
+): Pick<RequestRecord, "authMethod" | "accessKind" | "permission" | "resourceType" | "resourceId"> {
   if (access === undefined) {
     return {
       authMethod: null,
@@ -280,15 +267,7 @@ function whatAccessSettled(
 /** The allowlisted environment — the only place request headers are read. */
 function whereItCameFrom(
   input: RequestRecordInput,
-): Pick<
-  RequestRecord,
-  | "ip"
-  | "forwardedFor"
-  | "userAgent"
-  | "clientHints"
-  | "acceptLanguage"
-  | "clientContext"
-> {
+): Pick<RequestRecord, "ip" | "forwardedFor" | "userAgent" | "clientHints" | "acceptLanguage" | "clientContext"> {
   return {
     ip: input.ip ?? null,
     forwardedFor: headerValue(input.headers, FORWARDED_FOR_HEADER),
@@ -307,10 +286,7 @@ function whereItCameFrom(
  * the status it produced, which is why `not-found` from enforcement becomes
  * `denied` while a plain 404 stays `not-found`.
  */
-function resolveDecision(
-  status: number,
-  access: RequestAccessFacts | undefined,
-): RequestDecision {
+function resolveDecision(status: number, access: RequestAccessFacts | undefined): RequestDecision {
   if (status >= 500) return "error";
   if (access?.outcome === "unauthenticated" || status === 401) {
     return "unauthenticated";
@@ -335,11 +311,7 @@ function maskUnmatchedPath(url: string): string {
   const [rawPath = ""] = url.split("?");
   return rawPath
     .split("/")
-    .map((segment) =>
-      segment.length === 0 || NON_IDENTIFYING_SEGMENT.test(segment)
-        ? segment
-        : ":id",
-    )
+    .map((segment) => (segment.length === 0 || NON_IDENTIFYING_SEGMENT.test(segment) ? segment : ":id"))
     .join("/");
 }
 
@@ -348,27 +320,20 @@ function maskUnmatchedPath(url: string): string {
  * occurrence rather than a joined blob: the values here are diagnostic, and
  * the first is the one the client meant.
  */
-function headerValue(
-  headers: RequestRecordHeaders,
-  name: string,
-): string | null {
+function headerValue(headers: RequestRecordHeaders, name: string): string | null {
   const value = firstHeaderValue(headers[name]);
   if (value === undefined || value.length === 0) return null;
   return value.slice(0, MAX_HEADER_VALUE_LENGTH);
 }
 
 /** A repeated header arrives as an array; only its first occurrence is read. */
-function firstHeaderValue(
-  raw: string | readonly string[] | undefined,
-): string | undefined {
+function firstHeaderValue(raw: string | readonly string[] | undefined): string | undefined {
   if (raw === undefined) return undefined;
   return typeof raw === "string" ? raw : raw[0];
 }
 
 /** Every `sec-ch-ua*` header and nothing else, or null when none were sent. */
-function clientHintsOf(
-  headers: RequestRecordHeaders,
-): Record<string, string> | null {
+function clientHintsOf(headers: RequestRecordHeaders): Record<string, string> | null {
   const hints: Record<string, string> = {};
   let kept = 0;
   for (const name of Object.keys(headers)) {

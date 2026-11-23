@@ -3,15 +3,9 @@ import type { AuditActor } from "@dads-framework/core/audit-actor";
 import { requestIdOf } from "./request-id.js";
 
 /** Receives ingress correlation and the resolved audit actor's kind. */
-export type RequestTrace = (facts: {
-  readonly requestId: string;
-  readonly actorKind: AuditActor["kind"];
-}) => void;
+export type RequestTrace = (facts: { readonly requestId: string; readonly actorKind: AuditActor["kind"] }) => void;
 
-const observers = new WeakMap<
-  object,
-  { readonly observe: RequestTrace; readonly requestId: string }
->();
+const observers = new WeakMap<object, { readonly observe: RequestTrace; readonly requestId: string }>();
 
 export function beginRequestTrace(
   request: Parameters<typeof requestIdOf>[0],
@@ -30,11 +24,7 @@ export function annotateRequestActor(request: object, actor: AuditActor): void {
   }
 }
 
-function annotate(
-  observe: RequestTrace,
-  requestId: string,
-  actorKind: AuditActor["kind"],
-): void {
+function annotate(observe: RequestTrace, requestId: string, actorKind: AuditActor["kind"]): void {
   try {
     observe({ requestId, actorKind });
   } catch {

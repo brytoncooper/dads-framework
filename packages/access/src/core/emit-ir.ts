@@ -1,30 +1,12 @@
 import { isGrantableRole } from "./grantable.js";
-import {
-  isEntityHandleHolder,
-  isExpirableHolder,
-  isUsersetHolder,
-  isWildcardHolder,
-} from "./holders.js";
+import { isEntityHandleHolder, isExpirableHolder, isUsersetHolder, isWildcardHolder } from "./holders.js";
 import type { SingleRoleValue } from "./holders.js";
-import type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./ir.js";
 import { isPermissionToken, isRoleToken } from "./refs.js";
-import type {
-  PermissionTerm,
-  RoleHolder,
-  ThroughAllTerm,
-  ThroughTerm,
-} from "./refs.js";
+import type { PermissionTerm, RoleHolder, ThroughAllTerm, ThroughTerm } from "./refs.js";
 import type { AccessModel, ResolvedAccessDefinition } from "./access-model.js";
 
-function isHolderList(
-  holder: RoleHolder,
-): holder is readonly SingleRoleValue[] {
+function isHolderList(holder: RoleHolder): holder is readonly SingleRoleValue[] {
   return Array.isArray(holder);
 }
 
@@ -41,9 +23,7 @@ function subjectsForHolder(holder: RoleHolder): readonly AccessIrSubject[] {
   }
   if (isGrantableRole(holder)) {
     const direct = subjectsForHolder(holder.directSubject);
-    return holder.groupSubject === undefined
-      ? direct
-      : [...direct, ...subjectsForHolder(holder.groupSubject)];
+    return holder.groupSubject === undefined ? direct : [...direct, ...subjectsForHolder(holder.groupSubject)];
   }
   if (isWildcardHolder(holder)) {
     return [{ kind: "wildcard", wireName: holder.entity.wireName }];
@@ -67,9 +47,7 @@ function irArrowTerm(term: ThroughTerm | ThroughAllTerm): AccessIrTerm {
   return {
     kind: term.kind,
     roleName: term.role.roleName,
-    targetPermission: isPermissionToken(term.target)
-      ? term.target.permissionName
-      : term.target.roleName,
+    targetPermission: isPermissionToken(term.target) ? term.target.permissionName : term.target.roleName,
   };
 }
 
@@ -115,9 +93,7 @@ function irTerm(term: PermissionTerm, ownerWireName: string): AccessIrTerm {
   };
 }
 
-function irRoles(
-  definition: ResolvedAccessDefinition,
-): readonly AccessIrRole[] {
+function irRoles(definition: ResolvedAccessDefinition): readonly AccessIrRole[] {
   return Object.values(definition.roles).map((role) => ({
     name: role.roleName,
     subjects: subjectsForHolder(role.holder),
@@ -128,29 +104,19 @@ function irRoles(
  * Lower sealed `access()` definitions into the schema IR the emitter and
  * visualizer share.
  */
-export function emitAccessIr(
-  model: AccessModel,
-): readonly AccessIrDefinition[] {
+export function emitAccessIr(model: AccessModel): readonly AccessIrDefinition[] {
   return model.definitions.map(irDefinition);
 }
 
-function irDefinition(
-  definition: ResolvedAccessDefinition,
-): AccessIrDefinition {
+function irDefinition(definition: ResolvedAccessDefinition): AccessIrDefinition {
   const owner = definition.entity.wireName;
   return {
     wireName: owner,
     roles: irRoles(definition),
-    permissions: Object.entries(definition.expressions).map(([name, terms]) =>
-      irPermission(owner, name, terms),
-    ),
+    permissions: Object.entries(definition.expressions).map(([name, terms]) => irPermission(owner, name, terms)),
   };
 }
 
-function irPermission(
-  owner: string,
-  name: string,
-  terms: readonly PermissionTerm[],
-): AccessIrPermission {
+function irPermission(owner: string, name: string, terms: readonly PermissionTerm[]): AccessIrPermission {
   return { name, terms: terms.map((term) => irTerm(term, owner)) };
 }

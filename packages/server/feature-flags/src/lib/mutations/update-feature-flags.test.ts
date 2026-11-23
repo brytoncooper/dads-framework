@@ -19,12 +19,7 @@ const second = featureFlagDefinitionFactory({ slug: "orders.second" });
 
 function setUp(tenants = new FakeTenantDirectory()) {
   const store = new InMemoryFeatureFlagStore();
-  const mutation = new UpdateFeatureFlags(
-    [first, second],
-    store,
-    tenants,
-    new FixedClock(NOW),
-  );
+  const mutation = new UpdateFeatureFlags([first, second], store, tenants, new FixedClock(NOW));
   return { store, mutation };
 }
 
@@ -49,9 +44,7 @@ describe("UpdateFeatureFlags", () => {
   });
 
   it("records each change in history with its batch, actor, time and note", async () => {
-    const { store, mutation } = setUp(
-      new FakeTenantDirectory().name("t-1", "Acme"),
-    );
+    const { store, mutation } = setUp(new FakeTenantDirectory().name("t-1", "Acme"));
     const states = await mutation.execute({
       actorId: "user-1",
       request: {
@@ -96,9 +89,7 @@ describe("UpdateFeatureFlags", () => {
   });
 
   it("refuses a tenant the application says is not active, writing nothing", async () => {
-    const { store, mutation } = setUp(
-      new FakeTenantDirectory().deactivate("gone"),
-    );
+    const { store, mutation } = setUp(new FakeTenantDirectory().deactivate("gone"));
     await expect(
       mutation.execute({
         actorId: "user-1",
@@ -123,9 +114,7 @@ describe("UpdateFeatureFlags", () => {
       mutation.execute({
         actorId: "user-1",
         request: {
-          changes: [
-            { slug: "orders.unknown", expectedRevision: 0, mode: "OFF" },
-          ],
+          changes: [{ slug: "orders.unknown", expectedRevision: 0, mode: "OFF" }],
         },
       }),
     ).rejects.toMatchObject({ code: "FEATURE_FLAG_NOT_FOUND" });

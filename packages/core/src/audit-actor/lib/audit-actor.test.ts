@@ -64,18 +64,15 @@ describe("auditActorSchema", () => {
     expect(parseAuditActor(serializeAuditActor(actor))).toEqual(actor);
   });
 
-  it.each(["", "robot !", "unattributed"])(
-    "rejects invalid actor kind %s",
-    (kind) => {
-      expect(
-        auditActorSchema.safeParse({
-          kind,
-          id: "actor-1",
-          requestId: REQUEST_ID,
-        }).success,
-      ).toBe(false);
-    },
-  );
+  it.each(["", "robot !", "unattributed"])("rejects invalid actor kind %s", (kind) => {
+    expect(
+      auditActorSchema.safeParse({
+        kind,
+        id: "actor-1",
+        requestId: REQUEST_ID,
+      }).success,
+    ).toBe(false);
+  });
 
   it("rejects an unknown key rather than dropping it", () => {
     expect(
@@ -89,10 +86,7 @@ describe("auditActorSchema", () => {
   });
 
   it("rejects an empty request id, which would attribute a row to nothing", () => {
-    expect(
-      auditActorSchema.safeParse({ kind: "user", id: "user-1", requestId: "" })
-        .success,
-    ).toBe(false);
+    expect(auditActorSchema.safeParse({ kind: "user", id: "user-1", requestId: "" }).success).toBe(false);
   });
 
   it("rejects a reason longer than the column admits", () => {
@@ -143,12 +137,7 @@ describe("serializeAuditActor and parseAuditActor", () => {
       reason: "escalation",
     });
 
-    expect(Object.keys(storedFields(stored))).toEqual([
-      "kind",
-      "id",
-      "requestId",
-      "reason",
-    ]);
+    expect(Object.keys(storedFields(stored))).toEqual(["kind", "id", "requestId", "reason"]);
   });
 
   it("stores the OAuth client a person acted through under the keys the trigger reads", () => {

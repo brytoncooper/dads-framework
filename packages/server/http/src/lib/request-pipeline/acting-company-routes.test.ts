@@ -4,11 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { bodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";
-import {
-  withAuthorizationContext,
-  fromQuery,
-  requireSession,
-} from "../route/access.js";
+import { withAuthorizationContext, fromQuery, requireSession } from "../route/access.js";
 import { getRoute } from "../route/get-route.js";
 import { routeGroup } from "../route/route-group.js";
 import { registerRoutes } from "./register-routes.js";
@@ -23,8 +19,7 @@ afterEach(async () => {
 
 async function buildCompanyApp(
   perMinute: number,
-  actorFor: (organizationId: string) => string = (organizationId) =>
-    `${organizationId}/person`,
+  actorFor: (organizationId: string) => string = (organizationId) => `${organizationId}/person`,
 ) {
   const app = await createHttpApp({
     nodeEnv: "test",
@@ -36,10 +31,7 @@ async function buildCompanyApp(
       getRoute({
         route: { method: "GET", template: "/company-actor" },
         summary: "Inspect the resolved business actor and audit identity",
-        access: withAuthorizationContext(
-          requireSession(),
-          fromQuery("actingOrganizationId"),
-        ),
+        access: withAuthorizationContext(requireSession(), fromQuery("actingOrganizationId")),
         capabilities: { rateLimit: { perMinute } },
         query: z.object({ actingOrganizationId: z.enum(["a", "b"]) }),
         response: z.object({

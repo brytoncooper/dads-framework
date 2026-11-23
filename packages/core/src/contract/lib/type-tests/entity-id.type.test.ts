@@ -46,12 +46,8 @@ describe("entityIdSchema — nominal typing", () => {
   });
 
   it("survives .optional() and .nullable()", () => {
-    expectTypeOf<
-      z.output<ReturnType<typeof alphaIdSchema.optional>>
-    >().toEqualTypeOf<AlphaId | undefined>();
-    expectTypeOf<
-      z.output<ReturnType<typeof alphaIdSchema.nullable>>
-    >().toEqualTypeOf<AlphaId | null>();
+    expectTypeOf<z.output<ReturnType<typeof alphaIdSchema.optional>>>().toEqualTypeOf<AlphaId | undefined>();
+    expectTypeOf<z.output<ReturnType<typeof alphaIdSchema.nullable>>>().toEqualTypeOf<AlphaId | null>();
     expect(alphaIdSchema.nullable().parse(null)).toBeNull();
   });
 });

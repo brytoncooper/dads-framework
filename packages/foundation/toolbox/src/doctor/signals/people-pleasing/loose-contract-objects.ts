@@ -28,12 +28,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { manifestRootOf, readPackageGraph } from "../scanners/package-graph.js";
 import { declaresRoutes } from "../scanners/response-code.js";
 import {
@@ -116,18 +111,14 @@ function commentLinesAbove(lines: readonly string[], line: number): string[] {
 /** True when the comment block above the call names its authority. */
 function isEscaped(module: DoctorModule, node: ts.Node): boolean {
   const lines = module.source.text.split("\n");
-  return commentLinesAbove(lines, lineOf(module, node)).some((text) =>
-    NAMED_ESCAPE.test(text),
-  );
+  return commentLinesAbove(lines, lineOf(module, node)).some((text) => NAMED_ESCAPE.test(text));
 }
 
 /** The package roots whose manifest names a contract package. */
 function contractRoots(context: DoctorContext): ReadonlySet<string> {
   return new Set(
     readPackageGraph(context)
-      .manifests.filter((manifest) =>
-        CONTRACT_PACKAGE.test(manifest.name ?? ""),
-      )
+      .manifests.filter((manifest) => CONTRACT_PACKAGE.test(manifest.name ?? ""))
       .map((manifest) => manifestRootOf(manifest)),
   );
 }

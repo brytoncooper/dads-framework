@@ -28,10 +28,7 @@ Save as `record-audit.mts` and run `npx tsx record-audit.mts`.
 ```ts
 import { randomUUID } from "node:crypto";
 import { DrizzleAuditLogReader } from "@dads-framework/audit";
-import {
-  currentAuditActor,
-  withSystemActor,
-} from "@dads-framework/core/audit-actor";
+import { currentAuditActor, withSystemActor } from "@dads-framework/core/audit-actor";
 import { createPostgresConnection } from "@dads-framework/postgres";
 
 const connectionString = process.env.DATABASE_URL;
@@ -49,27 +46,18 @@ try {
   const id = randomUUID();
   const workspace = "audit-example";
   await withSystemActor("example-import", () =>
-    connection.pool.query(
-      "INSERT INTO documents (id, workspace_key, project_key) VALUES ($1, $2, $3)",
-      [id, workspace, "example-project"],
-    ),
+    connection.pool.query("INSERT INTO documents (id, workspace_key, project_key) VALUES ($1, $2, $3)", [
+      id,
+      workspace,
+      "example-project",
+    ]),
   );
 
   const reader = new DrizzleAuditLogReader(connection.drizzle);
   const filter = { record: { tableName: "documents", rowKey: { id } } };
-  const rows = await reader.listRows(
-    { kind: "application", values: { workspace } },
-    filter,
-    null,
-    10,
-  );
+  const rows = await reader.listRows({ kind: "application", values: { workspace } }, filter, null, 10);
   console.log(rows.map(({ operation, actorId }) => [operation, actorId]));
-  const outside = await reader.listRows(
-    { kind: "application", values: { workspace: "unrelated" } },
-    filter,
-    null,
-    10,
-  );
+  const outside = await reader.listRows({ kind: "application", values: { workspace: "unrelated" } }, filter, null, 10);
   console.log(outside.length);
 } finally {
   await connection.close();

@@ -1,9 +1,6 @@
 import type { Identity, IdentitySession } from "../../index.js";
 import type { configureBetterAuth } from "./configure-better-auth.js";
-import {
-  enterpriseProviderBinding,
-  type EnterpriseSsoProvider,
-} from "./enterprise-options.js";
+import { enterpriseProviderBinding, type EnterpriseSsoProvider } from "./enterprise-options.js";
 import { forEmail } from "./enterprise-plugin.js";
 
 export type EnterpriseSsoSession = IdentitySession & {
@@ -14,10 +11,7 @@ export type EnterpriseSsoSession = IdentitySession & {
 
 export type EnterpriseBetterAuthIdentity = Identity & {
   /** Authenticate the user for a tenant. Applications still authorize membership separately. */
-  readonly readTenantSession: (
-    headers: Headers,
-    tenantId: string,
-  ) => Promise<IdentitySession | null>;
+  readonly readTenantSession: (headers: Headers, tenantId: string) => Promise<IdentitySession | null>;
   /** Snapshot a verified session to check tenant policy without another database lookup. */
   readonly readTenantSessionPolicy: (headers: Headers) => Promise<{
     readonly session: IdentitySession;
@@ -41,16 +35,9 @@ export function createIdentitySessionReaders(
     const current = await vendor.api.getSession({ headers });
     if (current === null || !current.user.emailVerified) return null;
     const provider = forEmail(providers, current.user.email);
-    const sessionBinding =
-      "ssoProviderBinding" in current.session
-        ? current.session.ssoProviderBinding
-        : undefined;
+    const sessionBinding = "ssoProviderBinding" in current.session ? current.session.ssoProviderBinding : undefined;
     const hasProviderSession = sessionMatchesProvider(sessionBinding, provider);
-    if (
-      !hasProviderSession &&
-      (provider?.mode === "required" || sessionBinding != null)
-    )
-      return null;
+    if (!hasProviderSession && (provider?.mode === "required" || sessionBinding != null)) return null;
     return { current, provider: hasProviderSession ? provider : undefined };
   }
 
@@ -59,46 +46,41 @@ export function createIdentitySessionReaders(
     return context === null ? null : identityView(context.current);
   };
 
-  const readEnterpriseSession: EnterpriseBetterAuthIdentity["readEnterpriseSession"] =
-    async (headers, tenantId, maxAgeMs) => {
-      const context = await readCurrent(headers);
-      if (context === null || context.provider?.tenantId !== tenantId)
-        return null;
-      const authenticatedAt = context.current.session.createdAt;
-      if (!withinAge(authenticatedAt, maxAgeMs)) return null;
-      return {
-        ...identityView(context.current),
-        providerId: context.provider.id,
-        tenantId,
-        authenticatedAt,
-      };
+  const readEnterpriseSession: EnterpriseBetterAuthIdentity["readEnterpriseSession"] = async (
+    headers,
+    tenantId,
+    maxAgeMs,
+  ) => {
+    const context = await readCurrent(headers);
+    if (context === null || context.provider?.tenantId !== tenantId) return null;
+    const authenticatedAt = context.current.session.createdAt;
+    if (!withinAge(authenticatedAt, maxAgeMs)) return null;
+    return {
+      ...identityView(context.current),
+      providerId: context.provider.id,
+      tenantId,
+      authenticatedAt,
     };
+  };
 
-  const requiredTenants = new Set(
-    providers
-      .filter(({ mode }) => mode === "required")
-      .map(({ tenantId }) => tenantId),
-  );
-  const readTenantSessionPolicy: EnterpriseBetterAuthIdentity["readTenantSessionPolicy"] =
-    async (headers) => {
-      const context = await readCurrent(headers);
-      if (context === null) return null;
-      const session = identityView(context.current);
-      const expiresAt = session.expiresAt.getTime();
-      const ssoTenantId = context.provider?.tenantId;
-      return {
-        session,
-        allowsTenant: (tenantId) =>
-          expiresAt > Date.now() &&
-          (ssoTenantId === tenantId || !requiredTenants.has(tenantId)),
-      };
+  const requiredTenants = new Set(providers.filter(({ mode }) => mode === "required").map(({ tenantId }) => tenantId));
+  const readTenantSessionPolicy: EnterpriseBetterAuthIdentity["readTenantSessionPolicy"] = async (headers) => {
+    const context = await readCurrent(headers);
+    if (context === null) return null;
+    const session = identityView(context.current);
+    const expiresAt = session.expiresAt.getTime();
+    const ssoTenantId = context.provider?.tenantId;
+    return {
+      session,
+      allowsTenant: (tenantId) =>
+        expiresAt > Date.now() && (ssoTenantId === tenantId || !requiredTenants.has(tenantId)),
     };
+  };
 
-  const readTenantSession: EnterpriseBetterAuthIdentity["readTenantSession"] =
-    async (headers, tenantId) => {
-      const policy = await readTenantSessionPolicy(headers);
-      return policy?.allowsTenant(tenantId) ? policy.session : null;
-    };
+  const readTenantSession: EnterpriseBetterAuthIdentity["readTenantSession"] = async (headers, tenantId) => {
+    const policy = await readTenantSessionPolicy(headers);
+    return policy?.allowsTenant(tenantId) ? policy.session : null;
+  };
 
   return {
     readSession,
@@ -108,23 +90,13 @@ export function createIdentitySessionReaders(
   };
 }
 
-function sessionMatchesProvider(
-  binding: unknown,
-  provider: EnterpriseSsoProvider | undefined,
-): boolean {
-  return (
-    typeof binding === "string" &&
-    provider !== undefined &&
-    binding === enterpriseProviderBinding(provider)
-  );
+function sessionMatchesProvider(binding: unknown, provider: EnterpriseSsoProvider | undefined): boolean {
+  return typeof binding === "string" && provider !== undefined && binding === enterpriseProviderBinding(provider);
 }
 
 function withinAge(authenticatedAt: Date, maxAgeMs?: number): boolean {
   const age = Date.now() - authenticatedAt.getTime();
-  return (
-    maxAgeMs === undefined ||
-    (Number.isFinite(maxAgeMs) && age >= 0 && age <= maxAgeMs)
-  );
+  return maxAgeMs === undefined || (Number.isFinite(maxAgeMs) && age >= 0 && age <= maxAgeMs);
 }
 
 function identityView(current: {

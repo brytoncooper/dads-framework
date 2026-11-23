@@ -1,23 +1,8 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 
 import type { Locale } from "./localized-text.js";
-import {
-  followLocaleSignals,
-  initializeLocaleProviderState,
-  selectLocale,
-} from "./logic/locale-provider-state.js";
-import {
-  DEFAULT_LOCALE,
-  type LocaleSignals,
-  resolveInitialLocale,
-} from "./resolve-initial-locale.js";
+import { followLocaleSignals, initializeLocaleProviderState, selectLocale } from "./logic/locale-provider-state.js";
+import { DEFAULT_LOCALE, type LocaleSignals, resolveInitialLocale } from "./resolve-initial-locale.js";
 
 /**
  * The one thing a copy hook reads from React: which language the reader reads.
@@ -43,14 +28,9 @@ export type LocaleProviderProps = LocaleSignals & {
   readonly children: ReactNode;
 };
 
-export function LocaleProvider({
-  children,
-  ...signals
-}: LocaleProviderProps): ReactNode {
+export function LocaleProvider({ children, ...signals }: LocaleProviderProps): ReactNode {
   const signalLocale = resolveInitialLocale(signals);
-  const [providerState, setProviderState] = useState(() =>
-    initializeLocaleProviderState(signalLocale),
-  );
+  const [providerState, setProviderState] = useState(() => initializeLocaleProviderState(signalLocale));
   const activeState = followLocaleSignals(providerState, signalLocale);
 
   // React discards this render and retries before reconciling children, so a
@@ -61,9 +41,7 @@ export function LocaleProvider({
 
   const setLocale = useCallback(
     (locale: Locale) => {
-      setProviderState((currentState) =>
-        selectLocale(followLocaleSignals(currentState, signalLocale), locale),
-      );
+      setProviderState((currentState) => selectLocale(followLocaleSignals(currentState, signalLocale), locale));
     },
     [signalLocale],
   );
@@ -71,11 +49,7 @@ export function LocaleProvider({
     () => ({ locale: activeState.selectedLocale, setLocale }),
     [activeState.selectedLocale, setLocale],
   );
-  return (
-    <LocaleContext.Provider value={selection}>
-      {children}
-    </LocaleContext.Provider>
-  );
+  return <LocaleContext.Provider value={selection}>{children}</LocaleContext.Provider>;
 }
 
 /**

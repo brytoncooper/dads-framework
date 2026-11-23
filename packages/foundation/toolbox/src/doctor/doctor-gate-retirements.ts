@@ -22,15 +22,11 @@ type Retirements = {
 };
 
 /** Only floors keyed by an actual removed package may leave the baseline. */
-export function retiredOwnerFloors(
-  input: BaseComparisonInput,
-  base: BaselineSections,
-): Retirements {
+export function retiredOwnerFloors(input: BaseComparisonInput, base: BaselineSections): Retirements {
   const keys = new Map<string, ReadonlySet<string>>();
   const notes: string[] = [];
   const context = input.context;
-  if (context === undefined || !context.exists(PROJECT_PATH))
-    return { keys, notes };
+  if (context === undefined || !context.exists(PROJECT_PATH)) return { keys, notes };
   const former = baseOwners(input);
   if (former.length === 0) return { keys, notes };
   const current = context.packages();
@@ -60,38 +56,22 @@ type Comparison = {
   readonly proof: ProvesReplacement;
 };
 
-function detectRemovedFloors(
-  base: BaselineSections,
-  measure: string,
-  comparison: Comparison,
-) {
+function detectRemovedFloors(base: BaselineSections, measure: string, comparison: Comparison) {
   const entries = base.get(measure);
   if (entries === undefined) return [];
-  return [...entries].flatMap(([key, entry]) =>
-    detectRemoval(measure, key, entry.value, comparison),
-  );
+  return [...entries].flatMap(([key, entry]) => detectRemoval(measure, key, entry.value, comparison));
 }
 
-function detectRemoval(
-  measure: string,
-  key: string,
-  formerFloor: number,
-  comparison: Comparison,
-) {
+function detectRemoval(measure: string, key: string, formerFloor: number, comparison: Comparison) {
   const { input, context, current, actual, former, proof } = comparison;
   if (input.baseline.floors.get(measure)?.has(key)) return [];
-  const matches = former.filter(
-    (entry) => key === (measure === INVARIANTS ? entry.name : entry.root),
-  );
+  const matches = former.filter((entry) => key === (measure === INVARIANTS ? entry.name : entry.root));
   const owner = matches.length === 1 ? matches[0] : undefined;
-  if (owner === undefined || !rootWasRemoved(input, context, current, owner))
-    return [];
+  if (owner === undefined || !rootWasRemoved(input, context, current, owner)) return [];
   const successor = current.find((entry) => entry.name === owner.name);
   if (!consistentIdentity(actual, owner, successor)) return [];
-  if (!removalHasProof(measure, owner, successor, formerFloor, proof))
-    return [];
-  const outcome =
-    successor === undefined ? "retired" : `replaced by ${successor.root}`;
+  if (!removalHasProof(measure, owner, successor, formerFloor, proof)) return [];
+  const outcome = successor === undefined ? "retired" : `replaced by ${successor.root}`;
   return [
     {
       key,
@@ -100,11 +80,7 @@ function detectRemoval(
   ];
 }
 
-function consistentIdentity(
-  actual: readonly Owner[],
-  former: Owner,
-  successor: Owner | undefined,
-): boolean {
+function consistentIdentity(actual: readonly Owner[], former: Owner, successor: Owner | undefined): boolean {
   const matches = actual.filter((entry) => entry.name === former.name);
   if (successor === undefined) return matches.length === 0;
   return matches.length === 1 && matches[0]?.root === successor.root;
@@ -138,11 +114,7 @@ function readOwner(value: unknown): readonly Owner[] {
 }
 
 function safePackageRoot(root: string): boolean {
-  return (
-    root.startsWith("packages/") &&
-    posix.normalize(root) === root &&
-    !root.endsWith("/")
-  );
+  return root.startsWith("packages/") && posix.normalize(root) === root && !root.endsWith("/");
 }
 
 function rootWasRemoved(
@@ -151,28 +123,15 @@ function rootWasRemoved(
   current: readonly DoctorPackage[],
   owner: Owner,
 ): boolean {
-  if (
-    context.exists(owner.root) ||
-    current.some((entry) => entry.root === owner.root)
-  )
-    return false;
-  if (
-    context
-      .files()
-      .some((path) => path === owner.root || path.startsWith(`${owner.root}/`))
-  )
-    return false;
+  if (context.exists(owner.root) || current.some((entry) => entry.root === owner.root)) return false;
+  if (context.files().some((path) => path === owner.root || path.startsWith(`${owner.root}/`))) return false;
   const manifest = input.readAtRef(input.base, `${owner.root}/package.json`);
   if (manifest.status !== 0) return false;
   const former: unknown = JSON.parse(manifest.stdout);
   return isRecord(former) && former["name"] === owner.name;
 }
 
-type ProvesReplacement = (
-  former: Owner,
-  successor: DoctorPackage,
-  formerFloor: number,
-) => boolean;
+type ProvesReplacement = (former: Owner, successor: DoctorPackage, formerFloor: number) => boolean;
 
 function removalHasProof(
   measure: string,
@@ -197,11 +156,7 @@ function replacementProof(
   const cases = countNegativeCases(context);
   return (former, successor, formerFloor) => {
     const receipt = transitions[former.root];
-    if (
-      !isRecord(receipt) ||
-      receipt["package"] !== former.name ||
-      receipt["formerFloor"] !== formerFloor
-    )
+    if (!isRecord(receipt) || receipt["package"] !== former.name || receipt["formerFloor"] !== formerFloor)
       return false;
     const roots = receipt["replacementRoots"];
     const reason = receipt["reason"];
@@ -210,12 +165,7 @@ function replacementProof(
     return roots.every((root) => {
       if (!isString(root) || !currentRoots.has(root)) return false;
       const entry = floors.get(NEGATIVE_CASES)?.get(root);
-      return (
-        entry !== undefined &&
-        entry.value > 0 &&
-        hasReason(entry) &&
-        (cases.get(root)?.value ?? 0) >= entry.value
-      );
+      return entry !== undefined && entry.value > 0 && hasReason(entry) && (cases.get(root)?.value ?? 0) >= entry.value;
     });
   };
 }

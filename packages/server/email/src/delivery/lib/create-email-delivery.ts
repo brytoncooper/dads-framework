@@ -22,8 +22,6 @@ export type CreateEmailDeliveryOptions = {
  * needed EARLIER than the jobs and actions over it: domains inject it while
  * they assemble, and only once they all exist is there a surface to collect.
  */
-export function createEmailDelivery(
-  options: CreateEmailDeliveryOptions,
-): EmailDelivery {
+export function createEmailDelivery(options: CreateEmailDeliveryOptions): EmailDelivery {
   return new LiveEmailDelivery(options);
 }

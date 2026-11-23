@@ -4,16 +4,9 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
-import {
-  createFixture,
-  events,
-  runFixture,
-} from "./testing-soundness-test-fixture.mjs";
+import { createFixture, events, runFixture } from "./testing-soundness-test-fixture.mjs";
 
-const runner = resolve(
-  process.env.DADS_SOUNDNESS_TEST_RUNNER ??
-    "scripts/testing/testing-soundness.mjs",
-);
+const runner = resolve(process.env.DADS_SOUNDNESS_TEST_RUNNER ?? "scripts/testing/testing-soundness.mjs");
 
 test("CLI auto mode overlaps isolated cases when sampled resources allow it", () => {
   const fixture = createFixture();
@@ -40,11 +33,7 @@ if (mode !== 'baseline') {
       nodeArguments: ["--import", probe],
       env: { DADS_TEST_ASSERT_LIMITS: "1", VITEST_MAX_WORKERS: "99" },
     });
-    assert.equal(
-      result.status,
-      0,
-      JSON.stringify({ stderr: result.stderr, evidence }),
-    );
+    assert.equal(result.status, 0, JSON.stringify({ stderr: result.stderr, evidence }));
     assert.equal(evidence.summary.status, "pass");
     assert.equal(evidence.concurrency.caseJobs, 2);
     assert.equal(evidence.concurrency.mode, "auto");
@@ -76,13 +65,7 @@ test("CLI auto mode stays sequential on a busy host", () => {
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(evidence.concurrency.caseJobs, 1);
-    assert.deepEqual(events(fixture), [
-      "baseline",
-      "alpha",
-      "native:alpha",
-      "beta",
-      "native:beta",
-    ]);
+    assert.deepEqual(events(fixture), ["baseline", "alpha", "native:alpha", "beta", "native:beta"]);
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
   }
@@ -149,15 +132,10 @@ test("shards run disjoint slices of the sorted corpus and record what they ran",
     assert.deepEqual(first.evidence.corpus.caseIds, ["alpha", "beta"]);
     assert.equal(first.evidence.summary.cases, 1);
     assert.equal(first.evidence.summary.status, "pass");
-    assert.deepEqual(events(fixtures[0]), [
-      "baseline",
-      "alpha",
-      "native:alpha",
-    ]);
+    assert.deepEqual(events(fixtures[0]), ["baseline", "alpha", "native:alpha"]);
     assert.deepEqual(events(fixtures[1]), ["baseline", "beta", "native:beta"]);
   } finally {
-    for (const fixture of fixtures)
-      rmSync(fixture.root, { recursive: true, force: true });
+    for (const fixture of fixtures) rmSync(fixture.root, { recursive: true, force: true });
   }
 });
 
@@ -180,23 +158,12 @@ function runShard(fixture, shard, name) {
   const output = join(fixture.root, name);
   const result = spawnSync(
     process.execPath,
-    [
-      runner,
-      "--fixture",
-      fixture.root,
-      "--dad-test",
-      fixture.native,
-      "--output",
-      output,
-      "--shard",
-      shard,
-    ],
+    [runner, "--fixture", fixture.root, "--dad-test", fixture.native, "--output", output, "--shard", shard],
     { encoding: "utf8", env: { ...process.env, DADS_TEST_FAIL_BASELINE: "0" } },
   );
   return {
     result,
-    evidence:
-      result.status === 0 ? JSON.parse(readFileSync(output, "utf8")) : null,
+    evidence: result.status === 0 ? JSON.parse(readFileSync(output, "utf8")) : null,
   };
 }
 

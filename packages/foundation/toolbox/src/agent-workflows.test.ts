@@ -26,9 +26,7 @@ const project = parseDadsProject({
 
 describe("agent workflows", () => {
   it("recommends focused verification from changed ownership", () => {
-    const recommendation = recommendChangedVerification(project, [
-      "packages/documents/src/create.ts",
-    ]);
+    const recommendation = recommendChangedVerification(project, ["packages/documents/src/create.ts"]);
 
     expect(recommendation.packages).toEqual([
       {
@@ -47,34 +45,18 @@ describe("agent workflows", () => {
   });
 
   it("includes consumers when a provider changes", () => {
-    const recommendation = recommendChangedVerification(project, [
-      "packages/documents/src/create.ts",
-    ]);
+    const recommendation = recommendChangedVerification(project, ["packages/documents/src/create.ts"]);
 
-    expect(recommendation.packages.map((entry) => entry.packageName)).toEqual([
-      "documents",
-      "search",
-    ]);
-    expect(recommendation.tasks.map((entry) => entry.state)).toEqual([
-      "run",
-      "run",
-    ]);
+    expect(recommendation.packages.map((entry) => entry.packageName)).toEqual(["documents", "search"]);
+    expect(recommendation.tasks.map((entry) => entry.state)).toEqual(["run", "run"]);
   });
 
   it("uses conservative verification for an unowned executable change", () => {
-    const recommendation = recommendChangedVerification(project, [
-      "tools/release.mjs",
-    ]);
+    const recommendation = recommendChangedVerification(project, ["tools/release.mjs"]);
 
-    expect(recommendation.packages.map((entry) => entry.packageName)).toEqual([
-      "documents",
-      "search",
-    ]);
+    expect(recommendation.packages.map((entry) => entry.packageName)).toEqual(["documents", "search"]);
     expect(recommendation.unownedPaths).toEqual(["tools/release.mjs"]);
-    expect(recommendation.tasks.map((entry) => entry.state)).toEqual([
-      "unknown-scope",
-      "unknown-scope",
-    ]);
+    expect(recommendation.tasks.map((entry) => entry.state)).toEqual(["unknown-scope", "unknown-scope"]);
     expect(recommendation.complete).toBe(true);
   });
 });

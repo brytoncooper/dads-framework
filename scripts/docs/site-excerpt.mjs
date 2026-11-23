@@ -14,8 +14,7 @@ const LANGUAGES = new Map([
 
 function uniqueAnchor(lines, text, fail) {
   const anchor = text.split(/\r?\n/u);
-  const matches = (_, index) =>
-    anchor.every((line, offset) => lines[index + offset] === line);
+  const matches = (_, index) => anchor.every((line, offset) => lines[index + offset] === line);
   const first = lines.findIndex(matches);
   if (first === -1 || lines.findLastIndex(matches) !== first) {
     const target = anchor.length === 1 ? "one line" : "one block of lines";
@@ -37,15 +36,7 @@ export function sourceExcerpt({ token, page, readFile }) {
   } catch {
     fail("expected a JSON selection");
   }
-  const {
-    path,
-    language,
-    from,
-    through,
-    all,
-    displayPath: customDisplayPath,
-    note,
-  } = selection ?? {};
+  const { path, language, from, through, all, displayPath: customDisplayPath, note } = selection ?? {};
   const extension = LANGUAGES.get(language);
   const fullFile = all === true;
   if (
@@ -54,21 +45,12 @@ export function sourceExcerpt({ token, page, readFile }) {
     !path.endsWith(extension) ||
     (!fullFile && (typeof from !== "string" || typeof through !== "string"))
   ) {
-    fail(
-      "expected a source path, language, and start/end lines (or all: true)",
-    );
+    fail("expected a source path, language, and start/end lines (or all: true)");
   }
-  if (
-    posix.isAbsolute(path) ||
-    posix.normalize(path) !== path ||
-    path.startsWith("../") ||
-    /[\\`\r\n]/u.test(path)
-  ) {
+  if (posix.isAbsolute(path) || posix.normalize(path) !== path || path.startsWith("../") || /[\\`\r\n]/u.test(path)) {
     fail("expected a relative source path without traversal");
   }
-  const repositoryPath = page.startsWith(`${STARTER_ROOT}examples/`)
-    ? `${STARTER_ROOT}${path}`
-    : path;
+  const repositoryPath = page.startsWith(`${STARTER_ROOT}examples/`) ? `${STARTER_ROOT}${path}` : path;
   const rawContent = readFile(repositoryPath).toString();
   let excerpt;
   if (fullFile) {
@@ -89,21 +71,13 @@ export function sourceExcerpt({ token, page, readFile }) {
       : repositoryPath.startsWith(STARTER_ROOT)
         ? repositoryPath.slice(STARTER_ROOT.length)
         : repositoryPath;
-  const summary =
-    typeof note === "string" && note.trim().length > 0
-      ? note.trim()
-      : undefined;
-  return summary
-    ? { language, excerpt, path: displayPath, note: summary }
-    : { language, excerpt, path: displayPath };
+  const summary = typeof note === "string" && note.trim().length > 0 ? note.trim() : undefined;
+  return summary ? { language, excerpt, path: displayPath, note: summary } : { language, excerpt, path: displayPath };
 }
 
 function fencedExcerpt({ language, excerpt }) {
   const backticks = excerpt.match(/`+/gu) ?? [];
-  const length = backticks.reduce(
-    (longest, run) => Math.max(longest, run.length + 1),
-    3,
-  );
+  const length = backticks.reduce((longest, run) => Math.max(longest, run.length + 1), 3);
   const fence = "`".repeat(length);
   return `${fence}${language}\n${excerpt}\n${fence}\n\n`;
 }
@@ -124,10 +98,7 @@ export function expandPageExamples(page, readFile) {
       if (excerpt) {
         const alreadyLabeled =
           previous?.type === "paragraph" &&
-          previous.tokens.some(
-            (inline) =>
-              inline.type === "codespan" && inline.text === excerpt.path,
-          );
+          previous.tokens.some((inline) => inline.type === "codespan" && inline.text === excerpt.path);
         const label = alreadyLabeled
           ? ""
           : excerpt.note
@@ -140,14 +111,8 @@ export function expandPageExamples(page, readFile) {
   }
   parser.walkTokens(tokens, (token) => {
     validateGuideCode(page, token);
-    if (
-      token.type === "html" &&
-      token.text.trimStart().startsWith(DIRECTIVE) &&
-      !excerpts.has(token)
-    ) {
-      throw new Error(
-        `${page.path}: place docs excerpts in their own Markdown block.`,
-      );
+    if (token.type === "html" && token.text.trimStart().startsWith(DIRECTIVE) && !excerpts.has(token)) {
+      throw new Error(`${page.path}: place docs excerpts in their own Markdown block.`);
     }
   });
   if (excerpts.size === 0) return page.markdown;

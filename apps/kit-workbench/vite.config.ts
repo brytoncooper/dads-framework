@@ -13,20 +13,11 @@ async function installedNotices() {
   const resolveFromStyles = createRequire(styles);
   const fonts = ["ibm-plex-sans", "ibm-plex-mono"].map((font) => ({
     fileName: `licenses/${font}.txt`,
-    source: join(
-      dirname(resolveFromStyles.resolve(`@fontsource/${font}`)),
-      "LICENSE",
-    ),
+    source: join(dirname(resolveFromStyles.resolve(`@fontsource/${font}`)), "LICENSE"),
   }));
-  const ui = resolve(
-    dirname(require.resolve("@dads-framework/ui/elements")),
-    "../..",
-  );
+  const ui = resolve(dirname(require.resolve("@dads-framework/ui/elements")), "../..");
   const uiLicenses = await readdir(join(ui, "third-party-licenses"));
-  const uiNotices = [
-    "THIRD_PARTY_NOTICES.md",
-    ...uiLicenses.map((name) => posix.join("third-party-licenses", name)),
-  ];
+  const uiNotices = ["THIRD_PARTY_NOTICES.md", ...uiLicenses.map((name) => posix.join("third-party-licenses", name))];
   return [
     ...fonts,
     ...uiNotices.map((name) => ({
@@ -65,15 +56,7 @@ export default defineConfig({
     strictPort: true,
     fs: {
       // Keep Vite's default denials and protect the local example sessions.
-      deny: [
-        ".env",
-        ".env.*",
-        "*.{crt,pem,key,p12,pfx,cer,der}",
-        ".npmrc",
-        ".yarnrc.yml",
-        "**/.git/**",
-        "**/.dads/**",
-      ],
+      deny: [".env", ".env.*", "*.{crt,pem,key,p12,pfx,cer,der}", ".npmrc", ".yarnrc.yml", "**/.git/**", "**/.dads/**"],
     },
     proxy: { "/api": { target: apiTarget } },
   },

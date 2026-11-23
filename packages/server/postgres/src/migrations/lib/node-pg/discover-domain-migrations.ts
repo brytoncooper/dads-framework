@@ -14,16 +14,12 @@ import {
   ownerFromRelativePath,
 } from "./shipped-migration-files.js";
 
-const migrationFunctionSchema = z.custom<DomainMigrationFunction>(
-  (value) => typeof value === "function",
-);
+const migrationFunctionSchema = z.custom<DomainMigrationFunction>((value) => typeof value === "function");
 
 const domainMigrationModuleSchema = z.object({
   up: migrationFunctionSchema,
   down: z.union([migrationFunctionSchema, z.literal(false)]),
-  dependsOn: z
-    .array(z.string().regex(/^\d{14}_[a-z0-9_]+\.migration$/))
-    .optional(),
+  dependsOn: z.array(z.string().regex(/^\d{14}_[a-z0-9_]+\.migration$/)).optional(),
   ownTransaction: z.literal(true).optional(),
   buildsIndexesConcurrently: z.literal(true).optional(),
 });
@@ -31,9 +27,7 @@ const domainMigrationModuleSchema = z.object({
 export async function discoverDomainMigrations(
   input: DiscoverDomainMigrationsInput,
 ): Promise<DiscoveredDomainMigration[]> {
-  const relativePaths = (
-    await listMigrationRelativePaths(input.workspace)
-  ).toSorted((left, right) =>
+  const relativePaths = (await listMigrationRelativePaths(input.workspace)).toSorted((left, right) =>
     idFromFileName(left).localeCompare(idFromFileName(right)),
   );
 
@@ -41,14 +35,10 @@ export async function discoverDomainMigrations(
   const seenIds = new Map<string, string>();
 
   for (const relativePath of relativePaths) {
-    discovered.push(
-      await readDiscoveredMigration(input.workspace, relativePath, seenIds),
-    );
+    discovered.push(await readDiscoveredMigration(input.workspace, relativePath, seenIds));
   }
 
-  const appliedNames = input.appliedIds?.map((id) =>
-    resolveAppliedMigration(id, discovered),
-  );
+  const appliedNames = input.appliedIds?.map((id) => resolveAppliedMigration(id, discovered));
   return planMigrationOrder(discovered, appliedNames);
 }
 
@@ -62,17 +52,12 @@ async function readDiscoveredMigration(
   const pathOwner = ownerFromRelativePath(workspace, relativePath);
   assertValidTimestampId(fileId, relativePath);
 
-  const loaded = domainMigrationModuleSchema.safeParse(
-    await loadDomainMigrationModule(filePath, workspace),
-  );
+  const loaded = domainMigrationModuleSchema.safeParse(await loadDomainMigrationModule(filePath, workspace));
   if (!loaded.success) {
-    throw new Error(
-      `migration ${relativePath} must export up and an explicit down function or down: false`,
-    );
+    throw new Error(`migration ${relativePath} must export up and an explicit down function or down: false`);
   }
 
-  const { ownTransaction = false, buildsIndexesConcurrently = false } =
-    loaded.data;
+  const { ownTransaction = false, buildsIndexesConcurrently = false } = loaded.data;
   if (loaded.data.dependsOn === undefined) {
     assertLegacyFile(
       fileId,
@@ -96,31 +81,20 @@ async function readDiscoveredMigration(
     down: loaded.data.down,
     filePath,
     journalName: journalNameFromRelativePath(relativePath),
-    ...(loaded.data.dependsOn === undefined
-      ? {}
-      : { dependsOn: loaded.data.dependsOn }),
+    ...(loaded.data.dependsOn === undefined ? {} : { dependsOn: loaded.data.dependsOn }),
     ...(ownTransaction ? { ownTransaction: true } : {}),
     ...(buildsIndexesConcurrently ? { buildsIndexesConcurrently: true } : {}),
   };
 }
 
-function resolveAppliedMigration(
-  id: string,
-  discovered: readonly DiscoveredDomainMigration[],
-): string {
-  const matches = discovered.filter(
-    (entry) => entry.id === id || entry.journalName === id,
-  );
+function resolveAppliedMigration(id: string, discovered: readonly DiscoveredDomainMigration[]): string {
+  const matches = discovered.filter((entry) => entry.id === id || entry.journalName === id);
   if (matches.length > 1) {
-    throw new Error(
-      `applied migration ${id} is ambiguous; use its full journal name`,
-    );
+    throw new Error(`applied migration ${id} is ambiguous; use its full journal name`);
   }
   const migration = matches[0];
   if (migration === undefined) {
-    throw new Error(
-      `applied migration ${id} is missing from the current build`,
-    );
+    throw new Error(`applied migration ${id} is missing from the current build`);
   }
   return migration.journalName;
 }
@@ -146,9 +120,7 @@ function assertLegacyFile(
   }
   const existingPath = seenIds.get(fileId);
   if (existingPath !== undefined) {
-    throw new Error(
-      `migration id ${fileId} is declared by both ${existingPath} and ${relativePath}`,
-    );
+    throw new Error(`migration id ${fileId} is declared by both ${existingPath} and ${relativePath}`);
   }
   seenIds.set(fileId, relativePath);
 }
@@ -169,8 +141,6 @@ function assertValidTimestampId(id: string, relativePath: string): void {
     utc.getUTCMinutes() === minute &&
     utc.getUTCSeconds() === second;
   if (!matches) {
-    throw new Error(
-      `migration ${relativePath} id ${id} is not a valid UTC timestamp`,
-    );
+    throw new Error(`migration ${relativePath} id ${id} is not a valid UTC timestamp`);
   }
 }

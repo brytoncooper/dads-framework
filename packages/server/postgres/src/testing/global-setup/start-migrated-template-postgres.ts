@@ -1,8 +1,5 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
-import {
-  TEMPLATE_DATABASE,
-  applyCheckedInSchema,
-} from "../start-test-postgres.js";
+import { TEMPLATE_DATABASE, applyCheckedInSchema } from "../start-test-postgres.js";
 import {
   postgresStorageSettings,
   testPostgresStorage,
@@ -55,10 +52,7 @@ async function startSharedPostgresContainer() {
         `max_connections=${String(SHARED_TEST_POSTGRES_MAX_CONNECTIONS)}`,
         ...postgresStorageSettings(storage),
       ]);
-    return await withPostgresMemoryLimit(
-      withPostgresStorage(container, storage),
-      storage,
-    ).start();
+    return await withPostgresMemoryLimit(withPostgresStorage(container, storage), storage).start();
   } finally {
     if (previousRyuk === undefined) {
       Reflect.deleteProperty(process.env, "TESTCONTAINERS_RYUK_DISABLED");

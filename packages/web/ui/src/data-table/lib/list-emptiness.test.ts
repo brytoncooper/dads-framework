@@ -6,11 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  keepTableWhileChecking,
-  needsUnfilteredTotal,
-  readListEmptiness,
-} from "./list-emptiness.js";
+import { keepTableWhileChecking, needsUnfilteredTotal, readListEmptiness } from "./list-emptiness.js";
 
 describe("readListEmptiness", () => {
   it("has rows whenever the page returned any", () => {
@@ -83,15 +79,9 @@ describe("readListEmptiness", () => {
 describe("needsUnfilteredTotal", () => {
   it("asks only when a narrowed view came back empty", () => {
     expect(needsUnfilteredTotal({ total: 0, activeFilterCount: 1 })).toBe(true);
-    expect(needsUnfilteredTotal({ total: 0, activeFilterCount: 0 })).toBe(
-      false,
-    );
-    expect(needsUnfilteredTotal({ total: 2, activeFilterCount: 1 })).toBe(
-      false,
-    );
-    expect(
-      needsUnfilteredTotal({ total: undefined, activeFilterCount: 1 }),
-    ).toBe(false);
+    expect(needsUnfilteredTotal({ total: 0, activeFilterCount: 0 })).toBe(false);
+    expect(needsUnfilteredTotal({ total: 2, activeFilterCount: 1 })).toBe(false);
+    expect(needsUnfilteredTotal({ total: undefined, activeFilterCount: 1 })).toBe(false);
   });
 });
 

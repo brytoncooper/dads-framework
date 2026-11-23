@@ -1,9 +1,6 @@
 import type { RoleToken } from "@dads-framework/access";
 import type { PostgresQuery, PostgresRow } from "../postgres-types.js";
-import type {
-  AuthorizationModelDefinition,
-  CompiledColumnRelation,
-} from "./policy-model.js";
+import type { AuthorizationModelDefinition, CompiledColumnRelation } from "./policy-model.js";
 
 const SQL_COLUMN_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const SQL_TABLE_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
@@ -30,15 +27,9 @@ export type ColumnRelationCheckResult = {
   readonly recommendedIndexSql: string;
 };
 
-function assertSafeIdentifier(
-  value: string,
-  pattern: RegExp,
-  label: string,
-): void {
+function assertSafeIdentifier(value: string, pattern: RegExp, label: string): void {
   if (!pattern.test(value)) {
-    throw new Error(
-      `Invalid columnRelation ${label} "${value}": must be an unquoted SQL identifier`,
-    );
+    throw new Error(`Invalid columnRelation ${label} "${value}": must be an unquoted SQL identifier`);
   }
 }
 
@@ -79,31 +70,19 @@ function compileSingleColumnRelation(
   const relation = binding.role.roleName;
   const key = `${entity}\u0000${relation}`;
   if (seen.has(key)) {
-    throw new Error(
-      `Duplicate columnRelation binding for ${entity}#${relation}`,
-    );
+    throw new Error(`Duplicate columnRelation binding for ${entity}#${relation}`);
   }
   seen.add(key);
 
   assertSafeIdentifier(binding.table, SQL_TABLE_IDENT, "table");
   assertSafeIdentifier(binding.idColumn, SQL_COLUMN_IDENT, "idColumn");
-  assertSafeIdentifier(
-    binding.targetIdColumn,
-    SQL_COLUMN_IDENT,
-    "targetIdColumn",
-  );
+  assertSafeIdentifier(binding.targetIdColumn, SQL_COLUMN_IDENT, "targetIdColumn");
 
-  const relDef = model.relations.find(
-    (candidate) =>
-      candidate.entity === entity && candidate.wireName === relation,
-  );
+  const relDef = model.relations.find((candidate) => candidate.entity === entity && candidate.wireName === relation);
   if (relDef === undefined) {
-    throw new Error(
-      `Column relation ${entity}#${relation} does not exist in the compiled access model`,
-    );
+    throw new Error(`Column relation ${entity}#${relation} does not exist in the compiled access model`);
   }
-  const onlyTarget =
-    relDef.targets.length === 1 ? relDef.targets[0] : undefined;
+  const onlyTarget = relDef.targets.length === 1 ? relDef.targets[0] : undefined;
   if (onlyTarget === undefined || onlyTarget.kind !== "entity") {
     throw new Error(
       `Column relation ${entity}#${relation} must declare exactly one direct entity target (no polymorphic, wildcard, or userset targets)`,
@@ -125,23 +104,15 @@ export function findColumnRelation(
   entity: string,
   relation: string,
 ): CompiledColumnRelation | undefined {
-  return model.columnRelations?.find(
-    (entry) => entry.entity === entity && entry.relation === relation,
-  );
+  return model.columnRelations?.find((entry) => entry.entity === entity && entry.relation === relation);
 }
 
 /** Generate recommended `(targetIdColumn, idColumn)` reverse-lookup index DDL for column-backed relations. */
-export function columnRelationIndexSql(
-  bindings: readonly ColumnRelationBinding[],
-): readonly string[] {
+export function columnRelationIndexSql(bindings: readonly ColumnRelationBinding[]): readonly string[] {
   return bindings.map((binding) => {
     assertSafeIdentifier(binding.table, SQL_TABLE_IDENT, "table");
     assertSafeIdentifier(binding.idColumn, SQL_COLUMN_IDENT, "idColumn");
-    assertSafeIdentifier(
-      binding.targetIdColumn,
-      SQL_COLUMN_IDENT,
-      "targetIdColumn",
-    );
+    assertSafeIdentifier(binding.targetIdColumn, SQL_COLUMN_IDENT, "targetIdColumn");
     const { table } = splitSchemaTable(binding.table);
     const indexName = `idx_dad_${table}_${binding.targetIdColumn}_${binding.idColumn}`;
     return `CREATE INDEX IF NOT EXISTS ${indexName} ON ${binding.table} (${binding.targetIdColumn}, ${binding.idColumn});`;
@@ -154,9 +125,7 @@ export function deriveAutoScopeColumns(
   resourceType: string,
   idColumn: string,
 ): Readonly<Record<string, string>> | undefined {
-  const bindings = model.columnRelations?.filter(
-    (entry) => entry.entity === resourceType,
-  );
+  const bindings = model.columnRelations?.filter((entry) => entry.entity === resourceType);
   if (bindings === undefined || bindings.length === 0) return undefined;
   const dotIndex = idColumn.indexOf(".");
   const prefix = dotIndex === -1 ? "" : `${idColumn.slice(0, dotIndex)}.`;
@@ -194,9 +163,7 @@ async function verifyOneColumnRelation(
       WHERE table_schema = $1 AND table_name = $2 AND column_name IN ($3, $4)`,
     values: [schema, table, binding.idColumn, binding.targetIdColumn],
   });
-  const present = new Set(
-    colRows.map((row) => readTextCell(row, "column_name")),
-  );
+  const present = new Set(colRows.map((row) => readTextCell(row, "column_name")));
   for (const required of [binding.idColumn, binding.targetIdColumn]) {
     if (!present.has(required)) {
       throw new Error(
@@ -209,9 +176,7 @@ async function verifyOneColumnRelation(
     values: [schema, table],
   });
   const targetPrefix = `(${binding.targetIdColumn}`;
-  const hasRecommendedIndex = indexRows.some((row) =>
-    readTextCell(row, "indexdef").includes(targetPrefix),
-  );
+  const hasRecommendedIndex = indexRows.some((row) => readTextCell(row, "indexdef").includes(targetPrefix));
   const indexName = `idx_dad_${table}_${binding.targetIdColumn}_${binding.idColumn}`;
   return {
     entity: binding.entity,

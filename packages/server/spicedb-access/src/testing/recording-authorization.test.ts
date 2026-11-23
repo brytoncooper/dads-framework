@@ -55,9 +55,7 @@ describe("RecordingAuthorization", () => {
         permission: "view",
       }),
     ).rejects.toThrow("unanswered check");
-    await expect(fake.writeRelationships([])).rejects.toThrow(
-      "does not support tuple mutation",
-    );
+    await expect(fake.writeRelationships([])).rejects.toThrow("does not support tuple mutation");
     await expect(
       fake.lookupResources({
         subject: { id: "opal", type: "user" },
@@ -65,9 +63,9 @@ describe("RecordingAuthorization", () => {
         permission: "view",
       }),
     ).rejects.toThrow("unanswered lookup");
-    await expect(
-      fake.deleteRelationships({ resourceType: "platform" }),
-    ).rejects.toThrow("does not support tuple mutation");
+    await expect(fake.deleteRelationships({ resourceType: "platform" })).rejects.toThrow(
+      "does not support tuple mutation",
+    );
     await expect(
       fake.relationshipExists({
         resourceType: "platform",
@@ -146,13 +144,11 @@ describe("RecordingAuthorization", () => {
     }[] = [
       {
         call: () => fake.writeRelationships([]),
-        message:
-          "RecordingAuthorization does not support tuple mutation; use FakeAuthorization",
+        message: "RecordingAuthorization does not support tuple mutation; use FakeAuthorization",
       },
       {
         call: () => fake.deleteRelationships({ resourceType: "platform" }),
-        message:
-          "RecordingAuthorization does not support tuple mutation; use FakeAuthorization",
+        message: "RecordingAuthorization does not support tuple mutation; use FakeAuthorization",
       },
       {
         call: () =>
@@ -161,8 +157,7 @@ describe("RecordingAuthorization", () => {
             resourceId: "app",
             relation: "admin",
           }),
-        message:
-          "RecordingAuthorization does not support tuple inspection; use FakeAuthorization",
+        message: "RecordingAuthorization does not support tuple inspection; use FakeAuthorization",
       },
       {
         call: () =>
@@ -170,8 +165,7 @@ describe("RecordingAuthorization", () => {
             resource: { type: "platform", id: "app" },
             relation: "admin",
           }),
-        message:
-          "RecordingAuthorization does not support tuple inspection; use FakeAuthorization",
+        message: "RecordingAuthorization does not support tuple inspection; use FakeAuthorization",
       },
     ];
 
@@ -183,8 +177,7 @@ describe("RecordingAuthorization", () => {
         rejection = error;
       }
       expect(rejection).toBeInstanceOf(Error);
-      if (rejection instanceof Error)
-        expect(rejection.message).toBe(method.message);
+      if (rejection instanceof Error) expect(rejection.message).toBe(method.message);
     }
   });
 });

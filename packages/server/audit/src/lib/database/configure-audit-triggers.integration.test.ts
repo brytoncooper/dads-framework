@@ -1,10 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { configureAuditTriggers } from "./configure-audit-triggers.js";
 import type { AuditLogScope } from "./readers/audit-log-reader.interface.js";
@@ -17,12 +14,8 @@ describe("application audit configuration", () => {
   beforeAll(async () => {
     postgres = await startTestPostgres();
     reader = new DrizzleAuditLogReader(drizzle(postgres.pool));
-    await postgres.pool.query(
-      "CREATE TABLE scoped_documents (id text PRIMARY KEY, tenant_key text, group_key text)",
-    );
-    await postgres.pool.query(
-      "CREATE TABLE temporary_tokens (id text PRIMARY KEY)",
-    );
+    await postgres.pool.query("CREATE TABLE scoped_documents (id text PRIMARY KEY, tenant_key text, group_key text)");
+    await postgres.pool.query("CREATE TABLE temporary_tokens (id text PRIMARY KEY)");
     const statements: string[] = [];
     configureAuditTriggers(
       {
@@ -59,35 +52,12 @@ describe("application audit configuration", () => {
     const [row] = await reader.listRows(applicationScope, {}, null, 10);
     expect(row?.rowKey).toEqual({ id: "doc-a" });
     expect(row?.scopeValues).toEqual(applicationScope.values);
-    expect(
-      await reader.listRows({ kind: "application", values: {} }, {}, null, 10),
-    ).toEqual([]);
-    expect(
-      await reader.listRows(
-        { kind: "application", values: { workspace: "group-1" } },
-        {},
-        null,
-        10,
-      ),
-    ).toEqual([]);
-    expect(
-      await reader.listRows(
-        { kind: "platform" },
-        { tableNames: ["temporary_tokens"] },
-        null,
-        10,
-      ),
-    ).toEqual([]);
+    expect(await reader.listRows({ kind: "application", values: {} }, {}, null, 10)).toEqual([]);
+    expect(await reader.listRows({ kind: "application", values: { workspace: "group-1" } }, {}, null, 10)).toEqual([]);
+    expect(await reader.listRows({ kind: "platform" }, { tableNames: ["temporary_tokens"] }, null, 10)).toEqual([]);
 
-    await postgres.pool.query(
-      "UPDATE scoped_documents SET tenant_key = 'space-b' WHERE id = 'doc-a'",
-    );
-    const movedRows = await reader.listRows(
-      { kind: "application", values: { workspace: "space-b" } },
-      {},
-      null,
-      10,
-    );
+    await postgres.pool.query("UPDATE scoped_documents SET tenant_key = 'space-b' WHERE id = 'doc-a'");
+    const movedRows = await reader.listRows({ kind: "application", values: { workspace: "space-b" } }, {}, null, 10);
     expect(movedRows.map((entry) => entry.rowKey)).toEqual([{ id: "doc-b" }]);
   });
 });

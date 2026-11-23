@@ -58,13 +58,9 @@ describe("DataTable toolbar on wide screens", () => {
     }
     const { container } = render(<FilteredLoadsTable />);
 
-    const actions = container.querySelector(
-      '[data-slot="data-table-toolbar-actions"]',
-    );
+    const actions = container.querySelector('[data-slot="data-table-toolbar-actions"]');
     expect(
-      [...(actions?.children ?? [])].map(
-        (child) => child.getAttribute("aria-label") ?? child.textContent,
-      ),
+      [...(actions?.children ?? [])].map((child) => child.getAttribute("aria-label") ?? child.textContent),
     ).toEqual(["Search Tickets", "Pick Dates"]);
     expect(screen.queryByRole("button", { name: /Filters/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Inbound" })).toBeNull();
@@ -72,17 +68,11 @@ describe("DataTable toolbar on wide screens", () => {
   });
 
   it("puts the search, then a pill per filter group, then the caller's menus, then Columns", () => {
-    const { container } = render(
-      <TypedLoadsTable addFilter={<Button type="button">Add Filter</Button>} />,
-    );
+    const { container } = render(<TypedLoadsTable addFilter={<Button type="button">Add Filter</Button>} />);
 
-    const actions = container.querySelector(
-      '[data-slot="data-table-toolbar-actions"]',
-    );
+    const actions = container.querySelector('[data-slot="data-table-toolbar-actions"]');
     expect(
-      [...(actions?.children ?? [])].map(
-        (child) => child.getAttribute("aria-label") ?? child.textContent,
-      ),
+      [...(actions?.children ?? [])].map((child) => child.getAttribute("aria-label") ?? child.textContent),
     ).toEqual(["Search Tickets", "Type", "Add Filter"]);
     expect(screen.getByRole("button", { name: "Columns" })).toBeDefined();
     expect(screen.queryByRole("group", { name: "Applied Filters" })).toBeNull();
@@ -128,25 +118,13 @@ describe("DataTable with a caller frame", () => {
         columns: COLUMNS,
         pageCount: 1,
       });
-      return (
-        <DataTable
-          table={table}
-          contentClassName="overflow-hidden rounded-xl border"
-        />
-      );
+      return <DataTable table={table} contentClassName="overflow-hidden rounded-xl border" />;
     }
     const { container } = render(<FramedTable />);
-    const frame = container.querySelector<HTMLElement>(
-      '[data-slot="data-table-content"]',
-    );
-    const scroller = container.querySelector<HTMLElement>(
-      '[data-slot="table-container"]',
-    );
-    const rightFade = container.querySelector<HTMLElement>(
-      '[data-slot="table-edge-fade"][data-edge="right"]',
-    );
-    if (!frame || !scroller || !rightFade)
-      throw new Error("Expected a framed table.");
+    const frame = container.querySelector<HTMLElement>('[data-slot="data-table-content"]');
+    const scroller = container.querySelector<HTMLElement>('[data-slot="table-container"]');
+    const rightFade = container.querySelector<HTMLElement>('[data-slot="table-edge-fade"][data-edge="right"]');
+    if (!frame || !scroller || !rightFade) throw new Error("Expected a framed table.");
 
     expect(frame.className).toContain("rounded-xl");
     expect(frame.contains(rightFade)).toBe(true);

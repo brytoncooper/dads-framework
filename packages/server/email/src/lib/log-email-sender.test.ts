@@ -26,9 +26,7 @@ describe("LogEmailSender", () => {
       hasHtml: false,
       hasReplyTo: false,
     });
-    expect(JSON.stringify(logInfo.mock.calls)).not.toContain(
-      "alice@example.com",
-    );
+    expect(JSON.stringify(logInfo.mock.calls)).not.toContain("alice@example.com");
     expect(JSON.stringify(logInfo.mock.calls)).not.toContain("secret");
   });
 

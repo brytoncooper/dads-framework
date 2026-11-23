@@ -16,11 +16,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 const PROJECT_FILE = "dads.project.json";
 const INVARIANTS_FILE = "INVARIANTS.md";
@@ -33,9 +29,7 @@ function countInvariantsFiles(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const declared of context.packages()) {
     if (declared.kind === undefined) {
-      throw new Error(
-        `${PROJECT_FILE}: package "${declared.name}" declares no kind; every package says what it is`,
-      );
+      throw new Error(`${PROJECT_FILE}: package "${declared.name}" declares no kind; every package says what it is`);
     }
     if (!MEASURED_ROOTS.some((prefix) => declared.root.startsWith(prefix))) {
       continue;
@@ -58,8 +52,7 @@ export const invariantsFilesSignal: DoctorSignal = {
   unit: "count",
   direction: "floor",
   thresholds: { standard: null, strict: null },
-  sentence:
-    "Then you ghosted your invariants. They still watch your deployments.",
+  sentence: "Then you ghosted your invariants. They still watch your deployments.",
   measure: "invariantsFiles",
   run: (context) => Promise.resolve(countInvariantsFiles(context)),
 };

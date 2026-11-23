@@ -48,9 +48,7 @@ describe("InMemoryDirectTransferStorage", () => {
       contentType: "application/pdf",
       metadata: { "upload-id": "upload" },
     });
-    expect(await storage.readObjectPrefix(upload.key, 3)).toEqual(
-      bytes(1, 2, 3),
-    );
+    expect(await storage.readObjectPrefix(upload.key, 3)).toEqual(bytes(1, 2, 3));
     expect((await objects.get(upload.key))?.body).toEqual(bytes(1, 2, 3, 4));
   });
 
@@ -96,9 +94,7 @@ describe("InMemoryDirectTransferStorage", () => {
       metadata: {},
     });
 
-    expect(
-      await storage.listUploadedParts({ ...upload, key: "other" }),
-    ).toBeNull();
+    expect(await storage.listUploadedParts({ ...upload, key: "other" })).toBeNull();
   });
 
   it("deletes an object, and deleting it again succeeds", async () => {
@@ -133,9 +129,7 @@ describe("InMemoryDirectTransferStorage", () => {
         partNumber: 1,
         expiresInSeconds: 900,
       }),
-    ).toBe(
-      `memory://upload/key?uploadId=${upload.storageUploadId}&partNumber=1&expires=900`,
-    );
+    ).toBe(`memory://upload/key?uploadId=${upload.storageUploadId}&partNumber=1&expires=900`);
     expect(
       await storage.presignAttachmentDownload({
         key: "key",
@@ -159,9 +153,7 @@ describe("InMemoryDirectTransferStorage", () => {
       expiresInSeconds: 3600,
     });
 
-    expect(upload.url).toBe(
-      `memory://write-once/key?bytes=3&sha256=${sha256}&if-none-match=*&expires=3600`,
-    );
+    expect(upload.url).toBe(`memory://write-once/key?bytes=3&sha256=${sha256}&if-none-match=*&expires=3600`);
     expect(upload.headers).toEqual({
       "content-type": "image/png",
       "content-length": "3",

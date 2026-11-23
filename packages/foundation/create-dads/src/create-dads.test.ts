@@ -1,13 +1,6 @@
 /** Proves guided and noninteractive creation share one deterministic recipe. */
 
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -24,17 +17,11 @@ afterEach(() => {
 describe("create Dads", () => {
   it("creates the named APIs and their modern dependencies", async () => {
     const targetDirectory = join(temporaryDirectory(), "kit-api");
-    const creation = await createDads(
-      [targetDirectory, "--skip-install"],
-      dependencies(),
-    );
+    const creation = await createDads([targetDirectory, "--skip-install"], dependencies());
     expect(creation.installed).toBe(false);
     expect(creation.initialization.created).toContain("apps/customer/app.ts");
     expect(creation.initialization.created).toContain("apps/staff/app.ts");
-    const manifest = readFileSync(
-      join(targetDirectory, "package.json"),
-      "utf8",
-    );
+    const manifest = readFileSync(join(targetDirectory, "package.json"), "utf8");
     expect(manifest).toContain("@dads-framework/postgres-access");
     expect(manifest).toContain("@dads-framework/http");
     expect(manifest).not.toMatch(/legacy-(?:http|authorization)/);
@@ -50,9 +37,7 @@ describe("create Dads", () => {
         return Promise.resolve();
       },
     };
-    expect((await createDads([targetDirectory], installer)).installed).toBe(
-      true,
-    );
+    expect((await createDads([targetDirectory], installer)).installed).toBe(true);
     const rerun = await createDads([targetDirectory], installer);
     expect(rerun.initialization.created).toEqual([]);
     expect(rerun.installed).toBe(false);
@@ -80,8 +65,7 @@ describe("create Dads", () => {
       },
     });
     const healthyRerun = await createDads([targetDirectory, "--yes"], {
-      installDependencies: () =>
-        Promise.reject(new Error("Healthy rerun must not reinstall.")),
+      installDependencies: () => Promise.reject(new Error("Healthy rerun must not reinstall.")),
     });
 
     expect(recovered.initialization.created).toEqual([]);
@@ -133,27 +117,21 @@ describe("create Dads", () => {
   it("rejects unknown options and extra positional arguments before writing", async () => {
     const targetDirectory = join(temporaryDirectory(), "parsed-api");
 
-    await expect(
-      createDads(
-        [targetDirectory, "--profil", "strict", "--skip-install"],
-        dependencies(),
-      ),
-    ).rejects.toThrow("Unknown option --profil");
-    await expect(
-      createDads(
-        [targetDirectory, "unexpected", "--skip-install"],
-        dependencies(),
-      ),
-    ).rejects.toThrow("Unexpected positional argument unexpected");
+    await expect(createDads([targetDirectory, "--profil", "strict", "--skip-install"], dependencies())).rejects.toThrow(
+      "Unknown option --profil",
+    );
+    await expect(createDads([targetDirectory, "unexpected", "--skip-install"], dependencies())).rejects.toThrow(
+      "Unexpected positional argument unexpected",
+    );
     expect(() => readFileSync(join(targetDirectory, "package.json"))).toThrow();
   });
 
   it("rejects retired recipe options before writing", async () => {
     const targetDirectory = temporaryDirectory();
     for (const option of ["--profile", "--adapter", "--client"]) {
-      await expect(
-        createDads([targetDirectory, option, "legacy"], dependencies()),
-      ).rejects.toThrow(`Unknown option ${option}.`);
+      await expect(createDads([targetDirectory, option, "legacy"], dependencies())).rejects.toThrow(
+        `Unknown option ${option}.`,
+      );
     }
     expect(existsSync(join(targetDirectory, "package.json"))).toBe(false);
   });
@@ -162,8 +140,7 @@ describe("create Dads", () => {
     const targetDirectory = join(temporaryDirectory(), "planned-api");
 
     const creation = await createDads([targetDirectory, "--yes", "--dry-run"], {
-      installDependencies: () =>
-        Promise.reject(new Error("A dry run must not install.")),
+      installDependencies: () => Promise.reject(new Error("A dry run must not install.")),
     });
 
     expect(creation.installed).toBe(false);
@@ -173,22 +150,12 @@ describe("create Dads", () => {
 
   it("adds an isolated project to an existing app", async () => {
     const targetDirectory = temporaryDirectory();
-    writeFileSync(
-      join(targetDirectory, "package.json"),
-      '{"name":"existing-app"}\n',
-    );
+    writeFileSync(join(targetDirectory, "package.json"), '{"name":"existing-app"}\n');
 
-    const creation = await createDads(
-      [targetDirectory, "--existing", "--yes", "--skip-install"],
-      dependencies(),
-    );
+    const creation = await createDads([targetDirectory, "--existing", "--yes", "--skip-install"], dependencies());
 
-    expect(creation.initialization.projectRoot).toBe(
-      join(targetDirectory, "dads"),
-    );
-    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe(
-      '{"name":"existing-app"}\n',
-    );
+    expect(creation.initialization.projectRoot).toBe(join(targetDirectory, "dads"));
+    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe('{"name":"existing-app"}\n');
   });
 
   it("diagnoses an existing project before it writes, and creates the same files either way", async () => {
@@ -196,26 +163,15 @@ describe("create Dads", () => {
     const written: string[] = [];
     const projectRootExistedWhenWritten: boolean[] = [];
 
-    const creation = await createDads(
-      [diagnosed, "--existing", "--yes", "--skip-install"],
-      {
-        ...dependencies(),
-        write: (text) => {
-          written.push(text);
-          projectRootExistedWhenWritten.push(
-            existsSync(join(diagnosed, "dads", "package.json")),
-          );
-        },
+    const creation = await createDads([diagnosed, "--existing", "--yes", "--skip-install"], {
+      ...dependencies(),
+      write: (text) => {
+        written.push(text);
+        projectRootExistedWhenWritten.push(existsSync(join(diagnosed, "dads", "package.json")));
       },
-    );
+    });
     const undiagnosed = await createDads(
-      [
-        existingApplication(),
-        "--existing",
-        "--yes",
-        "--skip-install",
-        "--skip-doctor",
-      ],
+      [existingApplication(), "--existing", "--yes", "--skip-install", "--skip-doctor"],
       dependencies(),
     );
 
@@ -224,62 +180,43 @@ describe("create Dads", () => {
     expect(creation.doctor?.issues).toHaveLength(17);
     expect(written.join("")).toContain("Anxious attachment");
     expect(projectRootExistedWhenWritten).toEqual([false]);
-    expect(creation.initialization.created).toEqual(
-      undiagnosed.initialization.created,
-    );
+    expect(creation.initialization.created).toEqual(undiagnosed.initialization.created);
   });
 
   it("says so in one line and reads nothing when the target is fresh", async () => {
     const targetDirectory = join(temporaryDirectory(), "fresh-api");
     const written: string[] = [];
 
-    const creation = await createDads(
-      [targetDirectory, "--yes", "--skip-install"],
-      {
-        ...dependencies(),
-        write: (text) => {
-          written.push(text);
-        },
+    const creation = await createDads([targetDirectory, "--yes", "--skip-install"], {
+      ...dependencies(),
+      write: (text) => {
+        written.push(text);
       },
-    );
+    });
 
     expect(creation.doctor).toBeNull();
-    expect(written).toEqual([
-      `No existing project at ${targetDirectory}: skipping the doctor.\n`,
-    ]);
+    expect(written).toEqual([`No existing project at ${targetDirectory}: skipping the doctor.\n`]);
   });
 
   it("skips the doctor entirely for --skip-doctor and refuses a repeated one", async () => {
     const targetDirectory = existingApplication();
     const written: string[] = [];
 
-    const creation = await createDads(
-      [
-        targetDirectory,
-        "--existing",
-        "--yes",
-        "--skip-install",
-        "--skip-doctor",
-      ],
-      {
-        ...dependencies(),
-        write: (text) => {
-          written.push(text);
-        },
+    const creation = await createDads([targetDirectory, "--existing", "--yes", "--skip-install", "--skip-doctor"], {
+      ...dependencies(),
+      write: (text) => {
+        written.push(text);
       },
-    );
+    });
 
     expect(creation.doctor).toBeNull();
     expect(written).toEqual([]);
-    await expect(
-      createDads(
-        [targetDirectory, "--skip-doctor", "--skip-doctor"],
-        dependencies(),
-      ),
-    ).rejects.toThrow("Option --skip-doctor was provided more than once.");
-    await expect(
-      createDads([targetDirectory, "--today", "yesterday"], dependencies()),
-    ).rejects.toThrow("--today must be a date written YYYY-MM-DD.");
+    await expect(createDads([targetDirectory, "--skip-doctor", "--skip-doctor"], dependencies())).rejects.toThrow(
+      "Option --skip-doctor was provided more than once.",
+    );
+    await expect(createDads([targetDirectory, "--today", "yesterday"], dependencies())).rejects.toThrow(
+      "--today must be a date written YYYY-MM-DD.",
+    );
   });
 
   it("carries the report in the --json result and writes nothing before it", async () => {
@@ -287,14 +224,7 @@ describe("create Dads", () => {
     const written: string[] = [];
 
     const creation = await createDads(
-      [
-        targetDirectory,
-        "--existing",
-        "--json",
-        "--skip-install",
-        "--today",
-        "2026-09-07",
-      ],
+      [targetDirectory, "--existing", "--json", "--skip-install", "--today", "2026-09-07"],
       {
         ...dependencies(),
         write: (text) => {
@@ -314,50 +244,25 @@ describe("create Dads", () => {
 
   it("scaffolds the lean minimal template when --template minimal is requested", async () => {
     const targetDirectory = join(temporaryDirectory(), "minimal-api");
-    const creation = await createDads(
-      [targetDirectory, "--template", "minimal", "--skip-install"],
-      dependencies(),
-    );
+    const creation = await createDads([targetDirectory, "--template", "minimal", "--skip-install"], dependencies());
 
     expect(creation.initialization.created).toContain("apps/customer/app.ts");
     expect(creation.initialization.created).toContain("apps/staff/app.ts");
-    expect(creation.initialization.created).toContain(
-      "domains/tenants/index.ts",
-    );
-    expect(
-      creation.initialization.created.some((path) =>
-        path.startsWith("domains/notes/"),
-      ),
-    ).toBe(false);
-    expect(
-      creation.initialization.created.some((path) =>
-        path.startsWith("domains/support/"),
-      ),
-    ).toBe(false);
-    expect(
-      creation.initialization.created.some((path) =>
-        path.startsWith("examples/"),
-      ),
-    ).toBe(false);
+    expect(creation.initialization.created).toContain("domains/tenants/index.ts");
+    expect(creation.initialization.created.some((path) => path.startsWith("domains/notes/"))).toBe(false);
+    expect(creation.initialization.created.some((path) => path.startsWith("domains/support/"))).toBe(false);
+    expect(creation.initialization.created.some((path) => path.startsWith("examples/"))).toBe(false);
     expect(existsSync(join(targetDirectory, "domains/notes"))).toBe(false);
   });
 
   it("keeps --template example identical to the default starter and rejects unknown templates", async () => {
     const exampleDirectory = join(temporaryDirectory(), "example-api");
-    const creation = await createDads(
-      [exampleDirectory, "--template", "example", "--skip-install"],
-      dependencies(),
-    );
-    expect(creation.initialization.created).toContain(
-      "domains/notes/server/routes.ts",
-    );
+    const creation = await createDads([exampleDirectory, "--template", "example", "--skip-install"], dependencies());
+    expect(creation.initialization.created).toContain("domains/notes/server/routes.ts");
 
     const invalidDirectory = join(temporaryDirectory(), "invalid-template");
     await expect(
-      createDads(
-        [invalidDirectory, "--template", "blank", "--skip-install"],
-        dependencies(),
-      ),
+      createDads([invalidDirectory, "--template", "blank", "--skip-install"], dependencies()),
     ).rejects.toThrow("--template must be minimal or example.");
     expect(existsSync(invalidDirectory)).toBe(false);
   });
@@ -372,10 +277,7 @@ function existingApplication(): string {
 
 function simulateInstalledProject(projectRoot: string): void {
   mkdirSync(join(projectRoot, "node_modules"));
-  writeFileSync(
-    join(projectRoot, "package-lock.json"),
-    '{"lockfileVersion":3}\n',
-  );
+  writeFileSync(join(projectRoot, "package-lock.json"), '{"lockfileVersion":3}\n');
 }
 
 function dependencies(): CreateDadsDependencies {

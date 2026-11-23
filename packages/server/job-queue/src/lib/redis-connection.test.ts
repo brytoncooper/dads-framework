@@ -7,9 +7,7 @@ import { redisConnection } from "./redis-connection.js";
 
 describe("redisConnection", () => {
   it("parses escaped credentials and a database index", () => {
-    expect(
-      redisConnection("redis://job%40user:p%2Fass@redis.example.test:6380/3"),
-    ).toEqual({
+    expect(redisConnection("redis://job%40user:p%2Fass@redis.example.test:6380/3")).toEqual({
       host: "redis.example.test",
       port: 6380,
       username: "job@user",

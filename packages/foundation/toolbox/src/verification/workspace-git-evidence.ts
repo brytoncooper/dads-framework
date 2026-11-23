@@ -15,16 +15,9 @@ type ReadGit = (args: readonly string[]) => {
 
 export function readSnapshotGitEvidence(read: ReadGit): SnapshotGitEvidence {
   const historyBases = historyRefs.flatMap((ref) => {
-    const result = read([
-      "rev-parse",
-      "--verify",
-      "--quiet",
-      `${ref}^{commit}`,
-    ]);
+    const result = read(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
     const commit = result.stdout.trim();
-    return result.status === 0 && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(commit)
-      ? [{ ref, commit }]
-      : [];
+    return result.status === 0 && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(commit) ? [{ ref, commit }] : [];
   });
   const hooks = read(["config", "--get", "core.hooksPath"]);
   const hooksPath = hooks.stdout.trim();

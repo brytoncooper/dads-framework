@@ -22,16 +22,12 @@ export const TEST_SPICE_DB_MEMORY_GB = "DADS_TEST_SPICEDB_MEMORY_GB";
  */
 const DEFAULT_SPICE_DB_MEMORY_GB = 2;
 
-export function testSpiceDbMemoryLimitGb(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): number {
+export function testSpiceDbMemoryLimitGb(env: Readonly<Record<string, string | undefined>> = process.env): number {
   const raw = env[TEST_SPICE_DB_MEMORY_GB];
   if (raw === undefined || raw.trim() === "") return DEFAULT_SPICE_DB_MEMORY_GB;
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(
-      `${TEST_SPICE_DB_MEMORY_GB} must be a number of GB above 0 — got "${raw}"`,
-    );
+    throw new Error(`${TEST_SPICE_DB_MEMORY_GB} must be a number of GB above 0 — got "${raw}"`);
   }
   return value;
 }

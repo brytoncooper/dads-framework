@@ -40,8 +40,7 @@ export function installEmailDeliverySchemaV1(pgm: MigrationBuilder): void {
   });
 
   pgm.addConstraint("outbound_emails", "outbound_emails_status_check", {
-    check:
-      "status = ANY (ARRAY['queued'::text, 'sending'::text, 'sent'::text, 'failed'::text, 'cancelled'::text])",
+    check: "status = ANY (ARRAY['queued'::text, 'sending'::text, 'sent'::text, 'failed'::text, 'cancelled'::text])",
   });
 
   pgm.sql(

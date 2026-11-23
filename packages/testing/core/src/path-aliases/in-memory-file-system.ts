@@ -15,12 +15,8 @@ import { dirname, resolve } from "node:path";
 import type { AliasFileSystem } from "./alias-file-system.js";
 
 /** A file system over `files`, keyed by absolute path. */
-export function inMemoryFileSystem(
-  files: Readonly<Record<string, string>>,
-): AliasFileSystem {
-  const byPath = new Map(
-    Object.entries(files).map(([path, text]) => [resolve(path), text]),
-  );
+export function inMemoryFileSystem(files: Readonly<Record<string, string>>): AliasFileSystem {
+  const byPath = new Map(Object.entries(files).map(([path, text]) => [resolve(path), text]));
   return {
     isFile: (path: string): boolean => byPath.has(resolve(path)),
     readText: (path: string): string => readOrRefuse(byPath, path),

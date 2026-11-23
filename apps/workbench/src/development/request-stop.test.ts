@@ -22,9 +22,7 @@ it("authenticates the target before sending any shutdown instruction or secret",
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("No test port.");
   try {
-    await expect(
-      requestDevelopmentStop({ port: address.port, key: "a".repeat(64) }),
-    ).rejects.toThrow();
+    await expect(requestDevelopmentStop({ port: address.port, key: "a".repeat(64) })).rejects.toThrow();
     expect(observed).toEqual([{ method: "GET", authorization: undefined }]);
   } finally {
     await new Promise<void>((resolve) => {

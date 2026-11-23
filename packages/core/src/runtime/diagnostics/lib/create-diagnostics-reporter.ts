@@ -14,10 +14,7 @@
 
 import { CombinedDiagnosticsReporter } from "./combined-diagnostics-reporter.js";
 import type { DiagnosticsReporter } from "./diagnostics-reporter.js";
-import {
-  LogDiagnosticsReporter,
-  type DiagnosticsLog,
-} from "./log-diagnostics-reporter.js";
+import { LogDiagnosticsReporter, type DiagnosticsLog } from "./log-diagnostics-reporter.js";
 import type { SentryDestination } from "./logic/sentry-envelope.js";
 import { NoneDiagnosticsReporter } from "./none-diagnostics-reporter.js";
 import { SentryDiagnosticsReporter } from "./sentry-diagnostics-reporter.js";
@@ -45,9 +42,7 @@ export type CreateDiagnosticsReporterOptions = {
   };
 };
 
-export function createDiagnosticsReporter(
-  options: CreateDiagnosticsReporterOptions,
-): DiagnosticsReporter {
+export function createDiagnosticsReporter(options: CreateDiagnosticsReporterOptions): DiagnosticsReporter {
   if (options.driver === "none") return new NoneDiagnosticsReporter();
   if (options.log === undefined) {
     throw new Error(
@@ -57,12 +52,7 @@ export function createDiagnosticsReporter(
   const logged = new LogDiagnosticsReporter(options.log);
   if (options.driver === "log") return logged;
   if (options.sentry === undefined) {
-    throw new Error(
-      "DIAGNOSTICS_DRIVER=sentry requires a Sentry destination — set DIAGNOSTICS_SENTRY_DSN",
-    );
+    throw new Error("DIAGNOSTICS_DRIVER=sentry requires a Sentry destination — set DIAGNOSTICS_SENTRY_DSN");
   }
-  return new CombinedDiagnosticsReporter([
-    logged,
-    new SentryDiagnosticsReporter(options.sentry),
-  ]);
+  return new CombinedDiagnosticsReporter([logged, new SentryDiagnosticsReporter(options.sentry)]);
 }

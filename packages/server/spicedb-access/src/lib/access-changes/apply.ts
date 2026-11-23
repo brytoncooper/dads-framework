@@ -1,9 +1,6 @@
 import { ok, type Result } from "@dads-framework/core/errors";
 
-import type {
-  Authorization,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import type { Authorization, RelationshipWrite } from "@dads-framework/access/runtime";
 import type { ClaimAccessChanges } from "./claim.js";
 import { type ClaimedOutboxRow } from "./claim.js";
 import {
@@ -50,9 +47,7 @@ export class ApplyAccessChanges {
     private readonly maxAttempts: number = DEFAULT_MAX_ATTEMPTS,
   ) {}
 
-  async execute(
-    input: ApplyAccessChangesInput,
-  ): Promise<Result<ApplyAccessChangesReport>> {
+  async execute(input: ApplyAccessChangesInput): Promise<Result<ApplyAccessChangesReport>> {
     const at = this.now();
     const claimed = await this.store.claim({
       batchSize: input.batchSize ?? 50,
@@ -91,9 +86,7 @@ export class ApplyAccessChanges {
    * still PENDING under a live lease. It claims nothing, so a caller waiting
    * on its own facts never takes them from the worker that holds them.
    */
-  async keysHeldByLiveClaims(
-    idempotencyKeys: readonly string[],
-  ): Promise<readonly string[]> {
+  async keysHeldByLiveClaims(idempotencyKeys: readonly string[]): Promise<readonly string[]> {
     return this.store.heldByLiveClaim({
       idempotencyKeys,
       leaseCutoff: leaseCutoff(this.now(), this.leaseMs),
@@ -112,19 +105,13 @@ export class ApplyAccessChanges {
         if (!owned) return "SUPERSEDED";
         const applied = await this.apply(row, workerId);
         if (applied === "APPLIED") {
-          const settled = await this.store.markProjected(
-            [row.id],
-            this.now(),
-            workerId,
-          );
+          const settled = await this.store.markProjected([row.id], this.now(), workerId);
           return settled ? "PROJECTED" : "OWNERSHIP_LOST";
         }
         return applied;
       };
       const outcome =
-        row.ownerPartitionId === null
-          ? await settleRow()
-          : await this.coordinator.run(row.ownerPartitionId, settleRow);
+        row.ownerPartitionId === null ? await settleRow() : await this.coordinator.run(row.ownerPartitionId, settleRow);
       if (outcome === "PROJECTED") projected += 1;
       if (outcome === "FAILED") failed += 1;
     }
@@ -133,10 +120,7 @@ export class ApplyAccessChanges {
   }
 
   /** True when the fact reached the graph; false when it was recorded failed. */
-  private async apply(
-    row: ClaimedOutboxRow,
-    workerId: string,
-  ): Promise<"APPLIED" | "FAILED" | "OWNERSHIP_LOST"> {
+  private async apply(row: ClaimedOutboxRow, workerId: string): Promise<"APPLIED" | "FAILED" | "OWNERSHIP_LOST"> {
     try {
       if (row.operation === "WRITE") {
         await this.authorization.writeRelationships([toRelationship(row)]);
@@ -148,9 +132,7 @@ export class ApplyAccessChanges {
           subject: {
             type: row.subjectType,
             id: row.subjectId,
-            ...(row.subjectRelation === null
-              ? {}
-              : { relation: row.subjectRelation }),
+            ...(row.subjectRelation === null ? {} : { relation: row.subjectRelation }),
           },
         });
       }
@@ -174,9 +156,7 @@ function toRelationship(row: ClaimedOutboxRow): RelationshipWrite {
     subject: {
       type: row.subjectType,
       id: row.subjectId,
-      ...(row.subjectRelation === null
-        ? {}
-        : { relation: row.subjectRelation }),
+      ...(row.subjectRelation === null ? {} : { relation: row.subjectRelation }),
     },
   };
 }

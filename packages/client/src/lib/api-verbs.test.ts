@@ -5,11 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import {
-  defineGeneratedRoute,
-  paginationMetaSchema,
-  REQUEST_ID_HEADER,
-} from "@dads-framework/core/contract";
+import { defineGeneratedRoute, paginationMetaSchema, REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { ApiError, NetworkError, UnauthorizedError } from "./api-error.js";
 import {
@@ -36,12 +32,7 @@ const widgetRoutes = {
     "getWidgetsByWidgetId",
     (widgetId: string) => `/widgets/${encodeURIComponent(widgetId)}`,
   ),
-  create: defineGeneratedRoute(
-    "POST",
-    "/widgets",
-    "postWidgets",
-    () => "/widgets",
-  ),
+  create: defineGeneratedRoute("POST", "/widgets", "postWidgets", () => "/widgets"),
   archive: defineGeneratedRoute(
     "DELETE",
     "/widgets/:widgetId",
@@ -376,9 +367,7 @@ describe("sendToApiWithoutResponse", () => {
 
 describe("failures", () => {
   it("turns a fetch rejection into a typed network failure", async () => {
-    vi.stubGlobal("fetch", () =>
-      Promise.reject(new TypeError("RAW_BROWSER_NETWORK_MESSAGE")),
-    );
+    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("RAW_BROWSER_NETWORK_MESSAGE")));
 
     await expect(
       getFromApi({

@@ -1,10 +1,5 @@
 import type { ServiceBinding } from "./define-service.js";
-import {
-  type AnyDependency,
-  type CompositionRun,
-  type Dependency,
-  OfferedValues,
-} from "./dependency.js";
+import { type AnyDependency, type CompositionRun, type Dependency, OfferedValues } from "./dependency.js";
 import {
   type AccessContribution,
   type DeclaredContributions,
@@ -24,9 +19,7 @@ export type PluginSetupContext<Declared extends AnyDependency> = {
    * The value a declared dependency offers. Only dependencies listed in
    * `requires` are accepted, by the compiler and again at runtime.
    */
-  readonly use: <Value>(
-    dependency: Dependency<Declared["dependencyName"], Value>,
-  ) => Value;
+  readonly use: <Value>(dependency: Dependency<Declared["dependencyName"], Value>) => Value;
 };
 
 export type PluginSpec<
@@ -49,9 +42,7 @@ export type PluginSpec<
   readonly contributes?: PluginContributions<Flag, Access>;
   readonly setup?: (
     context: PluginSetupContext<Requires[number]>,
-  ) =>
-    | PluginRuntime<Provides, Route, Job>
-    | Promise<PluginRuntime<Provides, Route, Job>>;
+  ) => PluginRuntime<Provides, Route, Job> | Promise<PluginRuntime<Provides, Route, Job>>;
 };
 
 /**
@@ -73,22 +64,11 @@ export type Plugin<
   readonly requires: readonly Dependency<Need, unknown>[];
   readonly implements: ServiceBinding<ServiceName, never> | undefined;
   readonly contributes: DeclaredContributions<Flag, Access>;
-  readonly start: (
-    run: CompositionRun,
-    scope: PluginScope,
-  ) => Promise<StartedContributions<Route, Job>>;
+  readonly start: (run: CompositionRun, scope: PluginScope) => Promise<StartedContributions<Route, Job>>;
 };
 
 /** Any plugin, for code that only orders, starts, or reports. */
-export type AnyPlugin = Plugin<
-  string,
-  string,
-  unknown,
-  unknown,
-  NamedJob,
-  SluggedFlag,
-  string
->;
+export type AnyPlugin = Plugin<string, string, unknown, unknown, NamedJob, SluggedFlag, string>;
 
 const PLUGIN_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -107,30 +87,10 @@ export function definePlugin<
   ServiceName extends string = never,
   Access extends AccessContribution = never,
 >(
-  spec: PluginSpec<
-    Name,
-    Requires,
-    Provides,
-    Route,
-    Job,
-    Flag,
-    ServiceName,
-    Access
-  >,
-): Plugin<
-  Name,
-  Requires[number]["dependencyName"],
-  Provides,
-  Route,
-  Job,
-  Flag,
-  ServiceName,
-  Access
-> {
+  spec: PluginSpec<Name, Requires, Provides, Route, Job, Flag, ServiceName, Access>,
+): Plugin<Name, Requires[number]["dependencyName"], Provides, Route, Job, Flag, ServiceName, Access> {
   if (!PLUGIN_NAME.test(spec.name)) {
-    throw new Error(
-      `plugin name ${JSON.stringify(spec.name)} must be lowercase words joined by dashes`,
-    );
+    throw new Error(`plugin name ${JSON.stringify(spec.name)} must be lowercase words joined by dashes`);
   }
   const offered = new OfferedValues<Provides>(`plugin ${spec.name}`);
   const dependencyName: `plugin:${Name}` = `plugin:${spec.name}`;
@@ -159,15 +119,7 @@ async function startPlugin<
   Job extends NamedJob,
   ServiceName extends string,
 >(
-  spec: PluginSpec<
-    string,
-    Requires,
-    Provides,
-    Route,
-    Job,
-    SluggedFlag,
-    ServiceName
-  >,
+  spec: PluginSpec<string, Requires, Provides, Route, Job, SluggedFlag, ServiceName>,
   input: StartInput<Provides>,
 ): Promise<StartedContributions<Route, Job>> {
   if (spec.setup === undefined) return { routes: [], jobs: [] };

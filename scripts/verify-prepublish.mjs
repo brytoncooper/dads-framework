@@ -16,17 +16,13 @@ if (current === null || !hasProof(root, current.committed, current.key, true)) {
   process.exitCode = 1;
 } else {
   try {
-    const manifest = JSON.parse(
-      readFileSync(join(process.cwd(), "package.json"), "utf8"),
-    );
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
     if (typeof manifest.name !== "string" || manifest.name.length === 0) {
       throw new Error("The workspace package has no name.");
     }
     verifyReleaseArtifacts(root, manifest.name);
   } catch {
-    process.stderr.write(
-      "Publish refused because the local package archive did not pass release preflight.\n",
-    );
+    process.stderr.write("Publish refused because the local package archive did not pass release preflight.\n");
     process.exitCode = 1;
   }
 }

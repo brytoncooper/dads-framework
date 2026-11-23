@@ -32,35 +32,22 @@ type ReadPackageJson = {
   readonly dependencyNames: readonly string[];
 };
 
-const dependencyFields = [
-  "dependencies",
-  "devDependencies",
-  "peerDependencies",
-];
+const dependencyFields = ["dependencies", "devDependencies", "peerDependencies"];
 
 export function readWorkspacePackages(
   workspaceRoot: string,
   directories: readonly string[],
 ): readonly WorkspacePackage[] {
-  const read = directories.map((directory) =>
-    readOnePackage(workspaceRoot, directory),
-  );
+  const read = directories.map((directory) => readOnePackage(workspaceRoot, directory));
   const knownNames = new Set(
-    read
-      .map((entry) => entry.declared?.name)
-      .filter((name): name is string => name !== undefined),
+    read.map((entry) => entry.declared?.name).filter((name): name is string => name !== undefined),
   );
   const knownDirectories = new Set(read.map((entry) => entry.directory));
 
   return read.map((entry) => {
     const unsupported = [...entry.unsupported];
     const declared = entry.declared;
-    const references = resolveTsconfigReferences(
-      workspaceRoot,
-      entry.directory,
-      knownDirectories,
-      unsupported,
-    );
+    const references = resolveTsconfigReferences(workspaceRoot, entry.directory, knownDirectories, unsupported);
     const name = declared?.name;
     return {
       directory: entry.directory,
@@ -84,10 +71,7 @@ function readOnePackage(
   readonly declared: ReadPackageJson | undefined;
   readonly unsupported: readonly InitUnsupported[];
 } {
-  const packageJsonPath = join(
-    absoluteDirectory(workspaceRoot, directory),
-    "package.json",
-  );
+  const packageJsonPath = join(absoluteDirectory(workspaceRoot, directory), "package.json");
   let text: string;
   try {
     text = readFileSync(packageJsonPath, "utf8");
@@ -136,9 +120,7 @@ function readPackageJson(text: string): ReadPackageJson {
   };
 }
 
-function readDeclaredName(
-  parsed: Readonly<Record<string, unknown>>,
-): string | undefined {
+function readDeclaredName(parsed: Readonly<Record<string, unknown>>): string | undefined {
   const declaredName = parsed["name"];
   if (declaredName === undefined) return undefined;
   if (typeof declaredName !== "string") {
@@ -148,9 +130,7 @@ function readDeclaredName(
 }
 
 /** A command that is not a string would become a task that cannot run. */
-function readDeclaredScripts(
-  parsed: Readonly<Record<string, unknown>>,
-): Readonly<Record<string, string>> {
+function readDeclaredScripts(parsed: Readonly<Record<string, unknown>>): Readonly<Record<string, string>> {
   const declaredScripts = parsed["scripts"];
   if (declaredScripts === undefined) return {};
   if (!isRecord(declaredScripts)) {
@@ -167,9 +147,7 @@ function readDeclaredScripts(
 }
 
 /** Every dependency field contributes names; which field it came from does not matter. */
-function readDeclaredDependencyNames(
-  parsed: Readonly<Record<string, unknown>>,
-): readonly string[] {
+function readDeclaredDependencyNames(parsed: Readonly<Record<string, unknown>>): readonly string[] {
   const dependencyNames: string[] = [];
   for (const field of dependencyFields) {
     const declared = parsed[field];
@@ -193,10 +171,7 @@ function resolveTsconfigReferences(
   knownDirectories: ReadonlySet<string>,
   unsupported: InitUnsupported[],
 ): readonly string[] {
-  const tsconfigPath = join(
-    absoluteDirectory(workspaceRoot, directory),
-    "tsconfig.json",
-  );
+  const tsconfigPath = join(absoluteDirectory(workspaceRoot, directory), "tsconfig.json");
   if (!existsSync(tsconfigPath)) return [];
   const declared = readDeclaredReferences(tsconfigPath, directory, unsupported);
 
@@ -267,11 +242,7 @@ function referencedPackageDirectory(request: {
     });
     return undefined;
   }
-  const referenced = referencedDirectory(
-    request.workspaceRoot,
-    dirname(request.tsconfigPath),
-    path,
-  );
+  const referenced = referencedDirectory(request.workspaceRoot, dirname(request.tsconfigPath), path);
   if (request.knownDirectories.has(referenced)) return referenced;
   request.unsupported.push({
     subject,
@@ -281,19 +252,10 @@ function referencedPackageDirectory(request: {
 }
 
 /** A reference may name a tsconfig file or the directory that holds one. */
-function referencedDirectory(
-  workspaceRoot: string,
-  fromDirectory: string,
-  referencePath: string,
-): string {
+function referencedDirectory(workspaceRoot: string, fromDirectory: string, referencePath: string): string {
   const resolved = resolve(fromDirectory, referencePath);
-  const namesFile = existsSync(resolved)
-    ? statSync(resolved).isFile()
-    : resolved.endsWith(".json");
-  return workspaceRelative(
-    workspaceRoot,
-    namesFile ? dirname(resolved) : resolved,
-  );
+  const namesFile = existsSync(resolved) ? statSync(resolved).isFile() : resolved.endsWith(".json");
+  return workspaceRelative(workspaceRoot, namesFile ? dirname(resolved) : resolved);
 }
 
 function absoluteDirectory(workspaceRoot: string, directory: string): string {

@@ -82,23 +82,15 @@ export abstract class ClaimAccessChanges {
    * so a dispatch that races the background projector does nothing rather
    * than projecting twice.
    */
-  abstract claimByKeys(
-    claim: OutboxKeyClaim,
-  ): Promise<readonly ClaimedOutboxRow[]>;
+  abstract claimByKeys(claim: OutboxKeyClaim): Promise<readonly ClaimedOutboxRow[]>;
   /**
    * Of the named facts, the keys still PENDING and held under a live lease by
    * any worker. A read only: it claims nothing, takes no row lock and never
    * waits, so a caller can watch another worker's claim without stealing it.
    */
-  abstract heldByLiveClaim(
-    query: OutboxHeldKeysQuery,
-  ): Promise<readonly string[]>;
+  abstract heldByLiveClaim(query: OutboxHeldKeysQuery): Promise<readonly string[]>;
   abstract isClaimOwned(id: AccessChangeId, workerId: string): Promise<boolean>;
-  abstract markProjected(
-    ids: readonly AccessChangeId[],
-    at: Date,
-    workerId: string,
-  ): Promise<boolean>;
+  abstract markProjected(ids: readonly AccessChangeId[], at: Date, workerId: string): Promise<boolean>;
   abstract markFailed(
     id: AccessChangeId,
     outcome: {

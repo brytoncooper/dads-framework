@@ -11,8 +11,7 @@ import {
 
 export const PREFIX = "/api/site/files";
 export const GIB = 1024 ** 3;
-export const PLENTY: DiskFreeSpace = () =>
-  Promise.resolve({ freeBytes: 500 * GIB, totalBytes: 1000 * GIB });
+export const PLENTY: DiskFreeSpace = () => Promise.resolve({ freeBytes: 500 * GIB, totalBytes: 1000 * GIB });
 
 type Logged = {
   readonly fields: Record<string, unknown>;
@@ -35,9 +34,7 @@ export function storage(freeSpace: DiskFreeSpace = PLENTY): DiskObjectStorage {
   return new DiskObjectStorage(storageOptions(freeSpace));
 }
 
-export function storageOptions(
-  freeSpace: DiskFreeSpace = PLENTY,
-): DiskObjectStorageOptions {
+export function storageOptions(freeSpace: DiskFreeSpace = PLENTY): DiskObjectStorageOptions {
   return {
     rootDirectory: root,
     signingKey: () => Promise.resolve(new Uint8Array(32).fill(7)),

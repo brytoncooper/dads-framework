@@ -56,9 +56,7 @@ function captureFetch(response: Response): {
 
 describe("MailgunEmailSender", () => {
   it("posts to the US messages endpoint with Basic auth built from the key", async () => {
-    const { fetchImpl, calls } = captureFetch(
-      acceptedResponse({ id: "<20260911.1@example.test>" }),
-    );
+    const { fetchImpl, calls } = captureFetch(acceptedResponse({ id: "<20260911.1@example.test>" }));
     const sender = new MailgunEmailSender(
       {
         apiKey: "key-secret",
@@ -72,14 +70,10 @@ describe("MailgunEmailSender", () => {
     await sender.send(MESSAGE);
 
     const [call] = calls;
-    expect(call?.url).toBe(
-      "https://api.mailgun.net/v3/mail.example.test/messages",
-    );
+    expect(call?.url).toBe("https://api.mailgun.net/v3/mail.example.test/messages");
     expect(call?.init.method).toBe("POST");
     const headers = new Headers(call?.init.headers);
-    expect(headers.get("authorization")).toBe(
-      `Basic ${Buffer.from("api:key-secret").toString("base64")}`,
-    );
+    expect(headers.get("authorization")).toBe(`Basic ${Buffer.from("api:key-secret").toString("base64")}`);
   });
 
   it("posts to the EU host when the account lives in the EU region", async () => {
@@ -96,9 +90,7 @@ describe("MailgunEmailSender", () => {
 
     await sender.send(MESSAGE);
 
-    expect(calls[0]?.url).toBe(
-      "https://api.eu.mailgun.net/v3/mail.example.test/messages",
-    );
+    expect(calls[0]?.url).toBe("https://api.eu.mailgun.net/v3/mail.example.test/messages");
   });
 
   it("sends the envelope as multipart form fields", async () => {
@@ -120,22 +112,14 @@ describe("MailgunEmailSender", () => {
     });
 
     const body = calls[0]?.init.body;
-    if (!(body instanceof FormData))
-      throw new Error("expected a FormData body");
-    expect(textValues(body, "to")).toEqual([
-      "one@example.test",
-      "two@example.test",
-    ]);
+    if (!(body instanceof FormData)) throw new Error("expected a FormData body");
+    expect(textValues(body, "to")).toEqual(["one@example.test", "two@example.test"]);
     expect(textValues(body, "o:tag")).toEqual(["invitation"]);
-    expect(textValues(body, "from")).toEqual([
-      "Example App <no-reply@example.test>",
-    ]);
+    expect(textValues(body, "from")).toEqual(["Example App <no-reply@example.test>"]);
   });
 
   it("returns the vendor's message id as the receipt", async () => {
-    const { fetchImpl } = captureFetch(
-      acceptedResponse({ id: "<20260911.2@example.test>", message: "Queued" }),
-    );
+    const { fetchImpl } = captureFetch(acceptedResponse({ id: "<20260911.2@example.test>", message: "Queued" }));
     const sender = new MailgunEmailSender(
       {
         apiKey: "key-secret",
@@ -152,9 +136,7 @@ describe("MailgunEmailSender", () => {
   });
 
   it("reports a null receipt when Mailgun accepts without naming an id", async () => {
-    const { fetchImpl } = captureFetch(
-      new Response("Queued. Thank you.", { status: 200 }),
-    );
+    const { fetchImpl } = captureFetch(new Response("Queued. Thank you.", { status: 200 }));
     const sender = new MailgunEmailSender(
       {
         apiKey: "key-secret",
@@ -171,9 +153,7 @@ describe("MailgunEmailSender", () => {
   });
 
   it("throws on rejection without putting the key or the recipient in the message", async () => {
-    const { fetchImpl } = captureFetch(
-      new Response("domain not found: mail.example.test", { status: 404 }),
-    );
+    const { fetchImpl } = captureFetch(new Response("domain not found: mail.example.test", { status: 404 }));
     const sender = new MailgunEmailSender(
       {
         apiKey: "key-secret",
@@ -194,9 +174,7 @@ describe("MailgunEmailSender", () => {
   });
 
   it("truncates a long rejection body so a vendor error page cannot fill the logs", async () => {
-    const { fetchImpl } = captureFetch(
-      new Response("x".repeat(5_000), { status: 500 }),
-    );
+    const { fetchImpl } = captureFetch(new Response("x".repeat(5_000), { status: 500 }));
     const sender = new MailgunEmailSender(
       {
         apiKey: "key-secret",
@@ -235,8 +213,7 @@ describe("EmailSender conformance against Mailgun", () => {
         acceptedId,
         submittedEnvelope() {
           const body = calls[0]?.init.body;
-          if (!(body instanceof FormData))
-            throw new Error("Expected form data");
+          if (!(body instanceof FormData)) throw new Error("Expected form data");
           return {
             to: textValues(body, "to"),
             subject: body.get("subject"),

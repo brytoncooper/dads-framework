@@ -16,11 +16,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { readCapabilities } from "../scanners/capability-model.js";
 
 function countSingleImplementers(context: DoctorContext): SignalReadings {
@@ -40,8 +36,7 @@ export const singleImplementerAbstractionsSignal: DoctorSignal = {
   id: "single-implementer-abstractions",
   issue: "commitment-issues",
   alsoUnder: ["the-paper-wall"],
-  question:
-    "Is there a type with exactly one implementer and one consumer? (heuristic)",
+  question: "Is there a type with exactly one implementer and one consumer? (heuristic)",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

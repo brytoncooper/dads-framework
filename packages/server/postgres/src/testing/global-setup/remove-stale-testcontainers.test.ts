@@ -11,12 +11,7 @@ import {
 const NOW = new Date("2026-08-02T21:00:00.000Z");
 
 /** A running container the harness started, `minutes` ago, in `sessionId`. */
-function aged(
-  id: string,
-  minutes: number,
-  sessionId: string,
-  isReaper = false,
-): TestcontainersContainer {
+function aged(id: string, minutes: number, sessionId: string, isReaper = false): TestcontainersContainer {
   return {
     id,
     image: isReaper ? "testcontainers/ryuk:0.14.0" : "postgres:16-alpine",
@@ -28,12 +23,7 @@ function aged(
 }
 
 /** The same, but stopped — exited, or created and never started. */
-function stopped(
-  id: string,
-  minutes: number,
-  sessionId: string,
-  isReaper = false,
-): TestcontainersContainer {
+function stopped(id: string, minutes: number, sessionId: string, isReaper = false): TestcontainersContainer {
   return { ...aged(id, minutes, sessionId, isReaper), running: false };
 }
 
@@ -61,15 +51,11 @@ describe("selectStaleTestcontainers", () => {
     // The exact shape of the leak: containers labelled with a session whose
     // reaper was already gone, so nothing would ever remove them.
     const corpse = aged("corpse", 40, "dead-session");
-    expect(selectStaleTestcontainers([corpse], NOW).map((c) => c.id)).toEqual([
-      "corpse",
-    ]);
+    expect(selectStaleTestcontainers([corpse], NOW).map((c) => c.id)).toEqual(["corpse"]);
   });
 
   it("spares a container younger than the age floor", () => {
-    expect(
-      selectStaleTestcontainers([aged("young", 5, "dead-session")], NOW),
-    ).toEqual([]);
+    expect(selectStaleTestcontainers([aged("young", 5, "dead-session")], NOW)).toEqual([]);
   });
 
   it("spares the session this run is about to adopt", () => {
@@ -85,22 +71,14 @@ describe("selectStaleTestcontainers", () => {
   it("never removes a RUNNING reaper, however old", () => {
     // Removing another lane's reaper would orphan every container it watches —
     // the sweep would manufacture exactly the corpses it exists to clear.
-    expect(
-      selectStaleTestcontainers([aged("old-reaper", 600, "some", true)], NOW),
-    ).toEqual([]);
+    expect(selectStaleTestcontainers([aged("old-reaper", 600, "some", true)], NOW)).toEqual([]);
   });
 
   it("sweeps every aged container when no reaper is running at all", () => {
     // No running reaper means this run will create a fresh one with a session
     // id no existing container can carry, so every aged container is a corpse.
-    const containers = [
-      aged("a", 20, "session-one"),
-      aged("b", 90, "session-two"),
-      aged("c", 2, "session-two"),
-    ];
-    expect(selectStaleTestcontainers(containers, NOW).map((c) => c.id)).toEqual(
-      ["a", "b"],
-    );
+    const containers = [aged("a", 20, "session-one"), aged("b", 90, "session-two"), aged("c", 2, "session-two")];
+    expect(selectStaleTestcontainers(containers, NOW).map((c) => c.id)).toEqual(["a", "b"]);
   });
 
   it("adopts the NEWEST running reaper's session, as testcontainers does", () => {
@@ -111,10 +89,7 @@ describe("selectStaleTestcontainers", () => {
     const newer = aged("newer-reaper", 30, "newer-session", true);
     const onOlder = aged("on-older", 80, "older-session");
     const onNewer = aged("on-newer", 25, "newer-session");
-    const stale = selectStaleTestcontainers(
-      [older, newer, onOlder, onNewer],
-      NOW,
-    );
+    const stale = selectStaleTestcontainers([older, newer, onOlder, onNewer], NOW);
     expect(stale.map((c) => c.id)).toEqual(["on-older"]);
   });
 
@@ -139,30 +114,19 @@ describe("selectStaleTestcontainers", () => {
     const exited = stopped("exited", 40, "live-session");
     const created = stopped("created", 40, "live-session");
     const runningInUse = aged("in-use", 25, "live-session");
-    const stale = selectStaleTestcontainers(
-      [reaper, exited, created, runningInUse],
-      NOW,
-    );
+    const stale = selectStaleTestcontainers([reaper, exited, created, runningInUse], NOW);
     expect(stale.map((c) => c.id)).toEqual(["exited", "created"]);
   });
 
   it("still spares a stopped container younger than the floor", () => {
     // A container created seconds ago is one a run is starting right now.
-    expect(
-      selectStaleTestcontainers([stopped("starting", 1, "live")], NOW),
-    ).toEqual([]);
+    expect(selectStaleTestcontainers([stopped("starting", 1, "live")], NOW)).toEqual([]);
   });
 
   it("uses 15 minutes as the floor", () => {
     expect(STALE_AFTER_MS).toBe(15 * 60_000);
-    expect(
-      selectStaleTestcontainers([aged("just-under", 14, "s")], NOW),
-    ).toEqual([]);
-    expect(
-      selectStaleTestcontainers([aged("just-over", 16, "s")], NOW).map(
-        (c) => c.id,
-      ),
-    ).toEqual(["just-over"]);
+    expect(selectStaleTestcontainers([aged("just-under", 14, "s")], NOW)).toEqual([]);
+    expect(selectStaleTestcontainers([aged("just-over", 16, "s")], NOW).map((c) => c.id)).toEqual(["just-over"]);
   });
 });
 
@@ -182,10 +146,7 @@ describe("removeStaleTestcontainers", () => {
   it("keeps going when docker refuses one container", async () => {
     // A container that vanished between the list and the remove is the normal
     // race, not a reason to abandon the rest of the sweep or fail the run.
-    const docker = fakeDocker(
-      [aged("gone", 40, "dead"), aged("still-there", 40, "dead")],
-      ["gone"],
-    );
+    const docker = fakeDocker([aged("gone", 40, "dead"), aged("still-there", 40, "dead")], ["gone"]);
     const report = await removeStaleTestcontainers(docker, NOW);
     expect(docker.removed).toEqual(["still-there"]);
     expect(report.removed).toBe(1);
@@ -196,8 +157,7 @@ describe("removeStaleTestcontainers", () => {
     // The sweep is housekeeping. A machine without a running Docker must still
     // be able to run the tests that do not need one.
     const broken: DockerContainerClient = {
-      listTestcontainersContainers: () =>
-        Promise.reject(new Error("Cannot connect to the Docker daemon")),
+      listTestcontainersContainers: () => Promise.reject(new Error("Cannot connect to the Docker daemon")),
       remove: () => Promise.resolve(),
     };
     const report = await removeStaleTestcontainers(broken, NOW);

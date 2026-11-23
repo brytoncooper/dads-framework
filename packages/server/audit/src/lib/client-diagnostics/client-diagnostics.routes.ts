@@ -13,27 +13,16 @@
  * rather than anything a caller could treat as a resource it owns.
  */
 
-import {
-  postRoute,
-  publicAccess,
-  routeGroup,
-  type HttpRoute,
-} from "@dads-framework/http";
-import {
-  reportClientDiagnosticsBodySchema,
-  reportedClientDiagnosticsSchema,
-} from "@dads-framework/core/contract";
+import { postRoute, publicAccess, routeGroup, type HttpRoute } from "@dads-framework/http";
+import { reportClientDiagnosticsBodySchema, reportedClientDiagnosticsSchema } from "@dads-framework/core/contract";
 
 import type { ClientDiagnosticsRouteHandlers } from "./client-diagnostics.route-handlers.js";
 
-export function createClientDiagnosticsRoutes(
-  handlers: ClientDiagnosticsRouteHandlers,
-): HttpRoute[] {
+export function createClientDiagnosticsRoutes(handlers: ClientDiagnosticsRouteHandlers): HttpRoute[] {
   // Bound here rather than in the handler module: handler modules hold
   // methods in the route declaration, and a method handed to the
   // router as a value would arrive without its `this`.
-  const reportClientDiagnostics =
-    handlers.reportClientDiagnostics.bind(handlers);
+  const reportClientDiagnostics = handlers.reportClientDiagnostics.bind(handlers);
   return routeGroup("Client diagnostics", [
     postRoute({
       path: "/client-diagnostics",

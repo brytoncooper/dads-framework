@@ -21,12 +21,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   isProductionModule,
@@ -43,16 +38,11 @@ type Edge = {
 const VISITING = 1;
 const VISITED = 2;
 
-function edgesFrom(
-  module: DoctorModule,
-  inPackage: ReadonlySet<string>,
-): readonly Edge[] {
+function edgesFrom(module: DoctorModule, inPackage: ReadonlySet<string>): readonly Edge[] {
   const edges: Edge[] = [];
   for (const imported of moduleImports(module)) {
     if (imported.typeOnly) continue;
-    const target = resolveRelativeImport(module.path, imported.specifier).find(
-      (candidate) => inPackage.has(candidate),
-    );
+    const target = resolveRelativeImport(module.path, imported.specifier).find((candidate) => inPackage.has(candidate));
     if (target === undefined) continue;
     edges.push({
       to: target,
@@ -63,9 +53,7 @@ function edgesFrom(
 }
 
 /** Every import that points back at a module the walk is still inside. */
-function backEdges(
-  graph: ReadonlyMap<string, readonly Edge[]>,
-): readonly SignalEvidence[] {
+function backEdges(graph: ReadonlyMap<string, readonly Edge[]>): readonly SignalEvidence[] {
   const state = new Map<string, number>();
   const found: SignalEvidence[] = [];
   const walk = (from: string): void => {
@@ -87,10 +75,7 @@ function countIntraPackageCycles(context: DoctorContext): SignalReadings {
   const byPackage = new Map<string, DoctorModule[]>();
   for (const module of context.program().modules) {
     if (!isProductionModule(module.path)) continue;
-    byPackage.set(module.packageRoot, [
-      ...(byPackage.get(module.packageRoot) ?? []),
-      module,
-    ]);
+    byPackage.set(module.packageRoot, [...(byPackage.get(module.packageRoot) ?? []), module]);
   }
 
   const readings = new Map<string, SignalReading>();

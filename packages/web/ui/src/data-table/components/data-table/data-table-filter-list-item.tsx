@@ -4,14 +4,7 @@ import * as React from "react";
 
 import { useLocaleFormatting } from "../../../copy/index.js";
 import { Button, cn } from "../../../elements/index.js";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../forms/index.js";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../../forms/index.js";
 import {
   Command,
   CommandEmpty,
@@ -26,23 +19,13 @@ import {
 
 import { dataTableConfig } from "../../config/data-table.js";
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
-import {
-  getDefaultFilterOperator,
-  getFilterOperators,
-} from "../../lib/data-table.js";
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-  JoinOperator,
-} from "../../lib/data-table-types.js";
+import { getDefaultFilterOperator, getFilterOperators } from "../../lib/data-table.js";
+import type { ExtendedColumnFilter, FilterOperator, JoinOperator } from "../../lib/data-table-types.js";
 import { isKnownColumnId } from "../../lib/parsers.js";
 import { SortableItem, SortableItemHandle } from "../ui/sortable.js";
 
 import { renderFilterListInput } from "./data-table-filter-list-input.js";
-import {
-  REMOVE_FILTER_SHORTCUTS,
-  type FilterMenuUpdate,
-} from "./data-table-filter-input-shared.js";
+import { REMOVE_FILTER_SHORTCUTS, type FilterMenuUpdate } from "./data-table-filter-input-shared.js";
 
 type DataTableFilterItemProps<TData> = {
   filter: ExtendedColumnFilter<TData>;
@@ -72,10 +55,7 @@ export function DataTableFilterItem<TData>({
   const [showValueSelector, setShowValueSelector] = React.useState(false);
 
   const column = columns.find((column) => column.id === filter.id);
-  const columnIds = React.useMemo(
-    () => new Set(columns.map((column) => column.id)),
-    [columns],
-  );
+  const columnIds = React.useMemo(() => new Set(columns.map((column) => column.id)), [columns]);
 
   const joinOperatorListboxId = `${filterItemId}-join-operator-listbox`;
   const fieldListboxId = `${filterItemId}-field-listbox`;
@@ -83,16 +63,11 @@ export function DataTableFilterItem<TData>({
   const inputId = `${filterItemId}-input`;
 
   const filterOperators = getFilterOperators(filter.variant);
-  const selectedOperator = filterOperators.find(
-    (operator) => operator.value === filter.operator,
-  );
+  const selectedOperator = filterOperators.find((operator) => operator.value === filter.operator);
 
   const onItemKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
@@ -105,13 +80,7 @@ export function DataTableFilterItem<TData>({
         onFilterRemove(filter.filterId);
       }
     },
-    [
-      filter.filterId,
-      showFieldSelector,
-      showOperatorSelector,
-      showValueSelector,
-      onFilterRemove,
-    ],
+    [filter.filterId, showFieldSelector, showOperatorSelector, showValueSelector, onFilterRemove],
   );
 
   if (!column) return null;
@@ -127,9 +96,7 @@ export function DataTableFilterItem<TData>({
       >
         <div className="min-w-[72px] text-center">
           {index === 0 ? (
-            <span className="text-muted-foreground text-sm">
-              {t("dataTable.filter.where")}
-            </span>
+            <span className="text-muted-foreground text-sm">{t("dataTable.filter.where")}</span>
           ) : index === 1 ? (
             <Select
               value={joinOperator}
@@ -143,11 +110,7 @@ export function DataTableFilterItem<TData>({
                 aria-controls={joinOperatorListboxId}
                 className="rounded lowercase"
               >
-                <SelectValue
-                  placeholder={t(
-                    dataTableConfig.joinOperatorLabelKeys[joinOperator],
-                  )}
-                />
+                <SelectValue placeholder={t(dataTableConfig.joinOperatorLabelKeys[joinOperator])} />
               </SelectTrigger>
               <SelectContent
                 id={joinOperatorListboxId}
@@ -177,17 +140,13 @@ export function DataTableFilterItem<TData>({
               className="w-32 justify-between rounded font-normal"
             >
               <span className="truncate">
-                {columns.find((column) => column.id === filter.id)?.columnDef
-                  .meta?.label ?? t("dataTable.filter.selectField")}
+                {columns.find((column) => column.id === filter.id)?.columnDef.meta?.label ??
+                  t("dataTable.filter.selectField")}
               </span>
               <ChevronsUpDown className="opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            id={fieldListboxId}
-            align="start"
-            className="w-40 p-0"
-          >
+          <PopoverContent id={fieldListboxId} align="start" className="w-40 p-0">
             <Command>
               <CommandInput placeholder={t("dataTable.filter.searchFields")} />
               <CommandList>
@@ -202,8 +161,7 @@ export function DataTableFilterItem<TData>({
                           return;
                         }
 
-                        const variant =
-                          column.columnDef.meta?.variant ?? "text";
+                        const variant = column.columnDef.meta?.variant ?? "text";
                         onFilterUpdate(filter.filterId, {
                           id: column.id,
                           variant,
@@ -214,15 +172,8 @@ export function DataTableFilterItem<TData>({
                         setShowFieldSelector(false);
                       }}
                     >
-                      <span className="truncate">
-                        {column.columnDef.meta?.label}
-                      </span>
-                      <Check
-                        className={cn(
-                          "ml-auto",
-                          column.id === filter.id ? "opacity-100" : "opacity-0",
-                        )}
-                      />
+                      <span className="truncate">{column.columnDef.meta?.label}</span>
+                      <Check className={cn("ml-auto", column.id === filter.id ? "opacity-100" : "opacity-0")} />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -237,36 +188,19 @@ export function DataTableFilterItem<TData>({
           onValueChange={(value: FilterOperator) => {
             onFilterUpdate(filter.filterId, {
               operator: value,
-              value:
-                value === "isEmpty" || value === "isNotEmpty"
-                  ? ""
-                  : filter.value,
+              value: value === "isEmpty" || value === "isNotEmpty" ? "" : filter.value,
             });
           }}
         >
-          <SelectTrigger
-            size="sm"
-            aria-controls={operatorListboxId}
-            className="w-32 rounded lowercase"
-          >
+          <SelectTrigger size="sm" aria-controls={operatorListboxId} className="w-32 rounded lowercase">
             <div className="truncate">
-              <SelectValue
-                placeholder={
-                  selectedOperator
-                    ? t(selectedOperator.labelKey)
-                    : filter.operator
-                }
-              />
+              <SelectValue placeholder={selectedOperator ? t(selectedOperator.labelKey) : filter.operator} />
             </div>
           </SelectTrigger>
           <SelectContent id={operatorListboxId}>
             <SelectGroup>
               {filterOperators.map((operator) => (
-                <SelectItem
-                  key={operator.value}
-                  value={operator.value}
-                  className="lowercase"
-                >
+                <SelectItem key={operator.value} value={operator.value} className="lowercase">
                   {t(operator.labelKey)}
                 </SelectItem>
               ))}

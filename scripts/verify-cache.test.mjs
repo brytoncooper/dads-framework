@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -102,11 +96,7 @@ describe("a package-scoped key", () => {
 
   it("changes with a workspace package imported but never declared", () => {
     const root = workspace();
-    write(
-      root,
-      "packages/b/src/use.ts",
-      'import { c } from "c";\nexport { c };\n',
-    );
+    write(root, "packages/b/src/use.ts", 'import { c } from "c";\nexport { c };\n');
     const before = packageKey(root);
     write(root, "packages/c/src/index.ts", "export const c = 30;\n");
     assert.notEqual(packageKey(root), before);
@@ -114,11 +104,7 @@ describe("a package-scoped key", () => {
 
   it("changes with a dependency reached only through tsconfig references", () => {
     const root = workspace();
-    write(
-      root,
-      "packages/b/tsconfig.json",
-      JSON.stringify({ references: [{ path: "../c" }] }),
-    );
+    write(root, "packages/b/tsconfig.json", JSON.stringify({ references: [{ path: "../c" }] }));
     const before = packageKey(root);
     write(root, "packages/c/src/index.ts", "export const c = 30;\n");
     assert.notEqual(packageKey(root), before);
@@ -140,10 +126,7 @@ describe("a package-scoped key", () => {
 
   it("changes with the step's command", () => {
     const root = workspace();
-    assert.notEqual(
-      packageKey(root, "packages/b", ["node", "tool.js", "--fix"]),
-      packageKey(root),
-    );
+    assert.notEqual(packageKey(root, "packages/b", ["node", "tool.js", "--fix"]), packageKey(root));
   });
 
   it("does not change with a package it does not reach", () => {
@@ -155,11 +138,7 @@ describe("a package-scoped key", () => {
 
   it("widens to the whole tree when the package names a path outside itself", () => {
     const root = workspace();
-    write(
-      root,
-      "packages/b/src/read.ts",
-      'export const docs = "../../../docs/guide.md";\n',
-    );
+    write(root, "packages/b/src/read.ts", 'export const docs = "../../../docs/guide.md";\n');
     const before = packageKey(root);
     write(root, "packages/c/src/index.ts", "export const c = 300;\n");
     assert.notEqual(packageKey(root), before);
@@ -281,10 +260,7 @@ describe("a verify run through the cache", () => {
     assert.equal(finishRunCache(first), "");
 
     const second = contextFor(root);
-    assert.equal(
-      (await runThroughCache(second, step, counter.run)).cache,
-      "hit",
-    );
+    assert.equal((await runThroughCache(second, step, counter.run)).cache, "hit");
     finishRunCache(second);
     assert.equal(counter.calls(), 1);
 
@@ -298,9 +274,7 @@ describe("a verify run through the cache", () => {
     const root = workspace();
     const step = lintStep();
     const first = contextFor(root);
-    await runThroughCache(first, step, () =>
-      Promise.resolve({ exitCode: 1, output: "" }),
-    );
+    await runThroughCache(first, step, () => Promise.resolve({ exitCode: 1, output: "" }));
     finishRunCache(first);
     const second = contextFor(root);
     const key = cacheKey(second, step.cache, [step.command, ...step.args]);
@@ -311,11 +285,7 @@ describe("a verify run through the cache", () => {
     const root = workspace();
     const step = lintStep();
     const run = contextFor(root);
-    const key = cacheKey(
-      run,
-      { kind: "package", directory: "packages/a" },
-      COMMAND,
-    );
+    const key = cacheKey(run, { kind: "package", directory: "packages/a" }, COMMAND);
     writeRecord(run, "test", "packages/a", { key });
     await runThroughCache(run, step, passing().run);
     write(root, "packages/a/src/index.ts", "export const a = 99;\n");
@@ -338,11 +308,7 @@ describe("the summary", () => {
       cache,
     });
     const text = summaryBlock({
-      results: [
-        result("format", "hit"),
-        result("test", "3 of 5 packages cached"),
-        result("build", null),
-      ],
+      results: [result("format", "hit"), result("test", "3 of 5 packages cached"), result("build", null)],
       wallMs: 1,
       receipt: "budget 1",
       budget: { jobs: 1 },

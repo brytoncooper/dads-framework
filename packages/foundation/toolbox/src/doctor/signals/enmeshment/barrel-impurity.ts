@@ -15,34 +15,21 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  fileReading,
-  type DoctorSignal,
-  type SignalReading,
-  type SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  isReExportStatement,
-  topLevelStatements,
-} from "../scanners/top-level-declarations.js";
+import { fileReading, type DoctorSignal, type SignalReading, type SignalReadings } from "../../doctor-signal.js";
+import { isReExportStatement, topLevelStatements } from "../scanners/top-level-declarations.js";
 
 const BARREL = /^packages\/(?:[^/]+\/)+src\/index\.ts$/;
 
 /** Top-level statements in `text` that are not re-exports. */
 export function countImpureStatements(text: string): number {
-  return topLevelStatements(text).filter(
-    (statement) => !isReExportStatement(statement),
-  ).length;
+  return topLevelStatements(text).filter((statement) => !isReExportStatement(statement)).length;
 }
 
 function countBarrelImpurity(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const path of context.files()) {
     if (!BARREL.test(path)) continue;
-    readings.set(
-      path,
-      fileReading(path, countImpureStatements(context.read(path))),
-    );
+    readings.set(path, fileReading(path, countImpureStatements(context.read(path))));
   }
   return readings;
 }
@@ -50,8 +37,7 @@ function countBarrelImpurity(context: DoctorContext): SignalReadings {
 export const barrelImpuritySignal: DoctorSignal = {
   id: "barrel-impurity",
   issue: "enmeshment",
-  question:
-    "Does a package's `src/index.ts` contain a statement that is not `export ... from`?",
+  question: "Does a package's `src/index.ts` contain a statement that is not `export ... from`?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

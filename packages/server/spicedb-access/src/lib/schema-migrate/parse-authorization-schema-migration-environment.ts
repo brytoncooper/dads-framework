@@ -21,13 +21,9 @@ const authorizationSchemaMigrationEnvironmentSchema = z
     datastoreAdminUrl: environment.SPICEDB_DATASTORE_ADMIN_URL,
   }));
 
-export type AuthorizationSchemaMigrationEnvironment = z.infer<
-  typeof authorizationSchemaMigrationEnvironmentSchema
->;
+export type AuthorizationSchemaMigrationEnvironment = z.infer<typeof authorizationSchemaMigrationEnvironmentSchema>;
 
 /** Parses SpiceDB schema-migrate settings for the database-migration process. */
-export function parseAuthorizationSchemaMigrationEnvironment(
-  input: unknown,
-): AuthorizationSchemaMigrationEnvironment {
+export function parseAuthorizationSchemaMigrationEnvironment(input: unknown): AuthorizationSchemaMigrationEnvironment {
   return authorizationSchemaMigrationEnvironmentSchema.parse(input);
 }

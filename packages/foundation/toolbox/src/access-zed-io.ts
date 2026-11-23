@@ -14,8 +14,7 @@ export function readZedFile(inputPath: string): string {
         cause: error,
       });
     }
-    const detail =
-      error instanceof Error ? error.message : "Unable to read file.";
+    const detail = error instanceof Error ? error.message : "Unable to read file.";
     throw new Error(`Unable to read zed schema file ${inputPath}: ${detail}`, {
       cause: error,
     });
@@ -23,11 +22,7 @@ export function readZedFile(inputPath: string): string {
 }
 
 /** Write generated output to `outPath`, creating parent directories unless `dryRun`. */
-export function writeTextArtifact(
-  outPath: string | null,
-  content: string,
-  dryRun: boolean,
-): boolean {
+export function writeTextArtifact(outPath: string | null, content: string, dryRun: boolean): boolean {
   if (outPath === null || dryRun) {
     return false;
   }

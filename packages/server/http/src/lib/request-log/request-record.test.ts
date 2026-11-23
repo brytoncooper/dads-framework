@@ -10,23 +10,15 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  encodeClientContext,
-  CLIENT_CONTEXT_HEADER,
-} from "@dads-framework/core/contract";
+import { encodeClientContext, CLIENT_CONTEXT_HEADER } from "@dads-framework/core/contract";
 
-import {
-  buildRequestRecord,
-  type RequestRecordInput,
-} from "./request-record.js";
+import { buildRequestRecord, type RequestRecordInput } from "./request-record.js";
 
 const RESOURCE_ID = "01JQZ0000000000000000ORDER";
 const SESSION_COOKIE = "example.session=super-secret-session-value";
 const BEARER = "Bearer super-secret-token";
 
-function input(
-  overrides: Partial<RequestRecordInput> = {},
-): RequestRecordInput {
+function input(overrides: Partial<RequestRecordInput> = {}): RequestRecordInput {
   return {
     requestId: "request-1",
     recordedAt: new Date("2026-09-11T00:00:00.000Z"),
@@ -51,9 +43,7 @@ function input(
 
 describe("buildRequestRecord", () => {
   it("carries the trace this request belonged to", () => {
-    const record = buildRequestRecord(
-      input({ traceId: "4bf92f3577b34da6a3ce929d0e0e4736" }),
-    );
+    const record = buildRequestRecord(input({ traceId: "4bf92f3577b34da6a3ce929d0e0e4736" }));
 
     expect(record.traceId).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
   });
@@ -195,9 +185,7 @@ describe("buildRequestRecord", () => {
   });
 
   it("has no client hints and no language when the request sent none", () => {
-    const record = buildRequestRecord(
-      input({ headers: { cookie: SESSION_COOKIE } }),
-    );
+    const record = buildRequestRecord(input({ headers: { cookie: SESSION_COOKIE } }));
 
     expect(record.clientHints).toBeNull();
     expect(record.acceptLanguage).toBeNull();
@@ -225,12 +213,8 @@ describe("buildRequestRecord", () => {
   });
 
   it("stores a null client context for garbage and for an oversized header", () => {
-    const garbage = buildRequestRecord(
-      input({ headers: { [CLIENT_CONTEXT_HEADER]: "not-base64-json!!!" } }),
-    );
-    const oversized = buildRequestRecord(
-      input({ headers: { [CLIENT_CONTEXT_HEADER]: "a".repeat(5000) } }),
-    );
+    const garbage = buildRequestRecord(input({ headers: { [CLIENT_CONTEXT_HEADER]: "not-base64-json!!!" } }));
+    const oversized = buildRequestRecord(input({ headers: { [CLIENT_CONTEXT_HEADER]: "a".repeat(5000) } }));
 
     expect(garbage.clientContext).toBeNull();
     expect(oversized.clientContext).toBeNull();
@@ -282,37 +266,21 @@ describe("buildRequestRecord", () => {
   });
 
   it("maps status and access outcome onto one decision", () => {
-    const decisionFor = (
-      status: number,
-      access: RequestRecordInput["access"],
-    ): string => buildRequestRecord(input({ status, access })).decision;
+    const decisionFor = (status: number, access: RequestRecordInput["access"]): string =>
+      buildRequestRecord(input({ status, access })).decision;
 
-    expect(
-      decisionFor(201, { outcome: "allow", accessKind: "permission" }),
-    ).toBe("allow");
-    expect(
-      decisionFor(404, { outcome: "not-found", accessKind: "permission" }),
-    ).toBe("denied");
-    expect(
-      decisionFor(401, { outcome: "unauthenticated", accessKind: "session" }),
-    ).toBe("unauthenticated");
+    expect(decisionFor(201, { outcome: "allow", accessKind: "permission" })).toBe("allow");
+    expect(decisionFor(404, { outcome: "not-found", accessKind: "permission" })).toBe("denied");
+    expect(decisionFor(401, { outcome: "unauthenticated", accessKind: "session" })).toBe("unauthenticated");
     expect(decisionFor(404, undefined)).toBe("not-found");
     expect(decisionFor(403, undefined)).toBe("denied");
-    expect(
-      decisionFor(400, { outcome: "allow", accessKind: "permission" }),
-    ).toBe("error");
-    expect(
-      decisionFor(429, { outcome: "allow", accessKind: "permission" }),
-    ).toBe("error");
-    expect(
-      decisionFor(500, { outcome: "allow", accessKind: "permission" }),
-    ).toBe("error");
+    expect(decisionFor(400, { outcome: "allow", accessKind: "permission" })).toBe("error");
+    expect(decisionFor(429, { outcome: "allow", accessKind: "permission" })).toBe("error");
+    expect(decisionFor(500, { outcome: "allow", accessKind: "permission" })).toBe("error");
   });
 
   it("keeps the error code the response envelope reported", () => {
-    const record = buildRequestRecord(
-      input({ status: 400, errorCode: "VALIDATION_FAILED" }),
-    );
+    const record = buildRequestRecord(input({ status: 400, errorCode: "VALIDATION_FAILED" }));
 
     expect(record.errorCode).toBe("VALIDATION_FAILED");
   });
@@ -332,9 +300,7 @@ describe("buildRequestRecord", () => {
   });
 
   it("takes the first value of a repeated header rather than a joined array", () => {
-    const record = buildRequestRecord(
-      input({ headers: { "user-agent": ["first-agent", "second-agent"] } }),
-    );
+    const record = buildRequestRecord(input({ headers: { "user-agent": ["first-agent", "second-agent"] } }));
 
     expect(record.userAgent).toBe("first-agent");
   });

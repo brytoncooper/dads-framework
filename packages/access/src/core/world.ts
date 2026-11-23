@@ -29,8 +29,7 @@ export type WorldEntity = {
   readonly id: string;
 };
 
-export type WorldSubject =
-  WorldPerson | WorldMembers | WorldEntity | WildcardHolder;
+export type WorldSubject = WorldPerson | WorldMembers | WorldEntity | WildcardHolder;
 
 export type WorldActor = WorldPerson | WorldEntity;
 
@@ -69,19 +68,11 @@ function subjectTuple(subject: WorldSubject): string {
   return personTuple(subject);
 }
 
-function relationshipTuple(
-  role: RoleToken,
-  resourceId: string,
-  subject: WorldSubject,
-): string {
+function relationshipTuple(role: RoleToken, resourceId: string, subject: WorldSubject): string {
   return `${role.entityWireName}:${resourceId}#${role.roleName}@${subjectTuple(subject)}`;
 }
 
-function assertionTuple(
-  permission: PermissionToken,
-  resourceId: string,
-  actor: WorldActor,
-): string {
+function assertionTuple(permission: PermissionToken, resourceId: string, actor: WorldActor): string {
   return `${permission.entityWireName}:${resourceId}#${permission.permissionName}@${subjectTuple(actor)}`;
 }
 
@@ -89,10 +80,7 @@ function resolveEntityHandle(target: EntityHandle | DslNode): EntityHandle {
   return "handle" in target ? target.handle : target;
 }
 
-export function world(
-  title: string,
-  build: (verbs: WorldVerbs) => void,
-): AccessWorld {
+export function world(title: string, build: (verbs: WorldVerbs) => void): AccessWorld {
   const relationships: string[] = [];
   const allow: string[] = [];
   const deny: string[] = [];

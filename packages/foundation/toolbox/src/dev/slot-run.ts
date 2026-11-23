@@ -19,11 +19,8 @@ type RunState = z.infer<typeof stateSchema>;
 export async function runStatus(directory: string): Promise<RunState> {
   const active = await runRef(directory);
   if (active === undefined) return "stopped";
-  const state = stateSchema.parse(
-    (await readJson(join(active.directory, "status.json"))) ?? "starting",
-  );
-  if ((state === "running" || state === "starting") && !pidIsAlive(active.pid))
-    return "failed";
+  const state = stateSchema.parse((await readJson(join(active.directory, "status.json"))) ?? "starting");
+  if ((state === "running" || state === "starting") && !pidIsAlive(active.pid)) return "failed";
   return state;
 }
 
@@ -38,30 +35,18 @@ export async function lastRunActivity(directory: string): Promise<number> {
   }
 }
 
-export async function startSlot(
-  root: string,
-  slot: Slot,
-  config: DevConfig,
-): Promise<void> {
+export async function startSlot(root: string, slot: Slot, config: DevConfig): Promise<void> {
   const directory = slotDirectory(root, slot);
   const current = await runStatus(directory);
   if (current === "running") return;
-  if (current === "starting")
-    throw new Error("A supervisor is already starting this slot.");
+  if (current === "starting") throw new Error("A supervisor is already starting this slot.");
   if (!(await slotPortsAvailable(slot.firstPort, slot.portCount))) {
     throw new Error("The reserved port block is currently in use.");
   }
   const run = await mkdtemp(join(directory, "run-"));
   await writeJson(join(run, "plan.json"), { config, slot });
-  const supervisor = fileURLToPath(
-    new URL("./slot-supervisor.js", import.meta.url),
-  );
-  const child = launch(
-    [process.execPath, supervisor, run],
-    slot.worktree,
-    process.env,
-    join(run, "supervisor.log"),
-  );
+  const supervisor = fileURLToPath(new URL("./slot-supervisor.js", import.meta.url));
+  const child = launch([process.execPath, supervisor, run], slot.worktree, process.env, join(run, "supervisor.log"));
   const exited = childFinished(child).catch(() => null);
   if (child.pid === undefined) {
     await exited;
@@ -72,11 +57,7 @@ export async function startSlot(
     pid: child.pid,
   });
   child.unref();
-  const status = await pollStatus(
-    directory,
-    (state) => state !== "starting",
-    45_000,
-  );
+  const status = await pollStatus(directory, (state) => state !== "starting", 45_000);
   if (status !== "running") {
     await writeJson(join(run, "stop.json"), true);
     throw new Error(`Slot did not become ready. See ${run}/supervisor.log.`);
@@ -88,27 +69,16 @@ export async function stopSlot(root: string, slot: Slot): Promise<void> {
   const active = await runRef(directory);
   if (active === undefined || !pidIsAlive(active.pid)) return;
   await writeJson(join(active.directory, "stop.json"), true);
-  const status = await pollStatus(
-    directory,
-    (state) => state === "stopped" || state === "failed",
-    15_000,
-  );
-  if (status !== "stopped" && status !== "failed")
-    throw new Error("Slot supervisor did not stop before the deadline.");
+  const status = await pollStatus(directory, (state) => state === "stopped" || state === "failed", 15_000);
+  if (status !== "stopped" && status !== "failed") throw new Error("Slot supervisor did not stop before the deadline.");
 }
 
-async function runRef(
-  directory: string,
-): Promise<z.infer<typeof runRefSchema> | undefined> {
+async function runRef(directory: string): Promise<z.infer<typeof runRefSchema> | undefined> {
   const value = await readJson(join(directory, "active.json"));
   return value === undefined ? undefined : runRefSchema.parse(value);
 }
 
-async function pollStatus(
-  directory: string,
-  done: (state: RunState) => boolean,
-  timeout: number,
-): Promise<RunState> {
+async function pollStatus(directory: string, done: (state: RunState) => boolean, timeout: number): Promise<RunState> {
   const deadline = Date.now() + timeout;
   let state = await runStatus(directory);
   while (!done(state) && Date.now() < deadline) {

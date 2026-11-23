@@ -9,11 +9,7 @@
  * resolver found, or `null`.
  */
 
-import {
-  createAliasResolver,
-  nodeFileSystem,
-  type AliasResolver,
-} from "../path-aliases/index.js";
+import { createAliasResolver, nodeFileSystem, type AliasResolver } from "../path-aliases/index.js";
 import { isRecord } from "../parse-guards.js";
 import type { Plugin } from "vite";
 

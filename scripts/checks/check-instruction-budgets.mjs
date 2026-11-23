@@ -8,33 +8,19 @@ const budgets = JSON.parse(readFileSync(configPath, "utf8"));
 const agentEntrypoint = requireRecord(budgets, "agentEntrypoint");
 const skills = requireRecord(budgets, "skills");
 requireString(agentEntrypoint, "path", "agentEntrypoint");
-requirePositiveNumber(
-  agentEntrypoint,
-  "maxApproximateTokens",
-  "agentEntrypoint",
-);
+requirePositiveNumber(agentEntrypoint, "maxApproximateTokens", "agentEntrypoint");
 requireString(skills, "directory", "skills");
 requirePositiveNumber(skills, "maxApproximateTokensPerSkill", "skills");
 requirePositiveNumber(skills, "maxApproximateTokensPerWorkflowSkill", "skills");
-requirePositiveNumber(
-  skills,
-  "maxApproximateTokensPerSupportingReference",
-  "skills",
-);
+requirePositiveNumber(skills, "maxApproximateTokensPerSupportingReference", "skills");
 requirePositiveNumber(skills, "maxApproximateTokensTotal", "skills");
 
-const entrypointTokens = approximateTokens(
-  readFileSync(join(root, agentEntrypoint.path), "utf8"),
-);
-assertWithinBudget(
-  agentEntrypoint.path,
-  entrypointTokens,
-  agentEntrypoint.maxApproximateTokens,
-);
+const entrypointTokens = approximateTokens(readFileSync(join(root, agentEntrypoint.path), "utf8"));
+assertWithinBudget(agentEntrypoint.path, entrypointTokens, agentEntrypoint.maxApproximateTokens);
 
 const skillDirectory = join(root, skills.directory);
-const entries = readdirSync(skillDirectory, { withFileTypes: true }).sort(
-  (left, right) => left.name.localeCompare(right.name),
+const entries = readdirSync(skillDirectory, { withFileTypes: true }).sort((left, right) =>
+  left.name.localeCompare(right.name),
 );
 if (entries.length === 0) {
   throw new Error(`${skills.directory} contains no canonical skill folders.`);
@@ -46,9 +32,7 @@ let supportingReferenceCount = 0;
 const supportingReferences = [];
 for (const entry of entries) {
   if (!entry.isDirectory()) {
-    throw new Error(
-      `${skills.directory}/${entry.name} is an unexpected skill entry; expected a directory.`,
-    );
+    throw new Error(`${skills.directory}/${entry.name} is an unexpected skill entry; expected a directory.`);
   }
 
   const skillFolder = join(skillDirectory, entry.name);
@@ -66,20 +50,14 @@ for (const entry of entries) {
   assertWithinBudget(
     relative(root, skillFile),
     tokens,
-    workflow
-      ? skills.maxApproximateTokensPerWorkflowSkill
-      : skills.maxApproximateTokensPerSkill,
+    workflow ? skills.maxApproximateTokensPerWorkflowSkill : skills.maxApproximateTokensPerSkill,
   );
 
   for (const markdownFile of findSupportingMarkdown(skillFolder, skillFile)) {
     const text = readRegularFile(markdownFile, "supporting Markdown reference");
     const referenceTokens = approximateTokens(text);
     const referencePath = relative(root, markdownFile);
-    assertWithinBudget(
-      referencePath,
-      referenceTokens,
-      skills.maxApproximateTokensPerSupportingReference,
-    );
+    assertWithinBudget(referencePath, referenceTokens, skills.maxApproximateTokensPerSupportingReference);
     supportingReferenceTokens += referenceTokens;
     supportingReferenceCount += 1;
     supportingReferences.push({ path: referencePath, tokens: referenceTokens });
@@ -87,11 +65,7 @@ for (const entry of entries) {
 }
 
 // This combined ceiling intentionally includes both ordinary and workflow entrypoints.
-assertWithinBudget(
-  "all canonical skills",
-  totalSkillTokens,
-  skills.maxApproximateTokensTotal,
-);
+assertWithinBudget("all canonical skills", totalSkillTokens, skills.maxApproximateTokensTotal);
 
 process.stdout.write(
   `${JSON.stringify({
@@ -111,9 +85,7 @@ function approximateTokens(text) {
 
 function assertWithinBudget(name, actual, maximum) {
   if (actual > maximum) {
-    throw new Error(
-      `${name} uses approximately ${actual} tokens; budget is ${maximum}.`,
-    );
+    throw new Error(`${name} uses approximately ${actual} tokens; budget is ${maximum}.`);
   }
 }
 
@@ -127,21 +99,13 @@ function requireRecord(parent, key) {
 
 function requireString(parent, key, scope) {
   if (typeof parent[key] !== "string" || parent[key].length === 0) {
-    throw new Error(
-      `Instruction budget field ${scope}.${key} must be a non-empty string.`,
-    );
+    throw new Error(`Instruction budget field ${scope}.${key} must be a non-empty string.`);
   }
 }
 
 function requirePositiveNumber(parent, key, scope) {
-  if (
-    typeof parent[key] !== "number" ||
-    !Number.isFinite(parent[key]) ||
-    parent[key] <= 0
-  ) {
-    throw new Error(
-      `Instruction budget field ${scope}.${key} must be positive.`,
-    );
+  if (typeof parent[key] !== "number" || !Number.isFinite(parent[key]) || parent[key] <= 0) {
+    throw new Error(`Instruction budget field ${scope}.${key} must be positive.`);
   }
 }
 
@@ -162,8 +126,8 @@ function readRegularFile(file, description) {
 
 function findSupportingMarkdown(directory, canonicalFile) {
   const files = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true }).sort(
-    (left, right) => left.name.localeCompare(right.name),
+  for (const entry of readdirSync(directory, { withFileTypes: true }).sort((left, right) =>
+    left.name.localeCompare(right.name),
   )) {
     const file = join(directory, entry.name);
     if (entry.isDirectory()) {
@@ -171,9 +135,7 @@ function findSupportingMarkdown(directory, canonicalFile) {
       continue;
     }
     if (!entry.isFile()) {
-      throw new Error(
-        `${relative(root, file)} is an unexpected skill resource; expected a file or directory.`,
-      );
+      throw new Error(`${relative(root, file)} is an unexpected skill resource; expected a file or directory.`);
     }
     if (!entry.name.toLowerCase().endsWith(".md")) {
       continue;
@@ -182,9 +144,7 @@ function findSupportingMarkdown(directory, canonicalFile) {
       continue;
     }
     if (entry.name.toLowerCase() === "skill.md") {
-      throw new Error(
-        `${relative(root, file)} is an unexpected nested canonical skill entrypoint.`,
-      );
+      throw new Error(`${relative(root, file)} is an unexpected nested canonical skill entrypoint.`);
     }
     files.push(file);
   }
@@ -216,17 +176,11 @@ function parseFrontmatter(text, file) {
 
 function classifySkill(metadata, file) {
   const hasRole = Object.hasOwn(metadata, "role");
-  const hasInvocationPolicy = Object.hasOwn(
-    metadata,
-    "disable-model-invocation",
-  );
+  const hasInvocationPolicy = Object.hasOwn(metadata, "disable-model-invocation");
   if (!hasRole && !hasInvocationPolicy) {
     return false;
   }
-  if (
-    metadata.role !== "workflow" ||
-    metadata["disable-model-invocation"] !== "true"
-  ) {
+  if (metadata.role !== "workflow" || metadata["disable-model-invocation"] !== "true") {
     throw new Error(
       `${file} has ambiguous workflow metadata; role: workflow and disable-model-invocation: true are required together.`,
     );
@@ -237,8 +191,7 @@ function classifySkill(metadata, file) {
 function unquote(value) {
   if (
     value.length >= 2 &&
-    ((value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'")))
+    ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
   ) {
     return value.slice(1, -1);
   }

@@ -35,9 +35,7 @@ const DISABLED = "true";
  * Reads the switch exactly as testcontainers reads it, so this wall and the
  * library can never disagree about whether the reaper is running.
  */
-export function refuseDisabledContainerCleanup(
-  env: Readonly<Record<string, string | undefined>>,
-): void {
+export function refuseDisabledContainerCleanup(env: Readonly<Record<string, string | undefined>>): void {
   if (env[TESTCONTAINERS_RYUK_DISABLED] !== DISABLED) return;
   if (env["CI"] !== undefined) return;
 

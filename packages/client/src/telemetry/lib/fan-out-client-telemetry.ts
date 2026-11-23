@@ -13,11 +13,7 @@
  * than stopping at the first that fails.
  */
 
-import {
-  ClientTelemetry,
-  type TelemetryBreadcrumb,
-  type TelemetryContext,
-} from "../core/index.js";
+import { ClientTelemetry, type TelemetryBreadcrumb, type TelemetryContext } from "../core/index.js";
 
 export class FanOutClientTelemetry extends ClientTelemetry {
   readonly #destinations: readonly ClientTelemetry[];

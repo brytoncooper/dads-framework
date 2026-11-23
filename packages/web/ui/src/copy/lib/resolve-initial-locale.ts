@@ -52,9 +52,7 @@ export function resolveLocaleFromSignals<const TLocale extends string>(
   fallback: TLocale,
 ): TLocale {
   const candidates = [
-    ...(signals.preferred === undefined || signals.preferred === null
-      ? []
-      : [signals.preferred]),
+    ...(signals.preferred === undefined || signals.preferred === null ? [] : [signals.preferred]),
     ...(signals.browserLanguages ?? []),
   ];
   for (const candidate of candidates) {

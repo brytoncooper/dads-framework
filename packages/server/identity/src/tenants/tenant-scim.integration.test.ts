@@ -1,9 +1,5 @@
 import { actor, compileAccess } from "@dads-framework/access";
-import type {
-  ScimDirectory,
-  ScimGroupDirectory,
-  ScimUserData,
-} from "../scim/index.js";
+import type { ScimDirectory, ScimGroupDirectory, ScimUserData } from "../scim/index.js";
 import { runNodePgMigrations } from "@dads-framework/postgres/migrations";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
@@ -94,11 +90,7 @@ describe("tenant SCIM directory on Postgres", () => {
   }
 
   async function grant(owner: string, tenantId: TenantId) {
-    const invite = await tenants.invitations.issue(
-      owner,
-      tenantId,
-      accountSession.email,
-    );
+    const invite = await tenants.invitations.issue(owner, tenantId, accountSession.email);
     await tenants.invitations.accept(invite.token, accountSession);
   }
 
@@ -118,34 +110,29 @@ describe("tenant SCIM directory on Postgres", () => {
     const bob = await provision(north.id, { userName: "Bob", active: true });
     await expect(scim.get(south.id, alice.id)).resolves.toBeNull();
     await expect(scim.get(north.id, "invalid")).resolves.toBeNull();
-    await expect(
-      scim.update(south.id, alice.id, (user) => ({ ...user, active: false })),
-    ).resolves.toBeNull();
+    await expect(scim.update(south.id, alice.id, (user) => ({ ...user, active: false }))).resolves.toBeNull();
     await expect(scim.delete(south.id, alice.id)).resolves.toBe(false);
     await expect(scim.get(north.id, alice.id)).resolves.toEqual(alice);
-    await expect(
-      scim.create(north.id, { userName: "aLICE", active: false }),
-    ).resolves.toBe("conflict");
-    await expect(
-      scim.update(north.id, bob.id, (user) => ({ ...user, userName: "ALICE" })),
-    ).resolves.toBe("conflict");
+    await expect(scim.create(north.id, { userName: "aLICE", active: false })).resolves.toBe("conflict");
+    await expect(scim.update(north.id, bob.id, (user) => ({ ...user, userName: "ALICE" }))).resolves.toBe("conflict");
     await expect(scim.get(north.id, bob.id)).resolves.toEqual(bob);
     const filter = {
       attribute: "emails.value",
       value: "alice@example.test",
     } as const;
-    await expect(
-      scim.list(north.id, { startIndex: 1, count: 1, filter }),
-    ).resolves.toEqual({ users: [alice], totalResults: 1 });
-    await expect(
-      scim.list(south.id, { startIndex: 1, count: 1, filter }),
-    ).resolves.toEqual({ users: [other], totalResults: 1 });
-    await expect(
-      scim.list(north.id, { startIndex: 2, count: 1, filter }),
-    ).resolves.toEqual({ users: [], totalResults: 1 });
-    await expect(
-      scim.list(north.id, { startIndex: 1, count: 0 }),
-    ).resolves.toEqual({ users: [], totalResults: 2 });
+    await expect(scim.list(north.id, { startIndex: 1, count: 1, filter })).resolves.toEqual({
+      users: [alice],
+      totalResults: 1,
+    });
+    await expect(scim.list(south.id, { startIndex: 1, count: 1, filter })).resolves.toEqual({
+      users: [other],
+      totalResults: 1,
+    });
+    await expect(scim.list(north.id, { startIndex: 2, count: 1, filter })).resolves.toEqual({
+      users: [],
+      totalResults: 1,
+    });
+    await expect(scim.list(north.id, { startIndex: 1, count: 0 })).resolves.toEqual({ users: [], totalResults: 2 });
   });
 
   it("requires an explicit owner link and revokes only the linked tenant", async () => {
@@ -159,20 +146,20 @@ describe("tenant SCIM directory on Postgres", () => {
     };
     const user = await provision(workspace.id, profile);
     await expect(tenants.list(accountSession.id)).resolves.toEqual([]);
-    await expect(
-      tenants.bindScimUser("owner", workspace.id, user.id, accountSession.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.bindScimUser("owner", workspace.id, user.id, accountSession.id)).rejects.toBeInstanceOf(
+      TenantUnavailableError,
+    );
     await grant("owner", workspace.id);
     await grant("other", other.id);
-    await expect(
-      tenants.bindScimUser("owner", workspace.id, user.id, "owner"),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.bindScimUser("other", workspace.id, user.id, accountSession.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.bindScimUser("other", other.id, user.id, accountSession.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.bindScimUser("owner", workspace.id, user.id, "owner")).rejects.toBeInstanceOf(
+      TenantUnavailableError,
+    );
+    await expect(tenants.bindScimUser("other", workspace.id, user.id, accountSession.id)).rejects.toBeInstanceOf(
+      TenantUnavailableError,
+    );
+    await expect(tenants.bindScimUser("other", other.id, user.id, accountSession.id)).rejects.toBeInstanceOf(
+      TenantUnavailableError,
+    );
 
     await expect(
       scim.update(workspace.id, user.id, (current) => ({
@@ -180,86 +167,53 @@ describe("tenant SCIM directory on Postgres", () => {
         active: false,
       })),
     ).resolves.toMatchObject({ active: false });
-    await expect(
-      tenants.context(accountSession.id, workspace.id),
-    ).resolves.toMatchObject({ tenant: workspace });
+    await expect(tenants.context(accountSession.id, workspace.id)).resolves.toMatchObject({ tenant: workspace });
     await scim.update(workspace.id, user.id, (current) => ({
       ...current,
       active: true,
     }));
-    await tenants.bindScimUser(
-      "owner",
-      workspace.id,
-      user.id,
-      accountSession.id,
-    );
+    await tenants.bindScimUser("owner", workspace.id, user.id, accountSession.id);
     const spare = await provision(workspace.id, {
       userName: "spare",
       active: true,
     });
-    await expect(
-      tenants.bindScimUser("owner", workspace.id, spare.id, accountSession.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    const pending = await tenants.invitations.issue(
-      "owner",
-      workspace.id,
-      accountSession.email,
+    await expect(tenants.bindScimUser("owner", workspace.id, spare.id, accountSession.id)).rejects.toBeInstanceOf(
+      TenantUnavailableError,
     );
+    const pending = await tenants.invitations.issue("owner", workspace.id, accountSession.email);
     await scim.update(workspace.id, user.id, (current) => ({
       ...current,
       active: false,
     }));
 
-    await expect(
-      tenants.context(accountSession.id, workspace.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(tenants.list(accountSession.id)).resolves.toContainEqual(
-      other,
+    await expect(tenants.context(accountSession.id, workspace.id)).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.list(accountSession.id)).resolves.toContainEqual(other);
+    await expect(tenants.invitations.accept(pending.token, accountSession)).rejects.toBeInstanceOf(
+      TenantInvitationUnavailableError,
     );
-    await expect(
-      tenants.invitations.accept(pending.token, accountSession),
-    ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
     await scim.update(workspace.id, user.id, (current) => ({
       ...current,
       active: true,
     }));
-    await expect(
-      tenants.context(accountSession.id, workspace.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.context(accountSession.id, workspace.id)).rejects.toBeInstanceOf(TenantUnavailableError);
     await grant("owner", workspace.id);
 
     await expect(scim.delete(workspace.id, user.id)).resolves.toBe(true);
     await expect(scim.delete(workspace.id, user.id)).resolves.toBe(false);
     await expect(scim.get(workspace.id, user.id)).resolves.toBeNull();
-    await expect(
-      tenants.context(accountSession.id, workspace.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.context(accountSession.id, workspace.id)).rejects.toBeInstanceOf(TenantUnavailableError);
     const recreated = await provision(workspace.id, profile);
     expect(recreated.id).not.toBe(user.id);
-    await expect(
-      tenants.invitations.accept(pending.token, accountSession),
-    ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
-    await expect(
-      tenants.bindScimUser(
-        "other",
-        workspace.id,
-        recreated.id,
-        accountSession.id,
-      ),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await tenants.bindScimUser(
-      "owner",
-      workspace.id,
-      recreated.id,
-      accountSession.id,
+    await expect(tenants.invitations.accept(pending.token, accountSession)).rejects.toBeInstanceOf(
+      TenantInvitationUnavailableError,
     );
-    await expect(
-      tenants.context(accountSession.id, workspace.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.bindScimUser("other", workspace.id, recreated.id, accountSession.id)).rejects.toBeInstanceOf(
+      TenantUnavailableError,
+    );
+    await tenants.bindScimUser("owner", workspace.id, recreated.id, accountSession.id);
+    await expect(tenants.context(accountSession.id, workspace.id)).rejects.toBeInstanceOf(TenantUnavailableError);
     await grant("owner", workspace.id);
-    await expect(
-      tenants.context(accountSession.id, workspace.id),
-    ).resolves.toMatchObject({ tenant: workspace });
+    await expect(tenants.context(accountSession.id, workspace.id)).resolves.toMatchObject({ tenant: workspace });
     await expect(scim.get(workspace.id, user.id)).resolves.toBeNull();
   });
 
@@ -285,16 +239,15 @@ describe("tenant SCIM directory on Postgres", () => {
         members: [{ value: unrelated.id }],
       }),
     ).resolves.toBe("invalidMember");
-    await expect(
-      groups.list(tenant.id, { startIndex: 1, count: 0 }),
-    ).resolves.toEqual({ groups: [], totalResults: 0 });
+    await expect(groups.list(tenant.id, { startIndex: 1, count: 0 })).resolves.toEqual({ groups: [], totalResults: 0 });
     const group = await groups.create(tenant.id, { ...attributes, members });
     if (typeof group === "string") throw new Error("Expected a SCIM group");
     await expect(groups.get(tenant.id, group.id)).resolves.toEqual(group);
     await expect(groups.get(foreign.id, group.id)).resolves.toBeNull();
-    await expect(
-      groups.list(foreign.id, { startIndex: 1, count: 1 }),
-    ).resolves.toEqual({ groups: [], totalResults: 0 });
+    await expect(groups.list(foreign.id, { startIndex: 1, count: 1 })).resolves.toEqual({
+      groups: [],
+      totalResults: 0,
+    });
     await expect(
       groups.list(tenant.id, {
         startIndex: 1,
@@ -317,18 +270,14 @@ describe("tenant SCIM directory on Postgres", () => {
       })),
     ).resolves.toBe("invalidMember");
     await expect(groups.get(tenant.id, group.id)).resolves.toEqual(group);
-    await expect(tenants.context("local", tenant.id)).rejects.toBeInstanceOf(
-      TenantUnavailableError,
-    );
+    await expect(tenants.context("local", tenant.id)).rejects.toBeInstanceOf(TenantUnavailableError);
 
     await expect(scim.delete(tenant.id, local.id)).resolves.toBe(true);
     await expect(groups.get(tenant.id, group.id)).resolves.toMatchObject({
       ...attributes,
       members: [],
     });
-    await expect(
-      groups.update(tenant.id, group.id, (data) => ({ ...data, members })),
-    ).resolves.toBe("invalidMember");
+    await expect(groups.update(tenant.id, group.id, (data) => ({ ...data, members }))).resolves.toBe("invalidMember");
     await expect(groups.delete(tenant.id, group.id)).resolves.toBe(true);
     await expect(groups.get(tenant.id, group.id)).resolves.toBeNull();
   });
@@ -340,12 +289,7 @@ describe("tenant SCIM directory on Postgres", () => {
       userName: "rollback",
       active: true,
     });
-    await tenants.bindScimUser(
-      "rollback",
-      tenant.id,
-      user.id,
-      accountSession.id,
-    );
+    await tenants.bindScimUser("rollback", tenant.id, user.id, accountSession.id);
     const failure = createTenantScimDirectory({
       ...options,
       changes: {
@@ -356,16 +300,10 @@ describe("tenant SCIM directory on Postgres", () => {
       },
     });
 
-    await expect(failure.delete(tenant.id, user.id)).rejects.toThrow(
-      "Rollback probe",
-    );
+    await expect(failure.delete(tenant.id, user.id)).rejects.toThrow("Rollback probe");
     await expect(scim.get(tenant.id, user.id)).resolves.toEqual(user);
-    await expect(
-      tenants.context(accountSession.id, tenant.id),
-    ).resolves.toMatchObject({ tenant });
-    await expect(
-      tenants.memberships.roster("rollback", tenant.id),
-    ).resolves.toContainEqual({
+    await expect(tenants.context(accountSession.id, tenant.id)).resolves.toMatchObject({ tenant });
+    await expect(tenants.memberships.roster("rollback", tenant.id)).resolves.toContainEqual({
       tenantId: tenant.id,
       accountId: accountSession.id,
       role: "member",

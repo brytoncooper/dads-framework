@@ -14,11 +14,7 @@ import {
   type RunningJobSchedule,
 } from "../core/index.js";
 import { JobRegistry } from "../core/provider.js";
-import {
-  attemptsOf,
-  isTerminalAttempt,
-  type JobAttempts,
-} from "./logic/job-attempts.js";
+import { attemptsOf, isTerminalAttempt, type JobAttempts } from "./logic/job-attempts.js";
 import { redisConnection } from "./redis-connection.js";
 
 /** BullMQ adapter: Redis owns durable work, retries, and recurring schedules. */
@@ -110,10 +106,7 @@ export class BullMqJobQueue implements JobQueue {
     this.driver ??= import("bullmq").then(({ Queue, Worker }) => {
       const queue = new Queue(this.queueName, { connection: this.connection });
       queue.on("error", (error) => {
-        this.log.error(
-          { event: "job.queue.error", err: error },
-          "job queue error",
-        );
+        this.log.error({ event: "job.queue.error", err: error }, "job queue error");
       });
       return { queue, Worker };
     });
@@ -167,19 +160,13 @@ export class BullMqJobQueue implements JobQueue {
         { connection: this.connection, concurrency: this.concurrency },
       );
       this.worker.on("completed", (job) => {
-        this.log.info(
-          { event: "job.completed", jobName: job.name, jobId: job.id },
-          "job completed",
-        );
+        this.log.info({ event: "job.completed", jobName: job.name, jobId: job.id }, "job completed");
       });
       this.worker.on("failed", (job, error) => {
         this.reportFailedJob(job?.name, job?.id, attemptsOf(job), error);
       });
       this.worker.on("error", (error) => {
-        this.log.error(
-          { event: "job.worker.error", err: error },
-          "job worker error",
-        );
+        this.log.error({ event: "job.worker.error", err: error }, "job worker error");
       });
       // Started means consuming. BullMQ opens the worker's two connections in
       // its constructor and finishes them asynchronously, and closing one that
@@ -268,11 +255,7 @@ export class BullMqJobQueue implements JobQueue {
 
   private async reconcileSchedules(queue: Queue): Promise<void> {
     const expectedScheduleIds = new Set(
-      this.registry
-        .list()
-        .flatMap((definition) =>
-          definition.schedules.map((schedule) => schedule.id),
-        ),
+      this.registry.list().flatMap((definition) => definition.schedules.map((schedule) => schedule.id)),
     );
     const existingSchedules = await queue.getJobSchedulers(0, -1, true);
     for (const schedule of existingSchedules) {
@@ -292,9 +275,7 @@ export class BullMqJobQueue implements JobQueue {
     for (const definition of this.registry.list()) {
       for (const schedule of definition.schedules) {
         const repeat =
-          schedule.kind === "cron"
-            ? { pattern: schedule.pattern, tz: schedule.timeZone }
-            : { every: schedule.everyMs };
+          schedule.kind === "cron" ? { pattern: schedule.pattern, tz: schedule.timeZone } : { every: schedule.everyMs };
         await queue.upsertJobScheduler(schedule.id, repeat, {
           name: definition.name,
           data: schedule.payload,

@@ -23,10 +23,7 @@ export function expandInput(
     expandDependencyInput(value.slice(1), owner, stack, context);
     return;
   }
-  if (
-    value.startsWith("{projectRoot}") ||
-    value.startsWith("{workspaceRoot}")
-  ) {
+  if (value.startsWith("{projectRoot}") || value.startsWith("{workspaceRoot}")) {
     expandFileInput(value, owner, context);
     return;
   }
@@ -52,11 +49,7 @@ function expandObjectInput(
     context.reasons.add("non-file or unresolved input");
     return;
   }
-  if (
-    Object.hasOwn(value, "externalDependencies") ||
-    Object.hasOwn(value, "dependentTasksOutputFiles")
-  )
-    return;
+  if (Object.hasOwn(value, "externalDependencies") || Object.hasOwn(value, "dependentTasksOutputFiles")) return;
   const named = value["fileset"] ?? value["json"];
   if (typeof named !== "string") {
     context.reasons.add("non-file or unresolved input");
@@ -78,14 +71,8 @@ function expandDependencyInput(
   }
 }
 
-function expandFileInput(
-  value: string,
-  owner: NativeProject,
-  context: InputExpansion,
-): void {
-  const substituted = value
-    .replace(/^\{projectRoot\}/, owner.root)
-    .replace(/^\{workspaceRoot\}/, ".");
+function expandFileInput(value: string, owner: NativeProject, context: InputExpansion): void {
+  const substituted = value.replace(/^\{projectRoot\}/, owner.root).replace(/^\{workspaceRoot\}/, ".");
   const prefix = literalPrefix(substituted);
   if (prefix === null) context.reasons.add("unresolved or escaping input path");
   else if (prefix === ".") context.reasons.add("workspace-wide input");
@@ -104,9 +91,7 @@ function expandNamedInput(
     return;
   }
   const named = namedInputs(owner, context);
-  const definition = Object.hasOwn(named, value)
-    ? named[value]
-    : defaultDefinition(value);
+  const definition = Object.hasOwn(named, value) ? named[value] : defaultDefinition(value);
   if (!Array.isArray(definition)) {
     context.reasons.add(`unresolved named input ${value}`);
     return;
@@ -116,13 +101,9 @@ function expandNamedInput(
   for (const input of definition) expandInput(input, owner, nested, context);
 }
 
-function namedInputs(
-  owner: NativeProject,
-  context: InputExpansion,
-): Readonly<Record<string, unknown>> {
+function namedInputs(owner: NativeProject, context: InputExpansion): Readonly<Record<string, unknown>> {
   const globalInputs = context.root["namedInputs"];
-  if (globalInputs !== undefined && !isRecord(globalInputs))
-    context.reasons.add("malformed workspace namedInputs");
+  if (globalInputs !== undefined && !isRecord(globalInputs)) context.reasons.add("malformed workspace namedInputs");
   if (owner.namedInputs !== undefined && !isRecord(owner.namedInputs))
     context.reasons.add("malformed project namedInputs");
   return {
@@ -136,16 +117,10 @@ function defaultDefinition(value: string): unknown {
 }
 
 function literalPrefix(value: string): string | null {
-  if (value.includes("\\") || value.startsWith("/") || /^[A-Za-z]:/.test(value))
-    return null;
+  if (value.includes("\\") || value.startsWith("/") || /^[A-Za-z]:/.test(value)) return null;
   const normalized = value.replace(/^\.\//, "");
-  const wildcard = normalized
-    .split("")
-    .findIndex((character) => "?*[]{}()+@!".includes(character));
-  const prefix =
-    wildcard < 0
-      ? normalized
-      : normalized.slice(0, wildcard).replace(/[^/]*$/, "");
+  const wildcard = normalized.split("").findIndex((character) => "?*[]{}()+@!".includes(character));
+  const prefix = wildcard < 0 ? normalized : normalized.slice(0, wildcard).replace(/[^/]*$/, "");
   if (normalized.split("/").includes("..")) return null;
   const parts = prefix.split("/").filter((part) => part !== "" && part !== ".");
   return parts.length === 0 ? "." : parts.join("/");

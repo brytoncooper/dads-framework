@@ -28,9 +28,7 @@ const NOW = new Date("2026-08-02T22:00:00.000Z");
 const THIS_WORKTREE = "/checkouts/command";
 const OTHER_WORKTREE = "/checkouts/command/.claude/worktrees/dev-slots";
 
-function held(
-  overrides: Partial<ContainerTestRunLock> = {},
-): ContainerTestRunLock {
+function held(overrides: Partial<ContainerTestRunLock> = {}): ContainerTestRunLock {
   return {
     pid: 99,
     runId: 555,
@@ -105,9 +103,7 @@ describe("parseContainerTestRunLock", () => {
   });
 
   it("reads an old record written before slots knew about worktrees", () => {
-    const record = parseContainerTestRunLock(
-      JSON.stringify({ pid: 7, runId: 3, tier: "integration", startedAt: "x" }),
-    );
+    const record = parseContainerTestRunLock(JSON.stringify({ pid: 7, runId: 3, tier: "integration", startedAt: "x" }));
     expect(record).toEqual({
       pid: 7,
       runId: 3,
@@ -121,14 +117,8 @@ describe("parseContainerTestRunLock", () => {
     expect(parseContainerTestRunLock("{ not json")).toBeNull();
     expect(parseContainerTestRunLock("null")).toBeNull();
     expect(parseContainerTestRunLock(JSON.stringify({ pid: "7" }))).toBeNull();
-    expect(
-      parseContainerTestRunLock(
-        JSON.stringify({ pid: 1.5, tier: "a", startedAt: "b" }),
-      ),
-    ).toBeNull();
-    expect(
-      parseContainerTestRunLock(JSON.stringify({ ...held(), worktree: 7 })),
-    ).toBeNull();
+    expect(parseContainerTestRunLock(JSON.stringify({ pid: 1.5, tier: "a", startedAt: "b" }))).toBeNull();
+    expect(parseContainerTestRunLock(JSON.stringify({ ...held(), worktree: 7 }))).toBeNull();
   });
 });
 
@@ -137,12 +127,9 @@ describe("decideContainerTierSemaphore", () => {
     // One `nx run-many -t test:integration` fans out to 12 projects, each with
     // its own vitest process and its own globalSetup. They are ONE run, and
     // the first shipped version aborted 11 of them.
-    const decision = ask(
-      [held({ runId: 555 }), held({ pid: 77, runId: 555 })],
-      {
-        runId: 555,
-      },
-    );
+    const decision = ask([held({ runId: 555 }), held({ pid: 77, runId: 555 })], {
+      runId: 555,
+    });
     expect(decision.action).toBe("reenter");
   });
 
@@ -231,12 +218,8 @@ describe("containerTierSlotCount / containerTierWaitBudgetMs", () => {
   });
 
   it("refuses nonsense loudly instead of silently running with the default", () => {
-    expect(() => containerTierSlotCount({ DADS_TEST_TIER_SLOTS: "0" })).toThrow(
-      "DADS_TEST_TIER_SLOTS",
-    );
-    expect(() =>
-      containerTierWaitBudgetMs({ DADS_TEST_TIER_WAIT_MS: "soon" }),
-    ).toThrow("DADS_TEST_TIER_WAIT_MS");
+    expect(() => containerTierSlotCount({ DADS_TEST_TIER_SLOTS: "0" })).toThrow("DADS_TEST_TIER_SLOTS");
+    expect(() => containerTierWaitBudgetMs({ DADS_TEST_TIER_WAIT_MS: "soon" })).toThrow("DADS_TEST_TIER_WAIT_MS");
   });
 });
 
@@ -367,10 +350,7 @@ describe("acquireContainerTierSlot", () => {
 
   it("queues, says who it is waiting for, and takes the slot when it frees", async () => {
     const files = new Map<string, string>();
-    files.set(
-      first,
-      JSON.stringify(held({ pid: 1001, runId: 111, worktree: "/checkouts/a" })),
-    );
+    files.set(first, JSON.stringify(held({ pid: 1001, runId: 111, worktree: "/checkouts/a" })));
     const lines: string[] = [];
     const deps = fakeDeps({
       files,
@@ -430,12 +410,8 @@ describe("acquireContainerTierSlot", () => {
       const neighbour = containerTierSlotPath("integration", 2, root);
       writeFileSync(neighbour, JSON.stringify(held({ pid: 2002, runId: 222 })));
       release();
-      expect(
-        parseContainerTestRunLock(readFileSync(neighbour, "utf8"))?.pid,
-      ).toBe(2002);
-      expect(() =>
-        readFileSync(containerTierSlotPath("integration", 1, root), "utf8"),
-      ).toThrow();
+      expect(parseContainerTestRunLock(readFileSync(neighbour, "utf8"))?.pid).toBe(2002);
+      expect(() => readFileSync(containerTierSlotPath("integration", 1, root), "utf8")).toThrow();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -454,10 +430,7 @@ describe("findNxRunProcessId", () => {
   const table = new Map([
     [100, { ppid: 90, command: "node .../vitest/dist/worker.js" }],
     [90, { ppid: 80, command: "node .../nx/dist/bin/run-executor.js" }],
-    [
-      80,
-      { ppid: 10, command: "node .../.bin/nx run-many -t test:integration" },
-    ],
+    [80, { ppid: 10, command: "node .../.bin/nx run-many -t test:integration" }],
     [10, { ppid: 1, command: "-zsh" }],
   ]);
 
@@ -513,25 +486,15 @@ describe("shouldHoldContainerTestRunLock", () => {
   it("skips when the run that started it already holds the slot", () => {
     // run-integration-gate.ts's exclusive lane: no shared URL any more, but
     // the gate still holds this run's slot; queueing behind it deadlocked.
-    expect(
-      shouldHoldContainerTestRunLock({ [CONTAINER_TIER_SLOT_HELD]: "1" }),
-    ).toBe(false);
-    expect(
-      shouldHoldContainerTestRunLock({ [CONTAINER_TIER_SLOT_HELD]: "0" }),
-    ).toBe(true);
+    expect(shouldHoldContainerTestRunLock({ [CONTAINER_TIER_SLOT_HELD]: "1" })).toBe(false);
+    expect(shouldHoldContainerTestRunLock({ [CONTAINER_TIER_SLOT_HELD]: "0" })).toBe(true);
   });
 });
 
 describe("containerTestRunLockDir", () => {
   it("names the directory after the tier, so tiers never block each other", () => {
-    expect(containerTestRunLockDir("integration", "/tmp")).toBe(
-      "/tmp/command-test-tier-integration",
-    );
-    expect(containerTierSlotPath("integration", 2, "/tmp")).toBe(
-      "/tmp/command-test-tier-integration/2.lock",
-    );
-    expect(containerTestRunLockDir("fast", "/tmp")).not.toBe(
-      containerTestRunLockDir("integration", "/tmp"),
-    );
+    expect(containerTestRunLockDir("integration", "/tmp")).toBe("/tmp/command-test-tier-integration");
+    expect(containerTierSlotPath("integration", 2, "/tmp")).toBe("/tmp/command-test-tier-integration/2.lock");
+    expect(containerTestRunLockDir("fast", "/tmp")).not.toBe(containerTestRunLockDir("integration", "/tmp"));
   });
 });

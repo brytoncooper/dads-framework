@@ -14,12 +14,8 @@ function expectOutlinedPrimarySelected(tab: HTMLElement) {
   expect(tab.className).toContain("border-input");
   expect(tab.className).toContain("data-[state=active]:border-primary");
   expect(tab.className).toContain("data-[state=active]:bg-primary");
-  expect(tab.className).toContain(
-    "data-[state=active]:text-primary-foreground",
-  );
-  expect(tab.className).not.toContain(
-    "group-data-[variant=line]/tabs-list:after:bg-primary",
-  );
+  expect(tab.className).toContain("data-[state=active]:text-primary-foreground");
+  expect(tab.className).not.toContain("group-data-[variant=line]/tabs-list:after:bg-primary");
 }
 
 describe("tab visual hierarchy", () => {
@@ -40,9 +36,7 @@ describe("tab visual hierarchy", () => {
     });
 
     expect(tabList.className).not.toContain("bg-muted");
-    expect(tabList.className).toContain(
-      "group-data-[orientation=horizontal]/tabs:overflow-y-hidden",
-    );
+    expect(tabList.className).toContain("group-data-[orientation=horizontal]/tabs:overflow-y-hidden");
     expect(activeTab.className).toContain("[@media(pointer:coarse)]:min-h-11");
     expect(activeTab.className).toContain("[@media(pointer:coarse)]:min-w-11");
     expectOutlinedPrimarySelected(activeTab);

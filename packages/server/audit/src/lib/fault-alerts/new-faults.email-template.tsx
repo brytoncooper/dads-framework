@@ -1,12 +1,7 @@
 import React from "react";
 import { z } from "zod";
 
-import {
-  defineEmailTemplate,
-  EmailBadge,
-  EmailHeading,
-  EmailText,
-} from "@dads-framework/email/templates";
+import { defineEmailTemplate, EmailBadge, EmailHeading, EmailText } from "@dads-framework/email/templates";
 
 /**
  * The email that says something is newly broken.
@@ -27,12 +22,10 @@ const props = z.object({
       "One line per newly-seen fault type, loudest first, already formatted by `describeFaultLine`. Never empty — an alert with nothing in it is not sent.",
   }),
   totalOccurrences: z.number().int().nonnegative().meta({
-    description:
-      "Occurrences across every new fault found, including any trimmed from the list below.",
+    description: "Occurrences across every new fault found, including any trimmed from the list below.",
   }),
   truncated: z.boolean().meta({
-    description:
-      "True when more new faults were found than one email should carry.",
+    description: "True when more new faults were found than one email should carry.",
   }),
   windowHours: z.number().int().positive().meta({
     description: "How far back the sweep looked for first occurrences.",
@@ -45,22 +38,15 @@ export const newFaultsEmailTemplate = defineEmailTemplate({
     "Tells the operations address that fault types never seen before have started happening, with how often and roughly where.",
   props,
   subject: ({ faults }) =>
-    faults.length === 1
-      ? "1 new application fault"
-      : `${faults.length} new application faults`,
-  preview: ({ totalOccurrences }) =>
-    `${totalOccurrences} occurrences since the last sweep`,
+    faults.length === 1 ? "1 new application fault" : `${faults.length} new application faults`,
+  preview: ({ totalOccurrences }) => `${totalOccurrences} occurrences since the last sweep`,
   body: ({ faults, totalOccurrences, truncated, windowHours }) => (
     <>
       <EmailBadge tone="danger">{`${faults.length} new`}</EmailBadge>
       <EmailHeading>Something new is failing</EmailHeading>
       <EmailText>
-        {faults.length === 1
-          ? "One fault type"
-          : `${faults.length} fault types`}{" "}
-        appeared for the first time in the last {windowHours}{" "}
-        {windowHours === 1 ? "hour" : "hours"}, accounting for{" "}
-        {totalOccurrences}{" "}
+        {faults.length === 1 ? "One fault type" : `${faults.length} fault types`} appeared for the first time in the
+        last {windowHours} {windowHours === 1 ? "hour" : "hours"}, accounting for {totalOccurrences}{" "}
         {totalOccurrences === 1 ? "occurrence" : "occurrences"}.
       </EmailText>
       {faults.map((line) => (
@@ -68,8 +54,8 @@ export const newFaultsEmailTemplate = defineEmailTemplate({
       ))}
       {truncated ? (
         <EmailText>
-          More new faults were found than this email carries. Query request_log
-          and client_diagnostic_events directly for the full set.
+          More new faults were found than this email carries. Query request_log and client_diagnostic_events directly
+          for the full set.
         </EmailText>
       ) : null}
     </>

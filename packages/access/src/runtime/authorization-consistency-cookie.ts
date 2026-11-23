@@ -17,16 +17,11 @@ export function authorizationConsistencyTokenFromCookieHeader(
   return undefined;
 }
 
-export function authorizationConsistencySetCookie(
-  token: string,
-  options: { readonly secure?: boolean } = {},
-): string {
+export function authorizationConsistencySetCookie(token: string, options: { readonly secure?: boolean } = {}): string {
   return authorizationConsistencyCookie(encodeURIComponent(token), options);
 }
 
-export function authorizationConsistencyClearCookie(
-  options: { readonly secure?: boolean } = {},
-): string {
+export function authorizationConsistencyClearCookie(options: { readonly secure?: boolean } = {}): string {
   return authorizationConsistencyCookie("", options, ["Max-Age=0"]);
 }
 
@@ -35,22 +30,14 @@ function authorizationConsistencyCookie(
   options: { readonly secure?: boolean },
   extra: readonly string[] = [],
 ): string {
-  const parts = [
-    `${AUTHORIZATION_CONSISTENCY_COOKIE}=${value}`,
-    "Path=/api",
-    "HttpOnly",
-    "SameSite=Lax",
-    ...extra,
-  ];
+  const parts = [`${AUTHORIZATION_CONSISTENCY_COOKIE}=${value}`, "Path=/api", "HttpOnly", "SameSite=Lax", ...extra];
   if (options.secure === true) {
     parts.push("Secure");
   }
   return parts.join("; ");
 }
 
-function headerText(
-  cookieHeader: string | readonly string[] | undefined,
-): string {
+function headerText(cookieHeader: string | readonly string[] | undefined): string {
   if (typeof cookieHeader === "string") return cookieHeader;
   if (Array.isArray(cookieHeader)) return cookieHeader.join("; ");
   return "";

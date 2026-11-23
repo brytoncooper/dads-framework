@@ -21,12 +21,8 @@ describe("refusedReadOf", () => {
   });
 
   it("leaves an unmarked missing record, a refused write and a success alone", () => {
-    expect(refusedReadOf({ ...SETTINGS_READ, refusedForAccess: false })).toBe(
-      null,
-    );
+    expect(refusedReadOf({ ...SETTINGS_READ, refusedForAccess: false })).toBe(null);
     expect(refusedReadOf({ ...SETTINGS_READ, method: "PUT" })).toBe(null);
-    expect(
-      refusedReadOf({ ...SETTINGS_READ, status: 200, refusedForAccess: false }),
-    ).toBe(null);
+    expect(refusedReadOf({ ...SETTINGS_READ, status: 200, refusedForAccess: false })).toBe(null);
   });
 });

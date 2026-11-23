@@ -42,9 +42,6 @@ async function inventoryWorkbook(): Promise<ArrayBuffer> {
 async function independentWorkbook(): Promise<ArrayBuffer> {
   const testPath = expect.getState().testPath;
   if (testPath === undefined) throw new Error("Workbook test file is unknown");
-  const fixture = join(
-    dirname(testPath),
-    "../../../test-fixtures-xlsx/external-inventory.xlsx",
-  );
+  const fixture = join(dirname(testPath), "../../../test-fixtures-xlsx/external-inventory.xlsx");
   return new Uint8Array(await readFile(fixture)).buffer;
 }

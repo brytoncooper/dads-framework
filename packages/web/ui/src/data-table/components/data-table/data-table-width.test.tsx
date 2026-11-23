@@ -47,15 +47,7 @@ describe("DataTable on wide screens", () => {
   it("keeps every column and pins the identifying and actions columns", () => {
     render(<LoadsTable />);
 
-    expect(headerNames()).toEqual([
-      "Ticket",
-      "Status",
-      "Customer",
-      "Product",
-      "Carrier",
-      "Loaded",
-      "",
-    ]);
+    expect(headerNames()).toEqual(["Ticket", "Status", "Customer", "Product", "Carrier", "Loaded", ""]);
 
     const [ticketHeader] = screen.getAllByRole("columnheader");
     const ticketCell = screen.getByRole("cell", { name: "T-1001" });
@@ -69,9 +61,7 @@ describe("DataTable on wide screens", () => {
     expect(ticketHeader?.className).toContain("data-[pinned]:bg-table-header");
     expect(ticketCell.className).toContain("data-[pinned]:bg-card");
 
-    const actionsCell = screen
-      .getByRole("button", { name: "Void Ticket" })
-      .closest("td");
+    const actionsCell = screen.getByRole("button", { name: "Void Ticket" }).closest("td");
     expect(actionsCell?.getAttribute("data-pinned")).toBe("right");
     expect(actionsCell?.style.right).toBe("0px");
 
@@ -86,16 +76,8 @@ describe("DataTable Columns menu", () => {
     render(<LoadsTable />);
     openColumnsMenu();
 
-    const offered = screen
-      .getAllByRole("menuitemcheckbox")
-      .map((item) => item.textContent);
-    expect(offered).toEqual([
-      "Status",
-      "Customer",
-      "Product",
-      "Carrier",
-      "Loaded At",
-    ]);
+    const offered = screen.getAllByRole("menuitemcheckbox").map((item) => item.textContent);
+    expect(offered).toEqual(["Status", "Customer", "Product", "Carrier", "Loaded At"]);
     for (const item of screen.getAllByRole("menuitemcheckbox")) {
       expect(item.getAttribute("aria-checked")).toBe("true");
     }
@@ -110,12 +92,9 @@ describe("DataTable Columns menu", () => {
 
     expect(headerNames()).not.toContain("Carrier");
     expect(screen.getByText("1 Column Hidden")).toBeDefined();
-    expect(
-      JSON.parse(
-        window.localStorage.getItem(columnVisibilityStorageKey(TABLE_ID)) ??
-          "{}",
-      ),
-    ).toEqual({ carrier: false });
+    expect(JSON.parse(window.localStorage.getItem(columnVisibilityStorageKey(TABLE_ID)) ?? "{}")).toEqual({
+      carrier: false,
+    });
 
     unmount();
     render(<LoadsTable />);
@@ -171,32 +150,22 @@ describe("DataTable on phones", () => {
     const { container } = render(<LoadsTable />);
 
     expect(container.querySelector("table")).toBeNull();
-    const card = container.querySelector<HTMLElement>(
-      '[data-slot="data-table-card"]',
-    );
+    const card = container.querySelector<HTMLElement>('[data-slot="data-table-card"]');
     expect(card).not.toBeNull();
 
-    const heading = card?.querySelector(
-      '[data-slot="data-table-card-heading"]',
-    );
-    expect(heading?.querySelector("a")?.getAttribute("href")).toBe(
-      "/loads/load-1",
-    );
+    const heading = card?.querySelector('[data-slot="data-table-card-heading"]');
+    expect(heading?.querySelector("a")?.getAttribute("href")).toBe("/loads/load-1");
 
-    const summary = card?.querySelector(
-      '[data-slot="data-table-card-summary"]',
-    );
-    expect(
-      [...(summary?.querySelectorAll("dt") ?? [])].map((dt) => dt.textContent),
-    ).toEqual(["Status", "Customer", "Product"]);
+    const summary = card?.querySelector('[data-slot="data-table-card-summary"]');
+    expect([...(summary?.querySelectorAll("dt") ?? [])].map((dt) => dt.textContent)).toEqual([
+      "Status",
+      "Customer",
+      "Product",
+    ]);
 
-    expect(
-      card?.querySelector('[data-slot="data-table-card-actions"]')?.textContent,
-    ).toBe("Void Ticket");
+    expect(card?.querySelector('[data-slot="data-table-card-actions"]')?.textContent).toBe("Void Ticket");
 
-    const hitArea = card?.querySelector(
-      '[data-slot="data-table-row-hit-area"]',
-    );
+    const hitArea = card?.querySelector('[data-slot="data-table-row-hit-area"]');
     expect(hitArea?.getAttribute("href")).toBe("/loads/load-1");
     expect(hitArea?.getAttribute("aria-hidden")).toBe("true");
   });
@@ -205,9 +174,7 @@ describe("DataTable on phones", () => {
     const { container } = render(<LoadsTable />);
 
     const card = container.querySelector('[data-slot="data-table-card"]');
-    expect(
-      card?.querySelector('[data-slot="data-table-card-chevron"]'),
-    ).not.toBeNull();
+    expect(card?.querySelector('[data-slot="data-table-card-chevron"]')).not.toBeNull();
     expect(card?.querySelector("[aria-expanded]")).toBeNull();
     expect(screen.queryByRole("button", { name: "Details" })).toBeNull();
     expect(screen.queryByText("Prairie Freight")).toBeNull();
@@ -221,9 +188,7 @@ describe("DataTable on phones", () => {
     });
     primary.addEventListener("click", onPrimaryClick);
 
-    const hitArea = container.querySelector(
-      '[data-slot="data-table-card"] [data-slot="data-table-row-hit-area"]',
-    );
+    const hitArea = container.querySelector('[data-slot="data-table-card"] [data-slot="data-table-row-hit-area"]');
     if (hitArea) fireEvent.click(hitArea);
 
     expect(onPrimaryClick).toHaveBeenCalledTimes(1);
@@ -254,13 +219,7 @@ describe("DataTable on phones", () => {
         columns: COLUMNS,
         pageCount: 0,
       });
-      return (
-        <DataTable
-          table={table}
-          emptyMessage="No loads match these filters."
-          onClearFilters={() => undefined}
-        />
-      );
+      return <DataTable table={table} emptyMessage="No loads match these filters." onClearFilters={() => undefined} />;
     }
     render(<EmptyPhoneTable />);
 
@@ -270,23 +229,14 @@ describe("DataTable on phones", () => {
   });
 
   it("draws the loading skeleton as cards", () => {
-    const { container } = render(
-      <DataTableSkeleton columnCount={6} rowCount={3} />,
-    );
+    const { container } = render(<DataTableSkeleton columnCount={6} rowCount={3} />);
 
     expect(container.querySelector("table")).toBeNull();
-    expect(
-      container.querySelectorAll(
-        '[data-slot="data-table-skeleton-cards"] > li',
-      ),
-    ).toHaveLength(3);
+    expect(container.querySelectorAll('[data-slot="data-table-skeleton-cards"] > li')).toHaveLength(3);
   });
 
   it("drops the Columns menu and hidden-columns note, and expands to reader-hidden fields", () => {
-    window.localStorage.setItem(
-      columnVisibilityStorageKey(TABLE_ID),
-      JSON.stringify({ carrier: false }),
-    );
+    window.localStorage.setItem(columnVisibilityStorageKey(TABLE_ID), JSON.stringify({ carrier: false }));
     const { container } = render(<UnlinkedLoadsTable />);
 
     expect(screen.queryByRole("button", { name: "Columns" })).toBeNull();
@@ -342,17 +292,12 @@ describe("DataTable on phones", () => {
     }
     const { container } = render(<FilteredLoadsTable />);
 
-    const strip = container.querySelector(
-      '[data-slot="data-table-toolbar-primary"]',
-    );
-    expect(
-      [...(strip?.querySelectorAll("button") ?? [])].map(
-        (button) => button.textContent,
-      ),
-    ).toEqual(["Inbound", "Open Loads"]);
-    expect(
-      screen.getByRole("searchbox", { name: "Search Tickets" }),
-    ).toBeDefined();
+    const strip = container.querySelector('[data-slot="data-table-toolbar-primary"]');
+    expect([...(strip?.querySelectorAll("button") ?? [])].map((button) => button.textContent)).toEqual([
+      "Inbound",
+      "Open Loads",
+    ]);
+    expect(screen.getByRole("searchbox", { name: "Search Tickets" })).toBeDefined();
     for (const name of ["Yesterday", "Pick Dates", "Columns"]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
@@ -370,9 +315,7 @@ describe("DataTable on phones", () => {
     }
     expect(within(sheet).queryByRole("searchbox")).toBeNull();
 
-    fireEvent.click(
-      within(sheet).getByRole("button", { name: "Show Results" }),
-    );
+    fireEvent.click(within(sheet).getByRole("button", { name: "Show Results" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -387,26 +330,14 @@ describe("DataTable on phones", () => {
     const types = within(sheet).getByRole("group", { name: "Type" });
     fireEvent.click(within(types).getByRole("button", { name: "Transfers" }));
     fireEvent.click(within(types).getByRole("button", { name: "Sales" }));
-    expect(
-      within(types)
-        .getByRole("button", { name: "Sales" })
-        .getAttribute("aria-pressed"),
-    ).toBe("true");
+    expect(within(types).getByRole("button", { name: "Sales" }).getAttribute("aria-pressed")).toBe("true");
 
-    fireEvent.click(
-      within(sheet).getByRole("button", { name: "Show 3 Results" }),
-    );
+    fireEvent.click(within(sheet).getByRole("button", { name: "Show 3 Results" }));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Filters, 2 Applied" }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Filters, 2 Applied" })).toBeDefined();
     const chips = screen.getByRole("group", { name: "Applied Filters" });
-    expect(
-      within(chips).getByRole("button", { name: "Remove Type: Sales" }),
-    ).toBeDefined();
-    expect(
-      within(chips).getByRole("button", { name: "Remove Type: Transfers" }),
-    ).toBeDefined();
+    expect(within(chips).getByRole("button", { name: "Remove Type: Sales" })).toBeDefined();
+    expect(within(chips).getByRole("button", { name: "Remove Type: Transfers" })).toBeDefined();
   });
 
   it("puts every child behind the Filters button when the caller marks no search", () => {
@@ -431,10 +362,7 @@ describe("DataTable on phones", () => {
     expect(trigger.textContent).toBe("Filters");
     fireEvent.click(trigger);
     expect(
-      within(screen.getByRole("dialog", { name: "Filters" })).getByRole(
-        "searchbox",
-        { name: "Search Tickets" },
-      ),
+      within(screen.getByRole("dialog", { name: "Filters" })).getByRole("searchbox", { name: "Search Tickets" }),
     ).toBeDefined();
   });
 });

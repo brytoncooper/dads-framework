@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import process from "node:process";
 import test from "node:test";
 
-import {
-  AdoptionTaskError,
-  runAdoptionTasks,
-} from "./adoption-task-runner.mjs";
+import { AdoptionTaskError, runAdoptionTasks } from "./adoption-task-runner.mjs";
 
 test("returns a result per task when every task passed", async () => {
   const results = await runAdoptionTasks({
@@ -48,10 +45,7 @@ test("reports the failing task's commands and their output", async () => {
   assert.match(error.message, /FAILED adoption fixtures \/ fixture schema/);
   assert.match(error.message, /declaration missing/);
   assert.match(error.message, /exit: status 2/);
-  assert.match(
-    error.message,
-    /First failure in declared order: fixture schema\./,
-  );
+  assert.match(error.message, /First failure in declared order: fixture schema\./);
 });
 
 test("prints a shared prerequisite failure once and points the rest at it", async () => {
@@ -72,10 +66,7 @@ test("prints a shared prerequisite failure once and points the rest at it", asyn
     (thrown) => thrown,
   );
 
-  assert.equal(
-    error.message.match(/the packed creator did not install/g).length,
-    1,
-  );
+  assert.equal(error.message.match(/the packed creator did not install/g).length, 1);
   assert.match(
     error.message,
     /FAILED generated projects \/ strict-api\n {2}the same failure reported for generated projects \/ standard-api/,

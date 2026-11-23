@@ -13,17 +13,11 @@ import type { Clock } from "@dads-framework/core/runtime/clock";
 import { FakeEmailSender } from "../../../core/testing.js";
 
 import type { EmailEnvelope } from "../email-envelope.js";
-import type {
-  EmailTemplate,
-  EmailTemplateCatalog,
-} from "../email-template-port.js";
+import type { EmailTemplate, EmailTemplateCatalog } from "../email-template-port.js";
 import { MAX_DELIVERY_ATTEMPTS } from "../logic/next-attempt-at.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
 import { FakeOutboundEmailStore } from "../testing/fake-outbound-email-store.js";
-import {
-  DeliverOutboundEmail,
-  TEMPLATE_UNKNOWN_ERROR,
-} from "./deliver-outbound-email.mutation.js";
+import { DeliverOutboundEmail, TEMPLATE_UNKNOWN_ERROR } from "./deliver-outbound-email.mutation.js";
 
 const NOW = new Date("2026-09-11T12:00:00.000Z");
 
@@ -80,9 +74,7 @@ describe("DeliverOutboundEmail", () => {
     });
   }
 
-  async function queueOne(
-    templateName = TEMPLATE.name,
-  ): Promise<OutboundEmailId> {
+  async function queueOne(templateName = TEMPLATE.name): Promise<OutboundEmailId> {
     const { id } = await store.insert({
       templateName,
       props: { recipientName: "Dana Reyes" },
@@ -100,9 +92,7 @@ describe("DeliverOutboundEmail", () => {
 
     expect(result).toEqual({ ok: true, value: { outcome: "skipped" } });
     expect(emailSender.sent).toEqual([]);
-    expect(captured.entries).toContainEqual(
-      expect.objectContaining({ event: "email.delivery.skipped" }),
-    );
+    expect(captured.entries).toContainEqual(expect.objectContaining({ event: "email.delivery.skipped" }));
   });
 
   it("sends the rendered message and marks the row sent", async () => {
@@ -144,9 +134,7 @@ describe("DeliverOutboundEmail", () => {
     const id = await queueOne();
     emailSender.failEverySendWith(new Error("vendor timeout"));
 
-    await expect(build().execute({ outboundEmailId: id })).rejects.toThrow(
-      "vendor timeout",
-    );
+    await expect(build().execute({ outboundEmailId: id })).rejects.toThrow("vendor timeout");
 
     expect(store.find(id)).toMatchObject({
       status: "queued",
@@ -171,9 +159,7 @@ describe("DeliverOutboundEmail", () => {
     row.attempts = MAX_DELIVERY_ATTEMPTS - 1;
     emailSender.failEverySendWith(new Error("vendor timeout"));
 
-    await expect(build().execute({ outboundEmailId: id })).rejects.toThrow(
-      "vendor timeout",
-    );
+    await expect(build().execute({ outboundEmailId: id })).rejects.toThrow("vendor timeout");
 
     expect(store.find(id)).toMatchObject({
       status: "failed",

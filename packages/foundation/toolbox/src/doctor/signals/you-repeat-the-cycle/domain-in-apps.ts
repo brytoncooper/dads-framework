@@ -16,11 +16,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   addFinding,
   functionBodyOf,
@@ -90,13 +86,11 @@ function countDomainInApps(context: DoctorContext): SignalReadings {
 export const domainInAppsSignal: DoctorSignal = {
   id: "domain-in-apps",
   issue: "you-repeat-the-cycle",
-  question:
-    "Does a file under `apps/` import persistence or a vendor client and carry business logic? (heuristic)",
+  question: "Does a file under `apps/` import persistence or a vendor client and carry business logic? (heuristic)",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: 0 },
-  sentence:
-    "He put the first mutation in `apps/api`. Your inner child is still defending him.",
+  sentence: "He put the first mutation in `apps/api`. Your inner child is still defending him.",
   run: (context) => Promise.resolve(countDomainInApps(context)),
 };

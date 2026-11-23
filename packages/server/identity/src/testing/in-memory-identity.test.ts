@@ -1,9 +1,5 @@
 import { it } from "vitest";
-import {
-  inMemoryIdentity,
-  inMemoryIdentityCookie,
-  verifyIdentitySessionConformance,
-} from "./index.js";
+import { inMemoryIdentity, inMemoryIdentityCookie, verifyIdentitySessionConformance } from "./index.js";
 
 it("observes the shared session laws with seeded accounts and a fixed clock", async () => {
   const now = new Date("2026-11-20T12:00:00Z");

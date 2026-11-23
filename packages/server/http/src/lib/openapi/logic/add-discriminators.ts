@@ -1,10 +1,5 @@
 import { capitalizeInitial } from "./capitalize-initial.js";
-import {
-  componentSchemasOf,
-  isJsonObject,
-  mapRecord,
-  type JsonRecord,
-} from "./document-record.js";
+import { componentSchemasOf, isJsonObject, mapRecord, type JsonRecord } from "./document-record.js";
 
 type Discriminator = {
   readonly propertyName: string;
@@ -14,15 +9,7 @@ type Discriminator = {
 const COMPONENT_REF_PREFIX = "#/components/schemas/";
 
 /** Keywords whose values are data, never nested schemas. */
-const DATA_KEYWORDS = new Set([
-  "enum",
-  "const",
-  "default",
-  "example",
-  "examples",
-  "required",
-  "discriminator",
-]);
+const DATA_KEYWORDS = new Set(["enum", "const", "default", "example", "examples", "required", "discriminator"]);
 
 /**
  * Gives every choose-one type in an OpenAPI 3.0 document a discriminator, so
@@ -39,14 +26,11 @@ const DATA_KEYWORDS = new Set([
  */
 export function addDiscriminators(document: JsonRecord): JsonRecord {
   const originalComponents = componentSchemasOf(document);
-  const components = new Map<string, unknown>(
-    Object.entries(originalComponents),
-  );
+  const components = new Map<string, unknown>(Object.entries(originalComponents));
   const untagged: string[] = [];
 
   const resolve = (schema: unknown): unknown => {
-    if (!isJsonObject(schema) || typeof schema["$ref"] !== "string")
-      return schema;
+    if (!isJsonObject(schema) || typeof schema["$ref"] !== "string") return schema;
     const ref = schema["$ref"];
     if (!ref.startsWith(COMPONENT_REF_PREFIX)) return schema;
     return originalComponents[ref.slice(COMPONENT_REF_PREFIX.length)];
@@ -54,13 +38,8 @@ export function addDiscriminators(document: JsonRecord): JsonRecord {
 
   const addComponent = (name: string, schema: unknown): string => {
     const existing = components.get(name);
-    if (
-      existing !== undefined &&
-      JSON.stringify(existing) !== JSON.stringify(schema)
-    ) {
-      throw new Error(
-        `addDiscriminators: component "${name}" already exists with a different shape`,
-      );
+    if (existing !== undefined && JSON.stringify(existing) !== JSON.stringify(schema)) {
+      throw new Error(`addDiscriminators: component "${name}" already exists with a different shape`);
     }
     components.set(name, schema);
     return `${COMPONENT_REF_PREFIX}${name}`;
@@ -86,11 +65,7 @@ export function addDiscriminators(document: JsonRecord): JsonRecord {
     };
   };
 
-  const taggedUnion = (
-    branches: readonly unknown[],
-    discriminator: Discriminator,
-    stem: string,
-  ): JsonRecord => {
+  const taggedUnion = (branches: readonly unknown[], discriminator: Discriminator, stem: string): JsonRecord => {
     const mapping: Record<string, string> = {};
     const refs = discriminator.values.map((value, index) => {
       const branch = branches[index];
@@ -122,9 +97,7 @@ export function addDiscriminators(document: JsonRecord): JsonRecord {
       );
     }
     if ((key === "oneOf" || key === "anyOf") && Array.isArray(value)) {
-      return value.map((branch: unknown, index) =>
-        walk(branch, `${stem}Option${index + 1}`),
-      );
+      return value.map((branch: unknown, index) => walk(branch, `${stem}Option${index + 1}`));
     }
     if (key === "items") return walk(value, `${stem}Item`);
     if (key === "additionalProperties") return walk(value, `${stem}Value`);
@@ -142,9 +115,7 @@ export function addDiscriminators(document: JsonRecord): JsonRecord {
     );
   }
 
-  const existingComponents = isJsonObject(document["components"])
-    ? document["components"]
-    : {};
+  const existingComponents = isJsonObject(document["components"]) ? document["components"] : {};
   return {
     ...document,
     paths,
@@ -156,9 +127,7 @@ export function addDiscriminators(document: JsonRecord): JsonRecord {
 }
 
 /** The schema's `oneOf`, else its `anyOf`, when it has one. */
-function unionOf(
-  schema: JsonRecord,
-): { readonly key: "oneOf" | "anyOf"; readonly branches: unknown[] } | null {
+function unionOf(schema: JsonRecord): { readonly key: "oneOf" | "anyOf"; readonly branches: unknown[] } | null {
   for (const key of ["oneOf", "anyOf"] as const) {
     const branches = schema[key];
     if (Array.isArray(branches)) return { key, branches };
@@ -176,14 +145,9 @@ function discriminatorOf(branches: readonly unknown[]): Discriminator | null {
   if (!isJsonObject(first) || !isJsonObject(first["properties"])) return null;
 
   for (const propertyName of Object.keys(first["properties"])) {
-    const values = branches.map((branch) =>
-      requiredLiteral(branch, propertyName),
-    );
+    const values = branches.map((branch) => requiredLiteral(branch, propertyName));
     const literals = values.filter((value): value is string => value !== null);
-    if (
-      literals.length === branches.length &&
-      new Set(literals).size === literals.length
-    ) {
+    if (literals.length === branches.length && new Set(literals).size === literals.length) {
       return { propertyName, values: literals };
     }
   }
@@ -199,45 +163,26 @@ function requiredLiteral(branch: unknown, propertyName: string): string | null {
   if (!isJsonObject(property)) return null;
   if (typeof property["const"] === "string") return property["const"];
   const literals = property["enum"];
-  return Array.isArray(literals) &&
-    literals.length === 1 &&
-    typeof literals[0] === "string"
-    ? literals[0]
-    : null;
+  return Array.isArray(literals) && literals.length === 1 && typeof literals[0] === "string" ? literals[0] : null;
 }
 
 /** Inline schemas in operations: parameters, request bodies and responses. */
-function walkPaths(
-  paths: unknown,
-  walk: (schema: unknown, stem: string) => unknown,
-): unknown {
+function walkPaths(paths: unknown, walk: (schema: unknown, stem: string) => unknown): unknown {
   if (!isJsonObject(paths)) return paths;
   return mapRecord(paths, (pathItem) =>
-    isJsonObject(pathItem)
-      ? mapRecord(pathItem, (operation) => walkOperation(operation, walk))
-      : pathItem,
+    isJsonObject(pathItem) ? mapRecord(pathItem, (operation) => walkOperation(operation, walk)) : pathItem,
   );
 }
 
-function walkOperation(
-  operation: unknown,
-  walk: (schema: unknown, stem: string) => unknown,
-): unknown {
+function walkOperation(operation: unknown, walk: (schema: unknown, stem: string) => unknown): unknown {
   if (!isJsonObject(operation)) return operation;
-  const stem = discriminatorNameStem(
-    typeof operation["operationId"] === "string"
-      ? operation["operationId"]
-      : "",
-  );
+  const stem = discriminatorNameStem(typeof operation["operationId"] === "string" ? operation["operationId"] : "");
   const parameters = Array.isArray(operation["parameters"])
     ? operation["parameters"].map((parameter: unknown) =>
         isJsonObject(parameter) && typeof parameter["name"] === "string"
           ? {
               ...parameter,
-              schema: walk(
-                parameter["schema"],
-                `${stem}${discriminatorNameStem(parameter["name"])}Parameter`,
-              ),
+              schema: walk(parameter["schema"], `${stem}${discriminatorNameStem(parameter["name"])}Parameter`),
             }
           : parameter,
       )
@@ -247,11 +192,7 @@ function walkOperation(
     ...(parameters === undefined ? {} : { parameters }),
     ...(isJsonObject(operation["requestBody"])
       ? {
-          requestBody: walkContent(
-            operation["requestBody"],
-            `${stem}Body`,
-            walk,
-          ),
+          requestBody: walkContent(operation["requestBody"], `${stem}Body`, walk),
         }
       : {}),
     ...(isJsonObject(operation["responses"])
@@ -267,35 +208,22 @@ function walkOperation(
   };
 }
 
-function walkContent(
-  holder: unknown,
-  stem: string,
-  walk: (schema: unknown, stem: string) => unknown,
-): unknown {
+function walkContent(holder: unknown, stem: string, walk: (schema: unknown, stem: string) => unknown): unknown {
   if (!isJsonObject(holder) || !isJsonObject(holder["content"])) return holder;
   return {
     ...holder,
     content: mapRecord(holder["content"], (media) =>
-      isJsonObject(media)
-        ? { ...media, schema: walk(media["schema"], stem) }
-        : media,
+      isJsonObject(media) ? { ...media, schema: walk(media["schema"], stem) } : media,
     ),
   };
 }
 
-function mapRecordWithKeys(
-  record: JsonRecord,
-  map: (key: string, value: unknown) => unknown,
-): JsonRecord {
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [key, map(key, value)]),
-  );
+function mapRecordWithKeys(record: JsonRecord, map: (key: string, value: unknown) => unknown): JsonRecord {
+  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, map(key, value)]));
 }
 
 function withoutKey(record: JsonRecord, omitted: string): JsonRecord {
-  return Object.fromEntries(
-    Object.entries(record).filter(([key]) => key !== omitted),
-  );
+  return Object.fromEntries(Object.entries(record).filter(([key]) => key !== omitted));
 }
 
 function discriminatorNameStem(text: string): string {

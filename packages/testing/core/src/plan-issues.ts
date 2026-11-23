@@ -7,13 +7,9 @@ import type { TestingPlanIssue } from "./testing-api.js";
  */
 
 /** Returns the declared severity, or the severity implied by the issue code. */
-export function issueSeverity(
-  issue: TestingPlanIssue,
-): "info" | "uncertainty" | "error" {
+export function issueSeverity(issue: TestingPlanIssue): "info" | "uncertainty" | "error" {
   if (issue.severity !== undefined) return issue.severity;
-  return issue.code.startsWith("graph-") || issue.code.startsWith("snapshot-")
-    ? "info"
-    : "uncertainty";
+  return issue.code.startsWith("graph-") || issue.code.startsWith("snapshot-") ? "info" : "uncertainty";
 }
 
 /**
@@ -21,23 +17,16 @@ export function issueSeverity(
  * informational issue with no declared scope is "unknown" rather than "module":
  * it is not evidence that any one module is uncertain.
  */
-export function issueScope(
-  issue: TestingPlanIssue,
-): "module" | "workspace" | "unknown" {
+export function issueScope(issue: TestingPlanIssue): "module" | "workspace" | "unknown" {
   if (issue.scope !== undefined) return issue.scope;
-  if (
-    issue.code === "unknown-changed-path" ||
-    issue.code === "reachable-module-unowned"
-  ) {
+  if (issue.code === "unknown-changed-path" || issue.code === "reachable-module-unowned") {
     return "workspace";
   }
   return issueSeverity(issue) === "info" ? "unknown" : "module";
 }
 
 /** Formats the issue location as path:line:column, degrading as fields are missing. */
-export function formatIssueLocation(
-  issue: TestingPlanIssue,
-): string | undefined {
+export function formatIssueLocation(issue: TestingPlanIssue): string | undefined {
   if (issue.path === undefined) return undefined;
   if (issue.line === undefined) return issue.path;
   if (issue.column === undefined) {

@@ -25,11 +25,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   addFinding,
   evidenceAt,
@@ -83,23 +79,18 @@ function comparesARole(node: ts.Node): boolean {
   if (!ts.isBinaryExpression(node)) return false;
   if (!COMPARISONS.has(node.operatorToken.kind)) return false;
   const named = namesARole(node.left) || namesARole(node.right);
-  const permission =
-    namesAPermission(node.left) || namesAPermission(node.right);
+  const permission = namesAPermission(node.left) || namesAPermission(node.right);
   return named && permission;
 }
 
 /** True when the module reaches an access or authorization model at all. */
 function asksAModel(module: DoctorModule): boolean {
-  return moduleImports(module).some((imported) =>
-    ASKS_A_MODEL.test(imported.specifier),
-  );
+  return moduleImports(module).some((imported) => ASKS_A_MODEL.test(imported.specifier));
 }
 
 function switchesOnAPermission(node: ts.SwitchStatement): boolean {
   if (!namesARole(node.expression)) return false;
-  return node.caseBlock.clauses.some(
-    (clause) => ts.isCaseClause(clause) && namesAPermission(clause.expression),
-  );
+  return node.caseBlock.clauses.some((clause) => ts.isCaseClause(clause) && namesAPermission(clause.expression));
 }
 
 /** What a node is branching on, when it is branching on a role. */
@@ -116,10 +107,7 @@ function roleBranch(node: ts.Node): string | undefined {
   return compared ? "if on a role" : undefined;
 }
 
-function collectRoleBranches(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function collectRoleBranches(module: DoctorModule, readings: Map<string, SignalReading>): void {
   visitNodes(module.source, (node) => {
     const branch = roleBranch(node);
     if (branch === undefined) return;
@@ -141,13 +129,11 @@ function countRoleLadders(context: DoctorContext): SignalReadings {
 export const roleIfLaddersSignal: DoctorSignal = {
   id: "role-if-ladders",
   issue: "you-repeat-the-cycle",
-  question:
-    "Does an `if` or `switch` branch on a role outside the authorization model?",
+  question: "Does an `if` or `switch` branch on a role outside the authorization model?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: 0 },
-  sentence:
-    "Then you eat your denial test. There are children in other companies shipping role `if`s.",
+  sentence: "Then you eat your denial test. There are children in other companies shipping role `if`s.",
   run: (context) => Promise.resolve(countRoleLadders(context)),
 };

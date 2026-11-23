@@ -26,9 +26,7 @@ type PermissionsCopyKey = CopyKey<typeof permissionsCopy>;
 
 describe("translate", () => {
   it("resolves a bare key", () => {
-    expect(translate(permissionsCopy, "en", "permissions.page.title")).toBe(
-      "Permission Roles",
-    );
+    expect(translate(permissionsCopy, "en", "permissions.page.title")).toBe("Permission Roles");
   });
 
   it("fills {name} slots from vars", () => {
@@ -40,31 +38,19 @@ describe("translate", () => {
   });
 
   it("resolves a descriptor exactly as it resolves a key", () => {
-    expect(
-      translate(
-        permissionsCopy,
-        "en",
-        copy("permissions.at", { facility: "Cedar Rapids" }),
-      ),
-    ).toBe("Roles at Cedar Rapids");
+    expect(translate(permissionsCopy, "en", copy("permissions.at", { facility: "Cedar Rapids" }))).toBe(
+      "Roles at Cedar Rapids",
+    );
   });
 
   it("selects the singular and plural forms by count", () => {
-    expect(translate(permissionsCopy, "en", "permissions.holders", {}, 1)).toBe(
-      "1 person",
-    );
-    expect(translate(permissionsCopy, "en", "permissions.holders", {}, 4)).toBe(
-      "4 people",
-    );
-    expect(translate(permissionsCopy, "en", "permissions.holders", {}, 0)).toBe(
-      "0 people",
-    );
+    expect(translate(permissionsCopy, "en", "permissions.holders", {}, 1)).toBe("1 person");
+    expect(translate(permissionsCopy, "en", "permissions.holders", {}, 4)).toBe("4 people");
+    expect(translate(permissionsCopy, "en", "permissions.holders", {}, 0)).toBe("0 people");
   });
 
   it("fills {count} from the count itself — no second argument", () => {
-    expect(
-      translate(permissionsCopy, "en", copy("permissions.holders", {}, 1200)),
-    ).toBe("1,200 people");
+    expect(translate(permissionsCopy, "en", copy("permissions.holders", {}, 1200))).toBe("1,200 people");
   });
 
   it("pluralizes nested fragments independently", () => {
@@ -73,27 +59,23 @@ describe("translate", () => {
       groups: copy("permissions.groups", {}, 3),
     });
 
-    expect(translate(permissionsCopy, "en", sentence)).toBe(
-      "1 person across 3 groups",
-    );
+    expect(translate(permissionsCopy, "en", sentence)).toBe("1 person across 3 groups");
   });
 
   it("interpolates a plain number without ceremony", () => {
-    expect(
-      translate(permissionsCopy, "en", "permissions.at", { facility: 1200 }),
-    ).toBe("Roles at 1,200");
+    expect(translate(permissionsCopy, "en", "permissions.at", { facility: 1200 })).toBe("Roles at 1,200");
   });
 
   it("throws on a key the catalog does not declare — never renders the key", () => {
-    expect(() =>
-      translate(permissionsCopy, "en", "permissions.page.titel"),
-    ).toThrow(/"permissions\.page\.titel" is not declared/);
+    expect(() => translate(permissionsCopy, "en", "permissions.page.titel")).toThrow(
+      /"permissions\.page\.titel" is not declared/,
+    );
   });
 
   it("throws when a pluralized key has no form to select", () => {
-    expect(() =>
-      translate(permissionsCopy, "en", "permissions.missing", {}, 2),
-    ).toThrow(/pluralizes but the catalog declares neither/);
+    expect(() => translate(permissionsCopy, "en", "permissions.missing", {}, 2)).toThrow(
+      /pluralizes but the catalog declares neither/,
+    );
   });
 
   it("throws when a slot has nothing to fill it", () => {
@@ -115,9 +97,7 @@ describe("translate", () => {
   });
 
   it("leaves a sentence with no slots untouched", () => {
-    expect(translate(permissionsCopy, "en", "permissions.holders.none")).toBe(
-      "Nobody holds this role",
-    );
+    expect(translate(permissionsCopy, "en", "permissions.holders.none")).toBe("Nobody holds this role");
   });
 });
 

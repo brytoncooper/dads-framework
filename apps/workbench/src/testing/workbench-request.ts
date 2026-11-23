@@ -1,19 +1,9 @@
-import {
-  createHttpApp,
-  registerRoutes,
-  type HttpRoute,
-} from "@dads-framework/http";
+import { createHttpApp, registerRoutes, type HttpRoute } from "@dads-framework/http";
 import { z } from "zod";
 
-import {
-  workbenchAccessModel,
-  type WorkbenchRequestSubject,
-} from "../access.js";
+import { workbenchAccessModel, type WorkbenchRequestSubject } from "../access.js";
 import type { createWorkbench } from "../create-workbench.js";
-import {
-  checkWorkbenchPermission,
-  workbenchAuthorizationReadError,
-} from "../operations/workbench-authorization.js";
+import { checkWorkbenchPermission, workbenchAuthorizationReadError } from "../operations/workbench-authorization.js";
 import { routeOutcome } from "../route-outcome.js";
 
 const operations = {
@@ -82,11 +72,7 @@ export function operationOf(route: HttpRoute): Operation | undefined {
   });
 }
 
-export async function executeWorkbenchRoute(
-  route: HttpRoute | undefined,
-  input: WorkbenchInput,
-  app: WorkbenchApp,
-) {
+export async function executeWorkbenchRoute(route: HttpRoute | undefined, input: WorkbenchInput, app: WorkbenchApp) {
   if (route === undefined) throw new Error("Workbench route is unavailable");
   const http = await createHttpApp({
     nodeEnv: "test",
@@ -109,11 +95,9 @@ export async function executeWorkbenchRoute(
         lookupResources: (query) =>
           routeOutcome(async () => {
             await app.operations.synchronize();
-            return app.authorization
-              .lookupResources(query)
-              .catch((cause: unknown) => {
-                throw workbenchAuthorizationReadError(cause);
-              });
+            return app.authorization.lookupResources(query).catch((cause: unknown) => {
+              throw workbenchAuthorizationReadError(cause);
+            });
           }),
       },
     });
@@ -129,10 +113,7 @@ export async function executeWorkbenchRoute(
           }),
     });
     const status = response.statusCode;
-    const body =
-      status === 204
-        ? envelope.parse({})
-        : envelope.parse(response.json<unknown>());
+    const body = status === 204 ? envelope.parse({}) : envelope.parse(response.json<unknown>());
     return status < 400
       ? { kind: "success" as const, status, data: body.data, meta: body.meta }
       : {
@@ -157,8 +138,6 @@ function routeUrl(path: string, params: unknown, query: unknown): string {
     const value = values[key];
     return typeof value === "string" ? encodeURIComponent(value) : "";
   });
-  const search = new URLSearchParams(
-    Object.entries(queryValues).map(([key, value]) => [key, String(value)]),
-  );
+  const search = new URLSearchParams(Object.entries(queryValues).map(([key, value]) => [key, String(value)]));
   return search.size === 0 ? filled : `${filled}?${search}`;
 }

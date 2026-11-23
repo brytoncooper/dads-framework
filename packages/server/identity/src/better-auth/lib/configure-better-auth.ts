@@ -2,22 +2,14 @@ import type { IdentityEmail } from "../../index.js";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { jwt } from "better-auth/plugins";
 import { PostgresDialect } from "kysely";
-import {
-  IDENTITY_PATH,
-  type BetterAuthIdentityOptions,
-} from "./identity-options.js";
+import { IDENTITY_PATH, type BetterAuthIdentityOptions } from "./identity-options.js";
 
-import {
-  enterpriseDatabaseHooks,
-  enterpriseSsoPlugin,
-} from "./enterprise-plugin.js";
+import { enterpriseDatabaseHooks, enterpriseSsoPlugin } from "./enterprise-plugin.js";
 import type { EnterpriseSsoProvider } from "./enterprise-options.js";
 
 const enterpriseSessionFields = {
   ssoProviderBinding: { type: "string", required: false, input: false },
-} satisfies NonNullable<
-  NonNullable<BetterAuthOptions["session"]>["additionalFields"]
->;
+} satisfies NonNullable<NonNullable<BetterAuthOptions["session"]>["additionalFields"]>;
 
 const SESSION_SECONDS = 60 * 60 * 24 * 7;
 
@@ -78,8 +70,7 @@ export function configureBetterAuth(
       sendOnSignUp: true,
       expiresIn: 3600,
       sendVerificationEmail: ({ user, url }) => {
-        if (!user.emailVerified)
-          sendEmail({ kind: "verify-email", to: user.email, url });
+        if (!user.emailVerified) sendEmail({ kind: "verify-email", to: user.email, url });
         return Promise.resolve();
       },
     },

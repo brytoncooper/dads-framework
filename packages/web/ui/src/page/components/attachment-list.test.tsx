@@ -5,13 +5,7 @@
  * never trigger the other, and both need names that include the file.
  * @vitest-environment jsdom
  */
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AttachmentItem } from "../../elements/index.js";
@@ -34,22 +28,14 @@ describe("AttachmentList", () => {
     render(<AttachmentList items={[manual]} onDownload={vi.fn()} />);
 
     expect(screen.getByText("manual.pdf")).toBeDefined();
-    expect(
-      screen.getByText(/PDF\s*·\s*25(\.0)? ?(kB|KB|kilobytes?)/i),
-    ).toBeDefined();
+    expect(screen.getByText(/PDF\s*·\s*25(\.0)? ?(kB|KB|kilobytes?)/i)).toBeDefined();
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
 
   it("opens from the name button and never downloads", () => {
     const onOpen = vi.fn();
     const onDownload = vi.fn();
-    render(
-      <AttachmentList
-        items={[manual]}
-        onOpen={onOpen}
-        onDownload={onDownload}
-      />,
-    );
+    render(<AttachmentList items={[manual]} onOpen={onOpen} onDownload={onDownload} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open manual.pdf" }));
 
@@ -58,32 +44,20 @@ describe("AttachmentList", () => {
   });
 
   it("describes the open button with the file's type and size", () => {
-    render(
-      <AttachmentList items={[manual]} onOpen={vi.fn()} onDownload={vi.fn()} />,
-    );
+    render(<AttachmentList items={[manual]} onOpen={vi.fn()} onDownload={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: "Open manual.pdf" });
     const descriptionId = button.getAttribute("aria-describedby") ?? "";
 
-    expect(document.getElementById(descriptionId)?.textContent).toMatch(
-      /PDF\s*·\s*25(\.0)? ?(kB|KB|kilobytes?)/i,
-    );
+    expect(document.getElementById(descriptionId)?.textContent).toMatch(/PDF\s*·\s*25(\.0)? ?(kB|KB|kilobytes?)/i);
   });
 
   it("downloads from its own button and never opens", () => {
     const onOpen = vi.fn();
     const onDownload = vi.fn();
-    render(
-      <AttachmentList
-        items={[manual]}
-        onOpen={onOpen}
-        onDownload={onDownload}
-      />,
-    );
+    render(<AttachmentList items={[manual]} onOpen={onOpen} onDownload={onDownload} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Download manual.pdf" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Download manual.pdf" }));
 
     expect(onDownload).toHaveBeenCalledWith(manual);
     expect(onOpen).not.toHaveBeenCalled();
@@ -97,25 +71,15 @@ describe("AttachmentList", () => {
   });
 
   it("shows the default and a custom empty message", () => {
-    const { rerender } = render(
-      <AttachmentList items={[]} onDownload={vi.fn()} />,
-    );
+    const { rerender } = render(<AttachmentList items={[]} onDownload={vi.fn()} />);
     expect(screen.getByText("No files yet")).toBeDefined();
 
-    rerender(
-      <AttachmentList
-        items={[]}
-        onDownload={vi.fn()}
-        emptyMessage="No files attached."
-      />,
-    );
+    rerender(<AttachmentList items={[]} onDownload={vi.fn()} emptyMessage="No files attached." />);
     expect(screen.getByText("No files attached.")).toBeDefined();
   });
 
   it("shows a busy skeleton list while loading", () => {
-    render(
-      <AttachmentList items={[manual]} status="loading" onDownload={vi.fn()} />,
-    );
+    render(<AttachmentList items={[manual]} status="loading" onDownload={vi.fn()} />);
 
     const list = screen.getByRole("list", { name: "Loading files" });
     expect(list.getAttribute("aria-busy")).toBe("true");
@@ -161,16 +125,12 @@ describe("AttachmentList", () => {
       <AttachmentList
         items={[manual]}
         onDownload={vi.fn()}
-        itemActions={(item) => (
-          <button type="button">Remove {item.fileName}</button>
-        )}
+        itemActions={(item) => <button type="button">Remove {item.fileName}</button>}
         failure={<p role="alert">Could not download.</p>}
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Remove manual.pdf" }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Remove manual.pdf" })).toBeDefined();
     expect(screen.getByRole("alert").textContent).toBe("Could not download.");
   });
 });

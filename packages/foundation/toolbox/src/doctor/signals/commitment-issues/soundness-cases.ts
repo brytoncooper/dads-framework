@@ -19,12 +19,8 @@ function countSoundnessCases(context: DoctorContext): SignalReadings {
   const parsed: unknown = JSON.parse(context.read(CORPUS_FILE));
   const cases: unknown = isRecord(parsed) ? parsed["cases"] : undefined;
   if (!isUnknownArray(cases)) return new Map();
-  const defined = cases.filter(
-    (entry) => isRecord(entry) && isString(entry["id"]),
-  );
-  return new Map([
-    ["cases", { value: defined.length, evidence: [{ path: CORPUS_FILE }] }],
-  ]);
+  const defined = cases.filter((entry) => isRecord(entry) && isString(entry["id"]));
+  return new Map([["cases", { value: defined.length, evidence: [{ path: CORPUS_FILE }] }]]);
 }
 
 export const soundnessCasesSignal: DoctorSignal = {
@@ -35,8 +31,7 @@ export const soundnessCasesSignal: DoctorSignal = {
   unit: "count",
   direction: "floor",
   thresholds: { standard: null, strict: null },
-  sentence:
-    "You do not want a relationship. You just need to know they still pass.",
+  sentence: "You do not want a relationship. You just need to know they still pass.",
   measure: "soundnessCases",
   run: (context) => Promise.resolve(countSoundnessCases(context)),
 };

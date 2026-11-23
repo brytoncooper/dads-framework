@@ -12,9 +12,7 @@ import { InMemoryFeatureFlagStore } from "./in-memory-feature-flag-store.js";
 describe("InMemoryFeatureFlagStore", () => {
   it("keeps every FeatureFlagStore promise", async () => {
     await expect(
-      verifyFeatureFlagStoreConformance(() =>
-        Promise.resolve(new InMemoryFeatureFlagStore()),
-      ),
+      verifyFeatureFlagStoreConformance(() => Promise.resolve(new InMemoryFeatureFlagStore())),
     ).resolves.toBeUndefined();
   });
 });

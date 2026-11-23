@@ -1,12 +1,5 @@
 import * as React from "react";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "../../display/index.js";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../display/index.js";
 import { cn } from "../../elements/index.js";
 
 type ListPageHeaderProps = Omit<React.ComponentProps<"header">, "title"> & {
@@ -27,17 +20,8 @@ type ListEmptyStateProps = Omit<React.ComponentProps<"div">, "title"> & {
 };
 
 /** Establishes the shared vertical rhythm without owning page state. */
-export function ListPageShell({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      {...props}
-      data-slot="list-page-shell"
-      className={cn("flex min-w-0 flex-1 flex-col gap-6", className)}
-    />
-  );
+export function ListPageShell({ className, ...props }: React.ComponentProps<"div">) {
+  return <div {...props} data-slot="list-page-shell" className={cn("flex min-w-0 flex-1 flex-col gap-6", className)} />;
 }
 
 /**
@@ -66,21 +50,13 @@ export function ListPageHeader({
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h1
-            className={cn(
-              "text-3xl font-semibold tracking-tight text-balance",
-              hasObjectSwitch && "max-md:sr-only",
-            )}
-          >
+          <h1 className={cn("text-3xl font-semibold tracking-tight text-balance", hasObjectSwitch && "max-md:sr-only")}>
             {title}
           </h1>
           {objectSwitch}
         </div>
         {hasDescription && (
-          <p
-            data-slot="list-page-description"
-            className="max-w-prose text-foreground text-sm"
-          >
+          <p data-slot="list-page-description" className="max-w-prose text-foreground text-sm">
             {description}
           </p>
         )}
@@ -91,18 +67,12 @@ export function ListPageHeader({
 }
 
 /** Keeps feature-owned page actions in one responsive cluster. */
-export function ListPageActions({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export function ListPageActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       {...props}
       data-slot="list-page-actions"
-      className={cn(
-        "flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end",
-        className,
-      )}
+      className={cn("flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end", className)}
     />
   );
 }
@@ -110,24 +80,13 @@ export function ListPageActions({
 /**
  * Gives feature-owned empty copy and actions the shared page-level treatment.
  */
-export function ListEmptyState({
-  icon,
-  title,
-  description,
-  children,
-  className,
-  ...props
-}: ListEmptyStateProps) {
+export function ListEmptyState({ icon, title, description, children, className, ...props }: ListEmptyStateProps) {
   const hasIcon = React.Children.toArray(icon).length > 0;
   const hasDescription = React.Children.toArray(description).length > 0;
   const hasActions = React.Children.toArray(children).length > 0;
 
   return (
-    <Empty
-      {...props}
-      data-slot="list-empty-state"
-      className={cn("rounded-md border border-dashed", className)}
-    >
+    <Empty {...props} data-slot="list-empty-state" className={cn("rounded-md border border-dashed", className)}>
       <EmptyHeader>
         {hasIcon && (
           <EmptyMedia variant="icon" aria-hidden="true">
@@ -137,11 +96,7 @@ export function ListEmptyState({
         <EmptyTitle role="heading" aria-level={2}>
           {title}
         </EmptyTitle>
-        {hasDescription && (
-          <EmptyDescription className="text-foreground">
-            {description}
-          </EmptyDescription>
-        )}
+        {hasDescription && <EmptyDescription className="text-foreground">{description}</EmptyDescription>}
       </EmptyHeader>
       {hasActions && <EmptyContent>{children}</EmptyContent>}
     </Empty>

@@ -4,11 +4,7 @@ import { writeOutput } from "./cli-io.js";
 import { loadDadsProject } from "./project-files.js";
 import { readRouteSource } from "./route-inspection/read-route-source.js";
 
-export function inspect(
-  subject: string | undefined,
-  operation: string | undefined,
-  json: boolean,
-): void {
+export function inspect(subject: string | undefined, operation: string | undefined, json: boolean): void {
   if (subject !== "http-operation" || !operation) {
     throw new Error('inspect requires http-operation "<METHOD /path>".');
   }
@@ -16,11 +12,7 @@ export function inspect(
   const operations = listTypeScriptFiles(root).flatMap((file) => {
     const filename = relative(root, file);
     return readRouteSource(readFileSync(file, "utf8"), filename)
-      .filter(
-        (entry) =>
-          entry.operation === operation ||
-          `${entry.method} ${entry.routePath}` === operation,
-      )
+      .filter((entry) => entry.operation === operation || `${entry.method} ${entry.routePath}` === operation)
       .map((entry) => ({
         file: filename,
         operation: entry.operation,

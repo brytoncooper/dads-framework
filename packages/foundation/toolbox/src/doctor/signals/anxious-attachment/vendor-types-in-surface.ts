@@ -19,12 +19,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   exportedStatements,
@@ -43,20 +38,13 @@ const PROJECT_FILE = "dads.project.json";
 /** The name a node uses as a type, when it uses one. */
 function referencedTypeName(node: ts.Node): string | undefined {
   if (ts.isTypeReferenceNode(node)) return leftmostTypeName(node.typeName);
-  if (
-    ts.isExpressionWithTypeArguments(node) &&
-    ts.isIdentifier(node.expression)
-  ) {
+  if (ts.isExpressionWithTypeArguments(node) && ts.isIdentifier(node.expression)) {
     return node.expression.text;
   }
   return undefined;
 }
 
-function foreignNames(
-  module: DoctorModule,
-  allowed: ReadonlySet<string>,
-  own: string,
-): readonly SignalEvidence[] {
+function foreignNames(module: DoctorModule, allowed: ReadonlySet<string>, own: string): readonly SignalEvidence[] {
   const bindings = importedBindings(module);
   const found: SignalEvidence[] = [];
   const inspect = (node: ts.Node): void => {
@@ -80,11 +68,7 @@ function countForeignSurface(context: DoctorContext): SignalReadings {
   for (const declared of context.packages()) {
     const allowed = new Set(declared.allowedDependencies);
     const evidence = modules
-      .filter(
-        (module) =>
-          module.packageRoot === declared.root &&
-          isProductionModule(module.path),
-      )
+      .filter((module) => module.packageRoot === declared.root && isProductionModule(module.path))
       .flatMap((module) => foreignNames(module, allowed, declared.name));
     readings.set(declared.name, { value: evidence.length, evidence });
   }
@@ -95,8 +79,7 @@ export const vendorTypesInSurfaceSignal: DoctorSignal = {
   id: "vendor-types-in-surface",
   issue: "anxious-attachment",
   alsoUnder: ["the-paper-wall"],
-  question:
-    "Does an emitted `.d.ts` name a type from outside its package and its allowed dependencies?",
+  question: "Does an emitted `.d.ts` name a type from outside its package and its allowed dependencies?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

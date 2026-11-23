@@ -69,9 +69,7 @@ class ApplyAccessChangesAfterCommitLive extends ApplyAccessChangesAfterCommit {
 
   async dispatch(entries: readonly AccessChange[]): Promise<void> {
     if (entries.length === 0) return;
-    const idempotencyKeys = [
-      ...new Set(entries.map((entry) => entry.idempotencyKey)),
-    ];
+    const idempotencyKeys = [...new Set(entries.map((entry) => entry.idempotencyKey))];
     try {
       const result = await this.projector.applyKeys({
         idempotencyKeys,
@@ -100,9 +98,7 @@ class ApplyAccessChangesAfterCommitLive extends ApplyAccessChangesAfterCommit {
    * now (projected, or released for replay), so a live lease is always
    * someone else's.
    */
-  private async waitWhileHeldElsewhere(
-    idempotencyKeys: readonly string[],
-  ): Promise<void> {
+  private async waitWhileHeldElsewhere(idempotencyKeys: readonly string[]): Promise<void> {
     let held = await this.projector.keysHeldByLiveClaims(idempotencyKeys);
     const { checks, intervalMs, delay } = this.heldClaimWait;
     for (let check = 1; check <= checks && held.length > 0; check += 1) {
@@ -128,10 +124,5 @@ export function createApplyAccessChangesAfterCommit(
   workerId = "inline-dispatch",
   heldClaimWait: HeldClaimWait = DEFAULT_HELD_CLAIM_WAIT,
 ): ApplyAccessChangesAfterCommit {
-  return new ApplyAccessChangesAfterCommitLive(
-    projector,
-    log,
-    workerId,
-    heldClaimWait,
-  );
+  return new ApplyAccessChangesAfterCommitLive(projector, log, workerId, heldClaimWait);
 }

@@ -21,15 +21,10 @@ export type DadTestCliIo = {
 
 export type DadTestCommand = {
   readonly options: readonly OptionSpecification[];
-  readonly execute: (
-    parsed: ParsedArguments,
-    io: DadTestCliIo,
-    json: boolean,
-  ) => Promise<number>;
+  readonly execute: (parsed: ParsedArguments, io: DadTestCliIo, json: boolean) => Promise<number>;
 };
 
-const usage =
-  "Usage: dad-test plan|run|explain|init [options] [--json]. See the package README for each option.\n";
+const usage = "Usage: dad-test plan|run|explain|init [options] [--json]. See the package README for each option.\n";
 
 const commands = new Map<string, DadTestCommand>([
   ["plan", planCommand],
@@ -57,10 +52,7 @@ export function listDadTestCommands(): readonly {
 }
 
 /** Runs one `dad-test` invocation and returns its exit code. */
-export async function runDadTestCli(
-  argumentsAfterExecutable: readonly string[],
-  io: DadTestCliIo,
-): Promise<number> {
+export async function runDadTestCli(argumentsAfterExecutable: readonly string[], io: DadTestCliIo): Promise<number> {
   // The envelope is chosen before parsing so a parse failure is still reported
   // in the shape the caller asked for.
   const json = argumentsAfterExecutable.includes("--json");
@@ -70,23 +62,15 @@ export async function runDadTestCli(
       io.stdout(usage);
       return 0;
     }
-    const command =
-      operation === undefined ? undefined : commands.get(operation);
+    const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
       throw new Error("Expected operation plan, run, explain, or init.");
     }
-    const parsed = parseCommandOptions(
-      argumentsAfterExecutable.slice(1),
-      command.options,
-    );
+    const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);
     return await command.execute(parsed, io, json);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown failure.";
-    io.stderr(
-      json
-        ? `${JSON.stringify({ schemaVersion: 1, ok: false, error: message })}\n`
-        : `dad-test: ${message}\n`,
-    );
+    io.stderr(json ? `${JSON.stringify({ schemaVersion: 1, ok: false, error: message })}\n` : `dad-test: ${message}\n`);
     return 1;
   }
 }

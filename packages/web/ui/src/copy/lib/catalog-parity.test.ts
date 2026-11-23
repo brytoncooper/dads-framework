@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  assertCatalogParity,
-  checkCatalogParity,
-  placeholdersOf,
-} from "./catalog-parity.js";
+import { assertCatalogParity, checkCatalogParity, placeholdersOf } from "./catalog-parity.js";
 import { defineCopy, type LocalizedText } from "./localized-text.js";
 import { mergeCopy, type CopySource } from "./merge-copy.js";
 
@@ -17,8 +13,7 @@ import { mergeCopy, type CopySource } from "./merge-copy.js";
  */
 
 const ORDERS_FILE = "apps/example/features/orders/src/copy/orders-copy.ts";
-const FACILITIES_FILE =
-  "apps/example/features/facilities/src/copy/facilities-copy.ts";
+const FACILITIES_FILE = "apps/example/features/facilities/src/copy/facilities-copy.ts";
 
 /**
  * The locale list is injected so these cases can prove what happens when a
@@ -32,9 +27,7 @@ const TWO_LOCALES = ["en", "es"];
  * half-translated catalog a real translation pass produces — which the shipped
  * one-locale `LocalizedText` deliberately cannot.
  */
-function ordersSource(
-  entries: Record<string, Record<string, string>>,
-): CopySource {
+function ordersSource(entries: Record<string, Record<string, string>>): CopySource {
   const catalog: Record<string, LocalizedText> = {};
   for (const [key, translations] of Object.entries(entries)) {
     catalog[key] = { ...translations, en: translations["en"] ?? "" };
@@ -44,10 +37,7 @@ function ordersSource(
 
 describe("placeholdersOf", () => {
   it("names every interpolation slot once", () => {
-    expect([...placeholdersOf("{count} of {count} at {facility}")]).toEqual([
-      "count",
-      "facility",
-    ]);
+    expect([...placeholdersOf("{count} of {count} at {facility}")]).toEqual(["count", "facility"]);
   });
 
   it("finds none in a plain sentence", () => {
@@ -57,9 +47,7 @@ describe("placeholdersOf", () => {
 
 describe("checkCatalogParity", () => {
   it("passes a catalog that speaks every locale", () => {
-    const merged = mergeCopy([
-      ordersSource({ "orders.page.title": { en: "Orders", es: "Pedidos" } }),
-    ]);
+    const merged = mergeCopy([ordersSource({ "orders.page.title": { en: "Orders", es: "Pedidos" } })]);
 
     expect(checkCatalogParity(merged, TWO_LOCALES)).toEqual({
       missingTranslations: [],
@@ -77,29 +65,23 @@ describe("checkCatalogParity", () => {
       }),
     ]);
 
-    expect(checkCatalogParity(merged, TWO_LOCALES).missingTranslations).toEqual(
-      [{ key: "orders.status.DRAFT", file: ORDERS_FILE, locale: "es" }],
-    );
+    expect(checkCatalogParity(merged, TWO_LOCALES).missingTranslations).toEqual([
+      { key: "orders.status.DRAFT", file: ORDERS_FILE, locale: "es" },
+    ]);
   });
 
   it("treats an empty phrase as untranslated rather than as a translation", () => {
-    const merged = mergeCopy([
-      ordersSource({ "orders.page.title": { en: "Orders", es: "" } }),
-    ]);
+    const merged = mergeCopy([ordersSource({ "orders.page.title": { en: "Orders", es: "" } })]);
 
-    expect(
-      checkCatalogParity(merged, TWO_LOCALES).missingTranslations,
-    ).toHaveLength(1);
+    expect(checkCatalogParity(merged, TWO_LOCALES).missingTranslations).toHaveLength(1);
   });
 
   it("treats a whitespace-only phrase as untranslated", () => {
-    const merged = mergeCopy([
-      ordersSource({ "orders.page.title": { en: "Orders", es: " \n\t " } }),
-    ]);
+    const merged = mergeCopy([ordersSource({ "orders.page.title": { en: "Orders", es: " \n\t " } })]);
 
-    expect(checkCatalogParity(merged, TWO_LOCALES).missingTranslations).toEqual(
-      [{ key: "orders.page.title", file: ORDERS_FILE, locale: "es" }],
-    );
+    expect(checkCatalogParity(merged, TWO_LOCALES).missingTranslations).toEqual([
+      { key: "orders.page.title", file: ORDERS_FILE, locale: "es" },
+    ]);
   });
 
   it("names malformed placeholders with their key, file, locale, and token", () => {
@@ -112,9 +94,7 @@ describe("checkCatalogParity", () => {
       }),
     ]);
 
-    expect(
-      checkCatalogParity(merged, TWO_LOCALES).malformedPlaceholders,
-    ).toEqual([
+    expect(checkCatalogParity(merged, TWO_LOCALES).malformedPlaceholders).toEqual([
       {
         key: "orders.company",
         file: ORDERS_FILE,
@@ -134,9 +114,7 @@ describe("checkCatalogParity", () => {
       }),
     ]);
 
-    expect(
-      checkCatalogParity(merged, TWO_LOCALES).placeholderMismatches,
-    ).toEqual([
+    expect(checkCatalogParity(merged, TWO_LOCALES).placeholderMismatches).toEqual([
       {
         key: "orders.holders_other",
         file: ORDERS_FILE,
@@ -154,24 +132,17 @@ describe("checkCatalogParity", () => {
       }),
     ]);
 
-    const [mismatch] = checkCatalogParity(
-      merged,
-      TWO_LOCALES,
-    ).placeholderMismatches;
+    const [mismatch] = checkCatalogParity(merged, TWO_LOCALES).placeholderMismatches;
 
     expect(mismatch?.unexpected).toEqual(["facility"]);
   });
 
   it("refuses to measure against no locale at all", () => {
-    expect(() => checkCatalogParity(mergeCopy([]), [])).toThrow(
-      /at least one locale/,
-    );
+    expect(() => checkCatalogParity(mergeCopy([]), [])).toThrow(/at least one locale/);
   });
 
   it("is trivially satisfied by the one locale shipping today", () => {
-    const merged = mergeCopy([
-      ordersSource({ "orders.page.title": { en: "Orders" } }),
-    ]);
+    const merged = mergeCopy([ordersSource({ "orders.page.title": { en: "Orders" } })]);
 
     expect(checkCatalogParity(merged)).toEqual({
       missingTranslations: [],
@@ -224,9 +195,7 @@ describe("checkCatalogParity", () => {
 
 describe("assertCatalogParity", () => {
   it("says nothing when every phrase is present", () => {
-    const merged = mergeCopy([
-      ordersSource({ "orders.page.title": { en: "Orders", es: "Pedidos" } }),
-    ]);
+    const merged = mergeCopy([ordersSource({ "orders.page.title": { en: "Orders", es: "Pedidos" } })]);
 
     expect(() => {
       assertCatalogParity(merged, TWO_LOCALES);
@@ -243,9 +212,7 @@ describe("assertCatalogParity", () => {
 
     expect(() => {
       assertCatalogParity(merged, TWO_LOCALES);
-    }).toThrow(
-      /2 copy entries need work[\s\S]*orders\.page\.title[\s\S]*orders\.status\.DRAFT/,
-    );
+    }).toThrow(/2 copy entries need work[\s\S]*orders\.page\.title[\s\S]*orders\.status\.DRAFT/);
   });
 
   it("fails before runtime when a plural family has no _other fallback", () => {

@@ -6,10 +6,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": [
-    "src/**/*.test.ts",
-    "test-support-pdf/**/*.ts",
-    "test-support-xlsx/**/*.ts"
-  ],
+  "include": ["src/**/*.test.ts", "test-support-pdf/**/*.ts", "test-support-xlsx/**/*.ts"],
   "exclude": []
 }

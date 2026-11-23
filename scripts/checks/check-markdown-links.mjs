@@ -28,11 +28,7 @@ const REFERENCE_DEFINITION = /^\s{0,3}\[[^\]]+\]:\s*<?([^\s<>]+)>?/;
 
 /** A target Claude cannot resolve on disk, and should not try to. */
 function isExternal(target) {
-  return (
-    target.startsWith("#") ||
-    target.startsWith("//") ||
-    /^[A-Za-z][A-Za-z0-9+.-]*:/.test(target)
-  );
+  return target.startsWith("#") || target.startsWith("//") || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(target);
 }
 
 /** Strips the anchor and query a browser would use, leaving the file path. */
@@ -108,9 +104,7 @@ export function checkMarkdownLinks({ root, files }) {
 
     for (const link of collectLinkTargets(text)) {
       checkedLinkCount += 1;
-      const resolved = link.path.startsWith("/")
-        ? join(root, link.path)
-        : join(root, dirname(relPath), link.path);
+      const resolved = link.path.startsWith("/") ? join(root, link.path) : join(root, dirname(relPath), link.path);
       if (existsSync(resolved)) continue;
       problems.push(`${relPath}:${String(link.line)}: ${link.target}`);
     }
@@ -128,9 +122,7 @@ export function checkMarkdownLinks({ root, files }) {
   };
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const root = repositoryRoot();

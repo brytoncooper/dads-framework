@@ -17,15 +17,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  fileReading,
-  type DoctorSignal,
-  type SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  ESLINT_DISABLES_SIGNAL,
-  ESLINT_DISABLE_MARK,
-} from "../../hatch-names.js";
+import { fileReading, type DoctorSignal, type SignalReadings } from "../../doctor-signal.js";
+import { ESLINT_DISABLES_SIGNAL, ESLINT_DISABLE_MARK } from "../../hatch-names.js";
 import { isTypeScriptSource } from "../scanners/source-classification.js";
 
 function countSuppressionComments(context: DoctorContext): SignalReadings {
@@ -46,8 +39,7 @@ export const lintSuppressionCommentsSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "The compiler said something. You did not fix it. You put a comment over its mouth.",
+  sentence: "The compiler said something. You did not fix it. You put a comment over its mouth.",
   measure: "eslintDisables",
   run: (context) => Promise.resolve(countSuppressionComments(context)),
 };

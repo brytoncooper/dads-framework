@@ -21,16 +21,8 @@
 
 import { isRecord, isString, isUnknownArray } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  declaredPackages,
-  pathInPackage,
-  type DeclaredPackage,
-} from "../scanners/text-declared-packages.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { declaredPackages, pathInPackage, type DeclaredPackage } from "../scanners/text-declared-packages.js";
 
 const CONFORMANCE_FILE = "docs/readme-conformance.json";
 const README_FILE = "README.md";
@@ -49,9 +41,7 @@ function isAskedForATemplate(declared: DeclaredPackage): boolean {
   return declared.kind === undefined || !UNASKED_KINDS.has(declared.kind);
 }
 
-function countReadmesOutsideTheTemplate(
-  context: DoctorContext,
-): SignalReadings {
+function countReadmesOutsideTheTemplate(context: DoctorContext): SignalReadings {
   const held = heldToTemplate(context);
   const readings = new Map<string, SignalReading>();
   for (const declared of declaredPackages(context)) {
@@ -69,8 +59,7 @@ function countReadmesOutsideTheTemplate(
 export const readmeNonconformantSignal: DoctorSignal = {
   id: "readme-nonconformant",
   issue: "avoidant-attachment",
-  question:
-    "Does any package lack a README, or carry one outside the template?",
+  question: "Does any package lack a README, or carry one outside the template?",
   reads: "text",
   unit: "count",
   direction: "ceiling",

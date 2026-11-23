@@ -5,11 +5,7 @@ import { describeScopePlan } from "@dads-framework/access/scopes";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import {
-  answerScope,
-  planScopedList,
-  type ScopeLookups,
-} from "@dads-framework/access/runtime";
+import { answerScope, planScopedList, type ScopeLookups } from "@dads-framework/access/runtime";
 import { scopePredicate } from "../lib/scoped-lists/scope-predicate.js";
 import type { ScopeSqlBindings } from "../lib/scoped-lists/scope-sql-bindings.js";
 
@@ -84,16 +80,12 @@ async function selectScopedIds(
   bindings: ScopeSqlBindings,
   predicate: SQL,
 ): Promise<ReadonlySet<string>> {
-  const result = await db.execute(
-    sql`SELECT ${bindings.id} AS id FROM ${bindings.table} WHERE ${predicate}`,
-  );
+  const result = await db.execute(sql`SELECT ${bindings.id} AS id FROM ${bindings.table} WHERE ${predicate}`);
   const ids = new Set<string>();
   for (const row of result.rows) {
     const id = row["id"];
     if (typeof id !== "string") {
-      throw new Error(
-        `${bindings.wireName} id column returned ${typeof id}, not a string`,
-      );
+      throw new Error(`${bindings.wireName} id column returned ${typeof id}, not a string`);
     }
     ids.add(id);
   }
@@ -107,13 +99,9 @@ function describeDisagreement(disagreement: Disagreement): readonly string[] {
     `  ${name}`,
     ...(disagreement.onlyInSql.length === 0
       ? []
-      : [
-          `    SQL reads, SpiceDB denies: ${disagreement.onlyInSql.join(", ")}`,
-        ]),
+      : [`    SQL reads, SpiceDB denies: ${disagreement.onlyInSql.join(", ")}`]),
     ...(disagreement.onlyInLookup.length === 0
       ? []
-      : [
-          `    SpiceDB allows, SQL misses: ${disagreement.onlyInLookup.join(", ")}`,
-        ]),
+      : [`    SpiceDB allows, SQL misses: ${disagreement.onlyInLookup.join(", ")}`]),
   ];
 }

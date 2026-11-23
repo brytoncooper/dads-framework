@@ -9,34 +9,11 @@ import {
 } from "./migrate-v03-map.js";
 import { isRecord } from "./parse-guards.js";
 
-const IGNORED_DIRECTORIES = new Set([
-  ".git",
-  ".next",
-  ".turbo",
-  "coverage",
-  "dist",
-  "node_modules",
-  "target",
-]);
+const IGNORED_DIRECTORIES = new Set([".git", ".next", ".turbo", "coverage", "dist", "node_modules", "target"]);
 
-const SOURCE_EXTENSIONS = new Set([
-  ".cjs",
-  ".css",
-  ".cts",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".mts",
-  ".ts",
-  ".tsx",
-]);
+const SOURCE_EXTENSIONS = new Set([".cjs", ".css", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 
-const DEPENDENCY_SECTIONS = [
-  "dependencies",
-  "devDependencies",
-  "peerDependencies",
-  "optionalDependencies",
-] as const;
+const DEPENDENCY_SECTIONS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
 const QUOTED_DADS_SPECIFIER = /(["'])(@dads-framework\/[^"'\s]+)\1/gu;
 
@@ -59,9 +36,7 @@ export type MigrateToV03Result = {
  * Rewrites a 0.1.x / 0.2.x Dads workspace to the consolidated 0.3.0 packages.
  * Idempotent: running a second time produces zero edits.
  */
-export function migrateWorkspaceToV03(
-  options: MigrateToV03Options,
-): MigrateToV03Result {
+export function migrateWorkspaceToV03(options: MigrateToV03Options): MigrateToV03Result {
   const root = resolve(options.root);
   const dryRun = options.dryRun === true;
   const filesChanged: string[] = [];
@@ -72,14 +47,9 @@ export function migrateWorkspaceToV03(
   for (const absolutePath of collectCandidateFiles(root)) {
     const relativePath = toPosixPath(relative(root, absolutePath));
     const original = readFileSync(absolutePath, "utf8");
-    const updated = transformFile(
-      relativePath,
-      original,
-      addedPeers,
-      (count) => {
-        importReplacements += count;
-      },
-    );
+    const updated = transformFile(relativePath, original, addedPeers, (count) => {
+      importReplacements += count;
+    });
     if (updated === original) continue;
     filesChanged.push(relativePath);
     if (isPackageManifestPath(relativePath)) packageManifestsUpdated += 1;
@@ -98,9 +68,7 @@ export function migrateWorkspaceToV03(
 }
 
 function isPackageManifestPath(relativePath: string): boolean {
-  return (
-    relativePath === "package.json" || relativePath.endsWith("/package.json")
-  );
+  return relativePath === "package.json" || relativePath.endsWith("/package.json");
 }
 
 function transformFile(
@@ -119,24 +87,18 @@ function transformFile(
   if (!isSpecifierBearingFile(baseName)) return original;
 
   let count = 0;
-  const rewritten = original.replace(
-    QUOTED_DADS_SPECIFIER,
-    (full, quote: string, specifier: string) => {
-      const next = rewriteV03ImportSpecifier(specifier);
-      if (next === specifier) return full;
-      count += 1;
-      return `${quote}${next}${quote}`;
-    },
-  );
+  const rewritten = original.replace(QUOTED_DADS_SPECIFIER, (full, quote: string, specifier: string) => {
+    const next = rewriteV03ImportSpecifier(specifier);
+    if (next === specifier) return full;
+    count += 1;
+    return `${quote}${next}${quote}`;
+  });
   onImportReplacements(count);
   return rewritten;
 }
 
 function isSpecifierBearingFile(baseName: string): boolean {
-  return (
-    SOURCE_EXTENSIONS.has(extname(baseName)) ||
-    /^tsconfig(?:\..+)?\.json$/u.test(baseName)
-  );
+  return SOURCE_EXTENSIONS.has(extname(baseName)) || /^tsconfig(?:\..+)?\.json$/u.test(baseName);
 }
 
 function rewritePackageJson(original: string, addedPeers: Set<string>): string {
@@ -150,10 +112,7 @@ function rewritePackageJson(original: string, addedPeers: Set<string>): string {
   for (const sectionName of DEPENDENCY_SECTIONS) {
     const rawSection = parsed[sectionName];
     if (!isRecord(rawSection)) continue;
-    const result = rewriteDependencySection(
-      rawSection,
-      sectionName === "dependencies" ? peersToAdd : undefined,
-    );
+    const result = rewriteDependencySection(rawSection, sectionName === "dependencies" ? peersToAdd : undefined);
     if (!result.changed) continue;
     changed = true;
     nextManifest[sectionName] = sortRecord(result.entries);
@@ -182,9 +141,7 @@ function rewriteDependencySection(
       collectPeersForRetired(name, peersToAdd);
       continue;
     }
-    const nextVersion = isDadsPackage(name)
-      ? resolveUpgradedVersion(version)
-      : version;
+    const nextVersion = isDadsPackage(name) ? resolveUpgradedVersion(version) : version;
     if (nextVersion !== version) changed = true;
     entries[name] = nextVersion;
   }
@@ -192,10 +149,7 @@ function rewriteDependencySection(
   return { changed, entries };
 }
 
-function collectPeersForRetired(
-  retiredName: string,
-  peersToAdd: Record<string, string> | undefined,
-): void {
+function collectPeersForRetired(retiredName: string, peersToAdd: Record<string, string> | undefined): void {
   if (peersToAdd === undefined) return;
   const requiredPeers = Object.hasOwn(PEERS_FOR_RETIRED_PACKAGE, retiredName)
     ? PEERS_FOR_RETIRED_PACKAGE[retiredName]
@@ -220,11 +174,7 @@ function mergeAddedPeers(
   let changed = false;
 
   for (const [peerName, peerVersion] of Object.entries(peersToAdd)) {
-    if (
-      Object.hasOwn(deps, peerName) ||
-      Object.hasOwn(devDeps, peerName) ||
-      Object.hasOwn(peers, peerName)
-    ) {
+    if (Object.hasOwn(deps, peerName) || Object.hasOwn(devDeps, peerName) || Object.hasOwn(peers, peerName)) {
       continue;
     }
     deps[peerName] = peerVersion;
@@ -242,9 +192,7 @@ function rewriteDadsProjectJson(original: string): string {
     return original;
   }
 
-  const results = parsed["packages"].map((entry: unknown) =>
-    rewriteProjectPackageEntry(entry),
-  );
+  const results = parsed["packages"].map((entry: unknown) => rewriteProjectPackageEntry(entry));
   if (!results.some((result) => result.changed)) return original;
 
   const nextPackages = results.map((result) => result.entry);
@@ -280,23 +228,15 @@ function rewriteProjectPackageEntry(entry: unknown): {
 }
 
 function lookupRetiredTarget(packageName: string): string | undefined {
-  return Object.hasOwn(RETIRED_PACKAGE_TO_TARGET, packageName)
-    ? RETIRED_PACKAGE_TO_TARGET[packageName]
-    : undefined;
+  return Object.hasOwn(RETIRED_PACKAGE_TO_TARGET, packageName) ? RETIRED_PACKAGE_TO_TARGET[packageName] : undefined;
 }
 
 function isDadsPackage(packageName: string): boolean {
-  return (
-    packageName.startsWith("@dads-framework/") || packageName === "create-dads"
-  );
+  return packageName.startsWith("@dads-framework/") || packageName === "create-dads";
 }
 
 function resolveUpgradedVersion(current: string): string {
-  if (
-    current.startsWith("workspace:") ||
-    current.startsWith("file:") ||
-    current.startsWith("link:")
-  ) {
+  if (current.startsWith("workspace:") || current.startsWith("file:") || current.startsWith("link:")) {
     return current;
   }
   if (current.startsWith("^")) return `^${V03_TARGET_VERSION}`;
@@ -304,9 +244,7 @@ function resolveUpgradedVersion(current: string): string {
   return V03_TARGET_VERSION;
 }
 
-function parseJsonRecord(
-  text: string,
-): Readonly<Record<string, unknown>> | undefined {
+function parseJsonRecord(text: string): Readonly<Record<string, unknown>> | undefined {
   try {
     const parsed: unknown = JSON.parse(text);
     return isRecord(parsed) ? parsed : undefined;
@@ -324,12 +262,8 @@ function readStringMap(value: unknown): Record<string, string> {
   return result;
 }
 
-function sortRecord(
-  record: Readonly<Record<string, string>>,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(record).sort(([left], [right]) => left.localeCompare(right)),
-  );
+function sortRecord(record: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
 }
 
 function collectCandidateFiles(root: string): readonly string[] {
@@ -352,11 +286,7 @@ function collectCandidateFiles(root: string): readonly string[] {
 }
 
 function isMigrationCandidate(name: string): boolean {
-  return (
-    name === "package.json" ||
-    name === "dads.project.json" ||
-    isSpecifierBearingFile(name)
-  );
+  return name === "package.json" || name === "dads.project.json" || isSpecifierBearingFile(name);
 }
 
 function toPosixPath(value: string): string {

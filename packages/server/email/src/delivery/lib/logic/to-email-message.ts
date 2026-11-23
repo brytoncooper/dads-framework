@@ -1,8 +1,4 @@
-import type {
-  EmailAddress,
-  EmailAttachment,
-  EmailMessage,
-} from "../../../core/index.js";
+import type { EmailAddress, EmailAttachment, EmailMessage } from "../../../core/index.js";
 
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { RenderedEmailContent } from "../email-template-port.js";
@@ -26,15 +22,9 @@ export function toEmailMessage(
     subject: rendered.subject,
     text: rendered.text,
     html: rendered.html,
-    ...(envelope.cc === undefined
-      ? {}
-      : { cc: envelope.cc.map(toEmailAddress) }),
-    ...(envelope.bcc === undefined
-      ? {}
-      : { bcc: envelope.bcc.map(toEmailAddress) }),
-    ...(envelope.replyTo === undefined
-      ? {}
-      : { replyTo: toEmailAddress(envelope.replyTo) }),
+    ...(envelope.cc === undefined ? {} : { cc: envelope.cc.map(toEmailAddress) }),
+    ...(envelope.bcc === undefined ? {} : { bcc: envelope.bcc.map(toEmailAddress) }),
+    ...(envelope.replyTo === undefined ? {} : { replyTo: toEmailAddress(envelope.replyTo) }),
     ...(envelope.headers === undefined ? {} : { headers: envelope.headers }),
     ...(envelope.tags === undefined ? {} : { tags: envelope.tags }),
     ...(attachments.length === 0 ? {} : { attachments }),
@@ -42,11 +32,6 @@ export function toEmailMessage(
 }
 
 /** A parsed address as the driver takes it: a missing name stays missing. */
-function toEmailAddress(address: {
-  readonly address: string;
-  readonly name?: string | undefined;
-}): EmailAddress {
-  return address.name === undefined
-    ? { address: address.address }
-    : { address: address.address, name: address.name };
+function toEmailAddress(address: { readonly address: string; readonly name?: string | undefined }): EmailAddress {
+  return address.name === undefined ? { address: address.address } : { address: address.address, name: address.name };
 }

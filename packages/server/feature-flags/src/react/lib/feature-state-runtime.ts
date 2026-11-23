@@ -10,9 +10,7 @@ export type FeatureStateSnapshot = {
 };
 
 /** The application's read of one context's effective state, usually `GET /feature-state`. */
-export type FeatureStateLoader = (
-  contextKey: string,
-) => Promise<EffectiveFeatureState>;
+export type FeatureStateLoader = (contextKey: string) => Promise<EffectiveFeatureState>;
 
 type Listener = () => void;
 
@@ -51,10 +49,7 @@ export class FeatureStateRuntime {
   }
 
   /** A response carried this context's current hash; a different one means the flags moved. */
-  observeResponse(input: {
-    readonly contextKey: string;
-    readonly stateHash: string | null;
-  }): void {
+  observeResponse(input: { readonly contextKey: string; readonly stateHash: string | null }): void {
     if (input.stateHash === null || input.stateHash.length === 0) return;
     if (this.records.get(input.contextKey)?.stateHash === input.stateHash) {
       return;

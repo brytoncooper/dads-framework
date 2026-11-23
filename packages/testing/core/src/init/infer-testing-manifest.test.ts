@@ -67,19 +67,9 @@ describe("testing manifest inference", () => {
       }),
     ]);
 
-    expect(
-      inferred.manifest?.tasks.find((task) => task.id === "core:test")
-        ?.dependsOn,
-    ).toEqual(["core:typecheck"]);
-    expect(
-      inferred.manifest?.tasks.find((task) => task.id === "core:typecheck")
-        ?.dependsOn,
-    ).toEqual([]);
-    expect(
-      inferred.report.inferences.filter(
-        (inference) => inference.kind === "depends-on",
-      ),
-    ).toEqual([
+    expect(inferred.manifest?.tasks.find((task) => task.id === "core:test")?.dependsOn).toEqual(["core:typecheck"]);
+    expect(inferred.manifest?.tasks.find((task) => task.id === "core:typecheck")?.dependsOn).toEqual([]);
+    expect(inferred.report.inferences.filter((inference) => inference.kind === "depends-on")).toEqual([
       {
         kind: "depends-on",
         subject: "core:test",
@@ -115,22 +105,16 @@ describe("testing manifest inference", () => {
         fallbackDependencies: ["scope-core"],
       },
     ]);
-    expect(
-      inferred.report.inferences.filter(
-        (inference) => inference.kind === "fallback-dependency",
-      ),
-    ).toEqual([
+    expect(inferred.report.inferences.filter((inference) => inference.kind === "fallback-dependency")).toEqual([
       {
         kind: "fallback-dependency",
         subject: "scope-api",
-        detail:
-          "declares a dependency on @scope/core, so it falls back to scope-core",
+        detail: "declares a dependency on @scope/core, so it falls back to scope-core",
       },
       {
         kind: "fallback-dependency",
         subject: "scope-web",
-        detail:
-          "references the TypeScript project in packages/core, so it falls back to scope-core",
+        detail: "references the TypeScript project in packages/core, so it falls back to scope-core",
       },
     ]);
   });
@@ -187,10 +171,9 @@ describe("testing manifest inference", () => {
   });
 
   it("returns no manifest when nothing declares a recognized script", () => {
-    const inferred = inferTestingManifest(
-      detected({ patternSource: "single-package", patterns: [] }),
-      [workspacePackage(".", "workspace", { start: "serve" })],
-    );
+    const inferred = inferTestingManifest(detected({ patternSource: "single-package", patterns: [] }), [
+      workspacePackage(".", "workspace", { start: "serve" }),
+    ]);
 
     expect(inferred.manifest).toBeUndefined();
     expect(inferred.report.packages).toEqual([
@@ -216,10 +199,9 @@ describe("testing manifest inference", () => {
   });
 
   it("omits the working directory for the workspace root", () => {
-    const inferred = inferTestingManifest(
-      detected({ patternSource: "single-package", patterns: [] }),
-      [workspacePackage(".", "workspace", { test: "vitest run" })],
-    );
+    const inferred = inferTestingManifest(detected({ patternSource: "single-package", patterns: [] }), [
+      workspacePackage(".", "workspace", { test: "vitest run" }),
+    ]);
 
     expect(inferred.manifest?.tasks[0]?.execution).toEqual({
       executable: "npm",
@@ -229,9 +211,7 @@ describe("testing manifest inference", () => {
   });
 });
 
-function detected(
-  overrides: Partial<DetectedWorkspace> = {},
-): DetectedWorkspace {
+function detected(overrides: Partial<DetectedWorkspace> = {}): DetectedWorkspace {
   return {
     packageManager: "npm",
     packageManagerSource: "package-lock.json",

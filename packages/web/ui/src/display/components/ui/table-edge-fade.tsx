@@ -18,8 +18,7 @@ export function TableEdgeFade({
   readonly visible: boolean;
   readonly inset: number;
 }) {
-  const style =
-    edge === "left" ? { left: `${inset}px` } : { right: `${inset}px` };
+  const style = edge === "left" ? { left: `${inset}px` } : { right: `${inset}px` };
   return (
     <div
       aria-hidden="true"
@@ -27,10 +26,7 @@ export function TableEdgeFade({
       data-edge={edge}
       data-visible={visible ? "" : undefined}
       style={style}
-      className={cn(
-        FADE_BASE,
-        edge === "left" ? "bg-linear-to-r" : "bg-linear-to-l",
-      )}
+      className={cn(FADE_BASE, edge === "left" ? "bg-linear-to-r" : "bg-linear-to-l")}
     />
   );
 }

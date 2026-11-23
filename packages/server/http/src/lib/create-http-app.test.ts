@@ -10,8 +10,7 @@ import type { AddressInfo } from "node:net";
 import { Writable } from "node:stream";
 
 function portOf(address: AddressInfo | string | null): number {
-  if (address === null || typeof address === "string")
-    throw new Error("the app is not listening on a TCP port");
+  if (address === null || typeof address === "string") throw new Error("the app is not listening on a TCP port");
   return address.port;
 }
 import { afterEach, describe, expect, it } from "vitest";

@@ -20,18 +20,9 @@
 
 import { isRecord } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { requireToday } from "../scanners/git-history.js";
-import {
-  NPM_REGISTRY,
-  readJsonObject,
-  readStringField,
-  requireOnline,
-} from "../scanners/online-requests.js";
+import { NPM_REGISTRY, readJsonObject, readStringField, requireOnline } from "../scanners/online-requests.js";
 import { readPackageGraph } from "../scanners/package-graph.js";
 
 /** How long a release may be, before Dad calls it a situationship. */
@@ -46,9 +37,7 @@ type DeclaredDependency = {
   readonly manifest: string;
 };
 
-async function measureLastPublish(
-  context: DoctorContext,
-): Promise<SignalReadings> {
+async function measureLastPublish(context: DoctorContext): Promise<SignalReadings> {
   requireOnline(context);
   const today = requireToday(context.today);
   const readings = new Map<string, SignalReading>();
@@ -72,9 +61,7 @@ async function measureLastPublish(
  * Every dependency any manifest in the workspace declares, once, named against
  * the first manifest that declares it and sorted so two runs ask in one order.
  */
-function declaredDependencies(
-  context: DoctorContext,
-): readonly DeclaredDependency[] {
+function declaredDependencies(context: DoctorContext): readonly DeclaredDependency[] {
   const graph = readPackageGraph(context);
   const declaring = new Map<string, string>();
   for (const manifest of graph.manifests) {
@@ -93,16 +80,11 @@ function declaredDependencies(
  * carries it under `time`, the abbreviated one at the top level, and a
  * document with neither is a failure rather than a dependency of age zero.
  */
-async function readLastPublish(
-  context: DoctorContext,
-  name: string,
-): Promise<string> {
+async function readLastPublish(context: DoctorContext, name: string): Promise<string> {
   const url = packumentUrl(name);
   const document = await readJsonObject(context, url);
   const time: unknown = document["time"];
-  const modified = isRecord(time)
-    ? readStringField(time, "modified")
-    : readStringField(document, "modified");
+  const modified = isRecord(time) ? readStringField(time, "modified") : readStringField(document, "modified");
   if (modified === undefined) throw new Error(`${url} named no last publish`);
   return modified;
 }
@@ -121,8 +103,7 @@ function monthsBetween(published: string, today: string): number {
     throw new Error(`${published} is not a date`);
   }
   const months =
-    (to.getUTCFullYear() - from.getUTCFullYear()) * MONTHS_IN_A_YEAR +
-    (to.getUTCMonth() - from.getUTCMonth());
+    (to.getUTCFullYear() - from.getUTCFullYear()) * MONTHS_IN_A_YEAR + (to.getUTCMonth() - from.getUTCMonth());
   return to.getUTCDate() < from.getUTCDate() ? months - 1 : months;
 }
 

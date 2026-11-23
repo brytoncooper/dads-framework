@@ -136,9 +136,7 @@ type NativeRequest = {
   readonly jobs?: number;
 };
 
-export async function planTesting(
-  request: TestingOperationRequest,
-): Promise<TestingPlanResult> {
+export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
   const response = await invokeNativeTestingEngine("plan", request);
   return response.plan;
 }
@@ -149,9 +147,7 @@ export async function runTesting(request: TestingOperationRequest): Promise<{
 }> {
   const response = await invokeNativeTestingEngine("run", request);
   if (!response.run) {
-    throw new Error(
-      "The native testing engine returned a run response without run details.",
-    );
+    throw new Error("The native testing engine returned a run response without run details.");
   }
   return { plan: response.plan, run: response.run };
 }
@@ -162,28 +158,20 @@ async function invokeNativeTestingEngine(
 ): Promise<NonNullable<NativeResponse["result"]>> {
   const nativeRequest = toNativeRequest(operation, request);
   const response = await runNativeProcess(
-    resolveNativeTestingBinary(
-      request.nativeBinary === undefined
-        ? {}
-        : { explicitBinary: request.nativeBinary },
-    ).binary,
+    resolveNativeTestingBinary(request.nativeBinary === undefined ? {} : { explicitBinary: request.nativeBinary })
+      .binary,
     nativeRequest,
   );
   return requireResultFor(response, operation);
 }
 
 /** An absent field is omitted rather than sent as null, which the engine refuses. */
-function toNativeRequest(
-  operation: "plan" | "run",
-  request: TestingOperationRequest,
-): NativeRequest {
+function toNativeRequest(operation: "plan" | "run", request: TestingOperationRequest): NativeRequest {
   return {
     schemaVersion: protocolSchemaVersion,
     operation,
     workspaceRoot: resolve(request.workspaceRoot),
-    ...(request.manifestPath === undefined
-      ? {}
-      : { manifestPath: request.manifestPath }),
+    ...(request.manifestPath === undefined ? {} : { manifestPath: request.manifestPath }),
     ...(request.base === undefined ? {} : { base: request.base }),
     ...(request.head === undefined ? {} : { head: request.head }),
     all: request.all ?? false,
@@ -196,33 +184,20 @@ function toNativeRequest(
  * Every way the envelope can fail to carry the result asked for is an error
  * here, so a caller only ever sees a result for the operation it requested.
  */
-function requireResultFor(
-  response: NativeResponse,
-  operation: "plan" | "run",
-): NonNullable<NativeResponse["result"]> {
+function requireResultFor(response: NativeResponse, operation: "plan" | "run"): NonNullable<NativeResponse["result"]> {
   if (response.schemaVersion !== protocolSchemaVersion) {
-    throw new Error(
-      `Unsupported native response schemaVersion ${String(response.schemaVersion)}.`,
-    );
+    throw new Error(`Unsupported native response schemaVersion ${String(response.schemaVersion)}.`);
   }
   if (!response.ok || !response.result) {
-    throw new Error(
-      response.error ??
-        "The native testing engine failed without an error message.",
-    );
+    throw new Error(response.error ?? "The native testing engine failed without an error message.");
   }
   if (response.result.operation !== operation) {
-    throw new Error(
-      `The native testing engine returned ${response.result.operation} for ${operation}.`,
-    );
+    throw new Error(`The native testing engine returned ${response.result.operation} for ${operation}.`);
   }
   return response.result;
 }
 
-async function runNativeProcess(
-  nativeBinary: string,
-  request: NativeRequest,
-): Promise<NativeResponse> {
+async function runNativeProcess(nativeBinary: string, request: NativeRequest): Promise<NativeResponse> {
   return new Promise<NativeResponse>((resolveResponse, reject) => {
     const child = spawn(nativeBinary, [], { stdio: ["pipe", "pipe", "pipe"] });
     const stdout: string[] = [];
@@ -239,11 +214,7 @@ async function runNativeProcess(
       try {
         const parsed: unknown = JSON.parse(rawResponse);
         if (!isNativeResponse(parsed)) {
-          reject(
-            new Error(
-              "The native testing engine returned an invalid response.",
-            ),
-          );
+          reject(new Error("The native testing engine returned an invalid response."));
           return;
         }
         resolveResponse(parsed);

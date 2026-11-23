@@ -4,10 +4,7 @@ import { OwnerLock } from "@dads-framework/access/runtime";
 export class InMemoryOwnerLock extends OwnerLock {
   private readonly tails = new Map<string, Promise<void>>();
 
-  protected async runLocked<T>(
-    ownerPartitionId: string,
-    operation: () => Promise<T>,
-  ): Promise<T> {
+  protected async runLocked<T>(ownerPartitionId: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.tails.get(ownerPartitionId) ?? Promise.resolve();
     let release = (): void => undefined;
     const current = new Promise<void>((resolve) => {

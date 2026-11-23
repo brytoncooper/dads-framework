@@ -29,18 +29,13 @@ export class PostgresAccessChangeCompletionStatus
       .from(authorizationOutbox)
       .where(
         and(
-          inArray(authorizationOutbox.ownerPartitionId, [
-            ...input.ownerPartitionIds,
-          ]),
+          inArray(authorizationOutbox.ownerPartitionId, [...input.ownerPartitionIds]),
           inArray(authorizationOutbox.status, ["PENDING", "FAILED"]),
         ),
       )
       .orderBy(authorizationOutbox.enqueuedAt, authorizationOutbox.id);
     return rows.map((row) => {
-      if (
-        row.ownerPartitionId === null ||
-        (row.status !== "PENDING" && row.status !== "FAILED")
-      ) {
+      if (row.ownerPartitionId === null || (row.status !== "PENDING" && row.status !== "FAILED")) {
         throw new Error("Completion query returned a fact outside its scope");
       }
       return {
@@ -71,9 +66,7 @@ export class PostgresAccessChangeCompletionStatus
       .where(
         and(
           eq(authorizationOutbox.status, "PENDING"),
-          inArray(authorizationOutbox.resourceId, [
-            ...new Set(resources.map((resource) => resource.id)),
-          ]),
+          inArray(authorizationOutbox.resourceId, [...new Set(resources.map((resource) => resource.id))]),
         ),
       );
     return new Set(rows.map(resourceKey).filter((key) => named.has(key)));
@@ -92,9 +85,7 @@ export class PostgresAccessChangeCompletionStatus
       .where(
         and(
           eq(authorizationOutbox.ownerPartitionId, input.ownerPartitionId),
-          inArray(authorizationOutbox.idempotencyKey, [
-            ...input.idempotencyKeys,
-          ]),
+          inArray(authorizationOutbox.idempotencyKey, [...input.idempotencyKeys]),
           eq(authorizationOutbox.status, "FAILED"),
           isNull(authorizationOutbox.lockedBy),
           isNull(authorizationOutbox.lockedAt),
@@ -105,9 +96,6 @@ export class PostgresAccessChangeCompletionStatus
   }
 }
 
-function resourceKey(resource: {
-  readonly type: string;
-  readonly id: string;
-}): string {
+function resourceKey(resource: { readonly type: string; readonly id: string }): string {
   return `${resource.type}:${resource.id}`;
 }

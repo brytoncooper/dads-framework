@@ -1,24 +1,13 @@
 import { CompositionRun, type Dependency } from "./dependency.js";
 import type { NamedJob, StartedContributions } from "./plugin-contributions.js";
-import {
-  type PluginDisposalFailure,
-  PluginStartError,
-  PluginStopError,
-} from "./plugin-errors.js";
+import { type PluginDisposalFailure, PluginStartError, PluginStopError } from "./plugin-errors.js";
 import { refuseDuplicates } from "./refuse-duplicates.js";
-import {
-  EffectScope,
-  type PluginScope,
-  type ScopeLedger,
-} from "./plugin-scope.js";
+import { EffectScope, type PluginScope, type ScopeLedger } from "./plugin-scope.js";
 
 /** What starting reads from a plugin. */
 export type StartablePlugin<Route, Job extends NamedJob> = {
   readonly name: string;
-  readonly start: (
-    run: CompositionRun,
-    scope: PluginScope,
-  ) => Promise<StartedContributions<Route, Job>>;
+  readonly start: (run: CompositionRun, scope: PluginScope) => Promise<StartedContributions<Route, Job>>;
 };
 
 /** A started app. Hand `routes` and `jobs` to the host; call `stop` once done. */
@@ -59,10 +48,7 @@ export async function startPlugins<Route, Job extends NamedJob>(
     } catch (cause) {
       const failed = await scope.dispose();
       const rollback = await disposeNewestFirst(started);
-      throw new PluginStartError(plugin.name, cause, [
-        ...failed,
-        ...rollback.flatMap((failure) => failure.errors),
-      ]);
+      throw new PluginStartError(plugin.name, cause, [...failed, ...rollback.flatMap((failure) => failure.errors)]);
     }
   }
   await refuseDuplicateJobs(started);
@@ -70,9 +56,7 @@ export async function startPlugins<Route, Job extends NamedJob>(
 }
 
 /** Two plugins' jobs with one name: stop everything, then refuse. */
-async function refuseDuplicateJobs(
-  started: readonly Started<unknown, NamedJob>[],
-): Promise<void> {
+async function refuseDuplicateJobs(started: readonly Started<unknown, NamedJob>[]): Promise<void> {
   try {
     refuseDuplicates(
       "job",
@@ -106,9 +90,7 @@ function runningApp<Route, Job extends NamedJob>(
   };
 }
 
-async function stopAll(
-  started: readonly Started<unknown, NamedJob>[],
-): Promise<void> {
+async function stopAll(started: readonly Started<unknown, NamedJob>[]): Promise<void> {
   const failures = await disposeNewestFirst(started);
   if (failures.length > 0) throw new PluginStopError(failures);
 }

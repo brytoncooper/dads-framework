@@ -7,20 +7,13 @@ const MAX_PREPARED_CHECK_BYTES = 4_096;
 const MAX_PREPARED_SQL_BYTES = 32_768;
 
 type NamedStatementExecutor = {
-  query(
-    query: PostgresQuery & { readonly name?: string },
-  ): PromiseLike<PostgresQueryResult>;
+  query(query: PostgresQuery & { readonly name?: string }): PromiseLike<PostgresQueryResult>;
 };
 
-const preparedExecutors = new WeakMap<
-  NamedStatementExecutor,
-  PostgresAccessExecutor
->();
+const preparedExecutors = new WeakMap<NamedStatementExecutor, PostgresAccessExecutor>();
 
 /** Opt in to named single-check plans on a direct node-postgres pool. */
-export function preparePostgresChecks(
-  pool: NamedStatementExecutor,
-): PostgresAccessExecutor {
+export function preparePostgresChecks(pool: NamedStatementExecutor): PostgresAccessExecutor {
   const existing = preparedExecutors.get(pool);
   if (existing !== undefined) return existing;
 

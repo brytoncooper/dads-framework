@@ -94,18 +94,14 @@ const upgrades = new WebSocketServer({
 });
 
 /** Declare a WebSocket route. `access` is required, the same wall as every verb. */
-export function webSocketRoute(
-  config: WebSocketRouteConfig,
-): RawRouteBlueprint {
+export function webSocketRoute(config: WebSocketRouteConfig): RawRouteBlueprint {
   webSocketPaths.add(config.path);
   return defineRawRoute({
     method: "GET",
     path: config.path,
     summary: config.summary,
     access: config.access,
-    ...(config.capabilities === undefined
-      ? {}
-      : { capabilities: config.capabilities }),
+    ...(config.capabilities === undefined ? {} : { capabilities: config.capabilities }),
     openapi: config.openapi,
     handler: async (ctx) => {
       const pending = pendingUpgrades.get(ctx.request.raw);
@@ -122,35 +118,28 @@ export function webSocketRoute(
           });
         return;
       }
-      const accept = (
-        onOpen: (connection: WebSocketConnection) => void,
-      ): void => {
+      const accept = (onOpen: (connection: WebSocketConnection) => void): void => {
         pending.claimed = true;
         ctx.reply.hijack();
-        upgrades.handleUpgrade(
-          ctx.request.raw,
-          pending.socket,
-          pending.head,
-          (socket) => {
-            // A bad frame (too large, malformed) is an error on the socket;
-            // unheard, it would take the whole process down.
-            socket.on("error", (error) => {
-              ctx.log.warn({
-                event: "websocket.socket_error",
-                path: config.path,
-                error: error.message,
-              });
-              socket.terminate();
+        upgrades.handleUpgrade(ctx.request.raw, pending.socket, pending.head, (socket) => {
+          // A bad frame (too large, malformed) is an error on the socket;
+          // unheard, it would take the whole process down.
+          socket.on("error", (error) => {
+            ctx.log.warn({
+              event: "websocket.socket_error",
+              path: config.path,
+              error: error.message,
             });
-            if (pending.app.closing) {
-              socket.close(GOING_AWAY, "server closing");
-              return;
-            }
-            pending.app.open.add(socket);
-            socket.once("close", () => pending.app.open.delete(socket));
-            onOpen(connectionOver(socket));
-          },
-        );
+            socket.terminate();
+          });
+          if (pending.app.closing) {
+            socket.close(GOING_AWAY, "server closing");
+            return;
+          }
+          pending.app.open.add(socket);
+          socket.once("close", () => pending.app.open.delete(socket));
+          onOpen(connectionOver(socket));
+        });
       };
       await config.handler({ ...ctx, accept });
     },
@@ -168,25 +157,22 @@ export function acceptWebSocketUpgrades(app: FastifyInstance): void {
   appsAcceptingUpgrades.add(app.server);
   const sockets: AppSockets = { open: new Set(), closing: false };
 
-  app.server.on(
-    "upgrade",
-    (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-      const pending: PendingUpgrade = {
-        socket,
-        head,
-        app: sockets,
-        claimed: false,
-      };
-      pendingUpgrades.set(request, pending);
-      socket.on("error", () => socket.destroy());
-      const response = new ServerResponse(request);
-      response.assignSocket(asNetSocket(socket));
-      response.on("finish", () => {
-        if (!pending.claimed) socket.end();
-      });
-      app.routing(request, response);
-    },
-  );
+  app.server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    const pending: PendingUpgrade = {
+      socket,
+      head,
+      app: sockets,
+      claimed: false,
+    };
+    pendingUpgrades.set(request, pending);
+    socket.on("error", () => socket.destroy());
+    const response = new ServerResponse(request);
+    response.assignSocket(asNetSocket(socket));
+    response.on("finish", () => {
+      if (!pending.claimed) socket.end();
+    });
+    app.routing(request, response);
+  });
   app.addHook("preClose", (done) => {
     // A socket accepted from here on is closed at once, too.
     sockets.closing = true;
@@ -241,10 +227,5 @@ function asNetSocket(socket: Duplex): Socket {
 }
 
 function isNetSocket(value: unknown): value is Socket {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "remoteAddress" in value &&
-    "setTimeout" in value
-  );
+  return typeof value === "object" && value !== null && "remoteAddress" in value && "setTimeout" in value;
 }

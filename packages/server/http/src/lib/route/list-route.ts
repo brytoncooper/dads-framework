@@ -57,12 +57,11 @@ export type ListResult<ItemSchema extends z.ZodType> = {
  */
 export type ListMetaSchema = z.ZodType<PaginationMeta>;
 
-type ListMetaExtra<MetaSchema extends ListMetaSchema | undefined> =
-  MetaSchema extends ListMetaSchema
-    ? {
-        readonly meta: Omit<z.input<MetaSchema>, keyof PaginationMeta>;
-      }
-    : unknown;
+type ListMetaExtra<MetaSchema extends ListMetaSchema | undefined> = MetaSchema extends ListMetaSchema
+  ? {
+      readonly meta: Omit<z.input<MetaSchema>, keyof PaginationMeta>;
+    }
+  : unknown;
 
 /** Parsed inputs and subject available to a named list handler module. */
 export type ListRouteHandlerContext<
@@ -73,15 +72,12 @@ export type ListRouteHandlerContext<
 > = RouteHandlerContext<Params, Query, undefined, Subject> & Context;
 
 /** The one result shape a named list handler returns before the kit envelopes it. */
-export type ListRouteHandlerResult<ItemSchema extends z.ZodType> =
-  ListResult<ItemSchema>;
+export type ListRouteHandlerResult<ItemSchema extends z.ZodType> = ListResult<ItemSchema>;
 
 /** The query must parse to at least `{ page, perPage }`. */
 type PaginatedQuerySchema = z.ZodType<{ page: number; perPage: number }>;
 
-type PaginatedOperationQuery = z.ZodType<
-  Record<string, unknown> & { page: number; perPage: number }
->;
+type PaginatedOperationQuery = z.ZodType<Record<string, unknown> & { page: number; perPage: number }>;
 
 export type ListRouteConfig<
   Path extends string,
@@ -101,16 +97,10 @@ export type ListRouteConfig<
   /** Optional: a meta schema extending `paginationMetaSchema`; the handler returns its extra fields. */
   readonly meta?: MetaSchema;
   readonly handler: (
-    ctx: RouteHandlerContext<
-      SchemaOutput<ParamsSchema>,
-      SchemaOutput<QuerySchema>,
-      SchemaOutput<BodySchema>,
-      Subject
-    > &
+    ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, SchemaOutput<QuerySchema>, SchemaOutput<BodySchema>, Subject> &
       Ctx,
   ) =>
-    | Promise<ListResult<ItemSchema> & ListMetaExtra<MetaSchema>>
-    | (ListResult<ItemSchema> & ListMetaExtra<MetaSchema>);
+    Promise<ListResult<ItemSchema> & ListMetaExtra<MetaSchema>> | (ListResult<ItemSchema> & ListMetaExtra<MetaSchema>);
 } & VerbParams<Path, ParamsSchema>;
 
 type ListRouteContractSource<
@@ -167,22 +157,15 @@ function pageWindowOf(query: unknown): { page: number; perPage: number } {
   );
 }
 
-type ListRouteAccess =
-  | SessionAccess
-  | PermissionAccess
-  | VisibilityAccess
-  | ScopedAccess
-  | PublicAccess;
+type ListRouteAccess = SessionAccess | PermissionAccess | VisibilityAccess | ScopedAccess | PublicAccess;
 
-type ListRouteSubject<Access extends ListRouteAccess> =
-  Access extends PublicAccess ? SubjectRef | null : SubjectRef;
+type ListRouteSubject<Access extends ListRouteAccess> = Access extends PublicAccess ? SubjectRef | null : SubjectRef;
 
-type ListRouteContext<Access extends ListRouteAccess> =
-  Access extends VisibilityAccess
-    ? { readonly visibleIds: readonly string[] }
-    : Access extends ScopedAccess
-      ? { readonly scope: ScopeAnswer }
-      : Record<never, never>;
+type ListRouteContext<Access extends ListRouteAccess> = Access extends VisibilityAccess
+  ? { readonly visibleIds: readonly string[] }
+  : Access extends ScopedAccess
+    ? { readonly scope: ScopeAnswer }
+    : Record<never, never>;
 
 /**
  * LIST handler context follows the declared access. Public handlers accept a
@@ -198,13 +181,7 @@ export function listRoute<
   BodySchema extends z.ZodType | undefined = undefined,
   MetaSchema extends ListMetaSchema | undefined = undefined,
 >(
-  config: ListRouteContractSource<
-    Path,
-    ItemSchema,
-    QuerySchema,
-    ParamsSchema,
-    MetaSchema
-  > &
+  config: ListRouteContractSource<Path, ItemSchema, QuerySchema, ParamsSchema, MetaSchema> &
     OperationVerbCommon<Access> & {
       readonly handler: (
         ctx: RouteHandlerContext<
@@ -219,21 +196,15 @@ export function listRoute<
         | (ListResult<ItemSchema> & ListMetaExtra<MetaSchema>);
     },
 ): RouteBlueprint;
-export function listRoute(
-  config: ErasedListConfig | ErasedOperationVerbConfig,
-): RouteBlueprint {
+export function listRoute(config: ErasedListConfig | ErasedOperationVerbConfig): RouteBlueprint {
   const normalized = resolveListOperationConfig(config);
   const resolvedRoute = resolveVerbRoute(normalized, "GET");
   return buildDefinition({
     ...resolvedRoute,
     summary: normalized.summary,
     access: normalized.access,
-    ...(normalized.bodyLimitBytes === undefined
-      ? {}
-      : { bodyLimitBytes: normalized.bodyLimitBytes }),
-    ...(normalized.capabilities === undefined
-      ? {}
-      : { capabilities: normalized.capabilities }),
+    ...(normalized.bodyLimitBytes === undefined ? {} : { bodyLimitBytes: normalized.bodyLimitBytes }),
+    ...(normalized.capabilities === undefined ? {} : { capabilities: normalized.capabilities }),
     ...(normalized.params === undefined ? {} : { params: normalized.params }),
     query: normalized.query,
     response: z.array(normalized.item),
@@ -250,20 +221,11 @@ export function listRoute(
       if (normalized.access.kind === "scoped" && ctx.scope === undefined) {
         // No answers means no scope to render: refuse rather than list
         // unscoped. An empty answer is still an answer and reaches the SQL.
-        throw new HttpWiringError(
-          `scoped list route ${resolvedRoute.path} ran without a scope answer`,
-        );
+        throw new HttpWiringError(`scoped list route ${resolvedRoute.path} ran without a scope answer`);
       }
       const result = await normalized.handler(ctx);
-      if (
-        typeof result !== "object" ||
-        result === null ||
-        !("items" in result) ||
-        !("total" in result)
-      ) {
-        throw new HttpWiringError(
-          `list route ${resolvedRoute.path} must return { items, total }`,
-        );
+      if (typeof result !== "object" || result === null || !("items" in result) || !("total" in result)) {
+        throw new HttpWiringError(`list route ${resolvedRoute.path} must return { items, total }`);
       }
       const window = pageWindowOf(ctx.query);
       return {

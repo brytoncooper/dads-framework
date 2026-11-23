@@ -8,15 +8,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { useDataTable } from "../../hooks/use-data-table.js";
 import type { DataTableState } from "../../lib/data-table-search-params.js";
 import { DataTable } from "./data-table.js";
@@ -86,19 +78,9 @@ class ResizeObserverStub {
   }
 }
 
-const originalScrollIntoView = Object.getOwnPropertyDescriptor(
-  Element.prototype,
-  "scrollIntoView",
-);
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
 
-type Surface =
-  | "empty"
-  | "faceted"
-  | "filter-list"
-  | "filter-menu"
-  | "pagination"
-  | "sort-list"
-  | "toolbar";
+type Surface = "empty" | "faceted" | "filter-list" | "filter-menu" | "pagination" | "sort-list" | "toolbar";
 
 function ExampleSurface({
   surface,
@@ -151,38 +133,22 @@ afterAll(() => {
   if (originalScrollIntoView === undefined) {
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   } else {
-    Object.defineProperty(
-      Element.prototype,
-      "scrollIntoView",
-      originalScrollIntoView,
-    );
+    Object.defineProperty(Element.prototype, "scrollIntoView", originalScrollIntoView);
   }
   vi.unstubAllGlobals();
 });
 
 describe("DataTable English chrome", () => {
   it("announces loading while hiding decorative table geometry", () => {
-    const { rerender } = render(
-      <DataTableSkeleton columnCount={2} rowCount={2} />,
-    );
+    const { rerender } = render(<DataTableSkeleton columnCount={2} rowCount={2} />);
 
     const loadingTable = screen.getByRole("status", {
       name: "Loading Table",
     });
-    expect(
-      loadingTable.querySelector("table")?.getAttribute("aria-hidden"),
-    ).toBe("true");
+    expect(loadingTable.querySelector("table")?.getAttribute("aria-hidden")).toBe("true");
 
-    rerender(
-      <DataTableSkeleton
-        columnCount={2}
-        rowCount={2}
-        loadingLabel="Loading Organizations"
-      />,
-    );
-    expect(
-      screen.getByRole("status", { name: "Loading Organizations" }),
-    ).toBeDefined();
+    rerender(<DataTableSkeleton columnCount={2} rowCount={2} loadingLabel="Loading Organizations" />);
+    expect(screen.getByRole("status", { name: "Loading Organizations" })).toBeDefined();
   });
 
   it("uses Title Case for toolbar and pagination actions", () => {
@@ -190,22 +156,13 @@ describe("DataTable English chrome", () => {
 
     expect(screen.getByRole("textbox", { name: "Search Name" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Reset Filters" })).toBeDefined();
-    expect(
-      screen.queryByRole("combobox", { name: "Toggle Columns" }),
-    ).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Toggle Columns" })).toBeNull();
     expect(screen.queryByRole("button", { name: "View" })).toBeNull();
 
     rerender(<ExampleSurface surface="pagination" />);
     expect(screen.getByText("Rows per Page")).toBeDefined();
-    expect(
-      screen.getByRole("combobox", { name: "Rows per Page" }),
-    ).toBeDefined();
-    for (const name of [
-      "Go to First Page",
-      "Go to Previous Page",
-      "Go to Next Page",
-      "Go to Last Page",
-    ]) {
+    expect(screen.getByRole("combobox", { name: "Rows per Page" })).toBeDefined();
+    for (const name of ["Go to First Page", "Go to Previous Page", "Go to Next Page", "Go to Last Page"]) {
       expect(screen.getByRole("button", { name })).toBeDefined();
     }
   });
@@ -213,12 +170,8 @@ describe("DataTable English chrome", () => {
   it("uses Title Case for compact filter menu actions", () => {
     render(<ExampleSurface surface="filter-menu" />);
 
-    expect(
-      screen.getByRole("button", { name: "Reset All Filters" }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Open Filter Menu" }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Reset All Filters" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Open Filter Menu" })).toBeDefined();
   });
 
   it("uses Title Case for advanced filter commands", () => {
@@ -227,9 +180,7 @@ describe("DataTable English chrome", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Filter/ }));
     expect(screen.getByRole("button", { name: "Add Filter" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Reset Filters" })).toBeDefined();
-    expect(
-      screen.getByRole("combobox", { name: "Combine Filters" }),
-    ).toBeDefined();
+    expect(screen.getByRole("combobox", { name: "Combine Filters" })).toBeDefined();
   });
 
   it("uses Title Case for advanced sorting commands", () => {

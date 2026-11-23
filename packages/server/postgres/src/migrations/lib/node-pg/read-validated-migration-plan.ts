@@ -18,31 +18,20 @@ export async function readValidatedMigrationPlan(
   discovered: readonly DiscoveredDomainMigration[],
 ): Promise<{ pending: DiscoveredDomainMigration[]; protocolApplied: boolean }> {
   const recordedApplied = await readAppliedJournal(client);
-  if (
-    recordedApplied.filter((row) => row.name === NODE_PG_GRAPH_PROTOCOL)
-      .length > 1
-  ) {
+  if (recordedApplied.filter((row) => row.name === NODE_PG_GRAPH_PROTOCOL).length > 1) {
     throw new NodePgMigrationJournalError(
       "NODE_PG_MIGRATION_PROTOCOL_DUPLICATE",
       NODE_PG_GRAPH_PROTOCOL,
       "the dependency migration protocol appears more than once in the applied journal",
     );
   }
-  const protocolApplied = recordedApplied.some(
-    (row) => row.name === NODE_PG_GRAPH_PROTOCOL,
-  );
-  const applied = recordedApplied.filter(
-    (row) => row.name !== NODE_PG_GRAPH_PROTOCOL,
-  );
+  const protocolApplied = recordedApplied.some((row) => row.name === NODE_PG_GRAPH_PROTOCOL);
+  const applied = recordedApplied.filter((row) => row.name !== NODE_PG_GRAPH_PROTOCOL);
   const checksums = await readChecksumJournal(client);
   if (
     !protocolApplied &&
     applied.some((row) =>
-      discovered.some(
-        (migration) =>
-          migration.journalName === row.name &&
-          migration.dependsOn !== undefined,
-      ),
+      discovered.some((migration) => migration.journalName === row.name && migration.dependsOn !== undefined),
     )
   ) {
     throw new NodePgMigrationJournalError(
@@ -53,8 +42,7 @@ export async function readValidatedMigrationPlan(
   }
   if (
     protocolApplied &&
-    checksums.find((row) => row.name === NODE_PG_GRAPH_PROTOCOL)?.sha256 !==
-      (await legacyFingerprint(discovered))
+    checksums.find((row) => row.name === NODE_PG_GRAPH_PROTOCOL)?.sha256 !== (await legacyFingerprint(discovered))
   ) {
     throw new NodePgMigrationJournalError(
       "NODE_PG_MIGRATION_LEGACY_HISTORY_CHANGED",
@@ -68,34 +56,21 @@ export async function readValidatedMigrationPlan(
     discovered,
     applied.map((row) => row.name),
   );
-  const pending = ordered.filter(
-    (migration) => !applied.some((row) => row.name === migration.journalName),
-  );
+  const pending = ordered.filter((migration) => !applied.some((row) => row.name === migration.journalName));
   return { pending, protocolApplied };
 }
 
-export async function legacyFingerprint(
-  discovered: readonly DiscoveredDomainMigration[],
-): Promise<string> {
+export async function legacyFingerprint(discovered: readonly DiscoveredDomainMigration[]): Promise<string> {
   const legacy = await Promise.all(
     discovered
       .filter((migration) => migration.dependsOn === undefined)
-      .map(async (migration) => [
-        migration.journalName,
-        await fileSha256(migration.filePath),
-      ]),
+      .map(async (migration) => [migration.journalName, await fileSha256(migration.filePath)]),
   );
   return createHash("sha256").update(JSON.stringify(legacy)).digest("hex");
 }
 
 async function readAppliedJournal(client: Client): Promise<{ name: string }[]> {
-  if (
-    !(await relationExists(
-      client,
-      NODE_PG_JOURNAL_SCHEMA,
-      NODE_PG_APPLIED_TABLE,
-    ))
-  ) {
+  if (!(await relationExists(client, NODE_PG_JOURNAL_SCHEMA, NODE_PG_APPLIED_TABLE))) {
     return [];
   }
   const result = await client.query<{ name: string }>(
@@ -104,16 +79,8 @@ async function readAppliedJournal(client: Client): Promise<{ name: string }[]> {
   return result.rows;
 }
 
-async function readChecksumJournal(
-  client: Client,
-): Promise<{ name: string; sha256: string }[]> {
-  if (
-    !(await relationExists(
-      client,
-      NODE_PG_JOURNAL_SCHEMA,
-      NODE_PG_CHECKSUM_TABLE,
-    ))
-  ) {
+async function readChecksumJournal(client: Client): Promise<{ name: string; sha256: string }[]> {
+  if (!(await relationExists(client, NODE_PG_JOURNAL_SCHEMA, NODE_PG_CHECKSUM_TABLE))) {
     return [];
   }
   const result = await client.query<{ name: string; sha256: string }>(
@@ -127,9 +94,7 @@ async function assertJournalMatchesBuild(
   applied: readonly { name: string }[],
   checksums: readonly { name: string; sha256: string }[],
 ): Promise<void> {
-  const discoveredByName = new Map(
-    discovered.map((migration) => [migration.journalName, migration]),
-  );
+  const discoveredByName = new Map(discovered.map((migration) => [migration.journalName, migration]));
 
   for (const row of applied) {
     if (!discoveredByName.has(row.name)) {
@@ -141,9 +106,7 @@ async function assertJournalMatchesBuild(
     }
   }
 
-  const checksumByName = new Map(
-    checksums.map((row) => [row.name, row.sha256]),
-  );
+  const checksumByName = new Map(checksums.map((row) => [row.name, row.sha256]));
   for (const row of applied) {
     const migration = discoveredByName.get(row.name);
     if (migration === undefined) {

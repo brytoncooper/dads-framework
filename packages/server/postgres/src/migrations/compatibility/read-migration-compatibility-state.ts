@@ -1,10 +1,7 @@
 import { createHash } from "node:crypto";
 import type { PostgresClient as Client } from "../../index.js";
 
-import {
-  CATALOG_STATE,
-  USER_SCHEMAS,
-} from "./compatibility-catalog-queries.js";
+import { CATALOG_STATE, USER_SCHEMAS } from "./compatibility-catalog-queries.js";
 
 const READ_FORMAT = {
   search_path: "pg_catalog",
@@ -19,9 +16,7 @@ const READ_FORMAT = {
 export class UnsupportedMigrationCompatibilityReplicationStateError extends Error {
   readonly code = "MIGRATION_COMPATIBILITY_UNSUPPORTED_REPLICATION_STATE";
 
-  constructor(
-    readonly reason: "subscriptions" | "publication-catalog-version",
-  ) {
+  constructor(readonly reason: "subscriptions" | "publication-catalog-version") {
     super(
       reason === "subscriptions"
         ? "Database subscriptions require a dedicated-cluster migration rehearsal; external replication and slot state cannot be compared safely in cloned databases."
@@ -37,23 +32,18 @@ export class UnsupportedMigrationCompatibilityReplicationStateError extends Erro
  * Physical OIDs and table-column positions are absent; generated internal FK
  * trigger names are represented by their constraint and trigger behavior.
  */
-export async function readMigrationCompatibilityState(
-  client: Client,
-): Promise<MigrationCompatibilityState> {
+export async function readMigrationCompatibilityState(client: Client): Promise<MigrationCompatibilityState> {
   let failure: unknown;
   try {
     await refuseUnsupportedReplicationState(client);
     return await withReadFormat(client, () => readCanonicalState(client));
   } catch (error) {
-    if (error instanceof UnsupportedMigrationCompatibilityReplicationStateError)
-      throw error;
+    if (error instanceof UnsupportedMigrationCompatibilityReplicationStateError) throw error;
     failure = error;
   }
   // Driver errors can contain input values; compatibility evidence never does,
   // so only the SQLSTATE leaves this function, never the driver error itself.
-  throw new Error(
-    `Migration compatibility state could not be read deterministically${sqlStateSuffix(failure)}`,
-  );
+  throw new Error(`Migration compatibility state could not be read deterministically${sqlStateSuffix(failure)}`);
 }
 
 type MigrationCompatibilityState = {
@@ -61,9 +51,7 @@ type MigrationCompatibilityState = {
   data: Readonly<Record<string, { rows: number; sha256: string }>>;
 };
 
-async function refuseUnsupportedReplicationState(
-  client: Client,
-): Promise<void> {
+async function refuseUnsupportedReplicationState(client: Client): Promise<void> {
   const replication = await client.query<{
     supports_publication_membership: boolean;
     has_subscriptions: boolean;
@@ -76,51 +64,34 @@ async function refuseUnsupportedReplicationState(
   `);
   for (const state of replication.rows) {
     if (!state.supports_publication_membership) {
-      throw new UnsupportedMigrationCompatibilityReplicationStateError(
-        "publication-catalog-version",
-      );
+      throw new UnsupportedMigrationCompatibilityReplicationStateError("publication-catalog-version");
     }
     if (state.has_subscriptions) {
-      throw new UnsupportedMigrationCompatibilityReplicationStateError(
-        "subscriptions",
-      );
+      throw new UnsupportedMigrationCompatibilityReplicationStateError("subscriptions");
     }
   }
 }
 
 /** Runs `read` under READ_FORMAT's settings, restoring the previous ones after. */
-async function withReadFormat<T>(
-  client: Client,
-  read: () => Promise<T>,
-): Promise<T> {
+async function withReadFormat<T>(client: Client, read: () => Promise<T>): Promise<T> {
   const previous = await client.query<{ name: string; value: string }>(
     "SELECT name, current_setting(name) AS value FROM unnest($1::text[]) settings(name)",
     [Object.keys(READ_FORMAT)],
   );
   try {
     for (const [name, value] of Object.entries(READ_FORMAT)) {
-      await client.query("SELECT pg_catalog.set_config($1, $2, false)", [
-        name,
-        value,
-      ]);
+      await client.query("SELECT pg_catalog.set_config($1, $2, false)", [name, value]);
     }
     return await read();
   } finally {
     for (const { name, value } of previous.rows) {
-      await client.query("SELECT pg_catalog.set_config($1, $2, false)", [
-        name,
-        value,
-      ]);
+      await client.query("SELECT pg_catalog.set_config($1, $2, false)", [name, value]);
     }
   }
 }
 
-async function readCanonicalState(
-  client: Client,
-): Promise<MigrationCompatibilityState> {
-  const schema = hashRows(
-    await readCanonicalRows(client, CATALOG_STATE),
-  ).sha256;
+async function readCanonicalState(client: Client): Promise<MigrationCompatibilityState> {
+  const schema = hashRows(await readCanonicalRows(client, CATALOG_STATE)).sha256;
   const relations = await client.query<{
     schema_name: string;
     relation_name: string;
@@ -154,10 +125,7 @@ function sqlStateSuffix(error: unknown): string {
     : "";
 }
 
-async function readCanonicalRows(
-  client: Client,
-  query: string,
-): Promise<readonly string[]> {
+async function readCanonicalRows(client: Client, query: string): Promise<readonly string[]> {
   const result = await client.query<{ canonical: string }>(query);
   return result.rows.map(({ canonical }) => canonical);
 }

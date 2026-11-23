@@ -1,8 +1,4 @@
-import type {
-  FeatureFlagRememberedTenant,
-  FeatureFlagState,
-  UpdateFeatureFlagInput,
-} from "../../contract/index.js";
+import type { FeatureFlagRememberedTenant, FeatureFlagState, UpdateFeatureFlagInput } from "../../contract/index.js";
 
 /** A flag with no stored row: the contract's default. */
 export function defaultFeatureFlagState(slug: string): FeatureFlagState {
@@ -30,9 +26,7 @@ type TransitionInput = {
  * EVERYONE with `enabledAt` cleared, so turning a flag back to selected
  * tenants starts their timing again.
  */
-export function transitionFeatureFlagState(
-  input: TransitionInput,
-): FeatureFlagState {
+export function transitionFeatureFlagState(input: TransitionInput): FeatureFlagState {
   const updatedAt = input.now.toISOString();
   const common = {
     slug: input.current.slug,
@@ -66,9 +60,7 @@ export function transitionFeatureFlagState(
   }
 }
 
-function deselectAll(
-  tenants: readonly FeatureFlagRememberedTenant[],
-): FeatureFlagRememberedTenant[] {
+function deselectAll(tenants: readonly FeatureFlagRememberedTenant[]): FeatureFlagRememberedTenant[] {
   return tenants.map((tenant) => ({ ...tenant, enabledAt: null }));
 }
 
@@ -83,23 +75,17 @@ function selectTenants(
   updatedAt: string,
 ): FeatureFlagRememberedTenant[] {
   const selected = new Set(tenantIds);
-  const previous = new Map(
-    input.current.rememberedTenants.map((tenant) => [tenant.tenantId, tenant]),
-  );
+  const previous = new Map(input.current.rememberedTenants.map((tenant) => [tenant.tenantId, tenant]));
   const stillSelected = input.current.audienceMode === "SELECTED_TENANTS";
-  const unselected = input.current.rememberedTenants.filter(
-    (tenant) => !selected.has(tenant.tenantId),
-  );
+  const unselected = input.current.rememberedTenants.filter((tenant) => !selected.has(tenant.tenantId));
   return [
     ...deselectAll(unselected),
     ...tenantIds.map((tenantId) => {
       const existing = previous.get(tenantId);
       return {
         tenantId,
-        tenantName:
-          input.tenantNames.get(tenantId) ?? existing?.tenantName ?? tenantId,
-        enabledAt:
-          (stillSelected ? existing?.enabledAt : undefined) ?? updatedAt,
+        tenantName: input.tenantNames.get(tenantId) ?? existing?.tenantName ?? tenantId,
+        enabledAt: (stillSelected ? existing?.enabledAt : undefined) ?? updatedAt,
       };
     }),
   ];

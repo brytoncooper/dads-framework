@@ -1,30 +1,14 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { diffZedSchemas } from "./access-diff.js";
-import {
-  DEFAULT_ACCESS_MIGRATIONS_DIR,
-  scaffoldAccessMigration,
-} from "./access-migrate.js";
+import { DEFAULT_ACCESS_MIGRATIONS_DIR, scaffoldAccessMigration } from "./access-migrate.js";
 import { renderZedAccessTree } from "./access-tree.js";
 
-const dadExecutable = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "bin",
-  "dad.js",
-);
+const dadExecutable = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "dad.js");
 
 const HIERARCHY_SCHEMA = `use expiration
 
@@ -168,13 +152,7 @@ describe("renderZedAccessTree and dad access tree", () => {
 
     expect(result.inputPath).toBe(schemaPath);
     expect(result.definitionCount).toBe(5);
-    expect(result.definitions).toEqual([
-      "user",
-      "group",
-      "organization",
-      "folder",
-      "document",
-    ]);
+    expect(result.definitions).toEqual(["user", "group", "organization", "folder", "document"]);
     expect(result.tree).toContain("actors: user");
     expect(result.tree).toContain("organization");
     expect(result.tree).toContain("folder (recursive)");
@@ -197,25 +175,14 @@ describe("renderZedAccessTree and dad access tree", () => {
     expect(plain.stdout).toContain("folder (recursive)");
     expect(plain.stdout).toContain("document");
 
-    const jsonRun = runDad(workspace, [
-      "access",
-      "tree",
-      "schema.zed",
-      "--json",
-    ]);
+    const jsonRun = runDad(workspace, ["access", "tree", "schema.zed", "--json"]);
     expect(jsonRun.status).toBe(0);
     expect(jsonRun.stderr).toBe("");
     const parsed = parseJsonRecord(jsonRun.stdout);
     expect(parsed["ok"]).toBe(true);
     expect(parsed["inputPath"]).toBe(schemaPath);
     expect(parsed["definitionCount"]).toBe(5);
-    expect(parsed["definitions"]).toEqual([
-      "user",
-      "group",
-      "organization",
-      "folder",
-      "document",
-    ]);
+    expect(parsed["definitions"]).toEqual(["user", "group", "organization", "folder", "document"]);
     expect(String(parsed["tree"])).toContain("actors: user");
   });
 
@@ -225,16 +192,9 @@ describe("renderZedAccessTree and dad access tree", () => {
 
     const missingArg = runDad(workspace, ["access", "tree"]);
     expect(missingArg.status).toBe(1);
-    expect(missingArg.stderr).toContain(
-      "Dad: access tree requires a path to a .ts or .zed access file.",
-    );
+    expect(missingArg.stderr).toContain("Dad: access tree requires a path to a .ts or .zed access file.");
 
-    const unknownOpt = runDad(workspace, [
-      "access",
-      "tree",
-      "schema.zed",
-      "--bogus",
-    ]);
+    const unknownOpt = runDad(workspace, ["access", "tree", "schema.zed", "--bogus"]);
     expect(unknownOpt.status).toBe(1);
     expect(unknownOpt.stderr).toContain("Dad: Unknown option --bogus.");
 
@@ -284,12 +244,7 @@ describe("diffZedSchemas and dad access diff", () => {
     expect(safeKinds).toContain("modified-permission");
     expect(safeKinds).toContain("removed-permission");
 
-    const cliPlain = runDad(workspace, [
-      "access",
-      "diff",
-      "before.zed",
-      "after.zed",
-    ]);
+    const cliPlain = runDad(workspace, ["access", "diff", "before.zed", "after.zed"]);
     expect(cliPlain.status).toBe(0);
     expect(cliPlain.stdout).toContain("requiresMigration: false");
     expect(cliPlain.stdout).toContain("Safe changes:");
@@ -336,13 +291,7 @@ describe("diffZedSchemas and dad access diff", () => {
       subject: "team#member",
     });
 
-    const jsonRun = runDad(workspace, [
-      "access",
-      "diff",
-      "before.zed",
-      "breaking.zed",
-      "--json",
-    ]);
+    const jsonRun = runDad(workspace, ["access", "diff", "before.zed", "breaking.zed", "--json"]);
     expect(jsonRun.status).toBe(0);
     expect(jsonRun.stderr).toBe("");
     const parsed = parseJsonRecord(jsonRun.stdout);
@@ -376,10 +325,7 @@ describe("scaffoldAccessMigration and dad access migrate", () => {
     });
 
     const expectedDir = join(workspace, DEFAULT_ACCESS_MIGRATIONS_DIR);
-    const expectedFile = join(
-      expectedDir,
-      "0001_replace_editor_with_writer.ts",
-    );
+    const expectedFile = join(expectedDir, "0001_replace_editor_with_writer.ts");
     expect(result.id).toBe("0001_replace_editor_with_writer");
     expect(result.outDir).toBe(expectedDir);
     expect(result.filePath).toBe(expectedFile);
@@ -394,12 +340,8 @@ describe("scaffoldAccessMigration and dad access migrate", () => {
     expect(content).toContain(
       '// ops.copyRole({ resource: "document", role: "editor" }, { resource: "document", role: "writer" }),',
     );
-    expect(content).toContain(
-      'ops.dropRole({ resource: "document", role: "editor" }),',
-    );
-    expect(content).toContain(
-      'ops.dropRole({ resource: "legacy_note", role: "author" }),',
-    );
+    expect(content).toContain('ops.dropRole({ resource: "document", role: "editor" }),');
+    expect(content).toContain('ops.dropRole({ resource: "legacy_note", role: "author" }),');
     expect(content).toContain("removed expiration on document#owner (user)");
   });
 
@@ -472,52 +414,19 @@ describe("scaffoldAccessMigration and dad access migrate", () => {
     const workspace = createWorkspace();
     writeFileSync(join(workspace, "a.zed"), BASE_SCHEMA, "utf8");
 
-    const missingSlug = runDad(workspace, [
-      "access",
-      "migrate",
-      "--from",
-      "a.zed",
-      "--to",
-      "a.zed",
-    ]);
+    const missingSlug = runDad(workspace, ["access", "migrate", "--from", "a.zed", "--to", "a.zed"]);
     expect(missingSlug.status).toBe(1);
-    expect(missingSlug.stderr).toContain(
-      "Dad: access migrate requires a migration slug.",
-    );
+    expect(missingSlug.stderr).toContain("Dad: access migrate requires a migration slug.");
 
-    const missingFrom = runDad(workspace, [
-      "access",
-      "migrate",
-      "my_migration",
-      "--to",
-      "a.zed",
-    ]);
+    const missingFrom = runDad(workspace, ["access", "migrate", "my_migration", "--to", "a.zed"]);
     expect(missingFrom.status).toBe(1);
-    expect(missingFrom.stderr).toContain(
-      "Dad: access migrate requires --from <before>.",
-    );
+    expect(missingFrom.stderr).toContain("Dad: access migrate requires --from <before>.");
 
-    const missingTo = runDad(workspace, [
-      "access",
-      "migrate",
-      "my_migration",
-      "--from",
-      "a.zed",
-    ]);
+    const missingTo = runDad(workspace, ["access", "migrate", "my_migration", "--from", "a.zed"]);
     expect(missingTo.status).toBe(1);
-    expect(missingTo.stderr).toContain(
-      "Dad: access migrate requires --to <after>.",
-    );
+    expect(missingTo.stderr).toContain("Dad: access migrate requires --to <after>.");
 
-    const badSlug = runDad(workspace, [
-      "access",
-      "migrate",
-      "../escape",
-      "--from",
-      "a.zed",
-      "--to",
-      "a.zed",
-    ]);
+    const badSlug = runDad(workspace, ["access", "migrate", "../escape", "--from", "a.zed", "--to", "a.zed"]);
     expect(badSlug.status).toBe(1);
     expect(badSlug.stderr).toContain('Invalid migration slug "../escape"');
   });
@@ -531,9 +440,7 @@ describe("scaffoldAccessMigration and dad access migrate", () => {
       expect(help.stdout).toContain("Usage: dad access <subcommand>");
       expect(help.stdout).toContain("access tree <schema.ts|schema.zed>");
       expect(help.stdout).toContain("access diff <before> <after>");
-      expect(help.stdout).toContain(
-        "access migrate <slug> --from <before> --to <after>",
-      );
+      expect(help.stdout).toContain("access migrate <slug> --from <before> --to <after>");
     }
   });
 });
@@ -545,11 +452,7 @@ type DadRun = {
 };
 
 function runDad(cwd: string, commandArguments: readonly string[]): DadRun {
-  const completed = spawnSync(
-    process.execPath,
-    [dadExecutable, ...commandArguments],
-    { cwd, encoding: "utf8" },
-  );
+  const completed = spawnSync(process.execPath, [dadExecutable, ...commandArguments], { cwd, encoding: "utf8" });
   if (completed.error) throw completed.error;
   return {
     status: completed.status,

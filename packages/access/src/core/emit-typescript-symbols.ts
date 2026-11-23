@@ -70,9 +70,7 @@ export type ErgonomicSymbols = {
 };
 
 export function toCamelCase(wireName: string): string {
-  const parts = wireName
-    .split(/[^A-Za-z0-9]+/)
-    .filter((part) => part.length > 0);
+  const parts = wireName.split(/[^A-Za-z0-9]+/).filter((part) => part.length > 0);
   if (parts.length === 0) return "entity";
   const [first = "entity", ...rest] = parts;
   const head = first.toLowerCase();
@@ -90,9 +88,7 @@ function allocateUnique(
   reserved: ReadonlySet<string>,
   reservedSuffix: string,
 ): string {
-  const base = reserved.has(preferred)
-    ? `${preferred}${reservedSuffix}`
-    : preferred;
+  const base = reserved.has(preferred) ? `${preferred}${reservedSuffix}` : preferred;
   if (!used.has(base)) {
     used.add(base);
     return base;
@@ -106,9 +102,7 @@ function allocateUnique(
   return candidate;
 }
 
-function collectWireNames(
-  definitions: readonly AccessIrDefinition[],
-): readonly string[] {
+function collectWireNames(definitions: readonly AccessIrDefinition[]): readonly string[] {
   const seen = new Set<string>();
   const ordered: string[] = [];
   const add = (wireName: string): void => {
@@ -127,9 +121,7 @@ function collectWireNames(
   return ordered;
 }
 
-export function allocateErgonomicSymbols(
-  definitions: readonly AccessIrDefinition[],
-): ErgonomicSymbols {
+export function allocateErgonomicSymbols(definitions: readonly AccessIrDefinition[]): ErgonomicSymbols {
   const allWireNames = collectWireNames(definitions);
   const used = new Set<string>(ERGONOMIC_RESERVED_IDENTIFIERS);
   const varByWireName = new Map<string, string>();
@@ -140,18 +132,10 @@ export function allocateErgonomicSymbols(
     definitionByWireName.set(definition.wireName, definition);
   }
   for (const wireName of allWireNames) {
-    const variable = allocateUnique(
-      toCamelCase(wireName),
-      used,
-      ERGONOMIC_RESERVED_IDENTIFIERS,
-      "Entity",
-    );
+    const variable = allocateUnique(toCamelCase(wireName), used, ERGONOMIC_RESERVED_IDENTIFIERS, "Entity");
     varByWireName.set(wireName, variable);
     const definition = definitionByWireName.get(wireName);
-    if (
-      definition === undefined ||
-      (definition.roles.length === 0 && definition.permissions.length === 0)
-    ) {
+    if (definition === undefined || (definition.roles.length === 0 && definition.permissions.length === 0)) {
       actorWireNames.add(wireName);
     }
   }
@@ -171,10 +155,7 @@ function resourceSubjectDependencies(
   const deps: string[] = [];
   for (const role of definition.roles) {
     for (const subject of role.subjects) {
-      if (
-        subject.wireName !== definition.wireName &&
-        resourceWireNames.has(subject.wireName)
-      ) {
+      if (subject.wireName !== definition.wireName && resourceWireNames.has(subject.wireName)) {
         deps.push(subject.wireName);
       }
     }
@@ -190,9 +171,7 @@ export function orderErgonomicResources(
   definitions: readonly AccessIrDefinition[],
   actorWireNames: ReadonlySet<string>,
 ): readonly AccessIrDefinition[] {
-  const resources = definitions.filter(
-    (definition) => !actorWireNames.has(definition.wireName),
-  );
+  const resources = definitions.filter((definition) => !actorWireNames.has(definition.wireName));
   const byName = new Map(resources.map((def) => [def.wireName, def]));
   const resourceNames = new Set(byName.keys());
   const visited = new Set<string>();
@@ -228,7 +207,5 @@ export function formatPropKey(name: string): string {
 }
 
 export function formatPropAccess(target: string, name: string): string {
-  return isValidJsIdentifier(name)
-    ? `${target}.${name}`
-    : `${target}[${JSON.stringify(name)}]`;
+  return isValidJsIdentifier(name) ? `${target}.${name}` : `${target}[${JSON.stringify(name)}]`;
 }

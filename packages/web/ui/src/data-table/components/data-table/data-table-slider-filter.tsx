@@ -5,11 +5,7 @@ import * as React from "react";
 import { useLocaleFormatting } from "../../../copy/index.js";
 import { Button, cn, Separator } from "../../../elements/index.js";
 import { Input, Label, Slider } from "../../../forms/index.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../overlays/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 
@@ -21,22 +17,14 @@ type Range = {
 type RangeValue = [number, number];
 
 function getIsValidRange(value: unknown): value is RangeValue {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
+  return Array.isArray(value) && value.length === 2 && typeof value[0] === "number" && typeof value[1] === "number";
 }
 
 function parseValuesAsNumbers(value: unknown): RangeValue | undefined {
   if (
     Array.isArray(value) &&
     value.length === 2 &&
-    value.every(
-      (v) =>
-        (typeof v === "string" || typeof v === "number") && !Number.isNaN(v),
-    )
+    value.every((v) => (typeof v === "string" || typeof v === "number") && !Number.isNaN(v))
   ) {
     return [Number(value[0]), Number(value[1])];
   }
@@ -49,10 +37,7 @@ type DataTableSliderFilterProps<TData> = {
   title?: string;
 };
 
-export function DataTableSliderFilter<TData>({
-  column,
-  title,
-}: DataTableSliderFilterProps<TData>) {
+export function DataTableSliderFilter<TData>({ column, title }: DataTableSliderFilterProps<TData>) {
   const t = useDataTableCopy();
   const formatting = useLocaleFormatting();
   const id = React.useId();
@@ -79,12 +64,7 @@ export function DataTableSliderFilter<TData>({
     }
 
     const rangeSize = maxValue - minValue;
-    const step =
-      rangeSize <= 20
-        ? 1
-        : rangeSize <= 100
-          ? Math.ceil(rangeSize / 20)
-          : Math.ceil(rangeSize / 50);
+    const step = rangeSize <= 20 ? 1 : rangeSize <= 100 ? Math.ceil(rangeSize / 20) : Math.ceil(rangeSize / 50);
 
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
@@ -137,19 +117,10 @@ export function DataTableSliderFilter<TData>({
     <div className="flex items-center gap-1">
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="border-input border-dashed font-normal"
-          >
+          <Button type="button" variant="outline" size="sm" className="border-input border-dashed font-normal">
             <PlusCircle />
             <span>{title}</span>
-            <SliderRangeLabel
-              value={columnFilterValue}
-              unit={unit}
-              formatValue={formatValue}
-            />
+            <SliderRangeLabel value={columnFilterValue} unit={unit} formatValue={formatValue} />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="flex w-auto flex-col gap-4">
@@ -223,12 +194,7 @@ export function DataTableSliderFilter<TData>({
               onValueChange={onSliderValueChange}
             />
           </div>
-          <Button
-            type="button"
-            aria-label={clearLabel}
-            variant="outline"
-            onClick={onReset}
-          >
+          <Button type="button" aria-label={clearLabel} variant="outline" onClick={onReset}>
             {t("dataTable.action.clear")}
           </Button>
         </PopoverContent>
@@ -261,10 +227,7 @@ function SliderRangeLabel({
   if (!value) return null;
   return (
     <>
-      <Separator
-        orientation="vertical"
-        className="mx-0.5 data-[orientation=vertical]:h-4"
-      />
+      <Separator orientation="vertical" className="mx-0.5 data-[orientation=vertical]:h-4" />
       {formatValue(value[0])} - {formatValue(value[1])}
       {unit ? ` ${unit}` : ""}
     </>

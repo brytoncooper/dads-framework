@@ -4,13 +4,7 @@ import * as React from "react";
 
 import { Button, cn, Separator } from "../../../elements/index.js";
 import { Input } from "../../../forms/index.js";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "../../../overlays/index.js";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../../../overlays/index.js";
 
 import { useShellCopy } from "../../copy/shell-copy.js";
 
@@ -35,10 +29,7 @@ function Sidebar({
     return (
       <div
         data-slot="sidebar"
-        className={cn(
-          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
-          className,
-        )}
+        className={cn("flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground", className)}
         {...props}
       >
         {children}
@@ -58,9 +49,7 @@ function Sidebar({
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{t("shell.sidebar.title")}</SheetTitle>
-            <SheetDescription>
-              {t("shell.sidebar.mobileDescription")}
-            </SheetDescription>
+            <SheetDescription>{t("shell.sidebar.mobileDescription")}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -119,11 +108,7 @@ function Sidebar({
   );
 }
 
-function SidebarTrigger({
-  className,
-  onClick,
-  ...props
-}: React.ComponentProps<typeof Button>) {
+function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
   const t = useShellCopy();
   const { isMobile, open, openMobile, toggleSidebar } = useSidebar();
 
@@ -200,10 +185,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   );
 }
 
-function SidebarInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof Input>) {
+function SidebarInput({ className, ...props }: React.ComponentProps<typeof Input>) {
   return (
     <Input
       data-slot="sidebar-input"
@@ -236,10 +218,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function SidebarSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof Separator>) {
+function SidebarSeparator({ className, ...props }: React.ComponentProps<typeof Separator>) {
   return (
     <Separator
       data-slot="sidebar-separator"
@@ -319,10 +298,7 @@ function SidebarGroupAction({
   );
 }
 
-function SidebarGroupContent({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sidebar-group-content"

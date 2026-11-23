@@ -1,7 +1,4 @@
-import type {
-  PostgresQueryResult as QueryResult,
-  PostgresQueryResultRow as QueryResultRow,
-} from "../../../index.js";
+import type { PostgresQueryResult as QueryResult, PostgresQueryResultRow as QueryResultRow } from "../../../index.js";
 
 /**
  * The runner's journal tables, and the read-only view of them. Kept apart
@@ -17,10 +14,7 @@ export const NODE_PG_GRAPH_PROTOCOL = "__dads_dependency_migration_graph_v1__";
 
 /** What reading the journal needs: a `pg` Client or Pool both fit. */
 export type NodePgJournalQueryClient = {
-  query<Row extends QueryResultRow>(
-    text: string,
-    values?: unknown[],
-  ): Promise<QueryResult<Row>>;
+  query<Row extends QueryResultRow>(text: string, values?: unknown[]): Promise<QueryResult<Row>>;
 };
 
 /** One applied-journal row joined with its checksum row, if it has one. */
@@ -42,23 +36,11 @@ export type AppliedNodePgMigration = {
  * (the same server default) so the Date is the instant it ran, not a
  * wall-clock reading reinterpreted in the API process's zone.
  */
-export async function readAppliedNodePgJournal(
-  client: NodePgJournalQueryClient,
-): Promise<AppliedNodePgMigration[]> {
-  if (
-    !(await relationExists(
-      client,
-      NODE_PG_JOURNAL_SCHEMA,
-      NODE_PG_APPLIED_TABLE,
-    ))
-  ) {
+export async function readAppliedNodePgJournal(client: NodePgJournalQueryClient): Promise<AppliedNodePgMigration[]> {
+  if (!(await relationExists(client, NODE_PG_JOURNAL_SCHEMA, NODE_PG_APPLIED_TABLE))) {
     return [];
   }
-  const hasChecksums = await relationExists(
-    client,
-    NODE_PG_JOURNAL_SCHEMA,
-    NODE_PG_CHECKSUM_TABLE,
-  );
+  const hasChecksums = await relationExists(client, NODE_PG_JOURNAL_SCHEMA, NODE_PG_CHECKSUM_TABLE);
   const result = await client.query<{
     name: string;
     ran_at: Date;

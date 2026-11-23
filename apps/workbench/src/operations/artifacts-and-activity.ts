@@ -11,16 +11,10 @@ import type { OperationCoordinator } from "./operation-coordinator.js";
 import { findTask, paginate } from "./operation-coordinator.js";
 import { findCreatedResource } from "./create-request.js";
 
-export function artifactAndActivityOperations(
-  coordinator: OperationCoordinator,
-) {
+export function artifactAndActivityOperations(coordinator: OperationCoordinator) {
   const { store, clock, createId } = coordinator.dependencies;
   return {
-    createArtifact: (
-      subject: WorkbenchRequestSubject,
-      taskId: string,
-      body: CreateArtifact,
-    ) =>
+    createArtifact: (subject: WorkbenchRequestSubject, taskId: string, body: CreateArtifact) =>
       coordinator.run(async () => {
         return coordinator.create(
           subject,
@@ -34,10 +28,7 @@ export function artifactAndActivityOperations(
           },
           {
             kind: "protected-create",
-            createTarget: workbenchTarget(
-              workbenchTask.permissions.manage,
-              taskId,
-            ),
+            createTarget: workbenchTarget(workbenchTask.permissions.manage, taskId),
             replayTarget: (state, id) => {
               findCreatedResource(state.artifacts, id);
               return workbenchTarget(workbenchTask.permissions.manage, taskId);
@@ -55,13 +46,7 @@ export function artifactAndActivityOperations(
               createdAt: clock(),
             };
             state.artifacts.push(artifact);
-            coordinator.activity(
-              state,
-              subject,
-              task.workspaceId,
-              artifact.id,
-              "artifact.created",
-            );
+            coordinator.activity(state, subject, task.workspaceId, artifact.id, "artifact.created");
             return artifact;
           },
           (state, id) => findCreatedResource(state.artifacts, id),
@@ -74,11 +59,7 @@ export function artifactAndActivityOperations(
       query: ListQuery,
     ) =>
       coordinator.run(async () => {
-        const visible = await coordinator.allowedIds(
-          subject,
-          workbenchTask.permissions.view,
-          allowedIds ?? [taskId],
-        );
+        const visible = await coordinator.allowedIds(subject, workbenchTask.permissions.view, allowedIds ?? [taskId]);
         if (visible.length === 0) return paginate([], query);
         return paginate(await store.listArtifacts(taskId, visible), query);
       }),

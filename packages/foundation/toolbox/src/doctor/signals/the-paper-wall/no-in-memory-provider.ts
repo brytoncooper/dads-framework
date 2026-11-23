@@ -16,12 +16,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { readCapabilities } from "../scanners/capability-model.js";
 import { isProductionModule } from "../scanners/typescript-program.js";
 
@@ -48,13 +43,11 @@ function countMissingStandIns(context: DoctorContext): SignalReadings {
 export const noInMemoryProviderSignal: DoctorSignal = {
   id: "no-in-memory-provider",
   issue: "the-paper-wall",
-  question:
-    "Does a capability have exactly one implementer and no in-memory stand-in?",
+  question: "Does a capability have exactly one implementer and no in-memory stand-in?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: 0 },
-  sentence:
-    "If you cannot write one, you did not build a wall. You hung a curtain and put a lock on it.",
+  sentence: "If you cannot write one, you did not build a wall. You hung a curtain and put a lock on it.",
   run: (context) => Promise.resolve(countMissingStandIns(context)),
 };

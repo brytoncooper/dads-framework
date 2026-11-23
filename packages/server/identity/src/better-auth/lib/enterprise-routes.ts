@@ -18,24 +18,15 @@ export function createEnterpriseRoutes(
   secret: string,
   vendor: VendorHandler,
 ) {
-  return async (
-    request: Request,
-    route: string,
-  ): Promise<Response | undefined> => {
-    if (route === "POST /sign-in/sso")
-      return start(request, providers, origin, secret, vendor);
-    if (
-      route === `GET ${OIDC_CALLBACK}` &&
-      providers.some((provider) => provider.protocol === "oidc")
-    )
+  return async (request: Request, route: string): Promise<Response | undefined> => {
+    if (route === "POST /sign-in/sso") return start(request, providers, origin, secret, vendor);
+    if (route === `GET ${OIDC_CALLBACK}` && providers.some((provider) => provider.protocol === "oidc"))
       return oidcCallback(request, providers, origin, secret, vendor);
     if (route === `GET ${SAML_METADATA}`) {
       const url = new URL(request.url);
       if (
         !providers.some(
-          (provider) =>
-            provider.protocol === "saml" &&
-            provider.id === url.searchParams.get("providerId"),
+          (provider) => provider.protocol === "saml" && provider.id === url.searchParams.get("providerId"),
         )
       )
         return undefined;
@@ -43,12 +34,9 @@ export function createEnterpriseRoutes(
       return vendor(new Request(url, request));
     }
     const provider = providers.find(
-      (candidate) =>
-        candidate.protocol === "saml" &&
-        route === `POST ${SAML_CALLBACK}/${candidate.id}`,
+      (candidate) => candidate.protocol === "saml" && route === `POST ${SAML_CALLBACK}/${candidate.id}`,
     );
-    if (provider !== undefined)
-      return samlCallback(request, provider, secret, vendor);
+    if (provider !== undefined) return samlCallback(request, provider, secret, vendor);
     return undefined;
   };
 }
@@ -63,9 +51,7 @@ async function start(
   if (request.headers.get("origin") !== origin) return rejected(403);
   const body = await readSignInBody(request);
   if (body === null) return rejected(400);
-  const provider = providers.find(
-    (candidate) => candidate.id === body.providerId,
-  );
+  const provider = providers.find((candidate) => candidate.id === body.providerId);
   if (provider === undefined) return rejected(404);
 
   const callback = safeAppCallback(body.callbackURL, origin);
@@ -113,24 +99,12 @@ async function bindBrowserState(
     .clone()
     .json()
     .catch(() => null);
-  if (
-    typeof result !== "object" ||
-    result === null ||
-    !("url" in result) ||
-    typeof result.url !== "string"
-  )
+  if (typeof result !== "object" || result === null || !("url" in result) || typeof result.url !== "string")
     return rejected(502);
   const saml = provider.protocol === "saml";
-  const state = new URL(result.url).searchParams.get(
-    saml ? "RelayState" : "state",
-  );
+  const state = new URL(result.url).searchParams.get(saml ? "RelayState" : "state");
   if (state === null) return rejected(502);
-  return withStateCookie(
-    response,
-    stateCookie(saml, origin),
-    stateDigest(secret, provider, state),
-    300,
-  );
+  return withStateCookie(response, stateCookie(saml, origin), stateDigest(secret, provider, state), 300);
 }
 
 async function oidcCallback(
@@ -146,13 +120,10 @@ async function oidcCallback(
   if (!state || states.length !== 1) return rejected(403);
   const provider = providers.find(
     (candidate) =>
-      candidate.protocol === "oidc" &&
-      matchesState(request, cookie, stateDigest(secret, candidate, state)),
+      candidate.protocol === "oidc" && matchesState(request, cookie, stateDigest(secret, candidate, state)),
   );
   if (provider === undefined) return rejected(403);
-  const response = await withEnterpriseCallback(provider, () =>
-    vendor(request),
-  );
+  const response = await withEnterpriseCallback(provider, () => vendor(request));
   return withStateCookie(response, cookie, "", 0);
 }
 
@@ -181,14 +152,7 @@ async function samlCallback(
 ): Promise<Response> {
   const cookie = stateCookie(true, "");
   const form = await parseSamlForm(request);
-  if (
-    form === undefined ||
-    !matchesState(
-      request,
-      cookie,
-      stateDigest(secret, provider, form.RelayState),
-    )
-  )
+  if (form === undefined || !matchesState(request, cookie, stateDigest(secret, provider, form.RelayState)))
     return rejected(403);
   const headers = new Headers(request.headers);
   headers.delete("content-length");
@@ -197,40 +161,23 @@ async function samlCallback(
     headers,
     body: new URLSearchParams(form),
   });
-  const response = await withEnterpriseCallback(provider, () =>
-    vendor(callbackRequest),
-  );
+  const response = await withEnterpriseCallback(provider, () => vendor(callbackRequest));
   return withStateCookie(response, cookie, "", 0);
 }
 
 async function parseSamlForm(request: Request) {
-  const contentType = request.headers
-    .get("content-type")
-    ?.split(";")[0]
-    ?.trim()
-    .toLowerCase();
-  if (
-    contentType !== "application/x-www-form-urlencoded" ||
-    request.body === null
-  )
-    return undefined;
+  const contentType = request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+  if (contentType !== "application/x-www-form-urlencoded" || request.body === null) return undefined;
   const form = await readSamlForm(request.body);
   if (form === undefined) return undefined;
   const relayValues = form.getAll("RelayState");
   const assertionValues = form.getAll("SAMLResponse");
-  if (
-    relayValues.length !== 1 ||
-    assertionValues.length !== 1 ||
-    !relayValues[0] ||
-    !assertionValues[0]
-  )
+  if (relayValues.length !== 1 || assertionValues.length !== 1 || !relayValues[0] || !assertionValues[0])
     return undefined;
   return { RelayState: relayValues[0], SAMLResponse: assertionValues[0] };
 }
 
-async function readSamlForm(
-  body: ReadableStream<Uint8Array>,
-): Promise<URLSearchParams | undefined> {
+async function readSamlForm(body: ReadableStream<Uint8Array>): Promise<URLSearchParams | undefined> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let length = 0;
@@ -253,35 +200,19 @@ async function readSamlForm(
   }
 }
 
-function stateDigest(
-  secret: string,
-  provider: EnterpriseSsoProvider,
-  state: string,
-): string {
+function stateDigest(secret: string, provider: EnterpriseSsoProvider, state: string): string {
   return createHmac("sha256", secret)
-    .update(
-      JSON.stringify([
-        "dads-sso-browser-state-v1",
-        provider.protocol,
-        provider.id,
-        state,
-      ]),
-    )
+    .update(JSON.stringify(["dads-sso-browser-state-v1", provider.protocol, provider.id, state]))
     .digest("hex");
 }
 
 function stateCookie(saml: boolean, origin: string) {
   if (saml) return { name: RELAY_COOKIE, attributes: "Secure; SameSite=None" };
-  if (origin.startsWith("http:"))
-    return { name: LOCAL_OIDC_COOKIE, attributes: "SameSite=Lax" };
+  if (origin.startsWith("http:")) return { name: LOCAL_OIDC_COOKIE, attributes: "SameSite=Lax" };
   return { name: OIDC_COOKIE, attributes: "Secure; SameSite=Lax" };
 }
 
-function matchesState(
-  request: Request,
-  cookie: ReturnType<typeof stateCookie>,
-  expected: string,
-): boolean {
+function matchesState(request: Request, cookie: ReturnType<typeof stateCookie>, expected: string): boolean {
   const value = request.headers
     .get("cookie")
     ?.split(";")
@@ -302,10 +233,7 @@ function withStateCookie(
   maxAge: number,
 ): Response {
   const headers = new Headers(response.headers);
-  headers.append(
-    "set-cookie",
-    `${cookie.name}=${digest}; Max-Age=${maxAge}; Path=/; HttpOnly; ${cookie.attributes}`,
-  );
+  headers.append("set-cookie", `${cookie.name}=${digest}; Max-Age=${maxAge}; Path=/; HttpOnly; ${cookie.attributes}`);
   return new Response(response.body, { status: response.status, headers });
 }
 

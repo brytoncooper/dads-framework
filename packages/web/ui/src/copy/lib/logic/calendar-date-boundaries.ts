@@ -10,10 +10,7 @@ type CalendarDateParts = {
 };
 
 /** First UTC instant of an exact YYYY-MM-DD date in a named business timezone. */
-export function startOfCalendarDate(
-  value: string,
-  timeZone: string,
-): string | null {
+export function startOfCalendarDate(value: string, timeZone: string): string | null {
   const parts = parseCalendarDate(value);
   if (parts === null) return null;
   const firstInstant = firstInstantOfDate(parts, timeZone);
@@ -21,10 +18,7 @@ export function startOfCalendarDate(
 }
 
 /** Inclusive final UTC millisecond of a business date, preserving short and long DST days. */
-export function endOfCalendarDate(
-  value: string,
-  timeZone: string,
-): string | null {
+export function endOfCalendarDate(value: string, timeZone: string): string | null {
   const parts = parseCalendarDate(value);
   if (parts === null) return null;
   const firstInstant = firstInstantOfDate(parts, timeZone);
@@ -33,10 +27,7 @@ export function endOfCalendarDate(
   return new Date(nextInstant - 1).toISOString();
 }
 
-function firstInstantOfDate(
-  parts: CalendarDateParts,
-  timeZone: string,
-): number | null {
+function firstInstantOfDate(parts: CalendarDateParts, timeZone: string): number | null {
   const target = dateKey(parts);
   const approximateUtc = Date.UTC(parts.year, parts.month - 1, parts.day);
   let lower = approximateUtc - SEARCH_MARGIN_MS;
@@ -59,8 +50,7 @@ function parseCalendarDate(value: string): CalendarDateParts | null {
   const year = match?.[1];
   const month = match?.[2];
   const day = match?.[3];
-  if (year === undefined || month === undefined || day === undefined)
-    return null;
+  if (year === undefined || month === undefined || day === undefined) return null;
   const parts = { year: Number(year), month: Number(month), day: Number(day) };
   const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
   return date.getUTCFullYear() === parts.year &&
@@ -80,9 +70,5 @@ function nextCalendarDate(parts: CalendarDateParts): CalendarDateParts {
 }
 
 function dateKey(parts: CalendarDateParts): string {
-  return [
-    parts.year,
-    String(parts.month).padStart(2, "0"),
-    String(parts.day).padStart(2, "0"),
-  ].join("-");
+  return [parts.year, String(parts.month).padStart(2, "0"), String(parts.day).padStart(2, "0")].join("-");
 }

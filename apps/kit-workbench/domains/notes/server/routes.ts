@@ -1,11 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { paginationQuerySchema } from "@dads-framework/core/contract";
-import {
-  getRoute,
-  listRoute,
-  postRoute,
-  routeGroup,
-} from "@dads-framework/http";
+import { getRoute, listRoute, postRoute, routeGroup } from "@dads-framework/http";
 import type { StarterServices } from "../../../libraries/app-runtime/index.js";
 import { notesAccess, notesPermission } from "../access/index.js";
 import { inTenant, note, noteFeatures, noteInput } from "../contract/index.js";
@@ -25,8 +20,7 @@ export function notesRoutes({
       access: notesAccess,
       params: inTenant,
       response: noteFeatures,
-      handler: ({ params }) =>
-        flags.execute({ kind: "tenant", tenantId: params.tenantId }),
+      handler: ({ params }) => flags.execute({ kind: "tenant", tenantId: params.tenantId }),
     }),
     listRoute({
       route: { method: "GET", template: "/tenants/:tenantId/notes" },
@@ -55,9 +49,8 @@ export function notesRoutes({
           tenantId: params.tenantId,
           text: body.text,
         };
-        return writeWithPermission(
-          { subject, permission: notesPermission, resourceId: params.tenantId },
-          (tx) => notesStore.insertNote(tx, value),
+        return writeWithPermission({ subject, permission: notesPermission, resourceId: params.tenantId }, (tx) =>
+          notesStore.insertNote(tx, value),
         );
       },
     }),

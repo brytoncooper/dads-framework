@@ -1,29 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  loadOpenTelemetryPeers,
-  type OpenTelemetryPeerLoaders,
-} from "./node-telemetry.js";
+import { loadOpenTelemetryPeers, type OpenTelemetryPeerLoaders } from "./node-telemetry.js";
 import { loadOptionalPeer } from "./optional-peer.js";
 
-function missingModuleError(
-  message: string,
-  code?: "ERR_MODULE_NOT_FOUND" | "MODULE_NOT_FOUND",
-): Error {
+function missingModuleError(message: string, code?: "ERR_MODULE_NOT_FOUND" | "MODULE_NOT_FOUND"): Error {
   return Object.assign(new Error(message), code === undefined ? {} : { code });
 }
 
 describe("loadOptionalPeer (http/telemetry)", () => {
   it("wraps ERR_MODULE_NOT_FOUND with subpath, package name, install hint, and cause", async () => {
-    const cause = missingModuleError(
-      "Cannot find package '@opentelemetry/sdk-node'",
-      "ERR_MODULE_NOT_FOUND",
-    );
+    const cause = missingModuleError("Cannot find package '@opentelemetry/sdk-node'", "ERR_MODULE_NOT_FOUND");
 
-    const error = await loadOptionalPeer(
-      "@dads-framework/http/telemetry",
-      "@opentelemetry/sdk-node",
-      () => Promise.reject(cause),
+    const error = await loadOptionalPeer("@dads-framework/http/telemetry", "@opentelemetry/sdk-node", () =>
+      Promise.reject(cause),
     ).catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(Error);
@@ -36,16 +25,8 @@ describe("loadOptionalPeer (http/telemetry)", () => {
 
   it("wraps MODULE_NOT_FOUND and Cannot find module errors", async () => {
     await expect(
-      loadOptionalPeer(
-        "@dads-framework/http/telemetry",
-        "@opentelemetry/api",
-        () =>
-          Promise.reject(
-            missingModuleError(
-              "Cannot find module '@opentelemetry/api'",
-              "MODULE_NOT_FOUND",
-            ),
-          ),
+      loadOptionalPeer("@dads-framework/http/telemetry", "@opentelemetry/api", () =>
+        Promise.reject(missingModuleError("Cannot find module '@opentelemetry/api'", "MODULE_NOT_FOUND")),
       ),
     ).rejects.toThrow(
       '@dads-framework/http/telemetry requires optional peer dependency "@opentelemetry/api". Install it with: npm install @opentelemetry/api',
@@ -55,10 +36,8 @@ describe("loadOptionalPeer (http/telemetry)", () => {
   it("rethrows unrelated errors unchanged", async () => {
     const bug = new Error("Exporter initialization failed");
 
-    const caught = await loadOptionalPeer(
-      "@dads-framework/http/telemetry",
-      "@opentelemetry/sdk-node",
-      () => Promise.reject(bug),
+    const caught = await loadOptionalPeer("@dads-framework/http/telemetry", "@opentelemetry/sdk-node", () =>
+      Promise.reject(bug),
     ).catch((error: unknown) => error);
 
     expect(caught).toBe(bug);
@@ -93,14 +72,9 @@ describe("loadOptionalPeer (http/telemetry)", () => {
   it.each(peerCases)(
     "reports an actionable install error when $packageName is missing",
     async ({ key, packageName }) => {
-      const cause = missingModuleError(
-        `Cannot find package '${packageName}'`,
-        "ERR_MODULE_NOT_FOUND",
-      );
+      const cause = missingModuleError(`Cannot find package '${packageName}'`, "ERR_MODULE_NOT_FOUND");
 
-      await expect(
-        loadOpenTelemetryPeers({ [key]: () => Promise.reject(cause) }),
-      ).rejects.toMatchObject({
+      await expect(loadOpenTelemetryPeers({ [key]: () => Promise.reject(cause) })).rejects.toMatchObject({
         message: `@dads-framework/http/telemetry requires optional peer dependency "${packageName}". Install it with: npm install ${packageName}`,
         cause,
       });

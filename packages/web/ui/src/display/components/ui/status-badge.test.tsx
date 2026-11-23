@@ -64,9 +64,7 @@ describe("StatusBadge", () => {
 
     for (const { tone, lampClass, borderClass } of TONES) {
       const badge = screen.getByTestId(tone);
-      const lamp = badge.querySelector<HTMLElement>(
-        '[data-slot="status-badge-lamp"]',
-      );
+      const lamp = badge.querySelector<HTMLElement>('[data-slot="status-badge-lamp"]');
 
       expect(badge.textContent).toBe(tone);
       expect(badge.className).toContain(borderClass);
@@ -84,9 +82,7 @@ describe("StatusBadge", () => {
     );
 
     const badge = screen.getByText("Archived");
-    const lamp = badge.querySelector<HTMLElement>(
-      '[data-slot="status-badge-lamp"]',
-    );
+    const lamp = badge.querySelector<HTMLElement>('[data-slot="status-badge-lamp"]');
 
     expect(badge.className).toContain("feature-status");
     expect(lamp?.className).toContain("bg-muted-foreground");
@@ -95,9 +91,7 @@ describe("StatusBadge", () => {
   it("exports the lamp alone as a decorative, tone-colored dot", () => {
     render(<StatusLamp tone="warning" className="feature-lamp" />);
 
-    const lamp = document.querySelector<HTMLElement>(
-      '[data-slot="status-lamp"]',
-    );
+    const lamp = document.querySelector<HTMLElement>('[data-slot="status-lamp"]');
 
     expect(lamp?.getAttribute("aria-hidden")).toBe("true");
     expect(lamp?.className).toContain("bg-warning");

@@ -29,13 +29,7 @@ const COLUMNS: ColumnDef<Row>[] = [
 
 describe("column roles", () => {
   it("reads a definition's id from its id, else its accessor key", () => {
-    expect(COLUMNS.map((column) => readColumnDefId(column))).toEqual([
-      "select",
-      "name",
-      "status",
-      "amount",
-      "actions",
-    ]);
+    expect(COLUMNS.map((column) => readColumnDefId(column))).toEqual(["select", "name", "status", "amount", "actions"]);
   });
 
   it("treats the first non-selection column as the identifying column", () => {
@@ -52,9 +46,7 @@ describe("column roles", () => {
       left: ["select", "name"],
       right: ["actions"],
     });
-    expect(
-      defaultColumnPinning([{ id: "selection" }, ...COLUMNS.slice(1, 3)]),
-    ).toEqual({
+    expect(defaultColumnPinning([{ id: "selection" }, ...COLUMNS.slice(1, 3)])).toEqual({
       left: ["selection", "name"],
       right: [],
     });
@@ -65,17 +57,13 @@ describe("column roles", () => {
   });
 
   it("remembers only the columns the reader controls", () => {
-    expect(
-      pickReaderVisibility(
-        { status: false, amount: false },
-        new Set(["status"]),
-      ),
-    ).toEqual({ status: false });
+    expect(pickReaderVisibility({ status: false, amount: false }, new Set(["status"]))).toEqual({ status: false });
   });
 
   it("shows every hideable column again without touching the rest", () => {
-    expect(
-      showEveryHideableColumn({ status: false, amount: false }, ["status"]),
-    ).toEqual({ status: true, amount: false });
+    expect(showEveryHideableColumn({ status: false, amount: false }, ["status"])).toEqual({
+      status: true,
+      amount: false,
+    });
   });
 });

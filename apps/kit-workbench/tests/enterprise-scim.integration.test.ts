@@ -17,9 +17,7 @@ it(
   "mounts SCIM only for configured customer APIs and confines mutations to the bearer tenant",
   { timeout: 90_000 },
   async () => {
-    const postgres = await new PostgreSqlContainer(
-      "postgres:16-alpine",
-    ).start();
+    const postgres = await new PostgreSqlContainer("postgres:16-alpine").start();
     const apps: Awaited<ReturnType<typeof startApp>>[] = [];
     try {
       const databaseUrl = postgres.getConnectionUri();
@@ -73,15 +71,10 @@ it(
       apps.push(customer);
       const staff = await startApp("staff", { ...configuration, enterprise });
       apps.push(staff);
-      expect(
-        (await staff.inject({ url: users, headers: alpha.headers })).statusCode,
-      ).toBe(404);
+      expect((await staff.inject({ url: users, headers: alpha.headers })).statusCode).toBe(404);
       expect((await customer.inject({ url: users })).statusCode).toBe(401);
       const unknown = scimConfiguration(first);
-      expect(
-        (await customer.inject({ url: users, headers: unknown.headers }))
-          .statusCode,
-      ).toBe(401);
+      expect((await customer.inject({ url: users, headers: unknown.headers })).statusCode).toBe(401);
 
       const created = await customer.inject({
         method: "POST",
@@ -96,12 +89,8 @@ it(
       const { id } = userResponse.parse(created.json());
       const url = `${users}/${id}`;
       expect(created.headers.location).toBe(`${origin}${url}`);
-      expect(
-        (await customer.inject({ url, headers: rotated.headers })).statusCode,
-      ).toBe(200);
-      expect(
-        (await customer.inject({ url, headers: beta.headers })).statusCode,
-      ).toBe(404);
+      expect((await customer.inject({ url, headers: rotated.headers })).statusCode).toBe(200);
+      expect((await customer.inject({ url, headers: beta.headers })).statusCode).toBe(404);
       expect(
         (
           await customer.inject({
@@ -134,9 +123,7 @@ it(
           })
         ).statusCode,
       ).toBe(204);
-      expect(
-        (await customer.inject({ url, headers: alpha.headers })).statusCode,
-      ).toBe(404);
+      expect((await customer.inject({ url, headers: alpha.headers })).statusCode).toBe(404);
     } finally {
       await Promise.all(apps.map((app) => app.close()));
       await postgres.stop();
@@ -177,10 +164,7 @@ async function proveGroups(
   });
   expect(created.statusCode).toBe(201);
   const { id } = z.object({ id: z.uuid() }).parse(created.json());
-  expect(
-    (await customer.inject({ url: `${groups}/${id}`, headers: beta }))
-      .statusCode,
-  ).toBe(404);
+  expect((await customer.inject({ url: `${groups}/${id}`, headers: beta })).statusCode).toBe(404);
   expect(
     (
       await customer.inject({
@@ -203,10 +187,7 @@ async function seedTenants(databaseUrl: string, first: string, second: string) {
         requestId: "scim-fixture-seed",
       }),
     ]);
-    await client.query(
-      "INSERT INTO tenant (id, name) VALUES ($1, 'Alpha'), ($2, 'Beta')",
-      [first, second],
-    );
+    await client.query("INSERT INTO tenant (id, name) VALUES ($1, 'Alpha'), ($2, 'Beta')", [first, second]);
   } finally {
     await client.end();
   }

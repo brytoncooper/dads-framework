@@ -36,10 +36,7 @@ test("allows required vendor interface merges and their unused type parameters o
   try {
     const vendorRoot = join(root, "node_modules", vendorName);
     mkdirSync(vendorRoot, { recursive: true });
-    writeFileSync(
-      join(vendorRoot, "index.d.ts"),
-      "export interface VendorMetadata<T> { readonly item: T; }\n",
-    );
+    writeFileSync(join(vendorRoot, "index.d.ts"), "export interface VendorMetadata<T> { readonly item: T; }\n");
     const sourcePath = join(root, filename);
     writeFileSync(sourcePath, source);
     const program = ts.createProgram([sourcePath], {

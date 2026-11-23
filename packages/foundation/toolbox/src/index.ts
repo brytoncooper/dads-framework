@@ -1,13 +1,5 @@
-export {
-  loadAccessSource,
-  type AccessSourceKind,
-  type LoadedAccessSource,
-} from "./access-source-loader.js";
-export {
-  importZedSchema,
-  type ImportZedSchemaOptions,
-  type ZedSchemaImportResult,
-} from "./access-import.js";
+export { loadAccessSource, type AccessSourceKind, type LoadedAccessSource } from "./access-source-loader.js";
+export { importZedSchema, type ImportZedSchemaOptions, type ZedSchemaImportResult } from "./access-import.js";
 export {
   renderAccessTree,
   renderZedAccessTree,
@@ -40,15 +32,8 @@ export {
   type DadsProject,
   type ProjectOrientation,
 } from "./project-orientation.js";
-export {
-  findDadsProjectRoot,
-  loadDadsProject,
-  type LoadedDadsProject,
-} from "./project-files.js";
-export {
-  synchronizeAgentSkills,
-  type SkillSynchronization,
-} from "./synchronize-agent-skills.js";
+export { findDadsProjectRoot, loadDadsProject, type LoadedDadsProject } from "./project-files.js";
+export { synchronizeAgentSkills, type SkillSynchronization } from "./synchronize-agent-skills.js";
 export {
   recommendChangedVerification,
   type ChangedVerification,
@@ -63,28 +48,11 @@ export {
   type DadsProjectInitialization,
   type DadsStarterProfile,
 } from "./initialize-dads-project.js";
-export {
-  parseDadsInitializationArguments,
-  type DadsInitializationArguments,
-} from "./dads-initialization-arguments.js";
-export {
-  dependenciesAreInstalled,
-  recordDadsDependencyInstallation,
-} from "./dependency-installation-receipt.js";
-export {
-  diagnoseWorkspace,
-  type DiagnoseWorkspaceOptions,
-} from "./doctor/diagnose-workspace.js";
-export {
-  renderDoctorJson,
-  renderDoctorReport,
-  type DoctorReport,
-} from "./doctor/doctor-report.js";
-export {
-  migrateWorkspaceToV03,
-  type MigrateToV03Options,
-  type MigrateToV03Result,
-} from "./migrate-v03.js";
+export { parseDadsInitializationArguments, type DadsInitializationArguments } from "./dads-initialization-arguments.js";
+export { dependenciesAreInstalled, recordDadsDependencyInstallation } from "./dependency-installation-receipt.js";
+export { diagnoseWorkspace, type DiagnoseWorkspaceOptions } from "./doctor/diagnose-workspace.js";
+export { renderDoctorJson, renderDoctorReport, type DoctorReport } from "./doctor/doctor-report.js";
+export { migrateWorkspaceToV03, type MigrateToV03Options, type MigrateToV03Result } from "./migrate-v03.js";
 export {
   PEERS_FOR_RETIRED_PACKAGE,
   RETIRED_PACKAGE_TO_TARGET,

@@ -16,32 +16,21 @@ import type {
 } from "./verification/verification-contract.js";
 import type { VerificationInputRole } from "./verification/verification-inputs.js";
 
-export function parseVerificationExecution(
-  input: unknown,
-): VerificationTaskExecution {
+export function parseVerificationExecution(input: unknown): VerificationTaskExecution {
   if (!isRecord(input)) {
     throw new Error("Dads verification task execution must be an object.");
   }
   if (input["kind"] === "shell") return { kind: "shell" };
   if (input["kind"] !== "controlled-node") {
-    throw new Error(
-      "Dads verification task execution kind must be shell or controlled-node.",
-    );
+    throw new Error("Dads verification task execution kind must be shell or controlled-node.");
   }
   return parseControlledExecution(input);
 }
 
-function parseControlledExecution(
-  input: Record<string, unknown>,
-): VerificationControlledExecution {
+function parseControlledExecution(input: Record<string, unknown>): VerificationControlledExecution {
   const adapter = input["adapter"];
-  if (
-    adapter !== "artifact-provider-v1" &&
-    adapter !== "artifact-consumer-v1"
-  ) {
-    throw new Error(
-      "Controlled verification adapter must be artifact-provider-v1 or artifact-consumer-v1.",
-    );
+  if (adapter !== "artifact-provider-v1" && adapter !== "artifact-consumer-v1") {
+    throw new Error("Controlled verification adapter must be artifact-provider-v1 or artifact-consumer-v1.");
   }
   const timeoutMilliseconds = input["timeoutMilliseconds"];
   if (
@@ -49,28 +38,20 @@ function parseControlledExecution(
     !Number.isSafeInteger(timeoutMilliseconds) ||
     timeoutMilliseconds < 1
   ) {
-    throw new Error(
-      "Controlled verification timeoutMilliseconds must be positive.",
-    );
+    throw new Error("Controlled verification timeoutMilliseconds must be positive.");
   }
   const inputFiles = readRecordArray(input, "inputFiles").map((entry) => ({
     path: normalizeProjectPath(readNonEmptyString(entry, "path")),
     role: readVerificationInputRole(entry),
   }));
-  const publishOutputs = readRecordArray(input, "publishOutputs").map(
-    (entry) => ({
-      outputPath: normalizeProjectPath(readNonEmptyString(entry, "outputPath")),
-      projectPath: normalizeProjectPath(
-        readNonEmptyString(entry, "projectPath"),
-      ),
-    }),
-  );
+  const publishOutputs = readRecordArray(input, "publishOutputs").map((entry) => ({
+    outputPath: normalizeProjectPath(readNonEmptyString(entry, "outputPath")),
+    projectPath: normalizeProjectPath(readNonEmptyString(entry, "projectPath")),
+  }));
   const environment = readRecordArray(input, "environment").map((entry) => {
     const secret = entry["secret"];
     if (typeof secret !== "boolean") {
-      throw new Error(
-        "Controlled verification environment secret must be boolean.",
-      );
+      throw new Error("Controlled verification environment secret must be boolean.");
     }
     return {
       name: readNonEmptyString(entry, "name"),
@@ -82,21 +63,14 @@ function parseControlledExecution(
     kind: "controlled-node",
     adapter,
     workingDirectory: readNonEmptyString(input, "workingDirectory"),
-    runnerEntrypoint: normalizeProjectPath(
-      readNonEmptyString(input, "runnerEntrypoint"),
-    ),
+    runnerEntrypoint: normalizeProjectPath(readNonEmptyString(input, "runnerEntrypoint")),
     runnerArguments: readStringArray(input, "runnerArguments"),
     runnerVersion: readNonEmptyString(input, "runnerVersion"),
     inputFiles,
-    outputFiles: readStringArray(input, "outputFiles").map(
-      normalizeProjectPath,
-    ),
+    outputFiles: readStringArray(input, "outputFiles").map(normalizeProjectPath),
     publishOutputs,
     environment,
-    prerequisiteOutputTaskIds: readStringArray(
-      input,
-      "prerequisiteOutputTaskIds",
-    ),
+    prerequisiteOutputTaskIds: readStringArray(input, "prerequisiteOutputTaskIds"),
     timeoutMilliseconds,
   };
 }
@@ -119,22 +93,15 @@ export function assertExecutionReferences(
   assertAdapterContract(task, execution);
 }
 
-function assertControlledRunner(
-  task: VerificationTaskDefinition,
-  execution: VerificationControlledExecution,
-): void {
+function assertControlledRunner(task: VerificationTaskDefinition, execution: VerificationControlledExecution): void {
   if (execution.workingDirectory !== ".") {
     throw new Error("Controlled verification must run from the snapshot root.");
   }
   if (execution.runnerArguments.length > 0) {
-    throw new Error(
-      "Controlled verification runner arguments are not allowed.",
-    );
+    throw new Error("Controlled verification runner arguments are not allowed.");
   }
   if (task.command !== `node ${execution.runnerEntrypoint}`) {
-    throw new Error(
-      `Controlled verification command for ${task.id} must exactly name its runner entrypoint.`,
-    );
+    throw new Error(`Controlled verification command for ${task.id} must exactly name its runner entrypoint.`);
   }
 }
 
@@ -144,11 +111,7 @@ function assertOutputPrerequisites(
   taskById: ReadonlyMap<string, VerificationTaskDefinition>,
 ): void {
   const taskIds = new Set(taskById.keys());
-  assertKnownTaskIds(
-    execution.prerequisiteOutputTaskIds,
-    taskIds,
-    `output prerequisites for ${task.id}`,
-  );
+  assertKnownTaskIds(execution.prerequisiteOutputTaskIds, taskIds, `output prerequisites for ${task.id}`);
   for (const prerequisiteTaskId of execution.prerequisiteOutputTaskIds) {
     assertOutputPrerequisite(task, execution, prerequisiteTaskId, taskById);
   }
@@ -161,35 +124,22 @@ function assertOutputPrerequisite(
   taskById: ReadonlyMap<string, VerificationTaskDefinition>,
 ): void {
   if (!task.dependsOn.includes(prerequisiteTaskId)) {
-    throw new Error(
-      `Output prerequisite ${prerequisiteTaskId} must be an execution dependency of ${task.id}.`,
-    );
+    throw new Error(`Output prerequisite ${prerequisiteTaskId} must be an execution dependency of ${task.id}.`);
   }
   const prerequisiteTask = taskById.get(prerequisiteTaskId);
-  if (
-    !prerequisiteTask ||
-    prerequisiteTask.execution.kind !== "controlled-node"
-  ) {
-    throw new Error(
-      `Output prerequisite ${prerequisiteTaskId} must be a controlled task.`,
-    );
+  if (!prerequisiteTask || prerequisiteTask.execution.kind !== "controlled-node") {
+    throw new Error(`Output prerequisite ${prerequisiteTaskId} must be a controlled task.`);
   }
   for (const publishedOutput of prerequisiteTask.execution.publishOutputs) {
     const consumesPublishedArtifact = execution.inputFiles.some(
-      (inputFile) =>
-        inputFile.role === "artifact" &&
-        inputFile.path === publishedOutput.projectPath,
+      (inputFile) => inputFile.role === "artifact" && inputFile.path === publishedOutput.projectPath,
     );
     if (!consumesPublishedArtifact) {
-      throw new Error(
-        `${task.id} must consume published output ${publishedOutput.projectPath} as an artifact.`,
-      );
+      throw new Error(`${task.id} must consume published output ${publishedOutput.projectPath} as an artifact.`);
     }
   }
   if (prerequisiteTask.execution.publishOutputs.length === 0) {
-    throw new Error(
-      `Output prerequisite ${prerequisiteTaskId} must publish a generated artifact.`,
-    );
+    throw new Error(`Output prerequisite ${prerequisiteTaskId} must publish a generated artifact.`);
   }
 }
 
@@ -199,9 +149,7 @@ function assertPublishedOutputsAreRequired(
 ): void {
   for (const publishedOutput of execution.publishOutputs) {
     if (!execution.outputFiles.includes(publishedOutput.outputPath)) {
-      throw new Error(
-        `Published output ${publishedOutput.outputPath} is not required from ${task.id}.`,
-      );
+      throw new Error(`Published output ${publishedOutput.outputPath} is not required from ${task.id}.`);
     }
   }
 }
@@ -216,10 +164,7 @@ function assertPublishedOutputsAreRequired(
  * nothing this one lets through. Adding a third adapter means restating them
  * here, in that adapter's clause, rather than as a rule about `candidate`.
  */
-function assertAdapterContract(
-  task: VerificationTaskDefinition,
-  execution: VerificationControlledExecution,
-): void {
+function assertAdapterContract(task: VerificationTaskDefinition, execution: VerificationControlledExecution): void {
   if (
     execution.adapter === "artifact-provider-v1" &&
     (task.reusePolicy !== "never" ||
@@ -254,9 +199,7 @@ export function assertKnownTaskIds(
   }
 }
 
-function readVerificationInputRole(
-  input: Record<string, unknown>,
-): VerificationInputRole {
+function readVerificationInputRole(input: Record<string, unknown>): VerificationInputRole {
   const role = input["role"];
   if (
     role !== "source" &&
@@ -270,10 +213,7 @@ function readVerificationInputRole(
   return role;
 }
 
-function readRecordArray(
-  input: Record<string, unknown>,
-  fieldName: string,
-): readonly Record<string, unknown>[] {
+function readRecordArray(input: Record<string, unknown>, fieldName: string): readonly Record<string, unknown>[] {
   const fieldValue = input[fieldName];
   if (!Array.isArray(fieldValue) || !fieldValue.every(isRecord)) {
     throw new Error(`Dads package ${fieldName} must be an object array.`);
@@ -293,35 +233,23 @@ function readString(input: Record<string, unknown>, fieldName: string): string {
   return fieldValue;
 }
 
-export function readReusePolicy(
-  input: Record<string, unknown>,
-): VerificationReusePolicy {
+export function readReusePolicy(input: Record<string, unknown>): VerificationReusePolicy {
   const reusePolicy = input["reusePolicy"];
   if (reusePolicy !== "never" && reusePolicy !== "candidate") {
-    throw new Error(
-      "Dads verification task reusePolicy must be never or candidate.",
-    );
+    throw new Error("Dads verification task reusePolicy must be never or candidate.");
   }
   return reusePolicy;
 }
 
 export function normalizeProjectPath(value: string): string {
   const normalized = posix.normalize(value.replaceAll("\\", "/"));
-  if (
-    normalized === "." ||
-    normalized === ".." ||
-    normalized.startsWith("../") ||
-    normalized.startsWith("/")
-  ) {
+  if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.startsWith("/")) {
     throw new Error(`Expected a project-relative path, received ${value}.`);
   }
   return normalized.replace(/^\.\//, "").replace(/\/$/, "");
 }
 
-export function readNonEmptyString(
-  input: Record<string, unknown>,
-  fieldName: string,
-): string {
+export function readNonEmptyString(input: Record<string, unknown>, fieldName: string): string {
   const fieldValue = input[fieldName];
   if (typeof fieldValue !== "string" || fieldValue.trim().length === 0) {
     throw new Error(`Dads package ${fieldName} must be a non-empty string.`);
@@ -329,10 +257,7 @@ export function readNonEmptyString(
   return fieldValue;
 }
 
-export function readStringArray(
-  input: Record<string, unknown>,
-  fieldName: string,
-): readonly string[] {
+export function readStringArray(input: Record<string, unknown>, fieldName: string): readonly string[] {
   const fieldValue = input[fieldName];
   if (!Array.isArray(fieldValue) || !fieldValue.every(isString)) {
     throw new Error(`Dads package ${fieldName} must be a string array.`);

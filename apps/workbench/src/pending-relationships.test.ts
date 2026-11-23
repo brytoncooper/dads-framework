@@ -2,23 +2,12 @@ import type { PendingAuthorizationChange } from "./storage/workbench-state.js";
 import { testAuthorizationFault } from "./testing/authorization-double.js";
 import { WorkbenchMemoryAuthorization } from "./testing/workbench-memory-authorization.js";
 /** A failed relationship write must never report mutation success or permit reads through stale grants. */
-import {
-  executeWorkbenchRoute,
-  operationOf,
-} from "./testing/workbench-request.js";
+import { executeWorkbenchRoute, operationOf } from "./testing/workbench-request.js";
 import { describe, expect, it } from "vitest";
-import {
-  workbenchTask,
-  workbenchUser,
-  workbenchWorkspace,
-  type WorkbenchRelationship,
-} from "./access.js";
+import { workbenchTask, workbenchUser, workbenchWorkspace, type WorkbenchRelationship } from "./access.js";
 import { createWorkbench } from "./create-workbench.js";
 import { MemoryWorkbenchStore } from "./storage/memory-workbench-store.js";
-import {
-  workbenchState,
-  type WorkbenchState,
-} from "./storage/workbench-state.js";
+import { workbenchState, type WorkbenchState } from "./storage/workbench-state.js";
 import type { WorkbenchMutation } from "./storage/workbench-store.js";
 import { createAuthorizationDouble } from "./testing/authorization-double.js";
 
@@ -57,11 +46,7 @@ const alice = { type: "user", id: "alice" };
 const bob = { type: "user", id: "bob" };
 
 class ProjectingMemoryStore extends MemoryWorkbenchStore {
-  constructor(
-    private readonly project: (
-      change: PendingAuthorizationChange,
-    ) => Promise<void>,
-  ) {
+  constructor(private readonly project: (change: PendingAuthorizationChange) => Promise<void>) {
     super();
   }
 
@@ -70,8 +55,7 @@ class ProjectingMemoryStore extends MemoryWorkbenchStore {
   ): Promise<Result> {
     const next = await this.read();
     const committed = mutation(next);
-    for (const change of committed.authorizationChanges)
-      await this.project(change);
+    for (const change of committed.authorizationChanges) await this.project(change);
     this.state = workbenchState.parse(next);
     return committed.result;
   }
@@ -80,9 +64,7 @@ class ProjectingMemoryStore extends MemoryWorkbenchStore {
 describe("pending relationship recovery", () => {
   it("does not commit domain state when same-store projection fails", async () => {
     const authorization = new WorkbenchMemoryAuthorization();
-    const store = new ProjectingMemoryStore(() =>
-      Promise.reject(testAuthorizationFault("UNAVAILABLE", "Unavailable")),
-    );
+    const store = new ProjectingMemoryStore(() => Promise.reject(testAuthorizationFault("UNAVAILABLE", "Unavailable")));
     const app = createWorkbench({
       store,
       authorization,
@@ -114,17 +96,11 @@ describe("pending relationship recovery", () => {
     class AcknowledgementFailingStore extends MemoryWorkbenchStore {
       private failAcknowledgement = true;
 
-      override transaction<Result>(
-        change: (state: WorkbenchState) => Result,
-      ): Promise<Result> {
+      override transaction<Result>(change: (state: WorkbenchState) => Result): Promise<Result> {
         return super.transaction((state) => {
           const hadPending = state.pendingAuthorizationChanges.length > 0;
           const result = change(state);
-          if (
-            this.failAcknowledgement &&
-            hadPending &&
-            state.pendingAuthorizationChanges.length === 0
-          ) {
+          if (this.failAcknowledgement && hadPending && state.pendingAuthorizationChanges.length === 0) {
             this.failAcknowledgement = false;
             throw new Error("Simulated local acknowledgement failure");
           }
@@ -187,9 +163,9 @@ describe("pending relationship recovery", () => {
     expect((await store.read()).pendingAuthorizationChanges).toHaveLength(1);
     const workspace = (await store.read()).workspaces[0];
     if (!workspace) throw new Error("Missing pending workspace");
-    await expect(
-      app.operations.getWorkspace(alice, workspace.id),
-    ).rejects.toMatchObject({ code: "RELATIONSHIPS_PENDING" });
+    await expect(app.operations.getWorkspace(alice, workspace.id)).rejects.toMatchObject({
+      code: "RELATIONSHIPS_PENDING",
+    });
     setUnavailable(false);
     await app.operations.synchronize();
     await app.operations.synchronize();
@@ -221,12 +197,10 @@ describe("pending relationship recovery", () => {
     });
     await app.operations.claimTask(bob, task.id);
     setUnavailable(true);
-    await expect(
-      app.operations.revokeMember(alice, workspace.id, bob.id),
-    ).rejects.toMatchObject({ code: "RELATIONSHIPS_PENDING" });
-    expect(
-      (await store.read()).members.find((member) => member.userId === bob.id),
-    ).toBeUndefined();
+    await expect(app.operations.revokeMember(alice, workspace.id, bob.id)).rejects.toMatchObject({
+      code: "RELATIONSHIPS_PENDING",
+    });
+    expect((await store.read()).members.find((member) => member.userId === bob.id)).toBeUndefined();
     expect((await store.read()).pendingAuthorizationChanges).toHaveLength(1);
     await expect(app.operations.getTask(bob, task.id)).rejects.toMatchObject({
       code: "RELATIONSHIPS_PENDING",
@@ -285,12 +259,8 @@ describe("pending relationship recovery", () => {
       app.operations.claimTask(alice, task.id),
       app.operations.claimTask(bob, task.id),
     ]);
-    expect(claims.filter((claim) => claim.status === "fulfilled")).toHaveLength(
-      1,
-    );
-    expect(claims.filter((claim) => claim.status === "rejected")).toHaveLength(
-      1,
-    );
+    expect(claims.filter((claim) => claim.status === "fulfilled")).toHaveLength(1);
+    expect(claims.filter((claim) => claim.status === "rejected")).toHaveLength(1);
     expect(
       await authorization.listDirectSubjects({
         resource: { type: workbenchTask.wireName, id: task.id },

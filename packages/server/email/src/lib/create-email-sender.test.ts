@@ -13,21 +13,15 @@ import { VerboseLogEmailSender } from "./verbose-log-email-sender.js";
 
 describe("createEmailSender", () => {
   it("returns the log driver", () => {
-    expect(
-      createEmailSender(
-        { driver: "log", from: "Example App <x@y.z>" },
-        { info: vi.fn() },
-      ),
-    ).toBeInstanceOf(LogEmailSender);
+    expect(createEmailSender({ driver: "log", from: "Example App <x@y.z>" }, { info: vi.fn() })).toBeInstanceOf(
+      LogEmailSender,
+    );
   });
 
   it("returns the verbose log driver so dev can read bodies in the logs", () => {
-    expect(
-      createEmailSender(
-        { driver: "log-verbose", from: "Example App <x@y.z>" },
-        { info: vi.fn() },
-      ),
-    ).toBeInstanceOf(VerboseLogEmailSender);
+    expect(createEmailSender({ driver: "log-verbose", from: "Example App <x@y.z>" }, { info: vi.fn() })).toBeInstanceOf(
+      VerboseLogEmailSender,
+    );
   });
 
   it("returns the capture driver so the development mail page has messages", () => {
@@ -44,21 +38,15 @@ describe("createEmailSender", () => {
   });
 
   it("fails loudly when capture is selected without a mailbox", () => {
-    expect(() =>
-      createEmailSender(
-        { driver: "capture", from: "Example App <x@y.z>" },
-        { info: vi.fn() },
-      ),
-    ).toThrow(/mailbox/);
+    expect(() => createEmailSender({ driver: "capture", from: "Example App <x@y.z>" }, { info: vi.fn() })).toThrow(
+      /mailbox/,
+    );
   });
 
   it("fails loudly when resend is selected without an api key", () => {
-    expect(() =>
-      createEmailSender(
-        { driver: "resend", from: "Example App <x@y.z>" },
-        { info: vi.fn() },
-      ),
-    ).toThrow(/RESEND_API_KEY/);
+    expect(() => createEmailSender({ driver: "resend", from: "Example App <x@y.z>" }, { info: vi.fn() })).toThrow(
+      /RESEND_API_KEY/,
+    );
   });
 
   it("returns the mailgun driver", () => {

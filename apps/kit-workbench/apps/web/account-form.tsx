@@ -21,11 +21,7 @@ export function AccountForm({ onSignIn, hasInvitation }: AccountFormProps) {
   return (
     <Card className="access-card">
       <CardContent>
-        <h2>
-          {creating
-            ? t("workbench.auth.createTitle")
-            : t("workbench.auth.signIn")}
-        </h2>
+        <h2>{creating ? t("workbench.auth.createTitle") : t("workbench.auth.signIn")}</h2>
         {hasInvitation && <p>{t("workbench.auth.invitationEmail")}</p>}
         {verificationSent && (
           <p role="status" className="message">
@@ -101,9 +97,7 @@ export function AccountForm({ onSignIn, hasInvitation }: AccountFormProps) {
             setCreating(!creating);
           }}
         >
-          {creating
-            ? t("workbench.auth.existing")
-            : t("workbench.auth.createTitle")}
+          {creating ? t("workbench.auth.existing") : t("workbench.auth.createTitle")}
         </Button>
         {!creating && <EnterpriseSignInForm />}
       </CardContent>

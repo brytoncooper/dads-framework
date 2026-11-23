@@ -12,12 +12,8 @@ import { describe, expect, it } from "vitest";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
-type SpiceDbClient = NonNullable<
-  ConstructorParameters<typeof SpiceDbAuthorization>[1]
->;
-type WriteResponse = Awaited<
-  ReturnType<SpiceDbClient["promises"]["writeRelationships"]>
->;
+type SpiceDbClient = NonNullable<ConstructorParameters<typeof SpiceDbAuthorization>[1]>;
+type WriteResponse = Awaited<ReturnType<SpiceDbClient["promises"]["writeRelationships"]>>;
 
 const SUBJECT = { type: "user", id: "reader" };
 const RESOURCE = { type: "test/document", id: "document" };
@@ -89,9 +85,7 @@ describe("SpiceDB write deadline", () => {
         permission: "view",
       });
 
-    await expect(authorization.writeRelationships([GRANT])).resolves.toBe(
-      "before",
-    );
+    await expect(authorization.writeRelationships([GRANT])).resolves.toBe("before");
     const hung = authorization.writeRelationships([GRANT]);
     const queued = authorization.writeRelationships([GRANT]);
     expect(queuedSent).toBe(false);

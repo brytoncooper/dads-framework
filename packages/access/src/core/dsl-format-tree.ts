@@ -1,13 +1,7 @@
 import type { AccessModel } from "./access-model.js";
 import { parentRoleNameOf } from "./dsl-actor.js";
 import { emitAccessIr } from "./emit-ir.js";
-import type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./ir.js";
 
 type ParentLink = {
   readonly parentWireName: string;
@@ -55,9 +49,7 @@ function formatTerms(terms: readonly AccessIrTerm[]): string {
 
 function isRecursiveDefinition(def: AccessIrDefinition): boolean {
   return def.roles.some((role) =>
-    role.subjects.some(
-      (subject) => subject.kind === "type" && subject.wireName === def.wireName,
-    ),
+    role.subjects.some((subject) => subject.kind === "type" && subject.wireName === def.wireName),
   );
 }
 
@@ -68,10 +60,7 @@ function singleTypeSubjectWireName(role: AccessIrRole): string | undefined {
   return only.wireName;
 }
 
-function findParentLink(
-  def: AccessIrDefinition,
-  resourceWireNames: ReadonlySet<string>,
-): ParentLink | undefined {
+function findParentLink(def: AccessIrDefinition, resourceWireNames: ReadonlySet<string>): ParentLink | undefined {
   for (const role of def.roles) {
     const target = singleTypeSubjectWireName(role);
     if (
@@ -113,10 +102,7 @@ function buildHierarchy(resources: readonly AccessIrDefinition[]): {
 
   for (const def of resources) {
     const link = findParentLink(def, wireNames);
-    if (
-      link !== undefined &&
-      !createsCycle(def.wireName, link.parentWireName, parentByChild)
-    ) {
+    if (link !== undefined && !createsCycle(def.wireName, link.parentWireName, parentByChild)) {
       parentByChild.set(def.wireName, link);
       const list = childrenByParent.get(link.parentWireName) ?? [];
       list.push(def);
@@ -128,17 +114,12 @@ function buildHierarchy(resources: readonly AccessIrDefinition[]): {
   return { roots, childrenByParent, parentByChild };
 }
 
-function termHasParentThrough(
-  term: AccessIrTerm,
-  parentRoleName: string,
-): boolean {
+function termHasParentThrough(term: AccessIrTerm, parentRoleName: string): boolean {
   if (term.kind === "through" || term.kind === "through-all") {
     return term.roleName === parentRoleName;
   }
   if (term.kind === "or") {
-    return term.terms.some((entry) =>
-      termHasParentThrough(entry, parentRoleName),
-    );
+    return term.terms.some((entry) => termHasParentThrough(entry, parentRoleName));
   }
   if (term.kind === "excluding") {
     return termHasParentThrough(term.term, parentRoleName);
@@ -147,18 +128,12 @@ function termHasParentThrough(
     return termHasParentThrough(term.term, parentRoleName);
   }
   if (term.kind === "both") {
-    return (
-      termHasParentThrough(term.left, parentRoleName) ||
-      termHasParentThrough(term.right, parentRoleName)
-    );
+    return termHasParentThrough(term.left, parentRoleName) || termHasParentThrough(term.right, parentRoleName);
   }
   return false;
 }
 
-function permissionOriginTag(
-  permission: AccessIrPermission,
-  parentRoleName: string | undefined,
-): string {
+function permissionOriginTag(permission: AccessIrPermission, parentRoleName: string | undefined): string {
   if (parentRoleName === undefined) return "";
   const isPureInherited =
     permission.terms.length === 1 &&
@@ -166,9 +141,7 @@ function permissionOriginTag(
     permission.terms[0].roleName === parentRoleName &&
     permission.terms[0].targetPermission === permission.name;
   if (isPureInherited) return " [inherited]";
-  const usesParent = permission.terms.some((term) =>
-    termHasParentThrough(term, parentRoleName),
-  );
+  const usesParent = permission.terms.some((term) => termHasParentThrough(term, parentRoleName));
   return usesParent ? " [inherited+local]" : " [local]";
 }
 
@@ -212,9 +185,7 @@ function appendPermissions(
     const isLast = index === permissions.length - 1;
     const branch = isLast ? "└── " : "├── ";
     const tag = permissionOriginTag(perm, parentRoleName);
-    lines.push(
-      `${indent}${branch}${perm.name} = ${formatTerms(perm.terms)}${tag}`,
-    );
+    lines.push(`${indent}${branch}${perm.name} = ${formatTerms(perm.terms)}${tag}`);
   }
 }
 
@@ -244,13 +215,7 @@ function renderNode(
     } else {
       const suffix = isRecursiveDefinition(section.def) ? " (recursive)" : "";
       lines.push(`${prefix}${branch}${section.def.wireName}${suffix}`);
-      renderNode(
-        section.def,
-        childrenByParent,
-        parentByChild,
-        nextPrefix,
-        lines,
-      );
+      renderNode(section.def, childrenByParent, parentByChild, nextPrefix, lines);
     }
   }
 }
@@ -261,12 +226,8 @@ function renderNode(
  */
 export function formatAccessTree(model: AccessModel): string {
   const definitions = emitAccessIr(model);
-  const actors = definitions.filter(
-    (def) => def.roles.length === 0 && def.permissions.length === 0,
-  );
-  const resources = definitions.filter(
-    (def) => def.roles.length > 0 || def.permissions.length > 0,
-  );
+  const actors = definitions.filter((def) => def.roles.length === 0 && def.permissions.length === 0);
+  const resources = definitions.filter((def) => def.roles.length > 0 || def.permissions.length > 0);
   const { roots, childrenByParent, parentByChild } = buildHierarchy(resources);
 
   const blocks: string[] = [];

@@ -1,10 +1,7 @@
 import { actor, anyOf, compileAccess, resource } from "@dads-framework/access";
 import { describe, expect, it } from "vitest";
 
-import type {
-  PgMigrationClient,
-  PgMigrationRow,
-} from "../access-migrations/sql-migration-types.js";
+import type { PgMigrationClient, PgMigrationRow } from "../access-migrations/sql-migration-types.js";
 import type { SpiceDbExportedTuple } from "../spicedb-to-postgres/authzed-client-adapter.js";
 import {
   createAuthzedMigrationTarget,
@@ -97,9 +94,7 @@ describe("migratePostgresToSpiceDb & columnRelationOutboxTriggerSql", () => {
           const hasCursor = text.includes("> $1");
           const cursor = hasCursor ? String(params[0]) : "";
           const limit = Number(hasCursor ? params[1] : params[0]);
-          const filtered = hasCursor
-            ? docOrgRows.filter((row) => String(row["resource_id"]) > cursor)
-            : docOrgRows;
+          const filtered = hasCursor ? docOrgRows.filter((row) => String(row["resource_id"]) > cursor) : docOrgRows;
           return Promise.resolve({ rows: filtered.slice(0, limit) });
         }
         return Promise.resolve({ rows: [] });
@@ -191,9 +186,7 @@ describe("migratePostgresToSpiceDb & columnRelationOutboxTriggerSql", () => {
     expect(ddl.up[0]).toContain("INSERT INTO custom_outbox");
     expect(ddl.up[0]).toContain("'document'");
     expect(ddl.up[0]).toContain("'org'");
-    expect(ddl.up[1]).toContain(
-      "AFTER INSERT OR UPDATE OR DELETE ON app.documents",
-    );
+    expect(ddl.up[1]).toContain("AFTER INSERT OR UPDATE OR DELETE ON app.documents");
     expect(ddl.down[0]).toContain("DROP TRIGGER IF EXISTS");
     expect(ddl.down[1]).toContain("DROP FUNCTION IF EXISTS");
 

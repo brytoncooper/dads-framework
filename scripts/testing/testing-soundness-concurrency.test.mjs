@@ -46,12 +46,7 @@ test("a single-file task graph spends the whole budget on cases", () => {
 });
 
 test("CPU and memory pressure retain one runnable case without claiming spare capacity", () => {
-  const busy = caseConcurrencyFromResources(
-    undefined,
-    21,
-    { ...healthy, cpuIdleFraction: 0.05 },
-    3,
-  );
+  const busy = caseConcurrencyFromResources(undefined, 21, { ...healthy, cpuIdleFraction: 0.05 }, 3);
   assert.equal(busy.cpuBudget, 1);
   assert.equal(busy.taskJobs, 1);
   assert.equal(busy.caseJobs, 1);
@@ -120,10 +115,7 @@ test("explicit overrides run one task at a time and are capped by case count", a
     2,
     null,
   ]) {
-    await assert.rejects(
-      chooseCaseConcurrency(invalid, 21),
-      /positive safe integer/,
-    );
+    await assert.rejects(chooseCaseConcurrency(invalid, 21), /positive safe integer/);
   }
   assert.equal((await chooseCaseConcurrency("auto", 0)).caseJobs, 0);
   assert.equal((await chooseCaseConcurrency("2", 0)).caseJobs, 0);
@@ -132,14 +124,8 @@ test("explicit overrides run one task at a time and are capped by case count", a
 
 test("an invalid task graph width is refused rather than guessed", async () => {
   for (const width of [0, -1, 1.5, NaN, Infinity, "3", null]) {
-    await assert.rejects(
-      chooseCaseConcurrency("auto", 21, width),
-      /task graph width/,
-    );
-    assert.throws(
-      () => caseConcurrencyFromResources("auto", 21, healthy, width),
-      /task graph width/,
-    );
+    await assert.rejects(chooseCaseConcurrency("auto", 21, width), /task graph width/);
+    assert.throws(() => caseConcurrencyFromResources("auto", 21, healthy, width), /task graph width/);
   }
 });
 
@@ -168,13 +154,7 @@ test("pool bounds active workers, executes each item once and preserves input or
   await starts[4].promise;
   gates[4].resolve();
   gates[0].resolve();
-  assert.deepEqual(await result, [
-    "result-0",
-    "result-1",
-    "result-2",
-    "result-3",
-    "result-4",
-  ]);
+  assert.deepEqual(await result, ["result-0", "result-1", "result-2", "result-3", "result-4"]);
   assert.equal(maximum, 2);
   assert.equal(active, 0);
   assert.deepEqual(visited, [0, 1, 2, 3, 4]);

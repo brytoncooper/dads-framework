@@ -1,10 +1,6 @@
 import type { Clock } from "@dads-framework/core/runtime/clock";
 
-import type {
-  FeatureFlagDefinition,
-  FeatureFlagManagementList,
-  FeatureFlagState,
-} from "../../contract/index.js";
+import type { FeatureFlagDefinition, FeatureFlagManagementList, FeatureFlagState } from "../../contract/index.js";
 import { defaultFeatureFlagState } from "../logic/transition-feature-flag-state.js";
 import type { FeatureFlagStore } from "../ports/feature-flag-store.js";
 import type { TenantDirectory } from "../ports/tenant-directory.js";
@@ -24,19 +20,13 @@ export class ListFeatureFlagManagement {
   ) {}
 
   async execute(): Promise<FeatureFlagManagementList> {
-    const states = await this.store.listStates(
-      this.definitions.map((definition) => definition.slug),
-    );
+    const states = await this.store.listStates(this.definitions.map((definition) => definition.slug));
     const names = await this.currentTenantNames(states);
     const bySlug = new Map(states.map((state) => [state.slug, state]));
     const now = this.clock.now();
     return {
       flags: this.definitions.map((definition) => {
-        const state = withCurrentNames(
-          bySlug.get(definition.slug) ??
-            defaultFeatureFlagState(definition.slug),
-          names,
-        );
+        const state = withCurrentNames(bySlug.get(definition.slug) ?? defaultFeatureFlagState(definition.slug), names);
         return {
           definition,
           state,
@@ -46,22 +36,15 @@ export class ListFeatureFlagManagement {
     };
   }
 
-  private async currentTenantNames(
-    states: readonly FeatureFlagState[],
-  ): Promise<ReadonlyMap<string, string>> {
+  private async currentTenantNames(states: readonly FeatureFlagState[]): Promise<ReadonlyMap<string, string>> {
     const active = await this.tenants.findActiveTenants(
-      states.flatMap((state) =>
-        state.rememberedTenants.map((tenant) => tenant.tenantId),
-      ),
+      states.flatMap((state) => state.rememberedTenants.map((tenant) => tenant.tenantId)),
     );
     return new Map(active.map((tenant) => [tenant.id, tenant.name]));
   }
 }
 
-function withCurrentNames(
-  state: FeatureFlagState,
-  names: ReadonlyMap<string, string>,
-): FeatureFlagState {
+function withCurrentNames(state: FeatureFlagState, names: ReadonlyMap<string, string>): FeatureFlagState {
   return {
     ...state,
     rememberedTenants: state.rememberedTenants.map((tenant) => ({
@@ -71,11 +54,7 @@ function withCurrentNames(
   };
 }
 
-function isCleanupReady(
-  definition: FeatureFlagDefinition,
-  state: FeatureFlagState,
-  now: Date,
-): boolean {
+function isCleanupReady(definition: FeatureFlagDefinition, state: FeatureFlagState, now: Date): boolean {
   if (state.audienceMode !== "EVERYONE" || state.globalEnabledAt === null) {
     return false;
   }

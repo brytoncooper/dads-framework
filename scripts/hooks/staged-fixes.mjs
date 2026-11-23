@@ -29,16 +29,7 @@ export function applyStagedFixes(root, scratch, snapshot, before, files) {
   });
   const patch = git(
     root,
-    [
-      "diff",
-      "--cached",
-      "--binary",
-      "--no-ext-diff",
-      "--no-textconv",
-      "--src-prefix=a/",
-      "--dst-prefix=b/",
-      before,
-    ],
+    ["diff", "--cached", "--binary", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/", before],
     { env },
   );
   try {

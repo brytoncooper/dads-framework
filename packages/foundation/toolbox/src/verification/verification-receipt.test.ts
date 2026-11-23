@@ -32,14 +32,8 @@ import {
   findSuccessfulVerificationReceipt,
   publishSuccessfulVerificationReceipt,
 } from "./receipt-store.js";
-import {
-  runCapturedVerification,
-  runReusableVerificationTask,
-} from "./run-verification-task.js";
-import {
-  deriveVerifierIdentity,
-  readVerifierIdentity,
-} from "./verifier-identity.js";
+import { runCapturedVerification, runReusableVerificationTask } from "./run-verification-task.js";
+import { deriveVerifierIdentity, readVerifierIdentity } from "./verifier-identity.js";
 
 const temporaryProjects: string[] = [];
 
@@ -54,15 +48,9 @@ describe("verification input snapshots", () => {
   it("derives verifier identity from toolbox bytes rather than manifest input", () => {
     const toolboxRoot = mkdtempSync(join(tmpdir(), "dads-verifier-identity-"));
     temporaryProjects.push(toolboxRoot);
-    writeFileSync(
-      join(toolboxRoot, "verifier.js"),
-      "export const version = 1;\n",
-    );
+    writeFileSync(join(toolboxRoot, "verifier.js"), "export const version = 1;\n");
     const first = deriveVerifierIdentity(toolboxRoot);
-    writeFileSync(
-      join(toolboxRoot, "verifier.js"),
-      "export const version = 2;\n",
-    );
+    writeFileSync(join(toolboxRoot, "verifier.js"), "export const version = 2;\n");
 
     expect(deriveVerifierIdentity(toolboxRoot)).not.toBe(first);
     expect(readVerifierIdentity()).toMatch(/^[a-f0-9]{64}$/);
@@ -96,8 +84,7 @@ describe("verification input snapshots", () => {
     },
     {
       name: "filesystem metadata",
-      source:
-        'const { statSync } = await import("node:fs"); statSync(new URL("../src/input.txt", import.meta.url));',
+      source: 'const { statSync } = await import("node:fs"); statSync(new URL("../src/input.txt", import.meta.url));',
     },
   ])("denies $name as an undeclared execution input", ({ source }) => {
     const projectRoot = createControlledProject();
@@ -122,9 +109,7 @@ describe("verification input snapshots", () => {
 
     writeFileSync(join(projectRoot, "src/input.txt"), "B\n");
 
-    expect(
-      readFileSync(join(snapshot.snapshotRoot, "src/input.txt"), "utf8"),
-    ).toBe("A\n");
+    expect(readFileSync(join(snapshot.snapshotRoot, "src/input.txt"), "utf8")).toBe("A\n");
     expect(statSync(join(snapshot.snapshotRoot, "src/input.txt")).ino).not.toBe(
       statSync(join(projectRoot, "src/input.txt")).ino,
     );
@@ -144,10 +129,7 @@ describe("verification input snapshots", () => {
     expect(() =>
       captureVerificationSnapshot({
         ...baseRequest,
-        inputFiles: [
-          ...baseRequest.inputFiles,
-          { path: "../outside.txt", role: "source" },
-        ],
+        inputFiles: [...baseRequest.inputFiles, { path: "../outside.txt", role: "source" }],
       }),
     ).toThrow(/project-relative verification path/i);
 
@@ -156,10 +138,7 @@ describe("verification input snapshots", () => {
     expect(() =>
       captureVerificationSnapshot({
         ...baseRequest,
-        inputFiles: [
-          ...baseRequest.inputFiles,
-          { path: "src/symlink.txt", role: "source" },
-        ],
+        inputFiles: [...baseRequest.inputFiles, { path: "src/symlink.txt", role: "source" }],
       }),
     ).toThrow(/symlink/i);
   });
@@ -179,18 +158,12 @@ describe("verification input snapshots", () => {
 
     tokenEntry.value = "changed-after-capture";
 
-    expect(verificationEnvironment(snapshot)["FIXTURE_TOKEN"]).toBe(
-      "do-not-report",
-    );
+    expect(verificationEnvironment(snapshot)["FIXTURE_TOKEN"]).toBe("do-not-report");
     expect(JSON.stringify(snapshot.identity)).not.toContain("do-not-report");
 
     const changedSnapshot = captureVerificationSnapshot(request);
-    expect(changedSnapshot.identity.environmentSha256).not.toBe(
-      snapshot.identity.environmentSha256,
-    );
-    expect(changedSnapshot.identity.snapshotId).not.toBe(
-      snapshot.identity.snapshotId,
-    );
+    expect(changedSnapshot.identity.environmentSha256).not.toBe(snapshot.identity.environmentSha256);
+    expect(changedSnapshot.identity.snapshotId).not.toBe(snapshot.identity.snapshotId);
 
     discardVerificationSnapshot(snapshot);
     discardVerificationSnapshot(changedSnapshot);
@@ -208,18 +181,13 @@ describe("verification input snapshots", () => {
     expect(() =>
       captureVerificationSnapshot({
         ...request,
-        environment: [
-          { name: "FIXTURE_TOKEN", value: "credential", secret: true },
-        ],
+        environment: [{ name: "FIXTURE_TOKEN", value: "credential", secret: true }],
       }),
     ).toThrow(/secret-dependent verification tasks/i);
     expect(() =>
       captureVerificationSnapshot({
         ...request,
-        inputFiles: [
-          invalidInputRole,
-          { path: "tests/verify.mjs", role: "test" },
-        ],
+        inputFiles: [invalidInputRole, { path: "tests/verify.mjs", role: "test" }],
       }),
     ).toThrow(/input role/i);
   });
@@ -250,9 +218,7 @@ describe("verification input snapshots", () => {
       { ...request, outputFiles: ["changed-output.txt"] },
       {
         ...request,
-        environment: [
-          { name: "FIXTURE_TOKEN", value: "changed", secret: false },
-        ],
+        environment: [{ name: "FIXTURE_TOKEN", value: "changed", secret: false }],
       },
       { ...request, prerequisiteIdentities: ["policy:sha256:changed"] },
       { ...request, timeoutMilliseconds: request.timeoutMilliseconds + 1 },
@@ -260,17 +226,13 @@ describe("verification input snapshots", () => {
 
     for (const changedRequest of changedRequests) {
       const changedSnapshot = captureVerificationSnapshot(changedRequest);
-      expect(changedSnapshot.identity.snapshotId).not.toBe(
-        baseline.identity.snapshotId,
-      );
+      expect(changedSnapshot.identity.snapshotId).not.toBe(baseline.identity.snapshotId);
       discardVerificationSnapshot(changedSnapshot);
     }
 
     writeFileSync(join(projectRoot, "src/input.txt"), "changed bytes\n");
     const changedBytes = captureVerificationSnapshot(request);
-    expect(changedBytes.identity.snapshotId).not.toBe(
-      baseline.identity.snapshotId,
-    );
+    expect(changedBytes.identity.snapshotId).not.toBe(baseline.identity.snapshotId);
 
     discardVerificationSnapshot(baseline);
     discardVerificationSnapshot(reordered);
@@ -279,20 +241,13 @@ describe("verification input snapshots", () => {
 
   it("rejects expected-file changes and undeclared files added to a snapshot", () => {
     const projectRoot = createControlledProject();
-    const changedFileSnapshot = captureVerificationSnapshot(
-      controlledRequest(projectRoot),
-    );
+    const changedFileSnapshot = captureVerificationSnapshot(controlledRequest(projectRoot));
     chmodSync(join(changedFileSnapshot.snapshotRoot, "src/input.txt"), 0o644);
-    writeFileSync(
-      join(changedFileSnapshot.snapshotRoot, "src/input.txt"),
-      "changed\n",
-    );
+    writeFileSync(join(changedFileSnapshot.snapshotRoot, "src/input.txt"), "changed\n");
 
     expect(runCapturedVerification(changedFileSnapshot).status).toBe("failed");
 
-    const addedFileSnapshot = captureVerificationSnapshot(
-      controlledRequest(projectRoot),
-    );
+    const addedFileSnapshot = captureVerificationSnapshot(controlledRequest(projectRoot));
     chmodSync(addedFileSnapshot.snapshotRoot, 0o755);
     writeFileSync(join(addedFileSnapshot.snapshotRoot, "undeclared.txt"), "x");
 
@@ -304,9 +259,7 @@ describe("verification input snapshots", () => {
 
   it("reports whether the live project still matches the captured bytes", () => {
     const projectRoot = createControlledProject();
-    const snapshot = captureVerificationSnapshot(
-      controlledRequest(projectRoot),
-    );
+    const snapshot = captureVerificationSnapshot(controlledRequest(projectRoot));
 
     expect(capturedSnapshotMatchesProject(snapshot)).toBe(true);
     writeFileSync(join(projectRoot, "src/input.txt"), "B\n");
@@ -329,34 +282,20 @@ describe("controlled verification receipts", () => {
     writeFileSync(join(projectRoot, "src/input.txt"), "A\n");
 
     expect(executionA.status).toBe("succeeded");
-    expect(
-      readFileSync(join(snapshotA.outputRoot, "observed.txt"), "utf8"),
-    ).toBe("A\n");
+    expect(readFileSync(join(snapshotA.outputRoot, "observed.txt"), "utf8")).toBe("A\n");
     const store = createVerificationReceiptStore(projectRoot);
     const receiptA = publishSuccessfulVerificationReceipt(store, executionA);
     expect(JSON.stringify(receiptA)).not.toContain("do-not-report");
     expect(receiptA.identity.environmentNames).toEqual(["FIXTURE_TOKEN"]);
     expect(
-      findSuccessfulVerificationReceipt(
-        store,
-        request.projectId,
-        request.taskId,
-        snapshotA.identity.snapshotId,
-      ).status,
+      findSuccessfulVerificationReceipt(store, request.projectId, request.taskId, snapshotA.identity.snapshotId).status,
     ).toBe("match");
 
     writeFileSync(join(projectRoot, "src/input.txt"), "B\n");
     const snapshotB = captureVerificationSnapshot(request);
-    expect(snapshotB.identity.snapshotId).not.toBe(
-      snapshotA.identity.snapshotId,
-    );
+    expect(snapshotB.identity.snapshotId).not.toBe(snapshotA.identity.snapshotId);
     expect(
-      findSuccessfulVerificationReceipt(
-        store,
-        request.projectId,
-        request.taskId,
-        snapshotB.identity.snapshotId,
-      ).status,
+      findSuccessfulVerificationReceipt(store, request.projectId, request.taskId, snapshotB.identity.snapshotId).status,
     ).toBe("missing");
 
     discardVerificationSnapshot(snapshotA);
@@ -373,27 +312,17 @@ describe("controlled verification receipts", () => {
     writeFileSync(findOnlyReceipt(store.root), '{"partial":true}\n');
 
     expect(
-      findSuccessfulVerificationReceipt(
-        store,
-        request.projectId,
-        request.taskId,
-        snapshot.identity.snapshotId,
-      ).status,
+      findSuccessfulVerificationReceipt(store, request.projectId, request.taskId, snapshot.identity.snapshotId).status,
     ).toBe("invalid");
 
-    writeFileSync(
-      join(projectRoot, "tests/verify.mjs"),
-      "setTimeout(() => {}, 10_000);\n",
-    );
+    writeFileSync(join(projectRoot, "tests/verify.mjs"), "setTimeout(() => {}, 10_000);\n");
     const timeoutSnapshot = captureVerificationSnapshot({
       ...request,
       timeoutMilliseconds: 20,
     });
     const timeoutExecution = runCapturedVerification(timeoutSnapshot);
     expect(timeoutExecution.status).toBe("failed");
-    expect(() =>
-      publishSuccessfulVerificationReceipt(store, timeoutExecution),
-    ).toThrow(/failed verification/i);
+    expect(() => publishSuccessfulVerificationReceipt(store, timeoutExecution)).toThrow(/failed verification/i);
 
     discardVerificationSnapshot(snapshot);
     discardVerificationSnapshot(timeoutSnapshot);
@@ -408,9 +337,7 @@ describe("controlled verification receipts", () => {
 
     expect(failedTask.status).toBe("failed");
     const store = createVerificationReceiptStore(projectRoot);
-    const receiptFiles = listFiles(store.root).filter((path) =>
-      path.endsWith(".json"),
-    );
+    const receiptFiles = listFiles(store.root).filter((path) => path.endsWith(".json"));
     expect(receiptFiles).toEqual([]);
   });
 
@@ -418,15 +345,11 @@ describe("controlled verification receipts", () => {
     const projectRoot = createControlledProject();
     writeFileSync(join(projectRoot, "tests/verify.mjs"), "process.exit(0);\n");
 
-    const missingOutputTask = runReusableVerificationTask(
-      controlledRequest(projectRoot),
-    );
+    const missingOutputTask = runReusableVerificationTask(controlledRequest(projectRoot));
 
     expect(missingOutputTask.status).toBe("failed");
     const store = createVerificationReceiptStore(projectRoot);
-    expect(
-      listFiles(store.root).filter((path) => path.endsWith(".json")),
-    ).toEqual([]);
+    expect(listFiles(store.root).filter((path) => path.endsWith(".json"))).toEqual([]);
   });
 
   it("rejects runner arguments that could address the live checkout", () => {
@@ -436,12 +359,8 @@ describe("controlled verification receipts", () => {
       runnerArguments: [join(projectRoot, "src/input.txt")],
     };
 
-    expect(() => runReusableVerificationTask(request)).toThrow(
-      /runner arguments are not allowed/i,
-    );
-    expect(readFileSync(join(projectRoot, "src/input.txt"), "utf8")).toBe(
-      "A\n",
-    );
+    expect(() => runReusableVerificationTask(request)).toThrow(/runner arguments are not allowed/i);
+    expect(readFileSync(join(projectRoot, "src/input.txt"), "utf8")).toBe("A\n");
   });
 
   it("rejects a dishonest success state and changed outputs for one snapshot", () => {
@@ -490,12 +409,7 @@ describe("controlled verification receipts", () => {
     symlinkSync(savedTaskDirectory, taskDirectory, "dir");
 
     expect(
-      findSuccessfulVerificationReceipt(
-        store,
-        request.projectId,
-        request.taskId,
-        snapshot.identity.snapshotId,
-      ).status,
+      findSuccessfulVerificationReceipt(store, request.projectId, request.taskId, snapshot.identity.snapshotId).status,
     ).toBe("invalid");
 
     discardVerificationSnapshot(snapshot);
@@ -509,24 +423,12 @@ describe("controlled verification receipts", () => {
     const store = createVerificationReceiptStore(projectRoot);
     publishSuccessfulVerificationReceipt(store, execution);
     const receiptPath = findOnlyReceipt(store.root);
-    const foreignTaskDirectory = join(
-      store.root,
-      sha256("foreign-project"),
-      sha256(request.taskId),
-    );
+    const foreignTaskDirectory = join(store.root, sha256("foreign-project"), sha256(request.taskId));
     mkdirSync(foreignTaskDirectory, { recursive: true });
-    copyFileSync(
-      receiptPath,
-      join(foreignTaskDirectory, `${snapshot.identity.snapshotId}.json`),
-    );
+    copyFileSync(receiptPath, join(foreignTaskDirectory, `${snapshot.identity.snapshotId}.json`));
 
     expect(
-      findSuccessfulVerificationReceipt(
-        store,
-        "foreign-project",
-        request.taskId,
-        snapshot.identity.snapshotId,
-      ).status,
+      findSuccessfulVerificationReceipt(store, "foreign-project", request.taskId, snapshot.identity.snapshotId).status,
     ).toBe("invalid");
 
     discardVerificationSnapshot(snapshot);
@@ -569,9 +471,7 @@ function controlledRequest(projectRoot: string): ControlledVerificationRequest {
       { path: "tests/verify.mjs", role: "test" },
     ],
     outputFiles: ["observed.txt"],
-    environment: [
-      { name: "FIXTURE_TOKEN", value: "do-not-report", secret: false },
-    ],
+    environment: [{ name: "FIXTURE_TOKEN", value: "do-not-report", secret: false }],
     prerequisiteIdentities: ["policy:sha256:provider"],
     timeoutMilliseconds: 2_000,
   };
@@ -591,8 +491,7 @@ function listFiles(directory: string): string[] {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...listFiles(path));
-    else if (entry.isFile() && !lstatSync(path).isSymbolicLink())
-      files.push(path);
+    else if (entry.isFile() && !lstatSync(path).isSymbolicLink()) files.push(path);
   }
   return files;
 }

@@ -25,15 +25,10 @@ export type ZedSchemaImportResult = {
  * Read a SpiceDB `.zed` schema file, parse it into Dads access IR, emit strict
  * TypeScript, and optionally write the generated module to disk.
  */
-export function importZedSchema(
-  options: ImportZedSchemaOptions,
-): ZedSchemaImportResult {
+export function importZedSchema(options: ImportZedSchemaOptions): ZedSchemaImportResult {
   const baseDirectory = options.cwd ?? process.cwd();
   const inputPath = resolve(baseDirectory, options.inputPath);
-  const outPath =
-    options.outPath !== undefined
-      ? resolve(baseDirectory, options.outPath)
-      : null;
+  const outPath = options.outPath !== undefined ? resolve(baseDirectory, options.outPath) : null;
   const dryRun = options.dryRun === true;
   const source = readZedFile(inputPath);
   const definitions = parseZed(source);

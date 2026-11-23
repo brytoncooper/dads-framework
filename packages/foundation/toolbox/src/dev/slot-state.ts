@@ -14,10 +14,7 @@ export const slotSchema = z.strictObject({
 });
 export type Slot = z.infer<typeof slotSchema>;
 
-export async function withSlotLock<T>(
-  root: string,
-  work: () => Promise<T>,
-): Promise<T> {
+export async function withSlotLock<T>(root: string, work: () => Promise<T>): Promise<T> {
   await mkdir(root, { recursive: true, mode: 0o700 });
   const lock = join(root, "lock");
   const deadline = Date.now() + 60_000;
@@ -27,8 +24,7 @@ export async function withSlotLock<T>(
       break;
     } catch (error) {
       if (!hasCode(error, "EEXIST")) throw error;
-      if (Date.now() >= deadline)
-        throw new Error("The slot registry is busy.", { cause: error });
+      if (Date.now() >= deadline) throw new Error("The slot registry is busy.", { cause: error });
       await setTimeout(100);
     }
   }
@@ -44,10 +40,7 @@ export async function readSlots(root: string): Promise<Slot[]> {
   return value === undefined ? [] : z.array(slotSchema).parse(value);
 }
 
-export async function writeSlots(
-  root: string,
-  slots: readonly Slot[],
-): Promise<void> {
+export async function writeSlots(root: string, slots: readonly Slot[]): Promise<void> {
   await writeJson(join(root, "slots.json"), slots);
 }
 

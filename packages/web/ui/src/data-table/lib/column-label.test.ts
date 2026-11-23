@@ -10,15 +10,11 @@ import { humanizeColumnId, readColumnLabel } from "./column-label.js";
 
 describe("readColumnLabel", () => {
   it("prefers the meta label", () => {
-    expect(
-      readColumnLabel({ id: "loadedAt", metaLabel: "Loaded", header: "X" }),
-    ).toBe("Loaded");
+    expect(readColumnLabel({ id: "loadedAt", metaLabel: "Loaded", header: "X" })).toBe("Loaded");
   });
 
   it("falls back to a plain-text header", () => {
-    expect(
-      readColumnLabel({ id: "loadedAt", metaLabel: undefined, header: "Load" }),
-    ).toBe("Load");
+    expect(readColumnLabel({ id: "loadedAt", metaLabel: undefined, header: "Load" })).toBe("Load");
   });
 
   it("spells the id as words when the header is rendered", () => {

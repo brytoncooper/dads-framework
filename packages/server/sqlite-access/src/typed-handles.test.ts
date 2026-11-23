@@ -37,26 +37,9 @@ describe("SqliteAuthorization typed permission handles", () => {
       const access = createAccessClient(authorization);
       await access.add(user("alice"), workspace.document("doc-1").editor);
 
-      expect(
-        await authorization.can(
-          user("alice"),
-          workspace.document("doc-1").edit,
-        ),
-      ).toBe(true);
-      expect(
-        await authorization.can(
-          user("alice"),
-          workspace.document.permissions.edit,
-          "doc-1",
-        ),
-      ).toBe(true);
-      expect(
-        await authorization.can(
-          user("alice"),
-          workspace.document.permissions.edit,
-          "doc-2",
-        ),
-      ).toBe(false);
+      expect(await authorization.can(user("alice"), workspace.document("doc-1").edit)).toBe(true);
+      expect(await authorization.can(user("alice"), workspace.document.permissions.edit, "doc-1")).toBe(true);
+      expect(await authorization.can(user("alice"), workspace.document.permissions.edit, "doc-2")).toBe(false);
 
       const typedFilter = authorization.compileFilter({
         subject: user("alice"),
@@ -71,9 +54,7 @@ describe("SqliteAuthorization typed permission handles", () => {
       });
       expect(typedFilter).toEqual(wireFilter);
 
-      const rows = db
-        .prepare(`SELECT id FROM documents WHERE ${typedFilter.sql}`)
-        .all(...typedFilter.values);
+      const rows = db.prepare(`SELECT id FROM documents WHERE ${typedFilter.sql}`).all(...typedFilter.values);
       expect(rows).toEqual([{ id: "doc-1" }]);
     } finally {
       db.close();

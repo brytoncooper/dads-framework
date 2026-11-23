@@ -1,19 +1,11 @@
 import { emitZed } from "@dads-framework/access";
-import {
-  SpiceDbAuthorization,
-  type Authorization,
-  type PermissionQuery,
-} from "@dads-framework/spicedb-access";
+import { SpiceDbAuthorization, type Authorization, type PermissionQuery } from "@dads-framework/spicedb-access";
 import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { it } from "vitest";
 import { makeChain } from "../test-support/benchmark-chain.js";
-import {
-  PostgresAuthorization,
-  preparePostgresChecks,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, preparePostgresChecks, relationshipSchemaMigration } from "./index.js";
 
 const samplesPerRound = 1_280;
 const rounds = 3;
@@ -34,10 +26,7 @@ it("compares point checks on matching PostgreSQL and SpiceDB graphs", async () =
   }
 }, 120_000);
 
-async function compareDepth(
-  depth: number,
-  setup: Awaited<ReturnType<typeof startUnmigratedTestPostgres>>,
-) {
+async function compareDepth(depth: number, setup: Awaited<ReturnType<typeof startUnmigratedTestPostgres>>) {
   const spice = await startTestSpiceDb();
   const postgres = createPostgresConnection(
     { schema: {}, connectionString: setup.connectionString, maxConnections: 8 },
@@ -96,9 +85,7 @@ async function compareDepth(
         const order = round % 2 === 0 ? names : [...names].reverse();
         for (const name of order) {
           const result = await sample(engines[name], check, concurrency, round);
-          console.log(
-            JSON.stringify({ depth, name, concurrency, round, ...result }),
-          );
+          console.log(JSON.stringify({ depth, name, concurrency, round, ...result }));
         }
       }
     }
@@ -121,12 +108,7 @@ async function compareDepth(
   }
 }
 
-async function sample(
-  engine: Authorization,
-  check: PermissionQuery,
-  concurrency: number,
-  round: number,
-) {
+async function sample(engine: Authorization, check: PermissionQuery, concurrency: number, round: number) {
   await Promise.all(
     Array.from({ length: concurrency }, async () => {
       for (let warmup = 0; warmup < 30; warmup += 1) {
@@ -167,11 +149,7 @@ async function sample(
   };
 }
 
-async function timedCheck(
-  engine: Authorization,
-  query: PermissionQuery,
-  expected: boolean,
-) {
+async function timedCheck(engine: Authorization, query: PermissionQuery, expected: boolean) {
   const start = performance.now();
   const decision = await engine.check(query);
   const elapsed = performance.now() - start;

@@ -26,7 +26,4 @@ export {
   requestWorkOf,
   type RequestWorkTally,
 } from "./lib/request-work-tally.js";
-export {
-  chargeAuthorizationCheck,
-  chargeDatabaseQuery,
-} from "./lib/charge-request-work.js";
+export { chargeAuthorizationCheck, chargeDatabaseQuery } from "./lib/charge-request-work.js";

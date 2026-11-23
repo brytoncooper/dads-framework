@@ -1,12 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import {
-  emitTypeScriptFromZed,
-  parseZed,
-  type AccessIrDefinition,
-  type AccessModel,
-} from "@dads-framework/access";
+import { emitTypeScriptFromZed, parseZed, type AccessIrDefinition, type AccessModel } from "@dads-framework/access";
 
 import type { PgMigrationExecutor } from "../access-migrations/sql-migration-types.js";
 import { buildAccessModelFromIr } from "./access-model-from-ir.js";
@@ -17,10 +12,7 @@ import {
   type SpiceDbExportedTuple,
   type SpiceDbMigrationSource,
 } from "./authzed-client-adapter.js";
-import {
-  parseImportSpiceDbArgs,
-  type ImportSpiceDbCliOptions,
-} from "./cli-args.js";
+import { parseImportSpiceDbArgs, type ImportSpiceDbCliOptions } from "./cli-args.js";
 import {
   formatArgError,
   formatDryRunOutput,
@@ -29,10 +21,7 @@ import {
   formatParityFailureText,
   formatRuntimeError,
 } from "./cli-format.js";
-import {
-  migrateSpiceDbToPostgres,
-  type MigrateSpiceDbToPostgresResult,
-} from "./migrate-spicedb-to-postgres.js";
+import { migrateSpiceDbToPostgres, type MigrateSpiceDbToPostgresResult } from "./migrate-spicedb-to-postgres.js";
 import {
   verifySpiceDbPostgresParity,
   type ParityAuthorizationClient,
@@ -61,9 +50,7 @@ export type ImportSpiceDbCliConnectors = {
     readonly token: string;
     readonly insecure: boolean;
   }) => Promise<ImportSpiceDbSpiceConnection>;
-  readonly connectPostgres: (input: {
-    readonly databaseUrl: string;
-  }) => Promise<ImportSpiceDbPostgresConnection>;
+  readonly connectPostgres: (input: { readonly databaseUrl: string }) => Promise<ImportSpiceDbPostgresConnection>;
   readonly writeFile?: (path: string, content: string) => Promise<void>;
 };
 
@@ -92,9 +79,7 @@ type OutputSink = {
  * Run the `dads-import-spicedb` CLI flow with injectable SpiceDB, Postgres,
  * and file-writing connectors.
  */
-export async function runImportSpiceDbCli(
-  input: RunImportSpiceDbCliOptions,
-): Promise<RunImportSpiceDbCliResult> {
+export async function runImportSpiceDbCli(input: RunImportSpiceDbCliOptions): Promise<RunImportSpiceDbCliResult> {
   const sink = createOutputSink(input);
   const parsed = parseImportSpiceDbArgs(input.argv, input.env);
 
@@ -198,30 +183,16 @@ async function migrateAndReport(
     spiceDb: spiceConn.source,
     postgres: pgConn.executor,
     namespace: options.namespace,
-    ...(options.batchSize === undefined
-      ? {}
-      : { batchSize: options.batchSize }),
-    ...(options.verify
-      ? { onBatch: (batch) => collectedTuples.push(...batch) }
-      : {}),
+    ...(options.batchSize === undefined ? {} : { batchSize: options.batchSize }),
+    ...(options.verify ? { onBatch: (batch) => collectedTuples.push(...batch) } : {}),
   });
 
   if (options.out !== undefined) {
-    await writeGeneratedModel(
-      options.out,
-      migration.generatedTypeScript,
-      connectors.writeFile,
-    );
+    await writeGeneratedModel(options.out, migration.generatedTypeScript, connectors.writeFile);
   }
 
   const parity = options.verify
-    ? await runParityCheck(
-        options,
-        migration,
-        collectedTuples,
-        spiceConn,
-        pgConn,
-      )
+    ? await runParityCheck(options, migration, collectedTuples, spiceConn, pgConn)
     : undefined;
   return emitMigrationOutcome(options, migration, parity, sink);
 }
@@ -261,9 +232,7 @@ function emitMigrationOutcome(
 ): number {
   const hasMismatches = parity !== undefined && parity.mismatches.length > 0;
   if (options.json) {
-    sink.emitOut(
-      formatLiveJsonOutput(options, migration, parity, !hasMismatches),
-    );
+    sink.emitOut(formatLiveJsonOutput(options, migration, parity, !hasMismatches));
     return hasMismatches ? 1 : 0;
   }
 
@@ -278,8 +247,7 @@ function emitMigrationOutcome(
 async function writeGeneratedModel(
   outPath: string,
   content: string,
-  customWriteFile:
-    ((path: string, content: string) => Promise<void>) | undefined,
+  customWriteFile: ((path: string, content: string) => Promise<void>) | undefined,
 ): Promise<void> {
   if (customWriteFile !== undefined) {
     await customWriteFile(outPath, content);
@@ -305,9 +273,6 @@ function createOutputSink(input: RunImportSpiceDbCliOptions): OutputSink {
   return sink;
 }
 
-function toResult(
-  exitCode: number,
-  sink: OutputSink,
-): RunImportSpiceDbCliResult {
+function toResult(exitCode: number, sink: OutputSink): RunImportSpiceDbCliResult {
   return { exitCode, stdout: sink.stdout, stderr: sink.stderr };
 }

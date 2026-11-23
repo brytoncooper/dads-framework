@@ -72,18 +72,10 @@ function readRustDeclarations(text) {
 
 function parseSource(text, path) {
   const kind = SCRIPT_KINDS.get(extensionOf(path)) ?? ts.ScriptKind.TS;
-  const parsed = ts.createSourceFile(
-    path,
-    text,
-    ts.ScriptTarget.Latest,
-    true,
-    kind,
-  );
+  const parsed = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
   const failure = parsed.parseDiagnostics?.[0];
   if (failure !== undefined) {
-    throw new Error(
-      `${path}: could not be parsed: ${ts.flattenDiagnosticMessageText(failure.messageText, " ")}`,
-    );
+    throw new Error(`${path}: could not be parsed: ${ts.flattenDiagnosticMessageText(failure.messageText, " ")}`);
   }
   return parsed;
 }
@@ -147,9 +139,7 @@ function collectModuleBindings(statement, names) {
 
 /** Class, interface, and type-literal members, as `Owner#member` and bare. */
 function collectMembers(statement, owner, names) {
-  const members = ts.isTypeAliasDeclaration(statement)
-    ? memberNodesOfType(statement.type)
-    : (statement.members ?? []);
+  const members = ts.isTypeAliasDeclaration(statement) ? memberNodesOfType(statement.type) : (statement.members ?? []);
   for (const member of members) {
     const name = memberNameOf(member);
     if (name === undefined) continue;

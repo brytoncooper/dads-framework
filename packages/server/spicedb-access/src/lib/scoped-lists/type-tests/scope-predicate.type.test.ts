@@ -8,10 +8,7 @@ import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
-import {
-  describeScopePlan,
-  type ScopeBindings,
-} from "@dads-framework/access/scopes";
+import { describeScopePlan, type ScopeBindings } from "@dads-framework/access/scopes";
 
 import {
   answerScope,
@@ -78,9 +75,7 @@ describe("scopeQuestions / answerScope", () => {
       lookups: {
         lookupResources: (query) => {
           asked.push(`${query.resourceType}#${query.permission}`);
-          return Promise.resolve(
-            query.permission === "view_records" ? ["s1"] : [],
-          );
+          return Promise.resolve(query.permission === "view_records" ? ["s1"] : []);
         },
       },
     });
@@ -91,18 +86,14 @@ describe("scopeQuestions / answerScope", () => {
       "listfixture/site#blocked_here",
       "listfixture/folder#assignee",
     ]);
-    expect(answer.idsByQuestion.get("listfixture/site#view_records")).toEqual([
-      "s1",
-    ]);
+    expect(answer.idsByQuestion.get("listfixture/site#view_records")).toEqual(["s1"]);
     expect(answer.idsByQuestion.get("listfixture/folder#assignee")).toEqual([]);
   });
 });
 
 describe("scopePredicate", () => {
   it("renders the sheet plan: a via into the folder, a not, and every folder operator", () => {
-    const answer = answerEvery("listfixture/sheet", "view", (key) => [
-      `${key}-id`,
-    ]);
+    const answer = answerEvery("listfixture/sheet", "view", (key) => [`${key}-id`]);
     expect(describeScopePlan(answer.plan)).toBe(
       [
         "any(",
@@ -117,9 +108,7 @@ describe("scopePredicate", () => {
       ].join(""),
     );
 
-    const query = dialect.sqlToQuery(
-      scopePredicate(answer, sheetSql, [folderSql]),
-    );
+    const query = dialect.sqlToQuery(scopePredicate(answer, sheetSql, [folderSql]));
     expect(query.sql).toBe(
       [
         '((EXISTS (SELECT 1 FROM "scoped_list_folders" WHERE "scoped_list_folders"."id" = "scoped_list_sheets"."folder_id" AND (',
@@ -163,11 +152,7 @@ describe("scopePredicate", () => {
     const answer = answerEvery("listfixture/folder", "view", () => []);
     const partial: ScopeAnswer = {
       ...answer,
-      idsByQuestion: new Map(
-        [...answer.idsByQuestion].filter(
-          ([key]) => key !== "listfixture/folder#assignee",
-        ),
-      ),
+      idsByQuestion: new Map([...answer.idsByQuestion].filter(([key]) => key !== "listfixture/folder#assignee")),
     };
     expect(() => scopePredicate(partial, folderSql)).toThrow(
       "scope answer has no ids for listfixture/folder#assignee; build it with answerScope for the same plan",

@@ -19,12 +19,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { SOURCE_ROOTS } from "../scanners/source-classification.js";
 
 const DRAWER_NAMES = new Set(["helpers", "utils", "common", "misc", "shared"]);
@@ -43,9 +38,7 @@ function drawersAlong(path: string): readonly string[] {
   return found;
 }
 
-function collectDrawers(
-  context: DoctorContext,
-): ReadonlyMap<string, readonly string[]> {
+function collectDrawers(context: DoctorContext): ReadonlyMap<string, readonly string[]> {
   const drawers = new Map<string, string[]>();
   for (const path of context.files()) {
     if (!SOURCE_ROOTS.some((root) => path.startsWith(root))) continue;
@@ -61,9 +54,7 @@ function collectDrawers(
 function countJunkDrawers(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const [drawer, held] of collectDrawers(context)) {
-    const evidence: SignalEvidence[] = held
-      .slice(0, SHOWN_FILES)
-      .map((path) => ({ path }));
+    const evidence: SignalEvidence[] = held.slice(0, SHOWN_FILES).map((path) => ({ path }));
     readings.set(drawer, {
       value: held.length,
       evidence: [{ path: drawer, name: drawer }, ...evidence],
@@ -75,8 +66,7 @@ function countJunkDrawers(context: DoctorContext): SignalReadings {
 export const junkDrawerDirectoriesSignal: DoctorSignal = {
   id: "junk-drawer-directories",
   issue: "you-repeat-the-cycle",
-  question:
-    "Is there a directory named `helpers/`, `utils/`, `common/`, `misc/`, or `shared/`?",
+  question: "Is there a directory named `helpers/`, `utils/`, `common/`, `misc/`, or `shared/`?",
   reads: "text",
   unit: "files",
   direction: "ceiling",

@@ -18,9 +18,7 @@ export function formatBaseSubject(subject: AccessIrSubject): string {
   return `${subject.wireName}#${subject.relation}`;
 }
 
-export function formatPermissionExpression(
-  terms: readonly AccessIrTerm[],
-): string {
+export function formatPermissionExpression(terms: readonly AccessIrTerm[]): string {
   return terms.map(formatTerm).join(" + ");
 }
 
@@ -28,18 +26,13 @@ export function canonicalPermissionKey(terms: readonly AccessIrTerm[]): string {
   return terms.map(canonicalTermKey).sort().join(" | ");
 }
 
-export function formatDiffSummary(
-  counts: DiffSummaryCounts,
-  requiresMigration: boolean,
-): string {
+export function formatDiffSummary(counts: DiffSummaryCounts, requiresMigration: boolean): string {
   if (counts.safe.length === 0 && counts.breaking.length === 0) {
     return "No access model changes.";
   }
   const parts: string[] = [];
   if (counts.breaking.length > 0) {
-    parts.push(
-      `${counts.breaking.length} breaking change(s): ${counts.breaking.map(formatBreakingChange).join(", ")}`,
-    );
+    parts.push(`${counts.breaking.length} breaking change(s): ${counts.breaking.map(formatBreakingChange).join(", ")}`);
   }
   if (counts.safe.length > 0) {
     parts.push(`${counts.safe.length} safe change(s)`);

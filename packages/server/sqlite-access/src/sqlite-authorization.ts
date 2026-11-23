@@ -1,8 +1,4 @@
-import type {
-  AccessModel,
-  DslPermissionTarget,
-  PermissionToken,
-} from "@dads-framework/access";
+import type { AccessModel, DslPermissionTarget, PermissionToken } from "@dads-framework/access";
 import {
   Authorization,
   permissionQueryFromCan,
@@ -37,19 +33,11 @@ import {
 } from "./policy/compile-filter.js";
 import { compileSqliteLookupResources } from "./policy/compile-lookup-resources.js";
 import { compileSqliteLookupSubjects } from "./policy/compile-lookup-subjects.js";
-import {
-  normalizeSqliteCheck,
-  runSqliteCheckBatch,
-  runSqliteCheckEachBatch,
-} from "./sqlite-check-batch.js";
+import { normalizeSqliteCheck, runSqliteCheckBatch, runSqliteCheckEachBatch } from "./sqlite-check-batch.js";
 import type { SqliteExecutor } from "./sqlite-executor.js";
 import { SqliteTuples } from "./sqlite-tuples.js";
 import { readDecisionFlag, readStringColumn } from "./sqlite-types.js";
-import {
-  collectSubjectLookupResult,
-  requireConcreteSubject,
-  requireSubjectLookupInput,
-} from "./sqlite-validation.js";
+import { collectSubjectLookupResult, requireConcreteSubject, requireSubjectLookupInput } from "./sqlite-validation.js";
 
 const CHECK_BATCH_SIZE = 64;
 
@@ -85,15 +73,8 @@ export class SqliteAuthorization extends Authorization {
     this.#executor = options.executor;
     this.#now = options.now ?? (() => new Date());
     this.#columnRelations = options.columnRelations;
-    this.#policy = getOrCompileSqlitePolicy(
-      options.model,
-      options.columnRelations,
-    );
-    this.#tuples = new SqliteTuples(
-      this.#policy.model,
-      this.#namespace,
-      this.#executor,
-    );
+    this.#policy = getOrCompileSqlitePolicy(options.model, options.columnRelations);
+    this.#tuples = new SqliteTuples(this.#policy.model, this.#namespace, this.#executor);
   }
 
   /** Return the current evaluation timestamp in epoch milliseconds. */
@@ -102,18 +83,13 @@ export class SqliteAuthorization extends Authorization {
   }
 
   /** Bind every operation to a transaction-scoped executor and optional pinned clock. */
-  inTransaction(
-    executor: SqliteExecutor,
-    now?: () => Date,
-  ): SqliteAuthorization {
+  inTransaction(executor: SqliteExecutor, now?: () => Date): SqliteAuthorization {
     return new SqliteAuthorization({
       model: this.#model,
       namespace: this.#namespace,
       executor,
       now: now ?? this.#now,
-      ...(this.#columnRelations === undefined
-        ? {}
-        : { columnRelations: this.#columnRelations }),
+      ...(this.#columnRelations === undefined ? {} : { columnRelations: this.#columnRelations }),
     });
   }
 
@@ -122,18 +98,11 @@ export class SqliteAuthorization extends Authorization {
    * and report whether the recommended reverse-lookup index exists.
    */
   verifyColumnRelations(): Promise<readonly SqliteColumnRelationCheckResult[]> {
-    return verifySqliteColumnRelations(
-      this.#policy.model.columnRelations ?? [],
-      this.#executor,
-    );
+    return verifySqliteColumnRelations(this.#policy.model.columnRelations ?? [], this.#executor);
   }
 
   /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
-  can(
-    subject: SubjectRef,
-    target: DslPermissionTarget,
-    options?: AuthorizationCanOptions,
-  ): Promise<boolean>;
+  can(subject: SubjectRef, target: DslPermissionTarget, options?: AuthorizationCanOptions): Promise<boolean>;
   can(
     subject: SubjectRef,
     permission: PermissionToken,
@@ -146,32 +115,18 @@ export class SqliteAuthorization extends Authorization {
     resourceIdOrOptions?: string | AuthorizationCanOptions,
     maybeOptions?: AuthorizationCanOptions,
   ): Promise<boolean> {
-    return this.check(
-      permissionQueryFromCan(
-        subject,
-        permissionOrTarget,
-        resourceIdOrOptions,
-        maybeOptions,
-      ),
-    );
+    return this.check(permissionQueryFromCan(subject, permissionOrTarget, resourceIdOrOptions, maybeOptions));
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {
     const normalized = normalizeSqliteCheck(this.#policy, query);
     if (normalized === undefined) return false;
-    const compiled = compileSqliteCheck(
-      this.#policy.model,
-      this.#namespace,
-      this.currentTimeMs(),
-      normalized,
-    );
+    const compiled = compileSqliteCheck(this.#policy.model, this.#namespace, this.currentTimeMs(), normalized);
     const rows = await this.#executor.all(compiled.sql, compiled.params);
     return readDecisionFlag(rows[0]);
   }
 
-  override async checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  override async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     const nowMs = this.currentTimeMs();
     const context = {
       policy: this.#policy,
@@ -186,9 +141,7 @@ export class SqliteAuthorization extends Authorization {
     return answers;
   }
 
-  override async checkEach(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  override async checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     const nowMs = this.currentTimeMs();
     const context = {
       policy: this.#policy,
@@ -212,10 +165,7 @@ export class SqliteAuthorization extends Authorization {
       this.currentTimeMs(),
       this.#policy.model,
     );
-    const permission = this.#policy.permissionName(
-      target.resourceType,
-      target.permission,
-    );
+    const permission = this.#policy.permissionName(target.resourceType, target.permission);
     if (permission === undefined) {
       return Object.freeze({ sql: "0 = 1", values: [] });
     }
@@ -233,50 +183,30 @@ export class SqliteAuthorization extends Authorization {
     );
   }
 
-  override async lookupResources(
-    query: ResourceLookup,
-  ): Promise<readonly string[]> {
+  override async lookupResources(query: ResourceLookup): Promise<readonly string[]> {
     requireConcreteSubject(query.subject);
-    const permission = this.#policy.permissionName(
-      query.resourceType,
-      query.permission,
-    );
+    const permission = this.#policy.permissionName(query.resourceType, query.permission);
     if (permission === undefined) return [];
-    const compiled = compileSqliteLookupResources(
-      this.#policy.model,
-      this.#namespace,
-      this.currentTimeMs(),
-      {
-        subject: { type: query.subject.type, id: query.subject.id },
-        permission,
-        resourceType: query.resourceType,
-      },
-    );
+    const compiled = compileSqliteLookupResources(this.#policy.model, this.#namespace, this.currentTimeMs(), {
+      subject: { type: query.subject.type, id: query.subject.id },
+      permission,
+      resourceType: query.resourceType,
+    });
     const rows = await this.#executor.all(compiled.sql, compiled.params);
     return rows.map((row) => readStringColumn(row, "resource_id"));
   }
 
-  override async lookupSubjects(
-    query: SubjectLookup,
-  ): Promise<SubjectLookupResult> {
+  override async lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
     requireSubjectLookupInput(query);
-    const permission = this.#policy.permissionName(
-      query.resource.type,
-      query.permission,
-    );
+    const permission = this.#policy.permissionName(query.resource.type, query.permission);
     if (permission === undefined) {
       return { subjects: [], hasWildcard: false };
     }
-    const compiled = compileSqliteLookupSubjects(
-      this.#policy.model,
-      this.#namespace,
-      this.currentTimeMs(),
-      {
-        resource: { type: query.resource.type, id: query.resource.id },
-        permission,
-        subjectType: query.subjectType,
-      },
-    );
+    const compiled = compileSqliteLookupSubjects(this.#policy.model, this.#namespace, this.currentTimeMs(), {
+      resource: { type: query.resource.type, id: query.resource.id },
+      permission,
+      subjectType: query.subjectType,
+    });
     const rows = await this.#executor.all(compiled.sql, compiled.params);
     return collectSubjectLookupResult(rows);
   }
@@ -292,16 +222,12 @@ export class SqliteAuthorization extends Authorization {
     }
   }
 
-  override async writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override async writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     await this.#tuples.write(writes);
     return "";
   }
 
-  override async deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  override async deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     await this.#tuples.delete(filter);
     return "";
   }
@@ -314,9 +240,7 @@ export class SqliteAuthorization extends Authorization {
     return this.#tuples.exists(filter, this.currentTimeMs());
   }
 
-  override listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  override listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     return this.#tuples.list(query, this.currentTimeMs());
   }
 }

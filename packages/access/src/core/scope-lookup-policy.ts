@@ -9,10 +9,7 @@ import type { AccessModel } from "./access-model.js";
  * - Returns `true` ONLY when `model.lookupResourceAllowlist` explicitly names
  *   `resourceType`.
  */
-export function isLookupResourcesAllowed(
-  model: AccessModel,
-  resourceType: string,
-): boolean {
+export function isLookupResourcesAllowed(model: AccessModel, resourceType: string): boolean {
   if (model.bindings.some((entry) => entry.entity.wireName === resourceType)) {
     return false;
   }
@@ -25,13 +22,7 @@ export function isLookupResourcesAllowed(
  * plan asks SpiceDB for those record ids directly. This is the one lawful
  * `lookupResources` on a record, named by the relation, never by the caller.
  */
-export function isSparseDirectGrant(
-  model: AccessModel,
-  resourceType: string,
-  relation: string,
-): boolean {
-  const bindings = model.bindings.find(
-    (entry) => entry.entity.wireName === resourceType,
-  );
+export function isSparseDirectGrant(model: AccessModel, resourceType: string, relation: string): boolean {
+  const bindings = model.bindings.find((entry) => entry.entity.wireName === resourceType);
   return bindings?.roles[relation]?.kind === "sparse-direct";
 }

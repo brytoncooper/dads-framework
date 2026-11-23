@@ -13,11 +13,7 @@
 
 import { isAbsolute, resolve } from "node:path";
 import type { AliasFileSystem } from "./alias-file-system.js";
-import {
-  isRecord,
-  readDeclaredAliases,
-  readTsconfigChain,
-} from "./tsconfig-chain.js";
+import { isRecord, readDeclaredAliases, readTsconfigChain } from "./tsconfig-chain.js";
 
 const supportedExtensions = [
   ".ts",
@@ -49,14 +45,9 @@ type AliasMapping = {
   readonly target: string;
 };
 
-export function createAliasResolver(
-  options: AliasResolverOptions,
-): AliasResolver {
+export function createAliasResolver(options: AliasResolverOptions): AliasResolver {
   const { fileSystem } = options;
-  const absoluteTsconfig = resolve(
-    process.cwd(),
-    requireTsconfigOption(options.tsconfig),
-  );
+  const absoluteTsconfig = resolve(process.cwd(), requireTsconfigOption(options.tsconfig));
   const chain = readTsconfigChain(fileSystem, absoluteTsconfig);
   const declared = readDeclaredAliases(chain, absoluteTsconfig);
   const entries = Object.entries(declared.paths);
@@ -65,11 +56,8 @@ export function createAliasResolver(
       `Dads path aliases tsconfig ${absoluteTsconfig} does not declare or inherit compilerOptions.paths.`,
     );
   }
-  const mappings = entries.map(([pattern, targets]) =>
-    parseAliasMapping(pattern, targets, absoluteTsconfig),
-  );
-  return (specifier: string): string | null =>
-    resolveSpecifier(fileSystem, mappings, declared.baseUrl, specifier);
+  const mappings = entries.map(([pattern, targets]) => parseAliasMapping(pattern, targets, absoluteTsconfig));
+  return (specifier: string): string | null => resolveSpecifier(fileSystem, mappings, declared.baseUrl, specifier);
 }
 
 function requireTsconfigOption(tsconfig: string): string {
@@ -82,23 +70,15 @@ function requireTsconfigOption(tsconfig: string): string {
 // --- The alias map -------------------------------------------------------
 
 /** One usable target, or none: a target list of any other shape is refused. */
-function parseAliasMapping(
-  pattern: string,
-  targets: unknown,
-  tsconfig: string,
-): AliasMapping {
+function parseAliasMapping(pattern: string, targets: unknown, tsconfig: string): AliasMapping {
   const target = onlyTarget(targets);
   if (target === undefined) {
-    throw new Error(
-      `Dads path alias ${pattern} in ${tsconfig} must have exactly one target.`,
-    );
+    throw new Error(`Dads path alias ${pattern} in ${tsconfig} must have exactly one target.`);
   }
   const patternStars = countStars(pattern);
   const targetStars = countStars(target);
   if (patternStars > 1 || targetStars !== patternStars) {
-    throw new Error(
-      `Dads path alias ${pattern} in ${tsconfig} must use zero or one matching wildcard.`,
-    );
+    throw new Error(`Dads path alias ${pattern} in ${tsconfig} must use zero or one matching wildcard.`);
   }
   return { pattern, target };
 }
@@ -147,8 +127,7 @@ function matchAlias(pattern: string, specifier: string): string | undefined {
   if (wildcardIndex < 0) return pattern === specifier ? "" : undefined;
   const prefix = pattern.slice(0, wildcardIndex);
   const suffix = pattern.slice(wildcardIndex + 1);
-  if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix))
-    return undefined;
+  if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) return undefined;
   return specifier.slice(prefix.length, specifier.length - suffix.length);
 }
 
@@ -158,10 +137,7 @@ function matchAlias(pattern: string, specifier: string): string | undefined {
  * extension or an `index` inside it, and finally the source file behind a
  * specifier written with an explicit extension.
  */
-function resolveCandidate(
-  fileSystem: AliasFileSystem,
-  candidate: string,
-): string | null {
+function resolveCandidate(fileSystem: AliasFileSystem, candidate: string): string | null {
   if (fileSystem.isFile(candidate)) return resolve(candidate);
   const entry = packageEntryFile(fileSystem, candidate);
   if (entry !== null) return entry;
@@ -170,10 +146,7 @@ function resolveCandidate(
   return explicitExtensionSource(fileSystem, candidate);
 }
 
-function findSupportedFile(
-  fileSystem: AliasFileSystem,
-  candidate: string,
-): string | null {
+function findSupportedFile(fileSystem: AliasFileSystem, candidate: string): string | null {
   if (fileSystem.isFile(candidate)) return resolve(candidate);
   for (const extension of supportedExtensions) {
     const withExtension = `${candidate}${extension}`;
@@ -185,10 +158,7 @@ function findSupportedFile(
 }
 
 /** `@app/source.js` finds `src/source.ts`, the file the extension stands for. */
-function explicitExtensionSource(
-  fileSystem: AliasFileSystem,
-  candidate: string,
-): string | null {
+function explicitExtensionSource(fileSystem: AliasFileSystem, candidate: string): string | null {
   const extension = supportedExtensions.find((one) => candidate.endsWith(one));
   if (extension === undefined) return null;
   return findSupportedFile(fileSystem, candidate.slice(0, -extension.length));
@@ -202,14 +172,8 @@ function explicitExtensionSource(
  * that cannot be read is no manifest at all, so resolution falls through to
  * the extension and index probes.
  */
-function packageEntryFile(
-  fileSystem: AliasFileSystem,
-  directory: string,
-): string | null {
-  const manifest = readPackageManifest(
-    fileSystem,
-    resolve(directory, "package.json"),
-  );
+function packageEntryFile(fileSystem: AliasFileSystem, directory: string): string | null {
+  const manifest = readPackageManifest(fileSystem, resolve(directory, "package.json"));
   if (manifest === undefined) return null;
   const fields = [packageEntry(manifest), manifest["module"], manifest["main"]];
   for (const field of fields) {
@@ -238,9 +202,7 @@ function readPackageManifest(
  * string, or its `import` condition, or its `default` condition. Anything else
  * is absent, which leaves `module` and `main` to answer.
  */
-function packageEntry(
-  manifest: Readonly<Record<string, unknown>>,
-): string | undefined {
+function packageEntry(manifest: Readonly<Record<string, unknown>>): string | undefined {
   const exported = manifest["exports"];
   if (typeof exported === "string") return exported;
   if (!isRecord(exported)) return undefined;

@@ -35,9 +35,7 @@ export type ActorForSubject = (resolved: ResolvedSubject) => AuditActor;
  */
 export function composeSubjectToAuditActor(
   actorForSubjectType: Readonly<Record<string, ActorForSubject>>,
-  actorForRequest?: (
-    input: Parameters<AuditActorForSubject>[0],
-  ) => AuditActor | undefined,
+  actorForRequest?: (input: Parameters<AuditActorForSubject>[0]) => AuditActor | undefined,
 ): AuditActorForSubject {
   const actorForType = new Map<string, ActorForSubject>([
     ...Object.entries(actorForSubjectType),
@@ -54,9 +52,7 @@ export function composeSubjectToAuditActor(
 
     const actorFor = actorForType.get(subject.type);
     const resolved = { subject, authenticatedSubject, requestId };
-    return actorFor === undefined
-      ? provenIdentityActor(resolved)
-      : actorFor(resolved);
+    return actorFor === undefined ? provenIdentityActor(resolved) : actorFor(resolved);
   };
 }
 
@@ -66,12 +62,8 @@ export function composeSubjectToAuditActor(
  */
 function userActor(resolved: ResolvedSubject): AuditActor {
   const { subject, authenticatedSubject, requestId } = resolved;
-  const provenSameUser =
-    authenticatedSubject?.type === USER_SUBJECT_TYPE &&
-    subject.id === authenticatedSubject.id;
-  return provenSameUser
-    ? { kind: "user", id: subject.id, requestId }
-    : provenIdentityActor(resolved);
+  const provenSameUser = authenticatedSubject?.type === USER_SUBJECT_TYPE && subject.id === authenticatedSubject.id;
+  return provenSameUser ? { kind: "user", id: subject.id, requestId } : provenIdentityActor(resolved);
 }
 
 /**

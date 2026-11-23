@@ -56,27 +56,24 @@ describe("controlled capture request guards", () => {
   it("refuses a request that declares no required outputs", () => {
     const request = controlledRequest(createControlledProject());
 
-    expect(() =>
-      captureVerificationSnapshot({ ...request, outputFiles: [] }),
-    ).toThrow("Controlled verification must declare required outputs.");
+    expect(() => captureVerificationSnapshot({ ...request, outputFiles: [] })).toThrow(
+      "Controlled verification must declare required outputs.",
+    );
   });
 
-  it.each([
-    "DADS_VERIFICATION_OUTPUT_DIR",
-    "DADS_VERIFICATION_SNAPSHOT_ROOT",
-    "NODE_OPTIONS",
-    "LANG",
-    "TZ",
-  ])("refuses the reserved environment name %s", (name) => {
-    const request = controlledRequest(createControlledProject());
+  it.each(["DADS_VERIFICATION_OUTPUT_DIR", "DADS_VERIFICATION_SNAPSHOT_ROOT", "NODE_OPTIONS", "LANG", "TZ"])(
+    "refuses the reserved environment name %s",
+    (name) => {
+      const request = controlledRequest(createControlledProject());
 
-    expect(() =>
-      captureVerificationSnapshot({
-        ...request,
-        environment: [{ name, value: "hijacked", secret: false }],
-      }),
-    ).toThrow(`Verification environment ${name} is reserved.`);
-  });
+      expect(() =>
+        captureVerificationSnapshot({
+          ...request,
+          environment: [{ name, value: "hijacked", secret: false }],
+        }),
+      ).toThrow(`Verification environment ${name} is reserved.`);
+    },
+  );
 
   it("refuses an environment name outside the upper-case pattern", () => {
     const request = controlledRequest(createControlledProject());
@@ -109,10 +106,7 @@ describe("controlled capture request guards", () => {
     expect(() =>
       captureVerificationSnapshot({
         ...request,
-        prerequisiteIdentities: [
-          "policy:sha256:provider",
-          "policy:sha256:provider",
-        ],
+        prerequisiteIdentities: ["policy:sha256:provider", "policy:sha256:provider"],
       }),
     ).toThrow("Duplicate verification prerequisite identity.");
   });
@@ -123,10 +117,7 @@ describe("controlled capture request guards", () => {
     expect(() =>
       captureVerificationSnapshot({
         ...request,
-        inputFiles: [
-          ...request.inputFiles,
-          { path: "./src/input.txt", role: "artifact" },
-        ],
+        inputFiles: [...request.inputFiles, { path: "./src/input.txt", role: "artifact" }],
       }),
     ).toThrow("Duplicate verification input path.");
   });
@@ -151,19 +142,14 @@ describe("controlled capture request guards", () => {
     expect(() =>
       captureVerificationSnapshot({
         ...request,
-        inputFiles: [
-          ...request.inputFiles,
-          { path: ".dads/state.json", role: "configuration" },
-        ],
+        inputFiles: [...request.inputFiles, { path: ".dads/state.json", role: "configuration" }],
       }),
     ).toThrow("Verification inputs cannot include Dads local state.");
   });
 
   it("refuses a captured input that shares storage with another file", () => {
     const projectRoot = createControlledProject();
-    const snapshot = captureVerificationSnapshot(
-      controlledRequest(projectRoot),
-    );
+    const snapshot = captureVerificationSnapshot(controlledRequest(projectRoot));
     const capturedPath = join(snapshot.snapshotRoot, "src/input.txt");
     chmodSync(snapshot.snapshotRoot, 0o755);
     chmodSync(join(snapshot.snapshotRoot, "src"), 0o755);
@@ -184,10 +170,7 @@ function createControlledProject(): string {
   mkdirSync(join(projectRoot, "src"), { recursive: true });
   mkdirSync(join(projectRoot, "tests"), { recursive: true });
   writeFileSync(join(projectRoot, "src/input.txt"), "A\n");
-  writeFileSync(
-    join(projectRoot, "tests/verify.mjs"),
-    'import { readFileSync, writeFileSync } from "node:fs";\n',
-  );
+  writeFileSync(join(projectRoot, "tests/verify.mjs"), 'import { readFileSync, writeFileSync } from "node:fs";\n');
   return projectRoot;
 }
 
@@ -206,9 +189,7 @@ function controlledRequest(projectRoot: string): ControlledVerificationRequest {
       { path: "tests/verify.mjs", role: "test" },
     ],
     outputFiles: ["observed.txt"],
-    environment: [
-      { name: "FIXTURE_TOKEN", value: "do-not-report", secret: false },
-    ],
+    environment: [{ name: "FIXTURE_TOKEN", value: "do-not-report", secret: false }],
     prerequisiteIdentities: ["policy:sha256:provider"],
     timeoutMilliseconds: 2_000,
   };

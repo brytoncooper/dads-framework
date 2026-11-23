@@ -30,15 +30,10 @@ export async function readDevConfig(worktree: string): Promise<DevConfig> {
   }
   const names = new Set(config.services.map((service) => service.name));
   const offsets = new Set(config.services.map((service) => service.portOffset));
-  if (
-    names.size !== config.services.length ||
-    offsets.size !== config.services.length
-  ) {
+  if (names.size !== config.services.length || offsets.size !== config.services.length) {
     throw new Error("Service names and port offsets must each be unique.");
   }
-  if (
-    config.services.some((service) => service.portOffset >= config.portsPerSlot)
-  ) {
+  if (config.services.some((service) => service.portOffset >= config.portsPerSlot)) {
     throw new Error("A service port offset exceeds the slot's port block.");
   }
   return config;

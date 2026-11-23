@@ -5,11 +5,7 @@
  * sent yet; merge rules have to match that, not a local `.includes`.
  */
 import { describe, expect, it } from "vitest";
-import {
-  nextRemoteComboboxItems,
-  pageHasMore,
-  shouldPrefetchNextPage,
-} from "./remote-combobox-page.js";
+import { nextRemoteComboboxItems, pageHasMore, shouldPrefetchNextPage } from "./remote-combobox-page.js";
 
 const key = (item: { readonly value: string }): string => item.value;
 
@@ -47,14 +43,8 @@ describe("nextRemoteComboboxItems", () => {
 
 describe("shouldPrefetchNextPage", () => {
   it("asks for the next page only when more exist and none is in flight", () => {
-    expect(shouldPrefetchNextPage({ hasMore: true, loading: false })).toBe(
-      true,
-    );
-    expect(shouldPrefetchNextPage({ hasMore: true, loading: true })).toBe(
-      false,
-    );
-    expect(shouldPrefetchNextPage({ hasMore: false, loading: false })).toBe(
-      false,
-    );
+    expect(shouldPrefetchNextPage({ hasMore: true, loading: false })).toBe(true);
+    expect(shouldPrefetchNextPage({ hasMore: true, loading: true })).toBe(false);
+    expect(shouldPrefetchNextPage({ hasMore: false, loading: false })).toBe(false);
   });
 });

@@ -353,10 +353,8 @@ describe("SQLite SpiceDB parity: lookupSubjects, throughAll, and mutual recursio
     db.exec(sqliteRelationshipSchemaMigration.sql);
     const syncExec = createNodeSqliteExecutor(db);
     const asyncExec = {
-      all: (sql: string, params?: readonly SqliteValue[]) =>
-        Promise.resolve(syncExec.all(sql, params)),
-      run: (sql: string, params?: readonly SqliteValue[]) =>
-        Promise.resolve(syncExec.run(sql, params)),
+      all: (sql: string, params?: readonly SqliteValue[]) => Promise.resolve(syncExec.all(sql, params)),
+      run: (sql: string, params?: readonly SqliteValue[]) => Promise.resolve(syncExec.run(sql, params)),
       exec: (sql: string) => Promise.resolve(syncExec.exec(sql)),
     };
     const authz = new SqliteAuthorization({

@@ -13,10 +13,7 @@ export type DateRange = {
 };
 
 /** A range with only the ends that are set; an unset end is left out. */
-export function dateRange(
-  from: Date | undefined,
-  to: Date | undefined,
-): DateRange {
+export function dateRange(from: Date | undefined, to: Date | undefined): DateRange {
   return {
     ...(from === undefined ? {} : { from }),
     ...(to === undefined ? {} : { to }),
@@ -98,9 +95,7 @@ export function DateRangePicker({
           autoFocus={autoFocus}
           value={toDateInputValue(selected?.from)}
           onChange={(event) => {
-            onSelect(
-              dateRange(fromDateInputValue(event.target.value), selected?.to),
-            );
+            onSelect(dateRange(fromDateInputValue(event.target.value), selected?.to));
           }}
         />
       </div>
@@ -114,9 +109,7 @@ export function DateRangePicker({
           type="date"
           value={toDateInputValue(selected?.to)}
           onChange={(event) => {
-            onSelect(
-              dateRange(selected?.from, fromDateInputValue(event.target.value)),
-            );
+            onSelect(dateRange(selected?.from, fromDateInputValue(event.target.value)));
           }}
         />
       </div>

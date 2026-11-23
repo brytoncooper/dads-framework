@@ -1,11 +1,4 @@
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, every, resource, roleToken } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -55,14 +48,7 @@ const strictDoc = resource("strict_doc", {
   }),
 });
 
-const model = compileAccess([
-  user,
-  group,
-  workspace,
-  folder,
-  document,
-  strictDoc,
-]);
+const model = compileAccess([user, group, workspace, folder, document, strictDoc]);
 
 describe("PostgresAuthorization.compileFilter (live Postgres integration)", () => {
   let postgres: Awaited<ReturnType<typeof startUnmigratedTestPostgres>>;
@@ -94,12 +80,7 @@ describe("PostgresAuthorization.compileFilter (live Postgres integration)", () =
     await postgres.stop();
   });
 
-  async function listDocuments(
-    tenantActive: boolean,
-    subjectId: string,
-    permission: string,
-    limit = 2,
-  ) {
+  async function listDocuments(tenantActive: boolean, subjectId: string, permission: string, limit = 2) {
     const filter = auth.compileFilter({
       subject: { type: "user", id: subjectId },
       permission,

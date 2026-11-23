@@ -7,10 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PgMigrationExecutor } from "../access-migrations/sql-migration-types.js";
 import { buildAccessModelFromIr } from "./access-model-from-ir.js";
-import type {
-  SpiceDbExportedTuple,
-  SpiceDbMigrationSource,
-} from "./authzed-client-adapter.js";
+import type { SpiceDbExportedTuple, SpiceDbMigrationSource } from "./authzed-client-adapter.js";
 import { parseImportSpiceDbArgs } from "./cli-args.js";
 import { runImportSpiceDbCli, type ImportSpiceDbCliConnectors } from "./cli.js";
 import type { ParityAuthorizationClient } from "./verify-parity.js";
@@ -94,9 +91,7 @@ function createFakeConnectors(options?: {
       spiceConnectCalls.push(input);
       return Promise.resolve({
         source,
-        ...(options?.spiceParity === undefined
-          ? {}
-          : { parityClient: options.spiceParity }),
+        ...(options?.spiceParity === undefined ? {} : { parityClient: options.spiceParity }),
         close: () => {
           spiceClosed = true;
         },
@@ -111,9 +106,7 @@ function createFakeConnectors(options?: {
           ? {}
           : {
               createParityClient: ({ model }) => {
-                parityModelEntities = model.definitions.map(
-                  (def) => def.entity.wireName,
-                );
+                parityModelEntities = model.definitions.map((def) => def.entity.wireName);
                 return pgParity;
               },
             }),
@@ -135,14 +128,9 @@ function createFakeConnectors(options?: {
   };
 }
 
-function makeAllowMapClient(
-  allowMap: ReadonlyMap<string, readonly string[]>,
-): ParityAuthorizationClient {
+function makeAllowMapClient(allowMap: ReadonlyMap<string, readonly string[]>): ParityAuthorizationClient {
   return {
-    check: (q) =>
-      Promise.resolve(
-        (allowMap.get(q.subject.id) ?? []).includes(q.resource.id),
-      ),
+    check: (q) => Promise.resolve((allowMap.get(q.subject.id) ?? []).includes(q.resource.id)),
     lookupResources: (q) => Promise.resolve(allowMap.get(q.subject.id) ?? []),
   };
 }
@@ -185,13 +173,10 @@ describe("parseImportSpiceDbArgs", () => {
   });
 
   it("supports --flag=value syntax and SPICEDB_TOKEN / DATABASE_URL env fallbacks", () => {
-    const parsed = parseImportSpiceDbArgs(
-      ["--endpoint=spicedb.internal:50051"],
-      {
-        SPICEDB_TOKEN: "env-token",
-        DATABASE_URL: "postgres://localhost/envdb",
-      },
-    );
+    const parsed = parseImportSpiceDbArgs(["--endpoint=spicedb.internal:50051"], {
+      SPICEDB_TOKEN: "env-token",
+      DATABASE_URL: "postgres://localhost/envdb",
+    });
 
     expect(parsed).toEqual({
       kind: "options",
@@ -210,14 +195,7 @@ describe("parseImportSpiceDbArgs", () => {
 
   it("prefers explicit CLI flags over environment variables", () => {
     const parsed = parseImportSpiceDbArgs(
-      [
-        "--endpoint",
-        "localhost:50051",
-        "--token",
-        "cli-token",
-        "--database-url",
-        "postgres://localhost/clidb",
-      ],
+      ["--endpoint", "localhost:50051", "--token", "cli-token", "--database-url", "postgres://localhost/clidb"],
       {
         SPICEDB_TOKEN: "env-token",
         DATABASE_URL: "postgres://localhost/envdb",
@@ -232,33 +210,22 @@ describe("parseImportSpiceDbArgs", () => {
   });
 
   it("allows --dry-run without --database-url and rejects --dry-run with --verify", () => {
-    const dryRun = parseImportSpiceDbArgs(
-      ["--endpoint", "localhost:50051", "--dry-run"],
-      { SPICEDB_TOKEN: "tok" },
-    );
+    const dryRun = parseImportSpiceDbArgs(["--endpoint", "localhost:50051", "--dry-run"], { SPICEDB_TOKEN: "tok" });
     expect(dryRun.kind).toBe("options");
     if (dryRun.kind === "options") {
       expect(dryRun.options.dryRun).toBe(true);
       expect(dryRun.options.databaseUrl).toBeUndefined();
     }
 
-    const conflict = parseImportSpiceDbArgs(
-      ["--endpoint", "localhost:50051", "--dry-run", "--verify"],
-      DEFAULT_ENV,
-    );
+    const conflict = parseImportSpiceDbArgs(["--endpoint", "localhost:50051", "--dry-run", "--verify"], DEFAULT_ENV);
     expect(conflict.kind).toBe("error");
-    if (conflict.kind === "error")
-      expect(conflict.message).toContain("--verify");
+    if (conflict.kind === "error") expect(conflict.message).toContain("--verify");
   });
 
   it("returns help for --help and -h even when required flags are absent", () => {
     expect(parseImportSpiceDbArgs(["--help"]).kind).toBe("help");
     expect(parseImportSpiceDbArgs(["-h"]).kind).toBe("help");
-    const help = parseImportSpiceDbArgs([
-      "--endpoint",
-      "localhost:50051",
-      "-h",
-    ]);
+    const help = parseImportSpiceDbArgs(["--endpoint", "localhost:50051", "-h"]);
     expect(help.kind).toBe("help");
     if (help.kind === "help") {
       expect(help.usage).toContain("dads-import-spicedb");
@@ -269,46 +236,25 @@ describe("parseImportSpiceDbArgs", () => {
   it("rejects missing required flags, invalid --batch-size, duplicate flags, and unknown flags", () => {
     expect(parseImportSpiceDbArgs([], DEFAULT_ENV).kind).toBe("error");
     expect(
-      parseImportSpiceDbArgs([
-        "--endpoint",
-        "localhost:50051",
-        "--database-url",
-        "postgres://localhost/db",
-      ]).kind,
+      parseImportSpiceDbArgs(["--endpoint", "localhost:50051", "--database-url", "postgres://localhost/db"]).kind,
     ).toBe("error");
-    expect(
-      parseImportSpiceDbArgs([
-        "--endpoint",
-        "localhost:50051",
-        "--token",
-        "tok",
-      ]).kind,
-    ).toBe("error");
+    expect(parseImportSpiceDbArgs(["--endpoint", "localhost:50051", "--token", "tok"]).kind).toBe("error");
 
     for (const bad of ["0", "-3", "1.5", "abc", "10ms"]) {
-      const result = parseImportSpiceDbArgs(
-        ["--endpoint", "localhost:50051", "--batch-size", bad],
-        DEFAULT_ENV,
-      );
+      const result = parseImportSpiceDbArgs(["--endpoint", "localhost:50051", "--batch-size", bad], DEFAULT_ENV);
       expect(result.kind).toBe("error");
       if (result.kind === "error") {
         expect(result.message).toContain("--batch-size");
       }
     }
 
-    const dupValue = parseImportSpiceDbArgs(
-      ["--endpoint", "a:50051", "--endpoint", "b:50051"],
-      DEFAULT_ENV,
-    );
+    const dupValue = parseImportSpiceDbArgs(["--endpoint", "a:50051", "--endpoint", "b:50051"], DEFAULT_ENV);
     expect(dupValue.kind).toBe("error");
     if (dupValue.kind === "error") {
       expect(dupValue.message).toContain("Duplicate flag: --endpoint");
     }
 
-    const dupBool = parseImportSpiceDbArgs(
-      ["--endpoint", "a:50051", "--verify", "--verify"],
-      DEFAULT_ENV,
-    );
+    const dupBool = parseImportSpiceDbArgs(["--endpoint", "a:50051", "--verify", "--verify"], DEFAULT_ENV);
     expect(dupBool.kind).toBe("error");
     if (dupBool.kind === "error") {
       expect(dupBool.message).toContain("Duplicate flag: --verify");
@@ -371,28 +317,15 @@ describe("runImportSpiceDbCli", () => {
   it("migrates schema and tuples, batches Postgres upserts, and closes both connectors", async () => {
     const fakes = createFakeConnectors();
     const result = await runImportSpiceDbCli({
-      argv: [
-        ...BASE_LIVE_ARGS,
-        "--namespace",
-        "prod",
-        "--batch-size",
-        "1",
-        "--insecure",
-      ],
+      argv: [...BASE_LIVE_ARGS, "--namespace", "prod", "--batch-size", "1", "--insecure"],
       connectors: fakes.connectors,
     });
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain(
-      'Migrated 2 relationships (2 upserted) into Postgres namespace "prod"',
-    );
-    expect(fakes.spiceConnectCalls).toEqual([
-      { endpoint: "localhost:50051", token: "tok", insecure: true },
-    ]);
-    expect(fakes.pgConnectCalls).toEqual([
-      { databaseUrl: "postgres://localhost/app" },
-    ]);
+    expect(result.stdout).toContain('Migrated 2 relationships (2 upserted) into Postgres namespace "prod"');
+    expect(fakes.spiceConnectCalls).toEqual([{ endpoint: "localhost:50051", token: "tok", insecure: true }]);
+    expect(fakes.pgConnectCalls).toEqual([{ databaseUrl: "postgres://localhost/app" }]);
     // 2 DDL statements + 2 batch inserts (batchSize = 1 for 2 tuples)
     expect(fakes.queries).toHaveLength(4);
     expect(fakes.isSpiceClosed()).toBe(true);
@@ -403,13 +336,7 @@ describe("runImportSpiceDbCli", () => {
     const fakes = createFakeConnectors();
     let wroteFile = false;
     const result = await runImportSpiceDbCli({
-      argv: [
-        "--endpoint",
-        "localhost:50051",
-        "--dry-run",
-        "--out",
-        "/tmp/should-not-be-written.ts",
-      ],
+      argv: ["--endpoint", "localhost:50051", "--dry-run", "--out", "/tmp/should-not-be-written.ts"],
       env: { SPICEDB_TOKEN: "env-tok" },
       connectors: {
         ...fakes.connectors,
@@ -441,9 +368,7 @@ describe("runImportSpiceDbCli", () => {
       });
 
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain(
-        `Wrote generated TypeScript access model to ${outPath}`,
-      );
+      expect(result.stdout).toContain(`Wrote generated TypeScript access model to ${outPath}`);
       const written = await readFile(outPath, "utf8");
       expect(written).toContain("export const access = compileAccess(");
       expect(written).toContain("user.expiring");
@@ -469,9 +394,7 @@ describe("runImportSpiceDbCli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain(
-      "Parity verified: 9/9 queries matched (0 mismatches).",
-    );
+    expect(result.stdout).toContain("Parity verified: 9/9 queries matched (0 mismatches).");
     expect(fakes.getParityModelEntities()).toEqual(["user", "document"]);
   });
 
@@ -533,14 +456,7 @@ describe("runImportSpiceDbCli", () => {
 
     const dryFakes = createFakeConnectors();
     const dryResult = await runImportSpiceDbCli({
-      argv: [
-        "--endpoint",
-        "localhost:50051",
-        "--token",
-        "tok",
-        "--dry-run",
-        "--json",
-      ],
+      argv: ["--endpoint", "localhost:50051", "--token", "tok", "--dry-run", "--json"],
       connectors: dryFakes.connectors,
     });
     expect(dryResult.exitCode).toBe(0);

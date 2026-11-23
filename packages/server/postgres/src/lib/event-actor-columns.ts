@@ -35,8 +35,7 @@
  * `UserId` keeps the brand through to its column, still without this kit
  * importing any domain's contract. */
 export type PersistedEventActor<TUserId extends string = string> =
-  | { readonly type: "USER"; readonly userId: TUserId }
-  | { readonly type: "SYSTEM"; readonly system: string };
+  { readonly type: "USER"; readonly userId: TUserId } | { readonly type: "SYSTEM"; readonly system: string };
 
 export type EventActorColumns<TUserId extends string = string> = {
   readonly actorType: "USER" | "SYSTEM";

@@ -1,9 +1,6 @@
 import type { AccessIrPermission, AccessIrTerm } from "../core/ir.js";
 import type { PermissionQuery, SubjectRef } from "../runtime/authorization.js";
-import type {
-  PermissionExplanation,
-  PermissionTrace,
-} from "./explain-format.js";
+import type { PermissionExplanation, PermissionTrace } from "./explain-format.js";
 import {
   activeRoleTargets,
   checkRoleReachability,
@@ -64,12 +61,7 @@ function traceThroughTerm(
   term: Extract<AccessIrTerm, { readonly kind: "through" | "through-all" }>,
 ): PermissionTrace {
   const label = describeIrTerm(term);
-  const targets = activeRoleTargets(
-    context.groups,
-    entityType,
-    resourceId,
-    term.roleName,
-  );
+  const targets = activeRoleTargets(context.groups, entityType, resourceId, term.roleName);
   if (targets.length === 0) {
     return {
       label,
@@ -91,23 +83,15 @@ function traceThroughTerm(
       context.nowMs,
     );
     if (targetAllowed) allowCount += 1;
-    const subTrace = tracePermissionOrRole(
-      context,
-      target.subjectType,
-      target.subjectId,
-      term.targetPermission,
-    );
+    const subTrace = tracePermissionOrRole(context, target.subjectType, target.subjectId, term.targetPermission);
     childTraces.push({
       label: `via ${target.subjectType}:${target.subjectId}#${term.targetPermission}`,
       outcome: targetAllowed ? "ALLOW" : "DENY",
       ...(subTrace.detail === undefined ? {} : { detail: subTrace.detail }),
-      ...(subTrace.children === undefined
-        ? {}
-        : { children: subTrace.children }),
+      ...(subTrace.children === undefined ? {} : { children: subTrace.children }),
     });
   }
-  const allowed =
-    term.kind === "through" ? allowCount > 0 : allowCount === targets.length;
+  const allowed = term.kind === "through" ? allowCount > 0 : allowCount === targets.length;
   return { label, outcome: allowed ? "ALLOW" : "DENY", children: childTraces };
 }
 
@@ -124,9 +108,7 @@ function traceExcludingTerm(
     ...bannedTrace,
     label: `unless(${bannedTrace.label})`,
     outcome: blocked ? "BLOCKED" : "ALLOW",
-    detail: blocked
-      ? (bannedTrace.detail ?? "matched exclusion")
-      : "not excluded",
+    detail: blocked ? (bannedTrace.detail ?? "matched exclusion") : "not excluded",
   };
   return {
     label: describeIrTerm(term),
@@ -145,8 +127,7 @@ function traceConjunctionTerm(
   const rightTerm = term.kind === "gated" ? term.condition : term.right;
   const leftTrace = traceTerm(context, entityType, resourceId, leftTerm);
   const rightTrace = traceTerm(context, entityType, resourceId, rightTerm);
-  const allowed =
-    leftTrace.outcome === "ALLOW" && rightTrace.outcome === "ALLOW";
+  const allowed = leftTrace.outcome === "ALLOW" && rightTrace.outcome === "ALLOW";
   return {
     label: describeIrTerm(term),
     outcome: allowed ? "ALLOW" : "DENY",
@@ -154,12 +135,7 @@ function traceConjunctionTerm(
   };
 }
 
-function traceTerm(
-  context: TraceContext,
-  entityType: string,
-  resourceId: string,
-  term: AccessIrTerm,
-): PermissionTrace {
+function traceTerm(context: TraceContext, entityType: string, resourceId: string, term: AccessIrTerm): PermissionTrace {
   switch (term.kind) {
     case "role":
       return traceRoleTerm(context, entityType, resourceId, term.name);
@@ -174,9 +150,7 @@ function traceTerm(
     case "excluding":
       return traceExcludingTerm(context, entityType, resourceId, term);
     case "or": {
-      const children = term.terms.map((branch) =>
-        traceTerm(context, entityType, resourceId, branch),
-      );
+      const children = term.terms.map((branch) => traceTerm(context, entityType, resourceId, branch));
       const allowed = children.some((child) => child.outcome === "ALLOW");
       return {
         label: describeIrTerm(term),
@@ -193,13 +167,9 @@ function tracePermissionDefinition(
   resourceId: string,
   permission: AccessIrPermission,
 ): PermissionTrace {
-  const allowed =
-    context.valuation.get(
-      valuationKey(entityType, resourceId, permission.name),
-    ) === true;
+  const allowed = context.valuation.get(valuationKey(entityType, resourceId, permission.name)) === true;
   const label = `${permission.name} = ${describePermissionTerms(permission.terms)}`;
-  const singleTerm =
-    permission.terms.length === 1 ? permission.terms[0] : undefined;
+  const singleTerm = permission.terms.length === 1 ? permission.terms[0] : undefined;
   if (singleTerm !== undefined) {
     const inner = traceTerm(context, entityType, resourceId, singleTerm);
     return {
@@ -209,9 +179,7 @@ function tracePermissionDefinition(
       ...(inner.children === undefined ? {} : { children: inner.children }),
     };
   }
-  const children = permission.terms.map((term) =>
-    traceTerm(context, entityType, resourceId, term),
-  );
+  const children = permission.terms.map((term) => traceTerm(context, entityType, resourceId, term));
   return { label, outcome: allowed ? "ALLOW" : "DENY", children };
 }
 
@@ -229,17 +197,10 @@ function tracePermissionOrRole(
       detail: "cycle visited",
     };
   }
-  const permission = context.index.permissionsByEntity
-    .get(entityType)
-    ?.get(name);
+  const permission = context.index.permissionsByEntity.get(entityType)?.get(name);
   if (permission !== undefined) {
     context.traceStack.add(stackKey);
-    const trace = tracePermissionDefinition(
-      context,
-      entityType,
-      resourceId,
-      permission,
-    );
+    const trace = tracePermissionDefinition(context, entityType, resourceId, permission);
     context.traceStack.delete(stackKey);
     return trace;
   }
@@ -260,16 +221,8 @@ export function explainPermissionQuery(
   query: PermissionQuery,
   nowMs: number,
 ): PermissionExplanation {
-  const { groups, valuation } = computeActorValuation(
-    index,
-    tuples,
-    query.subject,
-    nowMs,
-    query.resource,
-  );
-  const permission = index.permissionsByEntity
-    .get(query.resource.type)
-    ?.get(query.permission);
+  const { groups, valuation } = computeActorValuation(index, tuples, query.subject, nowMs, query.resource);
+  const permission = index.permissionsByEntity.get(query.resource.type)?.get(query.permission);
   if (permission === undefined) {
     return {
       allowed: false,
@@ -280,10 +233,7 @@ export function explainPermissionQuery(
       },
     };
   }
-  const allowed =
-    valuation.get(
-      valuationKey(query.resource.type, query.resource.id, query.permission),
-    ) === true;
+  const allowed = valuation.get(valuationKey(query.resource.type, query.resource.id, query.permission)) === true;
   const context: TraceContext = {
     index,
     groups,
@@ -292,11 +242,6 @@ export function explainPermissionQuery(
     nowMs,
     traceStack: new Set(),
   };
-  const trace = tracePermissionOrRole(
-    context,
-    query.resource.type,
-    query.resource.id,
-    query.permission,
-  );
+  const trace = tracePermissionOrRole(context, query.resource.type, query.resource.id, query.permission);
   return { allowed, trace };
 }

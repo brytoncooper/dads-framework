@@ -8,10 +8,7 @@ import {
 } from "@opentelemetry/sdk-trace";
 
 import type { RequestTraceFacts } from "./core/index.js";
-import {
-  recordRequestTrace,
-  traceAttributionCases,
-} from "./core/testing/index.js";
+import { recordRequestTrace, traceAttributionCases } from "./core/testing/index.js";
 import { annotateRequest } from "./trace-request.js";
 
 type RequestTrace = {
@@ -34,15 +31,13 @@ export class OpenTelemetryTrace implements RequestTrace {
     });
     equal(context.setGlobalContextManager(new StackContextManager()), true);
     try {
-      traces
-        .getTracer("trace-conformance")
-        .startActiveSpan("request", (span) => {
-          try {
-            annotateRequest(facts);
-          } finally {
-            span.end();
-          }
-        });
+      traces.getTracer("trace-conformance").startActiveSpan("request", (span) => {
+        try {
+          annotateRequest(facts);
+        } finally {
+          span.end();
+        }
+      });
       await traces.forceFlush();
       return exporter.getFinishedSpans().map(({ attributes }) => attributes);
     } finally {

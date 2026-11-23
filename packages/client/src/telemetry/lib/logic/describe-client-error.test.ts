@@ -28,9 +28,7 @@ const STACK = [
 
 describe("describeClientError", () => {
   it("reads the name, message and located frames off an error", () => {
-    const described = describeClientError(
-      errorWithStack("TypeError", "cannot read properties of undefined", STACK),
-    );
+    const described = describeClientError(errorWithStack("TypeError", "cannot read properties of undefined", STACK));
 
     expect(described.name).toBe("TypeError");
     expect(described.message).toBe("cannot read properties of undefined");
@@ -43,9 +41,7 @@ describe("describeClientError", () => {
   });
 
   it("reads a frame that has no function name", () => {
-    const described = describeClientError(
-      errorWithStack("TypeError", "x", STACK),
-    );
+    const described = describeClientError(errorWithStack("TypeError", "x", STACK));
 
     expect(described.frames[2]).toEqual({
       file: "https://app.example/assets/main-e5f6.js",
@@ -70,12 +66,8 @@ describe("describeClientError", () => {
 
   it("groups by name and origin, never by message", () => {
     // "order 12345 not found" and "order 67890 not found" are one fault.
-    const first = describeClientError(
-      errorWithStack("TypeError", "order 12345 is missing", STACK),
-    );
-    const second = describeClientError(
-      errorWithStack("TypeError", "order 67890 is missing", STACK),
-    );
+    const first = describeClientError(errorWithStack("TypeError", "order 12345 is missing", STACK));
+    const second = describeClientError(errorWithStack("TypeError", "order 67890 is missing", STACK));
 
     expect(first.fingerprint).toBe(second.fingerprint);
   });

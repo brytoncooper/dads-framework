@@ -1,13 +1,6 @@
 import type { CapturedMailbox } from "./captured-mailbox.js";
-import type {
-  EmailMessage,
-  EmailSender,
-  EmailSendReceipt,
-} from "../core/index.js";
-import {
-  formatEmailAddress,
-  formatEmailAddresses,
-} from "./logic/format-email-address.js";
+import type { EmailMessage, EmailSender, EmailSendReceipt } from "../core/index.js";
+import { formatEmailAddress, formatEmailAddresses } from "./logic/format-email-address.js";
 
 /**
  * Development-page driver (`MAIL_DRIVER=capture`): keeps the WHOLE email —
@@ -31,20 +24,11 @@ export class CaptureEmailSender implements EmailSender {
 
   send(message: EmailMessage): Promise<EmailSendReceipt> {
     const id = this.mailbox.record({
-      from:
-        message.from === undefined
-          ? this.from
-          : formatEmailAddress(message.from),
+      from: message.from === undefined ? this.from : formatEmailAddress(message.from),
       to: formatEmailAddresses(message.to),
-      ...(message.cc === undefined
-        ? {}
-        : { cc: formatEmailAddresses(message.cc) }),
-      ...(message.bcc === undefined
-        ? {}
-        : { bcc: formatEmailAddresses(message.bcc) }),
-      ...(message.replyTo === undefined
-        ? {}
-        : { replyTo: formatEmailAddress(message.replyTo) }),
+      ...(message.cc === undefined ? {} : { cc: formatEmailAddresses(message.cc) }),
+      ...(message.bcc === undefined ? {} : { bcc: formatEmailAddresses(message.bcc) }),
+      ...(message.replyTo === undefined ? {} : { replyTo: formatEmailAddress(message.replyTo) }),
       subject: message.subject,
       text: message.text,
       ...(message.html === undefined ? {} : { html: message.html }),
@@ -58,9 +42,7 @@ export class CaptureEmailSender implements EmailSender {
             })),
           }),
       ...(message.tags === undefined ? {} : { tags: [...message.tags] }),
-      ...(message.headers === undefined
-        ? {}
-        : { headers: { ...message.headers } }),
+      ...(message.headers === undefined ? {} : { headers: { ...message.headers } }),
     });
     return Promise.resolve({ providerMessageId: id });
   }

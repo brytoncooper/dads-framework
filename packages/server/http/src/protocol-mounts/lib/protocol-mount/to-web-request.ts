@@ -50,22 +50,16 @@ function toWebHeaders(request: IncomingProtocolRequest): Headers {
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
     if (typeof value === "string") headers.append(name, value);
-    else if (Array.isArray(value))
-      for (const item of value) headers.append(name, item);
+    else if (Array.isArray(value)) for (const item of value) headers.append(name, item);
   }
   return headers;
 }
 
 export function toWebRequest(request: IncomingProtocolRequest): Request {
   const host = request.headers["host"];
-  const url = new URL(
-    request.url,
-    `http://${typeof host === "string" ? host : "localhost"}`,
-  );
+  const url = new URL(request.url, `http://${typeof host === "string" ? host : "localhost"}`);
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
-  const body = Buffer.isBuffer(request.body)
-    ? new Uint8Array(request.body)
-    : undefined;
+  const body = Buffer.isBuffer(request.body) ? new Uint8Array(request.body) : undefined;
   return new BufferedProtocolRequest(url, {
     method: request.method,
     headers: toWebHeaders(request),

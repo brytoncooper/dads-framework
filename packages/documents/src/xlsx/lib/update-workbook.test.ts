@@ -52,9 +52,7 @@ describe("updateWorkbookCells", () => {
 
     const workbook = new Workbook();
     await workbook.xlsx.load(updated);
-    expect(workbook.getWorksheet("Releases")?.getCell("B2").note).toBe(
-      "Customer supplied",
-    );
+    expect(workbook.getWorksheet("Releases")?.getCell("B2").note).toBe("Customer supplied");
     expect(workbook.getWorksheet("Calculations")?.getCell("A3").value).toEqual({
       formula: "SUM(A1:A2)",
       result: 5,

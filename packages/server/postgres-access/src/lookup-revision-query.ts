@@ -46,10 +46,7 @@ export function lookupRevisionQuery(namespace: string): PostgresQuery {
 }
 
 /** The revision and ordered result must use the exact same database snapshot. */
-export function lookupWithRevision(
-  query: PostgresQuery,
-  namespace: string,
-): PostgresQuery {
+export function lookupWithRevision(query: PostgresQuery, namespace: string): PostgresQuery {
   const values = query.values ?? [];
   return {
     text: `SELECT revision.stamp,
@@ -65,23 +62,15 @@ export function lookupWithRevision(
 export function readLookupRevision(row: PostgresRow | undefined): string {
   const stamp = row?.["stamp"];
   if (typeof stamp !== "string")
-    throw new Error(
-      "Postgres lookup reuse requires the versioned primary and restricted runtime role",
-    );
+    throw new Error("Postgres lookup reuse requires the versioned primary and restricted runtime role");
   return stamp;
 }
 
-export function readRevisionedIds(
-  row: PostgresRow | undefined,
-): readonly string[] {
+export function readRevisionedIds(row: PostgresRow | undefined): readonly string[] {
   const text = row?.["resource_ids"];
-  if (typeof text !== "string")
-    throw new Error("Postgres authorization returned invalid resource IDs");
+  if (typeof text !== "string") throw new Error("Postgres authorization returned invalid resource IDs");
   const ids: unknown = JSON.parse(text);
-  if (
-    !Array.isArray(ids) ||
-    !ids.every((id: unknown): id is string => typeof id === "string")
-  )
+  if (!Array.isArray(ids) || !ids.every((id: unknown): id is string => typeof id === "string"))
     throw new Error("Postgres authorization returned invalid resource IDs");
   return Object.freeze(ids);
 }

@@ -37,14 +37,11 @@ describe("SentryDiagnosticsReporter", () => {
     await reporter.flush(1_000);
 
     expect(sent).toHaveLength(1);
-    expect(sent[0]?.url).toBe(
-      "https://o1.ingest.us.sentry.io/api/42/envelope/",
-    );
+    expect(sent[0]?.url).toBe("https://o1.ingest.us.sentry.io/api/42/envelope/");
     expect(sent[0]?.init?.method).toBe("POST");
     expect(sent[0]?.init?.headers).toMatchObject({
       "content-type": "application/x-sentry-envelope",
-      "x-sentry-auth":
-        "Sentry sentry_version=7, sentry_key=publickey, sentry_client=dads-diagnostics/1.0",
+      "x-sentry-auth": "Sentry sentry_version=7, sentry_key=publickey, sentry_client=dads-diagnostics/1.0",
     });
   });
 

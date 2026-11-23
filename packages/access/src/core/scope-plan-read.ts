@@ -21,18 +21,13 @@ export function describeScopePlan(plan: ScopePlan): string {
  * Every distinct SpiceDB question in a plan, including inside `via`, in
  * first-seen order, so each is asked once per request.
  */
-export function distinctScopeLookups(
-  plan: ScopePlan,
-): readonly ScopeLookupTarget[] {
+export function distinctScopeLookups(plan: ScopePlan): readonly ScopeLookupTarget[] {
   const byKey = new Map<string, ScopeLookupTarget>();
   collectLookups(plan, byKey);
   return [...byKey.values()];
 }
 
-function collectLookups(
-  plan: ScopePlan,
-  byKey: Map<string, ScopeLookupTarget>,
-): void {
+function collectLookups(plan: ScopePlan, byKey: Map<string, ScopeLookupTarget>): void {
   if (plan.kind === "lookup") {
     byKey.set(`${plan.targetType}#${plan.targetPermission}`, {
       targetType: plan.targetType,

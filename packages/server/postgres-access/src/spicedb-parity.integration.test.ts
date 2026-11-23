@@ -1,24 +1,11 @@
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  emitZed,
-  every,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, allOf, anyOf, compileAccess, emitZed, every, resource, roleToken } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "@dads-framework/spicedb-access";
 import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  PostgresAuthorization,
-  relationshipExpirationMigration,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, relationshipExpirationMigration, relationshipSchemaMigration } from "./index.js";
 
 const user = actor("user");
 const groupMemberRef = roleToken("group", "member", user.handle);
@@ -67,15 +54,7 @@ const classifiedDoc = resource("classified_doc", {
   }),
 });
 
-const parityModel = compileAccess([
-  user,
-  group,
-  workspace,
-  folder,
-  document,
-  label,
-  classifiedDoc,
-]);
+const parityModel = compileAccess([user, group, workspace, folder, document, label, classifiedDoc]);
 
 describe("Live Postgres + SpiceDB parity for all 5 features", () => {
   const disposers: (() => Promise<void>)[] = [];
@@ -172,21 +151,9 @@ describe("Live Postgres + SpiceDB parity for all 5 features", () => {
         type: "user",
         id: "dana",
       }),
-      relationshipWrite(
-        { type: "classified_doc", id: "c_one" },
-        "required_label",
-        { type: "label", id: "l1" },
-      ),
-      relationshipWrite(
-        { type: "classified_doc", id: "c_two" },
-        "required_label",
-        { type: "label", id: "l1" },
-      ),
-      relationshipWrite(
-        { type: "classified_doc", id: "c_two" },
-        "required_label",
-        { type: "label", id: "l2" },
-      ),
+      relationshipWrite({ type: "classified_doc", id: "c_one" }, "required_label", { type: "label", id: "l1" }),
+      relationshipWrite({ type: "classified_doc", id: "c_two" }, "required_label", { type: "label", id: "l1" }),
+      relationshipWrite({ type: "classified_doc", id: "c_two" }, "required_label", { type: "label", id: "l2" }),
     ];
 
     await pgAuth.writeRelationships(acyclicTuples);
@@ -281,10 +248,7 @@ describe("Live Postgres + SpiceDB parity for all 5 features", () => {
     for (const [index, entry] of cases.entries()) {
       const q = queries[index];
       if (!q) throw new Error("missing query");
-      const [pgAllowed, spiceAllowed] = await Promise.all([
-        pgAuth.check(q),
-        spiceAuth.check(q),
-      ]);
+      const [pgAllowed, spiceAllowed] = await Promise.all([pgAuth.check(q), spiceAuth.check(q)]);
       expect(pgAllowed).toBe(entry.want);
       expect(spiceAllowed).toBe(entry.want);
       expect(pgBatch[index]).toBe(entry.want);
@@ -414,18 +378,8 @@ describe("Live Postgres + SpiceDB parity for all 5 features", () => {
     const future = new Date(Date.now() + 300_000);
 
     await expAuth.writeRelationships([
-      relationshipWrite(
-        ws,
-        "member",
-        { type: "user", id: "expired_u" },
-        { expiresAt: past },
-      ),
-      relationshipWrite(
-        ws,
-        "member",
-        { type: "user", id: "active_u" },
-        { expiresAt: future },
-      ),
+      relationshipWrite(ws, "member", { type: "user", id: "expired_u" }, { expiresAt: past }),
+      relationshipWrite(ws, "member", { type: "user", id: "active_u" }, { expiresAt: future }),
     ]);
 
     expect(
@@ -449,13 +403,11 @@ describe("Live Postgres + SpiceDB parity for all 5 features", () => {
         subjectType: "user",
       }),
     ).toEqual({ subjects: ["active_u"], hasWildcard: false });
-    expect(
-      await expAuth.listDirectSubjects({ resource: ws, relation: "member" }),
-    ).toEqual([{ type: "user", id: "active_u" }]);
-
-    await expAuth.writeRelationships([
-      relationshipWrite(ws, "member", { type: "user", id: "expired_u" }),
+    expect(await expAuth.listDirectSubjects({ resource: ws, relation: "member" })).toEqual([
+      { type: "user", id: "active_u" },
     ]);
+
+    await expAuth.writeRelationships([relationshipWrite(ws, "member", { type: "user", id: "expired_u" })]);
     expect(
       await expAuth.check({
         subject: { type: "user", id: "expired_u" },

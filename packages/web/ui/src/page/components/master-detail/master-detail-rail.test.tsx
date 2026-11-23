@@ -18,9 +18,7 @@ describe("MasterDetailRail", () => {
       <MasterDetailRail
         header={<MasterDetailRailHeader title="Assets" />}
         controls={<input aria-label="Search Assets" />}
-        sortHeader={
-          <MasterDetailSortHeader sort="name" onSortChange={vi.fn()} />
-        }
+        sortHeader={<MasterDetailSortHeader sort="name" onSortChange={vi.fn()} />}
       >
         <p>rows</p>
       </MasterDetailRail>,
@@ -35,10 +33,7 @@ describe("MasterDetailRail", () => {
       const previous = order[index - 1];
       const current = order[index];
       if (previous === undefined || current === undefined) continue;
-      expect(
-        previous.compareDocumentPosition(current) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      expect(previous.compareDocumentPosition(current) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
   });
 });
@@ -61,9 +56,7 @@ describe("MasterDetailRail controls", () => {
     const controls = screen.getByRole("textbox", {
       name: "Search Assets",
     }).parentElement;
-    expect(controls?.getAttribute("data-slot")).toBe(
-      "master-detail-rail-controls",
-    );
+    expect(controls?.getAttribute("data-slot")).toBe("master-detail-rail-controls");
     expect(controls?.className).toContain("flex-wrap");
     expect(controls?.className).not.toContain("flex-col");
   });
@@ -73,26 +66,20 @@ describe("MasterDetailSortHeader", () => {
   it("flips an ascending name sort to descending", () => {
     const onSortChange = vi.fn();
     render(<MasterDetailSortHeader sort="name" onSortChange={onSortChange} />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Sort by Name, descending" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Name, descending" }));
     expect(onSortChange).toHaveBeenCalledWith("-name");
   });
 
   it("flips a descending name sort back to ascending", () => {
     const onSortChange = vi.fn();
     render(<MasterDetailSortHeader sort="-name" onSortChange={onSortChange} />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Sort by Name, ascending" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Sort by Name, ascending" }));
     expect(onSortChange).toHaveBeenCalledWith("name");
   });
 
   it("starts ascending when the list is sorted by another key", () => {
     const onSortChange = vi.fn();
-    render(
-      <MasterDetailSortHeader sort="-createdAt" onSortChange={onSortChange} />,
-    );
+    render(<MasterDetailSortHeader sort="-createdAt" onSortChange={onSortChange} />);
     fireEvent.click(screen.getByRole("button", { name: /ascending$/ }));
     expect(onSortChange).toHaveBeenCalledWith("name");
   });
@@ -106,28 +93,14 @@ describe("MasterDetailSegmentedFilter", () => {
 
   it("shows counts after labels and reports a new choice", () => {
     const onValueChange = vi.fn();
-    render(
-      <MasterDetailSegmentedFilter
-        label="Setup"
-        options={options}
-        value="all"
-        onValueChange={onValueChange}
-      />,
-    );
+    render(<MasterDetailSegmentedFilter label="Setup" options={options} value="all" onValueChange={onValueChange} />);
     fireEvent.click(screen.getByRole("radio", { name: "Tag Needed (4)" }));
     expect(onValueChange).toHaveBeenCalledWith("needs-setup");
   });
 
   it("keeps the current choice when it is pressed again", () => {
     const onValueChange = vi.fn();
-    render(
-      <MasterDetailSegmentedFilter
-        label="Setup"
-        options={options}
-        value="all"
-        onValueChange={onValueChange}
-      />,
-    );
+    render(<MasterDetailSegmentedFilter label="Setup" options={options} value="all" onValueChange={onValueChange} />);
     fireEvent.click(screen.getByRole("radio", { name: "All" }));
     expect(onValueChange).not.toHaveBeenCalled();
   });

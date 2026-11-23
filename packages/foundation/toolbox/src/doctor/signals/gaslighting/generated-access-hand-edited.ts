@@ -18,22 +18,9 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  accessArtifacts,
-  declaredRootsOf,
-  owningRoot,
-} from "../scanners/access-artifacts.js";
-import {
-  readCommitLog,
-  requireGitWorkspace,
-  shortSha,
-  type GitCommit,
-} from "../scanners/git-history.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { accessArtifacts, declaredRootsOf, owningRoot } from "../scanners/access-artifacts.js";
+import { readCommitLog, requireGitWorkspace, shortSha, type GitCommit } from "../scanners/git-history.js";
 import { isTestSource } from "../scanners/source-classification.js";
 import { addFinding } from "../scanners/typescript-program.js";
 
@@ -42,9 +29,7 @@ const AUTHORING_EXTENSIONS = [".ts", ".tsx"];
 const DEPENDENCY_FILES = ["package.json", "package-lock.json"];
 
 function isDependencyFile(path: string): boolean {
-  return DEPENDENCY_FILES.some(
-    (name) => path === name || path.endsWith(`/${name}`),
-  );
+  return DEPENDENCY_FILES.some((name) => path === name || path.endsWith(`/${name}`));
 }
 
 function isAuthoring(path: string, root: string): boolean {

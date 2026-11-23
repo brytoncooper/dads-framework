@@ -124,9 +124,7 @@ function createInteractiveDom(userAgent = "Mozilla/5.0 (Macintosh)") {
     document.querySelector("#search-results"),
     dialog.querySelector(".search-close"),
   ]) {
-    defineMethod(node, "addEventListener", (type, handler) =>
-      addListener(node, type, handler),
-    );
+    defineMethod(node, "addEventListener", (type, handler) => addListener(node, type, handler));
   }
 
   const win = { navigator: { userAgent } };
@@ -154,9 +152,7 @@ test("siteHeader renders search trigger only on docs pages", () => {
   assert.match(trigger.textContent, /Search/u);
   assert.equal(trigger.querySelector("kbd")?.textContent, "⌘K");
 
-  const navLinks = Array.from(docsDoc.querySelectorAll("nav a")).map((a) =>
-    a.textContent.trim(),
-  );
+  const navLinks = Array.from(docsDoc.querySelectorAll("nav a")).map((a) => a.textContent.trim());
   assert.deepEqual(navLinks, ["Docs", "GitHub ↗"]);
 
   const homeDoc = domino.createDocument(siteHeader("home"));
@@ -192,27 +188,17 @@ test("docs-reader wraps search in native dialog outside main and preserves searc
   assert.ok(section.querySelector("button.search-close"));
   assert.ok(section.querySelector(".search-hint"));
 
-  assert.match(
-    rendered,
-    /<noscript><style>\.header-search-trigger\{display:none\}<\/style><\/noscript>/u,
-  );
+  assert.match(rendered, /<noscript><style>\.header-search-trigger\{display:none\}<\/style><\/noscript>/u);
 });
 
 test("markdown export omits header search trigger and search dialog completely", () => {
   const rendered = renderDocs(sampleDocHtml, "quickstart.html");
   const canonicals = new Map([["/docs/quickstart.html", "/docs/quickstart"]]);
-  const markdown = exportMarkdown(
-    rendered,
-    "https://dadsframework.dev/docs/quickstart",
-    canonicals,
-  );
+  const markdown = exportMarkdown(rendered, "https://dadsframework.dev/docs/quickstart", canonicals);
 
   assert.match(markdown, /# Quickstart/u);
   assert.match(markdown, /Start a new Dads backend with PostgreSQL\./u);
-  assert.doesNotMatch(
-    markdown,
-    /Search documentation|Type to search|⌘K|navigate|Close search/u,
-  );
+  assert.doesNotMatch(markdown, /Search documentation|Type to search|⌘K|navigate|Close search/u);
 });
 
 test("fragment HTML without body still places dialog outside article", () => {
@@ -226,19 +212,11 @@ test("fragment HTML without body still places dialog outside article", () => {
 });
 
 test("search modal opens on trigger click, Cmd+K, Ctrl+K, and slash outside inputs", () => {
-  const {
-    document,
-    dialog,
-    search,
-    dispatch,
-    getShowModalCalls,
-    getCloseCalls,
-  } = createInteractiveDom("Mozilla/5.0 (X11; Linux x86_64)");
-
-  assert.equal(
-    document.querySelector(".header-search-shortcut")?.textContent,
-    "Ctrl K",
+  const { document, dialog, search, dispatch, getShowModalCalls, getCloseCalls } = createInteractiveDom(
+    "Mozilla/5.0 (X11; Linux x86_64)",
   );
+
+  assert.equal(document.querySelector(".header-search-shortcut")?.textContent, "Ctrl K");
 
   const trigger = document.querySelector("#docs-search-trigger");
   dispatch(trigger, "click");

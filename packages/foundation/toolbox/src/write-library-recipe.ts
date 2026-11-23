@@ -7,10 +7,7 @@ type ManifestUpdate = {
   readonly data: Record<string, unknown>;
 };
 
-export function withLibraryRecipeLock<Result>(
-  projectRoot: string,
-  apply: () => Result,
-): Result {
+export function withLibraryRecipeLock<Result>(projectRoot: string, apply: () => Result): Result {
   const lock = join(projectRoot, ".dads-library-recipe.lock");
   mkdirSync(lock);
   try {
@@ -36,10 +33,7 @@ export function writeLibraryRecipe(
     }
     for (const manifest of manifests) {
       written.push(manifest);
-      writeFileSync(
-        manifest.path,
-        JSON.stringify(manifest.data, null, 2) + "\n",
-      );
+      writeFileSync(manifest.path, JSON.stringify(manifest.data, null, 2) + "\n");
     }
   } catch (error: unknown) {
     const rollbackErrors: unknown[] = [];

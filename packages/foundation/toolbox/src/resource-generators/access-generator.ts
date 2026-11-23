@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel } from "./names.js";
 
-export function addAccess(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function addAccess(plan: GenerationPlan, domain: string, name: string): void {
   const access = `${camel(name)}Access`;
   const directory = `domains/${domain}/access`;
   const wireName = `${domain}/${name}`.replaceAll("-", "_");
@@ -24,20 +20,12 @@ export const ${access} = resource("${wireName}", {
 });
 `,
   );
-  plan.appendLine(
-    `${directory}/index.ts`,
-    "// dad:add imports",
-    `import { ${access} } from "./${name}.js";`,
-  );
+  plan.appendLine(`${directory}/index.ts`, "// dad:add imports", `import { ${access} } from "./${name}.js";`);
   plan.appendLine(`${directory}/index.ts`, "// dad:add access", `  ${access},`);
 }
 
 /** Record collection routes are bounded by one authorized tenant. */
-export function addResourceGuards(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function addResourceGuards(plan: GenerationPlan, domain: string, name: string): void {
   const item = camel(name);
   plan.create(
     `domains/${domain}/access/${name}-guards.ts`,

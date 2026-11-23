@@ -9,11 +9,7 @@ const PHONE_WIDTH_QUERY = "(max-width: 767.98px)";
  * browser cannot answer (no `matchMedia`).
  */
 export function useIsPhoneWidth(): boolean {
-  return React.useSyncExternalStore(
-    subscribeToPhoneWidth,
-    readIsPhoneWidth,
-    readIsPhoneWidthOnServer,
-  );
+  return React.useSyncExternalStore(subscribeToPhoneWidth, readIsPhoneWidth, readIsPhoneWidthOnServer);
 }
 
 function subscribeToPhoneWidth(onChange: () => void): () => void {
@@ -34,10 +30,7 @@ function readIsPhoneWidthOnServer(): boolean {
 }
 
 function readPhoneWidthQuery(): MediaQueryList | null {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
     return null;
   }
   return window.matchMedia(PHONE_WIDTH_QUERY);

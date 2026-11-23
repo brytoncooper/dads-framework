@@ -48,10 +48,7 @@ export type AuditSettings = {
  * `composeApp(plugins)` alone, so the migration runner, `dad doctor`, and
  * `dad orient` see them without booting the app.
  */
-export type PluginContributions<
-  Flag extends SluggedFlag,
-  Access extends AccessContribution = AccessContribution,
-> = {
+export type PluginContributions<Flag extends SluggedFlag, Access extends AccessContribution = AccessContribution> = {
   readonly migrations?: readonly MigrationFolder[];
   readonly access?: readonly Access[];
   readonly flags?: readonly Flag[];
@@ -59,10 +56,7 @@ export type PluginContributions<
 };
 
 /** Contributions with every list present. */
-export type DeclaredContributions<
-  Flag extends SluggedFlag,
-  Access extends AccessContribution = AccessContribution,
-> = {
+export type DeclaredContributions<Flag extends SluggedFlag, Access extends AccessContribution = AccessContribution> = {
   readonly migrations: readonly MigrationFolder[];
   readonly access: readonly Access[];
   readonly flags: readonly Flag[];
@@ -87,10 +81,7 @@ export type StartedContributions<Route, Job extends NamedJob> = {
   readonly jobs: readonly Job[];
 };
 
-export function declaredContributions<
-  Flag extends SluggedFlag,
-  Access extends AccessContribution,
->(
+export function declaredContributions<Flag extends SluggedFlag, Access extends AccessContribution>(
   contributions: PluginContributions<Flag, Access> | undefined,
 ): DeclaredContributions<Flag, Access> {
   return {

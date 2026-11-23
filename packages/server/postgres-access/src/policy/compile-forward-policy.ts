@@ -3,10 +3,7 @@ import type {
   CompiledArrowTarget,
   CompiledPermissionExpression,
 } from "./policy-model.js";
-import {
-  analyzePermissionCycles,
-  type PermissionCyclePlan,
-} from "./permission-cycles.js";
+import { analyzePermissionCycles, type PermissionCyclePlan } from "./permission-cycles.js";
 import { compileRecursiveForwardCheck } from "./compile-recursive-policy.js";
 import { findColumnRelation } from "./column-relations.js";
 import {
@@ -66,14 +63,9 @@ export function compileForwardPermission(
   permissionName: string,
 ): string {
   const definition = context.model.permissions.find(
-    (candidate) =>
-      candidate.wireName === permissionName &&
-      candidate.entity === resource.entity,
+    (candidate) => candidate.wireName === permissionName && candidate.entity === resource.entity,
   );
-  if (!definition)
-    throw new Error(
-      `Postgres policy cannot find permission ${permissionName}.`,
-    );
+  if (!definition) throw new Error(`Postgres policy cannot find permission ${permissionName}.`);
   const scc = context.cycles.sccFor(resource.entity, permissionName);
   if (scc !== undefined) {
     return compileRecursiveForwardCheck({
@@ -84,15 +76,12 @@ export function compileForwardPermission(
       entryEntity: resource.entity,
       entryPermission: permissionName,
       scc,
-      compileExpression: (nodeResource, expression) =>
-        compileForwardExpression(context, nodeResource, expression),
+      compileExpression: (nodeResource, expression) => compileForwardExpression(context, nodeResource, expression),
     });
   }
   const identity = permissionIdentity(resource.entity, permissionName);
   if (context.active.has(identity))
-    throw new Error(
-      "Postgres SQL compilation does not support a cycle through permissions.",
-    );
+    throw new Error("Postgres SQL compilation does not support a cycle through permissions.");
   context.active.add(identity);
   try {
     return compileForwardExpression(context, resource, definition.expression);
@@ -119,10 +108,8 @@ function compileForwardExpression(
       expression.relation,
     );
   }
-  if (expression.kind === "through")
-    return compileThrough(context, resource, expression);
-  if (expression.kind === "through-all")
-    return compileThroughAll(context, resource, expression);
+  if (expression.kind === "through") return compileThrough(context, resource, expression);
+  if (expression.kind === "through-all") return compileThroughAll(context, resource, expression);
   if (expression.kind === "exclude")
     return `((${compileForwardExpression(context, resource, expression.include)}) AND NOT (${compileForwardExpression(context, resource, expression.exclude)}))`;
   const joiner = expression.kind === "any-of" ? " OR " : " AND ";
@@ -135,16 +122,8 @@ function compileThrough(
   expression: Extract<CompiledPermissionExpression, { kind: "through" }>,
 ): string {
   const { builder, namespace } = context;
-  const targets = resolveArrowTargets(
-    context.model,
-    resource.entity,
-    expression,
-  );
-  const columnRel = findColumnRelation(
-    context.model,
-    resource.entity,
-    expression.relation,
-  );
+  const targets = resolveArrowTargets(context.model, resource.entity, expression);
+  const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   if (columnRel !== undefined && targets[0] !== undefined) {
     const throughAlias = builder.throughAlias();
     const entitySql = builder.value(columnRel.entity);
@@ -160,19 +139,10 @@ function compileThrough(
     );
     return `EXISTS (SELECT 1 FROM ${columnRel.table} ${throughAlias} WHERE (${resource.type})::text = ${entitySql}::text AND ${throughAlias}.${columnRel.idColumn} = ${resource.id} AND ${throughAlias}.${columnRel.targetIdColumn} IS NOT NULL AND (${child}) OFFSET 0)`;
   }
-  const polymorphic = isPolymorphicRelation(
-    context.model,
-    resource.entity,
-    expression.relation,
-  );
+  const polymorphic = isPolymorphicRelation(context.model, resource.entity, expression.relation);
   const relationSql = builder.value(expression.relation);
   const throughAlias = builder.throughAlias();
-  const branchSql = compileArrowTargetBranches(
-    context,
-    throughAlias,
-    targets,
-    polymorphic,
-  );
+  const branchSql = compileArrowTargetBranches(context, throughAlias, targets, polymorphic);
   // OFFSET 0 keeps each arrow a correlated subplan. Pulling arrows up
   // into semijoins can repeatedly execute the nested membership query.
   return `EXISTS (SELECT 1 FROM ${TUPLES} ${throughAlias} WHERE ${throughAlias}.namespace = ${namespace} AND ${throughAlias}.resource_kind = ${resource.type} AND ${throughAlias}.resource_id = ${resource.id} AND ${throughAlias}.relation = ${relationSql} AND ${throughAlias}.subject_is_wildcard = false AND ${throughAlias}.subject_relation = '' AND ${notExpired(throughAlias)} AND (${branchSql}) OFFSET 0)`;
@@ -184,16 +154,8 @@ function compileThroughAll(
   expression: Extract<CompiledPermissionExpression, { kind: "through-all" }>,
 ): string {
   const { builder, namespace } = context;
-  const targets = resolveArrowTargets(
-    context.model,
-    resource.entity,
-    expression,
-  );
-  const columnRel = findColumnRelation(
-    context.model,
-    resource.entity,
-    expression.relation,
-  );
+  const targets = resolveArrowTargets(context.model, resource.entity, expression);
+  const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   if (columnRel !== undefined && targets[0] !== undefined) {
     const existsAlias = builder.throughAlias();
     const checkAlias = builder.throughAlias();
@@ -212,20 +174,11 @@ function compileThroughAll(
       `(${resource.type})::text = ${entitySql}::text AND ${alias}.${columnRel.idColumn} = ${resource.id} AND ${alias}.${columnRel.targetIdColumn} IS NOT NULL`;
     return `(EXISTS (SELECT 1 FROM ${columnRel.table} ${existsAlias} WHERE ${match(existsAlias)}) AND NOT EXISTS (SELECT 1 FROM ${columnRel.table} ${checkAlias} WHERE ${match(checkAlias)} AND NOT (${child}) OFFSET 0))`;
   }
-  const polymorphic = isPolymorphicRelation(
-    context.model,
-    resource.entity,
-    expression.relation,
-  );
+  const polymorphic = isPolymorphicRelation(context.model, resource.entity, expression.relation);
   const relationSql = builder.value(expression.relation);
   const existsAlias = builder.throughAlias();
   const checkAlias = builder.throughAlias();
-  const branchSql = compileArrowTargetBranches(
-    context,
-    checkAlias,
-    targets,
-    polymorphic,
-  );
+  const branchSql = compileArrowTargetBranches(context, checkAlias, targets, polymorphic);
   const parentMatch = (alias: string) =>
     `${alias}.namespace = ${namespace} AND ${alias}.resource_kind = ${resource.type} AND ${alias}.resource_id = ${resource.id} AND ${alias}.relation = ${relationSql} AND ${alias}.subject_is_wildcard = false AND ${alias}.subject_relation = '' AND ${notExpired(alias)}`;
   return `(EXISTS (SELECT 1 FROM ${TUPLES} ${existsAlias} WHERE ${parentMatch(existsAlias)}) AND NOT EXISTS (SELECT 1 FROM ${TUPLES} ${checkAlias} WHERE ${parentMatch(checkAlias)} AND NOT (${branchSql}) OFFSET 0))`;

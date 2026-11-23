@@ -17,10 +17,7 @@ function fixture(t) {
   const directory = join(root, "packages/sample");
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(root, readme), "# Sample package\n");
-  writeFileSync(
-    join(directory, "root.d.ts"),
-    "export declare const read: string;\n",
-  );
+  writeFileSync(join(directory, "root.d.ts"), "export declare const read: string;\n");
   writeFileSync(
     join(directory, "testing.d.ts"),
     [
@@ -72,25 +69,13 @@ test("the rendered reference links every emitted symbol and keeps overloads", (t
   });
 
   assert.match(html, /id="api-report-dads-frameworksample"/u);
-  assert.ok(
-    html.includes(
-      'href="https://github.com/brytoncooper/dads-framework/blob/main/packages/sample/README.md"',
-    ),
-  );
-  assert.match(
-    html,
-    /href="https:\/\/www\.npmjs\.com\/package\/@dads-framework\/sample"/u,
-  );
-  assert.equal(
-    files.get(`source/${readme}`).toString("utf8"),
-    "# Sample package\n",
-  );
+  assert.ok(html.includes('href="https://github.com/brytoncooper/dads-framework/blob/main/packages/sample/README.md"'));
+  assert.match(html, /href="https:\/\/www\.npmjs\.com\/package\/@dads-framework\/sample"/u);
+  assert.equal(files.get(`source/${readme}`).toString("utf8"), "# Sample package\n");
   assert.doesNotMatch(html, /Published:/u);
 
   const ids = [...html.matchAll(/<h[1-4] id="([^"]+)"/gu)].map(([, id]) => id);
-  const targets = [...html.matchAll(/href="#([^"]+)"/gu)]
-    .map(([, id]) => id)
-    .slice(1);
+  const targets = [...html.matchAll(/href="#([^"]+)"/gu)].map(([, id]) => id).slice(1);
   assert.equal(ids.length, new Set(ids).size);
   assert.deepEqual(targets, [
     "import-dads-frameworksample",
@@ -101,8 +86,7 @@ test("the rendered reference links every emitted symbol and keeps overloads", (t
   ]);
   assert.ok(targets.every((target) => ids.includes(target)));
   for (const { exports } of report.sections) {
-    for (const { signature } of exports)
-      assert.ok(markdown.split("\n").includes(signature));
+    for (const { signature } of exports) assert.ok(markdown.split("\n").includes(signature));
   }
 });
 

@@ -17,14 +17,8 @@ import { join, resolve } from "node:path";
 import process from "node:process";
 import { releaseSubjects } from "../release/release-subjects.mjs";
 
-import {
-  adoptionFixturesReceipt,
-  createAdoptionFixtureTasks,
-} from "./adoption-fixture-tasks.mjs";
-import {
-  loadAdoptionPackages,
-  packAdoptionPackages,
-} from "./adoption-packing.mjs";
+import { adoptionFixturesReceipt, createAdoptionFixtureTasks } from "./adoption-fixture-tasks.mjs";
+import { loadAdoptionPackages, packAdoptionPackages } from "./adoption-packing.mjs";
 import {
   createAdoptionWorkspace,
   createPhaseTimer,
@@ -33,10 +27,7 @@ import {
   writePhaseTable,
   writeReceipt,
 } from "./adoption-proof-run.mjs";
-import {
-  announceAdoptionJobs,
-  runAdoptionTasks,
-} from "./adoption-task-runner.mjs";
+import { announceAdoptionJobs, runAdoptionTasks } from "./adoption-task-runner.mjs";
 import {
   createGeneratedProjectTasks,
   generatedProjectReceipt,
@@ -48,13 +39,8 @@ const LABEL = "adoption proofs";
 async function main() {
   const root = process.cwd();
   const [option, directory, ...extra] = process.argv.slice(2);
-  if (
-    option &&
-    (option !== "--packed-directory" || !directory || extra.length)
-  ) {
-    throw new Error(
-      "Usage: verify-adoption.mjs [--packed-directory <release-dir>]",
-    );
+  if (option && (option !== "--packed-directory" || !directory || extra.length)) {
+    throw new Error("Usage: verify-adoption.mjs [--packed-directory <release-dir>]");
   }
   const timer = createPhaseTimer();
   const workspace = createAdoptionWorkspace("dads-adoption-");
@@ -68,14 +54,8 @@ async function main() {
     });
     const fixtures = createAdoptionFixtureTasks(context);
     const creator = prepareCreatorInstall(context);
-    const tasks = [
-      ...fixtures.tasks,
-      ...createGeneratedProjectTasks(context, creator),
-    ];
-    const concurrency = await announceAdoptionJobs(
-      LABEL,
-      Math.max(packages.size, tasks.length),
-    );
+    const tasks = [...fixtures.tasks, ...createGeneratedProjectTasks(context, creator)];
+    const concurrency = await announceAdoptionJobs(LABEL, Math.max(packages.size, tasks.length));
     // The packed boundary verification is the pool's tail: it is the longest
     // task, so it starts first and it is the only one still running for most of
     // its life. It fans its own scenarios out, and the budget it should spend
@@ -98,9 +78,7 @@ async function main() {
     creator.start();
     await runAdoptionTasks({ tasks, jobs: concurrency.jobs, label: LABEL });
     writePhaseTable(LABEL, timer);
-    writeReceipt(
-      adoptionFixturesReceipt(packages, fixtures, concurrency, timer.report()),
-    );
+    writeReceipt(adoptionFixturesReceipt(packages, fixtures, concurrency, timer.report()));
     writeReceipt(generatedProjectReceipt(concurrency, timer.report()));
   } finally {
     workspace.dispose();

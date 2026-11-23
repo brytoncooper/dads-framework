@@ -2,10 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import type { AccessModel, PermissionToken } from "@dads-framework/access";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import {
-  ControllableClock,
-  type TestDuration,
-} from "@dads-framework/access/testing";
+import { ControllableClock, type TestDuration } from "@dads-framework/access/testing";
 
 import { SqliteAuthorization } from "./sqlite-authorization.js";
 import { createNodeSqliteExecutor } from "./sqlite-executor.js";
@@ -96,9 +93,7 @@ function queryFilteredIds(
   values: readonly SqliteValue[],
 ): readonly string[] {
   const rows = db
-    .prepare(
-      `SELECT ${idColumn} AS row_id FROM ${table} WHERE ${filterSql} ORDER BY ${idColumn}`,
-    )
+    .prepare(`SELECT ${idColumn} AS row_id FROM ${table} WHERE ${filterSql} ORDER BY ${idColumn}`)
     .all(...values);
   return rows.map((row) => String(row["row_id"] ?? "")).sort();
 }
@@ -136,13 +131,7 @@ async function checkSqliteSubjectFilters(
     permission: input.permission.permissionName,
     idColumn: input.idColumn,
   });
-  const plainIds = queryFilteredIds(
-    input.db,
-    input.table,
-    input.idColumn,
-    plainFilter.sql,
-    plainFilter.values,
-  );
+  const plainIds = queryFilteredIds(input.db, input.table, input.idColumn, plainFilter.sql, plainFilter.values);
   const plainDiff = compareSets(subject, "compileFilter", plainIds, lookupIds);
   if (plainDiff !== undefined) disagreements.push(plainDiff);
 
@@ -154,19 +143,8 @@ async function checkSqliteSubjectFilters(
       idColumn: input.idColumn,
       scopeColumns: input.scopeColumns,
     });
-    const scopedIds = queryFilteredIds(
-      input.db,
-      input.table,
-      input.idColumn,
-      scopedFilter.sql,
-      scopedFilter.values,
-    );
-    const scopedDiff = compareSets(
-      subject,
-      "compileFilter(scopeColumns)",
-      scopedIds,
-      lookupIds,
-    );
+    const scopedIds = queryFilteredIds(input.db, input.table, input.idColumn, scopedFilter.sql, scopedFilter.values);
+    const scopedDiff = compareSets(subject, "compileFilter(scopeColumns)", scopedIds, lookupIds);
     if (scopedDiff !== undefined) disagreements.push(scopedDiff);
   }
   return disagreements;
@@ -176,9 +154,7 @@ async function checkSqliteSubjectFilters(
  * Prove that `compileFilter` (and `compileFilter({ scopeColumns })` when
  * provided) selects the exact same row IDs as `lookupResources` for every subject.
  */
-export async function proveSqliteFilterParity(
-  input: SqliteFilterParityInput,
-): Promise<void> {
+export async function proveSqliteFilterParity(input: SqliteFilterParityInput): Promise<void> {
   const disagreements: FilterDisagreement[] = [];
   for (const subject of input.subjects) {
     disagreements.push(...(await checkSqliteSubjectFilters(input, subject)));

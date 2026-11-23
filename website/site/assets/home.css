@@ -1,10 +1,6 @@
 .home-hero {
   border-bottom: 1px solid var(--rule-subtle);
-  background: radial-gradient(
-    ellipse at 82% 24%,
-    rgb(32 62 55 / 0.42) 0,
-    transparent 56%
-  );
+  background: radial-gradient(ellipse at 82% 24%, rgb(32 62 55 / 0.42) 0, transparent 56%);
 }
 .hero-layout {
   display: grid;
@@ -357,11 +353,7 @@ main h2 {
   border: 0;
 }
 :root[data-theme="light"] .home-hero {
-  background: radial-gradient(
-    ellipse at 82% 24%,
-    rgb(20 184 166 / 0.14) 0,
-    transparent 56%
-  );
+  background: radial-gradient(ellipse at 82% 24%, rgb(20 184 166 / 0.14) 0, transparent 56%);
 }
 :root[data-theme="light"] .hero-intro h1 span {
   color: #0f766e;

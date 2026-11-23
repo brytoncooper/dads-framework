@@ -12,11 +12,7 @@ import { FakeAuthorization } from "@dads-framework/access/testing";
 import { fromParam, requireSession } from "../lib/route/access.js";
 import { getRoute } from "../lib/route/get-route.js";
 import { routeGroup } from "../lib/route/route-group.js";
-import {
-  buildTestApp,
-  TEST_SUBJECT_HEADER,
-  type TestApp,
-} from "./build-test-app.js";
+import { buildTestApp, TEST_SUBJECT_HEADER, type TestApp } from "./build-test-app.js";
 import { dataBodyOf, errorBodyOf } from "./parse-inject-response.js";
 
 const echoSchema = z.object({ subjectId: z.string() });
@@ -96,9 +92,7 @@ describe("buildTestApp", () => {
           Promise.resolve({
             subject: { type: "user", id: "u1" },
             method: "session-cookie",
-            ...(request.headers["x-reauthenticated"] === "yes"
-              ? { sessionReauthenticatedAt: reauthenticatedAt }
-              : {}),
+            ...(request.headers["x-reauthenticated"] === "yes" ? { sessionReauthenticatedAt: reauthenticatedAt } : {}),
           }),
       },
     });

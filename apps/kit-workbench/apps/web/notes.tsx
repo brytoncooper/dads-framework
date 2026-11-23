@@ -1,21 +1,10 @@
-import {
-  Alert,
-  AlertDescription,
-  StatusBadge,
-} from "@dads-framework/ui/display";
+import { Alert, AlertDescription, StatusBadge } from "@dads-framework/ui/display";
 import { Badge, Button } from "@dads-framework/ui/elements";
 import { useEffect, useState } from "react";
-import {
-  listNotes,
-  notesExport,
-  readFeatures,
-} from "../../domains/notes/web-client/index.js";
+import { listNotes, notesExport, readFeatures } from "../../domains/notes/web-client/index.js";
 import type { Tenant } from "../../domains/tenants/web-client/index.js";
 import { describeFailure } from "./actions.js";
-import {
-  useWorkbenchCopy,
-  type WorkbenchCopyKey,
-} from "./copy/workbench-copy.js";
+import { useWorkbenchCopy, type WorkbenchCopyKey } from "./copy/workbench-copy.js";
 import { InviteCollaborator, NewNote } from "./note-forms.js";
 import { NoteList } from "./note-list.js";
 
@@ -29,10 +18,7 @@ export function Notes({ tenant }: { readonly tenant: Tenant }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    void Promise.all([
-      listNotes(tenant.id, page, controller.signal),
-      readFeatures(tenant.id, controller.signal),
-    ]).then(
+    void Promise.all([listNotes(tenant.id, page, controller.signal), readFeatures(tenant.id, controller.signal)]).then(
       ([result, state]) => {
         if (controller.signal.aborted) return;
         setNotes(result);
@@ -72,11 +58,7 @@ export function Notes({ tenant }: { readonly tenant: Tenant }) {
         </div>
         {features && (
           <StatusBadge tone={exportEnabled ? "positive" : "neutral"}>
-            {t(
-              exportEnabled
-                ? "workbench.notes.export.on"
-                : "workbench.notes.export.off",
-            )}
+            {t(exportEnabled ? "workbench.notes.export.on" : "workbench.notes.export.off")}
           </StatusBadge>
         )}
       </div>
@@ -96,14 +78,7 @@ export function Notes({ tenant }: { readonly tenant: Tenant }) {
           {t("workbench.notes.loading")}
         </p>
       )}
-      {notes && (
-        <NoteList
-          notes={notes}
-          page={page}
-          exportEnabled={exportEnabled}
-          onChangePage={setPage}
-        />
-      )}
+      {notes && <NoteList notes={notes} page={page} exportEnabled={exportEnabled} onChangePage={setPage} />}
       <InviteCollaborator tenantId={tenant.id} />
     </section>
   );

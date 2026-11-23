@@ -17,14 +17,8 @@ import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { componentShowcaseEmailTemplate } from "./component-showcase.email-template.js";
-import {
-  defineEmailTemplate,
-  type EmailTemplateDefinition,
-} from "./email-template.js";
-import {
-  createEmailTemplateRegistry,
-  EmailTemplateRegistry,
-} from "./email-template-registry.js";
+import { defineEmailTemplate, type EmailTemplateDefinition } from "./email-template.js";
+import { createEmailTemplateRegistry, EmailTemplateRegistry } from "./email-template-registry.js";
 
 const noticeTemplate = defineEmailTemplate({
   name: "email-templates.registry-test-notice",
@@ -42,9 +36,7 @@ const noticeTemplate = defineEmailTemplate({
  * template — the registry's parameter is the erased definition, so an
  * override the authoring door would reject still compiles here.
  */
-function withOverrides(
-  overrides: Partial<EmailTemplateDefinition<z.ZodType>>,
-): EmailTemplateDefinition<z.ZodType> {
+function withOverrides(overrides: Partial<EmailTemplateDefinition<z.ZodType>>): EmailTemplateDefinition<z.ZodType> {
   return { ...noticeTemplate, ...overrides };
 }
 
@@ -57,16 +49,13 @@ describe("EmailTemplateRegistry.register", () => {
     }).not.toThrow();
   });
 
-  it.each(["NoDots", "Bad.Case", "trailing.", ".leading", "two.dots.here", ""])(
-    "refuses the name %o",
-    (name) => {
-      const registry = new EmailTemplateRegistry();
+  it.each(["NoDots", "Bad.Case", "trailing.", ".leading", "two.dots.here", ""])("refuses the name %o", (name) => {
+    const registry = new EmailTemplateRegistry();
 
-      expect(() => {
-        registry.register(withOverrides({ name }));
-      }).toThrow(/<domain>\.<kebab-name>/);
-    },
-  );
+    expect(() => {
+      registry.register(withOverrides({ name }));
+    }).toThrow(/<domain>\.<kebab-name>/);
+  });
 
   it("refuses a scaffold's TODO description", () => {
     const registry = new EmailTemplateRegistry();
@@ -111,10 +100,7 @@ describe("EmailTemplateRegistry.register", () => {
 });
 
 describe("EmailTemplateRegistry.find", () => {
-  const registry = createEmailTemplateRegistry([
-    componentShowcaseEmailTemplate,
-    noticeTemplate,
-  ]);
+  const registry = createEmailTemplateRegistry([componentShowcaseEmailTemplate, noticeTemplate]);
 
   it("answers nothing for a template that was never registered", () => {
     expect(registry.find("identity.nope")).toBeUndefined();
@@ -130,9 +116,7 @@ describe("EmailTemplateRegistry.find", () => {
   });
 
   it("renders a named sample", async () => {
-    const rendered = await registry
-      .find("email-templates.component-showcase")
-      ?.renderSample("default");
+    const rendered = await registry.find("email-templates.component-showcase")?.renderSample("default");
 
     expect(rendered?.subject).toBe("Order SO-10428 is ready");
     expect(rendered?.html).toContain("4F7QK2");
@@ -148,10 +132,7 @@ describe("EmailTemplateRegistry.find", () => {
 
 describe("EmailTemplateRegistry.list", () => {
   it("sorts by name so a gallery never reorders between boots", () => {
-    const registry = createEmailTemplateRegistry([
-      noticeTemplate,
-      componentShowcaseEmailTemplate,
-    ]);
+    const registry = createEmailTemplateRegistry([noticeTemplate, componentShowcaseEmailTemplate]);
 
     expect(registry.list().map((template) => template.name)).toEqual([
       "email-templates.component-showcase",

@@ -24,14 +24,9 @@ import {
 } from "node:fs";
 import { dirname, join, posix, relative, resolve, sep } from "node:path";
 import { canonicalJson, compareText, sha256 } from "./canonical-bytes.js";
-import {
-  assertNoSymlinkComponents,
-  normalizeRelativePath,
-  resolveInside,
-} from "./filesystem-guards.js";
+import { assertNoSymlinkComponents, normalizeRelativePath, resolveInside } from "./filesystem-guards.js";
 
-export type VerificationInputRole =
-  "source" | "test" | "configuration" | "resolved-dependency" | "artifact";
+export type VerificationInputRole = "source" | "test" | "configuration" | "resolved-dependency" | "artifact";
 
 export type ControlledVerificationInput = {
   readonly path: string;
@@ -51,9 +46,7 @@ export type VerificationWorkRoot = {
   readonly outputs: string;
 };
 
-export function ensureVerificationWorkRoot(
-  projectRoot: string,
-): VerificationWorkRoot {
+export function ensureVerificationWorkRoot(projectRoot: string): VerificationWorkRoot {
   const dadsRoot = ensureWorkDirectory(projectRoot, ".dads");
   const verificationRoot = ensureWorkDirectory(dadsRoot, "verification");
   return {
@@ -73,20 +66,14 @@ export function copyVerificationInputs(
       path: normalizeRelativePath(input.path),
       role: input.role,
     }))
-    .sort((firstInput, secondInput) =>
-      compareText(firstInput.path, secondInput.path),
-    )
+    .sort((firstInput, secondInput) => compareText(firstInput.path, secondInput.path))
     .map((input) => {
       const destination = resolve(snapshotRoot, input.path);
       mkdirSync(dirname(destination), { recursive: true });
-      writeFileSync(
-        destination,
-        readStableProjectFile(projectRoot, input.path),
-        {
-          flag: "wx",
-          mode: 0o444,
-        },
-      );
+      writeFileSync(destination, readStableProjectFile(projectRoot, input.path), {
+        flag: "wx",
+        mode: 0o444,
+      });
       chmodSync(destination, 0o444);
       return fingerprintSnapshotFile(snapshotRoot, input.path, input.role);
     });
@@ -98,9 +85,7 @@ export function assertCapturedFilesUnchanged(
   declaredFiles: readonly VerificationInputFingerprint[],
 ): void {
   assertCapturedTreeUnchanged(snapshotRoot, declaredFiles);
-  const currentFiles = declaredFiles.map((file) =>
-    fingerprintSnapshotFile(snapshotRoot, file.path, file.role),
-  );
+  const currentFiles = declaredFiles.map((file) => fingerprintSnapshotFile(snapshotRoot, file.path, file.role));
   if (canonicalJson(currentFiles) !== canonicalJson(declaredFiles)) {
     throw new Error("Captured verification inputs changed after snapshotting.");
   }
@@ -112,9 +97,7 @@ export function projectFilesMatchCapture(
   capturedFiles: readonly VerificationInputFingerprint[],
 ): boolean {
   try {
-    const projectFiles = capturedFiles.map((file) =>
-      fingerprintProjectFile(projectRoot, file.path, file.role),
-    );
+    const projectFiles = capturedFiles.map((file) => fingerprintProjectFile(projectRoot, file.path, file.role));
     return canonicalJson(projectFiles) === canonicalJson(capturedFiles);
   } catch {
     return false;
@@ -123,8 +106,7 @@ export function projectFilesMatchCapture(
 
 export function makeSnapshotReadOnly(snapshotRoot: string): void {
   const directories = listDirectories(snapshotRoot).sort(
-    (firstDirectory, secondDirectory) =>
-      secondDirectory.length - firstDirectory.length,
+    (firstDirectory, secondDirectory) => secondDirectory.length - firstDirectory.length,
   );
   for (const directory of directories) chmodSync(directory, 0o555);
   chmodSync(snapshotRoot, 0o555);
@@ -141,47 +123,25 @@ export function removeCapturedTree(snapshotRoot: string): void {
  * and timestamps before and after, so a file swapped mid-read is a failure
  * rather than a silent capture of two different files.
  */
-function readStableProjectFile(
-  projectRoot: string,
-  projectPath: string,
-): Buffer {
+function readStableProjectFile(projectRoot: string, projectPath: string): Buffer {
   const absolutePath = resolveProjectFile(projectRoot, projectPath);
   const pathStatusBeforeRead = lstatSync(absolutePath, { bigint: true });
-  const descriptor = openSync(
-    absolutePath,
-    constants.O_RDONLY | constants.O_NOFOLLOW,
-  );
+  const descriptor = openSync(absolutePath, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const descriptorStatusBeforeRead = fstatSync(descriptor, { bigint: true });
-    assertStableFileStatus(
-      pathStatusBeforeRead,
-      descriptorStatusBeforeRead,
-      projectPath,
-    );
+    assertStableFileStatus(pathStatusBeforeRead, descriptorStatusBeforeRead, projectPath);
     const contents = readFileSync(descriptor);
     const descriptorStatusAfterRead = fstatSync(descriptor, { bigint: true });
     const pathStatusAfterRead = lstatSync(absolutePath, { bigint: true });
-    assertStableFileStatus(
-      descriptorStatusBeforeRead,
-      descriptorStatusAfterRead,
-      projectPath,
-    );
-    assertStableFileStatus(
-      descriptorStatusAfterRead,
-      pathStatusAfterRead,
-      projectPath,
-    );
+    assertStableFileStatus(descriptorStatusBeforeRead, descriptorStatusAfterRead, projectPath);
+    assertStableFileStatus(descriptorStatusAfterRead, pathStatusAfterRead, projectPath);
     return contents;
   } finally {
     closeSync(descriptor);
   }
 }
 
-function assertStableFileStatus(
-  before: BigIntStats,
-  after: BigIntStats,
-  projectPath: string,
-): void {
+function assertStableFileStatus(before: BigIntStats, after: BigIntStats, projectPath: string): void {
   if (
     !after.isFile() ||
     after.isSymbolicLink() ||
@@ -191,9 +151,7 @@ function assertStableFileStatus(
     before.mtimeNs !== after.mtimeNs ||
     before.ctimeNs !== after.ctimeNs
   ) {
-    throw new Error(
-      `Verification input changed while captured: ${projectPath}.`,
-    );
+    throw new Error(`Verification input changed while captured: ${projectPath}.`);
   }
 }
 
@@ -216,9 +174,7 @@ function fingerprintSnapshotFile(
   snapshotPath: string,
   role: VerificationInputRole,
 ): VerificationInputFingerprint {
-  const contents = readFileSync(
-    resolveSnapshotFile(snapshotRoot, snapshotPath),
-  );
+  const contents = readFileSync(resolveSnapshotFile(snapshotRoot, snapshotPath));
   return {
     path: snapshotPath,
     role,
@@ -232,14 +188,11 @@ function assertCapturedTreeUnchanged(
   declaredFiles: readonly VerificationInputFingerprint[],
 ): void {
   const actualEntries = listCapturedTreeEntries(snapshotRoot);
-  const expectedFiles = declaredFiles
-    .map((file) => file.path)
-    .sort(compareText);
+  const expectedFiles = declaredFiles.map((file) => file.path).sort(compareText);
   const expectedDirectories = directoriesContainingFiles(expectedFiles);
   if (
     canonicalJson(actualEntries.files) !== canonicalJson(expectedFiles) ||
-    canonicalJson(actualEntries.directories) !==
-      canonicalJson(expectedDirectories)
+    canonicalJson(actualEntries.directories) !== canonicalJson(expectedDirectories)
   ) {
     throw new Error("Captured verification tree contains undeclared inputs.");
   }
@@ -258,9 +211,7 @@ function listCapturedTreeEntries(
     const absolutePath = join(directory, entry.name);
     const snapshotPath = relative(root, absolutePath).split(sep).join("/");
     if (entry.isSymbolicLink()) {
-      throw new Error(
-        `Captured verification tree contains a symlink: ${snapshotPath}.`,
-      );
+      throw new Error(`Captured verification tree contains a symlink: ${snapshotPath}.`);
     }
     if (entry.isDirectory()) {
       directories.push(snapshotPath);
@@ -270,9 +221,7 @@ function listCapturedTreeEntries(
     } else if (entry.isFile()) {
       files.push(snapshotPath);
     } else {
-      throw new Error(
-        `Captured verification tree contains an unsupported input: ${snapshotPath}.`,
-      );
+      throw new Error(`Captured verification tree contains an unsupported input: ${snapshotPath}.`);
     }
   }
   return {
@@ -281,9 +230,7 @@ function listCapturedTreeEntries(
   };
 }
 
-function directoriesContainingFiles(
-  files: readonly string[],
-): readonly string[] {
+function directoriesContainingFiles(files: readonly string[]): readonly string[] {
   const directories = new Set<string>();
   for (const file of files) {
     let directory = posix.dirname(file);
@@ -301,9 +248,7 @@ function ensureWorkDirectory(parent: string, name: string): string {
   if (!existsSync(directory)) mkdirSync(directory);
   const status = lstatSync(directory);
   if (status.isSymbolicLink() || !status.isDirectory()) {
-    throw new Error(
-      `Verification work path is not a real directory: ${directory}.`,
-    );
+    throw new Error(`Verification work path is not a real directory: ${directory}.`);
   }
   return directory;
 }
@@ -316,9 +261,7 @@ function resolveProjectFile(projectRoot: string, projectPath: string): string {
   assertNoSymlinkComponents(projectRoot, projectPath);
   const status = lstatSync(absolutePath);
   if (status.isSymbolicLink() || !status.isFile()) {
-    throw new Error(
-      `Verification input must be a regular file: ${projectPath}.`,
-    );
+    throw new Error(`Verification input must be a regular file: ${projectPath}.`);
   }
   return absolutePath;
 }
@@ -331,10 +274,7 @@ function resolveProjectFile(projectRoot: string, projectPath: string): string {
  * through here, including the fingerprint `copyVerificationInputs` takes of the
  * copy it has just written.
  */
-function resolveSnapshotFile(
-  snapshotRoot: string,
-  snapshotPath: string,
-): string {
+function resolveSnapshotFile(snapshotRoot: string, snapshotPath: string): string {
   const absolutePath = resolveInside(snapshotRoot, snapshotPath);
   assertNoSymlinkComponents(snapshotRoot, snapshotPath);
   const status = lstatSync(absolutePath);

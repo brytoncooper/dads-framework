@@ -46,9 +46,7 @@ describe("NewestWrittenToken", () => {
   it("holds nothing after a failed write or a schema write", async () => {
     const newest = new NewestWrittenToken();
     await newest.track(() => Promise.resolve("written"), asToken);
-    await expect(
-      newest.track(() => Promise.reject(new Error("deadline")), asToken),
-    ).rejects.toThrow("deadline");
+    await expect(newest.track(() => Promise.reject(new Error("deadline")), asToken)).rejects.toThrow("deadline");
     expect(newest.current()).toBeUndefined();
 
     await newest.track(() => Promise.resolve("again"), asToken);

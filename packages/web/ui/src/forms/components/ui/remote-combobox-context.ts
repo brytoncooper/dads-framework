@@ -4,5 +4,4 @@ export type RemoteComboboxHandle = {
   readonly prefetchNext: () => void;
 };
 
-export const RemoteComboboxContext =
-  React.createContext<RemoteComboboxHandle | null>(null);
+export const RemoteComboboxContext = React.createContext<RemoteComboboxHandle | null>(null);

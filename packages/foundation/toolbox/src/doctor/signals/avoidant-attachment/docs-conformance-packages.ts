@@ -23,19 +23,13 @@ function countConformancePackages(context: DoctorContext): SignalReadings {
   if (!isRecord(parsed)) return new Map();
   const listed: unknown = parsed["packages"];
   if (!isUnknownArray(listed)) return new Map();
-  return new Map([
-    [
-      "packages",
-      { value: listed.length, evidence: [{ path: CONFORMANCE_FILE }] },
-    ],
-  ]);
+  return new Map([["packages", { value: listed.length, evidence: [{ path: CONFORMANCE_FILE }] }]]);
 }
 
 export const docsConformancePackagesSignal: DoctorSignal = {
   id: "docs-conformance-packages",
   issue: "avoidant-attachment",
-  question:
-    "Does any package lack a README, or carry one outside the template?",
+  question: "Does any package lack a README, or carry one outside the template?",
   reads: "text",
   unit: "count",
   direction: "floor",

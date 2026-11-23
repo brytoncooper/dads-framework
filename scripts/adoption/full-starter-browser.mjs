@@ -24,9 +24,7 @@ export async function proveStarterFrontend(targetUrl, profile) {
     const port = await Promise.race([
       waitForDebugPort(profile),
       closed.then(() => {
-        throw new Error(
-          "The headless browser exited before rendering the starter",
-        );
+        throw new Error("The headless browser exited before rendering the starter");
       }),
     ]);
     const tabs = await (
@@ -43,8 +41,7 @@ export async function proveStarterFrontend(targetUrl, profile) {
       await command(socket, "Page.navigate", { url: targetUrl });
       for (let attempt = 0; attempt < 60; attempt += 1) {
         const { result } = await command(socket, "Runtime.evaluate", {
-          expression:
-            "Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Sign in')",
+          expression: "Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Sign in')",
           returnByValue: true,
         });
         if (result.value === true) return;

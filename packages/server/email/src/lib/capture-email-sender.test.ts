@@ -23,10 +23,7 @@ describe("CaptureEmailSender", () => {
   it("captures the whole message so the page can render it", async () => {
     const mailbox = new CapturedMailbox({ now: fixedClock });
 
-    const receipt = await new CaptureEmailSender(
-      mailbox,
-      "Example App <dev@local>",
-    ).send(invitation);
+    const receipt = await new CaptureEmailSender(mailbox, "Example App <dev@local>").send(invitation);
 
     expect(receipt).toEqual({ providerMessageId: "mail-1" });
     expect(mailbox.list()).toEqual([
@@ -46,10 +43,7 @@ describe("CaptureEmailSender", () => {
     const mailbox = new CapturedMailbox({ now: fixedClock });
 
     await new CaptureEmailSender(mailbox, "Example App <dev@local>").send({
-      to: [
-        { address: "alice@example.com", name: "Alice" },
-        { address: "bob@example.com" },
-      ],
+      to: [{ address: "alice@example.com", name: "Alice" }, { address: "bob@example.com" }],
       cc: [{ address: "cc@example.com" }],
       bcc: [{ address: "bcc@example.com" }],
       replyTo: { address: "reply@example.com" },
@@ -126,14 +120,8 @@ describe("CaptureEmailSender", () => {
       text: "t",
     });
 
-    expect(mailbox.list().map((email) => email.subject)).toEqual([
-      "second",
-      "first",
-    ]);
-    expect(mailbox.list().map((email) => email.id)).toEqual([
-      "mail-2",
-      "mail-1",
-    ]);
+    expect(mailbox.list().map((email) => email.subject)).toEqual(["second", "first"]);
+    expect(mailbox.list().map((email) => email.id)).toEqual(["mail-2", "mail-1"]);
   });
 
   it("drops the oldest capture once the mailbox is full", async () => {
@@ -156,10 +144,7 @@ describe("CaptureEmailSender", () => {
       text: "t",
     });
 
-    expect(mailbox.list().map((email) => email.subject)).toEqual([
-      "third",
-      "second",
-    ]);
+    expect(mailbox.list().map((email) => email.subject)).toEqual(["third", "second"]);
   });
 
   it("empties on clear and never reuses an id it already handed out", async () => {

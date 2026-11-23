@@ -1,26 +1,15 @@
 import { fileURLToPath } from "node:url";
 
-import {
-  definePlugin,
-  defineService,
-  type AuditSettings,
-} from "@dads-framework/core/plugin";
+import { definePlugin, defineService, type AuditSettings } from "@dads-framework/core/plugin";
 
-import {
-  composeAudit,
-  type AssembledAudit,
-  type ComposeAuditDeps,
-} from "./compose-audit.js";
+import { composeAudit, type AssembledAudit, type ComposeAuditDeps } from "./compose-audit.js";
 import { AUDIT_TRIGGER_ALLOWLIST } from "./database/audit-trigger-allowlist.js";
 import type { AuditLogReader } from "./database/readers/audit-log-reader.interface.js";
 import { DrizzleAuditLogReader } from "./database/readers/drizzle-audit-log-reader.js";
 import { DrizzleRequestLogReader } from "./database/readers/drizzle-request-log-reader.js";
 import type { RequestLogReader } from "./database/readers/request-log-reader.interface.js";
 
-type AuditRetention = Pick<
-  ComposeAuditDeps,
-  "requestLogRetentionDays" | "clientDiagnosticsRetentionDays"
->;
+type AuditRetention = Pick<ComposeAuditDeps, "requestLogRetentionDays" | "clientDiagnosticsRetentionDays">;
 
 export type AuditPluginOptions = AuditRetention & AuditSettings;
 
@@ -32,9 +21,7 @@ export type AuditServices = {
 type AuditPluginRuntime = AuditServices & AssembledAudit;
 
 export const auditDepsService =
-  defineService("audit-dependencies").ofType<
-    Omit<ComposeAuditDeps, keyof AuditRetention>
-  >();
+  defineService("audit-dependencies").ofType<Omit<ComposeAuditDeps, keyof AuditRetention>>();
 
 export const auditService = defineService("audit").ofType<AuditServices>();
 
@@ -55,10 +42,7 @@ export function createAuditPlugin(options: AuditPluginOptions) {
     implements: auditService,
     contributes: {
       audit: {
-        untrackedTables: [
-          ...AUDIT_TRIGGER_ALLOWLIST,
-          ...(options.untrackedTables ?? []),
-        ],
+        untrackedTables: [...AUDIT_TRIGGER_ALLOWLIST, ...(options.untrackedTables ?? [])],
         scopes: (options.scopes ?? []).map(({ table, columns }) => ({
           table,
           columns: { ...columns },
@@ -66,9 +50,7 @@ export function createAuditPlugin(options: AuditPluginOptions) {
       },
       migrations: [
         {
-          directory: fileURLToPath(
-            new URL("../../src/lib/database/migrations/", import.meta.url),
-          ),
+          directory: fileURLToPath(new URL("../../src/lib/database/migrations/", import.meta.url)),
         },
       ],
     },

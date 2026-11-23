@@ -1,9 +1,6 @@
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  classifySchemaDiff,
-  type SchemaDiffClassification,
-} from "../logic/classify-schema-diff.js";
+import { classifySchemaDiff, type SchemaDiffClassification } from "../logic/classify-schema-diff.js";
 import { scaffoldMigration } from "./scaffold-migration.js";
 
 /**
@@ -32,9 +29,7 @@ export function planRenumber(input: {
   readonly mainEntryIds: readonly string[];
   readonly headEntryIds: readonly string[];
 }): RenumberPlan {
-  const missingFromHead = input.mainEntryIds.filter(
-    (id) => !input.headEntryIds.includes(id),
-  );
+  const missingFromHead = input.mainEntryIds.filter((id) => !input.headEntryIds.includes(id));
   if (missingFromHead.length > 0) {
     throw new Error(
       `this branch lacks main's journal entries (${missingFromHead.join(", ")}) — ` +
@@ -42,9 +37,7 @@ export function planRenumber(input: {
     );
   }
 
-  const ownEntryIds = input.headEntryIds.filter(
-    (id) => !input.mainEntryIds.includes(id),
-  );
+  const ownEntryIds = input.headEntryIds.filter((id) => !input.mainEntryIds.includes(id));
   const [ownEntryId, ...extraEntryIds] = ownEntryIds;
   if (ownEntryId === undefined) {
     return { kind: "no-own-entry" };
@@ -69,11 +62,7 @@ export function planRenumber(input: {
  * declare `id: "<oldId>"` exactly once; every other mention of the old id
  * (a TODO( step's message, a comment) moves with it.
  */
-export function rewriteMigrationId(
-  source: string,
-  oldId: string,
-  newId: string,
-): string {
+export function rewriteMigrationId(source: string, oldId: string, newId: string): string {
   const declarations = source.split(`id: "${oldId}"`).length - 1;
   if (declarations !== 1) {
     throw new Error(
@@ -122,28 +111,16 @@ export type RenumberMigrationResult =
  * judged before the first write; the caller guarantees a clean committed tree,
  * so a failure mid-write is recoverable with `git restore`.
  */
-export async function renumberMigration(
-  input: RenumberMigrationInput,
-): Promise<RenumberMigrationResult> {
-  const mainEntryIds = await mainEntriesBeside(
-    input.journalFolder,
-    input.entryId,
-  );
+export async function renumberMigration(input: RenumberMigrationInput): Promise<RenumberMigrationResult> {
+  const mainEntryIds = await mainEntriesBeside(input.journalFolder, input.entryId);
   const latestMainId = mainEntryIds.at(-1);
   if (latestMainId === undefined) {
     throw new Error("the journal has no entries besides this branch's own");
   }
 
-  const before = await classificationAuthored(
-    input.journalFolder,
-    mainEntryIds,
-    input.entryId,
-  );
+  const before = await classificationAuthored(input.journalFolder, mainEntryIds, input.entryId);
 
-  const latestMainSchema = await readFile(
-    join(input.journalFolder, latestMainId, "schema.zed"),
-    "utf8",
-  );
+  const latestMainSchema = await readFile(join(input.journalFolder, latestMainId, "schema.zed"), "utf8");
   if (latestMainSchema === input.composedSchema) {
     return { action: "subsumed-by-main", latestMainId };
   }
@@ -171,11 +148,7 @@ async function classificationAuthored(
   entryId: string,
 ): Promise<SchemaDiffClassification> {
   return classifySchemaDiff(
-    await previousSnapshotAuthoredAgainst(
-      journalFolder,
-      mainEntryIds,
-      entryNumberOf(entryId),
-    ),
+    await previousSnapshotAuthoredAgainst(journalFolder, mainEntryIds, entryNumberOf(entryId)),
     await readFile(join(journalFolder, entryId, "schema.zed"), "utf8"),
   );
 }
@@ -197,28 +170,21 @@ async function remintEntry(input: RenumberMigrationInput): Promise<string> {
     mode: "new",
   });
   if (minted.action !== "created") {
-    throw new Error(
-      `the scaffolder did not mint a new entry (${minted.action} ${minted.id})`,
-    );
+    throw new Error(`the scaffolder did not mint a new entry (${minted.action} ${minted.id})`);
   }
 
   const newEntryFolder = join(input.journalFolder, minted.id);
   for (const [name, content] of carriedFiles) {
     await writeFile(
       join(newEntryFolder, name),
-      name === "migration.ts"
-        ? rewriteMigrationId(content, input.entryId, minted.id)
-        : content,
+      name === "migration.ts" ? rewriteMigrationId(content, input.entryId, minted.id) : content,
     );
   }
   return minted.id;
 }
 
 /** The journal's entries other than the branch's own — main's, numbered 1..n. */
-async function mainEntriesBeside(
-  journalFolder: string,
-  ownEntryId: string,
-): Promise<readonly string[]> {
+async function mainEntriesBeside(journalFolder: string, ownEntryId: string): Promise<readonly string[]> {
   const folders = await readdir(journalFolder, { withFileTypes: true });
   const ids = folders
     .filter((folder) => folder.isDirectory())
@@ -250,30 +216,20 @@ async function previousSnapshotAuthoredAgainst(
   mainEntryIds: readonly string[],
   oldNumber: number,
 ): Promise<string> {
-  const previousId =
-    mainEntryIds[Math.min(oldNumber - 1, mainEntryIds.length) - 1];
-  return previousId === undefined
-    ? ""
-    : readFile(join(journalFolder, previousId, "schema.zed"), "utf8");
+  const previousId = mainEntryIds[Math.min(oldNumber - 1, mainEntryIds.length) - 1];
+  return previousId === undefined ? "" : readFile(join(journalFolder, previousId, "schema.zed"), "utf8");
 }
 
 /** Every file in the entry except its snapshot, which is re-taken. */
-async function readCarriedFiles(
-  entryFolder: string,
-): Promise<ReadonlyMap<string, string>> {
+async function readCarriedFiles(entryFolder: string): Promise<ReadonlyMap<string, string>> {
   const items = await readdir(entryFolder, { withFileTypes: true });
   const carried = new Map<string, string>();
   for (const item of items) {
     if (!item.isFile()) {
-      throw new Error(
-        `${join(entryFolder, item.name)} is not a plain file — move it by hand`,
-      );
+      throw new Error(`${join(entryFolder, item.name)} is not a plain file — move it by hand`);
     }
     if (item.name === "schema.zed") continue;
-    carried.set(
-      item.name,
-      await readFile(join(entryFolder, item.name), "utf8"),
-    );
+    carried.set(item.name, await readFile(join(entryFolder, item.name), "utf8"));
   }
   if (!carried.has("migration.ts")) {
     throw new Error(`${entryFolder} has no migration.ts to carry`);
@@ -281,19 +237,12 @@ async function readCarriedFiles(
   return carried;
 }
 
-function sameClassification(
-  left: SchemaDiffClassification,
-  right: SchemaDiffClassification,
-): boolean {
-  return (
-    removalsOf(left).sort().join("\n") === removalsOf(right).sort().join("\n")
-  );
+function sameClassification(left: SchemaDiffClassification, right: SchemaDiffClassification): boolean {
+  return removalsOf(left).sort().join("\n") === removalsOf(right).sort().join("\n");
 }
 
 function removalsOf(classification: SchemaDiffClassification): string[] {
-  return classification.kind === "destructive"
-    ? [...classification.removals]
-    : [];
+  return classification.kind === "destructive" ? [...classification.removals] : [];
 }
 
 function entryNumberOf(entryId: string): number {

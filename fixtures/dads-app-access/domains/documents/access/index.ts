@@ -37,11 +37,5 @@ export const document = organization.document;
 export const documentsAccessModel = compileAccess([user, organization]);
 
 /** Typed HTTP route guards — database-free and safe to import in domains/. */
-export const canViewDocument = requires(
-  document.permissions.view,
-  fromParam("documentId"),
-);
-export const canEditDocument = requires(
-  document.permissions.edit,
-  fromParam("documentId"),
-);
+export const canViewDocument = requires(document.permissions.view, fromParam("documentId"));
+export const canEditDocument = requires(document.permissions.edit, fromParam("documentId"));

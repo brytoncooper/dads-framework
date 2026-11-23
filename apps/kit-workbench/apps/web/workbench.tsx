@@ -1,23 +1,10 @@
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@dads-framework/ui/display";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@dads-framework/ui/display";
 import { Button, Card, CardContent } from "@dads-framework/ui/elements";
 import { Building2, ExternalLink } from "@dads-framework/ui/icons";
 import { useEffect, useState } from "react";
-import {
-  listTenants,
-  type Tenant,
-} from "../../domains/tenants/web-client/index.js";
+import { listTenants, type Tenant } from "../../domains/tenants/web-client/index.js";
 import { describeFailure } from "./actions.js";
-import {
-  useWorkbenchCopy,
-  type WorkbenchCopyKey,
-} from "./copy/workbench-copy.js";
+import { useWorkbenchCopy, type WorkbenchCopyKey } from "./copy/workbench-copy.js";
 import { Notes } from "./notes.js";
 import { PermissionsDashboard } from "./permissions-dashboard.js";
 import { AcceptInvitation, WorkspacePicker } from "./workspace-controls.js";
@@ -35,8 +22,7 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
   const [loadError, setLoadError] = useState<WorkbenchCopyKey>();
   const [reload, setReload] = useState(0);
   const [view, setView] = useState<WorkspaceView>("notes");
-  const tenant =
-    tenants?.find((entry) => entry.id === selected) ?? tenants?.[0];
+  const tenant = tenants?.find((entry) => entry.id === selected) ?? tenants?.[0];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,10 +52,7 @@ export function Workbench({ invitation, onJoined }: WorkbenchProps) {
 
   return (
     <div className="workspace-layout">
-      <aside
-        className="workspace-sidebar"
-        aria-label={t("workbench.tenant.controls")}
-      >
+      <aside className="workspace-sidebar" aria-label={t("workbench.tenant.controls")}>
         {invitation && (
           <AcceptInvitation
             token={invitation}
@@ -117,9 +100,7 @@ function EmptyWorkspaceCard() {
             </EmptyMedia>
             <p className="eyebrow">{t("workbench.tenant.emptyEyebrow")}</p>
             <EmptyTitle>{t("workbench.tenant.emptyTitle")}</EmptyTitle>
-            <EmptyDescription>
-              {t("workbench.tenant.emptyBody")}
-            </EmptyDescription>
+            <EmptyDescription>{t("workbench.tenant.emptyBody")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent className="onboarding-content">
             <ol className="onboarding-steps">

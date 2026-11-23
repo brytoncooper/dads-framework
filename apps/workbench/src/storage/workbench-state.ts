@@ -22,10 +22,7 @@ const workspaceSubject = z.strictObject({
 const relationship = z.union([
   z.strictObject({
     subject: userSubject,
-    relation: z.enum([
-      workbenchWorkspace.roles.owner.roleName,
-      workbenchWorkspace.roles.member.roleName,
-    ]),
+    relation: z.enum([workbenchWorkspace.roles.owner.roleName, workbenchWorkspace.roles.member.roleName]),
     resource: z.strictObject({
       type: z.literal(workbenchWorkspace.wireName),
       id: resourceId,
@@ -68,20 +65,13 @@ export const workbenchState = z.strictObject({
   artifacts: z.array(artifactResponse),
   activity: z.array(activityResponse),
   pendingAuthorizationChanges: z.array(pendingAuthorizationChange),
-  createRequests: z
-    .array(createRequestRecord)
-    .max(createRequestLimit)
-    .default([]),
+  createRequests: z.array(createRequestRecord).max(createRequestLimit).default([]),
 });
 export type WorkbenchState = z.infer<typeof workbenchState>;
-export type PendingAuthorizationChange = z.infer<
-  typeof pendingAuthorizationChange
->;
+export type PendingAuthorizationChange = z.infer<typeof pendingAuthorizationChange>;
 export type StoredWorkbenchRelationship = z.infer<typeof relationship>;
 
-export function storeWorkbenchAuthorizationChange(
-  change: PendingAuthorizationChange,
-): PendingAuthorizationChange {
+export function storeWorkbenchAuthorizationChange(change: PendingAuthorizationChange): PendingAuthorizationChange {
   return pendingAuthorizationChange.parse(change);
 }
 

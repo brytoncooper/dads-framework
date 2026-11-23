@@ -10,10 +10,7 @@
  */
 
 import assert from "node:assert/strict";
-import {
-  workbenchUser,
-  workbenchWorkspace,
-} from "../../apps/workbench/dist/access.js";
+import { workbenchUser, workbenchWorkspace } from "../../apps/workbench/dist/access.js";
 import { POSTGRES_WORKBENCH_STATE_TABLE } from "../../apps/workbench/dist/storage/postgres-workbench-schema.js";
 
 export async function inspectNamespace(pool, namespace) {
@@ -31,11 +28,7 @@ export async function inspectNamespace(pool, namespace) {
   const relationshipRow = relationshipResult.rows[0];
   assert.ok(relationshipRow, "The relationship count query returned no row.");
   const relationshipCount = relationshipRow.count;
-  assert.equal(
-    typeof relationshipCount,
-    "number",
-    "Postgres did not return a numeric relationship count.",
-  );
+  assert.equal(typeof relationshipCount, "number", "Postgres did not return a numeric relationship count.");
   const exactOwnerResult = await pool.query({
     text: "SELECT count(*)::integer AS count FROM dad_authorization_relationship WHERE namespace = $1 AND resource_kind = $2 AND relation = $3 AND subject_kind = $4 AND subject_id = $5 AND subject_relation = '' AND subject_is_wildcard = false",
     values: [
@@ -47,10 +40,7 @@ export async function inspectNamespace(pool, namespace) {
     ],
   });
   const exactOwnerRow = exactOwnerResult.rows[0];
-  assert.ok(
-    exactOwnerRow,
-    "The exact owner tuple count query returned no row.",
-  );
+  assert.ok(exactOwnerRow, "The exact owner tuple count query returned no row.");
   const exactOwnerRelationshipCount = exactOwnerRow.count;
   assert.equal(
     typeof exactOwnerRelationshipCount,
@@ -82,9 +72,7 @@ function parseDocument(value) {
     !Array.isArray(document.workspaces) ||
     !Array.isArray(document.pendingAuthorizationChanges)
   )
-    throw new Error(
-      "Workbench state query returned an invalid JSONB document.",
-    );
+    throw new Error("Workbench state query returned an invalid JSONB document.");
   return document;
 }
 

@@ -19,11 +19,7 @@ const fullGate: GateMode = {
 };
 
 it("leaves migration history and network checks to the full gate", () => {
-  const signals = [
-    migrationsOutOfOrderSignal,
-    branchProtectionOffSignal,
-    filesOverCeilingSignal,
-  ];
+  const signals = [migrationsOutOfOrderSignal, branchProtectionOffSignal, filesOverCeilingSignal];
   const fileGate = { ...fullGate, files: ["src/a.migration.ts"] };
 
   expect(gatedSignals(signals, fullGate)).toEqual(signals);

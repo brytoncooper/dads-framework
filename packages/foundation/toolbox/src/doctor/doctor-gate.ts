@@ -24,21 +24,9 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  createDoctorContext,
-  type DoctorContext,
-  type DoctorContextInput,
-} from "./doctor-context.js";
-import {
-  compareToBase,
-  type ReadAtRef,
-  type RefContents,
-} from "./doctor-gate-base.js";
-import {
-  matchesExemptGlob,
-  readGateBaseline,
-  serializeBaseline,
-} from "./doctor-gate-baseline.js";
+import { createDoctorContext, type DoctorContext, type DoctorContextInput } from "./doctor-context.js";
+import { compareToBase, type ReadAtRef, type RefContents } from "./doctor-gate-base.js";
+import { matchesExemptGlob, readGateBaseline, serializeBaseline } from "./doctor-gate-baseline.js";
 import {
   BASELINE_PATH,
   countEntries,
@@ -50,18 +38,10 @@ import {
   type GateMeasure,
   type GateMode,
 } from "./doctor-gate-model.js";
-import {
-  renderGateOutput,
-  summarizeGate,
-  type GateOutcome,
-} from "./doctor-gate-render.js";
+import { renderGateOutput, summarizeGate, type GateOutcome } from "./doctor-gate-render.js";
 import { evaluateCeiling, evaluateFloor } from "./doctor-gate-states.js";
 import { thresholdFor, type DoctorSignal } from "./doctor-signal.js";
-import {
-  DOCTOR_SIGNALS,
-  runDoctorSignals,
-  type SignalOutcome,
-} from "./doctor-signals.js";
+import { DOCTOR_SIGNALS, runDoctorSignals, type SignalOutcome } from "./doctor-signals.js";
 import { runGit } from "./signals/scanners/git-history.js";
 import { isTypeScriptProjectFile } from "./signals/scanners/typescript-program.js";
 
@@ -98,17 +78,12 @@ export function baselineSectionOf(signal: DoctorSignal): string {
  * gives a number, except a signal marked report-only. File-scoped runs
  * leave repository floors, history, and network checks to the full gate.
  */
-export function gatedSignals(
-  signals: readonly DoctorSignal[],
-  mode: GateMode,
-): readonly DoctorSignal[] {
+export function gatedSignals(signals: readonly DoctorSignal[], mode: GateMode): readonly DoctorSignal[] {
   return signals.filter((signal) => {
     if (signal.reportOnly === true) return false;
     if (
       mode.files !== undefined &&
-      (signal.direction === "floor" ||
-        signal.reads === "git" ||
-        signal.reads === "online")
+      (signal.direction === "floor" || signal.reads === "git" || signal.reads === "online")
     ) {
       return false;
     }
@@ -129,9 +104,7 @@ export async function runDoctorGate(input: GateInput): Promise<GateResult> {
   const before = serializeBaseline(baseline);
 
   const measured =
-    mode.base === undefined
-      ? await measuredOutcome(input, probe, baseline)
-      : comparedOutcome(input, probe, baseline);
+    mode.base === undefined ? await measuredOutcome(input, probe, baseline) : comparedOutcome(input, probe, baseline);
   const outcome = mode.seed ? withSeedNote(measured, baseline) : measured;
 
   const wrote = writeBaseline(input, outcome, before);
@@ -149,11 +122,7 @@ export async function runDoctorGate(input: GateInput): Promise<GateResult> {
 // Measuring
 // ---------------------------------------------------------------------------
 
-async function measuredOutcome(
-  input: GateInput,
-  probe: DoctorContext,
-  baseline: GateBaseline,
-): Promise<GateOutcome> {
+async function measuredOutcome(input: GateInput, probe: DoctorContext, baseline: GateBaseline): Promise<GateOutcome> {
   const mode = input.mode;
   const selection = selectFiles(probe, baseline, mode);
   const context = createDoctorContext({
@@ -185,21 +154,14 @@ type FileSelection = {
   readonly judged: ReadonlySet<string> | undefined;
 };
 
-function selectFiles(
-  context: DoctorContext,
-  baseline: GateBaseline,
-  mode: GateMode,
-): FileSelection {
+function selectFiles(context: DoctorContext, baseline: GateBaseline, mode: GateMode): FileSelection {
   const exempt = [...baseline.exempt, ...ALWAYS_EXEMPT];
-  const isExempt = (path: string): boolean =>
-    exempt.some((glob) => matchesExemptGlob(path, glob));
+  const isExempt = (path: string): boolean => exempt.some((glob) => matchesExemptGlob(path, glob));
   if (mode.files === undefined) {
     const visible = context.files().filter((path) => !isExempt(path));
     return { visible, judged: undefined };
   }
-  const judged = [...new Set(mode.files)].filter(
-    (path) => !isExempt(path) && context.exists(path),
-  );
+  const judged = [...new Set(mode.files)].filter((path) => !isExempt(path) && context.exists(path));
   if (judged.length === 0) {
     return { visible: [], judged: new Set() };
   }
@@ -313,10 +275,7 @@ function notMeasured(section: string, reason: string): GateFinding {
  * somewhere other than the file list. A file-scoped run judges only the
  * selected paths, whatever else a signal counted on the way.
  */
-function narrowValues(
-  outcome: SignalOutcome,
-  judged: ReadonlySet<string> | undefined,
-): ReadonlyMap<string, number> {
+function narrowValues(outcome: SignalOutcome, judged: ReadonlySet<string> | undefined): ReadonlyMap<string, number> {
   const values = new Map<string, number>();
   for (const [key, reading] of outcome.readings) {
     if (judged !== undefined && !judged.has(key)) continue;
@@ -354,21 +313,11 @@ function recordInventory(
 // ---------------------------------------------------------------------------
 
 /** The baseline names of the floors the gate only reports. */
-function reportOnlyFloorMeasures(
-  signals: readonly DoctorSignal[],
-): ReadonlySet<string> {
-  return new Set(
-    signals
-      .filter((signal) => signal.reportOnly === true)
-      .map((signal) => signal.measure ?? signal.id),
-  );
+function reportOnlyFloorMeasures(signals: readonly DoctorSignal[]): ReadonlySet<string> {
+  return new Set(signals.filter((signal) => signal.reportOnly === true).map((signal) => signal.measure ?? signal.id));
 }
 
-function comparedOutcome(
-  input: GateInput,
-  context: DoctorContext,
-  baseline: GateBaseline,
-): GateOutcome {
+function comparedOutcome(input: GateInput, context: DoctorContext, baseline: GateBaseline): GateOutcome {
   const compared = compareToBase({
     baseline,
     context,
@@ -387,8 +336,7 @@ function comparedOutcome(
 
 /** One read-only `git show`, through the one function the doctor spawns git in. */
 function gitShowAtRef(root: string): ReadAtRef {
-  return (ref: string, path: string): RefContents =>
-    runGit(root, "show", [`${ref}:${path}`]);
+  return (ref: string, path: string): RefContents => runGit(root, "show", [`${ref}:${path}`]);
 }
 
 // ---------------------------------------------------------------------------
@@ -401,11 +349,7 @@ function gitShowAtRef(root: string): ReadAtRef {
  * `--seed` writes even when it recorded nothing, so a repository that adopts
  * the gate gets its baseline file.
  */
-function writeBaseline(
-  input: GateInput,
-  outcome: GateOutcome,
-  before: string,
-): boolean {
+function writeBaseline(input: GateInput, outcome: GateOutcome, before: string): boolean {
   const mode = input.mode;
   if (!mode.update && !mode.seed) return false;
   const serialized = serializeBaseline(outcome.baseline);
@@ -427,15 +371,10 @@ function defaultWrite(root: string): (path: string, text: string) => void {
  * responsible for and not the size of the baseline it joined.
  */
 function withSeedNote(outcome: GateOutcome, before: GateBaseline): GateOutcome {
-  const ceilings =
-    countEntries(outcome.baseline.ceilings) - countEntries(before.ceilings);
-  const floors =
-    countEntries(outcome.baseline.floors) - countEntries(before.floors);
+  const ceilings = countEntries(outcome.baseline.ceilings) - countEntries(before.ceilings);
+  const floors = countEntries(outcome.baseline.floors) - countEntries(before.floors);
   return {
     ...outcome,
-    notes: [
-      ...outcome.notes,
-      `seeded ${ceilings} ceiling entries and ${floors} floor entries into ${BASELINE_PATH}`,
-    ],
+    notes: [...outcome.notes, `seeded ${ceilings} ceiling entries and ${floors} floor entries into ${BASELINE_PATH}`],
   };
 }

@@ -18,9 +18,7 @@ import { authorizationOutbox } from "./access-changes.tables.js";
  * change to its tuple, because a producer that replaces opposite facts
  * supersedes PENDING and FAILED ones alike. Answers how many facts it reset.
  */
-export async function requeueFailedAccessChanges(
-  db: Pick<DrizzleHandle, "update">,
-): Promise<number> {
+export async function requeueFailedAccessChanges(db: Pick<DrizzleHandle, "update">): Promise<number> {
   const reset = await db
     .update(authorizationOutbox)
     .set({ status: "PENDING", attempts: 0 })
@@ -29,10 +27,7 @@ export async function requeueFailedAccessChanges(
         isNull(authorizationOutbox.lockedBy),
         or(
           eq(authorizationOutbox.status, "FAILED"),
-          and(
-            eq(authorizationOutbox.status, "PENDING"),
-            gt(authorizationOutbox.attempts, 0),
-          ),
+          and(eq(authorizationOutbox.status, "PENDING"), gt(authorizationOutbox.attempts, 0)),
         ),
       ),
     )

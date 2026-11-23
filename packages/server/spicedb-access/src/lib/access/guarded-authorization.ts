@@ -27,10 +27,7 @@
  */
 
 import type { AccessModel } from "@dads-framework/access";
-import {
-  isLookupResourcesAllowed,
-  isSparseDirectGrant,
-} from "@dads-framework/access/scopes";
+import { isLookupResourcesAllowed, isSparseDirectGrant } from "@dads-framework/access/scopes";
 import {
   currentRequestWork,
   countAuthorizationLookupSize,
@@ -79,8 +76,7 @@ export type LookupResourcesPolicy = {
 export function authorizationKinds(model: AccessModel): LookupResourcesPolicy {
   return {
     mayLookup: (resourceType, permission) =>
-      isLookupResourcesAllowed(model, resourceType) ||
-      isSparseDirectGrant(model, resourceType, permission),
+      isLookupResourcesAllowed(model, resourceType) || isSparseDirectGrant(model, resourceType, permission),
   };
 }
 
@@ -112,11 +108,7 @@ export class GuardedAuthorization extends Authorization {
   readonly #marks: AuthorizationGuardMarks;
   readonly #policy: LookupResourcesPolicy;
 
-  constructor(
-    inner: Authorization,
-    marks: AuthorizationGuardMarks,
-    policy: LookupResourcesPolicy,
-  ) {
+  constructor(inner: Authorization, marks: AuthorizationGuardMarks, policy: LookupResourcesPolicy) {
     super();
     requireSaneMarks(marks);
     this.#inner = inner;
@@ -130,9 +122,7 @@ export class GuardedAuthorization extends Authorization {
     return allowed;
   }
 
-  override async checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  override async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     if (queries.length === 0) return [];
     const checkMany = this.#inner.checkMany?.bind(this.#inner);
     if (checkMany === undefined) {
@@ -145,33 +135,23 @@ export class GuardedAuthorization extends Authorization {
     return decisions;
   }
 
-  override async checkEach(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  override async checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     if (queries.length === 0) return [];
     const checkEach = this.#inner.checkEach?.bind(this.#inner);
     if (checkEach === undefined) {
-      return Promise.all(
-        queries.map((query) => checkOutcome(() => this.check(query))),
-      );
+      return Promise.all(queries.map((query) => checkOutcome(() => this.check(query))));
     }
     const outcomes = await checkEach(queries);
     this.#watchRoundTrips();
     return outcomes;
   }
 
-  override async lookupResources(
-    query: ResourceLookup,
-  ): Promise<readonly string[]> {
+  override async lookupResources(query: ResourceLookup): Promise<readonly string[]> {
     this.#refuseRecordLookup(query);
     const ids = await this.#inner.lookupResources(query);
     countAuthorizationLookupSize(ids.length);
     if (ids.length > this.#marks.maxLookupIds) {
-      throw new LookupOverHardCapError(
-        query,
-        ids.length,
-        this.#marks.maxLookupIds,
-      );
+      throw new LookupOverHardCapError(query, ids.length, this.#marks.maxLookupIds);
     }
     if (ids.length > this.#marks.warnLookupIds) {
       noteAuthorizationWarning({
@@ -184,15 +164,11 @@ export class GuardedAuthorization extends Authorization {
     return ids;
   }
 
-  override async writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override async writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     return this.#inner.writeRelationships(writes);
   }
 
-  override async deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  override async deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     return this.#inner.deleteRelationships(filter);
   }
 
@@ -204,9 +180,7 @@ export class GuardedAuthorization extends Authorization {
     return this.#inner.relationshipExists(filter);
   }
 
-  override async listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  override async listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     return this.#inner.listDirectSubjects(query);
   }
 
@@ -231,9 +205,7 @@ function requireSaneMarks(marks: AuthorizationGuardMarks): void {
   const { warnLookupIds, maxLookupIds } = marks;
   for (const [name, value] of Object.entries(marks)) {
     if (!Number.isInteger(value) || value <= 0) {
-      throw new Error(
-        `authorization guard mark ${name} must be a positive integer, got ${value}`,
-      );
+      throw new Error(`authorization guard mark ${name} must be a positive integer, got ${value}`);
     }
   }
   if (warnLookupIds >= maxLookupIds) {

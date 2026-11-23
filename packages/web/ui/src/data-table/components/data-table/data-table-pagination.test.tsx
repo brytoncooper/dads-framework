@@ -13,9 +13,7 @@ describe("DataTablePagination current page size", () => {
     "displays the actual %i rows per page without altering the selected server query",
     (perPage) => {
       render(<Pagination perPage={perPage} />);
-      expect(
-        screen.getByRole("combobox", { name: "Rows per Page" }).textContent,
-      ).toBe(String(perPage));
+      expect(screen.getByRole("combobox", { name: "Rows per Page" }).textContent).toBe(String(perPage));
     },
   );
 });

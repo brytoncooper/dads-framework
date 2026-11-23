@@ -32,13 +32,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import process from "node:process";
 
-const DERIVED_SEGMENTS = new Set([
-  "node_modules",
-  "dist",
-  ".dads",
-  "target",
-  "coverage",
-]);
+const DERIVED_SEGMENTS = new Set(["node_modules", "dist", ".dads", "target", "coverage"]);
 const IGNORED_FILE_LIMIT = 5000;
 
 /**
@@ -47,9 +41,7 @@ const IGNORED_FILE_LIMIT = 5000;
  * repository instead of `root`, so every `GIT_` variable is dropped.
  */
 export function gitEnvironment(extra = {}) {
-  const kept = Object.entries(process.env).filter(
-    ([name]) => !name.startsWith("GIT_"),
-  );
+  const kept = Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_"));
   return { ...Object.fromEntries(kept), ...extra };
 }
 
@@ -62,9 +54,7 @@ export function git(root, args, extra = {}) {
   });
   if (run.error !== undefined) throw run.error;
   if (run.status !== 0) {
-    throw new Error(
-      `git ${args[0]} exited ${String(run.status)}: ${run.stderr}`,
-    );
+    throw new Error(`git ${args[0]} exited ${String(run.status)}: ${run.stderr}`);
   }
   return run.stdout;
 }
@@ -87,10 +77,7 @@ export function captureHistory(root, revision = "HEAD") {
 }
 
 function hashGitPath(root, name) {
-  const path = resolve(
-    root,
-    git(root, ["rev-parse", "--git-path", name]).trimEnd(),
-  );
+  const path = resolve(root, git(root, ["rev-parse", "--git-path", name]).trimEnd());
   try {
     return hashFile(path);
   } catch (error) {
@@ -108,10 +95,7 @@ function writeWorkingTree(root) {
   const scratch = mkdtempSync(join(tmpdir(), "dads-verify-index-"));
   const index = join(scratch, "index");
   try {
-    const realIndex = resolve(
-      root,
-      git(root, ["rev-parse", "--git-path", "index"]).trim(),
-    );
+    const realIndex = resolve(root, git(root, ["rev-parse", "--git-path", "index"]).trim());
     if (existsSync(realIndex)) copyFileSync(realIndex, index);
     const environment = { GIT_INDEX_FILE: index };
     git(root, ["add", "-A", "--", "."], environment);
@@ -124,9 +108,7 @@ function writeWorkingTree(root) {
 /** Every path in the tree, directories included, mapped to `type:hash`. */
 function listTreeEntries(root, tree) {
   const entries = {};
-  for (const line of git(root, ["ls-tree", "-r", "-t", "-z", tree]).split(
-    "\0",
-  )) {
+  for (const line of git(root, ["ls-tree", "-r", "-t", "-z", tree]).split("\0")) {
     if (line === "") continue;
     const tab = line.indexOf("\t");
     const [, type, oid] = line.slice(0, tab).split(" ");
@@ -162,9 +144,7 @@ function hashIgnoredEntry(root, path) {
   if (!path.endsWith("/")) return [[path, hashIgnoredPath(root, path)]];
   const files = filesUnder(root, path, []);
   if (files === null) return null;
-  return files
-    .filter((file) => !isDerived(file))
-    .map((file) => [file, hashIgnoredPath(root, file)]);
+  return files.filter((file) => !isDerived(file)).map((file) => [file, hashIgnoredPath(root, file)]);
 }
 
 function hashIgnoredPath(root, path) {
@@ -176,14 +156,9 @@ function hashIgnoredPath(root, path) {
 
 /** `[path, hash]` for every ignored, non-derived file, or null if unknown. */
 function hashIgnoredInputs(root) {
-  const listed = git(root, [
-    "ls-files",
-    "-z",
-    "--others",
-    "--ignored",
-    "--exclude-standard",
-    "--directory",
-  ]).split("\0");
+  const listed = git(root, ["ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"]).split(
+    "\0",
+  );
   const hashed = [];
   for (const path of listed) {
     if (path === "" || isDerived(path)) continue;
@@ -215,9 +190,7 @@ export function captureFingerprint(root) {
     const tree = writeWorkingTree(root);
     const ignored = hashIgnoredInputs(root);
     if (ignored === null) {
-      throw new Error(
-        `an ignored directory holds over ${String(IGNORED_FILE_LIMIT)} files`,
-      );
+      throw new Error(`an ignored directory holds over ${String(IGNORED_FILE_LIMIT)} files`);
     }
     return {
       tree,

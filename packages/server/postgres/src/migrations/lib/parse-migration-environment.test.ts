@@ -6,9 +6,7 @@ import { parseMigrationEnvironment } from "./logic/parse-migration-environment.j
 
 describe("release migration environment", () => {
   it("requires a database connection string", () => {
-    expect(() => parseMigrationEnvironment({})).toThrow(
-      expect.objectContaining({ name: "ZodError" }),
-    );
+    expect(() => parseMigrationEnvironment({})).toThrow(expect.objectContaining({ name: "ZodError" }));
   });
 
   it("defaults the workspace root to the process working directory", () => {
@@ -43,8 +41,6 @@ describe("release migration environment", () => {
       name: "Error",
       driverCode: "28P01",
     });
-    expect(JSON.stringify(describeMigrationFailure(failure))).not.toContain(
-      "do-not-log",
-    );
+    expect(JSON.stringify(describeMigrationFailure(failure))).not.toContain("do-not-log");
   });
 });

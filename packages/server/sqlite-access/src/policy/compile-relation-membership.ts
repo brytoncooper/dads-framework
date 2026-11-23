@@ -1,16 +1,7 @@
 import type { SqliteQuery } from "../sqlite-types.js";
 import { findSqliteColumnRelation } from "./column-relations.js";
-import type {
-  ForwardCompileContext,
-  SqlResource,
-  SqlSubject,
-} from "./compile-forward-scc.js";
-import {
-  activeTupleCondition,
-  joinChunks,
-  QueryBuilder,
-  TUPLES,
-} from "./policy-sql.js";
+import type { ForwardCompileContext, SqlResource, SqlSubject } from "./compile-forward-scc.js";
+import { activeTupleCondition, joinChunks, QueryBuilder, TUPLES } from "./policy-sql.js";
 
 /**
  * Compiles a SQLite membership check for one `(resource, relation, subject)`
@@ -24,11 +15,7 @@ export function compileRelationMembership(
   resource: SqlResource,
   relation: string,
 ): SqliteQuery {
-  const columnRel = findSqliteColumnRelation(
-    context.model,
-    resource.entity,
-    relation,
-  );
+  const columnRel = findSqliteColumnRelation(context.model, resource.entity, relation);
   if (columnRel !== undefined) {
     if (subject.kind === "wildcard-only") {
       return { sql: "0", params: [] };
@@ -45,24 +32,13 @@ export function compileRelationMembership(
     )`);
   }
   const relDef = context.model.relations.find(
-    (candidate) =>
-      candidate.entity === resource.entity && candidate.wireName === relation,
+    (candidate) => candidate.entity === resource.entity && candidate.wireName === relation,
   );
-  const allowsUsersets =
-    relDef === undefined ||
-    relDef.targets.some((target) => target.kind === "subject-set");
-  const allowsWildcards =
-    relDef === undefined ||
-    relDef.targets.some((target) => target.kind === "wildcard");
+  const allowsUsersets = relDef === undefined || relDef.targets.some((target) => target.kind === "subject-set");
+  const allowsWildcards = relDef === undefined || relDef.targets.some((target) => target.kind === "wildcard");
 
   if (!allowsUsersets) {
-    return compileDirectRelationMembership(
-      context,
-      subject,
-      resource,
-      relation,
-      allowsWildcards,
-    );
+    return compileDirectRelationMembership(context, subject, resource, relation, allowsWildcards);
   }
 
   const b = new QueryBuilder();
@@ -151,9 +127,7 @@ function compileDirectRelationMembership(
 function compileSubjectMatch(subject: SqlSubject): SqliteQuery {
   const b = new QueryBuilder();
   if (subject.kind === "wildcard-only") {
-    return b.finish(
-      `(m.subject_is_wildcard = 1 AND m.subject_kind = ${b.append(subject.typeExpr)})`,
-    );
+    return b.finish(`(m.subject_is_wildcard = 1 AND m.subject_kind = ${b.append(subject.typeExpr)})`);
   }
   return b.finish(
     `((m.subject_is_wildcard = 0 AND m.subject_relation = '' AND m.subject_kind = ${b.append(subject.typeExpr)} AND m.subject_id = ${b.append(subject.idExpr)}) OR (m.subject_is_wildcard = 1 AND m.subject_kind = ${b.append(subject.typeExpr)}))`,

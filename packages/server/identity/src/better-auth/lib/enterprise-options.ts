@@ -20,8 +20,7 @@ export type EnterpriseSsoProvider = ProviderBase &
         readonly authorizationEndpoint: string;
         readonly tokenEndpoint: string;
         readonly jwksEndpoint: string;
-        readonly tokenEndpointAuthentication?:
-          "client_secret_basic" | "client_secret_post";
+        readonly tokenEndpointAuthentication?: "client_secret_basic" | "client_secret_post";
       }
     | {
         readonly protocol: "saml";
@@ -32,8 +31,7 @@ export type EnterpriseSsoProvider = ProviderBase &
       }
   );
 
-const DOMAIN =
-  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
+const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
 const IDENTIFIER = /^[a-z0-9][a-z0-9_-]{0,79}$/u;
 
 export function enterpriseSsoDomainChallenge(
@@ -58,22 +56,17 @@ export async function verifyEnterpriseProviders(
   origin: string,
 ): Promise<readonly EnterpriseSsoProvider[]> {
   const providers = configured.map((provider) => ({ ...provider }));
-  if (providers.length === 0)
-    throw new Error("Configure at least one enterprise SSO provider.");
+  if (providers.length === 0) throw new Error("Configure at least one enterprise SSO provider.");
   const ids = new Set<string>();
   const domains = new Set<string>();
   const tenantModes = new Map<string, "optional" | "required">();
   for (const provider of providers) {
     validateProvider(provider, origin);
     if (ids.has(provider.id) || domains.has(provider.domain))
-      throw new Error(
-        "Enterprise SSO provider IDs and domains must be unique.",
-      );
+      throw new Error("Enterprise SSO provider IDs and domains must be unique.");
     const tenantMode = tenantModes.get(provider.tenantId);
     if (tenantMode !== undefined && tenantMode !== provider.mode)
-      throw new Error(
-        "Enterprise SSO providers for a tenant must use the same mode.",
-      );
+      throw new Error("Enterprise SSO providers for a tenant must use the same mode.");
     tenantModes.set(provider.tenantId, provider.mode);
     ids.add(provider.id);
     domains.add(provider.domain);
@@ -84,18 +77,13 @@ export async function verifyEnterpriseProviders(
       const challenge = enterpriseSsoDomainChallenge(secret, tenantId, domain);
       const records = await resolveTxt(challenge.name).catch(() => []);
       if (!records.some((record) => record.join("") === challenge.value))
-        throw new Error(
-          `Enterprise SSO domain verification failed for ${domain}.`,
-        );
+        throw new Error(`Enterprise SSO domain verification failed for ${domain}.`);
     }),
   );
   return providers;
 }
 
-function validateProvider(
-  provider: EnterpriseSsoProvider,
-  origin: string,
-): void {
+function validateProvider(provider: EnterpriseSsoProvider, origin: string): void {
   if (
     !IDENTIFIER.test(provider.id) ||
     !provider.id.startsWith("sso-") ||
@@ -117,20 +105,14 @@ function validateProvider(
   }
 }
 
-function validateOidcProvider(
-  provider: Extract<EnterpriseSsoProvider, { protocol: "oidc" }>,
-  origin: string,
-): void {
+function validateOidcProvider(provider: Extract<EnterpriseSsoProvider, { protocol: "oidc" }>, origin: string): void {
   const authMethod = provider.tokenEndpointAuthentication;
   if (
     !provider.clientId.trim() ||
     !provider.clientSecret ||
-    (authMethod !== undefined &&
-      !["client_secret_basic", "client_secret_post"].includes(authMethod))
+    (authMethod !== undefined && !["client_secret_basic", "client_secret_post"].includes(authMethod))
   )
-    throw new Error(
-      "Enterprise OIDC requires valid confidential client credentials.",
-    );
+    throw new Error("Enterprise OIDC requires valid confidential client credentials.");
   for (const endpoint of [
     provider.issuer,
     provider.authorizationEndpoint,
@@ -140,45 +122,26 @@ function validateOidcProvider(
     validateEndpoint(endpoint, origin);
 }
 
-function validateSamlProvider(
-  provider: Extract<EnterpriseSsoProvider, { protocol: "saml" }>,
-  origin: string,
-): void {
-  if (
-    !origin.startsWith("https:") ||
-    !provider.entityId.trim() ||
-    provider.emailAttribute?.trim() === ""
-  )
-    throw new Error(
-      "Enterprise SAML requires an HTTPS application origin and valid IdP settings.",
-    );
+function validateSamlProvider(provider: Extract<EnterpriseSsoProvider, { protocol: "saml" }>, origin: string): void {
+  if (!origin.startsWith("https:") || !provider.entityId.trim() || provider.emailAttribute?.trim() === "")
+    throw new Error("Enterprise SAML requires an HTTPS application origin and valid IdP settings.");
   validateEndpoint(provider.signInUrl, origin);
   const certificate = new X509Certificate(provider.signingCertificate);
   const now = Date.now();
-  if (
-    Date.parse(certificate.validFrom) > now ||
-    Date.parse(certificate.validTo) <= now
-  )
-    throw new Error(
-      "Enterprise SAML IdP signing certificate is outside its validity period.",
-    );
+  if (Date.parse(certificate.validFrom) > now || Date.parse(certificate.validTo) <= now)
+    throw new Error("Enterprise SAML IdP signing certificate is outside its validity period.");
 }
 
 function validateEndpoint(endpoint: string, origin: string): void {
   const url = new URL(endpoint);
-  const sameDevelopmentOrigin =
-    url.origin === origin && origin.startsWith("http:");
+  const sameDevelopmentOrigin = url.origin === origin && origin.startsWith("http:");
   if (
-    (!sameDevelopmentOrigin &&
-      (url.protocol !== "https:" ||
-        isIP(url.hostname.replace(/^\[|\]$/gu, "")) !== 0)) ||
+    (!sameDevelopmentOrigin && (url.protocol !== "https:" || isIP(url.hostname.replace(/^\[|\]$/gu, "")) !== 0)) ||
     url.username ||
     url.password ||
     url.hash
   ) {
-    throw new Error(
-      "Enterprise SSO requires HTTPS IdP endpoints without embedded credentials or fragments.",
-    );
+    throw new Error("Enterprise SSO requires HTTPS IdP endpoints without embedded credentials or fragments.");
   }
 }
 
@@ -186,22 +149,12 @@ export function enterpriseEmailDomain(email: unknown): string | undefined {
   return normalizeIdentityEmail(email)?.split("@").at(-1);
 }
 
-export function enterpriseProviderBinding(
-  provider: EnterpriseSsoProvider,
-): string {
+export function enterpriseProviderBinding(provider: EnterpriseSsoProvider): string {
   const authority =
     provider.protocol === "oidc"
       ? [provider.issuer, provider.clientId]
       : [provider.entityId, provider.signingCertificate];
   return createHash("sha256")
-    .update(
-      JSON.stringify([
-        provider.id,
-        provider.tenantId,
-        provider.domain,
-        provider.protocol,
-        ...authority,
-      ]),
-    )
+    .update(JSON.stringify([provider.id, provider.tenantId, provider.domain, provider.protocol, ...authority]))
     .digest("base64url");
 }

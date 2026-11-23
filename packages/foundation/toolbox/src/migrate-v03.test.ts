@@ -1,20 +1,11 @@
-import {
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  RETIRED_PACKAGE_TO_TARGET,
-  rewriteV03ImportSpecifier,
-} from "./migrate-v03-map.js";
+import { RETIRED_PACKAGE_TO_TARGET, rewriteV03ImportSpecifier } from "./migrate-v03-map.js";
 import { migrateWorkspaceToV03 } from "./migrate-v03.js";
 
 const tempDirs: string[] = [];
@@ -39,35 +30,23 @@ afterEach(() => {
 
 describe("rewriteV03ImportSpecifier", () => {
   it("maps retired packages and subpaths to their 0.3.0 locations", () => {
-    expect(rewriteV03ImportSpecifier("@dads-framework/contract")).toBe(
-      "@dads-framework/core/contract",
+    expect(rewriteV03ImportSpecifier("@dads-framework/contract")).toBe("@dads-framework/core/contract");
+    expect(rewriteV03ImportSpecifier("@dads-framework/runtime/clock")).toBe("@dads-framework/core/runtime/clock");
+    expect(rewriteV03ImportSpecifier("@dads-framework/authorization-migration")).toBe(
+      "@dads-framework/spicedb-access/migration",
     );
-    expect(rewriteV03ImportSpecifier("@dads-framework/runtime/clock")).toBe(
-      "@dads-framework/core/runtime/clock",
+    expect(rewriteV03ImportSpecifier("@dads-framework/authorization/testing")).toBe(
+      "@dads-framework/spicedb-access/testing",
     );
-    expect(
-      rewriteV03ImportSpecifier("@dads-framework/authorization-migration"),
-    ).toBe("@dads-framework/spicedb-access/migration");
-    expect(
-      rewriteV03ImportSpecifier("@dads-framework/authorization/testing"),
-    ).toBe("@dads-framework/spicedb-access/testing");
-    expect(rewriteV03ImportSpecifier("@dads-framework/styles")).toBe(
-      "@dads-framework/ui/styles/index.css",
+    expect(rewriteV03ImportSpecifier("@dads-framework/styles")).toBe("@dads-framework/ui/styles/index.css");
+    expect(rewriteV03ImportSpecifier("@dads-framework/styles/fonts.css")).toBe("@dads-framework/ui/styles/fonts.css");
+    expect(rewriteV03ImportSpecifier("@dads-framework/design-tokens/default.tokens.json")).toBe(
+      "@dads-framework/ui/tokens/default.tokens.json",
     );
-    expect(rewriteV03ImportSpecifier("@dads-framework/styles/fonts.css")).toBe(
-      "@dads-framework/ui/styles/fonts.css",
+    expect(rewriteV03ImportSpecifier("@dads-framework/identity-better-auth")).toBe(
+      "@dads-framework/identity/better-auth",
     );
-    expect(
-      rewriteV03ImportSpecifier(
-        "@dads-framework/design-tokens/default.tokens.json",
-      ),
-    ).toBe("@dads-framework/ui/tokens/default.tokens.json");
-    expect(
-      rewriteV03ImportSpecifier("@dads-framework/identity-better-auth"),
-    ).toBe("@dads-framework/identity/better-auth");
-    expect(rewriteV03ImportSpecifier("@dads-framework/http")).toBe(
-      "@dads-framework/http",
-    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/http")).toBe("@dads-framework/http");
   });
 
   it("maps all 28 retired package names", () => {
@@ -135,15 +114,8 @@ describe("migrateWorkspaceToV03", () => {
 
     const dry = migrateWorkspaceToV03({ root, dryRun: true });
     expect(dry.dryRun).toBe(true);
-    expect(dry.filesChanged).toEqual([
-      "dads.project.json",
-      "package.json",
-      "src/app.ts",
-      "src/styles.css",
-    ]);
-    expect(readFileSync(join(root, "src/app.ts"), "utf8")).toContain(
-      "@dads-framework/contract",
-    );
+    expect(dry.filesChanged).toEqual(["dads.project.json", "package.json", "src/app.ts", "src/styles.css"]);
+    expect(readFileSync(join(root, "src/app.ts"), "utf8")).toContain("@dads-framework/contract");
 
     const applied = migrateWorkspaceToV03({ root });
     expect(applied.dryRun).toBe(false);
@@ -160,9 +132,7 @@ describe("migrateWorkspaceToV03", () => {
       })
       .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
     expect(manifest.dependencies["@dads-framework/core"]).toBe("^0.3.0");
-    expect(manifest.dependencies["@dads-framework/spicedb-access"]).toBe(
-      "^0.3.0",
-    );
+    expect(manifest.dependencies["@dads-framework/spicedb-access"]).toBe("^0.3.0");
     expect(manifest.dependencies["@dads-framework/email"]).toBe("^0.3.0");
     expect(manifest.dependencies["@dads-framework/identity"]).toBe("^0.3.0");
     expect(manifest.dependencies["@dads-framework/postgres"]).toBe("^0.3.0");
@@ -181,15 +151,11 @@ describe("migrateWorkspaceToV03", () => {
         'import { toCsv } from "@dads-framework/documents/csv";',
       ].join("\n"),
     );
-    expect(readFileSync(join(root, "src/styles.css"), "utf8")).toBe(
-      '@import "@dads-framework/ui/styles/index.css";\n',
-    );
+    expect(readFileSync(join(root, "src/styles.css"), "utf8")).toBe('@import "@dads-framework/ui/styles/index.css";\n');
 
     const project = z
       .object({
-        packages: z.array(
-          z.object({ allowedDependencies: z.array(z.string()) }),
-        ),
+        packages: z.array(z.object({ allowedDependencies: z.array(z.string()) })),
       })
       .parse(JSON.parse(readFileSync(join(root, "dads.project.json"), "utf8")));
     expect(project.packages[0]?.allowedDependencies).toEqual([

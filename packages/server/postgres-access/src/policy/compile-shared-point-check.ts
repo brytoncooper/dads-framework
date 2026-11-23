@@ -5,11 +5,7 @@ import type {
   CompiledPermissionExpression,
   NormalizedPermissionCheck,
 } from "./policy-model.js";
-import {
-  analyzePermissionCycles,
-  type PermissionCyclePlan,
-  type RecursiveSccPlan,
-} from "./permission-cycles.js";
+import { analyzePermissionCycles, type PermissionCyclePlan, type RecursiveSccPlan } from "./permission-cycles.js";
 import { compileRecursiveSharedBody } from "./compile-recursive-policy.js";
 import { findColumnRelation } from "./column-relations.js";
 import {
@@ -78,16 +74,8 @@ function compileSharedPointPlan(
   binding: SharedPointBinding,
 ): { readonly withClause: string; readonly allowed: string } {
   const cycles = analyzePermissionCycles(model);
-  const compiler = new SharedPointCompiler(
-    model,
-    cycles,
-    builder,
-    binding.namespace,
-  );
-  const allowed = compiler.permission(
-    binding.resourceEntity,
-    binding.permission,
-  );
+  const compiler = new SharedPointCompiler(model, cycles, builder, binding.namespace);
+  const allowed = compiler.permission(binding.resourceEntity, binding.permission);
   const reachable = subjectReachability(
     binding.namespace,
     binding.subjectKind,
@@ -103,10 +91,7 @@ function compileSharedPointPlan(
 
 class SharedPointCompiler {
   readonly queries: string[] = [];
-  readonly #compiled = new Map<
-    string,
-    Map<CompiledPermissionExpression, string>
-  >();
+  readonly #compiled = new Map<string, Map<CompiledPermissionExpression, string>>();
   readonly #sccAliases = new Map<string, string>();
   readonly #sccNodeAliases = new Map<string, string>();
   readonly #active = new Set<string>();
@@ -122,15 +107,12 @@ class SharedPointCompiler {
     const definition = this.model.permissions.find(
       (candidate) => candidate.entity === entity && candidate.wireName === name,
     );
-    if (!definition)
-      throw new Error(`Postgres policy cannot find permission ${name}.`);
+    if (!definition) throw new Error(`Postgres policy cannot find permission ${name}.`);
     const scc = this.cycles.sccFor(entity, name);
     if (scc !== undefined) return this.#sccPermission(scc, entity, name);
     const identity = permissionIdentity(entity, name);
     if (this.#active.has(identity))
-      throw new Error(
-        "Postgres SQL compilation does not support a cycle through permissions.",
-      );
+      throw new Error("Postgres SQL compilation does not support a cycle through permissions.");
     this.#active.add(identity);
     try {
       return this.#expression(entity, definition.expression);
@@ -160,10 +142,7 @@ class SharedPointCompiler {
     const baseAliases = new Map<string, string>();
     for (const node of scc.nodes) {
       if (node.base !== undefined) {
-        baseAliases.set(
-          node.identity,
-          this.#expression(node.entity, node.base),
-        );
+        baseAliases.set(node.identity, this.#expression(node.entity, node.base));
       }
     }
     const guardAliases = new Map<CompiledPermissionExpression, string>();
@@ -184,17 +163,12 @@ class SharedPointCompiler {
       baseAliases,
       guardAliases,
     });
-    this.queries.push(
-      `${cteName}(resource_kind, resource_id, permission_name) AS (${body})`,
-    );
+    this.queries.push(`${cteName}(resource_kind, resource_id, permission_name) AS (${body})`);
     this.#sccAliases.set(scc.id, cteName);
     return cteName;
   }
 
-  #expression(
-    entity: string,
-    expression: CompiledPermissionExpression,
-  ): string {
+  #expression(entity: string, expression: CompiledPermissionExpression): string {
     let expressions = this.#compiled.get(entity);
     if (expressions === undefined) {
       expressions = new Map();
@@ -204,9 +178,7 @@ class SharedPointCompiler {
     if (compiled !== undefined) return compiled;
     const body = this.#body(entity, expression);
     const alias = `point_policy_${String(this.queries.length)}`;
-    this.queries.push(
-      `${alias}(resource_kind, resource_id) AS MATERIALIZED (${body})`,
-    );
+    this.queries.push(`${alias}(resource_kind, resource_id) AS MATERIALIZED (${body})`);
     expressions.set(expression, alias);
     return alias;
   }
@@ -218,26 +190,13 @@ class SharedPointCompiler {
     }
     if (expression.kind === "through") {
       const targets = resolveArrowTargets(this.model, entity, expression);
-      const polymorphic = isPolymorphicRelation(
-        this.model,
-        entity,
-        expression.relation,
-      );
+      const polymorphic = isPolymorphicRelation(this.model, entity, expression.relation);
       return this.#through(entity, expression.relation, targets, polymorphic);
     }
     if (expression.kind === "through-all") {
       const targets = resolveArrowTargets(this.model, entity, expression);
-      const polymorphic = isPolymorphicRelation(
-        this.model,
-        entity,
-        expression.relation,
-      );
-      return this.#throughAll(
-        entity,
-        expression.relation,
-        targets,
-        polymorphic,
-      );
+      const polymorphic = isPolymorphicRelation(this.model, entity, expression.relation);
+      return this.#throughAll(entity, expression.relation, targets, polymorphic);
     }
     if (expression.kind === "exclude") {
       const include = this.#expression(entity, expression.include);
@@ -245,34 +204,18 @@ class SharedPointCompiler {
       return `SELECT * FROM ${include} EXCEPT SELECT * FROM ${exclude}`;
     }
     const operator = expression.kind === "any-of" ? "UNION" : "INTERSECT";
-    const children = new Set(
-      expression.expressions.map((child) => this.#expression(entity, child)),
-    );
-    return [...children]
-      .map((child) => `SELECT * FROM ${child}`)
-      .join(` ${operator} `);
+    const children = new Set(expression.expressions.map((child) => this.#expression(entity, child)));
+    return [...children].map((child) => `SELECT * FROM ${child}`).join(` ${operator} `);
   }
 
-  #through(
-    entity: string,
-    name: string,
-    targets: readonly CompiledArrowTarget[],
-    polymorphic: boolean,
-  ): string {
-    const branches = targets.map((target) =>
-      this.#throughBranch(entity, name, target, polymorphic),
-    );
+  #through(entity: string, name: string, targets: readonly CompiledArrowTarget[], polymorphic: boolean): string {
+    const branches = targets.map((target) => this.#throughBranch(entity, name, target, polymorphic));
     return branches.length === 1 && branches[0] !== undefined
       ? branches[0]
       : branches.map((branch) => `(${branch})`).join(" UNION ");
   }
 
-  #throughBranch(
-    entity: string,
-    name: string,
-    target: CompiledArrowTarget,
-    polymorphic: boolean,
-  ): string {
+  #throughBranch(entity: string, name: string, target: CompiledArrowTarget, polymorphic: boolean): string {
     const child = this.permission(target.entity, target.permission);
     const columnRel = findColumnRelation(this.model, entity, name);
     if (columnRel !== undefined) {
@@ -308,12 +251,7 @@ class SharedPointCompiler {
       ) parent`;
   }
 
-  #throughAll(
-    entity: string,
-    name: string,
-    targets: readonly CompiledArrowTarget[],
-    polymorphic: boolean,
-  ): string {
+  #throughAll(entity: string, name: string, targets: readonly CompiledArrowTarget[], polymorphic: boolean): string {
     const columnRel = findColumnRelation(this.model, entity, name);
     if (columnRel !== undefined && targets[0] !== undefined) {
       const child = this.permission(targets[0].entity, targets[0].permission);

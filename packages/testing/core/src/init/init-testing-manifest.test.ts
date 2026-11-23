@@ -1,21 +1,10 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseTestingManifest } from "../testing-manifest.js";
 import { createFakeNativeBinary } from "../test-support/native-fixture.js";
-import {
-  initReportFileName,
-  initTestingManifest,
-} from "./init-testing-manifest.js";
+import { initReportFileName, initTestingManifest } from "./init-testing-manifest.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -127,13 +116,9 @@ describe("manifest generation", () => {
 
     const result = await initTestingManifest(structural(workspaceRoot));
 
-    expect(result.report.workspace.patternSource).toBe(
-      "package.json#workspaces",
-    );
+    expect(result.report.workspace.patternSource).toBe("package.json#workspaces");
     expect(result.report.workspace.patterns).toEqual(["packages/*"]);
-    expect(result.manifest.projects.map((project) => project.id)).toEqual([
-      "scope-core",
-    ]);
+    expect(result.manifest.projects.map((project) => project.id)).toEqual(["scope-core"]);
   });
 
   it("runs scripts with yarn when a yarn lockfile is present", async () => {
@@ -160,13 +145,7 @@ describe("manifest generation", () => {
     const workspaceRoot = makeWorkspace({
       "package.json": JSON.stringify({ name: "workspace" }),
       "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
-      "pnpm-workspace.yaml": [
-        "packages:",
-        "  - packages/*",
-        "catalog:",
-        "  vitest: ^4.0.0",
-        "",
-      ].join("\n"),
+      "pnpm-workspace.yaml": ["packages:", "  - packages/*", "catalog:", "  vitest: ^4.0.0", ""].join("\n"),
       "packages/core/package.json": corePackage,
       "packages/core/tsconfig.json": "{}",
       "packages/web/package.json": webPackage,
@@ -183,10 +162,9 @@ describe("manifest generation", () => {
       ignoredWorkspaceKeys: ["catalog"],
     });
     expect(result.manifest.tasks[0]?.execution.executable).toBe("pnpm");
-    expect(
-      result.manifest.projects.find((project) => project.id === "scope-web")
-        ?.fallbackDependencies,
-    ).toEqual(["scope-core"]);
+    expect(result.manifest.projects.find((project) => project.id === "scope-web")?.fallbackDependencies).toEqual([
+      "scope-core",
+    ]);
     expect(result.report.unsupported).toEqual([]);
   });
 
@@ -202,9 +180,7 @@ describe("manifest generation", () => {
 
     expect(result.report.workspace.patternSource).toBe("single-package");
     expect(result.report.workspace.packageManagerSource).toBe("default");
-    expect(result.manifest.projects).toEqual([
-      { id: "solo", root: ".", fallbackDependencies: [] },
-    ]);
+    expect(result.manifest.projects).toEqual([{ id: "solo", root: ".", fallbackDependencies: [] }]);
     expect(result.manifest.tasks.map((task) => task.execution)).toEqual([
       { executable: "npm", args: ["run", "lint"] },
       { executable: "npm", args: ["run", "test"] },
@@ -220,14 +196,10 @@ describe("manifest generation", () => {
       "dads.testing.json": "existing\n",
     });
 
-    await expect(
-      initTestingManifest(structural(workspaceRoot)),
-    ).rejects.toThrow(
+    await expect(initTestingManifest(structural(workspaceRoot))).rejects.toThrow(
       "Refusing to overwrite existing dads.testing.json; pass --force to replace it.",
     );
-    expect(readFileSync(join(workspaceRoot, "dads.testing.json"), "utf8")).toBe(
-      "existing\n",
-    );
+    expect(readFileSync(join(workspaceRoot, "dads.testing.json"), "utf8")).toBe("existing\n");
     expect(existsSync(join(workspaceRoot, initReportFileName))).toBe(false);
 
     const result = await initTestingManifest({
@@ -247,9 +219,7 @@ describe("manifest generation", () => {
       }),
     });
 
-    await expect(
-      initTestingManifest(structural(workspaceRoot)),
-    ).rejects.toThrow(
+    await expect(initTestingManifest(structural(workspaceRoot))).rejects.toThrow(
       "No recognized test, typecheck, lint, or build scripts were found; wrote dads.testing.init-report.json and no manifest.",
     );
     expect(existsSync(join(workspaceRoot, "dads.testing.json"))).toBe(false);
@@ -257,9 +227,7 @@ describe("manifest generation", () => {
     expect(report["validation"]).toEqual({
       method: "none",
       ok: false,
-      messages: [
-        "No recognized test, typecheck, lint, or build scripts were found.",
-      ],
+      messages: ["No recognized test, typecheck, lint, or build scripts were found."],
     });
     expect(report["manifestChecksum"]).toBeNull();
     expect(report["packages"]).toEqual([
@@ -279,10 +247,7 @@ describe("manifest generation", () => {
         scripts: { test: "vitest run", typecheck: "tsc -b" },
       }),
     });
-    const fixture = createFakeNativeBinary(
-      makeTemporaryDirectory(),
-      planResponse,
-    );
+    const fixture = createFakeNativeBinary(makeTemporaryDirectory(), planResponse);
 
     const result = await initTestingManifest({
       workspaceRoot,
@@ -303,13 +268,8 @@ describe("manifest generation", () => {
       all: true,
       taskIds: [],
     });
-    expect(readStringField(request, "manifestPath")).toMatch(
-      /^dads\.testing\.json\..+\.tmp$/,
-    );
-    expect(writtenManifestTaskIds(workspaceRoot)).toEqual([
-      "solo:test",
-      "solo:typecheck",
-    ]);
+    expect(readStringField(request, "manifestPath")).toMatch(/^dads\.testing\.json\..+\.tmp$/);
+    expect(writtenManifestTaskIds(workspaceRoot)).toEqual(["solo:test", "solo:typecheck"]);
     expect(temporaryFilesIn(workspaceRoot)).toEqual([]);
   });
 
@@ -332,9 +292,7 @@ describe("manifest generation", () => {
         nativeBinary: fixture.binary,
         environment: {},
       }),
-    ).rejects.toThrow(
-      "Generated manifest was rejected by dad-test: Manifest must declare at least one task.",
-    );
+    ).rejects.toThrow("Generated manifest was rejected by dad-test: Manifest must declare at least one task.");
     expect(existsSync(join(workspaceRoot, "dads.testing.json"))).toBe(false);
     expect(temporaryFilesIn(workspaceRoot)).toEqual([]);
     const report = readReport(workspaceRoot);
@@ -353,10 +311,7 @@ describe("manifest generation", () => {
         scripts: { test: "vitest run" },
       }),
     });
-    const fixture = createFakeNativeBinary(
-      makeTemporaryDirectory(),
-      planResponse,
-    );
+    const fixture = createFakeNativeBinary(makeTemporaryDirectory(), planResponse);
 
     const result = await initTestingManifest({
       workspaceRoot,
@@ -392,9 +347,7 @@ function writtenManifestTaskIds(workspaceRoot: string): readonly string[] {
 }
 
 function readReport(workspaceRoot: string): Record<string, unknown> {
-  const parsed: unknown = JSON.parse(
-    readFileSync(join(workspaceRoot, initReportFileName), "utf8"),
-  );
+  const parsed: unknown = JSON.parse(readFileSync(join(workspaceRoot, initReportFileName), "utf8"));
   if (!isRecord(parsed)) {
     throw new Error("The init report must be a JSON object.");
   }

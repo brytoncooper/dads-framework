@@ -11,14 +11,7 @@ import { sql, type SQL } from "drizzle-orm";
 import { boolean, pgTable, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
-import {
-  actor,
-  allOf,
-  compileAccess,
-  emitAccessIr,
-  emitZedForDefinitions,
-  resource,
-} from "@dads-framework/access";
+import { actor, allOf, compileAccess, emitAccessIr, emitZedForDefinitions, resource } from "@dads-framework/access";
 import { scopeBindings } from "@dads-framework/access/scopes";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
@@ -77,10 +70,7 @@ export const sheet = resource("listfixture/sheet", {
   id: idSchema,
   roles: { folder, site },
   can: ({ folder: parentFolder, site: parentSite }) => ({
-    view: [
-      parentFolder.view.unless(parentSite.blocked_here),
-      parentSite.manage_records,
-    ],
+    view: [parentFolder.view.unless(parentSite.blocked_here), parentSite.manage_records],
   }),
 });
 
@@ -160,8 +150,7 @@ export const folderSqlRoles = {
   shared_site: { kind: "scope-join", matches: sharedWithAny },
   fallback_site: {
     kind: "derived",
-    matches: (ids: SQL) =>
-      sql`${folders.homeSiteId} = ANY(${ids}) AND ${sharedNowhere}`,
+    matches: (ids: SQL) => sql`${folders.homeSiteId} = ANY(${ids}) AND ${sharedNowhere}`,
   },
   archived: { kind: "tag", condition: sql`${folders.archived}` },
 } satisfies ScopeSqlRoles<typeof folderScope.roles>;

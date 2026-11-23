@@ -19,12 +19,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   functionBodyOf,
@@ -121,26 +116,19 @@ function breaches(body: ts.Block): readonly string[] {
   measureCallbacks(body, 0, tally);
   const statements = body.statements.length;
   return [
-    tally.complexity > COMPLEXITY_CEILING
-      ? `complexity ${tally.complexity}`
-      : "",
+    tally.complexity > COMPLEXITY_CEILING ? `complexity ${tally.complexity}` : "",
     statements > STATEMENT_CEILING ? `statements ${statements}` : "",
     tally.depth > DEPTH_CEILING ? `depth ${tally.depth}` : "",
     tally.callbacks > CALLBACK_CEILING ? `callbacks ${tally.callbacks}` : "",
   ].filter((over) => over.length > 0);
 }
 
-function measureModule(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function measureModule(module: DoctorModule, readings: Map<string, SignalReading>): void {
   visitNodes(module.source, (node) => {
     const body = functionBodyOf(node);
     if (body === undefined) return;
     const over = breaches(body);
-    const evidence: SignalEvidence[] = over.map((detail) =>
-      evidenceAt(module, node, detail),
-    );
+    const evidence: SignalEvidence[] = over.map((detail) => evidenceAt(module, node, detail));
     const where = `${module.path}:${lineOf(module, node)}`;
     readings.set(`${where} ${functionName(node)}`, {
       value: over.length,
@@ -161,8 +149,7 @@ function countFunctionsOverCeiling(context: DoctorContext): SignalReadings {
 export const functionsOverCeilingSignal: DoctorSignal = {
   id: "functions-over-ceiling",
   issue: "enmeshment",
-  question:
-    "Does any production function exceed complexity 10, 20 statements, depth 3, or 2 nested callbacks?",
+  question: "Does any production function exceed complexity 10, 20 statements, depth 3, or 2 nested callbacks?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

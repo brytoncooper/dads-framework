@@ -9,14 +9,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./table.js";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table.js";
 
 afterEach(() => {
   cleanup();
@@ -60,20 +53,13 @@ function setScrollMetrics(
 }
 
 function scroller(container: HTMLElement): HTMLElement {
-  const element = container.querySelector<HTMLElement>(
-    '[data-slot="table-container"]',
-  );
+  const element = container.querySelector<HTMLElement>('[data-slot="table-container"]');
   if (!element) throw new Error("Expected the table container.");
   return element;
 }
 
-function fade(
-  container: HTMLElement,
-  edge: "left" | "right",
-): HTMLElement | null {
-  return container.querySelector<HTMLElement>(
-    `[data-slot="table-edge-fade"][data-edge="${edge}"]`,
-  );
+function fade(container: HTMLElement, edge: "left" | "right"): HTMLElement | null {
+  return container.querySelector<HTMLElement>(`[data-slot="table-edge-fade"][data-edge="${edge}"]`);
 }
 
 function isShown(element: HTMLElement | null): boolean {
@@ -142,11 +128,7 @@ describe("Table stickyFirstColumn", () => {
   it("pins the first header and body cell on opaque surfaces", () => {
     const { container } = render(<WideTable stickyFirstColumn />);
 
-    expect(
-      container
-        .querySelector('[data-slot="table"]')
-        ?.hasAttribute("data-sticky-first-column"),
-    ).toBe(true);
+    expect(container.querySelector('[data-slot="table"]')?.hasAttribute("data-sticky-first-column")).toBe(true);
     const head = screen.getByRole("columnheader", { name: "Ticket" });
     const cell = screen.getByRole("cell", { name: "T-1001" });
     expect(head.className).toContain("first:sticky");
@@ -157,16 +139,12 @@ describe("Table stickyFirstColumn", () => {
 
     const row = cell.closest('[data-slot="table-row"]');
     expect(row?.className).toContain("hover:[&>td]:bg-table-row-hover");
-    expect(row?.className).toContain(
-      "data-[state=selected]:[&>td]:bg-table-row-selected",
-    );
+    expect(row?.className).toContain("data-[state=selected]:[&>td]:bg-table-row-selected");
   });
 
   it("leaves cells unpinned by default", () => {
     render(<WideTable />);
 
-    expect(
-      screen.getByRole("cell", { name: "T-1001" }).className,
-    ).not.toContain("first:sticky");
+    expect(screen.getByRole("cell", { name: "T-1001" }).className).not.toContain("first:sticky");
   });
 });

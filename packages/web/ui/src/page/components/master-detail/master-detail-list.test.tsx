@@ -1,22 +1,10 @@
 /** @vitest-environment jsdom */
 // The rail draws only rows in view, highlights the addressed record, keeps two pages loaded ahead, and always offers Load More.
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  MasterDetailList,
-  type MasterDetailListProps,
-} from "./master-detail-list.js";
-import {
-  type MasterDetailLinkProps,
-  MasterDetailRow,
-} from "./master-detail-row.js";
+import { MasterDetailList, type MasterDetailListProps } from "./master-detail-list.js";
+import { type MasterDetailLinkProps, MasterDetailRow } from "./master-detail-row.js";
 import { mockDesktopWidth, mockRailGeometry } from "./testing/rail-geometry.js";
 
 type Pump = { readonly slug: string; readonly name: string };
@@ -45,12 +33,7 @@ function renderList(overrides: Partial<MasterDetailListProps<Pump>> = {}) {
     onRetry: vi.fn(),
     getKey: (pump) => pump.slug,
     renderRow: (pump, selected) => (
-      <MasterDetailRow
-        href={`/assets/${pump.slug}`}
-        title={pump.name}
-        subtitle="Conveyor"
-        selected={selected}
-      />
+      <MasterDetailRow href={`/assets/${pump.slug}`} title={pump.name} subtitle="Conveyor" selected={selected} />
     ),
     emptyLabel: "No assets match this view.",
     loadingLabel: "Loading assets…",
@@ -107,9 +90,7 @@ describe("MasterDetailList", () => {
       ),
     });
     const facility = screen.getAllByText("North Plant")[0];
-    expect(facility?.getAttribute("data-slot")).toBe(
-      "master-detail-row-context",
-    );
+    expect(facility?.getAttribute("data-slot")).toBe("master-detail-row-context");
     expect(facility?.className).toContain("text-muted-foreground");
     expect(facility?.previousElementSibling?.textContent).toBe("Conveyor");
     expect(facility?.nextElementSibling).toBeNull();
@@ -117,9 +98,7 @@ describe("MasterDetailList", () => {
 
   it("omits an absent context label", () => {
     renderList({ items: pumps(3), total: 3, hasNextPage: false });
-    expect(
-      document.querySelector('[data-slot="master-detail-row-context"]'),
-    ).toBeNull();
+    expect(document.querySelector('[data-slot="master-detail-row-context"]')).toBeNull();
   });
 
   it("shows how much of the list is loaded while it is incomplete", () => {
@@ -170,9 +149,7 @@ describe("MasterDetailList", () => {
     cleanup();
 
     renderList({ status: "pending", items: [] });
-    expect(
-      screen.getByRole("status", { name: "Loading assets…" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("status", { name: "Loading assets…" })).toBeTruthy();
     cleanup();
 
     const props = renderList({ status: "error", items: [] });
@@ -187,10 +164,7 @@ describe("MasterDetailList scroll position on selection", () => {
   // browser does, with the scroll event arriving a moment later.
   let restoreScrollTo: () => void = () => undefined;
   beforeEach(() => {
-    const original = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      "scrollTo",
-    );
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollTo");
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
       writable: true,
@@ -214,21 +188,13 @@ describe("MasterDetailList scroll position on selection", () => {
   // A scroller can only scroll as far as its content: the virtual list's `ul` height past the viewport.
   let restoreScrollExtent: () => void = () => undefined;
   beforeEach(() => {
-    const scrollHeight = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      "scrollHeight",
-    );
-    const clientHeight = Object.getOwnPropertyDescriptor(
-      Element.prototype,
-      "clientHeight",
-    );
+    const scrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+    const clientHeight = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight");
     Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
       configurable: true,
       get(this: HTMLElement) {
         const content = this.firstElementChild;
-        return content instanceof HTMLElement
-          ? Number.parseFloat(content.style.height) || 0
-          : 0;
+        return content instanceof HTMLElement ? Number.parseFloat(content.style.height) || 0 : 0;
       },
     });
     Object.defineProperty(Element.prototype, "clientHeight", {
@@ -237,11 +203,7 @@ describe("MasterDetailList scroll position on selection", () => {
     });
     restoreScrollExtent = () => {
       if (scrollHeight) {
-        Object.defineProperty(
-          HTMLElement.prototype,
-          "scrollHeight",
-          scrollHeight,
-        );
+        Object.defineProperty(HTMLElement.prototype, "scrollHeight", scrollHeight);
       }
       if (clientHeight) {
         Object.defineProperty(Element.prototype, "clientHeight", clientHeight);
@@ -265,11 +227,7 @@ describe("MasterDetailList scroll position on selection", () => {
       getKey: (pump) => pump.slug,
       ...(selectedKey === undefined ? {} : { selectedKey }),
       renderRow: (pump, selected) => (
-        <MasterDetailRow
-          href={`/assets/${pump.slug}`}
-          title={pump.name}
-          selected={selected}
-        />
+        <MasterDetailRow href={`/assets/${pump.slug}`} title={pump.name} selected={selected} />
       ),
       emptyLabel: "none",
       loadingLabel: "loading",
@@ -285,9 +243,7 @@ describe("MasterDetailList scroll position on selection", () => {
   }
 
   function scroller(): HTMLElement {
-    const element = document.querySelector<HTMLElement>(
-      '[data-slot="master-detail-list"]',
-    );
+    const element = document.querySelector<HTMLElement>('[data-slot="master-detail-list"]');
     if (element === null) throw new Error("list scroller not rendered");
     return element;
   }
@@ -359,10 +315,7 @@ describe("MasterDetailList scroll position on selection", () => {
   });
 
   it("reveals a deep-linked row once, then leaves the reader's scroll alone", async () => {
-    const { rerender } = render(
-      <MasterDetailList {...listProps("pump-120")} />,
-      { reactStrictMode: true },
-    );
+    const { rerender } = render(<MasterDetailList {...listProps("pump-120")} />, { reactStrictMode: true });
     await settle();
     expect(scroller().scrollTop).toBeGreaterThan(0);
 
@@ -383,20 +336,12 @@ describe("MasterDetailRow search", () => {
         label="Assets"
         selected
         listSearch={{ status: "archived", sort: "-name", q: undefined }}
-        rail={
-          <MasterDetailRow
-            href="/assets/pump-2?from=record#details"
-            title="Pump 2"
-            selected={false}
-          />
-        }
+        rail={<MasterDetailRow href="/assets/pump-2?from=record#details" title="Pump 2" selected={false} />}
       >
         <p>record</p>
       </MasterDetailLayout>,
     );
-    expect(rowLink("Pump 2")?.getAttribute("href")).toBe(
-      "/assets/pump-2?status=archived&sort=-name#details",
-    );
+    expect(rowLink("Pump 2")?.getAttribute("href")).toBe("/assets/pump-2?status=archived&sort=-name#details");
   });
 
   it("passes the raw destination and list search to the app link component", async () => {
@@ -410,14 +355,7 @@ describe("MasterDetailRow search", () => {
         label="Assets"
         selected
         listSearch={{ page: 2 }}
-        rail={
-          <MasterDetailRow
-            href="/assets/pump-2"
-            title="Pump 2"
-            selected
-            linkComponent={RouterLink}
-          />
-        }
+        rail={<MasterDetailRow href="/assets/pump-2" title="Pump 2" selected linkComponent={RouterLink} />}
       >
         <p>record</p>
       </MasterDetailLayout>,

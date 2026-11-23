@@ -17,9 +17,7 @@ import type { ResourceLookup } from "@dads-framework/access/runtime";
 export async function listOnlyVisible<T>(
   authorization: Authorization,
   lookup: ResourceLookup,
-  list: (
-    visibleIds: readonly string[],
-  ) => Promise<{ rows: readonly T[]; total: number }>,
+  list: (visibleIds: readonly string[]) => Promise<{ rows: readonly T[]; total: number }>,
 ): Promise<{ rows: readonly T[]; total: number }> {
   const visibleIds = await authorization.lookupResources(lookup);
   if (visibleIds.length === 0) {

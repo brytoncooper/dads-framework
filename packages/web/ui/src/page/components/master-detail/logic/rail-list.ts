@@ -11,9 +11,10 @@ export type RailListPage<TItem> = {
 };
 
 /** Every loaded row in server order, and the server's total for the whole list. */
-export function flattenRailPages<TItem>(
-  data: { readonly pages: readonly RailListPage<TItem>[] } | undefined,
-): { readonly items: readonly TItem[]; readonly total: number } {
+export function flattenRailPages<TItem>(data: { readonly pages: readonly RailListPage<TItem>[] } | undefined): {
+  readonly items: readonly TItem[];
+  readonly total: number;
+} {
   if (data === undefined || data.pages.length === 0) {
     return { items: [], total: 0 };
   }
@@ -48,18 +49,12 @@ export function shouldLoadMoreRailRows(input: {
 }
 
 /** "N of M loaded" is shown only while some rows are not loaded yet. */
-export function isRailPartiallyLoaded(
-  loadedCount: number,
-  total: number,
-): boolean {
+export function isRailPartiallyLoaded(loadedCount: number, total: number): boolean {
   return loadedCount < total;
 }
 
 /** Direction of a sort string such as `name` or `-name` for one key; none when sorted by another key. */
-export function railSortDirection(
-  sort: string,
-  key: string,
-): "asc" | "desc" | null {
+export function railSortDirection(sort: string, key: string): "asc" | "desc" | null {
   if (sort === key) return "asc";
   if (sort === `-${key}`) return "desc";
   return null;
@@ -76,10 +71,7 @@ export function toggledNameSort(sort: string): "name" | "-name" {
  * not belong to the new list: the section's index address opens the new
  * list's first record, or shows the empty pane when there is none.
  */
-export function isRailStatusChange(
-  current: { readonly status?: string },
-  next: { readonly status?: string },
-): boolean {
+export function isRailStatusChange(current: { readonly status?: string }, next: { readonly status?: string }): boolean {
   return current.status !== next.status;
 }
 

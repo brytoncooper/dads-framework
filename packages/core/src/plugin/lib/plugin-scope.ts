@@ -37,9 +37,7 @@ export type ScopeLedger = {
 /** Thrown when a plugin registers an effect after its scope has closed. */
 export class PluginScopeClosedError extends Error {
   constructor(pluginName: string) {
-    super(
-      `plugin ${pluginName} registered an effect after its scope was disposed; the effect was not started`,
-    );
+    super(`plugin ${pluginName} registered an effect after its scope was disposed; the effect was not started`);
     this.name = "PluginScopeClosedError";
   }
 }

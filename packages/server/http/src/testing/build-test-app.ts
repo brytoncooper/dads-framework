@@ -62,9 +62,7 @@ function headerSubjects(): SubjectResolver {
   return {
     resolve: (request) => {
       const id = request.headers[TEST_SUBJECT_HEADER];
-      return Promise.resolve(
-        typeof id === "string" && id.length > 0 ? { type: "user", id } : null,
-      );
+      return Promise.resolve(typeof id === "string" && id.length > 0 ? { type: "user", id } : null);
     },
   };
 }
@@ -75,54 +73,36 @@ function sameSubjectsForEveryCredential(
   subjects: SubjectResolver,
 ): Readonly<Record<string, SubjectResolver>> {
   const names = routes.flatMap((route) =>
-    route.capabilities.machineCredential === undefined
-      ? []
-      : [route.capabilities.machineCredential],
+    route.capabilities.machineCredential === undefined ? [] : [route.capabilities.machineCredential],
   );
   return Object.fromEntries(names.map((name) => [name, subjects]));
 }
 
 function listAccessOptions(options: BuildTestAppOptions) {
   return {
-    ...(options.accessModel === undefined
-      ? {}
-      : { accessModel: options.accessModel }),
+    ...(options.accessModel === undefined ? {} : { accessModel: options.accessModel }),
     ...(options.lookups === undefined ? {} : { lookups: options.lookups }),
   };
 }
 
-export async function buildTestApp(
-  options: BuildTestAppOptions,
-): Promise<TestApp> {
+export async function buildTestApp(options: BuildTestAppOptions): Promise<TestApp> {
   const app = await createHttpApp({
     nodeEnv: "test",
     trustedOrigins: [],
     logger: false,
-    ...(options.rawBodyContentTypes === undefined
-      ? {}
-      : { rawBodyContentTypes: options.rawBodyContentTypes }),
-    ...(options.byteBodyContentTypes === undefined
-      ? {}
-      : { byteBodyContentTypes: options.byteBodyContentTypes }),
+    ...(options.rawBodyContentTypes === undefined ? {} : { rawBodyContentTypes: options.rawBodyContentTypes }),
+    ...(options.byteBodyContentTypes === undefined ? {} : { byteBodyContentTypes: options.byteBodyContentTypes }),
   });
   const subjects = options.subjects ?? headerSubjects();
   registerRoutes(app, {
     routes: options.routes,
     ...listAccessOptions(options),
     subjects,
-    machineCredentials:
-      options.machineCredentials ??
-      sameSubjectsForEveryCredential(options.routes, subjects),
+    machineCredentials: options.machineCredentials ?? sameSubjectsForEveryCredential(options.routes, subjects),
     authorization: options.authorization ?? new FakeAuthorization(),
-    ...(options.authorizationContexts === undefined
-      ? {}
-      : { authorizationContexts: options.authorizationContexts }),
-    ...(options.handlerTimeoutMs === undefined
-      ? {}
-      : { handlerTimeoutMs: options.handlerTimeoutMs }),
-    ...(options.featureState === undefined
-      ? {}
-      : { featureState: options.featureState }),
+    ...(options.authorizationContexts === undefined ? {} : { authorizationContexts: options.authorizationContexts }),
+    ...(options.handlerTimeoutMs === undefined ? {} : { handlerTimeoutMs: options.handlerTimeoutMs }),
+    ...(options.featureState === undefined ? {} : { featureState: options.featureState }),
   });
   await app.ready();
   return {

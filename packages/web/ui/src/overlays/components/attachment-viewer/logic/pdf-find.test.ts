@@ -45,15 +45,9 @@ describe("buildFindCommand", () => {
   });
 
   it("re-runs the search with the pdf.js change type for each toggle", () => {
-    expect(buildFindCommand(state, "highlight-all").type).toBe(
-      "highlightallchange",
-    );
-    expect(buildFindCommand(state, "case-sensitive").type).toBe(
-      "casesensitivitychange",
-    );
-    expect(buildFindCommand(state, "entire-word").type).toBe(
-      "entirewordchange",
-    );
+    expect(buildFindCommand(state, "highlight-all").type).toBe("highlightallchange");
+    expect(buildFindCommand(state, "case-sensitive").type).toBe("casesensitivitychange");
+    expect(buildFindCommand(state, "entire-word").type).toBe("entirewordchange");
   });
 
   it("never marks a direction on anything but a previous step", () => {

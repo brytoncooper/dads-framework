@@ -8,11 +8,7 @@ import { parseZedSchemaSurface } from "@dads-framework/access/schema";
 import { planSchemaContraction } from "@dads-framework/access/schema";
 
 const FIXTURE = readFileSync(
-  join(
-    dirname(fileURLToPath(import.meta.url)),
-    "__fixtures__",
-    "relationship-with-ceiling-view-products.zed",
-  ),
+  join(dirname(fileURLToPath(import.meta.url)), "__fixtures__", "relationship-with-ceiling-view-products.zed"),
   "utf8",
 );
 
@@ -57,19 +53,14 @@ definition docs/note {
 `);
 
     expect([...surface.resourceTypes]).toEqual(["user", "docs/note"]);
-    expect(surface.relations).toEqual([
-      { resourceType: "docs/note", relation: "owner" },
-    ]);
+    expect(surface.relations).toEqual([{ resourceType: "docs/note", relation: "owner" }]);
   });
 });
 
 describe("planSchemaContraction", () => {
   it("names leftover types and relations absent from the desired schema", () => {
     const desired = parseZedSchemaSurface(
-      FIXTURE.replace(
-        "  relation ceiling_view_products: organizations/organization#member\n",
-        "",
-      ),
+      FIXTURE.replace("  relation ceiling_view_products: organizations/organization#member\n", ""),
     );
     const live = parseZedSchemaSurface(`${FIXTURE}
 

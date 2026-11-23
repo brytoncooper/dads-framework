@@ -113,11 +113,7 @@ function scanBlockComment(line: string, index: number): ScanStep {
  * JavaScript string is a syntax error, so the state resets instead of eating
  * the rest of the file.
  */
-function scanOpenLiteral(
-  line: string,
-  index: number,
-  literal: OpenStringLiteral,
-): ScanStep {
+function scanOpenLiteral(line: string, index: number, literal: OpenStringLiteral): ScanStep {
   let position = index;
   while (position < line.length) {
     if (literal.escapes && line[position] === "\\") {
@@ -194,20 +190,11 @@ type LiteralStart = {
  * literal is consumed whole and opens nothing, which is what keeps `'"'` from
  * opening a string that never closes.
  */
-function openLiteralAt(
-  line: string,
-  index: number,
-  rust: boolean,
-): LiteralStart | undefined {
-  return rust
-    ? openRustLiteralAt(line, index)
-    : openScriptLiteralAt(line, index);
+function openLiteralAt(line: string, index: number, rust: boolean): LiteralStart | undefined {
+  return rust ? openRustLiteralAt(line, index) : openScriptLiteralAt(line, index);
 }
 
-function openRustLiteralAt(
-  line: string,
-  index: number,
-): LiteralStart | undefined {
+function openRustLiteralAt(line: string, index: number): LiteralStart | undefined {
   const rest = line.slice(index);
   const charLiteral = RUST_CHAR_LITERAL.exec(rest);
   if (charLiteral !== null) {
@@ -227,10 +214,7 @@ function openRustLiteralAt(
   };
 }
 
-function openScriptLiteralAt(
-  line: string,
-  index: number,
-): LiteralStart | undefined {
+function openScriptLiteralAt(line: string, index: number): LiteralStart | undefined {
   const character = line[index];
   if (character === '"' || character === "'") {
     return {

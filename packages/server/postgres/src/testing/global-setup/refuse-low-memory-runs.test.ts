@@ -58,9 +58,7 @@ function reading(overrides: Partial<MemoryReading> = {}): MemoryReading {
   };
 }
 
-function dockerVm(
-  overrides: Partial<DockerMemoryReading> = {},
-): DockerMemoryReading {
+function dockerVm(overrides: Partial<DockerMemoryReading> = {}): DockerMemoryReading {
   return {
     totalBytes: 6_212_771_840,
     inVm: true,
@@ -92,12 +90,8 @@ describe("parseMacAvailableMemory", () => {
   });
 
   it("returns null without a page size or with a missing line", () => {
-    expect(
-      parseMacAvailableMemory(MAC_VM_STAT.split("\n").slice(1).join("\n")),
-    ).toBeNull();
-    expect(
-      parseMacAvailableMemory(MAC_VM_STAT.replace(/^Pages inactive.*$/m, "")),
-    ).toBeNull();
+    expect(parseMacAvailableMemory(MAC_VM_STAT.split("\n").slice(1).join("\n"))).toBeNull();
+    expect(parseMacAvailableMemory(MAC_VM_STAT.replace(/^Pages inactive.*$/m, ""))).toBeNull();
   });
 });
 
@@ -151,21 +145,15 @@ describe("memoryThresholds", () => {
   });
 
   it("refuses nonsense instead of silently using the default", () => {
-    expect(() =>
-      memoryThresholds({ DADS_TEST_MIN_FREE_MEMORY_GB: "lots" }),
-    ).toThrow(/DADS_TEST_MIN_FREE_MEMORY_GB must be a number/);
-    expect(() => memoryThresholds({ DADS_TEST_MEMORY_WAIT_MS: "-1" })).toThrow(
-      /DADS_TEST_MEMORY_WAIT_MS/,
+    expect(() => memoryThresholds({ DADS_TEST_MIN_FREE_MEMORY_GB: "lots" })).toThrow(
+      /DADS_TEST_MIN_FREE_MEMORY_GB must be a number/,
     );
+    expect(() => memoryThresholds({ DADS_TEST_MEMORY_WAIT_MS: "-1" })).toThrow(/DADS_TEST_MEMORY_WAIT_MS/);
   });
 });
 
 describe("decideMemoryPreflight", () => {
-  const decide = (input: {
-    reading: MemoryReading;
-    waitedMs?: number;
-    thresholds?: MemoryThresholds;
-  }) =>
+  const decide = (input: { reading: MemoryReading; waitedMs?: number; thresholds?: MemoryThresholds }) =>
     decideMemoryPreflight({
       reading: input.reading,
       thresholds: input.thresholds ?? THRESHOLDS,
@@ -174,9 +162,7 @@ describe("decideMemoryPreflight", () => {
     });
 
   it("goes when the host and Docker's VM both have room", () => {
-    expect(decide({ reading: reading({ docker: dockerVm() }) }).action).toBe(
-      "go",
-    );
+    expect(decide({ reading: reading({ docker: dockerVm() }) }).action).toBe("go");
   });
 
   it("waits while the host is below its floor, saying what is free and needed", () => {
@@ -242,10 +228,7 @@ describe("awaitEnoughTestMemory", () => {
     const result = await awaitEnoughTestMemory("integration", {
       thresholds: THRESHOLDS,
       deps: {
-        read: () =>
-          Promise.resolve(
-            reading({ hostAvailableBytes: readings.shift() ?? 0 }),
-          ),
+        read: () => Promise.resolve(reading({ hostAvailableBytes: readings.shift() ?? 0 })),
         sleep: () => Promise.resolve(),
         log: (line) => logged.push(line),
       },
@@ -296,9 +279,10 @@ describe("decideRamStorageFallback", () => {
   });
 
   it("leaves disk alone, and keeps ram when Docker could not be read", () => {
-    expect(
-      decideRamStorageFallback({ storage: "disk", docker: dockerVm() }),
-    ).toEqual({ storage: "disk", message: null });
+    expect(decideRamStorageFallback({ storage: "disk", docker: dockerVm() })).toEqual({
+      storage: "disk",
+      message: null,
+    });
     expect(decideRamStorageFallback({ storage: "ram", docker: null })).toEqual({
       storage: "ram",
       message: null,
@@ -346,18 +330,11 @@ describe("decideVitestWorkerCap", () => {
   });
 
   it("never raises a count that already fits", () => {
-    expect(
-      decideVitestWorkerCap({ ...base, configuredWorkers: 4 }).workers,
-    ).toBeNull();
+    expect(decideVitestWorkerCap({ ...base, configuredWorkers: 4 }).workers).toBeNull();
   });
 
   it("leaves a chosen VITEST_MAX_WORKERS, and CI, alone", () => {
-    expect(
-      decideVitestWorkerCap({ ...base, env: { VITEST_MAX_WORKERS: "16" } })
-        .workers,
-    ).toBeNull();
-    expect(
-      decideVitestWorkerCap({ ...base, env: { CI: "true" } }).workers,
-    ).toBeNull();
+    expect(decideVitestWorkerCap({ ...base, env: { VITEST_MAX_WORKERS: "16" } }).workers).toBeNull();
+    expect(decideVitestWorkerCap({ ...base, env: { CI: "true" } }).workers).toBeNull();
   });
 });

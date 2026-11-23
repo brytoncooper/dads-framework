@@ -2,23 +2,11 @@ import type { GenerationPlan } from "./generation-plan.js";
 import { camel, pascal, title } from "./names.js";
 import { exposeWebArtifact } from "./web-client-exports.js";
 
-export function resourcePages(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function resourcePages(plan: GenerationPlan, domain: string, name: string): void {
   const dir = `domains/${domain}/web-client`;
   const record = pascal(name);
-  exposeWebArtifact(
-    plan,
-    domain,
-    `export { list${record}, read${record}, save${record} } from "./${name}-client.js";`,
-  );
-  exposeWebArtifact(
-    plan,
-    domain,
-    `export { ${record}ListPage, ${record}DetailPage } from "./${name}-pages.js";`,
-  );
+  exposeWebArtifact(plan, domain, `export { list${record}, read${record}, save${record} } from "./${name}-client.js";`);
+  exposeWebArtifact(plan, domain, `export { ${record}ListPage, ${record}DetailPage } from "./${name}-pages.js";`);
   plan.create(`${dir}/${name}-client.ts`, renderClient(name));
   plan.create(`${dir}/${name}-pages.ts`, renderPages(name));
 }

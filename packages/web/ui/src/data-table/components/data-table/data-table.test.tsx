@@ -6,11 +6,7 @@
  * defects.
  * @vitest-environment jsdom
  */
-import {
-  type ColumnDef,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { type ColumnDef, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -38,34 +34,31 @@ describe("DataTable interaction semantics", () => {
   it("scrolls only sideways, leaving vertical scrolling to the page", () => {
     const { container } = render(<ExampleTable />);
 
-    const scroller = container.querySelector(
-      '[data-slot="data-table-content"] [data-slot="table-container"]',
-    );
+    const scroller = container.querySelector('[data-slot="data-table-content"] [data-slot="table-container"]');
     expect(scroller?.className).toContain("overflow-x-auto");
     expect(scroller?.className).not.toContain("max-h-");
     expect(scroller?.className).not.toContain("overscroll-contain");
   });
 
   it("keeps a required single-choice filter without clear or reset actions", () => {
-    const requiredStatusColumns: ColumnDef<ExampleRow>[] = COLUMNS.map(
-      (column) =>
-        column.id === "status"
-          ? {
-              ...column,
-              meta: {
-                ...column.meta,
-                canClearFilter: false,
-                options: [
-                  {
-                    label: "Active",
-                    value: "ACTIVE",
-                    badgeTone: "information",
-                  },
-                  { label: "All", value: "ALL" },
-                ],
-              },
-            }
-          : { ...column, enableColumnFilter: false },
+    const requiredStatusColumns: ColumnDef<ExampleRow>[] = COLUMNS.map((column) =>
+      column.id === "status"
+        ? {
+            ...column,
+            meta: {
+              ...column.meta,
+              canClearFilter: false,
+              options: [
+                {
+                  label: "Active",
+                  value: "ACTIVE",
+                  badgeTone: "information",
+                },
+                { label: "All", value: "ALL" },
+              ],
+            },
+          }
+        : { ...column, enableColumnFilter: false },
     );
     const requiredStatusState: DataTableState = {
       ...UNFILTERED_STATE,
@@ -81,28 +74,18 @@ describe("DataTable interaction semantics", () => {
       />,
     );
 
-    expect(
-      screen.queryByRole("button", { name: "Clear Status Filter" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear Status Filter" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Reset Filters" })).toBeNull();
     expect(screen.queryByText("Clear Filters")).toBeNull();
-    expect(
-      container.querySelector('[data-slot="status-badge"]')?.textContent,
-    ).toBe("Active");
+    expect(container.querySelector('[data-slot="status-badge"]')?.textContent).toBe("Active");
 
     fireEvent.click(screen.getByRole("button", { name: "Status Active" }));
 
     expect(screen.queryByText("Clear Filters")).toBeNull();
-    const selectedIndicator = document.querySelector(
-      '[data-slot="data-table-single-select-indicator"]',
-    );
+    const selectedIndicator = document.querySelector('[data-slot="data-table-single-select-indicator"]');
     expect(selectedIndicator).not.toBeNull();
-    expect(selectedIndicator?.parentElement?.className).not.toContain(
-      "[&>svg:last-child]:hidden",
-    );
-    expect(
-      document.querySelector('[data-slot="data-table-multi-select-checkbox"]'),
-    ).toBeNull();
+    expect(selectedIndicator?.parentElement?.className).not.toContain("[&>svg:last-child]:hidden");
+    expect(document.querySelector('[data-slot="data-table-multi-select-checkbox"]')).toBeNull();
   });
 
   it("offers Clear Filters for page-owned narrowing with no column filter set", () => {
@@ -116,13 +99,7 @@ describe("DataTable interaction semantics", () => {
         state,
         onStateChange: setState,
       });
-      return (
-        <DataTable
-          table={table}
-          emptyMessage="No mills match these filters."
-          onClearFilters={onClearFilters}
-        />
-      );
+      return <DataTable table={table} emptyMessage="No mills match these filters." onClearFilters={onClearFilters} />;
     }
 
     render(<PageFilteredTable />);
@@ -154,15 +131,11 @@ describe("DataTable interaction semantics", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }));
     expect(onClearFilters).toHaveBeenCalledTimes(1);
-    expect(
-      screen.queryByRole("button", { name: "Clear Status Filter" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear Status Filter" })).toBeNull();
   });
 
   it("renders every active filter clear action as a separate native button", () => {
-    const { container } = render(
-      <ExampleTable initialState={FILTERED_STATE} withToolbar />,
-    );
+    const { container } = render(<ExampleTable initialState={FILTERED_STATE} withToolbar />);
 
     const clearStatus = screen.getByRole("button", {
       name: "Clear Status Filter",
@@ -181,25 +154,21 @@ describe("DataTable interaction semantics", () => {
 
     clearStatus.focus();
     fireEvent.click(clearStatus);
-    expect(
-      screen.queryByRole("button", { name: "Clear Status Filter" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear Status Filter" })).toBeNull();
   });
 
   it("announces an update without dimming or replacing table content", () => {
     const { container } = render(<ExampleTable isUpdating />);
 
     const table = screen.getByTestId("example-table");
-    const busyContent = container.querySelector<HTMLElement>(
-      '[data-slot="data-table-content"]',
-    );
+    const busyContent = container.querySelector<HTMLElement>('[data-slot="data-table-content"]');
     const status = screen.getByRole("status");
     expect(busyContent?.getAttribute("aria-busy")).toBe("true");
     expect(busyContent?.contains(status)).toBe(false);
     expect(status.textContent).toContain("Updating Table");
-    expect(
-      status.querySelector<HTMLElement>('[aria-hidden="true"]')?.className,
-    ).toContain("motion-reduce:animate-none");
+    expect(status.querySelector<HTMLElement>('[aria-hidden="true"]')?.className).toContain(
+      "motion-reduce:animate-none",
+    );
     expect(screen.getByText("North Mill")).toBeDefined();
     expect(table.className).not.toContain("opacity");
   });
@@ -208,9 +177,7 @@ describe("DataTable interaction semantics", () => {
     const columns: ColumnDef<ExampleRow>[] = [
       {
         id: "name",
-        cell: ({ row }) => (
-          <a href={`/mills/${row.original.name}`}>{row.original.name}</a>
-        ),
+        cell: ({ row }) => <a href={`/mills/${row.original.name}`}>{row.original.name}</a>,
       },
       { id: "status", accessorKey: "status" },
     ];
@@ -228,36 +195,22 @@ describe("DataTable interaction semantics", () => {
         amount: 8,
       },
     ];
-    const { container } = render(
-      <ExampleTable columns={columns} rows={rows} />,
-    );
-    const bodyRows = [
-      ...container.querySelectorAll(
-        '[data-slot="table-body"] [data-slot="table-row"]',
-      ),
-    ];
+    const { container } = render(<ExampleTable columns={columns} rows={rows} />);
+    const bodyRows = [...container.querySelectorAll('[data-slot="table-body"] [data-slot="table-row"]')];
 
     expect(bodyRows).toHaveLength(2);
     for (const bodyRow of bodyRows) {
       expect(bodyRow.className.split(/\s+/)).not.toContain("relative");
     }
 
-    const northHits = bodyRows[0]?.querySelectorAll(
-      '[data-slot="data-table-row-hit-area"]',
-    );
-    const southHits = bodyRows[1]?.querySelectorAll(
-      '[data-slot="data-table-row-hit-area"]',
-    );
+    const northHits = bodyRows[0]?.querySelectorAll('[data-slot="data-table-row-hit-area"]');
+    const southHits = bodyRows[1]?.querySelectorAll('[data-slot="data-table-row-hit-area"]');
     expect(northHits).toHaveLength(1);
     expect(southHits).toHaveLength(1);
     expect(northHits?.[0]?.getAttribute("href")).toBe("/mills/North Mill");
     expect(southHits?.[0]?.getAttribute("href")).toBe("/mills/South Mill");
-    expect(northHits?.[0]?.closest('[data-slot="table-row"]')).toBe(
-      bodyRows[0],
-    );
-    expect(southHits?.[0]?.closest('[data-slot="table-row"]')).toBe(
-      bodyRows[1],
-    );
+    expect(northHits?.[0]?.closest('[data-slot="table-row"]')).toBe(bodyRows[0]);
+    expect(southHits?.[0]?.closest('[data-slot="table-row"]')).toBe(bodyRows[1]);
   });
 
   it("heads each run of rows that share a group key with one group row", () => {
@@ -269,31 +222,18 @@ describe("DataTable interaction semantics", () => {
     });
     const { container } = render(
       <ExampleTable
-        rows={[
-          mill("North Mill", "ACTIVE"),
-          mill("South Mill", "ACTIVE"),
-          mill("West Mill", "CLOSED"),
-        ]}
+        rows={[mill("North Mill", "ACTIVE"), mill("South Mill", "ACTIVE"), mill("West Mill", "CLOSED")]}
         rowGroupOf={(row) => ({
           key: row.status,
           label: `Group ${row.status}`,
         })}
       />,
     );
-    const groupRows = [
-      ...container.querySelectorAll('[data-slot="data-table-group-row"]'),
-    ];
+    const groupRows = [...container.querySelectorAll('[data-slot="data-table-group-row"]')];
 
-    expect(groupRows.map((row) => row.textContent)).toEqual([
-      "Group ACTIVE",
-      "Group CLOSED",
-    ]);
-    expect(groupRows[0]?.querySelector("td")?.getAttribute("colspan")).toBe(
-      "4",
-    );
-    expect(groupRows[1]?.nextElementSibling?.textContent).toContain(
-      "West Mill",
-    );
+    expect(groupRows.map((row) => row.textContent)).toEqual(["Group ACTIVE", "Group CLOSED"]);
+    expect(groupRows[0]?.querySelector("td")?.getAttribute("colspan")).toBe("4");
+    expect(groupRows[1]?.nextElementSibling?.textContent).toContain("West Mill");
   });
 
   it("hides selection status until a caller opts into row selection", () => {

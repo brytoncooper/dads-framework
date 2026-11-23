@@ -1,7 +1,4 @@
-import {
-  paginationMetaSchema,
-  paginationQuerySchema,
-} from "@dads-framework/core/contract";
+import { paginationMetaSchema, paginationQuerySchema } from "@dads-framework/core/contract";
 import { z } from "zod";
 
 export const resourceId = z
@@ -18,9 +15,7 @@ export const createRequestKey = z
   .min(16)
   .max(128)
   .regex(/^[A-Za-z0-9._:-]+$/)
-  .describe(
-    "Caller-generated key for one creation attempt. Reuse it with the same payload when retrying.",
-  );
+  .describe("Caller-generated key for one creation attempt. Reuse it with the same payload when retrying.");
 export const taskStatus = z.enum(["todo", "in_progress", "done"]);
 
 export const workspaceParams = z.strictObject({ workspaceId: resourceId });
@@ -126,24 +121,20 @@ export const workbenchConflict = {
 export const postgresWriteConflict = {
   code: "POSTGRES_CONFLICT",
   status: 409,
-  description:
-    "The database aborted the write because it overlapped another transaction.",
-  defaultMessage:
-    "A concurrent change interrupted the operation. Refresh state before trying again.",
+  description: "The database aborted the write because it overlapped another transaction.",
+  defaultMessage: "A concurrent change interrupted the operation. Refresh state before trying again.",
 } as const;
 export const relationshipsPending = {
   code: "RELATIONSHIPS_PENDING",
   status: 503,
-  description:
-    "A durable relationship change is awaiting the authorization service.",
+  description: "A durable relationship change is awaiting the authorization service.",
   defaultMessage:
     "Authorization changes are pending. For creation, retry with the same requestKey and payload. For other changes, refresh state after recovery before deciding whether to retry.",
 } as const;
 export const authorizationUnavailable = {
   code: "AUTHORIZATION_UNAVAILABLE",
   status: 503,
-  description:
-    "The authorization service could not complete the required access evaluation.",
+  description: "The authorization service could not complete the required access evaluation.",
   defaultMessage: "Authorization is temporarily unavailable.",
 } as const;
 

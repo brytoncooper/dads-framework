@@ -141,10 +141,7 @@ export function buildDoctorReport(input: DoctorReportInput): DoctorReport {
   };
 }
 
-function reportSignal(
-  outcome: SignalOutcome,
-  profile: DoctorProfile,
-): ReportedSignal {
+function reportSignal(outcome: SignalOutcome, profile: DoctorProfile): ReportedSignal {
   const signal = outcome.signal;
   const threshold = thresholdFor(signal, profile);
   const values = [...outcome.readings.values()].map((reading) => reading.value);
@@ -177,10 +174,7 @@ function reportSignal(
  * A thresholded ceiling reports the keys that are over it; everything else
  * reports every key it read, because that is the whole of what it found.
  */
-function selectReadings(
-  outcome: SignalOutcome,
-  threshold: number | null,
-): readonly ReportedReading[] {
+function selectReadings(outcome: SignalOutcome, threshold: number | null): readonly ReportedReading[] {
   const reported: ReportedReading[] = [];
   for (const [key, reading] of outcome.readings) {
     if (threshold !== null && reading.value <= threshold) continue;
@@ -200,29 +194,19 @@ function stateOf(
   return over > 0 ? "over" : "ok";
 }
 
-function describeThreshold(
-  signal: DoctorSignal,
-  profile: DoctorProfile,
-): string {
+function describeThreshold(signal: DoctorSignal, profile: DoctorProfile): string {
   if (signal.direction === "floor") return "Dad: floor";
   const threshold = thresholdFor(signal, profile);
   if (threshold === null) return "Dad: report-only";
-  const amount =
-    signal.unit === "count" ? `${threshold}` : `${threshold} ${signal.unit}`;
-  const tightened =
-    profile === "strict" &&
-    signal.thresholds.strict !== signal.thresholds.standard;
+  const amount = signal.unit === "count" ? `${threshold}` : `${threshold} ${signal.unit}`;
+  const tightened = profile === "strict" && signal.thresholds.strict !== signal.thresholds.standard;
   return tightened ? `Dad: ${amount}; strict` : `Dad: ${amount}`;
 }
 
 function verdictOf(signals: readonly ReportedSignal[]): IssueVerdict {
   if (signals.some((signal) => signal.state === "over")) return "present";
   const seen = signals.some(
-    (signal) =>
-      signal.direction === "ceiling" &&
-      signal.threshold === null &&
-      signal.judgedInStrict &&
-      signal.over > 0,
+    (signal) => signal.direction === "ceiling" && signal.threshold === null && signal.judgedInStrict && signal.over > 0,
   );
   return seen ? "partial" : "absent";
 }
@@ -305,18 +289,12 @@ export function renderIssueExplanation(
     `Companion: docs/daddy-issues.md${issue.anchor}`,
     "",
     "Test:",
-    ...issue.questions.map(
-      (question, index) =>
-        `  ${index + 1}. ${question.text} (${question.signals.join(", ")})`,
-    ),
+    ...issue.questions.map((question, index) => `  ${index + 1}. ${question.text} (${question.signals.join(", ")})`),
     "",
     "Signals Dad measures today:",
     ...(signals.length === 0
       ? ["  none yet"]
-      : signals.map(
-          (signal) =>
-            `  ${signal.id.padEnd(SIGNAL_WIDTH)}${describeThreshold(signal, profile)}`,
-        )),
+      : signals.map((signal) => `  ${signal.id.padEnd(SIGNAL_WIDTH)}${describeThreshold(signal, profile)}`)),
     "",
     "Cure:",
     ...wrapSentence(issue.cure),

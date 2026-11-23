@@ -5,19 +5,16 @@ export const API_MOUNT_PREFIX = "/api";
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** The method and mount-relative template shared by server and client. */
-export type RouteContract<
-  Method extends HttpMethod = HttpMethod,
-  Template extends string = string,
-> = {
+export type RouteContract<Method extends HttpMethod = HttpMethod, Template extends string = string> = {
   readonly method: Method;
   readonly template: Template;
 };
 
 /** One descriptor bound to concrete URL arguments for a client request. */
-export type BoundRoute<
-  Method extends HttpMethod = HttpMethod,
-  Template extends string = string,
-> = RouteContract<Method, Template> & {
+export type BoundRoute<Method extends HttpMethod = HttpMethod, Template extends string = string> = RouteContract<
+  Method,
+  Template
+> & {
   readonly path: string;
 };
 
@@ -43,9 +40,7 @@ export type GeneratedRoute<
   Arguments extends readonly unknown[],
 > = RouteContract<Method, Template> & {
   readonly operation: Operation;
-  bind(
-    ...arguments_: Arguments
-  ): GeneratedBoundRoute<Method, Template, Operation>;
+  bind(...arguments_: Arguments): GeneratedBoundRoute<Method, Template, Operation>;
 };
 
 /**

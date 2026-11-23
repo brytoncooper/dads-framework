@@ -16,22 +16,14 @@ async function mailEntries(directory) {
   try {
     return await readdir(directory, { withFileTypes: true });
   } catch (fault) {
-    if (
-      typeof fault === "object" &&
-      fault !== null &&
-      "code" in fault &&
-      fault.code === "ENOENT"
-    )
-      return [];
+    if (typeof fault === "object" && fault !== null && "code" in fault && fault.code === "ENOENT") return [];
     throw fault;
   }
 }
 
 async function readLatestMail(directory) {
   const entries = await mailEntries(directory);
-  const files = entries.filter(
-    (entry) => entry.isFile() && entry.name.endsWith(".json"),
-  );
+  const files = entries.filter((entry) => entry.isFile() && entry.name.endsWith(".json"));
   const ordered = await Promise.all(
     files.map(async ({ name }) => {
       const path = join(directory, name);
@@ -40,11 +32,7 @@ async function readLatestMail(directory) {
   );
   ordered.sort((left, right) => right.updated - left.updated);
   return Promise.all(
-    ordered
-      .slice(0, 20)
-      .map(async ({ path }) =>
-        envelope.parse(JSON.parse(await readFile(path, "utf8"))),
-      ),
+    ordered.slice(0, 20).map(async ({ path }) => envelope.parse(JSON.parse(await readFile(path, "utf8")))),
   );
 }
 
@@ -57,8 +45,7 @@ if (process.argv.includes("--json")) {
   process.stdout.write(
     mail
       .map(
-        ({ to, subject, text }) =>
-          `To: ${to.map(({ address }) => address).join(", ")}\nSubject: ${subject}\n\n${text}`,
+        ({ to, subject, text }) => `To: ${to.map(({ address }) => address).join(", ")}\nSubject: ${subject}\n\n${text}`,
       )
       .join("\n\n") + "\n",
   );

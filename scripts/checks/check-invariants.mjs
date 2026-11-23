@@ -118,16 +118,12 @@ function checkCitation(world, owner, citation) {
   }
   if (citation.kind === "symbol") {
     const declared = world.symbols(path);
-    return declaresSymbol(declared, citation.symbol)
-      ? undefined
-      : `${path} declares no ${citation.symbol}`;
+    return declaresSymbol(declared, citation.symbol) ? undefined : `${path} declares no ${citation.symbol}`;
   }
   if (extensionOf(path) === "rs") {
     return `a Rust test is cited as ${path}#<fn>, not by a quoted name`;
   }
-  return namesTest(world.tests(path), citation.name)
-    ? undefined
-    : `${path} names no such test`;
+  return namesTest(world.tests(path), citation.name) ? undefined : `${path} names no such test`;
 }
 
 /**
@@ -142,8 +138,7 @@ function resolveCitedPath(world, owner, path) {
 }
 
 function describeCitation(citation) {
-  if (citation.kind === "test")
-    return `\`${citation.path}\` "${citation.name}"`;
+  if (citation.kind === "test") return `\`${citation.path}\` "${citation.name}"`;
   if (citation.kind === "symbol") {
     return `\`${citation.path}#${citation.symbol}\``;
   }
@@ -156,9 +151,7 @@ export function findInvariantsFiles(world) {
   for (const root of PACKAGE_ROOTS) {
     for (const directory of world.list(root)) {
       const owners = NESTED_ROOTS.has(root)
-        ? world
-            .list(`${root}/${directory}`)
-            .map((name) => `${directory}/${name}`)
+        ? world.list(`${root}/${directory}`).map((name) => `${directory}/${name}`)
         : [directory];
       for (const owner of owners) {
         const file = `${root}/${owner}/${INVARIANTS_FILE}`;
@@ -188,17 +181,12 @@ export function render(result, asJson) {
 
   const counts = `${result.entryCount} entries, ${result.citationCount} citations`;
   const lines = result.failures.map(renderFailure);
-  lines.push(
-    ok
-      ? `invariants: ${counts}, ok`
-      : `invariants: ${counts}, ${countLabel(result.failures.length)}`,
-  );
+  lines.push(ok ? `invariants: ${counts}, ok` : `invariants: ${counts}, ${countLabel(result.failures.length)}`);
   return `${lines.join("\n")}\n`;
 }
 
 function renderFailure(failure) {
-  const where =
-    failure.id === null ? failure.file : `${failure.file} ${failure.id}`;
+  const where = failure.id === null ? failure.file : `${failure.file} ${failure.id}`;
   const what = failure.citation === null ? "" : `${failure.citation}: `;
   return `${where}: ${what}${failure.problem}`;
 }
@@ -244,9 +232,7 @@ function listDirectories(root, directory) {
 
 function resolveRoot(argv) {
   const index = argv.indexOf("--root");
-  return index === -1 || argv[index + 1] === undefined
-    ? process.cwd()
-    : resolve(argv[index + 1]);
+  return index === -1 || argv[index + 1] === undefined ? process.cwd() : resolve(argv[index + 1]);
 }
 
 export function main(argv) {
@@ -257,9 +243,7 @@ export function main(argv) {
   };
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const result = main(process.argv.slice(2));

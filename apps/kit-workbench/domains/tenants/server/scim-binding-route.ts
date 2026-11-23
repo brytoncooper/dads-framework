@@ -1,21 +1,9 @@
 import { forbidden, notFound, validation } from "@dads-framework/core/errors";
-import {
-  defineRawRoute,
-  fromParam,
-  requires,
-  routeGroup,
-} from "@dads-framework/http";
-import {
-  TenantUnavailableError,
-  type Tenants,
-} from "@dads-framework/identity/tenants";
+import { defineRawRoute, fromParam, requires, routeGroup } from "@dads-framework/http";
+import { TenantUnavailableError, type Tenants } from "@dads-framework/identity/tenants";
 
 import { tenantAccess } from "../../../libraries/app-runtime/index.js";
-import {
-  scimBindingInput,
-  scimBindingParams,
-  scimBindingPath,
-} from "../contract/scim-binding-wire.js";
+import { scimBindingInput, scimBindingParams, scimBindingPath } from "../contract/scim-binding-wire.js";
 import { scimBindingCopy } from "../copy/scim-binding-copy.js";
 
 export function scimBindingRoutes(
@@ -23,18 +11,13 @@ export function scimBindingRoutes(
   origin: string,
   enabledTenantIds: readonly string[],
 ) {
-  const enabledTenants = new Set(
-    enabledTenantIds.map((tenantId) => tenantId.toLowerCase()),
-  );
+  const enabledTenants = new Set(enabledTenantIds.map((tenantId) => tenantId.toLowerCase()));
   return routeGroup(scimBindingCopy["tenants.scimBinding.tag"].en, [
     defineRawRoute({
       method: "POST",
       path: scimBindingPath,
       summary: scimBindingCopy["tenants.scimBinding.summary"].en,
-      access: requires(
-        tenantAccess.tenant.permissions.manage_tenant,
-        fromParam("tenantId"),
-      ),
+      access: requires(tenantAccess.tenant.permissions.manage_tenant, fromParam("tenantId")),
       openapi: {
         parameters: [
           {
@@ -67,17 +50,11 @@ export function scimBindingRoutes(
       openapiComponents: { ScimAccountBinding: scimBindingInput },
       handler: async ({ request, reply, subject, authenticatedSubject }) => {
         if (request.headers.origin !== origin)
-          throw forbidden(
-            "SCIM_BINDING_ORIGIN",
-            scimBindingCopy["tenants.scimBinding.origin"].en,
-          );
+          throw forbidden("SCIM_BINDING_ORIGIN", scimBindingCopy["tenants.scimBinding.origin"].en);
         const params = scimBindingParams.safeParse(request.params);
         const input = scimBindingInput.safeParse(request.body);
         if (!params.success || !input.success)
-          throw validation(
-            "INVALID_SCIM_BINDING",
-            scimBindingCopy["tenants.scimBinding.invalid"].en,
-          );
+          throw validation("INVALID_SCIM_BINDING", scimBindingCopy["tenants.scimBinding.invalid"].en);
         const { tenantId, scimUserId } = params.data;
         if (
           subject === null ||
@@ -87,15 +64,9 @@ export function scimBindingRoutes(
         )
           throw bindingUnavailable();
         try {
-          await tenants.bindScimUser(
-            subject.id,
-            tenantId,
-            scimUserId,
-            input.data.accountId,
-          );
+          await tenants.bindScimUser(subject.id, tenantId, scimUserId, input.data.accountId);
         } catch (error) {
-          if (error instanceof TenantUnavailableError)
-            throw bindingUnavailable();
+          if (error instanceof TenantUnavailableError) throw bindingUnavailable();
           throw error;
         }
         await reply.header("cache-control", "no-store").code(204).send();
@@ -105,8 +76,5 @@ export function scimBindingRoutes(
 }
 
 function bindingUnavailable() {
-  return notFound(
-    "RESOURCE_NOT_FOUND",
-    scimBindingCopy["tenants.scimBinding.unavailable"].en,
-  );
+  return notFound("RESOURCE_NOT_FOUND", scimBindingCopy["tenants.scimBinding.unavailable"].en);
 }

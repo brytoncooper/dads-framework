@@ -27,11 +27,7 @@ function attachmentCollectionPath(tenantId: string, noteId: string): string {
   return `/tenants/${encodeURIComponent(tenantId)}/notes/${encodeURIComponent(noteId)}/attachments`;
 }
 
-const uploadRoute = defineRoute(
-  "POST",
-  "/tenants/:tenantId/notes/:noteId/attachments",
-  attachmentCollectionPath,
-);
+const uploadRoute = defineRoute("POST", "/tenants/:tenantId/notes/:noteId/attachments", attachmentCollectionPath);
 
 const readRoute = defineRoute(
   "GET",
@@ -40,11 +36,7 @@ const readRoute = defineRoute(
     `${attachmentCollectionPath(tenantId, noteId)}/${encodeURIComponent(fileId)}`,
 );
 
-export function uploadNoteAttachment(
-  tenantId: string,
-  noteId: string,
-  text: string,
-) {
+export function uploadNoteAttachment(tenantId: string, noteId: string, text: string) {
   return sendToApi({
     route: uploadRoute.bind(tenantId, noteId),
     body: { schema: attachmentUploadBody, value: { text } },
@@ -52,12 +44,7 @@ export function uploadNoteAttachment(
   });
 }
 
-export function readNoteAttachment(
-  tenantId: string,
-  noteId: string,
-  fileId: string,
-  signal?: AbortSignal,
-) {
+export function readNoteAttachment(tenantId: string, noteId: string, fileId: string, signal?: AbortSignal) {
   return getFromApi({
     route: readRoute.bind(tenantId, noteId, fileId),
     returns: attachmentRecord,

@@ -72,23 +72,14 @@ export class QueryBuilder {
   }
 }
 
-type ArrowExpression = Extract<
-  CompiledPermissionExpression,
-  { readonly kind: "through" | "through-all" }
->;
+type ArrowExpression = Extract<CompiledPermissionExpression, { readonly kind: "through" | "through-all" }>;
 
 /** True when a relation declares more than one direct entity target type. */
-export function isPolymorphicRelation(
-  model: AuthorizationModelDefinition,
-  entity: string,
-  relation: string,
-): boolean {
+export function isPolymorphicRelation(model: AuthorizationModelDefinition, entity: string, relation: string): boolean {
   const definition = model.relations.find(
-    (candidate) =>
-      candidate.entity === entity && candidate.wireName === relation,
+    (candidate) => candidate.entity === entity && candidate.wireName === relation,
   );
-  const entityTargets =
-    definition?.targets.filter((target) => target.kind === "entity") ?? [];
+  const entityTargets = definition?.targets.filter((target) => target.kind === "entity") ?? [];
   return entityTargets.length > 1;
 }
 
@@ -100,24 +91,18 @@ export function resolveArrowTargets(
 ): readonly CompiledArrowTarget[] {
   if (expression.targets !== undefined) {
     if (expression.targets.length === 0) {
-      throw new Error(
-        `Postgres policy is missing arrow targets for ${entity}.${expression.relation}.`,
-      );
+      throw new Error(`Postgres policy is missing arrow targets for ${entity}.${expression.relation}.`);
     }
     return expression.targets;
   }
   const definition = model.relations.find(
-    (candidate) =>
-      candidate.entity === entity && candidate.wireName === expression.relation,
+    (candidate) => candidate.entity === entity && candidate.wireName === expression.relation,
   );
-  const entityTargets =
-    definition?.targets.filter((target) => target.kind === "entity") ?? [];
+  const entityTargets = definition?.targets.filter((target) => target.kind === "entity") ?? [];
   const resolved = entityTargets
     .filter((target) =>
       model.permissions.some(
-        (candidate) =>
-          candidate.entity === target.entity &&
-          candidate.wireName === expression.permission,
+        (candidate) => candidate.entity === target.entity && candidate.wireName === expression.permission,
       ),
     )
     .map((target) => ({
@@ -133,12 +118,8 @@ export function resolveArrowTargets(
 }
 
 /** True when any relation in the model accepts a userset (`entity#relation`) subject. */
-export function modelHasUsersetTargets(
-  model: AuthorizationModelDefinition,
-): boolean {
-  return model.relations.some((relation) =>
-    relation.targets.some((target) => target.kind === "subject-set"),
-  );
+export function modelHasUsersetTargets(model: AuthorizationModelDefinition): boolean {
+  return model.relations.some((relation) => relation.targets.some((target) => target.kind === "subject-set"));
 }
 
 /** Describes whether a specific `(entity, relation)` accepts userset or wildcard subjects. */
@@ -148,19 +129,14 @@ export function relationTargetCapabilities(
   relation: string,
 ): { readonly allowsUsersets: boolean; readonly allowsWildcards: boolean } {
   const definition = model.relations.find(
-    (candidate) =>
-      candidate.entity === entity && candidate.wireName === relation,
+    (candidate) => candidate.entity === entity && candidate.wireName === relation,
   );
   if (definition === undefined) {
     return { allowsUsersets: true, allowsWildcards: true };
   }
   return {
-    allowsUsersets: definition.targets.some(
-      (target) => target.kind === "subject-set",
-    ),
-    allowsWildcards: definition.targets.some(
-      (target) => target.kind === "wildcard",
-    ),
+    allowsUsersets: definition.targets.some((target) => target.kind === "subject-set"),
+    allowsWildcards: definition.targets.some((target) => target.kind === "wildcard"),
   };
 }
 
@@ -188,20 +164,13 @@ export function compiledRelationCheck(
         AND col_tuple.${columnRel.targetIdColumn} = ${subjectId})`;
   }
   const relationSql = builder.value(relationName);
-  const { allowsUsersets, allowsWildcards } = relationTargetCapabilities(
-    model,
-    resourceEntity,
-    relationName,
-  );
+  const { allowsUsersets, allowsWildcards } = relationTargetCapabilities(model, resourceEntity, relationName);
   // Top-level concrete checks (and checkMany input rows) always bind a declared
   // entity wireName, so per-relation userset analysis is exact even when other
   // relations in the model use subject-sets. Unchecked arrow subject_kind hops
   // fall back to model-wide userset detection.
-  const isDeclaredEntityBinding =
-    resourceKind.startsWith("$") || resourceKind === "i.resource_kind";
-  const skipUsersetRecursion = isDeclaredEntityBinding
-    ? !allowsUsersets
-    : !modelHasUsersetTargets(model);
+  const isDeclaredEntityBinding = resourceKind.startsWith("$") || resourceKind === "i.resource_kind";
+  const skipUsersetRecursion = isDeclaredEntityBinding ? !allowsUsersets : !modelHasUsersetTargets(model);
   if (skipUsersetRecursion) {
     return directRelationMembershipCheck(
       namespace,
@@ -213,14 +182,7 @@ export function compiledRelationCheck(
       allowsWildcards,
     );
   }
-  return relationMembershipCheck(
-    namespace,
-    subjectKind,
-    subjectId,
-    resourceKind,
-    resourceId,
-    relationSql,
-  );
+  return relationMembershipCheck(namespace, subjectKind, subjectId, resourceKind, resourceId, relationSql);
 }
 
 /** Direct primary-key membership check when a relation has no userset targets. */
@@ -254,11 +216,7 @@ function columnRelationDirectBranches(
   subjectKind: string,
   subjectId: string,
 ): string {
-  if (
-    columnRelations === undefined ||
-    columnRelations.length === 0 ||
-    builder === undefined
-  ) {
+  if (columnRelations === undefined || columnRelations.length === 0 || builder === undefined) {
     return "";
   }
   return columnRelations
@@ -282,12 +240,7 @@ export function directSubjectReachability(
   columnRelations?: readonly CompiledColumnRelation[],
   builder?: QueryBuilder,
 ): string {
-  const columnBranches = columnRelationDirectBranches(
-    columnRelations,
-    builder,
-    subjectKind,
-    subjectId,
-  );
+  const columnBranches = columnRelationDirectBranches(columnRelations, builder, subjectKind, subjectId);
   return `subject_reachable(resource_kind, resource_id, relation) AS (
       SELECT direct_tuple.resource_kind, direct_tuple.resource_id, direct_tuple.relation
       FROM ${TUPLES} direct_tuple
@@ -306,12 +259,7 @@ export function subjectReachability(
   columnRelations?: readonly CompiledColumnRelation[],
   builder?: QueryBuilder,
 ): string {
-  const columnBranches = columnRelationDirectBranches(
-    columnRelations,
-    builder,
-    subjectKind,
-    subjectId,
-  );
+  const columnBranches = columnRelationDirectBranches(columnRelations, builder, subjectKind, subjectId);
   return `subject_reachable(resource_kind, resource_id, relation) AS (
       SELECT direct_tuple.resource_kind, direct_tuple.resource_id, direct_tuple.relation
       FROM ${TUPLES} direct_tuple

@@ -26,17 +26,12 @@ export function sanitizeIdentifier(value: string): string {
   return trimDashes(identifier);
 }
 
-export function assignProjectIds(
-  packages: readonly WorkspacePackage[],
-): readonly ProjectIdAssignment[] {
+export function assignProjectIds(packages: readonly WorkspacePackage[]): readonly ProjectIdAssignment[] {
   const assignments: ProjectIdAssignment[] = [];
   const takenIds = new Map<string, string>();
 
   for (const workspacePackage of packages) {
-    const fromName =
-      workspacePackage.name === undefined
-        ? ""
-        : sanitizeIdentifier(workspacePackage.name);
+    const fromName = workspacePackage.name === undefined ? "" : sanitizeIdentifier(workspacePackage.name);
     if (fromName.length > 0 && !takenIds.has(fromName)) {
       takenIds.set(fromName, workspacePackage.directory);
       assignments.push({

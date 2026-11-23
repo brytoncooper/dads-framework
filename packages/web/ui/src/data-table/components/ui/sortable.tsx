@@ -13,11 +13,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  restrictToHorizontalAxis,
-  restrictToParentElement,
-  restrictToVerticalAxis,
-} from "@dnd-kit/modifiers";
+import { restrictToHorizontalAxis, restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   horizontalListSortingStrategy,
@@ -27,16 +23,9 @@ import {
 import * as React from "react";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
-import type {
-  SortableComponent,
-  SortableRuntimeProps,
-  SortableProps,
-} from "./sortable-types.js";
+import type { SortableComponent, SortableRuntimeProps, SortableProps } from "./sortable-types.js";
 
-import {
-  SortableRootContext,
-  type SortableRootContextValue,
-} from "./sortable-root-context.js";
+import { SortableRootContext, type SortableRootContextValue } from "./sortable-root-context.js";
 
 const orientationConfig = {
   vertical: {
@@ -94,10 +83,7 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-  const config = React.useMemo(
-    () => orientationConfig[orientation],
-    [orientation],
-  );
+  const config = React.useMemo(() => orientationConfig[orientation], [orientation]);
   type SortableValue = (typeof value)[number];
 
   const getItemValue = React.useCallback(
@@ -105,9 +91,7 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
       if (getItemValueProp) return getItemValueProp(item);
       if (typeof item === "string" || typeof item === "number") return item;
 
-      throw new Error(
-        "`getItemValue` is required when using an array of objects",
-      );
+      throw new Error("`getItemValue` is required when using an array of objects");
     },
     [getItemValueProp],
   );
@@ -131,12 +115,8 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
 
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const activeIndex = value.findIndex(
-        (item) => getItemValue(item) === active.id,
-      );
-      const overIndex = value.findIndex(
-        (item) => getItemValue(item) === over.id,
-      );
+      const activeIndex = value.findIndex((item) => getItemValue(item) === active.id);
+      const overIndex = value.findIndex((item) => getItemValue(item) === over.id);
 
       if (onMove) {
         onMove({ ...event, activeIndex, overIndex });
@@ -173,9 +153,7 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
         if (!over) return t("dataTable.sortable.notOverDroppable");
 
         const movementKey =
-          positionOf(over.id) > positionOf(active.id)
-            ? "dataTable.sortable.movedDown"
-            : "dataTable.sortable.movedUp";
+          positionOf(over.id) > positionOf(active.id) ? "dataTable.sortable.movedDown" : "dataTable.sortable.movedUp";
         return t(movementKey, {
           itemId: active.id.toString(),
           position: positionOf(over.id),
@@ -205,9 +183,7 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
         if (!over) return t("dataTable.sortable.notOverDroppable");
 
         const movementKey =
-          positionOf(over.id) > positionOf(active.id)
-            ? "dataTable.sortable.movingDown"
-            : "dataTable.sortable.movingUp";
+          positionOf(over.id) > positionOf(active.id) ? "dataTable.sortable.movingDown" : "dataTable.sortable.movingUp";
         return t(movementKey, {
           itemId: active.id.toString(),
           position: positionOf(over.id),
@@ -217,17 +193,16 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
     };
   }, [items, t]);
 
-  const screenReaderInstructions: ScreenReaderInstructions =
-    React.useMemo(() => {
-      const instructionsKey =
-        orientation === "vertical"
-          ? "dataTable.sortable.instructions.vertical"
-          : orientation === "horizontal"
-            ? "dataTable.sortable.instructions.horizontal"
-            : "dataTable.sortable.instructions.mixed";
+  const screenReaderInstructions: ScreenReaderInstructions = React.useMemo(() => {
+    const instructionsKey =
+      orientation === "vertical"
+        ? "dataTable.sortable.instructions.vertical"
+        : orientation === "horizontal"
+          ? "dataTable.sortable.instructions.horizontal"
+          : "dataTable.sortable.instructions.mixed";
 
-      return { draggable: t(instructionsKey) };
-    }, [orientation, t]);
+    return { draggable: t(instructionsKey) };
+  }, [orientation, t]);
 
   const contextValue = React.useMemo<SortableRootContextValue>(
     () => ({
@@ -239,16 +214,7 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
       setActiveId,
       flatCursor,
     }),
-    [
-      id,
-      items,
-      modifiers,
-      strategy,
-      config.modifiers,
-      config.strategy,
-      activeId,
-      flatCursor,
-    ],
+    [id, items, modifiers, strategy, config.modifiers, config.strategy, activeId, flatCursor],
   );
 
   return (
@@ -273,9 +239,4 @@ const Sortable: SortableComponent = <T,>(props: SortableRuntimeProps<T>) => {
 };
 
 export { Sortable, type SortableProps };
-export {
-  SortableContent,
-  SortableItem,
-  SortableItemHandle,
-  SortableOverlay,
-} from "./sortable-parts.js";
+export { SortableContent, SortableItem, SortableItemHandle, SortableOverlay } from "./sortable-parts.js";

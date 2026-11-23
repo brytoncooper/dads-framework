@@ -27,11 +27,7 @@ export async function chooseAdoptionJobs(requested, taskCount) {
   if (explicit !== null || taskCount === 0) {
     return adoptionJobsFromResources(requested, taskCount, null);
   }
-  return adoptionJobsFromResources(
-    requested,
-    taskCount,
-    await sampleResources(),
-  );
+  return adoptionJobsFromResources(requested, taskCount, await sampleResources());
 }
 
 export function adoptionJobsFromResources(requested, taskCount, resources) {
@@ -92,9 +88,7 @@ export async function runTaskPool(tasks, jobs) {
       if (result.status === "failed") stopped = true;
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.min(jobs, tasks.length) }, consume),
-  );
+  await Promise.all(Array.from({ length: Math.min(jobs, tasks.length) }, consume));
   return results;
 }
 
@@ -108,9 +102,7 @@ function longestFirst(tasks) {
 function taskCost(task) {
   if (task.cost === undefined) return 1;
   if (!Number.isFinite(task.cost) || task.cost <= 0) {
-    throw new Error(
-      `Task ${task.name} declared a cost that is not a positive number.`,
-    );
+    throw new Error(`Task ${task.name} declared a cost that is not a positive number.`);
   }
   return task.cost;
 }
@@ -138,19 +130,14 @@ function budgetFromResources(receipt, taskCount, resources) {
     receipt.limitingReasons.push("resource-probe-unavailable");
     return receipt;
   }
-  receipt.cpuBudget = Math.max(
-    1,
-    Math.floor(resources.cpuCapacity * resources.cpuIdleFraction) - 1,
-  );
+  receipt.cpuBudget = Math.max(1, Math.floor(resources.cpuCapacity * resources.cpuIdleFraction) - 1);
   receipt.memoryBudget = Math.floor(
-    Math.max(0, resources.availableMemoryBytes - MEMORY_HELD_BACK_BYTES) /
-      MEMORY_PER_JOB_BYTES,
+    Math.max(0, resources.availableMemoryBytes - MEMORY_HELD_BACK_BYTES) / MEMORY_PER_JOB_BYTES,
   );
   const limit = Math.min(taskCount, receipt.cpuBudget, receipt.memoryBudget);
   receipt.jobs = Math.max(1, limit);
   if (receipt.cpuBudget === limit) receipt.limitingReasons.push("cpu-budget");
-  if (receipt.memoryBudget === limit)
-    receipt.limitingReasons.push("memory-budget");
+  if (receipt.memoryBudget === limit) receipt.limitingReasons.push("memory-budget");
   if (taskCount === limit) receipt.limitingReasons.push("task-count");
   if (limit < 1) receipt.limitingReasons.push("minimum-one-job");
   return receipt;
@@ -160,14 +147,8 @@ function parseRequestedJobs(requested) {
   if (requested === undefined || requested === "" || requested === "auto") {
     return null;
   }
-  if (
-    typeof requested !== "string" ||
-    !/^[1-9]\d*$/.test(requested) ||
-    !Number.isSafeInteger(Number(requested))
-  ) {
-    throw new Error(
-      `DADS_ADOPTION_JOBS must be auto or a positive integer, received ${JSON.stringify(requested)}.`,
-    );
+  if (typeof requested !== "string" || !/^[1-9]\d*$/.test(requested) || !Number.isSafeInteger(Number(requested))) {
+    throw new Error(`DADS_ADOPTION_JOBS must be auto or a positive integer, received ${JSON.stringify(requested)}.`);
   }
   return Number(requested);
 }
@@ -204,9 +185,7 @@ async function sampleResources() {
   await sampleCpu(resources);
   sampleMemory(resources);
   if (!validResources(resources) && resources.probeErrors.length === 0) {
-    resources.probeErrors.push(
-      "Resource sample has missing or invalid readings.",
-    );
+    resources.probeErrors.push("Resource sample has missing or invalid readings.");
   }
   return resources;
 }
@@ -225,9 +204,7 @@ async function sampleCpu(resources) {
 function sampleMemory(resources) {
   try {
     resources.availableMemoryBytes =
-      typeof process.availableMemory === "function"
-        ? process.availableMemory()
-        : freemem();
+      typeof process.availableMemory === "function" ? process.availableMemory() : freemem();
   } catch (error) {
     resources.probeErrors.push(`Memory probe: ${errorMessage(error)}`);
   }

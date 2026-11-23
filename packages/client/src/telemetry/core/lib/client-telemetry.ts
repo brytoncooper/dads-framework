@@ -22,10 +22,7 @@
  *   telemetry's sake.
  */
 
-import type {
-  ClientDiagnosticBreadcrumb,
-  ClientDiagnosticEvent,
-} from "@dads-framework/core/contract";
+import type { ClientDiagnosticBreadcrumb, ClientDiagnosticEvent } from "@dads-framework/core/contract";
 
 /** What the caller knows about the fault that the error itself does not. */
 export type TelemetryContext = {

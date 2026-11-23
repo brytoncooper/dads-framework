@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  CONTAINER_TEST_TIER,
-  VITEST_TIER,
-  isContainerTestRun,
-} from "./skip-unless-container-tests.js";
+import { CONTAINER_TEST_TIER, VITEST_TIER, isContainerTestRun } from "./skip-unless-container-tests.js";
 
 /**
  * The gate that decides whether a run boots the shared stack at all. Every
@@ -13,9 +9,7 @@ import {
  */
 describe("isContainerTestRun", () => {
   it("is the container tier when the target set the variable", () => {
-    expect(isContainerTestRun({ [VITEST_TIER]: CONTAINER_TEST_TIER })).toBe(
-      true,
-    );
+    expect(isContainerTestRun({ [VITEST_TIER]: CONTAINER_TEST_TIER })).toBe(true);
   });
 
   it("is the fast tier when the variable is absent", () => {

@@ -22,15 +22,8 @@ const log = {
   },
 };
 
-export function openLocalServices(
-  scope: PluginScope,
-  config: ServiceConfiguration,
-  database: DrizzleHandle,
-) {
-  const queue = createJobQueue(
-    { driver: "in-process", queueName: "starter" },
-    log,
-  );
+export function openLocalServices(scope: PluginScope, config: ServiceConfiguration, database: DrizzleHandle) {
+  const queue = createJobQueue({ driver: "in-process", queueName: "starter" }, log);
   scope.onDispose(() => queue.close());
   const requestLog = new PostgresRequestLogSink(database, log);
   scope.onDispose(() => requestLog.close());
@@ -42,10 +35,7 @@ export function openLocalServices(
       : createObjectStorage({
           driver: "disk",
           rootDirectory: directory,
-          signingKey: () =>
-            Promise.resolve(
-              createHash("sha256").update(config.secret).digest(),
-            ),
+          signingKey: () => Promise.resolve(createHash("sha256").update(config.secret).digest()),
           publicPathPrefix: new URL("/api/files", config.baseUrl).href,
           clock: () => new Date(),
           log,
@@ -53,16 +43,13 @@ export function openLocalServices(
   return {
     queue,
     requestLog,
-    checkFiles: () =>
-      directory === undefined ? Promise.resolve() : access(directory),
+    checkFiles: () => (directory === undefined ? Promise.resolve() : access(directory)),
     diagnostics,
     storage,
     prepareFiles: () =>
       directory === undefined
         ? Promise.resolve()
-        : mkdir(directory, { recursive: true, mode: 0o700 }).then(
-            () => undefined,
-          ),
+        : mkdir(directory, { recursive: true, mode: 0o700 }).then(() => undefined),
   };
 }
 

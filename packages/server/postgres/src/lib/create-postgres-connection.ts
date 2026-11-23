@@ -1,14 +1,9 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import {
-  createAttributedPool,
-  type AuditActorSource,
-} from "./attributed-pool.js";
+import { createAttributedPool, type AuditActorSource } from "./attributed-pool.js";
 import { listenForCheckedOutClientErrors } from "./checked-out-client-errors.js";
 
-export type CreatePostgresConnectionOptions<
-  TSchema extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type CreatePostgresConnectionOptions<TSchema extends Record<string, unknown> = Record<string, unknown>> = {
   /** Runtime Drizzle schema, assembled by the composition root from domain exports. */
   readonly schema: TSchema;
   /** Postgres connection string from the validated environment. */
@@ -43,9 +38,7 @@ export type CreatePostgresConnectionOptions<
   readonly sessionSettings?: Readonly<Record<string, string>>;
 };
 
-export type PostgresConnection<
-  TSchema extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type PostgresConnection<TSchema extends Record<string, unknown> = Record<string, unknown>> = {
   readonly pool: Pool;
   readonly drizzle: NodePgDatabase<TSchema> & { $client: Pool };
   /** Ends the pool — wired into app shutdown by the composition root. */
@@ -71,30 +64,21 @@ export type PostgresPoolErrorLog = {
  * consumers, so attribution is a property of the connection rather than
  * something 61 writer files have to remember.
  */
-export function createPostgresConnection<
-  TSchema extends Record<string, unknown>,
->(
+export function createPostgresConnection<TSchema extends Record<string, unknown>>(
   options: CreatePostgresConnectionOptions<TSchema>,
   log: PostgresPoolErrorLog,
 ): PostgresConnection<TSchema> {
   const poolConfig = {
     connectionString: options.connectionString,
-    ...(options.maxConnections === undefined
-      ? {}
-      : { max: options.maxConnections }),
-    ...(options.sessionSettings === undefined
-      ? {}
-      : { options: startupOptionsOf(options.sessionSettings) }),
+    ...(options.maxConnections === undefined ? {} : { max: options.maxConnections }),
+    ...(options.sessionSettings === undefined ? {} : { options: startupOptionsOf(options.sessionSettings) }),
   };
   const pool =
     options.auditActorSource === undefined
       ? new Pool(poolConfig)
       : createAttributedPool(poolConfig, options.auditActorSource);
   pool.on("error", (error) => {
-    log.error(
-      { event: "database.idle-client-error", err: error },
-      "idle postgres client errored (connection dropped)",
-    );
+    log.error({ event: "database.idle-client-error", err: error }, "idle postgres client errored (connection dropped)");
   });
   listenForCheckedOutClientErrors(pool, (error) => {
     log.error(

@@ -1,7 +1,4 @@
-import type {
-  AccessMigrationStepOp,
-  DefinedAccessMigration,
-} from "./define-access-migration.js";
+import type { AccessMigrationStepOp, DefinedAccessMigration } from "./define-access-migration.js";
 import {
   assertNamespace,
   assertSqlIdentifier,
@@ -38,21 +35,14 @@ export async function runSqliteAccessMigrations(
     options.relationshipTable ?? DEFAULT_RELATIONSHIP_TABLE,
     "relationshipTable",
   );
-  const migrationsTable = assertSqlIdentifier(
-    options.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE,
-    "migrationsTable",
-  );
+  const migrationsTable = assertSqlIdentifier(options.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE, "migrationsTable");
   assertUniqueMigrationIds(options.migrations.map((m) => m.id));
 
   const executor = toSqliteMigrationExecutor(options.executor);
   const now = options.now ?? (() => Date.now());
 
   await ensureSqliteMigrationsTable(executor, migrationsTable);
-  const alreadyApplied = await readSqliteAppliedIds(
-    executor,
-    migrationsTable,
-    namespace,
-  );
+  const alreadyApplied = await readSqliteAppliedIds(executor, migrationsTable, namespace);
 
   return executePendingSqliteMigrations({
     executor,
@@ -84,20 +74,9 @@ async function executePendingSqliteMigrations(input: {
     }
     await runInSqliteTransaction(input.executor, async () => {
       for (const op of migration.ops) {
-        await executeSqliteStepOp(
-          input.executor,
-          input.relationshipTable,
-          input.namespace,
-          op,
-        );
+        await executeSqliteStepOp(input.executor, input.relationshipTable, input.namespace, op);
       }
-      await recordSqliteMigration(
-        input.executor,
-        input.migrationsTable,
-        input.namespace,
-        migration.id,
-        input.now(),
-      );
+      await recordSqliteMigration(input.executor, input.migrationsTable, input.namespace, migration.id, input.now());
     });
     applied.push(migration.id);
   }
@@ -105,10 +84,7 @@ async function executePendingSqliteMigrations(input: {
   return { applied, skipped };
 }
 
-async function ensureSqliteMigrationsTable(
-  executor: SqliteMigrationExecutor,
-  migrationsTable: string,
-): Promise<void> {
+async function ensureSqliteMigrationsTable(executor: SqliteMigrationExecutor, migrationsTable: string): Promise<void> {
   await executor.exec(`
     CREATE TABLE IF NOT EXISTS ${migrationsTable} (
       namespace TEXT NOT NULL,
@@ -124,17 +100,11 @@ async function readSqliteAppliedIds(
   migrationsTable: string,
   namespace: string,
 ): Promise<ReadonlySet<string>> {
-  const rows = await executor.all(
-    `SELECT id FROM ${migrationsTable} WHERE namespace = ? ORDER BY id`,
-    [namespace],
-  );
+  const rows = await executor.all(`SELECT id FROM ${migrationsTable} WHERE namespace = ? ORDER BY id`, [namespace]);
   return new Set(rows.map((row) => readStringField(row, "id")));
 }
 
-async function runInSqliteTransaction(
-  executor: SqliteMigrationExecutor,
-  work: () => Promise<void>,
-): Promise<void> {
+async function runInSqliteTransaction(executor: SqliteMigrationExecutor, work: () => Promise<void>): Promise<void> {
   await executor.exec("BEGIN");
   try {
     await work();
@@ -145,9 +115,7 @@ async function runInSqliteTransaction(
   }
 }
 
-async function rollbackSqliteQuietly(
-  executor: SqliteMigrationExecutor,
-): Promise<void> {
+async function rollbackSqliteQuietly(executor: SqliteMigrationExecutor): Promise<void> {
   try {
     await executor.exec("ROLLBACK");
   } catch {

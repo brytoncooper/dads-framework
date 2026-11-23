@@ -14,12 +14,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  fileReading,
-  type DoctorSignal,
-  type SignalReading,
-  type SignalReadings,
-} from "../../doctor-signal.js";
+import { fileReading, type DoctorSignal, type SignalReading, type SignalReadings } from "../../doctor-signal.js";
 import { isRustSource } from "../scanners/source-classification.js";
 
 const ALLOW = "#[allow(clippy::";
@@ -80,10 +75,7 @@ function countClippyAllows(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const path of context.files()) {
     if (!isRustSource(path)) continue;
-    readings.set(
-      path,
-      fileReading(path, countProductionAllows(context.read(path))),
-    );
+    readings.set(path, fileReading(path, countProductionAllows(context.read(path))));
   }
   return readings;
 }
@@ -96,8 +88,7 @@ export const clippyAllowsSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "The compiler is not confused. The compiler is the only one being honest with you.",
+  sentence: "The compiler is not confused. The compiler is the only one being honest with you.",
   measure: "clippyAllows",
   run: (context) => Promise.resolve(countClippyAllows(context)),
 };

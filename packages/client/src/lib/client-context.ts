@@ -1,8 +1,4 @@
-import {
-  CLIENT_CONTEXT_MAX_BYTES,
-  encodeClientContext,
-  type ClientContext,
-} from "@dads-framework/core/contract";
+import { CLIENT_CONTEXT_MAX_BYTES, encodeClientContext, type ClientContext } from "@dads-framework/core/contract";
 
 /**
  * The debugging environment every outbound request describes itself with
@@ -25,9 +21,7 @@ let describeClient: ClientContextProvider | null = null;
 /**
  * Describe this client on every request from here on, or pass `null` to stop.
  */
-export function setClientContextProvider(
-  provider: ClientContextProvider | null,
-): void {
+export function setClientContextProvider(provider: ClientContextProvider | null): void {
   describeClient = provider;
 }
 

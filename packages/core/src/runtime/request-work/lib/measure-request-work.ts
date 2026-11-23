@@ -8,9 +8,7 @@
 
 import { measureWork, type RequestWorkTally } from "./request-work-tally.js";
 
-export async function measureRequestWork(
-  work: () => unknown,
-): Promise<RequestWorkTally> {
+export async function measureRequestWork(work: () => unknown): Promise<RequestWorkTally> {
   const { tally } = await measureWork(work);
   return tally;
 }

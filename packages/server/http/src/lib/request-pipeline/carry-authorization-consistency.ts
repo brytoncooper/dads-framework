@@ -7,20 +7,11 @@ import {
   writtenAuthorizationConsistencyOnThisRequest,
 } from "@dads-framework/access/runtime";
 
-export function carryAuthorizationConsistency<T>(
-  request: FastifyRequest,
-  work: () => T,
-): T {
-  return runWithAuthorizationConsistency(
-    authorizationConsistencyTokenFromCookieHeader(request.headers.cookie),
-    work,
-  );
+export function carryAuthorizationConsistency<T>(request: FastifyRequest, work: () => T): T {
+  return runWithAuthorizationConsistency(authorizationConsistencyTokenFromCookieHeader(request.headers.cookie), work);
 }
 
-export function attachWrittenAuthorizationConsistencyCookie(
-  request: FastifyRequest,
-  reply: FastifyReply,
-): void {
+export function attachWrittenAuthorizationConsistencyCookie(request: FastifyRequest, reply: FastifyReply): void {
   const written = writtenAuthorizationConsistencyOnThisRequest();
   if (written === undefined) return;
   void reply.header(

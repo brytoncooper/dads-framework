@@ -6,9 +6,7 @@ import { isEmptySchemaError } from "./spice-db-empty-schema.js";
 
 describe("isEmptySchemaError", () => {
   it("recognizes SpiceDB's never-written schema refusals", () => {
-    expect(isEmptySchemaError(new Error("No schema has been defined"))).toBe(
-      true,
-    );
+    expect(isEmptySchemaError(new Error("No schema has been defined"))).toBe(true);
     expect(isEmptySchemaError({ message: "schema is empty" })).toBe(true);
   });
 

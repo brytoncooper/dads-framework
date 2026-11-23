@@ -14,10 +14,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import {
-  DiagnosticsReporter,
-  type FaultEvent,
-} from "./diagnostics-reporter.js";
+import { DiagnosticsReporter, type FaultEvent } from "./diagnostics-reporter.js";
 import {
   buildSentryEnvelope,
   sentryAuthHeader,
@@ -59,12 +56,8 @@ export class SentryDiagnosticsReporter extends DiagnosticsReporter {
       const body = buildSentryEnvelope(event, {
         eventId: randomUUID().replaceAll("-", ""),
         now: (this.options.now ?? (() => new Date()))(),
-        ...(this.options.environment === undefined
-          ? {}
-          : { environment: this.options.environment }),
-        ...(this.options.release === undefined
-          ? {}
-          : { release: this.options.release }),
+        ...(this.options.environment === undefined ? {} : { environment: this.options.environment }),
+        ...(this.options.release === undefined ? {} : { release: this.options.release }),
       });
       this.#track(this.#post(body));
     } catch {
@@ -103,9 +96,7 @@ export class SentryDiagnosticsReporter extends DiagnosticsReporter {
           "x-sentry-auth": this.#auth,
         },
         body,
-        signal: AbortSignal.timeout(
-          this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
-        ),
+        signal: AbortSignal.timeout(this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS),
       });
     } catch {
       // An unreachable vendor is an expected state, not a fault of ours.

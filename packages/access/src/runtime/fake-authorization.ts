@@ -34,10 +34,7 @@ export class FakeAuthorization implements Authorization {
 
   constructor(
     /** e.g. { "organizations/organization": { view: ["admin","member"], manage: ["admin"] } } */
-    private readonly permissions: Record<
-      string,
-      Record<string, readonly string[]>
-    > = {},
+    private readonly permissions: Record<string, Record<string, readonly string[]>> = {},
     options?: { readonly now?: () => Date },
   ) {
     this.now = options?.now ?? (() => new Date());
@@ -71,20 +68,14 @@ export class FakeAuthorization implements Authorization {
         `#${relation}@${query.subject.type}:${query.subject.id}${query.subject.relation ? `#${query.subject.relation}` : ""}`,
     );
     const ids = this.activeTuples()
-      .filter(
-        (tuple) =>
-          tuple.startsWith(prefix) &&
-          suffixes.some((suffix) => tuple.endsWith(suffix)),
-      )
+      .filter((tuple) => tuple.startsWith(prefix) && suffixes.some((suffix) => tuple.endsWith(suffix)))
       .map((tuple) => tuple.slice(prefix.length).split("#")[0])
       .filter((id): id is string => id !== undefined);
     return Promise.resolve([...new Set(ids)]);
   }
 
   lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
-    const relations = new Set(
-      this.relationsFor(query.resource.type, query.permission),
-    );
+    const relations = new Set(this.relationsFor(query.resource.type, query.permission));
     const subjectIds = new Set<string>();
     let hasWildcard = false;
     for (const tuple of this.activeTuples()) {
@@ -99,17 +90,13 @@ export class FakeAuthorization implements Authorization {
     return Promise.resolve({ subjects: [...subjectIds], hasWildcard });
   }
 
-  writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     this.seed(...writes);
     this.writeCounter += 1;
     return Promise.resolve(`fake-token-${this.writeCounter}`);
   }
 
-  deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     for (const tuple of [...this.tuples.keys()]) {
       if (!tupleMatchesFilter(tuple, filter)) continue;
       this.tuples.delete(tuple);
@@ -118,20 +105,12 @@ export class FakeAuthorization implements Authorization {
     return Promise.resolve(`fake-token-${this.writeCounter}`);
   }
 
-  relationshipExists(filter: {
-    resourceType: string;
-    resourceId: string;
-    relation: string;
-  }): Promise<boolean> {
+  relationshipExists(filter: { resourceType: string; resourceId: string; relation: string }): Promise<boolean> {
     const prefix = `${filter.resourceType}:${filter.resourceId}#${filter.relation}@`;
-    return Promise.resolve(
-      this.activeTuples().some((tuple) => tuple.startsWith(prefix)),
-    );
+    return Promise.resolve(this.activeTuples().some((tuple) => tuple.startsWith(prefix)));
   }
 
-  listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     const prefix = `${query.resource.type}:${query.resource.id}#${query.relation}@`;
     const subjects: SubjectRef[] = [];
     for (const tuple of this.activeTuples()) {
@@ -148,9 +127,7 @@ export class FakeAuthorization implements Authorization {
   }
 
   private isExpired(expiresAt: Date | undefined): boolean {
-    return (
-      expiresAt !== undefined && expiresAt.getTime() <= this.now().getTime()
-    );
+    return expiresAt !== undefined && expiresAt.getTime() <= this.now().getTime();
   }
 
   private activeTuples(): string[] {
@@ -161,10 +138,7 @@ export class FakeAuthorization implements Authorization {
     return active;
   }
 
-  private relationsFor(
-    resourceType: string,
-    permission: string,
-  ): readonly string[] {
+  private relationsFor(resourceType: string, permission: string): readonly string[] {
     return this.permissions[resourceType]?.[permission] ?? [permission];
   }
 }
@@ -182,11 +156,7 @@ function parseSubjectPart(subjectPart: string): SubjectRef | undefined {
   };
 }
 
-function subjectForLookup(
-  tuple: string,
-  query: SubjectLookup,
-  relations: ReadonlySet<string>,
-): string | undefined {
+function subjectForLookup(tuple: string, query: SubjectLookup, relations: ReadonlySet<string>): string | undefined {
   const parts = splitTuple(tuple);
   if (
     parts === undefined ||
@@ -204,9 +174,7 @@ function subjectForLookup(
 }
 
 function key(write: RelationshipWrite): string {
-  const subjectRelation = write.subject.relation
-    ? `#${write.subject.relation}`
-    : "";
+  const subjectRelation = write.subject.relation ? `#${write.subject.relation}` : "";
   return `${write.resource.type}:${write.resource.id}#${write.relation}@${write.subject.type}:${write.subject.id}${subjectRelation}`;
 }
 
@@ -224,19 +192,12 @@ function subjectMatches(subjectPart: string, filter: SubjectRef): boolean {
   return true;
 }
 
-function tupleMatchesFilter(
-  tuple: string,
-  filter: RelationshipFilter,
-): boolean {
+function tupleMatchesFilter(tuple: string, filter: RelationshipFilter): boolean {
   const parts = splitTuple(tuple);
-  if (parts === undefined || parts.resourceType !== filter.resourceType)
-    return false;
+  if (parts === undefined || parts.resourceType !== filter.resourceType) return false;
   if (filter.resourceId && parts.resourceId !== filter.resourceId) return false;
   if (filter.relation && parts.relation !== filter.relation) return false;
-  return (
-    filter.subject === undefined ||
-    subjectMatches(parts.subject, filter.subject)
-  );
+  return filter.subject === undefined || subjectMatches(parts.subject, filter.subject);
 }
 
 function splitTuple(tuple: string) {

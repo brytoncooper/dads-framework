@@ -5,10 +5,7 @@ import { FeatureFlagEvaluator } from "./feature-flag-evaluator.js";
 import { UpdateFeatureFlags } from "./mutations/update-feature-flags.js";
 import type { FeatureFlagStore } from "./ports/feature-flag-store.js";
 import type { TenantDirectory } from "./ports/tenant-directory.js";
-import {
-  type FeatureFlagPreviewReader,
-  GetEffectiveFeatureState,
-} from "./queries/get-effective-feature-state.js";
+import { type FeatureFlagPreviewReader, GetEffectiveFeatureState } from "./queries/get-effective-feature-state.js";
 import { GetPublicFeatureState } from "./queries/get-public-feature-state.js";
 import { ListFeatureFlagHistory } from "./queries/list-feature-flag-history.js";
 import { ListFeatureFlagManagement } from "./queries/list-feature-flag-management.js";
@@ -46,44 +43,21 @@ export type FeatureFlags = {
 /** Wires code-owned definitions to stored audience state. Definitions are never stored. */
 export function composeFeatureFlags(deps: FeatureFlagsDeps): FeatureFlags {
   assertSlugsDefinedOnce(deps.definitions);
-  const effective = new GetEffectiveFeatureState(
-    deps.definitions,
-    deps.store,
-    deps.readPreview,
-  );
+  const effective = new GetEffectiveFeatureState(deps.definitions, deps.store, deps.readPreview);
   return {
-    management: new ListFeatureFlagManagement(
-      deps.definitions,
-      deps.store,
-      deps.tenants,
-      deps.clock,
-    ),
+    management: new ListFeatureFlagManagement(deps.definitions, deps.store, deps.tenants, deps.clock),
     history: new ListFeatureFlagHistory(deps.definitions, deps.store),
-    update: new UpdateFeatureFlags(
-      deps.definitions,
-      deps.store,
-      deps.tenants,
-      deps.clock,
-    ),
+    update: new UpdateFeatureFlags(deps.definitions, deps.store, deps.tenants, deps.clock),
     effective,
-    publicState: new GetPublicFeatureState(
-      publicDefinitions(deps.definitions, deps.publicSlugs ?? []),
-      deps.store,
-    ),
+    publicState: new GetPublicFeatureState(publicDefinitions(deps.definitions, deps.publicSlugs ?? []), deps.store),
     evaluator: new FeatureFlagEvaluator(effective),
     evaluatorReadingStatesOncePerRequest: new FeatureFlagEvaluator(
-      new GetEffectiveFeatureState(
-        deps.definitions,
-        new ReadStatesOnceFeatureFlagStore(deps.store),
-        deps.readPreview,
-      ),
+      new GetEffectiveFeatureState(deps.definitions, new ReadStatesOnceFeatureFlagStore(deps.store), deps.readPreview),
     ),
   };
 }
 
-function assertSlugsDefinedOnce(
-  definitions: readonly FeatureFlagDefinition[],
-): void {
+function assertSlugsDefinedOnce(definitions: readonly FeatureFlagDefinition[]): void {
   const seen = new Set<string>();
   for (const { slug } of definitions) {
     if (seen.has(slug)) {
@@ -97,9 +71,7 @@ function publicDefinitions(
   definitions: readonly FeatureFlagDefinition[],
   publicSlugs: readonly string[],
 ): readonly FeatureFlagDefinition[] {
-  const bySlug = new Map(
-    definitions.map((definition) => [definition.slug, definition]),
-  );
+  const bySlug = new Map(definitions.map((definition) => [definition.slug, definition]));
   return publicSlugs.map((slug) => {
     const definition = bySlug.get(slug);
     if (definition === undefined) {

@@ -37,9 +37,7 @@ describe("routeGroup", () => {
 
   it("blueprints are not RouteDefinitions until grouped", () => {
     expectTypeOf(blueprint).not.toExtend<RouteDefinition>();
-    expectTypeOf(routeGroup("Things", [blueprint])).toExtend<
-      readonly (RouteDefinition | RawRouteDefinition)[]
-    >();
+    expectTypeOf(routeGroup("Things", [blueprint])).toExtend<readonly (RouteDefinition | RawRouteDefinition)[]>();
   });
 
   it("applies group capabilities across members; route fields win per key", () => {
@@ -51,10 +49,7 @@ describe("routeGroup", () => {
       response: thingSchema,
       handler: () => ({ id: "s" }),
     });
-    const routes = routeGroup("Things", { rateLimit: { perMinute: 100 } }, [
-      blueprint,
-      strict,
-    ]);
+    const routes = routeGroup("Things", { rateLimit: { perMinute: 100 } }, [blueprint, strict]);
     expect(routes[0]?.capabilities.rateLimit).toEqual({ perMinute: 100 });
     expect(routes[1]?.capabilities.rateLimit).toEqual({ perMinute: 1 });
   });
@@ -68,14 +63,8 @@ describe("routeGroup", () => {
       response: thingSchema,
       handler: () => ({ id: "w" }),
     });
-    const routes = routeGroup("Things", { site: "cloud_only" }, [
-      blueprint,
-      writes,
-    ]);
-    expect(routes.map((route) => route.capabilities.site)).toEqual([
-      "cloud_only",
-      "write_door",
-    ]);
+    const routes = routeGroup("Things", { site: "cloud_only" }, [blueprint, writes]);
+    expect(routes.map((route) => route.capabilities.site)).toEqual(["cloud_only", "write_door"]);
   });
 
   it("drops a group's cloud-only reason under a route's own label, and keeps a route's own reason", () => {
@@ -125,12 +114,7 @@ describe("routeGroup", () => {
       [blueprint, served, ownReason, reasonOnly, repeatsLabel],
     );
 
-    expect(
-      routes.map((route) => [
-        route.capabilities.site,
-        route.capabilities.cloudOnly,
-      ]),
-    ).toEqual([
+    expect(routes.map((route) => [route.capabilities.site, route.capabilities.cloudOnly])).toEqual([
       ["cloud_only", { reason: "STAFF_TOOLS", why: "Staff only." }],
       ["served", undefined],
       ["cloud_only", { reason: "NOT_YET", why: "Later.", ticket: "APP-1" }],
@@ -153,10 +137,7 @@ describe("routeGroup", () => {
       item: thingSchema,
       handler: () => ({ items: [], total: 0 }),
     });
-    const routes = [
-      ...routeGroup("Things", [blueprint]),
-      ...routeGroup("Imports", [imports]),
-    ];
+    const routes = [...routeGroup("Things", [blueprint]), ...routeGroup("Imports", [imports])];
     expect(routes.map((route) => route.tag)).toEqual(["Things", "Imports"]);
   });
 });

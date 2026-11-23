@@ -1,8 +1,4 @@
-import {
-  EnqueueAccessChanges,
-  type AccessChange,
-  type OutboxTx,
-} from "../lib/access-changes/enqueue.js";
+import { EnqueueAccessChanges, type AccessChange, type OutboxTx } from "../lib/access-changes/enqueue.js";
 import type { OwnerLockLease } from "@dads-framework/access/runtime";
 
 /**
@@ -37,19 +33,13 @@ export class FakeEnqueueAccessChanges extends EnqueueAccessChanges {
       return Promise.reject(new Error("outbox unavailable"));
     }
     for (const entry of newEntries) {
-      const known = this.entries.some(
-        (existing) => existing.idempotencyKey === entry.idempotencyKey,
-      );
+      const known = this.entries.some((existing) => existing.idempotencyKey === entry.idempotencyKey);
       if (!known) this.entries.push(entry);
     }
     return Promise.resolve();
   }
 
-  enqueueReplacingOpposite(
-    newEntries: readonly AccessChange[],
-    _tx: OutboxTx,
-    lease: OwnerLockLease,
-  ): Promise<void> {
+  enqueueReplacingOpposite(newEntries: readonly AccessChange[], _tx: OutboxTx, lease: OwnerLockLease): Promise<void> {
     return this.replaceOpposite(newEntries, lease);
   }
 
@@ -58,29 +48,20 @@ export class FakeEnqueueAccessChanges extends EnqueueAccessChanges {
    * stands in for the row transaction. Rejects before touching anything when
    * `failNext` is set, so a failed "transaction" leaves the outbox unchanged.
    */
-  replaceOpposite(
-    newEntries: readonly AccessChange[],
-    lease: OwnerLockLease,
-  ): Promise<void> {
+  replaceOpposite(newEntries: readonly AccessChange[], lease: OwnerLockLease): Promise<void> {
     if (this.failNext) {
       return Promise.reject(new Error("outbox unavailable"));
     }
     for (const entry of newEntries) {
       if (entry.ownerPartitionId === null) {
-        return Promise.reject(
-          new Error("replacement facts require an owner partition"),
-        );
+        return Promise.reject(new Error("replacement facts require an owner partition"));
       }
       lease.assertPartition(entry.ownerPartitionId);
     }
     for (const entry of newEntries) {
       for (let index = this.entries.length - 1; index >= 0; index -= 1) {
         const existing = this.entries[index];
-        if (
-          existing !== undefined &&
-          existing.operation !== entry.operation &&
-          sameExactFact(existing, entry)
-        ) {
+        if (existing !== undefined && existing.operation !== entry.operation && sameExactFact(existing, entry)) {
           this.entries.splice(index, 1);
         }
       }

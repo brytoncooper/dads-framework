@@ -63,9 +63,7 @@ export type ResolvedLintScope = {
 };
 
 /** Every probe scope's resolved rules, or nothing if any probe failed. */
-export function resolveLintScopes(
-  context: DoctorContext,
-): readonly ResolvedLintScope[] {
+export function resolveLintScopes(context: DoctorContext): readonly ResolvedLintScope[] {
   const resolved: ResolvedLintScope[] = [];
   for (const probe of PROBES) {
     const path = resolveProbe(context, probe);
@@ -82,19 +80,13 @@ export function resolveLintScopes(
 }
 
 /** The rule names one scope holds at a severity, sorted. */
-export function rulesAtSeverity(
-  scope: ResolvedLintScope,
-  severity: LintSeverity,
-): readonly string[] {
+export function rulesAtSeverity(scope: ResolvedLintScope, severity: LintSeverity): readonly string[] {
   return Object.keys(scope.rules)
     .filter((rule) => isSeverity(scope.rules[rule], severity))
     .sort();
 }
 
-function resolveProbe(
-  context: DoctorContext,
-  probe: LintProbe,
-): string | undefined {
+function resolveProbe(context: DoctorContext, probe: LintProbe): string | undefined {
   const files = context.files();
   if (files.includes(probe.path)) return probe.path;
   const fallback = probe.fallback;
@@ -102,9 +94,7 @@ function resolveProbe(
   return [...files].sort().find((path) => fallback.test(path));
 }
 
-function printedRules(
-  printedConfig: string,
-): Readonly<Record<string, unknown>> {
+function printedRules(printedConfig: string): Readonly<Record<string, unknown>> {
   const parsed: unknown = JSON.parse(printedConfig);
   const rules: unknown = isRecord(parsed) ? parsed["rules"] : undefined;
   return isRecord(rules) ? rules : {};

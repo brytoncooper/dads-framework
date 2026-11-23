@@ -1,11 +1,7 @@
 import { Client } from "pg";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import {
-  createPrivateDatabase,
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "../../testing/index.js";
+import { createPrivateDatabase, startUnmigratedTestPostgres, type TestPostgres } from "../../testing/index.js";
 
 import {
   readMigrationCompatibilityState,
@@ -25,24 +21,14 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
       const table = "CREATE TABLE retained (id integer PRIMARY KEY)";
       await left.query(table);
       await right.query(table);
-      await left.query(
-        "ALTER TABLE retained ADD COLUMN alpha text DEFAULT 'kept'",
-      );
-      await left.query(
-        "ALTER TABLE retained ADD COLUMN beta integer DEFAULT 7",
-      );
-      await right.query(
-        "ALTER TABLE retained ADD COLUMN beta integer DEFAULT 7",
-      );
-      await right.query(
-        "ALTER TABLE retained ADD COLUMN alpha text DEFAULT 'kept'",
-      );
+      await left.query("ALTER TABLE retained ADD COLUMN alpha text DEFAULT 'kept'");
+      await left.query("ALTER TABLE retained ADD COLUMN beta integer DEFAULT 7");
+      await right.query("ALTER TABLE retained ADD COLUMN beta integer DEFAULT 7");
+      await right.query("ALTER TABLE retained ADD COLUMN alpha text DEFAULT 'kept'");
       await left.query("INSERT INTO retained (id) VALUES (1)");
       await right.query("INSERT INTO retained (id) VALUES (1)");
 
-      expect(await readMigrationCompatibilityState(left)).toEqual(
-        await readMigrationCompatibilityState(right),
-      );
+      expect(await readMigrationCompatibilityState(left)).toEqual(await readMigrationCompatibilityState(right));
     });
   });
 
@@ -94,36 +80,25 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
 
   it("ignores only audit row noise and keeps the audit schema in the evidence", async () => {
     await withDatabases(async (left, right) => {
-      const schema =
-        "CREATE TABLE audit_log (position bigint, recorded_at timestamptz)";
+      const schema = "CREATE TABLE audit_log (position bigint, recorded_at timestamptz)";
       await left.query(schema);
       await right.query(schema);
-      await left.query(
-        "INSERT INTO audit_log VALUES (1, '2026-01-01T00:00:00Z')",
-      );
-      await right.query(
-        "INSERT INTO audit_log VALUES (99, '2026-03-01T00:00:00Z')",
-      );
+      await left.query("INSERT INTO audit_log VALUES (1, '2026-01-01T00:00:00Z')");
+      await right.query("INSERT INTO audit_log VALUES (99, '2026-03-01T00:00:00Z')");
 
       const before = await readMigrationCompatibilityState(left);
       expect(before).toEqual(await readMigrationCompatibilityState(right));
       expect(before.data).not.toHaveProperty('"public"."audit_log"');
 
       await right.query("ALTER TABLE audit_log ADD COLUMN actor_id uuid");
-      expect(before.schema).not.toBe(
-        (await readMigrationCompatibilityState(right)).schema,
-      );
+      expect(before.schema).not.toBe((await readMigrationCompatibilityState(right)).schema);
     });
   });
 
   it("detects sequence position divergence without advancing either sequence", async () => {
     await withDatabases(async (left, right) => {
-      await left.query(
-        "CREATE SEQUENCE retained_ids START WITH 7 INCREMENT BY 3",
-      );
-      await right.query(
-        "CREATE SEQUENCE retained_ids START WITH 7 INCREMENT BY 3",
-      );
+      await left.query("CREATE SEQUENCE retained_ids START WITH 7 INCREMENT BY 3");
+      await right.query("CREATE SEQUENCE retained_ids START WITH 7 INCREMENT BY 3");
       const before = await readMigrationCompatibilityState(left);
       expect(before).toEqual(await readMigrationCompatibilityState(left));
       await right.query("SELECT nextval('retained_ids')");
@@ -147,12 +122,8 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
       expect(before.schema).toBe(differentData.schema);
       expect(before.data).not.toEqual(differentData.data);
 
-      await right.query(
-        "ALTER TABLE business.retained ADD COLUMN extra boolean",
-      );
-      expect(before.schema).not.toBe(
-        (await readMigrationCompatibilityState(right)).schema,
-      );
+      await right.query("ALTER TABLE business.retained ADD COLUMN extra boolean");
+      expect(before.schema).not.toBe((await readMigrationCompatibilityState(right)).schema);
     });
   });
 
@@ -163,9 +134,7 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
         "CREATE TABLE retained (id integer); CREATE SCHEMA dads_migration; CREATE TABLE dads_migration.executed (name text); INSERT INTO dads_migration.executed VALUES ('a different execution order')",
       );
 
-      expect(await readMigrationCompatibilityState(left)).toEqual(
-        await readMigrationCompatibilityState(right),
-      );
+      expect(await readMigrationCompatibilityState(left)).toEqual(await readMigrationCompatibilityState(right));
     });
   });
 
@@ -174,22 +143,18 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
     "ALTER TABLE retained ADD CONSTRAINT retained_positive CHECK (id > 0)",
     "CREATE INDEX retained_value_idx ON retained(value)",
     "CREATE VIEW retained_values AS SELECT value FROM retained",
-  ])(
-    "includes defaults, constraints, indexes, and views: %s",
-    async (change) => {
-      await withDatabases(async (left, right) => {
-        const schema =
-          "CREATE TABLE retained (id integer, value text DEFAULT 'kept')";
-        await left.query(schema);
-        await right.query(schema);
-        await right.query(change);
+  ])("includes defaults, constraints, indexes, and views: %s", async (change) => {
+    await withDatabases(async (left, right) => {
+      const schema = "CREATE TABLE retained (id integer, value text DEFAULT 'kept')";
+      await left.query(schema);
+      await right.query(schema);
+      await right.query(change);
 
-        expect((await readMigrationCompatibilityState(left)).schema).not.toBe(
-          (await readMigrationCompatibilityState(right)).schema,
-        );
-      });
-    },
-  );
+      expect((await readMigrationCompatibilityState(left)).schema).not.toBe(
+        (await readMigrationCompatibilityState(right)).schema,
+      );
+    });
+  });
   it.each([
     {
       change: "publication names",
@@ -199,8 +164,7 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
     {
       change: "published operations",
       left: "CREATE PUBLICATION retained_publication FOR TABLE retained WITH (publish = 'insert')",
-      right:
-        "CREATE PUBLICATION retained_publication FOR TABLE retained WITH (publish = 'insert, update')",
+      right: "CREATE PUBLICATION retained_publication FOR TABLE retained WITH (publish = 'insert, update')",
     },
     {
       change: "table membership",
@@ -210,39 +174,33 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
     {
       change: "row filters",
       left: "CREATE PUBLICATION retained_publication FOR TABLE retained WHERE (id > 0)",
-      right:
-        "CREATE PUBLICATION retained_publication FOR TABLE retained WHERE (id > 1)",
+      right: "CREATE PUBLICATION retained_publication FOR TABLE retained WHERE (id > 1)",
     },
     {
       change: "column selections",
       left: "CREATE PUBLICATION retained_publication FOR TABLE retained (id)",
-      right:
-        "CREATE PUBLICATION retained_publication FOR TABLE retained (id, value)",
+      right: "CREATE PUBLICATION retained_publication FOR TABLE retained (id, value)",
     },
     {
       change: "schema membership",
       left: "CREATE PUBLICATION retained_publication FOR TABLES IN SCHEMA public",
-      right:
-        "CREATE PUBLICATION retained_publication FOR TABLES IN SCHEMA business",
+      right: "CREATE PUBLICATION retained_publication FOR TABLES IN SCHEMA business",
     },
-  ])(
-    "includes $change in logical replication evidence",
-    async (publication) => {
-      await withDatabases(async (left, right) => {
-        const schema =
-          "CREATE TABLE retained (id integer PRIMARY KEY, value text); CREATE TABLE another (id integer PRIMARY KEY); CREATE SCHEMA business";
-        await left.query(schema);
-        await right.query(schema);
-        await left.query(publication.left);
-        await right.query(publication.right);
+  ])("includes $change in logical replication evidence", async (publication) => {
+    await withDatabases(async (left, right) => {
+      const schema =
+        "CREATE TABLE retained (id integer PRIMARY KEY, value text); CREATE TABLE another (id integer PRIMARY KEY); CREATE SCHEMA business";
+      await left.query(schema);
+      await right.query(schema);
+      await left.query(publication.left);
+      await right.query(publication.right);
 
-        const before = await readMigrationCompatibilityState(left);
-        const after = await readMigrationCompatibilityState(right);
-        expect(before.schema).not.toBe(after.schema);
-        expect(before.data).toEqual(after.data);
-      });
-    },
-  );
+      const before = await readMigrationCompatibilityState(left);
+      const after = await readMigrationCompatibilityState(right);
+      expect(before.schema).not.toBe(after.schema);
+      expect(before.data).toEqual(after.data);
+    });
+  });
 
   it("refuses subscriptions without inspecting or exposing connection metadata", async () => {
     await withDatabases(async (_left, right) => {
@@ -253,15 +211,11 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
         WITH (connect = false, create_slot = false, enabled = false, slot_name = NONE)
       `);
       try {
-        await expect(
-          readMigrationCompatibilityState(right),
-        ).rejects.toMatchObject({
+        await expect(readMigrationCompatibilityState(right)).rejects.toMatchObject({
           code: "MIGRATION_COMPATIBILITY_UNSUPPORTED_REPLICATION_STATE",
           reason: "subscriptions",
         });
-        await expect(
-          readMigrationCompatibilityState(right),
-        ).rejects.toBeInstanceOf(
+        await expect(readMigrationCompatibilityState(right)).rejects.toBeInstanceOf(
           UnsupportedMigrationCompatibilityReplicationStateError,
         );
       } finally {
@@ -271,15 +225,10 @@ describe("migration compatibility state", { timeout: 60_000 }, () => {
   });
 });
 
-async function withDatabases(
-  verify: (left: Client, right: Client) => Promise<void>,
-): Promise<void> {
+async function withDatabases(verify: (left: Client, right: Client) => Promise<void>): Promise<void> {
   const leftFixture = await createPrivateDatabase(server.connectionString, {});
   try {
-    const rightFixture = await createPrivateDatabase(
-      server.connectionString,
-      {},
-    );
+    const rightFixture = await createPrivateDatabase(server.connectionString, {});
     const left = new Client({ connectionString: leftFixture.connectionString });
     const right = new Client({
       connectionString: rightFixture.connectionString,

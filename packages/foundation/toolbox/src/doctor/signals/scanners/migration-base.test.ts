@@ -60,17 +60,10 @@ function trunkRepository(): string {
 
 async function readBoth(root: string, base?: string) {
   const context = createDoctorContext({ root, base });
-  const [edited, ordered] = await runDoctorSignals(context, [
-    migrationsEditedSignal,
-    migrationsOutOfOrderSignal,
-  ]);
+  const [edited, ordered] = await runDoctorSignals(context, [migrationsEditedSignal, migrationsOutOfOrderSignal]);
   return {
-    edited: Object.fromEntries(
-      [...(edited?.readings ?? [])].map(([key, one]) => [key, one.value]),
-    ),
-    ordered: Object.fromEntries(
-      [...(ordered?.readings ?? [])].map(([key, one]) => [key, one.value]),
-    ),
+    edited: Object.fromEntries([...(edited?.readings ?? [])].map(([key, one]) => [key, one.value])),
+    ordered: Object.fromEntries([...(ordered?.readings ?? [])].map(([key, one]) => [key, one.value])),
     notes: [...(edited?.notes ?? []), ...(ordered?.notes ?? [])],
   };
 }

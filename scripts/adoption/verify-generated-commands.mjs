@@ -19,26 +19,15 @@ export const generatedCommands = generators.map(([command]) => command);
 export async function runGeneratedCommands(transcript, creator, projectRoot) {
   const dad = join(creator.host, "node_modules", ".bin", "dad");
   for (const generator of generators) {
-    const { stdout } = await transcript.run(
-      dad,
-      ["add", ...generator, "--json"],
-      {
-        cwd: projectRoot,
-      },
-    );
+    const { stdout } = await transcript.run(dad, ["add", ...generator, "--json"], {
+      cwd: projectRoot,
+    });
     const result = JSON.parse(stdout);
-    if (
-      !result.ok ||
-      !Array.isArray(result.result?.files) ||
-      result.result.files.length === 0
-    ) {
+    if (!result.ok || !Array.isArray(result.result?.files) || result.result.files.length === 0) {
       throw new Error(`Generator ${generator[0]} did not write any files.`);
     }
   }
-  writeFileSync(
-    join(projectRoot, "assembly", "generated-web.test.ts"),
-    webProof,
-  );
+  writeFileSync(join(projectRoot, "assembly", "generated-web.test.ts"), webProof);
 }
 
 export async function verifyGeneratedCommands(transcript, projectRoot) {
@@ -51,10 +40,7 @@ export async function verifyGeneratedCommands(transcript, projectRoot) {
   const { stdout } = await transcript.run("sh", ["ci/verify.sh"], {
     cwd: projectRoot,
   });
-  for (const evidence of [
-    "dad check boundaries",
-    "the package entry point loads",
-  ]) {
+  for (const evidence of ["dad check boundaries", "the package entry point loads"]) {
     if (!stdout.includes(evidence)) {
       throw new Error(`Generated verification did not report ${evidence}.`);
     }
@@ -62,17 +48,8 @@ export async function verifyGeneratedCommands(transcript, projectRoot) {
 
   const report = readJson(join(projectRoot, reportPath));
   const canonicalRoot = realpathSync(projectRoot);
-  for (const path of [
-    "domains/catalog/server/catalog-resource.test.ts",
-    "assembly/generated-web.test.ts",
-  ]) {
-    if (
-      !report.testResults.some(
-        (result) =>
-          result.name === join(canonicalRoot, path) &&
-          result.status === "passed",
-      )
-    ) {
+  for (const path of ["domains/catalog/server/catalog-resource.test.ts", "assembly/generated-web.test.ts"]) {
+    if (!report.testResults.some((result) => result.name === join(canonicalRoot, path) && result.status === "passed")) {
       throw new Error(`Generated verification did not pass ${path}.`);
     }
   }

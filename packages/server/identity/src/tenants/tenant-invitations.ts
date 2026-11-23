@@ -6,11 +6,7 @@ import { z } from "zod";
 import { membershipFact } from "./membership-facts.js";
 import type { TenantId } from "./tenant-access.js";
 import { lockScimAccountBinding } from "./tenant-scim-membership.js";
-import {
-  tenantInvitation,
-  tenantMembership,
-  tenantMembershipKey,
-} from "./tenant-tables.js";
+import { tenantInvitation, tenantMembership, tenantMembershipKey } from "./tenant-tables.js";
 import {
   accountSubject,
   checkTenantPermission,
@@ -60,15 +56,7 @@ export class TenantInvitations {
     const token = randomBytes(32).toString("base64url");
     const expiresAt = new Date(this.now().getTime() + invitationTtlMs);
     return tenantTransaction(this.options, async (tx) => {
-      if (
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          actor,
-          tenantId,
-          "manage_members",
-        ))
-      )
+      if (!(await checkTenantPermission(this.options, tx, actor, tenantId, "manage_members")))
         throw new TenantUnavailableError();
       await tx.insert(tenantInvitation).values({
         tokenHash: digestToken(token),
@@ -87,31 +75,15 @@ export class TenantInvitations {
     checkAcceptance?: TenantInvitationAcceptanceCheck,
   ): Promise<TenantId> {
     const email = providerEmail.safeParse(account.email);
-    if (
-      !z.literal(true).safeParse(account.emailVerified).success ||
-      !email.success ||
-      !tokenPattern.test(token)
-    ) {
+    if (!z.literal(true).safeParse(account.emailVerified).success || !email.success || !tokenPattern.test(token)) {
       return Promise.reject(new TenantInvitationUnavailableError());
     }
     const actor = accountSubject(this.options, account.id);
     return tenantTransaction(this.options, async (tx) => {
-      const invitation = await this.lockInvitation(
-        tx,
-        digestToken(token),
-        email.data,
-      );
+      const invitation = await this.lockInvitation(tx, digestToken(token), email.data);
       const issuer = accountSubject(this.options, invitation.issuedBy);
       await this.lockIssuerMembership(tx, invitation.tenantId, issuer.id);
-      if (
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          issuer,
-          invitation.tenantId,
-          "manage_members",
-        ))
-      ) {
+      if (!(await checkTenantPermission(this.options, tx, issuer, invitation.tenantId, "manage_members"))) {
         throw new TenantInvitationUnavailableError();
       }
       if (
@@ -127,22 +99,14 @@ export class TenantInvitations {
         throw new TenantInvitationUnavailableError();
       }
       const acceptedAt = this.now();
-      if (invitation.expiresAt <= acceptedAt)
-        throw new TenantInvitationUnavailableError();
+      if (invitation.expiresAt <= acceptedAt) throw new TenantInvitationUnavailableError();
       await this.acceptMembership(tx, invitation.tenantId, actor.id);
-      await tx
-        .update(tenantInvitation)
-        .set({ acceptedAt })
-        .where(eq(tenantInvitation.tokenHash, invitation.tokenHash));
+      await tx.update(tenantInvitation).set({ acceptedAt }).where(eq(tenantInvitation.tokenHash, invitation.tokenHash));
       return invitation.tenantId;
     });
   }
 
-  private async lockInvitation(
-    tx: TenantTransaction,
-    tokenHash: string,
-    email: string,
-  ) {
+  private async lockInvitation(tx: TenantTransaction, tokenHash: string, email: string) {
     const [invitation] = await tx
       .select()
       .from(tenantInvitation)
@@ -160,11 +124,7 @@ export class TenantInvitations {
   }
 
   /** Keep the issuer eligible until the grant commits. Role changes lock the same row. */
-  private async lockIssuerMembership(
-    tx: TenantTransaction,
-    tenantId: TenantId,
-    accountId: string,
-  ): Promise<void> {
+  private async lockIssuerMembership(tx: TenantTransaction, tenantId: TenantId, accountId: string): Promise<void> {
     const [member] = await tx
       .select({ accountId: tenantMembership.accountId })
       .from(tenantMembership)
@@ -173,11 +133,7 @@ export class TenantInvitations {
     if (member === undefined) throw new TenantInvitationUnavailableError();
   }
 
-  private async acceptMembership(
-    tx: TenantTransaction,
-    tenantId: TenantId,
-    accountId: string,
-  ): Promise<void> {
+  private async acceptMembership(tx: TenantTransaction, tenantId: TenantId, accountId: string): Promise<void> {
     const scimBinding = await lockScimAccountBinding(tx, tenantId, accountId);
     if (scimBinding?.active === false) {
       throw new TenantInvitationUnavailableError();
@@ -188,10 +144,7 @@ export class TenantInvitations {
       .onConflictDoNothing()
       .returning({ accountId: tenantMembership.accountId });
     if (added === undefined) return;
-    await this.options.changes.enqueue(
-      [membershipFact(this.options, tenantId, accountId, "member", "WRITE")],
-      tx,
-    );
+    await this.options.changes.enqueue([membershipFact(this.options, tenantId, accountId, "member", "WRITE")], tx);
   }
 
   private now(): Date {

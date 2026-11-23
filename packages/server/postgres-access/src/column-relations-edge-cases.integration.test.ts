@@ -1,17 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { actor, anyOf, compileAccess, resource, roleToken } from "@dads-framework/access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/access/runtime";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -44,11 +35,7 @@ function buildMixedColumnModel() {
   });
   const org = resource("edge/org", {
     roles: {
-      member: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
     },
     can: ({ member }) => ({ view: member }),
   });
@@ -56,11 +43,7 @@ function buildMixedColumnModel() {
     recursive: true,
     roles: {
       org,
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
     },
     can: ({ org: orgRole, viewer }) => ({
       view: anyOf(viewer, orgRole.view),
@@ -71,11 +54,7 @@ function buildMixedColumnModel() {
       org,
       folder,
       owner: user,
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       banned: user,
     },
     can: ({ org: orgRole, folder: folderRole, owner, viewer, banned }) => ({
@@ -145,8 +124,7 @@ function createBarrier(parties: number): () => Promise<void> {
 }
 
 describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
-  let postgres:
-    Awaited<ReturnType<typeof startUnmigratedTestPostgres>> | undefined;
+  let postgres: Awaited<ReturnType<typeof startUnmigratedTestPostgres>> | undefined;
 
   beforeAll(async () => {
     postgres = await startUnmigratedTestPostgres();
@@ -184,9 +162,7 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
 
   async function seedCyclicSchemaQualifiedData(): Promise<void> {
     const pool = requirePool();
-    await pool.query(
-      "TRUNCATE TABLE dad_authorization_relationship, app.documents, app.folders",
-    );
+    await pool.query("TRUNCATE TABLE dad_authorization_relationship, app.documents, app.folders");
     await pool.query(`
       INSERT INTO app.folders (id, org_id, parent_id) VALUES
         ('f-cycle-a', NULL, 'f-cycle-b'),
@@ -291,14 +267,7 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
     const compiled = compileAccessPolicy(schema.model, bindings);
     const actors = ["alice", "bob", "carol", "nobody"];
     const docs = ["doc-cycle", "doc-exp", "doc-self", "doc-wild"];
-    const folders = [
-      "f-branch",
-      "f-cycle-a",
-      "f-cycle-b",
-      "f-cycle-c",
-      "f-open",
-      "f-self",
-    ];
+    const folders = ["f-branch", "f-cycle-a", "f-cycle-b", "f-cycle-c", "f-open", "f-self"];
     const queries: PermissionQuery[] = [];
     for (const actorId of actors) {
       for (const docId of docs) {
@@ -317,15 +286,7 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
       }
     }
 
-    const oracle = runOracle(
-      compiled.model,
-      writes,
-      nowMs,
-      queries,
-      actors,
-      docs,
-      folders,
-    );
+    const oracle = runOracle(compiled.model, writes, nowMs, queries, actors, docs, folders);
     expect(await authz.checkMany(queries)).toEqual(oracle.checks);
 
     for (let index = 0; index < queries.length; index += 1) {
@@ -337,10 +298,7 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
         resource: query.resource,
         permission: query.permission,
       });
-      const sharedRows = await pool.query<{ allowed: boolean }>(
-        sharedQuery.text,
-        [...(sharedQuery.values ?? [])],
-      );
+      const sharedRows = await pool.query<{ allowed: boolean }>(sharedQuery.text, [...(sharedQuery.values ?? [])]);
       expect(Boolean(sharedRows.rows[0]?.allowed)).toBe(oracle.checks[index]);
     }
 
@@ -388,41 +346,28 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
 
     const runWriteSkew = async (retries: number) => {
       await pool.query("TRUNCATE TABLE skew_accounts");
-      await pool.query(
-        "INSERT INTO skew_accounts (id, balance) VALUES ('acct-a', 100), ('acct-b', 100)",
-      );
+      await pool.query("INSERT INTO skew_accounts (id, balance) VALUES ('acct-a', 100), ('acct-b', 100)");
       const waitBothRead = createBarrier(2);
       let firstRunReads = 0;
       let totalAttempts = 0;
 
       const debit = (targetId: string) =>
-        withProtectedPgTransaction(
-          { pool, authorization: authz, retries, retryBaseDelayMs: 5 },
-          async ({ client }) => {
-            totalAttempts += 1;
-            const totalRows = await client.query(
-              "SELECT SUM(balance)::text AS total FROM skew_accounts",
-            );
-            const rawTotal = totalRows.rows[0]?.["total"];
-            const total = typeof rawTotal === "string" ? Number(rawTotal) : 0;
-            firstRunReads += 1;
-            if (firstRunReads <= 2) {
-              await waitBothRead();
-            }
-            if (total >= 150) {
-              await client.query(
-                "UPDATE skew_accounts SET balance = balance - 80 WHERE id = $1",
-                [targetId],
-              );
-            }
-            return total;
-          },
-        );
+        withProtectedPgTransaction({ pool, authorization: authz, retries, retryBaseDelayMs: 5 }, async ({ client }) => {
+          totalAttempts += 1;
+          const totalRows = await client.query("SELECT SUM(balance)::text AS total FROM skew_accounts");
+          const rawTotal = totalRows.rows[0]?.["total"];
+          const total = typeof rawTotal === "string" ? Number(rawTotal) : 0;
+          firstRunReads += 1;
+          if (firstRunReads <= 2) {
+            await waitBothRead();
+          }
+          if (total >= 150) {
+            await client.query("UPDATE skew_accounts SET balance = balance - 80 WHERE id = $1", [targetId]);
+          }
+          return total;
+        });
 
-      const settled = await Promise.allSettled([
-        debit("acct-a"),
-        debit("acct-b"),
-      ]);
+      const settled = await Promise.allSettled([debit("acct-a"), debit("acct-b")]);
       const finalRows = await pool.query<{ id: string; balance: number }>(
         "SELECT id, balance FROM skew_accounts ORDER BY id",
       );
@@ -431,9 +376,7 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
 
     // With retries: 0, one transaction MUST fail with real Postgres 40001.
     const noRetry = await runWriteSkew(0);
-    const rejected = noRetry.settled.filter(
-      (entry): entry is PromiseRejectedResult => entry.status === "rejected",
-    );
+    const rejected = noRetry.settled.filter((entry): entry is PromiseRejectedResult => entry.status === "rejected");
     expect(rejected).toHaveLength(1);
     expect(rejected[0]?.reason).toBeInstanceOf(PostgresSerializationConflict);
     if (rejected[0]?.reason instanceof PostgresSerializationConflict) {
@@ -442,15 +385,10 @@ describe("PostgreSQL column-backed edge cases & live 40001 retries", () => {
 
     // With retries: 4, the conflicted transaction retries cleanly and both observe serialized totals!
     const withRetry = await runWriteSkew(4);
-    expect(
-      withRetry.settled.every((entry) => entry.status === "fulfilled"),
-    ).toBe(true);
+    expect(withRetry.settled.every((entry) => entry.status === "fulfilled")).toBe(true);
     expect(withRetry.totalAttempts).toBeGreaterThanOrEqual(3);
     // Serialized invariant: only the first debit (>= 150) withdrew 80; the retried tx saw total=120!
-    const finalTotal = withRetry.finalRows.reduce(
-      (sum, row) => sum + row.balance,
-      0,
-    );
+    const finalTotal = withRetry.finalRows.reduce((sum, row) => sum + row.balance, 0);
     expect(finalTotal).toBe(120);
   });
 });
@@ -464,13 +402,7 @@ function runOracle(
   docs: readonly string[],
   folders: readonly string[],
 ) {
-  const columnTuples: readonly (readonly [
-    string,
-    string,
-    string,
-    string,
-    string,
-  ])[] = [
+  const columnTuples: readonly (readonly [string, string, string, string, string])[] = [
     ["edge/folder", "f-cycle-a", "parent", "edge/folder", "f-cycle-b"],
     ["edge/folder", "f-cycle-b", "parent", "edge/folder", "f-cycle-c"],
     ["edge/folder", "f-cycle-c", "org", "edge/org", "org-team"],
@@ -494,18 +426,16 @@ function runOracle(
       subjectIsWildcard: entry.subject.id === "*",
       expiresAt: entry.expiresAt?.getTime() ?? null,
     })),
-    ...columnTuples.map(
-      ([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
-        resourceKind,
-        resourceId,
-        relation,
-        subjectKind,
-        subjectId,
-        subjectRelation: "",
-        subjectIsWildcard: false,
-        expiresAt: null,
-      }),
-    ),
+    ...columnTuples.map(([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
+      resourceKind,
+      resourceId,
+      relation,
+      subjectKind,
+      subjectId,
+      subjectRelation: "",
+      subjectIsWildcard: false,
+      expiresAt: null,
+    })),
   ];
   const lookups = [
     ...actors.map((actorId) => ({
@@ -566,14 +496,8 @@ function runOracle(
     if (actorId === undefined) continue;
     const rawDoc = rawLookups[index];
     const rawFolder = rawLookups[actors.length + index];
-    docLookups.set(
-      actorId,
-      Array.isArray(rawDoc) ? rawDoc.map(String).sort() : [],
-    );
-    folderLookups.set(
-      actorId,
-      Array.isArray(rawFolder) ? rawFolder.map(String).sort() : [],
-    );
+    docLookups.set(actorId, Array.isArray(rawDoc) ? rawDoc.map(String).sort() : []);
+    folderLookups.set(actorId, Array.isArray(rawFolder) ? rawFolder.map(String).sort() : []);
   }
   return { checks: rawChecks.map(Boolean), docLookups, folderLookups };
 }

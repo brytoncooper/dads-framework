@@ -16,16 +16,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  isProductionModule,
-  moduleImports,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { isProductionModule, moduleImports, type DoctorModule } from "../scanners/typescript-program.js";
 
 const APPLICATION_ROOT = "apps/";
 const ROUTE_PATH = /route/i;
@@ -34,15 +26,11 @@ const HTTP_PACKAGE = /(?:^|\/)http(?:-|$)/;
 
 function hasRoutes(module: DoctorModule): boolean {
   if (ROUTE_PATH.test(module.path)) return true;
-  return moduleImports(module).some((imported) =>
-    HTTP_PACKAGE.test(imported.specifier),
-  );
+  return moduleImports(module).some((imported) => HTTP_PACKAGE.test(imported.specifier));
 }
 
 function assertsStrictProfile(module: DoctorModule): boolean {
-  return moduleImports(module).some((imported) =>
-    STRICT_PROFILE.test(imported.specifier),
-  );
+  return moduleImports(module).some((imported) => STRICT_PROFILE.test(imported.specifier));
 }
 
 function countMissingProfiles(context: DoctorContext): SignalReadings {

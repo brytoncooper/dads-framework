@@ -31,18 +31,9 @@ import {
   type SignedPartUploadQuery,
 } from "./disk-part-links.js";
 import { DiskReadinessProbe } from "./disk-readiness-probe.js";
-import {
-  ObjectStorage,
-  type SignedUpload,
-  type SignedUploadRequest,
-  type StoredObject,
-} from "../core.js";
+import { ObjectStorage, type SignedUpload, type SignedUploadRequest, type StoredObject } from "../core.js";
 
-export {
-  type DiskSpace,
-  foldersToSync,
-  loadOrCreateDiskSigningKey,
-} from "./disk-files.js";
+export { type DiskSpace, foldersToSync, loadOrCreateDiskSigningKey } from "./disk-files.js";
 
 /** Reads the volume's space; `fs.statfs` on a box, a fixed answer in tests. */
 export type DiskFreeSpace = (directory: string) => Promise<DiskSpace>;
@@ -110,9 +101,7 @@ export class SiteDiskLow extends Error {
     readonly freeBytes: number,
     readonly floorBytes: number,
   ) {
-    super(
-      `site disk low: ${freeBytes.toString()} bytes free, floor ${floorBytes.toString()}`,
-    );
+    super(`site disk low: ${freeBytes.toString()} bytes free, floor ${floorBytes.toString()}`);
   }
 }
 
@@ -155,14 +144,8 @@ export class DiskObjectStorage extends ObjectStorage {
    * puts could otherwise rename sidecar A, sidecar B, body B, body A and
    * leave body A under sidecar B, which reads as corrupt.
    */
-  put(
-    key: string,
-    body: Uint8Array | string,
-    contentType: string,
-  ): Promise<void> {
-    return this.queueForKey(key, () =>
-      this.writeObject(key, body, contentType),
-    );
+  put(key: string, body: Uint8Array | string, contentType: string): Promise<void> {
+    return this.queueForKey(key, () => this.writeObject(key, body, contentType));
   }
 
   /** Runs `change` after every put or delete already queued for the key. */
@@ -177,14 +160,9 @@ export class DiskObjectStorage extends ObjectStorage {
     return next;
   }
 
-  private async writeObject(
-    key: string,
-    body: Uint8Array | string,
-    contentType: string,
-  ): Promise<void> {
+  private async writeObject(key: string, body: Uint8Array | string, contentType: string): Promise<void> {
     const path = this.pathOf(key);
-    const bytes =
-      typeof body === "string" ? new TextEncoder().encode(body) : body;
+    const bytes = typeof body === "string" ? new TextEncoder().encode(body) : body;
     await this.refuseBelowFloor(bytes.byteLength);
     const folder = dirname(path);
     const firstCreated = await mkdir(folder, { recursive: true });
@@ -263,10 +241,7 @@ export class DiskObjectStorage extends ObjectStorage {
     return `${this.publicPathPrefix()}?${query.toString()}`;
   }
 
-  async getSignedUpload(
-    key: string,
-    request: SignedUploadRequest,
-  ): Promise<SignedUpload> {
+  async getSignedUpload(key: string, request: SignedUploadRequest): Promise<SignedUpload> {
     this.pathOf(key);
     const expires = this.expiryAfter(request.expiresInSeconds);
     const sig = await this.sign(uploadSignedFields(key, expires, request));
@@ -316,9 +291,7 @@ export class DiskObjectStorage extends ObjectStorage {
     if (folderPart.startsWith("/") || segments.some(isUnsafeSegment)) {
       throw new InvalidObjectKey(prefix);
     }
-    const found = await listFilesUnder(
-      join(this.objectsDirectory, ...segments),
-    );
+    const found = await listFilesUnder(join(this.objectsDirectory, ...segments));
     return found
       .map((relative) => folderPart + relative)
       .filter((key) => key.startsWith(prefix) && isObjectFileName(key))
@@ -330,9 +303,7 @@ export class DiskObjectStorage extends ObjectStorage {
    * signature, a key outside the root, or a missing or corrupt file, so the
    * route answers all of them the same 404.
    */
-  async readSignedDownload(
-    query: SignedDownloadQuery,
-  ): Promise<OpenedSignedDownload | null> {
+  async readSignedDownload(query: SignedDownloadQuery): Promise<OpenedSignedDownload | null> {
     if (!isValidKey(query.key)) return null;
     const remainingSeconds = this.remainingSeconds(query.expires);
     if (remainingSeconds === null) return null;
@@ -346,11 +317,8 @@ export class DiskObjectStorage extends ObjectStorage {
    * Stores a signed upload only when the link, its expiry and the bytes all
    * match what was signed; anything else stores nothing.
    */
-  async receiveSignedUpload(
-    upload: ReceivedSignedUpload,
-  ): Promise<"stored" | "refused"> {
-    if (!isValidKey(upload.key) || !HEX_SHA256.test(upload.sha256))
-      return "refused";
+  async receiveSignedUpload(upload: ReceivedSignedUpload): Promise<"stored" | "refused"> {
+    if (!isValidKey(upload.key) || !HEX_SHA256.test(upload.sha256)) return "refused";
     if (this.remainingSeconds(upload.expires) === null) return "refused";
     const signed = uploadSignedFields(upload.key, upload.expires, upload);
     if (!(await this.signatureMatches(signed, upload.sig))) return "refused";
@@ -390,9 +358,7 @@ export class DiskObjectStorage extends ObjectStorage {
    * link, an upload id or part number out of shape, or a key outside the
    * root, so the route answers all of them the same 404.
    */
-  async readSignedPartUpload(
-    query: SignedPartUploadQuery,
-  ): Promise<SignedPartUpload | null> {
+  async readSignedPartUpload(query: SignedPartUploadQuery): Promise<SignedPartUpload | null> {
     const part = partNamedByQuery(query);
     if (part === null || !isValidKey(query.key)) return null;
     if (this.remainingSeconds(query.expires) === null) return null;
@@ -416,8 +382,7 @@ export class DiskObjectStorage extends ObjectStorage {
   checkWritable(): Promise<void> {
     const now = this.options.clock().getTime();
     const last = this.lastWriteProbe;
-    if (last !== null && now - last.at < WRITE_PROBE_INTERVAL_MS)
-      return last.outcome;
+    if (last !== null && now - last.at < WRITE_PROBE_INTERVAL_MS) return last.outcome;
     const outcome = this.probeWrite();
     // The cached outcome is awaited by each caller; this keeps a failed
     // probe from also counting as unhandled.
@@ -439,10 +404,7 @@ export class DiskObjectStorage extends ObjectStorage {
   private async refuseBelowFloor(incomingBytes: number): Promise<void> {
     await mkdir(this.options.rootDirectory, { recursive: true });
     const space = await this.freeSpace(this.options.rootDirectory);
-    const floorBytes = Math.max(
-      FLOOR_MIN_BYTES,
-      Math.ceil(space.totalBytes * FLOOR_SHARE_OF_VOLUME),
-    );
+    const floorBytes = Math.max(FLOOR_MIN_BYTES, Math.ceil(space.totalBytes * FLOOR_SHARE_OF_VOLUME));
     if (space.freeBytes - incomingBytes >= floorBytes) return;
     this.options.log.warn(
       { event: "site.files.disk_low", freeBytes: space.freeBytes, floorBytes },
@@ -482,15 +444,9 @@ export class DiskObjectStorage extends ObjectStorage {
       .digest("hex");
   }
 
-  private async signatureMatches(
-    fields: readonly string[],
-    received: string,
-  ): Promise<boolean> {
+  private async signatureMatches(fields: readonly string[], received: string): Promise<boolean> {
     if (!HEX_SHA256.test(received)) return false;
-    return timingSafeEqual(
-      Buffer.from(await this.sign(fields), "hex"),
-      Buffer.from(received, "hex"),
-    );
+    return timingSafeEqual(Buffer.from(await this.sign(fields), "hex"), Buffer.from(received, "hex"));
   }
 }
 
@@ -499,14 +455,7 @@ function uploadSignedFields(
   expires: string,
   request: Pick<SignedUploadRequest, "contentType" | "byteSize" | "sha256">,
 ): string[] {
-  return [
-    "PUT",
-    key,
-    expires,
-    request.contentType,
-    String(request.byteSize),
-    request.sha256,
-  ];
+  return ["PUT", key, expires, request.contentType, String(request.byteSize), request.sha256];
 }
 
 /** A plain relative key under the root that names an object, never a sidecar or temp file. */
@@ -517,13 +466,7 @@ export function isValidKey(key: string): boolean {
 }
 
 function isUnsafeSegment(segment: string): boolean {
-  return (
-    segment === "" ||
-    segment === "." ||
-    segment === ".." ||
-    segment.includes("\\") ||
-    segment.includes("\u0000")
-  );
+  return segment === "" || segment === "." || segment === ".." || segment.includes("\\") || segment.includes("\u0000");
 }
 
 /** A sidecar or a temp file is never an object. */

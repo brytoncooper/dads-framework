@@ -11,9 +11,7 @@ import {
 import { WorkbenchError } from "./operations/workbench-error.js";
 
 /** Only the HTTP edge translates application failures into the public HTTP contract. */
-export async function routeOutcome<Result>(
-  operation: () => Promise<Result>,
-): Promise<Result> {
+export async function routeOutcome<Result>(operation: () => Promise<Result>): Promise<Result> {
   try {
     return await operation();
   } catch (error: unknown) {
@@ -30,15 +28,9 @@ export async function routeOutcome<Result>(
       throw conflict(workbenchConflict.code, workbenchConflict.defaultMessage);
     }
     if (error.code === "AUTHORIZATION_UNAVAILABLE") {
-      throw new ServiceUnavailableError(
-        authorizationUnavailable.code,
-        authorizationUnavailable.defaultMessage,
-      );
+      throw new ServiceUnavailableError(authorizationUnavailable.code, authorizationUnavailable.defaultMessage);
     }
-    throw new ServiceUnavailableError(
-      relationshipsPending.code,
-      relationshipsPending.defaultMessage,
-    );
+    throw new ServiceUnavailableError(relationshipsPending.code, relationshipsPending.defaultMessage);
   }
 }
 

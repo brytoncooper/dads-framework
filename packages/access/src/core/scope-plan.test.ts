@@ -47,9 +47,7 @@ describe("compileScopePlan", () => {
   });
 
   it("lowers every operator and inlines the sibling permission", () => {
-    expect(
-      describeScopePlan(compileScopePlan(model, "test/folder", "view")),
-    ).toBe(
+    expect(describeScopePlan(compileScopePlan(model, "test/folder", "view"))).toBe(
       [
         "any(",
         "lookup(home_site: test/site#view_records), ",
@@ -93,35 +91,25 @@ describe("compileScopePlan", () => {
   });
 
   it("walks into another bound record with via", () => {
-    expect(
-      describeScopePlan(compileScopePlan(model, "test/sheet", "view")),
-    ).toBe(
+    expect(describeScopePlan(compileScopePlan(model, "test/sheet", "view"))).toBe(
       "all(via(folder: test/folder, any(lookup(home_site: test/site#view_records), lookup(shared_site: test/site#view_records))), lookup(site: test/site#view_records))",
     );
   });
 
   it("merges walks through the same role inside any", () => {
-    expect(
-      describeScopePlan(
-        compileScopePlan(model, "test/sheet", "view_or_manage_folder"),
-      ),
-    ).toBe(
+    expect(describeScopePlan(compileScopePlan(model, "test/sheet", "view_or_manage_folder"))).toBe(
       "via(folder: test/folder, any(lookup(home_site: test/site#view_records), lookup(shared_site: test/site#view_records), lookup(home_site: test/site#manage_records)))",
     );
   });
 
   it("refuses a direct role that is not a tag or sparse grant", () => {
-    expect(() =>
-      compileScopePlan(model, "test/folder", "read_directly"),
-    ).toThrow(
+    expect(() => compileScopePlan(model, "test/folder", "read_directly")).toThrow(
       "test/folder.read_directly: role reader is bound as scope-column but used directly; a direct role must be bound as tag or sparse-direct",
     );
   });
 
   it("refuses an unbound role", () => {
-    expect(
-      planScope(scopeSchema(model), "test/folder", "view_unbound"),
-    ).toEqual({
+    expect(planScope(scopeSchema(model), "test/folder", "view_unbound")).toEqual({
       plan: undefined,
       failures: [
         {
@@ -136,13 +124,7 @@ describe("compileScopePlan", () => {
     const registered = scopeSchema(model);
     const lookupAllowlist = new Set(registered.lookupAllowlist);
     lookupAllowlist.delete("test/site");
-    expect(() =>
-      compileScopePlanInSchema(
-        { ...registered, lookupAllowlist },
-        "test/folder",
-        "view_on_site",
-      ),
-    ).toThrow(
+    expect(() => compileScopePlanInSchema({ ...registered, lookupAllowlist }, "test/folder", "view_on_site")).toThrow(
       "role home_site points at test/site, which is neither in allowLookupResourcesOn nor a record with scope bindings",
     );
   });
@@ -152,9 +134,7 @@ describe("compileScopePlan", () => {
       bindings: [bindSheet()],
       allowLookupResourcesOn: [site],
     });
-    expect(
-      planScope(scopeSchema(unboundFolderModel), "test/sheet", "view").failures,
-    ).toEqual([
+    expect(planScope(scopeSchema(unboundFolderModel), "test/sheet", "view").failures).toEqual([
       {
         path: "test/sheet.view",
         message:
@@ -170,9 +150,7 @@ describe("compileScopePlan", () => {
         scopeBindings(beta, { peer: { kind: "scope-column" } }),
       ],
     });
-    expect(
-      planScope(scopeSchema(cyclicModel), "test/alpha", "view").failures,
-    ).toEqual([
+    expect(planScope(scopeSchema(cyclicModel), "test/alpha", "view").failures).toEqual([
       {
         path: "test/alpha.view → via peer → test/beta.view → via peer → test/alpha.view",
         message: "cycle: the rules reach this permission again",
@@ -207,9 +185,7 @@ describe("isLookupResourcesAllowed & isSparseDirectGrant", () => {
   });
 
   it("rejects allowLookupResourcesOn naming a missing definition", () => {
-    expect(() =>
-      compileAccess([site], { allowLookupResourcesOn: ["test/missing"] }),
-    ).toThrow(
+    expect(() => compileAccess([site], { allowLookupResourcesOn: ["test/missing"] })).toThrow(
       "allowLookupResourcesOn names missing access definition test/missing",
     );
   });
@@ -236,8 +212,7 @@ describe("checkScopeBindings", () => {
     expect(checkScopeBindings(model)).toEqual([
       {
         path: "test/folder.view",
-        message:
-          "test/folder is listed in allowLookupResourcesOn but also has scope bindings",
+        message: "test/folder is listed in allowLookupResourcesOn but also has scope bindings",
       },
     ]);
   });
@@ -253,9 +228,7 @@ describe("checkScopeBindings", () => {
       bindings: [binding, bindSheet()],
       allowLookupResourcesOn: [site],
     });
-    expect(checkScopeBindings(model)).toEqual([
-      { path: "test/folder.view", message: "role draft_site is not bound" },
-    ]);
+    expect(checkScopeBindings(model)).toEqual([{ path: "test/folder.view", message: "role draft_site is not bound" }]);
   });
 
   it("reports a cycle", () => {

@@ -1,8 +1,4 @@
-import {
-  abortPgTransaction,
-  releasePgClient,
-  type PgTransactionState,
-} from "./pg-transaction-lifecycle.js";
+import { abortPgTransaction, releasePgClient, type PgTransactionState } from "./pg-transaction-lifecycle.js";
 import type { PostgresAuthorization } from "./postgres-authorization.js";
 import type { PgClientLike, PgPoolLike } from "./postgres-types.js";
 import {
@@ -41,12 +37,7 @@ export async function withReadSnapshot<Client extends PgClientLike, Result>(
     destroyClient: false,
   };
   try {
-    return await executeReadSnapshot(
-      client,
-      options.authorization,
-      work,
-      state,
-    );
+    return await executeReadSnapshot(client, options.authorization, work, state);
   } catch (error) {
     state.destroyClient = await abortPgTransaction(client, state);
     throw error;
@@ -61,9 +52,7 @@ async function executeReadSnapshot<Client extends PgClientLike, Result>(
   work: (scope: ReadSnapshotScope<Client>) => PromiseLike<Result>,
   state: PgTransactionState,
 ): Promise<Result> {
-  await client.query(
-    "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
-  );
+  await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
   state.began = true;
   const scope = openProtectedAuthorizationScope(authorization, client, client);
   let result: Result;

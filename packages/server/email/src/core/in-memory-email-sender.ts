@@ -1,8 +1,4 @@
-import {
-  EmailSender,
-  type EmailMessage,
-  type EmailSendReceipt,
-} from "./email-sender.js";
+import { EmailSender, type EmailMessage, type EmailSendReceipt } from "./email-sender.js";
 
 /**
  * Inspectable stand-in for tests: captures every message in `sent` so a test

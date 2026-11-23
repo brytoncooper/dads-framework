@@ -1,8 +1,4 @@
-import type {
-  DndContextProps,
-  DragEndEvent,
-  UniqueIdentifier,
-} from "@dnd-kit/core";
+import type { DndContextProps, DragEndEvent, UniqueIdentifier } from "@dnd-kit/core";
 import type { SortableContextProps } from "@dnd-kit/sortable";
 import type { ReactNode } from "react";
 
@@ -40,16 +36,13 @@ export type SortableRuntimeProps<T> = DragContextOptions &
   Partial<GetItemValue<T>> & {
     value: T[];
     onValueChange?: (items: T[]) => void;
-    onMove?: (
-      event: DragEndEvent & { activeIndex: number; overIndex: number },
-    ) => void;
+    onMove?: (event: DragEndEvent & { activeIndex: number; overIndex: number }) => void;
     strategy?: NonNullable<SortableContextProps["strategy"]>;
     orientation?: "vertical" | "horizontal" | "mixed";
     flatCursor?: boolean;
   };
 
-export type SortableProps<T> = SortableRuntimeProps<T> &
-  (T extends object ? GetItemValue<T> : unknown);
+export type SortableProps<T> = SortableRuntimeProps<T> & (T extends object ? GetItemValue<T> : unknown);
 
 /** The generic component signature kept separate from its JSX implementation. */
 export type SortableComponent = <T>(props: SortableProps<T>) => ReactNode;

@@ -2,20 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  parseTestingManifest,
-  type TestingManifest,
-} from "../testing-manifest.js";
+import { parseTestingManifest, type TestingManifest } from "../testing-manifest.js";
 import { checkTestingManifest } from "./check-testing-manifest.js";
 
-const repositoryRoot = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-);
+const repositoryRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "..", "..", "..");
 
 function validManifest(): TestingManifest {
   return {
@@ -77,36 +67,29 @@ describe("generated manifest checking", () => {
         ...manifest,
         workspace: { ...manifest.workspace, root: "../elsewhere" },
       }),
-      message:
-        "workspace.root must be a workspace-relative path without parent traversal.",
+      message: "workspace.root must be a workspace-relative path without parent traversal.",
     },
     {
       name: "a project id outside the identifier charset",
-      break: (manifest) =>
-        withProject(manifest, (project) => ({ ...project, id: "core/api" })),
+      break: (manifest) => withProject(manifest, (project) => ({ ...project, id: "core/api" })),
       message: "project id must use letters, numbers, -, _, ., or :.",
     },
     {
       name: "an empty project id",
-      break: (manifest) =>
-        withProject(manifest, (project) => ({ ...project, id: "" })),
+      break: (manifest) => withProject(manifest, (project) => ({ ...project, id: "" })),
       message: "project id must use letters, numbers, -, _, ., or :.",
     },
     {
       name: "two projects with the same id",
       break: (manifest) => ({
         ...manifest,
-        projects: [
-          ...manifest.projects,
-          { id: "core", root: "apps/other", fallbackDependencies: [] },
-        ],
+        projects: [...manifest.projects, { id: "core", root: "apps/other", fallbackDependencies: [] }],
       }),
       message: "Duplicate project id core.",
     },
     {
       name: "an empty project root",
-      break: (manifest) =>
-        withProject(manifest, (project) => ({ ...project, root: "" })),
+      break: (manifest) => withProject(manifest, (project) => ({ ...project, root: "" })),
       message: "project.root must not be empty.",
     },
     {
@@ -116,8 +99,7 @@ describe("generated manifest checking", () => {
           ...project,
           root: "../packages/core",
         })),
-      message:
-        "project.root must be a workspace-relative path without parent traversal.",
+      message: "project.root must be a workspace-relative path without parent traversal.",
     },
     {
       name: "a project that falls back to itself",
@@ -156,8 +138,7 @@ describe("generated manifest checking", () => {
     },
     {
       name: "a task in a project no manifest declares",
-      break: (manifest) =>
-        withTask(manifest, (task) => ({ ...task, project: "ghost" })),
+      break: (manifest) => withTask(manifest, (task) => ({ ...task, project: "ghost" })),
       message: "Task core:test references unknown project ghost.",
     },
     {
@@ -176,8 +157,7 @@ describe("generated manifest checking", () => {
           ...task,
           execution: { ...task.execution, cwd: "../packages/core" },
         })),
-      message:
-        "execution.cwd must be a workspace-relative path without parent traversal.",
+      message: "execution.cwd must be a workspace-relative path without parent traversal.",
     },
     {
       name: "an impact path above the workspace",
@@ -186,8 +166,7 @@ describe("generated manifest checking", () => {
           ...task,
           impact: { mode: "changed-files", paths: ["../shared"] },
         })),
-      message:
-        "impact.paths must be a workspace-relative path without parent traversal.",
+      message: "impact.paths must be a workspace-relative path without parent traversal.",
     },
     {
       name: "changed-files impact without paths",
@@ -200,14 +179,12 @@ describe("generated manifest checking", () => {
     },
     {
       name: "a task that depends on itself",
-      break: (manifest) =>
-        withTask(manifest, (task) => ({ ...task, dependsOn: ["core:test"] })),
+      break: (manifest) => withTask(manifest, (task) => ({ ...task, dependsOn: ["core:test"] })),
       message: "Task core:test cannot depend on itself.",
     },
     {
       name: "a dependency no task declares",
-      break: (manifest) =>
-        withTask(manifest, (task) => ({ ...task, dependsOn: ["ghost"] })),
+      break: (manifest) => withTask(manifest, (task) => ({ ...task, dependsOn: ["ghost"] })),
       message: "Task core:test references unknown dependency ghost.",
     },
     {
@@ -215,9 +192,7 @@ describe("generated manifest checking", () => {
       break: (manifest) => ({
         ...manifest,
         tasks: manifest.tasks.map((task) =>
-          task.id === "core:typecheck"
-            ? { ...task, dependsOn: ["core:test"] }
-            : task,
+          task.id === "core:typecheck" ? { ...task, dependsOn: ["core:test"] } : task,
         ),
       }),
       message: "Task dependency cycle includes core:typecheck.",
@@ -244,8 +219,7 @@ describe("generated manifest checking", () => {
           fullFallback: { taskIds: ["core:typecheck"] },
         },
       }),
-      message:
-        "workspace.fullFallback.taskIds must contain every declared task exactly once.",
+      message: "workspace.fullFallback.taskIds must contain every declared task exactly once.",
     },
     {
       name: "a manifest without tasks",
@@ -260,23 +234,15 @@ describe("generated manifest checking", () => {
 
   for (const violation of violations) {
     it(`reports ${violation.name}`, () => {
-      expect(checkTestingManifest(violation.break(validManifest()))).toContain(
-        violation.message,
-      );
+      expect(checkTestingManifest(violation.break(validManifest()))).toContain(violation.message);
     });
   }
 
-  const fixtures = [
-    "fixtures/testing/dads.testing.json",
-    "fixtures/testing-soundness/dads.testing.json",
-  ];
+  const fixtures = ["fixtures/testing/dads.testing.json", "fixtures/testing-soundness/dads.testing.json"];
 
   for (const fixture of fixtures) {
     it(`accepts ${fixture}`, () => {
-      const manifest = parseTestingManifest(
-        readFileSync(join(repositoryRoot, fixture), "utf8"),
-        fixture,
-      );
+      const manifest = parseTestingManifest(readFileSync(join(repositoryRoot, fixture), "utf8"), fixture);
 
       expect(checkTestingManifest(manifest)).toEqual([]);
     });
@@ -285,29 +251,21 @@ describe("generated manifest checking", () => {
 
 function withProject(
   manifest: TestingManifest,
-  change: (
-    project: TestingManifest["projects"][number],
-  ) => TestingManifest["projects"][number],
+  change: (project: TestingManifest["projects"][number]) => TestingManifest["projects"][number],
 ): TestingManifest {
   return {
     ...manifest,
-    projects: manifest.projects.map((project) =>
-      project.id === "core" ? change(project) : project,
-    ),
+    projects: manifest.projects.map((project) => (project.id === "core" ? change(project) : project)),
   };
 }
 
 function withTask(
   manifest: TestingManifest,
-  change: (
-    task: TestingManifest["tasks"][number],
-  ) => TestingManifest["tasks"][number],
+  change: (task: TestingManifest["tasks"][number]) => TestingManifest["tasks"][number],
 ): TestingManifest {
   return {
     ...manifest,
-    tasks: manifest.tasks.map((task) =>
-      task.id === "core:test" ? change(task) : task,
-    ),
+    tasks: manifest.tasks.map((task) => (task.id === "core:test" ? change(task) : task)),
   };
 }
 
@@ -318,9 +276,7 @@ function withTaskId(manifest: TestingManifest, id: string): TestingManifest {
       ...manifest.workspace,
       fullFallback: { taskIds: ["core:typecheck", id] },
     },
-    tasks: manifest.tasks.map((task) =>
-      task.id === "core:test" ? { ...task, id } : task,
-    ),
+    tasks: manifest.tasks.map((task) => (task.id === "core:test" ? { ...task, id } : task)),
   };
 }
 

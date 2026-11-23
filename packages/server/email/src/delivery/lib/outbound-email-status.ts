@@ -13,13 +13,7 @@ import { z } from "zod";
  *   action re-queues it; nothing resends on its own.
  * - `cancelled` — withdrawn before it was sent.
  */
-export const OUTBOUND_EMAIL_STATUS_VALUES = [
-  "queued",
-  "sending",
-  "sent",
-  "failed",
-  "cancelled",
-] as const;
+export const OUTBOUND_EMAIL_STATUS_VALUES = ["queued", "sending", "sent", "failed", "cancelled"] as const;
 
 export type OutboundEmailStatus = (typeof OUTBOUND_EMAIL_STATUS_VALUES)[number];
 

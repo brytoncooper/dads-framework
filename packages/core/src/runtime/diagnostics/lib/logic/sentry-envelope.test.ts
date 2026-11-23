@@ -36,9 +36,7 @@ describe("sentry destination", () => {
       projectId: "42",
     };
 
-    expect(sentryEnvelopeUrl(destination)).toBe(
-      "https://o1.ingest.us.sentry.io/api/42/envelope/",
-    );
+    expect(sentryEnvelopeUrl(destination)).toBe("https://o1.ingest.us.sentry.io/api/42/envelope/");
     expect(sentryAuthHeader(destination)).toBe(
       "Sentry sentry_version=7, sentry_key=publickey, sentry_client=dads-diagnostics/1.0",
     );
@@ -47,10 +45,7 @@ describe("sentry destination", () => {
 
 describe("buildSentryEnvelope", () => {
   it("is an envelope header, an item header, and the event", () => {
-    const lines = buildSentryEnvelope(
-      { error: errorWith("boom"), source: "request" },
-      CONTEXT,
-    ).split("\n");
+    const lines = buildSentryEnvelope({ error: errorWith("boom"), source: "request" }, CONTEXT).split("\n");
 
     expect(lines).toHaveLength(3);
     expect(JSON.parse(lines[0] ?? "")).toEqual({
@@ -94,40 +89,27 @@ describe("buildSentryEvent", () => {
   it("groups by our own fingerprint, so Sentry splits where request_log does", () => {
     const error = errorWith("boom");
 
+    expect(buildSentryEvent({ error, source: "request" }, CONTEXT)["fingerprint"]).toEqual([
+      describeException(error).fingerprint,
+    ]);
     expect(
-      buildSentryEvent({ error, source: "request" }, CONTEXT)["fingerprint"],
-    ).toEqual([describeException(error).fingerprint]);
-    expect(
-      buildSentryEvent(
-        { error, source: "request", fingerprint: "authz.lookup@/orgs/:id" },
-        CONTEXT,
-      )["fingerprint"],
+      buildSentryEvent({ error, source: "request", fingerprint: "authz.lookup@/orgs/:id" }, CONTEXT)["fingerprint"],
     ).toEqual(["authz.lookup@/orgs/:id"]);
   });
 
   it("reports a poisoned process as fatal and a guard warning as a warning", () => {
     const error = errorWith("boom");
 
-    expect(
-      buildSentryEvent({ error, source: "process" }, CONTEXT),
-    ).toMatchObject({
+    expect(buildSentryEvent({ error, source: "process" }, CONTEXT)).toMatchObject({
       level: "fatal",
       exception: { values: [{ mechanism: { handled: false } }] },
     });
-    expect(
-      buildSentryEvent(
-        { error, source: "request", severity: "warning" },
-        CONTEXT,
-      )["level"],
-    ).toBe("warning");
+    expect(buildSentryEvent({ error, source: "request", severity: "warning" }, CONTEXT)["level"]).toBe("warning");
   });
 
   it("names the job a fault came out of", () => {
     expect(
-      buildSentryEvent(
-        { error: errorWith("boom"), source: "job", jobName: "audit.prune" },
-        CONTEXT,
-      )["tags"],
+      buildSentryEvent({ error: errorWith("boom"), source: "job", jobName: "audit.prune" }, CONTEXT)["tags"],
     ).toEqual({ source: "job", job_name: "audit.prune" });
   });
 
@@ -179,10 +161,7 @@ describe("buildSentryEvent", () => {
 
   it("describes a thrown non-error without leaking its contents", () => {
     const serialized = JSON.stringify(
-      buildSentryEvent(
-        { error: { secret: "customer-private-value" }, source: "job" },
-        CONTEXT,
-      ),
+      buildSentryEvent({ error: { secret: "customer-private-value" }, source: "job" }, CONTEXT),
     );
 
     expect(serialized).not.toContain("customer-private-value");
@@ -216,8 +195,7 @@ describe("parseStackFrames", () => {
       },
       {
         function: "createOrder",
-        filename:
-          "/app/apps/service/domains/orders/server/src/lib/create-order.mutation.js",
+        filename: "/app/apps/service/domains/orders/server/src/lib/create-order.mutation.js",
         lineno: 88,
         colno: 15,
         in_app: true,

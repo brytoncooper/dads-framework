@@ -27,10 +27,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isRecord, isString, isUnknownArray } from "../parse-guards.js";
-import {
-  buildTypeScriptProgram,
-  type DoctorProgram,
-} from "./signals/scanners/typescript-program.js";
+import { buildTypeScriptProgram, type DoctorProgram } from "./signals/scanners/typescript-program.js";
 
 const PROJECT_FILE = "dads.project.json";
 const PACKAGE_MANIFEST = "package.json";
@@ -91,10 +88,7 @@ export type DoctorContext = {
   /** The declared packages, or the workspace manifests when none are declared. */
   packages(): readonly DoctorPackage[];
   /** The seam for a signal that cannot answer from the file tree. */
-  exec(
-    command: string,
-    commandArguments: readonly string[],
-  ): DoctorCommandResult;
+  exec(command: string, commandArguments: readonly string[]): DoctorCommandResult;
   /**
    * Whether this run was told it may reach the network. False unless the
    * caller said `--online`, so nothing reaches out by default and a report is
@@ -141,12 +135,7 @@ export type DoctorContextInput = {
    * TypeScript program, which is built from this list — rather than after.
    */
   readonly files?: readonly string[] | undefined;
-  readonly exec?:
-    | ((
-        command: string,
-        commandArguments: readonly string[],
-      ) => DoctorCommandResult)
-    | undefined;
+  readonly exec?: ((command: string, commandArguments: readonly string[]) => DoctorCommandResult) | undefined;
   /** Whether the run may reach the network at all. Default false. */
   readonly online?: boolean | undefined;
   /** The transport the requests go over. Default the global `fetch`. */
@@ -224,12 +213,7 @@ function listHandWrittenDirectories(path: string): readonly string[] {
     return [];
   }
   return entries
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        !isHidden(entry.name) &&
-        !SKIPPED_DIRECTORIES.has(entry.name),
-    )
+    .filter((entry) => entry.isDirectory() && !isHidden(entry.name) && !SKIPPED_DIRECTORIES.has(entry.name))
     .map((entry) => entry.name)
     .sort();
 }
@@ -282,9 +266,7 @@ function walkFiles(root: string, prefix: string): readonly string[] {
  * `package.json` otherwise. A repository that has not adopted Dads still has
  * packages, and the signals that read them still have something to read.
  */
-function readDeclaredPackages(
-  context: DoctorContext,
-): readonly DoctorPackage[] {
+function readDeclaredPackages(context: DoctorContext): readonly DoctorPackage[] {
   if (!context.exists(PROJECT_FILE)) return readManifestPackages(context);
   const parsed: unknown = JSON.parse(context.read(PROJECT_FILE));
   if (!isRecord(parsed)) return [];
@@ -313,9 +295,7 @@ function readDeclaredStrings(value: unknown): readonly string[] {
   return isUnknownArray(value) ? value.filter(isString) : [];
 }
 
-function readManifestPackages(
-  context: DoctorContext,
-): readonly DoctorPackage[] {
+function readManifestPackages(context: DoctorContext): readonly DoctorPackage[] {
   const found: DoctorPackage[] = [];
   for (const path of context.files()) {
     if (!path.endsWith(PACKAGE_MANIFEST)) continue;
@@ -333,10 +313,7 @@ function readManifestPackages(
   return found;
 }
 
-function readManifestName(
-  context: DoctorContext,
-  path: string,
-): string | undefined {
+function readManifestName(context: DoctorContext, path: string): string | undefined {
   try {
     const parsed: unknown = JSON.parse(context.read(path));
     if (!isRecord(parsed)) return undefined;
@@ -351,11 +328,7 @@ function readManifestName(
 // The world
 // ---------------------------------------------------------------------------
 
-function runCommand(
-  root: string,
-  command: string,
-  commandArguments: readonly string[],
-): DoctorCommandResult {
+function runCommand(root: string, command: string, commandArguments: readonly string[]): DoctorCommandResult {
   const finished = spawnSync(command, [...commandArguments], {
     cwd: root,
     encoding: "utf8",
@@ -380,10 +353,7 @@ export const NOT_MEASURED_OFFLINE = "not measured (offline)";
  * decides what a response means — the signal that asked names every field it
  * reads, and a sentence in a body is data rather than an instruction.
  */
-async function requestOnce(
-  input: DoctorContextInput,
-  url: string,
-): Promise<DoctorHttpResponse> {
+async function requestOnce(input: DoctorContextInput, url: string): Promise<DoctorHttpResponse> {
   if (input.online !== true) throw new Error(NOT_MEASURED_OFFLINE);
   const transport = input.fetch ?? globalThis.fetch;
   const answered = await transport(url, {

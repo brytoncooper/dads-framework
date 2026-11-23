@@ -42,14 +42,10 @@ export class MultipartImageUpload {
         partNumber: 1,
         byteSize: input.byteSize,
         expiresInSeconds: Math.floor(
-          ((input.uploadUrlExpiresAt ?? input.expiresAt).getTime() -
-            input.at.getTime()) /
-            1000,
+          ((input.uploadUrlExpiresAt ?? input.expiresAt).getTime() - input.at.getTime()) / 1000,
         ),
       }),
-      uploadUrlExpiresAt: (
-        input.uploadUrlExpiresAt ?? input.expiresAt
-      ).toISOString(),
+      uploadUrlExpiresAt: (input.uploadUrlExpiresAt ?? input.expiresAt).toISOString(),
     };
   }
 
@@ -62,19 +58,11 @@ export class MultipartImageUpload {
   ): Promise<StoredObject | null> {
     const parts = await this.transfers.listUploadedParts(input);
     if (parts && !isOneBoundedPart(parts, input.maxBytes)) return null;
-    if (parts)
-      await this.transfers.completeMultipartUpload({ ...input, parts });
+    if (parts) await this.transfers.completeMultipartUpload({ ...input, parts });
     const head = await this.transfers.headObject(input.key);
-    if (
-      !head ||
-      !validImageHead(head, input.contentType, input.maxBytes, input.at)
-    )
-      return null;
+    if (!head || !validImageHead(head, input.contentType, input.maxBytes, input.at)) return null;
     const stored = await this.objects.get(input.key);
-    return stored?.body.byteLength === head.byteSize &&
-      stored.contentType === head.contentType
-      ? stored
-      : null;
+    return stored?.body.byteLength === head.byteSize && stored.contentType === head.contentType ? stored : null;
   }
 
   async discardAfterProcessing(input: MultipartUploadRef): Promise<void> {
@@ -91,25 +79,12 @@ export class MultipartImageUpload {
   }
 }
 
-function isOneBoundedPart(
-  parts: readonly UploadedPart[],
-  maxBytes: number,
-): boolean {
+function isOneBoundedPart(parts: readonly UploadedPart[], maxBytes: number): boolean {
   const [part] = parts;
-  return (
-    parts.length === 1 &&
-    part?.partNumber === 1 &&
-    part.byteSize > 0 &&
-    part.byteSize <= maxBytes
-  );
+  return parts.length === 1 && part?.partNumber === 1 && part.byteSize > 0 && part.byteSize <= maxBytes;
 }
 
-function validImageHead(
-  head: StoredObjectHead,
-  contentType: string,
-  maxBytes: number,
-  at: Date,
-): boolean {
+function validImageHead(head: StoredObjectHead, contentType: string, maxBytes: number, at: Date): boolean {
   const expectedSize = Number(head.metadata["upload-byte-size"]);
   const expiresAt = Date.parse(head.metadata["upload-expires-at"] ?? "");
   return (

@@ -15,15 +15,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  isHardcodedCopy,
-  renderedCopySpans,
-} from "../scanners/rendered-copy.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { isHardcodedCopy, renderedCopySpans } from "../scanners/rendered-copy.js";
 import { evidenceAt } from "../scanners/typescript-program.js";
 import { readRendererScope } from "../scanners/web-renderers.js";
 
@@ -43,13 +36,11 @@ function countHardcodedCopy(context: DoctorContext): SignalReadings {
 export const hardcodedUiCopySignal: DoctorSignal = {
   id: "hardcoded-ui-copy",
   issue: "you-are-looking-for-a-father-figure",
-  question:
-    "Does a renderer in a package that uses a copy catalog write customer-visible words inline?",
+  question: "Does a renderer in a package that uses a copy catalog write customer-visible words inline?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "If you do not own the language, you will speak whoever is loudest.",
+  sentence: "If you do not own the language, you will speak whoever is loudest.",
   run: (context) => Promise.resolve(countHardcodedCopy(context)),
 };

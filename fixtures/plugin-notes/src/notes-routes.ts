@@ -1,9 +1,4 @@
-import {
-  fromParam,
-  getRoute,
-  type HttpRoute,
-  routeGroup,
-} from "@dads-framework/http";
+import { fromParam, getRoute, type HttpRoute, routeGroup } from "@dads-framework/http";
 import { z } from "zod";
 
 import { noteAccess } from "./notes-access.js";

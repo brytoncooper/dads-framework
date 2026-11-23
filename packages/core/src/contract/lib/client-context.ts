@@ -78,10 +78,7 @@ const BASE64URL_PATTERN = /^[A-Za-z0-9_-]*$/;
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** base64url text back to UTF-8 bytes, or `null` for anything not valid base64url. */
@@ -120,9 +117,7 @@ export function encodeClientContext(context: ClientContext): string {
  * caller can log it and move on rather than reject the request over a
  * debugging header.
  */
-export function decodeClientContext(
-  headerValue: string | undefined,
-): ClientContext | null {
+export function decodeClientContext(headerValue: string | undefined): ClientContext | null {
   if (headerValue === undefined) return null;
   if (headerValue.length > CLIENT_CONTEXT_MAX_BYTES) return null;
 

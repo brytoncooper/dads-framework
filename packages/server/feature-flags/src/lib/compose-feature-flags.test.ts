@@ -61,9 +61,7 @@ describe("composeFeatureFlags", () => {
         ...defaultFeatureFlagState(publicFlag.slug),
         audienceMode: "SELECTED_TENANTS",
         revision: 1,
-        rememberedTenants: [
-          { tenantId: "t-1", tenantName: "One", enabledAt: NOW.toISOString() },
-        ],
+        rememberedTenants: [{ tenantId: "t-1", tenantName: "One", enabledAt: NOW.toISOString() }],
       },
     ]);
     expect(await flags.publicState.execute()).toEqual({ features: [] });
@@ -85,22 +83,16 @@ describe("composeFeatureFlags", () => {
       everyone(publicFlag.slug, "2026-09-01T12:00:00.000Z"),
       {
         ...everyone(privateFlag.slug, "2026-09-01T12:00:00.000Z"),
-        rememberedTenants: [
-          { tenantId: "t-1", tenantName: "Old name", enabledAt: null },
-        ],
+        rememberedTenants: [{ tenantId: "t-1", tenantName: "Old name", enabledAt: null }],
       },
       everyone("orders.deleted-from-code", "2026-01-01T00:00:00.000Z"),
     ]);
     const list = await flags.management.execute();
-    expect(
-      list.flags.map((flag) => [flag.definition.slug, flag.cleanupReady]),
-    ).toEqual([
+    expect(list.flags.map((flag) => [flag.definition.slug, flag.cleanupReady])).toEqual([
       [publicFlag.slug, true],
       [privateFlag.slug, false],
     ]);
-    expect(list.flags[1]?.state.rememberedTenants[0]?.tenantName).toBe(
-      "Renamed",
-    );
+    expect(list.flags[1]?.state.rememberedTenants[0]?.tenantName).toBe("Renamed");
   });
 
   it("answers history only for a defined flag", async () => {
@@ -119,9 +111,9 @@ describe("composeFeatureFlags", () => {
       tenants: new FakeTenantDirectory(),
       clock: new FixedClock(NOW),
     };
-    expect(() =>
-      composeFeatureFlags({ ...base, definitions: [publicFlag, publicFlag] }),
-    ).toThrow(/defined more than once/);
+    expect(() => composeFeatureFlags({ ...base, definitions: [publicFlag, publicFlag] })).toThrow(
+      /defined more than once/,
+    );
     expect(() =>
       composeFeatureFlags({
         ...base,

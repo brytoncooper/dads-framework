@@ -7,17 +7,13 @@
  */
 
 export type SchemaDiffClassification =
-  | { readonly kind: "additive" }
-  | { readonly kind: "destructive"; readonly removals: readonly string[] };
+  { readonly kind: "additive" } | { readonly kind: "destructive"; readonly removals: readonly string[] };
 
 type ParsedDefinition = {
   readonly relations: ReadonlyMap<string, readonly string[]>;
 };
 
-export function classifySchemaDiff(
-  previousSchema: string,
-  nextSchema: string,
-): SchemaDiffClassification {
+export function classifySchemaDiff(previousSchema: string, nextSchema: string): SchemaDiffClassification {
   const previous = parseZedDefinitions(previousSchema);
   const next = parseZedDefinitions(nextSchema);
 
@@ -29,14 +25,10 @@ export function classifySchemaDiff(
       removals.push(`definition ${definitionName}`);
       continue;
     }
-    removals.push(
-      ...relationRemovals(definitionName, previousDefinition, nextDefinition),
-    );
+    removals.push(...relationRemovals(definitionName, previousDefinition, nextDefinition));
   }
 
-  return removals.length > 0
-    ? { kind: "destructive", removals }
-    : { kind: "additive" };
+  return removals.length > 0 ? { kind: "destructive", removals } : { kind: "additive" };
 }
 
 function relationRemovals(
@@ -53,9 +45,7 @@ function relationRemovals(
     }
     for (const allowedType of previousTypes) {
       if (!nextTypes.includes(allowedType)) {
-        removals.push(
-          `allowed type ${allowedType} on ${definitionName}#${relationName}`,
-        );
+        removals.push(`allowed type ${allowedType} on ${definitionName}#${relationName}`);
       }
     }
   }
@@ -68,9 +58,7 @@ function relationRemovals(
  * deliberately not tracked: they store nothing, so changing them never
  * blocks a schema write.
  */
-export function parseZedDefinitions(
-  schema: string,
-): ReadonlyMap<string, ParsedDefinition> {
+export function parseZedDefinitions(schema: string): ReadonlyMap<string, ParsedDefinition> {
   const parser = new ZedDefinitionParser();
   for (const rawLine of schema.split("\n")) {
     parser.consume(stripComment(rawLine).trim());

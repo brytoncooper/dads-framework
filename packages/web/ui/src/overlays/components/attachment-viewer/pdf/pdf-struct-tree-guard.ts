@@ -32,9 +32,6 @@ export function guardStructTree(target: StructTreeSource): void {
 /** True for anything that carries a callable `getStructTree`, such as pdf.js's page prototype. */
 export function isStructTreeSource(value: unknown): value is StructTreeSource {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    "getStructTree" in value &&
-    typeof value.getStructTree === "function"
+    typeof value === "object" && value !== null && "getStructTree" in value && typeof value.getStructTree === "function"
   );
 }

@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-  entityIdSchema,
-  paginationQuerySchema,
-} from "@dads-framework/core/contract";
+import { entityIdSchema, paginationQuerySchema } from "@dads-framework/core/contract";
 
 import {
   featureFlagAudienceModeSchema,
@@ -22,10 +19,7 @@ export const featureFlagActorIdSchema = z.string().trim().min(1).meta({
 });
 
 /** One management batch; every history entry it wrote carries it. */
-export const featureFlagBatchIdSchema = entityIdSchema(
-  "FeatureFlagBatchId",
-  "Atomic feature-flag management batch id",
-);
+export const featureFlagBatchIdSchema = entityIdSchema("FeatureFlagBatchId", "Atomic feature-flag management batch id");
 export type FeatureFlagBatchId = z.infer<typeof featureFlagBatchIdSchema>;
 
 export const featureFlagRevisionSchema = z.number().int().nonnegative().meta({
@@ -39,14 +33,11 @@ export const featureFlagRememberedTenantSchema = z
       description: "Tenant name for management display",
     }),
     enabledAt: z.iso.datetime().nullable().meta({
-      description:
-        "Time this tenant was last selected, ISO 8601 UTC; null while it is not selected",
+      description: "Time this tenant was last selected, ISO 8601 UTC; null while it is not selected",
     }),
   })
   .readonly();
-export type FeatureFlagRememberedTenant = z.infer<
-  typeof featureFlagRememberedTenantSchema
->;
+export type FeatureFlagRememberedTenant = z.infer<typeof featureFlagRememberedTenantSchema>;
 
 /**
  * Durable flag state. A flag with no stored row reads as its default:
@@ -79,17 +70,14 @@ export const featureFlagManagementListSchema = z
           definition: featureFlagDefinitionSchema,
           state: featureFlagStateSchema,
           cleanupReady: z.boolean().meta({
-            description:
-              "Whether this flag has been on for everyone long enough to remove",
+            description: "Whether this flag has been on for everyone long enough to remove",
           }),
         })
         .readonly(),
     ),
   })
   .readonly();
-export type FeatureFlagManagementList = z.infer<
-  typeof featureFlagManagementListSchema
->;
+export type FeatureFlagManagementList = z.infer<typeof featureFlagManagementListSchema>;
 
 export const featureFlagHistoryEntrySchema = z
   .strictObject({
@@ -101,19 +89,13 @@ export const featureFlagHistoryEntrySchema = z
     note: z.string().trim().min(1).optional().meta({
       description: "Optional operator note recorded for this revision",
     }),
-    changedAt: z.iso
-      .datetime()
-      .meta({ description: "Change time, ISO 8601 UTC" }),
+    changedAt: z.iso.datetime().meta({ description: "Change time, ISO 8601 UTC" }),
     changedBy: featureFlagActorIdSchema,
   })
   .readonly();
-export type FeatureFlagHistoryEntry = z.infer<
-  typeof featureFlagHistoryEntrySchema
->;
+export type FeatureFlagHistoryEntry = z.infer<typeof featureFlagHistoryEntrySchema>;
 
-export const featureFlagHistoryParamsSchema = z
-  .strictObject({ slug: featureFlagSlugSchema })
-  .readonly();
+export const featureFlagHistoryParamsSchema = z.strictObject({ slug: featureFlagSlugSchema }).readonly();
 export const featureFlagHistoryQuerySchema = paginationQuerySchema.strict();
 
 const selectedTenantIdsSchema = z
@@ -147,9 +129,7 @@ export const updateFeatureFlagInputSchema = z
     }),
   ])
   .readonly();
-export type UpdateFeatureFlagInput = z.infer<
-  typeof updateFeatureFlagInputSchema
->;
+export type UpdateFeatureFlagInput = z.infer<typeof updateFeatureFlagInputSchema>;
 
 export const updateFeatureFlagsRequestSchema = z
   .strictObject({
@@ -158,10 +138,6 @@ export const updateFeatureFlagsRequestSchema = z
     }),
   })
   .readonly();
-export type UpdateFeatureFlagsRequest = z.infer<
-  typeof updateFeatureFlagsRequestSchema
->;
+export type UpdateFeatureFlagsRequest = z.infer<typeof updateFeatureFlagsRequestSchema>;
 
-export const updateFeatureFlagsResponseSchema = z
-  .strictObject({ states: z.array(featureFlagStateSchema) })
-  .readonly();
+export const updateFeatureFlagsResponseSchema = z.strictObject({ states: z.array(featureFlagStateSchema) }).readonly();

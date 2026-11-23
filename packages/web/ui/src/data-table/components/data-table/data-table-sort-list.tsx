@@ -4,11 +4,7 @@ import * as React from "react";
 
 import { FormattedInteger } from "../../../copy/index.js";
 import { Badge, Button, cn } from "../../../elements/index.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../overlays/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { Sortable, SortableContent, SortableOverlay } from "../ui/sortable.js";
@@ -18,19 +14,12 @@ import { DataTableSortItem } from "./data-table-sort-item.js";
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
-type DataTableSortListProps<TData> = React.ComponentProps<
-  typeof PopoverContent
-> & {
+type DataTableSortListProps<TData> = React.ComponentProps<typeof PopoverContent> & {
   table: Table<TData>;
   disabled?: boolean;
 };
 
-export function DataTableSortList<TData>({
-  table,
-  disabled,
-  className,
-  ...props
-}: DataTableSortListProps<TData>) {
+export function DataTableSortList<TData>({ table, disabled, className, ...props }: DataTableSortListProps<TData>) {
   const t = useDataTableCopy();
   const id = React.useId();
   const labelId = React.useId();
@@ -41,26 +30,18 @@ export function DataTableSortList<TData>({
   const sorting = table.getState().sorting;
   const onSortingChange = table.setSorting;
 
-  const { columnLabels, columns } = React.useMemo(
-    () => readSortColumns(table, sorting),
-    [sorting, table],
-  );
+  const { columnLabels, columns } = React.useMemo(() => readSortColumns(table, sorting), [sorting, table]);
 
   const onSortAdd = React.useCallback(() => {
     const firstColumn = columns[0];
     if (!firstColumn) return;
 
-    onSortingChange((prevSorting) => [
-      ...prevSorting,
-      { id: firstColumn.id, desc: false },
-    ]);
+    onSortingChange((prevSorting) => [...prevSorting, { id: firstColumn.id, desc: false }]);
   }, [columns, onSortingChange]);
 
   const onSortUpdate = React.useCallback(
     (sortId: string, updates: Partial<ColumnSort>) => {
-      onSortingChange((prevSorting) =>
-        updateSort(prevSorting, sortId, updates),
-      );
+      onSortingChange((prevSorting) => updateSort(prevSorting, sortId, updates));
     },
     [onSortingChange],
   );
@@ -81,17 +62,12 @@ export function DataTableSortList<TData>({
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        (event.target instanceof HTMLElement &&
-          event.target.contentEditable === "true")
+        (event.target instanceof HTMLElement && event.target.contentEditable === "true")
       ) {
         return;
       }
 
-      if (
-        event.key.toLowerCase() === SORT_SHORTCUT_KEY &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey
-      ) {
+      if (event.key.toLowerCase() === SORT_SHORTCUT_KEY && (event.ctrlKey || event.metaKey) && event.shiftKey) {
         event.preventDefault();
         setOpen(toggleOpen);
       }
@@ -105,10 +81,7 @@ export function DataTableSortList<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        sorting.length > 0
-      ) {
+      if (REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase()) && sorting.length > 0) {
         event.preventDefault();
         onSortingReset();
       }
@@ -117,19 +90,10 @@ export function DataTableSortList<TData>({
   );
 
   return (
-    <Sortable
-      value={sorting}
-      onValueChange={onSortingChange}
-      getItemValue={(item) => item.id}
-    >
+    <Sortable value={sorting} onValueChange={onSortingChange} getItemValue={(item) => item.id}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="font-normal"
-            onKeyDown={onTriggerKeyDown}
-            disabled={disabled}
-          >
+          <Button variant="outline" className="font-normal" onKeyDown={onTriggerKeyDown} disabled={disabled}>
             <ArrowDownUp className="text-muted-foreground" />
             {t("dataTable.sort.trigger")}
             {sorting.length > 0 && (
@@ -153,28 +117,15 @@ export function DataTableSortList<TData>({
         >
           <div className="flex flex-col gap-1">
             <h4 id={labelId} className="font-medium leading-none">
-              {sorting.length > 0
-                ? t("dataTable.sort.heading.active")
-                : t("dataTable.sort.heading.empty")}
+              {sorting.length > 0 ? t("dataTable.sort.heading.active") : t("dataTable.sort.heading.empty")}
             </h4>
-            <p
-              id={descriptionId}
-              className={cn(
-                "text-muted-foreground text-sm",
-                sorting.length > 0 && "sr-only",
-              )}
-            >
-              {sorting.length > 0
-                ? t("dataTable.sort.description.active")
-                : t("dataTable.sort.description.empty")}
+            <p id={descriptionId} className={cn("text-muted-foreground text-sm", sorting.length > 0 && "sr-only")}>
+              {sorting.length > 0 ? t("dataTable.sort.description.active") : t("dataTable.sort.description.empty")}
             </p>
           </div>
           {sorting.length > 0 && (
             <SortableContent asChild>
-              <div
-                role="list"
-                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
-              >
+              <div role="list" className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
                 {sorting.map((sort) => (
                   <DataTableSortItem
                     key={sort.id}
@@ -190,20 +141,11 @@ export function DataTableSortList<TData>({
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
-            <Button
-              className="rounded"
-              ref={addButtonRef}
-              onClick={onSortAdd}
-              disabled={columns.length === 0}
-            >
+            <Button className="rounded" ref={addButtonRef} onClick={onSortAdd} disabled={columns.length === 0}>
               {t("dataTable.action.addSort")}
             </Button>
             {sorting.length > 0 && (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onSortingReset}
-              >
+              <Button variant="outline" className="rounded" onClick={onSortingReset}>
                 {t("dataTable.action.resetSorting")}
               </Button>
             )}
@@ -241,14 +183,8 @@ function toggleOpen(open: boolean): boolean {
   return !open;
 }
 
-function updateSort(
-  sorting: ColumnSort[],
-  id: string,
-  updates: Partial<ColumnSort>,
-) {
-  return sorting.map((sort) =>
-    sort.id === id ? { ...sort, ...updates } : sort,
-  );
+function updateSort(sorting: ColumnSort[], id: string, updates: Partial<ColumnSort>) {
+  return sorting.map((sort) => (sort.id === id ? { ...sort, ...updates } : sort));
 }
 
 function removeSort(sorting: ColumnSort[], id: string) {

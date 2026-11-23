@@ -3,8 +3,7 @@
   const storageKey = "dads-theme";
   const root = document.documentElement;
 
-  const getCurrentTheme = () =>
-    root.dataset.theme === "light" ? "light" : "dark";
+  const getCurrentTheme = () => (root.dataset.theme === "light" ? "light" : "dark");
 
   const applyTheme = (theme) => {
     root.dataset.theme = theme;

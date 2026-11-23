@@ -14,17 +14,9 @@ import type { JobQueue } from "@dads-framework/job-queue/core";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
 import type { EnqueueStarterEmail } from "../libraries/app-runtime/index.js";
-import {
-  starterMailTemplate,
-  starterMailTemplates,
-  renderStarterMail,
-} from "./local-mail-template.js";
+import { starterMailTemplate, starterMailTemplates, renderStarterMail } from "./local-mail-template.js";
 
-export function createLocalMail(
-  database: DrizzleHandle,
-  queue: JobQueue,
-  directory: string,
-) {
+export function createLocalMail(database: DrizzleHandle, queue: JobQueue, directory: string) {
   const store = new DrizzleOutboundEmailStore(database);
   const emailSender = spoolSender(directory);
   const clock = new SystemClock();
@@ -45,11 +37,7 @@ export function createLocalMail(
     catalog: starterMailTemplates,
   });
   const enqueueEmail: EnqueueStarterEmail = async ({ kind, to, url }) => {
-    await emailDelivery.sendNow(
-      starterMailTemplate,
-      { kind, url },
-      { to: [{ address: to }] },
-    );
+    await emailDelivery.sendNow(starterMailTemplate, { kind, url }, { to: [{ address: to }] });
   };
   return { jobs, enqueueEmail };
 }

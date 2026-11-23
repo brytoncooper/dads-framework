@@ -1,11 +1,7 @@
 import { objectStorageConformance } from "../testing.js";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { createHash } from "node:crypto";
-import {
-  GenericContainer,
-  type StartedTestContainer,
-  Wait,
-} from "testcontainers";
+import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { MultipartImageUpload } from "./multipart-image-upload.js";
@@ -44,9 +40,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
         MINIO_ROOT_PASSWORD: CREDENTIALS.secretAccessKey,
       })
       .withExposedPorts(MINIO_API_PORT)
-      .withWaitStrategy(
-        Wait.forHttp("/minio/health/live", MINIO_API_PORT).forStatusCode(200),
-      )
+      .withWaitStrategy(Wait.forHttp("/minio/health/live", MINIO_API_PORT).forStatusCode(200))
       .start();
 
     const endpoint = `http://${container.getHost()}:${container.getMappedPort(MINIO_API_PORT).toString()}`;
@@ -77,10 +71,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
     await run(objects);
   });
 
-  async function putPart(
-    url: string,
-    bytes: Uint8Array<ArrayBuffer>,
-  ): Promise<string> {
+  async function putPart(url: string, bytes: Uint8Array<ArrayBuffer>): Promise<string> {
     const response = await fetch(url, { method: "PUT", body: bytes });
     expect(response.status).toBe(200);
     const etag = response.headers.get("etag");
@@ -165,9 +156,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
       contentType: "application/x-test",
       metadata: { owner: "integration" },
     });
-    expect(await storage.readObjectPrefix(key, 16)).toEqual(
-      new Uint8Array(16).fill(0x41),
-    );
+    expect(await storage.readObjectPrefix(key, 16)).toEqual(new Uint8Array(16).fill(0x41));
 
     const downloadUrl = await storage.presignAttachmentDownload({
       key,
@@ -176,9 +165,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
     });
     const download = await fetch(downloadUrl);
     expect(download.status).toBe(200);
-    expect(download.headers.get("content-disposition")).toMatch(
-      /^attachment; filename=/,
-    );
+    expect(download.headers.get("content-disposition")).toMatch(/^attachment; filename=/);
     await download.arrayBuffer();
 
     await storage.deleteObject(key);
@@ -200,9 +187,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
 
   it("reports a missing object as null", async () => {
     expect(await storage.headObject("maintenance/test/missing.bin")).toBeNull();
-    expect(
-      await storage.readObjectPrefix("maintenance/test/missing.bin", 16),
-    ).toBeNull();
+    expect(await storage.readObjectPrefix("maintenance/test/missing.bin", 16)).toBeNull();
   });
 
   describe("write-once signed upload", () => {
@@ -214,9 +199,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
       readonly headers: Readonly<Record<string, string>>;
     }): Promise<Response> {
       // fetch sets Content-Length from the body; it matches the signed value.
-      const headers = Object.entries(upload.headers).filter(
-        ([name]) => name !== "content-length",
-      );
+      const headers = Object.entries(upload.headers).filter(([name]) => name !== "content-length");
       return fetch(upload.url, { method: "PUT", headers, body });
     }
 
@@ -284,9 +267,7 @@ describe("S3DirectTransferStorage against MinIO", () => {
     });
 
     it("reports a missing object as null", async () => {
-      expect(
-        await storage.headObjectChecksum("maintenance/uploads/test/missing"),
-      ).toBeNull();
+      expect(await storage.headObjectChecksum("maintenance/uploads/test/missing")).toBeNull();
     });
   });
 });

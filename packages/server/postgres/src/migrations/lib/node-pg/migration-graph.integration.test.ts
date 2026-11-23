@@ -6,18 +6,10 @@ import { Client } from "pg";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { defaultMigrationWorkspace } from "../../index.js";
 
-import {
-  inspectNodePgMigrations,
-  runNodePgMigrations,
-  stampNodePgJournalAsApplied,
-} from "../../index.js";
+import { inspectNodePgMigrations, runNodePgMigrations, stampNodePgJournalAsApplied } from "../../index.js";
 import { NODE_PG_GRAPH_PROTOCOL } from "./node-pg-journal.js";
 import { readAppliedNodePgJournal } from "../../journal-status.js";
-import {
-  createPrivateDatabase,
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "../../../testing/index.js";
+import { createPrivateDatabase, startUnmigratedTestPostgres, type TestPostgres } from "../../../testing/index.js";
 
 const FOLDER = "packages/server/probe/src/lib/database/migrations";
 const A = "20260101120000_alpha.migration";
@@ -58,24 +50,15 @@ describe("dependency migration journal", () => {
       databaseUrl: postgres.connectionString,
       workspace: defaultMigrationWorkspace(workspaceRoot),
     });
-  const writeMigration = (
-    name: string,
-    sql: string,
-    dependsOn?: readonly string[],
-  ) =>
+  const writeMigration = (name: string, sql: string, dependsOn?: readonly string[]) =>
     writeFile(
       join(workspaceRoot, FOLDER, `${name}.ts`),
-      (dependsOn === undefined
-        ? ""
-        : `export const dependsOn = ${JSON.stringify(dependsOn)};\n`) +
+      (dependsOn === undefined ? "" : `export const dependsOn = ${JSON.stringify(dependsOn)};\n`) +
         `export function up(pgm) { pgm.sql(${JSON.stringify(sql)}); }\nexport const down = false;\n`,
     );
 
   it("applies an earlier independent sibling after B is deployed without replaying B or losing data", async () => {
-    await writeMigration(
-      LEGACY,
-      "CREATE TABLE kept (id integer primary key, value text)",
-    );
+    await writeMigration(LEGACY, "CREATE TABLE kept (id integer primary key, value text)");
     await writeMigration(
       B,
       "CREATE TABLE beta (id integer primary key); INSERT INTO kept VALUES (1, 'B deployed')",
@@ -94,10 +77,9 @@ describe("dependency migration journal", () => {
       }),
     ).toBe("current");
 
-    expect(
-      (await postgres.pool.query<{ value: string }>("SELECT value FROM kept"))
-        .rows,
-    ).toEqual([{ value: "B deployed" }]);
+    expect((await postgres.pool.query<{ value: string }>("SELECT value FROM kept")).rows).toEqual([
+      { value: "B deployed" },
+    ]);
     expect(
       (
         await postgres.pool.query<{ name: string }>(
@@ -125,13 +107,9 @@ describe("dependency migration journal", () => {
     await writeMigration(B, "UPDATE kept SET value = 'preserved'", []);
     await writeMigration(A, "ALTER TABLE kept RENAME value TO renamed", [B]);
     await migrate();
-    expect(
-      (
-        await postgres.pool.query<{ renamed: string }>(
-          "SELECT renamed FROM kept",
-        )
-      ).rows,
-    ).toEqual([{ renamed: "preserved" }]);
+    expect((await postgres.pool.query<{ renamed: string }>("SELECT renamed FROM kept")).rows).toEqual([
+      { renamed: "preserved" },
+    ]);
   });
 
   it("refuses a missing prerequisite before any schema SQL", async () => {
@@ -200,11 +178,8 @@ describe("dependency migration journal", () => {
         }),
       ).rejects.toThrow(/preceding already run migration/);
       expect(
-        (
-          await client.query<{ table: string | null }>(
-            "SELECT to_regclass('public.must_not_exist')::text AS table",
-          )
-        ).rows,
+        (await client.query<{ table: string | null }>("SELECT to_regclass('public.must_not_exist')::text AS table"))
+          .rows,
       ).toEqual([{ table: null }]);
     } finally {
       await client.end();
@@ -212,47 +187,28 @@ describe("dependency migration journal", () => {
   });
 
   it("rolls back protocol marker, SQL and checksums on failure and safely resumes", async () => {
-    await writeMigration(
-      A,
-      "CREATE TABLE alpha (id integer); INSERT INTO prerequisite VALUES (1)",
-      [],
-    );
+    await writeMigration(A, "CREATE TABLE alpha (id integer); INSERT INTO prerequisite VALUES (1)", []);
     await expect(migrate()).rejects.toMatchObject({ code: "42P01" });
     expect(
-      (
-        await postgres.pool.query<{ table: string | null }>(
-          "SELECT to_regclass('public.alpha')::text AS table",
-        )
-      ).rows,
+      (await postgres.pool.query<{ table: string | null }>("SELECT to_regclass('public.alpha')::text AS table")).rows,
     ).toEqual([{ table: null }]);
     await postgres.pool.query("CREATE TABLE prerequisite (id integer)");
     await migrate();
     await migrate();
-    expect(
-      (await postgres.pool.query<{ id: number }>("SELECT id FROM prerequisite"))
-        .rows,
-    ).toEqual([{ id: 1 }]);
+    expect((await postgres.pool.query<{ id: number }>("SELECT id FROM prerequisite")).rows).toEqual([{ id: 1 }]);
   });
 
   describe("a file that exports ownTransaction", () => {
     const C = "20260101120002_gamma.migration";
-    const writeAlone = (
-      name: string,
-      sql: string,
-      dependsOn: readonly string[],
-    ) =>
+    const writeAlone = (name: string, sql: string, dependsOn: readonly string[]) =>
       writeFile(
         join(workspaceRoot, FOLDER, `${name}.ts`),
         `export const ownTransaction = true;\nexport const dependsOn = ${JSON.stringify(dependsOn)};\n` +
           `export function up(pgm) { pgm.sql(${JSON.stringify(sql)}); }\nexport const down = false;\n`,
       );
     const tableExists = async (name: string) =>
-      (
-        await postgres.pool.query<{ table: string | null }>(
-          "SELECT to_regclass($1)::text AS table",
-          [`public.${name}`],
-        )
-      ).rows[0]?.table === name;
+      (await postgres.pool.query<{ table: string | null }>("SELECT to_regclass($1)::text AS table", [`public.${name}`]))
+        .rows[0]?.table === name;
     const applied = async () =>
       (
         await postgres.pool.query<{ name: string }>(
@@ -264,11 +220,7 @@ describe("dependency migration journal", () => {
     it("stays applied and recorded when a later file fails, and a rerun resumes", async () => {
       await writeAlone(A, "CREATE TABLE alpha (id integer)", []);
       await writeMigration(B, "CREATE TABLE beta (id integer)", [A]);
-      await writeMigration(
-        C,
-        "CREATE TABLE gamma (id integer); INSERT INTO prerequisite VALUES (1)",
-        [B],
-      );
+      await writeMigration(C, "CREATE TABLE gamma (id integer); INSERT INTO prerequisite VALUES (1)", [B]);
 
       await expect(migrate()).rejects.toMatchObject({ code: "42P01" });
 
@@ -285,11 +237,7 @@ describe("dependency migration journal", () => {
 
     it("rolls back only itself on failure", async () => {
       await writeMigration(A, "CREATE TABLE alpha (id integer)", []);
-      await writeAlone(
-        B,
-        "CREATE TABLE beta (id integer); INSERT INTO prerequisite VALUES (1)",
-        [A],
-      );
+      await writeAlone(B, "CREATE TABLE beta (id integer); INSERT INTO prerequisite VALUES (1)", [A]);
 
       await expect(migrate()).rejects.toMatchObject({ code: "42P01" });
 
@@ -300,11 +248,7 @@ describe("dependency migration journal", () => {
 
     it("keeps files without the export in one transaction", async () => {
       await writeMigration(A, "CREATE TABLE alpha (id integer)", []);
-      await writeMigration(
-        B,
-        "CREATE TABLE beta (id integer); INSERT INTO prerequisite VALUES (1)",
-        [A],
-      );
+      await writeMigration(B, "CREATE TABLE beta (id integer); INSERT INTO prerequisite VALUES (1)", [A]);
 
       await expect(migrate()).rejects.toMatchObject({ code: "42P01" });
 
@@ -315,11 +259,7 @@ describe("dependency migration journal", () => {
 
   describe("a file that exports buildsIndexesConcurrently", () => {
     const INDEX = "widgets_code_idx";
-    const writeConcurrent = (
-      name: string,
-      body: string,
-      dependsOn: readonly string[],
-    ) =>
+    const writeConcurrent = (name: string, body: string, dependsOn: readonly string[]) =>
       writeFile(
         join(workspaceRoot, FOLDER, `${name}.ts`),
         `export const buildsIndexesConcurrently = true;\nexport const dependsOn = ${JSON.stringify(dependsOn)};\n` +
@@ -362,33 +302,20 @@ describe("dependency migration journal", () => {
         }),
       ).toBe("current");
 
-      await writeConcurrent(
-        B,
-        `pgm.sql('DROP INDEX CONCURRENTLY IF EXISTS "${INDEX}"');`,
-        [A],
-      );
+      await writeConcurrent(B, `pgm.sql('DROP INDEX CONCURRENTLY IF EXISTS "${INDEX}"');`, [A]);
       await migrate();
       expect(await indexState()).toEqual([]);
       expect(await journaled(B)).toBe(true);
     });
 
     it.each([
-      [
-        "other DDL",
-        'pgm.sql("ALTER TABLE widgets ADD COLUMN must_not_exist text");',
-      ],
-      [
-        "a non-concurrent index",
-        `pgm.createIndex("widgets", "code", { name: "${INDEX}", ifNotExists: true });`,
-      ],
+      ["other DDL", 'pgm.sql("ALTER TABLE widgets ADD COLUMN must_not_exist text");'],
+      ["a non-concurrent index", `pgm.createIndex("widgets", "code", { name: "${INDEX}", ifNotExists: true });`],
       [
         "a second statement behind an index",
         `pgm.sql("CREATE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX} ON widgets (code); ALTER TABLE widgets ADD COLUMN must_not_exist text");`,
       ],
-      [
-        "a direct query",
-        'await pgm.db.query("ALTER TABLE widgets ADD COLUMN must_not_exist text");',
-      ],
+      ["a direct query", 'await pgm.db.query("ALTER TABLE widgets ADD COLUMN must_not_exist text");'],
     ])("refuses %s before running any of its SQL", async (_label, body) => {
       await writeFile(
         join(workspaceRoot, FOLDER, `${A}.ts`),
@@ -432,9 +359,7 @@ describe("dependency migration journal", () => {
       await migrate();
       await postgres.pool.query("UPDATE widgets SET code = 'a'");
       await expect(
-        postgres.pool.query(
-          `CREATE UNIQUE INDEX CONCURRENTLY ${INDEX} ON widgets (code)`,
-        ),
+        postgres.pool.query(`CREATE UNIQUE INDEX CONCURRENTLY ${INDEX} ON widgets (code)`),
       ).rejects.toMatchObject({ code: "23505" });
       expect(await indexState()).toEqual(["invalid"]);
       await postgres.pool.query("UPDATE widgets SET code = 'b' WHERE id = 2");
@@ -447,11 +372,7 @@ describe("dependency migration journal", () => {
     });
 
     it("leaves a file without the export unable to build concurrently", async () => {
-      await writeMigration(
-        A,
-        `CREATE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX} ON widgets (code)`,
-        [],
-      );
+      await writeMigration(A, `CREATE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX} ON widgets (code)`, []);
 
       await expect(migrate()).rejects.toMatchObject({ code: "25001" });
       expect(await indexState()).toEqual([]);
@@ -493,18 +414,11 @@ describe("dependency migration journal", () => {
       code: "NODE_PG_MIGRATION_TRANSACTION_REQUIRED",
     });
     expect(
-      (
-        await postgres.pool.query<{ table: string | null }>(
-          "SELECT to_regclass('public.alpha')::text AS table",
-        )
-      ).rows,
+      (await postgres.pool.query<{ table: string | null }>("SELECT to_regclass('public.alpha')::text AS table")).rows,
     ).toEqual([{ table: null }]);
     expect(
-      (
-        await postgres.pool.query<{ count: string }>(
-          "SELECT count(*) FROM dads_migration.dads_node_pg_migrations",
-        )
-      ).rows,
+      (await postgres.pool.query<{ count: string }>("SELECT count(*) FROM dads_migration.dads_node_pg_migrations"))
+        .rows,
     ).toEqual([{ count: "0" }]);
   });
 
@@ -530,15 +444,10 @@ describe("dependency migration journal", () => {
   it("reports original applied names without exposing the protocol marker", async () => {
     await writeMigration(A, "CREATE TABLE alpha (id integer)", []);
     await migrate();
-    expect(
-      (await readAppliedNodePgJournal(postgres.pool)).map(
-        (entry) => entry.journalName,
-      ),
-    ).toEqual([A]);
-    await postgres.pool.query(
-      "DELETE FROM dads_migration.dads_node_pg_migrations WHERE name = $1",
-      [NODE_PG_GRAPH_PROTOCOL],
-    );
+    expect((await readAppliedNodePgJournal(postgres.pool)).map((entry) => entry.journalName)).toEqual([A]);
+    await postgres.pool.query("DELETE FROM dads_migration.dads_node_pg_migrations WHERE name = $1", [
+      NODE_PG_GRAPH_PROTOCOL,
+    ]);
     await expect(migrate()).rejects.toMatchObject({
       code: "NODE_PG_MIGRATION_PROTOCOL_MISSING",
     });
@@ -547,13 +456,10 @@ describe("dependency migration journal", () => {
   it("refuses duplicate protocol identities in applied history", async () => {
     await writeMigration(A, "CREATE TABLE alpha (id integer)", []);
     await migrate();
-    await postgres.pool.query(
-      "DROP TRIGGER dads_node_pg_checksums_on_apply ON dads_migration.dads_node_pg_migrations",
-    );
-    await postgres.pool.query(
-      "INSERT INTO dads_migration.dads_node_pg_migrations (name, run_on) VALUES ($1, NOW())",
-      [NODE_PG_GRAPH_PROTOCOL],
-    );
+    await postgres.pool.query("DROP TRIGGER dads_node_pg_checksums_on_apply ON dads_migration.dads_node_pg_migrations");
+    await postgres.pool.query("INSERT INTO dads_migration.dads_node_pg_migrations (name, run_on) VALUES ($1, NOW())", [
+      NODE_PG_GRAPH_PROTOCOL,
+    ]);
     await expect(migrate()).rejects.toMatchObject({
       code: "NODE_PG_MIGRATION_PROTOCOL_DUPLICATE",
     });

@@ -21,17 +21,11 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { guardScriptOf, wiredGuards } from "../scanners/text-agent-harness.js";
 
-const SPAWNS_A_TOOL =
-  /\b(?:spawnSync|spawn|execSync|execFileSync|execFile)\s*\(/;
-const HANDLES_ABSENCE =
-  /\b(?:existsSync|ENOENT|catch|command -v|which)\b|\.error\b/;
+const SPAWNS_A_TOOL = /\b(?:spawnSync|spawn|execSync|execFileSync|execFile)\s*\(/;
+const HANDLES_ABSENCE = /\b(?:existsSync|ENOENT|catch|command -v|which)\b|\.error\b/;
 
 function countGuardsThatFailClosed(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
@@ -51,13 +45,11 @@ function countGuardsThatFailClosed(context: DoctorContext): SignalReadings {
 export const guardsFailClosedSignal: DoctorSignal = {
   id: "guards-fail-closed",
   issue: "dad-has-issues-too",
-  question:
-    "Does any guard block a change when its own tool is missing, rather than failing open? (heuristic)",
+  question: "Does any guard block a change when its own tool is missing, rather than failing open? (heuristic)",
   reads: "text",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: null },
-  sentence:
-    "A missing tool fails open, because a house nobody can enter is not strict, it is empty.",
+  sentence: "A missing tool fails open, because a house nobody can enter is not strict, it is empty.",
   run: (context) => Promise.resolve(countGuardsThatFailClosed(context)),
 };

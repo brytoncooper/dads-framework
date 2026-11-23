@@ -22,11 +22,7 @@ export type RetiredTouch = {
  * Read `name`'s table activity through `database` — a connection to it the
  * caller owns and closes — and write it to the ledger before a drop.
  */
-export async function recordRetiredDatabaseTouches(
-  admin: Pool,
-  database: ClientBase,
-  name: string,
-): Promise<void> {
+export async function recordRetiredDatabaseTouches(admin: Pool, database: ClientBase, name: string): Promise<void> {
   const touched = (
     await database.query<{ schemaname: string; relname: string }>(`
       SELECT schemaname, relname
@@ -42,27 +38,17 @@ export async function recordRetiredDatabaseTouches(
      SELECT $1, t.schemaname, t.relname
      FROM unnest($2::text[], $3::text[]) AS t(schemaname, relname)
      UNION ALL SELECT $1, NULL, NULL`,
-    [
-      name,
-      touched.map((row) => row.schemaname),
-      touched.map((row) => row.relname),
-    ],
+    [name, touched.map((row) => row.schemaname), touched.map((row) => row.relname)],
   );
 }
 
 /** Ledger rows for databases whose names start with `test_<prefix>_`. */
-export async function readRetiredDatabaseTouches(
-  admin: Pool,
-  prefix: string,
-): Promise<RetiredTouch[]> {
+export async function readRetiredDatabaseTouches(admin: Pool, prefix: string): Promise<RetiredTouch[]> {
   return readLedger(admin, "starts_with(datname, $1)", `test_${prefix}_`);
 }
 
 /** Ledger rows for the one database `name`. */
-export async function readRetiredDatabaseTouchesOf(
-  admin: Pool,
-  name: string,
-): Promise<RetiredTouch[]> {
+export async function readRetiredDatabaseTouchesOf(admin: Pool, name: string): Promise<RetiredTouch[]> {
   return readLedger(admin, "datname = $1", name);
 }
 
@@ -71,10 +57,9 @@ async function readLedger(
   condition: "starts_with(datname, $1)" | "datname = $1",
   value: string,
 ): Promise<RetiredTouch[]> {
-  const exists = await admin.query<{ ledger: string | null }>(
-    "SELECT to_regclass($1)::text AS ledger",
-    [RETIRED_DATABASE_TOUCHES],
-  );
+  const exists = await admin.query<{ ledger: string | null }>("SELECT to_regclass($1)::text AS ledger", [
+    RETIRED_DATABASE_TOUCHES,
+  ]);
   if (exists.rows[0]?.ledger == null) return [];
   const rows = await admin.query<{
     datname: string;

@@ -19,9 +19,7 @@ export type {
  * that opens the driver. The factory returns the native client because the
  * legacy migration runner needs to hand the same session to node-pg-migrate.
  */
-export async function connectPostgresClient(
-  connectionString: string,
-): Promise<Client> {
+export async function connectPostgresClient(connectionString: string): Promise<Client> {
   const client = new Client({ connectionString });
   await client.connect();
   return client;

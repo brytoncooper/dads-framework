@@ -7,10 +7,9 @@ import { mapListResult } from "./list-result.js";
  */
 describe("mapListResult", () => {
   it("maps each row and preserves the total", () => {
-    const result = mapListResult(
-      { rows: [{ id: "one" }, { id: "two" }], total: 8 },
-      (row) => ({ value: row.id.toUpperCase() }),
-    );
+    const result = mapListResult({ rows: [{ id: "one" }, { id: "two" }], total: 8 }, (row) => ({
+      value: row.id.toUpperCase(),
+    }));
 
     expectTypeOf(result).toEqualTypeOf<{
       readonly items: readonly { value: string }[];
@@ -24,11 +23,9 @@ describe("mapListResult", () => {
   });
 
   it("maps an empty page without changing its total", () => {
-    expect(mapListResult({ rows: [], total: 12 }, (row: never) => row)).toEqual(
-      {
-        items: [],
-        total: 12,
-      },
-    );
+    expect(mapListResult({ rows: [], total: 12 }, (row: never) => row)).toEqual({
+      items: [],
+      total: 12,
+    });
   });
 });

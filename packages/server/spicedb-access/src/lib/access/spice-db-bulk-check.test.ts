@@ -4,9 +4,7 @@ import { measureWork } from "@dads-framework/core/runtime/request-work";
 
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
-type SpiceDbClient = NonNullable<
-  ConstructorParameters<typeof SpiceDbAuthorization>[1]
->;
+type SpiceDbClient = NonNullable<ConstructorParameters<typeof SpiceDbAuthorization>[1]>;
 type BulkCheck = NonNullable<SpiceDbClient["promises"]["checkBulkPermissions"]>;
 type BulkRequest = Parameters<BulkCheck>[0];
 type BulkResponse = Awaited<ReturnType<BulkCheck>>;
@@ -19,10 +17,7 @@ const QUERIES = Array.from({ length: 5 }, (_, index) => ({
   consistencyToken: "stale-token",
 }));
 
-function adapter(
-  checkBulkPermissions: BulkCheck,
-  onCheckItemError?: (error: Error) => void,
-) {
+function adapter(checkBulkPermissions: BulkCheck, onCheckItemError?: (error: Error) => void) {
   const unavailable = (): never => {
     throw new Error("Unexpected individual authorization call");
   };
@@ -68,13 +63,7 @@ describe("SpiceDB bulk permission checks", () => {
       return Promise.resolve({ pairs });
     });
 
-    await expect(authorization.checkMany(QUERIES)).resolves.toEqual([
-      true,
-      false,
-      false,
-      false,
-      false,
-    ]);
+    await expect(authorization.checkMany(QUERIES)).resolves.toEqual([true, false, false, false, false]);
     expect(requests).toEqual([
       {
         consistency: {
@@ -119,9 +108,7 @@ describe("SpiceDB bulk permission checks", () => {
       permission: "view",
     }));
 
-    await expect(authorization.checkMany(queries)).resolves.toEqual(
-      queries.map(() => true),
-    );
+    await expect(authorization.checkMany(queries)).resolves.toEqual(queries.map(() => true));
     expect(sizes).toEqual([128, 128, 1]);
   });
 
@@ -150,17 +137,11 @@ describe("SpiceDB bulk item errors", () => {
 
   it("gives each errored or unanswered item to checkEach's caller as a failure, and logs each", async () => {
     const logged: Error[] = [];
-    const authorization = adapter(answersWithErrors, (error) =>
-      logged.push(error),
-    );
+    const authorization = adapter(answersWithErrors, (error) => logged.push(error));
 
     const outcomes = await authorization.checkEach(asked);
 
-    expect(outcomes.map((outcome) => outcome.kind)).toEqual([
-      "answered",
-      "failed",
-      "failed",
-    ]);
+    expect(outcomes.map((outcome) => outcome.kind)).toEqual(["answered", "failed", "failed"]);
     expect(outcomes[0]).toEqual({ kind: "answered", allowed: true });
     expect(logged.map((error) => error.message)).toEqual([
       "SpiceDB could not answer view on test/document for a user in a bulk check (code 14): unavailable",
@@ -170,21 +151,16 @@ describe("SpiceDB bulk item errors", () => {
 
   it("denies checkMany's errored items, logs each and notes the request without an id", async () => {
     const logged: Error[] = [];
-    const authorization = adapter(answersWithErrors, (error) =>
-      logged.push(error),
-    );
+    const authorization = adapter(answersWithErrors, (error) => logged.push(error));
 
-    const { result, tally } = await measureWork(() =>
-      authorization.checkMany(asked),
-    );
+    const { result, tally } = await measureWork(() => authorization.checkMany(asked));
 
     expect(result).toEqual([true, false, false]);
     expect(logged).toHaveLength(2);
     expect(tally.authzWarning).toEqual({
       type: "AuthorizationBulkItemErrorDenied",
       fingerprint: "authz.bulk-item-error",
-      detail:
-        "SpiceDB answered view on test/document with an error in a bulk check; denied",
+      detail: "SpiceDB answered view on test/document with an error in a bulk check; denied",
     });
   });
 });

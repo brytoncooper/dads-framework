@@ -1,10 +1,6 @@
 function sectionLinks(article) {
   const headings = article.matchAll(/<h2 id="([^"]+)">([\s\S]*?)<\/h2>/gu);
-  return Array.from(
-    headings,
-    ([, id, heading]) =>
-      `<li><a href="#${id}">${heading.replace(/<[^>]+>/gu, "")}</a></li>`,
-  );
+  return Array.from(headings, ([, id, heading]) => `<li><a href="#${id}">${heading.replace(/<[^>]+>/gu, "")}</a></li>`);
 }
 
 function pageLink(page, direction, label) {
@@ -17,9 +13,7 @@ function pageLink(page, direction, label) {
 
 function pagination(links, page) {
   const entries = Array.from(
-    links.matchAll(
-      /<li><a href="([^"]+)"(?: aria-current="page")?>([^<]+)<\/a><\/li>/gu,
-    ),
+    links.matchAll(/<li><a href="([^"]+)"(?: aria-current="page")?>([^<]+)<\/a><\/li>/gu),
     ([, href, title]) => ({ href, title }),
   );
   const current = entries.findIndex(({ href }) => href === page);
@@ -35,23 +29,15 @@ function enhanceSearch(html) {
   if (!match) return html;
 
   let section = match[0];
-  section = section.replace(
-    /<label for="docs-search">/u,
-    '<label for="docs-search" class="sr">',
-  );
-  section = section.replace(
-    /<input id="docs-search"([^>]*)>/u,
-    (inputMatch, attrs) => {
-      const enhancedInput = /\bautofocus\b/u.test(attrs)
-        ? inputMatch
-        : `<input id="docs-search"${attrs} autofocus>`;
-      return `<div class="search-field">
+  section = section.replace(/<label for="docs-search">/u, '<label for="docs-search" class="sr">');
+  section = section.replace(/<input id="docs-search"([^>]*)>/u, (inputMatch, attrs) => {
+    const enhancedInput = /\bautofocus\b/u.test(attrs) ? inputMatch : `<input id="docs-search"${attrs} autofocus>`;
+    return `<div class="search-field">
   <svg class="search-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8.75" cy="8.75" r="5.75"/><path d="M13 13l4.25 4.25" stroke-linecap="round"/></svg>
   ${enhancedInput}
   <button type="button" class="search-close" aria-label="Close search"><kbd aria-hidden="true">Esc</kbd></button>
 </div>`;
-    },
-  );
+  });
   section = section.replace(
     /<\/section>/u,
     `<p class="search-hint">Type to search guides, APIs, and commands.</p>
@@ -67,10 +53,7 @@ function enhanceSearch(html) {
 ${section}
 </dialog>`;
 
-  html = html.replace(
-    /<section class="search"[^>]*>[\s\S]*?<\/section>\s*/u,
-    "",
-  );
+  html = html.replace(/<section class="search"[^>]*>[\s\S]*?<\/section>\s*/u, "");
   if (html.includes("</body>")) {
     return html.replace("</body>", () => `${dialog}\n</body>`);
   }
@@ -85,43 +68,36 @@ function decorateComparisonTable(tableHtml) {
   if (!theadMatch) {
     return `<div class="reader-table"><table>${tableHtml}</table></div>`;
   }
-  const headers = Array.from(
-    theadMatch[1].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gu),
-    ([, cell]) => cell.replace(/<[^>]+>/gu, "").trim(),
+  const headers = Array.from(theadMatch[1].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gu), ([, cell]) =>
+    cell.replace(/<[^>]+>/gu, "").trim(),
   );
   if (headers.at(-1) !== "Dads") {
     return `<div class="reader-table"><table>${tableHtml}</table></div>`;
   }
-  const decorated = tableHtml.replace(
-    /<tbody>([\s\S]*?)<\/tbody>/u,
-    (_, body) => {
-      const styledBody = body.replace(/<tr>([\s\S]*?)<\/tr>/gu, (__, row) => {
-        let colIndex = 0;
-        const styledRow = row.replace(
-          /<td([^>]*)>([\s\S]*?)<\/td>/gu,
-          (___, attrs, content) => {
-            colIndex += 1;
-            if (colIndex === 1) {
-              return `<td${attrs}>${content}</td>`;
-            }
-            const plain = content.replace(/<[^>]+>/gu, "").trim();
-            let tone = "cmp-warn";
-            if (/^Yes\b/iu.test(plain)) {
-              tone = "cmp-yes";
-            } else if (/^No\b/iu.test(plain)) {
-              tone = "cmp-no";
-            }
-            const nextAttrs = attrs.includes('class="')
-              ? attrs.replace('class="', `class="${tone} `)
-              : `${attrs} class="${tone}"`;
-            return `<td${nextAttrs}>${content}</td>`;
-          },
-        );
-        return `<tr>${styledRow}</tr>`;
+  const decorated = tableHtml.replace(/<tbody>([\s\S]*?)<\/tbody>/u, (_, body) => {
+    const styledBody = body.replace(/<tr>([\s\S]*?)<\/tr>/gu, (__, row) => {
+      let colIndex = 0;
+      const styledRow = row.replace(/<td([^>]*)>([\s\S]*?)<\/td>/gu, (___, attrs, content) => {
+        colIndex += 1;
+        if (colIndex === 1) {
+          return `<td${attrs}>${content}</td>`;
+        }
+        const plain = content.replace(/<[^>]+>/gu, "").trim();
+        let tone = "cmp-warn";
+        if (/^Yes\b/iu.test(plain)) {
+          tone = "cmp-yes";
+        } else if (/^No\b/iu.test(plain)) {
+          tone = "cmp-no";
+        }
+        const nextAttrs = attrs.includes('class="')
+          ? attrs.replace('class="', `class="${tone} `)
+          : `${attrs} class="${tone}"`;
+        return `<td${nextAttrs}>${content}</td>`;
       });
-      return `<tbody>${styledBody}</tbody>`;
-    },
-  );
+      return `<tr>${styledRow}</tr>`;
+    });
+    return `<tbody>${styledBody}</tbody>`;
+  });
   return `<div class="reader-table reader-table-compare"><table>${decorated}</table></div>`;
 }
 
@@ -135,14 +111,9 @@ function styleArticle(article, links) {
   <nav aria-label="On this page"><ul>${links.join("")}</ul></nav>
 </details>`,
     );
-    article = article.replace(
-      /<h2 id="([^"]+)">/gu,
-      (_, id) => `<h2 id="${id}" tabindex="-1">`,
-    );
+    article = article.replace(/<h2 id="([^"]+)">/gu, (_, id) => `<h2 id="${id}" tabindex="-1">`);
   }
-  return article.replace(/<table>([\s\S]*?)<\/table>/gu, (_, table) =>
-    decorateComparisonTable(table),
-  );
+  return article.replace(/<table>([\s\S]*?)<\/table>/gu, (_, table) => decorateComparisonTable(table));
 }
 
 function tableOfContents(links) {
@@ -154,20 +125,16 @@ function tableOfContents(links) {
 }
 
 export function addDocsReader(html, page) {
-  const navLinks =
-    html.match(/<nav aria-label="Documentation">([\s\S]*?)<\/nav>/u)?.[1] ?? "";
+  const navLinks = html.match(/<nav aria-label="Documentation">([\s\S]*?)<\/nav>/u)?.[1] ?? "";
   const pager = pagination(navLinks, page);
   let toc = "";
 
   html = enhanceSearch(html);
-  html = html.replace(
-    /(<article(?: [^>]*)?>)([\s\S]*?)<\/article>/u,
-    (_, opening, article) => {
-      const headings = sectionLinks(article);
-      toc = tableOfContents(headings);
-      return `${opening}${styleArticle(article, headings)}</article>\n${pager}`;
-    },
-  );
+  html = html.replace(/(<article(?: [^>]*)?>)([\s\S]*?)<\/article>/u, (_, opening, article) => {
+    const headings = sectionLinks(article);
+    toc = tableOfContents(headings);
+    return `${opening}${styleArticle(article, headings)}</article>\n${pager}`;
+  });
 
   if (toc) {
     html = html.replace("</main>", () => `</main>${toc}`);

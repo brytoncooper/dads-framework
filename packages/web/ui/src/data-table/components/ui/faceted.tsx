@@ -122,10 +122,7 @@ function FacetedTrigger(props: React.ComponentProps<typeof PopoverTrigger>) {
   const { className, children, ...triggerProps } = props;
 
   return (
-    <PopoverTrigger
-      {...triggerProps}
-      className={cn("justify-between text-left", className)}
-    >
+    <PopoverTrigger {...triggerProps} className={cn("justify-between text-left", className)}>
       {children}
     </PopoverTrigger>
   );
@@ -139,20 +136,12 @@ type FacetedBadgeListProps = React.ComponentProps<"div"> & {
 };
 
 function FacetedBadgeList(props: FacetedBadgeListProps) {
-  const {
-    options = [],
-    max = 2,
-    placeholder,
-    className,
-    badgeClassName,
-    ...badgeListProps
-  } = props;
+  const { options = [], max = 2, placeholder, className, badgeClassName, ...badgeListProps } = props;
 
   const t = useDataTableCopy();
   const context = useFacetedContext("FacetedBadgeList");
   const values = toValueList(context.value);
-  const resolvedPlaceholder =
-    placeholder ?? t("dataTable.filter.selectOptions");
+  const resolvedPlaceholder = placeholder ?? t("dataTable.filter.selectOptions");
 
   const getLabel = React.useCallback(
     (value: string) => {
@@ -164,10 +153,7 @@ function FacetedBadgeList(props: FacetedBadgeListProps) {
 
   if (values.length === 0) {
     return (
-      <div
-        {...badgeListProps}
-        className="flex w-full items-center gap-1 text-muted-foreground"
-      >
+      <div {...badgeListProps} className="flex w-full items-center gap-1 text-muted-foreground">
         {resolvedPlaceholder}
         <ChevronsUpDown className="ml-auto size-4 shrink-0 opacity-50" />
       </div>
@@ -175,24 +161,14 @@ function FacetedBadgeList(props: FacetedBadgeListProps) {
   }
 
   return (
-    <div
-      {...badgeListProps}
-      className={cn("flex flex-wrap items-center gap-1", className)}
-    >
+    <div {...badgeListProps} className={cn("flex flex-wrap items-center gap-1", className)}>
       {max < values.length ? (
-        <Badge
-          variant="secondary"
-          className={cn("rounded-sm px-1 font-normal", badgeClassName)}
-        >
+        <Badge variant="secondary" className={cn("rounded-sm px-1 font-normal", badgeClassName)}>
           {t("dataTable.filter.selectedCount", { count: values.length })}
         </Badge>
       ) : (
         values.map((value) => (
-          <Badge
-            key={value}
-            variant="secondary"
-            className={cn("rounded-sm px-1 font-normal", badgeClassName)}
-          >
+          <Badge key={value} variant="secondary" className={cn("rounded-sm px-1 font-normal", badgeClassName)}>
             <span className="truncate">{getLabel(value)}</span>
           </Badge>
         ))
@@ -208,10 +184,7 @@ function FacetedContent(props: React.ComponentProps<typeof PopoverContent>) {
     <PopoverContent
       {...contentProps}
       align="start"
-      className={cn(
-        "w-[200px] origin-(--radix-popover-content-transform-origin) p-0",
-        className,
-      )}
+      className={cn("w-[200px] origin-(--radix-popover-content-transform-origin) p-0", className)}
     >
       <Command>{children}</Command>
     </PopoverContent>
@@ -262,9 +235,7 @@ function FacetedItem(props: FacetedItemProps) {
       <span
         className={cn(
           "flex size-4 items-center justify-center rounded-sm border border-primary",
-          isSelected
-            ? "bg-primary text-primary-foreground"
-            : "opacity-50 [&_svg]:invisible",
+          isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible",
         )}
       >
         <Check className="size-4" />

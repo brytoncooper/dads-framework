@@ -15,11 +15,7 @@
  * not a repository.
  */
 
-import {
-  runDoctorGate,
-  type GateInput,
-  type GateResult,
-} from "./doctor/doctor-gate.js";
+import { runDoctorGate, type GateInput, type GateResult } from "./doctor/doctor-gate.js";
 import type { GateMode } from "./doctor/doctor-gate-model.js";
 import { signalEvidences, type DoctorProfile } from "./doctor/doctor-signal.js";
 import { DOCTOR_SIGNALS } from "./doctor/doctor-signals.js";
@@ -71,10 +67,7 @@ export function readGateMode(input: GateArgumentInput): GateMode | undefined {
   return mode;
 }
 
-function lastValue(
-  input: GateArgumentInput,
-  option: string,
-): string | undefined {
+function lastValue(input: GateArgumentInput, option: string): string | undefined {
   return input.values.get(option)?.at(-1);
 }
 
@@ -91,9 +84,7 @@ function refuseExclusiveModes(mode: GateMode): void {
     throw new Error("--seed and --update are exclusive.");
   }
   if (mode.base !== undefined && (mode.update || mode.seed)) {
-    throw new Error(
-      "--base only reads; it cannot be combined with --update or --seed.",
-    );
+    throw new Error("--base only reads; it cannot be combined with --update or --seed.");
   }
   if (mode.files !== undefined && (mode.base !== undefined || mode.seed)) {
     throw new Error("--file cannot be combined with --base or --seed.");
@@ -127,9 +118,7 @@ export type GateCommand = {
  * same way it narrows the report, and a section of the baseline no selected
  * signal owns is left exactly as it is rather than read as stale.
  */
-export async function runGateCommand(
-  command: GateCommand,
-): Promise<GateResult> {
+export async function runGateCommand(command: GateCommand): Promise<GateResult> {
   const standalone = await runStandaloneRatchet({
     root: command.root,
     mode: command.mode,
@@ -147,7 +136,5 @@ export async function runGateCommand(
 function selectedSignals(command: GateCommand) {
   if (!command.issuesNarrowed) return DOCTOR_SIGNALS;
   const chosen = command.issues.map((issue) => issue.id);
-  return DOCTOR_SIGNALS.filter((signal) =>
-    chosen.some((issue) => signalEvidences(signal, issue)),
-  );
+  return DOCTOR_SIGNALS.filter((signal) => chosen.some((issue) => signalEvidences(signal, issue)));
 }

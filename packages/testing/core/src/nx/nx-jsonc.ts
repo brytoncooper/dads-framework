@@ -1,12 +1,9 @@
 /** Parses Nx JSONC without interpreting comments or commas inside strings. */
 export function parseNxConfiguration(text: string, subject: string): unknown {
   try {
-    return JSON.parse(
-      removeTrailingCommasAfterValues(removeJsonComments(text)),
-    );
+    return JSON.parse(removeTrailingCommasAfterValues(removeJsonComments(text)));
   } catch (error: unknown) {
-    const detail =
-      error instanceof Error ? error.message : "unknown JSON error";
+    const detail = error instanceof Error ? error.message : "unknown JSON error";
     throw new Error(`Unable to parse ${subject}: ${detail}`, { cause: error });
   }
 }
@@ -68,8 +65,7 @@ function removeTrailingCommasAfterValues(text: string): string {
       index = end;
       continue;
     }
-    if (text[index] !== "," || !isTrailingComma(text, index))
-      output += text[index] ?? "";
+    if (text[index] !== "," || !isTrailingComma(text, index)) output += text[index] ?? "";
     index += 1;
   }
   return output;
@@ -82,16 +78,11 @@ function isTrailingComma(text: string, index: number): boolean {
   return previous !== undefined && !"[{:,".includes(previous);
 }
 
-function findNonWhitespace(
-  text: string,
-  start: number,
-  direction: 1 | -1,
-): string | undefined {
+function findNonWhitespace(text: string, start: number, direction: 1 | -1): string | undefined {
   let index = start;
   while (index >= 0 && index < text.length) {
     const character = text[index];
-    if (character !== undefined && !" \t\r\n".includes(character))
-      return character;
+    if (character !== undefined && !" \t\r\n".includes(character)) return character;
     index += direction;
   }
   return undefined;

@@ -14,10 +14,7 @@
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReadings } from "../../doctor-signal.js";
 import { isTestSource } from "../scanners/source-classification.js";
-import {
-  countOccurrences,
-  isWideningAssertion,
-} from "../scanners/typescript-program.js";
+import { countOccurrences, isWideningAssertion } from "../scanners/typescript-program.js";
 
 function countTestAssertions(context: DoctorContext): SignalReadings {
   return countOccurrences({
@@ -36,7 +33,6 @@ export const assertionsInTestsSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "The compiler is not confused. The compiler is the only one being honest with you.",
+  sentence: "The compiler is not confused. The compiler is the only one being honest with you.",
   run: (context) => Promise.resolve(countTestAssertions(context)),
 };

@@ -1,28 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/spicedb-access";
+import { actor, allOf, anyOf, compileAccess, every, resource, roleToken } from "@dads-framework/access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/spicedb-access";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
 
 import { compileAccessPolicy } from "./compile-access-policy.js";
-import {
-  PostgresAuthorization,
-  preparePostgresChecks,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, preparePostgresChecks, relationshipSchemaMigration } from "./index.js";
 
 const ORACLE_BIN = path.resolve(
   import.meta.dirname,
@@ -53,9 +38,7 @@ function callLeanOracle(payload: unknown): OracleOutput {
   }
   return {
     checks: parsed.checks.map((v) => Boolean(v)),
-    lookups: parsed.lookups.map((arr) =>
-      Array.isArray(arr) ? arr.map(String) : [],
-    ),
+    lookups: parsed.lookups.map((arr) => (Array.isArray(arr) ? arr.map(String) : [])),
   };
 }
 
@@ -79,11 +62,7 @@ function buildAdversarialSchema() {
   const workspace = resource("fuzz/workspace", {
     roles: {
       owner: user.expiring,
-      member: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       banned: user,
     },
     can: ({ owner, member, banned }) => ({
@@ -104,11 +83,7 @@ function buildAdversarialSchema() {
     parents: [workspace, folder],
     roles: {
       scope_ws: workspace,
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       approver: user,
       banned: user,
     },
@@ -312,10 +287,7 @@ it.runIf(existsSync(ORACLE_BIN))(
         const nowMs = Date.now();
         const namespace = `lean_fuzz_${String(seed)}`;
         await pool.query("TRUNCATE dad_authorization_relationship, fuzz_docs");
-        const { users, docs, docWorkspace, writes } = generateWorld(
-          seed,
-          nowMs,
-        );
+        const { users, docs, docWorkspace, writes } = generateWorld(seed, nowMs);
 
         const pgAuth = new PostgresAuthorization({
           model,
@@ -324,10 +296,7 @@ it.runIf(existsSync(ORACLE_BIN))(
         });
         await pgAuth.writeRelationships(writes);
         for (const [docId, wsId] of docWorkspace) {
-          await pool.query(
-            "INSERT INTO fuzz_docs (id, workspace_id) VALUES ($1, $2)",
-            [docId, wsId],
-          );
+          await pool.query("INSERT INTO fuzz_docs (id, workspace_id) VALUES ($1, $2)", [docId, wsId]);
         }
 
         // Read back deduplicated stored tuples from Postgres so Lean sees the exact
@@ -389,8 +358,7 @@ it.runIf(existsSync(ORACLE_BIN))(
             subjectId: row.subject_id,
             subjectRelation: row.subject_relation,
             subjectIsWildcard: row.subject_is_wildcard,
-            expiresAt:
-              row.expires_at_ms === null ? null : Number(row.expires_at_ms),
+            expiresAt: row.expires_at_ms === null ? null : Number(row.expires_at_ms),
           })),
           now: oracleNow,
           checks: checkQueries.map((q) => ({

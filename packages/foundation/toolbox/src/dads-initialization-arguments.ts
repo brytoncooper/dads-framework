@@ -48,21 +48,13 @@ export function parseDadsInitializationArguments(
     }
 
     recordOption(argument, seenOptions);
-    index += applyInitializationOption(
-      parsed,
-      argumentsAfterCommand,
-      index,
-      argument,
-    );
+    index += applyInitializationOption(parsed, argumentsAfterCommand, index, argument);
   }
 
   return createInitializationArguments(parsed);
 }
 
-function recordTargetDirectory(
-  parsed: PartialInitializationArguments,
-  argument: string,
-): void {
+function recordTargetDirectory(parsed: PartialInitializationArguments, argument: string): void {
   if (parsed.targetDirectory) {
     throw new Error(`Unexpected positional argument ${argument}.`);
   }
@@ -82,10 +74,7 @@ function applyInitializationOption(
 }
 
 /** Answers whether `option` was a standalone flag, applying it when it was. */
-function applyInitializationFlag(
-  parsed: PartialInitializationArguments,
-  option: string,
-): boolean {
+function applyInitializationFlag(parsed: PartialInitializationArguments, option: string): boolean {
   if (option === "--existing") parsed.mode = "existing";
   else if (option === "--yes") parsed.acceptDefaults = true;
   else if (option === "--dry-run") parsed.dryRun = true;
@@ -102,17 +91,11 @@ function applyInitializationValue(
   option: string,
 ): void {
   if (option === "--name") {
-    parsed.projectName = readOptionValue(
-      argumentsAfterCommand,
-      optionIndex,
-      option,
-    );
+    parsed.projectName = readOptionValue(argumentsAfterCommand, optionIndex, option);
     return;
   }
   if (option === "--template") {
-    parsed.template = parseProjectTemplate(
-      readOptionValue(argumentsAfterCommand, optionIndex, option),
-    );
+    parsed.template = parseProjectTemplate(readOptionValue(argumentsAfterCommand, optionIndex, option));
     return;
   }
   throw new Error(`Unknown option ${option}.`);
@@ -123,9 +106,7 @@ function parseProjectTemplate(value: string): DadsProjectTemplate {
   throw new Error("--template must be minimal or example.");
 }
 
-function createInitializationArguments(
-  parsed: PartialInitializationArguments,
-): DadsInitializationArguments {
+function createInitializationArguments(parsed: PartialInitializationArguments): DadsInitializationArguments {
   const { targetDirectory } = parsed;
   if (!targetDirectory) {
     throw new Error("Provide a Dads project directory.");
@@ -150,11 +131,7 @@ function recordOption(option: string, seenOptions: Set<string>): void {
   seenOptions.add(option);
 }
 
-function readOptionValue(
-  argumentsAfterCommand: readonly string[],
-  optionIndex: number,
-  option: string,
-): string {
+function readOptionValue(argumentsAfterCommand: readonly string[], optionIndex: number, option: string): string {
   const optionValue = argumentsAfterCommand[optionIndex + 1];
   if (!optionValue || optionValue.startsWith("--")) {
     throw new Error(`${option} requires a value.`);

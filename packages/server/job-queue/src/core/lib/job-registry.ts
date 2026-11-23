@@ -37,9 +37,7 @@ export class JobRegistry {
       names.add(job.name);
       for (const schedule of job.schedules) {
         if (scheduleIds.has(schedule.id)) {
-          throw new Error(
-            `Schedule "${schedule.id}" is registered more than once`,
-          );
+          throw new Error(`Schedule "${schedule.id}" is registered more than once`);
         }
         scheduleIds.add(schedule.id);
       }

@@ -6,18 +6,10 @@ import {
   type DslResourceRecord,
 } from "./dsl-resource.js";
 import type { DslNode } from "./dsl-resource-types.js";
-import type {
-  AnyDslResource,
-  DslRoleHolder,
-  DslSingleRoleHolder,
-} from "./dsl-types.js";
+import type { AnyDslResource, DslRoleHolder, DslSingleRoleHolder } from "./dsl-types.js";
 import type { EntityHandle } from "./entity-handle.js";
 import { isGrantableRole } from "./grantable.js";
-import {
-  isEntityHandleHolder,
-  isExpirableHolder,
-  isWildcardHolder,
-} from "./holders.js";
+import { isEntityHandleHolder, isExpirableHolder, isWildcardHolder } from "./holders.js";
 import { isRoleToken } from "./refs.js";
 
 export type DiscoveredDslGraph = {
@@ -32,26 +24,18 @@ type DiscoveryState = {
   readonly resourceByWireName: Map<string, DslResourceRecord>;
 };
 
-function registerActorHandle(
-  state: DiscoveryState,
-  handle: EntityHandle,
-): void {
+function registerActorHandle(state: DiscoveryState, handle: EntityHandle): void {
   if (state.resourceByWireName.has(handle.wireName)) return;
   if (!state.actorHandles.has(handle.wireName)) {
     state.actorHandles.set(handle.wireName, handle);
   }
 }
 
-export function isDslHolderList(
-  holder: DslRoleHolder,
-): holder is readonly DslSingleRoleHolder[] {
+export function isDslHolderList(holder: DslRoleHolder): holder is readonly DslSingleRoleHolder[] {
   return Array.isArray(holder);
 }
 
-function discoverEntityHolder(
-  state: DiscoveryState,
-  entry: DslSingleRoleHolder,
-): void {
+function discoverEntityHolder(state: DiscoveryState, entry: DslSingleRoleHolder): void {
   if (isExpirableHolder(entry)) {
     const owner = getExpirableUsersetOwner(entry);
     if (owner !== undefined) {
@@ -74,10 +58,7 @@ function discoverEntityHolder(
   }
 }
 
-function discoverSingleHolder(
-  state: DiscoveryState,
-  entry: DslSingleRoleHolder,
-): void {
+function discoverSingleHolder(state: DiscoveryState, entry: DslSingleRoleHolder): void {
   if (isDslLazyResource(entry)) {
     discoverResource(state, entry());
     return;
@@ -139,9 +120,7 @@ function discoverResource(state: DiscoveryState, node: AnyDslResource): void {
   }
 }
 
-export function discoverDslGraph(
-  nodes: readonly DslNode[],
-): DiscoveredDslGraph {
+export function discoverDslGraph(nodes: readonly DslNode[]): DiscoveredDslGraph {
   const state: DiscoveryState = {
     visited: new Set<object>(),
     actorHandles: new Map<string, EntityHandle>(),

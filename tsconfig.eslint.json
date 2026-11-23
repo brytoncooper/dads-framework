@@ -6,16 +6,8 @@
     "jsx": "react-jsx",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "paths": {
-      "@dads-framework/feature-flags-postgres": [
-        "./apps/kit-workbench/migrations/support/feature-flags.ts"
-      ]
+      "@dads-framework/feature-flags-postgres": ["./apps/kit-workbench/migrations/support/feature-flags.ts"]
     }
   },
-  "include": [
-    "packages/**/*.ts",
-    "packages/**/*.tsx",
-    "fixtures/**/*.ts",
-    "apps/**/*.ts",
-    "apps/**/*.tsx"
-  ]
+  "include": ["packages/**/*.ts", "packages/**/*.tsx", "fixtures/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx"]
 }

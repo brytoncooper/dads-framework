@@ -19,14 +19,8 @@ export function mockRailGeometry({
   readonly width?: number;
 } = {}): () => void {
   const prototype = HTMLElement.prototype;
-  const heightDescriptor = Object.getOwnPropertyDescriptor(
-    prototype,
-    "offsetHeight",
-  );
-  const widthDescriptor = Object.getOwnPropertyDescriptor(
-    prototype,
-    "offsetWidth",
-  );
+  const heightDescriptor = Object.getOwnPropertyDescriptor(prototype, "offsetHeight");
+  const widthDescriptor = Object.getOwnPropertyDescriptor(prototype, "offsetWidth");
   Object.defineProperty(prototype, "offsetHeight", {
     configurable: true,
     get(this: HTMLElement) {

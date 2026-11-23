@@ -15,10 +15,7 @@
 import type { AlertableFault } from "./summarize-new-faults.js";
 
 export function describeFaultLine(fault: AlertableFault): string {
-  const occurrences =
-    fault.occurrences === 1
-      ? "1 occurrence"
-      : `${fault.occurrences} occurrences`;
+  const occurrences = fault.occurrences === 1 ? "1 occurrence" : `${fault.occurrences} occurrences`;
   const location = fault.where === null ? "" : ` at ${fault.where}`;
   return `${fault.type} (${fault.origin}) — ${occurrences}${location} · ${fault.fingerprint}`;
 }

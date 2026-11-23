@@ -77,9 +77,7 @@ describe("LiveEmailDelivery", () => {
     registerDeliveryJob(jobQueue);
   });
 
-  function build(
-    overrides: { clock?: Clock; log?: ReturnType<typeof testLog>["log"] } = {},
-  ) {
+  function build(overrides: { clock?: Clock; log?: ReturnType<typeof testLog>["log"] } = {}) {
     return new LiveEmailDelivery({
       store,
       emailSender,
@@ -105,9 +103,7 @@ describe("LiveEmailDelivery", () => {
         status: "queued",
         sendAt: NOW,
       });
-      expect(jobQueue.enqueued).toEqual([
-        { jobName: EMAIL_DELIVER_JOB, payload: { outboundEmailId: result.id } },
-      ]);
+      expect(jobQueue.enqueued).toEqual([{ jobName: EMAIL_DELIVER_JOB, payload: { outboundEmailId: result.id } }]);
     });
 
     it("leaves the dispatch to the caller that owns the transaction", async () => {
@@ -144,17 +140,13 @@ describe("LiveEmailDelivery", () => {
     });
 
     it("refuses props the template does not accept, writing nothing", async () => {
-      await expect(
-        build().enqueue(TEMPLATE, { wrongField: "x" }, ENVELOPE),
-      ).rejects.toThrow();
+      await expect(build().enqueue(TEMPLATE, { wrongField: "x" }, ENVELOPE)).rejects.toThrow();
 
       expect(store.rows).toEqual([]);
     });
 
     it("refuses an envelope with no recipient, writing nothing", async () => {
-      await expect(
-        build().enqueue(TEMPLATE, PROPS, { to: [] }),
-      ).rejects.toThrow();
+      await expect(build().enqueue(TEMPLATE, PROPS, { to: [] })).rejects.toThrow();
 
       expect(store.rows).toEqual([]);
     });
@@ -171,9 +163,7 @@ describe("LiveEmailDelivery", () => {
 
       expect(result.dispatched).toBe(true);
       expect(store.find(result.id)?.status).toBe("queued");
-      expect(captured.entries).toContainEqual(
-        expect.objectContaining({ event: "email.dispatch.failed" }),
-      );
+      expect(captured.entries).toContainEqual(expect.objectContaining({ event: "email.dispatch.failed" }));
     });
   });
 
@@ -181,11 +171,7 @@ describe("LiveEmailDelivery", () => {
     it("sends the rendered message and records one settled row", async () => {
       const captured = testLog();
 
-      const result = await build({ log: captured.log }).sendNow(
-        TEMPLATE,
-        PROPS,
-        ENVELOPE,
-      );
+      const result = await build({ log: captured.log }).sendNow(TEMPLATE, PROPS, ENVELOPE);
 
       expect(emailSender.sent[0]).toMatchObject({
         to: ENVELOPE.to,
@@ -227,9 +213,7 @@ describe("LiveEmailDelivery", () => {
       emailSender.failEverySendWith(new Error("Mailgun rejected the email"));
       const delivery = build({ log: captured.log });
 
-      await expect(delivery.sendNow(TEMPLATE, PROPS, ENVELOPE)).rejects.toThrow(
-        "Mailgun rejected the email",
-      );
+      await expect(delivery.sendNow(TEMPLATE, PROPS, ENVELOPE)).rejects.toThrow("Mailgun rejected the email");
 
       expect(store.rows[0]).toMatchObject({
         status: "failed",

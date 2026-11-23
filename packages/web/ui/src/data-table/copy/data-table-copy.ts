@@ -1,9 +1,4 @@
-import {
-  createCopyHook,
-  defineCopy,
-  type CopyKey,
-  type CopyTranslator,
-} from "../../copy/index.js";
+import { createCopyHook, defineCopy, type CopyKey, type CopyTranslator } from "../../copy/index.js";
 
 /** Whole visible and accessible phrases owned by the shared DataTable kit. */
 export const dataTableCopy = defineCopy({

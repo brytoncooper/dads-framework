@@ -27,8 +27,6 @@ describe("AuthorizationWarningFaults", () => {
       fingerprint: "authz.round-trips@/b",
     });
     expect(faults.recordable(warning, "/a", HOUR)).toBeDefined();
-    expect(faults.recordable(warning, undefined, 0)?.fingerprint).toBe(
-      "authz.round-trips@unmatched",
-    );
+    expect(faults.recordable(warning, undefined, 0)?.fingerprint).toBe("authz.round-trips@unmatched");
   });
 });

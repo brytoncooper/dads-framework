@@ -11,10 +11,7 @@
 
 import process from "node:process";
 
-import {
-  loadAdoptionPackages,
-  packAdoptionPackages,
-} from "./adoption-packing.mjs";
+import { loadAdoptionPackages, packAdoptionPackages } from "./adoption-packing.mjs";
 import {
   createAdoptionWorkspace,
   createPhaseTimer,
@@ -23,10 +20,7 @@ import {
   writePhaseTable,
   writeReceipt,
 } from "./adoption-proof-run.mjs";
-import {
-  announceAdoptionJobs,
-  runAdoptionTasks,
-} from "./adoption-task-runner.mjs";
+import { announceAdoptionJobs, runAdoptionTasks } from "./adoption-task-runner.mjs";
 import {
   createGeneratedProjectTasks,
   generatedProjectReceipt,

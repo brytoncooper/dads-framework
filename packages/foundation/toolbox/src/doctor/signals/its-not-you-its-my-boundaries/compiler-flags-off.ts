@@ -20,11 +20,7 @@
 
 import { isRecord } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 const CONFIGURATION_FILES = ["tsconfig.base.json", "tsconfig.json"];
 
@@ -41,15 +37,10 @@ export const REQUIRED_STRICTNESS = [
   "verbatimModuleSyntax",
 ];
 
-function readCompilerOptions(
-  context: DoctorContext,
-  path: string,
-): Record<string, unknown> | undefined {
+function readCompilerOptions(context: DoctorContext, path: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(context.read(path));
-    const options: unknown = isRecord(parsed)
-      ? parsed["compilerOptions"]
-      : undefined;
+    const options: unknown = isRecord(parsed) ? parsed["compilerOptions"] : undefined;
     return isRecord(options) ? options : undefined;
   } catch {
     return undefined;
@@ -57,9 +48,7 @@ function readCompilerOptions(
 }
 
 function countFlagsOff(context: DoctorContext): SignalReadings {
-  const path = CONFIGURATION_FILES.find((candidate) =>
-    context.exists(candidate),
-  );
+  const path = CONFIGURATION_FILES.find((candidate) => context.exists(candidate));
   if (path === undefined) return new Map();
   const options = readCompilerOptions(context, path);
   if (options === undefined) return new Map();
@@ -76,8 +65,7 @@ function countFlagsOff(context: DoctorContext): SignalReadings {
 export const compilerFlagsOffSignal: DoctorSignal = {
   id: "compiler-flags-off",
   issue: "its-not-you-its-my-boundaries",
-  question:
-    "Is any strictness flag from the base list missing from the compiler configuration?",
+  question: "Is any strictness flag from the base list missing from the compiler configuration?",
   reads: "text",
   unit: "count",
   direction: "ceiling",

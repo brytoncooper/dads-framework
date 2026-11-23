@@ -65,10 +65,7 @@ export type McpToolSet = Readonly<{
 }>;
 
 /** Whether one tool set is on for one caller (its feature flag, typically). */
-export type IsMcpToolSetOn = (
-  toolSet: McpToolSet,
-  caller: McpCaller,
-) => Promise<boolean>;
+export type IsMcpToolSetOn = (toolSet: McpToolSet, caller: McpCaller) => Promise<boolean>;
 
 /**
  * Types one tool's input against its schema. The endpoint parses arguments with
@@ -84,8 +81,7 @@ export function defineMcpTool<Schema extends z.ZodType>(definition: {
 }): McpTool {
   return {
     ...definition,
-    run: async (input, caller) =>
-      definition.run(definition.inputSchema.parse(input), caller),
+    run: async (input, caller) => definition.run(definition.inputSchema.parse(input), caller),
   };
 }
 
@@ -94,9 +90,7 @@ export function defineMcpTool<Schema extends z.ZodType>(definition: {
  * to, or null for a missing, unknown, expired or revoked token, or a person
  * who may no longer sign in. Implemented by the identity domain.
  */
-export type ResolveMcpBearer = (
-  authorization: string | undefined,
-) => Promise<Readonly<{
+export type ResolveMcpBearer = (authorization: string | undefined) => Promise<Readonly<{
   userId: string;
   scopes: readonly string[];
   /** The OAuth client the token was issued to. */

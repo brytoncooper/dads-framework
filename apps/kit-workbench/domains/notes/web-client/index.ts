@@ -1,8 +1,5 @@
 import { getFromApi, getPageFromApi, sendToApi } from "@dads-framework/client";
-import {
-  defineRoute,
-  paginationQuerySchema,
-} from "@dads-framework/core/contract";
+import { defineRoute, paginationQuerySchema } from "@dads-framework/core/contract";
 import { z } from "zod";
 import { note, noteInput, noteFeatures } from "../contract/wire.js";
 
@@ -56,11 +53,7 @@ const exportRoute = defineRoute(
     `${tenantNotes(tenantId)}/${encodeURIComponent(noteId)}/exports/${format}`,
 );
 
-export function exportNote(
-  tenantId: string,
-  noteId: string,
-  format: NoteExportFormat,
-) {
+export function exportNote(tenantId: string, noteId: string, format: NoteExportFormat) {
   return getFromApi({
     route: exportRoute.bind(tenantId, noteId, format),
     returns: z.object({

@@ -1,14 +1,8 @@
 import { actor, resource } from "@dads-framework/access";
-import {
-  expectedRowVersionFields,
-  rowVersionSchema,
-} from "@dads-framework/core/contract";
+import { expectedRowVersionFields, rowVersionSchema } from "@dads-framework/core/contract";
 import { staleSave } from "@dads-framework/core/errors";
 import { fromParam, patchRoute, routeGroup } from "@dads-framework/http";
-import {
-  updateAtRowVersion,
-  type DrizzleHandle,
-} from "@dads-framework/postgres";
+import { updateAtRowVersion, type DrizzleHandle } from "@dads-framework/postgres";
 import { eq } from "drizzle-orm";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { z } from "zod";

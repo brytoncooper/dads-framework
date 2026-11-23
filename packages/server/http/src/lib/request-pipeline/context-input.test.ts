@@ -15,18 +15,12 @@ import { registerRoutes } from "./register-routes.js";
 describe("input-only authorization context", () => {
   it("rejects mixing resolved and input-only authority in either declaration order", () => {
     const source = fromHeader("x-test-context");
-    expect(() =>
-      withAuthorizationContextInput(
-        withAuthorizationContext(requireSession(), source),
-        source,
-      ),
-    ).toThrow("cannot be combined");
-    expect(() =>
-      withAuthorizationContext(
-        withAuthorizationContextInput(requireSession(), source),
-        source,
-      ),
-    ).toThrow("cannot be combined");
+    expect(() => withAuthorizationContextInput(withAuthorizationContext(requireSession(), source), source)).toThrow(
+      "cannot be combined",
+    );
+    expect(() => withAuthorizationContext(withAuthorizationContextInput(requireSession(), source), source)).toThrow(
+      "cannot be combined",
+    );
   });
   it("passes only declared input while preserving identity and leaving policy to the operation", async () => {
     const app = await createHttpApp({
@@ -40,10 +34,7 @@ describe("input-only authorization context", () => {
         getRoute({
           path: "/context-input",
           summary: "Runtime authority input",
-          access: withAuthorizationContextInput(
-            requireSession(),
-            fromHeader("x-test-context"),
-          ),
+          access: withAuthorizationContextInput(requireSession(), fromHeader("x-test-context")),
           response: z.object({
             input: z.string().nullable(),
             actor: z.string(),

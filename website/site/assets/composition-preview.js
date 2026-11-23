@@ -6,9 +6,7 @@ if (preview) {
   const tabs = [...tabList.querySelectorAll('[role="tab"]')];
   const fileLink = preview.querySelector("#composition-file-link");
   const accessSwitch = preview.querySelector("#composition-access-switch");
-  const accessButtons = accessSwitch
-    ? [...accessSwitch.querySelectorAll("button[data-access]")]
-    : [];
+  const accessButtons = accessSwitch ? [...accessSwitch.querySelectorAll("button[data-access]")] : [];
   const response = preview.querySelector("#composition-status");
   const detail = preview.querySelector("#composition-detail");
   const cases = {
@@ -45,10 +43,7 @@ if (preview) {
   function selectAccess(next) {
     activeAccess = next;
     for (const button of accessButtons) {
-      button.setAttribute(
-        "aria-pressed",
-        String(button.dataset.access === next),
-      );
+      button.setAttribute("aria-pressed", String(button.dataset.access === next));
     }
     updateResponse();
   }

@@ -21,9 +21,7 @@ describe("S3DirectTransferStorage part URL", () => {
         expiresInSeconds: 900,
       }),
     );
-    expect(url.searchParams.get("X-Amz-SignedHeaders")?.split(";")).toContain(
-      "content-length",
-    );
+    expect(url.searchParams.get("X-Amz-SignedHeaders")?.split(";")).toContain("content-length");
     expect(url.searchParams.get("X-Amz-Expires")).toBe("900");
   });
 });
@@ -51,15 +49,9 @@ describe("S3DirectTransferStorage write-once upload", () => {
 
   it("signs If-None-Match, the checksum, the content type and the length", async () => {
     const url = new URL((await presign()).url);
-    const signedHeaders =
-      url.searchParams.get("X-Amz-SignedHeaders")?.split(";") ?? [];
+    const signedHeaders = url.searchParams.get("X-Amz-SignedHeaders")?.split(";") ?? [];
     expect(signedHeaders).toEqual(
-      expect.arrayContaining([
-        "content-type",
-        "content-length",
-        "x-amz-checksum-sha256",
-        "if-none-match",
-      ]),
+      expect.arrayContaining(["content-type", "content-length", "x-amz-checksum-sha256", "if-none-match"]),
     );
     expect(url.searchParams.get("X-Amz-Expires")).toBe("3600");
   });

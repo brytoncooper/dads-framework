@@ -1,18 +1,10 @@
-import {
-  composeApi,
-  definePlugin,
-  defineService,
-  providePlugin,
-} from "@dads-framework/core/plugin";
+import { composeApi, definePlugin, defineService, providePlugin } from "@dads-framework/core/plugin";
 import type { PostgresAuthorization } from "@dads-framework/postgres-access";
 import type { Pool } from "pg";
 
 import { assembleAuthorization } from "../../assembly/authorization.js";
 import { organization, user } from "../../domains/documents/access/index.js";
-import {
-  documentsRoutes,
-  type DocumentsRepository,
-} from "../../domains/documents/server/routes.js";
+import { documentsRoutes, type DocumentsRepository } from "../../domains/documents/server/routes.js";
 
 const appServices = defineService("customer-services").ofType<{
   readonly authorization: PostgresAuthorization;

@@ -37,11 +37,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import type {
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { isTestSource } from "./source-classification.js";
 
 /** The compiler API. Every signal that needs it takes it from here. */
@@ -52,12 +48,7 @@ const MODULE_SUFFIXES = [".ts", ".tsx"];
 const DECLARATION_SUFFIX = ".d.ts";
 const GENERATED_SUFFIX = ".generated.ts";
 const SOURCE_MARKER = "/src/";
-const NON_PRODUCTION_SEGMENTS = [
-  "/type-tests/",
-  "/test-support/",
-  "/__tests__/",
-  "/src/testing/",
-];
+const NON_PRODUCTION_SEGMENTS = ["/type-tests/", "/test-support/", "/__tests__/", "/src/testing/"];
 const NON_PRODUCTION_ROOTS = ["scripts/", "fixtures/", "tools/"];
 const NO_PROGRAM = "no tsconfig.json in this workspace";
 const DOC_COMMENT_HEAD = "/**";
@@ -90,9 +81,7 @@ export type ProgramWorkspace = {
 };
 
 /** Parses every module the workspace declares. Throws when it declares none. */
-export function buildTypeScriptProgram(
-  workspace: ProgramWorkspace,
-): DoctorProgram {
+export function buildTypeScriptProgram(workspace: ProgramWorkspace): DoctorProgram {
   const files = workspace.files();
   const projects = projectDirectories(files);
   if (projects.length === 0) throw new Error(NO_PROGRAM);
@@ -129,9 +118,7 @@ function projectDirectories(files: readonly string[]): readonly string[] {
   return [...directories];
 }
 
-function declaredRoots(
-  packages: readonly { readonly root: string }[],
-): readonly string[] {
+function declaredRoots(packages: readonly { readonly root: string }[]): readonly string[] {
   return packages
     .map((declared) => declared.root)
     .filter((root) => root.length > 0)
@@ -144,11 +131,7 @@ function isModulePath(path: string): boolean {
   return MODULE_SUFFIXES.some((suffix) => path.endsWith(suffix));
 }
 
-function parseModule(
-  root: string,
-  path: string,
-  owners: readonly string[],
-): DoctorModule {
+function parseModule(root: string, path: string, owners: readonly string[]): DoctorModule {
   const text = readFileSync(join(root, path), "utf8");
   const source = ts.createSourceFile(
     path,
@@ -179,10 +162,7 @@ function owningPackageRoot(path: string, owners: readonly string[]): string {
 // ---------------------------------------------------------------------------
 
 /** Every node below `node`, in source order. */
-export function visitNodes(
-  node: ts.Node,
-  visit: (node: ts.Node) => void,
-): void {
+export function visitNodes(node: ts.Node, visit: (node: ts.Node) => void): void {
   node.forEachChild((child) => {
     visit(child);
     visitNodes(child, visit);
@@ -196,15 +176,9 @@ export function lineOf(module: DoctorModule, node: ts.Node): number {
 }
 
 /** Evidence a reader can open: the file, the line, and what was found there. */
-export function evidenceAt(
-  module: DoctorModule,
-  node: ts.Node,
-  name?: string,
-): SignalEvidence {
+export function evidenceAt(module: DoctorModule, node: ts.Node, name?: string): SignalEvidence {
   const line = lineOf(module, node);
-  return name === undefined
-    ? { path: module.path, line }
-    : { path: module.path, line, name };
+  return name === undefined ? { path: module.path, line } : { path: module.path, line, name };
 }
 
 /** True for the hand-written TypeScript a package ships to its consumers. */
@@ -218,9 +192,7 @@ export function isProductionModule(path: string): boolean {
 export function hasDocComment(module: DoctorModule, node: ts.Node): boolean {
   const text = module.source.text;
   const ranges = ts.getLeadingCommentRanges(text, node.getFullStart()) ?? [];
-  return ranges.some(
-    (range) => text.slice(range.pos, range.pos + 3) === DOC_COMMENT_HEAD,
-  );
+  return ranges.some((range) => text.slice(range.pos, range.pos + 3) === DOC_COMMENT_HEAD);
 }
 
 /** True when a statement carries the modifier named. */
@@ -231,12 +203,8 @@ export function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
 }
 
 /** The top-level statements a module exports. */
-export function exportedStatements(
-  module: DoctorModule,
-): readonly ts.Statement[] {
-  return module.source.statements.filter((statement) =>
-    hasModifier(statement, ts.SyntaxKind.ExportKeyword),
-  );
+export function exportedStatements(module: DoctorModule): readonly ts.Statement[] {
+  return module.source.statements.filter((statement) => hasModifier(statement, ts.SyntaxKind.ExportKeyword));
 }
 
 /** The names a top-level statement declares, which is none for most of them. */
@@ -249,11 +217,7 @@ export function declaredNames(statement: ts.Statement): readonly string[] {
   if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
     return statement.name === undefined ? [] : [statement.name.text];
   }
-  if (
-    ts.isTypeAliasDeclaration(statement) ||
-    ts.isInterfaceDeclaration(statement) ||
-    ts.isEnumDeclaration(statement)
-  ) {
+  if (ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement) || ts.isEnumDeclaration(statement)) {
     return [statement.name.text];
   }
   return [];
@@ -273,11 +237,7 @@ export function isWideningAssertion(node: ts.Node): boolean {
 }
 
 function isConstType(type: ts.TypeNode): boolean {
-  return (
-    ts.isTypeReferenceNode(type) &&
-    ts.isIdentifier(type.typeName) &&
-    type.typeName.text === "const"
-  );
+  return ts.isTypeReferenceNode(type) && ts.isIdentifier(type.typeName) && type.typeName.text === "const";
 }
 
 // ---------------------------------------------------------------------------
@@ -361,9 +321,7 @@ export function functionName(node: ts.Node): string {
   if (!ts.isFunctionDeclaration(node) && !ts.isMethodDeclaration(node)) {
     return "anonymous function";
   }
-  return node.name !== undefined && ts.isIdentifier(node.name)
-    ? node.name.text
-    : "anonymous function";
+  return node.name !== undefined && ts.isIdentifier(node.name) ? node.name.text : "anonymous function";
 }
 
 /** The leftmost identifier of a type name, which is the one that was imported. */
@@ -372,10 +330,7 @@ export function leftmostTypeName(name: ts.EntityName): string {
 }
 
 /** True when the node or anything below it matches. */
-export function containsNode(
-  node: ts.Node,
-  match: (node: ts.Node) => boolean,
-): boolean {
+export function containsNode(node: ts.Node, match: (node: ts.Node) => boolean): boolean {
   let found = match(node);
   visitNodes(node, (child) => {
     if (match(child)) found = true;
@@ -388,10 +343,7 @@ export function containsNode(
  * declared inside it. What a callback does happens later and somewhere else,
  * so a question about "this expression" must stop where the next scope starts.
  */
-export function containsInScope(
-  node: ts.Node,
-  match: (node: ts.Node) => boolean,
-): boolean {
+export function containsInScope(node: ts.Node, match: (node: ts.Node) => boolean): boolean {
   if (match(node)) return true;
   let found = false;
   node.forEachChild((child) => {
@@ -402,11 +354,7 @@ export function containsInScope(
 }
 
 /** Adds one finding to the running count for a key. */
-export function addFinding(
-  readings: Map<string, SignalReading>,
-  key: string,
-  evidence: SignalEvidence,
-): void {
+export function addFinding(readings: Map<string, SignalReading>, key: string, evidence: SignalEvidence): void {
   const found = readings.get(key);
   readings.set(key, {
     value: (found?.value ?? 0) + 1,
@@ -481,9 +429,7 @@ function isTypeOnlyEdge(node: ts.Node): boolean {
 /** `@scope/name/deep` and `name/deep` both name the package `…/name`. */
 export function packageOfSpecifier(specifier: string): string {
   const segments = specifier.split("/");
-  return specifier.startsWith("@")
-    ? segments.slice(0, 2).join("/")
-    : (segments[0] ?? specifier);
+  return specifier.startsWith("@") ? segments.slice(0, 2).join("/") : (segments[0] ?? specifier);
 }
 
 /** True for a relative path or a Node builtin, which name no package. */
@@ -492,9 +438,7 @@ export function isLocalSpecifier(specifier: string): boolean {
 }
 
 /** Every local name a module imports, mapped to the specifier it came from. */
-export function importedBindings(
-  module: DoctorModule,
-): ReadonlyMap<string, string> {
+export function importedBindings(module: DoctorModule): ReadonlyMap<string, string> {
   const bindings = new Map<string, string>();
   for (const statement of module.source.statements) {
     if (!ts.isImportDeclaration(statement)) continue;
@@ -522,10 +466,7 @@ function importedNames(clause: ts.ImportClause | undefined): readonly string[] {
  * both spellings and the directory barrel are offered and the caller keeps
  * whichever the program actually parsed.
  */
-export function resolveRelativeImport(
-  fromPath: string,
-  specifier: string,
-): readonly string[] {
+export function resolveRelativeImport(fromPath: string, specifier: string): readonly string[] {
   if (!specifier.startsWith(".")) return [];
   const base = joinRelative(fromPath, specifier);
   const stem = base.replace(/\.(?:js|mjs|cjs|ts|tsx)$/, "");

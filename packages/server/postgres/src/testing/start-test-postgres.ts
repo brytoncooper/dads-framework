@@ -66,9 +66,7 @@ export type StartTestPostgresOptions = {
  * which is what `CONTAINER_PER_FILE=1` forces, and what the nightly job runs
  * to prove the shared path has not started hiding cross-file leakage.
  */
-export async function startTestPostgres(
-  options: StartTestPostgresOptions = {},
-): Promise<TestPostgres> {
+export async function startTestPostgres(options: StartTestPostgresOptions = {}): Promise<TestPostgres> {
   const shared = process.env[SHARED_TEST_POSTGRES_URL];
   if (shared !== undefined && process.env[CONTAINER_PER_FILE] !== "1") {
     return databaseFromTemplate(shared, options);
@@ -86,9 +84,7 @@ export async function startUnattributedTestPostgres(): Promise<TestPostgres> {
 }
 
 /** A private empty database for tests that must prove the migration process itself. */
-export async function startUnmigratedTestPostgres(
-  options: StartTestPostgresOptions = {},
-): Promise<TestPostgres> {
+export async function startUnmigratedTestPostgres(options: StartTestPostgresOptions = {}): Promise<TestPostgres> {
   const shared = process.env[SHARED_TEST_POSTGRES_URL];
   if (shared !== undefined && process.env[CONTAINER_PER_FILE] !== "1") {
     return databaseWithoutTemplate(shared, options);
@@ -97,9 +93,7 @@ export async function startUnmigratedTestPostgres(
 }
 
 /** Per-file honesty path: one container, migrated in place, owned by this file. */
-async function bootOwnContainer(
-  options: StartTestPostgresOptions,
-): Promise<TestPostgres> {
+async function bootOwnContainer(options: StartTestPostgresOptions): Promise<TestPostgres> {
   return bootOwnContainerWithMigration(true, options);
 }
 
@@ -139,17 +133,11 @@ async function bootOwnContainerWithMigration(
 }
 
 /** Clone the migrated template into a database only this caller uses. */
-async function databaseFromTemplate(
-  sharedUrl: string,
-  options: StartTestPostgresOptions,
-): Promise<TestPostgres> {
+async function databaseFromTemplate(sharedUrl: string, options: StartTestPostgresOptions): Promise<TestPostgres> {
   return createPrivateDatabase(sharedUrl, options, TEMPLATE_DATABASE);
 }
 
-async function databaseWithoutTemplate(
-  sharedUrl: string,
-  options: StartTestPostgresOptions,
-): Promise<TestPostgres> {
+async function databaseWithoutTemplate(sharedUrl: string, options: StartTestPostgresOptions): Promise<TestPostgres> {
   return createPrivateDatabase(sharedUrl, options);
 }
 
@@ -170,9 +158,7 @@ export async function createPrivateDatabase(
   const admin = createTestPool(adminUrl(sharedUrl));
   try {
     await admin.query(
-      template === undefined
-        ? `CREATE DATABASE "${name}"`
-        : `CREATE DATABASE "${name}" TEMPLATE "${template}"`,
+      template === undefined ? `CREATE DATABASE "${name}"` : `CREATE DATABASE "${name}" TEMPLATE "${template}"`,
     );
   } finally {
     await admin.end();
@@ -211,15 +197,9 @@ export async function createPrivateDatabase(
  * to the database, so in RAM the one reader connects first and is spared by
  * the terminate pass.
  */
-async function retirePrivateDatabase(
-  admin: Pool,
-  connectionString: string,
-  name: string,
-): Promise<void> {
+async function retirePrivateDatabase(admin: Pool, connectionString: string, name: string): Promise<void> {
   const dropNow = await serverKeepsDataInMemory(admin);
-  const statsReader = dropNow
-    ? await connectStatsReader(connectionString)
-    : undefined;
+  const statsReader = dropNow ? await connectStatsReader(connectionString) : undefined;
   try {
     await admin.query(`ALTER DATABASE "${name}" ALLOW_CONNECTIONS false`);
     // Client backends only. Autovacuum workers ignore ALLOW_CONNECTIONS
@@ -236,9 +216,7 @@ async function retirePrivateDatabase(
       [name, spared],
     );
     if (remaining.rows.length > 0) {
-      throw new Error(
-        `Test database ${name} still has active connections after termination`,
-      );
+      throw new Error(`Test database ${name} still has active connections after termination`);
     }
     if (statsReader !== undefined) {
       // A terminated backend publishes its table counters as it exits, and
@@ -256,17 +234,13 @@ async function retirePrivateDatabase(
 }
 
 /** The one connection that reads a database's table counters before its drop. */
-async function connectStatsReader(
-  connectionString: string,
-): Promise<{ client: Client; pid: number }> {
+async function connectStatsReader(connectionString: string): Promise<{ client: Client; pid: number }> {
   const client = new Client({ connectionString });
   // A failure surfaces as the rejected query; an `error` event with no
   // listener would instead crash the test worker.
   client.on("error", () => undefined);
   await client.connect();
-  const result = await client.query<{ pid: number }>(
-    "SELECT pg_backend_pid() AS pid",
-  );
+  const result = await client.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
   const pid = result.rows[0]?.pid;
   if (pid === undefined) {
     await client.end();
@@ -282,9 +256,7 @@ async function connectStatsReader(
  * on a disk-backed server would pay the checkpoint the default avoids.
  */
 async function serverKeepsDataInMemory(admin: Pool): Promise<boolean> {
-  const result = await admin.query<{ fsync: string }>(
-    "SELECT current_setting('fsync') AS fsync",
-  );
+  const result = await admin.query<{ fsync: string }>("SELECT current_setting('fsync') AS fsync");
   return result.rows[0]?.fsync === "off";
 }
 
@@ -298,18 +270,14 @@ const MIGRATE_BIN = "packages/server/postgres/src/migrations/bin/migrate.ts";
 
 export async function applyCheckedInSchema(databaseUrl: string): Promise<void> {
   const workspaceRoot = findWorkspaceRoot();
-  await execFileAsync(
-    process.execPath,
-    ["--import", "tsx", join(workspaceRoot, MIGRATE_BIN)],
-    {
-      cwd: workspaceRoot,
-      env: {
-        ...process.env,
-        DATABASE_URL: databaseUrl,
-        WORKSPACE_ROOT: workspaceRoot,
-      },
+  await execFileAsync(process.execPath, ["--import", "tsx", join(workspaceRoot, MIGRATE_BIN)], {
+    cwd: workspaceRoot,
+    env: {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+      WORKSPACE_ROOT: workspaceRoot,
     },
-  );
+  });
 }
 
 /**
@@ -336,7 +304,5 @@ function isWorkspaceRoot(dir: string): boolean {
   const manifest = join(dir, "package.json");
   if (!existsSync(manifest)) return false;
   const parsed: unknown = JSON.parse(readFileSync(manifest, "utf8"));
-  return (
-    typeof parsed === "object" && parsed !== null && "workspaces" in parsed
-  );
+  return typeof parsed === "object" && parsed !== null && "workspaces" in parsed;
 }

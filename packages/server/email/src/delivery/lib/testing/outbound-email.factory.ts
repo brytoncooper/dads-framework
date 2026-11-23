@@ -2,10 +2,7 @@ import { deterministicUuid } from "@dads-framework/postgres/testing/deterministi
 
 import type { outboundEmailDocument } from "../database/generated-tables/outbound-email-documents.tables.js";
 import type { outboundEmail } from "../database/generated-tables/outbound-emails.tables.js";
-import {
-  type OutboundEmailId,
-  outboundEmailIdSchema,
-} from "../outbound-email-status.js";
+import { type OutboundEmailId, outboundEmailIdSchema } from "../outbound-email-status.js";
 
 type OutboundEmailInsert = typeof outboundEmail.$inferInsert;
 
@@ -15,9 +12,7 @@ let outboundEmailCounter = 0;
 
 /** A deterministic branded id, parsed rather than cast. */
 export function outboundEmailId(sequence: number): OutboundEmailId {
-  return outboundEmailIdSchema.parse(
-    deterministicUuid("outbound-email", sequence),
-  );
+  return outboundEmailIdSchema.parse(deterministicUuid("outbound-email", sequence));
 }
 
 /**
@@ -25,9 +20,7 @@ export function outboundEmailId(sequence: number): OutboundEmailId {
  * (docs/testing/seeders.md). Outbound-email rows carry no ownership tuples —
  * they are platform-internal, readable only through operator-gated actions.
  */
-export function makeOutboundEmail(
-  overrides: Partial<OutboundEmailInsert> = {},
-): OutboundEmailInsert {
+export function makeOutboundEmail(overrides: Partial<OutboundEmailInsert> = {}): OutboundEmailInsert {
   outboundEmailCounter += 1;
   return {
     id: outboundEmailId(outboundEmailCounter),

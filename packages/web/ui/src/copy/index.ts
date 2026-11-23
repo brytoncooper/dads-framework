@@ -7,30 +7,10 @@ export {
   type Locale,
   type LocalizedText,
 } from "./lib/localized-text.js";
-export {
-  mergeCopy,
-  type CopySource,
-  type MergedCopy,
-  type MergedCopyEntry,
-} from "./lib/merge-copy.js";
-export {
-  defineGlossary,
-  glossaryCatalog,
-  type Glossary,
-  type GlossaryEntry,
-} from "./lib/glossary.js";
-export {
-  copy,
-  isCopyDescriptor,
-  type CopyDescriptor,
-  type CopyVars,
-} from "./lib/copy-descriptor.js";
-export {
-  translate,
-  type CopyKey,
-  type PluralBaseKey,
-  type PluralCategory,
-} from "./lib/translate.js";
+export { mergeCopy, type CopySource, type MergedCopy, type MergedCopyEntry } from "./lib/merge-copy.js";
+export { defineGlossary, glossaryCatalog, type Glossary, type GlossaryEntry } from "./lib/glossary.js";
+export { copy, isCopyDescriptor, type CopyDescriptor, type CopyVars } from "./lib/copy-descriptor.js";
+export { translate, type CopyKey, type PluralBaseKey, type PluralCategory } from "./lib/translate.js";
 export { createCopyHook, type CopyTranslator } from "./lib/create-copy-hook.js";
 export {
   LocaleProvider,
@@ -72,14 +52,8 @@ export {
   type ListFormatOptions,
   type RelativeTimeFormatUnit,
 } from "./lib/locale-formatting.js";
-export {
-  startOfCalendarDate,
-  endOfCalendarDate,
-} from "./lib/logic/calendar-date-boundaries.js";
-export {
-  useLocaleFormatting,
-  type LocaleFormatting,
-} from "./lib/use-locale-formatting.js";
+export { startOfCalendarDate, endOfCalendarDate } from "./lib/logic/calendar-date-boundaries.js";
+export { useLocaleFormatting, type LocaleFormatting } from "./lib/use-locale-formatting.js";
 export {
   FormattedDateTime,
   FormattedExactDecimal,
@@ -96,10 +70,7 @@ export {
   type PlaceholderMismatch,
   type PluralFallbackGap,
 } from "./lib/catalog-parity.js";
-export {
-  checkEnglishChromeCase,
-  type EnglishChromeCaseViolation,
-} from "./lib/english-chrome-case.js";
+export { checkEnglishChromeCase, type EnglishChromeCaseViolation } from "./lib/english-chrome-case.js";
 export {
   checkProductVocabulary,
   defineProductVocabulary,

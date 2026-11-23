@@ -22,9 +22,7 @@ export function openReferencePagePdfWriter(): FixedPagePdfRenderer {
 }
 
 function pdfObjects(document: FixedPagePdf): readonly string[] {
-  const pageIds = document.pages.map(
-    (_, index) => `${String(5 + 2 * index)} 0 R`,
-  );
+  const pageIds = document.pages.map((_, index) => `${String(5 + 2 * index)} 0 R`);
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     `<< /Type /Pages /Count ${String(pageIds.length)} /Kids [${pageIds.join(" ")}] >>`,
@@ -32,9 +30,7 @@ function pdfObjects(document: FixedPagePdf): readonly string[] {
   ];
   for (const [index, lines] of document.pages.entries()) {
     const stream = pageStream(lines, document.height);
-    objects.push(
-      `<< /Length ${String(stream.length)} >>\nstream\n${stream}endstream`,
-    );
+    objects.push(`<< /Length ${String(stream.length)} >>\nstream\n${stream}endstream`);
     objects.push(
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${String(document.width)} ${String(document.height)}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${String(4 + 2 * index)} 0 R >>`,
     );

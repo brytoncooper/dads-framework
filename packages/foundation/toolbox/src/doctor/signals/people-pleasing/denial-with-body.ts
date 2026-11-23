@@ -16,26 +16,15 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading } from "../../doctor-signal.js";
 import { readRouteModel } from "../scanners/route-model.js";
-import {
-  readCodeSkeleton,
-  type SkeletonLine,
-} from "../scanners/top-level-declarations.js";
+import { readCodeSkeleton, type SkeletonLine } from "../scanners/top-level-declarations.js";
 
 const DENIAL_STATUS = /\bstatus\s*:\s*(?:401|403|404)\b/;
 const BODY_PROPERTY = /^(?:shape|body|data|details|payload|fields|errors)\s*:/;
 
 /** The first line at or after `from` whose depth leaves the literal. */
-function literalEnd(
-  skeleton: readonly SkeletonLine[],
-  from: number,
-  depth: number,
-): number {
+function literalEnd(skeleton: readonly SkeletonLine[], from: number, depth: number): number {
   for (let index = from; index < skeleton.length; index += 1) {
     const line = skeleton[index];
     if (line !== undefined && line.endDepth < depth) return index;
@@ -43,11 +32,7 @@ function literalEnd(
   return skeleton.length;
 }
 
-function literalStart(
-  skeleton: readonly SkeletonLine[],
-  from: number,
-  depth: number,
-): number {
+function literalStart(skeleton: readonly SkeletonLine[], from: number, depth: number): number {
   for (let index = from; index >= 0; index -= 1) {
     const line = skeleton[index];
     if (line !== undefined && line.startDepth < depth) return index;
@@ -56,11 +41,7 @@ function literalStart(
 }
 
 /** True when the object literal holding this line also declares a payload. */
-function carriesBody(
-  skeleton: readonly SkeletonLine[],
-  at: number,
-  depth: number,
-): boolean {
+function carriesBody(skeleton: readonly SkeletonLine[], at: number, depth: number): boolean {
   const from = literalStart(skeleton, at, depth);
   const to = literalEnd(skeleton, at, depth);
   for (let index = from; index <= to && index < skeleton.length; index += 1) {
@@ -71,10 +52,7 @@ function carriesBody(
   return false;
 }
 
-function denialsWithBodyIn(
-  context: DoctorContext,
-  paths: readonly string[],
-): readonly SignalEvidence[] {
+function denialsWithBodyIn(context: DoctorContext, paths: readonly string[]): readonly SignalEvidence[] {
   const found: SignalEvidence[] = [];
   for (const path of paths) {
     const skeleton = readCodeSkeleton(context.read(path));
@@ -104,7 +82,6 @@ export const denialWithBodySignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You return 403 with a paragraph so the unauthorized caller will not think you’re rude.",
+  sentence: "You return 403 with a paragraph so the unauthorized caller will not think you’re rude.",
   run: (context) => Promise.resolve(countDenialsWithBody(context)),
 };

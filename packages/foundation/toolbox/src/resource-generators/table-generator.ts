@@ -5,12 +5,7 @@ import { isMissingPathError } from "../missing-path-error.js";
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, databaseName } from "./names.js";
 
-export function addTable(
-  plan: GenerationPlan,
-  root: string,
-  domain: string,
-  name: string,
-): void {
+export function addTable(plan: GenerationPlan, root: string, domain: string, name: string): void {
   const dir = `domains/${domain}/server`;
   const item = camel(name);
   const table = databaseName(domain, name);
@@ -60,19 +55,9 @@ function nextTimestamp(files: readonly string[]): string {
   const now = new Date();
   const today = migrationTimestamp(now);
   if (today > cutoff) return today;
-  const date = [
-    cutoff.slice(0, 4),
-    cutoff.slice(4, 6),
-    cutoff.slice(6, 8),
-  ].join("-");
-  const time = [
-    cutoff.slice(8, 10),
-    cutoff.slice(10, 12),
-    cutoff.slice(12, 14),
-  ].join(":");
-  return migrationTimestamp(
-    new Date(new Date(`${date}T${time}Z`).getTime() + 1_000),
-  );
+  const date = [cutoff.slice(0, 4), cutoff.slice(4, 6), cutoff.slice(6, 8)].join("-");
+  const time = [cutoff.slice(8, 10), cutoff.slice(10, 12), cutoff.slice(12, 14)].join(":");
+  return migrationTimestamp(new Date(new Date(`${date}T${time}Z`).getTime() + 1_000));
 }
 
 function migrationTimestamp(time: Date): string {
@@ -103,11 +88,7 @@ export function down(pgm: MigrationBuilder): void {
 `;
 }
 
-function registerMigrations(
-  plan: GenerationPlan,
-  domain: string,
-  root: string,
-): void {
+function registerMigrations(plan: GenerationPlan, domain: string, root: string): void {
   const name = `${camel(domain)}Migrations`;
   const file = `domains/${domain}/server/migration-source.ts`;
   plan.create(
@@ -126,10 +107,6 @@ export const ${name}: MigrationSource = {
   const entry = `export { ${name} } from "./server/migration-source.js";`;
   plan.appendLine(publicIndex, "// dad:add exports", entry);
   const registry = "assembly/migrations.ts";
-  plan.appendLine(
-    registry,
-    "// dad:add imports",
-    `import { ${name} } from "../domains/${domain}/index.js";`,
-  );
+  plan.appendLine(registry, "// dad:add imports", `import { ${name} } from "../domains/${domain}/index.js";`);
   plan.appendLine(registry, "// dad:add migrations", `  ${name},`);
 }

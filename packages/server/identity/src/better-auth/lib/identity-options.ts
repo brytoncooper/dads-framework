@@ -18,13 +18,7 @@ export function validatedOrigin(baseUrl: string): string {
   if (url.protocol !== "https:" && !(local && url.protocol === "http:")) {
     throw new Error("Identity requires HTTPS or a loopback HTTP origin.");
   }
-  if (
-    url.username ||
-    url.password ||
-    url.pathname !== "/" ||
-    url.search ||
-    url.hash
-  ) {
+  if (url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
     throw new Error("Identity requires a bare origin.");
   }
   return url.origin;

@@ -5,10 +5,7 @@ import { request as httpRequest } from "node:http";
 import { WorkbenchMemoryAuthorization } from "./testing/workbench-memory-authorization.js";
 import { createWorkbench } from "./create-workbench.js";
 import { MemoryWorkbenchStore } from "./storage/memory-workbench-store.js";
-import {
-  startComposedWorkbenchServer,
-  startWorkbenchServer,
-} from "./server.js";
+import { startComposedWorkbenchServer, startWorkbenchServer } from "./server.js";
 
 const shutdowns: (() => Promise<void>)[] = [];
 afterEach(async () => {

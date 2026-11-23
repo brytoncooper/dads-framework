@@ -13,9 +13,7 @@ const optionsSchema = z.strictObject({
 });
 
 /** Credentials are independent random 64-character hex strings. Initialized instances must set requireExistingData; it defaults to false for first startup. */
-export type WorkbenchInfrastructureOptions = Readonly<
-  z.input<typeof optionsSchema>
->;
+export type WorkbenchInfrastructureOptions = Readonly<z.input<typeof optionsSchema>>;
 
 export type DockerCommand = {
   readonly args: readonly string[];
@@ -28,16 +26,12 @@ export type DockerCommandRunner = (command: DockerCommand) => Promise<string>;
 
 const messages = {
   INVALID_OPTIONS: "Workbench infrastructure options are invalid.",
-  DOCKER_UNAVAILABLE:
-    "Docker and Docker Compose 2.20 or newer must be available and running.",
-  OWNERSHIP_CONFLICT:
-    "Refusing Docker resources with unexpected names or ownership labels.",
+  DOCKER_UNAVAILABLE: "Docker and Docker Compose 2.20 or newer must be available and running.",
+  OWNERSHIP_CONFLICT: "Refusing Docker resources with unexpected names or ownership labels.",
   DATA_MISSING:
     "Retained workbench authorization data is missing. Refusing to create a blank authorization database; no implicit reset is performed.",
-  COMMAND_FAILED:
-    "A bounded workbench Docker command failed. Resources and data have not been automatically purged.",
-  INVALID_ENDPOINT:
-    "The selected workbench backend must publish exactly one valid loopback port.",
+  COMMAND_FAILED: "A bounded workbench Docker command failed. Resources and data have not been automatically purged.",
+  INVALID_ENDPOINT: "The selected workbench backend must publish exactly one valid loopback port.",
   CANCELLED: "Workbench infrastructure operation was cancelled or timed out.",
 };
 
@@ -76,8 +70,7 @@ export class WorkbenchInfrastructure {
     private readonly runner: DockerCommandRunner = runDockerCommand,
   ) {
     const parsed = optionsSchema.safeParse(options);
-    if (!parsed.success)
-      throw new WorkbenchInfrastructureError("INVALID_OPTIONS");
+    if (!parsed.success) throw new WorkbenchInfrastructureError("INVALID_OPTIONS");
     this.options = parsed.data;
     const postgresContainer: ExpectedResource = {
       kind: "container",
@@ -124,21 +117,13 @@ export class WorkbenchInfrastructure {
     };
   }
 
-  async start(
-    signal?: AbortSignal,
-  ): Promise<WorkbenchInfrastructureConnection> {
-    const bounded = AbortSignal.any([
-      AbortSignal.timeout(240_000),
-      ...(signal ? [signal] : []),
-    ]);
+  async start(signal?: AbortSignal): Promise<WorkbenchInfrastructureConnection> {
+    const bounded = AbortSignal.any([AbortSignal.timeout(240_000), ...(signal ? [signal] : [])]);
     await this.verifyPrerequisites(bounded);
     const existing = await this.inspectOwnership(bounded);
     if (
       this.options.requireExistingData &&
-      !existing.some(
-        (resource) =>
-          resource.kind === "volume" && resource.role === "postgres_data",
-      )
+      !existing.some((resource) => resource.kind === "volume" && resource.role === "postgres_data")
     )
       throw new WorkbenchInfrastructureError("DATA_MISSING");
     await this.command(
@@ -163,21 +148,14 @@ export class WorkbenchInfrastructure {
       120_000,
     );
     const owned = await this.inspectOwnership(bounded);
-    if (owned.length !== this.resources.length)
-      throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
+    if (owned.length !== this.resources.length) throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
     const service = owned.find(
       (entry) =>
-        entry.kind === "container" &&
-        entry.role ===
-          (this.options.adapter === "spicedb" ? "spicedb" : "postgres"),
+        entry.kind === "container" && entry.role === (this.options.adapter === "spicedb" ? "spicedb" : "postgres"),
     );
     if (!service) throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
     const mapping = await this.command(
-      [
-        "port",
-        service.id,
-        this.options.adapter === "spicedb" ? "50051/tcp" : "5432/tcp",
-      ],
+      ["port", service.id, this.options.adapter === "spicedb" ? "50051/tcp" : "5432/tcp"],
       bounded,
     );
     const port = loopbackPort(mapping);
@@ -195,14 +173,8 @@ export class WorkbenchInfrastructure {
   async stop(): Promise<void> {
     const signal = AbortSignal.timeout(120_000);
     const owned = await this.inspectOwnership(signal);
-    for (const container of owned
-      .filter((entry) => entry.kind === "container")
-      .reverse()) {
-      await this.command(
-        ["container", "stop", "--time", "10", container.id],
-        signal,
-        20_000,
-      );
+    for (const container of owned.filter((entry) => entry.kind === "container").reverse()) {
+      await this.command(["container", "stop", "--time", "10", container.id], signal, 20_000);
       await this.command(["container", "rm", container.id], signal);
     }
     for (const network of owned.filter((entry) => entry.kind === "network"))
@@ -210,30 +182,14 @@ export class WorkbenchInfrastructure {
   }
 
   private async verifyPrerequisites(signal: AbortSignal): Promise<void> {
-    await this.command(
-      ["info", "--format", "{{.ServerVersion}}"],
-      signal,
-      10_000,
-      "DOCKER_UNAVAILABLE",
-    );
-    const version = await this.command(
-      ["compose", "version", "--short"],
-      signal,
-      10_000,
-      "DOCKER_UNAVAILABLE",
-    );
+    await this.command(["info", "--format", "{{.ServerVersion}}"], signal, 10_000, "DOCKER_UNAVAILABLE");
+    const version = await this.command(["compose", "version", "--short"], signal, 10_000, "DOCKER_UNAVAILABLE");
     const match = /^v?(\d+)\.(\d+)\./.exec(version.trim());
-    if (
-      !match ||
-      Number(match[1]) < 2 ||
-      (Number(match[1]) === 2 && Number(match[2]) < 20)
-    )
+    if (!match || Number(match[1]) < 2 || (Number(match[1]) === 2 && Number(match[2]) < 20))
       throw new WorkbenchInfrastructureError("DOCKER_UNAVAILABLE");
   }
 
-  private async inspectOwnership(
-    signal: AbortSignal,
-  ): Promise<OwnedResource[]> {
+  private async inspectOwnership(signal: AbortSignal): Promise<OwnedResource[]> {
     const owned: OwnedResource[] = [];
     const kinds: readonly ResourceKind[] = ["container", "network", "volume"];
     for (const kind of kinds) {
@@ -256,31 +212,20 @@ export class WorkbenchInfrastructure {
           ],
           signal,
         );
-        for (const name of output.trim().split("\n").filter(Boolean))
-          listedNames.add(name);
+        for (const name of output.trim().split("\n").filter(Boolean)) listedNames.add(name);
       }
       for (const name of listedNames) {
         const resource = expected.find((entry) => entry.name === name);
-        if (!resource)
-          throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
+        if (!resource) throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
         owned.push(await this.inspectResource(resource, signal));
       }
     }
     return owned;
   }
 
-  private async inspectResource(
-    resource: ExpectedResource,
-    signal: AbortSignal,
-  ): Promise<OwnedResource> {
+  private async inspectResource(resource: ExpectedResource, signal: AbortSignal): Promise<OwnedResource> {
     const output = await this.command(
-      [
-        resource.kind,
-        "inspect",
-        "--format",
-        inspectFormat(resource.kind),
-        resource.name,
-      ],
+      [resource.kind, "inspect", "--format", inspectFormat(resource.kind), resource.name],
       signal,
     );
     const inspected = parseInspectedResource(output);
@@ -320,9 +265,7 @@ function inspectFormat(kind: ResourceKind): string {
 }
 
 /** Unreadable or unexpected inspect output is a refusal, never a partially trusted resource. */
-function parseInspectedResource(
-  output: string,
-): z.output<typeof inspectedResource> {
+function parseInspectedResource(output: string): z.output<typeof inspectedResource> {
   let json: unknown;
   try {
     json = JSON.parse(output);
@@ -330,8 +273,7 @@ function parseInspectedResource(
     throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
   }
   const parsed = inspectedResource.safeParse(json);
-  if (!parsed.success)
-    throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
+  if (!parsed.success) throw new WorkbenchInfrastructureError("OWNERSHIP_CONFLICT");
   return parsed.data;
 }
 
@@ -345,9 +287,7 @@ function assertOwnedResource(
   const roleLabel = `com.docker.compose.${resource.kind === "container" ? "service" : resource.kind}`;
   if (
     name.replace(/^\//, "") !== resource.name ||
-    (resource.kind === "volume"
-      ? id !== resource.name
-      : !/^[a-f0-9]{64}$/.test(id)) ||
+    (resource.kind === "volume" ? id !== resource.name : !/^[a-f0-9]{64}$/.test(id)) ||
     labels?.[ownerLabel] !== projectName ||
     labels[composeProjectLabel] !== projectName ||
     labels[roleLabel] !== resource.role

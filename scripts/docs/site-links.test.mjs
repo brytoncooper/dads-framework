@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import {
-  mkdtempSync,
-  mkdirSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -60,10 +54,7 @@ test("catalogued links, including directory README targets, stay on the site", (
   write("docs/reference/README.md", "# Reference\n");
   pages.set("docs/reference/README.md", { slug: "reference" });
 
-  assert.equal(
-    link("../reference/README.md#options"),
-    "reference.html#options",
-  );
+  assert.equal(link("../reference/README.md#options"), "reference.html#options");
   assert.equal(link("../reference/#options"), "reference.html#options");
 });
 
@@ -72,10 +63,7 @@ test("keeps source links local and refuses private paths before routing", (t) =>
   write("examples/route.ts", "export const route = {};\n");
   pages.set("docs/private/README.md", { slug: "private" });
 
-  assert.equal(
-    link("../../examples/route.ts#L1"),
-    "source/examples/route.ts#L1",
-  );
+  assert.equal(link("../../examples/route.ts#L1"), "source/examples/route.ts#L1");
   assert.ok(files.has("source/examples/route.ts"));
   assert.throws(() => link("../private/README.md"), /cannot expose/u);
   assert.throws(() => link("../../../README.md"), /cannot expose/u);
@@ -91,14 +79,8 @@ test("loads catalogue source and proof without page links", (t) => {
   execFileSync("git", ["init", "-q"], { cwd: root });
   execFileSync("git", ["add", "--", source, proof], { cwd: root });
 
-  loadPageExamples(
-    { path: "guide.md", examples: [{ source, proof }] },
-    exampleFileReader(root, files),
-  );
-  assert.equal(
-    files.get(`source/${source}`).toString(),
-    "export const example = <span />;",
-  );
+  loadPageExamples({ path: "guide.md", examples: [{ source, proof }] }, exampleFileReader(root, files));
+  assert.equal(files.get(`source/${source}`).toString(), "export const example = <span />;");
   assert.ok(files.has(`source/${proof}`));
 });
 
@@ -108,19 +90,12 @@ test("rejects private, untracked and symlink example paths", (t) => {
   write("examples/untracked.ts", "work in progress");
   symlinkSync("../docs/private/secret.ts", join(root, "examples/alias.ts"));
   execFileSync("git", ["init", "-q"], { cwd: root });
-  execFileSync(
-    "git",
-    ["add", "--", "docs/private/secret.ts", "examples/alias.ts"],
-    { cwd: root },
-  );
+  execFileSync("git", ["add", "--", "docs/private/secret.ts", "examples/alias.ts"], { cwd: root });
   const readFile = exampleFileReader(root, files);
 
   assert.throws(() => readFile("docs/private/secret.ts"), /cannot expose/u);
   assert.throws(() => readFile("examples/alias.ts"), /point directly/u);
-  assert.throws(
-    () => readFile("examples/untracked.ts"),
-    /tracked repository file/u,
-  );
+  assert.throws(() => readFile("examples/untracked.ts"), /tracked repository file/u);
   assert.throws(() => readFile("../outside.ts"), /tracked repository file/u);
   assert.equal(files.size, 0);
 });

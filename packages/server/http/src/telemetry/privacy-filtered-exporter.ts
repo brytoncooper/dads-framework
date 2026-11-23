@@ -26,13 +26,8 @@ function withPublicSpanFields(span: ReadableSpan): ReadableSpan {
   return {
     ...span,
     spanContext: () => span.spanContext(),
-    name:
-      span.instrumentationScope.name === "@opentelemetry/instrumentation-pg"
-        ? "postgres.query"
-        : span.name,
-    attributes: Object.fromEntries(
-      Object.entries(span.attributes).filter(([key]) => EXPORTED_KEYS.has(key)),
-    ),
+    name: span.instrumentationScope.name === "@opentelemetry/instrumentation-pg" ? "postgres.query" : span.name,
+    attributes: Object.fromEntries(Object.entries(span.attributes).filter(([key]) => EXPORTED_KEYS.has(key))),
     status: { code: span.status.code },
     events: [],
     links: [],

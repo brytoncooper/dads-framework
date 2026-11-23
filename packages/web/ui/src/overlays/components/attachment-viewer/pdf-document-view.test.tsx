@@ -6,14 +6,7 @@
  * and event bus, and thumbnails are left undrawn.
  * @vitest-environment jsdom
  */
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PdfDocumentView } from "./pdf-document-view.js";
@@ -90,24 +83,17 @@ function fakeController(): PdfViewerController {
 }
 
 function renderView() {
-  const view = render(
-    <PdfDocumentView data={new ArrayBuffer(8)} onFailed={vi.fn()} />,
-  );
+  const view = render(<PdfDocumentView data={new ArrayBuffer(8)} onFailed={vi.fn()} />);
   return {
     ...view,
     showPage: (pageNumber: number) => {
       controllerState = { ...controllerState, pageNumber };
-      view.rerender(
-        <PdfDocumentView data={new ArrayBuffer(8)} onFailed={vi.fn()} />,
-      );
+      view.rerender(<PdfDocumentView data={new ArrayBuffer(8)} onFailed={vi.fn()} />);
     },
   };
 }
 
-const originalScrollIntoView = Object.getOwnPropertyDescriptor(
-  Element.prototype,
-  "scrollIntoView",
-);
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
 
 beforeEach(() => {
   fakeBus = createFakeBus();
@@ -135,11 +121,7 @@ afterEach(() => {
   if (originalScrollIntoView === undefined) {
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   } else {
-    Object.defineProperty(
-      Element.prototype,
-      "scrollIntoView",
-      originalScrollIntoView,
-    );
+    Object.defineProperty(Element.prototype, "scrollIntoView", originalScrollIntoView);
   }
 });
 
@@ -175,8 +157,7 @@ describe("PdfDocumentView", () => {
 
   it("disables the backward controls on page 1 and the forward ones on the last page", () => {
     const { showPage } = renderView();
-    const isDisabled = (name: string) =>
-      screen.getByRole("button", { name }).hasAttribute("disabled");
+    const isDisabled = (name: string) => screen.getByRole("button", { name }).hasAttribute("disabled");
 
     expect(isDisabled("First Page")).toBe(true);
     expect(isDisabled("Previous Page")).toBe(true);
@@ -221,11 +202,7 @@ describe("PdfDocumentView", () => {
       expect(rail.querySelectorAll("button")).toHaveLength(5);
 
       showPage(2);
-      expect(
-        screen
-          .getByRole("button", { name: "Page 2" })
-          .getAttribute("aria-current"),
-      ).toBe("page");
+      expect(screen.getByRole("button", { name: "Page 2" }).getAttribute("aria-current")).toBe("page");
 
       fireEvent.click(screen.getByRole("button", { name: "Page 4" }));
       expect(goToPage).toHaveBeenCalledWith(4);
@@ -234,31 +211,19 @@ describe("PdfDocumentView", () => {
     it("hides and shows the rail from the toolbar", () => {
       renderView();
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Hide Page Thumbnails" }),
-      );
-      expect(
-        screen.queryByRole("navigation", { name: "Page Thumbnails" }),
-      ).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Hide Page Thumbnails" }));
+      expect(screen.queryByRole("navigation", { name: "Page Thumbnails" })).toBeNull();
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Show Page Thumbnails" }),
-      );
-      expect(
-        screen.getByRole("navigation", { name: "Page Thumbnails" }),
-      ).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Show Page Thumbnails" }));
+      expect(screen.getByRole("navigation", { name: "Page Thumbnails" })).toBeTruthy();
     });
 
     it("starts hidden on a phone-width window", () => {
       vi.stubGlobal("innerWidth", 390);
       renderView();
 
-      expect(
-        screen.queryByRole("navigation", { name: "Page Thumbnails" }),
-      ).toBeNull();
-      expect(
-        screen.getByRole("button", { name: "Show Page Thumbnails" }),
-      ).toBeTruthy();
+      expect(screen.queryByRole("navigation", { name: "Page Thumbnails" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Show Page Thumbnails" })).toBeTruthy();
     });
   });
 
@@ -334,11 +299,7 @@ describe("PdfDocumentView", () => {
         type: "casesensitivitychange",
         caseSensitive: true,
       });
-      expect(
-        screen
-          .getByRole("button", { name: "Match Case" })
-          .getAttribute("aria-pressed"),
-      ).toBe("true");
+      expect(screen.getByRole("button", { name: "Match Case" }).getAttribute("aria-pressed")).toBe("true");
     });
 
     it("closes on Escape and clears its highlights", () => {
@@ -356,9 +317,7 @@ describe("PdfDocumentView", () => {
 
       fireEvent.keyDown(window, { key: "f", ctrlKey: true });
 
-      expect(
-        screen.getByRole("searchbox", { name: "Find in Document" }),
-      ).toBeTruthy();
+      expect(screen.getByRole("searchbox", { name: "Find in Document" })).toBeTruthy();
     });
   });
 
@@ -378,9 +337,7 @@ describe("PdfDocumentView", () => {
     renderView();
 
     fireEvent.click(screen.getByRole("button", { name: "Rotate Clockwise" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Rotate Counterclockwise" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Rotate Counterclockwise" }));
 
     expect(rotate.mock.calls).toEqual([["clockwise"], ["counterclockwise"]]);
   });

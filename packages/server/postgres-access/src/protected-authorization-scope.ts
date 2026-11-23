@@ -1,7 +1,4 @@
-import type {
-  PostgresAccessExecutor,
-  PostgresAuthorization,
-} from "./postgres-authorization.js";
+import type { PostgresAccessExecutor, PostgresAuthorization } from "./postgres-authorization.js";
 
 type Lifetime = {
   owner: object | undefined;
@@ -10,9 +7,7 @@ type Lifetime = {
 
 const lifetimes = new WeakMap<PostgresAuthorization, Lifetime>();
 
-export function assertProtectedAuthorizationActive(
-  authorization: PostgresAuthorization,
-): void {
+export function assertProtectedAuthorizationActive(authorization: PostgresAuthorization): void {
   const scope = lifetimes.get(authorization);
   if (scope !== undefined && !scope.active()) {
     throw scopeEnded();
@@ -27,9 +22,7 @@ export function assertProtectedAuthorizationCanJoin(
   if (scope === undefined) return;
   if (!scope.active()) throw scopeEnded();
   if (scope.owner !== owner) {
-    throw new Error(
-      "Protected authorization can only join its own Postgres transaction",
-    );
+    throw new Error("Protected authorization can only join its own Postgres transaction");
   }
 }
 

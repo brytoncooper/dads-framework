@@ -1,8 +1,4 @@
-import type {
-  EmailMessage,
-  EmailSender,
-  EmailSendReceipt,
-} from "../core/index.js";
+import type { EmailMessage, EmailSender, EmailSendReceipt } from "../core/index.js";
 import { buildMailgunForm } from "./logic/build-mailgun-form.js";
 
 /**

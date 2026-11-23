@@ -1,16 +1,7 @@
 import { actor, compileAccess } from "@dads-framework/access";
-import type {
-  AuditLogScope,
-  AuditTriggerConfiguration,
-} from "@dads-framework/audit";
-import type {
-  FeatureFlagContext,
-  TenantDirectory,
-} from "@dads-framework/feature-flags";
-import {
-  createPostgresConnection,
-  type PostgresConnection,
-} from "@dads-framework/postgres";
+import type { AuditLogScope, AuditTriggerConfiguration } from "@dads-framework/audit";
+import type { FeatureFlagContext, TenantDirectory } from "@dads-framework/feature-flags";
+import { createPostgresConnection, type PostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
   relationshipSchemaMigration,
@@ -48,8 +39,7 @@ describe("two tenants on Postgres", () => {
     cleanup.push(postgres.stop);
     const migration = new MigrationBuilder(
       {
-        query: () =>
-          Promise.reject(new Error("Schema assembly performs no I/O")),
+        query: () => Promise.reject(new Error("Schema assembly performs no I/O")),
         select: () => Promise.resolve([]),
       },
       undefined,
@@ -100,22 +90,14 @@ describe("two tenants on Postgres", () => {
     await expect(tenants.list("nora")).resolves.toEqual([north]);
     await expect(tenants.list("sam")).resolves.toEqual([south]);
     await expect(tenants.list("visitor")).resolves.toEqual([]);
-    await expect(tenants.context("nora", south.id)).rejects.toBeInstanceOf(
+    await expect(tenants.context("nora", south.id)).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.rename("nora", south.id, "Changed")).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.memberships.roster("sam", north.id)).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.invitations.issue("nora", south.id, "user@example.test")).rejects.toBeInstanceOf(
       TenantUnavailableError,
     );
-    await expect(
-      tenants.rename("nora", south.id, "Changed"),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.memberships.roster("sam", north.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.invitations.issue("nora", south.id, "user@example.test"),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
 
-    await expect(
-      tenants.rename("nora", north.id, "North Team"),
-    ).resolves.toEqual({ ...north, name: "North Team" });
+    await expect(tenants.rename("nora", north.id, "North Team")).resolves.toEqual({ ...north, name: "North Team" });
     const context = await tenants.context("sam", south.id);
     const audience: FeatureFlagContext = context.audience;
     const auditScope: AuditLogScope = context.auditScope;
@@ -126,31 +108,23 @@ describe("two tenants on Postgres", () => {
       kind: "application",
       values: { tenant_id: south.id },
     });
-    expect(triggerOptions.tables["tenant"]?.scopeColumns?.["tenant_id"]).toBe(
-      "id",
-    );
-    await expect(
-      directory.findActiveTenants([south.id, "not-a-tenant"]),
-    ).resolves.toEqual([south]);
+    expect(triggerOptions.tables["tenant"]?.scopeColumns?.["tenant_id"]).toBe("id");
+    await expect(directory.findActiveTenants([south.id, "not-a-tenant"])).resolves.toEqual([south]);
   });
 
   it("requires a verified recipient, consumes the invitation once, and grants only the invited tenant", async () => {
     const project = await tenants.create("pat", "Project");
     const another = await tenants.create("alex", "Another");
-    const { token } = await tenants.invitations.issue(
-      "pat",
-      project.id,
-      "guest@example.test",
-    );
+    const { token } = await tenants.invitations.issue("pat", project.id, "guest@example.test");
     const guest = {
       id: "guest",
       email: "Guest@example.test",
       emailVerified: true,
     };
 
-    await expect(
-      tenants.invitations.accept(token, { ...guest, emailVerified: false }),
-    ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
+    await expect(tenants.invitations.accept(token, { ...guest, emailVerified: false })).rejects.toBeInstanceOf(
+      TenantInvitationUnavailableError,
+    );
     await expect(
       tenants.invitations.accept(token, {
         ...guest,
@@ -158,70 +132,48 @@ describe("two tenants on Postgres", () => {
       }),
     ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
     await expect(tenants.list(guest.id)).resolves.toEqual([]);
-    await expect(tenants.invitations.accept(token, guest)).resolves.toBe(
-      project.id,
-    );
-    await expect(
-      tenants.invitations.accept(token, guest),
-    ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
+    await expect(tenants.invitations.accept(token, guest)).resolves.toBe(project.id);
+    await expect(tenants.invitations.accept(token, guest)).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
 
     await expect(tenants.list(guest.id)).resolves.toEqual([project]);
-    await expect(tenants.context(guest.id, another.id)).rejects.toBeInstanceOf(
+    await expect(tenants.context(guest.id, another.id)).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.rename(guest.id, project.id, "Changed")).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.memberships.changeRole(guest.id, project.id, guest.id, "admin")).rejects.toBeInstanceOf(
       TenantUnavailableError,
     );
-    await expect(
-      tenants.rename(guest.id, project.id, "Changed"),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.memberships.changeRole(guest.id, project.id, guest.id, "admin"),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.memberships.roster("pat", project.id),
-    ).resolves.toEqual([
+    await expect(tenants.memberships.roster("pat", project.id)).resolves.toEqual([
       { tenantId: project.id, accountId: guest.id, role: "member" },
       { tenantId: project.id, accountId: "pat", role: "owner" },
     ]);
 
     await tenants.memberships.changeRole("pat", project.id, guest.id, "admin");
-    await expect(
-      tenants.memberships.roster(guest.id, project.id),
-    ).resolves.toHaveLength(2);
-    await expect(
-      tenants.memberships.permissions("pat", project.id, guest.id),
-    ).resolves.toEqual({
+    await expect(tenants.memberships.roster(guest.id, project.id)).resolves.toHaveLength(2);
+    await expect(tenants.memberships.permissions("pat", project.id, guest.id)).resolves.toEqual({
       role: "admin",
       view: true,
       manageMembers: true,
       manageTenant: false,
     });
-    await expect(
-      tenants.memberships.permissions(guest.id, project.id, "pat"),
-    ).resolves.toEqual({
+    await expect(tenants.memberships.permissions(guest.id, project.id, "pat")).resolves.toEqual({
       role: "owner",
       view: true,
       manageMembers: true,
       manageTenant: true,
     });
-    await expect(
-      tenants.memberships.removeMember(guest.id, project.id, "pat"),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await tenants.memberships.removeMember("pat", project.id, guest.id);
-    await expect(
-      tenants.memberships.permissions("pat", project.id, guest.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(tenants.list(guest.id)).resolves.toEqual([]);
-    await expect(tenants.context(guest.id, project.id)).rejects.toBeInstanceOf(
+    await expect(tenants.memberships.removeMember(guest.id, project.id, "pat")).rejects.toBeInstanceOf(
       TenantUnavailableError,
     );
+    await tenants.memberships.removeMember("pat", project.id, guest.id);
+    await expect(tenants.memberships.permissions("pat", project.id, guest.id)).rejects.toBeInstanceOf(
+      TenantUnavailableError,
+    );
+    await expect(tenants.list(guest.id)).resolves.toEqual([]);
+    await expect(tenants.context(guest.id, project.id)).rejects.toBeInstanceOf(TenantUnavailableError);
   });
 
   it("commits one membership when the same invite arrives concurrently", async () => {
     const tenant = await tenants.create("jordan", "Concurrent");
-    const { token } = await tenants.invitations.issue(
-      "jordan",
-      tenant.id,
-      "race@example.test",
-    );
+    const { token } = await tenants.invitations.issue("jordan", tenant.id, "race@example.test");
     const account = {
       id: "racer",
       email: "race@example.test",
@@ -235,18 +187,12 @@ describe("two tenants on Postgres", () => {
       { status: "fulfilled", value: tenant.id },
     ]);
     await expect(tenants.list(account.id)).resolves.toEqual([tenant]);
-    await expect(
-      tenants.memberships.roster("jordan", tenant.id),
-    ).resolves.toHaveLength(2);
+    await expect(tenants.memberships.roster("jordan", tenant.id)).resolves.toHaveLength(2);
   });
 
   it("checks the locked invitation tenant and verified recipient before granting membership", async () => {
     const tenant = await tenants.create("sso-owner", "SSO Required");
-    const invite = await tenants.invitations.issue(
-      "sso-owner",
-      tenant.id,
-      "proof@example.test",
-    );
+    const invite = await tenants.invitations.issue("sso-owner", tenant.id, "proof@example.test");
     const account = {
       id: "proof-recipient",
       email: "Proof@example.test",
@@ -259,21 +205,17 @@ describe("two tenants on Postgres", () => {
           account: { ...account, email: "proof@example.test" },
         });
         await expect(
-          database.pool.query(
-            "SELECT tenant_id FROM tenant_invitation WHERE tenant_id = $1 FOR UPDATE NOWAIT",
-            [tenant.id],
-          ),
+          database.pool.query("SELECT tenant_id FROM tenant_invitation WHERE tenant_id = $1 FOR UPDATE NOWAIT", [
+            tenant.id,
+          ]),
         ).rejects.toMatchObject({ code: "55P03" });
         return false;
       }),
     ).rejects.toBeInstanceOf(TenantInvitationUnavailableError);
     await expect(tenants.list(account.id)).resolves.toEqual([]);
     await expect(
-      tenants.invitations.accept(
-        invite.token,
-        account,
-        ({ tenantId, account: verified }) =>
-          Promise.resolve(tenantId === tenant.id && verified.id === account.id),
+      tenants.invitations.accept(invite.token, account, ({ tenantId, account: verified }) =>
+        Promise.resolve(tenantId === tenant.id && verified.id === account.id),
       ),
     ).resolves.toBe(tenant.id);
     await expect(tenants.list(account.id)).resolves.toEqual([tenant]);
@@ -281,11 +223,7 @@ describe("two tenants on Postgres", () => {
 
   it("holds the inviter's membership through the acceptance authorization check", async () => {
     const tenant = await tenants.create("casey", "Lock proof");
-    const first = await tenants.invitations.issue(
-      "casey",
-      tenant.id,
-      "lead@example.test",
-    );
+    const first = await tenants.invitations.issue("casey", tenant.id, "lead@example.test");
     const admin = {
       id: "lead",
       email: "lead@example.test",
@@ -293,11 +231,7 @@ describe("two tenants on Postgres", () => {
     };
     await tenants.invitations.accept(first.token, admin);
     await tenants.memberships.changeRole("casey", tenant.id, admin.id, "admin");
-    const invite = await tenants.invitations.issue(
-      admin.id,
-      tenant.id,
-      "guest-lock@example.test",
-    );
+    const invite = await tenants.invitations.issue(admin.id, tenant.id, "guest-lock@example.test");
 
     const probe = async () => {
       // Role revocation needs this exact exclusive row lock.
@@ -324,11 +258,7 @@ describe("two tenants on Postgres", () => {
 
   it("rechecks expiry after the issuer authorization completes", async () => {
     const tenant = await tenants.create("riley", "Expiry during authorization");
-    const invite = await tenants.invitations.issue(
-      "riley",
-      tenant.id,
-      "late@example.test",
-    );
+    const invite = await tenants.invitations.issue("riley", tenant.id, "late@example.test");
     const priorTime = clock.now;
     duringAuthorization = () => {
       clock.now = invite.expiresAt;
@@ -351,34 +281,17 @@ describe("two tenants on Postgres", () => {
 
   it("refuses expired invites and revokes outstanding invite authority when an admin loses access", async () => {
     const tenant = await tenants.create("morgan", "Workspace");
-    const first = await tenants.invitations.issue(
-      "morgan",
-      tenant.id,
-      "admin@example.test",
-    );
+    const first = await tenants.invitations.issue("morgan", tenant.id, "admin@example.test");
     const admin = {
       id: "taylor",
       email: "admin@example.test",
       emailVerified: true,
     };
     await tenants.invitations.accept(first.token, admin);
-    await tenants.memberships.changeRole(
-      "morgan",
-      tenant.id,
-      admin.id,
-      "admin",
-    );
+    await tenants.memberships.changeRole("morgan", tenant.id, admin.id, "admin");
 
-    const expired = await tenants.invitations.issue(
-      "morgan",
-      tenant.id,
-      "expiry@example.test",
-    );
-    const forwarded = await tenants.invitations.issue(
-      admin.id,
-      tenant.id,
-      "next@example.test",
-    );
+    const expired = await tenants.invitations.issue("morgan", tenant.id, "expiry@example.test");
+    const forwarded = await tenants.invitations.issue(admin.id, tenant.id, "next@example.test");
     await tenants.memberships.removeMember("morgan", tenant.id, admin.id);
     await expect(
       tenants.invitations.accept(forwarded.token, {

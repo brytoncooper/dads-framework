@@ -1,11 +1,5 @@
 import { execFileSync } from "node:child_process";
-import {
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
@@ -17,8 +11,7 @@ import { orientProjectPath } from "./project-orientation.js";
 const temporaryRoots: string[] = [];
 
 afterEach(() => {
-  for (const root of temporaryRoots.splice(0))
-    rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 test("plans without writes and adds library ownership and verification once", () => {
@@ -30,13 +23,10 @@ test("plans without writes and adds library ownership and verification once", ()
   const result = addLibraryRecipe(owner, "asset-records", false);
   expect(result.status).toBe("installed");
   const { project } = loadDadsProject(owner);
-  expect(
-    orientProjectPath(project, "libraries/asset-records/src/contract.ts")
-      ?.packageName,
-  ).toBe("@example/owner-asset-records");
-  expect(project.verificationPolicy.fullFallbackTaskIds).toContain(
-    "@example/owner-asset-records:library-test",
+  expect(orientProjectPath(project, "libraries/asset-records/src/contract.ts")?.packageName).toBe(
+    "@example/owner-asset-records",
   );
+  expect(project.verificationPolicy.fullFallbackTaskIds).toContain("@example/owner-asset-records:library-test");
 
   const workspace = readFileSync(join(owner, "package.json"), "utf8");
   expect(JSON.parse(workspace)).toMatchObject({
@@ -46,19 +36,12 @@ test("plans without writes and adds library ownership and verification once", ()
     },
   });
   const contract = join(owner, result.root, "src/contract.ts");
-  writeFileSync(
-    contract,
-    "export interface AssetRecordsContract { id: number }\n",
-  );
-  expect(addLibraryRecipe(owner, "asset-records", false).status).toBe(
-    "already-installed",
-  );
+  writeFileSync(contract, "export interface AssetRecordsContract { id: number }\n");
+  expect(addLibraryRecipe(owner, "asset-records", false).status).toBe("already-installed");
   expect(readFileSync(contract, "utf8")).toContain("id: number");
   expect(readFileSync(join(owner, "package.json"), "utf8")).toBe(workspace);
   rmSync(contract);
-  expect(() => addLibraryRecipe(owner, "asset-records", false)).toThrow(
-    /Incomplete/,
-  );
+  expect(() => addLibraryRecipe(owner, "asset-records", false)).toThrow(/Incomplete/);
 });
 
 test("preserves a preexisting library and rejects non-package paths", () => {
@@ -67,13 +50,9 @@ test("preserves a preexisting library and rejects non-package paths", () => {
   mkdirSync(directory, { recursive: true });
   const file = join(directory, "README.md");
   writeFileSync(file, "belongs to the app");
-  expect(() => addLibraryRecipe(owner, "asset-records", false)).toThrow(
-    /Refusing/,
-  );
+  expect(() => addLibraryRecipe(owner, "asset-records", false)).toThrow(/Refusing/);
   expect(readFileSync(file, "utf8")).toBe("belongs to the app");
-  expect(() => addLibraryRecipe(owner, "../elsewhere", false)).toThrow(
-    /lowercase/,
-  );
+  expect(() => addLibraryRecipe(owner, "../elsewhere", false)).toThrow(/lowercase/);
 });
 
 test("an independent npm project consumes the packed runtime and declarations", () => {
@@ -89,27 +68,19 @@ test("an independent npm project consumes the packed runtime and declarations", 
     cwd: owner,
     env,
   });
-  const pack = execFileSync(
-    "npm",
-    ["pack", "--workspace", library.packageName, "--silent"],
-    {
-      cwd: owner,
-      env,
-      encoding: "utf8",
-    },
-  )
+  const pack = execFileSync("npm", ["pack", "--workspace", library.packageName, "--silent"], {
+    cwd: owner,
+    env,
+    encoding: "utf8",
+  })
     .trim()
     .split("\n")
     .at(-1);
   if (!pack) throw new Error("npm pack did not return a tarball.");
-  execFileSync(
-    "npm",
-    ["install", "--offline", "--ignore-scripts", join(owner, pack)],
-    {
-      cwd: consumer,
-      env,
-    },
-  );
+  execFileSync("npm", ["install", "--offline", "--ignore-scripts", join(owner, pack)], {
+    cwd: consumer,
+    env,
+  });
   writeFileSync(
     join(consumer, "index.mts"),
     `import type { ${library.contractName} } from "${library.packageName}";
@@ -117,22 +88,14 @@ const asset: ${library.contractName} = { id: "a1" };
 export { asset };
 `,
   );
-  execFileSync(
-    process.execPath,
-    [compiler, "--noEmit", "--module", "NodeNext", "--strict", "index.mts"],
-    {
-      cwd: consumer,
-      env,
-    },
-  );
-  execFileSync(
-    process.execPath,
-    ["--input-type=module", "-e", `await import("${library.packageName}");`],
-    {
-      cwd: consumer,
-      env,
-    },
-  );
+  execFileSync(process.execPath, [compiler, "--noEmit", "--module", "NodeNext", "--strict", "index.mts"], {
+    cwd: consumer,
+    env,
+  });
+  execFileSync(process.execPath, ["--input-type=module", "-e", `await import("${library.packageName}");`], {
+    cwd: consumer,
+    env,
+  });
 }, 30_000);
 
 function projects() {
@@ -151,10 +114,7 @@ function projects() {
       private: true,
     }),
   );
-  writeFileSync(
-    join(consumer, "package.json"),
-    JSON.stringify({ name: "consumer", private: true }),
-  );
+  writeFileSync(join(consumer, "package.json"), JSON.stringify({ name: "consumer", private: true }));
   writeFileSync(
     join(owner, "dads.project.json"),
     JSON.stringify({

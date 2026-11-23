@@ -12,9 +12,7 @@
  */
 
 /** What fills a sentence's slots — including another sentence. */
-export type CopyVars = Readonly<
-  Record<string, string | number | CopyDescriptor>
->;
+export type CopyVars = Readonly<Record<string, string | number | CopyDescriptor>>;
 
 export type CopyDescriptor<Key extends string = string> = {
   readonly key: Key;
@@ -30,11 +28,7 @@ export type CopyDescriptor<Key extends string = string> = {
  * logic test can assert `toEqual({ key: "orders.empty" })` and read as what it
  * means.
  */
-export function copy<Key extends string>(
-  key: Key,
-  vars?: CopyVars,
-  count?: number,
-): CopyDescriptor<Key> {
+export function copy<Key extends string>(key: Key, vars?: CopyVars, count?: number): CopyDescriptor<Key> {
   return {
     key,
     ...(vars === undefined ? {} : { vars }),

@@ -12,13 +12,7 @@ export {
 } from "./container-tier-semaphore.js";
 
 import { execFileSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SHARED_TEST_POSTGRES_URL } from "../start-test-postgres.js";
@@ -77,10 +71,7 @@ const ANNOUNCE_INTERVAL_MS = 15_000;
  */
 export function findNxRunProcessId(
   pid: number,
-  table: ReadonlyMap<
-    number,
-    { readonly ppid: number; readonly command: string }
-  >,
+  table: ReadonlyMap<number, { readonly ppid: number; readonly command: string }>,
 ): number {
   let current = pid;
   let root = pid;
@@ -108,19 +99,12 @@ export class ContainerTestRunAlreadyActiveError extends Error {
 }
 
 /** The tier's slot directory: `command-test-tier-integration/1.lock …`. */
-export function containerTestRunLockDir(
-  tier: string,
-  dir: string = tmpdir(),
-): string {
+export function containerTestRunLockDir(tier: string, dir: string = tmpdir()): string {
   return join(dir, `command-test-tier-${tier}`);
 }
 
 /** One slot file. `slot` is 1-based, so the names read as a count. */
-export function containerTierSlotPath(
-  tier: string,
-  slot: number,
-  dir: string = tmpdir(),
-): string {
+export function containerTierSlotPath(tier: string, slot: number, dir: string = tmpdir()): string {
   return join(containerTestRunLockDir(tier, dir), `${String(slot)}.lock`);
 }
 
@@ -135,28 +119,17 @@ function readNumericSetting(
   if (raw === undefined || raw.trim().length === 0) return fallback;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < minimum) {
-    throw new Error(
-      `${name} must be an integer of at least ${String(minimum)} — got "${raw}"`,
-    );
+    throw new Error(`${name} must be an integer of at least ${String(minimum)} — got "${raw}"`);
   }
   return value;
 }
 
-export function containerTierSlotCount(
-  env: Readonly<Record<string, string | undefined>>,
-): number {
+export function containerTierSlotCount(env: Readonly<Record<string, string | undefined>>): number {
   return readNumericSetting(env, CONTAINER_TIER_SLOTS, DEFAULT_SLOTS, 1);
 }
 
-export function containerTierWaitBudgetMs(
-  env: Readonly<Record<string, string | undefined>>,
-): number {
-  return readNumericSetting(
-    env,
-    CONTAINER_TIER_WAIT_MS,
-    DEFAULT_WAIT_BUDGET_MS,
-    0,
-  );
+export function containerTierWaitBudgetMs(env: Readonly<Record<string, string | undefined>>): number {
+  return readNumericSetting(env, CONTAINER_TIER_WAIT_MS, DEFAULT_WAIT_BUDGET_MS, 0);
 }
 
 /**
@@ -172,9 +145,7 @@ export const CONTAINER_TIER_SLOT_HELD = "DADS_TEST_TIER_SLOT_HELD";
  * the URL (or the held-slot marker) and must not take a second slot with a
  * different nx runId.
  */
-export function shouldHoldContainerTestRunLock(
-  env: Readonly<Record<string, string | undefined>>,
-): boolean {
+export function shouldHoldContainerTestRunLock(env: Readonly<Record<string, string | undefined>>): boolean {
   if (env["CI"] !== undefined) return false;
   if (env[CONTAINER_TIER_SLOT_HELD] === "1") return false;
   const inherited = env[SHARED_TEST_POSTGRES_URL];
@@ -188,12 +159,7 @@ export function processIsAlive(pid: number): boolean {
     return true;
   } catch (error) {
     // EPERM means it exists but belongs to another user — still alive.
-    return (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "EPERM"
-    );
+    return typeof error === "object" && error !== null && "code" in error && error.code === "EPERM";
   }
 }
 
@@ -255,10 +221,7 @@ export function currentNxRunId(): number {
   return findNxRunProcessId(process.pid, processTable());
 }
 
-function readSlot(
-  deps: ContainerTierSlotDeps,
-  path: string,
-): ContainerTestRunLock | null {
+function readSlot(deps: ContainerTierSlotDeps, path: string): ContainerTestRunLock | null {
   const text = deps.readLock(path);
   return text === null ? null : parseContainerTestRunLock(text);
 }
@@ -290,13 +253,10 @@ export async function acquireContainerTierSlot(
     tier,
     deps,
     dir: options.dir,
-    paths: Array.from({ length: slotCount }, (_unused, index) =>
-      containerTierSlotPath(tier, index + 1, options.dir),
-    ),
+    paths: Array.from({ length: slotCount }, (_unused, index) => containerTierSlotPath(tier, index + 1, options.dir)),
     runId: deps.runId(),
     worktree: deps.worktree(),
-    waitBudgetMs:
-      options.waitBudgetMs ?? containerTierWaitBudgetMs(process.env),
+    waitBudgetMs: options.waitBudgetMs ?? containerTierWaitBudgetMs(process.env),
     beforeTake: options.beforeTake,
   });
 }
@@ -357,11 +317,7 @@ async function waitForSlot(search: SlotSearch): Promise<() => void> {
 function createWaitLogger(log: (line: string) => void) {
   let announcedAtMs: number | null = null;
   return (message: string, waitedMs: number): void => {
-    if (
-      announcedAtMs !== null &&
-      waitedMs - announcedAtMs < ANNOUNCE_INTERVAL_MS
-    )
-      return;
+    if (announcedAtMs !== null && waitedMs - announcedAtMs < ANNOUNCE_INTERVAL_MS) return;
     log(message);
     announcedAtMs = waitedMs;
   };
@@ -369,10 +325,7 @@ function createWaitLogger(log: (line: string) => void) {
 
 function tryTakeSlot(
   tier: string,
-  decision: Extract<
-    ContainerTierSemaphoreDecision,
-    { action: "take" | "steal" }
-  >,
+  decision: Extract<ContainerTierSemaphoreDecision, { action: "take" | "steal" }>,
   context: {
     readonly runId: number;
     readonly worktree: string;

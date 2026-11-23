@@ -3,18 +3,14 @@ import type { BoundRoute, HttpMethod, RouteContract } from "./api-path.js";
 import type { PaginationMeta } from "./pagination.schema.js";
 
 /** `:param` names extracted from a mount-relative route template. */
-export type OperationPathParamNames<Path extends string> =
-  Path extends `${string}:${infer Param}/${infer Rest}`
-    ? Param | OperationPathParamNames<`/${Rest}`>
-    : Path extends `${string}:${infer Param}`
-      ? Param
-      : never;
+export type OperationPathParamNames<Path extends string> = Path extends `${string}:${infer Param}/${infer Rest}`
+  ? Param | OperationPathParamNames<`/${Rest}`>
+  : Path extends `${string}:${infer Param}`
+    ? Param
+    : never;
 
 /** Object output shape a `params` schema must produce for a path template. */
-export type OperationPathParamsShape<Path extends string> = Record<
-  OperationPathParamNames<Path>,
-  string
->;
+export type OperationPathParamsShape<Path extends string> = Record<OperationPathParamNames<Path>, string>;
 
 export type LiteralMountRelativePath<Path extends string> = string extends Path
   ? never
@@ -24,15 +20,11 @@ export type LiteralMountRelativePath<Path extends string> = string extends Path
 
 export type OperationQuerySchema = z.ZodType<Record<string, unknown>>;
 
-export type PaginatedOperationQuerySchema = z.ZodType<
-  Record<string, unknown> & { page: number; perPage: number }
->;
+export type PaginatedOperationQuerySchema = z.ZodType<Record<string, unknown> & { page: number; perPage: number }>;
 
 export type NonArrayOperationResponse<S> =
   S extends z.ZodArray<z.ZodType>
-    ? [
-        "collections use listOperation — getOperation responses cannot be arrays",
-      ]
+    ? ["collections use listOperation — getOperation responses cannot be arrays"]
     : unknown;
 
 export type OperationParamsOption<
@@ -64,8 +56,7 @@ export type GetOperationContract<
   ResponseSchema extends z.ZodType = z.ZodType,
   ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
     z.ZodType<OperationPathParamsShape<Path>> | undefined,
-  QuerySchema extends OperationQuerySchema | undefined =
-    OperationQuerySchema | undefined,
+  QuerySchema extends OperationQuerySchema | undefined = OperationQuerySchema | undefined,
   MetaSchema extends z.ZodType | undefined = z.ZodType | undefined,
 > = RouteContract<"GET", Path> & {
   readonly kind: "get";
@@ -78,12 +69,10 @@ export type GetOperationContract<
 export type ListOperationContract<
   Path extends string = string,
   ItemSchema extends z.ZodType = z.ZodType,
-  QuerySchema extends PaginatedOperationQuerySchema =
-    PaginatedOperationQuerySchema,
+  QuerySchema extends PaginatedOperationQuerySchema = PaginatedOperationQuerySchema,
   ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
     z.ZodType<OperationPathParamsShape<Path>> | undefined,
-  MetaSchema extends z.ZodType<PaginationMeta> | undefined =
-    z.ZodType<PaginationMeta> | undefined,
+  MetaSchema extends z.ZodType<PaginationMeta> | undefined = z.ZodType<PaginationMeta> | undefined,
 > = RouteContract<"GET", Path> & {
   readonly kind: "list";
   readonly params: ParamsSchema;
@@ -97,8 +86,7 @@ export type PostOperationContract<
   ResponseSchema extends z.ZodType = z.ZodType,
   ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
     z.ZodType<OperationPathParamsShape<Path>> | undefined,
-  QuerySchema extends OperationQuerySchema | undefined =
-    OperationQuerySchema | undefined,
+  QuerySchema extends OperationQuerySchema | undefined = OperationQuerySchema | undefined,
   BodySchema extends z.ZodType | undefined = z.ZodType | undefined,
   MetaSchema extends z.ZodType | undefined = z.ZodType | undefined,
   Status extends 200 | 201 | 202 = 200 | 201 | 202,

@@ -18,9 +18,7 @@ describe("resolveRequestId", () => {
   it("mints an id when the header is blank", () => {
     const resolved = resolveRequestId("   ");
     expect(resolved.generated).toBe(true);
-    expect(resolved.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-    );
+    expect(resolved.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 
   it("mints an id when the header is missing or not a string", () => {
@@ -30,8 +28,6 @@ describe("resolveRequestId", () => {
   });
 
   it("mints a fresh id per request, never a shared one", () => {
-    expect(resolveRequestId(undefined).id).not.toBe(
-      resolveRequestId(undefined).id,
-    );
+    expect(resolveRequestId(undefined).id).not.toBe(resolveRequestId(undefined).id);
   });
 });

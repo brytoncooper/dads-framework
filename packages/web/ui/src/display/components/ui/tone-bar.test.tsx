@@ -26,9 +26,7 @@ describe("ToneBar", () => {
   });
 
   it("sizes the fill to the percent", () => {
-    const { container } = render(
-      <ToneBar percent={40} tone="positive" label="40% remaining" />,
-    );
+    const { container } = render(<ToneBar percent={40} tone="positive" label="40% remaining" />);
 
     expect(fillOf(container)?.style.width).toBe("40%");
   });
@@ -43,17 +41,13 @@ describe("ToneBar", () => {
   });
 
   it("treats NaN as empty", () => {
-    const { container } = render(
-      <ToneBar percent={Number.NaN} tone="neutral" label="Unknown" />,
-    );
+    const { container } = render(<ToneBar percent={Number.NaN} tone="neutral" label="Unknown" />);
 
     expect(fillOf(container)?.style.width).toBe("0%");
   });
 
   it("colors the fill by tone", () => {
-    const { container } = render(
-      <ToneBar percent={10} tone="critical" label="10% remaining" />,
-    );
+    const { container } = render(<ToneBar percent={10} tone="critical" label="10% remaining" />);
 
     expect(fillOf(container)?.className).toContain("bg-destructive");
   });

@@ -1,14 +1,6 @@
-import type {
-  PermissionQuery,
-  RelationshipFilter,
-  ResourceLookup,
-} from "@dads-framework/spicedb-access";
+import type { PermissionQuery, RelationshipFilter, ResourceLookup } from "@dads-framework/spicedb-access";
 import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
-import {
-  workbenchTask,
-  workbenchWorkspace,
-  type WorkbenchRelationship,
-} from "../access.js";
+import { workbenchTask, workbenchWorkspace, type WorkbenchRelationship } from "../access.js";
 
 const workspaceType = workbenchWorkspace.wireName;
 const taskType = workbenchTask.wireName;
@@ -18,9 +10,7 @@ const workspacePermissions = {
     workbenchWorkspace.roles.owner.roleName,
     workbenchWorkspace.roles.member.roleName,
   ],
-  [workbenchWorkspace.permissions.manage.permissionName]: [
-    workbenchWorkspace.roles.owner.roleName,
-  ],
+  [workbenchWorkspace.permissions.manage.permissionName]: [workbenchWorkspace.roles.owner.roleName],
 };
 
 /** A small Workbench graph substitute. Real backend parity is tested separately. */
@@ -47,9 +37,7 @@ export class WorkbenchMemoryAuthorization extends FakeAuthorization {
     return decisions.some(Boolean);
   }
 
-  override async lookupResources(
-    query: ResourceLookup,
-  ): Promise<readonly string[]> {
+  override async lookupResources(query: ResourceLookup): Promise<readonly string[]> {
     if (query.resourceType !== taskType) return super.lookupResources(query);
     const parents = await super.lookupResources({
       ...query,
@@ -67,11 +55,8 @@ export class WorkbenchMemoryAuthorization extends FakeAuthorization {
     return [...new Set(tasks.flat())];
   }
 
-  async deleteExact(
-    ...relationships: readonly WorkbenchRelationship[]
-  ): Promise<void> {
-    for (const relationship of relationships)
-      await this.deleteRelationships(relationshipFilter(relationship));
+  async deleteExact(...relationships: readonly WorkbenchRelationship[]): Promise<void> {
+    for (const relationship of relationships) await this.deleteRelationships(relationshipFilter(relationship));
   }
 
   async hasTuple(relationship: WorkbenchRelationship): Promise<boolean> {
@@ -85,9 +70,7 @@ export class WorkbenchMemoryAuthorization extends FakeAuthorization {
   }
 }
 
-export function relationshipFilter(
-  relationship: WorkbenchRelationship,
-): RelationshipFilter {
+export function relationshipFilter(relationship: WorkbenchRelationship): RelationshipFilter {
   return {
     resourceType: relationship.resource.type,
     resourceId: relationship.resource.id,

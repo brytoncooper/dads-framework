@@ -29,16 +29,12 @@ function isNonemptyCatalogField(value: unknown): boolean {
   return true;
 }
 
-function definedPermissionNames(
-  definition: ResolvedAccessDefinition,
-): Set<string> {
+function definedPermissionNames(definition: ResolvedAccessDefinition): Set<string> {
   return new Set(Object.keys(definition.expressions));
 }
 
 function hasGrantableRole(definition: ResolvedAccessDefinition): boolean {
-  return Object.values(definition.roles).some((roleToken) =>
-    isGrantableRole(roleToken.holder),
-  );
+  return Object.values(definition.roles).some((roleToken) => isGrantableRole(roleToken.holder));
 }
 
 /**
@@ -48,15 +44,10 @@ function hasGrantableRole(definition: ResolvedAccessDefinition): boolean {
 export function checkAccessConformance(
   definitions: readonly ResolvedAccessDefinition[],
 ): readonly ConformanceFailure[] {
-  return definitions.flatMap((definition) => [
-    ...catalogFailures(definition),
-    ...grantingFailures(definition),
-  ]);
+  return definitions.flatMap((definition) => [...catalogFailures(definition), ...grantingFailures(definition)]);
 }
 
-function catalogFailures(
-  definition: ResolvedAccessDefinition,
-): readonly ConformanceFailure[] {
+function catalogFailures(definition: ResolvedAccessDefinition): readonly ConformanceFailure[] {
   const failures: ConformanceFailure[] = [];
   for (const [role, token] of Object.entries(definition.roles)) {
     if (!isGrantableRole(token.holder)) continue;
@@ -80,9 +71,7 @@ function catalogFailures(
   return failures;
 }
 
-function grantingFailures(
-  definition: ResolvedAccessDefinition,
-): readonly ConformanceFailure[] {
+function grantingFailures(definition: ResolvedAccessDefinition): readonly ConformanceFailure[] {
   const permissionNames = definedPermissionNames(definition);
   const required = definition.granting?.requires ?? [];
   const wireName = definition.entity.wireName;

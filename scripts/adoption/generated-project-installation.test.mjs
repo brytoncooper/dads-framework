@@ -19,16 +19,9 @@ test("redirects http's schema edge to its packed tarball", () => {
   ]);
   const tarballs = new Map([["@dads-framework/core", "/tmp/schema.tgz"]]);
 
-  assert.deepEqual(
-    buildInternalDependencyOverrides(
-      ["@dads-framework/http"],
-      packages,
-      tarballs,
-    ),
-    {
-      "@dads-framework/core": "file:/tmp/schema.tgz",
-    },
-  );
+  assert.deepEqual(buildInternalDependencyOverrides(["@dads-framework/http"], packages, tarballs), {
+    "@dads-framework/core": "file:/tmp/schema.tgz",
+  });
 });
 
 test("redirects all native options when testing is both a root and a toolbox dependency", () => {
@@ -48,17 +41,11 @@ test("redirects all native options when testing is both a root and a toolbox dep
     ],
     [
       "@dads-framework/testing",
-      packageRecord(
-        "@dads-framework/testing",
-        {},
-        Object.fromEntries(nativeNames.map((name) => [name, "0.1.0"])),
-      ),
+      packageRecord("@dads-framework/testing", {}, Object.fromEntries(nativeNames.map((name) => [name, "0.1.0"]))),
     ],
     ...nativeNames.map((name) => [name, packageRecord(name)]),
   ]);
-  const tarballs = new Map(
-    nativeNames.map((name) => [name, `/tmp/${name}.tgz`]),
-  );
+  const tarballs = new Map(nativeNames.map((name) => [name, `/tmp/${name}.tgz`]));
   const overrides = buildInternalDependencyOverrides(
     ["@dads-framework/testing", "@dads-framework/toolbox"],
     packages,
@@ -70,9 +57,7 @@ test("redirects all native options when testing is both a root and a toolbox dep
     assert.equal(overrides[name], `file:/tmp/${name}.tgz`);
   }
 
-  assert.deepEqual(collectPackageClosure("@dads-framework/testing", packages), [
-    "@dads-framework/testing",
-  ]);
+  assert.deepEqual(collectPackageClosure("@dads-framework/testing", packages), ["@dads-framework/testing"]);
 });
 
 test("does not override registry dependencies or direct roots", () => {

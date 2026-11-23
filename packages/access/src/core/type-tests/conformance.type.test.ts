@@ -5,11 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  checkAccessConformance,
-  lifecycleTrigger,
-  missingGrantingAdvisories,
-} from "../../catalog.js";
+import { checkAccessConformance, lifecycleTrigger, missingGrantingAdvisories } from "../../catalog.js";
 import { actor, compileAccess, resource } from "../../index.js";
 import { testGrantable } from "../test-support/test-grantable.js";
 

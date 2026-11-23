@@ -22,30 +22,12 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { isResponseCode } from "../scanners/response-code.js";
-import {
-  evidenceAt,
-  isProductionModule,
-  ts,
-  visitNodes,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import { evidenceAt, isProductionModule, ts, visitNodes, type DoctorModule } from "../scanners/typescript-program.js";
 
 const ROW_NAME = /^(?:row|record)$|(?:Row|Record)$/;
-const RESPONSE_SENDERS = new Set([
-  "ok",
-  "json",
-  "created",
-  "send",
-  "envelope",
-  "parse",
-]);
+const RESPONSE_SENDERS = new Set(["ok", "json", "created", "send", "envelope", "parse"]);
 
 /** True for an expression that names a whole row. */
 function isRowValue(node: ts.Node | undefined): boolean {
@@ -64,11 +46,7 @@ function senderName(call: ts.CallExpression): string | undefined {
 function isWholeRowSent(node: ts.Node): boolean {
   if (!ts.isCallExpression(node)) return false;
   const name = senderName(node);
-  return (
-    name !== undefined &&
-    RESPONSE_SENDERS.has(name) &&
-    isRowValue(node.arguments[0])
-  );
+  return name !== undefined && RESPONSE_SENDERS.has(name) && isRowValue(node.arguments[0]);
 }
 
 function isWholeRowReturned(node: ts.Node): boolean {
@@ -77,11 +55,7 @@ function isWholeRowReturned(node: ts.Node): boolean {
 }
 
 function isObjectRest(node: ts.Node): boolean {
-  return (
-    ts.isBindingElement(node) &&
-    node.dotDotDotToken !== undefined &&
-    ts.isObjectBindingPattern(node.parent)
-  );
+  return ts.isBindingElement(node) && node.dotDotDotToken !== undefined && ts.isObjectBindingPattern(node.parent);
 }
 
 /** What the node does with a whole row, or nothing when it names its fields. */

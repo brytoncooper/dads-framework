@@ -37,10 +37,7 @@ export function DetailCard({
       {...props}
       data-slot="detail-card"
       data-flush={flush ? "true" : undefined}
-      className={cn(
-        "flex min-w-0 flex-col rounded-lg border bg-card text-card-foreground shadow-xs",
-        className,
-      )}
+      className={cn("flex min-w-0 flex-col rounded-lg border bg-card text-card-foreground shadow-xs", className)}
     >
       <header
         data-slot="detail-card-header"
@@ -56,21 +53,14 @@ export function DetailCard({
                 {icon}
               </span>
             ) : null}
-            <h2 className="min-w-0 text-lg font-semibold text-balance">
-              {title}
-            </h2>
+            <h2 className="min-w-0 text-lg font-semibold text-balance">{title}</h2>
           </div>
           {hasContent(description) ? (
-            <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-              {description}
-            </p>
+            <p className="mt-1 max-w-prose text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
         {hasContent(actions) ? (
-          <div
-            data-slot="detail-card-actions"
-            className="flex shrink-0 flex-wrap items-center gap-2"
-          >
+          <div data-slot="detail-card-actions" className="flex shrink-0 flex-wrap items-center gap-2">
             {actions}
           </div>
         ) : null}
@@ -87,10 +77,7 @@ export function DetailCard({
         {children}
       </div>
       {hasContent(footer) ? (
-        <footer
-          data-slot="detail-card-footer"
-          className="flex flex-wrap items-center gap-2 border-t px-4 py-3 sm:px-6"
-        >
+        <footer data-slot="detail-card-footer" className="flex flex-wrap items-center gap-2 border-t px-4 py-3 sm:px-6">
           {footer}
         </footer>
       ) : null}

@@ -12,10 +12,7 @@ export const INITIAL_ROTATION: ViewRotation = 0;
 const ROTATION_STEP = 90;
 
 /** The rotation one press lands on, wrapping at both ends. */
-export function nextRotation(
-  current: number,
-  direction: RotateDirection,
-): ViewRotation {
+export function nextRotation(current: number, direction: RotateDirection): ViewRotation {
   const delta = direction === "clockwise" ? ROTATION_STEP : -ROTATION_STEP;
   return normalizeRotation(current + delta);
 }

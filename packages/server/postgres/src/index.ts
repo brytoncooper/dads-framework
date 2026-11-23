@@ -20,15 +20,8 @@ export {
   type PostgresPoolErrorLog,
 } from "./lib/create-postgres-connection.js";
 export type { DrizzleHandle } from "./drizzle.js";
-export {
-  eventActorColumns,
-  type EventActorColumns,
-  type PersistedEventActor,
-} from "./lib/event-actor-columns.js";
-export {
-  loadPageAndTotal,
-  sqlOffsetForPage,
-} from "./lib/load-page-and-total.js";
+export { eventActorColumns, type EventActorColumns, type PersistedEventActor } from "./lib/event-actor-columns.js";
+export { loadPageAndTotal, sqlOffsetForPage } from "./lib/load-page-and-total.js";
 export { isUniqueViolation } from "./lib/unique-violation.js";
 export {
   applySyncedRows,

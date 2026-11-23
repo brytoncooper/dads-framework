@@ -4,10 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 
-import {
-  listPackageDirectories,
-  planTestProjects,
-} from "./check-test-types.mjs";
+import { listPackageDirectories, planTestProjects } from "./check-test-types.mjs";
 
 test("plans test types for direct and grouped package workspaces", (context) => {
   const root = mkdtempSync(join(tmpdir(), "dads-test-types-"));
@@ -34,10 +31,7 @@ test("plans test types for direct and grouped package workspaces", (context) => 
   });
 
   assert.deepEqual(plan, {
-    projects: [
-      "packages/core/tsconfig.tests.json",
-      "packages/server/http/tsconfig.tests.json",
-    ],
+    projects: ["packages/core/tsconfig.tests.json", "packages/server/http/tsconfig.tests.json"],
     missing: ["packages/access"],
     stale: [],
   });

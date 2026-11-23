@@ -10,9 +10,7 @@ export type SpiceDbWriteRelationshipsResult = {
  */
 export type SpiceDbMigrationTarget = {
   writeSchema(schemaText: string): Promise<void>;
-  writeRelationships(
-    tuples: readonly SpiceDbExportedTuple[],
-  ): Promise<SpiceDbWriteRelationshipsResult>;
+  writeRelationships(tuples: readonly SpiceDbExportedTuple[]): Promise<SpiceDbWriteRelationshipsResult>;
 };
 
 export type AuthzedWriteTimestampLike = {
@@ -71,16 +69,12 @@ export function isAuthzedWriteClientLike(
  * idempotent `SpiceDbMigrationTarget` using `WriteSchema` and `TOUCH`
  * `WriteRelationships` calls (safe to re-run during live cutovers).
  */
-export function createAuthzedMigrationTarget(
-  client: AuthzedWriteClientLike,
-): SpiceDbMigrationTarget {
+export function createAuthzedMigrationTarget(client: AuthzedWriteClientLike): SpiceDbMigrationTarget {
   return {
     async writeSchema(schemaText: string): Promise<void> {
       await client.promises.writeSchema({ schema: schemaText });
     },
-    async writeRelationships(
-      tuples: readonly SpiceDbExportedTuple[],
-    ): Promise<SpiceDbWriteRelationshipsResult> {
+    async writeRelationships(tuples: readonly SpiceDbExportedTuple[]): Promise<SpiceDbWriteRelationshipsResult> {
       if (tuples.length === 0) return {};
       const response = await client.promises.writeRelationships({
         updates: tuples.map(toAuthzedTouchUpdate),
@@ -92,9 +86,7 @@ export function createAuthzedMigrationTarget(
   };
 }
 
-function toAuthzedTouchUpdate(
-  tuple: SpiceDbExportedTuple,
-): AuthzedRelationshipUpdateLike {
+function toAuthzedTouchUpdate(tuple: SpiceDbExportedTuple): AuthzedRelationshipUpdateLike {
   const expiresAt = encodeAuthzedTimestamp(tuple.expiresAt);
   return {
     operation: AUTHZED_OPERATION_TOUCH,
@@ -116,9 +108,7 @@ function toAuthzedTouchUpdate(
   };
 }
 
-function encodeAuthzedTimestamp(
-  expiresAt: Date | undefined,
-): AuthzedWriteTimestampLike | undefined {
+function encodeAuthzedTimestamp(expiresAt: Date | undefined): AuthzedWriteTimestampLike | undefined {
   if (expiresAt === undefined) return undefined;
   const millis = expiresAt.getTime();
   if (!Number.isFinite(millis)) {

@@ -1,9 +1,6 @@
 import { getFromApi } from "@dads-framework/client";
 import { z } from "zod";
-import {
-  signInOptions,
-  signInOptionsRoute,
-} from "../../libraries/sign-in-options/index.js";
+import { signInOptions, signInOptionsRoute } from "../../libraries/sign-in-options/index.js";
 
 const enterpriseReturnParameter = "enterpriseSignIn";
 const enterpriseStartResult = z.object({ url: z.url() });
@@ -17,10 +14,7 @@ export function readSignInOptions(signal: AbortSignal) {
 }
 
 export function returnedWithEnterpriseError(current: URL): boolean {
-  return (
-    current.searchParams.get(enterpriseReturnParameter) === "1" &&
-    current.searchParams.has("error")
-  );
+  return current.searchParams.get(enterpriseReturnParameter) === "1" && current.searchParams.has("error");
 }
 
 function returnTo(current: URL): URL {
@@ -31,10 +25,7 @@ function returnTo(current: URL): URL {
   return callback;
 }
 
-export async function beginEnterpriseSignIn(
-  providerId: string,
-  current: URL,
-): Promise<string> {
+export async function beginEnterpriseSignIn(providerId: string, current: URL): Promise<string> {
   const response = await fetch("/api/auth/sign-in/sso", {
     method: "POST",
     credentials: "same-origin",
@@ -45,13 +36,8 @@ export async function beginEnterpriseSignIn(
 
   const json: unknown = await response.json();
   const destination = new URL(enterpriseStartResult.parse(json).url);
-  const localDevelopment =
-    current.protocol === "http:" && current.origin === destination.origin;
-  if (
-    (destination.protocol !== "https:" && !localDevelopment) ||
-    destination.username ||
-    destination.password
-  ) {
+  const localDevelopment = current.protocol === "http:" && current.origin === destination.origin;
+  if ((destination.protocol !== "https:" && !localDevelopment) || destination.username || destination.password) {
     throw new Error("The enterprise sign-in destination is invalid.");
   }
   return destination.href;

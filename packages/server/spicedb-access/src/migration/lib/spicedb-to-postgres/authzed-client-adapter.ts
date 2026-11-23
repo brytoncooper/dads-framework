@@ -25,9 +25,7 @@ export type SpiceDbExportRelationshipsOptions = {
  */
 export type SpiceDbMigrationSource = {
   readSchema(): Promise<SpiceDbReadSchemaResult>;
-  exportRelationships(
-    options?: SpiceDbExportRelationshipsOptions,
-  ): AsyncIterable<readonly SpiceDbExportedTuple[]>;
+  exportRelationships(options?: SpiceDbExportRelationshipsOptions): AsyncIterable<readonly SpiceDbExportedTuple[]>;
 };
 
 export type AuthzedTimestampLike = {
@@ -77,9 +75,7 @@ export type AuthzedV1ClientLike = {
       readonly readAt?: { readonly token: string };
     }>;
   };
-  exportBulkRelationships(
-    request: AuthzedExportBulkRequestLike,
-  ): AsyncIterable<AuthzedExportResponseLike>;
+  exportBulkRelationships(request: AuthzedExportBulkRequestLike): AsyncIterable<AuthzedExportResponseLike>;
 };
 
 export function isAuthzedV1ClientLike(
@@ -90,10 +86,7 @@ export function isAuthzedV1ClientLike(
     readonly promises?: unknown;
     readonly exportBulkRelationships?: unknown;
   } = source;
-  return (
-    candidate.promises !== undefined &&
-    typeof candidate.exportBulkRelationships === "function"
-  );
+  return candidate.promises !== undefined && typeof candidate.exportBulkRelationships === "function";
 }
 
 /**
@@ -101,9 +94,7 @@ export function isAuthzedV1ClientLike(
  * `SpiceDbMigrationSource` using `ReadSchema` and streaming
  * `ExportBulkRelationships`.
  */
-export function createAuthzedMigrationSource(
-  client: AuthzedV1ClientLike,
-): SpiceDbMigrationSource {
+export function createAuthzedMigrationSource(client: AuthzedV1ClientLike): SpiceDbMigrationSource {
   return {
     async readSchema() {
       const response = await client.promises.readSchema({});
@@ -154,9 +145,7 @@ function buildExportConsistency(
   };
 }
 
-function convertAuthzedRelationship(
-  item: AuthzedRelationshipLike,
-): SpiceDbExportedTuple {
+function convertAuthzedRelationship(item: AuthzedRelationshipLike): SpiceDbExportedTuple {
   const { resource, subjectObject } = requireRelationshipEndpoints(item);
   assertNoCaveat(item, resource);
   const subjectRelation = item.subject?.optionalRelation;
@@ -179,9 +168,7 @@ function requireRelationshipEndpoints(item: AuthzedRelationshipLike): {
   const resource = item.resource;
   const subjectObject = item.subject?.object;
   if (resource === undefined || subjectObject === undefined || !item.relation) {
-    throw new Error(
-      "Incomplete relationship received from SpiceDB ExportBulkRelationships",
-    );
+    throw new Error("Incomplete relationship received from SpiceDB ExportBulkRelationships");
   }
   return { resource, subjectObject };
 }
@@ -212,9 +199,7 @@ function buildSubjectRef(
   return { type: subjectObject.objectType, id: subjectObject.objectId };
 }
 
-function parseAuthzedTimestamp(
-  timestamp: AuthzedTimestampLike | undefined,
-): Date | undefined {
+function parseAuthzedTimestamp(timestamp: AuthzedTimestampLike | undefined): Date | undefined {
   if (timestamp === undefined) return undefined;
   const seconds = Number(timestamp.seconds);
   const nanos = timestamp.nanos ?? 0;

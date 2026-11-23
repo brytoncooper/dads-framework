@@ -37,86 +37,38 @@ export class RecordingAuthorization implements Authorization {
   )[] = [];
   constructor(private readonly answers: RecordingAuthorizationOptions = {}) {
     this.rejectDuplicateAnswers(answers.checks ?? [], permissionKey, "check");
-    this.rejectDuplicateAnswers(
-      answers.lookups ?? [],
-      lookupAnswerKey,
-      "lookup",
-    );
-    this.rejectDuplicateAnswers(
-      answers.subjectLookups ?? [],
-      subjectLookupAnswerKey,
-      "subject-lookup",
-    );
+    this.rejectDuplicateAnswers(answers.lookups ?? [], lookupAnswerKey, "lookup");
+    this.rejectDuplicateAnswers(answers.subjectLookups ?? [], subjectLookupAnswerKey, "subject-lookup");
   }
   check(query: PermissionQuery): Promise<boolean> {
     this.questions.push({ kind: "check", query });
-    return Promise.resolve().then(
-      () =>
-        this.find(this.answers.checks ?? [], permissionKey, query, "check")
-          .answer,
-    );
+    return Promise.resolve().then(() => this.find(this.answers.checks ?? [], permissionKey, query, "check").answer);
   }
   lookupResources(query: ResourceLookup): Promise<readonly string[]> {
     this.questions.push({ kind: "lookup", query });
-    return Promise.resolve().then(
-      () =>
-        this.find(this.answers.lookups ?? [], lookupAnswerKey, query, "lookup")
-          .answer,
-    );
+    return Promise.resolve().then(() => this.find(this.answers.lookups ?? [], lookupAnswerKey, query, "lookup").answer);
   }
   lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
     this.questions.push({ kind: "subject-lookup", query });
     return Promise.resolve().then(
-      () =>
-        this.find(
-          this.answers.subjectLookups ?? [],
-          subjectLookupAnswerKey,
-          query,
-          "subject-lookup",
-        ).answer,
+      () => this.find(this.answers.subjectLookups ?? [], subjectLookupAnswerKey, query, "subject-lookup").answer,
     );
   }
-  writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     void writes;
-    return Promise.reject(
-      new Error(
-        "RecordingAuthorization does not support tuple mutation; use FakeAuthorization",
-      ),
-    );
+    return Promise.reject(new Error("RecordingAuthorization does not support tuple mutation; use FakeAuthorization"));
   }
-  deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     void filter;
-    return Promise.reject(
-      new Error(
-        "RecordingAuthorization does not support tuple mutation; use FakeAuthorization",
-      ),
-    );
+    return Promise.reject(new Error("RecordingAuthorization does not support tuple mutation; use FakeAuthorization"));
   }
-  relationshipExists(filter: {
-    resourceType: string;
-    resourceId: string;
-    relation: string;
-  }): Promise<boolean> {
+  relationshipExists(filter: { resourceType: string; resourceId: string; relation: string }): Promise<boolean> {
     void filter;
-    return Promise.reject(
-      new Error(
-        "RecordingAuthorization does not support tuple inspection; use FakeAuthorization",
-      ),
-    );
+    return Promise.reject(new Error("RecordingAuthorization does not support tuple inspection; use FakeAuthorization"));
   }
-  listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     void query;
-    return Promise.reject(
-      new Error(
-        "RecordingAuthorization does not support tuple inspection; use FakeAuthorization",
-      ),
-    );
+    return Promise.reject(new Error("RecordingAuthorization does not support tuple inspection; use FakeAuthorization"));
   }
   private find<T extends { query: object; answer: unknown }>(
     answers: readonly T[],
@@ -126,8 +78,7 @@ export class RecordingAuthorization implements Authorization {
   ): T {
     const key = keyOf(query);
     const found = answers.find((candidate) => keyOf(candidate.query) === key);
-    if (!found)
-      throw new Error(`RecordingAuthorization unanswered ${kind}: ${key}`);
+    if (!found) throw new Error(`RecordingAuthorization unanswered ${kind}: ${key}`);
     return found;
   }
   private rejectDuplicateAnswers<T extends { query: object }>(
@@ -136,8 +87,7 @@ export class RecordingAuthorization implements Authorization {
     kind: string,
   ): void {
     const keys = answers.map((answer) => keyOf(answer.query));
-    if (new Set(keys).size !== keys.length)
-      throw new Error(`RecordingAuthorization duplicate ${kind} answer`);
+    if (new Set(keys).size !== keys.length) throw new Error(`RecordingAuthorization duplicate ${kind} answer`);
   }
 }
 

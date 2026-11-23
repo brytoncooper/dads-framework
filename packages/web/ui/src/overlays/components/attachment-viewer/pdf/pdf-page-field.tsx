@@ -90,9 +90,7 @@ export function PdfPageField({
           event.currentTarget.blur();
         }}
       />
-      <span className="whitespace-nowrap">
-        {t("overlays.attachmentViewer.pdf.pageCount", { count: pageCount })}
-      </span>
+      <span className="whitespace-nowrap">{t("overlays.attachmentViewer.pdf.pageCount", { count: pageCount })}</span>
     </span>
   );
 }

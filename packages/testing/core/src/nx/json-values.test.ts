@@ -22,9 +22,7 @@ describe("stableJson", () => {
     });
 
     expect(first).toBe(second);
-    expect(new TextEncoder().encode(first)).toEqual(
-      new TextEncoder().encode(second),
-    );
+    expect(new TextEncoder().encode(first)).toEqual(new TextEncoder().encode(second));
   });
 
   it("sorts every nested object key, keeps array order, and ends with one newline", () => {
@@ -52,9 +50,7 @@ describe("stableJson", () => {
 
   it("refuses to serialize an output value JSON cannot round-trip", () => {
     for (const value of [undefined, () => "x", 0n, Symbol("x")]) {
-      expect(() => stableJson({ importer: value })).toThrow(
-        "Importer attempted to serialize a non-JSON output value.",
-      );
+      expect(() => stableJson({ importer: value })).toThrow("Importer attempted to serialize a non-JSON output value.");
     }
   });
 });

@@ -1,9 +1,6 @@
 import type { DslPermissionTarget, DslRoleSlot } from "../core/dsl-types.js";
 import type { PermissionToken, RoleToken } from "../core/refs.js";
-import type {
-  RelationshipWrite,
-  SubjectRef,
-} from "../runtime/authorization.js";
+import type { RelationshipWrite, SubjectRef } from "../runtime/authorization.js";
 import {
   type AccessScenarioVerbs,
   type GrantBuilder,
@@ -42,10 +39,7 @@ function createRecordingGrantBuilder(
         kind: "absolute",
         expiresAt,
       }),
-    to: (
-      first: HarnessSubjectInput | HarnessEntityTarget,
-      secondId?: string,
-    ) => {
+    to: (first: HarnessSubjectInput | HarnessEntityTarget, secondId?: string) => {
       const subject = resolveSubjectInput(first, secondId);
       const baseWrite: RelationshipWrite = {
         resource: { type: entityWireName, id: resourceId },
@@ -79,10 +73,7 @@ function createRecordingRevokeBuilder(
   resourceId: string,
 ): RevokeBuilder {
   return {
-    from: (
-      first: HarnessSubjectInput | HarnessEntityTarget,
-      secondId?: string,
-    ) => {
+    from: (first: HarnessSubjectInput | HarnessEntityTarget, secondId?: string) => {
       const subject = resolveSubjectInput(first, secondId);
       steps.push({
         kind: "revoke",
@@ -126,11 +117,7 @@ function buildScenarioAssertVerbs(steps: ScenarioStep[]) {
     });
   };
   return {
-    assertCan: (
-      actor: SubjectRef,
-      permissionOrTarget: PermissionToken | DslPermissionTarget,
-      resourceId?: string,
-    ) => {
+    assertCan: (actor: SubjectRef, permissionOrTarget: PermissionToken | DslPermissionTarget, resourceId?: string) => {
       pushCheck(actor, permissionOrTarget, resourceId, true);
     },
     assertCannot: (
@@ -140,18 +127,10 @@ function buildScenarioAssertVerbs(steps: ScenarioStep[]) {
     ) => {
       pushCheck(actor, permissionOrTarget, resourceId, false);
     },
-    assertVisible: (
-      actor: SubjectRef,
-      permission: PermissionToken,
-      expectedIds: readonly string[],
-    ) => {
+    assertVisible: (actor: SubjectRef, permission: PermissionToken, expectedIds: readonly string[]) => {
       steps.push({ kind: "assert-visible", actor, permission, expectedIds });
     },
-    assertMatrix: (
-      target: HarnessEntityTarget,
-      resourceId: string,
-      spec: PermissionMatrixSpec,
-    ) => {
+    assertMatrix: (target: HarnessEntityTarget, resourceId: string, spec: PermissionMatrixSpec) => {
       steps.push({
         kind: "assert-matrix",
         resourceType: resolveWireName(target),
@@ -164,10 +143,7 @@ function buildScenarioAssertVerbs(steps: ScenarioStep[]) {
 
 /** Synchronously record scenario steps with zero `await`s inside the callback. */
 export function recordScenarioSteps(
-  build: (
-    scenario: AccessScenarioVerbs,
-    appendSteps: (extraSteps: readonly ScenarioStep[]) => void,
-  ) => void,
+  build: (scenario: AccessScenarioVerbs, appendSteps: (extraSteps: readonly ScenarioStep[]) => void) => void,
 ): readonly ScenarioStep[] {
   const steps: ScenarioStep[] = [];
   const scenario: AccessScenarioVerbs = {
@@ -180,21 +156,11 @@ export function recordScenarioSteps(
     everyone: (target) => ({ type: resolveWireName(target), id: "*" }),
     grant: (roleOrSlot: RoleToken | DslRoleSlot, resourceId?: string) => {
       const target = resolveRoleTarget(roleOrSlot, resourceId);
-      return createRecordingGrantBuilder(
-        steps,
-        target.entityWireName,
-        target.roleName,
-        target.resourceId,
-      );
+      return createRecordingGrantBuilder(steps, target.entityWireName, target.roleName, target.resourceId);
     },
     revoke: (roleOrSlot: RoleToken | DslRoleSlot, resourceId?: string) => {
       const target = resolveRoleTarget(roleOrSlot, resourceId);
-      return createRecordingRevokeBuilder(
-        steps,
-        target.entityWireName,
-        target.roleName,
-        target.resourceId,
-      );
+      return createRecordingRevokeBuilder(steps, target.entityWireName, target.roleName, target.resourceId);
     },
     advanceTime: (duration) => {
       steps.push({ kind: "advance-time", duration });

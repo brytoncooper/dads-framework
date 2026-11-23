@@ -25,14 +25,10 @@ const ASCENDING_PREFIX = "+";
  *                                           -> "status.desc,createdAt"
  * ```
  */
-export function encodeSortParam(
-  sort: readonly SortParamItem[],
-): string | undefined {
+export function encodeSortParam(sort: readonly SortParamItem[]): string | undefined {
   if (sort.length === 0) return undefined;
 
-  return sort
-    .map((item) => (item.desc ? `${item.id}${DESCENDING_SUFFIX}` : item.id))
-    .join(COLUMN_SEPARATOR);
+  return sort.map((item) => (item.desc ? `${item.id}${DESCENDING_SUFFIX}` : item.id)).join(COLUMN_SEPARATOR);
 }
 
 /**
@@ -79,6 +75,4 @@ function columnSort(id: string, desc: boolean): SortParamItem | undefined {
  */
 export const sortParamSchema = z
   .union([z.string(), z.array(sortingItemSchema)])
-  .transform((value) =>
-    typeof value === "string" ? decodeSortParam(value) : value,
-  );
+  .transform((value) => (typeof value === "string" ? decodeSortParam(value) : value));

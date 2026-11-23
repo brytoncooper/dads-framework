@@ -14,21 +14,13 @@ import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ReadAtRef } from "./doctor-gate-base.js";
 import { serializeBaseline } from "./doctor-gate-baseline.js";
-import {
-  BASELINE_PATH,
-  SUPPRESSIONS_PATH,
-  type BaselineSections,
-  type GateMode,
-} from "./doctor-gate-model.js";
+import { BASELINE_PATH, SUPPRESSIONS_PATH, type BaselineSections, type GateMode } from "./doctor-gate-model.js";
 import { runDoctorGate, type GateResult } from "./doctor-gate.js";
 
 const BASE = "origin/main";
 const SEEDED = "seeded before the gate existed";
 
-type Entries = Record<
-  string,
-  { value: number; reason?: string; movedTo?: string }
->;
+type Entries = Record<string, { value: number; reason?: string; movedTo?: string }>;
 
 function sections(raw: Record<string, Entries>): BaselineSections {
   return new Map(
@@ -44,10 +36,7 @@ function sections(raw: Record<string, Entries>): BaselineSections {
   );
 }
 
-function baselineText(
-  ceilings: Record<string, Entries>,
-  floors: Record<string, Entries> = {},
-): string {
+function baselineText(ceilings: Record<string, Entries>, floors: Record<string, Entries> = {}): string {
   return serializeBaseline({
     countedLines: "non-blank, non-comment",
     exempt: [],
@@ -81,16 +70,11 @@ const BASE_MODE: GateMode = {
 function atRefs(contents: Record<string, string>): ReadAtRef {
   return (ref, path) => {
     const stored = contents[`${ref}:${path}`];
-    return stored === undefined
-      ? { status: 1, stdout: "" }
-      : { status: 0, stdout: stored };
+    return stored === undefined ? { status: 1, stdout: "" } : { status: 0, stdout: stored };
   };
 }
 
-async function compare(
-  current: string,
-  readAtRef: ReadAtRef,
-): Promise<GateResult> {
+async function compare(current: string, readAtRef: ReadAtRef): Promise<GateResult> {
   const root = mkdtempSync(join(tmpdir(), "dad-gate-base-"));
   try {
     mkdirSync(dirname(join(root, BASELINE_PATH)), { recursive: true });
@@ -122,9 +106,7 @@ describe("--base", () => {
     const result = await compare(
       baselineText(marks({ "src/a.ts": { value: 900, reason: SEEDED } })),
       atRefs({
-        [`${BASE}:${BASELINE_PATH}`]: baselineText(
-          marks({ "src/a.ts": { value: 712, reason: SEEDED } }),
-        ),
+        [`${BASE}:${BASELINE_PATH}`]: baselineText(marks({ "src/a.ts": { value: 712, reason: SEEDED } })),
       }),
     );
 
@@ -166,9 +148,7 @@ describe("--base", () => {
     const result = await compare(
       baselineText(marks({ "src/a.ts": { value: 712 } })),
       atRefs({
-        [`${BASE}:${BASELINE_PATH}`]: baselineText(
-          marks({ "src/a.ts": { value: 712, reason: SEEDED } }),
-        ),
+        [`${BASE}:${BASELINE_PATH}`]: baselineText(marks({ "src/a.ts": { value: 712, reason: SEEDED } })),
       }),
     );
 
@@ -185,24 +165,17 @@ describe("--base", () => {
         }),
       ),
       atRefs({
-        [`${BASE}:${BASELINE_PATH}`]: baselineText(
-          marks({ "src/a.ts": { value: 712, reason: SEEDED } }),
-        ),
+        [`${BASE}:${BASELINE_PATH}`]: baselineText(marks({ "src/a.ts": { value: 712, reason: SEEDED } })),
       }),
     );
 
     expect(result.exitCode).toBe(0);
     expect(result.output).toMatch(/new exceptions since origin\/main:/);
-    expect(result.output).toMatch(
-      /fileLines src\/new\.ts: mark 450 \(split lands next week\)/,
-    );
+    expect(result.output).toMatch(/fileLines src\/new\.ts: mark 450 \(split lands next week\)/);
   });
 
   it("treats every entry as new when the ref carries no baseline", async () => {
-    const result = await compare(
-      baselineText(marks({ "src/a.ts": { value: 712, reason: SEEDED } })),
-      atRefs({}),
-    );
+    const result = await compare(baselineText(marks({ "src/a.ts": { value: 712, reason: SEEDED } })), atRefs({}));
 
     expect(result.exitCode).toBe(0);
     expect(result.output).toMatch(/does not exist at origin\/main/);
@@ -234,9 +207,7 @@ describe("--base", () => {
     );
 
     expect(result.exitCode).toBe(1);
-    expect(result.output).toMatch(
-      /eslint-suppressions\.json: suppressions grew 2 -> 3/,
-    );
+    expect(result.output).toMatch(/eslint-suppressions\.json: suppressions grew 2 -> 3/);
   });
 });
 
@@ -259,9 +230,7 @@ describe("--base, when a floor's count moves to another key", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.output).toMatch(/floors moved since origin\/main:/);
-    expect(result.output).toMatch(
-      /soundnessCases a: floor moved 23 to b \(which rose 23\)/,
-    );
+    expect(result.output).toMatch(/soundnessCases a: floor moved 23 to b \(which rose 23\)/);
   });
 
   it("counts a key the ref does not carry as zero", async () => {
@@ -287,9 +256,7 @@ describe("--base, when a floor's count moves to another key", () => {
     );
 
     expect(result.exitCode).toBe(1);
-    expect(result.output).toMatch(
-      /floor fell 27 -> 4 with movedTo b, which rose 12, not 23/,
-    );
+    expect(result.output).toMatch(/floor fell 27 -> 4 with movedTo b, which rose 12, not 23/);
   });
 
   it("rejects an entry that names itself", async () => {
@@ -314,21 +281,15 @@ describe("--base, when a floor's count moves to another key", () => {
       { a: { value: 27, reason: SEEDED }, b: { value: 4, reason: SEEDED } },
     );
     expect(fell.exitCode).toBe(1);
-    expect(fell.output).toMatch(
-      /movedTo names gone, which is not a key in this section/,
-    );
-    expect(fell.output).toMatch(
-      /floor fell 27 -> 4 with movedTo gone, which the baseline does not record/,
-    );
+    expect(fell.output).toMatch(/movedTo names gone, which is not a key in this section/);
+    expect(fell.output).toMatch(/floor fell 27 -> 4 with movedTo gone, which the baseline does not record/);
 
     const stood = await moved(
       { a: { value: 27, reason: MOVED, movedTo: "gone" } },
       { a: { value: 27, reason: SEEDED } },
     );
     expect(stood.exitCode).toBe(1);
-    expect(stood.output).toMatch(
-      /movedTo names gone, which is not a key in this section/,
-    );
+    expect(stood.output).toMatch(/movedTo names gone, which is not a key in this section/);
   });
 
   it("rejects the fall when the entry lost the reason for it", async () => {
@@ -338,9 +299,7 @@ describe("--base, when a floor's count moves to another key", () => {
     );
 
     expect(result.exitCode).toBe(1);
-    expect(result.output).toMatch(
-      /floor fell 27 -> 4 with no reason on the entry/,
-    );
+    expect(result.output).toMatch(/floor fell 27 -> 4 with no reason on the entry/);
   });
 
   it("ignores the receipt once the fall it explains is in the past", async () => {

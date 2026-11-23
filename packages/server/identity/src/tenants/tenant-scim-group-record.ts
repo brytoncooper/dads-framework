@@ -1,15 +1,8 @@
-import type {
-  ScimGroup,
-  ScimGroupData,
-  ScimGroupQuery,
-} from "../scim/index.js";
+import type { ScimGroup, ScimGroupData, ScimGroupQuery } from "../scim/index.js";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { TenantId } from "./tenant-access.js";
-import {
-  tenantScimGroup,
-  tenantScimGroupMember,
-} from "./tenant-scim-group-tables.js";
+import { tenantScimGroup, tenantScimGroupMember } from "./tenant-scim-group-tables.js";
 import type { TenantTransaction } from "./tenant-transaction.js";
 
 type GroupRow = typeof tenantScimGroup.$inferSelect;
@@ -22,10 +15,7 @@ export function scimGroupValues(data: ScimGroupData) {
   };
 }
 
-export function scimGroupRecord(
-  row: GroupRow,
-  memberIds: readonly string[],
-): ScimGroup {
+export function scimGroupRecord(row: GroupRow, memberIds: readonly string[]): ScimGroup {
   return {
     displayName: row.displayName,
     ...(row.externalId === null ? {} : { externalId: row.externalId }),
@@ -36,22 +26,13 @@ export function scimGroupRecord(
   };
 }
 
-export async function loadScimGroupMembers(
-  tx: TenantTransaction,
-  tenantId: TenantId,
-  groupIds: readonly string[],
-) {
+export async function loadScimGroupMembers(tx: TenantTransaction, tenantId: TenantId, groupIds: readonly string[]) {
   const members = new Map<string, string[]>();
   if (groupIds.length === 0) return members;
   const rows = await tx
     .select()
     .from(tenantScimGroupMember)
-    .where(
-      and(
-        eq(tenantScimGroupMember.tenantId, tenantId),
-        inArray(tenantScimGroupMember.groupId, groupIds),
-      ),
-    );
+    .where(and(eq(tenantScimGroupMember.tenantId, tenantId), inArray(tenantScimGroupMember.groupId, groupIds)));
   for (const row of rows) {
     const group = members.get(row.groupId) ?? [];
     group.push(row.userId);

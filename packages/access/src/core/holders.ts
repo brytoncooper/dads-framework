@@ -46,30 +46,15 @@ export function withExpiration(holder: SingleRoleValue): ExpirableHolder {
 }
 
 export function isWildcardHolder(value: unknown): value is WildcardHolder {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "wildcard"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "wildcard";
 }
 
 export function isUsersetHolder(value: unknown): value is UsersetHolder {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "userset"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "userset";
 }
 
 export function isExpirableHolder(value: unknown): value is ExpirableHolder {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "expirable"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "expirable";
 }
 
 export function isEntityHandleHolder(value: unknown): value is EntityHandle {
@@ -84,11 +69,6 @@ export function isEntityHandleHolder(value: unknown): value is EntityHandle {
   );
 }
 
-export type SingleRoleValue =
-  | EntityHandle
-  | GrantableRole
-  | WildcardHolder
-  | UsersetHolder
-  | ExpirableHolder;
+export type SingleRoleValue = EntityHandle | GrantableRole | WildcardHolder | UsersetHolder | ExpirableHolder;
 
 export type RoleValue = SingleRoleValue | readonly SingleRoleValue[];

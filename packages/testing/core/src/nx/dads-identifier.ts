@@ -9,9 +9,6 @@
 
 /** A stable, collision-free Dads identifier for an arbitrary Nx name. */
 export function dadsIdentifier(value: string): string {
-  const encoded = Array.from(
-    value,
-    (character) => character.codePointAt(0)?.toString(16) ?? "0",
-  ).join("-");
+  const encoded = Array.from(value, (character) => character.codePointAt(0)?.toString(16) ?? "0").join("-");
   return `nx-${encoded || "empty"}`;
 }

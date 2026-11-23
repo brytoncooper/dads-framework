@@ -1,11 +1,5 @@
 import { execFileSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import process from "node:process";
 
@@ -41,9 +35,7 @@ function codeLanguage(token) {
 }
 
 export function readReadmeExamples(markdown) {
-  const tokens = new Marked()
-    .lexer(markdown)
-    .filter(({ type }) => type !== "space");
+  const tokens = new Marked().lexer(markdown).filter(({ type }) => type !== "space");
   let inTryIt = false;
   let hasTryIt = false;
   let hasUsage = false;
@@ -68,9 +60,7 @@ export function readReadmeExamples(markdown) {
     const next = tokens[index + 1];
     const extension = TYPESCRIPT.get(codeLanguage(next));
     if (extension === undefined || next.text.trim() === "") {
-      errors.push(
-        "the dads:check-example marker needs a following nonempty TypeScript or TSX fence",
-      );
+      errors.push("the dads:check-example marker needs a following nonempty TypeScript or TSX fence");
       continue;
     }
     hasCheckedTypeScriptUsage ||= inTryIt;
@@ -78,8 +68,7 @@ export function readReadmeExamples(markdown) {
   }
 
   if (!hasTryIt) errors.push("missing a ## Try it section");
-  else if (!hasUsage)
-    errors.push("## Try it needs a labeled setup or usage code block");
+  else if (!hasUsage) errors.push("## Try it needs a labeled setup or usage code block");
   if (hasTypeScriptUsage && !hasCheckedTypeScriptUsage) {
     errors.push("mark a TypeScript example in ## Try it with " + CHECK_EXAMPLE);
   }
@@ -90,17 +79,11 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-export function publicPackages(
-  root,
-  packages = readJson(join(root, "dads.project.json")).packages,
-) {
+export function publicPackages(root, packages = readJson(join(root, "dads.project.json")).packages) {
   return packages.filter((entry) => {
     if (!entry.root.startsWith("packages/")) return false;
     const manifest = readJson(join(root, entry.root, "package.json"));
-    return (
-      manifest.private !== true &&
-      manifest.publishConfig?.access !== "restricted"
-    );
+    return manifest.private !== true && manifest.publishConfig?.access !== "restricted";
   });
 }
 
@@ -116,10 +99,7 @@ function compileExamples(root, snippets) {
       mkdirSync(directory);
       const file = join(directory, `example.${snippet.extension}`);
       writeFileSync(file, snippet.code);
-      files.set(
-        relative(root, file),
-        `${snippet.name} README.md (example ${snippet.number})`,
-      );
+      files.set(relative(root, file), `${snippet.name} README.md (example ${snippet.number})`);
     }
     execFileSync(
       process.execPath,

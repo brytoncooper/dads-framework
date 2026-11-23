@@ -11,14 +11,10 @@ import { usePageCopy } from "../../copy/page-copy.js";
 export const MASTER_DETAIL_DESKTOP_QUERY = "(min-width: 1024px)";
 
 /** The list's own URL params: the only search a link between records or back to the list carries. */
-export type MasterDetailListSearch = Readonly<
-  Record<string, string | number | undefined>
->;
+export type MasterDetailListSearch = Readonly<Record<string, string | number | undefined>>;
 
 const MasterDetailPaneContext = React.createContext(false);
-const MasterDetailListSearchContext = React.createContext<
-  MasterDetailListSearch | undefined
->(undefined);
+const MasterDetailListSearchContext = React.createContext<MasterDetailListSearch | undefined>(undefined);
 
 /**
  * Whether this component renders inside a master-detail record pane. A show
@@ -36,8 +32,7 @@ export function useInMasterDetailPane(): boolean {
  * it, so they cannot follow the reader to another record or back to the list.
  * Undefined outside a frame, which is a link with no search.
  */
-export function useMasterDetailListSearch():
-  MasterDetailListSearch | undefined {
+export function useMasterDetailListSearch(): MasterDetailListSearch | undefined {
   return React.useContext(MasterDetailListSearchContext);
 }
 
@@ -47,11 +42,7 @@ export function useMasterDetailListSearch():
  * `matchMedia`), so tests and old browsers get the one-pane behaviour.
  */
 export function useIsMasterDetailDesktop(): boolean {
-  return React.useSyncExternalStore(
-    subscribeToDesktopWidth,
-    readIsDesktopWidth,
-    readIsDesktopWidthOnServer,
-  );
+  return React.useSyncExternalStore(subscribeToDesktopWidth, readIsDesktopWidth, readIsDesktopWidthOnServer);
 }
 
 /**
@@ -123,9 +114,7 @@ export function MasterDetailLayout({
             selected ? "flex" : "hidden",
           )}
         >
-          <MasterDetailPaneContext.Provider value>
-            {children}
-          </MasterDetailPaneContext.Provider>
+          <MasterDetailPaneContext.Provider value>{children}</MasterDetailPaneContext.Provider>
         </div>
       </div>
     </MasterDetailListSearchContext.Provider>
@@ -144,10 +133,7 @@ export function MasterDetailNoSelection({
 }) {
   const t = usePageCopy();
   return (
-    <p
-      data-slot="master-detail-no-selection"
-      className="text-muted-foreground text-sm"
-    >
+    <p data-slot="master-detail-no-selection" className="text-muted-foreground text-sm">
       {message ?? t("page.masterDetail.noSelection")}
     </p>
   );
@@ -171,10 +157,7 @@ function readIsDesktopWidthOnServer(): boolean {
 }
 
 function readDesktopWidthQuery(): MediaQueryList | null {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
     return null;
   }
   return window.matchMedia(MASTER_DETAIL_DESKTOP_QUERY);

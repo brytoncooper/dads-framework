@@ -18,13 +18,7 @@ Save this as `example.mts` and run `node --experimental-strip-types example.mts`
 <!-- dads:check-example -->
 
 ```ts
-import {
-  createHttpApp,
-  getRoute,
-  publicAccess,
-  registerRoutes,
-  routeGroup,
-} from "@dads-framework/http";
+import { createHttpApp, getRoute, publicAccess, registerRoutes, routeGroup } from "@dads-framework/http";
 import { z } from "zod";
 
 const greeting = getRoute({
@@ -73,10 +67,7 @@ const organizationSchema = z.object({ id: z.uuid(), name: z.string() });
 export const getOrganization = getRoute({
   route: { method: "GET", template: "/organizations/:id" },
   summary: "Get an organization",
-  access: requires(
-    permissionToken("organizations/organization", "view"),
-    fromParam("id"),
-  ),
+  access: requires(permissionToken("organizations/organization", "view"), fromParam("id")),
   params: z.object({ id: z.uuid() }),
   response: organizationSchema, // the DATA shape from the contract lib
   handler: ({ params }) => ({ id: params.id, name: "Example Organization" }),

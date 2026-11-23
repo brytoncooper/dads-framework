@@ -42,21 +42,12 @@ function renderTraceNode(
   for (let index = 0; index < children.length; index += 1) {
     const child = children[index];
     if (child === undefined) continue;
-    renderTraceNode(
-      child,
-      childPrefix,
-      index === children.length - 1,
-      false,
-      lines,
-    );
+    renderTraceNode(child, childPrefix, index === children.length - 1, false, lines);
   }
 }
 
 /** Format a decision tree into readable multiline diagnostic text. */
-export function formatPermissionExplanation(
-  query: PermissionQuery,
-  explanation: PermissionExplanation,
-): string {
+export function formatPermissionExplanation(query: PermissionQuery, explanation: PermissionExplanation): string {
   const lines: string[] = [
     `${formatSubjectRef(query.subject)} on ${formatPermissionTarget(query)} => ${explanation.allowed ? "ALLOW" : "DENY"}`,
   ];

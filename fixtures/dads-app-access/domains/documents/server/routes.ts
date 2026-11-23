@@ -1,10 +1,5 @@
 import { notFound } from "@dads-framework/core/errors";
-import {
-  getRoute,
-  patchRoute,
-  routeGroup,
-  type HttpRoute,
-} from "@dads-framework/http";
+import { getRoute, patchRoute, routeGroup, type HttpRoute } from "@dads-framework/http";
 import { z } from "zod";
 
 import { canEditDocument, canViewDocument } from "../access/index.js";
@@ -46,11 +41,7 @@ export function documentsRoutes(repository: DocumentsRepository): HttpRoute[] {
       body: renameBody,
       response: documentResponse,
       handler: async ({ params, body, subject }) => {
-        const updated = await repository.renameInProtectedTx(
-          subject.id,
-          params.documentId,
-          body.title,
-        );
+        const updated = await repository.renameInProtectedTx(subject.id, params.documentId, body.title);
         if (updated === null) throw notFound("Document", params.documentId);
         return updated;
       },

@@ -11,9 +11,7 @@ import type {
 
 export type PermissionTermInput = PermissionTerm | readonly PermissionTerm[];
 
-function isTermList(
-  value: PermissionTermInput,
-): value is readonly PermissionTerm[] {
+function isTermList(value: PermissionTermInput): value is readonly PermissionTerm[] {
   return Array.isArray(value);
 }
 
@@ -42,10 +40,7 @@ export function asPermissionTerm(value: PermissionTermInput): PermissionTerm {
  * Arrow: the role's holder must also hold `target` on the related object.
  * `target` may be a permission or a role.
  */
-export function through(
-  role: RoleToken,
-  target: PermissionToken | RoleToken,
-): ThroughTerm {
+export function through(role: RoleToken, target: PermissionToken | RoleToken): ThroughTerm {
   return { kind: "through", role, target };
 }
 
@@ -53,20 +48,14 @@ export function through(
  * Intersection arrow: the subject must hold `target` on every object held
  * by `role` (`role.all(target)`). `target` may be a permission or a role.
  */
-export function throughAll(
-  role: RoleToken,
-  target: PermissionToken | RoleToken,
-): ThroughAllTerm {
+export function throughAll(role: RoleToken, target: PermissionToken | RoleToken): ThroughAllTerm {
   return { kind: "through-all", role, target };
 }
 
 /**
  * Permission intersection: `term` only when `condition` is also true.
  */
-export function gated(
-  term: PermissionTermInput,
-  condition: PermissionTermInput,
-): GatedTerm {
+export function gated(term: PermissionTermInput, condition: PermissionTermInput): GatedTerm {
   return {
     kind: "gated",
     term: asPermissionTerm(term),
@@ -77,10 +66,7 @@ export function gated(
 /**
  * Exclusion: `term` minus `banned`.
  */
-export function excluding(
-  term: PermissionTermInput,
-  banned: PermissionTermInput,
-): ExcludingTerm {
+export function excluding(term: PermissionTermInput, banned: PermissionTermInput): ExcludingTerm {
   return {
     kind: "excluding",
     term: asPermissionTerm(term),
@@ -91,10 +77,7 @@ export function excluding(
 /**
  * General intersection of two terms.
  */
-export function both(
-  left: PermissionTermInput,
-  right: PermissionTermInput,
-): BothTerm {
+export function both(left: PermissionTermInput, right: PermissionTermInput): BothTerm {
   return {
     kind: "both",
     left: asPermissionTerm(left),

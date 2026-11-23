@@ -2,33 +2,19 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type {
-  TestingPlanIssue,
-  TestingPlanResult,
-  TestingRunResult,
-  TestingTaskDecision,
-} from "./testing-api.js";
+import type { TestingPlanIssue, TestingPlanResult, TestingRunResult, TestingTaskDecision } from "./testing-api.js";
 import { buildTestingReport } from "./testing-report.js";
 import { parseTestingManifest } from "./testing-manifest.js";
 import type { TestingManifest } from "./testing-manifest.js";
 
-const workspaceRoot = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-);
+const workspaceRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "..", "..");
 
 /**
  * `core` has no fallback dependents of its own; `api` and `web` each declare
  * `core` as a fallback dependency, so a change to `core` reaches both.
  */
 const manifest: TestingManifest = parseTestingManifest(
-  readFileSync(
-    join(workspaceRoot, "fixtures", "testing-soundness", "dads.testing.json"),
-    "utf8",
-  ),
+  readFileSync(join(workspaceRoot, "fixtures", "testing-soundness", "dads.testing.json"), "utf8"),
   "fixtures/testing-soundness/dads.testing.json",
 );
 
@@ -159,17 +145,9 @@ describe("testing report", () => {
     const report = buildTestingReport({ plan, manifest });
 
     expect(report.projectClosure.changedProjects).toEqual([]);
-    expect(report.projectClosure.unownedChangedPaths).toEqual([
-      "docs/readme.md",
-    ]);
-    expect(report.projectClosure.closureProjects).toEqual([
-      "api",
-      "core",
-      "web",
-    ]);
-    expect(report.projectClosure.closureTaskIds).toEqual(
-      [...allTaskIds].sort(),
-    );
+    expect(report.projectClosure.unownedChangedPaths).toEqual(["docs/readme.md"]);
+    expect(report.projectClosure.closureProjects).toEqual(["api", "core", "web"]);
+    expect(report.projectClosure.closureTaskIds).toEqual([...allTaskIds].sort());
     expect(report.projectClosure.closureTaskCount).toBe(9);
   });
 
@@ -177,9 +155,7 @@ describe("testing report", () => {
     const plan: TestingPlanResult = {
       schemaVersion: 1,
       scope: { kind: "all", changedPaths: [], fullFallback: true },
-      tasks: allTaskIds.map((id) =>
-        task(id, { reason: "full-fallback", widened: true }),
-      ),
+      tasks: allTaskIds.map((id) => task(id, { reason: "full-fallback", widened: true })),
       issues: [],
       complete: true,
       counts: { run: 9, skipProvenUnaffected: 0 },
@@ -189,14 +165,8 @@ describe("testing report", () => {
 
     expect(report.projectClosure.changedProjects).toEqual([]);
     expect(report.projectClosure.unownedChangedPaths).toEqual([]);
-    expect(report.projectClosure.closureProjects).toEqual([
-      "api",
-      "core",
-      "web",
-    ]);
-    expect(report.projectClosure.closureTaskIds).toEqual(
-      [...allTaskIds].sort(),
-    );
+    expect(report.projectClosure.closureProjects).toEqual(["api", "core", "web"]);
+    expect(report.projectClosure.closureTaskIds).toEqual([...allTaskIds].sort());
     expect(report.projectClosure.closureTaskCount).toBe(9);
     expect(report.projectClosure.reductionRatio).toBe(1);
   });
@@ -281,14 +251,8 @@ describe("testing report", () => {
       scope: { ...scope, fullFallback: true },
     };
 
-    expect(
-      buildTestingReport({ plan: planWithoutFallback, manifest }).fallback
-        .forcedBy,
-    ).toEqual([]);
-    expect(
-      buildTestingReport({ plan: planWithFallback, manifest }).fallback
-        .forcedBy,
-    ).toEqual([
+    expect(buildTestingReport({ plan: planWithoutFallback, manifest }).fallback.forcedBy).toEqual([]);
+    expect(buildTestingReport({ plan: planWithFallback, manifest }).fallback.forcedBy).toEqual([
       {
         code: "unknown-changed-path",
         message: "A changed path could not be attributed to any module.",
@@ -458,10 +422,7 @@ describe("testing report", () => {
 });
 
 /** A task decision with test-friendly defaults, overridable per field. */
-function task(
-  id: string,
-  overrides: Partial<Omit<TestingTaskDecision, "id">> = {},
-): TestingTaskDecision {
+function task(id: string, overrides: Partial<Omit<TestingTaskDecision, "id">> = {}): TestingTaskDecision {
   return {
     id,
     decision: "run",

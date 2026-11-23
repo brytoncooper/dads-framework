@@ -6,12 +6,7 @@ export function singleRequestHeader(
 ): string | undefined {
   const normalizedName = name.toLowerCase();
   const headerValue = headers[normalizedName];
-  if (
-    typeof headerValue !== "string" ||
-    headerValue.trim().length === 0 ||
-    headerValue.includes(",")
-  )
-    return undefined;
+  if (typeof headerValue !== "string" || headerValue.trim().length === 0 || headerValue.includes(",")) return undefined;
   let occurrences = 0;
   for (let index = 0; index < rawHeaders.length; index += 2) {
     if (rawHeaders[index]?.toLowerCase() === normalizedName) occurrences += 1;

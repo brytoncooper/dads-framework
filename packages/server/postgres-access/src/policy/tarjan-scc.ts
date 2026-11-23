@@ -27,11 +27,7 @@ export function findStronglyConnectedComponents(
   return state.sccs;
 }
 
-function strongConnect(
-  node: string,
-  adjacency: ReadonlyMap<string, readonly string[]>,
-  state: TarjanState,
-): void {
+function strongConnect(node: string, adjacency: ReadonlyMap<string, readonly string[]>, state: TarjanState): void {
   const currentIndex = state.index;
   state.indices.set(node, currentIndex);
   state.lowlink.set(node, currentIndex);

@@ -131,10 +131,7 @@ export function hasReason(entry: BaselineEntry | undefined): boolean {
  * `movedTo`. A move a tool makes toward the threshold rewrites the number and
  * nothing else, so the receipt an entry carries survives every `--update`.
  */
-export function entryAt(
-  entry: BaselineEntry | undefined,
-  value: number,
-): BaselineEntry {
+export function entryAt(entry: BaselineEntry | undefined, value: number): BaselineEntry {
   const movedTo = entry?.movedTo;
   if (movedTo === undefined) return { value, reason: entry?.reason };
   return { value, reason: entry?.reason, movedTo };
@@ -145,11 +142,7 @@ export function entryAt(
  * this section records. A receipt that names its own key or a key nobody
  * records is an error in every mode: it points at arithmetic nobody can check.
  */
-export function movedToProblem(
-  key: string,
-  entry: BaselineEntry,
-  entries: BaselineEntries,
-): string | undefined {
+export function movedToProblem(key: string, entry: BaselineEntry, entries: BaselineEntries): string | undefined {
   const movedTo = entry.movedTo;
   if (movedTo === undefined) return undefined;
   if (movedTo === key) return "movedTo names its own key";

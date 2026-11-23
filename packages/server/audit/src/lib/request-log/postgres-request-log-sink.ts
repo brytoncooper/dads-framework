@@ -15,11 +15,7 @@
  */
 
 import { withSystemActor } from "@dads-framework/core/audit-actor";
-import {
-  RequestLogSink,
-  requestIdSchema,
-  type RequestRecord,
-} from "@dads-framework/http";
+import { RequestLogSink, requestIdSchema, type RequestRecord } from "@dads-framework/http";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 import { requestLog } from "../database/generated-tables/request-log.tables.js";
 
@@ -164,9 +160,7 @@ export class PostgresRequestLogSink extends RequestLogSink {
  * plain string end to end, and this insert is where it becomes the row's
  * branded primary key.
  */
-function toRequestLogInsert(
-  row: RequestRecord,
-): typeof requestLog.$inferInsert {
+function toRequestLogInsert(row: RequestRecord): typeof requestLog.$inferInsert {
   return {
     requestId: requestIdSchema.parse(row.requestId),
     recordedAt: row.recordedAt,

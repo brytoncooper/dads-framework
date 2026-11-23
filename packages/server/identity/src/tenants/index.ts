@@ -7,21 +7,14 @@ export {
   type TenantId,
   type TenantRole,
 } from "./tenant-access.js";
-export {
-  createTenantDirectory,
-  tenantAuditConfiguration,
-} from "./tenant-composition.js";
+export { createTenantDirectory, tenantAuditConfiguration } from "./tenant-composition.js";
 export {
   type AuthenticatedTenantAccount,
   type TenantInvitationAcceptanceCheck,
   TenantInvitationUnavailableError,
 } from "./tenant-invitations.js";
 export type { TenantMembership } from "./tenant-memberships.js";
-export {
-  TenantUnavailableError,
-  type TenantsOptions,
-  type TenantTransaction,
-} from "./tenant-transaction.js";
+export { TenantUnavailableError, type TenantsOptions, type TenantTransaction } from "./tenant-transaction.js";
 export { Tenants, type TenantContext, type TenantRecord } from "./tenants.js";
 
 export { tenantMigrations } from "./tenant-migrations.js";

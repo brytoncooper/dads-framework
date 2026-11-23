@@ -28,10 +28,7 @@ const BACKSTOP_GRACE_MS = 1_000;
  * the write queue always moves on even if the call itself never answers.
  * The rejection carries no gRPC status code, so it is never retried.
  */
-export function withinWriteDeadline<T>(
-  send: () => Promise<T>,
-  deadlineMs: number,
-): Promise<T> {
+export function withinWriteDeadline<T>(send: () => Promise<T>, deadlineMs: number): Promise<T> {
   const limitMs = deadlineMs + Math.min(BACKSTOP_GRACE_MS, deadlineMs);
   let timer: ReturnType<typeof setTimeout> | undefined;
   const expired = new Promise<never>((_resolve, reject) => {

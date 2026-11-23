@@ -40,23 +40,20 @@ describe("openResponseObjects", () => {
 
     const opened = openResponseObjects(document);
 
-    expect(opened).toHaveProperty(
-      ["paths", "/me", "get", "responses", "200", "content"],
-      {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: {
-              data: {
-                type: "object",
-                properties: { name: { type: "string" } },
-                required: ["name"],
-              },
+    expect(opened).toHaveProperty(["paths", "/me", "get", "responses", "200", "content"], {
+      "application/json": {
+        schema: {
+          type: "object",
+          properties: {
+            data: {
+              type: "object",
+              properties: { name: { type: "string" } },
+              required: ["name"],
             },
           },
         },
       },
-    );
+    });
   });
 
   it("opens the components a response reaches through refs", () => {
@@ -80,28 +77,15 @@ describe("openResponseObjects", () => {
 
     const opened = openResponseObjects(document);
 
-    expect(opened).not.toHaveProperty([
-      "components",
-      "schemas",
-      "MeResponse",
-      "additionalProperties",
-    ]);
-    expect(opened).not.toHaveProperty([
-      "components",
-      "schemas",
-      "Profile",
-      "additionalProperties",
-    ]);
+    expect(opened).not.toHaveProperty(["components", "schemas", "MeResponse", "additionalProperties"]);
+    expect(opened).not.toHaveProperty(["components", "schemas", "Profile", "additionalProperties"]);
   });
 
   it("keeps a schema only a request uses closed", () => {
     const document = {
       paths: {
         "/visits": {
-          post: operation(
-            { type: "object" },
-            { $ref: "#/components/schemas/VisitBody" },
-          ),
+          post: operation({ type: "object" }, { $ref: "#/components/schemas/VisitBody" }),
         },
       },
       components: { schemas: { VisitBody: closedProfile } },
@@ -109,10 +93,7 @@ describe("openResponseObjects", () => {
 
     const opened = openResponseObjects(document);
 
-    expect(opened).toHaveProperty(
-      ["components", "schemas", "VisitBody", "additionalProperties"],
-      false,
-    );
+    expect(opened).toHaveProperty(["components", "schemas", "VisitBody", "additionalProperties"], false);
   });
 
   it("opens a component a request shares with a response", () => {
@@ -124,12 +105,7 @@ describe("openResponseObjects", () => {
 
     const opened = openResponseObjects(document);
 
-    expect(opened).not.toHaveProperty([
-      "components",
-      "schemas",
-      "Visit",
-      "additionalProperties",
-    ]);
+    expect(opened).not.toHaveProperty(["components", "schemas", "Visit", "additionalProperties"]);
   });
 
   it("opens and follows a property whose name is a schema keyword", () => {
@@ -163,12 +139,7 @@ describe("openResponseObjects", () => {
       "default",
       "additionalProperties",
     ]);
-    expect(opened).not.toHaveProperty([
-      "components",
-      "schemas",
-      "Visit",
-      "additionalProperties",
-    ]);
+    expect(opened).not.toHaveProperty(["components", "schemas", "Visit", "additionalProperties"]);
   });
 
   it("keeps an open map's value schema", () => {
@@ -177,9 +148,8 @@ describe("openResponseObjects", () => {
 
     const opened = openResponseObjects(document);
 
-    expect(opened).toHaveProperty(
-      ["paths", "/me", "get", "responses", "200", "content"],
-      { "application/json": { schema: meta } },
-    );
+    expect(opened).toHaveProperty(["paths", "/me", "get", "responses", "200", "content"], {
+      "application/json": { schema: meta },
+    });
   });
 });

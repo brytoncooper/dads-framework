@@ -42,10 +42,7 @@ describe("FakeEmailSender", () => {
       text: "t",
     });
 
-    expect([first, second]).toEqual([
-      { providerMessageId: "fake-1" },
-      { providerMessageId: "fake-2" },
-    ]);
+    expect([first, second]).toEqual([{ providerMessageId: "fake-1" }, { providerMessageId: "fake-2" }]);
   });
 
   it("rejects and captures nothing once told to fail", async () => {

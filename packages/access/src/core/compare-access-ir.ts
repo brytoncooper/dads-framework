@@ -1,10 +1,4 @@
-import type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./ir.js";
 
 function subjectKey(subject: AccessIrSubject): string {
   const suffix = subject.expiration === true ? ":expiration" : "";
@@ -72,21 +66,15 @@ function termKey(term: AccessIrTerm): string {
 }
 
 function sortTerms(terms: readonly AccessIrTerm[]): AccessIrTerm[] {
-  return [...terms].sort((left, right) =>
-    termKey(left).localeCompare(termKey(right)),
-  );
+  return [...terms].sort((left, right) => termKey(left).localeCompare(termKey(right)));
 }
 
 function roleMap(roles: readonly AccessIrRole[]): Map<string, AccessIrRole> {
   return new Map(roles.map((role) => [role.name, role]));
 }
 
-function permissionMap(
-  permissions: readonly AccessIrPermission[],
-): Map<string, AccessIrPermission> {
-  return new Map(
-    permissions.map((permission) => [permission.name, permission]),
-  );
+function permissionMap(permissions: readonly AccessIrPermission[]): Map<string, AccessIrPermission> {
+  return new Map(permissions.map((permission) => [permission.name, permission]));
 }
 
 function subjectSet(subjects: readonly AccessIrSubject[]): Set<string> {
@@ -98,10 +86,7 @@ function subjectSet(subjects: readonly AccessIrSubject[]): Set<string> {
  * order are kept. Same-entity permission refs compare equal to roles of
  * the same name (SpiceDB's shared namespace).
  */
-export function accessIrDiff(
-  expected: AccessIrDefinition,
-  actual: AccessIrDefinition,
-): readonly string[] {
+export function accessIrDiff(expected: AccessIrDefinition, actual: AccessIrDefinition): readonly string[] {
   const differences: string[] = [];
   if (expected.wireName !== actual.wireName) {
     differences.push(`wire name ${expected.wireName} vs ${actual.wireName}`);
@@ -112,17 +97,11 @@ export function accessIrDiff(
   return differences;
 }
 
-function roleDifferences(
-  expected: AccessIrDefinition,
-  actual: AccessIrDefinition,
-): readonly string[] {
+function roleDifferences(expected: AccessIrDefinition, actual: AccessIrDefinition): readonly string[] {
   const differences: string[] = [];
   const expectedRoles = roleMap(expected.roles);
   const actualRoles = roleMap(actual.roles);
-  for (const name of new Set([
-    ...expectedRoles.keys(),
-    ...actualRoles.keys(),
-  ])) {
+  for (const name of new Set([...expectedRoles.keys(), ...actualRoles.keys()])) {
     const left = expectedRoles.get(name);
     const right = actualRoles.get(name);
     if (left === undefined) {
@@ -133,18 +112,12 @@ function roleDifferences(
       differences.push(`${expected.wireName} missing role ${name}`);
       continue;
     }
-    differences.push(
-      ...subjectDifferences(`${expected.wireName}#${name}`, left, right),
-    );
+    differences.push(...subjectDifferences(`${expected.wireName}#${name}`, left, right));
   }
   return differences;
 }
 
-function subjectDifferences(
-  role: string,
-  left: AccessIrRole,
-  right: AccessIrRole,
-): readonly string[] {
+function subjectDifferences(role: string, left: AccessIrRole, right: AccessIrRole): readonly string[] {
   const leftSubjects = subjectSet(left.subjects);
   const rightSubjects = subjectSet(right.subjects);
   return [
@@ -157,17 +130,11 @@ function subjectDifferences(
   ];
 }
 
-function permissionDifferences(
-  expected: AccessIrDefinition,
-  actual: AccessIrDefinition,
-): readonly string[] {
+function permissionDifferences(expected: AccessIrDefinition, actual: AccessIrDefinition): readonly string[] {
   const differences: string[] = [];
   const expectedPermissions = permissionMap(expected.permissions);
   const actualPermissions = permissionMap(actual.permissions);
-  for (const name of new Set([
-    ...expectedPermissions.keys(),
-    ...actualPermissions.keys(),
-  ])) {
+  for (const name of new Set([...expectedPermissions.keys(), ...actualPermissions.keys()])) {
     const left = expectedPermissions.get(name);
     const right = actualPermissions.get(name);
     if (left === undefined) {
@@ -181,9 +148,7 @@ function permissionDifferences(
     const leftKeys = sortTerms(left.terms).map(termKey).join(" | ");
     const rightKeys = sortTerms(right.terms).map(termKey).join(" | ");
     if (leftKeys !== rightKeys) {
-      differences.push(
-        `${expected.wireName}#${name} terms ${leftKeys} vs ${rightKeys}`,
-      );
+      differences.push(`${expected.wireName}#${name} terms ${leftKeys} vs ${rightKeys}`);
     }
   }
 
@@ -194,17 +159,10 @@ export function accessIrDefinitionsDiff(
   expected: readonly AccessIrDefinition[],
   actual: readonly AccessIrDefinition[],
 ): readonly string[] {
-  const expectedMap = new Map(
-    expected.map((definition) => [definition.wireName, definition]),
-  );
-  const actualMap = new Map(
-    actual.map((definition) => [definition.wireName, definition]),
-  );
+  const expectedMap = new Map(expected.map((definition) => [definition.wireName, definition]));
+  const actualMap = new Map(actual.map((definition) => [definition.wireName, definition]));
   const differences: string[] = [];
-  for (const wireName of new Set([
-    ...expectedMap.keys(),
-    ...actualMap.keys(),
-  ])) {
+  for (const wireName of new Set([...expectedMap.keys(), ...actualMap.keys()])) {
     const left = expectedMap.get(wireName);
     const right = actualMap.get(wireName);
     if (left === undefined) {

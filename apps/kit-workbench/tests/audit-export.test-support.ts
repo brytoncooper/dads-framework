@@ -36,10 +36,7 @@ export async function proveAuditExport(proof: AuditProof) {
   await proveAuditExportMetadata(staff, url, owner);
 }
 
-async function proveAuditExportAccess(
-  { customer, staff, owner, member, otherTenantId }: AuditProof,
-  url: string,
-) {
+async function proveAuditExportAccess({ customer, staff, owner, member, otherTenantId }: AuditProof, url: string) {
   expect((await staff.inject({ url })).statusCode).toBe(401);
   expect((await customer.inject({ url, headers: owner })).statusCode).toBe(404);
   const denied = await staff.inject({ url, headers: member });
@@ -53,10 +50,7 @@ async function proveAuditExportAccess(
       })
     ).statusCode,
   ).toBe(404);
-  expect(
-    (await staff.inject({ url: `${url}?beforePosition=1`, headers: owner }))
-      .statusCode,
-  ).toBe(400);
+  expect((await staff.inject({ url: `${url}?beforePosition=1`, headers: owner })).statusCode).toBe(400);
 }
 
 async function proveAuditExportPages(
@@ -72,37 +66,25 @@ async function proveAuditExportPages(
   expect(first.statusCode).toBe(200);
   expect(first.headers["content-type"]).toMatch(/^application\/x-ndjson\b/u);
   expect(first.headers["cache-control"]).toBe("no-store");
-  expect(first.headers["content-disposition"]).toBe(
-    'attachment; filename="audit-log.ndjson"',
-  );
+  expect(first.headers["content-disposition"]).toBe('attachment; filename="audit-log.ndjson"');
   const link = first.headers["link"];
-  const next = /^<([^>]+)>; rel="next"$/u.exec(
-    typeof link === "string" ? link : "",
-  )?.[1];
+  const next = /^<([^>]+)>; rel="next"$/u.exec(typeof link === "string" ? link : "")?.[1];
   if (next === undefined) throw new Error("Expected a continuation link");
   expect(next.startsWith(`${url}?`)).toBe(true);
-  expect((await staff.inject({ url: next, headers: member })).statusCode).toBe(
-    404,
-  );
+  expect((await staff.inject({ url: next, headers: member })).statusCode).toBe(404);
   const nextPage = await staff.inject({ url: next, headers: owner });
   expect(nextPage.statusCode).toBe(200);
   expect(first.body).not.toBe(nextPage.body);
 }
 
-async function proveAuditExportMetadata(
-  staff: Http,
-  url: string,
-  owner: AuditProof["owner"],
-) {
+async function proveAuditExportMetadata(staff: Http, url: string, owner: AuditProof["owner"]) {
   const complete = await staff.inject({ url, headers: owner });
   expect(complete.statusCode).toBe(200);
   const audit = complete.body
     .trimEnd()
     .split("\n")
     .map((line) => auditLine.parse(JSON.parse(line)));
-  expect(
-    audit.filter(({ tableName }) => tableName === "starter_note"),
-  ).toHaveLength(1);
+  expect(audit.filter(({ tableName }) => tableName === "starter_note")).toHaveLength(1);
   expect(complete.body).not.toContain("rowAfter");
   expect(complete.body).not.toContain("Alpha's note");
   expect(complete.body).not.toContain("Beta's private note");

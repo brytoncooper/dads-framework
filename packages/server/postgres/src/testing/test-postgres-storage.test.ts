@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  postgresStorageSettings,
-  testPostgresMemoryLimitGb,
-  testPostgresStorage,
-} from "./test-postgres-storage.js";
+import { postgresStorageSettings, testPostgresMemoryLimitGb, testPostgresStorage } from "./test-postgres-storage.js";
 
 describe("testPostgresStorage", () => {
   it("defaults to disk when unset or empty", () => {
@@ -18,9 +14,7 @@ describe("testPostgresStorage", () => {
   });
 
   it("refuses any other value instead of silently using disk", () => {
-    expect(() =>
-      testPostgresStorage({ TEST_POSTGRES_STORAGE: "memory" }),
-    ).toThrow(/must be "disk" or "ram"/);
+    expect(() => testPostgresStorage({ TEST_POSTGRES_STORAGE: "memory" })).toThrow(/must be "disk" or "ram"/);
   });
 });
 

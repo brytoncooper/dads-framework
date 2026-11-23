@@ -22,10 +22,7 @@
  * that question's caller. Without `checkEach` behind it, checks go one by one.
  */
 
-import {
-  AnswersOncePerScope,
-  OneValuePerScope,
-} from "@dads-framework/core/runtime/request-work";
+import { AnswersOncePerScope, OneValuePerScope } from "@dads-framework/core/runtime/request-work";
 
 import {
   Authorization,
@@ -102,10 +99,7 @@ export class AnswerOnceAuthorization extends Authorization {
   }
 
   /** A group sends once the tick that opened it has finished gathering. */
-  #openGroup(
-    groups: Map<string, GatheredChecks>,
-    groupKey: string,
-  ): GatheredChecks {
+  #openGroup(groups: Map<string, GatheredChecks>, groupKey: string): GatheredChecks {
     const queries: PermissionQuery[] = [];
     const outcomes = Promise.resolve().then(() => {
       if (groups.get(groupKey) === group) groups.delete(groupKey);
@@ -116,39 +110,23 @@ export class AnswerOnceAuthorization extends Authorization {
     return group;
   }
 
-  #sendGathered(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  #sendGathered(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     const checkEach = this.#inner.checkEach?.bind(this.#inner);
     if (checkEach === undefined || queries.length === 1) {
-      return Promise.all(
-        queries.map((query) => checkOutcome(() => this.#inner.check(query))),
-      );
+      return Promise.all(queries.map((query) => checkOutcome(() => this.#inner.check(query))));
     }
     return checkEach(queries);
   }
 
-  override async checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  override async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     const decisions: boolean[] = [];
-    for (
-      let offset = 0;
-      offset < queries.length;
-      offset += PERMISSION_BATCH_SIZE
-    ) {
-      decisions.push(
-        ...(await this.#checkBatch(
-          queries.slice(offset, offset + PERMISSION_BATCH_SIZE),
-        )),
-      );
+    for (let offset = 0; offset < queries.length; offset += PERMISSION_BATCH_SIZE) {
+      decisions.push(...(await this.#checkBatch(queries.slice(offset, offset + PERMISSION_BATCH_SIZE))));
     }
     return decisions;
   }
 
-  #checkBatch(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  #checkBatch(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     const uncached: PermissionQuery[] = [];
     // Cache misses register synchronously before the batch starts in this microtask.
     const batch = Promise.resolve().then(async () => {
@@ -157,8 +135,7 @@ export class AnswerOnceAuthorization extends Authorization {
         return this.#inner.checkMany(uncached);
       }
       const decisions: boolean[] = [];
-      for (const query of uncached)
-        decisions.push(await this.#inner.check(query));
+      for (const query of uncached) decisions.push(await this.#inner.check(query));
       return decisions;
     });
     const answers: Promise<boolean>[] = [];
@@ -175,35 +152,23 @@ export class AnswerOnceAuthorization extends Authorization {
   }
 
   override lookupResources(query: ResourceLookup): Promise<readonly string[]> {
-    return this.#lookups.answer(lookupKey(query), () =>
-      this.#inner.lookupResources(query),
-    );
+    return this.#lookups.answer(lookupKey(query), () => this.#inner.lookupResources(query));
   }
 
   override lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
     const innerLookup = this.#inner.lookupSubjects?.bind(this.#inner);
     if (innerLookup === undefined) {
-      return Promise.reject(
-        new Error("underlying Authorization does not implement lookupSubjects"),
-      );
+      return Promise.reject(new Error("underlying Authorization does not implement lookupSubjects"));
     }
-    return this.#subjectLookups.answer(subjectLookupKey(query), () =>
-      innerLookup(query),
-    );
+    return this.#subjectLookups.answer(subjectLookupKey(query), () => innerLookup(query));
   }
 
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     return this.#forgettingAround(() => this.#inner.writeRelationships(writes));
   }
 
-  override deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
-    return this.#forgettingAround(() =>
-      this.#inner.deleteRelationships(filter),
-    );
+  override deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
+    return this.#forgettingAround(() => this.#inner.deleteRelationships(filter));
   }
 
   override relationshipExists(filter: {
@@ -214,9 +179,7 @@ export class AnswerOnceAuthorization extends Authorization {
     return this.#inner.relationshipExists(filter);
   }
 
-  override listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  override listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     return this.#inner.listDirectSubjects(query);
   }
 
@@ -251,22 +214,13 @@ function checkKey(query: PermissionQuery): string {
 
 /** Questions that may share one bulk call: the same consistency asked. */
 function consistencyKey(query: PermissionQuery): string {
-  return JSON.stringify([
-    query.consistencyToken ?? null,
-    query.consistency ?? null,
-  ]);
+  return JSON.stringify([query.consistencyToken ?? null, query.consistency ?? null]);
 }
 
 function lookupKey(query: ResourceLookup): string {
-  return JSON.stringify([
-    ...lookupQuestionIdentity(query),
-    query.consistencyToken ?? null,
-  ]);
+  return JSON.stringify([...lookupQuestionIdentity(query), query.consistencyToken ?? null]);
 }
 
 function subjectLookupKey(query: SubjectLookup): string {
-  return JSON.stringify([
-    ...subjectLookupQuestionIdentity(query),
-    query.consistencyToken ?? null,
-  ]);
+  return JSON.stringify([...subjectLookupQuestionIdentity(query), query.consistencyToken ?? null]);
 }

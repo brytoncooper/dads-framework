@@ -76,18 +76,14 @@ export class InProcessJobQueue implements JobQueue {
       this.cancelTimers();
       this.timers.clear();
       this.started = false;
-      return Promise.reject(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
   }
 
   enqueue(jobName: string, payload: unknown): Promise<void> {
     const definition = this.registry.get(jobName);
     this.counts = { ...this.counts, waiting: this.counts.waiting + 1 };
-    const execution = Promise.resolve().then(() =>
-      this.runJob(jobName, payload, definition),
-    );
+    const execution = Promise.resolve().then(() => this.runJob(jobName, payload, definition));
     this.activeRuns.add(execution);
     void execution.finally(() => {
       this.activeRuns.delete(execution);
@@ -110,11 +106,7 @@ export class InProcessJobQueue implements JobQueue {
     await Promise.all([...this.activeRuns]);
   }
 
-  private async runJob(
-    jobName: string,
-    payload: unknown,
-    definition: JobDefinition,
-  ): Promise<void> {
+  private async runJob(jobName: string, payload: unknown, definition: JobDefinition): Promise<void> {
     this.counts = {
       ...this.counts,
       waiting: this.counts.waiting - 1,
@@ -124,10 +116,7 @@ export class InProcessJobQueue implements JobQueue {
     // The request id is logged because it is the only handle on
     // the `audit_log` rows one run produced.
     const actor = jobRunActor(jobName);
-    this.log.info(
-      { event: "job.started", jobName, requestId: actor.requestId },
-      "job started",
-    );
+    this.log.info({ event: "job.started", jobName, requestId: actor.requestId }, "job started");
     try {
       await runWithAuditActor(actor, () => definition.run(payload));
       this.counts = {
@@ -142,10 +131,7 @@ export class InProcessJobQueue implements JobQueue {
         active: this.counts.active - 1,
         failed: this.counts.failed + 1,
       };
-      this.log.error(
-        { event: "job.failed", jobName, err: error },
-        "job failed",
-      );
+      this.log.error({ event: "job.failed", jobName, err: error }, "job failed");
     }
   }
 
@@ -179,10 +165,7 @@ export class InProcessJobQueue implements JobQueue {
   }
 }
 
-function nextRunMillis(
-  now: number,
-  schedule: JobSchedule<unknown>,
-): number | undefined {
+function nextRunMillis(now: number, schedule: JobSchedule<unknown>): number | undefined {
   if (schedule.kind === "interval") {
     return (Math.floor(now / schedule.everyMs) + 1) * schedule.everyMs;
   }
@@ -197,9 +180,7 @@ function nextRunMillis(
   }
 }
 
-function describeRunningSchedule(
-  scheduled: ScheduledTimer,
-): RunningJobSchedule {
+function describeRunningSchedule(scheduled: ScheduledTimer): RunningJobSchedule {
   if (scheduled.schedule.kind === "cron") {
     return {
       id: scheduled.schedule.id,

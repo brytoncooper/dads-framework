@@ -23,12 +23,7 @@
 
 import type { FastifyRequest } from "fastify";
 
-import {
-  anonymousActor,
-  type AuditActor,
-  enterAuditActor,
-  runWithAuditActor,
-} from "@dads-framework/core/audit-actor";
+import { anonymousActor, type AuditActor, enterAuditActor, runWithAuditActor } from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import { rememberRequestActor } from "../request-log/request-outcome.js";

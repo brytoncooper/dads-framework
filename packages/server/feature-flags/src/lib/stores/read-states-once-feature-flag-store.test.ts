@@ -20,9 +20,7 @@ const SLUG = "orders.pilot";
 class CountingFeatureFlagStore extends InMemoryFeatureFlagStore {
   reads = 0;
 
-  override listStates(
-    slugs: readonly string[],
-  ): Promise<readonly FeatureFlagState[]> {
+  override listStates(slugs: readonly string[]): Promise<readonly FeatureFlagState[]> {
     this.reads += 1;
     return super.listStates(slugs);
   }
@@ -64,9 +62,7 @@ describe("ReadStatesOnceFeatureFlagStore", () => {
       await store.listStates([SLUG]);
       await store.applyBatch({
         expectedRevisions: new Map([[SLUG, 0]]),
-        nextStates: [
-          { ...defaultFeatureFlagState(SLUG), audienceMode: "EVERYONE" },
-        ],
+        nextStates: [{ ...defaultFeatureFlagState(SLUG), audienceMode: "EVERYONE" }],
         history: [],
       });
       return store.listStates([SLUG]);

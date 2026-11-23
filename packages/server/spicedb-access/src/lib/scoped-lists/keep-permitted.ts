@@ -6,10 +6,7 @@
  */
 import type { PermissionToken } from "@dads-framework/access";
 
-import type {
-  PermissionQuery,
-  SubjectRef,
-} from "@dads-framework/access/runtime";
+import type { PermissionQuery, SubjectRef } from "@dads-framework/access/runtime";
 import { checkAll } from "../access/check-all.js";
 
 /**
@@ -37,10 +34,7 @@ export async function keepPermitted<Row extends { readonly id: string }>(
   rows: readonly Row[],
 ): Promise<readonly Row[]> {
   const kept: Row[] = [];
-  const batchSize =
-    authorization.checkMany === undefined
-      ? SINGLE_CHECK_CONCURRENCY
-      : BULK_CHECK_SIZE;
+  const batchSize = authorization.checkMany === undefined ? SINGLE_CHECK_CONCURRENCY : BULK_CHECK_SIZE;
   for (let start = 0; start < rows.length; start += batchSize) {
     const batch = rows.slice(start, start + batchSize);
     const queries = batch.map((row): PermissionQuery => ({

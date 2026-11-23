@@ -15,19 +15,13 @@ import { z } from "zod";
 
 import { permissionToken } from "@dads-framework/access";
 import { requires } from "../route/route-guards.test-support.js";
-import {
-  anonymousActor,
-  type AuditActor,
-} from "@dads-framework/core/audit-actor";
+import { anonymousActor, type AuditActor } from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import { FakeDiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics/testing";
 import { noteAuthorizationWarning } from "@dads-framework/core/runtime/request-work";
 
 import { createHttpApp } from "../create-http-app.js";
-import type {
-  PermissionChecker,
-  SubjectResolver,
-} from "../request-pipeline/enforce-access.js";
+import type { PermissionChecker, SubjectResolver } from "../request-pipeline/enforce-access.js";
 import { registerRoutes } from "../request-pipeline/register-routes.js";
 import { fromParam, requireSession } from "../route/access.js";
 import { getRoute } from "../route/get-route.js";
@@ -74,24 +68,16 @@ class ExplodingSink extends RequestLogSink {
 }
 
 const subjects: SubjectResolver = {
-  resolve: (request) =>
-    Promise.resolve(request.headers["x-anon"] === "1" ? null : CALLER),
+  resolve: (request) => Promise.resolve(request.headers["x-anon"] === "1" ? null : CALLER),
   resolveWithMethod: (request) =>
-    Promise.resolve(
-      request.headers["x-anon"] === "1"
-        ? null
-        : { subject: CALLER, method: "session-cookie" },
-    ),
+    Promise.resolve(request.headers["x-anon"] === "1" ? null : { subject: CALLER, method: "session-cookie" }),
 };
 
 const routes = routeGroup("Orders", [
   postRoute({
     route: { method: "POST", template: "/orgs/:id/orders" },
     summary: "Create an order",
-    access: requires(
-      permissionToken("organizations/organization", "orders_create"),
-      fromParam("id"),
-    ),
+    access: requires(permissionToken("organizations/organization", "orders_create"), fromParam("id")),
     params: z.object({ id: z.string() }),
     body: z.object({ number: z.string().min(1) }),
     response: z.object({ id: z.string() }),
@@ -146,9 +132,7 @@ async function appWith(
     subjects,
     authorization,
     auditActorForSubject: ({ subject, requestId }): AuditActor =>
-      subject === null
-        ? anonymousActor(requestId)
-        : { kind: "user", id: subject.id, requestId },
+      subject === null ? anonymousActor(requestId) : { kind: "user", id: subject.id, requestId },
   });
   await app.ready();
   apps.push(app);
@@ -159,9 +143,7 @@ async function appWith(
 const grantsOrdersCreate: PermissionChecker = {
   check: (query) =>
     Promise.resolve(
-      query.subject.id === CALLER.id &&
-        query.permission === "orders_create" &&
-        query.resource.id === ORGANIZATION_ID,
+      query.subject.id === CALLER.id && query.permission === "orders_create" && query.resource.id === ORGANIZATION_ID,
     ),
 };
 
@@ -382,18 +364,13 @@ describe("captureRequestRecord", () => {
       status: 200,
       decision: "allow",
       exceptionType: "AuthorizationLookupOverWarningMark",
-      exceptionFingerprint:
-        "authz.lookup-size:test/machine#view@/orgs/:id/busy",
+      exceptionFingerprint: "authz.lookup-size:test/machine#view@/orgs/:id/busy",
     });
   });
 
   it("reports a tripped guard as a warning, grouped the way its row is", async () => {
     const diagnostics = new FakeDiagnosticsReporter();
-    const app = await appWith(
-      new CapturingSink(),
-      grantsOrdersCreate,
-      diagnostics,
-    );
+    const app = await appWith(new CapturingSink(), grantsOrdersCreate, diagnostics);
 
     await app.inject({ method: "GET", url: "/orgs/org-1/busy" });
 

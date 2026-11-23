@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  type AuditActor,
-  currentAuditActor,
-} from "@dads-framework/core/audit-actor";
+import { type AuditActor, currentAuditActor } from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
@@ -27,8 +24,7 @@ import { registerRoutes } from "./register-routes.js";
 const subject: SubjectRef = { type: "user", id: "u1" };
 
 const subjects: SubjectResolver = {
-  resolve: (request) =>
-    Promise.resolve(request.headers["x-anon"] === "1" ? null : subject),
+  resolve: (request) => Promise.resolve(request.headers["x-anon"] === "1" ? null : subject),
 };
 
 /** A session a staff member signed in as `u1` under; the subject stays `u1`. */
@@ -36,10 +32,7 @@ const subjects: SubjectResolver = {
 const neverChecks: PermissionChecker = { check: () => Promise.resolve(false) };
 
 /** Structurally what the composition root injects; the real mapping is its own. */
-const mapSubjectToActor: AuditActorForSubject = ({
-  authenticatedSubject,
-  requestId,
-}) => {
+const mapSubjectToActor: AuditActorForSubject = ({ authenticatedSubject, requestId }) => {
   return authenticatedSubject === null
     ? { kind: "anonymous", id: "", requestId }
     : { kind: "user", id: authenticatedSubject.id, requestId };
@@ -103,9 +96,7 @@ async function buildApp(options: {
     routes,
     subjects: options.subjects ?? subjects,
     authorization: neverChecks,
-    ...(options.auditActorForSubject === undefined
-      ? {}
-      : { auditActorForSubject: options.auditActorForSubject }),
+    ...(options.auditActorForSubject === undefined ? {} : { auditActorForSubject: options.auditActorForSubject }),
   });
   await app.ready();
   apps.push(app);
@@ -202,9 +193,7 @@ describe("the audit actor a request carries", () => {
       url: "/public-actor",
       headers: { [REQUEST_ID_HEADER]: "req-response" },
     });
-    expect(atResponse).toEqual([
-      { kind: "anonymous", id: "", requestId: "req-response" },
-    ]);
+    expect(atResponse).toEqual([{ kind: "anonymous", id: "", requestId: "req-response" }]);
   });
 
   it("is gone outside a request", () => {

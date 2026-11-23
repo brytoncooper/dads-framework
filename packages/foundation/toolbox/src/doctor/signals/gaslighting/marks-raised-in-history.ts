@@ -24,11 +24,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReadings } from "../../doctor-signal.js";
 import { doctorCasesSignal } from "../dad-has-issues-too/doctor-cases.js";
 import { testCountSignal } from "../commitment-issues/test-count.js";
 import { shortSha, requireGitWorkspace } from "../scanners/git-history.js";
@@ -55,10 +51,7 @@ function isReportOnly(key: string): boolean {
   return REPORT_ONLY_PATHS.some((prefix) => key.startsWith(prefix));
 }
 
-function loosenedBetween(
-  later: BaselineRevision,
-  earlier: BaselineRevision,
-): ReadonlyMap<string, SignalEvidence> {
+function loosenedBetween(later: BaselineRevision, earlier: BaselineRevision): ReadonlyMap<string, SignalEvidence> {
   const moves = new Map<string, SignalEvidence>();
   for (const [key, entry] of later.entries) {
     if (isReportOnly(key)) continue;
@@ -86,12 +79,7 @@ function countLoosenedMarks(context: DoctorContext): SignalReadings {
   for (let index = 0; index + 1 < history.length; index += 1) {
     collectComparedKeys(evidence, history[index], history[index + 1]);
   }
-  return new Map(
-    [...evidence].map(([key, found]) => [
-      key,
-      { value: found.length, evidence: found },
-    ]),
-  );
+  return new Map([...evidence].map(([key, found]) => [key, { value: found.length, evidence: found }]));
 }
 
 function collectComparedKeys(
@@ -113,13 +101,11 @@ export const marksRaisedInHistorySignal: DoctorSignal = {
   id: "marks-raised-in-history",
   issue: "gaslighting",
   alsoUnder: ["dad-has-issues-too"],
-  question:
-    "Does the baseline's history contain a diff where a ceiling mark went up or a floor came down?",
+  question: "Does the baseline's history contain a diff where a ceiling mark went up or a floor came down?",
   reads: "git",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "First you rename the violation. Then you explain why it had to happen.",
+  sentence: "First you rename the violation. Then you explain why it had to happen.",
   run: (context) => Promise.resolve(countLoosenedMarks(context)),
 };

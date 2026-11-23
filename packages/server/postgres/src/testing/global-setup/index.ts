@@ -1,11 +1,7 @@
 import { spawn } from "node:child_process";
 import { availableParallelism } from "node:os";
 import { fileURLToPath } from "node:url";
-import {
-  CONTAINER_PER_FILE,
-  findWorkspaceRoot,
-  SHARED_TEST_POSTGRES_URL,
-} from "../start-test-postgres.js";
+import { CONTAINER_PER_FILE, findWorkspaceRoot, SHARED_TEST_POSTGRES_URL } from "../start-test-postgres.js";
 import {
   claimSharedTestPostgresLease,
   decideSharedTestPostgres,
@@ -28,17 +24,10 @@ import {
   processIsAlive,
   shouldHoldContainerTestRunLock,
 } from "./refuse-stacked-container-runs.js";
-import {
-  describeRemovedTestcontainers,
-  dockerCli,
-  removeStaleTestcontainers,
-} from "./remove-stale-testcontainers.js";
+import { describeRemovedTestcontainers, dockerCli, removeStaleTestcontainers } from "./remove-stale-testcontainers.js";
 import { isContainerTestRun } from "./skip-unless-container-tests.js";
 import { startMigratedTemplatePostgres } from "./start-migrated-template-postgres.js";
-import {
-  TEST_DATABASE_RUN_PREFIX,
-  verifySchemaKeyedSuite,
-} from "./verify-schema-keyed-suite.js";
+import { TEST_DATABASE_RUN_PREFIX, verifySchemaKeyedSuite } from "./verify-schema-keyed-suite.js";
 
 /**
  * Vitest `globalSetup` for every project whose suites need a real Postgres.
@@ -53,9 +42,7 @@ import {
  * `CONTAINER_PER_FILE=1` skips the shared container entirely — the nightly
  * honesty job.
  */
-export default async function setup(
-  project?: VitestProjectWorkers,
-): Promise<() => Promise<void>> {
+export default async function setup(project?: VitestProjectWorkers): Promise<() => Promise<void>> {
   refuseDisabledContainerCleanup(process.env);
   refuseSlowLocalTestMode(process.env);
 
@@ -98,9 +85,7 @@ async function sweepLocalTestcontainers(): Promise<void> {
   if (line !== null) process.stdout.write(`${line}\n`);
 }
 
-async function prepareSharedPostgres(
-  releaseLock: () => void,
-): Promise<() => Promise<void>> {
+async function prepareSharedPostgres(releaseLock: () => void): Promise<() => Promise<void>> {
   const leasePath = sharedTestPostgresLeasePath();
   const runId = currentNxRunId();
   const decision = decideSharedTestPostgres({
@@ -149,10 +134,7 @@ async function prepareSharedPostgres(
  * schema-keyed suite's hash covered every table they touched
  * (verify-schema-keyed-suite.ts). A miss fails the run.
  */
-function teardownAfterVerifying(
-  sharedUrl: string,
-  releaseLock: () => void,
-): () => Promise<void> {
+function teardownAfterVerifying(sharedUrl: string, releaseLock: () => void): () => Promise<void> {
   const prefix = `p${String(process.pid)}${Date.now().toString(36)}`;
   process.env[TEST_DATABASE_RUN_PREFIX] = prefix;
   return async () => {
@@ -177,13 +159,8 @@ function teardownAfterVerifying(
   };
 }
 
-function holdSharedPostgresUntilNxExits(
-  containerId: string,
-  nxPid: number,
-): void {
-  const script = fileURLToPath(
-    new URL("./hold-shared-test-postgres.mjs", import.meta.url),
-  );
+function holdSharedPostgresUntilNxExits(containerId: string, nxPid: number): void {
+  const script = fileURLToPath(new URL("./hold-shared-test-postgres.mjs", import.meta.url));
   const child = spawn(process.execPath, [script, containerId, String(nxPid)], {
     detached: true,
     stdio: "ignore",
@@ -191,10 +168,7 @@ function holdSharedPostgresUntilNxExits(
   child.unref();
 }
 
-async function attachWhenReady(
-  leasePath: string,
-  releaseLock: () => void,
-): Promise<() => Promise<void>> {
+async function attachWhenReady(leasePath: string, releaseLock: () => void): Promise<() => Promise<void>> {
   const url = await waitForSharedTestPostgresUrl({
     readLease: () => readSharedTestPostgresLease(leasePath),
     isAlive: processIsAlive,

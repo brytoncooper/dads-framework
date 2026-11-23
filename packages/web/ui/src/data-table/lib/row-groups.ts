@@ -17,8 +17,5 @@ export function startsRowGroup<TData>(
   const row = rows[index];
   if (row === undefined) return false;
   const previous = rows[index - 1];
-  return (
-    previous === undefined ||
-    rowGroupOf(previous.original).key !== rowGroupOf(row.original).key
-  );
+  return previous === undefined || rowGroupOf(previous.original).key !== rowGroupOf(row.original).key;
 }

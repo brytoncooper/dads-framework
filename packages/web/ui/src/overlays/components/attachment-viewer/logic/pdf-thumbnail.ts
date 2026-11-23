@@ -71,9 +71,6 @@ export function thumbnailDimensions(
 }
 
 /** Whether the rail should start open in a window this wide. */
-export function railDefaultOpen(
-  windowWidth: number,
-  minWidth: number = RAIL_DEFAULT_OPEN_MIN_WIDTH,
-): boolean {
+export function railDefaultOpen(windowWidth: number, minWidth: number = RAIL_DEFAULT_OPEN_MIN_WIDTH): boolean {
   return windowWidth >= minWidth;
 }

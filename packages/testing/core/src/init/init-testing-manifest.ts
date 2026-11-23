@@ -3,23 +3,12 @@ import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { resolveNativeTestingBinary } from "../native-platform.js";
 import { planTesting } from "../testing-api.js";
-import {
-  defaultTestingManifestFileName,
-  serializeTestingManifest,
-  type TestingManifest,
-} from "../testing-manifest.js";
-import {
-  writeFilesAtomically,
-  type FileOutput,
-} from "../write-files-atomically.js";
+import { defaultTestingManifestFileName, serializeTestingManifest, type TestingManifest } from "../testing-manifest.js";
+import { writeFilesAtomically, type FileOutput } from "../write-files-atomically.js";
 import { checkTestingManifest } from "./check-testing-manifest.js";
 import { describeError } from "./describe-error.js";
 import { detectWorkspace } from "./detect-workspace.js";
-import {
-  inferTestingManifest,
-  type InitReport,
-  type InitValidation,
-} from "./infer-testing-manifest.js";
+import { inferTestingManifest, type InitReport, type InitValidation } from "./infer-testing-manifest.js";
 import { readWorkspacePackages } from "./package-inventory.js";
 import { workspaceRelative } from "./workspace-relative-path.js";
 
@@ -53,8 +42,7 @@ export type InitTestingManifestResult = {
 
 export const initReportFileName = "dads.testing.init-report.json";
 
-const noRecognizedScripts =
-  "No recognized test, typecheck, lint, or build scripts were found";
+const noRecognizedScripts = "No recognized test, typecheck, lint, or build scripts were found";
 
 /** Where the two generated files go, named both absolutely and as the result reports them. */
 type InitPaths = {
@@ -71,37 +59,24 @@ type BuildReport = (
   manifestChecksum: string | null,
 ) => { readonly report: InitReport; readonly output: FileOutput };
 
-export async function initTestingManifest(
-  options: InitTestingManifestOptions,
-): Promise<InitTestingManifestResult> {
+export async function initTestingManifest(options: InitTestingManifestOptions): Promise<InitTestingManifestResult> {
   const paths = resolveInitPaths(options);
 
   // Checked before anything is generated: a refusal must not touch the report.
   if (existsSync(paths.manifestFile) && options.force !== true) {
-    throw new Error(
-      `Refusing to overwrite existing ${paths.manifestPath}; pass --force to replace it.`,
-    );
+    throw new Error(`Refusing to overwrite existing ${paths.manifestPath}; pass --force to replace it.`);
   }
 
   const workspace = detectWorkspace(paths.workspaceRoot);
-  const packages = readWorkspacePackages(
-    paths.workspaceRoot,
-    workspace.packageDirectories,
-  );
+  const packages = readWorkspacePackages(paths.workspaceRoot, workspace.packageDirectories);
   const inferred = inferTestingManifest(workspace, packages);
   const buildReport = reportBuilder(inferred.report, paths.reportFile);
 
-  requireStandaloneWorkspace(
-    paths.workspaceRoot,
-    paths.reportFile,
-    inferred.report,
-  );
+  requireStandaloneWorkspace(paths.workspaceRoot, paths.reportFile, inferred.report);
   const manifest = requireInferredManifest(inferred.manifest, buildReport);
   const manifestText = requireStructurallyValid(manifest, buildReport);
   const checksum = createHash("sha256").update(manifestText).digest("hex");
-  const nativeBinary = (
-    options.resolveNativeBinary ?? installedNativeBinary(options)
-  )();
+  const nativeBinary = (options.resolveNativeBinary ?? installedNativeBinary(options))();
 
   const report =
     nativeBinary === undefined
@@ -126,13 +101,8 @@ function resolveInitPaths(options: InitTestingManifestOptions): InitPaths {
   const workspaceRoot = resolve(options.workspaceRoot);
   const requestedPath = options.manifestPath ?? defaultTestingManifestFileName;
   const manifestFile = resolve(workspaceRoot, requestedPath);
-  if (
-    manifestFile !== workspaceRoot &&
-    !manifestFile.startsWith(`${workspaceRoot}${sep}`)
-  ) {
-    throw new Error(
-      `The manifest path must stay inside the workspace: ${requestedPath}`,
-    );
+  if (manifestFile !== workspaceRoot && !manifestFile.startsWith(`${workspaceRoot}${sep}`)) {
+    throw new Error(`The manifest path must stay inside the workspace: ${requestedPath}`);
   }
   const reportFile = join(dirname(manifestFile), initReportFileName);
   return {
@@ -165,40 +135,22 @@ function reportBuilder(
 }
 
 /** A workspace with nothing to run still gets the report that says so. */
-function requireInferredManifest(
-  manifest: TestingManifest | undefined,
-  buildReport: BuildReport,
-): TestingManifest {
+function requireInferredManifest(manifest: TestingManifest | undefined, buildReport: BuildReport): TestingManifest {
   if (manifest !== undefined) return manifest;
   writeFilesAtomically([
-    buildReport(
-      { method: "none", ok: false, messages: [`${noRecognizedScripts}.`] },
-      null,
-    ).output,
+    buildReport({ method: "none", ok: false, messages: [`${noRecognizedScripts}.`] }, null).output,
   ]);
-  throw new Error(
-    `${noRecognizedScripts}; wrote ${initReportFileName} and no manifest.`,
-  );
+  throw new Error(`${noRecognizedScripts}; wrote ${initReportFileName} and no manifest.`);
 }
 
 /** Serialized only once it has passed, so the text that reaches disk is the text checked. */
-function requireStructurallyValid(
-  manifest: TestingManifest,
-  buildReport: BuildReport,
-): string {
+function requireStructurallyValid(manifest: TestingManifest, buildReport: BuildReport): string {
   const structuralMessages = checkTestingManifest(manifest);
   if (structuralMessages.length === 0) {
     return serializeTestingManifest(manifest);
   }
-  writeFilesAtomically([
-    buildReport(
-      { method: "structural", ok: false, messages: structuralMessages },
-      null,
-    ).output,
-  ]);
-  throw new Error(
-    `Generated manifest failed validation: ${structuralMessages.join(" ")}`,
-  );
+  writeFilesAtomically([buildReport({ method: "structural", ok: false, messages: structuralMessages }, null).output]);
+  throw new Error(`Generated manifest failed validation: ${structuralMessages.join(" ")}`);
 }
 
 /** Without an engine to ask, the structural check is the whole check. */
@@ -208,14 +160,8 @@ function writeStructurallyChecked(
   checksum: string,
   buildReport: BuildReport,
 ): InitReport {
-  const written = buildReport(
-    { method: "structural", ok: true, messages: [] },
-    checksum,
-  );
-  writeFilesAtomically([
-    { path: paths.manifestFile, contents: manifestText },
-    written.output,
-  ]);
+  const written = buildReport({ method: "structural", ok: true, messages: [] }, checksum);
+  writeFilesAtomically([{ path: paths.manifestFile, contents: manifestText }, written.output]);
   return written.report;
 }
 
@@ -234,23 +180,14 @@ async function writeEngineChecked(request: {
     manifestText: request.manifestText,
     nativeBinary: request.nativeBinary,
     onRejected: (message, error) => {
-      writeFilesAtomically([
-        buildReport({ method: "native", ok: false, messages: [message] }, null)
-          .output,
-      ]);
-      return new Error(
-        `Generated manifest was rejected by dad-test: ${message}`,
-        {
-          cause: error,
-        },
-      );
+      writeFilesAtomically([buildReport({ method: "native", ok: false, messages: [message] }, null).output]);
+      return new Error(`Generated manifest was rejected by dad-test: ${message}`, {
+        cause: error,
+      });
     },
   });
 
-  const written = buildReport(
-    { method: "native", ok: true, messages: [], selectedTaskCount },
-    request.checksum,
-  );
+  const written = buildReport({ method: "native", ok: true, messages: [], selectedTaskCount }, request.checksum);
   writeFilesAtomically([written.output]);
   return written.report;
 }
@@ -267,14 +204,9 @@ function requireStandaloneWorkspace(
     ...inferredReport,
     validation: { method: "none", ok: false, messages: [message] },
     manifestChecksum: null,
-    unsupported: [
-      ...inferredReport.unsupported,
-      { subject: "nx.json", message },
-    ],
+    unsupported: [...inferredReport.unsupported, { subject: "nx.json", message }],
   };
-  writeFilesAtomically([
-    { path: reportFile, contents: `${JSON.stringify(report, null, 2)}\n` },
-  ]);
+  writeFilesAtomically([{ path: reportFile, contents: `${JSON.stringify(report, null, 2)}\n` }]);
   throw new Error(`${message} No manifest was written.`);
 }
 
@@ -321,18 +253,12 @@ async function validateWithNativeEngine(request: {
  * structural check is the same set of rules. Any resolution failure means "not
  * installed here", which is a supported state rather than an error.
  */
-function installedNativeBinary(
-  options: InitTestingManifestOptions,
-): () => string | undefined {
+function installedNativeBinary(options: InitTestingManifestOptions): () => string | undefined {
   return () => {
     try {
       return resolveNativeTestingBinary({
-        ...(options.nativeBinary === undefined
-          ? {}
-          : { explicitBinary: options.nativeBinary }),
-        ...(options.environment === undefined
-          ? {}
-          : { environment: options.environment }),
+        ...(options.nativeBinary === undefined ? {} : { explicitBinary: options.nativeBinary }),
+        ...(options.environment === undefined ? {} : { environment: options.environment }),
       }).binary;
     } catch {
       return undefined;

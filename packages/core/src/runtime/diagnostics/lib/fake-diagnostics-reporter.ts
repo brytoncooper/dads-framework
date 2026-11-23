@@ -5,10 +5,7 @@
  * it (docs/testing/seeders.md).
  */
 
-import {
-  DiagnosticsReporter,
-  type FaultEvent,
-} from "./diagnostics-reporter.js";
+import { DiagnosticsReporter, type FaultEvent } from "./diagnostics-reporter.js";
 
 export class FakeDiagnosticsReporter extends DiagnosticsReporter {
   readonly captured: FaultEvent[] = [];

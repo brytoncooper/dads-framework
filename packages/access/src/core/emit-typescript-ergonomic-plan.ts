@@ -1,9 +1,4 @@
-import type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrTerm } from "./ir.js";
 import { childIrTermsOf } from "./emit-typescript-ergonomic-terms.js";
 import type { ErgonomicSymbols } from "./emit-typescript-symbols.js";
 
@@ -22,22 +17,15 @@ function termReferencesRole(term: AccessIrTerm, roleName: string): boolean {
   if (term.kind === "through" || term.kind === "through-all") {
     return term.roleName === roleName;
   }
-  return childIrTermsOf(term).some((child) =>
-    termReferencesRole(child, roleName),
-  );
+  return childIrTermsOf(term).some((child) => termReferencesRole(child, roleName));
 }
 
-function stripSelfParentThrough(
-  permission: AccessIrPermission,
-): AccessIrPermission | undefined {
+function stripSelfParentThrough(permission: AccessIrPermission): AccessIrPermission | undefined {
   let stripped = false;
   const remaining: AccessIrTerm[] = [];
   for (const term of permission.terms) {
     const isSelfParentArrow =
-      !stripped &&
-      term.kind === "through" &&
-      term.roleName === "parent" &&
-      term.targetPermission === permission.name;
+      !stripped && term.kind === "through" && term.roleName === "parent" && term.targetPermission === permission.name;
     if (isSelfParentArrow) {
       stripped = true;
     } else {
@@ -69,10 +57,7 @@ function extractRecursiveParentWireNames(
       hasSelf = true;
       continue;
     }
-    if (
-      symbols.actorWireNames.has(subject.wireName) ||
-      !declared.has(subject.wireName)
-    ) {
+    if (symbols.actorWireNames.has(subject.wireName) || !declared.has(subject.wireName)) {
       return undefined;
     }
     parentWireNames.push(subject.wireName);
@@ -88,12 +73,7 @@ function planRecursiveResource(
   const parentRole = definition.roles.find((role) => role.name === "parent");
   if (parentRole === undefined) return undefined;
 
-  const parentWireNames = extractRecursiveParentWireNames(
-    parentRole,
-    definition.wireName,
-    symbols,
-    declared,
-  );
+  const parentWireNames = extractRecursiveParentWireNames(parentRole, definition.wireName, symbols, declared);
   if (parentWireNames === undefined) return undefined;
 
   const emittedPermissions: AccessIrPermission[] = [];
@@ -119,11 +99,7 @@ function collectLazyTargetsForRoles(
 ): void {
   for (const role of roles) {
     for (const subject of role.subjects) {
-      if (
-        subject.kind === "type" &&
-        subject.expiration !== true &&
-        !declared.has(subject.wireName)
-      ) {
+      if (subject.kind === "type" && subject.expiration !== true && !declared.has(subject.wireName)) {
         lazyTargets.add(subject.wireName);
       }
     }

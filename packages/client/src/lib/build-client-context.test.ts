@@ -9,15 +9,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  type ClientContext,
-  clientContextSchema,
-} from "@dads-framework/core/contract";
+import { type ClientContext, clientContextSchema } from "@dads-framework/core/contract";
 
-import {
-  buildClientContext,
-  type ClientEnvironmentSnapshot,
-} from "./build-client-context.js";
+import { buildClientContext, type ClientEnvironmentSnapshot } from "./build-client-context.js";
 
 const NOTHING_REPORTED: ClientEnvironmentSnapshot = {
   build: undefined,
@@ -49,9 +43,7 @@ const FULLY_REPORTED: ClientEnvironmentSnapshot = {
   tabAgeMs: 61_000,
 };
 
-function contextFrom(
-  overrides: Partial<ClientEnvironmentSnapshot>,
-): ClientContext {
+function contextFrom(overrides: Partial<ClientEnvironmentSnapshot>): ClientContext {
   return buildClientContext({ ...NOTHING_REPORTED, ...overrides });
 }
 
@@ -150,16 +142,13 @@ describe("shaping one browser snapshot for the wire", () => {
     ["everything reported", FULLY_REPORTED],
     ["hostile values", { ...FULLY_REPORTED, routeId: "/".repeat(9_000) }],
     ["broken numbers", { ...FULLY_REPORTED, deviceMemory: Number.NaN }],
-  ] as const)(
-    "always produces a context the server accepts (%s)",
-    (_case, snapshot) => {
-      const parsed = clientContextSchema.safeParse(
-        // The wire drops absent fields, and so must the check: the server never
-        // sees a key explicitly set to `undefined`.
-        JSON.parse(JSON.stringify(buildClientContext(snapshot))),
-      );
+  ] as const)("always produces a context the server accepts (%s)", (_case, snapshot) => {
+    const parsed = clientContextSchema.safeParse(
+      // The wire drops absent fields, and so must the check: the server never
+      // sees a key explicitly set to `undefined`.
+      JSON.parse(JSON.stringify(buildClientContext(snapshot))),
+    );
 
-      expect(parsed.success).toBe(true);
-    },
-  );
+    expect(parsed.success).toBe(true);
+  });
 });

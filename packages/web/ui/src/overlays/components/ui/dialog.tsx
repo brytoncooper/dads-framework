@@ -16,10 +16,7 @@ const DialogClosePermission = React.createContext<{
 /** Modal dialogs render Radix's Overlay so its scroll lock covers the backdrop. */
 const DialogModal = React.createContext(false);
 
-function Dialog({
-  modal = false,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+function Dialog({ modal = false, ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   const allowCloseRef = React.useRef(false);
   const allowCloseFromControl = React.useCallback(() => {
     allowCloseRef.current = true;
@@ -49,22 +46,15 @@ function Dialog({
   );
 }
 
-function DialogTrigger({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
-function DialogPortal({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogClose({
-  onClick,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Close>) {
+function DialogClose({ onClick, ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) {
   const { allowCloseFromControl } = React.useContext(DialogClosePermission);
   return (
     <DialogPrimitive.Close
@@ -84,10 +74,7 @@ function DialogOverlay({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <Overlay
       data-slot="dialog-overlay"
-      className={cn(
-        "fixed inset-0 z-50 bg-scrim/50 dark:bg-scrim/70",
-        className,
-      )}
+      className={cn("fixed inset-0 z-50 bg-scrim/50 dark:bg-scrim/70", className)}
       {...props}
     />
   );
@@ -148,15 +135,10 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className,
-      )}
+      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
       {...props}
     >
-      {showCloseButton && (
-        <DialogCancel>{t("overlays.action.close")}</DialogCancel>
-      )}
+      {showCloseButton && <DialogCancel>{t("overlays.action.close")}</DialogCancel>}
       {children}
     </div>
   );
@@ -168,14 +150,7 @@ function DialogAction({
   size = "default",
   ...props
 }: Omit<React.ComponentProps<typeof Button>, "asChild">) {
-  return (
-    <Button
-      data-slot="dialog-action"
-      variant={variant}
-      size={size}
-      {...props}
-    />
-  );
+  return <Button data-slot="dialog-action" variant={variant} size={size} {...props} />;
 }
 
 /** A secondary dialog action that closes without submitting an enclosing form. */
@@ -203,10 +178,7 @@ function DialogCancel({
   );
 }
 
-function DialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
@@ -216,10 +188,7 @@ function DialogTitle({
   );
 }
 
-function DialogDescription({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"

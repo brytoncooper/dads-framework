@@ -1,15 +1,6 @@
 /** Proves a controlled runner may only import the allowlisted builtins and literal local modules. */
 
-import {
-  chmodSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -43,10 +34,7 @@ describe("controlled import allowlist", () => {
         'writeFileSync(join(process.env["DADS_VERIFICATION_OUTPUT_DIR"], "observed.txt"), input);',
       ].join("\n"),
     );
-    writeFileSync(
-      join(projectRoot, "tests/helper.mjs"),
-      'export const message = "allowed";\n',
-    );
+    writeFileSync(join(projectRoot, "tests/helper.mjs"), 'export const message = "allowed";\n');
     const baseRequest = controlledRequest(projectRoot);
     const helper: ControlledVerificationInput = {
       path: "tests/helper.mjs",
@@ -64,43 +52,27 @@ describe("controlled import allowlist", () => {
   });
 
   it("refuses a builtin the allowlist does not name", () => {
-    const projectRoot = createControlledProject(
-      'import { createHash } from "node:crypto";\ncreateHash("sha256");\n',
-    );
+    const projectRoot = createControlledProject('import { createHash } from "node:crypto";\ncreateHash("sha256");\n');
 
-    expect(failureFor(projectRoot)).toBe(
-      "Controlled verification import is not allowlisted: node:crypto.",
-    );
+    expect(failureFor(projectRoot)).toBe("Controlled verification import is not allowlisted: node:crypto.");
   });
 
   it("refuses a package import the allowlist does not name", () => {
-    const projectRoot = createControlledProject(
-      'import { describe } from "vitest";\ndescribe;\n',
-    );
+    const projectRoot = createControlledProject('import { describe } from "vitest";\ndescribe;\n');
 
-    expect(failureFor(projectRoot)).toBe(
-      "Controlled verification package import is not allowlisted: vitest.",
-    );
+    expect(failureFor(projectRoot)).toBe("Controlled verification package import is not allowlisted: vitest.");
   });
 
   it("refuses a dynamic import whose specifier is not a literal", () => {
-    const projectRoot = createControlledProject(
-      'const specifier = "node:fs";\nawait import(specifier);\n',
-    );
+    const projectRoot = createControlledProject('const specifier = "node:fs";\nawait import(specifier);\n');
 
-    expect(failureFor(projectRoot)).toBe(
-      "Controlled verification dynamic imports must be literal.",
-    );
+    expect(failureFor(projectRoot)).toBe("Controlled verification dynamic imports must be literal.");
   });
 
   it("refuses a literal dynamic import of a builtin outside the allowlist", () => {
-    const projectRoot = createControlledProject(
-      'await import("node:child_process");\n',
-    );
+    const projectRoot = createControlledProject('await import("node:child_process");\n');
 
-    expect(failureFor(projectRoot)).toBe(
-      "Controlled verification import is not allowlisted: node:child_process.",
-    );
+    expect(failureFor(projectRoot)).toBe("Controlled verification import is not allowlisted: node:child_process.");
   });
 });
 

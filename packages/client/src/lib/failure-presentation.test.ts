@@ -6,10 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  FAILURE_PRESENTED_INLINE,
-  isFailurePresentedInline,
-} from "./failure-presentation.js";
+import { FAILURE_PRESENTED_INLINE, isFailurePresentedInline } from "./failure-presentation.js";
 
 describe("isFailurePresentedInline", () => {
   it("recognizes the inline declaration", () => {
@@ -23,9 +20,7 @@ describe("isFailurePresentedInline", () => {
 
   it("ignores meta that does not declare inline presentation", () => {
     expect(isFailurePresentedInline({})).toBe(false);
-    expect(isFailurePresentedInline({ failurePresentation: "global" })).toBe(
-      false,
-    );
+    expect(isFailurePresentedInline({ failurePresentation: "global" })).toBe(false);
     expect(isFailurePresentedInline({ failurePresentation: true })).toBe(false);
   });
 });

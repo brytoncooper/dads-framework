@@ -36,18 +36,12 @@ function group(overrides: Partial<FilterGroup> = {}): FilterGroup {
 
 describe("toggleFilterValue", () => {
   it("adds and removes values of a multi-select group in option order", () => {
-    expect(
-      toggleFilterValue(group({ selected: ["TRANSFER"] }), "SALE"),
-    ).toEqual(["SALE", "TRANSFER"]);
-    expect(
-      toggleFilterValue(group({ selected: ["SALE", "TRANSFER"] }), "SALE"),
-    ).toEqual(["TRANSFER"]);
+    expect(toggleFilterValue(group({ selected: ["TRANSFER"] }), "SALE")).toEqual(["SALE", "TRANSFER"]);
+    expect(toggleFilterValue(group({ selected: ["SALE", "TRANSFER"] }), "SALE")).toEqual(["TRANSFER"]);
   });
 
   it("drops values no option knows", () => {
-    expect(
-      toggleFilterValue(group({ selected: ["GONE"] }), "PURCHASE"),
-    ).toEqual(["PURCHASE"]);
+    expect(toggleFilterValue(group({ selected: ["GONE"] }), "PURCHASE")).toEqual(["PURCHASE"]);
   });
 
   it("switches a single-select group and clears it on a second press", () => {

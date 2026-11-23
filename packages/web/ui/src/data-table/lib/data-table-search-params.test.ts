@@ -53,9 +53,7 @@ describe("dataTableSearchSchema", () => {
   });
 
   it("reads the compact filters param", () => {
-    expect(
-      dataTableSearchSchema.parse({ filters: "status.ACTIVE*name.feeds" }),
-    ).toEqual(
+    expect(dataTableSearchSchema.parse({ filters: "status.ACTIVE*name.feeds" })).toEqual(
       stateWith({
         filters: [
           { id: "status", value: "ACTIVE" },
@@ -110,9 +108,7 @@ describe("dataTableSearchSchema", () => {
   });
 
   it("coerces the numbers a query string hands back as text", () => {
-    expect(dataTableSearchSchema.parse({ page: "3", perPage: "25" })).toEqual(
-      stateWith({ page: 3, perPage: 25 }),
-    );
+    expect(dataTableSearchSchema.parse({ page: "3", perPage: "25" })).toEqual(stateWith({ page: 3, perPage: 25 }));
   });
 
   it("degrades a mangled param to its default instead of throwing", () => {
@@ -129,23 +125,17 @@ describe("dataTableSearchSchema", () => {
 
 describe("toDataTableSearchParams", () => {
   it("writes nothing at all for the default view", () => {
-    expect(toQueryString(toDataTableSearchParams(defaultDataTableState))).toBe(
-      "",
-    );
+    expect(toQueryString(toDataTableSearchParams(defaultDataTableState))).toBe("");
   });
 
   it("writes only the params that deviate", () => {
-    const search = toDataTableSearchParams(
-      stateWith({ page: 2, sort: [{ id: "name", desc: true }] }),
-    );
+    const search = toDataTableSearchParams(stateWith({ page: 2, sort: [{ id: "name", desc: true }] }));
 
     expect(toQueryString(search)).toBe("?page=2&sort=name.desc");
   });
 
   it("writes a non-default page size and join operator", () => {
-    const search = toDataTableSearchParams(
-      stateWith({ perPage: 50, joinOperator: "or" }),
-    );
+    const search = toDataTableSearchParams(stateWith({ perPage: 50, joinOperator: "or" }));
 
     expect(toQueryString(search)).toBe("?perPage=50&joinOperator=or");
   });
@@ -159,9 +149,7 @@ describe("toDataTableSearchParams", () => {
     );
 
     expect(unfiltered.filters).toBeUndefined();
-    expect(toQueryString(filtered)).toBe(
-      "?filters=name.feeds*status.ACTIVE%2CARCHIVED",
-    );
+    expect(toQueryString(filtered)).toBe("?filters=name.feeds*status.ACTIVE%2CARCHIVED");
   });
 
   it("round-trips back through the schema", () => {
@@ -176,9 +164,7 @@ describe("toDataTableSearchParams", () => {
       joinOperator: "or",
     });
 
-    expect(dataTableSearchSchema.parse(toDataTableSearchParams(state))).toEqual(
-      state,
-    );
+    expect(dataTableSearchSchema.parse(toDataTableSearchParams(state))).toEqual(state);
   });
 });
 

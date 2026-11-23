@@ -22,16 +22,8 @@ describe("section-nav", () => {
     );
 
     expect(screen.getByRole("navigation", { name: "Areas" })).toBeTruthy();
-    expect(
-      screen
-        .getByRole("button", { name: "Identity" })
-        .getAttribute("aria-current"),
-    ).toBe("true");
-    expect(
-      screen
-        .getByRole("button", { name: "Email" })
-        .getAttribute("aria-current"),
-    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Identity" }).getAttribute("aria-current")).toBe("true");
+    expect(screen.getByRole("button", { name: "Email" }).getAttribute("aria-current")).toBeNull();
   });
 
   it("marks the current section with a bar, a tint, and weight", () => {
@@ -60,9 +52,7 @@ describe("section-nav", () => {
       </SectionNav>,
     );
 
-    expect(screen.getByRole("button", { name: "Email" }).className).toContain(
-      "min-h-11",
-    );
+    expect(screen.getByRole("button", { name: "Email" }).className).toContain("min-h-11");
   });
 
   it("styles a feature-owned link and announces it as the current page", () => {

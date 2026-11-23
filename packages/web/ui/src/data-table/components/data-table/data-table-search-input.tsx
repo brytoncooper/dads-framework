@@ -25,10 +25,7 @@ export function DataTableSearchInput({
   value,
   onCommit,
   ...inputProps
-}: Omit<
-  React.ComponentProps<typeof Input>,
-  "value" | "defaultValue" | "onChange"
-> & {
+}: Omit<React.ComponentProps<typeof Input>, "value" | "defaultValue" | "onChange"> & {
   readonly value: string;
   readonly onCommit: (term: string) => void;
 }) {

@@ -1,7 +1,4 @@
-import type {
-  DslPermissionTarget,
-  PermissionToken,
-} from "@dads-framework/access";
+import type { DslPermissionTarget, PermissionToken } from "@dads-framework/access";
 import {
   Authorization,
   permissionQueryFromCan,
@@ -23,30 +20,15 @@ import {
   compilePostgresCheckMany,
   compilePostgresLookup,
 } from "./policy/compile-postgres-policy.js";
-import type {
-  PostgresFilterQuery,
-  PostgresAccessFilter,
-} from "./policy/compile-filter.js";
-import {
-  verifyPostgresColumnRelations,
-  type ColumnRelationCheckResult,
-} from "./policy/column-relations.js";
-import {
-  runCompilePostgresFilter,
-  runResolvePostgresFilter,
-} from "./policy/run-filter.js";
+import type { PostgresFilterQuery, PostgresAccessFilter } from "./policy/compile-filter.js";
+import { verifyPostgresColumnRelations, type ColumnRelationCheckResult } from "./policy/column-relations.js";
+import { runCompilePostgresFilter, runResolvePostgresFilter } from "./policy/run-filter.js";
 import { compileLinearCheck } from "./policy/compile-linear-check.js";
 import { compilePostgresSubjectLookup } from "./policy/compile-subject-lookup.js";
 import type { NormalizedPermissionCheck } from "./policy/policy-model.js";
 
-import {
-  compileAccessPolicy,
-  type CompiledAccessPolicy,
-} from "./compile-access-policy.js";
-import {
-  isDrizzlePgTransaction,
-  type DrizzleExecuteLike,
-} from "./drizzle-structural.js";
+import { compileAccessPolicy, type CompiledAccessPolicy } from "./compile-access-policy.js";
+import { isDrizzlePgTransaction, type DrizzleExecuteLike } from "./drizzle-structural.js";
 import {
   parseSubjectLookupRows,
   readDecisionFlag,
@@ -86,15 +68,9 @@ export class PostgresAuthorization extends Authorization {
     this.#revisionedLookup =
       reusePool === undefined
         ? undefined
-        : new RevisionedLookup(options.namespace, (query) =>
-            readFromLookupPrimary(reusePool, query, timeout),
-          );
+        : new RevisionedLookup(options.namespace, (query) => readFromLookupPrimary(reusePool, query, timeout));
     this.#policy = compileAccessPolicy(options.model, options.columnRelations);
-    this.#tuples = new PostgresTuples(
-      this.#policy.model,
-      options.namespace,
-      (query) => this.#query(query),
-    );
+    this.#tuples = new PostgresTuples(this.#policy.model, options.namespace, (query) => this.#query(query));
   }
 
   /** Bind every operation to an application-owned transaction client. */
@@ -115,10 +91,7 @@ export class PostgresAuthorization extends Authorization {
    * PostgreSQL and report whether the recommended reverse-lookup index exists.
    */
   verifyColumnRelations(): Promise<readonly ColumnRelationCheckResult[]> {
-    return verifyPostgresColumnRelations(
-      this.#policy.model.columnRelations ?? [],
-      (query) => this.#query(query),
-    );
+    return verifyPostgresColumnRelations(this.#policy.model.columnRelations ?? [], (query) => this.#query(query));
   }
 
   /** Bind reads and writes to an existing Drizzle transaction. */
@@ -130,11 +103,7 @@ export class PostgresAuthorization extends Authorization {
   }
 
   /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
-  can(
-    subject: SubjectRef,
-    target: DslPermissionTarget,
-    options?: AuthorizationCanOptions,
-  ): Promise<boolean>;
+  can(subject: SubjectRef, target: DslPermissionTarget, options?: AuthorizationCanOptions): Promise<boolean>;
   can(
     subject: SubjectRef,
     permission: PermissionToken,
@@ -147,25 +116,14 @@ export class PostgresAuthorization extends Authorization {
     resourceIdOrOptions?: string | AuthorizationCanOptions,
     maybeOptions?: AuthorizationCanOptions,
   ): Promise<boolean> {
-    return this.check(
-      permissionQueryFromCan(
-        subject,
-        permissionOrTarget,
-        resourceIdOrOptions,
-        maybeOptions,
-      ),
-    );
+    return this.check(permissionQueryFromCan(subject, permissionOrTarget, resourceIdOrOptions, maybeOptions));
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {
     const normalized = this.#normalizedCheck(query);
     if (normalized === undefined) return false;
     const linear = this.#executor.queryCheck
-      ? compileLinearCheck(
-          this.#policy.model,
-          this.#options.namespace,
-          normalized,
-        )
+      ? compileLinearCheck(this.#policy.model, this.#options.namespace, normalized)
       : undefined;
     if (linear === undefined) return this.#ordinaryCheck(normalized);
 
@@ -182,127 +140,70 @@ export class PostgresAuthorization extends Authorization {
     return this.#ordinaryCheck(normalized, remaining);
   }
 
-  async #ordinaryCheck(
-    normalized: NormalizedPermissionCheck,
-    timeout?: number,
-  ): Promise<boolean> {
-    const query = compilePostgresCheck(
-      this.#policy.model,
-      this.#options.namespace,
-      normalized,
-    );
-    const rows = await this.#query(
-      query,
-      timeout === undefined && query.canPrepare ? "check" : undefined,
-      timeout,
-    );
+  async #ordinaryCheck(normalized: NormalizedPermissionCheck, timeout?: number): Promise<boolean> {
+    const query = compilePostgresCheck(this.#policy.model, this.#options.namespace, normalized);
+    const rows = await this.#query(query, timeout === undefined && query.canPrepare ? "check" : undefined, timeout);
     return readDecisionFlag(rows[0]);
   }
 
-  override async checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  override async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     const answers: boolean[] = [];
     for (let offset = 0; offset < queries.length; offset += CHECK_BATCH_SIZE) {
-      answers.push(
-        ...(await this.#checkBatch(
-          queries.slice(offset, offset + CHECK_BATCH_SIZE),
-        )),
-      );
+      answers.push(...(await this.#checkBatch(queries.slice(offset, offset + CHECK_BATCH_SIZE))));
     }
     return answers;
   }
 
-  async #checkBatch(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  async #checkBatch(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     const normalized = queries.map((query) => this.#normalizedCheck(query));
     const known = normalized.filter((query) => query !== undefined);
     if (known.length === 0) return normalized.map(() => false);
-    const compiled = compilePostgresCheckMany(
-      this.#policy.model,
-      this.#options.namespace,
-      known,
-    );
-    const rows = await this.#query(
-      compiled,
-      compiled.canPrepare ? "check" : undefined,
-    );
-    if (rows.length !== known.length)
-      throw new Error("Postgres authorization omitted a decision");
+    const compiled = compilePostgresCheckMany(this.#policy.model, this.#options.namespace, known);
+    const rows = await this.#query(compiled, compiled.canPrepare ? "check" : undefined);
+    if (rows.length !== known.length) throw new Error("Postgres authorization omitted a decision");
     let index = 0;
-    return normalized.map((query) =>
-      query === undefined ? false : readDecisionFlag(rows[index++]),
-    );
+    return normalized.map((query) => (query === undefined ? false : readDecisionFlag(rows[index++])));
   }
 
-  #normalizedCheck(
-    query: PermissionQuery,
-  ): NormalizedPermissionCheck | undefined {
+  #normalizedCheck(query: PermissionQuery): NormalizedPermissionCheck | undefined {
     requireConcreteSubject(query.subject);
-    const permission = this.#policy.permissionName(
-      query.resource.type,
-      query.permission,
-    );
+    const permission = this.#policy.permissionName(query.resource.type, query.permission);
     if (permission === undefined) return undefined;
     return { subject: query.subject, resource: query.resource, permission };
   }
 
   /** Compile a parameterized SQL Boolean filter predicate for single-query resource listing. */
   compileFilter(query: PostgresFilterQuery): PostgresAccessFilter {
-    return runCompilePostgresFilter(
-      this.#policy,
-      this.#options.namespace,
-      query,
-    );
+    return runCompilePostgresFilter(this.#policy, this.#options.namespace, query);
   }
 
   /** Resolves a `scopeColumns`-assisted filter, pruning empty branches for optimal SQL plans. */
   resolveFilter(query: PostgresFilterQuery): Promise<PostgresAccessFilter> {
-    return runResolvePostgresFilter(
-      this.#policy,
-      this.#options.namespace,
-      query,
-      (planQuery) => this.#query(planQuery, "check"),
+    return runResolvePostgresFilter(this.#policy, this.#options.namespace, query, (planQuery) =>
+      this.#query(planQuery, "check"),
     );
   }
 
-  override async lookupResources(
-    query: ResourceLookup,
-  ): Promise<readonly string[]> {
+  override async lookupResources(query: ResourceLookup): Promise<readonly string[]> {
     requireConcreteSubject(query.subject);
-    const permission = this.#policy.permissionName(
-      query.resourceType,
-      query.permission,
-    );
+    const permission = this.#policy.permissionName(query.resourceType, query.permission);
     if (permission === undefined) return [];
     const input = { ...query, subject: { ...query.subject }, permission };
-    const compile = () =>
-      compilePostgresLookup(this.#policy.model, this.#options.namespace, input);
-    if (this.#revisionedLookup !== undefined)
-      return this.#revisionedLookup.lookup(input, compile);
+    const compile = () => compilePostgresLookup(this.#policy.model, this.#options.namespace, input);
+    if (this.#revisionedLookup !== undefined) return this.#revisionedLookup.lookup(input, compile);
     const rows = await this.#query(compile());
     return rows.map((row) => readTupleColumn(row, "resource_id"));
   }
 
-  override async lookupSubjects(
-    query: SubjectLookup,
-  ): Promise<SubjectLookupResult> {
+  override async lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
     requireSubjectLookupInput(query);
-    const permission = this.#policy.permissionName(
-      query.resource.type,
-      query.permission,
-    );
+    const permission = this.#policy.permissionName(query.resource.type, query.permission);
     if (permission === undefined) return { subjects: [], hasWildcard: false };
-    const compiled = compilePostgresSubjectLookup(
-      this.#policy.model,
-      this.#options.namespace,
-      {
-        resource: query.resource,
-        permission,
-        subjectType: query.subjectType,
-      },
-    );
+    const compiled = compilePostgresSubjectLookup(this.#policy.model, this.#options.namespace, {
+      resource: query.resource,
+      permission,
+      subjectType: query.subjectType,
+    });
     const rows = await this.#query(compiled);
     return parseSubjectLookupRows(rows);
   }
@@ -318,31 +219,23 @@ export class PostgresAuthorization extends Authorization {
     }
   }
 
-  override async writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override async writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     await this.#tuples.write(writes);
     return "";
   }
 
-  override async deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  override async deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     await this.#tuples.delete(filter);
     return "";
   }
 
   override relationshipExists(
-    filter: Required<
-      Pick<RelationshipFilter, "resourceType" | "resourceId" | "relation">
-    >,
+    filter: Required<Pick<RelationshipFilter, "resourceType" | "resourceId" | "relation">>,
   ): Promise<boolean> {
     return this.#tuples.exists(filter);
   }
 
-  override listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  override listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     return this.#tuples.list(query);
   }
 
@@ -357,9 +250,7 @@ export class PostgresAuthorization extends Authorization {
     };
     const executor = this.#executor;
     const result =
-      operation === "check" && executor.queryCheck
-        ? await executor.queryCheck(config)
-        : await executor.query(config);
+      operation === "check" && executor.queryCheck ? await executor.queryCheck(config) : await executor.query(config);
     return result.rows;
   }
 }

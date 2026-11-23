@@ -1,11 +1,7 @@
 import { CalendarIcon } from "lucide-react";
 import { resolveReaderTimeZone } from "../../../copy/index.js";
 import { Button, cn } from "../../../elements/index.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../overlays/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../overlays/index.js";
 
 import type { FilterOperator } from "../../lib/data-table-types.js";
 import { formatDate, isSameDay, toTimestampText } from "../../lib/format.js";
@@ -35,14 +31,8 @@ export function renderFilterDateInput<TData>(
 ) {
   const columnMeta = column.columnDef.meta;
   const label = (
-    key:
-      | "dataTable.filter.namedDate"
-      | "dataTable.filter.selectNamedDate"
-      | "dataTable.filter.selectNamedDateRange",
-  ) =>
-    layout === "list"
-      ? copy(key, { columnLabel: String(columnMeta?.label) })
-      : undefined;
+    key: "dataTable.filter.namedDate" | "dataTable.filter.selectNamedDate" | "dataTable.filter.selectNamedDateRange",
+  ) => (layout === "list" ? copy(key, { columnLabel: String(columnMeta?.label) }) : undefined);
 
   const inputListboxId = `${inputId}-listbox`;
 
@@ -74,9 +64,7 @@ export function renderFilterDateInput<TData>(
             !filter.value && "text-muted-foreground",
           )}
         >
-          <CalendarIcon
-            className={layout === "menu" ? "size-3.5" : undefined}
-          />
+          <CalendarIcon className={layout === "menu" ? "size-3.5" : undefined} />
           <span className="truncate">{displayValue}</span>
         </Button>
       </PopoverTrigger>
@@ -88,10 +76,7 @@ export function renderFilterDateInput<TData>(
             selected={dateRange(startDate, endDate)}
             onSelect={(range) => {
               onFilterUpdate(filter.filterId, {
-                value: [
-                  toTimestampText(range?.from),
-                  toTimestampText(range?.to),
-                ],
+                value: [toTimestampText(range?.from), toTimestampText(range?.to)],
               });
             }}
           />
@@ -129,11 +114,7 @@ function formatDateLabel<TData>(
     });
   }
   if (startDate) return formatDate(startDate, formatting, DATE_FORMAT_OPTIONS);
-  return copy(
-    layout === "menu"
-      ? "dataTable.filter.pickDate"
-      : "dataTable.filter.pickADate",
-  );
+  return copy(layout === "menu" ? "dataTable.filter.pickDate" : "dataTable.filter.pickADate");
 }
 
 function showsDateRange(operator: FilterOperator, count: number): boolean {

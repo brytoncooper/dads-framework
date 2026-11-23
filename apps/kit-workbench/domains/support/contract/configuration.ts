@@ -16,6 +16,4 @@ export const staffImpersonationConfiguration = z.strictObject({
   revokerAccountIds: z.array(accountId),
 });
 
-export type StaffImpersonationConfiguration = z.output<
-  typeof staffImpersonationConfiguration
->;
+export type StaffImpersonationConfiguration = z.output<typeof staffImpersonationConfiguration>;

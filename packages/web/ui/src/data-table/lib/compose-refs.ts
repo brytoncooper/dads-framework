@@ -31,9 +31,7 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
     // React <19 logs an error when a callback ref returns a value. We do not
     // use ref cleanups internally, so this only happens when a caller's ref
     // callback returns one — the React 19 cleanup feature.
-    const hasCleanup = cleanups.some(
-      (cleanup) => typeof cleanup === "function",
-    );
+    const hasCleanup = cleanups.some((cleanup) => typeof cleanup === "function");
     if (!hasCleanup) return undefined;
 
     return () => {

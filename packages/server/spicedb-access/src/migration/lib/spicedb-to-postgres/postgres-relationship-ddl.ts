@@ -8,9 +8,7 @@ import {
  * Matches `@dads-framework/postgres-access`'s `relationshipSchemaMigration`
  * DDL so migrated rows are immediately queryable by `PostgresAuthorization`.
  */
-export function buildPostgresRelationshipSchemaSql(
-  tableName: string = DEFAULT_RELATIONSHIP_TABLE,
-): string {
+export function buildPostgresRelationshipSchemaSql(tableName: string = DEFAULT_RELATIONSHIP_TABLE): string {
   const table = assertSqlIdentifier(tableName, "relationshipTable");
   return `
 CREATE TABLE IF NOT EXISTS ${table} (
@@ -46,9 +44,7 @@ CREATE INDEX IF NOT EXISTS ${table}_expires_at
  * Matches `@dads-framework/postgres-access`'s `relationshipExpirationMigration`
  * DDL to ensure existing v1 tables gain `expires_at` before bulk writes.
  */
-export function buildPostgresRelationshipExpirationSql(
-  tableName: string = DEFAULT_RELATIONSHIP_TABLE,
-): string {
+export function buildPostgresRelationshipExpirationSql(tableName: string = DEFAULT_RELATIONSHIP_TABLE): string {
   const table = assertSqlIdentifier(tableName, "relationshipTable");
   return `
 ALTER TABLE ${table}

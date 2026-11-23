@@ -14,10 +14,7 @@ import { doctorCasesSignal } from "./doctor-cases.js";
 
 const CORPUS = "fixtures/daddy-issues";
 
-function contextOver(
-  directories: readonly string[],
-  manifests: Record<string, string>,
-): DoctorContext {
+function contextOver(directories: readonly string[], manifests: Record<string, string>): DoctorContext {
   return {
     root: "/repo",
     today: undefined,
@@ -50,8 +47,7 @@ describe("the doctor corpus floor", () => {
   it("counts the case directories the corpus holds", async () => {
     const context = contextOver(["explicit-any", "files-over-ceiling"], {
       [`${CORPUS}/explicit-any/fixture.json`]: manifest("explicit-any"),
-      [`${CORPUS}/files-over-ceiling/fixture.json`]:
-        manifest("files-over-ceiling"),
+      [`${CORPUS}/files-over-ceiling/fixture.json`]: manifest("files-over-ceiling"),
     });
 
     expect(await cases(context)).toBe(2);

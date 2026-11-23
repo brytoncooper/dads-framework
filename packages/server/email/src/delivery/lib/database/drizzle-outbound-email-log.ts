@@ -3,10 +3,7 @@ import { count, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
 import { type EmailEnvelope, emailEnvelopeSchema } from "../email-envelope.js";
-import type {
-  OutboundEmailId,
-  OutboundEmailStatus,
-} from "../outbound-email-status.js";
+import type { OutboundEmailId, OutboundEmailStatus } from "../outbound-email-status.js";
 import { outboundEmail } from "./generated-tables/outbound-emails.tables.js";
 import { outboundEmailPropsSchema } from "./outbound-email-props.js";
 
@@ -46,8 +43,7 @@ export class DrizzleOutboundEmailLog {
   constructor(private readonly db: DrizzleHandle) {}
 
   async list(query: OutboundEmailLogQuery): Promise<OutboundEmailLogPage> {
-    const where =
-      query.recipient === undefined ? undefined : addressedTo(query.recipient);
+    const where = query.recipient === undefined ? undefined : addressedTo(query.recipient);
     const [rows, totals] = await Promise.all([
       this.db
         .select()
@@ -63,11 +59,7 @@ export class DrizzleOutboundEmailLog {
   }
 
   async find(id: OutboundEmailId): Promise<OutboundEmailLogEntry | null> {
-    const [row] = await this.db
-      .select()
-      .from(outboundEmail)
-      .where(eq(outboundEmail.id, id))
-      .limit(1);
+    const [row] = await this.db.select().from(outboundEmail).where(eq(outboundEmail.id, id)).limit(1);
     return row ? toLogEntry(row) : null;
   }
 }
@@ -85,9 +77,7 @@ function addressedTo(recipient: string): SQL {
   )`;
 }
 
-function toLogEntry(
-  row: typeof outboundEmail.$inferSelect,
-): OutboundEmailLogEntry {
+function toLogEntry(row: typeof outboundEmail.$inferSelect): OutboundEmailLogEntry {
   const envelope = emailEnvelopeSchema.safeParse(row.envelope);
   return {
     id: row.id,

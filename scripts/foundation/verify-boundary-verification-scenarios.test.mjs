@@ -10,10 +10,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  boundaryScenarios,
-  proveBaseline,
-} from "./verify-boundary-verification-scenarios.mjs";
+import { boundaryScenarios, proveBaseline } from "./verify-boundary-verification-scenarios.mjs";
 
 const EXPECTED_SCENARIOS = [
   "baseline",

@@ -60,10 +60,7 @@ export type DaddyIssue = {
 };
 
 /** Every issue, in the order `DAD.md` raises them. */
-export const DADDY_ISSUES: readonly DaddyIssue[] = [
-  ...ATTACHMENT_ISSUES,
-  ...ENFORCEMENT_ISSUES,
-];
+export const DADDY_ISSUES: readonly DaddyIssue[] = [...ATTACHMENT_ISSUES, ...ENFORCEMENT_ISSUES];
 
 /** The issue an id names, or `undefined` when nothing carries that id. */
 export function findDaddyIssue(id: string): DaddyIssue | undefined {

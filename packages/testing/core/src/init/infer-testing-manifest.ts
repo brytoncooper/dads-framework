@@ -76,11 +76,7 @@ export type InitReport = {
   };
   readonly workspace: Pick<
     DetectedWorkspace,
-    | "packageManager"
-    | "packageManagerSource"
-    | "patternSource"
-    | "patterns"
-    | "ignoredWorkspaceKeys"
+    "packageManager" | "packageManagerSource" | "patternSource" | "patterns" | "ignoredWorkspaceKeys"
   >;
   readonly packages: readonly InitReportPackage[];
   readonly inferences: readonly InitInference[];
@@ -109,9 +105,7 @@ export function inferTestingManifest(
   const identified = identifyProjects(packages);
   const inferred = inferPackages(workspace, packages, identified, inferences);
 
-  const sortedTasks = [...inferred.tasks].sort((left, right) =>
-    compareText(left.id, right.id),
-  );
+  const sortedTasks = [...inferred.tasks].sort((left, right) => compareText(left.id, right.id));
   const report: Omit<InitReport, "validation" | "manifestChecksum"> = {
     schemaVersion: 1,
     generator: { name: "@dads-framework/testing", command: "dad-test init" },
@@ -124,10 +118,7 @@ export function inferTestingManifest(
     },
     packages: inferred.reportPackages,
     inferences,
-    unsupported: [
-      ...workspace.unsupported,
-      ...packages.flatMap((workspacePackage) => workspacePackage.unsupported),
-    ],
+    unsupported: [...workspace.unsupported, ...packages.flatMap((workspacePackage) => workspacePackage.unsupported)],
   };
 
   if (sortedTasks.length === 0) return { manifest: undefined, report };
@@ -138,9 +129,7 @@ export function inferTestingManifest(
         root: ".",
         fullFallback: { taskIds: sortedTasks.map((task) => task.id) },
       },
-      projects: [...inferred.projects].sort((left, right) =>
-        compareText(left.id, right.id),
-      ),
+      projects: [...inferred.projects].sort((left, right) => compareText(left.id, right.id)),
       tasks: sortedTasks,
     },
     report,

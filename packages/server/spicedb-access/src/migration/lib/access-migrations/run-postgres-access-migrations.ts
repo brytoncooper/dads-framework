@@ -1,7 +1,4 @@
-import type {
-  AccessMigrationStepOp,
-  DefinedAccessMigration,
-} from "./define-access-migration.js";
+import type { AccessMigrationStepOp, DefinedAccessMigration } from "./define-access-migration.js";
 import {
   assertNamespace,
   assertSqlIdentifier,
@@ -36,18 +33,11 @@ export async function runPostgresAccessMigrations(
     options.relationshipTable ?? DEFAULT_RELATIONSHIP_TABLE,
     "relationshipTable",
   );
-  const migrationsTable = assertSqlIdentifier(
-    options.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE,
-    "migrationsTable",
-  );
+  const migrationsTable = assertSqlIdentifier(options.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE, "migrationsTable");
   assertUniqueMigrationIds(options.migrations.map((m) => m.id));
 
   await ensurePostgresMigrationsTable(options.executor, migrationsTable);
-  const alreadyApplied = await readPostgresAppliedIds(
-    options.executor,
-    migrationsTable,
-    namespace,
-  );
+  const alreadyApplied = await readPostgresAppliedIds(options.executor, migrationsTable, namespace);
 
   return executePendingPostgresMigrations({
     executor: options.executor,
@@ -77,19 +67,9 @@ async function executePendingPostgresMigrations(input: {
     }
     await runInPostgresTransaction(input.executor, async (client) => {
       for (const op of migration.ops) {
-        await executePostgresStepOp(
-          client,
-          input.relationshipTable,
-          input.namespace,
-          op,
-        );
+        await executePostgresStepOp(client, input.relationshipTable, input.namespace, op);
       }
-      await recordPostgresMigration(
-        client,
-        input.migrationsTable,
-        input.namespace,
-        migration.id,
-      );
+      await recordPostgresMigration(client, input.migrationsTable, input.namespace, migration.id);
     });
     applied.push(migration.id);
   }
@@ -97,10 +77,7 @@ async function executePendingPostgresMigrations(input: {
   return { applied, skipped };
 }
 
-async function ensurePostgresMigrationsTable(
-  client: PgMigrationClient,
-  migrationsTable: string,
-): Promise<void> {
+async function ensurePostgresMigrationsTable(client: PgMigrationClient, migrationsTable: string): Promise<void> {
   await client.query(`
     CREATE TABLE IF NOT EXISTS ${migrationsTable} (
       namespace text NOT NULL,
@@ -116,10 +93,7 @@ async function readPostgresAppliedIds(
   migrationsTable: string,
   namespace: string,
 ): Promise<ReadonlySet<string>> {
-  const result = await client.query(
-    `SELECT id FROM ${migrationsTable} WHERE namespace = $1 ORDER BY id`,
-    [namespace],
-  );
+  const result = await client.query(`SELECT id FROM ${migrationsTable} WHERE namespace = $1 ORDER BY id`, [namespace]);
   return new Set(result.rows.map((row) => readStringField(row, "id")));
 }
 
@@ -127,8 +101,7 @@ async function runInPostgresTransaction(
   executor: PgMigrationExecutor,
   work: (client: PgMigrationClient) => Promise<void>,
 ): Promise<void> {
-  const pooled =
-    executor.connect !== undefined ? await executor.connect() : undefined;
+  const pooled = executor.connect !== undefined ? await executor.connect() : undefined;
   const client: PgMigrationClient = pooled ?? executor;
   try {
     await client.query("BEGIN");

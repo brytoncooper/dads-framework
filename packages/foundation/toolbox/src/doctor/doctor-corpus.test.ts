@@ -44,15 +44,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -63,16 +55,7 @@ import { createDoctorContext, type DoctorFetch } from "./doctor-context.js";
 import { thresholdFor, type DoctorSignal } from "./doctor-signal.js";
 import { DOCTOR_SIGNALS, runDoctorSignals } from "./doctor-signals.js";
 
-const CORPUS = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "fixtures",
-  "daddy-issues",
-);
+const CORPUS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..", "fixtures", "daddy-issues");
 
 /** One commit a manifest declares: what it wrote, what it said, and when. */
 type FixtureCommit = {
@@ -188,15 +171,11 @@ function readNumberMap(value: unknown): ReadonlyMap<string, number> {
 
 function readFixtureCase(id: string): FixtureCase {
   const manifest = readJson(join(CORPUS, id, "fixture.json"));
-  if (!isRecord(manifest))
-    throw new Error(`${id}: the manifest is not an object.`);
+  if (!isRecord(manifest)) throw new Error(`${id}: the manifest is not an object.`);
   const signal: unknown = manifest["signal"];
-  if (!isString(signal))
-    throw new Error(`${id}: the manifest names no signal.`);
+  if (!isString(signal)) throw new Error(`${id}: the manifest names no signal.`);
   if (signal !== id) {
-    throw new Error(
-      `${id}: the manifest names ${signal}, not the directory it sits in.`,
-    );
+    throw new Error(`${id}: the manifest names ${signal}, not the directory it sits in.`);
   }
   const today: unknown = manifest["today"];
   return {
@@ -269,24 +248,15 @@ function materialize(testCase: FixtureCase): string {
  * two dates are then put back deliberately, so the commit a case declares is
  * dated the day it says and not the day the suite ran.
  */
-function runFixtureGit(
-  root: string,
-  commandArguments: readonly string[],
-  date?: string,
-): void {
-  const dates =
-    date === undefined
-      ? {}
-      : { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
+function runFixtureGit(root: string, commandArguments: readonly string[], date?: string): void {
+  const dates = date === undefined ? {} : { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
   const finished = spawnSync("git", [...commandArguments], {
     cwd: root,
     encoding: "utf8",
     env: { ...environmentWithoutGitVariables(), ...dates },
   });
   if (finished.status !== 0) {
-    throw new Error(
-      `git ${commandArguments.join(" ")} failed: ${finished.stderr}`,
-    );
+    throw new Error(`git ${commandArguments.join(" ")} failed: ${finished.stderr}`);
   }
 }
 
@@ -305,11 +275,7 @@ function replayHistory(root: string, history: readonly FixtureCommit[]): void {
   runFixtureGit(root, ["config", "commit.gpgsign", "false"]);
   runFixtureGit(root, ["config", "core.excludesFile", "/dev/null"]);
   const wired = existsSync(join(root, HOOKS_DIRECTORY));
-  runFixtureGit(root, [
-    "config",
-    "core.hooksPath",
-    wired ? HOOKS_DIRECTORY : "",
-  ]);
+  runFixtureGit(root, ["config", "core.hooksPath", wired ? HOOKS_DIRECTORY : ""]);
   for (const commit of history) applyCommit(root, commit);
 }
 
@@ -320,11 +286,7 @@ function applyCommit(root: string, commit: FixtureCommit): void {
     else writeFixtureFile(root, path, contents);
   }
   runFixtureGit(root, ["add", "--all", "."]);
-  runFixtureGit(
-    root,
-    ["commit", "--quiet", "--allow-empty", "--message", commit.message],
-    commit.date,
-  );
+  runFixtureGit(root, ["commit", "--quiet", "--allow-empty", "--message", commit.message], commit.date);
   if (commit.base) {
     runFixtureGit(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
   }
@@ -363,26 +325,19 @@ async function readSignals(
     today: testCase.today,
     exec: (command, commandArguments) => ({
       status: 0,
-      stdout:
-        testCase.commands.get([command, ...commandArguments].join(" ")) ?? "",
+      stdout: testCase.commands.get([command, ...commandArguments].join(" ")) ?? "",
     }),
     online: testCase.responses.size > 0,
     fetch: fixtureFetch(testCase),
   });
   const readings = new Map<string, ReadonlyMap<string, number>>();
   for (const outcome of await runDoctorSignals(context, DOCTOR_SIGNALS)) {
-    readings.set(
-      outcome.signal.id,
-      new Map([...outcome.readings].map(([key, one]) => [key, one.value])),
-    );
+    readings.set(outcome.signal.id, new Map([...outcome.readings].map(([key, one]) => [key, one.value])));
   }
   return readings;
 }
 
-function tripped(
-  signal: DoctorSignal,
-  readings: ReadonlyMap<string, number>,
-): boolean {
+function tripped(signal: DoctorSignal, readings: ReadonlyMap<string, number>): boolean {
   const values = [...readings.values()];
   if (signal.direction === "floor") {
     return values.reduce((sum, value) => sum + value, 0) > 0;
@@ -393,11 +348,11 @@ function tripped(
 
 /** Author time, committer time, author, subject: one line per commit. */
 function readReplayedLog(root: string): readonly string[] {
-  const listed = spawnSync(
-    "git",
-    ["log", "--reverse", "--format=%at %ct %an <%ae> %s"],
-    { cwd: root, encoding: "utf8", env: environmentWithoutGitVariables() },
-  );
+  const listed = spawnSync("git", ["log", "--reverse", "--format=%at %ct %an <%ae> %s"], {
+    cwd: root,
+    encoding: "utf8",
+    env: environmentWithoutGitVariables(),
+  });
   return listed.stdout.split("\n").filter((line) => line.length > 0);
 }
 
@@ -464,40 +419,32 @@ describe("the daddy issues fixture corpus", () => {
     expect([...named].sort()).toStrictEqual(signals);
   });
 
-  it(
-    "trips exactly the signal its case names, and no other",
-    { timeout: TIMEOUT },
-    async () => {
-      for (const id of readCaseIds()) {
-        const testCase = readFixtureCase(id);
-        const root = materialize(testCase);
-        try {
-          const readings = await readSignals(testCase, root);
-          const own =
-            readings.get(testCase.signal) ?? new Map<string, number>();
-          expect({ case: id, readings: Object.fromEntries(own) }).toStrictEqual(
-            {
-              case: id,
-              readings: Object.fromEntries(testCase.expected),
-            },
-          );
-          for (const signal of DOCTOR_SIGNALS) {
-            const measured =
-              readings.get(signal.id) ?? new Map<string, number>();
-            expect({
-              case: id,
-              signal: signal.id,
-              tripped: tripped(signal, measured),
-            }).toStrictEqual({
-              case: id,
-              signal: signal.id,
-              tripped: signal.id === testCase.signal,
-            });
-          }
-        } finally {
-          rmSync(root, { recursive: true, force: true });
+  it("trips exactly the signal its case names, and no other", { timeout: TIMEOUT }, async () => {
+    for (const id of readCaseIds()) {
+      const testCase = readFixtureCase(id);
+      const root = materialize(testCase);
+      try {
+        const readings = await readSignals(testCase, root);
+        const own = readings.get(testCase.signal) ?? new Map<string, number>();
+        expect({ case: id, readings: Object.fromEntries(own) }).toStrictEqual({
+          case: id,
+          readings: Object.fromEntries(testCase.expected),
+        });
+        for (const signal of DOCTOR_SIGNALS) {
+          const measured = readings.get(signal.id) ?? new Map<string, number>();
+          expect({
+            case: id,
+            signal: signal.id,
+            tripped: tripped(signal, measured),
+          }).toStrictEqual({
+            case: id,
+            signal: signal.id,
+            tripped: signal.id === testCase.signal,
+          });
         }
+      } finally {
+        rmSync(root, { recursive: true, force: true });
       }
-    },
-  );
+    }
+  });
 });

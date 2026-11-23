@@ -43,10 +43,7 @@ Save this as `example.mts` and run `npx tsx example.mts`.
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createObjectStorage,
-  loadOrCreateDiskSigningKey,
-} from "@dads-framework/object-storage";
+import { createObjectStorage, loadOrCreateDiskSigningKey } from "@dads-framework/object-storage";
 
 const rootDirectory = await mkdtemp(join(tmpdir(), "dads-storage-"));
 const storage = createObjectStorage({

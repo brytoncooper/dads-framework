@@ -15,10 +15,7 @@
  * nothing, and no collector can reach in and cancel a live request's body.
  */
 import { describe, expect, it } from "vitest";
-import {
-  toWebRequest,
-  type IncomingProtocolRequest,
-} from "./to-web-request.js";
+import { toWebRequest, type IncomingProtocolRequest } from "./to-web-request.js";
 
 const payload = {
   email: "operator@example.com",

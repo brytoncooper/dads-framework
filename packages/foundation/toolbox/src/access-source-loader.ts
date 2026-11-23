@@ -38,10 +38,7 @@ export type LoadedAccessSource = {
  * JavaScript module (`.ts`, `.mts`, `.js`, `.mjs`) exporting an `AccessModel`
  * or DSL `actor(...)` / `resource(...)` definitions.
  */
-export async function loadAccessSource(
-  inputPath: string,
-  cwd?: string,
-): Promise<LoadedAccessSource> {
+export async function loadAccessSource(inputPath: string, cwd?: string): Promise<LoadedAccessSource> {
   const resolvedPath = resolve(cwd ?? process.cwd(), inputPath);
   const extension = extname(resolvedPath).toLowerCase();
 
@@ -51,9 +48,7 @@ export async function loadAccessSource(
   if (MODULE_EXTENSIONS.has(extension)) {
     return loadModuleAccessSource(resolvedPath);
   }
-  throw new Error(
-    `Unsupported access schema file "${resolvedPath}". Expected a .zed, .ts, .mts, .js, or .mjs file.`,
-  );
+  throw new Error(`Unsupported access schema file "${resolvedPath}". Expected a .zed, .ts, .mts, .js, or .mjs file.`);
 }
 
 function loadZedAccessSource(resolvedPath: string): LoadedAccessSource {
@@ -68,9 +63,7 @@ function loadZedAccessSource(resolvedPath: string): LoadedAccessSource {
   };
 }
 
-async function loadModuleAccessSource(
-  resolvedPath: string,
-): Promise<LoadedAccessSource> {
+async function loadModuleAccessSource(resolvedPath: string): Promise<LoadedAccessSource> {
   if (!existsSync(resolvedPath)) {
     throw new Error(`Access schema file not found: ${resolvedPath}.`);
   }
@@ -88,26 +81,19 @@ async function loadModuleAccessSource(
   };
 }
 
-async function importModuleNamespace(
-  moduleUrl: string,
-  resolvedPath: string,
-): Promise<unknown> {
+async function importModuleNamespace(moduleUrl: string, resolvedPath: string): Promise<unknown> {
   try {
     const imported: unknown = await import(moduleUrl);
     return imported;
   } catch (error: unknown) {
-    const detail =
-      error instanceof Error ? error.message : "Unable to import module.";
+    const detail = error instanceof Error ? error.message : "Unable to import module.";
     throw new Error(`Unable to load access module ${resolvedPath}: ${detail}`, {
       cause: error,
     });
   }
 }
 
-function extractAccessModel(
-  loaded: unknown,
-  resolvedPath: string,
-): AccessModel {
+function extractAccessModel(loaded: unknown, resolvedPath: string): AccessModel {
   const candidates = collectExportCandidates(loaded);
   const directModel = candidates.find(isAccessModel);
   if (directModel !== undefined) {
@@ -168,10 +154,7 @@ function collectDslNodes(candidates: readonly unknown[]): readonly DslNode[] {
   return nodes;
 }
 
-function hasProperty<K extends string>(
-  value: object,
-  key: K,
-): value is Record<K, unknown> {
+function hasProperty<K extends string>(value: object, key: K): value is Record<K, unknown> {
   return key in value;
 }
 
@@ -180,16 +163,10 @@ function readObjectProperty(value: object, key: string): unknown {
 }
 
 function isEntityHandle(value: unknown): value is EntityHandle {
-  return (
-    isRecord(value) &&
-    typeof value["wireName"] === "string" &&
-    isRecord(value["idSchema"])
-  );
+  return isRecord(value) && typeof value["wireName"] === "string" && isRecord(value["idSchema"]);
 }
 
-function isResolvedAccessDefinition(
-  value: unknown,
-): value is ResolvedAccessDefinition {
+function isResolvedAccessDefinition(value: unknown): value is ResolvedAccessDefinition {
   if (!isRecord(value)) return false;
   return (
     isEntityHandle(value["entity"]) &&

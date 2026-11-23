@@ -23,12 +23,7 @@ export async function migrationSupportFiles(
   async function visit(file: string): Promise<void> {
     if (visited.has(file)) return;
     visited.add(file);
-    const source = ts.createSourceFile(
-      file,
-      await readFile(file, "utf8"),
-      ts.ScriptTarget.Latest,
-      true,
-    );
+    const source = ts.createSourceFile(file, await readFile(file, "utf8"), ts.ScriptTarget.Latest, true);
     for (const specifier of runtimeImports(source)) {
       const helper = workspace.moduleAliases[specifier];
       const candidate =
@@ -40,12 +35,9 @@ export async function migrationSupportFiles(
       if (candidate === undefined) continue;
       const dependency = await resolveModuleFile(candidate);
       const path = relative(root, dependency);
-      if (path.startsWith("..") || isAbsolute(path))
-        throw new Error("migration support is outside the workspace");
+      if (path.startsWith("..") || isAbsolute(path)) throw new Error("migration support is outside the workspace");
       if (dependency.endsWith(".migration.ts"))
-        throw new Error(
-          `migration support cannot import another migration: ${path}`,
-        );
+        throw new Error(`migration support cannot import another migration: ${path}`);
       supports.add(path);
       await visit(dependency);
     }
@@ -69,13 +61,7 @@ async function resolveModuleFile(candidate: string): Promise<string> {
     try {
       if ((await stat(path)).isFile()) return path;
     } catch (error: unknown) {
-      if (
-        error === null ||
-        typeof error !== "object" ||
-        !("code" in error) ||
-        error.code !== "ENOENT"
-      )
-        throw error;
+      if (error === null || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
     }
   }
   throw new Error(`missing migration support module ${candidate}`);
@@ -84,10 +70,7 @@ async function resolveModuleFile(candidate: string): Promise<string> {
 function runtimeImports(source: ts.SourceFile): readonly string[] {
   const imports: string[] = [];
   function collect(node: ts.Node): void {
-    const specifier =
-      runtimeImportSpecifier(node) ??
-      runtimeReExportSpecifier(node) ??
-      dynamicImportSpecifier(node);
+    const specifier = runtimeImportSpecifier(node) ?? runtimeReExportSpecifier(node) ?? dynamicImportSpecifier(node);
     if (specifier !== undefined) imports.push(specifier);
     ts.forEachChild(node, collect);
   }
@@ -142,8 +125,6 @@ function dynamicImportSpecifier(node: ts.Node): string | undefined {
     return undefined;
   const argument = node.arguments[0];
   if (argument === undefined || !ts.isStringLiteral(argument))
-    throw new Error(
-      "dynamic migration support imports require a dedicated rehearsal",
-    );
+    throw new Error("dynamic migration support imports require a dedicated rehearsal");
   return argument.text;
 }

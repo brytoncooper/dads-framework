@@ -37,22 +37,9 @@ const PROTECTED_PATTERNS = [
 ];
 
 /** Tools that write. Anything else this hook sees is passed straight through. */
-const EDIT_TOOLS = new Set([
-  "Edit",
-  "Write",
-  "MultiEdit",
-  "StrReplace",
-  "NotebookEdit",
-  "Delete",
-]);
+const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "StrReplace", "NotebookEdit", "Delete"]);
 
-const PATH_KEYS = [
-  "file_path",
-  "filePath",
-  "path",
-  "notebook_path",
-  "target_file",
-];
+const PATH_KEYS = ["file_path", "filePath", "path", "notebook_path", "target_file"];
 
 /** True when `path` is one of the files the user owns. */
 export function isProtected(path) {
@@ -97,10 +84,7 @@ export function decide(event) {
 
 /** Claude Code and Cursor want the same answer in two different envelopes. */
 export function renderResponse(event, decision, reason) {
-  const isClaude =
-    event !== null &&
-    typeof event === "object" &&
-    typeof event.hook_event_name === "string";
+  const isClaude = event !== null && typeof event === "object" && typeof event.hook_event_name === "string";
   if (isClaude) {
     // An allow would bypass the user's own permission settings, so the quiet
     // answer is no answer: only `ask` and `deny` are opinions worth stating.
@@ -133,38 +117,13 @@ const SELF_TEST_CASES = [
   ["Write", ".github/workflows/verify.yml", "ask", "the workflow is protected"],
   ["MultiEdit", ".claude/settings.json", "ask", "hook wiring is protected"],
   ["Edit", ".cursor/hooks.json", "ask", "cursor hook wiring is protected"],
-  [
-    "Write",
-    "scripts/agent-guards/guard-shell-commands.mjs",
-    "ask",
-    "the guards guard themselves",
-  ],
-  [
-    "Edit",
-    ".agents/source-budgets.json",
-    "ask",
-    "the ratchet baseline is protected",
-  ],
-  [
-    "Edit",
-    "eslint-suppressions.json",
-    "ask",
-    "the suppression baseline is protected",
-  ],
+  ["Write", "scripts/agent-guards/guard-shell-commands.mjs", "ask", "the guards guard themselves"],
+  ["Edit", ".agents/source-budgets.json", "ask", "the ratchet baseline is protected"],
+  ["Edit", "eslint-suppressions.json", "ask", "the suppression baseline is protected"],
   ["Edit", "AGENTS.md", "ask", "the contract document is protected"],
   ["Write", "LICENSE.md", "ask", "the licence is protected"],
-  [
-    "Edit",
-    "/repo/local-repos/dads-framework/.githooks/pre-push",
-    "ask",
-    "absolute paths are matched too",
-  ],
-  [
-    "Edit",
-    "packages/server/http/src/index.ts",
-    "allow",
-    "ordinary source is allowed",
-  ],
+  ["Edit", "/repo/local-repos/dads-framework/.githooks/pre-push", "ask", "absolute paths are matched too"],
+  ["Edit", "packages/server/http/src/index.ts", "allow", "ordinary source is allowed"],
   ["Write", "docs/house-rules.md", "allow", "ordinary documents are allowed"],
   ["Write", "README.md", "allow", "README is not the licence"],
   ["Read", "AGENTS.md", "allow", "a read of a protected file is allowed"],
@@ -191,8 +150,7 @@ function selfTest() {
   process.stdout.write(
     failures.length === 0
       ? `guard-protected-files self-test OK (${String(total)} cases)\n`
-      : lines.join("") +
-          `guard-protected-files self-test: ${String(failures.length)} of ${String(total)} failed\n`,
+      : lines.join("") + `guard-protected-files self-test: ${String(failures.length)} of ${String(total)} failed\n`,
   );
   process.exitCode = failures.length === 0 ? 0 : 1;
 }

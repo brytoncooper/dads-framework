@@ -1,16 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  actor,
-  compileAccess,
-  permissionToken,
-  resource,
-} from "@dads-framework/access";
-import {
-  requires,
-  requiresVisible,
-} from "../route/route-guards.test-support.js";
+import { actor, compileAccess, permissionToken, resource } from "@dads-framework/access";
+import { requires, requiresVisible } from "../route/route-guards.test-support.js";
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import {
   ACCESS_REFUSAL_HEADER,
@@ -21,14 +13,7 @@ import {
 
 import { bodyOf, errorBodyOf } from "../../testing/index.js";
 import { createHttpApp, type HttpAppOptions } from "../create-http-app.js";
-import {
-  fromBody,
-  fromFixed,
-  fromParam,
-  fromQuery,
-  publicAccess,
-  requireSession,
-} from "../route/access.js";
+import { fromBody, fromFixed, fromParam, fromQuery, publicAccess, requireSession } from "../route/access.js";
 import { getRoute } from "../route/get-route.js";
 import { listRoute } from "../route/list-route.js";
 import { postRoute } from "../route/post-route.js";
@@ -54,9 +39,7 @@ function subjectsFromHeader(): SubjectResolver {
   return {
     resolve: (request) => {
       const id = request.headers["x-test-user"];
-      return Promise.resolve(
-        typeof id === "string" && id.length > 0 ? { type: "user", id } : null,
-      );
+      return Promise.resolve(typeof id === "string" && id.length > 0 ? { type: "user", id } : null);
     },
   };
 }
@@ -65,10 +48,7 @@ const routes = routeGroup("Organizations", [
   getRoute({
     route: { method: "GET", template: "/orgs/:id" },
     summary: "Get an organization",
-    access: requires(
-      permissionToken("organizations/organization", "view"),
-      fromParam("id"),
-    ),
+    access: requires(permissionToken("organizations/organization", "view"), fromParam("id")),
     params: z.object({ id: z.string() }),
     response: orgSchema,
     handler: ({ params }) => ({ id: params.id }),
@@ -90,10 +70,7 @@ const routes = routeGroup("Organizations", [
   getRoute({
     route: { method: "GET", template: "/misconfigured" },
     summary: "fromParam names a param the path does not have",
-    access: requires(
-      permissionToken("organizations/organization", "view"),
-      fromParam("id"),
-    ),
+    access: requires(permissionToken("organizations/organization", "view"), fromParam("id")),
     response: orgSchema,
     handler: () => ({ id: "unreachable" }),
   }),
@@ -123,9 +100,7 @@ async function buildApp(
     routes: [...routes, ...(registerOptions?.extraRoutes ?? [])],
     subjects: subjectsFromHeader(),
     authorization,
-    ...(registerOptions?.handlerTimeoutMs === undefined
-      ? {}
-      : { handlerTimeoutMs: registerOptions.handlerTimeoutMs }),
+    ...(registerOptions?.handlerTimeoutMs === undefined ? {} : { handlerTimeoutMs: registerOptions.handlerTimeoutMs }),
   });
   await app.ready();
   apps.push(app);
@@ -214,26 +189,18 @@ describe("access enforcement", () => {
 describe("rate limiting (capability ladder)", () => {
   it("answers 429 with retry-after once the route budget is spent", async () => {
     const app = await buildApp(undefined, {
-      extraRoutes: routeGroup(
-        "Organizations",
-        { rateLimit: { perMinute: 2 } },
-        [
-          getRoute({
-            route: { method: "GET", template: "/limited" },
-            summary: "Tight budget",
-            access: publicAccess(),
-            response: z.object({ ok: z.boolean() }),
-            handler: () => ({ ok: true }),
-          }),
-        ],
-      ),
+      extraRoutes: routeGroup("Organizations", { rateLimit: { perMinute: 2 } }, [
+        getRoute({
+          route: { method: "GET", template: "/limited" },
+          summary: "Tight budget",
+          access: publicAccess(),
+          response: z.object({ ok: z.boolean() }),
+          handler: () => ({ ok: true }),
+        }),
+      ]),
     });
-    expect(
-      (await app.inject({ method: "GET", url: "/limited" })).statusCode,
-    ).toBe(200);
-    expect(
-      (await app.inject({ method: "GET", url: "/limited" })).statusCode,
-    ).toBe(200);
+    expect((await app.inject({ method: "GET", url: "/limited" })).statusCode).toBe(200);
+    expect((await app.inject({ method: "GET", url: "/limited" })).statusCode).toBe(200);
     const third = await app.inject({ method: "GET", url: "/limited" });
     expect(third.statusCode).toBe(429);
     expect(errorBodyOf(third).code).toBe("TOO_MANY_REQUESTS");
@@ -328,9 +295,7 @@ describe("platform defaults", () => {
         "access-control-request-method": "GET",
       },
     });
-    expect(trusted.headers["access-control-allow-origin"]).toBe(
-      "https://app.example.test",
-    );
+    expect(trusted.headers["access-control-allow-origin"]).toBe("https://app.example.test");
     const untrusted = await app.inject({
       method: "OPTIONS",
       url: "/open",
@@ -350,10 +315,7 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
     postRoute({
       route: { method: "POST", template: "/tickets" },
       summary: "Create into the organization named by the body",
-      access: requires(
-        permissionToken("organizations/organization", "manage"),
-        fromBody("organizationId"),
-      ),
+      access: requires(permissionToken("organizations/organization", "manage"), fromBody("organizationId")),
       body: z.object({ organizationId: z.string(), name: z.string() }),
       response: z.object({ ok: z.boolean() }),
       handler: () => ({ ok: true }),
@@ -492,10 +454,7 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
             template: "/document-workflows/commands",
           },
           summary: "Apply a command under the facility named by the query",
-          access: requires(
-            permissionToken("organizations/facility", "manage"),
-            fromQuery("facilityId"),
-          ),
+          access: requires(permissionToken("organizations/facility", "manage"), fromQuery("facilityId")),
           query: z.object({ facilityId: z.string() }),
           body: z.object({ kind: z.string() }),
           response: z.object({ ok: z.boolean() }),
@@ -610,10 +569,7 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
         postRoute({
           route: { method: "POST", template: "/platform-echo" },
           summary: "Fixed-id platform gate",
-          access: requires(
-            permissionToken("platform", "execute_live_environment_actions"),
-            fromFixed("command"),
-          ),
+          access: requires(permissionToken("platform", "execute_live_environment_actions"), fromFixed("command")),
           body: z.object({}),
           response: z.object({ ok: z.boolean() }),
           handler: () => ({ ok: true }),

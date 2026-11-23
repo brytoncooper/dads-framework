@@ -5,22 +5,10 @@ import type {
   CompiledPermissionExpression,
   NormalizedSubjectLookup,
 } from "./policy-model.js";
-import {
-  analyzePermissionCycles,
-  type PermissionCyclePlan,
-} from "./permission-cycles.js";
-import {
-  compileRecursiveSubjectLookup,
-  type SubjectResourceRef,
-} from "./compile-recursive-subjects.js";
+import { analyzePermissionCycles, type PermissionCyclePlan } from "./permission-cycles.js";
+import { compileRecursiveSubjectLookup, type SubjectResourceRef } from "./compile-recursive-subjects.js";
 import { findColumnRelation } from "./column-relations.js";
-import {
-  notExpired,
-  permissionIdentity,
-  QueryBuilder,
-  resolveArrowTargets,
-  TUPLES,
-} from "./policy-sql.js";
+import { notExpired, permissionIdentity, QueryBuilder, resolveArrowTargets, TUPLES } from "./policy-sql.js";
 
 type SubjectContext = {
   readonly model: AuthorizationModelDefinition;
@@ -68,14 +56,9 @@ function compileSubjectPermission(
   permissionName: string,
 ): string {
   const definition = context.model.permissions.find(
-    (candidate) =>
-      candidate.wireName === permissionName &&
-      candidate.entity === resource.entity,
+    (candidate) => candidate.wireName === permissionName && candidate.entity === resource.entity,
   );
-  if (!definition)
-    throw new Error(
-      `Postgres policy cannot find permission ${permissionName}.`,
-    );
+  if (!definition) throw new Error(`Postgres policy cannot find permission ${permissionName}.`);
   const scc = context.cycles.sccFor(resource.entity, permissionName);
   if (scc !== undefined) {
     return compileRecursiveSubjectLookup({
@@ -85,17 +68,13 @@ function compileSubjectPermission(
       resource,
       entryPermission: permissionName,
       scc,
-      compileExpr: (ref, expression) =>
-        compileSubjectExpression(context, ref, expression),
-      compileAllOf: (ref, expressions) =>
-        compileAllOfSubjects(context, ref, expressions),
+      compileExpr: (ref, expression) => compileSubjectExpression(context, ref, expression),
+      compileAllOf: (ref, expressions) => compileAllOfSubjects(context, ref, expressions),
     });
   }
   const identity = permissionIdentity(resource.entity, permissionName);
   if (context.active.has(identity))
-    throw new Error(
-      "Postgres SQL compilation does not support a cycle through permissions.",
-    );
+    throw new Error("Postgres SQL compilation does not support a cycle through permissions.");
   context.active.add(identity);
   try {
     return compileSubjectExpression(context, resource, definition.expression);
@@ -109,14 +88,10 @@ function compileSubjectExpression(
   resource: SubjectResourceRef,
   expression: CompiledPermissionExpression,
 ): string {
-  if (expression.kind === "relation")
-    return compileRelationSubjects(context, resource, expression.relation);
-  if (expression.kind === "through")
-    return compileThroughSubjects(context, resource, expression);
-  if (expression.kind === "through-all")
-    return compileThroughAllSubjects(context, resource, expression);
-  if (expression.kind === "exclude")
-    return compileExcludeSubjects(context, resource, expression);
+  if (expression.kind === "relation") return compileRelationSubjects(context, resource, expression.relation);
+  if (expression.kind === "through") return compileThroughSubjects(context, resource, expression);
+  if (expression.kind === "through-all") return compileThroughAllSubjects(context, resource, expression);
+  if (expression.kind === "exclude") return compileExcludeSubjects(context, resource, expression);
   if (expression.kind === "any-of") {
     return expression.expressions
       .map((child) => `(${compileSubjectExpression(context, resource, child)})`)
@@ -125,17 +100,9 @@ function compileSubjectExpression(
   return compileAllOfSubjects(context, resource, expression.expressions);
 }
 
-function compileRelationSubjects(
-  context: SubjectContext,
-  resource: SubjectResourceRef,
-  relation: string,
-): string {
+function compileRelationSubjects(context: SubjectContext, resource: SubjectResourceRef, relation: string): string {
   const { builder, namespace, subjectType } = context;
-  const columnRel = findColumnRelation(
-    context.model,
-    resource.entity,
-    relation,
-  );
+  const columnRel = findColumnRelation(context.model, resource.entity, relation);
   if (columnRel !== undefined) {
     const colAlias = builder.throughAlias();
     const entitySql = builder.value(columnRel.entity);
@@ -198,11 +165,7 @@ function compileAllOfSubjects(
   return current;
 }
 
-function intersectSubjectQueries(
-  builder: QueryBuilder,
-  leftSql: string,
-  rightSql: string,
-): string {
+function intersectSubjectQueries(builder: QueryBuilder, leftSql: string, rightSql: string): string {
   const leftAlias = builder.cteAlias("sub_l");
   const rightAlias = builder.cteAlias("sub_r");
   return `WITH ${leftAlias} AS (${leftSql}), ${rightAlias} AS (${rightSql})
@@ -227,16 +190,8 @@ function compileExcludeSubjects(
 ): string {
   const incAlias = context.builder.cteAlias("sub_inc");
   const excAlias = context.builder.cteAlias("sub_exc");
-  const includeSql = compileSubjectExpression(
-    context,
-    resource,
-    expression.include,
-  );
-  const excludeSql = compileSubjectExpression(
-    context,
-    resource,
-    expression.exclude,
-  );
+  const includeSql = compileSubjectExpression(context, resource, expression.include);
+  const excludeSql = compileSubjectExpression(context, resource, expression.exclude);
   return `WITH ${incAlias} AS (${includeSql}), ${excAlias} AS (${excludeSql})
     SELECT inc.subject_id, inc.is_wildcard
     FROM ${incAlias} inc
@@ -256,17 +211,9 @@ function compileThroughSubjects(
   expression: Extract<CompiledPermissionExpression, { kind: "through" }>,
 ): string {
   const { builder, namespace } = context;
-  const targets = resolveArrowTargets(
-    context.model,
-    resource.entity,
-    expression,
-  );
+  const targets = resolveArrowTargets(context.model, resource.entity, expression);
   const throughAlias = builder.throughAlias();
-  const columnRel = findColumnRelation(
-    context.model,
-    resource.entity,
-    expression.relation,
-  );
+  const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   if (columnRel !== undefined) {
     const entitySql = builder.value(columnRel.entity);
     const targetKindSql = builder.value(columnRel.targetEntity);
@@ -308,19 +255,11 @@ function compileThroughAllSubjects(
   expression: Extract<CompiledPermissionExpression, { kind: "through-all" }>,
 ): string {
   const { builder, namespace } = context;
-  const targets = resolveArrowTargets(
-    context.model,
-    resource.entity,
-    expression,
-  );
+  const targets = resolveArrowTargets(context.model, resource.entity, expression);
   const tupleAlias = builder.throughAlias();
   const parentsAlias = builder.cteAlias("all_parents");
   const subjectsAlias = builder.cteAlias("all_parent_subjects");
-  const columnRel = findColumnRelation(
-    context.model,
-    resource.entity,
-    expression.relation,
-  );
+  const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   const parentsQuery =
     columnRel !== undefined
       ? `SELECT ${builder.value(columnRel.targetEntity)}::text AS parent_kind, ${tupleAlias}.${columnRel.targetIdColumn} AS parent_id
@@ -337,12 +276,7 @@ function compileThroughAllSubjects(
         AND ${tupleAlias}.subject_is_wildcard = false
         AND ${tupleAlias}.subject_relation = ''
         AND ${notExpired(tupleAlias)}`;
-  const targetSql = compileTargetSubjectBranches(
-    context,
-    "p.parent_kind",
-    "p.parent_id",
-    targets,
-  );
+  const targetSql = compileTargetSubjectBranches(context, "p.parent_kind", "p.parent_id", targets);
   return `WITH ${parentsAlias} AS (
       ${parentsQuery}
     ),

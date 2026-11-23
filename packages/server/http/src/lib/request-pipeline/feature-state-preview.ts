@@ -66,10 +66,7 @@ export function currentFeatureStatePreview(): FeatureStatePreview | undefined {
 }
 
 /** Runs `work` with `preview` as the current preview, for this pipeline and for tests. */
-export function runWithFeatureStatePreview<T>(
-  preview: FeatureStatePreview,
-  work: () => Promise<T>,
-): Promise<T> {
+export function runWithFeatureStatePreview<T>(preview: FeatureStatePreview, work: () => Promise<T>): Promise<T> {
   const scope = { preview, active: true };
   return previewContext.run(scope, async () => {
     try {
@@ -85,11 +82,7 @@ type PreviewReply = {
   readonly raw: { setHeader(name: string, value: string): unknown };
 };
 
-function writePreviewHeader(
-  reply: PreviewReply,
-  name: string,
-  value: string,
-): void {
+function writePreviewHeader(reply: PreviewReply, name: string, value: string): void {
   void reply.header(name, value);
   void reply.raw.setHeader(name, value);
 }
@@ -137,15 +130,8 @@ export async function carryFeatureStatePreview<T>(input: {
     writePreviewHeader(input.reply, protocol.droppedHeader, "1");
     return input.work();
   }
-  if (
-    !preview.allowsWrites &&
-    isWriteMethod(input.method) &&
-    input.writesDuringFeaturePreview !== "allowed"
-  ) {
-    throw forbidden(
-      "FEATURE_PREVIEW_READ_ONLY",
-      "Saving is turned off while previewing",
-    );
+  if (!preview.allowsWrites && isWriteMethod(input.method) && input.writesDuringFeaturePreview !== "allowed") {
+    throw forbidden("FEATURE_PREVIEW_READ_ONLY", "Saving is turned off while previewing");
   }
   return runWithFeatureStatePreview(preview, input.work);
 }

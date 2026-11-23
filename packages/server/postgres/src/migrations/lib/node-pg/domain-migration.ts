@@ -1,9 +1,7 @@
 import type { MigrationWorkspace } from "./migration-workspace.js";
 import type { MigrationBuilder } from "node-pg-migrate";
 
-export type DomainMigrationFunction = (
-  pgm: MigrationBuilder,
-) => void | Promise<void>;
+export type DomainMigrationFunction = (pgm: MigrationBuilder) => void | Promise<void>;
 
 export type DomainMigration = {
   id: string;

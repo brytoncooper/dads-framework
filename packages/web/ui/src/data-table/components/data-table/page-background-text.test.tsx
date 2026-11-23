@@ -34,10 +34,7 @@ function isGreyTextClass(className: string): boolean {
   if (variants.includes("_svg") || variants.includes("data-[placeholder]")) {
     return false;
   }
-  return (
-    utility === "text-muted-foreground" ||
-    /^text-foreground\/\d+$/.test(utility)
-  );
+  return utility === "text-muted-foreground" || /^text-foreground\/\d+$/.test(utility);
 }
 
 function greyTextClasses(container: HTMLElement): string[] {
@@ -75,20 +72,10 @@ function TableFooter({ part }: { readonly part: "pagination" | "hidden" }) {
   );
 }
 
-const PAGE_BACKGROUND_PARTS: readonly (readonly [
-  string,
-  () => React.ReactElement,
-])[] = [
+const PAGE_BACKGROUND_PARTS: readonly (readonly [string, () => React.ReactElement])[] = [
   [
     "FilterPill, unset",
-    () => (
-      <FilterPill
-        label="Type"
-        options={TYPE_OPTIONS}
-        selected={[]}
-        onSelectedChange={ignore}
-      />
-    ),
+    () => <FilterPill label="Type" options={TYPE_OPTIONS} selected={[]} onSelectedChange={ignore} />,
   ],
   [
     "AppliedFilterChips",
@@ -125,12 +112,9 @@ const PAGE_BACKGROUND_PARTS: readonly (readonly [
 ];
 
 describe("table text on the page background", () => {
-  it.each(PAGE_BACKGROUND_PARTS)(
-    "%s never sets grey text on the grey page",
-    (_name, renderPart) => {
-      const { container } = render(renderPart());
-      expect(container.textContent).not.toBe("");
-      expect(greyTextClasses(container)).toEqual([]);
-    },
-  );
+  it.each(PAGE_BACKGROUND_PARTS)("%s never sets grey text on the grey page", (_name, renderPart) => {
+    const { container } = render(renderPart());
+    expect(container.textContent).not.toBe("");
+    expect(greyTextClasses(container)).toEqual([]);
+  });
 });

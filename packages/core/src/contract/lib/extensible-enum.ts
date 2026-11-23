@@ -10,12 +10,11 @@ export const EXTENSIBLE_ENUM_KEY = "x-extensible-enum";
  * `x-extensible-enum` instead of `enum` (see `openExtensibleEnums`), so a
  * contract diff reads an added value as compatible.
  */
-export function extensibleEnum<
-  const TValues extends readonly [string, ...string[]],
->(values: TValues, description: string) {
-  return z
-    .enum(values)
-    .meta({ description, [EXTENSIBLE_ENUM_KEY]: [...values] });
+export function extensibleEnum<const TValues extends readonly [string, ...string[]]>(
+  values: TValues,
+  description: string,
+) {
+  return z.enum(values).meta({ description, [EXTENSIBLE_ENUM_KEY]: [...values] });
 }
 
 /**
@@ -23,9 +22,7 @@ export function extensibleEnum<
  * Zod emits `enum` for every `z.enum`, and a closed `enum` beside
  * `x-extensible-enum` would still tell clients to reject a new value.
  */
-export function openExtensibleEnums(context: {
-  readonly jsonSchema: z.core.JSONSchema.BaseSchema;
-}): void {
+export function openExtensibleEnums(context: { readonly jsonSchema: z.core.JSONSchema.BaseSchema }): void {
   if (EXTENSIBLE_ENUM_KEY in context.jsonSchema) {
     delete context.jsonSchema.enum;
   }

@@ -1,9 +1,4 @@
-import {
-  actor,
-  compileAccess,
-  emitZed,
-  resource,
-} from "@dads-framework/access";
+import { actor, compileAccess, emitZed, resource } from "@dads-framework/access";
 import type { RelationshipWrite } from "@dads-framework/spicedb-access";
 import {
   createTunedSpiceDbClient,
@@ -15,11 +10,7 @@ import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
-import {
-  PostgresAuthorization,
-  preparePostgresChecks,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, preparePostgresChecks, relationshipSchemaMigration } from "./index.js";
 
 const isBenchmark = process.env["VITEST_TIER"] === "benchmark";
 const disposers: (() => Promise<void>)[] = [];
@@ -57,8 +48,7 @@ async function sample(work: () => Promise<unknown>, trials = 11) {
   }
   times.sort((left, right) => left - right);
   const median = times[Math.floor(times.length / 2)] ?? 0;
-  const p95 =
-    times[Math.min(times.length - 1, Math.ceil(times.length * 0.95) - 1)] ?? 0;
+  const p95 = times[Math.min(times.length - 1, Math.ceil(times.length * 0.95) - 1)] ?? 0;
   return {
     medianMs: Number(median.toFixed(2)),
     p95Ms: Number(p95.toFixed(2)),
@@ -86,9 +76,7 @@ it.runIf(isBenchmark)(
     const model = compileAccess([workspace]);
     const wsType = workspace.wireName;
     const docType = workspace.document.wireName;
-    const docParentRel = Object.keys(workspace.document.roles).find(
-      (role) => role !== "viewer",
-    );
+    const docParentRel = Object.keys(workspace.document.roles).find((role) => role !== "viewer");
     if (!docParentRel) throw new Error("Missing parent role on document");
     const namespace = "scale_100k";
 
@@ -161,44 +149,28 @@ it.runIf(isBenchmark)(
 
     const spice = await startSpice();
     await spice.writeSchema(emitZed(model));
-    const docWrites: RelationshipWrite[] = Array.from(
-      { length: 100_000 },
-      (_, index) => ({
-        resource: { type: docType, id: `doc_${String(index + 1)}` },
-        relation: docParentRel,
-        subject: { type: wsType, id: `ws_${String(index % 200)}` },
-      }),
-    );
+    const docWrites: RelationshipWrite[] = Array.from({ length: 100_000 }, (_, index) => ({
+      resource: { type: docType, id: `doc_${String(index + 1)}` },
+      relation: docParentRel,
+      subject: { type: wsType, id: `ws_${String(index % 200)}` },
+    }));
     await spice.writeRelationships([...docWrites, ...memberWrites]);
 
-    const runPgFilter = async (
-      subjectId: string,
-      expectedCount: number,
-      mode: "plain" | "scoped" | "resolved",
-    ) => {
+    const runPgFilter = async (subjectId: string, expectedCount: number, mode: "plain" | "scoped" | "resolved") => {
       const q = {
         subject: { type: "user", id: subjectId },
         permission: "view",
         resourceType: docType,
         idColumn: "d.id",
-        ...(mode === "plain"
-          ? {}
-          : { scopeColumns: { [docParentRel]: "d.workspace_id" } }),
+        ...(mode === "plain" ? {} : { scopeColumns: { [docParentRel]: "d.workspace_id" } }),
       };
-      const filter =
-        mode === "resolved"
-          ? await pgAuth.resolveFilter(q)
-          : pgAuth.compileFilter(q);
+      const filter = mode === "resolved" ? await pgAuth.resolveFilter(q) : pgAuth.compileFilter(q);
       const sql = `SELECT d.id FROM bench_documents d WHERE ${filter.sql} ORDER BY d.updated_at DESC LIMIT 50`;
       const page = await pool.query<{ id: string }>(sql, [...filter.values]);
       expect(page.rows).toHaveLength(expectedCount);
     };
 
-    const runSpiceDirectLookup = async (
-      subjectId: string,
-      expectedCount: number,
-      mode: TunedSpiceDbConsistency,
-    ) => {
+    const runSpiceDirectLookup = async (subjectId: string, expectedCount: number, mode: TunedSpiceDbConsistency) => {
       const ids = await spice.lookupResources(
         {
           resourceType: docType,
@@ -262,46 +234,22 @@ it.runIf(isBenchmark)(
         JSON.stringify({
           benchmark: "100k_paginated_list",
           scenario: scenario.name,
-          pgFilter: await sample(() =>
-            runPgFilter(scenario.userId, scenario.expectedPage, "plain"),
-          ),
-          pgFilterScoped: await sample(() =>
-            runPgFilter(scenario.userId, scenario.expectedPage, "scoped"),
-          ),
-          pgResolveFilter: await sample(() =>
-            runPgFilter(scenario.userId, scenario.expectedPage, "resolved"),
-          ),
+          pgFilter: await sample(() => runPgFilter(scenario.userId, scenario.expectedPage, "plain")),
+          pgFilterScoped: await sample(() => runPgFilter(scenario.userId, scenario.expectedPage, "scoped")),
+          pgResolveFilter: await sample(() => runPgFilter(scenario.userId, scenario.expectedPage, "resolved")),
           spiceDirectConsistent: await sample(
-            () =>
-              runSpiceDirectLookup(
-                scenario.userId,
-                scenario.expectedPage,
-                "fully-consistent",
-              ),
+            () => runSpiceDirectLookup(scenario.userId, scenario.expectedPage, "fully-consistent"),
             directTrials,
           ),
           spiceDirectCached: await sample(
-            () =>
-              runSpiceDirectLookup(
-                scenario.userId,
-                scenario.expectedPage,
-                "minimize-latency",
-              ),
+            () => runSpiceDirectLookup(scenario.userId, scenario.expectedPage, "minimize-latency"),
             directTrials,
           ),
           spiceScopedConsistent: await sample(() =>
-            runSpiceScopedBestPractice(
-              scenario.userId,
-              scenario.expectedPage,
-              "fully-consistent",
-            ),
+            runSpiceScopedBestPractice(scenario.userId, scenario.expectedPage, "fully-consistent"),
           ),
           spiceScopedCached: await sample(() =>
-            runSpiceScopedBestPractice(
-              scenario.userId,
-              scenario.expectedPage,
-              "minimize-latency",
-            ),
+            runSpiceScopedBestPractice(scenario.userId, scenario.expectedPage, "minimize-latency"),
           ),
         }),
       );
@@ -329,9 +277,7 @@ it.runIf(isBenchmark)(
     const model = compileAccess([folder]);
     const folderType = folder.wireName;
     const fileType = folder.file.wireName;
-    const fileParentRel = Object.keys(folder.file.roles).find(
-      (role) => role !== "viewer",
-    );
+    const fileParentRel = Object.keys(folder.file.roles).find((role) => role !== "viewer");
     if (!fileParentRel) throw new Error("Missing parent role on file");
     const spice = await startSpice();
     await spice.writeSchema(emitZed(model));
@@ -565,19 +511,13 @@ it.runIf(isBenchmark)(
         expect(result[1]).toBe(false);
       });
       const spiceSingleRpcConsistent = await sample(async () => {
-        const result = await spice.checkManySingleRpc(
-          queries,
-          "fully-consistent",
-        );
+        const result = await spice.checkManySingleRpc(queries, "fully-consistent");
         expect(result).toHaveLength(batchSize);
         expect(result[0]).toBe(true);
         expect(result[1]).toBe(false);
       });
       const spiceSingleRpcCached = await sample(async () => {
-        const result = await spice.checkManySingleRpc(
-          queries,
-          "minimize-latency",
-        );
+        const result = await spice.checkManySingleRpc(queries, "minimize-latency");
         expect(result).toHaveLength(batchSize);
         expect(result[0]).toBe(true);
         expect(result[1]).toBe(false);

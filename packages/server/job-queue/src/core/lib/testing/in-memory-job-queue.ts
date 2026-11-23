@@ -1,9 +1,5 @@
 import { describeJobs, type JobDefinition } from "../job-definition.js";
-import type {
-  JobQueue,
-  JobQueueCounts,
-  JobQueueInspection,
-} from "../job-queue.js";
+import type { JobQueue, JobQueueCounts, JobQueueInspection } from "../job-queue.js";
 import { JobRegistry } from "../job-registry.js";
 
 /** One accepted piece of work, exactly as the caller enqueued it. */
@@ -87,9 +83,7 @@ export class FakeJobQueue implements JobQueue {
       await this.registry.get(job.jobName).run(job.payload);
       this.completed += 1;
     } catch (error) {
-      this.failures.push(
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      this.failures.push(error instanceof Error ? error : new Error(String(error)));
     }
   }
 

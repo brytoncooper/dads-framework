@@ -23,19 +23,12 @@ export type SignedUpload = {
 };
 
 export abstract class ObjectStorage {
-  abstract put(
-    key: string,
-    body: Uint8Array | string,
-    contentType: string,
-  ): Promise<void>;
+  abstract put(key: string, body: Uint8Array | string, contentType: string): Promise<void>;
   abstract get(key: string): Promise<StoredObject | null>;
   /** Time-limited download URL — hand to clients instead of proxying bytes. */
   abstract getSignedUrl(key: string, expiresInSeconds: number): Promise<string>;
   /** Time-limited single PUT, so a client uploads bytes straight to storage. Storage refuses any other bytes. */
-  abstract getSignedUpload(
-    key: string,
-    request: SignedUploadRequest,
-  ): Promise<SignedUpload>;
+  abstract getSignedUpload(key: string, request: SignedUploadRequest): Promise<SignedUpload>;
   abstract delete(key: string): Promise<void>;
   /** Every object key that starts with the prefix, across all pages. */
   abstract list(prefix: string): Promise<string[]>;

@@ -11,7 +11,4 @@ export {
   readAppliedNodePgJournal,
 } from "./lib/node-pg/node-pg-journal.js";
 export { listShippedDatabaseMigrations } from "./lib/node-pg/shipped-migration-files.js";
-export {
-  defaultMigrationWorkspace,
-  type MigrationWorkspace,
-} from "./lib/node-pg/migration-workspace.js";
+export { defaultMigrationWorkspace, type MigrationWorkspace } from "./lib/node-pg/migration-workspace.js";

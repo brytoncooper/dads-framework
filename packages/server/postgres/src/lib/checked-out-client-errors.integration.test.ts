@@ -1,8 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "../testing/start-test-postgres.js";
+import { startTestPostgres, type TestPostgres } from "../testing/start-test-postgres.js";
 import { createPostgresConnection } from "./create-postgres-connection.js";
 
 /**
@@ -33,18 +30,14 @@ describe("checked-out client errors (integration)", () => {
       { error: (value) => logged.push(value) },
     );
     const client = await connection.pool.connect();
-    const backend = await client.query<{ pid: number }>(
-      "select pg_backend_pid() as pid",
-    );
+    const backend = await client.query<{ pid: number }>("select pg_backend_pid() as pid");
     const pid = backend.rows[0]?.pid;
     expect(pid).toBeTypeOf("number");
 
     await postgres.pool.query("select pg_terminate_backend($1)", [pid]);
 
     await vi.waitFor(() => {
-      expect(logged).toContainEqual(
-        expect.objectContaining({ event: "database.checked-out-client-error" }),
-      );
+      expect(logged).toContainEqual(expect.objectContaining({ event: "database.checked-out-client-error" }));
     });
     // The dead client is still the caller's to destroy, and says it is dead.
     await expect(client.query("select 1")).rejects.toThrow();

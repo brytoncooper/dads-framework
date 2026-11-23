@@ -16,15 +16,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  BASELINE_FILE,
-  baselineExemptions,
-} from "../scanners/text-ratchet-baseline.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { BASELINE_FILE, baselineExemptions } from "../scanners/text-ratchet-baseline.js";
 
 const GENERATED_MARKS = ["generated", ".d.ts", ".snap", ".lock"];
 const OUTPUT_DIRECTORIES = new Set([

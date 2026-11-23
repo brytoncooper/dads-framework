@@ -24,16 +24,9 @@
 import type { PostgresConnection } from "@dads-framework/postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 
-import {
-  AUDITED_FIXTURE_TABLES,
-  createAuditedFixtureTables,
-} from "./testing/audited-fixture-tables.js";
+import { AUDITED_FIXTURE_TABLES, createAuditedFixtureTables } from "./testing/audited-fixture-tables.js";
 
 const SYSTEM_ACTOR = JSON.stringify({
   kind: "system",
@@ -41,11 +34,7 @@ const SYSTEM_ACTOR = JSON.stringify({
   requestId: "r1",
 });
 
-const TOUCHED_TABLES = [
-  "audit_log",
-  ...AUDITED_FIXTURE_TABLES,
-  "authorization_outbox",
-];
+const TOUCHED_TABLES = ["audit_log", ...AUDITED_FIXTURE_TABLES, "authorization_outbox"];
 
 type AuditRow = {
   table_name: string;
@@ -79,15 +68,10 @@ afterEach(async () => {
 type AuditFixtureClient = Pick<PostgresConnection["pool"], "query">;
 
 /** Run statements on one client, with the audit actor set on that client. */
-async function attributed<T>(
-  actor: string,
-  run: (client: AuditFixtureClient) => Promise<T>,
-): Promise<T> {
+async function attributed<T>(actor: string, run: (client: AuditFixtureClient) => Promise<T>): Promise<T> {
   const client = await postgres.pool.connect();
   try {
-    await client.query(`SELECT set_config('dads.audit_actor', $1, false)`, [
-      actor,
-    ]);
+    await client.query(`SELECT set_config('dads.audit_actor', $1, false)`, [actor]);
     return await run(client);
   } finally {
     client.release();
@@ -106,10 +90,7 @@ async function auditRowsFor(tableName: string): Promise<AuditRow[]> {
   return result.rows;
 }
 
-async function insertParty(
-  client: AuditFixtureClient,
-  slug: string,
-): Promise<string> {
+async function insertParty(client: AuditFixtureClient, slug: string): Promise<string> {
   const result = await client.query<{ id: string }>(
     `INSERT INTO audit_fixture_parties (name, slug) VALUES ($1, $2) RETURNING id`,
     [`Audited ${slug}`, slug],
@@ -123,9 +104,7 @@ async function insertParty(
 
 describe("the audit_record trigger", () => {
   it("records an insert with its actor, key, and new row", async () => {
-    const id = await attributed(SYSTEM_ACTOR, (client) =>
-      insertParty(client, "audited-insert"),
-    );
+    const id = await attributed(SYSTEM_ACTOR, (client) => insertParty(client, "audited-insert"));
 
     const rows = await auditRowsFor("audit_fixture_parties");
 
@@ -145,10 +124,11 @@ describe("the audit_record trigger", () => {
   it("names exactly the columns an update touched", async () => {
     await attributed(SYSTEM_ACTOR, async (client) => {
       await insertParty(client, "audited-update");
-      await client.query(
-        `UPDATE audit_fixture_parties SET name = $1, locale = $2 WHERE slug = $3`,
-        ["Renamed", "es-MX", "audited-update"],
-      );
+      await client.query(`UPDATE audit_fixture_parties SET name = $1, locale = $2 WHERE slug = $3`, [
+        "Renamed",
+        "es-MX",
+        "audited-update",
+      ]);
     });
 
     const rows = await auditRowsFor("audit_fixture_parties");
@@ -164,9 +144,7 @@ describe("the audit_record trigger", () => {
   it("keeps the whole row a delete removed", async () => {
     await attributed(SYSTEM_ACTOR, async (client) => {
       await insertParty(client, "audited-delete");
-      await client.query(`DELETE FROM audit_fixture_parties WHERE slug = $1`, [
-        "audited-delete",
-      ]);
+      await client.query(`DELETE FROM audit_fixture_parties WHERE slug = $1`, ["audited-delete"]);
     });
 
     const rows = await auditRowsFor("audit_fixture_parties");
@@ -179,9 +157,9 @@ describe("the audit_record trigger", () => {
   });
 
   it("refuses a write without an actor and leaves no audit row", async () => {
-    await expect(
-      attributed("", (client) => insertParty(client, "missing-actor")),
-    ).rejects.toMatchObject({ code: "42501" });
+    await expect(attributed("", (client) => insertParty(client, "missing-actor"))).rejects.toMatchObject({
+      code: "42501",
+    });
     expect(await auditRowsFor("audit_fixture_parties")).toEqual([]);
   });
 
@@ -215,11 +193,7 @@ describe("the audit_record trigger", () => {
            subject_type, subject_id, status, enqueued_at
          ) VALUES ($1, 'WRITE', 'fixtures/party', $2, 'admin',
                    'user', $3, 'PENDING', now())`,
-        [
-          "audit-allowlist-1",
-          "33333333-3333-4333-8333-333333333333",
-          "44444444-4444-4444-8444-444444444444",
-        ],
+        ["audit-allowlist-1", "33333333-3333-4333-8333-333333333333", "44444444-4444-4444-8444-444444444444"],
       ),
     );
 
@@ -229,17 +203,11 @@ describe("the audit_record trigger", () => {
 
 describe("audit_log itself", () => {
   it("refuses updates and deletes of its own rows", async () => {
-    await attributed(SYSTEM_ACTOR, (client) =>
-      insertParty(client, "audited-immutable"),
-    );
+    await attributed(SYSTEM_ACTOR, (client) => insertParty(client, "audited-immutable"));
     expect(await auditRowsFor("audit_fixture_parties")).toHaveLength(1);
 
-    await expect(
-      postgres.pool.query(`UPDATE audit_log SET reason = 'rewritten'`),
-    ).rejects.toThrow(/immutable/u);
-    await expect(postgres.pool.query(`DELETE FROM audit_log`)).rejects.toThrow(
-      /immutable/u,
-    );
+    await expect(postgres.pool.query(`UPDATE audit_log SET reason = 'rewritten'`)).rejects.toThrow(/immutable/u);
+    await expect(postgres.pool.query(`DELETE FROM audit_log`)).rejects.toThrow(/immutable/u);
 
     expect(await auditRowsFor("audit_fixture_parties")).toHaveLength(1);
   });

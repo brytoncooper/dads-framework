@@ -12,22 +12,13 @@ import type { HttpRoute } from "../route/route-group.js";
  * compiled access model explicitly names the resource type in
  * `allowLookupResourcesOn` and does not bind it in `scopeBindings`.
  */
-export function refuseVisibleRecordList(
-  route: HttpRoute,
-  model: AccessModel | undefined,
-): void {
+export function refuseVisibleRecordList(route: HttpRoute, model: AccessModel | undefined): void {
   const access = route.access;
   if (access.kind !== "visibility") return;
   if (model === undefined) {
-    throw new HttpWiringError(
-      `${route.method} ${route.path} uses requiresVisible without an access model`,
-    );
+    throw new HttpWiringError(`${route.method} ${route.path} uses requiresVisible without an access model`);
   }
-  if (
-    !model.definitions.some(
-      ({ entity }) => entity.wireName === access.resourceType,
-    )
-  ) {
+  if (!model.definitions.some(({ entity }) => entity.wireName === access.resourceType)) {
     throw new HttpWiringError(
       `${route.method} ${route.path} uses requiresVisible for ${access.resourceType}, which is missing from the access model`,
     );

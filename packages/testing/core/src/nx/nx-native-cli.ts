@@ -1,9 +1,5 @@
 import { parseArgs } from "node:util";
-import {
-  planNativeNxTesting,
-  runNativeNxTesting,
-  type NativeNxTestingOptions,
-} from "./nx-native-workspace.js";
+import { planNativeNxTesting, runNativeNxTesting, type NativeNxTestingOptions } from "./nx-native-workspace.js";
 
 async function main(): Promise<void> {
   const { operation, request, json } = readInvocation();
@@ -67,8 +63,7 @@ function readOptions(
 function readJobs(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   const jobs = Number(value);
-  if (!Number.isSafeInteger(jobs) || jobs < 1)
-    throw new Error("--jobs must be a positive integer.");
+  if (!Number.isSafeInteger(jobs) || jobs < 1) throw new Error("--jobs must be a positive integer.");
   return jobs;
 }
 
@@ -80,8 +75,6 @@ function readTargets(value: string | undefined): readonly string[] | undefined {
 }
 
 main().catch((error: unknown) => {
-  process.stderr.write(
-    `${error instanceof Error ? error.message : "Nx adapter failed."}\n`,
-  );
+  process.stderr.write(`${error instanceof Error ? error.message : "Nx adapter failed."}\n`);
   process.exitCode = 1;
 });

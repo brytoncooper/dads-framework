@@ -33,10 +33,8 @@ describe("the TypeScript program", () => {
     const root = workspaceWith({
       "tsconfig.json": STRICT_CONFIG,
       "packages/group/name/src/order.ts": "export const order = 1;\n",
-      "packages/group/name/src/order.d.ts":
-        "export declare const order: number;\n",
-      "packages/group/name/src/client.generated.ts":
-        "export const client = 1;\n",
+      "packages/group/name/src/order.d.ts": "export declare const order: number;\n",
+      "packages/group/name/src/client.generated.ts": "export const client = 1;\n",
     });
     try {
       const parsed = createDoctorContext({ root })
@@ -71,12 +69,8 @@ describe("the TypeScript program", () => {
       const context = createDoctorContext({ root });
       expect(() => context.program()).toThrow("no tsconfig.json");
       const outcomes = await runDoctorSignals(context, [explicitAnySignal]);
-      expect(outcomes.map((outcome) => outcome.failure)).toStrictEqual([
-        "no tsconfig.json in this workspace",
-      ]);
-      expect(outcomes.map((outcome) => outcome.readings.size)).toStrictEqual([
-        0,
-      ]);
+      expect(outcomes.map((outcome) => outcome.failure)).toStrictEqual(["no tsconfig.json in this workspace"]);
+      expect(outcomes.map((outcome) => outcome.readings.size)).toStrictEqual([0]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

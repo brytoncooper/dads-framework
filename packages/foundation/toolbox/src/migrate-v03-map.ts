@@ -171,9 +171,7 @@ const SPECIFIER_RULES: readonly SpecifierRule[] = [
  * Dependencies that were required in 0.2.x packages and became optional peers
  * on their consolidated 0.3.0 parent so lightweight adopters do not pull them.
  */
-export const PEERS_FOR_RETIRED_PACKAGE: Readonly<
-  Record<string, Readonly<Record<string, string>>>
-> = {
+export const PEERS_FOR_RETIRED_PACKAGE: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   "@dads-framework/identity-better-auth": {
     "@better-auth/core": "1.7.26",
     "@better-auth/sso": "1.7.26",

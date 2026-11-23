@@ -24,13 +24,9 @@ export function renderFilterMenuOptionsInput<TData>({
   const inputListboxId = `${inputId}-listbox`;
 
   const options = column.columnDef.meta?.options ?? [];
-  const selectedValues = Array.isArray(filter.value)
-    ? filter.value
-    : [filter.value];
+  const selectedValues = Array.isArray(filter.value) ? filter.value : [filter.value];
 
-  const selectedOptions = options.filter((option) =>
-    selectedValues.includes(option.value),
-  );
+  const selectedOptions = options.filter((option) => selectedValues.includes(option.value));
 
   return (
     <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -52,10 +48,7 @@ export function renderFilterMenuOptionsInput<TData>({
               <div className="flex items-center -space-x-2 rtl:space-x-reverse">
                 {selectedOptions.map((selectedOption) =>
                   selectedOption.icon ? (
-                    <div
-                      key={selectedOption.value}
-                      className="rounded-full border bg-background p-0.5"
-                    >
+                    <div key={selectedOption.value} className="rounded-full border bg-background p-0.5">
                       <selectedOption.icon className="size-3.5" />
                     </div>
                   ) : null,

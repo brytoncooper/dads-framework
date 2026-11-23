@@ -1,13 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import {
-  describeException,
-  type DiagnosticsReporter,
-} from "@dads-framework/core/runtime/diagnostics";
-import {
-  type HttpErrorResponse,
-  mapErrorToHttpResponse,
-} from "@dads-framework/core/errors/map-error-to-http-response";
+import { describeException, type DiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics";
+import { type HttpErrorResponse, mapErrorToHttpResponse } from "@dads-framework/core/errors/map-error-to-http-response";
 
 import {
   HandlerTimeoutError,
@@ -16,10 +10,7 @@ import {
   ResponseDriftError,
   ServiceUnavailableError,
 } from "../http-errors.js";
-import {
-  rememberErrorCode,
-  rememberException,
-} from "../request-log/request-outcome.js";
+import { rememberErrorCode, rememberException } from "../request-log/request-outcome.js";
 import { requestIdOf } from "./request-id.js";
 
 /**
@@ -40,9 +31,7 @@ const TRANSPORT_CODES: Record<number, string> = {
 };
 
 /** Fastify decorates its own errors with a 4xx/5xx statusCode. */
-function isTransportError(
-  error: unknown,
-): error is { statusCode: number; message: string } {
+function isTransportError(error: unknown): error is { statusCode: number; message: string } {
   return (
     typeof error === "object" &&
     error !== null &&
@@ -53,10 +42,7 @@ function isTransportError(
   );
 }
 
-function mapHttpException(
-  error: unknown,
-  requestId: string,
-): HttpErrorResponse | null {
+function mapHttpException(error: unknown, requestId: string): HttpErrorResponse | null {
   if (error instanceof RequestValidationError) {
     return {
       status: 400,
@@ -119,62 +105,51 @@ export type ErrorHandlingOptions = {
   readonly instanceId?: string;
 };
 
-export function installErrorHandling(
-  app: FastifyInstance,
-  options: ErrorHandlingOptions = {},
-): void {
-  app.setErrorHandler(
-    (error: unknown, request: FastifyRequest, reply: FastifyReply) => {
-      const requestId = requestIdOf(request);
-      const httpMapped = mapHttpException(error, requestId);
-      const mapped =
-        httpMapped ??
-        (isTransportError(error) && error.statusCode < 500
-          ? {
-              status: error.statusCode,
-              body: {
-                error: {
-                  code: TRANSPORT_CODES[error.statusCode] ?? "HTTP_ERROR",
-                  message: error.message,
-                },
+export function installErrorHandling(app: FastifyInstance, options: ErrorHandlingOptions = {}): void {
+  app.setErrorHandler((error: unknown, request: FastifyRequest, reply: FastifyReply) => {
+    const requestId = requestIdOf(request);
+    const httpMapped = mapHttpException(error, requestId);
+    const mapped =
+      httpMapped ??
+      (isTransportError(error) && error.statusCode < 500
+        ? {
+            status: error.statusCode,
+            body: {
+              error: {
+                code: TRANSPORT_CODES[error.statusCode] ?? "HTTP_ERROR",
+                message: error.message,
               },
-              unexpected: false,
-            }
-          : mapErrorToHttpResponse(error, requestId));
-      if (mapped.unexpected) {
-        request.log.error(
-          {
-            event: "unhandled.exception",
-            requestId,
-            err: error,
-          },
-          "request failed unexpectedly",
-        );
-        // Beside the line, not instead of it: the line carries the full `err`
-        // serialization a human reads, and this carries the type and
-        // fingerprint a query groups by.
-        rememberException(request, describeException(error));
-        options.diagnostics?.captureException({
-          error,
-          source: "request",
+            },
+            unexpected: false,
+          }
+        : mapErrorToHttpResponse(error, requestId));
+    if (mapped.unexpected) {
+      request.log.error(
+        {
+          event: "unhandled.exception",
           requestId,
-          ...(request.routeOptions.url === undefined
-            ? {}
-            : { routeId: request.routeOptions.url }),
-          ...(options.release === undefined
-            ? {}
-            : { release: options.release }),
-          ...(options.instanceId === undefined
-            ? {}
-            : { instanceId: options.instanceId }),
-        });
-      }
-      // The envelope is the only place the code exists; the request row wants
-      // it, and by `onResponse` the body is already on the wire.
-      rememberErrorCode(request, mapped.body.error.code);
-      void reply.status(mapped.status).send(mapped.body);
-    },
-  );
+          err: error,
+        },
+        "request failed unexpectedly",
+      );
+      // Beside the line, not instead of it: the line carries the full `err`
+      // serialization a human reads, and this carries the type and
+      // fingerprint a query groups by.
+      rememberException(request, describeException(error));
+      options.diagnostics?.captureException({
+        error,
+        source: "request",
+        requestId,
+        ...(request.routeOptions.url === undefined ? {} : { routeId: request.routeOptions.url }),
+        ...(options.release === undefined ? {} : { release: options.release }),
+        ...(options.instanceId === undefined ? {} : { instanceId: options.instanceId }),
+      });
+    }
+    // The envelope is the only place the code exists; the request row wants
+    // it, and by `onResponse` the body is already on the wire.
+    rememberErrorCode(request, mapped.body.error.code);
+    void reply.status(mapped.status).send(mapped.body);
+  });
 
   app.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply) => {
     rememberErrorCode(request, "NOT_FOUND");

@@ -28,8 +28,7 @@ const standaloneExecutor = "nx:run-commands";
 /** Vite and Vitest reach for Nx path resolution; Dads cannot supply it. */
 const nxPathSemanticsReason: TargetExclusion = {
   classification: "native-adapter-needed",
-  reason:
-    "Vite/Vitest config imports nxViteTsPaths and requires Nx path semantics",
+  reason: "Vite/Vitest config imports nxViteTsPaths and requires Nx path semantics",
 };
 
 /** Everything a converted task needs, once nothing is left to resolve. */
@@ -52,10 +51,7 @@ export async function convertTarget(input: {
     target: target.name,
     field,
   }));
-  const base: Omit<
-    ImportedTaskAudit,
-    "classification" | "reason" | "executor"
-  > = {
+  const base: Omit<ImportedTaskAudit, "classification" | "reason" | "executor"> = {
     project: project.name,
     target: target.name,
     sourceLocation: input.sourceLocation,
@@ -91,23 +87,18 @@ export async function convertTarget(input: {
 // --- Why a target cannot become a task -----------------------------------
 
 /** The first reason this target is not importable, if there is one. */
-function unsupportedTargetReason(
-  target: NxTarget,
-): TargetExclusion | undefined {
+function unsupportedTargetReason(target: NxTarget): TargetExclusion | undefined {
   if (target.continuous)
     return {
       classification: "excluded",
-      reason:
-        "continuous targets cannot be represented as finite standalone tasks",
+      reason: "continuous targets cannot be represented as finite standalone tasks",
     };
   if (target.inferred)
     return {
       classification: "native-adapter-needed",
-      reason:
-        "Nx inferred target needs a native adapter rather than an imported recipe",
+      reason: "Nx inferred target needs a native adapter rather than an imported recipe",
     };
-  if (target.executor !== standaloneExecutor)
-    return foreignExecutorReason(target.executor);
+  if (target.executor !== standaloneExecutor) return foreignExecutorReason(target.executor);
   if (target.unresolvedExecutionFields.length > 0)
     return {
       classification: "opaque",
@@ -124,9 +115,7 @@ function foreignExecutorReason(executor: string | undefined): TargetExclusion {
       reason: "target has no resolved executor",
     };
   return {
-    classification: executor.startsWith("@nx/")
-      ? "native-adapter-needed"
-      : "opaque",
+    classification: executor.startsWith("@nx/") ? "native-adapter-needed" : "opaque",
     reason: `executor ${executor} is not a standalone recipe`,
   };
 }
@@ -152,12 +141,8 @@ function excluded(
 // --- Materializing the recipe --------------------------------------------
 
 /** The argv, working directory, and substitutions a task would run with. */
-function resolveStandaloneRecipe(
-  target: NxTarget,
-  projectRoot: string,
-): StandaloneRecipe | Error {
-  if (target.command === undefined)
-    return new Error("nx:run-commands target has no single resolved command");
+function resolveStandaloneRecipe(target: NxTarget, projectRoot: string): StandaloneRecipe | Error {
+  if (target.command === undefined) return new Error("nx:run-commands target has no single resolved command");
   const command = resolveTemplate(target.command, projectRoot);
   if (command instanceof Error) return command;
   const cwd = resolveCwd(target.cwd, projectRoot);
@@ -172,11 +157,7 @@ function resolveStandaloneRecipe(
 }
 
 /** The Dads task a resolved recipe becomes. */
-function convertedTask(
-  project: NxProject,
-  target: NxTarget,
-  recipe: StandaloneRecipe,
-): DadsTestingTask {
+function convertedTask(project: NxProject, target: NxTarget, recipe: StandaloneRecipe): DadsTestingTask {
   return {
     id: `${project.id}:${target.id}`,
     project: project.id,
@@ -194,8 +175,7 @@ function convertedTask(
 /** What a target's name says the task is for; `nx-native-model.ts` has `nativeTaskKind` for an anchored reading. */
 function taskKind(target: string): DadsTestingTask["kind"] {
   const normalized = target.toLowerCase();
-  if (normalized.includes("typecheck") || normalized.includes("type-check"))
-    return "typecheck";
+  if (normalized.includes("typecheck") || normalized.includes("type-check")) return "typecheck";
   if (normalized.includes("lint")) return "lint";
   if (normalized.includes("build")) return "build";
   if (normalized.includes("test") || normalized.includes("spec")) return "test";
@@ -229,8 +209,7 @@ function resolveTemplate(
     substitutions.push({ placeholder: entry.placeholder, value: replacement });
     resolved = resolved.split(entry.placeholder).join(replacement);
   }
-  if (/[{][^}]+[}]/.test(resolved))
-    return new Error("command contains unresolved Nx placeholders");
+  if (/[{][^}]+[}]/.test(resolved)) return new Error("command contains unresolved Nx placeholders");
   return { value: resolved, substitutions };
 }
 
@@ -247,13 +226,9 @@ function resolveCwd(
   const source = value ?? "{workspaceRoot}";
   const resolved = resolveTemplate(source, projectRoot);
   if (resolved instanceof Error) return resolved;
-  if (path.isAbsolute(resolved.value))
-    return new Error(
-      "cwd must be workspace-relative after placeholder resolution",
-    );
+  if (path.isAbsolute(resolved.value)) return new Error("cwd must be workspace-relative after placeholder resolution");
   const normalized = normalizeRoot(resolved.value);
-  if (normalized === ".." || normalized.startsWith("../"))
-    return new Error("cwd escapes the source workspace");
+  if (normalized === ".." || normalized.startsWith("../")) return new Error("cwd escapes the source workspace");
   return { value: normalized, substitutions: resolved.substitutions };
 }
 
@@ -274,16 +249,11 @@ type ArgvScan = {
 /** Splits a resolved command into argv, or refuses it with the reason. */
 function parseStandaloneArgv(command: string): readonly string[] | Error {
   if (shellControlSyntax.test(command))
-    return new Error(
-      "command uses shell control syntax and cannot become standalone argv",
-    );
+    return new Error("command uses shell control syntax and cannot become standalone argv");
   const argv = splitArgv(command);
   if (argv instanceof Error) return argv;
   if (argv.length === 0) return new Error("command is empty");
-  if (argv.some(invokesNx))
-    return new Error(
-      "command invokes Nx and would retain a hidden Nx runtime dependency",
-    );
+  if (argv.some(invokesNx)) return new Error("command invokes Nx and would retain a hidden Nx runtime dependency");
   return argv;
 }
 
@@ -295,21 +265,16 @@ function splitArgv(command: string): readonly string[] | Error {
     if (next instanceof Error) return next;
     scan = next;
   }
-  if (scan.quote !== undefined)
-    return new Error("command contains an unclosed quote");
+  if (scan.quote !== undefined) return new Error("command contains an unclosed quote");
   return endArgument(scan).argv;
 }
 
 /** The scan after one more character, or a refusal that ends it. */
 function scanCharacter(scan: ArgvScan, character: string): ArgvScan | Error {
   if (scan.quote !== undefined) return scanQuoted(scan, character);
-  if (character === "'" || character === '"')
-    return { ...scan, quote: character };
+  if (character === "'" || character === '"') return { ...scan, quote: character };
   if (argumentBoundary.test(character)) return endArgument(scan);
-  if (character === "\\")
-    return new Error(
-      "command uses shell escapes and cannot become standalone argv",
-    );
+  if (character === "\\") return new Error("command uses shell escapes and cannot become standalone argv");
   return { ...scan, current: scan.current + character };
 }
 
@@ -343,21 +308,13 @@ function invokesNx(argument: string): boolean {
  * treated as risky, because being wrong here means shipping a task that fails
  * only outside Nx.
  */
-async function hasNxViteTsPaths(
-  workspaceRoot: string,
-  argv: readonly string[],
-  cwd: string,
-): Promise<boolean> {
-  if (!argv.some((argument) => /(^|\/)(vite|vitest)$/.test(argument)))
-    return false;
+async function hasNxViteTsPaths(workspaceRoot: string, argv: readonly string[], cwd: string): Promise<boolean> {
+  if (!argv.some((argument) => /(^|\/)(vite|vitest)$/.test(argument))) return false;
   const configured = configuredVitePath(argv);
   if (!configured) return false;
   if (path.isAbsolute(configured) || configured.includes("..")) return true;
   try {
-    const config = await fs.readFile(
-      path.join(workspaceRoot, cwd, configured),
-      "utf8",
-    );
+    const config = await fs.readFile(path.join(workspaceRoot, cwd, configured), "utf8");
     return /nxViteTsPaths/.test(config);
   } catch {
     return true;
@@ -366,9 +323,7 @@ async function hasNxViteTsPaths(
 
 /** The `--config` value a Vite or Vitest command names, in either spelling. */
 function configuredVitePath(argv: readonly string[]): string | undefined {
-  const inlineConfig = argv.find((argument) =>
-    argument.startsWith("--config="),
-  );
+  const inlineConfig = argv.find((argument) => argument.startsWith("--config="));
   if (inlineConfig) return inlineConfig.slice("--config=".length);
   const configIndex = argv.findIndex((argument) => argument === "--config");
   return configIndex >= 0 ? argv[configIndex + 1] : undefined;

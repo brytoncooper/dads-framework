@@ -14,20 +14,13 @@ const SCALE_TOLERANCE = 0.001;
  * (for example the result of Fit Width) it lands on the nearest preset on the
  * requested side, and it stops at the smallest and largest preset.
  */
-export function nextZoomScale(
-  currentScale: number,
-  direction: ZoomDirection,
-): number {
+export function nextZoomScale(currentScale: number, direction: ZoomDirection): number {
   if (direction === "in") {
-    const larger = ZOOM_STEPS.find(
-      (step) => step > currentScale + SCALE_TOLERANCE,
-    );
+    const larger = ZOOM_STEPS.find((step) => step > currentScale + SCALE_TOLERANCE);
     return larger ?? LAST_ZOOM_STEP;
   }
 
-  const smaller = [...ZOOM_STEPS]
-    .reverse()
-    .find((step) => step < currentScale - SCALE_TOLERANCE);
+  const smaller = [...ZOOM_STEPS].reverse().find((step) => step < currentScale - SCALE_TOLERANCE);
   return smaller ?? FIRST_ZOOM_STEP;
 }
 

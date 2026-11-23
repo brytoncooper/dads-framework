@@ -1,9 +1,6 @@
 import type { RoleToken } from "@dads-framework/access";
 import type { SqliteExecutor } from "../sqlite-executor.js";
-import type {
-  CompiledSqliteColumnRelation,
-  SqliteAuthorizationModel,
-} from "./policy-model.js";
+import type { CompiledSqliteColumnRelation, SqliteAuthorizationModel } from "./policy-model.js";
 
 const SQL_COLUMN_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const SQL_TABLE_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -30,15 +27,9 @@ export type SqliteColumnRelationCheckResult = {
   readonly recommendedIndexSql: string;
 };
 
-function assertSafeIdentifier(
-  value: string,
-  pattern: RegExp,
-  label: string,
-): void {
+function assertSafeIdentifier(value: string, pattern: RegExp, label: string): void {
   if (!pattern.test(value)) {
-    throw new Error(
-      `Invalid SQLite columnRelation ${label} "${value}": must be an unquoted SQL identifier`,
-    );
+    throw new Error(`Invalid SQLite columnRelation ${label} "${value}": must be an unquoted SQL identifier`);
   }
 }
 
@@ -65,31 +56,19 @@ function compileSingleBinding(
   const relation = binding.role.roleName;
   const key = `${entity}\u0000${relation}`;
   if (seen.has(key)) {
-    throw new Error(
-      `Duplicate SQLite columnRelation binding for ${entity}#${relation}`,
-    );
+    throw new Error(`Duplicate SQLite columnRelation binding for ${entity}#${relation}`);
   }
   seen.add(key);
 
   assertSafeIdentifier(binding.table, SQL_TABLE_IDENT, "table");
   assertSafeIdentifier(binding.idColumn, SQL_COLUMN_IDENT, "idColumn");
-  assertSafeIdentifier(
-    binding.targetIdColumn,
-    SQL_COLUMN_IDENT,
-    "targetIdColumn",
-  );
+  assertSafeIdentifier(binding.targetIdColumn, SQL_COLUMN_IDENT, "targetIdColumn");
 
-  const relDef = model.relations.find(
-    (candidate) =>
-      candidate.entity === entity && candidate.wireName === relation,
-  );
+  const relDef = model.relations.find((candidate) => candidate.entity === entity && candidate.wireName === relation);
   if (relDef === undefined) {
-    throw new Error(
-      `SQLite column relation ${entity}#${relation} does not exist in the compiled access model`,
-    );
+    throw new Error(`SQLite column relation ${entity}#${relation} does not exist in the compiled access model`);
   }
-  const onlyTarget =
-    relDef.targets.length === 1 ? relDef.targets[0] : undefined;
+  const onlyTarget = relDef.targets.length === 1 ? relDef.targets[0] : undefined;
   if (onlyTarget === undefined || onlyTarget.kind !== "entity") {
     throw new Error(
       `SQLite column relation ${entity}#${relation} must declare exactly one direct entity target (no polymorphic, wildcard, or userset targets)`,
@@ -111,23 +90,15 @@ export function findSqliteColumnRelation(
   entity: string,
   relation: string,
 ): CompiledSqliteColumnRelation | undefined {
-  return model.columnRelations?.find(
-    (entry) => entry.entity === entity && entry.relation === relation,
-  );
+  return model.columnRelations?.find((entry) => entry.entity === entity && entry.relation === relation);
 }
 
 /** Generate recommended `(targetIdColumn, idColumn)` reverse-lookup index DDL for SQLite column-backed relations. */
-export function sqliteColumnRelationIndexSql(
-  bindings: readonly SqliteColumnRelationBinding[],
-): readonly string[] {
+export function sqliteColumnRelationIndexSql(bindings: readonly SqliteColumnRelationBinding[]): readonly string[] {
   return bindings.map((binding) => {
     assertSafeIdentifier(binding.table, SQL_TABLE_IDENT, "table");
     assertSafeIdentifier(binding.idColumn, SQL_COLUMN_IDENT, "idColumn");
-    assertSafeIdentifier(
-      binding.targetIdColumn,
-      SQL_COLUMN_IDENT,
-      "targetIdColumn",
-    );
+    assertSafeIdentifier(binding.targetIdColumn, SQL_COLUMN_IDENT, "targetIdColumn");
     const indexName = `idx_dad_${binding.table}_${binding.targetIdColumn}_${binding.idColumn}`;
     return `CREATE INDEX IF NOT EXISTS ${indexName} ON ${binding.table} (${binding.targetIdColumn}, ${binding.idColumn});`;
   });
@@ -139,9 +110,7 @@ export function deriveAutoSqliteScopeColumns(
   resourceType: string,
   idColumn: string,
 ): Readonly<Record<string, string>> | undefined {
-  const bindings = model.columnRelations?.filter(
-    (entry) => entry.entity === resourceType,
-  );
+  const bindings = model.columnRelations?.filter((entry) => entry.entity === resourceType);
   if (bindings === undefined || bindings.length === 0) return undefined;
   const dotIndex = idColumn.indexOf(".");
   const prefix = dotIndex === -1 ? "" : `${idColumn.slice(0, dotIndex)}.`;
@@ -173,10 +142,7 @@ async function verifyOneSqliteColumnRelation(
   binding: CompiledSqliteColumnRelation,
   executor: SqliteExecutor,
 ): Promise<SqliteColumnRelationCheckResult> {
-  const tableRows = await executor.all(
-    `PRAGMA table_info(${binding.table})`,
-    [],
-  );
+  const tableRows = await executor.all(`PRAGMA table_info(${binding.table})`, []);
   const columns = new Set(tableRows.map((row) => readText(row, "name")));
   for (const required of [binding.idColumn, binding.targetIdColumn]) {
     if (!columns.has(required)) {
@@ -208,10 +174,7 @@ async function hasLeadingTargetIndex(
     if (!SQL_COLUMN_IDENT.test(indexName)) continue;
     const infoRows = await executor.all(`PRAGMA index_info(${indexName})`, []);
     const firstCol = infoRows.find((row) => Number(row["seqno"]) === 0);
-    if (
-      firstCol !== undefined &&
-      readText(firstCol, "name") === binding.targetIdColumn
-    ) {
+    if (firstCol !== undefined && readText(firstCol, "name") === binding.targetIdColumn) {
       return true;
     }
   }

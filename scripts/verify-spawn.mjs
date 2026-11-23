@@ -16,8 +16,7 @@ export function spawnStep(step, cwd) {
   return new Promise((resolve) => {
     const child = spawn(step.command, step.args, { cwd, env: process.env });
     const chunks = [];
-    const stream =
-      step.id === "test" && process.env.DADS_VERIFY_TEST_PROGRESS === "1";
+    const stream = step.id === "test" && process.env.DADS_VERIFY_TEST_PROGRESS === "1";
     child.stdout.on("data", (chunk) => {
       chunks.push(chunk);
       if (stream) process.stdout.write(chunk);
@@ -26,9 +25,7 @@ export function spawnStep(step, cwd) {
       chunks.push(chunk);
       if (stream) process.stderr.write(chunk);
     });
-    child.on("error", (error) =>
-      resolve({ exitCode: 1, output: `${step.command}: ${error.message}\n` }),
-    );
+    child.on("error", (error) => resolve({ exitCode: 1, output: `${step.command}: ${error.message}\n` }));
     child.on("close", (code, signal) => resolve(closed(chunks, code, signal)));
   });
 }

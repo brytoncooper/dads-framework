@@ -1,21 +1,10 @@
 import type { ApiPage } from "@dads-framework/client";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@dads-framework/ui/display";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@dads-framework/ui/display";
 import { Badge, Button, Card, CardContent } from "@dads-framework/ui/elements";
 import { Input, Label } from "@dads-framework/ui/forms";
 import { FileSpreadsheet, FileText, Search, X } from "@dads-framework/ui/icons";
 import { useState } from "react";
-import {
-  exportNote,
-  type Note,
-  type NoteExportFormat,
-} from "../../domains/notes/web-client/index.js";
+import { exportNote, type Note, type NoteExportFormat } from "../../domains/notes/web-client/index.js";
 import { useAction } from "./actions.js";
 import { useWorkbenchCopy } from "./copy/workbench-copy.js";
 import { NoteAttachments } from "./note-attachments.js";
@@ -27,24 +16,13 @@ type NoteListProps = {
   readonly onChangePage: (page: number) => void;
 };
 
-export function NoteList({
-  notes,
-  page,
-  exportEnabled,
-  onChangePage,
-}: NoteListProps) {
+export function NoteList({ notes, page, exportEnabled, onChangePage }: NoteListProps) {
   const t = useWorkbenchCopy();
   const [query, setQuery] = useState("");
   const normalized = query.trim().toLocaleLowerCase();
-  const filtered = normalized
-    ? notes.items.filter((note) => matchesNote(note, normalized))
-    : notes.items;
-  const totalPages = Math.max(
-    1,
-    Math.ceil(notes.meta.total / notes.meta.perPage),
-  );
-  const showPagination =
-    notes.meta.page > 1 || notes.meta.total > notes.meta.perPage;
+  const filtered = normalized ? notes.items.filter((note) => matchesNote(note, normalized)) : notes.items;
+  const totalPages = Math.max(1, Math.ceil(notes.meta.total / notes.meta.perPage));
+  const showPagination = notes.meta.page > 1 || notes.meta.total > notes.meta.perPage;
 
   return (
     <div className="notes-list">
@@ -65,9 +43,7 @@ export function NoteList({
                   <FileText aria-hidden="true" />
                 </EmptyMedia>
                 <EmptyTitle>{t("workbench.notes.emptyTitle")}</EmptyTitle>
-                <EmptyDescription>
-                  {t("workbench.notes.emptyDescription")}
-                </EmptyDescription>
+                <EmptyDescription>{t("workbench.notes.emptyDescription")}</EmptyDescription>
               </EmptyHeader>
             </Empty>
           </CardContent>
@@ -82,9 +58,7 @@ export function NoteList({
                   <Search aria-hidden="true" />
                 </EmptyMedia>
                 <EmptyTitle>{t("workbench.notes.noMatchTitle")}</EmptyTitle>
-                <EmptyDescription>
-                  {t("workbench.notes.noMatchDescription")}
-                </EmptyDescription>
+                <EmptyDescription>{t("workbench.notes.noMatchDescription")}</EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
                 <Button
@@ -126,10 +100,7 @@ export function NoteList({
           <Button
             variant="outline"
             size="sm"
-            disabled={
-              page !== notes.meta.page ||
-              page * notes.meta.perPage >= notes.meta.total
-            }
+            disabled={page !== notes.meta.page || page * notes.meta.perPage >= notes.meta.total}
             onClick={() => {
               onChangePage(page + 1);
             }}
@@ -149,12 +120,7 @@ type NoteSearchBarProps = {
   readonly onQueryChange: (value: string) => void;
 };
 
-function NoteSearchBar({
-  query,
-  shownCount,
-  pageCount,
-  onQueryChange,
-}: NoteSearchBarProps) {
+function NoteSearchBar({ query, shownCount, pageCount, onQueryChange }: NoteSearchBarProps) {
   const t = useWorkbenchCopy();
   return (
     <div className="notes-toolbar">
@@ -187,22 +153,14 @@ function NoteSearchBar({
           </Button>
         )}
       </div>
-      <Badge variant="outline">
-        {t("workbench.notes.count", { shown: shownCount, total: pageCount })}
-      </Badge>
+      <Badge variant="outline">{t("workbench.notes.count", { shown: shownCount, total: pageCount })}</Badge>
     </div>
   );
 }
 
 const exportFormats: readonly NoteExportFormat[] = ["csv", "pdf"];
 
-function NoteRow({
-  note,
-  exportEnabled,
-}: {
-  readonly note: Note;
-  readonly exportEnabled: boolean;
-}) {
+function NoteRow({ note, exportEnabled }: { readonly note: Note; readonly exportEnabled: boolean }) {
   const t = useWorkbenchCopy();
   const action = useAction();
   const stats = summarizeNote(note.text);
@@ -219,9 +177,7 @@ function NoteRow({
     <article className="note">
       <div className="note-header">
         <div className="note-meta">
-          <code className="note-id-chip">
-            {t("workbench.notes.noteId", { shortId })}
-          </code>
+          <code className="note-id-chip">{t("workbench.notes.noteId", { shortId })}</code>
           <span className="note-stats">
             {t("workbench.notes.summary", {
               words: stats.words,
@@ -244,18 +200,12 @@ function NoteRow({
                 ) : (
                   <FileText className="size-3.5" aria-hidden="true" />
                 )}
-                {t(
-                  format === "csv"
-                    ? "workbench.notes.export.csv"
-                    : "workbench.notes.export.pdf",
-                )}
+                {t(format === "csv" ? "workbench.notes.export.csv" : "workbench.notes.export.pdf")}
               </Button>
             ))}
           </div>
         ) : (
-          <span className="note-export-hint">
-            {t("workbench.notes.export.locked")}
-          </span>
+          <span className="note-export-hint">{t("workbench.notes.export.locked")}</span>
         )}
       </div>
       <p className="note-body">{note.text}</p>
@@ -270,10 +220,7 @@ function NoteRow({
 }
 
 function matchesNote(note: Note, query: string): boolean {
-  return (
-    note.text.toLocaleLowerCase().includes(query) ||
-    note.id.toLocaleLowerCase().includes(query)
-  );
+  return note.text.toLocaleLowerCase().includes(query) || note.id.toLocaleLowerCase().includes(query);
 }
 
 function summarizeNote(text: string): {
@@ -285,13 +232,8 @@ function summarizeNote(text: string): {
   return { words, chars: text.length };
 }
 
-function downloadNote(
-  file: { readonly base64: string; readonly contentType: string },
-  format: NoteExportFormat,
-) {
-  const bytes = Uint8Array.from(atob(file.base64), (character) =>
-    character.charCodeAt(0),
-  );
+function downloadNote(file: { readonly base64: string; readonly contentType: string }, format: NoteExportFormat) {
+  const bytes = Uint8Array.from(atob(file.base64), (character) => character.charCodeAt(0));
   const content = new Blob([bytes], { type: file.contentType });
   const url = URL.createObjectURL(content);
   const link = document.createElement("a");

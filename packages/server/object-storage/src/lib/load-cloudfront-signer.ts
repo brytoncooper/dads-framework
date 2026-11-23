@@ -21,10 +21,5 @@ export function loadCloudFrontSigner(): CloudFrontSigner {
 }
 
 function isCloudFrontSigner(sdk: unknown): sdk is CloudFrontSigner {
-  return (
-    typeof sdk === "object" &&
-    sdk !== null &&
-    "getSignedUrl" in sdk &&
-    typeof sdk.getSignedUrl === "function"
-  );
+  return typeof sdk === "object" && sdk !== null && "getSignedUrl" in sdk && typeof sdk.getSignedUrl === "function";
 }

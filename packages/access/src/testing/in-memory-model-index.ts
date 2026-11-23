@@ -1,11 +1,6 @@
 import type { AccessModel } from "../core/access-model.js";
 import { emitAccessIr } from "../core/emit-ir.js";
-import type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrTerm,
-} from "../core/ir.js";
+import type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrTerm } from "../core/ir.js";
 
 /** Normalized tuple stored inside `InMemoryAuthorization`. */
 export type StoredAccessTuple = {
@@ -22,24 +17,15 @@ export type StoredAccessTuple = {
 /** Pre-indexed lookup tables compiled once from an `AccessModel`. */
 export type IndexedAccessModel = {
   readonly definitions: ReadonlyMap<string, AccessIrDefinition>;
-  readonly rolesByEntity: ReadonlyMap<
-    string,
-    ReadonlyMap<string, AccessIrRole>
-  >;
-  readonly permissionsByEntity: ReadonlyMap<
-    string,
-    ReadonlyMap<string, AccessIrPermission>
-  >;
+  readonly rolesByEntity: ReadonlyMap<string, ReadonlyMap<string, AccessIrRole>>;
+  readonly permissionsByEntity: ReadonlyMap<string, ReadonlyMap<string, AccessIrPermission>>;
 };
 
 /** Build fast O(1) lookup maps over the lowered IR of an `AccessModel`. */
 export function indexAccessModel(model: AccessModel): IndexedAccessModel {
   const definitions = new Map<string, AccessIrDefinition>();
   const rolesByEntity = new Map<string, ReadonlyMap<string, AccessIrRole>>();
-  const permissionsByEntity = new Map<
-    string,
-    ReadonlyMap<string, AccessIrPermission>
-  >();
+  const permissionsByEntity = new Map<string, ReadonlyMap<string, AccessIrPermission>>();
 
   for (const definition of emitAccessIr(model)) {
     definitions.set(definition.wireName, definition);
@@ -100,9 +86,7 @@ export function describeIrTerm(term: AccessIrTerm): string {
 }
 
 /** Format a human-readable shorthand for a top-level permission expression. */
-export function describePermissionTerms(
-  terms: readonly AccessIrTerm[],
-): string {
+export function describePermissionTerms(terms: readonly AccessIrTerm[]): string {
   if (terms.length === 0) return "never";
   if (terms.length === 1) {
     const onlyTerm = terms[0];

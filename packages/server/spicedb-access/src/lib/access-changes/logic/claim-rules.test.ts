@@ -1,26 +1,17 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_LEASE_MS,
-  leaseCutoff,
-  outcomeAfterFailure,
-  summarizeError,
-} from "./claim-rules.js";
+import { DEFAULT_LEASE_MS, leaseCutoff, outcomeAfterFailure, summarizeError } from "./claim-rules.js";
 
 const NOW = new Date("2026-08-03T12:00:00.000Z");
 
 describe("leaseCutoff", () => {
   it("is one lease behind now", () => {
-    expect(leaseCutoff(NOW, 60_000)).toEqual(
-      new Date("2026-08-03T11:59:00.000Z"),
-    );
+    expect(leaseCutoff(NOW, 60_000)).toEqual(new Date("2026-08-03T11:59:00.000Z"));
   });
 
   it("defaults to the documented lease rather than to zero", () => {
     // A zero default would make every in-flight claim instantly stealable,
     // so two workers would project the same fact on every run.
-    expect(leaseCutoff(NOW)).toEqual(
-      new Date(NOW.getTime() - DEFAULT_LEASE_MS),
-    );
+    expect(leaseCutoff(NOW)).toEqual(new Date(NOW.getTime() - DEFAULT_LEASE_MS));
   });
 });
 
@@ -60,9 +51,7 @@ describe("outcomeAfterFailure", () => {
 
 describe("summarizeError", () => {
   it("keeps a short message as-is", () => {
-    expect(summarizeError(new Error("permission denied"))).toBe(
-      "permission denied",
-    );
+    expect(summarizeError(new Error("permission denied"))).toBe("permission denied");
   });
 
   it("survives a thrown non-Error", () => {

@@ -1,9 +1,5 @@
 /// <reference types="vite/client" />
-import {
-  getDocument,
-  GlobalWorkerOptions,
-  type PDFDocumentLoadingTask,
-} from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument, GlobalWorkerOptions, type PDFDocumentLoadingTask } from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;

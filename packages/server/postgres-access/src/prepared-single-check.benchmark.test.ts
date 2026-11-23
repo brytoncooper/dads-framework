@@ -39,11 +39,7 @@ it("measures warm single checks with ordinary and named Postgres statements", as
   }
 }, 240_000);
 
-async function seed(
-  depth: number,
-  pool: PostgresAccessExecutor,
-  executor: PostgresAccessExecutor,
-) {
+async function seed(depth: number, pool: PostgresAccessExecutor, executor: PostgresAccessExecutor) {
   const { model, facts, check } = makeChain(depth, depth === 0 ? 1 : 5_000);
   const namespace = `bench_${String(depth)}`;
   const baseline = new PostgresAuthorization({
@@ -64,13 +60,7 @@ async function seed(
 
 type World = Awaited<ReturnType<typeof seed>>;
 
-async function proveFreshness({
-  baseline,
-  prepared,
-  isolated,
-  check,
-  revoke,
-}: World) {
+async function proveFreshness({ baseline, prepared, isolated, check, revoke }: World) {
   if (!revoke) throw new Error("Benchmark fixture omitted a membership tuple");
   for (let warm = 0; warm < 30; warm += 1) {
     expect(await prepared.check(check)).toBe(true);
@@ -94,18 +84,15 @@ async function proveFreshness({
 
 async function compare(world: World, concurrency: number) {
   const modes = ["baseline", "prepared"] as const;
-  const results: Record<(typeof modes)[number], ReturnType<typeof summary>[]> =
-    {
-      baseline: [],
-      prepared: [],
-    };
+  const results: Record<(typeof modes)[number], ReturnType<typeof summary>[]> = {
+    baseline: [],
+    prepared: [],
+  };
   for (let run = 0; run < runs; run += 1) {
     const order = run % 2 === 0 ? modes : [...modes].reverse();
     for (const mode of order) {
       const samples = await Promise.all(
-        Array.from({ length: concurrency }, (_, lane) =>
-          measureLane(world, world[mode], concurrency, run, lane),
-        ),
+        Array.from({ length: concurrency }, (_, lane) => measureLane(world, world[mode], concurrency, run, lane)),
       );
       results[mode].push(summary(samples.flat()));
     }
@@ -132,17 +119,13 @@ async function measureLane(
       },
       resource: {
         ...check.resource,
-        id:
-          depth === 0 || index % 4 === 1
-            ? check.resource.id
-            : `node_${String((index % 4_999) + 1)}`,
+        id: depth === 0 || index % 4 === 1 ? check.resource.id : `node_${String((index % 4_999) + 1)}`,
       },
     };
     const start = performance.now();
     const decision = await backend.check(query);
     const elapsed = performance.now() - start;
-    if (decision !== allowed)
-      throw new Error("Unexpected benchmark permission decision");
+    if (decision !== allowed) throw new Error("Unexpected benchmark permission decision");
     if (sample >= 0) times.push(elapsed);
   }
   return times;

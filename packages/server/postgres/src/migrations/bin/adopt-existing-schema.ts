@@ -1,10 +1,6 @@
 #!/usr/bin/env node
 import { stampJournalWhenSchemaMatches } from "../index.js";
-import {
-  migrationInputFromEnvironment,
-  migrationLog,
-  reportMigrationFailure,
-} from "./migration-log.js";
+import { migrationInputFromEnvironment, migrationLog, reportMigrationFailure } from "./migration-log.js";
 
 /**
  * `dads-migrate-adopt`: records a leftover schema built before the journal
@@ -12,10 +8,7 @@ import {
  */
 async function adoptExistingSchema(): Promise<void> {
   const input = migrationInputFromEnvironment(process.env);
-  const outcome = await stampJournalWhenSchemaMatches(
-    input.databaseUrl,
-    input.workspace,
-  );
+  const outcome = await stampJournalWhenSchemaMatches(input.databaseUrl, input.workspace);
   migrationLog.info(
     {
       event: "database.journal.adopt.complete",

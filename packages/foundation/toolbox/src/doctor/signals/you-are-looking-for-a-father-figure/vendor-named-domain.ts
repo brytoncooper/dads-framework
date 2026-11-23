@@ -19,12 +19,7 @@
  */
 
 import type { DoctorContext, DoctorPackage } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   importedBindings,
@@ -44,17 +39,13 @@ import {
  */
 function aliasTargets(type: ts.TypeNode): readonly string[] {
   if (ts.isTypeReferenceNode(type)) {
-    return ts.isIdentifier(type.typeName)
-      ? [leftmostTypeName(type.typeName)]
-      : [];
+    return ts.isIdentifier(type.typeName) ? [leftmostTypeName(type.typeName)] : [];
   }
   if (ts.isIntersectionTypeNode(type)) return type.types.flatMap(aliasTargets);
   return [];
 }
 
-function extendedNames(
-  clauses: ts.NodeArray<ts.HeritageClause> | undefined,
-): readonly string[] {
+function extendedNames(clauses: ts.NodeArray<ts.HeritageClause> | undefined): readonly string[] {
   const names: string[] = [];
   for (const clause of clauses ?? []) {
     if (clause.token !== ts.SyntaxKind.ExtendsKeyword) continue;
@@ -76,46 +67,28 @@ function borrowedNames(node: ts.Node): readonly string[] {
 
 function exportsName(statement: ts.Statement, name: string): boolean {
   if (ts.isExportAssignment(statement)) {
-    return (
-      ts.isIdentifier(statement.expression) &&
-      statement.expression.text === name
-    );
+    return ts.isIdentifier(statement.expression) && statement.expression.text === name;
   }
-  if (
-    !ts.isExportDeclaration(statement) ||
-    statement.moduleSpecifier !== undefined
-  ) {
+  if (!ts.isExportDeclaration(statement) || statement.moduleSpecifier !== undefined) {
     return false;
   }
   const clause = statement.exportClause;
   return (
     clause !== undefined &&
     ts.isNamedExports(clause) &&
-    clause.elements.some(
-      (element) => (element.propertyName ?? element.name).text === name,
-    )
+    clause.elements.some((element) => (element.propertyName ?? element.name).text === name)
   );
 }
 
-function isPrivateVendorSubclass(
-  node: ts.Node,
-  owner: DoctorPackage | undefined,
-  vendor: string,
-): boolean {
+function isPrivateVendorSubclass(node: ts.Node, owner: DoctorPackage | undefined, vendor: string): boolean {
   if (!ts.isClassDeclaration(node) || node.name === undefined) return false;
   if (owner?.kind !== "adapter" && owner?.kind !== "binding") return false;
   if (!owner.allowedDependencies.includes(vendor)) return false;
-  if (
-    node.modifiers?.some(
-      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-    )
-  ) {
+  if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) {
     return false;
   }
   const name = node.name.text;
-  return !node
-    .getSourceFile()
-    .statements.some((statement) => exportsName(statement, name));
+  return !node.getSourceFile().statements.some((statement) => exportsName(statement, name));
 }
 
 function borrowedFromVendor(
@@ -145,11 +118,7 @@ function countVendorNamedDomain(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const module of context.program().modules) {
     if (!isProductionModule(module.path)) continue;
-    const evidence = borrowedFromVendor(
-      module,
-      workspace,
-      owners.get(module.packageRoot),
-    );
+    const evidence = borrowedFromVendor(module, workspace, owners.get(module.packageRoot));
     readings.set(module.path, { value: evidence.length, evidence });
   }
   return readings;
@@ -163,7 +132,6 @@ export const vendorNamedDomainSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "A vendor can implement a capability. It cannot tell you what the capability _is_.",
+  sentence: "A vendor can implement a capability. It cannot tell you what the capability _is_.",
   run: (context) => Promise.resolve(countVendorNamedDomain(context)),
 };

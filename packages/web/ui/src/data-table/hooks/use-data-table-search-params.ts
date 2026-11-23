@@ -1,10 +1,6 @@
 import * as React from "react";
 
-import {
-  type DataTableState,
-  pickDataTableState,
-  withPageResetOnNarrowing,
-} from "../lib/data-table-search-params.js";
+import { type DataTableState, pickDataTableState, withPageResetOnNarrowing } from "../lib/data-table-search-params.js";
 
 /** What `useDataTable` needs to run controlled. Spread it straight in. */
 export type DataTableStateBinding = {
@@ -54,8 +50,5 @@ export function useDataTableSearchParams({
     [state, onSearchChange],
   );
 
-  return React.useMemo(
-    () => ({ state, onStateChange }),
-    [state, onStateChange],
-  );
+  return React.useMemo(() => ({ state, onStateChange }), [state, onStateChange]);
 }

@@ -7,10 +7,7 @@ import {
 } from "@dads-framework/email/templates";
 import { createElement } from "react";
 import { z } from "zod";
-import {
-  accountMailDescription,
-  accountMailTitle,
-} from "./copy/account-mail.js";
+import { accountMailDescription, accountMailTitle } from "./copy/account-mail.js";
 
 const props = z.strictObject({ kind: z.string().min(1), url: z.url() });
 export const starterMailTemplate = defineEmailTemplate({
@@ -19,8 +16,7 @@ export const starterMailTemplate = defineEmailTemplate({
   props,
   subject: ({ kind }) => accountMailTitle(kind),
   preview: ({ kind }) => accountMailTitle(kind),
-  body: ({ kind, url }) =>
-    createElement(EmailButton, { href: url, children: accountMailTitle(kind) }),
+  body: ({ kind, url }) => createElement(EmailButton, { href: url, children: accountMailTitle(kind) }),
   samples: {
     verification: {
       kind: "verify-email",

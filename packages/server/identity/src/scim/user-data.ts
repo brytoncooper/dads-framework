@@ -33,10 +33,7 @@ function parseEmail(value: unknown): ScimEmail {
   const type = userString(fields["type"]);
   const display = userString(fields["display"]);
   const primary = fields["primary"];
-  if (
-    !email?.trim() ||
-    (primary !== undefined && typeof primary !== "boolean")
-  ) {
+  if (!email?.trim() || (primary !== undefined && typeof primary !== "boolean")) {
     throw new ScimError(400, "Invalid email attribute.", "invalidValue");
   }
   return {
@@ -49,8 +46,7 @@ function parseEmail(value: unknown): ScimEmail {
 
 function parseEmails(value: unknown): readonly ScimEmail[] | undefined {
   if (value === undefined || value === null) return undefined;
-  if (!Array.isArray(value))
-    throw new ScimError(400, "Expected an email list.", "invalidValue");
+  if (!Array.isArray(value)) throw new ScimError(400, "Expected an email list.", "invalidValue");
   const emails = value.map(parseEmail);
   if (emails.filter((email) => email.primary).length > 1) {
     throw new ScimError(400, "Only one email can be primary.", "invalidValue");
@@ -58,10 +54,7 @@ function parseEmails(value: unknown): readonly ScimEmail[] | undefined {
   return emails;
 }
 
-export function parseScimUser(
-  input: unknown,
-  defaultActive = true,
-): ScimUserData {
+export function parseScimUser(input: unknown, defaultActive = true): ScimUserData {
   const fields = attributes(input);
   const userName = userString(fields["username"]);
   const active = fields["active"] ?? defaultActive;
@@ -70,11 +63,7 @@ export function parseScimUser(
   const name = parseName(fields["name"]);
   const emails = parseEmails(fields["emails"]);
   if (!userName?.trim() || typeof active !== "boolean") {
-    throw new ScimError(
-      400,
-      "A userName string and a boolean active value are required.",
-      "invalidValue",
-    );
+    throw new ScimError(400, "A userName string and a boolean active value are required.", "invalidValue");
   }
   return {
     userName,

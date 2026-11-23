@@ -46,8 +46,7 @@ function manage(groupId: string, userId: string) {
 }
 
 describe("plain pg protected transaction", () => {
-  let container:
-    Awaited<ReturnType<typeof startUnmigratedTestPostgres>> | undefined;
+  let container: Awaited<ReturnType<typeof startUnmigratedTestPostgres>> | undefined;
   let pool: Pool | undefined;
   let authorization: PostgresAuthorization;
 
@@ -78,14 +77,10 @@ describe("plain pg protected transaction", () => {
     return pool;
   }
 
-  async function members(
-    groupId: string,
-    reader: Pick<PgClientLike, "query"> = requirePool(),
-  ): Promise<string[]> {
-    const result = await reader.query(
-      "select user_id from plain_pg_membership where group_id = $1 order by user_id",
-      [groupId],
-    );
+  async function members(groupId: string, reader: Pick<PgClientLike, "query"> = requirePool()): Promise<string[]> {
+    const result = await reader.query("select user_id from plain_pg_membership where group_id = $1 order by user_id", [
+      groupId,
+    ]);
     return result.rows.map((row) => {
       const value = row["user_id"];
       if (typeof value !== "string") {
@@ -95,30 +90,18 @@ describe("plain pg protected transaction", () => {
     });
   }
 
-  async function addMember(
-    groupId: string,
-    userId: string,
-    scope: ProtectedPgTransaction,
-  ): Promise<void> {
-    await scope.client.query(
-      "insert into plain_pg_membership (group_id, user_id) values ($1, $2)",
-      [groupId, userId],
-    );
+  async function addMember(groupId: string, userId: string, scope: ProtectedPgTransaction): Promise<void> {
+    await scope.client.query("insert into plain_pg_membership (group_id, user_id) values ($1, $2)", [groupId, userId]);
     await scope.authorization.writeRelationships([membership(groupId, userId)]);
   }
 
   it("commits application rows and relationship facts atomically on plain pg.Pool", async () => {
     const groupId = "plain-commit";
-    const result = await withProtectedPgTransaction(
-      { pool: requirePool(), authorization },
-      async (scope) => {
-        await addMember(groupId, "alice", scope);
-        expect(await scope.authorization.check(manage(groupId, "alice"))).toBe(
-          true,
-        );
-        return "committed";
-      },
-    );
+    const result = await withProtectedPgTransaction({ pool: requirePool(), authorization }, async (scope) => {
+      await addMember(groupId, "alice", scope);
+      expect(await scope.authorization.check(manage(groupId, "alice"))).toBe(true);
+      return "committed";
+    });
 
     expect(result).toBe("committed");
     expect(await members(groupId)).toEqual(["alice"]);
@@ -127,12 +110,9 @@ describe("plain pg protected transaction", () => {
 
   it("supports plain pg.Pool through the unified withProtectedPostgresTransaction helper", async () => {
     const groupId = "unified-pool-commit";
-    await withProtectedPostgresTransaction(
-      { pool: requirePool(), authorization },
-      async (scope) => {
-        await addMember(groupId, "bob", scope);
-      },
-    );
+    await withProtectedPostgresTransaction({ pool: requirePool(), authorization }, async (scope) => {
+      await addMember(groupId, "bob", scope);
+    });
 
     expect(await members(groupId)).toEqual(["bob"]);
     expect(await authorization.check(manage(groupId, "bob"))).toBe(true);
@@ -143,16 +123,11 @@ describe("plain pg protected transaction", () => {
     const rejected = new Error("Application rejected write");
 
     await expect(
-      withProtectedPgTransaction(
-        { pool: requirePool(), authorization },
-        async (scope) => {
-          await addMember(groupId, "alice", scope);
-          expect(
-            await scope.authorization.check(manage(groupId, "alice")),
-          ).toBe(true);
-          throw rejected;
-        },
-      ),
+      withProtectedPgTransaction({ pool: requirePool(), authorization }, async (scope) => {
+        await addMember(groupId, "alice", scope);
+        expect(await scope.authorization.check(manage(groupId, "alice"))).toBe(true);
+        throw rejected;
+      }),
     ).rejects.toBe(rejected);
 
     expect(await members(groupId)).toEqual([]);
@@ -162,50 +137,36 @@ describe("plain pg protected transaction", () => {
   it("prevents concurrent write skew under SERIALIZABLE isolation and wraps 40001 conflicts", async () => {
     const groupId = "plain-write-skew";
     const pgPool = requirePool();
-    await pgPool.query(
-      "insert into plain_pg_membership (group_id, user_id) values ($1, 'alice'), ($1, 'bob')",
-      [groupId],
-    );
-    await authorization.writeRelationships([
-      membership(groupId, "alice"),
-      membership(groupId, "bob"),
+    await pgPool.query("insert into plain_pg_membership (group_id, user_id) values ($1, 'alice'), ($1, 'bob')", [
+      groupId,
     ]);
+    await authorization.writeRelationships([membership(groupId, "alice"), membership(groupId, "bob")]);
 
     const rendezvous = twoReaders();
-    const remove = vi.fn(
-      async (scope: ProtectedPgTransaction, userId: string) => {
-        expect(await scope.authorization.check(manage(groupId, userId))).toBe(
-          true,
-        );
-        expect(await members(groupId, scope.client)).toEqual(["alice", "bob"]);
-        await rendezvous.wait();
-        await scope.client.query(
-          "delete from plain_pg_membership where group_id = $1 and user_id = $2",
-          [groupId, userId],
-        );
-        await scope.authorization.deleteRelationships(removal(groupId, userId));
-      },
-    );
+    const remove = vi.fn(async (scope: ProtectedPgTransaction, userId: string) => {
+      expect(await scope.authorization.check(manage(groupId, userId))).toBe(true);
+      expect(await members(groupId, scope.client)).toEqual(["alice", "bob"]);
+      await rendezvous.wait();
+      await scope.client.query("delete from plain_pg_membership where group_id = $1 and user_id = $2", [
+        groupId,
+        userId,
+      ]);
+      await scope.authorization.deleteRelationships(removal(groupId, userId));
+    });
 
     function attempt(userId: string) {
-      return withProtectedPgTransaction(
-        { pool: pgPool, authorization },
-        (scope) => remove(scope, userId),
-      ).catch((error: unknown) => {
-        rendezvous.release();
-        throw error;
-      });
+      return withProtectedPgTransaction({ pool: pgPool, authorization }, (scope) => remove(scope, userId)).catch(
+        (error: unknown) => {
+          rendezvous.release();
+          throw error;
+        },
+      );
     }
 
-    const results = await Promise.allSettled([
-      attempt("alice"),
-      attempt("bob"),
-    ]);
+    const results = await Promise.allSettled([attempt("alice"), attempt("bob")]);
 
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(
-      results.filter((result) => result.status === "fulfilled"),
-    ).toHaveLength(1);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     const rejected = results.filter((result) => result.status === "rejected");
     expect(rejected).toHaveLength(1);
     const conflict: unknown = rejected[0]?.reason;
@@ -217,42 +178,26 @@ describe("plain pg protected transaction", () => {
       code: POSTGRES_CONFLICT,
       retryable: true,
     });
-    expect(readPostgresSerializationConflict(conflict.cause)?.cause).toBe(
-      conflict.cause,
-    );
+    expect(readPostgresSerializationConflict(conflict.cause)?.cause).toBe(conflict.cause);
 
     const remaining = await members(groupId);
     expect(remaining).toHaveLength(1);
-    const allowed = await authorization.checkMany([
-      manage(groupId, "alice"),
-      manage(groupId, "bob"),
-    ]);
-    expect(allowed).toEqual(
-      ["alice", "bob"].map((userId) => remaining.includes(userId)),
-    );
+    const allowed = await authorization.checkMany([manage(groupId, "alice"), manage(groupId, "bob")]);
+    expect(allowed).toEqual(["alice", "bob"].map((userId) => remaining.includes(userId)));
   });
 
   it("expires scoped authorization immediately after commit and blocks post-commit reuse", async () => {
     const groupId = "plain-expired";
     const pgPool = requirePool();
-    const expired = await withProtectedPgTransaction(
-      { pool: pgPool, authorization },
-      async (scope) => {
-        await addMember(groupId, "alice", scope);
-        return scope.authorization;
-      },
-    );
+    const expired = await withProtectedPgTransaction({ pool: pgPool, authorization }, async (scope) => {
+      await addMember(groupId, "alice", scope);
+      return scope.authorization;
+    });
 
-    await expect(expired.check(manage(groupId, "alice"))).rejects.toThrow(
-      "scope has ended",
-    );
+    await expect(expired.check(manage(groupId, "alice"))).rejects.toThrow("scope has ended");
+    await expect(expired.deleteRelationships(removal(groupId, "alice"))).rejects.toThrow("scope has ended");
     await expect(
-      expired.deleteRelationships(removal(groupId, "alice")),
-    ).rejects.toThrow("scope has ended");
-    await expect(
-      withProtectedPgTransaction({ pool: pgPool, authorization: expired }, () =>
-        Promise.resolve(),
-      ),
+      withProtectedPgTransaction({ pool: pgPool, authorization: expired }, () => Promise.resolve()),
     ).rejects.toThrow("scope has ended");
     expect(await authorization.check(manage(groupId, "alice"))).toBe(true);
   });

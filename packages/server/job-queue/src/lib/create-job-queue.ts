@@ -23,10 +23,7 @@ export type CreateJobQueueOptions = {
  * Pick the in-process or BullMQ driver from JOBS_DRIVER. The driver is an
  * env decision, never a code one.
  */
-export function createJobQueue(
-  options: CreateJobQueueOptions,
-  log: JobLog,
-): JobQueue {
+export function createJobQueue(options: CreateJobQueueOptions, log: JobLog): JobQueue {
   if (options.queueName.trim().length === 0) {
     throw new Error("Job queue name must not be empty");
   }
@@ -34,13 +31,7 @@ export function createJobQueue(
     if (!options.redisUrl) {
       throw new Error("JOBS_DRIVER=bullmq requires REDIS_URL");
     }
-    return new BullMqJobQueue(
-      options.redisUrl,
-      log,
-      options.queueName,
-      options.concurrency ?? 5,
-      options.diagnostics,
-    );
+    return new BullMqJobQueue(options.redisUrl, log, options.queueName, options.concurrency ?? 5, options.diagnostics);
   }
   return new InProcessJobQueue(log, options.queueName);
 }

@@ -1,13 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  permissionToken,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, permissionToken, resource, roleToken } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 
 import {
@@ -83,13 +76,9 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
     const w1 = { type: "workspace", id: "w1" };
     const alice = { type: "user", id: "alice" };
 
-    await authz.writeRelationships([
-      relationshipWrite(w1, "member", alice, { expiresAt: new Date(5_000) }),
-    ]);
+    await authz.writeRelationships([relationshipWrite(w1, "member", alice, { expiresAt: new Date(5_000) })]);
 
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(true);
     expect(
       await authz.lookupResources({
         subject: alice,
@@ -104,9 +93,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         subjectType: "user",
       }),
     ).toEqual({ subjects: ["alice"], hasWildcard: false });
-    expect(
-      await authz.listDirectSubjects({ resource: w1, relation: "member" }),
-    ).toEqual([alice]);
+    expect(await authz.listDirectSubjects({ resource: w1, relation: "member" })).toEqual([alice]);
     expect(
       await authz.relationshipExists({
         resourceType: "workspace",
@@ -116,9 +103,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
     ).toBe(true);
 
     setNow(5_000);
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(false);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(false);
     expect(
       await authz.lookupResources({
         subject: alice,
@@ -133,9 +118,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         subjectType: "user",
       }),
     ).toEqual({ subjects: [], hasWildcard: false });
-    expect(
-      await authz.listDirectSubjects({ resource: w1, relation: "member" }),
-    ).toEqual([]);
+    expect(await authz.listDirectSubjects({ resource: w1, relation: "member" })).toEqual([]);
     expect(
       await authz.relationshipExists({
         resourceType: "workspace",
@@ -145,17 +128,11 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
     ).toBe(false);
 
     // Touch extends expiration, then clears expiration permanently
-    await authz.writeRelationships([
-      relationshipWrite(w1, "member", alice, { expiresAt: new Date(8_000) }),
-    ]);
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(true);
+    await authz.writeRelationships([relationshipWrite(w1, "member", alice, { expiresAt: new Date(8_000) })]);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(true);
     await authz.writeRelationships([relationshipWrite(w1, "member", alice)]);
     setNow(99_999);
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(true);
   });
 
   it("Feature 1: denies downstream access when an intermediate group or parent link expires", async () => {
@@ -172,12 +149,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         id: "g-temp",
         relation: "member",
       }),
-      relationshipWrite(
-        docRef,
-        "parent",
-        { type: "folder", id: "f-root" },
-        { expiresAt: new Date(6_000) },
-      ),
+      relationshipWrite(docRef, "parent", { type: "folder", id: "f-root" }, { expiresAt: new Date(6_000) }),
     ]);
 
     expect(
@@ -225,9 +197,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
       relationshipWrite(dFolder, "parent", { type: "folder", id: "f1" }),
     ]);
 
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: dWs }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: dWs })).toBe(true);
     expect(
       await authz.check({
         subject: alice,
@@ -242,9 +212,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         resource: dFolder,
       }),
     ).toBe(true);
-    expect(
-      await authz.check({ subject: bob, permission: "view", resource: dWs }),
-    ).toBe(false);
+    expect(await authz.check({ subject: bob, permission: "view", resource: dWs })).toBe(false);
 
     expect(
       await authz.lookupResources({
@@ -417,9 +385,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         }),
       }),
     });
-    expect(() => compileAccessPolicy(compileAccess([u, badExclude]))).toThrow(
-      /non-monotonic cycle through excluding/,
-    );
+    expect(() => compileAccessPolicy(compileAccess([u, badExclude]))).toThrow(/non-monotonic cycle through excluding/);
 
     const badThroughAll = resource("node", {
       recursive: true,
@@ -432,9 +398,7 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         }),
       }),
     });
-    expect(() =>
-      compileAccessPolicy(compileAccess([u, badThroughAll])),
-    ).toThrow(/non-monotonic cycle/);
+    expect(() => compileAccessPolicy(compileAccess([u, badThroughAll]))).toThrow(/non-monotonic cycle/);
 
     const badLocal = resource("node", {
       roles: { viewer: u },
@@ -443,8 +407,6 @@ describe("SQLite SpiceDB parity: expiration, polymorphic arrows, and recursion",
         b: [permissionToken("node", "a")],
       }),
     });
-    expect(() => compileAccessPolicy(compileAccess([u, badLocal]))).toThrow(
-      /Cyclic permission reference/,
-    );
+    expect(() => compileAccessPolicy(compileAccess([u, badLocal]))).toThrow(/Cyclic permission reference/);
   });
 });

@@ -5,12 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  cronSchedule,
-  defineJob,
-  describeJobs,
-  intervalSchedule,
-} from "./job-definition.js";
+import { cronSchedule, defineJob, describeJobs, intervalSchedule } from "./job-definition.js";
 
 describe("Job definitions", () => {
   it("parses payloads before invoking the bound run", async () => {

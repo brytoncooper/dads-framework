@@ -1,8 +1,5 @@
 import type { Identity } from "@dads-framework/identity";
-import {
-  createImpersonation,
-  type ImpersonationOptions,
-} from "@dads-framework/identity/impersonation";
+import { createImpersonation, type ImpersonationOptions } from "@dads-framework/identity/impersonation";
 import type { EnterpriseBetterAuthIdentity } from "@dads-framework/identity/better-auth";
 import { createPostgresImpersonationStore } from "@dads-framework/identity/better-auth/impersonation-store";
 import type { createPostgresConnection } from "@dads-framework/postgres";
@@ -17,8 +14,7 @@ import {
 import type { ServiceConfiguration } from "./services.js";
 
 export type StaffImpersonationServices = {
-  readonly staffImpersonation:
-    ReturnType<typeof configureStaffImpersonation> | undefined;
+  readonly staffImpersonation: ReturnType<typeof configureStaffImpersonation> | undefined;
 };
 
 export function openStaffImpersonationServices(
@@ -33,11 +29,8 @@ export function openStaffImpersonationServices(
   },
   tenants: Tenants,
 ): StaffImpersonationServices {
-  if (config.enterprise?.staffImpersonation === undefined)
-    return { staffImpersonation: undefined };
-  const configuration = staffImpersonationConfiguration.parse(
-    config.enterprise.staffImpersonation,
-  );
+  if (config.enterprise?.staffImpersonation === undefined) return { staffImpersonation: undefined };
+  const configuration = staffImpersonationConfiguration.parse(config.enterprise.staffImpersonation);
   const { tenantId } = configuration;
   const persistence = createPostgresImpersonationStore(pool);
   const impersonation = createImpersonation({
@@ -53,8 +46,7 @@ export function openStaffImpersonationServices(
       enterpriseIdentity === undefined
         ? identity
         : {
-            readSession: (headers) =>
-              enterpriseIdentity.readTenantSession(headers, tenantId),
+            readSession: (headers) => enterpriseIdentity.readTenantSession(headers, tenantId),
           },
     lifetimeMs: 5 * 60 * 1000,
     authorize: staffSupportPolicy(configuration, tenants),
@@ -70,11 +62,7 @@ export function openStaffImpersonationServices(
 }
 
 function staffSupportPolicy(
-  {
-    tenantId,
-    staffAccountIds,
-    revokerAccountIds,
-  }: StaffImpersonationConfiguration,
+  { tenantId, staffAccountIds, revokerAccountIds }: StaffImpersonationConfiguration,
   tenants: Tenants,
 ): ImpersonationOptions["authorize"] {
   const staff = new Set(staffAccountIds);
@@ -83,12 +71,6 @@ function staffSupportPolicy(
     if (scope.tenantId !== tenantId) return false;
     if (scope.action === "revoke") return revokers.has(scope.actorAccountId);
     if (!staff.has(scope.actorAccountId)) return false;
-    return (
-      (await readTenantAsTarget(
-        tenants,
-        scope.effectiveAccountId,
-        tenantId,
-      )) !== null
-    );
+    return (await readTenantAsTarget(tenants, scope.effectiveAccountId, tenantId)) !== null;
   };
 }

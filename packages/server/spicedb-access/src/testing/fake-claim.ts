@@ -1,9 +1,6 @@
 import { deterministicUuid } from "@dads-framework/postgres/testing/deterministic-uuid";
 
-import {
-  accessChangeIdSchema,
-  type AccessChangeId,
-} from "../lib/access-changes/access-change.ids.js";
+import { accessChangeIdSchema, type AccessChangeId } from "../lib/access-changes/access-change.ids.js";
 import {
   ClaimAccessChanges,
   type ClaimedOutboxRow,
@@ -12,10 +9,7 @@ import {
   type OutboxHeldKeysQuery,
   type OutboxKeyClaim,
 } from "../lib/access-changes/claim.js";
-import type {
-  AccessChange,
-  OutboxStatus,
-} from "../lib/access-changes/enqueue.js";
+import type { AccessChange, OutboxStatus } from "../lib/access-changes/enqueue.js";
 
 type StoredRow = Omit<ClaimedOutboxRow, "attempts"> & {
   attempts: number;
@@ -128,9 +122,7 @@ export class FakeClaimAccessChanges extends ClaimAccessChanges {
   claimByKeys(claim: OutboxKeyClaim): Promise<readonly ClaimedOutboxRow[]> {
     this.lastCutoff = claim.leaseCutoff;
     const wanted = new Set(claim.idempotencyKeys);
-    return Promise.resolve(
-      this.take(claim, (row) => wanted.has(row.idempotencyKey), Infinity),
-    );
+    return Promise.resolve(this.take(claim, (row) => wanted.has(row.idempotencyKey), Infinity));
   }
 
   private take(
@@ -143,9 +135,7 @@ export class FakeClaimAccessChanges extends ClaimAccessChanges {
       if (taken.length >= batchSize) break;
       if (row.status !== "PENDING") continue;
       if (!wanted(row)) continue;
-      const free =
-        row.lockedAt === null ||
-        row.lockedAt.getTime() <= claim.leaseCutoff.getTime();
+      const free = row.lockedAt === null || row.lockedAt.getTime() <= claim.leaseCutoff.getTime();
       if (!free) continue;
       row.lockedBy = claim.workerId;
       row.lockedAt = claim.now;
@@ -180,16 +170,10 @@ export class FakeClaimAccessChanges extends ClaimAccessChanges {
 
   isClaimOwned(id: AccessChangeId, workerId: string): Promise<boolean> {
     const row = this.rows.get(id);
-    return Promise.resolve(
-      row?.status === "PENDING" && row.lockedBy === workerId,
-    );
+    return Promise.resolve(row?.status === "PENDING" && row.lockedBy === workerId);
   }
 
-  markProjected(
-    ids: readonly AccessChangeId[],
-    at: Date,
-    workerId: string,
-  ): Promise<boolean> {
+  markProjected(ids: readonly AccessChangeId[], at: Date, workerId: string): Promise<boolean> {
     let settled = 0;
     for (const id of ids) {
       const row = this.rows.get(id);

@@ -2,11 +2,7 @@ import type { PermissionToken } from "@dads-framework/access";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type { PostgresAuthorization } from "./postgres-authorization.js";
-import type {
-  PgClientLike,
-  PgPoolLike,
-  PostgresValue,
-} from "./postgres-types.js";
+import type { PgClientLike, PgPoolLike, PostgresValue } from "./postgres-types.js";
 
 export type PostgresFilterParityInput = {
   readonly db: PgPoolLike | PgClientLike;
@@ -38,16 +34,13 @@ async function queryFilteredIds(
   filterSql: string,
   values: readonly PostgresValue[],
 ): Promise<readonly string[]> {
-  const result = await db.query(
-    `SELECT ${idColumn} AS row_id FROM ${table} WHERE ${filterSql} ORDER BY ${idColumn}`,
-    [...values],
-  );
+  const result = await db.query(`SELECT ${idColumn} AS row_id FROM ${table} WHERE ${filterSql} ORDER BY ${idColumn}`, [
+    ...values,
+  ]);
   return result.rows
     .map((row) => {
       const rawId = row["row_id"];
-      return typeof rawId === "string" || typeof rawId === "number"
-        ? String(rawId)
-        : "";
+      return typeof rawId === "string" || typeof rawId === "number" ? String(rawId) : "";
     })
     .sort();
 }
@@ -73,13 +66,7 @@ async function runSingleFilterCheck(
   filter: { readonly sql: string; readonly values: readonly PostgresValue[] },
   lookupIds: readonly string[],
 ): Promise<FilterDisagreement | undefined> {
-  const actualIds = await queryFilteredIds(
-    input.db,
-    input.table,
-    input.idColumn,
-    filter.sql,
-    filter.values,
-  );
+  const actualIds = await queryFilteredIds(input.db, input.table, input.idColumn, filter.sql, filter.values);
   return compareSets(subject, mode, actualIds, lookupIds);
 }
 
@@ -111,10 +98,7 @@ async function checkSubjectFilters(
   );
   if (plainDiff !== undefined) disagreements.push(plainDiff);
 
-  const scopedQuery =
-    input.scopeColumns === undefined
-      ? baseQuery
-      : { ...baseQuery, scopeColumns: input.scopeColumns };
+  const scopedQuery = input.scopeColumns === undefined ? baseQuery : { ...baseQuery, scopeColumns: input.scopeColumns };
   if (input.scopeColumns !== undefined) {
     const scopedDiff = await runSingleFilterCheck(
       input,
@@ -142,9 +126,7 @@ async function checkSubjectFilters(
  * `compileFilter({ scopeColumns })`, and `resolveFilter` return the exact same
  * row IDs as `lookupResources` for every subject.
  */
-export async function provePostgresFilterParity(
-  input: PostgresFilterParityInput,
-): Promise<void> {
+export async function provePostgresFilterParity(input: PostgresFilterParityInput): Promise<void> {
   const disagreements: FilterDisagreement[] = [];
   for (const subject of input.subjects) {
     disagreements.push(...(await checkSubjectFilters(input, subject)));

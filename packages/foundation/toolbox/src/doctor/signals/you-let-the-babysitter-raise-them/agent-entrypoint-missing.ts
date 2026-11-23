@@ -16,10 +16,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReadings } from "../../doctor-signal.js";
-import {
-  agentEntrypointPath,
-  isWorkingRepository,
-} from "../scanners/text-agent-harness.js";
+import { agentEntrypointPath, isWorkingRepository } from "../scanners/text-agent-harness.js";
 
 const PREFERRED_ENTRYPOINT = "AGENTS.md";
 
@@ -40,13 +37,11 @@ function countMissingEntrypoints(context: DoctorContext): SignalReadings {
 export const agentEntrypointMissingSignal: DoctorSignal = {
   id: "agent-entrypoint-missing",
   issue: "you-let-the-babysitter-raise-them",
-  question:
-    "Is there no agent entrypoint — `AGENTS.md` or equivalent — at the repository root?",
+  question: "Is there no agent entrypoint — `AGENTS.md` or equivalent — at the repository root?",
   reads: "text",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "A rule in a wiki is a rule he will never read. A rule in a hook is a rule he cannot get past.",
+  sentence: "A rule in a wiki is a rule he will never read. A rule in a hook is a rule he cannot get past.",
   run: (context) => Promise.resolve(countMissingEntrypoints(context)),
 };

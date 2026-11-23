@@ -4,10 +4,7 @@ import type { DrizzleHandle } from "@dads-framework/postgres";
 import { mintUuidV7 } from "@dads-framework/core/contract";
 
 import { type EmailEnvelope, emailEnvelopeSchema } from "../email-envelope.js";
-import {
-  type OutboundEmailId,
-  outboundEmailIdSchema,
-} from "../outbound-email-status.js";
+import { type OutboundEmailId, outboundEmailIdSchema } from "../outbound-email-status.js";
 import { queuedEmailAttachmentsSchema } from "../queued-email-attachment.js";
 import { outboundEmailDocument } from "./generated-tables/outbound-email-documents.tables.js";
 import { outboundEmail } from "./generated-tables/outbound-emails.tables.js";
@@ -37,14 +34,10 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
     tx?: OutboundEmailTx,
   ): Promise<{ id: OutboundEmailId; deduplicated: boolean }> {
     if (tx === undefined && hasQueuedDocuments(record)) {
-      return this.db.transaction((transaction) =>
-        this.insert(record, transaction),
-      );
+      return this.db.transaction((transaction) => this.insert(record, transaction));
     }
     const writer = tx ?? this.db;
-    const attachments = queuedEmailAttachmentsSchema.parse(
-      record.attachments ?? [],
-    );
+    const attachments = queuedEmailAttachmentsSchema.parse(record.attachments ?? []);
     const inserted = await writer
       .insert(outboundEmail)
       .values({
@@ -74,11 +67,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
     };
   }
 
-  private async insertDocuments(
-    writer: OutboundEmailTx,
-    id: OutboundEmailId,
-    record: NewOutboundEmail,
-  ): Promise<void> {
+  private async insertDocuments(writer: OutboundEmailTx, id: OutboundEmailId, record: NewOutboundEmail): Promise<void> {
     if (!hasQueuedDocuments(record)) return;
     await writer.insert(outboundEmailDocument).values({
       outboundEmailId: id,
@@ -87,10 +76,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
     });
   }
 
-  async claimForSending(
-    id: OutboundEmailId,
-    now: Date,
-  ): Promise<ClaimedOutboundEmail | null> {
+  async claimForSending(id: OutboundEmailId, now: Date): Promise<ClaimedOutboundEmail | null> {
     const claimed = await this.db
       .update(outboundEmail)
       .set({
@@ -128,17 +114,12 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
       props: outboundEmailPropsSchema.parse(row.props),
       envelope: parseEnvelope(row.id, row.envelope),
       attempts: row.attempts,
-      attachments: queuedEmailAttachmentsSchema.parse(
-        document?.attachments ?? [],
-      ),
+      attachments: queuedEmailAttachmentsSchema.parse(document?.attachments ?? []),
       failurePolicy: document?.failurePolicy ?? "retry",
     };
   }
 
-  async markSent(
-    id: OutboundEmailId,
-    result: { providerMessageId: string | null; sentAt: Date },
-  ): Promise<void> {
+  async markSent(id: OutboundEmailId, result: { providerMessageId: string | null; sentAt: Date }): Promise<void> {
     await this.db
       .update(outboundEmail)
       .set({
@@ -151,10 +132,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
       .where(eq(outboundEmail.id, id));
   }
 
-  async markRetryLater(
-    id: OutboundEmailId,
-    retry: { nextAttemptAt: Date; lastError: string },
-  ): Promise<void> {
+  async markRetryLater(id: OutboundEmailId, retry: { nextAttemptAt: Date; lastError: string }): Promise<void> {
     await this.db
       .update(outboundEmail)
       .set({
@@ -166,10 +144,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
       .where(eq(outboundEmail.id, id));
   }
 
-  async markFailed(
-    id: OutboundEmailId,
-    failure: { lastError: string },
-  ): Promise<void> {
+  async markFailed(id: OutboundEmailId, failure: { lastError: string }): Promise<void> {
     await this.db
       .update(outboundEmail)
       .set({
@@ -185,13 +160,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
     const due = await this.db
       .select({ id: outboundEmail.id })
       .from(outboundEmail)
-      .where(
-        and(
-          eq(outboundEmail.status, "queued"),
-          lte(outboundEmail.sendAt, now),
-          this.dueForRetry(now),
-        ),
-      )
+      .where(and(eq(outboundEmail.status, "queued"), lte(outboundEmail.sendAt, now), this.dueForRetry(now)))
       .orderBy(asc(outboundEmail.sendAt))
       .limit(limit);
     return due.map((row) => row.id);
@@ -205,19 +174,12 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
         lastError: STALE_CLAIM_ERROR,
         claimedAt: null,
       })
-      .where(
-        and(
-          eq(outboundEmail.status, "sending"),
-          lt(outboundEmail.claimedAt, olderThan),
-        ),
-      )
+      .where(and(eq(outboundEmail.status, "sending"), lt(outboundEmail.claimedAt, olderThan)))
       .returning({ id: outboundEmail.id });
     return failed.map((row) => row.id);
   }
 
-  async requeueFailed(
-    ids?: readonly OutboundEmailId[],
-  ): Promise<readonly OutboundEmailId[]> {
+  async requeueFailed(ids?: readonly OutboundEmailId[]): Promise<readonly OutboundEmailId[]> {
     // An explicit empty selection re-queues nothing; omitting `ids` entirely
     // is what means "every failed row".
     if (ids?.length === 0) return [];
@@ -233,18 +195,13 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
       .where(
         ids === undefined
           ? eq(outboundEmail.status, "failed")
-          : and(
-              eq(outboundEmail.status, "failed"),
-              inArray(outboundEmail.id, [...ids]),
-            ),
+          : and(eq(outboundEmail.status, "failed"), inArray(outboundEmail.id, [...ids])),
       )
       .returning({ id: outboundEmail.id });
     return requeued.map((row) => row.id);
   }
 
-  async recordImmediate(
-    record: ImmediateOutboundEmail,
-  ): Promise<{ id: OutboundEmailId }> {
+  async recordImmediate(record: ImmediateOutboundEmail): Promise<{ id: OutboundEmailId }> {
     const inserted = await this.db
       .insert(outboundEmail)
       .values({
@@ -269,10 +226,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
 
   /** A row with no scheduled retry is due; one with a retry waits for it. */
   private dueForRetry(now: Date) {
-    return or(
-      isNull(outboundEmail.nextAttemptAt),
-      lte(outboundEmail.nextAttemptAt, now),
-    );
+    return or(isNull(outboundEmail.nextAttemptAt), lte(outboundEmail.nextAttemptAt, now));
   }
 
   /**
@@ -281,9 +235,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
    * because a conflict is with a COMMITTED row — an uncommitted one would
    * have blocked the insert instead.
    */
-  private async findByDedupeKey(
-    dedupeKey: string | null | undefined,
-  ): Promise<OutboundEmailId> {
+  private async findByDedupeKey(dedupeKey: string | null | undefined): Promise<OutboundEmailId> {
     if (dedupeKey === null || dedupeKey === undefined) {
       throw new Error(
         "An outbound email with no dedupe key cannot conflict; the insert was refused for another reason",
@@ -305,10 +257,7 @@ export class DrizzleOutboundEmailStore implements OutboundEmailStore {
 }
 
 function hasQueuedDocuments(record: NewOutboundEmail): boolean {
-  return (
-    (record.attachments?.length ?? 0) > 0 ||
-    record.failurePolicy === "manual-review"
-  );
+  return (record.attachments?.length ?? 0) > 0 || record.failurePolicy === "manual-review";
 }
 
 /**
@@ -318,9 +267,7 @@ function hasQueuedDocuments(record: NewOutboundEmail): boolean {
 function parseEnvelope(id: OutboundEmailId, stored: unknown): EmailEnvelope {
   const parsed = emailEnvelopeSchema.safeParse(stored);
   if (!parsed.success) {
-    throw new Error(
-      `Outbound email ${id} carries an envelope this build cannot read`,
-    );
+    throw new Error(`Outbound email ${id} carries an envelope this build cannot read`);
   }
   return parsed.data;
 }

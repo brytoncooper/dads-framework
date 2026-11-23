@@ -1,8 +1,4 @@
-import {
-  TenantUnavailableError,
-  type TenantId,
-  type Tenants,
-} from "@dads-framework/identity/tenants";
+import { TenantUnavailableError, type TenantId, type Tenants } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 import type { Impersonation } from "@dads-framework/identity/impersonation";
@@ -25,9 +21,7 @@ type StaffImpersonationHandlerOptions = {
   readonly tenants: Tenants;
 };
 
-export function configureStaffImpersonation(
-  options: StaffImpersonationHandlerOptions,
-) {
+export function configureStaffImpersonation(options: StaffImpersonationHandlerOptions) {
   const trustedOrigin = new URL(options.baseUrl).origin;
   return async function handle(request: Request): Promise<Response> {
     const refused = validateRequest(request, trustedOrigin);
@@ -40,22 +34,14 @@ export function configureStaffImpersonation(
 }
 
 function validateRequest(request: Request, trustedOrigin: string) {
-  if (
-    request.method !== "POST" ||
-    new URL(request.url).pathname !== "/api/staff/impersonation"
-  ) {
+  if (request.method !== "POST" || new URL(request.url).pathname !== "/api/staff/impersonation") {
     return rejection(404, "RESOURCE_NOT_FOUND");
   }
   if (request.headers.get("origin") !== trustedOrigin) {
     return rejection(403, "UNTRUSTED_ORIGIN");
   }
-  const contentType = request.headers
-    .get("content-type")
-    ?.split(";")[0]
-    ?.trim()
-    .toLowerCase();
-  if (contentType !== "application/json")
-    return rejection(415, "UNSUPPORTED_MEDIA_TYPE");
+  const contentType = request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+  if (contentType !== "application/json") return rejection(415, "UNSUPPORTED_MEDIA_TYPE");
   return undefined;
 }
 
@@ -76,13 +62,9 @@ async function runCommand(
     case "view-tenant":
       return viewTenant(options, headers, command.grantId);
     case "stop":
-      return (await impersonation.stop(headers, command.grantId))
-        ? json({ stopped: true })
-        : rejectedGrant();
+      return (await impersonation.stop(headers, command.grantId)) ? json({ stopped: true }) : rejectedGrant();
     case "revoke":
-      return (await impersonation.revoke(headers, command.grantId))
-        ? json({ revoked: true })
-        : rejectedGrant();
+      return (await impersonation.revoke(headers, command.grantId)) ? json({ revoked: true }) : rejectedGrant();
   }
 }
 
@@ -93,11 +75,7 @@ async function viewTenant(
 ) {
   const active = await impersonation.use(headers, { grantId, tenantId });
   if (active === null) return rejectedGrant();
-  const view = await readTenantAsTarget(
-    tenants,
-    active.effectiveAccountId,
-    tenantId,
-  );
+  const view = await readTenantAsTarget(tenants, active.effectiveAccountId, tenantId);
   return view === null
     ? rejectedGrant()
     : json({
@@ -107,11 +85,7 @@ async function viewTenant(
       });
 }
 
-export async function readTenantAsTarget(
-  tenants: Tenants,
-  accountId: string,
-  tenantId: TenantId,
-) {
+export async function readTenantAsTarget(tenants: Tenants, accountId: string, tenantId: TenantId) {
   try {
     return (await tenants.context(accountId, tenantId)).tenant;
   } catch (error) {

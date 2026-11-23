@@ -26,23 +26,14 @@ import { bodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";
 import { HttpWiringError } from "../http-errors.js";
 import { registerRoutes } from "../request-pipeline/register-routes.js";
-import {
-  publicAccess,
-  requireSession,
-  requiresScoped,
-  requiresVisible,
-} from "./access.js";
+import { publicAccess, requireSession, requiresScoped, requiresVisible } from "./access.js";
 import { deleteRoute } from "./delete-route.js";
 import { getRoute } from "./get-route.js";
 import { listRoute } from "./list-route.js";
 import { patchRoute, putRoute } from "./patch-route.js";
 import { postNoContentRoute } from "./post-no-content-route.js";
 import { postRoute } from "./post-route.js";
-import type {
-  RawRouteInput,
-  RouteBlueprint,
-  RouteLogger,
-} from "./route-definition.js";
+import type { RawRouteInput, RouteBlueprint, RouteLogger } from "./route-definition.js";
 import { routeGroup } from "./route-group.js";
 
 const noteSchema = z.object({ id: z.string(), title: z.string() });
@@ -185,11 +176,7 @@ describe("operation-backed routes", () => {
     expect(route.method).toBe("GET");
     expect(route.path).toBe("/notes/:id");
     expect(route.status).toBe(200);
-    await expect(
-      route.execute(
-        rawInput({ params: { id: "n1" }, query: { verbose: "true" } }),
-      ),
-    ).resolves.toEqual({
+    await expect(route.execute(rawInput({ params: { id: "n1" }, query: { verbose: "true" } }))).resolves.toEqual({
       data: { id: "n1", title: "Verbose" },
       meta: { revision: 3 },
     });
@@ -214,9 +201,7 @@ describe("operation-backed routes", () => {
       subject: userSubject,
       idsByQuestion: new Map(),
     };
-    await expect(
-      route.execute(rawInput({ scope: scopeAnswer })),
-    ).resolves.toEqual({ data: { total: 4 } });
+    await expect(route.execute(rawInput({ scope: scopeAnswer }))).resolves.toEqual({ data: { total: 4 } });
   });
 
   it("executes listRoute with pagination, custom meta, and visibility context", async () => {
@@ -291,20 +276,16 @@ describe("operation-backed routes", () => {
       purpose: "append-only-telemetry",
     });
 
-    await expect(
-      created.execute(rawInput({ body: { title: "Draft" } })),
-    ).resolves.toEqual({ data: { id: "n-new", title: "Draft" } });
-    await expect(
-      accepted.execute(
-        rawInput({ params: { id: "n1" }, query: { format: "csv" } }),
-      ),
-    ).resolves.toEqual({
+    await expect(created.execute(rawInput({ body: { title: "Draft" } }))).resolves.toEqual({
+      data: { id: "n-new", title: "Draft" },
+    });
+    await expect(accepted.execute(rawInput({ params: { id: "n1" }, query: { format: "csv" } }))).resolves.toEqual({
       data: { jobId: "n1-csv" },
       meta: { queuedAt: "2026-11-23T00:00:00Z" },
     });
-    await expect(
-      telemetry.execute(rawInput({ subject: null, body: { event: "click" } })),
-    ).resolves.toEqual({ data: { accepted: true } });
+    await expect(telemetry.execute(rawInput({ subject: null, body: { event: "click" } }))).resolves.toEqual({
+      data: { accepted: true },
+    });
   });
 
   it("executes patchRoute, putRoute, deleteRoute, and postNoContentRoute over HTTP", async () => {

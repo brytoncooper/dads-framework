@@ -1,13 +1,6 @@
 /** Proves initialization is safe, repeatable, and isolated in existing apps. */
 
-import {
-  lstatSync,
-  mkdtempSync,
-  readFileSync,
-  readlinkSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { lstatSync, mkdtempSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -39,15 +32,9 @@ describe("initialize Dads project", () => {
     expect(first.created).toContain("domains/notes/server/routes.ts");
     expect(first.created).toContain("apps/staff/app.ts");
     expect(first.created).toContain(".codex/skills");
-    expect(
-      lstatSync(join(targetDirectory, ".codex/skills")).isSymbolicLink(),
-    ).toBe(true);
-    expect(readlinkSync(join(targetDirectory, ".codex/skills"))).toBe(
-      "../.agents/skills",
-    );
-    expect(readFileSync(join(targetDirectory, "AGENTS.md"), "utf8")).toContain(
-      "# Dads app",
-    );
+    expect(lstatSync(join(targetDirectory, ".codex/skills")).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(join(targetDirectory, ".codex/skills"))).toBe("../.agents/skills");
+    expect(readFileSync(join(targetDirectory, "AGENTS.md"), "utf8")).toContain("# Dads app");
     expect(second.created).toEqual([]);
     expect(second.unchanged).toEqual(first.created);
   });
@@ -59,10 +46,7 @@ describe("initialize Dads project", () => {
       mode: "new",
       projectName: "clear-api",
     });
-    writeFileSync(
-      join(targetDirectory, "domains/notes/server/routes.ts"),
-      "user-owned change\n",
-    );
+    writeFileSync(join(targetDirectory, "domains/notes/server/routes.ts"), "user-owned change\n");
 
     expect(() =>
       initializeDadsProject({
@@ -85,15 +69,13 @@ describe("initialize Dads project", () => {
     });
 
     expect(result.projectRoot).toBe(join(targetDirectory, "dads"));
-    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe(
-      existingPackage,
-    );
+    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe(existingPackage);
     expect(result.created).toContain("assembly/services.ts");
     expect(result.created).toContain("tests/starter.integration.test.ts");
     expect(result.created).toContain("apps/customer/app.ts");
-    expect(
-      readFileSync(join(targetDirectory, "dads", "package.json"), "utf8"),
-    ).toContain("@dads-framework/postgres-access");
+    expect(readFileSync(join(targetDirectory, "dads", "package.json"), "utf8")).toContain(
+      "@dads-framework/postgres-access",
+    );
   });
 
   it("emits the kit dependencies and provider-neutral CI", () => {
@@ -103,17 +85,12 @@ describe("initialize Dads project", () => {
       mode: "new",
       projectName: "kit-api",
     });
-    const manifest = readFileSync(
-      join(targetDirectory, "package.json"),
-      "utf8",
-    );
+    const manifest = readFileSync(join(targetDirectory, "package.json"), "utf8");
     expect(manifest).toContain("@dads-framework/http");
     expect(manifest).toContain("@dads-framework/identity");
     expect(manifest).toContain("@dads-framework/postgres-access");
     expect(manifest).not.toMatch(/legacy-(?:http|authorization)/);
-    expect(
-      readFileSync(join(targetDirectory, "ci/verify.sh"), "utf8"),
-    ).toContain("npm run verify");
+    expect(readFileSync(join(targetDirectory, "ci/verify.sh"), "utf8")).toContain("npm run verify");
   });
 
   it("refuses to initialize a non-empty directory it does not recognize", () => {
@@ -129,9 +106,7 @@ describe("initialize Dads project", () => {
     ).toThrow(
       `Refusing to initialize non-empty directory ${targetDirectory}. Use existing-project mode to add an isolated Dads project.`,
     );
-    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe(
-      '{"name":"host"}\n',
-    );
+    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe('{"name":"host"}\n');
   });
 
   it("previews every change without writing a file", () => {
@@ -144,9 +119,7 @@ describe("initialize Dads project", () => {
     });
 
     expect(result.created).toContain("dads.project.json");
-    expect(() =>
-      readFileSync(join(targetDirectory, "dads.project.json"), "utf8"),
-    ).toThrow();
+    expect(() => readFileSync(join(targetDirectory, "dads.project.json"), "utf8")).toThrow();
   });
 
   it("creates the minimal template without example domains and keeps reruns unchanged", () => {
@@ -167,42 +140,24 @@ describe("initialize Dads project", () => {
     expect(first.created).toContain("apps/customer/app.ts");
     expect(first.created).toContain("apps/staff/app.ts");
     expect(first.created).toContain("domains/tenants/index.ts");
-    expect(
-      first.created.filter((path) => path.startsWith("domains/notes/")),
-    ).toEqual([]);
-    expect(
-      first.created.filter((path) => path.startsWith("domains/support/")),
-    ).toEqual([]);
-    expect(
-      first.created.filter((path) => path.startsWith("examples/")),
-    ).toEqual([]);
+    expect(first.created.filter((path) => path.startsWith("domains/notes/"))).toEqual([]);
+    expect(first.created.filter((path) => path.startsWith("domains/support/"))).toEqual([]);
+    expect(first.created.filter((path) => path.startsWith("examples/"))).toEqual([]);
     expect(second.created).toEqual([]);
     expect(second.unchanged).toEqual(first.created);
   });
 
   it("forwards --template minimal through the dad init command entrypoint", () => {
     const targetDirectory = join(temporaryDirectory(), "cli-minimal");
-    const stdout = vi
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     try {
-      initialize(
-        [targetDirectory, "--template", "minimal", "--skip-install", "--json"],
-        true,
-      );
+      initialize([targetDirectory, "--template", "minimal", "--skip-install", "--json"], true);
     } finally {
       stdout.mockRestore();
     }
 
-    expect(
-      readFileSync(join(targetDirectory, "apps/customer/app.ts"), "utf8"),
-    ).toContain("// dad:add domains");
-    expect(() =>
-      readFileSync(
-        join(targetDirectory, "domains/notes/server/routes.ts"),
-        "utf8",
-      ),
-    ).toThrow();
+    expect(readFileSync(join(targetDirectory, "apps/customer/app.ts"), "utf8")).toContain("// dad:add domains");
+    expect(() => readFileSync(join(targetDirectory, "domains/notes/server/routes.ts"), "utf8")).toThrow();
   });
 });
 

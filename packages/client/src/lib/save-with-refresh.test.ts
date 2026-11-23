@@ -6,12 +6,8 @@ import { ApiError } from "./api-error.js";
 import { saveWithRefresh } from "./save-with-refresh.js";
 
 it("refreshes stale state without replaying the write", async () => {
-  const save = vi
-    .fn()
-    .mockRejectedValue(new ApiError(409, ROW_VERSION_CONFLICT, "Changed"));
-  const refresh = vi
-    .fn()
-    .mockResolvedValue({ title: "Saved by another editor", rowVersion: 2 });
+  const save = vi.fn().mockRejectedValue(new ApiError(409, ROW_VERSION_CONFLICT, "Changed"));
+  const refresh = vi.fn().mockResolvedValue({ title: "Saved by another editor", rowVersion: 2 });
 
   await expect(saveWithRefresh({ save, refresh })).resolves.toEqual({
     kind: "stale",
@@ -23,9 +19,7 @@ it("refreshes stale state without replaying the write", async () => {
 
 it("returns the result of a successful write without refreshing", async () => {
   const refresh = vi.fn();
-  await expect(
-    saveWithRefresh({ save: () => Promise.resolve(2), refresh }),
-  ).resolves.toEqual({
+  await expect(saveWithRefresh({ save: () => Promise.resolve(2), refresh })).resolves.toEqual({
     kind: "saved",
     value: 2,
   });
@@ -35,15 +29,12 @@ it("returns the result of a successful write without refreshing", async () => {
 it("lets unrelated refusals and failed refreshes reach the normal error path", async () => {
   const refusal = new ApiError(409, "NAME_IN_USE", "In use");
   const refresh = vi.fn().mockRejectedValue(new Error("Refresh failed"));
-  await expect(
-    saveWithRefresh({ save: () => Promise.reject(refusal), refresh }),
-  ).rejects.toBe(refusal);
+  await expect(saveWithRefresh({ save: () => Promise.reject(refusal), refresh })).rejects.toBe(refusal);
   expect(refresh).not.toHaveBeenCalled();
 
   await expect(
     saveWithRefresh({
-      save: () =>
-        Promise.reject(new ApiError(409, ROW_VERSION_CONFLICT, "Changed")),
+      save: () => Promise.reject(new ApiError(409, ROW_VERSION_CONFLICT, "Changed")),
       refresh,
     }),
   ).rejects.toThrow("Refresh failed");

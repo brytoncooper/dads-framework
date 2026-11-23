@@ -6,11 +6,7 @@
  * previous language until a full reload.
  */
 import { describe, expect, it } from "vitest";
-import {
-  followLocaleSignals,
-  initializeLocaleProviderState,
-  selectLocale,
-} from "./locale-provider-state.js";
+import { followLocaleSignals, initializeLocaleProviderState, selectLocale } from "./locale-provider-state.js";
 
 describe("locale provider state", () => {
   it("follows a changed preferred-locale prop before children read it", () => {

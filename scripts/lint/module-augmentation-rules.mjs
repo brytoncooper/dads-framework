@@ -22,10 +22,7 @@ function vendorInterface(context, node) {
   if (!symbol) return undefined;
 
   return checker.getMergedSymbol(symbol).declarations?.find((original) => {
-    return (
-      ts.isInterfaceDeclaration(original) &&
-      program.isSourceFileFromExternalLibrary(original.getSourceFile())
-    );
+    return ts.isInterfaceDeclaration(original) && program.isSourceFileFromExternalLibrary(original.getSourceFile());
   });
 }
 

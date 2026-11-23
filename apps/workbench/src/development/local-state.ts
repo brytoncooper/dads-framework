@@ -64,9 +64,7 @@ type DevelopmentFlagValues = {
 };
 
 /** Parse only the app's two lifecycle commands; no implicit resets or path overrides. */
-export function parseDevelopmentArguments(
-  args: readonly string[],
-): DevelopmentArguments {
+export function parseDevelopmentArguments(args: readonly string[]): DevelopmentArguments {
   if (args.length === 1 && args[0] === "--help") return helpArguments();
   const action = args[0];
   if (action !== "up" && action !== "stop") throw invalidArguments();
@@ -85,17 +83,13 @@ function helpArguments(): DevelopmentArguments {
 }
 
 /** Flags arrive as `--name value` pairs; each name is optional and may appear once. */
-function readDevelopmentFlags(
-  args: readonly string[],
-  action: DevelopmentAction,
-): DevelopmentFlagValues {
+function readDevelopmentFlags(args: readonly string[], action: DevelopmentAction): DevelopmentFlagValues {
   let flags: DevelopmentFlagValues = { instance: "default", port: 4317 };
   const seen = new Set<string>();
   for (let index = 1; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
-    if (!flag || value === undefined || seen.has(flag))
-      throw invalidArguments();
+    if (!flag || value === undefined || seen.has(flag)) throw invalidArguments();
     seen.add(flag);
     flags = applyDevelopmentFlag(flags, action, flag, value);
   }
@@ -113,16 +107,13 @@ function applyDevelopmentFlag(
     requireInstance(value);
     return { ...flags, instance: value };
   }
-  if (flag === "--port" && action === "up")
-    return { ...flags, port: readPort(value) };
-  if (flag === "--adapter" && action === "up")
-    return { ...flags, adapter: readAdapter(value) };
+  if (flag === "--port" && action === "up") return { ...flags, port: readPort(value) };
+  if (flag === "--adapter" && action === "up") return { ...flags, adapter: readAdapter(value) };
   throw invalidArguments();
 }
 
 function readPort(value: string): number {
-  if (!/^(0|[1-9][0-9]{0,4})$/.test(value) || Number(value) > 65_535)
-    throw invalidArguments();
+  if (!/^(0|[1-9][0-9]{0,4})$/.test(value) || Number(value) > 65_535) throw invalidArguments();
   return Number(value);
 }
 
@@ -132,20 +123,15 @@ function readAdapter(value: string): DevelopmentAdapter {
 }
 
 /** Private instance-local files, never an arbitrary user-supplied directory. */
-export function prepareDevelopmentDirectory(
-  root: string,
-  instance: string,
-): string {
+export function prepareDevelopmentDirectory(root: string, instance: string): string {
   requireInstance(instance);
   let directory = root;
   for (const segment of [".dads", "workbench", instance]) {
     directory = join(directory, segment);
     if (!existsSync(directory)) mkdirSync(directory, { mode: 0o700 });
     const metadata = lstatSync(directory);
-    if (!metadata.isDirectory() || metadata.isSymbolicLink())
-      throw invalidState();
-    if (segment === instance && (metadata.mode & 0o077) !== 0)
-      throw invalidState();
+    if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw invalidState();
+    if (segment === instance && (metadata.mode & 0o077) !== 0) throw invalidState();
   }
   return directory;
 }
@@ -190,22 +176,14 @@ export function resolveDevelopmentAdapter(
 }
 
 /** Missing initialized stores and symlinked SQLite files must never become an implicit reset. */
-export function prepareWorkbenchDatabase(
-  directory: string,
-  initialized: boolean,
-): string {
+export function prepareWorkbenchDatabase(directory: string, initialized: boolean): string {
   const path = join(directory, "workbench.sqlite");
   if (!existsSync(path) && initialized) throw invalidState();
   for (const suffix of ["", "-wal", "-shm", "-journal"]) {
     const candidate = `${path}${suffix}`;
     if (!existsSync(candidate)) continue;
     const metadata = lstatSync(candidate);
-    if (
-      !metadata.isFile() ||
-      metadata.isSymbolicLink() ||
-      (metadata.mode & 0o077) !== 0
-    )
-      throw invalidState();
+    if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o077) !== 0) throw invalidState();
   }
   if (!existsSync(path)) closeSync(openSync(path, "wx", 0o600));
   return path;
@@ -214,10 +192,7 @@ export function prepareWorkbenchDatabase(
 export function markDevelopmentInitialized(directory: string): void {
   const state = readOrCreateDevelopmentState(directory);
   if (state.initialized) return;
-  const temporary = join(
-    directory,
-    `state-${randomBytes(8).toString("hex")}.tmp`,
-  );
+  const temporary = join(directory, `state-${randomBytes(8).toString("hex")}.tmp`);
   writeFileSync(temporary, JSON.stringify({ ...state, initialized: true }), {
     flag: "wx",
     mode: 0o600,
@@ -292,18 +267,10 @@ export function acquireDevelopmentLease(directory: string) {
   };
 }
 
-export function readPrivateJson<Value>(
-  path: string,
-  parse: (value: unknown) => Value,
-): Value {
+export function readPrivateJson<Value>(path: string, parse: (value: unknown) => Value): Value {
   try {
     const metadata = lstatSync(path);
-    if (
-      !metadata.isFile() ||
-      metadata.isSymbolicLink() ||
-      (metadata.mode & 0o077) !== 0
-    )
-      throw invalidState();
+    if (!metadata.isFile() || metadata.isSymbolicLink() || (metadata.mode & 0o077) !== 0) throw invalidState();
     const value: unknown = JSON.parse(readFileSync(path, "utf8"));
     return parse(value);
   } catch {

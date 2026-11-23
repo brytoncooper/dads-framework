@@ -8,13 +8,7 @@
  */
 
 /** Top-level directories a line budget applies to. */
-export const SOURCE_ROOTS = [
-  "packages/",
-  "apps/",
-  "crates/",
-  "fixtures/",
-  "scripts/",
-];
+export const SOURCE_ROOTS = ["packages/", "apps/", "crates/", "fixtures/", "scripts/"];
 
 /** Extensions a line budget applies to. */
 export const SOURCE_EXTENSIONS = [".ts", ".tsx", ".rs", ".mjs", ".js"];
@@ -27,14 +21,10 @@ const PRODUCTION_EXCLUDED_SEGMENTS = ["/test-support/", "/type-tests/"];
 const SOURCE_MARKER = "/src/";
 
 /** Every budgeted file, test or not, in the order the file list gave them. */
-export function budgetedSourceFiles(
-  files: readonly string[],
-  hasRootSourcePackage = false,
-): readonly string[] {
+export function budgetedSourceFiles(files: readonly string[], hasRootSourcePackage = false): readonly string[] {
   return files.filter(
     (path) =>
-      (SOURCE_ROOTS.some((root) => path.startsWith(root)) ||
-        (hasRootSourcePackage && path.startsWith("src/"))) &&
+      (SOURCE_ROOTS.some((root) => path.startsWith(root)) || (hasRootSourcePackage && path.startsWith("src/"))) &&
       SOURCE_EXTENSIONS.some((extension) => path.endsWith(extension)),
   );
 }
@@ -47,11 +37,7 @@ export function budgetedSourceFiles(
 export function isTestSource(path: string): boolean {
   if (TEST_SUFFIXES.some((suffix) => path.endsWith(suffix))) return true;
   if (path.endsWith("/tests.rs")) return true;
-  return (
-    path.startsWith("crates/") &&
-    path.includes("/tests/") &&
-    path.endsWith(".rs")
-  );
+  return path.startsWith("crates/") && path.includes("/tests/") && path.endsWith(".rs");
 }
 
 /** True for Rust source. */
@@ -70,9 +56,7 @@ export function isProductionTypeScript(path: string): boolean {
   if (PRODUCTION_EXCLUDED_SUFFIXES.some((suffix) => path.endsWith(suffix))) {
     return false;
   }
-  return !PRODUCTION_EXCLUDED_SEGMENTS.some((segment) =>
-    path.includes(segment),
-  );
+  return !PRODUCTION_EXCLUDED_SEGMENTS.some((segment) => path.includes(segment));
 }
 
 /** The `packages/<group>/<name>` or `apps/<name>` a source file belongs to. */

@@ -1,10 +1,6 @@
 /** The Docker edge must refuse ownership collisions, keep secrets out of failures, and accept only one loopback endpoint. */
 import { describe, expect, it } from "vitest";
-import {
-  WorkbenchInfrastructure,
-  type DockerCommand,
-  type DockerCommandRunner,
-} from "./docker-infrastructure.js";
+import { WorkbenchInfrastructure, type DockerCommand, type DockerCommandRunner } from "./docker-infrastructure.js";
 
 const projectName = `dads-workbench-${"a".repeat(32)}`;
 const options = {
@@ -21,11 +17,7 @@ type Resource = {
   labels: Record<string, string>;
 };
 
-function resource(
-  kind: Resource["kind"],
-  suffix: string,
-  idCharacter = "d",
-): Resource {
+function resource(kind: Resource["kind"], suffix: string, idCharacter = "d"): Resource {
   const name = `${projectName}-${suffix}`;
   return {
     kind,
@@ -35,11 +27,7 @@ function resource(
       "dev.dads.workbench": projectName,
       "com.docker.compose.project": projectName,
       [`com.docker.compose.${kind === "container" ? "service" : kind}`]:
-        kind === "volume"
-          ? "postgres_data"
-          : kind === "network"
-            ? "workbench"
-            : suffix,
+        kind === "volume" ? "postgres_data" : kind === "network" ? "workbench" : suffix,
     },
   };
 }
@@ -63,24 +51,16 @@ function fakeDocker(initial: Resource[] = []) {
         resource("volume", "postgres-data"),
       ];
       if (command.args.includes("--profile"))
-        items.splice(
-          1,
-          0,
-          resource("container", "migrate", "e"),
-          resource("container", "spicedb", "f"),
-        );
+        items.splice(1, 0, resource("container", "migrate", "e"), resource("container", "spicedb", "f"));
       for (const item of items) {
-        if (!resources.some((entry) => entry.name === item.name))
-          resources.push(item);
+        if (!resources.some((entry) => entry.name === item.name)) resources.push(item);
       }
       afterUp?.();
       return "";
     }
     if (kind === "port") return mapping;
     if (action === "ls") {
-      const filter = command.args.find(
-        (arg) => arg.startsWith("label=") || arg.startsWith("name="),
-      );
+      const filter = command.args.find((arg) => arg.startsWith("label=") || arg.startsWith("name="));
       return resources
         .filter(
           (entry) =>
@@ -94,10 +74,7 @@ function fakeDocker(initial: Resource[] = []) {
     }
     if (action === "inspect") {
       const target = command.args.at(-1);
-      const found = resources.find(
-        (entry) =>
-          entry.kind === kind && (entry.name === target || entry.id === target),
-      );
+      const found = resources.find((entry) => entry.kind === kind && (entry.name === target || entry.id === target));
       if (!found) throw new Error("Missing fake resource");
       return JSON.stringify({
         id: found.id,
@@ -107,17 +84,14 @@ function fakeDocker(initial: Resource[] = []) {
     }
     if (action === "stop") return "";
     if (action === "rm") {
-      const index = resources.findIndex(
-        (entry) => entry.kind === kind && entry.id === command.args.at(-1),
-      );
+      const index = resources.findIndex((entry) => entry.kind === kind && entry.id === command.args.at(-1));
       if (index < 0) throw new Error("Removed an unknown resource");
       resources.splice(index, 1);
       return "";
     }
     throw new Error(`Unexpected fake command: ${command.args.join(" ")}`);
   };
-  const run: DockerCommandRunner = (command) =>
-    Promise.resolve().then(() => execute(command));
+  const run: DockerCommandRunner = (command) => Promise.resolve().then(() => execute(command));
   return {
     run,
     resources,
@@ -135,39 +109,31 @@ function fakeDocker(initial: Resource[] = []) {
 }
 
 describe("workbench Docker ownership", () => {
-  it.each(["container", "network", "volume"])(
-    "refuses a foreign exact-name %s before start or stop",
-    async (kind) => {
-      const candidate =
-        kind === "container"
-          ? resource("container", "postgres")
-          : kind === "network"
-            ? resource("network", "network")
-            : resource("volume", "postgres-data");
-      delete candidate.labels["dev.dads.workbench"];
-      for (const action of ["start", "stop"]) {
-        const fake = fakeDocker([candidate]);
-        const infrastructure = new WorkbenchInfrastructure(options, fake.run);
-        await expect(
-          action === "start" ? infrastructure.start() : infrastructure.stop(),
-        ).rejects.toMatchObject({ code: "OWNERSHIP_CONFLICT" });
-        expect(
-          fake.calls.some(
-            (call) =>
-              call.args.includes("up") ||
-              call.args.includes("rm") ||
-              call.args.includes("stop"),
-          ),
-        ).toBe(false);
-      }
-    },
-  );
+  it.each(["container", "network", "volume"])("refuses a foreign exact-name %s before start or stop", async (kind) => {
+    const candidate =
+      kind === "container"
+        ? resource("container", "postgres")
+        : kind === "network"
+          ? resource("network", "network")
+          : resource("volume", "postgres-data");
+    delete candidate.labels["dev.dads.workbench"];
+    for (const action of ["start", "stop"]) {
+      const fake = fakeDocker([candidate]);
+      const infrastructure = new WorkbenchInfrastructure(options, fake.run);
+      await expect(action === "start" ? infrastructure.start() : infrastructure.stop()).rejects.toMatchObject({
+        code: "OWNERSHIP_CONFLICT",
+      });
+      expect(
+        fake.calls.some((call) => call.args.includes("up") || call.args.includes("rm") || call.args.includes("stop")),
+      ).toBe(false);
+    }
+  });
 
   it("refuses an unexpected container with the same Compose project label", async () => {
     const fake = fakeDocker([resource("container", "foreign")]);
-    await expect(
-      new WorkbenchInfrastructure(options, fake.run).stop(),
-    ).rejects.toMatchObject({ code: "OWNERSHIP_CONFLICT" });
+    await expect(new WorkbenchInfrastructure(options, fake.run).stop()).rejects.toMatchObject({
+      code: "OWNERSHIP_CONFLICT",
+    });
     expect(fake.calls.some((call) => call.args.includes("rm"))).toBe(false);
   });
 
@@ -177,9 +143,9 @@ describe("workbench Docker ownership", () => {
       const volume = resource("volume", "postgres-data");
       volume.labels[label] = "foreign";
       const fake = fakeDocker([volume]);
-      await expect(
-        new WorkbenchInfrastructure(options, fake.run).start(),
-      ).rejects.toMatchObject({ code: "OWNERSHIP_CONFLICT" });
+      await expect(new WorkbenchInfrastructure(options, fake.run).start()).rejects.toMatchObject({
+        code: "OWNERSHIP_CONFLICT",
+      });
       expect(fake.calls.some((call) => call.args.includes("up"))).toBe(false);
     },
   );
@@ -192,17 +158,15 @@ describe("workbench Docker ownership", () => {
     await infrastructure.stop();
     expect(fake.resources).toEqual([volume]);
     await infrastructure.start();
-    expect(fake.resources.filter((entry) => entry.kind === "volume")).toEqual([
-      volume,
-    ]);
+    expect(fake.resources.filter((entry) => entry.kind === "volume")).toEqual([volume]);
   });
 
   it("refuses an initialized instance with missing authorization data before Compose can create a blank database", async () => {
     const fake = fakeDocker();
     const initialized = { ...options, requireExistingData: true };
-    await expect(
-      new WorkbenchInfrastructure(initialized, fake.run).start(),
-    ).rejects.toMatchObject({ code: "DATA_MISSING" });
+    await expect(new WorkbenchInfrastructure(initialized, fake.run).start()).rejects.toMatchObject({
+      code: "DATA_MISSING",
+    });
     expect(fake.calls.some((call) => call.args.includes("up"))).toBe(false);
     expect(fake.resources).toEqual([]);
   });
@@ -211,19 +175,14 @@ describe("workbench Docker ownership", () => {
     const volume = resource("volume", "postgres-data");
     const fake = fakeDocker([volume]);
     const initialized = { ...options, requireExistingData: true };
-    await expect(
-      new WorkbenchInfrastructure(initialized, fake.run).start(),
-    ).resolves.toMatchObject({ adapter: "postgres" });
-    expect(fake.resources.filter((entry) => entry.kind === "volume")).toEqual([
-      volume,
-    ]);
+    await expect(new WorkbenchInfrastructure(initialized, fake.run).start()).resolves.toMatchObject({
+      adapter: "postgres",
+    });
+    expect(fake.resources.filter((entry) => entry.kind === "volume")).toEqual([volume]);
   });
 
   it("allows scoped partial cleanup even when initialized authorization data is missing", async () => {
-    const fake = fakeDocker([
-      resource("container", "postgres"),
-      resource("network", "network", "1"),
-    ]);
+    const fake = fakeDocker([resource("container", "postgres"), resource("network", "network", "1")]);
     const initialized = { ...options, requireExistingData: true };
     const infrastructure = new WorkbenchInfrastructure(initialized, fake.run);
     await infrastructure.stop();
@@ -236,13 +195,9 @@ describe("workbench Docker ownership", () => {
     const fake = fakeDocker([resource("network", "network")]);
     const runner: DockerCommandRunner = async (command) => {
       const output = await fake.run(command);
-      return command.args.includes("inspect")
-        ? `malformed ${options.password} ${options.token}`
-        : output;
+      return command.args.includes("inspect") ? `malformed ${options.password} ${options.token}` : output;
     };
-    const result = await new WorkbenchInfrastructure(options, runner)
-      .stop()
-      .catch((error: unknown) => error);
+    const result = await new WorkbenchInfrastructure(options, runner).stop().catch((error: unknown) => error);
     expect(result).toMatchObject({ code: "OWNERSHIP_CONFLICT" });
     expect(String(result)).not.toContain(options.password);
     expect(String(result)).not.toContain(options.token);
@@ -256,28 +211,16 @@ describe("workbench Docker ownership", () => {
       adapter: "postgres",
     });
     const up = fake.calls.find((call) => call.args.includes("up"));
-    expect(up?.args).toEqual(
-      expect.arrayContaining(["--pull", "missing", "--wait", "--wait-timeout"]),
-    );
+    expect(up?.args).toEqual(expect.arrayContaining(["--pull", "missing", "--wait", "--wait-timeout"]));
     expect(up?.env["DADS_WORKBENCH_PASSWORD"]).toBe(options.password);
     expect(up?.env["DADS_WORKBENCH_TOKEN"]).toBe(options.token);
-    expect(
-      fake.calls.every(
-        (call) => call.timeoutMs > 0 && call.timeoutMs <= 120_000,
-      ),
-    ).toBe(true);
-    expect(JSON.stringify(fake.calls.map((call) => call.args))).not.toContain(
-      options.password,
-    );
-    expect(JSON.stringify(fake.calls.map((call) => call.args))).not.toContain(
-      options.token,
-    );
+    expect(fake.calls.every((call) => call.timeoutMs > 0 && call.timeoutMs <= 120_000)).toBe(true);
+    expect(JSON.stringify(fake.calls.map((call) => call.args))).not.toContain(options.password);
+    expect(JSON.stringify(fake.calls.map((call) => call.args))).not.toContain(options.token);
     await infrastructure.stop();
     await infrastructure.stop();
     expect(fake.resources.map((entry) => entry.kind)).toEqual(["volume"]);
-    for (const call of fake.calls.filter(
-      (entry) => entry.args.includes("rm") || entry.args.includes("stop"),
-    )) {
+    for (const call of fake.calls.filter((entry) => entry.args.includes("rm") || entry.args.includes("stop"))) {
       expect(call.args[0]).not.toBe("volume");
       expect(call.args.at(-1)).toMatch(/^[a-f0-9]{64}$/);
       expect(call.args).not.toContain("--force");
@@ -292,9 +235,7 @@ describe("workbench Docker ownership", () => {
         cause: { password: options.password },
       }),
     );
-    const result = await new WorkbenchInfrastructure(options, fake.run)
-      .start()
-      .catch((error: unknown) => error);
+    const result = await new WorkbenchInfrastructure(options, fake.run).start().catch((error: unknown) => error);
     expect(result).toBeInstanceOf(Error);
     expect(String(result)).not.toContain(options.password);
     expect(String(result)).not.toContain(options.token);
@@ -302,29 +243,20 @@ describe("workbench Docker ownership", () => {
     expect(JSON.stringify(result)).not.toContain(options.token);
   });
 
-  it.each([
-    "0.0.0.0:49152",
-    "[::]:49152",
-    "127.0.0.1:0",
-    "127.0.0.1:65536",
-    "127.0.0.1:49152\n127.0.0.1:49153",
-  ])("rejects invalid published mapping %s", async (mapping) => {
-    const fake = fakeDocker();
-    fake.setMapping(mapping);
-    await expect(
-      new WorkbenchInfrastructure(options, fake.run).start(),
-    ).rejects.toMatchObject({ code: "INVALID_ENDPOINT" });
-  });
+  it.each(["0.0.0.0:49152", "[::]:49152", "127.0.0.1:0", "127.0.0.1:65536", "127.0.0.1:49152\n127.0.0.1:49153"])(
+    "rejects invalid published mapping %s",
+    async (mapping) => {
+      const fake = fakeDocker();
+      fake.setMapping(mapping);
+      await expect(new WorkbenchInfrastructure(options, fake.run).start()).rejects.toMatchObject({
+        code: "INVALID_ENDPOINT",
+      });
+    },
+  );
 
   it("validates the project name before issuing any command", () => {
     const fake = fakeDocker();
-    expect(
-      () =>
-        new WorkbenchInfrastructure(
-          { ...options, projectName: "foreign-project" },
-          fake.run,
-        ),
-    ).toThrow();
+    expect(() => new WorkbenchInfrastructure({ ...options, projectName: "foreign-project" }, fake.run)).toThrow();
     expect(fake.calls).toEqual([]);
   });
 
@@ -332,11 +264,9 @@ describe("workbench Docker ownership", () => {
     const cancelled = new AbortController();
     cancelled.abort();
     const untouched = fakeDocker();
-    await expect(
-      new WorkbenchInfrastructure(options, untouched.run).start(
-        cancelled.signal,
-      ),
-    ).rejects.toMatchObject({ code: "CANCELLED" });
+    await expect(new WorkbenchInfrastructure(options, untouched.run).start(cancelled.signal)).rejects.toMatchObject({
+      code: "CANCELLED",
+    });
     expect(untouched.calls).toEqual([]);
     const duringUp = new AbortController();
     const partial = fakeDocker();
@@ -353,10 +283,7 @@ describe("workbench Docker ownership", () => {
 
   it("starts SpiceDB only with its explicit Compose profile", async () => {
     const fake = fakeDocker();
-    const infrastructure = new WorkbenchInfrastructure(
-      { ...options, adapter: "spicedb" },
-      fake.run,
-    );
+    const infrastructure = new WorkbenchInfrastructure({ ...options, adapter: "spicedb" }, fake.run);
     await expect(infrastructure.start()).resolves.toEqual({
       adapter: "spicedb",
       endpoint: "127.0.0.1:49152",
@@ -366,9 +293,7 @@ describe("workbench Docker ownership", () => {
     expect(up?.args).toContain("spicedb");
     const port = fake.calls.find((call) => call.args[0] === "port");
     expect(port?.args).toContain("50051/tcp");
-    expect(
-      fake.resources.filter((entry) => entry.kind === "container"),
-    ).toHaveLength(3);
+    expect(fake.resources.filter((entry) => entry.kind === "container")).toHaveLength(3);
   });
 
   it("starts the default backend with only its retained Postgres resources", async () => {

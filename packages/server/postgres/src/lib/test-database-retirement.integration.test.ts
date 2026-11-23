@@ -46,25 +46,18 @@ describe("shared test database retirement", () => {
     });
 
     try {
-      const connected = await client.query<{ pid: number }>(
-        "SELECT pg_backend_pid() AS pid",
-      );
+      const connected = await client.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
       const pid = connected.rows[0]?.pid;
       if (pid === undefined) throw new Error("Expected an external backend");
       await database.pool.query("SELECT 1");
-      await neighbor.pool.query(
-        "CREATE TABLE retirement_probe (value integer)",
-      );
+      await neighbor.pool.query("CREATE TABLE retirement_probe (value integer)");
       await neighbor.pool.query("INSERT INTO retirement_probe VALUES (42)");
 
       // A run that attached to a shared container gets that container's
       // storage, so ask the server rather than this process's env.
       const droppedOnStop =
-        (
-          await server.pool.query<{ fsync: string }>(
-            "SELECT current_setting('fsync') AS fsync",
-          )
-        ).rows[0]?.fsync === "off";
+        (await server.pool.query<{ fsync: string }>("SELECT current_setting('fsync') AS fsync")).rows[0]?.fsync ===
+        "off";
       await database.stop();
       await clientEnded;
 
@@ -75,30 +68,21 @@ describe("shared test database retirement", () => {
       );
       // On disk a stopped database is kept until the container goes; in RAM
       // it is dropped at once (test-postgres-storage.ts).
-      expect(metadata.rows).toEqual(
-        droppedOnStop ? [] : [{ datallowconn: false }],
-      );
+      expect(metadata.rows).toEqual(droppedOnStop ? [] : [{ datallowconn: false }]);
       expect(database.pool.ended).toBe(true);
       expect(database.pool.totalCount).toBe(0);
-      expect(clientErrors).toContainEqual(
-        expect.objectContaining({ code: "57P01" }),
-      );
-      const remaining = await server.pool.query<{ pid: number }>(
-        "SELECT pid FROM pg_stat_activity WHERE pid = $1",
-        [pid],
-      );
+      expect(clientErrors).toContainEqual(expect.objectContaining({ code: "57P01" }));
+      const remaining = await server.pool.query<{ pid: number }>("SELECT pid FROM pg_stat_activity WHERE pid = $1", [
+        pid,
+      ]);
       expect(remaining.rows).toEqual([]);
       // 55000: connections disallowed (disk). 3D000: database gone (RAM).
       await expect(reconnect.query("SELECT 1")).rejects.toMatchObject({
         code: droppedOnStop ? "3D000" : "55000",
       });
-      expect(
-        (
-          await neighbor.pool.query<{ value: number }>(
-            "SELECT value FROM retirement_probe",
-          )
-        ).rows,
-      ).toEqual([{ value: 42 }]);
+      expect((await neighbor.pool.query<{ value: number }>("SELECT value FROM retirement_probe")).rows).toEqual([
+        { value: 42 },
+      ]);
     } finally {
       client.release(true);
       await external.end();
@@ -139,31 +123,21 @@ describe("shared test database retirement", () => {
       await leaked.query("CREATE TABLE leaked_probe (value integer)");
       await leaked.query("INSERT INTO leaked_probe VALUES (1)");
       const droppedOnStop =
-        (
-          await server.pool.query<{ fsync: string }>(
-            "SELECT current_setting('fsync') AS fsync",
-          )
-        ).rows[0]?.fsync === "off";
+        (await server.pool.query<{ fsync: string }>("SELECT current_setting('fsync') AS fsync")).rows[0]?.fsync ===
+        "off";
 
       await database.stop();
       asking.stopping = false;
       await askAgainAndAgain;
 
-      const firstRefusal = outcomes.findIndex(
-        (outcome) => outcome !== "served",
-      );
+      const firstRefusal = outcomes.findIndex((outcome) => outcome !== "served");
       expect(firstRefusal).toBeGreaterThanOrEqual(0);
       expect(outcomes.slice(firstRefusal)).not.toContain("served");
       if (droppedOnStop) {
         // Terminated, not closed, and its counters still reach the ledger.
-        const admin = createTestPool(
-          withDatabase(server.connectionString, "postgres"),
-          { attributed: false },
-        );
+        const admin = createTestPool(withDatabase(server.connectionString, "postgres"), { attributed: false });
         try {
-          expect(
-            await readRetiredDatabaseTouchesOf(admin, databaseName),
-          ).toEqual(
+          expect(await readRetiredDatabaseTouchesOf(admin, databaseName)).toEqual(
             expect.arrayContaining([
               {
                 databaseName,

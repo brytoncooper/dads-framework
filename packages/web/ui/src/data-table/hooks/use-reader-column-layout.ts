@@ -24,9 +24,7 @@ export type ReaderColumnLayout<TData> = {
   readonly columns: ColumnDef<TData>[];
   readonly defaultPinning: ColumnPinningState;
   readonly columnVisibility: VisibilityState;
-  readonly onColumnVisibilityChange: (
-    updaterOrValue: Updater<VisibilityState>,
-  ) => void;
+  readonly onColumnVisibilityChange: (updaterOrValue: Updater<VisibilityState>) => void;
 };
 
 /**
@@ -44,34 +42,20 @@ export function useReaderColumnLayout<TData>({
   readonly initialVisibility: VisibilityState | undefined;
   readonly tableId: string | undefined;
 }): ReaderColumnLayout<TData> {
-  const columns = React.useMemo(
-    () => withColumnRoles(callerColumns),
-    [callerColumns],
-  );
-  const hideableColumnIds = React.useMemo(
-    () => readHideableColumnIds(columns),
-    [columns],
-  );
-  const defaultPinning = React.useMemo(
-    () => defaultColumnPinning(columns),
-    [columns],
-  );
+  const columns = React.useMemo(() => withColumnRoles(callerColumns), [callerColumns]);
+  const hideableColumnIds = React.useMemo(() => readHideableColumnIds(columns), [columns]);
+  const defaultPinning = React.useMemo(() => defaultColumnPinning(columns), [columns]);
 
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>(() => ({
-      ...initialVisibility,
-      ...readStoredColumnVisibility(readBrowserStorage(), tableId),
-    }));
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() => ({
+    ...initialVisibility,
+    ...readStoredColumnVisibility(readBrowserStorage(), tableId),
+  }));
 
   const onColumnVisibilityChange = React.useCallback(
     (updaterOrValue: Updater<VisibilityState>) => {
       const next = functionalUpdate(updaterOrValue, columnVisibility);
       setColumnVisibility(next);
-      writeStoredColumnVisibility(
-        readBrowserStorage(),
-        tableId,
-        pickReaderVisibility(next, hideableColumnIds),
-      );
+      writeStoredColumnVisibility(readBrowserStorage(), tableId, pickReaderVisibility(next, hideableColumnIds));
     },
     [columnVisibility, hideableColumnIds, tableId],
   );

@@ -39,13 +39,7 @@ export type ParseImportSpiceDbArgsResult =
       readonly usage: string;
     };
 
-type ValueFlag =
-  | "--endpoint"
-  | "--token"
-  | "--database-url"
-  | "--namespace"
-  | "--out"
-  | "--batch-size";
+type ValueFlag = "--endpoint" | "--token" | "--database-url" | "--namespace" | "--out" | "--batch-size";
 
 type BooleanFlag = "--verify" | "--insecure" | "--dry-run" | "--json";
 
@@ -58,12 +52,7 @@ const VALUE_FLAGS: ReadonlySet<string> = new Set<ValueFlag>([
   "--batch-size",
 ]);
 
-const BOOLEAN_FLAGS: ReadonlySet<string> = new Set<BooleanFlag>([
-  "--verify",
-  "--insecure",
-  "--dry-run",
-  "--json",
-]);
+const BOOLEAN_FLAGS: ReadonlySet<string> = new Set<BooleanFlag>(["--verify", "--insecure", "--dry-run", "--json"]);
 
 const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
 
@@ -110,12 +99,7 @@ function scanTokens(argv: readonly string[]): RawParsedFlags | string {
   return raw;
 }
 
-function consumeToken(
-  raw: RawParsedFlags,
-  argv: readonly string[],
-  index: number,
-  token: string,
-): number | string {
+function consumeToken(raw: RawParsedFlags, argv: readonly string[], index: number, token: string): number | string {
   const { name, inlineValue } = splitFlagToken(token);
   if (isBooleanFlag(name)) {
     return consumeBooleanFlag(raw, name, inlineValue, index);
@@ -189,13 +173,9 @@ function buildOptionsFromRaw(
   if (endpoint === undefined) {
     return errorResult("Missing required flag: --endpoint <host:port>");
   }
-  const token =
-    readOptionalText(raw.values.get("--token")) ??
-    readOptionalText(env["SPICEDB_TOKEN"]);
+  const token = readOptionalText(raw.values.get("--token")) ?? readOptionalText(env["SPICEDB_TOKEN"]);
   if (token === undefined) {
-    return errorResult(
-      "Missing SpiceDB token: pass --token <key> or set SPICEDB_TOKEN",
-    );
+    return errorResult("Missing SpiceDB token: pass --token <key> or set SPICEDB_TOKEN");
   }
   return finalizeOptions(raw, env, endpoint, token);
 }
@@ -237,13 +217,9 @@ function resolveDatabaseUrl(
   env: Readonly<Record<string, string | undefined>>,
   dryRun: boolean,
 ): string | undefined | ParseImportSpiceDbArgsResult {
-  const databaseUrl =
-    readOptionalText(raw.values.get("--database-url")) ??
-    readOptionalText(env["DATABASE_URL"]);
+  const databaseUrl = readOptionalText(raw.values.get("--database-url")) ?? readOptionalText(env["DATABASE_URL"]);
   if (!dryRun && databaseUrl === undefined) {
-    return errorResult(
-      "Missing Postgres URL: pass --database-url <url> or set DATABASE_URL",
-    );
+    return errorResult("Missing Postgres URL: pass --database-url <url> or set DATABASE_URL");
   }
   return databaseUrl;
 }
@@ -257,8 +233,7 @@ function buildCliOptions(input: {
   readonly databaseUrl: string | undefined;
   readonly batchSize: number | undefined;
 }): ImportSpiceDbCliOptions {
-  const namespace =
-    readOptionalText(input.raw.values.get("--namespace")) ?? "default";
+  const namespace = readOptionalText(input.raw.values.get("--namespace")) ?? "default";
   const out = readOptionalText(input.raw.values.get("--out"));
 
   return {
@@ -269,9 +244,7 @@ function buildCliOptions(input: {
     insecure: input.raw.booleans.has("--insecure"),
     dryRun: input.dryRun,
     json: input.raw.booleans.has("--json"),
-    ...(input.databaseUrl === undefined
-      ? {}
-      : { databaseUrl: input.databaseUrl }),
+    ...(input.databaseUrl === undefined ? {} : { databaseUrl: input.databaseUrl }),
     ...(out === undefined ? {} : { out }),
     ...(input.batchSize === undefined ? {} : { batchSize: input.batchSize }),
   };
@@ -313,9 +286,7 @@ function isBooleanFlag(name: string): name is BooleanFlag {
 
 function isKnownFlagToken(token: string): boolean {
   const { name } = splitFlagToken(token);
-  return (
-    VALUE_FLAGS.has(name) || BOOLEAN_FLAGS.has(name) || HELP_FLAGS.has(name)
-  );
+  return VALUE_FLAGS.has(name) || BOOLEAN_FLAGS.has(name) || HELP_FLAGS.has(name);
 }
 
 function readOptionalText(value: string | undefined): string | undefined {

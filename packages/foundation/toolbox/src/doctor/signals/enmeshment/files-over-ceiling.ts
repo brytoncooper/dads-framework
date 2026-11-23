@@ -12,32 +12,16 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  fileReading,
-  type DoctorSignal,
-  type SignalReading,
-  type SignalReadings,
-} from "../../doctor-signal.js";
+import { fileReading, type DoctorSignal, type SignalReading, type SignalReadings } from "../../doctor-signal.js";
 import { countCodeLines } from "../scanners/counted-lines.js";
-import {
-  budgetedSourceFiles,
-  isTestSource,
-} from "../scanners/source-classification.js";
+import { budgetedSourceFiles, isTestSource } from "../scanners/source-classification.js";
 
 function countProductionFileLines(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
-  const hasRootSourcePackage = context
-    .packages()
-    .some(({ root }) => root === "src");
-  for (const path of budgetedSourceFiles(
-    context.files(),
-    hasRootSourcePackage,
-  )) {
+  const hasRootSourcePackage = context.packages().some(({ root }) => root === "src");
+  for (const path of budgetedSourceFiles(context.files(), hasRootSourcePackage)) {
     if (isTestSource(path)) continue;
-    readings.set(
-      path,
-      fileReading(path, countCodeLines(context.read(path), path)),
-    );
+    readings.set(path, fileReading(path, countCodeLines(context.read(path), path)));
   }
   return readings;
 }

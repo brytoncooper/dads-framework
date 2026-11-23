@@ -6,10 +6,7 @@ export type PgTransactionState = {
   destroyClient: boolean;
 };
 
-export async function abortPgTransaction(
-  client: PgClientLike,
-  state: PgTransactionState,
-): Promise<boolean> {
+export async function abortPgTransaction(client: PgClientLike, state: PgTransactionState): Promise<boolean> {
   if (!state.began) return true;
   if (state.committed) return false;
   if (isIdleClient(client)) return false;
@@ -27,15 +24,9 @@ export function releasePgClient(client: PgClientLike, destroy: boolean): void {
 }
 
 function isIdleClient(client: PgClientLike): boolean {
-  return (
-    typeof client.getTransactionStatus === "function" &&
-    client.getTransactionStatus() === "I"
-  );
+  return typeof client.getTransactionStatus === "function" && client.getTransactionStatus() === "I";
 }
 
 function isIdleOrUnknownClient(client: PgClientLike): boolean {
-  return (
-    typeof client.getTransactionStatus !== "function" ||
-    client.getTransactionStatus() === "I"
-  );
+  return typeof client.getTransactionStatus !== "function" || client.getTransactionStatus() === "I";
 }

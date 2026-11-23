@@ -40,11 +40,7 @@ describe("parseZed", () => {
         attached_user: [user, user.anyone],
       },
       can: ({ admin, custodian, parent_platform, platform_tenancy }) => ({
-        administer_party: anyOf(
-          custodian,
-          admin,
-          parent_platform.administer,
-        ).unless(platform_tenancy),
+        administer_party: anyOf(custodian, admin, parent_platform.administer).unless(platform_tenancy),
         create_workspaces: allOf(admin, platform_tenancy),
         act: parent_platform.super_admin,
       }),
@@ -56,9 +52,7 @@ describe("parseZed", () => {
     expect(accessIrDefinitionsDiff(emitAccessIr(model), parsed)).toEqual([]);
 
     const fromIr = compileAccessFromIr(parsed);
-    expect(
-      accessIrDefinitionsDiff(emitAccessIr(model), emitAccessIr(fromIr)),
-    ).toEqual([]);
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), emitAccessIr(fromIr))).toEqual([]);
   });
 
   it("parses a hand-written fragment with comments and empty user", () => {
@@ -76,12 +70,8 @@ describe("parseZed", () => {
       { wireName: "user", roles: [], permissions: [] },
       {
         wireName: "platform/support_session",
-        roles: [
-          { name: "grantee", subjects: [{ kind: "type", wireName: "user" }] },
-        ],
-        permissions: [
-          { name: "act", terms: [{ kind: "role", name: "grantee" }] },
-        ],
+        roles: [{ name: "grantee", subjects: [{ kind: "type", wireName: "user" }] }],
+        permissions: [{ name: "act", terms: [{ kind: "role", name: "grantee" }] }],
       },
     ]);
   });
@@ -168,22 +158,14 @@ describe("parseZed", () => {
   });
 
   it("reports accurate 1-based line numbers on unsupported constructs", () => {
-    expect(() =>
-      parseZed(
-        "/*\nline 2\n*/\ncaveat ip_check(ip string) { ip == '1.1.1.1' }",
-      ),
-    ).toThrow(/line 4:.*caveat/);
+    expect(() => parseZed("/*\nline 2\n*/\ncaveat ip_check(ip string) { ip == '1.1.1.1' }")).toThrow(/line 4:.*caveat/);
 
-    expect(() =>
-      parseZed("definition doc {\n  relation viewer: user with ip_check\n}"),
-    ).toThrow(/line 2:.*with ip_check/);
-
-    expect(() =>
-      parseZed("definition doc {\n  permission empty = nil\n}"),
-    ).toThrow(/line 2:.*nil/);
-
-    expect(() => parseZed("use unknown_pragma\ndefinition user {}")).toThrow(
-      /line 1:.*use unknown_pragma/,
+    expect(() => parseZed("definition doc {\n  relation viewer: user with ip_check\n}")).toThrow(
+      /line 2:.*with ip_check/,
     );
+
+    expect(() => parseZed("definition doc {\n  permission empty = nil\n}")).toThrow(/line 2:.*nil/);
+
+    expect(() => parseZed("use unknown_pragma\ndefinition user {}")).toThrow(/line 1:.*use unknown_pragma/);
   });
 });

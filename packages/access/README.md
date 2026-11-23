@@ -25,14 +25,7 @@ Save as `access-model.mts` and run `npx tsx access-model.mts`.
 <!-- dads:check-example -->
 
 ```ts
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  emitZed,
-  formatAccessTree,
-  resource,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, emitZed, formatAccessTree, resource } from "@dads-framework/access";
 
 const user = actor("user");
 

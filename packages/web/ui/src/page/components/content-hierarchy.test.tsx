@@ -10,13 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { Button } from "../../elements/index.js";
 
-import {
-  FormActions,
-  MetadataItem,
-  MetadataList,
-  SectionHeader,
-  SubsectionHeading,
-} from "./content-hierarchy.js";
+import { FormActions, MetadataItem, MetadataList, SectionHeader, SubsectionHeading } from "./content-hierarchy.js";
 
 afterEach(cleanup);
 
@@ -46,9 +40,7 @@ describe("content hierarchy", () => {
     expect(sectionHeading.className).toContain("text-2xl");
     expect(subsectionHeading.className).toContain("text-xl");
     expect(sectionHeader?.className).toContain("sm:flex-row");
-    expect(
-      screen.getByRole("button", { name: "Enable Product" }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Enable Product" })).toBeDefined();
   });
 
   it("renders reusable metadata as a responsive description list", () => {
@@ -85,10 +77,7 @@ describe("content hierarchy", () => {
     expect(actions.className).toContain("flex-col-reverse");
     expect(actions.className).toContain("sm:flex-row");
     expect(actions.className).toContain("sm:justify-end");
-    expect(buttons.map((button) => button.textContent)).toEqual([
-      "Cancel",
-      "Save Changes",
-    ]);
+    expect(buttons.map((button) => button.textContent)).toEqual(["Cancel", "Save Changes"]);
   });
 
   it("left-aligns actions with primary-first DOM order when align is start", () => {
@@ -106,20 +95,11 @@ describe("content hierarchy", () => {
     expect(actions.className).toContain("sm:justify-start");
     expect(actions.className).not.toContain("flex-col-reverse");
     expect(actions.className).not.toContain("sm:justify-end");
-    expect(buttons.map((button) => button.textContent)).toEqual([
-      "Save Changes",
-      "Cancel",
-    ]);
+    expect(buttons.map((button) => button.textContent)).toEqual(["Save Changes", "Cancel"]);
   });
 
   it("omits optional structure when a permission expression resolves false", () => {
-    const { container } = render(
-      <SectionHeader
-        title="Availability"
-        description={false}
-        actions={false}
-      />,
-    );
+    const { container } = render(<SectionHeader title="Availability" description={false} actions={false} />);
 
     expect(container.querySelector("p")).toBeNull();
     expect(container.querySelector('[data-slot="section-actions"]')).toBeNull();

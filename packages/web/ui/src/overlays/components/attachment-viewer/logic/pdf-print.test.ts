@@ -17,10 +17,7 @@ import {
 
 describe("printRenderScale", () => {
   it("scales a page to the target DPI when it fits the pixel budget", () => {
-    expect(printRenderScale(612, 792)).toBeCloseTo(
-      PRINT_TARGET_DPI / PDF_POINTS_PER_INCH,
-      10,
-    );
+    expect(printRenderScale(612, 792)).toBeCloseTo(PRINT_TARGET_DPI / PDF_POINTS_PER_INCH, 10);
   });
 
   it("honours an explicit target DPI", () => {
@@ -68,9 +65,7 @@ describe("chunkPages", () => {
   });
 
   it("covers every page exactly once", () => {
-    expect(chunkPages(37, 5).flat()).toEqual(
-      Array.from({ length: 37 }, (_unused, index) => index + 1),
-    );
+    expect(chunkPages(37, 5).flat()).toEqual(Array.from({ length: 37 }, (_unused, index) => index + 1));
   });
 
   it("returns no batches for an empty document", () => {

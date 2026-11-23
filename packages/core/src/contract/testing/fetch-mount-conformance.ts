@@ -48,9 +48,7 @@ export async function proveFetchMount(open: OpenProtocolHost): Promise<void> {
   }
 }
 
-async function proveListAnswers(
-  exchange: (request: Request) => Promise<Response>,
-): Promise<void> {
+async function proveListAnswers(exchange: (request: Request) => Promise<Response>): Promise<void> {
   const url = "http://test.local" + prefix + "/visible?color=blue";
   const denied = await exchange(new Request(url));
   equal(denied.status, 404);
@@ -61,15 +59,11 @@ async function proveListAnswers(
   equal(visible.status, 200);
   deepEqual(await visible.json(), { visibleIds: ["blue-item"] });
 
-  const wrongMount = await exchange(
-    new Request(url.replace(prefix, "/other"), member),
-  );
+  const wrongMount = await exchange(new Request(url.replace(prefix, "/other"), member));
   equal(wrongMount.status, 404);
 }
 
-async function proveBinaryAnswer(
-  exchange: (request: Request) => Promise<Response>,
-): Promise<void> {
+async function proveBinaryAnswer(exchange: (request: Request) => Promise<Response>): Promise<void> {
   const echoed = await exchange(
     new Request("http://test.local" + prefix + "/echo", {
       method: "POST",

@@ -4,8 +4,7 @@ import type { auditLog } from "../generated-tables/audit-log.tables.js";
 
 /** Full audit history or rows matching every configured application scope dimension. */
 export type AuditLogScope =
-  | { readonly kind: "application"; readonly values: AuditScopeValues }
-  | { readonly kind: "platform" };
+  { readonly kind: "application"; readonly values: AuditScopeValues } | { readonly kind: "platform" };
 
 /** Narrowing within a scope. Every field is optional and they combine with AND. */
 export type AuditLogRowFilter = {
@@ -100,9 +99,7 @@ export abstract class AuditLogReader {
   ): Promise<readonly AuditLogRecord[]>;
 
   /** Every row one request wrote, oldest first. */
-  abstract rowsForRequest(
-    requestId: string,
-  ): Promise<readonly AuditLogRecord[]>;
+  abstract rowsForRequest(requestId: string): Promise<readonly AuditLogRecord[]>;
 
   /** Count distinct records changed by one request in the named scope. */
   abstract countRecordsForRequest(

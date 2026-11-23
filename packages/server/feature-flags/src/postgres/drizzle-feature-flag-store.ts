@@ -12,22 +12,12 @@ import {
 } from "../index.js";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 
-import {
-  featureFlagChangeEvents,
-  featureFlagStates,
-  featureFlagTenantTargets,
-} from "./feature-flag-tables.js";
+import { featureFlagChangeEvents, featureFlagStates, featureFlagTenantTargets } from "./feature-flag-tables.js";
 
 type Transaction = Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
 type StateRow = Pick<
   typeof featureFlagStates.$inferSelect,
-  | "id"
-  | "slug"
-  | "audienceMode"
-  | "rowVersion"
-  | "globalEnabledAt"
-  | "updatedAt"
-  | "updatedBy"
+  "id" | "slug" | "audienceMode" | "rowVersion" | "globalEnabledAt" | "updatedAt" | "updatedBy"
 >;
 type TargetRow = typeof featureFlagTenantTargets.$inferSelect;
 
@@ -42,9 +32,7 @@ export class DrizzleFeatureFlagStore extends FeatureFlagStore {
     super();
   }
 
-  async listStates(
-    slugs: readonly string[],
-  ): Promise<readonly FeatureFlagState[]> {
+  async listStates(slugs: readonly string[]): Promise<readonly FeatureFlagState[]> {
     if (slugs.length === 0) return [];
     const rows = await this.db
       .select({
@@ -95,9 +83,7 @@ export class DrizzleFeatureFlagStore extends FeatureFlagStore {
     return { rows: rows.map(toHistoryEntry), total: total?.value ?? 0 };
   }
 
-  async applyBatch(
-    input: FeatureFlagBatchWrite,
-  ): Promise<"applied" | "revision-conflict"> {
+  async applyBatch(input: FeatureFlagBatchWrite): Promise<"applied" | "revision-conflict"> {
     try {
       await this.db.transaction(async (tx) => {
         for (const next of input.nextStates) {
@@ -113,10 +99,7 @@ export class DrizzleFeatureFlagStore extends FeatureFlagStore {
   }
 }
 
-function toState(
-  row: StateRow,
-  targets: readonly TargetRow[],
-): FeatureFlagState {
+function toState(row: StateRow, targets: readonly TargetRow[]): FeatureFlagState {
   return featureFlagStateSchema.parse({
     slug: row.slug,
     audienceMode: row.audienceMode,
@@ -132,9 +115,7 @@ function toState(
   });
 }
 
-function toHistoryEntry(
-  row: typeof featureFlagChangeEvents.$inferSelect,
-): FeatureFlagHistoryEntry {
+function toHistoryEntry(row: typeof featureFlagChangeEvents.$inferSelect): FeatureFlagHistoryEntry {
   return {
     batchId: featureFlagBatchIdSchema.parse(row.batchId),
     slug: row.slug,
@@ -155,9 +136,7 @@ async function writeStateWithTargets(
   const expected = expectedRevisions.get(next.slug);
   if (expected === undefined) throw new RevisionConflict();
   const stateId = await writeState(tx, next, expected);
-  await tx
-    .delete(featureFlagTenantTargets)
-    .where(eq(featureFlagTenantTargets.featureFlagStateId, stateId));
+  await tx.delete(featureFlagTenantTargets).where(eq(featureFlagTenantTargets.featureFlagStateId, stateId));
   if (next.rememberedTenants.length === 0) return;
   await tx.insert(featureFlagTenantTargets).values(
     next.rememberedTenants.map((tenant) => ({
@@ -177,8 +156,7 @@ function stateColumns(next: FeatureFlagState) {
   }
   return {
     audienceMode: next.audienceMode,
-    globalEnabledAt:
-      next.globalEnabledAt === null ? null : new Date(next.globalEnabledAt),
+    globalEnabledAt: next.globalEnabledAt === null ? null : new Date(next.globalEnabledAt),
     updatedAt: new Date(next.updatedAt),
     updatedBy: next.updatedBy,
     rowVersion: next.revision,
@@ -186,11 +164,7 @@ function stateColumns(next: FeatureFlagState) {
 }
 
 /** Revision 0 means "no row yet": insert, and lose to a concurrent first write. */
-async function writeState(
-  tx: Transaction,
-  next: FeatureFlagState,
-  expected: number,
-): Promise<string> {
+async function writeState(tx: Transaction, next: FeatureFlagState, expected: number): Promise<string> {
   const rows =
     expected === 0
       ? await tx
@@ -201,22 +175,14 @@ async function writeState(
       : await tx
           .update(featureFlagStates)
           .set(stateColumns(next))
-          .where(
-            and(
-              eq(featureFlagStates.slug, next.slug),
-              eq(featureFlagStates.rowVersion, expected),
-            ),
-          )
+          .where(and(eq(featureFlagStates.slug, next.slug), eq(featureFlagStates.rowVersion, expected)))
           .returning({ id: featureFlagStates.id });
   const row = rows[0];
   if (row === undefined) throw new RevisionConflict();
   return row.id;
 }
 
-async function insertHistory(
-  tx: Transaction,
-  history: readonly FeatureFlagHistoryEntry[],
-): Promise<void> {
+async function insertHistory(tx: Transaction, history: readonly FeatureFlagHistoryEntry[]): Promise<void> {
   if (history.length === 0) return;
   await tx.insert(featureFlagChangeEvents).values(
     history.map((entry) => ({

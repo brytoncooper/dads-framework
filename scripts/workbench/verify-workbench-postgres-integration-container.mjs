@@ -22,14 +22,7 @@ export function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function createWorkbenchPostgresContainer({
-  image,
-  runId,
-  ownerLabel,
-  password,
-  cancellation,
-  redact,
-}) {
+export function createWorkbenchPostgresContainer({ image, runId, ownerLabel, password, cancellation, redact }) {
   let postgres;
 
   async function docker(args, { cleanup = false } = {}) {
@@ -60,16 +53,13 @@ export function createWorkbenchPostgresContainer({
       }
       await setTimeout(250, undefined, { signal: cancellation.signal });
     }
-    throw new Error(
-      `Timed out waiting for ${description}: ${errorMessage(lastError)}`,
-    );
+    throw new Error(`Timed out waiting for ${description}: ${errorMessage(lastError)}`);
   }
 
   async function postgresPort(containerId) {
     const mapping = (await docker(["port", containerId, "5432/tcp"])).trim();
     const match = /^127\.0\.0\.1:([0-9]+)$/.exec(mapping);
-    if (!match)
-      throw new Error("Postgres must expose exactly one loopback port.");
+    if (!match) throw new Error("Postgres must expose exactly one loopback port.");
     const port = Number(match[1]);
     if (!Number.isInteger(port) || port < 1 || port > 65_535)
       throw new Error("Docker returned an invalid Postgres port.");
@@ -87,9 +77,7 @@ export function createWorkbenchPostgresContainer({
       try {
         await docker(["image", "inspect", image, "--format", "{{.Id}}"]);
       } catch {
-        throw new Error(
-          `Required Docker image is unavailable. Run: docker pull ${image}`,
-        );
+        throw new Error(`Required Docker image is unavailable. Run: docker pull ${image}`);
       }
     },
 
@@ -117,24 +105,11 @@ export function createWorkbenchPostgresContainer({
           image,
         ])
       ).trim();
-      if (!/^[a-f0-9]{64}$/.test(id))
-        throw new Error(
-          "Docker returned an invalid Postgres container identifier.",
-        );
+      if (!/^[a-f0-9]{64}$/.test(id)) throw new Error("Docker returned an invalid Postgres container identifier.");
       postgres.id = id;
       await docker(["start", postgres.id]);
       await waitUntil("Postgres readiness", () =>
-        docker([
-          "exec",
-          postgres.id,
-          "pg_isready",
-          "-h",
-          "127.0.0.1",
-          "-U",
-          "dads",
-          "-d",
-          "dads",
-        ]),
+        docker(["exec", postgres.id, "pg_isready", "-h", "127.0.0.1", "-U", "dads", "-d", "dads"]),
       );
       const port = await postgresPort(postgres.id);
       return `postgres://dads:${password}@127.0.0.1:${port}/dads`;
@@ -143,21 +118,11 @@ export function createWorkbenchPostgresContainer({
     async cleanupOwnedContainer() {
       if (!postgres) return;
       const owner = (
-        await docker(
-          [
-            "container",
-            "inspect",
-            "--format",
-            `{{index .Config.Labels "${ownerLabel}"}}`,
-            postgres.id,
-          ],
-          { cleanup: true },
-        )
+        await docker(["container", "inspect", "--format", `{{index .Config.Labels "${ownerLabel}"}}`, postgres.id], {
+          cleanup: true,
+        })
       ).trim();
-      if (owner !== runId)
-        throw new Error(
-          `Refusing to remove unowned container ${postgres.name}.`,
-        );
+      if (owner !== runId) throw new Error(`Refusing to remove unowned container ${postgres.name}.`);
       await docker(["container", "rm", "--force", postgres.id], {
         cleanup: true,
       });

@@ -1,8 +1,6 @@
 import type { Identity, IdentitySession } from "../identity-types.js";
 
-export type InMemoryIdentitySessions = Readonly<
-  Record<string, IdentitySession>
->;
+export type InMemoryIdentitySessions = Readonly<Record<string, IdentitySession>>;
 
 const SESSION_COOKIE = "dads_fixture_session";
 
@@ -22,10 +20,7 @@ export function inMemoryIdentityCookie(key: string): string {
 }
 
 /** A stand-in for the verified-session boundary, driven by a test clock. */
-export function inMemoryIdentity(
-  seed: InMemoryIdentitySessions,
-  now: () => Date,
-): Identity {
+export function inMemoryIdentity(seed: InMemoryIdentitySessions, now: () => Date): Identity {
   const sessions = new Map(Object.entries(seed));
 
   function sessionFor(headers: Headers): IdentitySession | null {
@@ -46,9 +41,7 @@ export function inMemoryIdentity(
       if (key !== undefined) sessions.delete(key);
       return Promise.resolve(Response.json({ ok: true }));
     }
-    return Promise.resolve(
-      Response.json({ error: "not-found" }, { status: 404 }),
-    );
+    return Promise.resolve(Response.json({ error: "not-found" }, { status: 404 }));
   }
 
   return {

@@ -65,13 +65,6 @@ export function catalogOnly(spec: {
   };
 }
 
-export function isCatalogOnlyCapability(
-  value: unknown,
-): value is CatalogOnlyCapability {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "catalogOnly"
-  );
+export function isCatalogOnlyCapability(value: unknown): value is CatalogOnlyCapability {
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "catalogOnly";
 }

@@ -67,21 +67,13 @@ export function placeholdersOf(phrase: string): ReadonlySet<string> {
  * before a second locale ships; that costs this narrowing, which is honest
  * about a phrase object having been written by hand.
  */
-function writtenPhraseFor(
-  text: LocalizedText,
-  locale: string,
-): string | undefined {
+function writtenPhraseFor(text: LocalizedText, locale: string): string | undefined {
   const phrases: Readonly<Record<string, unknown>> = text;
   const phrase = phrases[locale];
-  return typeof phrase === "string" && phrase.trim().length > 0
-    ? phrase
-    : undefined;
+  return typeof phrase === "string" && phrase.trim().length > 0 ? phrase : undefined;
 }
 
-function comparePlaceholders(
-  reference: string,
-  translation: string,
-): { missing: string[]; unexpected: string[] } {
+function comparePlaceholders(reference: string, translation: string): { missing: string[]; unexpected: string[] } {
   const expected = placeholdersOf(reference);
   const actual = placeholdersOf(translation);
   return {
@@ -91,10 +83,7 @@ function comparePlaceholders(
 }
 
 function findPluralFallbackGaps(merged: MergedCopy): PluralFallbackGap[] {
-  const families = new Map<
-    string,
-    { readonly key: string; readonly file: string; hasOther: boolean }
-  >();
+  const families = new Map<string, { readonly key: string; readonly file: string; hasOther: boolean }>();
 
   for (const [key, entry] of merged) {
     const match = PLURAL_KEY.exec(key);
@@ -129,9 +118,7 @@ function recordMalformedPlaceholders(
   phrase: string,
 ): boolean {
   const malformed = inspectPlaceholderSyntax(phrase).malformed;
-  malformedPlaceholders.push(
-    ...malformed.map((token) => ({ key, file, locale, token })),
-  );
+  malformedPlaceholders.push(...malformed.map((token) => ({ key, file, locale, token })));
   return malformed.length > 0;
 }
 
@@ -167,18 +154,9 @@ function checkCatalogEntry(
       findings.missingTranslations.push({ key, file, locale });
       continue;
     }
-    const malformedTranslation = recordMalformedPlaceholders(
-      findings.malformedPlaceholders,
-      key,
-      file,
-      locale,
-      phrase,
-    );
+    const malformedTranslation = recordMalformedPlaceholders(findings.malformedPlaceholders, key, file, locale, phrase);
     if (malformedReference || malformedTranslation) continue;
-    const { missing, unexpected } = comparePlaceholders(
-      referencePhrase,
-      phrase,
-    );
+    const { missing, unexpected } = comparePlaceholders(referencePhrase, phrase);
     if (missing.length > 0 || unexpected.length > 0) {
       findings.placeholderMismatches.push({
         key,
@@ -203,9 +181,7 @@ export function checkCatalogParity(
 ): CatalogParityReport {
   const [reference, ...translated] = locales;
   if (reference === undefined) {
-    throw new Error(
-      "catalog parity needs at least one locale to measure against",
-    );
+    throw new Error("catalog parity needs at least one locale to measure against");
   }
 
   const findings: PhraseFindings = {
@@ -222,30 +198,23 @@ export function checkCatalogParity(
 
 function describeParityReport(report: CatalogParityReport): string {
   const lines = [
-    ...report.missingTranslations.map(
-      (gap) => `  ${gap.key} (${gap.file}) has no ${gap.locale} phrase`,
-    ),
+    ...report.missingTranslations.map((gap) => `  ${gap.key} (${gap.file}) has no ${gap.locale} phrase`),
     ...report.malformedPlaceholders.map(
-      (gap) =>
-        `  ${gap.key} (${gap.file}) ${gap.locale} has malformed placeholder ${gap.token}`,
+      (gap) => `  ${gap.key} (${gap.file}) ${gap.locale} has malformed placeholder ${gap.token}`,
     ),
     ...report.placeholderMismatches.map(
       (gap) =>
         `  ${gap.key} (${gap.file}) ${gap.locale} placeholders differ — missing [${gap.missing.join(", ")}], unexpected [${gap.unexpected.join(", ")}]`,
     ),
     ...report.pluralFallbackGaps.map(
-      (gap) =>
-        `  ${gap.key} (${gap.file}) plural family has no ${gap.missingKey} fallback`,
+      (gap) => `  ${gap.key} (${gap.file}) plural family has no ${gap.missingKey} fallback`,
     ),
   ];
   return lines.join("\n");
 }
 
 /** Parity as a check: the failure message IS the translation worklist. */
-export function assertCatalogParity(
-  merged: MergedCopy,
-  locales: readonly string[] = SUPPORTED_LOCALES,
-): void {
+export function assertCatalogParity(merged: MergedCopy, locales: readonly string[] = SUPPORTED_LOCALES): void {
   const report = checkCatalogParity(merged, locales);
   const gaps =
     report.missingTranslations.length +

@@ -19,23 +19,14 @@ async function loadStylesheet(specifier, base) {
     ? resolve(base, specifier)
     : execFileSync(
         process.execPath,
-        [
-          "--conditions=style",
-          "--input-type=module",
-          "--eval",
-          resolveExport,
-          base,
-          specifier,
-        ],
+        ["--conditions=style", "--input-type=module", "--eval", resolveExport, base, specifier],
         { encoding: "utf8" },
       );
   return { path, base: dirname(path), content: await readFile(path, "utf8") };
 }
 
 test("the public stylesheet compiles with its palette, fonts, and custom utilities", async () => {
-  const entry = createRequire(import.meta.url).resolve(
-    "@dads-framework/ui/styles/index.css",
-  );
+  const entry = createRequire(import.meta.url).resolve("@dads-framework/ui/styles/index.css");
   const base = dirname(entry);
   const source = await readFile(entry, "utf8");
   const stylesheet = await compile(source, { base, loadStylesheet });

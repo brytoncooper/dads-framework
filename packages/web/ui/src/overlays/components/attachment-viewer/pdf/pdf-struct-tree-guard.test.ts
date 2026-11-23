@@ -5,17 +5,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  guardStructTree,
-  isStructTreeSource,
-  type StructTreeSource,
-} from "./pdf-struct-tree-guard.js";
+import { guardStructTree, isStructTreeSource, type StructTreeSource } from "./pdf-struct-tree-guard.js";
 
 describe("guardStructTree", () => {
   it("resolves null when the original rejects", async () => {
     const target: StructTreeSource = {
-      getStructTree: () =>
-        Promise.reject(new TypeError("i.getRaw is not a function")),
+      getStructTree: () => Promise.reject(new TypeError("i.getRaw is not a function")),
     };
     guardStructTree(target);
     await expect(target.getStructTree()).resolves.toBeNull();
@@ -49,9 +44,7 @@ describe("guardStructTree", () => {
 
 describe("isStructTreeSource", () => {
   it("accepts an object with a callable getStructTree and rejects anything else", () => {
-    expect(isStructTreeSource({ getStructTree: () => Promise.resolve() })).toBe(
-      true,
-    );
+    expect(isStructTreeSource({ getStructTree: () => Promise.resolve() })).toBe(true);
     expect(isStructTreeSource({ getStructTree: "tree" })).toBe(false);
     expect(isStructTreeSource(null)).toBe(false);
     expect(isStructTreeSource("page")).toBe(false);

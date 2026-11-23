@@ -43,10 +43,7 @@ export async function applyDesiredAuthorizationSchema(input: {
   }
 
   const liveSchema = await store.readSchema();
-  const plan = planSchemaContraction(
-    parseZedSchemaSurface(liveSchema),
-    parseZedSchemaSurface(input.desiredSchema),
-  );
+  const plan = planSchemaContraction(parseZedSchemaSurface(liveSchema), parseZedSchemaSurface(input.desiredSchema));
   const snapshot = await maybeSnapshot(plan, input.snapshotDatastore, log);
   await deleteLeftoverRelationships(store, plan, log);
   await writeDesiredSchema(store, input.desiredSchema);
@@ -113,10 +110,7 @@ async function deleteLeftoverRelationships(
   }
 }
 
-async function writeDesiredSchema(
-  store: AuthorizationSchemaStore,
-  desiredSchema: string,
-): Promise<void> {
+async function writeDesiredSchema(store: AuthorizationSchemaStore, desiredSchema: string): Promise<void> {
   let attempt = 0;
   while (attempt < MAX_WRITE_SCHEMA_ATTEMPTS) {
     attempt += 1;
@@ -133,9 +127,7 @@ async function writeDesiredSchema(
   }
 }
 
-function filterForBlocker(
-  blocker: NonNullable<ReturnType<typeof parseWriteSchemaBlocker>>,
-): RelationshipFilter {
+function filterForBlocker(blocker: NonNullable<ReturnType<typeof parseWriteSchemaBlocker>>): RelationshipFilter {
   if (blocker.kind === "removed-type") {
     return { resourceType: blocker.resourceType };
   }
@@ -151,9 +143,7 @@ function filterForBlocker(
     subject: {
       type: blocker.subjectType,
       id: "",
-      ...(blocker.subjectRelation === undefined
-        ? {}
-        : { relation: blocker.subjectRelation }),
+      ...(blocker.subjectRelation === undefined ? {} : { relation: blocker.subjectRelation }),
     },
   };
 }

@@ -28,9 +28,7 @@ export type FilterParamItem = z.infer<typeof filterItemParamSchema>;
  */
 export const filterParamSchema = z
   .union([z.string(), z.array(filterItemParamSchema)])
-  .transform((value) =>
-    typeof value === "string" ? decodeFilterParam(value) : value,
-  );
+  .transform((value) => (typeof value === "string" ? decodeFilterParam(value) : value));
 
 const FILTER_SEPARATOR = "*";
 const FIELD_SEPARATOR = ".";
@@ -55,9 +53,7 @@ const ESCAPE = "\\";
  * the column (and the operator, when one is spelled out), dots included, so
  * `name.test.org` searches for `test.org`.
  */
-export function encodeFilterParam(
-  filters: readonly FilterParamItem[],
-): string | undefined {
+export function encodeFilterParam(filters: readonly FilterParamItem[]): string | undefined {
   if (filters.length === 0) return undefined;
 
   return filters.map(encodeFilter).join(FILTER_SEPARATOR);
@@ -105,8 +101,7 @@ function keepOperatorLookalikeWhole(encoded: string): string {
 function decodeFilter(token: string): FilterParamItem | undefined {
   const fields = splitUnescaped(token, FIELD_SEPARATOR);
   const [rawId, second] = fields;
-  if (rawId === undefined || rawId === "" || fields.length < 2)
-    return undefined;
+  if (rawId === undefined || rawId === "" || fields.length < 2) return undefined;
 
   const id = unescape(rawId);
   const hasOperator = fields.length > 2 && isFilterOperator(second);

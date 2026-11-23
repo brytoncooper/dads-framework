@@ -22,11 +22,7 @@
  */
 
 import type { DoctorContext, DoctorPackage } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 import { readSourceBindings } from "../scanners/source-bindings.js";
 
@@ -39,25 +35,11 @@ const ALLOWED_TARGET_KINDS = new Map<string, readonly string[]>([
   ["edge", ["core", "edge"]],
   ["profile", ["core", "adapter", "binding", "edge"]],
   ["tooling", ["core", "tooling", "artifact"]],
-  [
-    "composition",
-    [
-      "core",
-      "adapter",
-      "binding",
-      "edge",
-      "profile",
-      "tooling",
-      "composition",
-      "artifact",
-    ],
-  ],
+  ["composition", ["core", "adapter", "binding", "edge", "profile", "tooling", "composition", "artifact"]],
   ["artifact", []],
 ]);
 
-function readKinds(
-  packages: readonly DoctorPackage[],
-): ReadonlyMap<string, string> {
+function readKinds(packages: readonly DoctorPackage[]): ReadonlyMap<string, string> {
   const kinds = new Map<string, string>();
   for (const declared of packages) {
     const kind = declared.kind;
@@ -78,9 +60,7 @@ function countForbiddenEdges(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const declared of packages) {
     const bindings = readSourceBindings(context, declared);
-    const depsInBindings = new Set(
-      bindings.flatMap((scope) => scope.dependencies),
-    );
+    const depsInBindings = new Set(bindings.flatMap((scope) => scope.dependencies));
     recordEdges(
       readings,
       kinds,
@@ -89,13 +69,7 @@ function countForbiddenEdges(context: DoctorContext): SignalReadings {
       declared.allowedDependencies.filter((name) => !depsInBindings.has(name)),
     );
     for (const binding of bindings) {
-      recordEdges(
-        readings,
-        kinds,
-        `${declared.name}/${binding.name}`,
-        "binding",
-        binding.dependencies,
-      );
+      recordEdges(readings, kinds, `${declared.name}/${binding.name}`, "binding", binding.dependencies);
     }
   }
   return readings;

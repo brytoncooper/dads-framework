@@ -22,10 +22,7 @@
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
 import { readPackageGraph } from "../scanners/package-graph.js";
-import {
-  SOURCE_EXTENSIONS,
-  SOURCE_ROOTS,
-} from "../scanners/source-classification.js";
+import { SOURCE_EXTENSIONS, SOURCE_ROOTS } from "../scanners/source-classification.js";
 
 function isOwnableSource(path: string): boolean {
   return (
@@ -41,9 +38,7 @@ function countUnownedSource(context: DoctorContext) {
   const roots = graph.packages.map((declared) => declared.root);
   for (const path of context.files()) {
     if (!isOwnableSource(path)) continue;
-    const owned = roots.some(
-      (root) => path === root || path.startsWith(`${root}/`),
-    );
+    const owned = roots.some((root) => path === root || path.startsWith(`${root}/`));
     readings.set(path, { value: owned ? 0 : 1, evidence: [{ path }] });
   }
   return readings;

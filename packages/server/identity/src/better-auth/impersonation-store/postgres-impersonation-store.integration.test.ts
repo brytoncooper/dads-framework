@@ -1,9 +1,6 @@
 import { createImpersonation } from "../../impersonation/index.js";
 import { runNodePgMigrations } from "@dads-framework/postgres/migrations";
-import {
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startUnmigratedTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { createPostgresImpersonationStore } from "./index.js";
@@ -60,29 +57,17 @@ it("commits grant mutations and their audit rows together on real PostgreSQL", a
 
   const grant = await impersonation.start(staff, scope);
   if (!grant) throw new Error("Expected a staff grant");
-  expect(
-    await impersonation.use(staff, { grantId: grant.id, tenantId }),
-  ).toEqual(grant);
+  expect(await impersonation.use(staff, { grantId: grant.id, tenantId })).toEqual(grant);
   await pool.query(`ALTER TABLE identity_staff_impersonation_audit ADD CONSTRAINT reject_success
     CHECK (event->>'outcome' <> 'authorized') NOT VALID`);
-  await expect(impersonation.start(staff, scope)).rejects.toThrow(
-    "reject_success",
-  );
-  await expect(impersonation.revoke(staff, grant.id)).rejects.toThrow(
-    "reject_success",
-  );
+  await expect(impersonation.start(staff, scope)).rejects.toThrow("reject_success");
+  await expect(impersonation.revoke(staff, grant.id)).rejects.toThrow("reject_success");
 
-  const remaining = await pool.query(
-    "SELECT id FROM identity_staff_impersonation_grants",
-  );
+  const remaining = await pool.query("SELECT id FROM identity_staff_impersonation_grants");
   expect(remaining.rows).toEqual([{ id: grant.id }]);
-  await pool.query(
-    "ALTER TABLE identity_staff_impersonation_audit DROP CONSTRAINT reject_success",
-  );
+  await pool.query("ALTER TABLE identity_staff_impersonation_audit DROP CONSTRAINT reject_success");
   expect(await impersonation.revoke(staff, grant.id)).toBe(true);
-  expect(
-    await impersonation.use(staff, { grantId: grant.id, tenantId }),
-  ).toBeNull();
+  expect(await impersonation.use(staff, { grantId: grant.id, tenantId })).toBeNull();
 
   const audit = await pool.query(
     `

@@ -71,10 +71,7 @@ export async function runDoctorSignals(
   return outcomes;
 }
 
-async function runOneSignal(
-  context: DoctorContext,
-  signal: DoctorSignal,
-): Promise<SignalOutcome> {
+async function runOneSignal(context: DoctorContext, signal: DoctorSignal): Promise<SignalOutcome> {
   const start = context.notes?.length ?? 0;
   try {
     const readings = await signal.run(context);

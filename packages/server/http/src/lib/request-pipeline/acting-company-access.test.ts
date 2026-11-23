@@ -43,10 +43,7 @@ function setup() {
     lookups: authorization,
     authorizationContexts: {
       execute: (authenticatedSubject: SubjectRef, organizationId: unknown) => {
-        if (
-          typeof organizationId !== "string" ||
-          !eligibleCompanies.has(organizationId)
-        ) {
+        if (typeof organizationId !== "string" || !eligibleCompanies.has(organizationId)) {
           return Promise.resolve(null);
         }
         return Promise.resolve({
@@ -71,30 +68,25 @@ function request(actingOrganizationId: unknown) {
 describe("acting-company request enforcement", () => {
   it("does not borrow B's manager permission while acting through A", async () => {
     const { ports } = setup();
-    await expect(
-      enforceAccess(permissionAccess, request("a"), ports),
-    ).resolves.toEqual({
+    await expect(enforceAccess(permissionAccess, request("a"), ports)).resolves.toEqual({
       outcome: "not-found",
       subject: actorA,
       authenticatedSubject: identity,
     });
-    await expect(
-      enforceAccess(permissionAccess, request("b"), ports),
-    ).resolves.toMatchObject({ outcome: "allow", subject: actorB });
+    await expect(enforceAccess(permissionAccess, request("b"), ports)).resolves.toMatchObject({
+      outcome: "allow",
+      subject: actorB,
+    });
   });
 
   it("uses the same scoped subject for collection discovery", async () => {
     const { ports } = setup();
-    await expect(
-      enforceAccess(visibilityAccess, request("a"), ports),
-    ).resolves.toMatchObject({
+    await expect(enforceAccess(visibilityAccess, request("a"), ports)).resolves.toMatchObject({
       outcome: "allow",
       subject: actorA,
       visibleIds: [],
     });
-    await expect(
-      enforceAccess(visibilityAccess, request("b"), ports),
-    ).resolves.toMatchObject({
+    await expect(enforceAccess(visibilityAccess, request("b"), ports)).resolves.toMatchObject({
       outcome: "allow",
       subject: actorB,
       visibleIds: [resource.id],
@@ -106,9 +98,7 @@ describe("acting-company request enforcement", () => {
     async (organizationId) => {
       const { ports } = setup();
       for (const access of [permissionAccess, visibilityAccess]) {
-        await expect(
-          enforceAccess(access, request(organizationId), ports),
-        ).resolves.toEqual({
+        await expect(enforceAccess(access, request(organizationId), ports)).resolves.toEqual({
           outcome: "not-found",
           subject: null,
           authenticatedSubject: identity,
@@ -119,9 +109,7 @@ describe("acting-company request enforcement", () => {
 
   it("retains the authenticated identity separately from the business actor", async () => {
     const { ports } = setup();
-    await expect(
-      enforceAccess(permissionAccess, request("b"), ports),
-    ).resolves.toMatchObject({
+    await expect(enforceAccess(permissionAccess, request("b"), ports)).resolves.toMatchObject({
       outcome: "allow",
       subject: actorB,
       authenticatedSubject: identity,
@@ -130,13 +118,9 @@ describe("acting-company request enforcement", () => {
 
   it("rechecks affiliation after a previous allowed request", async () => {
     const { ports, eligibleCompanies } = setup();
-    await expect(
-      enforceAccess(permissionAccess, request("b"), ports),
-    ).resolves.toMatchObject({ outcome: "allow" });
+    await expect(enforceAccess(permissionAccess, request("b"), ports)).resolves.toMatchObject({ outcome: "allow" });
     eligibleCompanies.delete("b");
-    await expect(
-      enforceAccess(permissionAccess, request("b"), ports),
-    ).resolves.toEqual({
+    await expect(enforceAccess(permissionAccess, request("b"), ports)).resolves.toEqual({
       outcome: "not-found",
       subject: null,
       authenticatedSubject: identity,
@@ -160,17 +144,16 @@ describe("acting-company request enforcement", () => {
       authorization: ports.authorization,
       lookups: ports.lookups,
     };
-    await expect(
-      enforceAccess(permissionAccess, request("b"), withoutResolver),
-    ).rejects.toThrow(
+    await expect(enforceAccess(permissionAccess, request("b"), withoutResolver)).rejects.toThrow(
       "authorization-context route registered without a resolver",
     );
   });
 
   it("preserves explicit identity-context account routes", async () => {
     const { ports } = setup();
-    await expect(
-      enforceAccess({ kind: "session" }, request(undefined), ports),
-    ).resolves.toMatchObject({ outcome: "allow", subject: identity });
+    await expect(enforceAccess({ kind: "session" }, request(undefined), ports)).resolves.toMatchObject({
+      outcome: "allow",
+      subject: identity,
+    });
   });
 });

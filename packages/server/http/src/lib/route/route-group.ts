@@ -1,8 +1,5 @@
 import { resolveCapabilities, type RouteCapabilities } from "./capabilities.js";
-import type {
-  RawRouteBlueprint,
-  RawRouteDefinition,
-} from "./define-raw-route.js";
+import type { RawRouteBlueprint, RawRouteDefinition } from "./define-raw-route.js";
 import type { RouteBlueprint, RouteDefinition } from "./route-definition.js";
 
 /**
@@ -21,39 +18,22 @@ import type { RouteBlueprint, RouteDefinition } from "./route-definition.js";
 export type HttpRoute = RouteDefinition | RawRouteDefinition;
 type AnyBlueprint = RouteBlueprint | RawRouteBlueprint;
 
-function isBlueprintList(
-  value: RouteCapabilities | readonly AnyBlueprint[],
-): value is readonly AnyBlueprint[] {
+function isBlueprintList(value: RouteCapabilities | readonly AnyBlueprint[]): value is readonly AnyBlueprint[] {
   return Array.isArray(value);
 }
 
-export function routeGroup(
-  tag: string,
-  routes: readonly AnyBlueprint[],
-): HttpRoute[];
-export function routeGroup(
-  tag: string,
-  capabilities: RouteCapabilities,
-  routes: readonly AnyBlueprint[],
-): HttpRoute[];
+export function routeGroup(tag: string, routes: readonly AnyBlueprint[]): HttpRoute[];
+export function routeGroup(tag: string, capabilities: RouteCapabilities, routes: readonly AnyBlueprint[]): HttpRoute[];
 export function routeGroup(
   tag: string,
   capabilitiesOrRoutes: RouteCapabilities | readonly AnyBlueprint[],
   maybeRoutes?: readonly AnyBlueprint[],
 ): HttpRoute[] {
-  const capabilities = isBlueprintList(capabilitiesOrRoutes)
-    ? undefined
-    : capabilitiesOrRoutes;
-  const routes = isBlueprintList(capabilitiesOrRoutes)
-    ? capabilitiesOrRoutes
-    : (maybeRoutes ?? []);
+  const capabilities = isBlueprintList(capabilitiesOrRoutes) ? undefined : capabilitiesOrRoutes;
+  const routes = isBlueprintList(capabilitiesOrRoutes) ? capabilitiesOrRoutes : (maybeRoutes ?? []);
   return routes.map((blueprint) => ({
     ...blueprint,
     tag,
-    capabilities: resolveCapabilities(
-      undefined,
-      capabilities,
-      blueprint.capabilities,
-    ),
+    capabilities: resolveCapabilities(undefined, capabilities, blueprint.capabilities),
   }));
 }

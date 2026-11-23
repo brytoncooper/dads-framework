@@ -21,41 +21,22 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  blameLineDates,
-  daysBefore,
-  requireGitWorkspace,
-  requireToday,
-} from "../scanners/git-history.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { blameLineDates, daysBefore, requireGitWorkspace, requireToday } from "../scanners/git-history.js";
 import { budgetedSourceFiles } from "../scanners/source-classification.js";
 
 /** The two markers, joined at load time so this module does not carry one. */
 const MARKS = [["TO", "DO"].join(""), ["FIX", "ME"].join("")];
 
 /** A marker that opens a comment, or continues a block comment's margin. */
-const MARKER = new RegExp(
-  `(?://|/\\*+|^\\s*[*#])\\s*(?:${MARKS.join("|")})\\b`,
-);
+const MARKER = new RegExp(`(?://|/\\*+|^\\s*[*#])\\s*(?:${MARKS.join("|")})\\b`);
 
 /** The one-based lines of a file whose comment carries a marker. */
 function markedLines(text: string): readonly number[] {
-  return text
-    .split("\n")
-    .flatMap((line, index) => (MARKER.test(line) ? [index + 1] : []));
+  return text.split("\n").flatMap((line, index) => (MARKER.test(line) ? [index + 1] : []));
 }
 
-function ageOneFile(
-  context: DoctorContext,
-  path: string,
-  today: string,
-  lines: readonly number[],
-): SignalReading {
+function ageOneFile(context: DoctorContext, path: string, today: string, lines: readonly number[]): SignalReading {
   const dates = blameLineDates(context.root, path);
   const evidence: SignalEvidence[] = [];
   let oldest = 0;
@@ -91,7 +72,6 @@ export const todoAgeSignal: DoctorSignal = {
   unit: "days",
   direction: "ceiling",
   thresholds: { standard: null, strict: 30 },
-  sentence:
-    "You left a breadcrumb instead: `TODO: check permission` on a route that’s been in prod since March.",
+  sentence: "You left a breadcrumb instead: `TODO: check permission` on a route that’s been in prod since March.",
   run: (context) => Promise.resolve(ageMarkedPromises(context)),
 };

@@ -1,15 +1,7 @@
 import console from "node:console";
 import process from "node:process";
 import { createAgentIndexes } from "./agent-index.mjs";
-import {
-  cp,
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { renderDocsCode } from "./docs-code.mjs";
@@ -23,8 +15,7 @@ const origin = "https://dadsframework.dev";
 const repository = "https://github.com/brytoncooper/dads-framework";
 
 function replaceRequired(text, marker, content, page) {
-  if (!text.includes(marker))
-    throw new Error(`Missing template marker ${marker} in ${page}.`);
+  if (!text.includes(marker)) throw new Error(`Missing template marker ${marker} in ${page}.`);
   return text.replace(marker, () => content);
 }
 
@@ -42,8 +33,7 @@ const docsSearchTrigger = `<button type="button" class="header-search-trigger" i
     </button>`;
 
 export function siteHeader(currentPage) {
-  const searchButton =
-    currentPage === "docs" ? `\n    ${docsSearchTrigger}` : "";
+  const searchButton = currentPage === "docs" ? `\n    ${docsSearchTrigger}` : "";
   return `<header class="site-header"><div class="wrap">
   <a href="/" class="brand"${currentPage === "home" ? ' aria-current="page"' : ""}><img src="/assets/dads-symbol-light.png" class="brand-symbol brand-symbol-on-dark" alt="" width="26" height="26"><img src="/assets/dads-symbol-dark.png" class="brand-symbol brand-symbol-on-light" alt="" width="26" height="26">Dads Framework</a>
   <nav aria-label="Main">${searchButton}
@@ -54,9 +44,7 @@ export function siteHeader(currentPage) {
 </div></header>`;
 }
 
-const siteFooter = (
-  markdownPath,
-) => `<footer class="site-footer"><div class="wrap">
+const siteFooter = (markdownPath) => `<footer class="site-footer"><div class="wrap">
   <small>Dads Framework · <a href="/framework-license.txt">MIT license</a></small>
   <small><a href="${markdownPath}" type="text/markdown">Read as Markdown</a> · <a href="/docs/llms.txt">llms.txt</a> · <a href="/credits.html">Credits</a></small>
 </div></footer>`;
@@ -86,12 +74,7 @@ export function renderDocs(html, page) {
   html = addDocsReader(html, page);
   const file = `docs/${page}`;
   const path = canonicalPath(file);
-  html = replaceRequired(
-    html,
-    '<link rel="stylesheet" href="assets/site.css">',
-    "",
-    page,
-  );
+  html = replaceRequired(html, '<link rel="stylesheet" href="assets/site.css">', "", page);
   html = replaceRequired(
     html,
     "</head>",
@@ -120,17 +103,10 @@ ${themeInitScript}
     '<details class="docs-menu" open><summary>Browse documentation</summary><nav aria-label="Documentation">',
     page,
   );
-  html = replaceRequired(
-    html,
-    "</nav>\n<main",
-    "</nav></details>\n<main",
-    page,
-  );
+  html = replaceRequired(html, "</nav>\n<main", "</nav></details>\n<main", page);
   html = html.replace(
     ">Markdown source</a>",
-    page.startsWith("api-")
-      ? ">Raw declaration report</a>"
-      : ">Original Markdown source</a>",
+    page.startsWith("api-") ? ">Raw declaration report</a>" : ">Original Markdown source</a>",
   );
   html = replaceRequired(
     html,
@@ -144,67 +120,32 @@ ${themeInitScript}
 
 async function buildSite() {
   const docsArg = process.argv[2] || process.env.DADS_DOCS_DIR;
-  if (!docsArg)
-    throw new Error(
-      "Pass the generated docs folder to npm run build -- <docs-folder>.",
-    );
+  if (!docsArg) throw new Error("Pass the generated docs folder to npm run build -- <docs-folder>.");
   const docs = resolve(docsArg);
   const outputRelativeDocs = relative(output, docs);
-  if (
-    docs === output ||
-    (!outputRelativeDocs.startsWith("..") && !isAbsolute(outputRelativeDocs))
-  ) {
+  if (docs === output || (!outputRelativeDocs.startsWith("..") && !isAbsolute(outputRelativeDocs))) {
     throw new Error("The input docs must live outside the output folder.");
   }
 
-  const required = [
-    "index.html",
-    "search-index.js",
-    "assets/search.js",
-    "assets/site.css",
-    "source",
-    "llms.txt",
-  ];
+  const required = ["index.html", "search-index.js", "assets/search.js", "assets/site.css", "source", "llms.txt"];
   await Promise.all(required.map((path) => stat(join(docs, path))));
-  const pages = (await readdir(docs))
-    .filter((file) => file.endsWith(".html"))
-    .sort();
+  const pages = (await readdir(docs)).filter((file) => file.endsWith(".html")).sort();
 
   const renderedPages = await Promise.all(
-    pages.map(async (page) => [
-      page,
-      renderDocs(await readFile(join(docs, page), "utf8"), page),
-    ]),
+    pages.map(async (page) => [page, renderDocs(await readFile(join(docs, page), "utf8"), page)]),
   );
   const storyLink = (title, fallback) => {
     const matched = renderedPages.find(([, html]) => {
       const heading = html.match(/<article><h1[^>]*>([^<]*)<\/h1>/u)?.[1];
       return heading?.trim().toLowerCase() === title.toLowerCase();
     });
-    return matched
-      ? `/docs/${matched[0]}`
-      : `${repository}/blob/main/${fallback}`;
+    return matched ? `/docs/${matched[0]}` : `${repository}/blob/main/${fallback}`;
   };
 
   let home = await readFile(join(source, "index.html"), "utf8");
-  home = replaceRequired(
-    home,
-    "<!-- site-header -->",
-    siteHeader("home"),
-    "home",
-  );
-  home = replaceRequired(
-    home,
-    "<!-- site-footer -->",
-    siteFooter(markdownPath("index.html")),
-    "home",
-  );
-  home = replaceRequired(
-    home,
-    "<!-- dad-url -->",
-    storyLink("Dad", "DAD.md"),
-    "home",
-  );
+  home = replaceRequired(home, "<!-- site-header -->", siteHeader("home"), "home");
+  home = replaceRequired(home, "<!-- site-footer -->", siteFooter(markdownPath("index.html")), "home");
+  home = replaceRequired(home, "<!-- dad-url -->", storyLink("Dad", "DAD.md"), "home");
   home = replaceRequired(
     home,
     "<!-- gary-url -->",
@@ -214,18 +155,8 @@ async function buildSite() {
   const supportingPages = await Promise.all(
     ["credits.html", "404.html"].map(async (page) => {
       let html = await readFile(join(source, page), "utf8");
-      html = replaceRequired(
-        html,
-        "<!-- site-header -->",
-        siteHeader(""),
-        page,
-      );
-      html = replaceRequired(
-        html,
-        "<!-- site-footer -->",
-        siteFooter(markdownPath(page)),
-        page,
-      );
+      html = replaceRequired(html, "<!-- site-header -->", siteHeader(""), page);
+      html = replaceRequired(html, "<!-- site-footer -->", siteFooter(markdownPath(page)), page);
       return [page, markdownAlternate(html, page)];
     }),
   );
@@ -235,9 +166,7 @@ async function buildSite() {
     ...supportingPages,
     ...renderedPages.map(([page, html]) => [`docs/${page}`, html]),
   ];
-  const canonicalPaths = new Map(
-    sitePages.map(([path]) => [`/${path}`, canonicalPath(path)]),
-  );
+  const canonicalPaths = new Map(sitePages.map(([path]) => [`/${path}`, canonicalPath(path)]));
   const { rootIndex, docsIndex } = createAgentIndexes({
     origin,
     renderedPages,
@@ -258,8 +187,7 @@ async function buildSite() {
   ]);
   await cp(source, output, {
     recursive: true,
-    filter: (path) =>
-      !retiredAssets.has(relative(join(source, "assets"), path)),
+    filter: (path) => !retiredAssets.has(relative(join(source, "assets"), path)),
   });
   await cp(docs, join(output, "docs"), { recursive: true });
   await Promise.all([
@@ -268,9 +196,7 @@ async function buildSite() {
     ...[...sitePages, ...companions].map(([file, content]) =>
       writeFile(
         join(output, file),
-        file.startsWith("docs/") && file.endsWith(".html")
-          ? renderDocsCode(content)
-          : content,
+        file.startsWith("docs/") && file.endsWith(".html") ? renderDocsCode(content) : content,
       ),
     ),
     writeFile(
@@ -278,14 +204,9 @@ async function buildSite() {
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", ...pages.map((page) => (page === "index.html" ? "/docs/" : `/docs/${page.slice(0, -5)}`))].map((path) => `  <url><loc>https://dadsframework.dev${path}</loc></url>`).join("\n")}\n</urlset>\n`,
     ),
   ]);
-  console.log(
-    `Built landing page and ${pages.length} documentation pages in dist/.`,
-  );
+  console.log(`Built landing page and ${pages.length} documentation pages in dist/.`);
 }
 
-if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await buildSite();
 }

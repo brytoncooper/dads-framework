@@ -116,18 +116,12 @@ function fileOf(location: string): string {
  * guards nothing. It has to be identical for the same fault across reloads
  * and across clients, which rules out anything seeded per session.
  */
-function fingerprintOf(
-  name: string,
-  frames: readonly ClientDiagnosticFrame[],
-): string {
+function fingerprintOf(name: string, frames: readonly ClientDiagnosticFrame[]): string {
   const signature = [
     name,
     ...frames
       .slice(0, FINGERPRINT_FRAMES)
-      .map(
-        (frame) =>
-          `${frame.function ?? ""}@${frame.file ?? ""}:${String(frame.line ?? 0)}`,
-      ),
+      .map((frame) => `${frame.function ?? ""}@${frame.file ?? ""}:${String(frame.line ?? 0)}`),
   ].join("|");
   let hash = 2_166_136_261;
   for (let at = 0; at < signature.length; at += 1) {

@@ -52,12 +52,9 @@ export type PdfFindState = {
  * highlights the search left behind.
  */
 export function usePdfFind(eventBus: PdfEventBus): PdfFindState {
-  const [barState, setBarState] = React.useState<FindBarState>(
-    INITIAL_FIND_BAR_STATE,
-  );
+  const [barState, setBarState] = React.useState<FindBarState>(INITIAL_FIND_BAR_STATE);
   const [resultCode, setResultCode] = React.useState<number | null>(null);
-  const [matchCount, setMatchCount] =
-    React.useState<FindMatchCount>(NO_MATCHES);
+  const [matchCount, setMatchCount] = React.useState<FindMatchCount>(NO_MATCHES);
   const stateRef = React.useRef(barState);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -89,15 +86,12 @@ export function usePdfFind(eventBus: PdfEventBus): PdfFindState {
     };
   }, [eventBus]);
 
-  const update = React.useCallback(
-    (change: Partial<FindBarState>): FindBarState => {
-      const next = { ...stateRef.current, ...change };
-      stateRef.current = next;
-      setBarState(next);
-      return next;
-    },
-    [],
-  );
+  const update = React.useCallback((change: Partial<FindBarState>): FindBarState => {
+    const next = { ...stateRef.current, ...change };
+    stateRef.current = next;
+    setBarState(next);
+    return next;
+  }, []);
 
   const setQuery = React.useCallback(
     (query: string) => {

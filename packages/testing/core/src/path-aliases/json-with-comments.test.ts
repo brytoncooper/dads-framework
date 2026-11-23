@@ -76,53 +76,52 @@ describe("parseJsonWithComments", () => {
   });
 
   it("names the line and column it stopped at", () => {
-    const cases: readonly { readonly source: string; readonly stop: string }[] =
-      [
-        {
-          source: "{ compilerOptions: {} }",
-          stop: "expected a property name at line 1, column 3",
-        },
-        {
-          source: "{ 'single': 1 }",
-          stop: "expected a property name at line 1, column 3",
-        },
-        {
-          source: '{\n  "a" 1\n}',
-          stop: "expected a colon after a property name at line 2, column 7",
-        },
-        {
-          source: '{ "a": tru }',
-          stop: "expected a value at line 1, column 8",
-        },
-        {
-          source: '{ "a": 1 "b": 2 }',
-          stop: "expected a comma or } at line 1, column 10",
-        },
-        {
-          source: "[ 1 2 ]",
-          stop: "expected a comma or ] at line 1, column 5",
-        },
-        {
-          source: '{ "a": ',
-          stop: "expected a value at line 1, column 8",
-        },
-        {
-          source: '{ "a": "unterminated }',
-          stop: "expected the end of a string at line 1, column 8",
-        },
-        {
-          source: '/* never closed\n{ "a": 1 }',
-          stop: "expected the end of a block comment at line 1, column 1",
-        },
-        {
-          source: '{ "a": 1 }\n{ "b": 2 }',
-          stop: "expected the end of the file at line 2, column 1",
-        },
-        {
-          source: "",
-          stop: "expected a value at line 1, column 1",
-        },
-      ];
+    const cases: readonly { readonly source: string; readonly stop: string }[] = [
+      {
+        source: "{ compilerOptions: {} }",
+        stop: "expected a property name at line 1, column 3",
+      },
+      {
+        source: "{ 'single': 1 }",
+        stop: "expected a property name at line 1, column 3",
+      },
+      {
+        source: '{\n  "a" 1\n}',
+        stop: "expected a colon after a property name at line 2, column 7",
+      },
+      {
+        source: '{ "a": tru }',
+        stop: "expected a value at line 1, column 8",
+      },
+      {
+        source: '{ "a": 1 "b": 2 }',
+        stop: "expected a comma or } at line 1, column 10",
+      },
+      {
+        source: "[ 1 2 ]",
+        stop: "expected a comma or ] at line 1, column 5",
+      },
+      {
+        source: '{ "a": ',
+        stop: "expected a value at line 1, column 8",
+      },
+      {
+        source: '{ "a": "unterminated }',
+        stop: "expected the end of a string at line 1, column 8",
+      },
+      {
+        source: '/* never closed\n{ "a": 1 }',
+        stop: "expected the end of a block comment at line 1, column 1",
+      },
+      {
+        source: '{ "a": 1 }\n{ "b": 2 }',
+        stop: "expected the end of the file at line 2, column 1",
+      },
+      {
+        source: "",
+        stop: "expected a value at line 1, column 1",
+      },
+    ];
 
     for (const one of cases) {
       expect(() => parseJsonWithComments(one.source)).toThrow(one.stop);

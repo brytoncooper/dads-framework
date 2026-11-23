@@ -17,21 +17,11 @@ import type {
  */
 export type AuthorizationMigrationClient = {
   /** Deletes precisely one tuple, distinguishing a direct subject from its usersets. */
-  deleteExactRelationship(
-    fact: RelationshipWrite,
-  ): Promise<SpiceDbConsistencyToken>;
-  readRelationshipPage(
-    query: RelationshipPageRequest,
-  ): Promise<RelationshipPage>;
-  writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken>;
-  deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken>;
-  listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]>;
+  deleteExactRelationship(fact: RelationshipWrite): Promise<SpiceDbConsistencyToken>;
+  readRelationshipPage(query: RelationshipPageRequest): Promise<RelationshipPage>;
+  writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken>;
+  deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken>;
+  listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]>;
   check(query: PermissionQuery): Promise<boolean>;
 };
 
@@ -46,9 +36,7 @@ export type AuthorizationMigrationStore = AuthorizationMigrationClient & {
   writeSchema(schema: string): Promise<void>;
 };
 
-export type AuthorizationMigrationStep = (
-  client: AuthorizationMigrationClient,
-) => Promise<void>;
+export type AuthorizationMigrationStep = (client: AuthorizationMigrationClient) => Promise<void>;
 
 /**
  * One journal entry, as authored in

@@ -28,11 +28,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReadings } from "../../doctor-signal.js";
 import {
   readCommitLog,
   requireGitWorkspace,
@@ -40,11 +36,7 @@ import {
   type GitChange,
   type GitCommit,
 } from "../scanners/git-history.js";
-import {
-  NO_BASE_NOTE,
-  readMigrationBase,
-  type MigrationBase,
-} from "../scanners/migration-base.js";
+import { NO_BASE_NOTE, readMigrationBase, type MigrationBase } from "../scanners/migration-base.js";
 import { isMigrationFile } from "../scanners/migration-files.js";
 
 const ADDED = "A";
@@ -53,11 +45,7 @@ const ADDED = "A";
  * Records one change to a migration: the first add opens its record, and
  * every change after that is an edit.
  */
-function recordChange(
-  edits: Map<string, SignalEvidence[]>,
-  commit: GitCommit,
-  change: GitChange,
-): void {
+function recordChange(edits: Map<string, SignalEvidence[]>, commit: GitCommit, change: GitChange): void {
   const found = edits.get(change.path);
   if (found === undefined && change.status === ADDED) {
     edits.set(change.path, []);
@@ -76,9 +64,7 @@ function editEvidence(commit: GitCommit, change: GitChange): SignalEvidence {
 }
 
 /** With no base: every edit to a migration after it was added. */
-function editsByMigration(
-  commits: readonly GitCommit[],
-): ReadonlyMap<string, readonly SignalEvidence[]> {
+function editsByMigration(commits: readonly GitCommit[]): ReadonlyMap<string, readonly SignalEvidence[]> {
   const edits = new Map<string, SignalEvidence[]>();
   for (const commit of [...commits].reverse()) {
     for (const change of commit.changes) {
@@ -112,28 +98,18 @@ function countMigrationEdits(context: DoctorContext): SignalReadings {
   const commits = readCommitLog(context.root);
   const base = readMigrationBase(context);
   if (base === undefined) context.notes?.push(NO_BASE_NOTE);
-  const edits =
-    base === undefined
-      ? editsByMigration(commits)
-      : editsPastBase(commits, base);
-  return new Map(
-    [...edits].map(([path, evidence]) => [
-      path,
-      { value: evidence.length, evidence },
-    ]),
-  );
+  const edits = base === undefined ? editsByMigration(commits) : editsPastBase(commits, base);
+  return new Map([...edits].map(([path, evidence]) => [path, { value: evidence.length, evidence }]));
 }
 
 export const migrationsEditedSignal: DoctorSignal = {
   id: "migrations-edited",
   issue: "gaslighting",
-  question:
-    "Was a migration the base line already holds modified, deleted, or renamed by a commit past the base?",
+  question: "Was a migration the base line already holds modified, deleted, or renamed by a commit past the base?",
   reads: "git",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "First you rename the violation. Then you explain why it had to happen.",
+  sentence: "First you rename the violation. Then you explain why it had to happen.",
   run: (context) => Promise.resolve(countMigrationEdits(context)),
 };

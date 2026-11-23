@@ -21,10 +21,7 @@ const REFUSAL_DECISIONS = ["denied", "not-found", "unauthenticated"];
  * (`anonymous`, no actor id) are mostly sign-in pages and probes, and would
  * bury the refusals of people who were signed in.
  */
-const SIGNED_IN_ACTOR = [
-  ne(requestLog.actorKind, "anonymous"),
-  ne(requestLog.actorId, ""),
-];
+const SIGNED_IN_ACTOR = [ne(requestLog.actorKind, "anonymous"), ne(requestLog.actorId, "")];
 
 /** A refusal must come from this application's enforcement. */
 const LOCAL_ENFORCEMENT = eq(requestLog.imported, false);
@@ -104,9 +101,7 @@ function userCondition(userId: string | undefined): SQL | undefined {
   return and(eq(requestLog.actorKind, "user"), eq(requestLog.actorId, userId));
 }
 
-function olderThanRequestCursor(
-  olderThan: RequestLogCursor | null,
-): SQL | undefined {
+function olderThanRequestCursor(olderThan: RequestLogCursor | null): SQL | undefined {
   if (olderThan === null) return undefined;
   if (olderThan.requestId === null) {
     return sql`${requestLog.recordedAt} < ${olderThan.recordedAt}::timestamptz`;

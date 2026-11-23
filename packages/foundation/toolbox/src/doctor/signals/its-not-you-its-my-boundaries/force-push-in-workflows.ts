@@ -21,23 +21,14 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { DEFAULT_BRANCH, FORCE_PUSH } from "../scanners/text-bypass-marks.js";
-import {
-  ciWorkflowFiles,
-  matchingLines,
-} from "../scanners/text-ci-workflows.js";
+import { ciWorkflowFiles, matchingLines } from "../scanners/text-ci-workflows.js";
 
 function countForcedPushes(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const path of ciWorkflowFiles(context.files())) {
-    const found = matchingLines(context.read(path), FORCE_PUSH).filter((line) =>
-      DEFAULT_BRANCH.test(line.text),
-    );
+    const found = matchingLines(context.read(path), FORCE_PUSH).filter((line) => DEFAULT_BRANCH.test(line.text));
     readings.set(path, {
       value: found.length,
       evidence: found.map((line) => ({ path, line: line.line })),

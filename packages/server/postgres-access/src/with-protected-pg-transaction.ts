@@ -1,8 +1,4 @@
-import {
-  abortPgTransaction,
-  releasePgClient,
-  type PgTransactionState,
-} from "./pg-transaction-lifecycle.js";
+import { abortPgTransaction, releasePgClient, type PgTransactionState } from "./pg-transaction-lifecycle.js";
 import type { PostgresAuthorization } from "./postgres-authorization.js";
 import { readPostgresSerializationConflict } from "./postgres-serialization-conflict.js";
 import type { PgClientLike, PgPoolLike } from "./postgres-types.js";
@@ -11,9 +7,7 @@ import {
   openProtectedAuthorizationScope,
 } from "./protected-authorization-scope.js";
 
-export type ProtectedPgTransactionOptions<
-  Client extends PgClientLike = PgClientLike,
-> = {
+export type ProtectedPgTransactionOptions<Client extends PgClientLike = PgClientLike> = {
   readonly pool: PgPoolLike<Client>;
   readonly authorization: PostgresAuthorization;
   /**
@@ -26,11 +20,10 @@ export type ProtectedPgTransactionOptions<
   readonly retryBaseDelayMs?: number;
 };
 
-export type ProtectedPgTransaction<Client extends PgClientLike = PgClientLike> =
-  {
-    readonly client: Client;
-    readonly authorization: PostgresAuthorization;
-  };
+export type ProtectedPgTransaction<Client extends PgClientLike = PgClientLike> = {
+  readonly client: Client;
+  readonly authorization: PostgresAuthorization;
+};
 
 /**
  * Run one protected write on a plain node-postgres pool using
@@ -41,10 +34,7 @@ export type ProtectedPgTransaction<Client extends PgClientLike = PgClientLike> =
  * `40001` serialization failures into `PostgresSerializationConflict` (retrying
  * automatically up to `retries` times when configured).
  */
-export async function withProtectedPgTransaction<
-  Client extends PgClientLike,
-  Result,
->(
+export async function withProtectedPgTransaction<Client extends PgClientLike, Result>(
   options: ProtectedPgTransactionOptions<Client>,
   work: (scope: ProtectedPgTransaction<Client>) => PromiseLike<Result>,
 ): Promise<Result> {
@@ -63,22 +53,14 @@ export async function withProtectedPgTransaction<
   }
 }
 
-async function runSinglePgTransactionAttempt<
-  Client extends PgClientLike,
-  Result,
->(
+async function runSinglePgTransactionAttempt<Client extends PgClientLike, Result>(
   options: ProtectedPgTransactionOptions<Client>,
   work: (scope: ProtectedPgTransaction<Client>) => PromiseLike<Result>,
 ): Promise<Result> {
   const client = await options.pool.connect();
   const state = { began: false, committed: false, destroyClient: false };
   try {
-    return await executePgTransaction(
-      client,
-      options.authorization,
-      work,
-      state,
-    );
+    return await executePgTransaction(client, options.authorization, work, state);
   } catch (error) {
     state.destroyClient = await abortPgTransaction(client, state);
     throw error;
@@ -90,9 +72,7 @@ async function runSinglePgTransactionAttempt<
 function validateRetryCount(retries: number | undefined): number {
   const value = retries ?? 0;
   if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(
-      "Protected Postgres transaction retries must be a non-negative integer",
-    );
+    throw new Error("Protected Postgres transaction retries must be a non-negative integer");
   }
   return value;
 }
@@ -100,9 +80,7 @@ function validateRetryCount(retries: number | undefined): number {
 function validateRetryBaseDelayMs(delay: number | undefined): number {
   const value = delay ?? 15;
   if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(
-      "Protected Postgres transaction retryBaseDelayMs must be a non-negative integer",
-    );
+    throw new Error("Protected Postgres transaction retryBaseDelayMs must be a non-negative integer");
   }
   return value;
 }

@@ -22,9 +22,7 @@ describe("XLSX workbook contract", () => {
       metadata: { formatId: "inventory", formatVersion: 1 },
     });
 
-    await expect(
-      xlsxWorkbookCodec.read(bytes, ["Suppliers", "Missing", "Inventory"]),
-    ).resolves.toEqual({
+    await expect(xlsxWorkbookCodec.read(bytes, ["Suppliers", "Missing", "Inventory"])).resolves.toEqual({
       metadata: { formatId: "inventory", formatVersion: "1" },
       sheets: [
         { sheetName: "Suppliers", rows: [] },
@@ -42,10 +40,7 @@ describe("XLSX workbook contract", () => {
   });
 
   it("reads and edits an independently authored SpreadsheetML workbook", async () => {
-    const file = new URL(
-      "../../../test-fixtures-xlsx/external-inventory.xlsx",
-      import.meta.url,
-    );
+    const file = new URL("../../../test-fixtures-xlsx/external-inventory.xlsx", import.meta.url);
     const bytes = new Uint8Array(await readFile(file)).buffer;
     const expected = {
       metadata: null,
@@ -66,9 +61,7 @@ describe("XLSX workbook contract", () => {
       ],
     };
 
-    await expect(xlsxWorkbookCodec.read(bytes, ["Inventory"])).resolves.toEqual(
-      expected,
-    );
+    await expect(xlsxWorkbookCodec.read(bytes, ["Inventory"])).resolves.toEqual(expected);
 
     const updated = await xlsxWorkbookCodec.update(bytes, [
       {

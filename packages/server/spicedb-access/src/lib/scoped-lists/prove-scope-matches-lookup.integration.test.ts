@@ -12,22 +12,12 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import {
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startUnmigratedTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 import { deterministicUuid } from "@dads-framework/postgres/testing/deterministic-uuid";
 
 import { proveScopeMatchesLookup } from "../../testing/prove-scope-matches-lookup.js";
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
-import {
-  relationshipWrite,
-  type RelationshipWrite,
-  type SubjectRef,
-} from "@dads-framework/access/runtime";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
+import { relationshipWrite, type RelationshipWrite, type SubjectRef } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "../access/spice-db-authorization.js";
 import { scopeSqlBindings } from "./scope-sql-bindings.js";
 import {
@@ -47,8 +37,7 @@ import {
   Site,
 } from "./testing/scoped-list-fixture.js";
 
-const id = (name: string, counter: number) =>
-  deterministicUuid(`scoped-list-${name}`, counter);
+const id = (name: string, counter: number) => deterministicUuid(`scoped-list-${name}`, counter);
 
 const S1 = id("site", 1);
 const S2 = id("site", 2);
@@ -128,20 +117,15 @@ function relationshipsFor(): readonly RelationshipWrite[] {
     type: Site.wireName,
     id: siteId,
   });
-  const writes: RelationshipWrite[] = siteGrants.map(
-    ([siteId, relation, subject]) =>
-      relationshipWrite({ type: Site.wireName, id: siteId }, relation, subject),
+  const writes: RelationshipWrite[] = siteGrants.map(([siteId, relation, subject]) =>
+    relationshipWrite({ type: Site.wireName, id: siteId }, relation, subject),
   );
   for (const row of folderRows) {
     const resource = { type: Folder.wireName, id: row.id };
     if (row.homeSiteId !== null) {
-      writes.push(
-        relationshipWrite(resource, "home_site", site(row.homeSiteId)),
-      );
+      writes.push(relationshipWrite(resource, "home_site", site(row.homeSiteId)));
       if (row.sharedWith.length === 0) {
-        writes.push(
-          relationshipWrite(resource, "fallback_site", site(row.homeSiteId)),
-        );
+        writes.push(relationshipWrite(resource, "fallback_site", site(row.homeSiteId)));
       }
     }
     for (const sharedSite of row.sharedWith) {
@@ -184,11 +168,7 @@ async function insertRows(db: DrizzleHandle): Promise<void> {
   );
   await db
     .insert(folderShares)
-    .values(
-      folderRows.flatMap((row) =>
-        row.sharedWith.map((siteId) => ({ folderId: row.id, siteId })),
-      ),
-    );
+    .values(folderRows.flatMap((row) => row.sharedWith.map((siteId) => ({ folderId: row.id, siteId }))));
   await db.insert(sheets).values([...sheetRows]);
 }
 
@@ -201,10 +181,7 @@ describe("proveScopeMatchesLookup (integration)", () => {
   let authorization: SpiceDbAuthorization;
 
   beforeAll(async () => {
-    [postgres, spiceDb] = await Promise.all([
-      startUnmigratedTestPostgres({ attributed: false }),
-      startTestSpiceDb(),
-    ]);
+    [postgres, spiceDb] = await Promise.all([startUnmigratedTestPostgres({ attributed: false }), startTestSpiceDb()]);
     db = drizzle(postgres.pool);
     await createFixtureTables(db);
     await insertRows(db);
@@ -231,12 +208,9 @@ describe("proveScopeMatchesLookup (integration)", () => {
           resourceType,
         })),
       ].sort();
-    const sorted = (ids: readonly (string | undefined)[]) =>
-      ids.map(required).sort();
+    const sorted = (ids: readonly (string | undefined)[]) => ids.map(required).sort();
 
-    expect(await visibleTo(alice, Folder.wireName)).toEqual(
-      sorted([F1, F2, F3, F7]),
-    );
+    expect(await visibleTo(alice, Folder.wireName)).toEqual(sorted([F1, F2, F3, F7]));
     expect(await visibleTo(bob, Folder.wireName)).toEqual(sorted([F2, F4, F5]));
     expect(await visibleTo(carol, Folder.wireName)).toEqual(sorted([F4]));
     expect(await visibleTo(dave, Folder.wireName)).toEqual(sorted([F6]));
@@ -244,9 +218,7 @@ describe("proveScopeMatchesLookup (integration)", () => {
     expect(await visibleTo(erin, Folder.wireName)).toEqual([]);
 
     expect(await visibleTo(alice, Sheet.wireName)).toEqual(sorted([H1]));
-    expect(await visibleTo(bob, Sheet.wireName)).toEqual(
-      sorted([H1, H2, H3, H4]),
-    );
+    expect(await visibleTo(bob, Sheet.wireName)).toEqual(sorted([H1, H2, H3, H4]));
     expect(await visibleTo(carol, Sheet.wireName)).toEqual(sorted([H4]));
     expect(await visibleTo(dave, Sheet.wireName)).toEqual(sorted([H3]));
     expect(await visibleTo(gina, Sheet.wireName)).toEqual([]);

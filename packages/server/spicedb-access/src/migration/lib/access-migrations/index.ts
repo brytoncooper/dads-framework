@@ -39,10 +39,7 @@ export {
   runPostgresAccessMigrations,
   type RunPostgresAccessMigrationsOptions,
 } from "./run-postgres-access-migrations.js";
-export {
-  runSqliteAccessMigrations,
-  type RunSqliteAccessMigrationsOptions,
-} from "./run-sqlite-access-migrations.js";
+export { runSqliteAccessMigrations, type RunSqliteAccessMigrationsOptions } from "./run-sqlite-access-migrations.js";
 export {
   assertAccessMigrationsUpToDate,
   type AccessMigrationRef,

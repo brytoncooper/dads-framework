@@ -15,18 +15,12 @@ import { digestInputs, digestProjectInputs, sha256 } from "./import-digest.js";
 const workspaces: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    workspaces
-      .splice(0)
-      .map((root) => rm(root, { recursive: true, force: true })),
-  );
+  await Promise.all(workspaces.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 describe("import digest", () => {
   it("hashes bytes with SHA-256", () => {
-    expect(sha256("dads")).toBe(
-      createHash("sha256").update("dads").digest("hex"),
-    );
+    expect(sha256("dads")).toBe(createHash("sha256").update("dads").digest("hex"));
     expect(sha256(new Uint8Array([1, 2, 3]))).toBe(
       createHash("sha256")
         .update(new Uint8Array([1, 2, 3]))
@@ -42,11 +36,7 @@ describe("import digest", () => {
 
     const inputs = await digestInputs(root);
 
-    expect(inputs.map((input) => input.path)).toEqual([
-      "package-lock.json",
-      "nx.json",
-      "package.json",
-    ]);
+    expect(inputs.map((input) => input.path)).toEqual(["package-lock.json", "nx.json", "package.json"]);
     expect(inputs[0]?.sha256).toBe(sha256("{}\n"));
   });
 
@@ -58,30 +48,18 @@ describe("import digest", () => {
     const root = await createWorkspace();
     await writeFile(path.join(root, "package.json"), '{"name":"root"}\n');
     await mkdir(path.join(root, "apps/app"), { recursive: true });
-    await writeFile(
-      path.join(root, "apps/app/project.json"),
-      '{"name":"app"}\n',
-    );
-    await writeFile(
-      path.join(root, "apps/app/package.json"),
-      '{"name":"app"}\n',
-    );
+    await writeFile(path.join(root, "apps/app/project.json"), '{"name":"app"}\n');
+    await writeFile(path.join(root, "apps/app/package.json"), '{"name":"app"}\n');
     const rootInputs = await digestInputs(root);
 
-    const inputs = await digestProjectInputs(root, rootInputs, [
-      "apps/app",
-      ".",
-      "libs/absent",
-    ]);
+    const inputs = await digestProjectInputs(root, rootInputs, ["apps/app", ".", "libs/absent"]);
 
     expect(inputs.map((input) => input.path)).toEqual([
       "apps/app/package.json",
       "apps/app/project.json",
       "package.json",
     ]);
-    expect(
-      inputs.filter((input) => input.path === "package.json"),
-    ).toHaveLength(1);
+    expect(inputs.filter((input) => input.path === "package.json")).toHaveLength(1);
   });
 
   it("raises a read failure that is not a missing file", async () => {

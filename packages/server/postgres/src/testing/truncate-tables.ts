@@ -5,10 +5,7 @@ import type { Pool } from "pg";
  * beats re-creating schemas or containers per test. Pass the domain tables
  * the suite touches; identity/session state usually rides along via CASCADE.
  */
-export async function truncateTables(
-  pool: Pool,
-  tableNames: readonly string[],
-): Promise<void> {
+export async function truncateTables(pool: Pool, tableNames: readonly string[]): Promise<void> {
   if (tableNames.length === 0) return;
   const quoted = tableNames.map((name) => `"${name}"`).join(", ");
   await pool.query(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`);

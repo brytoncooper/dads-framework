@@ -18,11 +18,7 @@ import {
   type PostRouteHandlerResult,
 } from "../src/index.js";
 import { HttpWiringError } from "../src/lib/http-errors.js";
-import {
-  fromParam,
-  publicAccess,
-  requireSession,
-} from "../src/lib/route/access.js";
+import { fromParam, publicAccess, requireSession } from "../src/lib/route/access.js";
 import { deleteRoute } from "../src/lib/route/delete-route.js";
 import { getRoute } from "../src/lib/route/get-route.js";
 import { patchRoute } from "../src/lib/route/patch-route.js";
@@ -33,32 +29,19 @@ import { requires } from "../src/lib/route/route-guards.test-support.js";
 import { rawInput, thingSchema } from "./verb-fixture.js";
 
 const thingRoutes = {
-  detail: defineRoute(
-    "GET",
-    "/things/:id",
-    (id: string) => `/things/${encodeURIComponent(id)}`,
-  ),
+  detail: defineRoute("GET", "/things/:id", (id: string) => `/things/${encodeURIComponent(id)}`),
 };
 
 describe("verb-specific compile walls", () => {
   it("accepts named handler functions through the generated handler-property seam", () => {
-    type GetThingContext = GetRouteHandlerContext<
-      { readonly id: string },
-      undefined,
-      SubjectRef
-    >;
+    type GetThingContext = GetRouteHandlerContext<{ readonly id: string }, undefined, SubjectRef>;
     type GetThingResult = GetRouteHandlerResult<typeof thingSchema>;
 
-    const getThing: NamedRouteHandler<
-      GetThingContext,
-      Promise<GetThingResult>
-    > = function getThing(context) {
+    const getThing: NamedRouteHandler<GetThingContext, Promise<GetThingResult>> = function getThing(context) {
       return Promise.resolve({ id: context.params.id, name: "thing" });
     };
 
-    expectTypeOf(getThing).toExtend<
-      NamedRouteHandler<GetThingContext, Promise<GetThingResult>>
-    >();
+    expectTypeOf(getThing).toExtend<NamedRouteHandler<GetThingContext, Promise<GetThingResult>>>();
   });
 
   it("accepts a literal path as the transitional route-card source", () => {
@@ -250,21 +233,13 @@ describe("verb-specific compile walls", () => {
 
 describe("named route-handler aliases", () => {
   it("lets paired handler modules state their contexts and results", () => {
-    type GetThingContext = GetRouteHandlerContext<
-      { id: string },
-      undefined,
-      SubjectRef
-    >;
+    type GetThingContext = GetRouteHandlerContext<{ id: string }, undefined, SubjectRef>;
     type GetThingResult = GetRouteHandlerResult<typeof thingSchema>;
     function getThing(context: GetThingContext): GetThingResult {
       return { id: context.params.id, name: context.subject.id };
     }
 
-    type ListThingsContext = ListRouteHandlerContext<
-      undefined,
-      { page: number; perPage: number },
-      SubjectRef
-    >;
+    type ListThingsContext = ListRouteHandlerContext<undefined, { page: number; perPage: number }, SubjectRef>;
     type ListThingsResult = ListRouteHandlerResult<typeof thingSchema>;
     function listThings(context: ListThingsContext): ListThingsResult {
       return {
@@ -273,48 +248,27 @@ describe("named route-handler aliases", () => {
       };
     }
 
-    type CreateThingContext = PostRouteHandlerContext<
-      undefined,
-      undefined,
-      { name: string },
-      SubjectRef
-    >;
+    type CreateThingContext = PostRouteHandlerContext<undefined, undefined, { name: string }, SubjectRef>;
     type CreateThingResult = PostRouteHandlerResult<typeof thingSchema>;
     function createThing(context: CreateThingContext): CreateThingResult {
       return { id: context.subject.id, name: context.body.name };
     }
 
-    type RenameThingContext = MutateRouteHandlerContext<
-      { id: string },
-      { name: string },
-      SubjectRef
-    >;
+    type RenameThingContext = MutateRouteHandlerContext<{ id: string }, { name: string }, SubjectRef>;
     type RenameThingResult = MutateRouteHandlerResult<typeof thingSchema>;
     function renameThing(context: RenameThingContext): RenameThingResult {
       return { id: context.params.id, name: context.body.name };
     }
 
-    type DeleteThingContext = DeleteRouteHandlerContext<
-      { id: string },
-      undefined,
-      SubjectRef
-    >;
+    type DeleteThingContext = DeleteRouteHandlerContext<{ id: string }, undefined, SubjectRef>;
     function deleteThing(context: DeleteThingContext): void {
       expect(context.subject.id).toBe("u1");
     }
 
-    expectTypeOf(getThing).toExtend<
-      (context: GetThingContext) => GetThingResult
-    >();
-    expectTypeOf(listThings).toExtend<
-      (context: ListThingsContext) => ListThingsResult
-    >();
-    expectTypeOf(createThing).toExtend<
-      (context: CreateThingContext) => CreateThingResult
-    >();
-    expectTypeOf(renameThing).toExtend<
-      (context: RenameThingContext) => RenameThingResult
-    >();
+    expectTypeOf(getThing).toExtend<(context: GetThingContext) => GetThingResult>();
+    expectTypeOf(listThings).toExtend<(context: ListThingsContext) => ListThingsResult>();
+    expectTypeOf(createThing).toExtend<(context: CreateThingContext) => CreateThingResult>();
+    expectTypeOf(renameThing).toExtend<(context: RenameThingContext) => RenameThingResult>();
     expectTypeOf(deleteThing).toExtend<(context: DeleteThingContext) => void>();
   });
 });
@@ -335,10 +289,7 @@ describe("route compile-time guarantees", () => {
     const covered = getRoute({
       route: { method: "GET", template: "/things/:id" },
       summary: "Get a thing",
-      access: requires(
-        permissionToken("things/thing", "view"),
-        fromParam("id"),
-      ),
+      access: requires(permissionToken("things/thing", "view"), fromParam("id")),
       params: z.object({ id: z.string() }),
       response: thingSchema,
       handler: ({ params }) => {

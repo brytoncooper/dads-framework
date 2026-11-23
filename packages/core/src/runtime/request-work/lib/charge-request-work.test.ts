@@ -9,17 +9,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  chargeAuthorizationCheck,
-  chargeDatabaseQuery,
-} from "./charge-request-work.js";
+import { chargeAuthorizationCheck, chargeDatabaseQuery } from "./charge-request-work.js";
 import { measureWork } from "./request-work-tally.js";
 
 describe("charging request work", () => {
   it("returns the call's value untouched", async () => {
-    const { result } = await measureWork(async () =>
-      chargeDatabaseQuery(() => ({ rows: [1, 2, 3] })),
-    );
+    const { result } = await measureWork(async () => chargeDatabaseQuery(() => ({ rows: [1, 2, 3] })));
 
     expect(result).toEqual({ rows: [1, 2, 3] });
   });

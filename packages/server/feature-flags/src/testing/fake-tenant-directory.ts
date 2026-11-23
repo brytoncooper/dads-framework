@@ -1,7 +1,4 @@
-import {
-  type ActiveTenant,
-  TenantDirectory,
-} from "../lib/ports/tenant-directory.js";
+import { type ActiveTenant, TenantDirectory } from "../lib/ports/tenant-directory.js";
 
 /**
  * A tenant directory for tests. Every id is active and named after itself
@@ -23,9 +20,7 @@ export class FakeTenantDirectory extends TenantDirectory {
 
   findActiveTenants(ids: readonly string[]): Promise<readonly ActiveTenant[]> {
     return Promise.resolve(
-      ids
-        .filter((id) => !this.inactive.has(id))
-        .map((id) => ({ id, name: this.names.get(id) ?? id })),
+      ids.filter((id) => !this.inactive.has(id)).map((id) => ({ id, name: this.names.get(id) ?? id })),
     );
   }
 }

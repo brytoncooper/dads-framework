@@ -9,12 +9,7 @@ import type { DomainEventHandler, EventBus } from "./event-bus.js";
 export class InProcessEventBus implements EventBus {
   private readonly handlers = new Map<string, DomainEventHandler[]>();
 
-  constructor(
-    private readonly onHandlerError: (
-      eventName: string,
-      error: unknown,
-    ) => void,
-  ) {}
+  constructor(private readonly onHandlerError: (eventName: string, error: unknown) => void) {}
 
   async publish(eventName: string, payload: unknown): Promise<void> {
     for (const handler of this.handlers.get(eventName) ?? []) {

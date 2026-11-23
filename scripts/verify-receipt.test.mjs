@@ -1,11 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -14,12 +8,7 @@ import test from "node:test";
 import { git } from "./verify-fingerprint.mjs";
 import { verifySteps } from "./verify-graph.mjs";
 import { pushedObjects, verifyPush } from "./verify-pre-push.mjs";
-import {
-  captureProof,
-  hasProof,
-  proofKey,
-  recordProof,
-} from "./verify-receipt.mjs";
+import { captureProof, hasProof, proofKey, recordProof } from "./verify-receipt.mjs";
 
 function fixture(context) {
   const root = mkdtempSync(join(tmpdir(), "dads-receipt-test-"));
@@ -56,10 +45,7 @@ test("release requires the complete uncached graph for the same inputs", (contex
 
   const full = { full: true, uncached: true };
   assert.equal(recordProof(root, original, passingRun(false), full), false);
-  assert.equal(
-    recordProof(root, original, passingRun(true), { ...full, uncached: false }),
-    false,
-  );
+  assert.equal(recordProof(root, original, passingRun(true), { ...full, uncached: false }), false);
   const reused = passingRun(true);
   reused.results[0].cache = "hit";
   assert.equal(recordProof(root, original, reused, full), false);
@@ -85,20 +71,11 @@ test("a release receipt binds verification and toolchain settings", (context) =>
     }),
     true,
   );
-  for (const name of [
-    "NODE_OPTIONS",
-    "VITEST_POOL",
-    "CI",
-    "RUSTUP_TOOLCHAIN",
-  ]) {
+  for (const name of ["NODE_OPTIONS", "VITEST_POOL", "CI", "RUSTUP_TOOLCHAIN"]) {
     const value = process.env[name];
     try {
       process.env[name] = value === "" ? "changed" : "";
-      assert.equal(
-        hasProof(root, committed, proofKey(committed, []), true),
-        false,
-        name,
-      );
+      assert.equal(hasProof(root, committed, proofKey(committed, []), true), false, name);
     } finally {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
@@ -143,8 +120,7 @@ test("push uses pushed objects even when HEAD moved and the checkout is dirty", 
   const current = captureProof(root);
   assert.ok(current);
   writeFileSync(join(root, "extra.txt"), "dirty\n");
-  const record = (object) =>
-    `refs/heads/source ${object} refs/heads/target ${"0".repeat(object.length)}\n`;
+  const record = (object) => `refs/heads/source ${object} refs/heads/target ${"0".repeat(object.length)}\n`;
 
   assert.equal(verifyPush(root, record(originalObject)), true);
   git(root, ["tag", "-a", "verified", originalObject, "-m", "verified"]);
@@ -153,27 +129,14 @@ test("push uses pushed objects even when HEAD moved and the checkout is dirty", 
   assert.equal(hasProof(root, current.committed, current.key), false);
 
   const blob = git(root, ["rev-parse", "HEAD:source.txt"]).trim();
-  assert.throws(
-    () => verifyPush(root, record(originalObject) + record(blob)),
-    /git rev-parse/u,
-  );
+  assert.throws(() => verifyPush(root, record(originalObject) + record(blob)), /git rev-parse/u);
 });
 
 test("push rejects malformed records and accepts valid deletions", () => {
   const zero = "0".repeat(40);
   const object = "1".repeat(40);
-  assert.deepEqual(
-    [...pushedObjects(`(delete) ${zero} refs/heads/target ${object}\n`, 40)],
-    [],
-  );
-  assert.throws(
-    () =>
-      pushedObjects(
-        `refs/heads/source ${zero} refs/heads/target ${object}\n`,
-        40,
-      ),
-    /invalid/u,
-  );
+  assert.deepEqual([...pushedObjects(`(delete) ${zero} refs/heads/target ${object}\n`, 40)], []);
+  assert.throws(() => pushedObjects(`refs/heads/source ${zero} refs/heads/target ${object}\n`, 40), /invalid/u);
   assert.throws(() => pushedObjects("truncated\n", 40), /invalid/u);
 });
 
@@ -182,10 +145,7 @@ test("unproved non-HEAD refs are verified in a detached checkout of that object"
   const packageName = "receipt-test";
   const scripts = join(root, "scripts");
   mkdirSync(scripts);
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({ name: packageName }),
-  );
+  writeFileSync(join(root, "package.json"), JSON.stringify({ name: packageName }));
   writeFileSync(
     join(root, "package-lock.json"),
     JSON.stringify({
@@ -233,10 +193,7 @@ assert.ok(recordProof(root, before, { exitCode: 0, results }, { full: false, unc
   assert.doesNotThrow(() => verifyPush(root, input));
   assert.equal(hasProof(root, pushed.committed, pushed.key), true);
   assert.equal(readFileSync(checkoutLog, "utf8"), "checkout\n");
-  assert.equal(
-    readFileSync(join(root, "source.txt"), "utf8"),
-    "different HEAD\n",
-  );
+  assert.equal(readFileSync(join(root, "source.txt"), "utf8"), "different HEAD\n");
 });
 
 test("an identical tree cannot reuse proof after HEAD history or comparison base changes", (context) => {
@@ -248,13 +205,7 @@ test("an identical tree cannot reuse proof after HEAD history or comparison base
   const options = { full: false, uncached: false };
   assert.equal(recordProof(root, original, passingRun(false), options), true);
 
-  git(root, [
-    "commit",
-    "--allow-empty",
-    "--quiet",
-    "-m",
-    "A different history",
-  ]);
+  git(root, ["commit", "--allow-empty", "--quiet", "-m", "A different history"]);
   const moved = captureProof(root);
   assert.ok(moved);
   assert.equal(moved.fingerprint.tree, original.fingerprint.tree);

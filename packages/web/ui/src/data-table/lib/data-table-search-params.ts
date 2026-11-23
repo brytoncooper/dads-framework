@@ -33,25 +33,11 @@ export const DEFAULT_JOIN_OPERATOR: JoinOperator = "and";
  * pass none of them.
  */
 export const dataTableSearchSchema = z.object({
-  page: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .catch(DEFAULT_PAGE)
-    .default(DEFAULT_PAGE),
-  perPage: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(MAX_PER_PAGE)
-    .catch(DEFAULT_PER_PAGE)
-    .default(DEFAULT_PER_PAGE),
+  page: z.coerce.number().int().min(1).catch(DEFAULT_PAGE).default(DEFAULT_PAGE),
+  perPage: z.coerce.number().int().min(1).max(MAX_PER_PAGE).catch(DEFAULT_PER_PAGE).default(DEFAULT_PER_PAGE),
   sort: sortParamSchema.catch([]).default([]),
   filters: filterParamSchema.catch([]).default([]),
-  joinOperator: z
-    .enum(dataTableConfig.joinOperators)
-    .catch(DEFAULT_JOIN_OPERATOR)
-    .default(DEFAULT_JOIN_OPERATOR),
+  joinOperator: z.enum(dataTableConfig.joinOperators).catch(DEFAULT_JOIN_OPERATOR).default(DEFAULT_JOIN_OPERATOR),
 });
 
 /**
@@ -92,18 +78,13 @@ export type DataTableSearchParams = {
   joinOperator: JoinOperator | undefined;
 };
 
-export function toDataTableSearchParams(
-  state: DataTableState,
-): DataTableSearchParams {
+export function toDataTableSearchParams(state: DataTableState): DataTableSearchParams {
   return {
     page: state.page === DEFAULT_PAGE ? undefined : state.page,
     perPage: state.perPage === DEFAULT_PER_PAGE ? undefined : state.perPage,
     sort: encodeSortParam(state.sort),
     filters: encodeFilterParam(state.filters),
-    joinOperator:
-      state.joinOperator === DEFAULT_JOIN_OPERATOR
-        ? undefined
-        : state.joinOperator,
+    joinOperator: state.joinOperator === DEFAULT_JOIN_OPERATOR ? undefined : state.joinOperator,
   };
 }
 
@@ -134,10 +115,7 @@ export const dataTableSearchMiddlewares = [compactDataTableSearchParams];
  * Page 7 of the old filter is not page 7 of the new one, so any change that
  * reshapes the result set sends the reader back to the first page.
  */
-export function withPageResetOnNarrowing(
-  previous: DataTableState,
-  next: DataTableState,
-): DataTableState {
+export function withPageResetOnNarrowing(previous: DataTableState, next: DataTableState): DataTableState {
   if (next.page !== previous.page) return next;
   return { ...next, page: narrowsResults(previous, next) ? 1 : next.page };
 }

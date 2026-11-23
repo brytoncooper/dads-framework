@@ -15,9 +15,7 @@ export type ClientEnvironmentSnapshot = {
   readonly timeZone: string | undefined;
   readonly locale: string | undefined;
   readonly routeId: string | undefined;
-  readonly viewport:
-    | { readonly w: number; readonly h: number; readonly dpr: number }
-    | undefined;
+  readonly viewport: { readonly w: number; readonly h: number; readonly dpr: number } | undefined;
   readonly screen: { readonly w: number; readonly h: number } | undefined;
   readonly touch: boolean | undefined;
   readonly online: boolean | undefined;
@@ -50,9 +48,7 @@ const MAX_CONNECTION = 32;
  * must not take the build stamp down with it. Absent fields stay `undefined`
  * and disappear when the context is serialized for the header.
  */
-export function buildClientContext(
-  environment: ClientEnvironmentSnapshot,
-): ClientContext {
+export function buildClientContext(environment: ClientEnvironmentSnapshot): ClientContext {
   return {
     version: 1,
     client: "web",
@@ -88,9 +84,7 @@ function count(value: number | undefined): number | undefined {
   return known === undefined ? undefined : Math.max(0, Math.round(known));
 }
 
-function viewportOf(
-  viewport: ClientEnvironmentSnapshot["viewport"],
-): ClientContext["viewport"] {
+function viewportOf(viewport: ClientEnvironmentSnapshot["viewport"]): ClientContext["viewport"] {
   if (viewport === undefined) return undefined;
   const w = count(viewport.w);
   const h = count(viewport.h);
@@ -99,9 +93,7 @@ function viewportOf(
   return { w, h, dpr };
 }
 
-function screenOf(
-  screen: ClientEnvironmentSnapshot["screen"],
-): ClientContext["screen"] {
+function screenOf(screen: ClientEnvironmentSnapshot["screen"]): ClientContext["screen"] {
   if (screen === undefined) return undefined;
   const w = count(screen.w);
   const h = count(screen.h);

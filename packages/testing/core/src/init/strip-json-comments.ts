@@ -113,10 +113,7 @@ function closesCollection(text: string, from: number): boolean {
   return next === "}" || next === "]";
 }
 
-function nextMeaningfulCharacter(
-  text: string,
-  from: number,
-): string | undefined {
+function nextMeaningfulCharacter(text: string, from: number): string | undefined {
   for (let index = from; index < text.length; index += 1) {
     const character = text[index];
     if (character === undefined) return undefined;

@@ -18,9 +18,7 @@ describe("attachmentDisposition", () => {
   it("replaces quote, backslash and non-ASCII characters in the fallback", () => {
     const header = attachmentDisposition('Bomba "Ñ"\\(1).pdf');
     expect(header).toContain(`filename="Bomba ____(1).pdf"`);
-    expect(header).toContain(
-      "filename*=UTF-8''Bomba%20%22%C3%91%22%5C%281%29.pdf",
-    );
+    expect(header).toContain("filename*=UTF-8''Bomba%20%22%C3%91%22%5C%281%29.pdf");
   });
 
   it("falls back to a generic name when nothing printable remains", () => {

@@ -10,10 +10,7 @@ import {
   type SpiceDbMigrationSource,
 } from "./authzed-client-adapter.js";
 import { migrateSpiceDbToPostgres } from "./migrate-spicedb-to-postgres.js";
-import {
-  verifySpiceDbPostgresParity,
-  type ParityAuthorizationClient,
-} from "./verify-parity.js";
+import { verifySpiceDbPostgresParity, type ParityAuthorizationClient } from "./verify-parity.js";
 
 type RecordedQuery = {
   readonly text: string;
@@ -158,11 +155,7 @@ describe("migrateSpiceDbToPostgres", () => {
     expect(result.zedToken).toBe("zed-tok-123");
     expect(result.exportedCount).toBe(3);
     expect(result.writtenCount).toBe(3);
-    expect(result.definitions.map((def) => def.wireName)).toEqual([
-      "user",
-      "group",
-      "workspace",
-    ]);
+    expect(result.definitions.map((def) => def.wireName)).toEqual(["user", "group", "workspace"]);
     expect(result.generatedTypeScript).toContain("user.expiring");
     expect(result.generatedTypeScript).toContain("group.roles.member");
     expect(result.generatedTypeScript).toContain("user.anyone");
@@ -172,9 +165,7 @@ describe("migrateSpiceDbToPostgres", () => {
 
     // 2 DDL statements + 2 batched INSERT ... ON CONFLICT DO UPDATE statements
     expect(queries).toHaveLength(4);
-    expect(queries[0]?.text).toContain(
-      "CREATE TABLE IF NOT EXISTS dad_authorization_relationship",
-    );
+    expect(queries[0]?.text).toContain("CREATE TABLE IF NOT EXISTS dad_authorization_relationship");
     expect(queries[1]?.text).toContain("ADD COLUMN IF NOT EXISTS expires_at");
 
     const firstInsertValues = queries[2]?.values;
@@ -210,8 +201,7 @@ describe("migrateSpiceDbToPostgres", () => {
       promises: {
         readSchema: () =>
           Promise.resolve({
-            schemaText:
-              "definition user {}\ndefinition doc {\n  relation viewer: user\n}",
+            schemaText: "definition user {}\ndefinition doc {\n  relation viewer: user\n}",
           }),
       },
       exportBulkRelationships: () =>
@@ -267,10 +257,7 @@ describe("verifySpiceDbPostgresParity", () => {
     ]);
 
     const makeClient = (): ParityAuthorizationClient => ({
-      check: (q) =>
-        Promise.resolve(
-          (allowMap.get(q.subject.id) ?? []).includes(q.resource.id),
-        ),
+      check: (q) => Promise.resolve((allowMap.get(q.subject.id) ?? []).includes(q.resource.id)),
       lookupResources: (q) => Promise.resolve(allowMap.get(q.subject.id) ?? []),
     });
 

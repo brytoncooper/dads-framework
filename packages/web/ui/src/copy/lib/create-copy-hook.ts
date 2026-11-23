@@ -29,14 +29,11 @@ export type CopyTranslator<Catalog extends CopyCatalog> = (
  * export const useOrdersCopy = createCopyHook(ordersCopy);
  * ```
  */
-export function createCopyHook<Catalog extends CopyCatalog>(
-  catalog: Catalog,
-): () => CopyTranslator<Catalog> {
+export function createCopyHook<Catalog extends CopyCatalog>(catalog: Catalog): () => CopyTranslator<Catalog> {
   return function useCopy(): CopyTranslator<Catalog> {
     const locale = useLocale();
     return useCallback(
-      (keyOrDescriptor, vars, count) =>
-        translate(catalog, locale, keyOrDescriptor, vars, count),
+      (keyOrDescriptor, vars, count) => translate(catalog, locale, keyOrDescriptor, vars, count),
       [locale],
     );
   };

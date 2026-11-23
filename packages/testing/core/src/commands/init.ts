@@ -23,9 +23,7 @@ export const initCommand: DadTestCommand = {
       workspaceRoot: io.cwd,
       ...(manifestPath === undefined ? {} : { manifestPath }),
       force: parsed.flags.has("--force"),
-      ...(io.nativeBinary === undefined
-        ? {}
-        : { nativeBinary: io.nativeBinary }),
+      ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
       environment: io.env,
     });
     if (json) {
@@ -37,15 +35,10 @@ export const initCommand: DadTestCommand = {
   },
 };
 
-function writeHumanReport(
-  io: DadTestCliIo,
-  result: InitTestingManifestResult,
-): void {
+function writeHumanReport(io: DadTestCliIo, result: InitTestingManifestResult): void {
   const validation = result.report.validation;
   const selected =
-    validation.selectedTaskCount === undefined
-      ? ""
-      : ` selected=${String(validation.selectedTaskCount)}`;
+    validation.selectedTaskCount === undefined ? "" : ` selected=${String(validation.selectedTaskCount)}`;
   const counted = `${count(result.manifest.projects.length, "project")}, ${count(result.manifest.tasks.length, "task")}`;
   const lines = [
     `init: wrote ${result.manifestPath} (${counted}) validation=${validation.method}${selected}`,

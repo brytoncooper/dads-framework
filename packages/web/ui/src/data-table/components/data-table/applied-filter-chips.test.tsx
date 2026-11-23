@@ -16,10 +16,7 @@ import { AppliedFilterChips } from "./applied-filter-chips.js";
 afterEach(cleanup);
 
 function OrderChips({ onClearAll }: { readonly onClearAll?: () => void }) {
-  const [types, setTypes] = React.useState<readonly string[]>([
-    "SALE",
-    "TRANSFER",
-  ]);
+  const [types, setTypes] = React.useState<readonly string[]>(["SALE", "TRANSFER"]);
   const [directions, setDirections] = React.useState<readonly string[]>(["IN"]);
   const groups: FilterGroup[] = [
     {
@@ -40,40 +37,25 @@ function OrderChips({ onClearAll }: { readonly onClearAll?: () => void }) {
       onSelectedChange: setDirections,
     },
   ];
-  return (
-    <AppliedFilterChips
-      groups={groups}
-      {...(onClearAll === undefined ? {} : { onClearAll })}
-    />
-  );
+  return <AppliedFilterChips groups={groups} {...(onClearAll === undefined ? {} : { onClearAll })} />;
 }
 
 function chipTexts(): (string | null)[] {
-  return [
-    ...document.querySelectorAll('[data-slot="applied-filter-chip"]'),
-  ].map((chip) => chip.textContent);
+  return [...document.querySelectorAll('[data-slot="applied-filter-chip"]')].map((chip) => chip.textContent);
 }
 
 describe("AppliedFilterChips", () => {
   it("shows one chip per applied value inside a named group", () => {
     render(<OrderChips />);
 
-    expect(
-      screen.getByRole("group", { name: "Applied Filters" }),
-    ).toBeDefined();
-    expect(chipTexts()).toEqual([
-      "Type: Sales",
-      "Type: Transfers",
-      "Direction: Inbound",
-    ]);
+    expect(screen.getByRole("group", { name: "Applied Filters" })).toBeDefined();
+    expect(chipTexts()).toEqual(["Type: Sales", "Type: Transfers", "Direction: Inbound"]);
   });
 
   it("removes only the chip's own value", () => {
     render(<OrderChips />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Remove Type: Transfers" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Remove Type: Transfers" }));
     expect(chipTexts()).toEqual(["Type: Sales", "Direction: Inbound"]);
   });
 

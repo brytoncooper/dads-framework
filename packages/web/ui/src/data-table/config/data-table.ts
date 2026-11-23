@@ -62,16 +62,7 @@ export const dataTableConfig = {
     { labelKey: "dataTable.sort.ascending", value: "asc" },
     { labelKey: "dataTable.sort.descending", value: "desc" },
   ] as const satisfies readonly CopyLabeledValue[],
-  filterVariants: [
-    "text",
-    "number",
-    "range",
-    "date",
-    "dateRange",
-    "boolean",
-    "select",
-    "multiSelect",
-  ] as const,
+  filterVariants: ["text", "number", "range", "date", "dateRange", "boolean", "select", "multiSelect"] as const,
   operators: [
     "iLike",
     "notILike",

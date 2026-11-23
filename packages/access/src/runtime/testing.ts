@@ -13,14 +13,8 @@ export {
   type PermissionExplanation,
   type PermissionTrace,
 } from "../testing/explain-format.js";
-export {
-  InMemoryAuthorization,
-  type InMemoryAuthorizationOptions,
-} from "../testing/in-memory-authorization.js";
-export {
-  createAccessHarness,
-  type AccessHarness,
-} from "../testing/access-harness.js";
+export { InMemoryAuthorization, type InMemoryAuthorizationOptions } from "../testing/in-memory-authorization.js";
+export { createAccessHarness, type AccessHarness } from "../testing/access-harness.js";
 export type {
   AccessScenarioVerbs,
   GrantBuilder,

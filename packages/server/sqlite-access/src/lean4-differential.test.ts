@@ -2,27 +2,12 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { actor, allOf, anyOf, compileAccess, every, resource, roleToken } from "@dads-framework/access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/access/runtime";
 import { expect, it } from "vitest";
 
 import { compileAccessPolicy } from "./policy/compile-access-policy.js";
-import {
-  createNodeSqliteExecutor,
-  SqliteAuthorization,
-  sqliteRelationshipSchemaMigration,
-} from "./index.js";
+import { createNodeSqliteExecutor, SqliteAuthorization, sqliteRelationshipSchemaMigration } from "./index.js";
 
 const ORACLE_BIN = path.resolve(
   import.meta.dirname,
@@ -51,9 +36,7 @@ function callLeanOracle(payload: unknown): {
   }
   return {
     checks: parsed.checks.map((v) => Boolean(v)),
-    lookups: parsed.lookups.map((arr) =>
-      Array.isArray(arr) ? arr.map(String) : [],
-    ),
+    lookups: parsed.lookups.map((arr) => (Array.isArray(arr) ? arr.map(String) : [])),
   };
 }
 
@@ -77,11 +60,7 @@ function buildAdversarialSchema() {
   const workspace = resource("fuzz/workspace", {
     roles: {
       owner: user.expiring,
-      member: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       banned: user,
     },
     can: ({ owner, member, banned }) => ({
@@ -102,11 +81,7 @@ function buildAdversarialSchema() {
     parents: [workspace, folder],
     roles: {
       scope_ws: workspace,
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       approver: user,
       banned: user,
     },
@@ -145,9 +120,7 @@ it.runIf(existsSync(ORACLE_BIN))(
         for (const stmt of sqliteRelationshipSchemaMigration.statements) {
           db.exec(stmt);
         }
-        db.exec(
-          "CREATE TABLE fuzz_docs (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL);",
-        );
+        db.exec("CREATE TABLE fuzz_docs (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL);");
         const auth = new SqliteAuthorization({
           model,
           namespace: `sqlite_fuzz_${String(seed)}`,
@@ -241,9 +214,7 @@ it.runIf(existsSync(ORACLE_BIN))(
               ...maybeExpiry(),
             });
         }
-        const insDoc = db.prepare(
-          "INSERT INTO fuzz_docs (id, workspace_id) VALUES (?, ?)",
-        );
+        const insDoc = db.prepare("INSERT INTO fuzz_docs (id, workspace_id) VALUES (?, ?)");
         for (const d of docs) {
           const ws = workspaces[pick(workspaces.length)] ?? "w0";
           insDoc.run(d, ws);
@@ -334,10 +305,7 @@ it.runIf(existsSync(ORACLE_BIN))(
             subjectId: String(row["subject_id"] ?? ""),
             subjectRelation: String(row["subject_relation"] ?? ""),
             subjectIsWildcard: Number(row["subject_is_wildcard"] ?? 0) === 1,
-            expiresAt:
-              row["expires_at"] === null || row["expires_at"] === undefined
-                ? null
-                : Number(row["expires_at"]),
+            expiresAt: row["expires_at"] === null || row["expires_at"] === undefined ? null : Number(row["expires_at"]),
           })),
           now: nowMs,
           checks: checkQueries.map((q) => ({
@@ -374,13 +342,9 @@ it.runIf(existsSync(ORACLE_BIN))(
             idColumn: "d.id",
           });
           const plainRows = db
-            .prepare(
-              `SELECT d.id FROM fuzz_docs d WHERE ${plain.sql} ORDER BY d.id`,
-            )
+            .prepare(`SELECT d.id FROM fuzz_docs d WHERE ${plain.sql} ORDER BY d.id`)
             .all(...plain.values);
-          expect(plainRows.map((r) => String(r["id"] ?? ""))).toEqual(
-            expectedIds,
-          );
+          expect(plainRows.map((r) => String(r["id"] ?? ""))).toEqual(expectedIds);
 
           if (spec.permission === "scoped_view") {
             const scoped = auth.compileFilter({
@@ -391,13 +355,9 @@ it.runIf(existsSync(ORACLE_BIN))(
               scopeColumns: { scope_ws: "d.workspace_id" },
             });
             const scopedRows = db
-              .prepare(
-                `SELECT d.id FROM fuzz_docs d WHERE ${scoped.sql} ORDER BY d.id`,
-              )
+              .prepare(`SELECT d.id FROM fuzz_docs d WHERE ${scoped.sql} ORDER BY d.id`)
               .all(...scoped.values);
-            expect(scopedRows.map((r) => String(r["id"] ?? ""))).toEqual(
-              expectedIds,
-            );
+            expect(scopedRows.map((r) => String(r["id"] ?? ""))).toEqual(expectedIds);
           }
           totalQueriesChecked += 2;
         }

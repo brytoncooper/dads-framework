@@ -3,8 +3,7 @@ import * as React from "react";
 import type { ViewRotation } from "../logic/view-rotation.js";
 
 /** Any of these means the reader has taken over the rail's scroll. */
-const USER_SCROLL_EVENTS: readonly ("wheel" | "touchstart" | "pointerdown")[] =
-  ["wheel", "touchstart", "pointerdown"];
+const USER_SCROLL_EVENTS: readonly ("wheel" | "touchstart" | "pointerdown")[] = ["wheel", "touchstart", "pointerdown"];
 
 function thumbnailFor(rail: HTMLElement, page: number): HTMLElement | null {
   return rail.querySelector<HTMLElement>(`[data-page="${String(page)}"]`);

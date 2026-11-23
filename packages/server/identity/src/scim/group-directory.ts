@@ -30,10 +30,7 @@ export type ScimGroupDirectory = {
     readonly totalResults: number;
   }>;
   readonly get: (tenantId: string, id: string) => Promise<ScimGroup | null>;
-  readonly create: (
-    tenantId: string,
-    data: ScimGroupData,
-  ) => Promise<ScimGroup | "conflict" | "invalidMember">;
+  readonly create: (tenantId: string, data: ScimGroupData) => Promise<ScimGroup | "conflict" | "invalidMember">;
   /** Commit the callback and validate tenant member references in the same transaction. */
   readonly update: (
     tenantId: string,

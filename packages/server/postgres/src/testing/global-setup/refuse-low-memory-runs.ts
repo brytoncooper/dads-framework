@@ -3,11 +3,7 @@ import { readFile } from "node:fs/promises";
 import { freemem, platform } from "node:os";
 import { promisify } from "node:util";
 import { getContainerRuntimeClient } from "testcontainers";
-import {
-  TEST_POSTGRES_STORAGE,
-  testPostgresStorage,
-  type TestPostgresStorage,
-} from "../test-postgres-storage.js";
+import { TEST_POSTGRES_STORAGE, testPostgresStorage, type TestPostgresStorage } from "../test-postgres-storage.js";
 
 /**
  * A memory floor under container-tier runs. The wall against a test run
@@ -107,12 +103,7 @@ export function parseMacAvailableMemory(vmStat: string): number | null {
     const match = new RegExp(`^${label}:\\s+(\\d+)\\.$`, "m").exec(vmStat);
     return match === null ? null : Number(match[1]);
   };
-  const counts = [
-    pages("Pages free"),
-    pages("Pages inactive"),
-    pages("Pages speculative"),
-    pages("Pages purgeable"),
-  ];
+  const counts = [pages("Pages free"), pages("Pages inactive"), pages("Pages speculative"), pages("Pages purgeable")];
   let total = 0;
   for (const count of counts) {
     if (count === null) return null;
@@ -125,10 +116,7 @@ export function parseMacAvailableMemory(vmStat: string): number | null {
  * What one container holds that the VM cannot simply take back: its usage
  * minus inactive page cache, the same figure `docker stats` shows.
  */
-export function containerWorkingSetBytes(memory: {
-  readonly usage?: number;
-  readonly inactiveFile?: number;
-}): number {
+export function containerWorkingSetBytes(memory: { readonly usage?: number; readonly inactiveFile?: number }): number {
   return Math.max(0, (memory.usage ?? 0) - (memory.inactiveFile ?? 0));
 }
 
@@ -137,19 +125,12 @@ export function containerWorkingSetBytes(memory: {
  * Natively on Linux its containers share the host's memory, which the host
  * reading already covers.
  */
-export function dockerRunsInVm(
-  hostPlatform: string,
-  operatingSystem: string,
-): boolean {
+export function dockerRunsInVm(hostPlatform: string, operatingSystem: string): boolean {
   return hostPlatform !== "linux" || /docker desktop/i.test(operatingSystem);
 }
 
 /** A knob set to nonsense is a mistake worth saying out loud. */
-function readNonNegative(
-  env: Readonly<Record<string, string | undefined>>,
-  name: string,
-  fallback: number,
-): number {
+function readNonNegative(env: Readonly<Record<string, string | undefined>>, name: string, fallback: number): number {
   const raw = env[name];
   if (raw === undefined || raw.trim().length === 0) return fallback;
   const value = Number(raw);
@@ -159,21 +140,11 @@ function readNonNegative(
   return value;
 }
 
-export function memoryThresholds(
-  env: Readonly<Record<string, string | undefined>>,
-): MemoryThresholds {
+export function memoryThresholds(env: Readonly<Record<string, string | undefined>>): MemoryThresholds {
   return {
-    hostMinFreeBytes:
-      readNonNegative(env, MIN_FREE_MEMORY_GB, DEFAULT_MIN_FREE_GB) * GIB,
-    dockerMinFreeBytes:
-      readNonNegative(
-        env,
-        MIN_FREE_DOCKER_MEMORY_GB,
-        DEFAULT_MIN_FREE_DOCKER_GB,
-      ) * GIB,
-    waitBudgetMs: Math.round(
-      readNonNegative(env, MEMORY_WAIT_MS, DEFAULT_MEMORY_WAIT_MS),
-    ),
+    hostMinFreeBytes: readNonNegative(env, MIN_FREE_MEMORY_GB, DEFAULT_MIN_FREE_GB) * GIB,
+    dockerMinFreeBytes: readNonNegative(env, MIN_FREE_DOCKER_MEMORY_GB, DEFAULT_MIN_FREE_DOCKER_GB) * GIB,
+    waitBudgetMs: Math.round(readNonNegative(env, MEMORY_WAIT_MS, DEFAULT_MEMORY_WAIT_MS)),
   };
 }
 
@@ -200,10 +171,7 @@ export function decideMemoryPreflight(input: {
 }): MemoryPreflightDecision {
   const { reading, thresholds, tier } = input;
   const short: string[] = [];
-  if (
-    thresholds.hostMinFreeBytes > 0 &&
-    reading.hostAvailableBytes < thresholds.hostMinFreeBytes
-  ) {
+  if (thresholds.hostMinFreeBytes > 0 && reading.hostAvailableBytes < thresholds.hostMinFreeBytes) {
     short.push(
       `host: ${describeGb(reading.hostAvailableBytes)} free (${reading.hostSource}), ` +
         `needs ${describeGb(thresholds.hostMinFreeBytes)} — ${MIN_FREE_MEMORY_GB}`,
@@ -300,9 +268,7 @@ function withinTimeout<T>(work: Promise<T>): Promise<T | null> {
   ]);
 }
 
-async function readHostAvailableMemory(): Promise<
-  Pick<MemoryReading, "hostAvailableBytes" | "hostSource">
-> {
+async function readHostAvailableMemory(): Promise<Pick<MemoryReading, "hostAvailableBytes" | "hostSource">> {
   if (platform() === "linux") {
     const meminfo = await withinTimeout(readFile("/proc/meminfo", "utf8"));
     const bytes = meminfo === null ? null : parseLinuxMemAvailable(meminfo);
@@ -311,11 +277,8 @@ async function readHostAvailableMemory(): Promise<
     }
   }
   if (platform() === "darwin") {
-    const output = await withinTimeout(
-      run("vm_stat", [], { encoding: "utf8", timeout: READING_TIMEOUT_MS }),
-    );
-    const bytes =
-      output === null ? null : parseMacAvailableMemory(output.stdout);
+    const output = await withinTimeout(run("vm_stat", [], { encoding: "utf8", timeout: READING_TIMEOUT_MS }));
+    const bytes = output === null ? null : parseMacAvailableMemory(output.stdout);
     if (bytes !== null) {
       return { hostAvailableBytes: bytes, hostSource: "vm_stat" };
     }
@@ -336,17 +299,13 @@ async function readDockerMemory(): Promise<DockerMemoryReading | null> {
   if (!inVm) {
     return { totalBytes: runtime.memory, inVm, freeBytes: null };
   }
-  const running = (await client.container.list()).filter(
-    (container) => container.State === "running",
-  );
+  const running = (await client.container.list()).filter((container) => container.State === "running");
   // A container that is restarting or just exited reports empty stats; it
   // counts as holding nothing rather than dropping the whole reading.
   const held = await Promise.all(
     running.map(async (container) => {
       try {
-        const stats = await client.container
-          .getById(container.Id)
-          .stats({ stream: false, "one-shot": true });
+        const stats = await client.container.getById(container.Id).stats({ stream: false, "one-shot": true });
         return containerWorkingSetBytes({
           usage: stats.memory_stats.usage,
           inactiveFile: stats.memory_stats.stats.inactive_file,
@@ -366,10 +325,7 @@ async function readDockerMemory(): Promise<DockerMemoryReading | null> {
 
 /** One reading of host and Docker memory; the Docker half may be `null`. */
 export async function readTestMemory(): Promise<MemoryReading> {
-  const [host, docker] = await Promise.all([
-    readHostAvailableMemory(),
-    withinTimeout(readDockerMemory()),
-  ]);
+  const [host, docker] = await Promise.all([readHostAvailableMemory(), withinTimeout(readDockerMemory())]);
   return { ...host, docker };
 }
 
@@ -421,10 +377,7 @@ export async function awaitEnoughTestMemory(
     if (decision.action === "abort") {
       throw new NotEnoughTestMemoryError(decision.message);
     }
-    if (
-      announcedAtMs === null ||
-      waitedMs - announcedAtMs >= ANNOUNCE_INTERVAL_MS
-    ) {
+    if (announcedAtMs === null || waitedMs - announcedAtMs >= ANNOUNCE_INTERVAL_MS) {
       deps.log(decision.message);
       announcedAtMs = waitedMs;
     }
@@ -486,10 +439,7 @@ export function decideVitestWorkerCap(input: {
   readonly reserveBytes: number;
 }): VitestWorkerCap {
   const chosen = input.env["VITEST_MAX_WORKERS"];
-  if (
-    input.env["CI"] !== undefined ||
-    (chosen !== undefined && chosen !== "")
-  ) {
+  if (input.env["CI"] !== undefined || (chosen !== undefined && chosen !== "")) {
     return { workers: null, message: null };
   }
   const planned = input.configuredWorkers ?? Math.max(1, input.cores - 1);

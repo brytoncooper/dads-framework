@@ -77,19 +77,9 @@
   /* Depth on dark comes from black, not from tinted ink — and it has to be
      stronger than on light, because a dark surface has less room to darken. */
   --elevation-1: 0 1px 1px 0 var(--palette-black-a36);
-  --elevation-2:
-    0 1px 1px -0.5px var(--palette-black-a36),
-    0 1px 2px 0 var(--palette-black-a48);
-  --elevation-3:
-    0 1px 2px -1px var(--palette-black-a56),
-    0 3px 6px -2px var(--palette-black-a48);
-  --elevation-4:
-    0 2px 4px -2px var(--palette-black-a58),
-    0 8px 16px -6px var(--palette-black-a55);
-  --elevation-5:
-    0 4px 8px -4px var(--palette-black-a62),
-    0 16px 32px -12px var(--palette-black-a62);
-  --elevation-6:
-    0 8px 16px -8px var(--palette-black-a68),
-    0 32px 64px -20px var(--palette-black-a72);
+  --elevation-2: 0 1px 1px -0.5px var(--palette-black-a36), 0 1px 2px 0 var(--palette-black-a48);
+  --elevation-3: 0 1px 2px -1px var(--palette-black-a56), 0 3px 6px -2px var(--palette-black-a48);
+  --elevation-4: 0 2px 4px -2px var(--palette-black-a58), 0 8px 16px -6px var(--palette-black-a55);
+  --elevation-5: 0 4px 8px -4px var(--palette-black-a62), 0 16px 32px -12px var(--palette-black-a62);
+  --elevation-6: 0 8px 16px -8px var(--palette-black-a68), 0 32px 64px -20px var(--palette-black-a72);
 }

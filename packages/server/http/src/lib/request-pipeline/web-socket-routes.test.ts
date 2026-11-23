@@ -15,9 +15,7 @@ import { registerRoutes } from "./register-routes.js";
 const subjects: SubjectResolver = {
   resolve: (request) => {
     const id = request.headers["x-test-user"];
-    return Promise.resolve(
-      typeof id === "string" && id.length > 0 ? { type: "user", id } : null,
-    );
+    return Promise.resolve(typeof id === "string" && id.length > 0 ? { type: "user", id } : null);
   },
 };
 
@@ -56,8 +54,7 @@ async function listening(): Promise<string> {
   await app.listen({ port: 0, host: "127.0.0.1" });
   apps.push(app);
   const address = app.server.address();
-  if (address === null || typeof address === "string")
-    throw new Error("no port");
+  if (address === null || typeof address === "string") throw new Error("no port");
   return `ws://127.0.0.1:${String(address.port)}`;
 }
 
@@ -66,10 +63,7 @@ afterEach(async () => {
   apps = [];
 });
 
-function open(
-  url: string,
-  headers: Record<string, string>,
-): Promise<{ socket: WebSocket; messages: string[] }> {
+function open(url: string, headers: Record<string, string>): Promise<{ socket: WebSocket; messages: string[] }> {
   return new Promise((resolve, reject) => {
     const socket = new WebSocket(url, { headers });
     const messages: string[] = [];
@@ -111,16 +105,12 @@ describe("webSocketRoute", () => {
 
   it("answers an upgrade to an unknown path 404", async () => {
     const base = await listening();
-    await expect(
-      open(`${base}/nowhere`, { "x-test-user": "u1" }),
-    ).rejects.toThrow("status 404");
+    await expect(open(`${base}/nowhere`, { "x-test-user": "u1" })).rejects.toThrow("status 404");
   });
 
   it("answers a handler's refusal before any socket opens", async () => {
     const base = await listening();
-    await expect(
-      open(`${base}/echo`, { "x-test-user": "refused" }),
-    ).rejects.toThrow("status 404");
+    await expect(open(`${base}/echo`, { "x-test-user": "refused" })).rejects.toThrow("status 404");
   });
 
   it("answers a plain GET 426", async () => {

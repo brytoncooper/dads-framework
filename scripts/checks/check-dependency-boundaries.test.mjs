@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  checkDependencyBoundaries,
-  render,
-} from "./check-dependency-boundaries.mjs";
+import { checkDependencyBoundaries, render } from "./check-dependency-boundaries.mjs";
 
 /**
  * Every fixture is a `dads.project.json`, a `package.json`, and whatever source
@@ -20,10 +17,7 @@ function createWorld(files) {
       if (value === undefined) throw new Error(`no such file: ${path}`);
       return value;
     },
-    listFiles: (directory) =>
-      [...contents.keys()]
-        .filter((path) => path.startsWith(`${directory}/`))
-        .sort(),
+    listFiles: (directory) => [...contents.keys()].filter((path) => path.startsWith(`${directory}/`)).sort(),
   };
 }
 
@@ -84,9 +78,7 @@ test("a dynamic import of an unlisted adapter is a violation", () => {
 
 test("relative, builtin, and allowed imports pass", () => {
   const world = createWorld({
-    "dads.project.json": projectFile(
-      declaration({ allowedDependencies: ["zod"] }),
-    ),
+    "dads.project.json": projectFile(declaration({ allowedDependencies: ["zod"] })),
     "packages/one/src/index.ts":
       'import { readFileSync } from "node:fs";\nimport { z } from "zod";\nimport { local } from "./local.js";\nimport { deep } from "zod/v4";\n',
   });
@@ -130,10 +122,7 @@ test("a peer dependency the declaration omits is a violation", () => {
   const result = checkDependencyBoundaries(world);
 
   assert.deepEqual(gatesOf(result), ["declared-dependencies"]);
-  assert.match(
-    result.violations[0].message,
-    /declares "react" in peerDependencies/u,
-  );
+  assert.match(result.violations[0].message, /declares "react" in peerDependencies/u);
 });
 
 test("optional dependencies must match the declaration", () => {
@@ -146,23 +135,17 @@ test("optional dependencies must match the declaration", () => {
     ...files,
     "dads.project.json": projectFile(declaration()),
   });
-  assert.deepEqual(gatesOf(checkDependencyBoundaries(unlisted)), [
-    "declared-dependencies",
-  ]);
+  assert.deepEqual(gatesOf(checkDependencyBoundaries(unlisted)), ["declared-dependencies"]);
   const allowed = createWorld({
     ...files,
-    "dads.project.json": projectFile(
-      declaration({ allowedDependencies: ["native-helper"] }),
-    ),
+    "dads.project.json": projectFile(declaration({ allowedDependencies: ["native-helper"] })),
   });
   assert.deepEqual(checkDependencyBoundaries(allowed).violations, []);
 });
 
 test("a third-party allowance nothing installs is a violation", () => {
   const world = createWorld({
-    "dads.project.json": projectFile(
-      declaration({ allowedDependencies: ["drizzle-orm"] }),
-    ),
+    "dads.project.json": projectFile(declaration({ allowedDependencies: ["drizzle-orm"] })),
     "packages/one/package.json": manifest(),
   });
 
@@ -198,9 +181,7 @@ test("devDependencies are outside the declaration gate", () => {
 
 test("a package without a manifest is only held to the import gate", () => {
   const world = createWorld({
-    "dads.project.json": projectFile(
-      declaration({ name: "crate", root: "crates/one" }),
-    ),
+    "dads.project.json": projectFile(declaration({ name: "crate", root: "crates/one" })),
   });
 
   const result = checkDependencyBoundaries(world);
@@ -219,8 +200,7 @@ test("a foreign type in a published surface is a violation", () => {
     "packages/one/package.json": manifest({
       publishConfig: { access: "public" },
     }),
-    "packages/one/dist/index.d.ts":
-      'import type { Pool } from "pg";\nexport declare function open(): Pool;\n',
+    "packages/one/dist/index.d.ts": 'import type { Pool } from "pg";\nexport declare function open(): Pool;\n',
   });
 
   const result = checkDependencyBoundaries(world);
@@ -236,8 +216,7 @@ test("an inline import() type in a published surface is a violation", () => {
     "packages/one/package.json": manifest({
       publishConfig: { access: "public" },
     }),
-    "packages/one/dist/index.d.ts":
-      'export declare const client: import("@tanstack/react-query").QueryClient;\n',
+    "packages/one/dist/index.d.ts": 'export declare const client: import("@tanstack/react-query").QueryClient;\n',
   });
 
   const result = checkDependencyBoundaries(world);
@@ -248,9 +227,7 @@ test("an inline import() type in a published surface is a violation", () => {
 
 test("the package itself, an allowed dependency, and node: all pass", () => {
   const world = createWorld({
-    "dads.project.json": projectFile(
-      declaration({ allowedDependencies: ["zod"] }),
-    ),
+    "dads.project.json": projectFile(declaration({ allowedDependencies: ["zod"] })),
     "packages/one/package.json": manifest({
       publishConfig: { access: "public" },
       dependencies: { zod: "^4.0.0" },
@@ -276,17 +253,13 @@ test("an exports subpath surface is checked too", () => {
       },
     }),
     "packages/one/dist/index.d.ts": "export declare const one: 1;\n",
-    "packages/one/dist/testing/index.d.ts":
-      'export type { Harness } from "vitest";\n',
+    "packages/one/dist/testing/index.d.ts": 'export type { Harness } from "vitest";\n',
   });
 
   const result = checkDependencyBoundaries(world);
 
   assert.deepEqual(gatesOf(result), ["public-surface"]);
-  assert.equal(
-    result.violations[0].file,
-    "packages/one/dist/testing/index.d.ts",
-  );
+  assert.equal(result.violations[0].file, "packages/one/dist/testing/index.d.ts");
 });
 
 test("an unbuilt package is skipped, not failed", () => {
@@ -383,17 +356,13 @@ function scopedBindingWorld(files, overrides = {}) {
       peerDependenciesMeta: { "drizzle-orm": { optional: true } },
       ...overrides,
     }),
-    "packages/one/src/postgres/index.ts":
-      'import { sql } from "drizzle-orm"; export { sql };',
+    "packages/one/src/postgres/index.ts": 'import { sql } from "drizzle-orm"; export { sql };',
     ...files,
   });
 }
 
 test("a binding can load its optional peer within its own export", () => {
-  assert.deepEqual(
-    checkDependencyBoundaries(scopedBindingWorld()).violations,
-    [],
-  );
+  assert.deepEqual(checkDependencyBoundaries(scopedBindingWorld()).violations, []);
 });
 
 test("core cannot reach an adapter subpath or its optional peer", () => {
@@ -409,25 +378,13 @@ test("core cannot reach an adapter subpath or its optional peer", () => {
       ].join("\n"),
     }),
   );
-  assert.deepEqual(gatesOf(result), [
-    "imports",
-    "imports",
-    "imports",
-    "imports",
-  ]);
-  assert.ok(
-    result.violations.every(({ message }) =>
-      message.includes("outside its source scope"),
-    ),
-  );
+  assert.deepEqual(gatesOf(result), ["imports", "imports", "imports", "imports"]);
+  assert.ok(result.violations.every(({ message }) => message.includes("outside its source scope")));
 });
 
 test("a scoped binding must declare peers as optional", () => {
   assert.throws(
-    () =>
-      checkDependencyBoundaries(
-        scopedBindingWorld({}, { peerDependenciesMeta: {} }),
-      ),
+    () => checkDependencyBoundaries(scopedBindingWorld({}, { peerDependenciesMeta: {} })),
     /Invalid source binding @fixture\/one\/postgres/u,
   );
 });

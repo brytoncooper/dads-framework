@@ -14,10 +14,7 @@ import type { ClientDiagnosticEvent } from "@dads-framework/core/contract";
 
 import type { ClientDiagnosticWriter } from "../database/writers/client-diagnostic-writer.interface.js";
 import { clientDiagnosticEventIdSchema } from "./client-diagnostic-event.ids.js";
-import {
-  clientDiagnosticRow,
-  type ReportingActor,
-} from "./logic/client-diagnostic-row.js";
+import { clientDiagnosticRow, type ReportingActor } from "./logic/client-diagnostic-row.js";
 
 /** The narrow logger this needs; the kit never holds a whole pino instance. */
 export type ClientDiagnosticsLog = {

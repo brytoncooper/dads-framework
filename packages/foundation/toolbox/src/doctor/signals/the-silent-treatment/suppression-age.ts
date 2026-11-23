@@ -20,11 +20,7 @@
 
 import { isRecord } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   daysBefore,
   readFileAtRevision,
@@ -78,10 +74,7 @@ function readSuppressionHistory(root: string): readonly SuppressionRevision[] {
 }
 
 /** The newest commit where the count fell, or the one that first recorded it. */
-function lastDownwardMove(
-  history: readonly SuppressionRevision[],
-  key: string,
-): string | undefined {
+function lastDownwardMove(history: readonly SuppressionRevision[], key: string): string | undefined {
   let recorded: string | undefined;
   for (let index = 0; index < history.length; index += 1) {
     const current = history[index]?.counts.get(key);
@@ -121,7 +114,6 @@ export const suppressionAgeSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: 0 },
-  sentence:
-    "A suppressions file nobody has opened since the day it was generated.",
+  sentence: "A suppressions file nobody has opened since the day it was generated.",
   run: (context) => Promise.resolve(ageSuppressions(context)),
 };

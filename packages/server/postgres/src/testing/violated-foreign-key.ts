@@ -42,9 +42,7 @@ export type ForeignKeyRefusal = {
  * Awaits a write expected to be refused and describes the refusal. Throws if
  * the write succeeded, or failed for any reason other than a foreign key.
  */
-export async function violatedForeignKey(
-  write: PromiseLike<unknown>,
-): Promise<ForeignKeyRefusal> {
+export async function violatedForeignKey(write: PromiseLike<unknown>): Promise<ForeignKeyRefusal> {
   try {
     await write;
   } catch (error) {
@@ -52,9 +50,7 @@ export async function violatedForeignKey(
     if (refusal !== undefined) return refusal;
     throw error;
   }
-  throw new Error(
-    "expected the write to be refused by a foreign key, but it was accepted",
-  );
+  throw new Error("expected the write to be refused by a foreign key, but it was accepted");
 }
 
 /** Walks the `cause` chain — drizzle wraps the driver error one level down. */
@@ -69,17 +65,12 @@ function foreignKeyRefusalIn(error: unknown): ForeignKeyRefusal | undefined {
 }
 
 function readRefusal(value: unknown): ForeignKeyRefusal | undefined {
-  if (readStringField(value, "code") !== FOREIGN_KEY_VIOLATION)
-    return undefined;
+  if (readStringField(value, "code") !== FOREIGN_KEY_VIOLATION) return undefined;
 
   const childTable = readStringField(value, "table");
   const constraint = readStringField(value, "constraint");
   const parentTable = PARENT_TABLE.exec(readStringField(value, "detail") ?? "");
-  if (
-    childTable === undefined ||
-    constraint === undefined ||
-    parentTable?.[1] === undefined
-  ) {
+  if (childTable === undefined || constraint === undefined || parentTable?.[1] === undefined) {
     return undefined;
   }
   return { childTable, parentTable: parentTable[1], constraint };

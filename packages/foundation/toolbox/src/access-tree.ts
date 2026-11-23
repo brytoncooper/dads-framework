@@ -1,11 +1,7 @@
 /** Render a `.ts`/`.js` or `.zed` access schema as a deterministic ASCII hierarchy tree. */
 
 import { resolve } from "node:path";
-import {
-  compileAccessFromIr,
-  formatAccessTree,
-  parseZed,
-} from "@dads-framework/access";
+import { compileAccessFromIr, formatAccessTree, parseZed } from "@dads-framework/access";
 import { loadAccessSource } from "./access-source-loader.js";
 import { readZedFile } from "./access-zed-io.js";
 
@@ -26,9 +22,7 @@ export type AccessTreeResult = {
  * schema file and render its deterministic ASCII hierarchy tree via
  * `formatAccessTree`.
  */
-export async function renderAccessTree(
-  options: RenderAccessTreeOptions,
-): Promise<AccessTreeResult> {
+export async function renderAccessTree(options: RenderAccessTreeOptions): Promise<AccessTreeResult> {
   const loaded = await loadAccessSource(options.inputPath, options.cwd);
   const tree = formatAccessTree(loaded.model);
 
@@ -44,9 +38,7 @@ export async function renderAccessTree(
  * Read a `.zed` schema file, parse it into Dads access IR, lower it into an
  * `AccessModel`, and render the hierarchy tree via `formatAccessTree`.
  */
-export function renderZedAccessTree(
-  options: RenderAccessTreeOptions,
-): AccessTreeResult {
+export function renderZedAccessTree(options: RenderAccessTreeOptions): AccessTreeResult {
   const baseDirectory = options.cwd ?? process.cwd();
   const inputPath = resolve(baseDirectory, options.inputPath);
   const source = readZedFile(inputPath);

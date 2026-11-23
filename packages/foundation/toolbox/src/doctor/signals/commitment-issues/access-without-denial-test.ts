@@ -18,39 +18,22 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  accessArtifacts,
-  declaredRootsOf,
-  owningRoot,
-} from "../scanners/access-artifacts.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { accessArtifacts, declaredRootsOf, owningRoot } from "../scanners/access-artifacts.js";
 import { isTestSource } from "../scanners/source-classification.js";
 
 const DENIAL_NAME = /denial/i;
 const DENIAL_TEXT = /no[- ]relationship|denial/i;
 
 /** The first test under a package root that proves a denial, if any. */
-function denialTestIn(
-  context: DoctorContext,
-  root: string,
-): string | undefined {
+function denialTestIn(context: DoctorContext, root: string): string | undefined {
   return context
     .files()
     .filter((path) => path.startsWith(`${root}/`) && isTestSource(path))
-    .find(
-      (path) =>
-        DENIAL_NAME.test(path) ||
-        (context.exists(path) && DENIAL_TEXT.test(context.read(path))),
-    );
+    .find((path) => DENIAL_NAME.test(path) || (context.exists(path) && DENIAL_TEXT.test(context.read(path))));
 }
 
-function countSchemaOwnersWithoutDenial(
-  context: DoctorContext,
-): SignalReadings {
+function countSchemaOwnersWithoutDenial(context: DoctorContext): SignalReadings {
   const roots = declaredRootsOf(context);
   const readings = new Map<string, SignalReading>();
   for (const artifact of accessArtifacts(context)) {
@@ -68,8 +51,7 @@ function countSchemaOwnersWithoutDenial(
 export const accessWithoutDenialTestSignal: DoctorSignal = {
   id: "access-without-denial-test",
   issue: "commitment-issues",
-  question:
-    "Does a package that publishes a generated access schema have no test proving a denial?",
+  question: "Does a package that publishes a generated access schema have no test proving a denial?",
   reads: "packages",
   unit: "count",
   direction: "ceiling",

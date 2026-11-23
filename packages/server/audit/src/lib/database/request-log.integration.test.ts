@@ -48,10 +48,7 @@ describe("request_log", () => {
 
     await db.insert(requestLog).values(row);
 
-    const [found] = await db
-      .select()
-      .from(requestLog)
-      .where(eq(requestLog.requestId, row.requestId));
+    const [found] = await db.select().from(requestLog).where(eq(requestLog.requestId, row.requestId));
 
     expect(found).toMatchObject({
       requestId: row.requestId,
@@ -66,9 +63,7 @@ describe("request_log", () => {
   it("writes no audit_log row — request_log is allowlisted, not audited", async () => {
     await db.insert(requestLog).values(makeRequestLog());
 
-    const audited = await postgres.pool.query(
-      `SELECT 1 FROM audit_log WHERE table_name = 'request_log'`,
-    );
+    const audited = await postgres.pool.query(`SELECT 1 FROM audit_log WHERE table_name = 'request_log'`);
 
     expect(audited.rows).toHaveLength(0);
   });

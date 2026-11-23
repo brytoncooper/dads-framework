@@ -4,11 +4,7 @@ import * as React from "react";
 
 import { FormattedInteger } from "../../../copy/index.js";
 import { Badge, Button, cn } from "../../../elements/index.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../overlays/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { useDebouncedCallback } from "../../hooks/use-debounced-callback.js";
@@ -26,9 +22,7 @@ import { REMOVE_FILTER_SHORTCUTS } from "./data-table-filter-input-shared.js";
 const DEBOUNCE_MS = 300;
 const FILTER_SHORTCUT_KEY = "f";
 
-type DataTableFilterListProps<TData> = React.ComponentProps<
-  typeof PopoverContent
-> & {
+type DataTableFilterListProps<TData> = React.ComponentProps<typeof PopoverContent> & {
   table: Table<TData>;
   debounceMs?: number;
   disabled?: boolean;
@@ -55,15 +49,10 @@ export function DataTableFilterList<TData>({
   } = readDataTableFilterState(table);
 
   const columns = React.useMemo(() => {
-    return table
-      .getAllColumns()
-      .filter((column) => column.columnDef.enableColumnFilter);
+    return table.getAllColumns().filter((column) => column.columnDef.enableColumnFilter);
   }, [table]);
 
-  const columnIds = React.useMemo(
-    () => new Set(columns.map((column) => column.id)),
-    [columns],
-  );
+  const columnIds = React.useMemo(() => new Set(columns.map((column) => column.id)), [columns]);
 
   const debouncedSetFilters = useDebouncedCallback(onFiltersChange, debounceMs);
 
@@ -86,15 +75,8 @@ export function DataTableFilterList<TData>({
   }, [columns, columnIds, filters, debouncedSetFilters]);
 
   const onFilterUpdate = React.useCallback(
-    (
-      filterId: string,
-      updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
-    ) => {
-      debouncedSetFilters(
-        filters.map((filter) =>
-          filter.filterId === filterId ? { ...filter, ...updates } : filter,
-        ),
-      );
+    (filterId: string, updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>) => {
+      debouncedSetFilters(filters.map((filter) => (filter.filterId === filterId ? { ...filter, ...updates } : filter)));
     },
     [filters, debouncedSetFilters],
   );
@@ -119,17 +101,12 @@ export function DataTableFilterList<TData>({
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        (event.target instanceof HTMLElement &&
-          event.target.contentEditable === "true")
+        (event.target instanceof HTMLElement && event.target.contentEditable === "true")
       ) {
         return;
       }
 
-      if (
-        event.key.toLowerCase() === FILTER_SHORTCUT_KEY &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey
-      ) {
+      if (event.key.toLowerCase() === FILTER_SHORTCUT_KEY && (event.ctrlKey || event.metaKey) && event.shiftKey) {
         event.preventDefault();
         setOpen((prev) => !prev);
       }
@@ -143,10 +120,7 @@ export function DataTableFilterList<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        filters.length > 0
-      ) {
+      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) && filters.length > 0) {
         event.preventDefault();
         onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
       }
@@ -155,19 +129,10 @@ export function DataTableFilterList<TData>({
   );
 
   return (
-    <Sortable
-      value={filters}
-      onValueChange={onFiltersChange}
-      getItemValue={(item) => item.filterId}
-    >
+    <Sortable value={filters} onValueChange={onFiltersChange} getItemValue={(item) => item.filterId}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="font-normal"
-            onKeyDown={onTriggerKeyDown}
-            disabled={disabled}
-          >
+          <Button variant="outline" className="font-normal" onKeyDown={onTriggerKeyDown} disabled={disabled}>
             <ListFilter className="text-muted-foreground" />
             {t("dataTable.filter.trigger")}
             {filters.length > 0 && (
@@ -188,28 +153,15 @@ export function DataTableFilterList<TData>({
         >
           <div className="flex flex-col gap-1">
             <h4 id={labelId} className="font-medium leading-none">
-              {filters.length > 0
-                ? t("dataTable.filter.heading.active")
-                : t("dataTable.filter.heading.empty")}
+              {filters.length > 0 ? t("dataTable.filter.heading.active") : t("dataTable.filter.heading.empty")}
             </h4>
-            <p
-              id={descriptionId}
-              className={cn(
-                "text-muted-foreground text-sm",
-                filters.length > 0 && "sr-only",
-              )}
-            >
-              {filters.length > 0
-                ? t("dataTable.filter.description.active")
-                : t("dataTable.filter.description.empty")}
+            <p id={descriptionId} className={cn("text-muted-foreground text-sm", filters.length > 0 && "sr-only")}>
+              {filters.length > 0 ? t("dataTable.filter.description.active") : t("dataTable.filter.description.empty")}
             </p>
           </div>
           {filters.length > 0 ? (
             <SortableContent asChild>
-              <div
-                role="list"
-                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
-              >
+              <div role="list" className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
                 {filters.map((filter, index) => (
                   <DataTableFilterItem<TData>
                     key={filter.filterId}
@@ -227,19 +179,11 @@ export function DataTableFilterList<TData>({
             </SortableContent>
           ) : null}
           <div className="flex w-full items-center gap-2">
-            <Button
-              className="rounded"
-              ref={addButtonRef}
-              onClick={onFilterAdd}
-            >
+            <Button className="rounded" ref={addButtonRef} onClick={onFilterAdd}>
               {t("dataTable.action.addFilter")}
             </Button>
             {filters.length > 0 ? (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onFiltersReset}
-              >
+              <Button variant="outline" className="rounded" onClick={onFiltersReset}>
                 {t("dataTable.action.resetFilters")}
               </Button>
             ) : null}

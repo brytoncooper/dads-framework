@@ -2,11 +2,7 @@ import assert from "node:assert/strict";
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import {
-  createFixture,
-  events,
-  runFixture,
-} from "./testing-soundness-test-fixture.mjs";
+import { createFixture, events, runFixture } from "./testing-soundness-test-fixture.mjs";
 
 test("CLI executes a fresh baseline once and isolates every mutation and native run", () => {
   const fixture = createFixture();
@@ -20,13 +16,7 @@ test("CLI executes a fresh baseline once and isolates every mutation and native 
       assert.equal(evidence.summary.status, "pass");
       assert.deepEqual(
         events(fixture),
-        Array.from({ length: invocation }, () => [
-          "baseline",
-          "alpha",
-          "native:alpha",
-          "beta",
-          "native:beta",
-        ]).flat(),
+        Array.from({ length: invocation }, () => ["baseline", "alpha", "native:alpha", "beta", "native:beta"]).flat(),
       );
       assert.deepEqual(evidence.executionCounts, {
         baselineTasks: 1,
@@ -44,13 +34,7 @@ test("CLI executes a fresh baseline once and isolates every mutation and native 
         assert.ok(result.outcomes.baseline[0].durationMs >= 0);
         assert.ok(result.outcomes.mutated[0].durationMs >= 0);
       }
-      for (const phase of [
-        "totalMs",
-        "baselineMs",
-        "setupMs",
-        "mutantMs",
-        "nativeMs",
-      ]) {
+      for (const phase of ["totalMs", "baselineMs", "setupMs", "mutantMs", "nativeMs"]) {
         assert.ok(evidence.timings[phase] >= 0, phase);
       }
     }
@@ -66,10 +50,7 @@ test("CLI records baseline failure before executing any mutation or native plan"
     assert.equal(result.status, 1, result.stderr);
     assert.deepEqual(events(fixture), ["baseline"]);
     assert.equal(evidence.summary.status, "fail");
-    assert.match(
-      evidence.baseline.executionError,
-      /Baseline tasks did not pass/,
-    );
+    assert.match(evidence.baseline.executionError, /Baseline tasks did not pass/);
     assert.deepEqual(evidence.executionCounts, {
       baselineTasks: 1,
       mutantTasks: 0,

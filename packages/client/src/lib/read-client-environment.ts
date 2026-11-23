@@ -80,9 +80,7 @@ export function setCurrentRouteId(routeId: string | undefined): void {
  * request that asked. Nothing here is fingerprinting — each field answers a
  * debugging question the request log is expected to be asked.
  */
-export function readClientEnvironment(
-  sources: ClientEnvironmentSources,
-): ClientEnvironmentSnapshot {
+export function readClientEnvironment(sources: ClientEnvironmentSources): ClientEnvironmentSnapshot {
   const { window, navigator } = sources;
   return {
     build: sources.build,
@@ -96,8 +94,7 @@ export function readClientEnvironment(
     connection: read(() => navigator.connection?.effectiveType),
     deviceMemory: read(() => navigator.deviceMemory),
     hardwareConcurrency: read(() => navigator.hardwareConcurrency),
-    tabAgeMs:
-      tabStartedAtMs === undefined ? undefined : sources.nowMs - tabStartedAtMs,
+    tabAgeMs: tabStartedAtMs === undefined ? undefined : sources.nowMs - tabStartedAtMs,
   };
 }
 
@@ -111,9 +108,7 @@ function read<Value>(readValue: () => Value): Value | undefined {
 }
 
 /** All three numbers or none: half a viewport says nothing worth logging. */
-function readViewport(
-  window: ClientWindowLike,
-): ClientEnvironmentSnapshot["viewport"] {
+function readViewport(window: ClientWindowLike): ClientEnvironmentSnapshot["viewport"] {
   const w = window.innerWidth;
   const h = window.innerHeight;
   const dpr = window.devicePixelRatio;
@@ -121,9 +116,7 @@ function readViewport(
   return { w, h, dpr };
 }
 
-function readScreen(
-  window: ClientWindowLike,
-): ClientEnvironmentSnapshot["screen"] {
+function readScreen(window: ClientWindowLike): ClientEnvironmentSnapshot["screen"] {
   const w = window.screen?.width;
   const h = window.screen?.height;
   if (w === undefined || h === undefined) return undefined;

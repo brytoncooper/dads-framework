@@ -39,7 +39,6 @@ export const controllingPeersSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "It controls who you import, what you return, and which Node version you’re allowed to see.",
+  sentence: "It controls who you import, what you return, and which Node version you’re allowed to see.",
   run: (context) => Promise.resolve(countRuntimePeers(context)),
 };

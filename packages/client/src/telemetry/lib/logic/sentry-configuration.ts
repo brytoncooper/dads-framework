@@ -93,9 +93,7 @@ const DATA_COLLECTION: SentryDataCollection = {
   urlQueryParams: false,
 };
 
-export function sentryConfiguration(
-  input: SentryConfigurationInput,
-): SentryConfiguration {
+export function sentryConfiguration(input: SentryConfigurationInput): SentryConfiguration {
   return {
     dsn: input.dsn,
     release: input.release,

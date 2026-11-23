@@ -4,16 +4,13 @@ import { posix, relative, resolve, sep } from "node:path";
 
 const EXTERNAL = /^(https?:|mailto:)/i;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
-const REPOSITORY_BLOB =
-  "https://github.com/brytoncooper/dads-framework/blob/main/";
+const REPOSITORY_BLOB = "https://github.com/brytoncooper/dads-framework/blob/main/";
 const PRIVATE =
   /^(?:docs\/(?:private|plans|benchmarks|agents)\/|\.agents\/plans\/|\.git\/|node_modules\/|dist\/|\.env(?:\.|$))/;
 
 function localTarget(source, path) {
   const value = decodeURIComponent(path);
-  return value.startsWith("/")
-    ? posix.normalize(value.slice(1))
-    : posix.join(posix.dirname(source), value);
+  return value.startsWith("/") ? posix.normalize(value.slice(1)) : posix.join(posix.dirname(source), value);
 }
 
 function repositoryFile(root, path) {
@@ -43,8 +40,7 @@ function fileOrReadme(root, path) {
 }
 
 export function markdownLink({ root, pages, files, source, target }) {
-  if (target.startsWith("#") || EXTERNAL.test(target) || target === "")
-    return target;
+  if (target.startsWith("#") || EXTERNAL.test(target) || target === "") return target;
   if (SCHEME.test(target) || target.startsWith("//")) {
     throw new Error(`${source}: unsupported link target ${target}.`);
   }
@@ -56,10 +52,7 @@ export function markdownLink({ root, pages, files, source, target }) {
   const page = pages.get(candidate);
   if (page) return `${page.slug}.html${suffix}`;
   const file = fileOrReadme(root, candidate);
-  if (!file)
-    throw new Error(
-      `${source}: link ${target} has no file or directory README.`,
-    );
+  if (!file) throw new Error(`${source}: link ${target} has no file or directory README.`);
   const readmePage = pages.get(file);
   if (readmePage) return `${readmePage.slug}.html${suffix}`;
 
@@ -100,9 +93,7 @@ export function exampleFileReader(root, files) {
     }
     const absolute = repositoryFile(canonicalRoot, path);
     if (realpathSync(absolute) !== absolute || !lstatSync(absolute).isFile()) {
-      throw new Error(
-        `Docs example must point directly to a repository file: ${path}.`,
-      );
+      throw new Error(`Docs example must point directly to a repository file: ${path}.`);
     }
     const file = readPublicFile(canonicalRoot, path);
     files.set(`source/${path}`, file);

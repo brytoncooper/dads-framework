@@ -22,15 +22,9 @@ function groupDirectory(): ScimGroupDirectory {
     return storage;
   }
 
-  function save(
-    tenant: string,
-    data: ScimGroupData,
-    id: string = randomUUID(),
-    created = new Date().toISOString(),
-  ) {
+  function save(tenant: string, data: ScimGroupData, id: string = randomUUID(), created = new Date().toISOString()) {
     const allowed = memberIds.get(tenant) ?? [];
-    if (data.members.some((member) => !allowed.includes(member.value)))
-      return "invalidMember";
+    if (data.members.some((member) => !allowed.includes(member.value))) return "invalidMember";
     const group = {
       ...data,
       id,
@@ -45,8 +39,7 @@ function groupDirectory(): ScimGroupDirectory {
     list(tenant, { filter, count, startIndex }) {
       const matches = [...scoped(tenant).values()].filter((group) => {
         if (!filter) return true;
-        if (filter.attribute === "displayName")
-          return group.displayName.toLowerCase() === filter.value.toLowerCase();
+        if (filter.attribute === "displayName") return group.displayName.toLowerCase() === filter.value.toLowerCase();
         return group[filter.attribute] === filter.value;
       });
       return Promise.resolve({
@@ -58,11 +51,7 @@ function groupDirectory(): ScimGroupDirectory {
     create: (tenant, data) => Promise.resolve(save(tenant, data)),
     update(tenant, id, change) {
       const current = scoped(tenant).get(id);
-      return Promise.resolve(
-        current
-          ? save(tenant, change(current), current.id, current.created)
-          : null,
-      );
+      return Promise.resolve(current ? save(tenant, change(current), current.id, current.created) : null);
     },
     delete: (tenant, id) => Promise.resolve(scoped(tenant).delete(id)),
   };
@@ -71,8 +60,7 @@ function groupDirectory(): ScimGroupDirectory {
 function setup() {
   const handler = createScimHandler({
     baseUrl,
-    authenticate: (token) =>
-      Promise.resolve(["alpha", "beta"].includes(token) ? token : null),
+    authenticate: (token) => Promise.resolve(["alpha", "beta"].includes(token) ? token : null),
     directory: {
       list: () => Promise.resolve({ users: [], totalResults: 0 }),
       get: () => Promise.resolve(null),
@@ -105,8 +93,7 @@ function groupPayload(displayName: string, ...members: string[]) {
 
 function groupPath(response: Response): string {
   const location = response.headers.get("Location");
-  if (!location?.startsWith(`${baseUrl}/Groups/`))
-    throw new Error("Missing SCIM Group location.");
+  if (!location?.startsWith(`${baseUrl}/Groups/`)) throw new Error("Missing SCIM Group location.");
   return location.slice(baseUrl.length + 1);
 }
 
@@ -121,21 +108,19 @@ describe("optional SCIM Groups", () => {
       totalResults: 2,
       Resources: [{ endpoint: "/Users" }, { endpoint: "/Groups" }],
     });
-    await expect(
-      (await send("ResourceTypes/Group")).json(),
-    ).resolves.toMatchObject({ id: "Group", schema: groupSchema });
-    await expect(
-      (await send(`Schemas/${groupSchema}`)).json(),
-    ).resolves.toMatchObject({ id: groupSchema, name: "Group" });
+    await expect((await send("ResourceTypes/Group")).json()).resolves.toMatchObject({
+      id: "Group",
+      schema: groupSchema,
+    });
+    await expect((await send(`Schemas/${groupSchema}`)).json()).resolves.toMatchObject({
+      id: groupSchema,
+      name: "Group",
+    });
   });
 
   it("creates, filters, replaces, and deletes a group", async () => {
     const send = setup();
-    const created = await send(
-      "Groups",
-      "POST",
-      groupPayload("Engineering", memberA),
-    );
+    const created = await send("Groups", "POST", groupPayload("Engineering", memberA));
     expect(created.status).toBe(201);
     const path = groupPath(created);
     const filtered = await send(
@@ -148,9 +133,7 @@ describe("optional SCIM Groups", () => {
     const replaced = await send(path, "PUT", groupPayload("Platform", memberB));
     await expect(replaced.json()).resolves.toMatchObject({
       displayName: "Platform",
-      members: [
-        { value: memberB, type: "User", $ref: `${baseUrl}/Users/${memberB}` },
-      ],
+      members: [{ value: memberB, type: "User", $ref: `${baseUrl}/Users/${memberB}` }],
     });
     expect((await send(path, "DELETE")).status).toBe(204);
     expect((await send(path)).status).toBe(404);
@@ -158,9 +141,7 @@ describe("optional SCIM Groups", () => {
 
   it("adds, removes, and replaces Group members using IdP PATCH formats", async () => {
     const send = setup();
-    const path = groupPath(
-      await send("Groups", "POST", groupPayload("Engineering", memberA)),
-    );
+    const path = groupPath(await send("Groups", "POST", groupPayload("Engineering", memberA)));
     const added = await send(
       path,
       "PATCH",
@@ -191,10 +172,7 @@ describe("optional SCIM Groups", () => {
     const send = setup();
     const data = groupPayload("Engineering", memberA);
     const path = groupPath(await send("Groups", "POST", data));
-    expect(
-      (await send("Groups", "POST", groupPayload("Beta", foreignMember)))
-        .status,
-    ).toBe(400);
+    expect((await send("Groups", "POST", groupPayload("Beta", foreignMember))).status).toBe(400);
     for (const [method, body] of [
       ["GET", undefined],
       ["PUT", data],
@@ -204,9 +182,7 @@ describe("optional SCIM Groups", () => {
       expect((await send(path, method, body, "beta")).status).toBe(404);
       expect((await send(path, method, body, "forged")).status).toBe(401);
     }
-    await expect(
-      (await send("Groups", "GET", undefined, "beta")).json(),
-    ).resolves.toMatchObject({ totalResults: 0 });
+    await expect((await send("Groups", "GET", undefined, "beta")).json()).resolves.toMatchObject({ totalResults: 0 });
     const invalid = await send(
       path,
       "PATCH",
@@ -224,14 +200,8 @@ describe("optional SCIM Groups", () => {
   it("requires authentication for Group collections and bounds membership payloads", async () => {
     const send = setup();
     expect((await send("Groups", "GET", undefined, "forged")).status).toBe(401);
-    expect(
-      (await send("Groups", "POST", groupPayload("Engineering"), "forged"))
-        .status,
-    ).toBe(401);
-    const payload = groupPayload(
-      "Engineering",
-      ...Array.from({ length: 1001 }, () => memberA),
-    );
+    expect((await send("Groups", "POST", groupPayload("Engineering"), "forged")).status).toBe(401);
+    const payload = groupPayload("Engineering", ...Array.from({ length: 1001 }, () => memberA));
     const oversized = await send("Groups", "POST", payload);
     expect(oversized.status).toBe(400);
     await expect(oversized.json()).resolves.toMatchObject({

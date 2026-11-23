@@ -15,10 +15,7 @@ export type WebPlugin<Name extends string, Page extends WebPage> = {
   readonly pages: readonly Page[];
 };
 
-export function defineWebPlugin<
-  const Name extends string,
-  Page extends WebPage = never,
->(spec: {
+export function defineWebPlugin<const Name extends string, Page extends WebPage = never>(spec: {
   readonly name: Name;
   readonly pages?: readonly Page[];
 }): WebPlugin<Name, Page> {
@@ -37,15 +34,11 @@ export function composeWebApp<Name extends string, Page extends WebPage>(
 ): ComposedWebApp<Page> {
   const names = plugins.map((plugin) => plugin.name);
   if (new Set(names).size !== names.length) {
-    throw new PluginCompositionError(
-      `web plugins must have unique names; got ${names.join(", ")}`,
-    );
+    throw new PluginCompositionError(`web plugins must have unique names; got ${names.join(", ")}`);
   }
   refuseDuplicates(
     "page",
-    plugins.flatMap((plugin) =>
-      plugin.pages.map((page) => ({ key: page.path, pluginName: plugin.name })),
-    ),
+    plugins.flatMap((plugin) => plugin.pages.map((page) => ({ key: page.path, pluginName: plugin.name }))),
   );
   return { plugins: names, pages: plugins.flatMap((plugin) => plugin.pages) };
 }

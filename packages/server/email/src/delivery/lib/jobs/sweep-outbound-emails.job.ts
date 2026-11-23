@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-  cronSchedule,
-  defineJob,
-  type JobDefinition,
-} from "@dads-framework/job-queue/core";
+import { cronSchedule, defineJob, type JobDefinition } from "@dads-framework/job-queue/core";
 
 import { EMAIL_SWEEP_JOB } from "./email-job-names.js";
 
@@ -24,9 +20,7 @@ type SweepOutboundEmailsOperation = {
  * fails is picked up by the next minute's sweep, and a queue-level retry
  * would only stack them.
  */
-export function createSweepOutboundEmailsJob(
-  operation: SweepOutboundEmailsOperation,
-): JobDefinition {
+export function createSweepOutboundEmailsJob(operation: SweepOutboundEmailsOperation): JobDefinition {
   return defineJob({
     name: EMAIL_SWEEP_JOB,
     payload: z.strictObject({}),

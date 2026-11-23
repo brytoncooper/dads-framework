@@ -15,9 +15,7 @@ export function pidIsAlive(pid: number): boolean {
 /** Unknown visibility is treated as a running process. */
 export async function worktreeHasProcesses(path: string): Promise<boolean> {
   try {
-    return process.platform === "linux"
-      ? await linuxHasProcesses(path)
-      : await localUserHasProcesses(path);
+    return process.platform === "linux" ? await linuxHasProcesses(path) : await localUserHasProcesses(path);
   } catch {
     return true;
   }
@@ -38,26 +36,18 @@ async function linuxHasProcesses(path: string): Promise<boolean> {
 }
 
 function isUnavailableProcess(error: unknown): boolean {
-  return ["ENOENT", "ESRCH", "EACCES", "EPERM"].some((code) =>
-    hasCode(error, code),
-  );
+  return ["ENOENT", "ESRCH", "EACCES", "EPERM"].some((code) => hasCode(error, code));
 }
 
 async function localUserHasProcesses(path: string): Promise<boolean> {
   const uid = process.getuid?.();
   if (uid === undefined) return true;
   const execute = promisify(execFile);
-  const result = await execute(
-    "lsof",
-    ["-a", "-u", String(uid), "-d", "cwd", "-Fn"],
-    {
-      encoding: "utf8",
-      timeout: 8_000,
-    },
-  );
-  return result.stdout
-    .split("\n")
-    .some((line) => line.startsWith("n") && inside(line.slice(1), path));
+  const result = await execute("lsof", ["-a", "-u", String(uid), "-d", "cwd", "-Fn"], {
+    encoding: "utf8",
+    timeout: 8_000,
+  });
+  return result.stdout.split("\n").some((line) => line.startsWith("n") && inside(line.slice(1), path));
 }
 
 function inside(cwd: string, path: string): boolean {
@@ -65,10 +55,5 @@ function inside(cwd: string, path: string): boolean {
 }
 
 export function hasCode(error: unknown, code: string): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === code
-  );
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
 }

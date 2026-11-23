@@ -1,14 +1,7 @@
 /** Proves the minimal template preserves full framework shape with zero example domains. */
 
 import { execFileSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,10 +12,7 @@ import { checkDomainBoundaries } from "../domain-boundaries/check-domain-boundar
 import { parseDadsProject } from "../project-orientation.js";
 import { parseGeneratorArguments } from "../resource-generators/generator-arguments.js";
 import { renderMinimalProjectFiles } from "./render-minimal-project.js";
-import {
-  renderStarterProjectFiles,
-  type StarterProjectFile,
-} from "./render-starter-project.js";
+import { renderStarterProjectFiles, type StarterProjectFile } from "./render-starter-project.js";
 
 const workspace = fileURLToPath(new URL("../../../../../", import.meta.url));
 const nodeModules = join(workspace, "node_modules");
@@ -70,12 +60,8 @@ describe("renderMinimalProjectFiles", () => {
       expect(paths).toContain(required);
     }
 
-    expect(paths.filter((path) => path.startsWith("domains/notes/"))).toEqual(
-      [],
-    );
-    expect(paths.filter((path) => path.startsWith("domains/support/"))).toEqual(
-      [],
-    );
+    expect(paths.filter((path) => path.startsWith("domains/notes/"))).toEqual([]);
+    expect(paths.filter((path) => path.startsWith("domains/support/"))).toEqual([]);
     expect(paths.filter((path) => path.startsWith("examples/"))).toEqual([]);
     expect(paths).not.toContain("examples.html");
     expect(paths).not.toContain("apps/web/notes.tsx");
@@ -84,15 +70,9 @@ describe("renderMinimalProjectFiles", () => {
     expect(paths).not.toContain("apps/web/permissions-dashboard.tsx");
     expect(paths).not.toContain("apps/web/enterprise-sign-in-form.tsx");
     expect(paths).not.toContain("apps/web/enterprise-sign-in-client.ts");
-    expect(paths).not.toContain(
-      "migrations/20261120080200_enable_notes_exports.migration.ts",
-    );
-    expect(paths).not.toContain(
-      "migrations/20261120080300_enterprise_identity.migration.ts",
-    );
-    expect(paths).not.toContain(
-      "migrations/20261120080400_staff_impersonation.migration.ts",
-    );
+    expect(paths).not.toContain("migrations/20261120080200_enable_notes_exports.migration.ts");
+    expect(paths).not.toContain("migrations/20261120080300_enterprise_identity.migration.ts");
+    expect(paths).not.toContain("migrations/20261120080400_staff_impersonation.migration.ts");
   });
 
   it("keeps clean manifests, generator markers, and zero dangling example imports", () => {
@@ -144,15 +124,13 @@ describe("renderMinimalProjectFiles", () => {
       template: "example",
     });
     expect(exampleFiles).toEqual(defaultFiles);
-    expect(exampleFiles.map((file) => file.path)).toContain(
-      "domains/notes/server/routes.ts",
-    );
+    expect(exampleFiles.map((file) => file.path)).toContain("domains/notes/server/routes.ts");
   });
 
   it("rejects invalid project names", () => {
-    expect(() =>
-      renderMinimalProjectFiles({ projectName: "Invalid Name" }),
-    ).toThrow(/Dads project names must use lowercase/);
+    expect(() => renderMinimalProjectFiles({ projectName: "Invalid Name" })).toThrow(
+      /Dads project names must use lowercase/,
+    );
   });
 
   it(
@@ -172,33 +150,21 @@ describe("renderMinimalProjectFiles", () => {
         ok: true,
         violations: [],
       });
-      runTool(scratch, "typescript/bin/tsc", [
-        "-p",
-        "tsconfig.json",
-        "--noEmit",
-      ]);
+      runTool(scratch, "typescript/bin/tsc", ["-p", "tsconfig.json", "--noEmit"]);
 
       const generated = generateProjectArtifact(
         scratch,
         parseGeneratorArguments(["resource", "products", "--api", "customer"]),
       );
       expect(generated.files.length).toBeGreaterThan(0);
-      expect(
-        readFileSync(join(scratch, "apps/customer/app.ts"), "utf8"),
-      ).toContain("productsPlugin");
-      expect(
-        readFileSync(join(scratch, "assembly/migrations.ts"), "utf8"),
-      ).toContain("products");
+      expect(readFileSync(join(scratch, "apps/customer/app.ts"), "utf8")).toContain("productsPlugin");
+      expect(readFileSync(join(scratch, "assembly/migrations.ts"), "utf8")).toContain("products");
 
       expect(checkDomainBoundaries(scratch)).toEqual({
         ok: true,
         violations: [],
       });
-      runTool(scratch, "typescript/bin/tsc", [
-        "-p",
-        "tsconfig.json",
-        "--noEmit",
-      ]);
+      runTool(scratch, "typescript/bin/tsc", ["-p", "tsconfig.json", "--noEmit"]);
       const testOutput = runTool(scratch, "vitest/vitest.mjs", [
         "run",
         "--reporter=verbose",
@@ -213,10 +179,7 @@ describe("renderMinimalProjectFiles", () => {
   );
 });
 
-function writeProject(
-  scratch: string,
-  files: readonly StarterProjectFile[],
-): void {
+function writeProject(scratch: string, files: readonly StarterProjectFile[]): void {
   for (const file of files) {
     const target = join(scratch, file.path);
     mkdirSync(dirname(target), { recursive: true });
@@ -225,20 +188,12 @@ function writeProject(
   symlinkSync(nodeModules, join(scratch, "node_modules"), "junction");
 }
 
-function runTool(
-  scratch: string,
-  executable: string,
-  args: readonly string[],
-): string {
-  return execFileSync(
-    process.execPath,
-    [join(nodeModules, executable), ...args],
-    {
-      cwd: scratch,
-      encoding: "utf8",
-      timeout: 60_000,
-    },
-  );
+function runTool(scratch: string, executable: string, args: readonly string[]): string {
+  return execFileSync(process.execPath, [join(nodeModules, executable), ...args], {
+    cwd: scratch,
+    encoding: "utf8",
+    timeout: 60_000,
+  });
 }
 
 function temporaryDirectory(): string {

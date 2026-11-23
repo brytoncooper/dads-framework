@@ -48,9 +48,7 @@ export async function runVerifyGraph(options) {
 function createContext(options) {
   const { steps, budget, runStep } = options;
   if (!Number.isSafeInteger(budget) || budget < 1) {
-    throw new Error(
-      `Budget must be a positive whole number, not ${String(budget)}.`,
-    );
+    throw new Error(`Budget must be a positive whole number, not ${String(budget)}.`);
   }
   const serial = options.serial === true;
   return {
@@ -79,8 +77,7 @@ function prioritized(steps) {
   const unblocks = transitiveDependentCount(steps);
   const declared = new Map(steps.map((step, index) => [step.id, index]));
   return [...steps].sort((left, right) => {
-    const byUnblocks =
-      (unblocks.get(right.id) ?? 0) - (unblocks.get(left.id) ?? 0);
+    const byUnblocks = (unblocks.get(right.id) ?? 0) - (unblocks.get(left.id) ?? 0);
     if (byUnblocks !== 0) return byUnblocks;
     return (declared.get(left.id) ?? 0) - (declared.get(right.id) ?? 0);
   });
@@ -97,17 +94,13 @@ function startWhatFits(context) {
 }
 
 function dependenciesPassed(step, context) {
-  return step.needs.every(
-    (need) => context.results.get(need)?.status === "passed",
-  );
+  return step.needs.every((need) => context.results.get(need)?.status === "passed");
 }
 
 function canStart(step, context) {
   if (context.running.size === 0) return true;
   if (step.weight === "all" && context.allInFlight > 0) return false;
-  return (
-    context.weightInFlight + slotsFor(step, context.budget) <= context.budget
-  );
+  return context.weightInFlight + slotsFor(step, context.budget) <= context.budget;
 }
 
 function launch(step, context) {
@@ -164,9 +157,7 @@ function record(result, context) {
 function blockDependentsOfFailures(context) {
   for (const step of context.ordered) {
     if (!context.pending.has(step.id)) continue;
-    const blocker = step.needs.find((need) =>
-      notPassed(context.results.get(need)),
-    );
+    const blocker = step.needs.find((need) => notPassed(context.results.get(need)));
     if (blocker === undefined) continue;
     context.pending.delete(step.id);
     const result = {
@@ -216,7 +207,6 @@ function summarize(context, wallMs) {
   return {
     results,
     wallMs,
-    exitCode:
-      context.firstFailure === null ? 0 : (context.firstFailure.exitCode ?? 1),
+    exitCode: context.firstFailure === null ? 0 : (context.firstFailure.exitCode ?? 1),
   };
 }

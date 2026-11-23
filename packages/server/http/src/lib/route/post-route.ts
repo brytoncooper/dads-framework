@@ -1,16 +1,8 @@
 import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import type {
-  OperationPathParamsShape,
-  PostOperationContract,
-} from "@dads-framework/core/contract";
+import type { OperationPathParamsShape, PostOperationContract } from "@dads-framework/core/contract";
 import { HttpWiringError } from "../http-errors.js";
-import type {
-  PermissionAccess,
-  PublicAccess,
-  RouteAccess,
-  SessionAccess,
-} from "./access.js";
+import type { PermissionAccess, PublicAccess, RouteAccess, SessionAccess } from "./access.js";
 import {
   resolvePostOperationConfig,
   type ErasedOperationPostConfig,
@@ -51,15 +43,8 @@ export type PostRouteConfig<
   readonly query?: QuerySchema;
   readonly body?: BodySchema;
   handler(
-    ctx: RouteHandlerContext<
-      SchemaOutput<ParamsSchema>,
-      SchemaOutput<QuerySchema>,
-      SchemaOutput<BodySchema>,
-      Subject
-    >,
-  ):
-    | Promise<HandlerResult<ResponseSchema, MetaSchema>>
-    | HandlerResult<ResponseSchema, MetaSchema>;
+    ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, SchemaOutput<QuerySchema>, SchemaOutput<BodySchema>, Subject>,
+  ): Promise<HandlerResult<ResponseSchema, MetaSchema>> | HandlerResult<ResponseSchema, MetaSchema>;
 } & VerbParams<Path, ParamsSchema> &
   PostResourcePolicy<Access, BodySchema>;
 
@@ -109,20 +94,12 @@ export type PostOperationRouteConfig<
     Status
   >;
   handler(
-    ctx: RouteHandlerContext<
-      SchemaOutput<ParamsSchema>,
-      SchemaOutput<QuerySchema>,
-      SchemaOutput<BodySchema>,
-      Subject
-    >,
-  ):
-    | Promise<HandlerResult<ResponseSchema, MetaSchema>>
-    | HandlerResult<ResponseSchema, MetaSchema>;
+    ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, SchemaOutput<QuerySchema>, SchemaOutput<BodySchema>, Subject>,
+  ): Promise<HandlerResult<ResponseSchema, MetaSchema>> | HandlerResult<ResponseSchema, MetaSchema>;
 } & PostOperationResourcePolicy<Access, BodySchema, Status>;
 
 /** Parsed inputs and subject available to a named POST handler module. */
-export type PostRouteHandlerContext<Params, Query, Body, Subject> =
-  RouteHandlerContext<Params, Query, Body, Subject>;
+export type PostRouteHandlerContext<Params, Query, Body, Subject> = RouteHandlerContext<Params, Query, Body, Subject>;
 
 /** Data shape a named POST handler returns before the kit envelopes it. */
 export type PostRouteHandlerResult<
@@ -140,16 +117,7 @@ export function postRoute<
   BodySchema extends z.ZodType | undefined = undefined,
   MetaSchema extends z.ZodType | undefined = undefined,
 >(
-  config: PostRouteConfig<
-    Path,
-    Access,
-    SubjectRef,
-    ResponseSchema,
-    ParamsSchema,
-    QuerySchema,
-    BodySchema,
-    MetaSchema
-  >,
+  config: PostRouteConfig<Path, Access, SubjectRef, ResponseSchema, ParamsSchema, QuerySchema, BodySchema, MetaSchema>,
 ): RouteBlueprint;
 /** Public POST — the handler must deal with a null subject. */
 export function postRoute<
@@ -218,9 +186,7 @@ export function postRoute<
     Status
   >,
 ): RouteBlueprint;
-export function postRoute(
-  config: ErasedPostVerbConfig | ErasedOperationPostConfig,
-): RouteBlueprint {
+export function postRoute(config: ErasedPostVerbConfig | ErasedOperationPostConfig): RouteBlueprint {
   const normalized = resolvePostOperationConfig(config);
   const route = buildDefinition({
     ...normalized,
@@ -243,8 +209,6 @@ function assertPublicTelemetry(
     policy.kind !== "resource-free" ||
     policy.purpose !== "append-only-telemetry"
   ) {
-    throw new HttpWiringError(
-      "A resource-free telemetry POST requires public access, status 200, and a body schema",
-    );
+    throw new HttpWiringError("A resource-free telemetry POST requires public access, status 200, and a body schema");
   }
 }

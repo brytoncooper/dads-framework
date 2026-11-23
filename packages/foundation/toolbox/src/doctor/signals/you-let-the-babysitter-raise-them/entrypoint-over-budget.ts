@@ -19,11 +19,7 @@
 
 import { isRecord, isString } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 const BUDGETS_FILE = ".agents/instruction-budgets.json";
 const SKILL_FILE = "SKILL.md";
@@ -66,33 +62,19 @@ function readBudgets(context: DoctorContext): Budgets | undefined {
     directory,
     perSkill: numberAt(skills, "maxApproximateTokensPerSkill"),
     perWorkflowSkill: numberAt(skills, "maxApproximateTokensPerWorkflowSkill"),
-    perReference: numberAt(
-      skills,
-      "maxApproximateTokensPerSupportingReference",
-    ),
+    perReference: numberAt(skills, "maxApproximateTokensPerSupportingReference"),
     total: numberAt(skills, "maxApproximateTokensTotal"),
   };
 }
 
-function budgetForInstruction(
-  budgets: Budgets,
-  path: string,
-  text: string,
-): number {
+function budgetForInstruction(budgets: Budgets, path: string, text: string): number {
   if (!path.endsWith(`/${SKILL_FILE}`)) return budgets.perReference;
-  return WORKFLOW_FRONTMATTER.test(text)
-    ? budgets.perWorkflowSkill
-    : budgets.perSkill;
+  return WORKFLOW_FRONTMATTER.test(text) ? budgets.perWorkflowSkill : budgets.perSkill;
 }
 
-function instructionFiles(
-  context: DoctorContext,
-  budgets: Budgets,
-): readonly string[] {
+function instructionFiles(context: DoctorContext, budgets: Budgets): readonly string[] {
   const prefix = `${budgets.directory}/`;
-  return context
-    .files()
-    .filter((path) => path.startsWith(prefix) && path.endsWith(".md"));
+  return context.files().filter((path) => path.startsWith(prefix) && path.endsWith(".md"));
 }
 
 function countOverBudget(context: DoctorContext): SignalReadings {
@@ -103,9 +85,7 @@ function countOverBudget(context: DoctorContext): SignalReadings {
     const tokens = approximateTokens(context.read(budgets.entrypoint));
     readings.set(budgets.entrypoint, {
       value: tokens > budgets.entrypointTokens ? 1 : 0,
-      evidence: [
-        { path: budgets.entrypoint, name: `${String(tokens)} tokens` },
-      ],
+      evidence: [{ path: budgets.entrypoint, name: `${String(tokens)} tokens` }],
     });
   }
   let library = 0;
@@ -128,8 +108,7 @@ function countOverBudget(context: DoctorContext): SignalReadings {
 export const entrypointOverBudgetSignal: DoctorSignal = {
   id: "entrypoint-over-budget",
   issue: "you-let-the-babysitter-raise-them",
-  question:
-    "Do the entrypoint or the skills exceed their recorded token budgets?",
+  question: "Do the entrypoint or the skills exceed their recorded token budgets?",
   reads: "text",
   unit: "count",
   direction: "ceiling",

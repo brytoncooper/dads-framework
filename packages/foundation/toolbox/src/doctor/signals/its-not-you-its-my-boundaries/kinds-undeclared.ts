@@ -21,11 +21,7 @@
 import { isRecord, isString, isUnknownArray } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  manifestRootOf,
-  readPackageGraph,
-  type PackageManifestFacts,
-} from "../scanners/package-graph.js";
+import { manifestRootOf, readPackageGraph, type PackageManifestFacts } from "../scanners/package-graph.js";
 
 const ROOT_MANIFEST = "package.json";
 
@@ -61,18 +57,11 @@ function readWorkspaceGlobs(context: DoctorContext): readonly string[] {
  * tree is one then, which is the same rule the context uses when nothing is
  * declared at all.
  */
-function isWorkspaceDirectory(
-  globs: readonly string[],
-  directory: string,
-): boolean {
+function isWorkspaceDirectory(globs: readonly string[], directory: string): boolean {
   if (globs.length === 0) return true;
-  const included = globs.some(
-    (glob) => !glob.startsWith("!") && matchesGlob(glob, directory),
-  );
+  const included = globs.some((glob) => !glob.startsWith("!") && matchesGlob(glob, directory));
   if (!included) return false;
-  return !globs.some(
-    (glob) => glob.startsWith("!") && matchesGlob(glob.slice(1), directory),
-  );
+  return !globs.some((glob) => glob.startsWith("!") && matchesGlob(glob.slice(1), directory));
 }
 
 function undeclaredWorkspaceManifests(
@@ -96,17 +85,10 @@ function countUndeclaredKinds(context: DoctorContext) {
   for (const declared of graph.packages) {
     readings.set(declared.name, {
       value: declared.kind === undefined ? 1 : 0,
-      evidence:
-        declared.kind === undefined
-          ? [{ path: declared.root, name: declared.name }]
-          : [],
+      evidence: declared.kind === undefined ? [{ path: declared.root, name: declared.name }] : [],
     });
   }
-  for (const manifest of undeclaredWorkspaceManifests(
-    context,
-    graph.manifests,
-    roots,
-  )) {
+  for (const manifest of undeclaredWorkspaceManifests(context, graph.manifests, roots)) {
     readings.set(manifest.name ?? manifest.path, {
       value: 1,
       evidence: [{ path: manifest.path, name: manifest.name ?? "" }],

@@ -59,9 +59,7 @@ export type TestcontainersContainer = {
 
 /** The Docker calls the sweep makes — a port, so the logic tests against a fake. */
 export type DockerContainerClient = {
-  listTestcontainersContainers: () => Promise<
-    readonly TestcontainersContainer[]
-  >;
+  listTestcontainersContainers: () => Promise<readonly TestcontainersContainer[]>;
   remove: (id: string) => Promise<void>;
 };
 
@@ -80,9 +78,7 @@ export type RemovedTestcontainersReport = {
  * the same way here, so "not the current session" means the same thing to the
  * sweep as it does to the library.
  */
-function sessionThisRunWillAdopt(
-  containers: readonly TestcontainersContainer[],
-): string | null {
+function sessionThisRunWillAdopt(containers: readonly TestcontainersContainer[]): string | null {
   const reapers = containers
     // RUNNING reapers only, exactly as `findReaperContainers` filters. A
     // stopped reaper watches nothing and will not be reused, so treating its
@@ -143,9 +139,7 @@ export async function removeStaleTestcontainers(
 }
 
 /** The one line a sweep is worth, or nothing at all when it found nothing. */
-export function describeRemovedTestcontainers(
-  report: RemovedTestcontainersReport,
-): string | null {
+export function describeRemovedTestcontainers(report: RemovedTestcontainersReport): string | null {
   if (report.removed === 0) return null;
   const failed = report.failed > 0 ? `, ${report.failed} already gone` : "";
   return (
@@ -184,10 +178,7 @@ export function dockerCli(): DockerContainerClient {
         .split("\n")
         .filter((line) => line.trim() !== "")
         .map(parseInspectLine)
-        .filter(
-          (container): container is TestcontainersContainer =>
-            container !== null,
-        );
+        .filter((container): container is TestcontainersContainer => container !== null);
     },
     remove: async (id: string) => {
       // `--volumes` because a leaked container's anonymous volume leaks with

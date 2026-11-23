@@ -1,9 +1,4 @@
-import {
-  emitAccessIr,
-  emitZed,
-  type AccessIrDefinition,
-  type AccessModel,
-} from "@dads-framework/access";
+import { emitAccessIr, emitZed, type AccessIrDefinition, type AccessModel } from "@dads-framework/access";
 
 import {
   assertNamespace,
@@ -81,22 +76,10 @@ export async function migratePostgresToSpiceDb(
     options.relationshipTable ?? DEFAULT_RELATIONSHIP_TABLE,
     "relationshipTable",
   );
-  const batchSize = assertPositiveInt(
-    options.batchSize ?? DEFAULT_BATCH_SIZE,
-    "batchSize",
-  );
-  const pageSize = assertPositiveInt(
-    options.pageSize ?? DEFAULT_PAGE_SIZE,
-    "pageSize",
-  );
-  const resolvedColumns = resolveExportColumnRelations(
-    options.model,
-    options.columnRelations,
-  );
-  const outboxTriggers = columnRelationOutboxTriggerSql(
-    options.model,
-    options.columnRelations ?? [],
-  );
+  const batchSize = assertPositiveInt(options.batchSize ?? DEFAULT_BATCH_SIZE, "batchSize");
+  const pageSize = assertPositiveInt(options.pageSize ?? DEFAULT_PAGE_SIZE, "pageSize");
+  const resolvedColumns = resolveExportColumnRelations(options.model, options.columnRelations);
+  const outboxTriggers = columnRelationOutboxTriggerSql(options.model, options.columnRelations ?? []);
 
   const target = isAuthzedWriteClientLike(options.spiceDb)
     ? createAuthzedMigrationTarget(options.spiceDb)
@@ -189,9 +172,7 @@ async function exportTupleTable(input: {
   readonly includeExpired: boolean;
   readonly writer: BatchWriter;
 }): Promise<number> {
-  const expiryClause = input.includeExpired
-    ? ""
-    : " AND (expires_at IS NULL OR expires_at > now())";
+  const expiryClause = input.includeExpired ? "" : " AND (expires_at IS NULL OR expires_at > now())";
   let offset = 0;
   let count = 0;
 
@@ -289,17 +270,12 @@ function rowToExportedTuple(row: PgMigrationRow): SpiceDbExportedTuple {
 function readRequiredString(row: PgMigrationRow, column: string): string {
   const value = row[column];
   if (typeof value !== "string" || value.length === 0) {
-    throw new Error(
-      `Expected non-empty string column "${column}" from Postgres`,
-    );
+    throw new Error(`Expected non-empty string column "${column}" from Postgres`);
   }
   return value;
 }
 
-function readOptionalString(
-  row: PgMigrationRow,
-  column: string,
-): string | undefined {
+function readOptionalString(row: PgMigrationRow, column: string): string | undefined {
   const value = row[column];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }

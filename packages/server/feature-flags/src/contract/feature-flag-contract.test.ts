@@ -40,15 +40,9 @@ describe("feature flag contract", () => {
   });
 
   it("accepts dotted lowercase slugs and refuses anything else", () => {
-    expect(
-      featureFlagSlugSchema.safeParse("billing.invoices.bulk-export").success,
-    ).toBe(true);
-    expect(featureFlagSlugSchema.safeParse("Billing.Invoices").success).toBe(
-      false,
-    );
-    expect(featureFlagSlugSchema.safeParse("billing..invoices").success).toBe(
-      false,
-    );
+    expect(featureFlagSlugSchema.safeParse("billing.invoices.bulk-export").success).toBe(true);
+    expect(featureFlagSlugSchema.safeParse("Billing.Invoices").success).toBe(false);
+    expect(featureFlagSlugSchema.safeParse("billing..invoices").success).toBe(false);
   });
 
   it("rejects duplicate selected tenant ids while keeping concurrency per change", () => {
@@ -70,12 +64,7 @@ describe("feature flag contract", () => {
   });
 
   it("refuses audience detail or a state hash alongside the public list", () => {
-    expect(publicFeatureStateSchema.safeParse({ features: [] }).success).toBe(
-      true,
-    );
-    expect(
-      publicFeatureStateSchema.safeParse({ features: [], stateHash: "x" })
-        .success,
-    ).toBe(false);
+    expect(publicFeatureStateSchema.safeParse({ features: [] }).success).toBe(true);
+    expect(publicFeatureStateSchema.safeParse({ features: [], stateHash: "x" }).success).toBe(false);
   });
 });

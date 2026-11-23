@@ -8,12 +8,7 @@
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "./dialog.js";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./dialog.js";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./sheet.js";
 
 afterEach(cleanup);
@@ -42,9 +37,7 @@ describe("default overlay X close targets", () => {
     const closeButton = screen.getByRole("button", { name: "Close" });
     expectAccessibleCoarseTarget(closeButton);
     expect(closeButton.querySelector("svg")).not.toBeNull();
-    expect(closeButton.className).toContain(
-      "[&_svg:not([class*='size-'])]:size-4",
-    );
+    expect(closeButton.className).toContain("[&_svg:not([class*='size-'])]:size-4");
   });
 
   it("expands the Sheet target without enlarging its icon", () => {
@@ -59,8 +52,6 @@ describe("default overlay X close targets", () => {
 
     const closeButton = screen.getByRole("button", { name: "Close" });
     expectAccessibleCoarseTarget(closeButton);
-    expect(closeButton.querySelector("svg")?.getAttribute("class")).toContain(
-      "size-4",
-    );
+    expect(closeButton.querySelector("svg")?.getAttribute("class")).toContain("size-4");
   });
 });

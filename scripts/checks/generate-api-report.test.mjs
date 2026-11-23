@@ -1,11 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -78,10 +72,7 @@ function withFixture(run) {
       })}\n`,
     );
     writeFileSync(join(directory, "dist", "index.d.ts"), INDEX_DECLARATIONS);
-    writeFileSync(
-      join(directory, "dist", "version.d.ts"),
-      VERSION_DECLARATIONS,
-    );
+    writeFileSync(join(directory, "dist", "version.d.ts"), VERSION_DECLARATIONS);
     run({ root, directory });
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -94,10 +85,7 @@ test("writes one line per export, sorted by name", () => {
 
     assert.equal(result.exitCode, 0);
     assert.match(result.output, /1 of 1 reports rewritten/);
-    assert.equal(
-      readFileSync(join(directory, "api-report.md"), "utf8"),
-      EXPECTED_REPORT,
-    );
+    assert.equal(readFileSync(join(directory, "api-report.md"), "utf8"), EXPECTED_REPORT);
   });
 });
 
@@ -121,10 +109,7 @@ test("--check passes on a committed report and writes nothing", () => {
 
     assert.equal(result.exitCode, 0);
     assert.match(result.output, /api-report: clean \(1 packages\)/);
-    assert.equal(
-      readFileSync(join(directory, "api-report.md"), "utf8"),
-      EXPECTED_REPORT,
-    );
+    assert.equal(readFileSync(join(directory, "api-report.md"), "utf8"), EXPECTED_REPORT);
   });
 });
 
@@ -142,21 +127,12 @@ test("--check fails with a diff when the surface changes", () => {
     const result = main(["--check"], { root });
 
     assert.equal(result.exitCode, 1);
-    assert.match(
-      result.output,
-      new RegExp(`--- ${REPORT_PATH} \\(committed\\)`),
-    );
-    assert.match(
-      result.output,
-      new RegExp(`\\+\\+\\+ ${REPORT_PATH} \\(regenerated\\)`),
-    );
+    assert.match(result.output, new RegExp(`--- ${REPORT_PATH} \\(committed\\)`));
+    assert.match(result.output, new RegExp(`\\+\\+\\+ ${REPORT_PATH} \\(regenerated\\)`));
     assert.match(result.output, /^-- function renameWidget: /m);
     assert.match(result.output, /^\+- function relabelWidget: /m);
     assert.match(result.output, /1 report\(s\) out of date/);
-    assert.equal(
-      readFileSync(join(directory, "api-report.md"), "utf8"),
-      EXPECTED_REPORT,
-    );
+    assert.equal(readFileSync(join(directory, "api-report.md"), "utf8"), EXPECTED_REPORT);
   });
 });
 
@@ -184,12 +160,7 @@ test("a reordered union is the same report line, not a diff", () => {
 
     assert.equal(result.exitCode, 0, result.output);
     assert.match(result.output, /api-report: clean/);
-    assert.ok(
-      written.includes(
-        '- type Outcome: export type Outcome = "blocked" | "no-op" | "ready";',
-      ),
-      written,
-    );
+    assert.ok(written.includes('- type Outcome: export type Outcome = "blocked" | "no-op" | "ready";'), written);
     assert.ok(
       written.includes(
         "- function decide: export declare function decide(input: " +
@@ -279,29 +250,18 @@ test("entry points cover subpaths, conditions, and the types fallback", () => {
     ],
   );
 
-  assert.deepEqual(
-    resolveEntryPoints({ name: "legacy", types: "./dist/index.d.ts" }),
-    [{ subpath: ".", specifier: "legacy", target: "./dist/index.d.ts" }],
-  );
+  assert.deepEqual(resolveEntryPoints({ name: "legacy", types: "./dist/index.d.ts" }), [
+    { subpath: ".", specifier: "legacy", target: "./dist/index.d.ts" },
+  ]);
 });
 
 test("the diff keeps context and caps its own length", () => {
   const before = ["a", "b", "c", "d", "e"].join("\n");
   const after = ["a", "b", "C", "d", "e"].join("\n");
 
-  assert.deepEqual(diffLines(before, after), [
-    " a",
-    " b",
-    "-c",
-    "+C",
-    " d",
-    " e",
-  ]);
+  assert.deepEqual(diffLines(before, after), [" a", " b", "-c", "+C", " d", " e"]);
 
-  const long = diffLines(
-    "",
-    Array.from({ length: 90 }, (_, i) => i).join("\n"),
-  );
+  const long = diffLines("", Array.from({ length: 90 }, (_, i) => i).join("\n"));
   assert.equal(long.length, 61);
   assert.equal(long.at(-1), "... 30 more diff lines");
 });

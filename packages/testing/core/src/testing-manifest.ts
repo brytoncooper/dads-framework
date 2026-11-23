@@ -43,62 +43,38 @@ export type TestingManifestTask = {
   };
 };
 
-export type TestingManifestTaskKind =
-  "test" | "typecheck" | "lint" | "build" | "custom";
+export type TestingManifestTaskKind = "test" | "typecheck" | "lint" | "build" | "custom";
 
-export type TestingManifestImpactMode =
-  "reachability" | "changed-files" | "project" | "always";
+export type TestingManifestImpactMode = "reachability" | "changed-files" | "project" | "always";
 
 export const defaultTestingManifestFileName = "dads.testing.json";
 
 const manifestSchemaVersion = 1;
 
-const taskKinds: readonly TestingManifestTaskKind[] = [
-  "test",
-  "typecheck",
-  "lint",
-  "build",
-  "custom",
-];
+const taskKinds: readonly TestingManifestTaskKind[] = ["test", "typecheck", "lint", "build", "custom"];
 
-const impactModes: readonly TestingManifestImpactMode[] = [
-  "reachability",
-  "changed-files",
-  "project",
-  "always",
-];
+const impactModes: readonly TestingManifestImpactMode[] = ["reachability", "changed-files", "project", "always"];
 
 /**
  * Reads the manifest for a workspace. The resolved manifest path must stay
  * inside the workspace root: a manifest outside the workspace would describe
  * paths this workspace does not own.
  */
-export function readTestingManifest(
-  workspaceRoot: string,
-  manifestPath?: string,
-): TestingManifest {
+export function readTestingManifest(workspaceRoot: string, manifestPath?: string): TestingManifest {
   const requestedPath = manifestPath ?? defaultTestingManifestFileName;
   const root = resolve(workspaceRoot);
   const resolvedPath = resolve(root, requestedPath);
   if (resolvedPath !== root && !resolvedPath.startsWith(`${root}${sep}`)) {
-    throw new Error(
-      `The manifest path must stay inside the workspace: ${requestedPath}`,
-    );
+    throw new Error(`The manifest path must stay inside the workspace: ${requestedPath}`);
   }
-  return parseTestingManifest(
-    readFileSync(resolvedPath, "utf8"),
-    requestedPath,
-  );
+  return parseTestingManifest(readFileSync(resolvedPath, "utf8"), requestedPath);
 }
 
 /**
  * Parses manifest text. `subject` names the document in every error message so
  * a caller reading several manifests can tell them apart.
  */
-export function parseTestingManifest(
-  text: string,
-  subject: string,
-): TestingManifest {
+export function parseTestingManifest(text: string, subject: string): TestingManifest {
   let document: unknown;
   try {
     document = JSON.parse(text);
@@ -110,12 +86,7 @@ export function parseTestingManifest(
   }
 
   const root = readRecord(document, "the manifest", subject);
-  rejectUnknownKeys(
-    root,
-    ["schemaVersion", "workspace", "projects", "tasks"],
-    "the manifest",
-    subject,
-  );
+  rejectUnknownKeys(root, ["schemaVersion", "workspace", "projects", "tasks"], "the manifest", subject);
   if (root["schemaVersion"] !== manifestSchemaVersion) {
     throw new Error(`${subject}: schemaVersion must be 1`);
   }
@@ -123,9 +94,8 @@ export function parseTestingManifest(
   return {
     schemaVersion: manifestSchemaVersion,
     workspace: readWorkspace(root["workspace"], subject),
-    projects: readArray(root["projects"], "projects", subject).map(
-      (project, index) =>
-        readProject(project, `projects[${String(index)}]`, subject),
+    projects: readArray(root["projects"], "projects", subject).map((project, index) =>
+      readProject(project, `projects[${String(index)}]`, subject),
     ),
     tasks: readArray(root["tasks"], "tasks", subject).map((task, index) =>
       readTask(task, `tasks[${String(index)}]`, subject),
@@ -141,9 +111,7 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
   const document = {
     schemaVersion: manifest.schemaVersion,
     workspace: {
-      ...(manifest.workspace.root === undefined
-        ? {}
-        : { root: manifest.workspace.root }),
+      ...(manifest.workspace.root === undefined ? {} : { root: manifest.workspace.root }),
       fullFallback: { taskIds: [...manifest.workspace.fullFallback.taskIds] },
     },
     projects: manifest.projects.map((project) => ({
@@ -158,9 +126,7 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       execution: {
         executable: task.execution.executable,
         args: [...task.execution.args],
-        ...(task.execution.cwd === undefined
-          ? {}
-          : { cwd: task.execution.cwd }),
+        ...(task.execution.cwd === undefined ? {} : { cwd: task.execution.cwd }),
         ...(task.execution.shell === true ? { shell: true } : {}),
       },
       dependsOn: [...task.dependsOn],
@@ -170,50 +136,23 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
-function readWorkspace(
-  value: unknown,
-  subject: string,
-): TestingManifest["workspace"] {
+function readWorkspace(value: unknown, subject: string): TestingManifest["workspace"] {
   const workspace = readRecord(value, "workspace", subject);
   rejectUnknownKeys(workspace, ["root", "fullFallback"], "workspace", subject);
-  const fullFallback = readRecord(
-    workspace["fullFallback"],
-    "workspace.fullFallback",
-    subject,
-  );
-  rejectUnknownKeys(
-    fullFallback,
-    ["taskIds"],
-    "workspace.fullFallback",
-    subject,
-  );
+  const fullFallback = readRecord(workspace["fullFallback"], "workspace.fullFallback", subject);
+  rejectUnknownKeys(fullFallback, ["taskIds"], "workspace.fullFallback", subject);
   const root = workspace["root"];
   return {
-    ...(root === undefined
-      ? {}
-      : { root: readString(root, "workspace.root", subject) }),
+    ...(root === undefined ? {} : { root: readString(root, "workspace.root", subject) }),
     fullFallback: {
-      taskIds: readStringArray(
-        fullFallback["taskIds"],
-        "workspace.fullFallback.taskIds",
-        subject,
-      ),
+      taskIds: readStringArray(fullFallback["taskIds"], "workspace.fullFallback.taskIds", subject),
     },
   };
 }
 
-function readProject(
-  value: unknown,
-  where: string,
-  subject: string,
-): TestingManifestProject {
+function readProject(value: unknown, where: string, subject: string): TestingManifestProject {
   const project = readRecord(value, where, subject);
-  rejectUnknownKeys(
-    project,
-    ["id", "root", "fallbackDependencies"],
-    where,
-    subject,
-  );
+  rejectUnknownKeys(project, ["id", "root", "fallbackDependencies"], where, subject);
   return {
     id: readString(project["id"], `${where}.id`, subject),
     root: readString(project["root"], `${where}.root`, subject),
@@ -225,77 +164,40 @@ function readProject(
   };
 }
 
-function readTask(
-  value: unknown,
-  where: string,
-  subject: string,
-): TestingManifestTask {
+function readTask(value: unknown, where: string, subject: string): TestingManifestTask {
   const task = readRecord(value, where, subject);
-  rejectUnknownKeys(
-    task,
-    ["id", "project", "kind", "execution", "dependsOn", "impact"],
-    where,
-    subject,
-  );
+  rejectUnknownKeys(task, ["id", "project", "kind", "execution", "dependsOn", "impact"], where, subject);
   return {
     id: readString(task["id"], `${where}.id`, subject),
     project: readString(task["project"], `${where}.project`, subject),
     kind: readEnumeration(task["kind"], taskKinds, `${where}.kind`, subject),
     execution: readExecution(task["execution"], `${where}.execution`, subject),
-    dependsOn: readOptionalStringArray(
-      task["dependsOn"],
-      `${where}.dependsOn`,
-      subject,
-    ),
+    dependsOn: readOptionalStringArray(task["dependsOn"], `${where}.dependsOn`, subject),
     impact: readImpact(task["impact"], `${where}.impact`, subject),
   };
 }
 
-function readExecution(
-  value: unknown,
-  where: string,
-  subject: string,
-): TestingManifestTask["execution"] {
+function readExecution(value: unknown, where: string, subject: string): TestingManifestTask["execution"] {
   const execution = readRecord(value, where, subject);
-  rejectUnknownKeys(
-    execution,
-    ["executable", "args", "cwd", "shell"],
-    where,
-    subject,
-  );
+  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell"], where, subject);
   const cwd = execution["cwd"];
   const shell = execution["shell"];
   if (shell !== undefined && typeof shell !== "boolean") {
     throw new Error(`${subject}: ${where}.shell must be a boolean`);
   }
   return {
-    executable: readString(
-      execution["executable"],
-      `${where}.executable`,
-      subject,
-    ),
+    executable: readString(execution["executable"], `${where}.executable`, subject),
     args: readOptionalStringArray(execution["args"], `${where}.args`, subject),
-    ...(cwd === undefined
-      ? {}
-      : { cwd: readString(cwd, `${where}.cwd`, subject) }),
+    ...(cwd === undefined ? {} : { cwd: readString(cwd, `${where}.cwd`, subject) }),
     shell: shell ?? false,
   };
 }
 
-function readImpact(
-  value: unknown,
-  where: string,
-  subject: string,
-): TestingManifestTask["impact"] {
+function readImpact(value: unknown, where: string, subject: string): TestingManifestTask["impact"] {
   const impact = readRecord(value, where, subject);
   rejectUnknownKeys(impact, ["mode", "paths"], where, subject);
   return {
-    mode: readEnumeration(
-      impact["mode"],
-      impactModes,
-      `${where}.mode`,
-      subject,
-    ),
+    mode: readEnumeration(impact["mode"], impactModes, `${where}.mode`, subject),
     paths: readOptionalStringArray(impact["paths"], `${where}.paths`, subject),
   };
 }
@@ -312,22 +214,14 @@ function rejectUnknownKeys(
   }
 }
 
-function readRecord(
-  value: unknown,
-  where: string,
-  subject: string,
-): Record<string, unknown> {
+function readRecord(value: unknown, where: string, subject: string): Record<string, unknown> {
   if (!isRecord(value)) {
     throw new Error(`${subject}: ${where} must be an object`);
   }
   return value;
 }
 
-function readArray(
-  value: unknown,
-  where: string,
-  subject: string,
-): readonly unknown[] {
+function readArray(value: unknown, where: string, subject: string): readonly unknown[] {
   if (!isUnknownArray(value)) {
     throw new Error(`${subject}: ${where} must be an array`);
   }
@@ -341,21 +235,13 @@ function readString(value: unknown, where: string, subject: string): string {
   return value;
 }
 
-function readStringArray(
-  value: unknown,
-  where: string,
-  subject: string,
-): readonly string[] {
+function readStringArray(value: unknown, where: string, subject: string): readonly string[] {
   return readArray(value, where, subject).map((entry, index) =>
     readString(entry, `${where}[${String(index)}]`, subject),
   );
 }
 
-function readOptionalStringArray(
-  value: unknown,
-  where: string,
-  subject: string,
-): readonly string[] {
+function readOptionalStringArray(value: unknown, where: string, subject: string): readonly string[] {
   return value === undefined ? [] : readStringArray(value, where, subject);
 }
 
@@ -368,9 +254,7 @@ function readEnumeration<Value extends string>(
   const text = readString(value, where, subject);
   const match = allowedValues.find((candidate) => candidate === text);
   if (match === undefined) {
-    throw new Error(
-      `${subject}: ${where} must be one of ${allowedValues.join(", ")}`,
-    );
+    throw new Error(`${subject}: ${where} must be one of ${allowedValues.join(", ")}`);
   }
   return match;
 }

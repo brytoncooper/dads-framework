@@ -11,10 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  isProductionTypeScript,
-  packageRootOf,
-} from "../scanners/source-classification.js";
+import { isProductionTypeScript, packageRootOf } from "../scanners/source-classification.js";
 import { topLevelFunctionNames } from "../scanners/top-level-declarations.js";
 import { duplicatedHelpersSignal } from "./duplicated-helpers.js";
 
@@ -38,13 +35,9 @@ function contextOver(tree: Record<string, string>): DoctorContext {
   };
 }
 
-async function counted(
-  tree: Record<string, string>,
-): Promise<Record<string, number>> {
+async function counted(tree: Record<string, string>): Promise<Record<string, number>> {
   const measured = await duplicatedHelpersSignal.run(contextOver(tree));
-  return Object.fromEntries(
-    [...measured].map(([key, reading]) => [key, reading.value]),
-  );
+  return Object.fromEntries([...measured].map(([key, reading]) => [key, reading.value]));
 }
 
 const IS_RECORD = "export function isRecord(value) { return true; }\n";
@@ -90,19 +83,11 @@ describe("duplicated helpers", () => {
   it("asks only what a package ships", () => {
     expect(isProductionTypeScript("packages/http/core/src/one.ts")).toBe(true);
     expect(isProductionTypeScript("apps/workbench/src/one.ts")).toBe(true);
-    expect(isProductionTypeScript("packages/http/core/src/one.test.ts")).toBe(
-      false,
-    );
-    expect(
-      isProductionTypeScript("packages/http/core/src/one.generated.ts"),
-    ).toBe(false);
-    expect(
-      isProductionTypeScript("packages/http/core/type-tests/cards.ts"),
-    ).toBe(false);
+    expect(isProductionTypeScript("packages/http/core/src/one.test.ts")).toBe(false);
+    expect(isProductionTypeScript("packages/http/core/src/one.generated.ts")).toBe(false);
+    expect(isProductionTypeScript("packages/http/core/type-tests/cards.ts")).toBe(false);
     expect(isProductionTypeScript("scripts/checks/check-docs.mjs")).toBe(false);
-    expect(packageRootOf("packages/http/core/src/one.ts")).toBe(
-      "packages/http/core",
-    );
+    expect(packageRootOf("packages/http/core/src/one.ts")).toBe("packages/http/core");
     expect(packageRootOf("apps/workbench/src/one.ts")).toBe("apps/workbench");
   });
 

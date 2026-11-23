@@ -7,10 +7,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import { FakeEnqueueAccessChanges } from "../../testing/fake-enqueue.js";
-import {
-  relationshipWrite,
-  type RelationshipFilter,
-} from "@dads-framework/access/runtime";
+import { relationshipWrite, type RelationshipFilter } from "@dads-framework/access/runtime";
 import { outboxKeyForRelationship } from "./enqueue.js";
 import { deleteRelationshipsNow, revokeAccess } from "./revoke.js";
 
@@ -110,9 +107,7 @@ describe("revokeAccess", () => {
     // The WHOLE key, not a substring of it. `toContain("membership-1")` is
     // satisfied by any key that merely mentions the cause — including one
     // built for the wrong operation, resource, or subject.
-    expect(outbox.enqueued[0]?.idempotencyKey).toBe(
-      outboxKeyForRelationship("DELETE", MEMBERSHIP, "membership-1"),
-    );
+    expect(outbox.enqueued[0]?.idempotencyKey).toBe(outboxKeyForRelationship("DELETE", MEMBERSHIP, "membership-1"));
   });
 
   it("SUCCEEDS when the synchronous delete throws — the row is the guarantee", async () => {
@@ -202,22 +197,16 @@ describe("revokeAccess", () => {
     await revokeAccess(input);
 
     expect(outbox.enqueued).toHaveLength(1);
-    expect(outbox.enqueued[0]?.idempotencyKey).toBe(
-      outboxKeyForRelationship("DELETE", MEMBERSHIP, "membership-1"),
-    );
+    expect(outbox.enqueued[0]?.idempotencyKey).toBe(outboxKeyForRelationship("DELETE", MEMBERSHIP, "membership-1"));
   });
 
   it("sweeps wider than it records when a resource loses every tuple", async () => {
     const authorization = new FakeAuthorization(PERMISSIONS);
     const outbox = new FakeEnqueueAccessChanges();
-    const owner = relationshipWrite(
-      { type: WORKSPACE_TYPE, id: ORG_ID },
-      "owner",
-      {
-        type: ORG_TYPE,
-        id: ORG_ID,
-      },
-    );
+    const owner = relationshipWrite({ type: WORKSPACE_TYPE, id: ORG_ID }, "owner", {
+      type: ORG_TYPE,
+      id: ORG_ID,
+    });
     await authorization.writeRelationships([
       owner,
       relationshipWrite({ type: WORKSPACE_TYPE, id: ORG_ID }, "admin", {
@@ -225,9 +214,7 @@ describe("revokeAccess", () => {
         id: USER_ID,
       }),
     ]);
-    const sweep: RelationshipFilter[] = [
-      { resourceType: WORKSPACE_TYPE, resourceId: ORG_ID },
-    ];
+    const sweep: RelationshipFilter[] = [{ resourceType: WORKSPACE_TYPE, resourceId: ORG_ID }];
 
     await revokeAccess({
       authorization,

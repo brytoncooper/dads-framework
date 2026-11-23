@@ -1,10 +1,7 @@
 // Real graph regression: another adapter revokes warmed authority. Old caller
 // and request tokens cannot preserve check or discovery after that graph write.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { runWithAuthorizationConsistency } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
@@ -49,9 +46,7 @@ describe("current enforcement after remote graph revocation", () => {
         type: "test/current_document",
         id: `${mode}-document`,
       };
-      const oldToken = await otherWriter.writeRelationships([
-        relationshipWrite(resource, "viewer", subject),
-      ]);
+      const oldToken = await otherWriter.writeRelationships([relationshipWrite(resource, "viewer", subject)]);
       await expect(
         reader.check({
           subject,
@@ -76,13 +71,10 @@ describe("current enforcement after remote graph revocation", () => {
         relation: "viewer",
         subject,
       });
-      const query =
-        mode === "old-query-token" ? { consistencyToken: oldToken } : {};
+      const query = mode === "old-query-token" ? { consistencyToken: oldToken } : {};
       const cookie = mode === "old-cookie-token" ? oldToken : undefined;
       await runWithAuthorizationConsistency(cookie, async () => {
-        await expect(
-          reader.check({ subject, resource, permission: "view", ...query }),
-        ).resolves.toBe(false);
+        await expect(reader.check({ subject, resource, permission: "view", ...query })).resolves.toBe(false);
         await expect(
           reader.lookupResources({
             subject,
@@ -126,16 +118,10 @@ describe("enforcement at least as fresh as the adapter's own newest write", () =
       permission: "view",
     };
     // Grant, warm SpiceDB's cache with the allowed answer, then revoke.
-    await server.writeRelationships([
-      relationshipWrite(resource, "viewer", subject),
-    ]);
+    await server.writeRelationships([relationshipWrite(resource, "viewer", subject)]);
     for (let warm = 0; warm < 3; warm += 1) {
-      await expect(
-        server.check({ subject, resource, permission: "view" }),
-      ).resolves.toBe(true);
-      await expect(server.lookupResources(lookup)).resolves.toEqual([
-        resource.id,
-      ]);
+      await expect(server.check({ subject, resource, permission: "view" })).resolves.toBe(true);
+      await expect(server.lookupResources(lookup)).resolves.toEqual([resource.id]);
     }
 
     await server.deleteRelationships({
@@ -144,19 +130,11 @@ describe("enforcement at least as fresh as the adapter's own newest write", () =
       relation: "viewer",
       subject,
     });
-    await expect(
-      server.check({ subject, resource, permission: "view" }),
-    ).resolves.toBe(false);
+    await expect(server.check({ subject, resource, permission: "view" })).resolves.toBe(false);
     await expect(server.lookupResources(lookup)).resolves.toEqual([]);
 
-    await server.writeRelationships([
-      relationshipWrite(resource, "viewer", subject),
-    ]);
-    await expect(
-      server.check({ subject, resource, permission: "view" }),
-    ).resolves.toBe(true);
-    await expect(server.lookupResources(lookup)).resolves.toEqual([
-      resource.id,
-    ]);
+    await server.writeRelationships([relationshipWrite(resource, "viewer", subject)]);
+    await expect(server.check({ subject, resource, permission: "view" })).resolves.toBe(true);
+    await expect(server.lookupResources(lookup)).resolves.toEqual([resource.id]);
   });
 });

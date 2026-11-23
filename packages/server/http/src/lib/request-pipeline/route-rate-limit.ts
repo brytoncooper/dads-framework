@@ -1,10 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { rememberErrorCode } from "../request-log/request-outcome.js";
-import {
-  resolveCapabilities,
-  type RouteCapabilities,
-} from "../route/capabilities.js";
+import { resolveCapabilities, type RouteCapabilities } from "../route/capabilities.js";
 import type { HttpRoute } from "../route/route-group.js";
 import { createRateLimiter, type RateLimiter } from "./rate-limit.js";
 
@@ -14,25 +11,14 @@ import { createRateLimiter, type RateLimiter } from "./rate-limit.js";
  */
 
 /** The per-route limiter, or null when the effective policy is unlimited. */
-export function limiterFor(
-  definition: HttpRoute,
-  appCapabilities: RouteCapabilities | undefined,
-): RateLimiter | null {
-  const effective = resolveCapabilities(
-    appCapabilities,
-    undefined,
-    definition.capabilities,
-  );
+export function limiterFor(definition: HttpRoute, appCapabilities: RouteCapabilities | undefined): RateLimiter | null {
+  const effective = resolveCapabilities(appCapabilities, undefined, definition.capabilities);
   const limit = effective.rateLimit;
   if (limit === undefined || limit === "unlimited") return null;
   return createRateLimiter(limit, Date.now);
 }
 
-export function sendRateLimited(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  retryAfterSeconds: number,
-): FastifyReply {
+export function sendRateLimited(request: FastifyRequest, reply: FastifyReply, retryAfterSeconds: number): FastifyReply {
   void reply.header("retry-after", String(retryAfterSeconds));
   rememberErrorCode(request, "TOO_MANY_REQUESTS");
   return reply.status(429).send({
@@ -51,8 +37,5 @@ export function consumeBudget(
   subjectId: string | undefined,
 ): { allowed: true } | { allowed: false; retryAfterSeconds: number } {
   if (!limiter) return { allowed: true };
-  return limiter.consume(
-    `${definition.method} ${definition.path}`,
-    subjectId ?? request.ip,
-  );
+  return limiter.consume(`${definition.method} ${definition.path}`, subjectId ?? request.ip);
 }

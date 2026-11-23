@@ -19,8 +19,7 @@ export function enableExampleCopy(article) {
         feedback.textContent = "Code copied.";
       } catch {
         button.textContent = "Copy failed";
-        feedback.textContent =
-          "Copy failed. Select and copy the code manually.";
+        feedback.textContent = "Copy failed. Select and copy the code manually.";
       }
       reset = setTimeout(() => {
         button.textContent = "Copy";

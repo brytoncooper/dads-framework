@@ -22,11 +22,7 @@ export function compileSqliteThrough(
   compilePermission: ForwardPermissionCompiler,
 ): SqliteQuery {
   const alias = context.nextAlias("thr");
-  const columnRel = findSqliteColumnRelation(
-    context.model,
-    resource.entity,
-    relation,
-  );
+  const columnRel = findSqliteColumnRelation(context.model, resource.entity, relation);
   const b = new QueryBuilder();
   if (columnRel !== undefined) {
     const targetMatch = compileColumnArrowTargets(
@@ -46,13 +42,7 @@ export function compileSqliteThrough(
         AND (${b.append(targetMatch)})
     )`);
   }
-  const targetMatch = compileArrowTargetDisjunction(
-    context,
-    subject,
-    alias,
-    targets,
-    compilePermission,
-  );
+  const targetMatch = compileArrowTargetDisjunction(context, subject, alias, targets, compilePermission);
   return b.finish(`EXISTS (
     SELECT 1
     FROM ${TUPLES} ${alias}
@@ -78,11 +68,7 @@ export function compileSqliteThroughAll(
 ): SqliteQuery {
   const existsAlias = context.nextAlias("all_e");
   const failAlias = context.nextAlias("all_n");
-  const columnRel = findSqliteColumnRelation(
-    context.model,
-    resource.entity,
-    relation,
-  );
+  const columnRel = findSqliteColumnRelation(context.model, resource.entity, relation);
   const b = new QueryBuilder();
   if (columnRel !== undefined) {
     const targetMatch = compileColumnArrowTargets(
@@ -111,13 +97,7 @@ export function compileSqliteThroughAll(
       )
     )`);
   }
-  const targetMatch = compileArrowTargetDisjunction(
-    context,
-    subject,
-    failAlias,
-    targets,
-    compilePermission,
-  );
+  const targetMatch = compileArrowTargetDisjunction(context, subject, failAlias, targets, compilePermission);
   return b.finish(`(
     EXISTS (
       SELECT 1

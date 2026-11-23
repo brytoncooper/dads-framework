@@ -11,10 +11,7 @@ import {
 } from "./direct-transfer-storage.js";
 import { attachmentDisposition } from "./logic/attachment-disposition.js";
 import type { SignedUpload } from "../core.js";
-import {
-  s3ClientConfig,
-  type S3ObjectStorageOptions,
-} from "./s3-object-storage.js";
+import { s3ClientConfig, type S3ObjectStorageOptions } from "./s3-object-storage.js";
 
 /**
  * S3 API driver for browser-direct transfers — the same client settings as
@@ -53,8 +50,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
         Metadata: { ...input.metadata },
       }),
     );
-    if (!response.UploadId)
-      throw new Error("The bucket opened a multipart upload without an id");
+    if (!response.UploadId) throw new Error("The bucket opened a multipart upload without an id");
     return { key: input.key, storageUploadId: response.UploadId };
   }
 
@@ -78,16 +74,12 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
       }),
       {
         expiresIn: input.expiresInSeconds,
-        ...(input.byteSize === undefined
-          ? {}
-          : { signableHeaders: new Set(["content-length"]) }),
+        ...(input.byteSize === undefined ? {} : { signableHeaders: new Set(["content-length"]) }),
       },
     );
   }
 
-  async listUploadedParts(
-    upload: MultipartUploadRef,
-  ): Promise<readonly UploadedPart[] | null> {
+  async listUploadedParts(upload: MultipartUploadRef): Promise<readonly UploadedPart[] | null> {
     try {
       return await this.listEveryUploadedPart(upload);
     } catch (error: unknown) {
@@ -96,9 +88,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     }
   }
 
-  private async listEveryUploadedPart(
-    upload: MultipartUploadRef,
-  ): Promise<UploadedPart[]> {
+  private async listEveryUploadedPart(upload: MultipartUploadRef): Promise<UploadedPart[]> {
     const parts: UploadedPart[] = [];
     let marker: string | undefined;
     const { sdk, client } = await this.loadClient();
@@ -157,25 +147,19 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
   async headObject(key: string): Promise<StoredObjectHead | null> {
     try {
       const { sdk, client } = await this.loadClient();
-      const response = await client.send(
-        new sdk.HeadObjectCommand({ Bucket: this.options.bucket, Key: key }),
-      );
+      const response = await client.send(new sdk.HeadObjectCommand({ Bucket: this.options.bucket, Key: key }));
       return {
         byteSize: response.ContentLength ?? 0,
         contentType: response.ContentType ?? "application/octet-stream",
         metadata: { ...response.Metadata },
       };
     } catch (error: unknown) {
-      if (isNamed(error, "NotFound") || isNamed(error, "NoSuchKey"))
-        return null;
+      if (isNamed(error, "NotFound") || isNamed(error, "NoSuchKey")) return null;
       throw error;
     }
   }
 
-  async readObjectPrefix(
-    key: string,
-    byteCount: number,
-  ): Promise<Uint8Array | null> {
+  async readObjectPrefix(key: string, byteCount: number): Promise<Uint8Array | null> {
     try {
       const { sdk, client } = await this.loadClient();
       const response = await client.send(
@@ -187,8 +171,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
       );
       return (await response.Body?.transformToByteArray()) ?? new Uint8Array();
     } catch (error: unknown) {
-      if (isNamed(error, "NoSuchKey") || isNamed(error, "NotFound"))
-        return null;
+      if (isNamed(error, "NoSuchKey") || isNamed(error, "NotFound")) return null;
       if (isNamed(error, "InvalidRange")) return new Uint8Array();
       throw error;
     }
@@ -200,13 +183,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
     readonly expiresInSeconds: number;
   }): Promise<string> {
     if (this.options.downloadSigner)
-      return Promise.resolve(
-        this.options.downloadSigner.sign(
-          input.key,
-          input.expiresInSeconds,
-          input.fileName,
-        ),
-      );
+      return Promise.resolve(this.options.downloadSigner.sign(input.key, input.expiresInSeconds, input.fileName));
     const { sdk, client } = await this.loadClient();
     const { getSignedUrl } = await loadS3Presigner();
     return getSignedUrl(
@@ -222,14 +199,10 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
 
   async deleteObject(key: string): Promise<void> {
     const { sdk, client } = await this.loadClient();
-    await client.send(
-      new sdk.DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
-    );
+    await client.send(new sdk.DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }));
   }
 
-  async presignWriteOnceUpload(
-    input: WriteOnceUploadRequest,
-  ): Promise<SignedUpload> {
+  async presignWriteOnceUpload(input: WriteOnceUploadRequest): Promise<SignedUpload> {
     const checksum = Buffer.from(input.sha256, "hex").toString("base64");
     const { sdk, client } = await this.loadClient();
     const { getSignedUrl } = await loadS3Presigner();
@@ -248,12 +221,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
         // The presigner leaves these unsigned by default. Signing them makes
         // storage refuse other bytes and refuse any write over an existing
         // object, so the URL can only create this exact object once.
-        signableHeaders: new Set([
-          "content-type",
-          "content-length",
-          "x-amz-checksum-sha256",
-          "if-none-match",
-        ]),
+        signableHeaders: new Set(["content-type", "content-length", "x-amz-checksum-sha256", "if-none-match"]),
         unhoistableHeaders: new Set(["x-amz-checksum-sha256"]),
       },
     );
@@ -280,14 +248,10 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
       );
       return {
         byteSize: response.ContentLength ?? 0,
-        sha256: fullObjectSha256Hex(
-          response.ChecksumSHA256,
-          response.ChecksumType,
-        ),
+        sha256: fullObjectSha256Hex(response.ChecksumSHA256, response.ChecksumType),
       };
     } catch (error: unknown) {
-      if (isNamed(error, "NotFound") || isNamed(error, "NoSuchKey"))
-        return null;
+      if (isNamed(error, "NotFound") || isNamed(error, "NoSuchKey")) return null;
       throw error;
     }
   }
@@ -299,10 +263,7 @@ export class S3DirectTransferStorage implements DirectTransferStorage {
  * hashes, marked `COMPOSITE` or written `<hash>-<parts>`), which is not the
  * SHA-256 of the bytes.
  */
-function fullObjectSha256Hex(
-  checksumBase64: string | undefined,
-  checksumType: string | undefined,
-): string | null {
+function fullObjectSha256Hex(checksumBase64: string | undefined, checksumType: string | undefined): string | null {
   if (checksumBase64 === undefined || checksumBase64 === "") return null;
   if (checksumType === "COMPOSITE" || checksumBase64.includes("-")) return null;
   return Buffer.from(checksumBase64, "base64").toString("hex");

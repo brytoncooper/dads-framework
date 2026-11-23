@@ -27,18 +27,7 @@ services:
     container_name: ${DADS_WORKBENCH_PROJECT:?}-migrate
     labels:
       dev.dads.workbench: ${DADS_WORKBENCH_PROJECT:?}
-    command:
-      [
-        datastore,
-        migrate,
-        head,
-        --datastore-engine,
-        postgres,
-        --migration-timeout,
-        45s,
-        --log-level,
-        warn,
-      ]
+    command: [datastore, migrate, head, --datastore-engine, postgres, --migration-timeout, 45s, --log-level, warn]
     environment:
       SPICEDB_DATASTORE_CONN_URI: ${DADS_WORKBENCH_DATASTORE_URI:?}
     depends_on:
@@ -66,14 +55,7 @@ services:
       - "127.0.0.1::50051"
     networks: [workbench]
     healthcheck:
-      test:
-        [
-          CMD,
-          /usr/local/bin/grpc_health_probe,
-          -addr=127.0.0.1:50051,
-          -connect-timeout=1s,
-          -rpc-timeout=1s,
-        ]
+      test: [CMD, /usr/local/bin/grpc_health_probe, -addr=127.0.0.1:50051, -connect-timeout=1s, -rpc-timeout=1s]
       interval: 2s
       timeout: 3s
       retries: 30

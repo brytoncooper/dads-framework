@@ -4,9 +4,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export function readVerifierIdentity(): string {
-  return deriveVerifierIdentity(
-    dirname(dirname(fileURLToPath(import.meta.url))),
-  );
+  return deriveVerifierIdentity(dirname(dirname(fileURLToPath(import.meta.url))));
 }
 
 export function deriveVerifierIdentity(toolboxRoot: string): string {

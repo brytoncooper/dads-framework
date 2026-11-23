@@ -22,9 +22,7 @@ describe("authorization consistency on this request", () => {
     runWithAuthorizationConsistency("cookie-token", () => {
       recordWrittenAuthorizationConsistency("written-at-3");
       expect(authorizationConsistencyTokenOnThisRequest()).toBe("written-at-3");
-      expect(writtenAuthorizationConsistencyOnThisRequest()).toBe(
-        "written-at-3",
-      );
+      expect(writtenAuthorizationConsistencyOnThisRequest()).toBe("written-at-3");
     });
   });
 

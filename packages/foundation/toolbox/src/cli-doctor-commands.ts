@@ -13,17 +13,8 @@
  */
 
 import { commandDocumentation, documentedError } from "./cli-documentation.js";
-import {
-  GATE_FLAGS,
-  GATE_ONLY_OPTIONS,
-  GATE_OPTIONS,
-  readGateMode,
-  runGateCommand,
-} from "./cli-doctor-gate.js";
-import {
-  createDoctorContext,
-  type DoctorContextInput,
-} from "./doctor/doctor-context.js";
+import { GATE_FLAGS, GATE_ONLY_OPTIONS, GATE_OPTIONS, readGateMode, runGateCommand } from "./cli-doctor-gate.js";
+import { createDoctorContext, type DoctorContextInput } from "./doctor/doctor-context.js";
 import type { GateMode } from "./doctor/doctor-gate-model.js";
 import {
   buildDoctorReport,
@@ -33,25 +24,10 @@ import {
   type DoctorReport,
 } from "./doctor/doctor-report.js";
 import { signalEvidences, type DoctorProfile } from "./doctor/doctor-signal.js";
-import {
-  DOCTOR_SIGNALS,
-  runDoctorSignals,
-  signalsForIssue,
-} from "./doctor/doctor-signals.js";
-import {
-  DADDY_ISSUES,
-  findDaddyIssue,
-  type DaddyIssue,
-  type DaddyIssueId,
-} from "./doctor/issues.js";
+import { DOCTOR_SIGNALS, runDoctorSignals, signalsForIssue } from "./doctor/doctor-signals.js";
+import { DADDY_ISSUES, findDaddyIssue, type DaddyIssue, type DaddyIssueId } from "./doctor/issues.js";
 
-const VALUE_OPTIONS = new Set([
-  "--profile",
-  "--issue",
-  "--today",
-  ...GATE_OPTIONS,
-  ...GATE_ONLY_OPTIONS,
-]);
+const VALUE_OPTIONS = new Set(["--profile", "--issue", "--today", ...GATE_OPTIONS, ...GATE_ONLY_OPTIONS]);
 const PROFILES = new Set(["standard", "strict"]);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -74,9 +50,7 @@ export type DoctorArguments = {
 // ---------------------------------------------------------------------------
 
 /** Splits the argument list, refusing every flag this phase cannot honour. */
-export function parseDoctorArguments(
-  commandArguments: readonly string[],
-): DoctorArguments {
+export function parseDoctorArguments(commandArguments: readonly string[]): DoctorArguments {
   const read = readArgumentList(commandArguments);
   return toDoctorArguments(read.values, read.flags, read.positional);
 }
@@ -96,11 +70,7 @@ function readArgumentList(commandArguments: readonly string[]): ReadArguments {
   while (index < commandArguments.length) {
     const argument = commandArguments[index] ?? "";
     index += 1;
-    if (
-      argument === "--json" ||
-      argument === "--online" ||
-      GATE_FLAGS.has(argument)
-    ) {
+    if (argument === "--json" || argument === "--online" || GATE_FLAGS.has(argument)) {
       flags.add(argument);
       continue;
     }
@@ -169,9 +139,7 @@ function readProfile(values: ReadonlyMap<string, string[]>): DoctorProfile {
  * The issues to report, always in the order `DAD.md` raises them: `--issue`
  * narrows the report, it does not reorder it.
  */
-function readIssues(
-  values: ReadonlyMap<string, string[]>,
-): readonly DaddyIssue[] {
+function readIssues(values: ReadonlyMap<string, string[]>): readonly DaddyIssue[] {
   const chosen = values.get("--issue") ?? [];
   if (chosen.length === 0) return DADDY_ISSUES;
   for (const id of chosen) {
@@ -210,9 +178,7 @@ export type DiagnoseOptions = {
  * A cross-listed signal is one of them: `--issue` names an issue, and every
  * signal reported under that issue runs, whichever issue it calls its own.
  */
-export async function diagnoseRepository(
-  options: DiagnoseOptions,
-): Promise<DoctorReport> {
+export async function diagnoseRepository(options: DiagnoseOptions): Promise<DoctorReport> {
   const context = createDoctorContext({
     root: options.root,
     today: options.today,
@@ -220,9 +186,7 @@ export async function diagnoseRepository(
     online: options.online ?? false,
   });
   const selected = options.issues.map((issue) => issue.id);
-  const signals = DOCTOR_SIGNALS.filter((signal) =>
-    selected.some((issue) => signalEvidences(signal, issue)),
-  );
+  const signals = DOCTOR_SIGNALS.filter((signal) => selected.some((issue) => signalEvidences(signal, issue)));
   const outcomes = await runDoctorSignals(context, signals);
   return buildDoctorReport({
     root: context.root,
@@ -243,10 +207,7 @@ export async function diagnoseRepository(
  * which is the whole difference between describing a repository and holding
  * one.
  */
-export async function doctor(
-  commandArguments: readonly string[],
-  json: boolean,
-): Promise<number> {
+export async function doctor(commandArguments: readonly string[], json: boolean): Promise<number> {
   const parsed = parseDoctorCommand(commandArguments);
   if (parsed.explain !== undefined) {
     explainDaddyIssue(parsed, json);
@@ -270,40 +231,25 @@ export async function doctor(
     issues: parsed.issues,
     online: parsed.online,
   });
-  process.stdout.write(
-    json ? renderDoctorJson(report) : renderDoctorReport(report),
-  );
+  process.stdout.write(json ? renderDoctorJson(report) : renderDoctorReport(report));
   return 0;
 }
 
-function parseDoctorCommand(
-  commandArguments: readonly string[],
-): DoctorArguments {
+function parseDoctorCommand(commandArguments: readonly string[]): DoctorArguments {
   try {
     return parseDoctorArguments(commandArguments);
   } catch (error) {
-    throw documentedError(
-      error,
-      commandDocumentation(process.cwd(), "docs/doctor.md"),
-    );
+    throw documentedError(error, commandDocumentation(process.cwd(), "docs/doctor.md"));
   }
 }
 
 function explainDaddyIssue(parsed: DoctorArguments, json: boolean): void {
-  const manual = commandDocumentation(
-    parsed.path ?? process.cwd(),
-    "docs/daddy-issues.md",
-  );
+  const manual = commandDocumentation(parsed.path ?? process.cwd(), "docs/daddy-issues.md");
   const issue = findDaddyIssue(parsed.explain ?? "");
   if (issue === undefined) {
-    throw documentedError(
-      `No daddy issue is named ${parsed.explain ?? ""}.`,
-      manual,
-    );
+    throw documentedError(`No daddy issue is named ${parsed.explain ?? ""}.`, manual);
   }
-  const documentation = manual.endsWith("daddy-issues.md")
-    ? `${manual}#${issue.id}`
-    : manual;
+  const documentation = manual.endsWith("daddy-issues.md") ? `${manual}#${issue.id}` : manual;
   const signals = signalsForIssue(issue.id);
   if (json) {
     process.stdout.write(
@@ -311,9 +257,7 @@ function explainDaddyIssue(parsed: DoctorArguments, json: boolean): void {
     );
     return;
   }
-  process.stdout.write(
-    `${renderIssueExplanation(issue, signals, parsed.profile)}\nSee ${documentation}\n`,
-  );
+  process.stdout.write(`${renderIssueExplanation(issue, signals, parsed.profile)}\nSee ${documentation}\n`);
 }
 
 function describeSignal(signal: (typeof DOCTOR_SIGNALS)[number]) {

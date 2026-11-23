@@ -34,11 +34,7 @@ describe("mergeCopy", () => {
   it("gathers every catalog under one key space", () => {
     const merged = mergeCopy([ordersSource, productsSource]);
 
-    expect([...merged.keys()]).toEqual([
-      "orders.page.title",
-      "orders.status.DRAFT",
-      "products.page.title",
-    ]);
+    expect([...merged.keys()]).toEqual(["orders.page.title", "orders.status.DRAFT", "products.page.title"]);
   });
 
   it("keeps provenance, so a failure can name the file to open", () => {

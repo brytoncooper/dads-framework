@@ -16,17 +16,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  evidenceAt,
-  exportedStatements,
-  ts,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { evidenceAt, exportedStatements, ts, type DoctorModule } from "../scanners/typescript-program.js";
 
 const OUTPUT_NAME = /(?:response|output)/i;
 const ABSENCE = new Set([
@@ -42,10 +33,7 @@ function shapeCount(type: ts.TypeNode): number {
   return type.types.filter((member) => !ABSENCE.has(member.kind)).length;
 }
 
-function readOutputShapes(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function readOutputShapes(module: DoctorModule, readings: Map<string, SignalReading>): void {
   for (const statement of exportedStatements(module)) {
     if (!ts.isTypeAliasDeclaration(statement)) continue;
     const name = statement.name.text;
@@ -69,13 +57,11 @@ function countMultiShapeResponses(context: DoctorContext): SignalReadings {
 export const multiShapeResponsesSignal: DoctorSignal = {
   id: "multi-shape-responses",
   issue: "people-pleasing",
-  question:
-    "Is a route's output a union, or does its handler return more than one shape?",
+  question: "Is a route's output a union, or does its handler return more than one shape?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You grow a second response shape, then a third. Nobody loves you more. They just know you’ll fold.",
+  sentence: "You grow a second response shape, then a third. Nobody loves you more. They just know you’ll fold.",
   run: (context) => Promise.resolve(countMultiShapeResponses(context)),
 };

@@ -601,10 +601,7 @@ article th {
 @media (min-width: 74rem) {
   .layout {
     width: min(calc(100% - clamp(2rem, 6vw, 6rem)), 90rem);
-    grid-template-columns: minmax(13rem, 15rem) minmax(0, 1fr) minmax(
-        11.5rem,
-        13.5rem
-      );
+    grid-template-columns: minmax(13rem, 15rem) minmax(0, 1fr) minmax(11.5rem, 13.5rem);
     gap: clamp(2rem, 3vw, 3.25rem);
   }
   .reader-outline {
@@ -1054,14 +1051,7 @@ article blockquote > :last-child {
 .docs-example :is(.hljs-type, .hljs-built_in, .hljs-title.class_) {
   color: #c4b5fd;
 }
-.docs-example
-  :is(
-    .hljs-attr,
-    .hljs-attribute,
-    .hljs-variable,
-    .hljs-property,
-    .hljs-selector-id
-  ) {
+.docs-example :is(.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-property, .hljs-selector-id) {
   color: #e6eff3;
 }
 .docs-example :is(.hljs-meta, .hljs-tag, .hljs-name, .hljs-section) {

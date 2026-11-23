@@ -1,16 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { jobQueueConformance } from "../core/lib/testing/job-queue-conformance.js";
-import {
-  RedisContainer,
-  type StartedRedisContainer,
-} from "@testcontainers/redis";
+import { RedisContainer, type StartedRedisContainer } from "@testcontainers/redis";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  type AuditActor,
-  currentAuditActor,
-} from "@dads-framework/core/audit-actor";
+import { type AuditActor, currentAuditActor } from "@dads-framework/core/audit-actor";
 
 import { BullMqJobQueue } from "./bullmq-job-queue.js";
 import { cronSchedule, defineJob, intervalSchedule } from "../core/index.js";
@@ -81,14 +75,10 @@ describe("BullMqJobQueue (integration)", () => {
       await queue.enqueue("greet", { name: "alice" });
       await queue.enqueue("explode", {});
 
-      await expect
-        .poll(() => seen, { timeout: 15_000 })
-        .toEqual([{ name: "alice" }]);
+      await expect.poll(() => seen, { timeout: 15_000 }).toEqual([{ name: "alice" }]);
       await expect
         .poll(() => errors, { timeout: 15_000 })
-        .toContainEqual(
-          expect.objectContaining({ event: "job.failed", jobName: "explode" }),
-        );
+        .toContainEqual(expect.objectContaining({ event: "job.failed", jobName: "explode" }));
     } finally {
       await queue.close();
     }
@@ -124,9 +114,7 @@ describe("BullMqJobQueue (integration)", () => {
 
       await queue.enqueue("prune-sessions", {});
 
-      await expect
-        .poll(() => seen, { timeout: 15_000 })
-        .toMatchObject({ kind: "system", id: "job:prune-sessions" });
+      await expect.poll(() => seen, { timeout: 15_000 }).toMatchObject({ kind: "system", id: "job:prune-sessions" });
       expect(seen?.requestId).toBeTruthy();
       expect(started).toContainEqual(
         expect.objectContaining({
@@ -160,9 +148,7 @@ describe("BullMqJobQueue (integration)", () => {
           schedules: [],
           run: () => {
             attempts += 1;
-            return attempts < 3
-              ? Promise.reject(new Error("try again"))
-              : Promise.resolve();
+            return attempts < 3 ? Promise.reject(new Error("try again")) : Promise.resolve();
           },
         }),
       ]);
@@ -172,13 +158,9 @@ describe("BullMqJobQueue (integration)", () => {
 
       await expect.poll(() => attempts, { timeout: 15_000 }).toBe(3);
       await expect
-        .poll(
-          () =>
-            progress.filter(
-              (entry) => "event" in entry && entry.event === "job.completed",
-            ).length,
-          { timeout: 15_000 },
-        )
+        .poll(() => progress.filter((entry) => "event" in entry && entry.event === "job.completed").length, {
+          timeout: 15_000,
+        })
         .toBe(1);
     } finally {
       await queue.close();
@@ -219,9 +201,7 @@ describe("BullMqJobQueue (integration)", () => {
 
       await queue.start();
 
-      await expect
-        .poll(() => runs.length, { timeout: 15_000 })
-        .toBeGreaterThan(1);
+      await expect.poll(() => runs.length, { timeout: 15_000 }).toBeGreaterThan(1);
       const inspection = await queue.inspect();
       expect(inspection).toMatchObject({
         driver: "bullmq",
@@ -272,11 +252,7 @@ describe("BullMqJobQueue (integration)", () => {
       info: (entry: object) => progress.push(entry),
       error: () => undefined,
     };
-    const firstQueue = new BullMqJobQueue(
-      redis.getConnectionUrl(),
-      log,
-      queueName,
-    );
+    const firstQueue = new BullMqJobQueue(redis.getConnectionUrl(), log, queueName);
     firstQueue.register([
       defineJob({
         name: "reconciled-job",
@@ -296,11 +272,7 @@ describe("BullMqJobQueue (integration)", () => {
     expect((await firstQueue.inspect()).schedules).toHaveLength(1);
     await firstQueue.close();
 
-    const otherApplication = new BullMqJobQueue(
-      redis.getConnectionUrl(),
-      log,
-      "another-application",
-    );
+    const otherApplication = new BullMqJobQueue(redis.getConnectionUrl(), log, "another-application");
     otherApplication.register([
       defineJob({
         name: "other-application-job",
@@ -318,11 +290,7 @@ describe("BullMqJobQueue (integration)", () => {
     ]);
     await otherApplication.start();
 
-    const replacementQueue = new BullMqJobQueue(
-      redis.getConnectionUrl(),
-      log,
-      queueName,
-    );
+    const replacementQueue = new BullMqJobQueue(redis.getConnectionUrl(), log, queueName);
     try {
       replacementQueue.register([
         defineJob({
@@ -344,9 +312,7 @@ describe("BullMqJobQueue (integration)", () => {
           scheduleId: "reconciled-job.removed-schedule",
         }),
       );
-      expect((await otherApplication.inspect()).schedules).toMatchObject([
-        { id: "reconciled-job.removed-schedule" },
-      ]);
+      expect((await otherApplication.inspect()).schedules).toMatchObject([{ id: "reconciled-job.removed-schedule" }]);
     } finally {
       await replacementQueue.close();
       await otherApplication.close();

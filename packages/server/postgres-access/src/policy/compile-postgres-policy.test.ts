@@ -157,30 +157,14 @@ describe("compilePostgresCheck through aliases", () => {
     });
 
     expect(plan.canPrepare).toBe(false);
-    expect(plan.text).toContain(
-      "FROM dad_authorization_relationship through_tuple_0",
-    );
-    expect(plan.text).toContain(
-      "FROM dad_authorization_relationship through_tuple_1",
-    );
-    expect(plan.text).toContain(
-      "FROM dad_authorization_relationship through_tuple_2",
-    );
-    expect(plan.text).toContain(
-      "FROM dad_authorization_relationship through_tuple_3",
-    );
-    expect(plan.text).toContain(
-      "through_tuple_1.resource_kind = through_tuple_0.subject_kind",
-    );
-    expect(plan.text).toContain(
-      "through_tuple_1.resource_id = through_tuple_0.subject_id",
-    );
-    expect(plan.text).toContain(
-      "through_tuple_3.resource_kind = through_tuple_2.subject_kind",
-    );
-    expect(plan.text).toContain(
-      "through_tuple_3.resource_id = through_tuple_2.subject_id",
-    );
+    expect(plan.text).toContain("FROM dad_authorization_relationship through_tuple_0");
+    expect(plan.text).toContain("FROM dad_authorization_relationship through_tuple_1");
+    expect(plan.text).toContain("FROM dad_authorization_relationship through_tuple_2");
+    expect(plan.text).toContain("FROM dad_authorization_relationship through_tuple_3");
+    expect(plan.text).toContain("through_tuple_1.resource_kind = through_tuple_0.subject_kind");
+    expect(plan.text).toContain("through_tuple_1.resource_id = through_tuple_0.subject_id");
+    expect(plan.text).toContain("through_tuple_3.resource_kind = through_tuple_2.subject_kind");
+    expect(plan.text).toContain("through_tuple_3.resource_id = through_tuple_2.subject_id");
   });
 });
 
@@ -213,9 +197,7 @@ it("rejects permission-through cycles in both point compilers", () => {
     permission: "loop",
   };
   expect(() => compilePostgresCheck(model, "tenant-a", check)).toThrow(/cycle/);
-  expect(() => compileSharedPointCheck(model, "tenant-a", check)).toThrow(
-    /cycle/,
-  );
+  expect(() => compileSharedPointCheck(model, "tenant-a", check)).toThrow(/cycle/);
 });
 
 describe("compilePostgresLookup", () => {
@@ -227,45 +209,31 @@ describe("compilePostgresLookup", () => {
     });
 
     expect(plan.text).toContain("WITH RECURSIVE subject_reachable");
-    expect(plan.text).toContain(
-      "FROM dad_authorization_relationship direct_tuple",
-    );
+    expect(plan.text).toContain("FROM dad_authorization_relationship direct_tuple");
     expect(plan.text).toContain("FROM subject_reachable child_relation");
-    expect(plan.text).toContain(
-      "tuple.subject_id = child_relation.resource_id",
-    );
+    expect(plan.text).toContain("tuple.subject_id = child_relation.resource_id");
     expect(plan.text).toContain("UNION");
     expect(plan.text).not.toContain("WITH candidate AS");
-    expect(plan.text).not.toContain(
-      "SELECT DISTINCT resource_kind, resource_id",
-    );
+    expect(plan.text).not.toContain("SELECT DISTINCT resource_kind, resource_id");
     expect(plan.text).toContain("CROSS JOIN LATERAL");
-    expect(plan.text).toContain(
-      "through_tuple_0.subject_id = related_resource.resource_id",
-    );
+    expect(plan.text).toContain("through_tuple_0.subject_id = related_resource.resource_id");
     expect(plan.text).toContain("OFFSET 0");
     expect(plan.text).toContain("INTERSECT");
     expect(plan.text).toContain("EXCEPT");
   });
 
   it("uses only the fixed candidate binding for a fused predicate", () => {
-    const plan = compilePostgresCandidatePredicate(
-      nestedThroughModel,
-      "tenant-a",
-      {
-        subject: { type: "user", id: "user-1" },
-        resourceType: "order",
-        permission: "operate",
-      },
-    );
+    const plan = compilePostgresCandidatePredicate(nestedThroughModel, "tenant-a", {
+      subject: { type: "user", id: "user-1" },
+      resourceType: "order",
+      permission: "operate",
+    });
 
     expect(plan.kind).toBe("candidate-predicate");
     expect(plan.text).toContain(
       `${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.tableAlias}.${POSTGRES_AUTHORIZATION_CANDIDATE_BINDING.resourceIdColumn}`,
     );
     expect(plan.text).not.toContain("WITH candidate AS");
-    expect(plan.text).not.toContain(
-      "SELECT DISTINCT resource_kind, resource_id",
-    );
+    expect(plan.text).not.toContain("SELECT DISTINCT resource_kind, resource_id");
   });
 });

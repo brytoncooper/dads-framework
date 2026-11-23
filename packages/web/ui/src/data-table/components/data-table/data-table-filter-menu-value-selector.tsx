@@ -17,11 +17,7 @@ type FilterValueSelectorProps<TData> = {
   onSelect: (value: string) => void;
 };
 
-export function FilterValueSelector<TData>({
-  column,
-  value,
-  onSelect,
-}: FilterValueSelectorProps<TData>) {
+export function FilterValueSelector<TData>({ column, value, onSelect }: FilterValueSelectorProps<TData>) {
   const t = useDataTableCopy();
   const variant = readColumnFilterVariant(column);
 
@@ -50,18 +46,11 @@ export function FilterValueSelector<TData>({
 
     case "select":
     case "multiSelect":
-      return (
-        <FilterOptionSelector
-          options={column.columnDef.meta?.options}
-          onSelect={onSelect}
-        />
-      );
+      return <FilterOptionSelector options={column.columnDef.meta?.options} onSelect={onSelect} />;
 
     case "date":
     case "dateRange":
-      return (
-        <FilterDateSelector column={column} value={value} onSelect={onSelect} />
-      );
+      return <FilterDateSelector column={column} value={value} onSelect={onSelect} />;
 
     case "text":
     case "number":
@@ -101,11 +90,7 @@ function FilterOptionSelector({
   );
 }
 
-function FilterDateSelector<TData>({
-  column,
-  value,
-  onSelect,
-}: FilterValueSelectorProps<TData>) {
+function FilterDateSelector<TData>({ column, value, onSelect }: FilterValueSelectorProps<TData>) {
   const t = useDataTableCopy();
   return (
     <DatePicker
@@ -119,10 +104,7 @@ function FilterDateSelector<TData>({
   );
 }
 
-function FilterTextSelector({
-  value,
-  onSelect,
-}: Pick<FilterValueSelectorProps<unknown>, "value" | "onSelect">) {
+function FilterTextSelector({ value, onSelect }: Pick<FilterValueSelectorProps<unknown>, "value" | "onSelect">) {
   const t = useDataTableCopy();
   const isEmpty = !value.trim();
 
@@ -143,9 +125,7 @@ function FilterTextSelector({
         ) : (
           <>
             <BadgeCheck />
-            <span className="truncate">
-              {t("dataTable.filter.byValue", { value })}
-            </span>
+            <span className="truncate">{t("dataTable.filter.byValue", { value })}</span>
           </>
         )}
       </CommandItem>

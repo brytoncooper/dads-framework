@@ -6,9 +6,7 @@ import { promisify } from "node:util";
 import { expect, it } from "vitest";
 import { traceAttributionCases } from "./core/testing/index.js";
 
-const traceProcess = fileURLToPath(
-  new URL("../../proof/trace-process.mjs", import.meta.url),
-);
+const traceProcess = fileURLToPath(new URL("../../proof/trace-process.mjs", import.meta.url));
 
 function launchTraceProcess(env: NodeJS.ProcessEnv) {
   return promisify(execFile)(process.execPath, [traceProcess], {
@@ -52,14 +50,10 @@ it.each(traceAttributionCases)(
       request.on("data", (chunk: Buffer) => chunks.push(chunk));
       request.on("end", () => {
         payloads.push(Buffer.concat(chunks));
-        response
-          .writeHead(200, { "content-type": "application/x-protobuf" })
-          .end();
+        response.writeHead(200, { "content-type": "application/x-protobuf" }).end();
       });
     });
-    await new Promise<void>((resolve) =>
-      collector.listen(0, "127.0.0.1", resolve),
-    );
+    await new Promise<void>((resolve) => collector.listen(0, "127.0.0.1", resolve));
 
     try {
       const address = collector.address();

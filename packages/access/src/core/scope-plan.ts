@@ -74,16 +74,8 @@ export type ScopeSchema = {
  * Compile `permissionName` on a registered record definition. Throws, naming
  * every failure, when the plan cannot be compiled.
  */
-export function compileScopePlan(
-  model: AccessModel,
-  definitionWireName: string,
-  permissionName: string,
-): ScopePlan {
-  return compileScopePlanInSchema(
-    scopeSchema(model),
-    definitionWireName,
-    permissionName,
-  );
+export function compileScopePlan(model: AccessModel, definitionWireName: string, permissionName: string): ScopePlan {
+  return compileScopePlanInSchema(scopeSchema(model), definitionWireName, permissionName);
 }
 
 export function compileScopePlanInSchema(
@@ -93,12 +85,8 @@ export function compileScopePlanInSchema(
 ): ScopePlan {
   const result = planScope(schema, definitionWireName, permissionName);
   if (result.plan === undefined) {
-    const lines = result.failures.map(
-      (failure) => `  ${failure.path}: ${failure.message}`,
-    );
-    throw new Error(
-      `cannot compile a scope plan for ${definitionWireName}.${permissionName}:\n${lines.join("\n")}`,
-    );
+    const lines = result.failures.map((failure) => `  ${failure.path}: ${failure.message}`);
+    throw new Error(`cannot compile a scope plan for ${definitionWireName}.${permissionName}:\n${lines.join("\n")}`);
   }
   return result.plan;
 }
@@ -116,13 +104,7 @@ export function planScope(
   readonly failures: readonly ScopePlanFailure[];
 } {
   const failures: ScopePlanFailure[] = [];
-  const plan = planPermission(
-    { schema, failures },
-    definitionWireName,
-    permissionName,
-    [],
-    [],
-  );
+  const plan = planPermission({ schema, failures }, definitionWireName, permissionName, [], []);
   return { plan: failures.length === 0 ? plan : undefined, failures };
 }
 
@@ -151,15 +133,9 @@ type Place = {
   readonly visiting: readonly string[];
 };
 
-function fail(
-  walk: Walk,
-  path: readonly string[],
-  message: string,
-): ScopePlan | undefined {
+function fail(walk: Walk, path: readonly string[], message: string): ScopePlan | undefined {
   const failure = { path: path.join(" → "), message };
-  const alreadyReported = walk.failures.some(
-    (entry) => entry.path === failure.path && entry.message === message,
-  );
+  const alreadyReported = walk.failures.some((entry) => entry.path === failure.path && entry.message === message);
   if (!alreadyReported) {
     walk.failures.push(failure);
   }
@@ -179,9 +155,7 @@ function planPermission(
     return fail(walk, here, "cycle: the rules reach this permission again");
   }
 
-  const definition = walk.schema.definitions.find(
-    (entry) => entry.wireName === wireName,
-  );
+  const definition = walk.schema.definitions.find((entry) => entry.wireName === wireName);
   if (definition === undefined) {
     return fail(walk, here, `no access definition named ${wireName}`);
   }
@@ -190,55 +164,29 @@ function planPermission(
     return fail(walk, here, `${wireName} is not a record with scope bindings`);
   }
 
-  return planAtPlace(
-    walk,
-    { definition, roles, path: here, visiting: [...visiting, step] },
-    permissionName,
-  );
+  return planAtPlace(walk, { definition, roles, path: here, visiting: [...visiting, step] }, permissionName);
 }
 
-function planAtPlace(
-  walk: Walk,
-  place: Place,
-  permissionName: string,
-): ScopePlan | undefined {
+function planAtPlace(walk: Walk, place: Place, permissionName: string): ScopePlan | undefined {
   const { definition } = place;
-  const permission = definition.permissions.find(
-    (entry) => entry.name === permissionName,
-  );
+  const permission = definition.permissions.find((entry) => entry.name === permissionName);
   if (permission === undefined) {
     if (definition.roles.some((role) => role.name === permissionName)) {
       return planRole(walk, place, permissionName);
     }
-    return fail(
-      walk,
-      place.path,
-      `${definition.wireName} has no permission ${permissionName}`,
-    );
+    return fail(walk, place.path, `${definition.wireName} has no permission ${permissionName}`);
   }
   return anyOf(permission.terms.map((term) => planTerm(walk, place, term)));
 }
 
 function planNameRef(walk: Walk, place: Place, name: string) {
-  const isPermission = place.definition.permissions.some(
-    (permission) => permission.name === name,
-  );
+  const isPermission = place.definition.permissions.some((permission) => permission.name === name);
   return isPermission
-    ? planPermission(
-        walk,
-        place.definition.wireName,
-        name,
-        place.path,
-        place.visiting,
-      )
+    ? planPermission(walk, place.definition.wireName, name, place.path, place.visiting)
     : planRole(walk, place, name);
 }
 
-function planTerm(
-  walk: Walk,
-  place: Place,
-  term: AccessIrTerm,
-): ScopePlan | undefined {
+function planTerm(walk: Walk, place: Place, term: AccessIrTerm): ScopePlan | undefined {
   if (term.kind === "role" || term.kind === "permission") {
     return planNameRef(walk, place, term.name);
   }
@@ -256,30 +204,17 @@ function planTerm(
     return anyOf(term.terms.map((entry) => planTerm(walk, place, entry)));
   }
   if (term.kind === "gated") {
-    return allOf([
-      planTerm(walk, place, term.term),
-      planTerm(walk, place, term.condition),
-    ]);
+    return allOf([planTerm(walk, place, term.term), planTerm(walk, place, term.condition)]);
   }
   if (term.kind === "both") {
-    return allOf([
-      planTerm(walk, place, term.left),
-      planTerm(walk, place, term.right),
-    ]);
+    return allOf([planTerm(walk, place, term.left), planTerm(walk, place, term.right)]);
   }
   const banned = planTerm(walk, place, term.banned);
-  return allOf([
-    planTerm(walk, place, term.term),
-    banned === undefined ? undefined : notOf(banned),
-  ]);
+  return allOf([planTerm(walk, place, term.term), banned === undefined ? undefined : notOf(banned)]);
 }
 
 /** A role used directly as a term: only a tag or a sparse direct grant. */
-function planRole(
-  walk: Walk,
-  place: Place,
-  roleName: string,
-): ScopePlan | undefined {
+function planRole(walk: Walk, place: Place, roleName: string): ScopePlan | undefined {
   const binding = place.roles[roleName];
   if (binding === undefined) {
     return fail(walk, place.path, `role ${roleName} is not bound`);
@@ -298,12 +233,7 @@ function planRole(
 }
 
 /** `role->targetPermission`: a scope lookup, or a walk into another record. */
-function planThrough(
-  walk: Walk,
-  place: Place,
-  roleName: string,
-  targetPermission: string,
-): ScopePlan | undefined {
+function planThrough(walk: Walk, place: Place, roleName: string, targetPermission: string): ScopePlan | undefined {
   const binding = place.roles[roleName];
   if (binding === undefined) {
     fail(walk, place.path, `role ${roleName} is not bound`);
@@ -319,11 +249,7 @@ function planThrough(
   }
   const role = place.definition.roles.find((entry) => entry.name === roleName);
   if (role === undefined) {
-    fail(
-      walk,
-      place.path,
-      `${place.definition.wireName} has no role ${roleName}`,
-    );
+    fail(walk, place.path, `${place.definition.wireName} has no role ${roleName}`);
     return undefined;
   }
 
@@ -337,13 +263,7 @@ function planThrough(
         );
         return undefined;
       }
-      return planTarget(
-        walk,
-        place,
-        roleName,
-        subject.wireName,
-        targetPermission,
-      );
+      return planTarget(walk, place, roleName, subject.wireName, targetPermission);
     }),
   );
 }
@@ -356,16 +276,8 @@ function planTarget(
   targetPermission: string,
 ): ScopePlan | undefined {
   if (walk.schema.bindings.has(targetType)) {
-    const plan = planPermission(
-      walk,
-      targetType,
-      targetPermission,
-      [...place.path, `via ${roleName}`],
-      place.visiting,
-    );
-    return plan === undefined
-      ? undefined
-      : { kind: "via", role: roleName, targetType, plan };
+    const plan = planPermission(walk, targetType, targetPermission, [...place.path, `via ${roleName}`], place.visiting);
+    return plan === undefined ? undefined : { kind: "via", role: roleName, targetType, plan };
   }
   if (walk.schema.lookupAllowlist.has(targetType)) {
     return { kind: "lookup", role: roleName, targetType, targetPermission };

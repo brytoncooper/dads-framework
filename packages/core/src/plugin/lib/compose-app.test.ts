@@ -10,11 +10,7 @@ import { definePlugin } from "./define-plugin.js";
 import { defineService } from "./define-service.js";
 import type { Dependency } from "./dependency.js";
 import { orderPlugins } from "./order-plugins.js";
-import {
-  PluginCompositionError,
-  PluginStartError,
-  PluginStopError,
-} from "./plugin-errors.js";
+import { PluginCompositionError, PluginStartError, PluginStopError } from "./plugin-errors.js";
 import { providePlugin } from "./provide-plugin.js";
 
 type Clock = { readonly now: () => number };
@@ -46,9 +42,7 @@ describe("composeApp: ordering and refusals", () => {
   });
 
   it("refuses a plugin whose dependency is missing, naming both", () => {
-    expect(() => orderPlugins([notes, fixedClock])).toThrow(
-      "plugin notes requires plugin accounts",
-    );
+    expect(() => orderPlugins([notes, fixedClock])).toThrow("plugin notes requires plugin accounts");
     expect(() => orderPlugins([notes, accounts])).toThrow(
       "plugin notes requires service clock, which no plugin in the composition implements",
     );
@@ -66,18 +60,14 @@ describe("composeApp: ordering and refusals", () => {
       implements: ticketsService,
       setup: () => ({ provides: "tickets" }),
     });
-    expect(() => composeApp([first, second])).toThrow(
-      "plugins first, second require each other in a cycle",
-    );
+    expect(() => composeApp([first, second])).toThrow("plugins first, second require each other in a cycle");
   });
 
   it("refuses a repeated plugin and a service implemented twice", () => {
     const otherClock = providePlugin("other-clock", clockService, () => ({
       now: () => 1,
     }));
-    expect(() => composeApp([accounts, accounts])).toThrow(
-      "plugin accounts is listed more than once",
-    );
+    expect(() => composeApp([accounts, accounts])).toThrow("plugin accounts is listed more than once");
     expect(() => composeApp([fixedClock, otherClock])).toThrow(
       "service clock is implemented by both fixed-clock and other-clock",
     );
@@ -100,15 +90,11 @@ describe("composeApp: ordering and refusals", () => {
         name,
         contributes: { audit: { untrackedTables: ["log"] } },
       });
-    expect(() => composeApp([audited("one"), audited("two")])).toThrow(
-      PluginCompositionError,
-    );
+    expect(() => composeApp([audited("one"), audited("two")])).toThrow(PluginCompositionError);
   });
 
   it("refuses a plugin name that is not lowercase words and dashes", () => {
-    expect(() => definePlugin({ name: "Notes Plugin" })).toThrow(
-      "must be lowercase words joined by dashes",
-    );
+    expect(() => definePlugin({ name: "Notes Plugin" })).toThrow("must be lowercase words joined by dashes");
   });
 });
 
@@ -131,9 +117,7 @@ describe("composeApp: declared contributions", () => {
     expect(app.flags).toEqual([{ slug: "notes.sharing", owner: "notes team" }]);
     expect(app.access).toEqual([{ entity: { wireName: "audit/log" } }]);
     expect(app.untrackedAuditTables).toEqual(["request_log"]);
-    expect(app.auditScopes).toEqual([
-      { table: "note", columns: { workspace: "workspace_id" } },
-    ]);
+    expect(app.auditScopes).toEqual([{ table: "note", columns: { workspace: "workspace_id" } }]);
     expect(setup).not.toHaveBeenCalled();
   });
 
@@ -144,9 +128,7 @@ describe("composeApp: declared contributions", () => {
       definePlugin({ name: "first", contributes: { access: [first] } }),
       definePlugin({ name: "second", contributes: { access: [second] } }),
     ]);
-    expectTypeOf(app.access).toEqualTypeOf<
-      readonly (typeof first | typeof second)[]
-    >();
+    expectTypeOf(app.access).toEqualTypeOf<readonly (typeof first | typeof second)[]>();
     expect(app.access).toEqual([first, second]);
   });
 
@@ -164,17 +146,9 @@ describe("composeApp: declared contributions", () => {
       owner: "notes-store",
       required: true,
     });
-    expect(
-      source?.files.test(
-        "node_modules/notes/migrations/20261119000000_notes.migration.ts",
-      ),
-    ).toBe(true);
-    expect(
-      source?.files.test("node_modules/notes/migrations/nested/x.migration.ts"),
-    ).toBe(false);
-    expect(() =>
-      composeApp([migrating]).migrationSources("/srv/other"),
-    ).toThrow("is not under the workspace root");
+    expect(source?.files.test("node_modules/notes/migrations/20261119000000_notes.migration.ts")).toBe(true);
+    expect(source?.files.test("node_modules/notes/migrations/nested/x.migration.ts")).toBe(false);
+    expect(() => composeApp([migrating]).migrationSources("/srv/other")).toThrow("is not under the workspace root");
   });
 });
 
@@ -201,10 +175,7 @@ describe("composeApp: start and stop", () => {
           return {};
         },
       });
-    const running = await composeApp([
-      recording("one"),
-      recording("two"),
-    ]).start();
+    const running = await composeApp([recording("one"), recording("two")]).start();
 
     await Promise.all([running.stop(), running.stop()]);
 
@@ -266,40 +237,31 @@ describe("composeApp: start and stop", () => {
   });
 
   it("refuses two plugins' jobs with one name after rolling everything back", async () => {
-    const withJob = (name: string) =>
-      definePlugin({ name, setup: () => ({ jobs: [{ name: "sweep" }] }) });
+    const withJob = (name: string) => definePlugin({ name, setup: () => ({ jobs: [{ name: "sweep" }] }) });
 
-    await expect(
-      composeApp([withJob("one"), withJob("two")]).start(),
-    ).rejects.toThrow("job sweep is contributed by both one and two");
+    await expect(composeApp([withJob("one"), withJob("two")]).start()).rejects.toThrow(
+      "job sweep is contributed by both one and two",
+    );
   });
 });
 
 describe("composeApp: compile-time checks", () => {
   it("keeps each contribution's own type through composition", async () => {
     const running = await composeApp([notes, fixedClock, accounts]).start();
-    expectTypeOf(running.routes).toEqualTypeOf<
-      readonly { method: string; path: string }[]
-    >();
-    expectTypeOf(running.read(accounts).find).toEqualTypeOf<
-      (id: string) => string
-    >();
+    expectTypeOf(running.routes).toEqualTypeOf<readonly { method: string; path: string }[]>();
+    expectTypeOf(running.read(accounts).find).toEqualTypeOf<(id: string) => string>();
     await running.stop();
   });
 
   it("asks for no extra argument when every dependency is offered", () => {
-    expectTypeOf<
-      DependencyCheck<"plugin:accounts" | "service:clock", "plugin:accounts">
-    >().toEqualTypeOf<[]>();
+    expectTypeOf<DependencyCheck<"plugin:accounts" | "service:clock", "plugin:accounts">>().toEqualTypeOf<[]>();
   });
 
   it("demands an argument naming the unmet dependency when one is missing", () => {
-    expectTypeOf<
-      DependencyCheck<"plugin:notes", "plugin:accounts" | "plugin:notes">
-    >().toEqualTypeOf<[unmetDependency: "unmet dependency: plugin:accounts"]>();
-    expectTypeOf(notes.requires).toEqualTypeOf<
-      readonly Dependency<"plugin:accounts" | "service:clock", unknown>[]
+    expectTypeOf<DependencyCheck<"plugin:notes", "plugin:accounts" | "plugin:notes">>().toEqualTypeOf<
+      [unmetDependency: "unmet dependency: plugin:accounts"]
     >();
+    expectTypeOf(notes.requires).toEqualTypeOf<readonly Dependency<"plugin:accounts" | "service:clock", unknown>[]>();
   });
 });
 

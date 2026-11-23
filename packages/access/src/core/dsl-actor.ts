@@ -20,23 +20,15 @@ export function parentRoleNameOf(wireName: string): string {
 }
 
 export function isDslActor(value: unknown): value is DslActor {
-  return (
-    typeof value === "function" && "kind" in value && value.kind === "dsl-actor"
-  );
+  return typeof value === "function" && "kind" in value && value.kind === "dsl-actor";
 }
 
 export function isDslResource(value: unknown): value is AnyDslResource {
-  return (
-    typeof value === "function" &&
-    "kind" in value &&
-    value.kind === "dsl-resource"
-  );
+  return typeof value === "function" && "kind" in value && value.kind === "dsl-resource";
 }
 
 export function isDslLazyResource(value: unknown): value is DslLazyResource {
-  return (
-    typeof value === "function" && !isDslActor(value) && !isDslResource(value)
-  );
+  return typeof value === "function" && !isDslActor(value) && !isDslResource(value);
 }
 
 type DslActorMetadata<WireName extends string> = {

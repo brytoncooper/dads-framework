@@ -96,26 +96,18 @@ function buildParityModel() {
 
 describe("expiring relationships (expires_at)", () => {
   it("defines expires_at column and partial index in v1 and additive v2 migrations", () => {
-    expect(relationshipSchemaMigration.sql).toContain(
-      "expires_at timestamptz NULL",
-    );
+    expect(relationshipSchemaMigration.sql).toContain("expires_at timestamptz NULL");
     expect(relationshipSchemaMigration.sql).toContain(
       "CREATE INDEX IF NOT EXISTS dad_authorization_relationship_expires_at",
     );
-    expect(relationshipSchemaMigration.sql).toContain(
-      "WHERE expires_at IS NOT NULL",
-    );
+    expect(relationshipSchemaMigration.sql).toContain("WHERE expires_at IS NOT NULL");
 
     expect(relationshipExpirationMigration.version).toBe(2);
-    expect(relationshipExpirationMigration.sql).toContain(
-      "ADD COLUMN IF NOT EXISTS expires_at timestamptz NULL",
-    );
+    expect(relationshipExpirationMigration.sql).toContain("ADD COLUMN IF NOT EXISTS expires_at timestamptz NULL");
     expect(relationshipExpirationMigration.sql).toContain(
       "CREATE INDEX IF NOT EXISTS dad_authorization_relationship_expires_at",
     );
-    expect(relationshipExpirationMigration.sql).toContain(
-      "WHERE expires_at IS NOT NULL",
-    );
+    expect(relationshipExpirationMigration.sql).toContain("WHERE expires_at IS NOT NULL");
   });
 
   it("upserts expires_at on writeRelationships and filters expiration on direct reads", async () => {
@@ -130,12 +122,7 @@ describe("expiring relationships (expires_at)", () => {
     const later = new Date("2031-01-01T00:00:00.000Z");
 
     await authorization.writeRelationships([
-      relationshipWrite(
-        { type: "workspace", id: "ws-1" },
-        "member",
-        { type: "user", id: "alice" },
-        { expiresAt },
-      ),
+      relationshipWrite({ type: "workspace", id: "ws-1" }, "member", { type: "user", id: "alice" }, { expiresAt }),
       relationshipWrite(
         { type: "workspace", id: "ws-1" },
         "member",
@@ -151,9 +138,7 @@ describe("expiring relationships (expires_at)", () => {
     const writeQuery = queries[0];
     expect(writeQuery?.text).toContain("expires_at");
     expect(writeQuery?.text).toContain("$9::timestamptz[]");
-    expect(writeQuery?.text).toContain(
-      "DO UPDATE SET expires_at = EXCLUDED.expires_at",
-    );
+    expect(writeQuery?.text).toContain("DO UPDATE SET expires_at = EXCLUDED.expires_at");
     expect(writeQuery?.values?.[8]).toEqual([later, null]);
 
     await expect(
@@ -172,17 +157,13 @@ describe("expiring relationships (expires_at)", () => {
       resourceId: "ws-1",
       relation: "member",
     });
-    expect(queries[1]?.text).toContain(
-      "(expires_at IS NULL OR expires_at > now())",
-    );
+    expect(queries[1]?.text).toContain("(expires_at IS NULL OR expires_at > now())");
 
     await authorization.listDirectSubjects({
       resource: { type: "workspace", id: "ws-1" },
       relation: "member",
     });
-    expect(queries[2]?.text).toContain(
-      "(expires_at IS NULL OR expires_at > now())",
-    );
+    expect(queries[2]?.text).toContain("(expires_at IS NULL OR expires_at > now())");
   });
 
   it("enforces expires_at predicate across linear, point, batch, reverse, shared, and subject SQL", () => {
@@ -207,9 +188,7 @@ describe("expiring relationships (expires_at)", () => {
       roles: { p: l4 },
       can: ({ p }) => ({ view: p.view }),
     });
-    const linearModel = compileAccessPolicy(
-      compileAccess([user, l1, l2, l3, l4, l5]),
-    ).model;
+    const linearModel = compileAccessPolicy(compileAccess([user, l1, l2, l3, l4, l5])).model;
 
     const linear = compileLinearCheck(linearModel, "ns", {
       subject: { type: "user", id: "u1" },
@@ -217,10 +196,7 @@ describe("expiring relationships (expires_at)", () => {
       permission: "view",
     });
     expect(linear).toBeDefined();
-    expect(
-      linear?.text.match(/expires_at IS NULL OR tuple\.expires_at > now\(\)/g)
-        ?.length,
-    ).toBe(2);
+    expect(linear?.text.match(/expires_at IS NULL OR tuple\.expires_at > now\(\)/g)?.length).toBe(2);
 
     const check = compilePostgresCheck(linearModel, "ns", {
       subject: { type: "user", id: "u1" },
@@ -235,12 +211,8 @@ describe("expiring relationships (expires_at)", () => {
       resourceType: "l2",
       permission: "view",
     });
-    expect(lookup.text).toContain(
-      "direct_tuple.expires_at IS NULL OR direct_tuple.expires_at > now()",
-    );
-    expect(lookup.text).toContain(
-      "through_tuple_0.expires_at IS NULL OR through_tuple_0.expires_at > now()",
-    );
+    expect(lookup.text).toContain("direct_tuple.expires_at IS NULL OR direct_tuple.expires_at > now()");
+    expect(lookup.text).toContain("through_tuple_0.expires_at IS NULL OR through_tuple_0.expires_at > now()");
   });
 });
 
@@ -297,12 +269,8 @@ describe("polymorphic arrows and through-all", () => {
       resource: { type: "document", id: "doc-1" },
       permission: "strict_view",
     });
-    expect(check.text).toContain(
-      "EXISTS (SELECT 1 FROM dad_authorization_relationship",
-    );
-    expect(check.text).toContain(
-      "AND NOT EXISTS (SELECT 1 FROM dad_authorization_relationship",
-    );
+    expect(check.text).toContain("EXISTS (SELECT 1 FROM dad_authorization_relationship");
+    expect(check.text).toContain("AND NOT EXISTS (SELECT 1 FROM dad_authorization_relationship");
     expect(check.text).toContain("AND NOT (");
 
     const batch = compilePostgresCheckMany(compiled.model, "ns", [
@@ -511,9 +479,7 @@ describe("transitive lookupSubjects", () => {
 
   it("compiles wildcard-aware intersection (both) and exposes lookupSubjects on transaction scopes", async () => {
     const model = buildParityModel();
-    const { queries, executor } = createRecordingExecutor([
-      { subject_id: "bob", is_wildcard: false },
-    ]);
+    const { queries, executor } = createRecordingExecutor([{ subject_id: "bob", is_wildcard: false }]);
     const root = new PostgresAuthorization({
       model,
       namespace: "ns-tx",

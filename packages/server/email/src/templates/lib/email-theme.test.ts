@@ -18,12 +18,7 @@ describe("emailTheme", () => {
   });
 
   it("sizes and spacing are absolute px, never rem", () => {
-    const scales = [
-      emailTheme.fontSize,
-      emailTheme.lineHeight,
-      emailTheme.space,
-      emailTheme.radius,
-    ];
+    const scales = [emailTheme.fontSize, emailTheme.lineHeight, emailTheme.space, emailTheme.radius];
     for (const scale of scales) {
       for (const [name, value] of Object.entries(scale)) {
         expect(value, name).toMatch(/^\d+px$/);

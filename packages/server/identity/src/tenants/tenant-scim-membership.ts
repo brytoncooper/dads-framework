@@ -38,27 +38,11 @@ export async function bindTenantScimUser(
   const id = scimIdSchema.parse(userId);
   try {
     await tenantTransaction(options, async (tx) => {
-      if (
-        !(await checkTenantPermission(
-          options,
-          tx,
-          actor,
-          tenant,
-          "manage_tenant",
-        ))
-      )
+      if (!(await checkTenantPermission(options, tx, actor, tenant, "manage_tenant")))
         throw new TenantUnavailableError();
       const userKey = liveScimUser(tenant, id);
-      const [user] = await tx
-        .select()
-        .from(tenantScimUser)
-        .where(userKey)
-        .for("update");
-      if (
-        user === undefined ||
-        !user.active ||
-        (user.accountId !== null && user.accountId !== target.id)
-      )
+      const [user] = await tx.select().from(tenantScimUser).where(userKey).for("update");
+      if (user === undefined || !user.active || (user.accountId !== null && user.accountId !== target.id))
         throw new TenantUnavailableError();
       const [member] = await tx
         .select()
@@ -66,12 +50,8 @@ export async function bindTenantScimUser(
         .where(tenantMembershipKey(tenant, target.id))
         .for("update");
       if (member?.role === "owner") throw new TenantUnavailableError();
-      if (member === undefined)
-        await releaseDeletedScimBinding(tx, tenant, target.id);
-      await tx
-        .update(tenantScimUser)
-        .set({ accountId: target.id })
-        .where(userKey);
+      if (member === undefined) await releaseDeletedScimBinding(tx, tenant, target.id);
+      await tx.update(tenantScimUser).set({ accountId: target.id }).where(userKey);
     });
   } catch (error) {
     if (isUniqueViolation(error)) throw new TenantUnavailableError();
@@ -79,30 +59,17 @@ export async function bindTenantScimUser(
   }
 }
 
-async function releaseDeletedScimBinding(
-  tx: TenantTransaction,
-  tenantId: TenantId,
-  accountId: string,
-): Promise<void> {
+async function releaseDeletedScimBinding(tx: TenantTransaction, tenantId: TenantId, accountId: string): Promise<void> {
   const [previous] = await tx
     .update(tenantScimUser)
     .set({ accountId: null })
-    .where(
-      and(
-        scimAccountKey(tenantId, accountId),
-        isNotNull(tenantScimUser.deletedAt),
-      ),
-    )
+    .where(and(scimAccountKey(tenantId, accountId), isNotNull(tenantScimUser.deletedAt)))
     .returning({ id: tenantScimUser.id });
   if (previous === undefined) throw new TenantUnavailableError();
 }
 
 /** Hold the directory row through the invitation's membership write. */
-export async function lockScimAccountBinding(
-  tx: TenantTransaction,
-  tenantId: TenantId,
-  accountId: string,
-) {
+export async function lockScimAccountBinding(tx: TenantTransaction, tenantId: TenantId, accountId: string) {
   const [user] = await tx
     .select({ active: tenantScimUser.active })
     .from(tenantScimUser)
@@ -118,21 +85,12 @@ export async function revokeScimManagedMembership(
   accountId: string | null,
 ): Promise<void> {
   if (accountId === null) return;
-  const [member] = await tx
-    .delete(tenantMembership)
-    .where(tenantMembershipKey(tenantId, accountId))
-    .returning();
+  const [member] = await tx.delete(tenantMembership).where(tenantMembershipKey(tenantId, accountId)).returning();
   if (member === undefined) return;
   if (member.role === "owner") throw new TenantUnavailableError();
-  await options.changes.enqueue(
-    [membershipFact(options, tenantId, accountId, member.role, "DELETE")],
-    tx,
-  );
+  await options.changes.enqueue([membershipFact(options, tenantId, accountId, member.role, "DELETE")], tx);
 }
 
 function scimAccountKey(tenantId: TenantId, accountId: string) {
-  return and(
-    eq(tenantScimUser.tenantId, tenantId),
-    eq(tenantScimUser.accountId, accountId),
-  );
+  return and(eq(tenantScimUser.tenantId, tenantId), eq(tenantScimUser.accountId, accountId));
 }

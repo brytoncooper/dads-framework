@@ -4,15 +4,9 @@ import { describe, expect, it } from "vitest";
 import { conflict, ok } from "@dads-framework/core/errors";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import {
-  FakeClaimAccessChanges,
-  testAccessChangeId,
-} from "../../testing/fake-claim.js";
+import { FakeClaimAccessChanges, testAccessChangeId } from "../../testing/fake-claim.js";
 import { InMemoryOwnerLock } from "../../testing/in-memory-owner-lock.js";
-import type {
-  RelationshipWrite,
-  SpiceDbConsistencyToken,
-} from "@dads-framework/access/runtime";
+import type { RelationshipWrite, SpiceDbConsistencyToken } from "@dads-framework/access/runtime";
 import type { AccessChangeId } from "./access-change.ids.js";
 import { ApplyAccessChanges } from "./apply.js";
 import type { ClaimedOutboxRow, OutboxKeyClaim } from "./claim.js";
@@ -34,10 +28,7 @@ const ORG_ROW = testAccessChangeId("org");
 const WORKSPACE_ROW = testAccessChangeId("workspace-row");
 const OTHER_ROW = testAccessChangeId("other-row");
 
-function fact(
-  id: AccessChangeId,
-  ownerPartitionId = ORGANIZATION,
-): ClaimedOutboxRow {
+function fact(id: AccessChangeId, ownerPartitionId = ORGANIZATION): ClaimedOutboxRow {
   return {
     id,
     idempotencyKey: `grant-${id}`,
@@ -54,19 +45,14 @@ function fact(
 }
 
 class RefusingAuthorization extends FakeAuthorization {
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     void writes;
     return Promise.reject(new Error("graph unavailable"));
   }
 }
 
 class BusyOwnerLock extends OwnerLock {
-  protected runLocked<T>(
-    ownerPartitionId: string,
-    operation: () => Promise<T>,
-  ): Promise<T> {
+  protected runLocked<T>(ownerPartitionId: string, operation: () => Promise<T>): Promise<T> {
     void ownerPartitionId;
     void operation;
     return Promise.reject(conflict("AUTHORIZATION_PARTITION_BUSY", "Busy"));
@@ -81,11 +67,7 @@ class UnclaimedStore extends FakeClaimAccessChanges {
 }
 
 class LostClaimStore extends FakeClaimAccessChanges {
-  override markProjected(
-    ids: readonly AccessChangeId[],
-    at: Date,
-    workerId: string,
-  ) {
+  override markProjected(ids: readonly AccessChangeId[], at: Date, workerId: string) {
     for (const id of ids) this.claimBy(id, "replacement-worker", at);
     return super.markProjected(ids, at, workerId);
   }
@@ -101,8 +83,7 @@ function setup(
   } = {},
 ) {
   const claims = options.claims ?? new FakeClaimAccessChanges();
-  const authorization =
-    options.authorization ?? new FakeAuthorization(PERMISSIONS);
+  const authorization = options.authorization ?? new FakeAuthorization(PERMISSIONS);
   const ownerLock = options.ownerLock ?? new InMemoryOwnerLock();
   const facts: ClaimedOutboxRow[] = [];
   const observedPartitions: string[][] = [];
@@ -145,12 +126,7 @@ function setup(
       }
     },
   };
-  const projector = new ApplyAccessChanges(
-    claims,
-    authorization,
-    () => NOW,
-    ownerLock,
-  );
+  const projector = new ApplyAccessChanges(claims, authorization, () => NOW, ownerLock);
   const clock = { elapsedMs: 0, waits: 0 };
   const completion = createCompleteAccessChanges({
     statusReader,
@@ -185,11 +161,7 @@ function setup(
 describe("CompleteAccessChanges", () => {
   it("projects named scopes and independently verifies their settled state", async () => {
     const test = setup();
-    test.seed(
-      fact(ORG_ROW),
-      fact(WORKSPACE_ROW, WORKSPACE),
-      fact(OTHER_ROW, OTHER_CUSTOMER),
-    );
+    test.seed(fact(ORG_ROW), fact(WORKSPACE_ROW, WORKSPACE), fact(OTHER_ROW, OTHER_CUSTOMER));
     expect(
       await test.completion.complete({
         ownerPartitionIds: [ORGANIZATION, WORKSPACE, ORGANIZATION],
@@ -216,9 +188,7 @@ describe("CompleteAccessChanges", () => {
       authorization: new RefusingAuthorization(PERMISSIONS),
     });
     test.seed(fact(ORG_ROW));
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({
       ok: false,
       error: {
         code: "AUTHORIZATION_ACCESS_CHANGES_INCOMPLETE",
@@ -231,9 +201,7 @@ describe("CompleteAccessChanges", () => {
   it("refuses success when zero facts are claimed but pending facts remain", async () => {
     const test = setup({ claims: new UnclaimedStore() });
     test.seed(fact(ORG_ROW));
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({ ok: false });
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({ ok: false });
     expect(test.claims.statusOf(ORG_ROW)).toBe("PENDING");
   });
 
@@ -259,9 +227,7 @@ describe("CompleteAccessChanges", () => {
     });
     test.seed(fact(ORG_ROW));
     test.claims.claimBy(ORG_ROW, "other-worker", NOW);
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toEqual(ok(undefined));
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toEqual(ok(undefined));
     expect(test.clock.waits).toBe(1);
   });
 
@@ -269,9 +235,7 @@ describe("CompleteAccessChanges", () => {
     const test = setup();
     test.seed(fact(ORG_ROW));
     test.claims.claimBy(ORG_ROW, "other-worker", NOW);
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({
       ok: false,
       error: { code: "AUTHORIZATION_ACCESS_CHANGES_INCOMPLETE" },
     });
@@ -284,9 +248,7 @@ describe("CompleteAccessChanges", () => {
       authorization: new RefusingAuthorization(PERMISSIONS),
     });
     test.seed(fact(ORG_ROW));
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({ ok: false });
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({ ok: false });
     expect(test.clock.waits).toBe(0);
   });
 
@@ -294,24 +256,15 @@ describe("CompleteAccessChanges", () => {
     const test = setup();
     test.seed(fact(ORG_ROW));
     test.claims.claimBy(ORG_ROW, "old-worker", NOW);
-    await test.claims.markFailed(
-      ORG_ROW,
-      { status: "FAILED", attempts: 5 },
-      "unavailable",
-      "old-worker",
-    );
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({ ok: false });
+    await test.claims.markFailed(ORG_ROW, { status: "FAILED", attempts: 5 }, "unavailable", "old-worker");
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({ ok: false });
     expect(test.clock.waits).toBe(0);
   });
 
   it("refuses completion when a claim is lost between graph application and settlement", async () => {
     const test = setup({ claims: new LostClaimStore() });
     test.seed(fact(ORG_ROW));
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({ ok: false });
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({ ok: false });
     expect(test.claims.statusOf(ORG_ROW)).toBe("PENDING");
     expect(test.claims.lockedByOf(ORG_ROW)).toBe("replacement-worker");
   });
@@ -320,15 +273,8 @@ describe("CompleteAccessChanges", () => {
     const test = setup();
     test.seed(fact(ORG_ROW));
     test.claims.claimBy(ORG_ROW, "old-worker", NOW);
-    await test.claims.markFailed(
-      ORG_ROW,
-      { status: "FAILED", attempts: 5 },
-      "unavailable",
-      "old-worker",
-    );
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({ ok: false });
+    await test.claims.markFailed(ORG_ROW, { status: "FAILED", attempts: 5 }, "unavailable", "old-worker");
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({ ok: false });
     expect(test.claims.statusOf(ORG_ROW)).toBe("FAILED");
     expect(test.retries).toEqual([]);
     expect(
@@ -344,9 +290,7 @@ describe("CompleteAccessChanges", () => {
   it("turns owner contention into an explicit incomplete result", async () => {
     const test = setup({ ownerLock: new BusyOwnerLock() });
     test.seed(fact(ORG_ROW));
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({
       ok: false,
       error: {
         code: "AUTHORIZATION_ACCESS_CHANGES_INCOMPLETE",
@@ -362,12 +306,8 @@ describe("CompleteAccessChanges", () => {
       idempotencyKeys: [`grant-${ORG_ROW}`],
       workerId: "first",
     });
-    expect(
-      await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toEqual(ok(undefined));
-    expect(await test.completion.complete({ ownerPartitionIds: [] })).toEqual(
-      ok(undefined),
-    );
+    expect(await test.completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toEqual(ok(undefined));
+    expect(await test.completion.complete({ ownerPartitionIds: [] })).toEqual(ok(undefined));
     expect(test.claims.statusOf(OTHER_ROW)).toBe("PENDING");
   });
 
@@ -378,12 +318,7 @@ describe("CompleteAccessChanges", () => {
     test.seed(fact(ORG_ROW), fact(heldBacklog), fact(exhaustedBacklog));
     test.claims.claimBy(heldBacklog, "other-worker", NOW);
     test.claims.claimBy(exhaustedBacklog, "old-worker", NOW);
-    await test.claims.markFailed(
-      exhaustedBacklog,
-      { status: "FAILED", attempts: 5 },
-      "unavailable",
-      "old-worker",
-    );
+    await test.claims.markFailed(exhaustedBacklog, { status: "FAILED", attempts: 5 }, "unavailable", "old-worker");
 
     expect(
       await test.completion.complete({
@@ -425,12 +360,7 @@ describe("CompleteAccessChanges", () => {
     test.seed(fact(ORG_ROW), fact(otherExhausted));
     for (const id of [ORG_ROW, otherExhausted]) {
       test.claims.claimBy(id, "old-worker", NOW);
-      await test.claims.markFailed(
-        id,
-        { status: "FAILED", attempts: 5 },
-        "unavailable",
-        "old-worker",
-      );
+      await test.claims.markFailed(id, { status: "FAILED", attempts: 5 }, "unavailable", "old-worker");
     }
 
     expect(
@@ -470,8 +400,6 @@ describe("CompleteAccessChanges", () => {
         },
       },
     });
-    expect(
-      await completion.complete({ ownerPartitionIds: [ORGANIZATION] }),
-    ).toMatchObject({ ok: false });
+    expect(await completion.complete({ ownerPartitionIds: [ORGANIZATION] })).toMatchObject({ ok: false });
   });
 });

@@ -1,8 +1,4 @@
-import {
-  defineCopy,
-  resolveLocalizedText,
-  type LocalizedText,
-} from "@dads-framework/ui/copy";
+import { defineCopy, resolveLocalizedText, type LocalizedText } from "@dads-framework/ui/copy";
 
 const accountMailTitles: Readonly<Record<string, LocalizedText>> = defineCopy({
   "verify-email": { en: "Verify your email address" },
@@ -13,8 +9,7 @@ const accountMailTitles: Readonly<Record<string, LocalizedText>> = defineCopy({
 
 const fallbackTitle = { en: "Continue to Dads" };
 
-export const accountMailDescription =
-  "Delivers account and tenant links for the Dads starter.";
+export const accountMailDescription = "Delivers account and tenant links for the Dads starter.";
 
 export function accountMailTitle(kind: string): string {
   return resolveLocalizedText(accountMailTitles[kind] ?? fallbackTitle, "en");

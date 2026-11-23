@@ -31,18 +31,12 @@ export class AuthorizationChangeError extends Error {
   }
 }
 
-export const AUTHORIZATION_CHANGE_ID =
-  /^\d{14}_[a-f0-9]{8}_[a-z0-9]+(?:_[a-z0-9]+)*$/;
+export const AUTHORIZATION_CHANGE_ID = /^\d{14}_[a-f0-9]{8}_[a-z0-9]+(?:_[a-z0-9]+)*$/;
 
-const JOURNAL_TYPES = new Set([
-  "authz/migration_journal",
-  "authz/migration_version",
-]);
+const JOURNAL_TYPES = new Set(["authz/migration_journal", "authz/migration_version"]);
 
 /** Canonical definitions absorb SpiceDB's formatting and equivalent permission grouping. */
-export function authorizationSchemaDefinitions(
-  schema: string,
-): ReadonlyMap<string, string> {
+export function authorizationSchemaDefinitions(schema: string): ReadonlyMap<string, string> {
   const tokens = schemaTokens(schema);
   const definitions = new Map<string, string>();
   let position = 0;
@@ -73,10 +67,7 @@ export function authorizationSchemaDefinitions(
         `authorization schema has an incomplete or duplicate definition ${name}`,
       );
     }
-    definitions.set(
-      name,
-      canonicalDefinitionTokens(tokens.slice(start, position)).join(" "),
-    );
+    definitions.set(name, canonicalDefinitionTokens(tokens.slice(start, position)).join(" "));
   }
   return definitions;
 }
@@ -91,15 +82,10 @@ export function canonicalAuthorizationSchema(schema: string): string {
 }
 
 export function authorizationSchemaFingerprint(schema: string): string {
-  return createHash("sha256")
-    .update(canonicalAuthorizationSchema(schema))
-    .digest("hex");
+  return createHash("sha256").update(canonicalAuthorizationSchema(schema)).digest("hex");
 }
 
-export function applyAuthorizationDefinitionPatches(
-  schema: string,
-  change: AuthorizationSchemaChange,
-): string {
+export function applyAuthorizationDefinitionPatches(schema: string, change: AuthorizationSchemaChange): string {
   const definitions = new Map(authorizationSchemaDefinitions(schema));
   const touched = new Set<string>();
   for (const patch of change.definitions) {
@@ -109,10 +95,7 @@ export function applyAuthorizationDefinitionPatches(
         `authorization change ${change.id} cannot alter journal definition ${patch.name}`,
       );
     }
-    if (
-      touched.has(patch.name) ||
-      (patch.before === null && patch.after === null)
-    ) {
+    if (touched.has(patch.name) || (patch.before === null && patch.after === null)) {
       throw new AuthorizationChangeError(
         "AUTHZ_CHANGE_INVALID",
         `authorization change ${change.id} has an invalid or repeated patch for ${patch.name}`,
@@ -161,8 +144,7 @@ export function orderAuthorizationChanges<T extends AuthorizationSchemaChange>(
     );
     if (
       !Number.isFinite(date.getTime()) ||
-      date.toISOString().replace(/[-:T]/g, "").slice(0, 14) !==
-        change.id.slice(0, 14)
+      date.toISOString().replace(/[-:T]/g, "").slice(0, 14) !== change.id.slice(0, 14)
     )
       throw new AuthorizationChangeError(
         "AUTHZ_CHANGE_INVALID",
@@ -194,17 +176,10 @@ export function orderAuthorizationChanges<T extends AuthorizationSchemaChange>(
   const ordered: T[] = [];
   while (ordered.length < changes.length) {
     const next = changes
-      .filter(
-        (change) =>
-          !ready.has(change.id) &&
-          change.dependsOn.every((dependency) => ready.has(dependency)),
-      )
+      .filter((change) => !ready.has(change.id) && change.dependsOn.every((dependency) => ready.has(dependency)))
       .sort((left, right) => left.id.localeCompare(right.id))[0];
     if (next === undefined) {
-      throw new AuthorizationChangeError(
-        "AUTHZ_CHANGE_DEPENDENCY",
-        "authorization changes contain a dependency cycle",
-      );
+      throw new AuthorizationChangeError("AUTHZ_CHANGE_DEPENDENCY", "authorization changes contain a dependency cycle");
     }
     ordered.push(next);
     ready.add(next.id);
@@ -212,10 +187,7 @@ export function orderAuthorizationChanges<T extends AuthorizationSchemaChange>(
   return ordered;
 }
 
-export function composeAuthorizationChanges(
-  baseline: string,
-  ordered: readonly AuthorizationSchemaChange[],
-): string {
+export function composeAuthorizationChanges(baseline: string, ordered: readonly AuthorizationSchemaChange[]): string {
   return ordered.reduce(applyAuthorizationDefinitionPatches, baseline);
 }
 
@@ -237,19 +209,14 @@ export function diffAuthorizationDefinitions(
 ): readonly AuthorizationDefinitionPatch[] {
   const before = authorizationSchemaDefinitions(beforeSchema);
   const after = authorizationSchemaDefinitions(afterSchema);
-  return [...new Set([...before.keys(), ...after.keys()])]
-    .sort()
-    .flatMap((name) => {
-      const previous = before.get(name) ?? null;
-      const next = after.get(name) ?? null;
-      return previous === next ? [] : [{ name, before: previous, after: next }];
-    });
+  return [...new Set([...before.keys(), ...after.keys()])].sort().flatMap((name) => {
+    const previous = before.get(name) ?? null;
+    const next = after.get(name) ?? null;
+    return previous === next ? [] : [{ name, before: previous, after: next }];
+  });
 }
 
-function canonicalPatchDefinition(
-  name: string,
-  schema: string | null,
-): string | null {
+function canonicalPatchDefinition(name: string, schema: string | null): string | null {
   if (schema === null) return null;
   const definitions = authorizationSchemaDefinitions(schema);
   const definition = definitions.get(name);
@@ -271,9 +238,7 @@ type PermissionExpression =
       readonly operands: readonly PermissionExpression[];
     };
 
-function canonicalDefinitionTokens(
-  tokens: readonly string[],
-): readonly string[] {
+function canonicalDefinitionTokens(tokens: readonly string[]): readonly string[] {
   const normalized: string[] = [];
   let position = 0;
   while (position < tokens.length) {
@@ -284,19 +249,12 @@ function canonicalDefinitionTokens(
       continue;
     }
     const name = tokens[position + 1];
-    if (name === undefined || tokens[position + 2] !== "=")
-      throw expressionFailure();
+    if (name === undefined || tokens[position + 2] !== "=") throw expressionFailure();
     normalized.push("permission", name, "=");
     const start = position + 3;
     position = start;
-    while (
-      position < tokens.length &&
-      !["relation", "permission", "}"].includes(tokens[position] ?? "")
-    )
-      position += 1;
-    normalized.push(
-      canonicalPermissionExpression(tokens.slice(start, position)),
-    );
+    while (position < tokens.length && !["relation", "permission", "}"].includes(tokens[position] ?? "")) position += 1;
+    normalized.push(canonicalPermissionExpression(tokens.slice(start, position)));
   }
   return normalized;
 }
@@ -308,8 +266,7 @@ function canonicalPermissionExpression(tokens: readonly string[]): string {
 
   function identifier(): string {
     const token = tokens[position];
-    if (token === undefined || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token))
-      throw expressionFailure();
+    if (token === undefined || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token)) throw expressionFailure();
     position += 1;
     return token;
   }
@@ -354,10 +311,7 @@ function canonicalPermissionExpression(tokens: readonly string[]): string {
       left = {
         kind: "operation",
         operator,
-        operands: [
-          ...associativeOperands(left, operator),
-          ...associativeOperands(right, operator),
-        ],
+        operands: [...associativeOperands(left, operator), ...associativeOperands(right, operator)],
       };
     }
     return left;
@@ -372,9 +326,7 @@ function associativeOperands(
   expression: PermissionExpression,
   operator: PermissionOperator,
 ): readonly PermissionExpression[] {
-  return operator !== "-" &&
-    expression.kind === "operation" &&
-    expression.operator === operator
+  return operator !== "-" && expression.kind === "operation" && expression.operator === operator
     ? expression.operands
     : [expression];
 }
@@ -410,10 +362,7 @@ function schemaTokens(schema: string): readonly string[] {
     if (remaining.startsWith("/*")) {
       const end = remaining.indexOf("*/", 2);
       if (end === -1)
-        throw new AuthorizationChangeError(
-          "AUTHZ_CHANGE_INVALID",
-          "authorization schema has an unterminated comment",
-        );
+        throw new AuthorizationChangeError("AUTHZ_CHANGE_INVALID", "authorization schema has an unterminated comment");
       position += end + 2;
       continue;
     }
@@ -424,10 +373,7 @@ function schemaTokens(schema: string): readonly string[] {
       );
     const token = /^[a-zA-Z_][a-zA-Z0-9_/]*|^->|^./s.exec(remaining)?.[0];
     if (token === undefined)
-      throw new AuthorizationChangeError(
-        "AUTHZ_CHANGE_INVALID",
-        "authorization schema could not be tokenized",
-      );
+      throw new AuthorizationChangeError("AUTHZ_CHANGE_INVALID", "authorization schema could not be tokenized");
     tokens.push(token);
     position += token.length;
   }

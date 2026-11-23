@@ -1,14 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  CONTAINER_PER_FILE,
-  SHARED_TEST_POSTGRES_URL,
-} from "../start-test-postgres.js";
-import {
-  CONTAINER_TEST_TIER,
-  VITEST_TIER,
-} from "./skip-unless-container-tests.js";
+import { CONTAINER_PER_FILE, SHARED_TEST_POSTGRES_URL } from "../start-test-postgres.js";
+import { CONTAINER_TEST_TIER, VITEST_TIER } from "./skip-unless-container-tests.js";
 import { currentWorktreeIdentity } from "./worktree-identity.js";
 
 export type SharedTestPostgresLease = {
@@ -41,9 +35,7 @@ export function sharedTestPostgresLeasePath(
   return join(dir, `command-test-postgres-${identity}.lease`);
 }
 
-export function parseSharedTestPostgresLease(
-  text: string,
-): SharedTestPostgresLease | null {
+export function parseSharedTestPostgresLease(text: string): SharedTestPostgresLease | null {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -61,9 +53,7 @@ export function parseSharedTestPostgresLease(
   return { runId, starterPid, url, startedAt };
 }
 
-function hasLeaseFields(
-  raw: unknown,
-): raw is Record<keyof SharedTestPostgresLease, unknown> {
+function hasLeaseFields(raw: unknown): raw is Record<keyof SharedTestPostgresLease, unknown> {
   return (
     typeof raw === "object" &&
     raw !== null &&
@@ -74,34 +64,21 @@ function hasLeaseFields(
   );
 }
 
-export function readSharedTestPostgresLease(
-  path: string,
-): SharedTestPostgresLease | null {
+export function readSharedTestPostgresLease(path: string): SharedTestPostgresLease | null {
   if (!existsSync(path)) return null;
   return parseSharedTestPostgresLease(readFileSync(path, "utf8"));
 }
 
-export function writeSharedTestPostgresLease(
-  path: string,
-  lease: SharedTestPostgresLease,
-): void {
+export function writeSharedTestPostgresLease(path: string, lease: SharedTestPostgresLease): void {
   writeFileSync(path, JSON.stringify(lease));
 }
 
-export function claimSharedTestPostgresLease(
-  path: string,
-  lease: SharedTestPostgresLease,
-): boolean {
+export function claimSharedTestPostgresLease(path: string, lease: SharedTestPostgresLease): boolean {
   try {
     writeFileSync(path, JSON.stringify(lease), { flag: "wx" });
     return true;
   } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "EEXIST"
-    ) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST") {
       return false;
     }
     throw error;
@@ -152,9 +129,7 @@ export async function waitForSharedTestPostgresUrl(input: {
       return lease.url;
     }
     if (lease === null || !input.isAlive(lease.starterPid)) {
-      throw new Error(
-        "shared test postgres starter died before publishing a URL",
-      );
+      throw new Error("shared test postgres starter died before publishing a URL");
     }
     await input.sleep(50);
   }

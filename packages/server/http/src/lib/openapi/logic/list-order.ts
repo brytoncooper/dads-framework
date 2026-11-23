@@ -67,9 +67,7 @@ function pinnedValues(member: unknown): ReadonlyMap<string, string> {
   return pinned;
 }
 
-function singleValue(
-  schema: Record<string, unknown> | undefined,
-): string | undefined {
+function singleValue(schema: Record<string, unknown> | undefined): string | undefined {
   const constant = schema?.["const"];
   if (typeof constant === "string") return constant;
   const values: unknown = schema?.["enum"];
@@ -82,17 +80,12 @@ function singleValue(
  * The first property (by name) that every member pins, each to a different
  * value; none when the list has fewer than two members or no such property.
  */
-function tagProperty(
-  pinned: readonly ReadonlyMap<string, string>[],
-): string | undefined {
+function tagProperty(pinned: readonly ReadonlyMap<string, string>[]): string | undefined {
   const [first] = pinned;
   if (first === undefined || pinned.length < 2) return undefined;
   return [...first.keys()].sort().find((name) => {
     const values = pinned.map((tags) => tags.get(name));
-    return (
-      values.every((value) => value !== undefined) &&
-      new Set(values).size === values.length
-    );
+    return values.every((value) => value !== undefined) && new Set(values).size === values.length;
   });
 }
 

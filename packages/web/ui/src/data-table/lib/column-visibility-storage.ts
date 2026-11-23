@@ -39,10 +39,7 @@ export function writeStoredColumnVisibility(
 ): void {
   if (storage === null || tableId === undefined) return;
   try {
-    storage.setItem(
-      columnVisibilityStorageKey(tableId),
-      JSON.stringify(visibility),
-    );
+    storage.setItem(columnVisibilityStorageKey(tableId), JSON.stringify(visibility));
   } catch {
     return;
   }
@@ -62,8 +59,6 @@ function parseColumnVisibility(value: unknown): VisibilityState {
     return {};
   }
   return Object.fromEntries(
-    Object.entries(value).filter(
-      (entry): entry is [string, boolean] => typeof entry[1] === "boolean",
-    ),
+    Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
   );
 }

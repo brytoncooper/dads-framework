@@ -148,9 +148,7 @@ describe("LogDiagnosticsReporter", () => {
   it("flushes and closes without work, because nothing is buffered", async () => {
     // Held as the seam, which is how composition holds it — the driver's own
     // `flush` takes no argument because it has nothing to wait for.
-    const reporter: DiagnosticsReporter = new LogDiagnosticsReporter(
-      recordingLog(),
-    );
+    const reporter: DiagnosticsReporter = new LogDiagnosticsReporter(recordingLog());
 
     await expect(reporter.flush(1_000)).resolves.toBe(true);
     await expect(reporter.close()).resolves.toBeUndefined();

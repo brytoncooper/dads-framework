@@ -7,12 +7,9 @@ import { defaultMigrationWorkspace } from "../../index.js";
 import { discoverDomainMigrations } from "./discover-domain-migrations.js";
 import { listShippedDatabaseMigrations } from "./shipped-migration-files.js";
 
-const organizationsMigrationFolder =
-  "packages/server/organizations/src/lib/database/migrations";
-const invoicesMigrationFolder =
-  "packages/server/invoices/src/lib/database/migrations";
-const authorizationMigrationFolder =
-  "packages/server/authorization/src/lib/database/migrations";
+const organizationsMigrationFolder = "packages/server/organizations/src/lib/database/migrations";
+const invoicesMigrationFolder = "packages/server/invoices/src/lib/database/migrations";
+const authorizationMigrationFolder = "packages/server/authorization/src/lib/database/migrations";
 
 /** The roots whose absence is a fault rather than a fact. */
 const REQUIRED_ROOTS = ["packages/server"];
@@ -55,8 +52,7 @@ describe("discoverDomainMigrations", () => {
     // The runtime image COPYs the two library roots and the authorization
     // journal, and nothing else from the repository.
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
     });
 
     const discovered = await discoverDomainMigrations({
@@ -67,37 +63,26 @@ describe("discoverDomainMigrations", () => {
 
   it("sorts distributed owners by timestamp id, not folder order", async () => {
     workspaceRoot = await createWorkspace({
-      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]:
-        migrationModule(),
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
-      [join(authorizationMigrationFolder, "20260101120002_gamma.migration.ts")]:
-        migrationModule({ irreversible: true }),
+      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]: migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
+      [join(authorizationMigrationFolder, "20260101120002_gamma.migration.ts")]: migrationModule({
+        irreversible: true,
+      }),
     });
 
     const discovered = await discoverDomainMigrations({
       workspace: defaultMigrationWorkspace(workspaceRoot),
     });
 
-    expect(discovered.map((row) => row.id)).toEqual([
-      "20260101120000",
-      "20260101120001",
-      "20260101120002",
-    ]);
-    expect(discovered.map((row) => row.owner)).toEqual([
-      "organizations",
-      "invoices",
-      "authorization",
-    ]);
+    expect(discovered.map((row) => row.id)).toEqual(["20260101120000", "20260101120001", "20260101120002"]);
+    expect(discovered.map((row) => row.owner)).toEqual(["organizations", "invoices", "authorization"]);
     expect(discovered[2]?.down).toBe(false);
   });
 
   it("ignores files outside the owner migration folders", async () => {
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
-      "packages/server/organizations/src/lib/database/20260101120001_skip.migration.ts":
-        migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
+      "packages/server/organizations/src/lib/database/20260101120001_skip.migration.ts": migrationModule(),
       "apps/example/20260101120002_skip.migration.ts": migrationModule(),
     });
 
@@ -109,8 +94,7 @@ describe("discoverDomainMigrations", () => {
 
   it("refuses a migration that omits down", async () => {
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        `export function up() {}
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: `export function up() {}
 `,
     });
 
@@ -123,10 +107,8 @@ describe("discoverDomainMigrations", () => {
 
   it("refuses duplicate ids", async () => {
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
-      [join(invoicesMigrationFolder, "20260101120000_beta.migration.ts")]:
-        migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
+      [join(invoicesMigrationFolder, "20260101120000_beta.migration.ts")]: migrationModule(),
     });
 
     await expect(
@@ -176,8 +158,7 @@ describe("discoverDomainMigrations", () => {
 
   it("refuses an applied id that is missing from the build", async () => {
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
     });
 
     await expect(
@@ -190,12 +171,9 @@ describe("discoverDomainMigrations", () => {
 
   it("refuses a gap between applied ids and the discovered order", async () => {
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
-      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]:
-        migrationModule(),
-      [join(authorizationMigrationFolder, "20260101120002_gamma.migration.ts")]:
-        migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
+      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]: migrationModule(),
+      [join(authorizationMigrationFolder, "20260101120002_gamma.migration.ts")]: migrationModule(),
     });
 
     await expect(
@@ -208,10 +186,8 @@ describe("discoverDomainMigrations", () => {
 
   it("accepts applied ids that are a prefix of the discovered order", async () => {
     workspaceRoot = await createWorkspace({
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
-      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]:
-        migrationModule(),
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
+      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]: migrationModule(),
     });
 
     const discovered = await discoverDomainMigrations({
@@ -219,10 +195,7 @@ describe("discoverDomainMigrations", () => {
       appliedIds: ["20260101120000"],
     });
 
-    expect(discovered.map((row) => row.id)).toEqual([
-      "20260101120000",
-      "20260101120001",
-    ]);
+    expect(discovered.map((row) => row.id)).toEqual(["20260101120000", "20260101120001"]);
   });
 
   it("keeps a deployed independent graph migration before an earlier pending sibling", async () => {
@@ -238,10 +211,7 @@ describe("discoverDomainMigrations", () => {
       appliedIds: ["20260101120001"],
     });
 
-    expect(discovered.map((row) => row.id)).toEqual([
-      "20260101120001",
-      "20260101120000",
-    ]);
+    expect(discovered.map((row) => row.id)).toEqual(["20260101120001", "20260101120000"]);
   });
 
   it("orders declared dependencies before a graph migration regardless of timestamps", async () => {
@@ -256,10 +226,7 @@ describe("discoverDomainMigrations", () => {
       workspace: defaultMigrationWorkspace(workspaceRoot),
     });
 
-    expect(discovered.map((row) => row.id)).toEqual([
-      "20260101120001",
-      "20260101120000",
-    ]);
+    expect(discovered.map((row) => row.id)).toEqual(["20260101120001", "20260101120000"]);
   });
 
   it("allows graph migrations minted in the same second when full identities differ", async () => {
@@ -312,17 +279,14 @@ describe("listShippedDatabaseMigrations", () => {
   it("describes every shipped file in run order without loading its module", async () => {
     const unloadable = `throw new Error("a lister must never load a migration");\n`;
     workspaceRoot = await createWorkspace({
-      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]:
-        unloadable,
-      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]:
-        migrationModule(),
-      [join(authorizationMigrationFolder, "20260101120002_gamma.migration.ts")]:
-        migrationModule({ irreversible: true }),
+      [join(invoicesMigrationFolder, "20260101120001_beta.migration.ts")]: unloadable,
+      [join(organizationsMigrationFolder, "20260101120000_alpha.migration.ts")]: migrationModule(),
+      [join(authorizationMigrationFolder, "20260101120002_gamma.migration.ts")]: migrationModule({
+        irreversible: true,
+      }),
     });
 
-    const shipped = await listShippedDatabaseMigrations(
-      defaultMigrationWorkspace(workspaceRoot),
-    );
+    const shipped = await listShippedDatabaseMigrations(defaultMigrationWorkspace(workspaceRoot));
 
     expect(shipped).toEqual([
       {
@@ -352,9 +316,9 @@ describe("listShippedDatabaseMigrations", () => {
       recursive: true,
     });
 
-    await expect(
-      listShippedDatabaseMigrations(defaultMigrationWorkspace(workspaceRoot)),
-    ).rejects.toThrow(/packages\/server does not exist/);
+    await expect(listShippedDatabaseMigrations(defaultMigrationWorkspace(workspaceRoot))).rejects.toThrow(
+      /packages\/server does not exist/,
+    );
   });
 });
 
@@ -367,11 +331,7 @@ async function createWorkspace(files: Record<string, string>): Promise<string> {
   // The two library roots exist in every real checkout and in the runtime
   // image, so discovery refuses a tree without them; a fixture that omitted
   // one would be testing the refusal rather than the discovery.
-  await Promise.all(
-    REQUIRED_ROOTS.map((root) =>
-      mkdir(join(workspaceRoot, root), { recursive: true }),
-    ),
-  );
+  await Promise.all(REQUIRED_ROOTS.map((root) => mkdir(join(workspaceRoot, root), { recursive: true })));
   await Promise.all(
     Object.entries(files).map(async ([relativePath, contents]) => {
       const filePath = join(workspaceRoot, relativePath);
@@ -383,10 +343,7 @@ async function createWorkspace(files: Record<string, string>): Promise<string> {
 }
 
 function migrationModule(options?: { irreversible?: boolean }): string {
-  const down =
-    options?.irreversible === true
-      ? "export const down = false;"
-      : "export function down() {}";
+  const down = options?.irreversible === true ? "export const down = false;" : "export function down() {}";
   return `export function up() {}
 ${down}
 `;

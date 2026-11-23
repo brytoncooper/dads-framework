@@ -1,9 +1,6 @@
 import { isRecord } from "../parse-guards.js";
 import { type NativeProject } from "./nx-native-graph.js";
-import {
-  expandInput,
-  type InputExpansion,
-} from "./nx-native-input-expansion.js";
+import { expandInput, type InputExpansion } from "./nx-native-input-expansion.js";
 
 const globalPolicyPaths = [
   "nx.json",
@@ -46,8 +43,7 @@ export function inputScope(
     projects,
     root: isRecord(configuration) ? configuration : {},
   };
-  if (!isRecord(configuration))
-    context.reasons.add("unresolved Nx configuration");
+  if (!isRecord(configuration)) context.reasons.add("unresolved Nx configuration");
   const visited = new Set<string>();
   visitProject(project, visited, context);
   visitTarget({ project, name, target }, visited, context);
@@ -70,11 +66,7 @@ export function inputScope(
  * of the projects it names are not in the declaring project's import graph, so "the dependency
  * roots already cover the prerequisite" is not true. Following it costs one project root each.
  */
-function visitTarget(
-  start: TargetIdentity,
-  visited: Set<string>,
-  context: InputExpansion,
-): void {
+function visitTarget(start: TargetIdentity, visited: Set<string>, context: InputExpansion): void {
   const queue: TargetIdentity[] = [start];
   const seen = new Set<string>();
   for (let index = 0; index < queue.length; index += 1) {
@@ -95,17 +87,13 @@ function visitTarget(
  * `targetDefaults`. Merging both would be wrong rather than conservative — a target's `inputs`
  * replace the defaults, so inheriting an input Nx would not apply can only make the scope refuse.
  */
-function expandDeclaredInputs(
-  identity: TargetIdentity,
-  context: InputExpansion,
-): void {
+function expandDeclaredInputs(identity: TargetIdentity, context: InputExpansion): void {
   const declared = identity.target["inputs"];
   if (declared !== undefined) {
     expandInputList(declared, identity.project, context);
     return;
   }
-  for (const inputs of targetDefaultInputs(identity, context))
-    expandInputList(inputs, identity.project, context);
+  for (const inputs of targetDefaultInputs(identity, context)) expandInputList(inputs, identity.project, context);
 }
 
 /**
@@ -113,10 +101,7 @@ function expandDeclaredInputs(
  * does not. Every configuration's inputs join the same set, which scopes the task as though any
  * of them could be the one that runs.
  */
-function expandConfigurationInputs(
-  identity: TargetIdentity,
-  context: InputExpansion,
-): void {
+function expandConfigurationInputs(identity: TargetIdentity, context: InputExpansion): void {
   const configurations = identity.target["configurations"];
   if (configurations === undefined) return;
   if (!isRecord(configurations)) {
@@ -124,17 +109,13 @@ function expandConfigurationInputs(
     return;
   }
   for (const value of Object.values(configurations)) {
-    if (isRecord(value))
-      expandInputList(value["inputs"], identity.project, context);
+    if (isRecord(value)) expandInputList(value["inputs"], identity.project, context);
     else context.reasons.add("malformed target configurations");
   }
 }
 
 /** Nx keys `targetDefaults` by target name or by executor; a wildcard key is read as matching. */
-function targetDefaultInputs(
-  identity: TargetIdentity,
-  context: InputExpansion,
-): readonly unknown[] {
+function targetDefaultInputs(identity: TargetIdentity, context: InputExpansion): readonly unknown[] {
   const defaults = context.root["targetDefaults"];
   if (defaults === undefined) return [];
   if (!isRecord(defaults)) {
@@ -143,21 +124,13 @@ function targetDefaultInputs(
   }
   const matched: unknown[] = [];
   for (const [key, value] of Object.entries(defaults)) {
-    const applies =
-      key === identity.name ||
-      key === identity.target["executor"] ||
-      key.includes("*");
-    if (applies && isRecord(value) && value["inputs"] !== undefined)
-      matched.push(value["inputs"]);
+    const applies = key === identity.name || key === identity.target["executor"] || key.includes("*");
+    if (applies && isRecord(value) && value["inputs"] !== undefined) matched.push(value["inputs"]);
   }
   return matched;
 }
 
-function expandInputList(
-  value: unknown,
-  owner: NativeProject,
-  context: InputExpansion,
-): void {
+function expandInputList(value: unknown, owner: NativeProject, context: InputExpansion): void {
   if (value === undefined) return;
   if (!Array.isArray(value)) {
     context.reasons.add("malformed target inputs");
@@ -166,19 +139,14 @@ function expandInputList(
   for (const input of value) expandInput(input, owner, new Set(), context);
 }
 
-function collectPrerequisites(
-  identity: TargetIdentity,
-  queue: TargetIdentity[],
-  context: InputExpansion,
-): void {
+function collectPrerequisites(identity: TargetIdentity, queue: TargetIdentity[], context: InputExpansion): void {
   const dependsOn = identity.target["dependsOn"];
   if (dependsOn === undefined) return;
   if (!Array.isArray(dependsOn)) {
     context.reasons.add("malformed task prerequisites");
     return;
   }
-  for (const entry of dependsOn)
-    addPrerequisite(entry, identity, queue, context);
+  for (const entry of dependsOn) addPrerequisite(entry, identity, queue, context);
 }
 
 function addPrerequisite(
@@ -188,8 +156,7 @@ function addPrerequisite(
   context: InputExpansion,
 ): void {
   if (typeof entry === "string") {
-    if (entry.startsWith("^"))
-      addDependencyPrerequisites(entry.slice(1), identity, queue, context);
+    if (entry.startsWith("^")) addDependencyPrerequisites(entry.slice(1), identity, queue, context);
     else pushPrerequisite(identity.project, entry, queue);
     return;
   }
@@ -197,13 +164,7 @@ function addPrerequisite(
     context.reasons.add("unresolved task prerequisite");
     return;
   }
-  addNamedPrerequisites(
-    entry["projects"],
-    entry["target"],
-    identity,
-    queue,
-    context,
-  );
+  addNamedPrerequisites(entry["projects"], entry["target"], identity, queue, context);
 }
 
 function addNamedPrerequisites(
@@ -225,19 +186,12 @@ function addNamedPrerequisites(
     context.reasons.add("unresolved task prerequisite");
     return;
   }
-  for (const name of projects)
-    addNamedPrerequisite(name, target, queue, context);
+  for (const name of projects) addNamedPrerequisite(name, target, queue, context);
 }
 
 /** A named project, never a tag selector: an entry the graph does not name cannot be located. */
-function addNamedPrerequisite(
-  name: unknown,
-  target: string,
-  queue: TargetIdentity[],
-  context: InputExpansion,
-): void {
-  const project =
-    typeof name === "string" ? context.projects.get(name) : undefined;
+function addNamedPrerequisite(name: unknown, target: string, queue: TargetIdentity[], context: InputExpansion): void {
+  const project = typeof name === "string" ? context.projects.get(name) : undefined;
   if (project) pushPrerequisite(project, target, queue);
   else context.reasons.add("unresolved task prerequisite");
 }
@@ -256,11 +210,7 @@ function addDependencyPrerequisites(
 }
 
 /** A prerequisite project with no such target still contributes its root; Nx runs nothing there. */
-function pushPrerequisite(
-  project: NativeProject,
-  name: string,
-  queue: TargetIdentity[],
-): void {
+function pushPrerequisite(project: NativeProject, name: string, queue: TargetIdentity[]): void {
   const target = project.targets[name];
   queue.push({ project, name, target: isRecord(target) ? target : {} });
 }
@@ -271,11 +221,7 @@ function pushPrerequisite(
  * root. A project rooted at the workspace root is a reason, because it owns every path and this
  * scope cannot name what it would take to miss one.
  */
-function visitProject(
-  owner: NativeProject,
-  visited: Set<string>,
-  context: InputExpansion,
-): void {
+function visitProject(owner: NativeProject, visited: Set<string>, context: InputExpansion): void {
   if (visited.has(owner.name)) return;
   visited.add(owner.name);
   if (owner.root === ".") context.reasons.add("workspace-root project");

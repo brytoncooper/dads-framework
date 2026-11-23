@@ -24,24 +24,10 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { addFinding } from "../scanners/typescript-program.js";
-import {
-  readCommitLog,
-  requireGitWorkspace,
-  shortSha,
-  type GitCommit,
-} from "../scanners/git-history.js";
-import {
-  NO_BASE_NOTE,
-  readMigrationBase,
-  type MigrationBase,
-} from "../scanners/migration-base.js";
+import { readCommitLog, requireGitWorkspace, shortSha, type GitCommit } from "../scanners/git-history.js";
+import { NO_BASE_NOTE, readMigrationBase, type MigrationBase } from "../scanners/migration-base.js";
 import {
   isMigrationFile,
   migrationJournal,
@@ -67,10 +53,7 @@ function readMigrationTree(context: DoctorContext): MigrationTree {
 
 type Readings = Map<string, SignalReading>;
 
-function newerThanAll(
-  newest: Map<string, string>,
-  paths: readonly string[],
-): void {
+function newerThanAll(newest: Map<string, string>, paths: readonly string[]): void {
   for (const path of paths) {
     const journal = migrationJournal(path);
     const stamp = migrationStamp(path);
@@ -120,11 +103,7 @@ function stampsPastBase(
 }
 
 /** With no base: each addition against what its journal held when it landed. */
-function stampsInHistory(
-  commits: readonly GitCommit[],
-  tree: MigrationTree,
-  readings: Readings,
-): void {
+function stampsInHistory(commits: readonly GitCommit[], tree: MigrationTree, readings: Readings): void {
   const newest = new Map<string, string>();
   for (const commit of [...commits].reverse()) {
     const added = addedMigrations(commit);
@@ -139,11 +118,7 @@ function stampsInHistory(
   }
 }
 
-function stampsOutOfOrder(
-  context: DoctorContext,
-  tree: MigrationTree,
-  readings: Readings,
-): void {
+function stampsOutOfOrder(context: DoctorContext, tree: MigrationTree, readings: Readings): void {
   const commits = readCommitLog(context.root);
   const base = readMigrationBase(context);
   if (base !== undefined) {
@@ -155,10 +130,7 @@ function stampsOutOfOrder(
 }
 
 /** True when following a migration's prerequisites leads back to it. */
-function reachesItself(
-  start: string,
-  graph: ReadonlyMap<string, readonly string[]>,
-): boolean {
+function reachesItself(start: string, graph: ReadonlyMap<string, readonly string[]>): boolean {
   const seen = new Set<string>();
   const queue = [...(graph.get(start) ?? [])];
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
@@ -171,34 +143,23 @@ function reachesItself(
 }
 
 /** The problems one migration's stated prerequisites have, in words. */
-function prerequisiteProblems(
-  path: string,
-  graph: ReadonlyMap<string, readonly string[]>,
-): readonly string[] {
+function prerequisiteProblems(path: string, graph: ReadonlyMap<string, readonly string[]>): readonly string[] {
   const problems = (graph.get(migrationName(path)) ?? [])
     .filter((name) => !graph.has(name))
     .map((name) => `missing prerequisite ${name}`);
-  return reachesItself(migrationName(path), graph)
-    ? [...problems, "prerequisite cycle"]
-    : problems;
+  return reachesItself(migrationName(path), graph) ? [...problems, "prerequisite cycle"] : problems;
 }
 
 function declaredGraph(tree: MigrationTree): Map<string, readonly string[]> {
   const graph = new Map<string, readonly string[]>();
   for (const [path, prerequisites] of tree) {
-    graph.set(
-      migrationName(path),
-      prerequisites.kind === "graph" ? prerequisites.dependencies : [],
-    );
+    graph.set(migrationName(path), prerequisites.kind === "graph" ? prerequisites.dependencies : []);
   }
   return graph;
 }
 
 /** Stated orders the runner cannot read, cannot satisfy, or cannot finish. */
-function graphProblems(
-  tree: MigrationTree,
-  readings: Map<string, SignalReading>,
-): void {
+function graphProblems(tree: MigrationTree, readings: Map<string, SignalReading>): void {
   const graph = declaredGraph(tree);
   for (const [path, prerequisites] of tree) {
     const problems: SignalEvidence[] =
@@ -212,9 +173,7 @@ function graphProblems(
 function countOutOfOrder(context: DoctorContext): SignalReadings {
   requireGitWorkspace(context.root);
   const tree = readMigrationTree(context);
-  const readings = new Map<string, SignalReading>(
-    [...tree.keys()].map((path) => [path, { value: 0, evidence: [] }]),
-  );
+  const readings = new Map<string, SignalReading>([...tree.keys()].map((path) => [path, { value: 0, evidence: [] }]));
   stampsOutOfOrder(context, tree, readings);
   graphProblems(tree, readings);
   return readings;
@@ -229,7 +188,6 @@ export const migrationsOutOfOrderSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "Sometimes you wake up to a production incident and cannot remember which version of you shipped.",
+  sentence: "Sometimes you wake up to a production incident and cannot remember which version of you shipped.",
   run: (context) => Promise.resolve(countOutOfOrder(context)),
 };

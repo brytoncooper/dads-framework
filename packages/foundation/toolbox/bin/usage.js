@@ -44,9 +44,7 @@ export const usage = [
 ].join("\n");
 
 const addUsage = ["Usage: dad add <generator>", ...addCommands].join("\n");
-const accessUsage = ["Usage: dad access <subcommand>", ...accessCommands].join(
-  "\n",
-);
+const accessUsage = ["Usage: dad access <subcommand>", ...accessCommands].join("\n");
 
 function isHelpFlag(argument) {
   return argument === "--help" || argument === "-h";
@@ -57,11 +55,6 @@ export function helpFor(args) {
   if (command === "--help" || command === "help") return usage;
   if (command === "add" && isHelpFlag(subject)) return addUsage;
   if (command === "access" && isHelpFlag(subject)) return accessUsage;
-  if (
-    command === "access" &&
-    accessSubcommands.has(subject) &&
-    isHelpFlag(detail)
-  )
-    return accessUsage;
+  if (command === "access" && accessSubcommands.has(subject) && isHelpFlag(detail)) return accessUsage;
   return undefined;
 }

@@ -6,9 +6,7 @@ import { outboundEmailIdSchema } from "../outbound-email-status.js";
 import { EMAIL_DELIVER_JOB } from "./email-job-names.js";
 
 type DeliverOutboundEmailOperation = {
-  execute(input: {
-    readonly outboundEmailId: ReturnType<typeof outboundEmailIdSchema.parse>;
-  }): Promise<unknown>;
+  execute(input: { readonly outboundEmailId: ReturnType<typeof outboundEmailIdSchema.parse> }): Promise<unknown>;
 };
 
 /**
@@ -17,9 +15,7 @@ type DeliverOutboundEmailOperation = {
  * (INV-EMAILDELIVERY-3), so letting the queue retry as well would give the
  * in-process and BullMQ drivers different behavior and double-count attempts.
  */
-export function createDeliverOutboundEmailJob(
-  operation: DeliverOutboundEmailOperation,
-): JobDefinition {
+export function createDeliverOutboundEmailJob(operation: DeliverOutboundEmailOperation): JobDefinition {
   return defineJob({
     name: EMAIL_DELIVER_JOB,
     payload: z.strictObject({ outboundEmailId: outboundEmailIdSchema }),

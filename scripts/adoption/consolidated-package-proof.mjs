@@ -24,61 +24,28 @@ const entries = new Map([
       hasRoot: false,
     },
   ],
-  [
-    "@dads-framework/client",
-    { subpaths: ["telemetry/core", "telemetry/testing"] },
-  ],
+  ["@dads-framework/client", { subpaths: ["telemetry/core", "telemetry/testing"] }],
   ["@dads-framework/documents", { subpaths: ["csv"], hasRoot: false }],
   ["@dads-framework/email", { subpaths: ["core", "testing", "core/testing"] }],
   ["@dads-framework/feature-flags", { subpaths: ["contract", "testing"] }],
-  [
-    "@dads-framework/http",
-    { subpaths: ["health", "telemetry/core", "telemetry/testing"] },
-  ],
-  [
-    "@dads-framework/identity",
-    { subpaths: ["scim", "testing", "impersonation"] },
-  ],
-  [
-    "@dads-framework/job-queue",
-    { subpaths: ["core", "testing", "core/testing", "core/provider"] },
-  ],
+  ["@dads-framework/http", { subpaths: ["health", "telemetry/core", "telemetry/testing"] }],
+  ["@dads-framework/identity", { subpaths: ["scim", "testing", "impersonation"] }],
+  ["@dads-framework/job-queue", { subpaths: ["core", "testing", "core/testing", "core/provider"] }],
   ["@dads-framework/object-storage", { subpaths: ["core", "testing"] }],
   ["@dads-framework/testing", { subpaths: ["nx", "path-aliases"] }],
 ]);
 
 const absentProviders = new Map([
   ["@dads-framework/client", ["@sentry/react"]],
-  [
-    "@dads-framework/documents",
-    ["pdfmake", "pdfjs-dist", "@napi-rs/canvas", "exceljs"],
-  ],
-  [
-    "@dads-framework/email",
-    [
-      "resend",
-      "@react-email/render",
-      "@dads-framework/postgres",
-      "@dads-framework/job-queue",
-    ],
-  ],
-  [
-    "@dads-framework/feature-flags",
-    ["@dads-framework/http", "@dads-framework/postgres", "react"],
-  ],
+  ["@dads-framework/documents", ["pdfmake", "pdfjs-dist", "@napi-rs/canvas", "exceljs"]],
+  ["@dads-framework/email", ["resend", "@react-email/render", "@dads-framework/postgres", "@dads-framework/job-queue"]],
+  ["@dads-framework/feature-flags", ["@dads-framework/http", "@dads-framework/postgres", "react"]],
   ["@dads-framework/http", ["@opentelemetry/sdk-node"]],
-  [
-    "@dads-framework/identity",
-    ["better-auth", "@dads-framework/postgres", "drizzle-orm"],
-  ],
+  ["@dads-framework/identity", ["better-auth", "@dads-framework/postgres", "drizzle-orm"]],
   ["@dads-framework/job-queue", ["bullmq"]],
   [
     "@dads-framework/object-storage",
-    [
-      "@aws-sdk/client-s3",
-      "@aws-sdk/cloudfront-signer",
-      "@aws-sdk/s3-request-presigner",
-    ],
+    ["@aws-sdk/client-s3", "@aws-sdk/cloudfront-signer", "@aws-sdk/s3-request-presigner"],
   ],
   ["@dads-framework/testing", ["nx", "vite"]],
 ]);
@@ -86,9 +53,7 @@ const absentProviders = new Map([
 export function consolidatedPackageProof(packageName) {
   const entry = entries.get(packageName);
   if (!entry) return undefined;
-  const specifiers = entry.subpaths.map(
-    (subpath) => `${packageName}/${subpath}`,
-  );
+  const specifiers = entry.subpaths.map((subpath) => `${packageName}/${subpath}`);
   if (entry.hasRoot !== false) specifiers.unshift(packageName);
   return `
     import assert from "node:assert/strict";

@@ -1,10 +1,7 @@
 import type { DrizzleHandle } from "@dads-framework/postgres";
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
-import type {
-  EmailFailurePolicy,
-  QueuedEmailAttachment,
-} from "../queued-email-attachment.js";
+import type { EmailFailurePolicy, QueuedEmailAttachment } from "../queued-email-attachment.js";
 
 /**
  * The slice of a Drizzle handle a caller may hand this store so an outbound
@@ -83,50 +80,29 @@ export abstract class OutboundEmailStore {
    * it, it is not due yet, or it is no longer queued — all of which are
    * ordinary, none of which are errors (INV-EMAILDELIVERY-1).
    */
-  abstract claimForSending(
-    id: OutboundEmailId,
-    now: Date,
-  ): Promise<ClaimedOutboundEmail | null>;
+  abstract claimForSending(id: OutboundEmailId, now: Date): Promise<ClaimedOutboundEmail | null>;
 
-  abstract markSent(
-    id: OutboundEmailId,
-    result: { providerMessageId: string | null; sentAt: Date },
-  ): Promise<void>;
+  abstract markSent(id: OutboundEmailId, result: { providerMessageId: string | null; sentAt: Date }): Promise<void>;
 
   /** Back to `queued`, due again at `nextAttemptAt`. */
-  abstract markRetryLater(
-    id: OutboundEmailId,
-    retry: { nextAttemptAt: Date; lastError: string },
-  ): Promise<void>;
+  abstract markRetryLater(id: OutboundEmailId, retry: { nextAttemptAt: Date; lastError: string }): Promise<void>;
 
   /** Terminal until an operator re-queues it; nothing retries a failed row. */
-  abstract markFailed(
-    id: OutboundEmailId,
-    failure: { lastError: string },
-  ): Promise<void>;
+  abstract markFailed(id: OutboundEmailId, failure: { lastError: string }): Promise<void>;
 
   /** Queued rows due at or before `now`, oldest first. */
-  abstract listDue(
-    now: Date,
-    limit: number,
-  ): Promise<readonly OutboundEmailId[]>;
+  abstract listDue(now: Date, limit: number): Promise<readonly OutboundEmailId[]>;
 
   /**
    * Fails every row claimed before `olderThan` with `STALE_CLAIM`. A crash
    * mid-send leaves a row in `sending`, and the body may already have been
    * accepted by the vendor, so the sweep refuses rather than resending.
    */
-  abstract failStaleClaims(
-    olderThan: Date,
-  ): Promise<readonly OutboundEmailId[]>;
+  abstract failStaleClaims(olderThan: Date): Promise<readonly OutboundEmailId[]>;
 
   /** Returns failed rows to `queued` with a clean attempt count. */
-  abstract requeueFailed(
-    ids?: readonly OutboundEmailId[],
-  ): Promise<readonly OutboundEmailId[]>;
+  abstract requeueFailed(ids?: readonly OutboundEmailId[]): Promise<readonly OutboundEmailId[]>;
 
   /** Records a send that already happened, settled, in one insert. */
-  abstract recordImmediate(
-    record: ImmediateOutboundEmail,
-  ): Promise<{ id: OutboundEmailId }>;
+  abstract recordImmediate(record: ImmediateOutboundEmail): Promise<{ id: OutboundEmailId }>;
 }

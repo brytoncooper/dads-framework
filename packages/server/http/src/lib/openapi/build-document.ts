@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-  apiResponseSchema,
-  openExtensibleEnums,
-} from "@dads-framework/core/contract";
+import { apiResponseSchema, openExtensibleEnums } from "@dads-framework/core/contract";
 
 import { isObjectValue } from "../object-value.js";
 import type { RawRouteDefinition } from "../route/define-raw-route.js";
@@ -54,9 +51,7 @@ function operationIdFor(route: { method: string; path: string }): string {
     .map((segment) =>
       segment.startsWith(":")
         ? `By${capitalizeInitial(segment.slice(1))}`
-        : segment.replace(/[^A-Za-z0-9]+(.)?/g, (_, ch: string | undefined) =>
-            ch ? ch.toUpperCase() : "",
-          ),
+        : segment.replace(/[^A-Za-z0-9]+(.)?/g, (_, ch: string | undefined) => (ch ? ch.toUpperCase() : "")),
     )
     .map(capitalizeInitial);
   return route.method.toLowerCase() + segments.join("");
@@ -75,38 +70,27 @@ function toSchemaObject(schema: z.ZodType, io: "input" | "output"): JsonRecord {
 }
 
 /** The route's success component: `{ data, meta? }`, enveloped exactly once. */
-function envelopedResponseSchema(
-  response: z.ZodType,
-  meta: z.ZodType | undefined,
-): z.ZodType {
+function envelopedResponseSchema(response: z.ZodType, meta: z.ZodType | undefined): z.ZodType {
   if (meta) {
     // Same field descriptions apiResponseSchema carries — the artifact's
     // documentation walls (spectral) hold for list envelopes too.
     return z.object({
       data: response.meta({ description: "The requested resource" }),
       meta: meta.meta({
-        description:
-          "Response metadata only (totals, cursors, warnings) — never business data",
+        description: "Response metadata only (totals, cursors, warnings) — never business data",
       }),
     });
   }
   return apiResponseSchema(response);
 }
 
-function responsesFor(
-  route: RouteDefinition,
-  components: Map<string, JsonRecord>,
-  responseName: string,
-): JsonRecord {
+function responsesFor(route: RouteDefinition, components: Map<string, JsonRecord>, responseName: string): JsonRecord {
   if (!route.schemas.response) {
     return { [String(route.status)]: { description: "" } };
   }
   components.set(
     responseName,
-    toSchemaObject(
-      envelopedResponseSchema(route.schemas.response, route.schemas.meta),
-      "output",
-    ),
+    toSchemaObject(envelopedResponseSchema(route.schemas.response, route.schemas.meta), "output"),
   );
   return {
     [String(route.status)]: {
@@ -129,15 +113,10 @@ type ParameterObject = {
 };
 
 /** Explodes an object schema into per-property OpenAPI parameters. */
-function parametersFrom(
-  schema: z.ZodType | undefined,
-  location: "path" | "query",
-): ParameterObject[] {
+function parametersFrom(schema: z.ZodType | undefined, location: "path" | "query"): ParameterObject[] {
   if (!schema) return [];
   const json = toSchemaObject(schema, "input");
-  const properties = isObjectValue(json["properties"])
-    ? json["properties"]
-    : {};
+  const properties = isObjectValue(json["properties"]) ? json["properties"] : {};
   const required = Array.isArray(json["required"]) ? json["required"] : [];
   return Object.entries(properties).map(([name, propSchema]) => {
     const description =
@@ -172,10 +151,7 @@ function requestBodyFor(
 }
 
 function contextHeaderParameters(route: RouteDefinition): ParameterObject[] {
-  if (
-    route.access.kind === "session" &&
-    route.access.authorizationContextInput?.kind === "header"
-  ) {
+  if (route.access.kind === "session" && route.access.authorizationContextInput?.kind === "header") {
     return [
       {
         name: route.access.authorizationContextInput.name.toLowerCase(),
@@ -187,17 +163,12 @@ function contextHeaderParameters(route: RouteDefinition): ParameterObject[] {
       },
     ];
   }
-  if (
-    route.access.kind === "public" ||
-    route.access.authorizationContext?.kind !== "header"
-  )
-    return [];
+  if (route.access.kind === "public" || route.access.authorizationContext?.kind !== "header") return [];
   return [
     {
       name: route.access.authorizationContext.name.toLowerCase(),
       in: "header",
-      required:
-        route.access.authorizationContextMode !== "technical-or-business",
+      required: route.access.authorizationContextMode !== "technical-or-business",
       schema: { type: "string", minLength: 1 },
       description:
         route.access.authorizationContextMode === "technical-or-business"
@@ -207,16 +178,9 @@ function contextHeaderParameters(route: RouteDefinition): ParameterObject[] {
   ];
 }
 
-function operationFor(
-  route: RouteDefinition,
-  components: Map<string, JsonRecord>,
-): JsonRecord {
+function operationFor(route: RouteDefinition, components: Map<string, JsonRecord>): JsonRecord {
   const operationId = operationIdFor(route);
-  const requestBody = requestBodyFor(
-    route,
-    `${capitalizeInitial(operationId)}Body`,
-    components,
-  );
+  const requestBody = requestBodyFor(route, `${capitalizeInitial(operationId)}Body`, components);
   return {
     operationId,
     summary: route.summary,
@@ -227,11 +191,7 @@ function operationFor(
       ...contextHeaderParameters(route),
     ],
     ...(requestBody ? { requestBody } : {}),
-    responses: responsesFor(
-      route,
-      components,
-      `${capitalizeInitial(operationId)}Response`,
-    ),
+    responses: responsesFor(route, components, `${capitalizeInitial(operationId)}Response`),
   };
 }
 
@@ -240,10 +200,7 @@ function operationFor(
  * declared component schemas are registered here — the operation's `$ref`s
  * would dangle otherwise, since no typed verb registers them.
  */
-function rawOperationFor(
-  route: RawRouteDefinition,
-  components: Map<string, JsonRecord>,
-): JsonRecord {
+function rawOperationFor(route: RawRouteDefinition, components: Map<string, JsonRecord>): JsonRecord {
   for (const [name, schema] of Object.entries(route.openapiComponents ?? {})) {
     components.set(name, toSchemaObject(schema, "output"));
   }
@@ -268,9 +225,7 @@ export function buildOpenApiDocument(
     paths[path] = {
       ...paths[path],
       [route.method.toLowerCase()]:
-        route.kind === "raw-route"
-          ? rawOperationFor(route, components)
-          : operationFor(route, components),
+        route.kind === "raw-route" ? rawOperationFor(route, components) : operationFor(route, components),
     };
   }
   return {

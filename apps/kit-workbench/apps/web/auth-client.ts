@@ -9,10 +9,7 @@ const session = z.object({ account }).nullable();
 
 type Credentials = { readonly email: string; readonly password: string };
 
-async function authRequest(
-  path: string,
-  options?: { readonly body: object } | { readonly signal: AbortSignal },
-) {
+async function authRequest(path: string, options?: { readonly body: object } | { readonly signal: AbortSignal }) {
   const response = await fetch(
     `/api/auth/${path}`,
     options && "body" in options
@@ -25,10 +22,7 @@ async function authRequest(
   );
   if (!response.ok) {
     const rejectedSignIn =
-      path === "sign-in/email" &&
-      (response.status === 400 ||
-        response.status === 401 ||
-        response.status === 403);
+      path === "sign-in/email" && (response.status === 400 || response.status === 401 || response.status === 403);
     throw new ApiError(
       response.status,
       rejectedSignIn ? "AUTH_SIGN_IN_REFUSED" : "AUTH_REQUEST_REFUSED",
@@ -47,14 +41,11 @@ export function readAccount(signal?: AbortSignal) {
 export async function signIn(credentials: Credentials) {
   await authRequest("sign-in/email", { body: credentials });
   const account = await readAccount();
-  if (account === null)
-    throw new Error("The browser did not retain the session cookie.");
+  if (account === null) throw new Error("The browser did not retain the session cookie.");
   return account;
 }
 
-export async function signUp(
-  credentials: Credentials & { readonly name: string },
-) {
+export async function signUp(credentials: Credentials & { readonly name: string }) {
   await authRequest("sign-up/email", {
     body: { ...credentials, callbackURL: "/" },
   });

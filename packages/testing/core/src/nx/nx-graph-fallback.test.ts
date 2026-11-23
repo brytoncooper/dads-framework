@@ -32,17 +32,15 @@ describe("parseNxGraphFallbackDependencies", () => {
   it("refuses graph output that is not a JSON object", () => {
     const notObjects: readonly JsonValue[] = ["graph", 7, null, true, []];
     for (const notAnObject of notObjects) {
-      expect(() =>
-        parseNxGraphFallbackDependencies(notAnObject, projects),
-      ).toThrow("graph output must be a JSON object");
+      expect(() => parseNxGraphFallbackDependencies(notAnObject, projects)).toThrow(
+        "graph output must be a JSON object",
+      );
     }
   });
 
   it("refuses graph output with no top-level graph object", () => {
     for (const missing of [{}, { graph: [] }, { graph: "nodes" }]) {
-      expect(() => parseNxGraphFallbackDependencies(missing, projects)).toThrow(
-        "expected top-level graph object",
-      );
+      expect(() => parseNxGraphFallbackDependencies(missing, projects)).toThrow("expected top-level graph object");
     }
   });
 
@@ -53,18 +51,15 @@ describe("parseNxGraphFallbackDependencies", () => {
       { nodes: [], dependencies: {} },
       { nodes: {}, dependencies: [] },
     ]) {
-      expect(() =>
-        parseNxGraphFallbackDependencies({ graph: body }, projects),
-      ).toThrow("expected graph.nodes and graph.dependencies objects");
+      expect(() => parseNxGraphFallbackDependencies({ graph: body }, projects)).toThrow(
+        "expected graph.nodes and graph.dependencies objects",
+      );
     }
   });
 
   it("refuses a project the graph does not describe as an object node", () => {
     expect(() =>
-      parseNxGraphFallbackDependencies(
-        { graph: { nodes: { util: { name: "util" } }, dependencies: {} } },
-        projects,
-      ),
+      parseNxGraphFallbackDependencies({ graph: { nodes: { util: { name: "util" } }, dependencies: {} } }, projects),
     ).toThrow("graph.nodes is missing object node app");
   });
 
@@ -83,42 +78,26 @@ describe("parseNxGraphFallbackDependencies", () => {
   });
 
   it("refuses a dependency edge that is not an object", () => {
-    expect(() =>
-      parseNxGraphFallbackDependencies(
-        graph({ app: ["util"], util: [] }),
-        projects,
-      ),
-    ).toThrow("dependency edge for app is not an object");
+    expect(() => parseNxGraphFallbackDependencies(graph({ app: ["util"], util: [] }), projects)).toThrow(
+      "dependency edge for app is not an object",
+    );
   });
 
   it("refuses an edge whose source disagrees with its containing key", () => {
     expect(() =>
-      parseNxGraphFallbackDependencies(
-        graph({ app: [{ source: "util", target: "app" }], util: [] }),
-        projects,
-      ),
-    ).toThrow(
-      "dependency edge for app does not declare matching source and target",
-    );
+      parseNxGraphFallbackDependencies(graph({ app: [{ source: "util", target: "app" }], util: [] }), projects),
+    ).toThrow("dependency edge for app does not declare matching source and target");
   });
 
   it("refuses an edge that declares no target", () => {
-    expect(() =>
-      parseNxGraphFallbackDependencies(
-        graph({ app: [{ source: "app" }], util: [] }),
-        projects,
-      ),
-    ).toThrow(
+    expect(() => parseNxGraphFallbackDependencies(graph({ app: [{ source: "app" }], util: [] }), projects)).toThrow(
       "dependency edge for app does not declare matching source and target",
     );
   });
 
   it("refuses a self dependency strict v1 cannot represent", () => {
     expect(() =>
-      parseNxGraphFallbackDependencies(
-        graph({ app: [{ source: "app", target: "app" }], util: [] }),
-        projects,
-      ),
+      parseNxGraphFallbackDependencies(graph({ app: [{ source: "app", target: "app" }], util: [] }), projects),
     ).toThrow("project app has a self dependency");
   });
 

@@ -2,18 +2,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { currentAuditActor } from "@dads-framework/core/audit-actor";
-import {
-  defineMcpTool,
-  type McpCaller,
-  type ResolveMcpBearer,
-} from "../../../index.js";
+import { defineMcpTool, type McpCaller, type ResolveMcpBearer } from "../../../index.js";
 import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { toWebRequest } from "../protocol-mount/to-web-request.js";
 import { createMcpEndpoint, type McpEndpointOptions } from "./mcp-endpoint.js";
 
-const METADATA_URL =
-  "https://api.example.com/.well-known/oauth-protected-resource/mcp";
+const METADATA_URL = "https://api.example.com/.well-known/oauth-protected-resource/mcp";
 const VALID_TOKEN = "Bearer good-token";
 const READ_ONLY_TOKEN = "Bearer read-only-token";
 const CLIENT_TOKEN = "Bearer client-token";
@@ -79,8 +74,7 @@ const hugeTool = defineMcpTool({
   title: "Huge",
   description: "Answers too much.",
   inputSchema: z.object({}),
-  run: () =>
-    Promise.resolve({ content: [{ type: "text", text: "x".repeat(5_000) }] }),
+  run: () => Promise.resolve({ content: [{ type: "text", text: "x".repeat(5_000) }] }),
 });
 
 const actorTool = defineMcpTool({
@@ -114,11 +108,7 @@ function endpoint(overrides: Partial<McpEndpointOptions> = {}) {
 }
 
 /** A fetch request as the protocol mount hands one over (`toWebRequest`). */
-function webRequest(
-  method: string,
-  headers: Record<string, string>,
-  body?: string,
-): Request {
+function webRequest(method: string, headers: Record<string, string>, body?: string): Request {
   return toWebRequest({
     method,
     url: "/mcp",
@@ -185,25 +175,19 @@ const toolListSchema = z.object({
 
 describe("MCP endpoint: transport", () => {
   it("answers GET with 405 and names POST as the only method", async () => {
-    const response = await endpoint()(
-      webRequest("GET", { authorization: VALID_TOKEN }),
-    );
+    const response = await endpoint()(webRequest("GET", { authorization: VALID_TOKEN }));
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");
   });
 
   it("answers a notification with 202 and no body", async () => {
-    const response = await endpoint()(
-      post({ jsonrpc: "2.0", method: "notifications/initialized" }),
-    );
+    const response = await endpoint()(post({ jsonrpc: "2.0", method: "notifications/initialized" }));
     expect(response.status).toBe(202);
     expect(await response.text()).toBe("");
   });
 
   it("acknowledges a client's JSON-RPC response with 202", async () => {
-    const response = await endpoint()(
-      post({ jsonrpc: "2.0", id: 7, result: {} }),
-    );
+    const response = await endpoint()(post({ jsonrpc: "2.0", id: 7, result: {} }));
     expect(response.status).toBe(202);
   });
 
@@ -226,33 +210,23 @@ describe("MCP endpoint: transport", () => {
   });
 
   it("refuses a body that is not application/json", async () => {
-    const response = await endpoint()(
-      post(rpc("ping"), { "content-type": "text/plain" }),
-    );
+    const response = await endpoint()(post(rpc("ping"), { "content-type": "text/plain" }));
     expect(response.status).toBe(415);
   });
 
   it("refuses a body over the request ceiling", async () => {
-    const response = await endpoint()(
-      post(rpc("ping", { padding: "x".repeat(20_000) })),
-    );
+    const response = await endpoint()(post(rpc("ping", { padding: "x".repeat(20_000) })));
     expect(response.status).toBe(413);
   });
 
   it("refuses an unsupported MCP-Protocol-Version header", async () => {
-    const response = await endpoint()(
-      post(rpc("ping"), { "mcp-protocol-version": "2023-01-01" }),
-    );
+    const response = await endpoint()(post(rpc("ping"), { "mcp-protocol-version": "2023-01-01" }));
     expect(response.status).toBe(400);
-    expect((await answerOf(response)).error?.message).toMatch(
-      /Unsupported MCP-Protocol-Version/,
-    );
+    expect((await answerOf(response)).error?.message).toMatch(/Unsupported MCP-Protocol-Version/);
   });
 
   it("accepts a supported MCP-Protocol-Version header", async () => {
-    const response = await endpoint()(
-      post(rpc("ping"), { "mcp-protocol-version": "2025-06-18" }),
-    );
+    const response = await endpoint()(post(rpc("ping"), { "mcp-protocol-version": "2025-06-18" }));
     expect(response.status).toBe(200);
     expect(await answerOf(response)).toEqual({
       jsonrpc: "2.0",
@@ -276,16 +250,12 @@ describe("MCP endpoint: transport", () => {
 
 describe("MCP endpoint: origin guard", () => {
   it("refuses a browser origin outside the allowlist", async () => {
-    const response = await endpoint()(
-      post(rpc("ping"), { origin: "https://evil.example" }),
-    );
+    const response = await endpoint()(post(rpc("ping"), { origin: "https://evil.example" }));
     expect(response.status).toBe(403);
   });
 
   it("serves an allowed origin", async () => {
-    const response = await endpoint()(
-      post(rpc("ping"), { origin: "https://app.example.com" }),
-    );
+    const response = await endpoint()(post(rpc("ping"), { origin: "https://app.example.com" }));
     expect(response.status).toBe(200);
   });
 
@@ -297,18 +267,12 @@ describe("MCP endpoint: origin guard", () => {
 
 describe("MCP endpoint: bearer", () => {
   it("challenges a request with no token, naming the resource metadata", async () => {
-    const response = await endpoint()(
-      post(rpc("initialize"), { authorization: "" }),
-    );
+    const response = await endpoint()(post(rpc("initialize"), { authorization: "" }));
     // An empty header is still a header; a missing one is the plain challenge.
     expect(response.status).toBe(401);
 
     const missing = await endpoint()(
-      webRequest(
-        "POST",
-        { "content-type": "application/json" },
-        JSON.stringify(rpc("initialize")),
-      ),
+      webRequest("POST", { "content-type": "application/json" }, JSON.stringify(rpc("initialize"))),
     );
     expect(missing.status).toBe(401);
     const challenge = missing.headers.get("www-authenticate") ?? "";
@@ -319,9 +283,7 @@ describe("MCP endpoint: bearer", () => {
   });
 
   it("challenges an unknown token with invalid_token", async () => {
-    const response = await endpoint()(
-      post(rpc("ping"), { authorization: "Bearer revoked" }),
-    );
+    const response = await endpoint()(post(rpc("ping"), { authorization: "Bearer revoked" }));
     expect(response.status).toBe(401);
     const challenge = response.headers.get("www-authenticate") ?? "";
     expect(challenge).toContain('error="invalid_token"');
@@ -330,26 +292,23 @@ describe("MCP endpoint: bearer", () => {
 });
 
 describe("MCP endpoint: initialize", () => {
-  it.each(["2025-06-18", "2025-03-26"])(
-    "echoes the supported protocol version %s",
-    async (version) => {
-      const response = await endpoint()(
-        post(
-          rpc("initialize", {
-            protocolVersion: version,
-            capabilities: {},
-            clientInfo: { name: "test", version: "0" },
-          }),
-        ),
-      );
-      const answer = await answerOf(response);
-      expect(answer.result).toEqual({
-        protocolVersion: version,
-        capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "command", version: "1.0.0" },
-      });
-    },
-  );
+  it.each(["2025-06-18", "2025-03-26"])("echoes the supported protocol version %s", async (version) => {
+    const response = await endpoint()(
+      post(
+        rpc("initialize", {
+          protocolVersion: version,
+          capabilities: {},
+          clientInfo: { name: "test", version: "0" },
+        }),
+      ),
+    );
+    const answer = await answerOf(response);
+    expect(answer.result).toEqual({
+      protocolVersion: version,
+      capabilities: { tools: { listChanged: false } },
+      serverInfo: { name: "command", version: "1.0.0" },
+    });
+  });
 
   it("offers the latest version when the client's is unknown", async () => {
     const response = await endpoint({ instructions: "Start with echo." })(
@@ -366,13 +325,7 @@ describe("MCP endpoint: tools/list", () => {
   it("lists every tool the token's scopes reach, with JSON Schema inputs", async () => {
     const response = await endpoint()(post(rpc("tools/list")));
     const { tools } = toolListSchema.parse((await answerOf(response)).result);
-    expect(tools.map((tool) => tool.name)).toEqual([
-      "echo",
-      "broken",
-      "huge",
-      "who-am-i",
-      "publish",
-    ]);
+    expect(tools.map((tool) => tool.name)).toEqual(["echo", "broken", "huge", "who-am-i", "publish"]);
     const echo = tools[0];
     expect(echo).toMatchObject({
       title: "Echo",
@@ -391,9 +344,7 @@ describe("MCP endpoint: tools/list", () => {
   });
 
   it("hides a tool set whose scope the token lacks", async () => {
-    const response = await endpoint()(
-      post(rpc("tools/list"), { authorization: READ_ONLY_TOKEN }),
-    );
+    const response = await endpoint()(post(rpc("tools/list"), { authorization: READ_ONLY_TOKEN }));
     const { tools } = toolListSchema.parse((await answerOf(response)).result);
     expect(tools.map((tool) => tool.name)).not.toContain("publish");
   });
@@ -423,9 +374,7 @@ describe("MCP endpoint: tools/list", () => {
       { flag: "example.templates.publish", userId: "user-1" },
     ]);
 
-    const called = await flagged(
-      post(rpc("tools/call", { name: "publish", arguments: {} })),
-    );
+    const called = await flagged(post(rpc("tools/call", { name: "publish", arguments: {} })));
     expect(called.status).toBe(200);
     expect((await answerOf(called)).error).toMatchObject({
       message: "Unknown tool: publish",
@@ -458,9 +407,7 @@ describe("MCP endpoint: tools/list", () => {
       inputSchema: z.string(),
       run: () => Promise.resolve({ content: [] }),
     });
-    expect(() =>
-      endpoint({ toolSets: [{ scope: "a", tools: [scalar] }] }),
-    ).toThrow(/object input schema/);
+    expect(() => endpoint({ toolSets: [{ scope: "a", tools: [scalar] }] })).toThrow(/object input schema/);
   });
 });
 
@@ -479,15 +426,11 @@ describe("MCP endpoint: tools/call", () => {
     expect(await toolResultOf(response)).toEqual({
       content: [{ type: "text", text: "hihi" }],
     });
-    expect(callers).toEqual([
-      { subject: { type: "user", id: "user-1" }, requestId: "req-1" },
-    ]);
+    expect(callers).toEqual([{ subject: { type: "user", id: "user-1" }, requestId: "req-1" }]);
   });
 
   it("turns invalid arguments into a readable tool error, not a protocol error", async () => {
-    const response = await endpoint()(
-      post(rpc("tools/call", { name: "echo", arguments: { text: "" } })),
-    );
+    const response = await endpoint()(post(rpc("tools/call", { name: "echo", arguments: { text: "" } })));
     const result = await toolResultOf(response);
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toMatch(/arguments for echo are not valid/);
@@ -495,27 +438,21 @@ describe("MCP endpoint: tools/call", () => {
   });
 
   it("treats missing arguments as an empty object", async () => {
-    const response = await endpoint()(
-      post(rpc("tools/call", { name: "publish" })),
-    );
+    const response = await endpoint()(post(rpc("tools/call", { name: "publish" })));
     expect(await toolResultOf(response)).toEqual({
       content: [{ type: "text", text: "done" }],
     });
   });
 
   it("answers an unknown tool with a JSON-RPC error", async () => {
-    const response = await endpoint()(
-      post(rpc("tools/call", { name: "nope", arguments: {} })),
-    );
+    const response = await endpoint()(post(rpc("tools/call", { name: "nope", arguments: {} })));
     const answer = await answerOf(response);
     expect(answer.error?.code).toBe(-32602);
     expect(answer.error?.message).toMatch(/Unknown tool: nope/);
   });
 
   it("answers malformed call params with invalid-params", async () => {
-    const response = await endpoint()(
-      post(rpc("tools/call", { arguments: {} })),
-    );
+    const response = await endpoint()(post(rpc("tools/call", { arguments: {} })));
     expect((await answerOf(response)).error?.code).toBe(-32602);
   });
 
@@ -542,20 +479,14 @@ describe("MCP endpoint: tools/call", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain("req-1");
     expect(result.content[0]?.text).not.toContain("secret");
-    expect(failures).toEqual([
-      expect.objectContaining({ tool: "broken", requestId: "req-1" }),
-    ]);
+    expect(failures).toEqual([expect.objectContaining({ tool: "broken", requestId: "req-1" })]);
   });
 
   it("refuses a result over the size cap", async () => {
-    const response = await endpoint()(
-      post(rpc("tools/call", { name: "huge" })),
-    );
+    const response = await endpoint()(post(rpc("tools/call", { name: "huge" })));
     const result = await toolResultOf(response);
     expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toMatch(
-      /over this server's 2000-byte limit/,
-    );
+    expect(result.content[0]?.text).toMatch(/over this server's 2000-byte limit/);
   });
 
   it("runs the tool as the caller's audit actor when a mapper is wired", async () => {
@@ -628,9 +559,7 @@ describe("MCP endpoint: tools/call", () => {
     const request = webRequest(
       "POST",
       { authorization: VALID_TOKEN, "content-type": "application/json" },
-      JSON.stringify(
-        rpc("tools/call", { name: "echo", arguments: { text: "a" } }),
-      ),
+      JSON.stringify(rpc("tools/call", { name: "echo", arguments: { text: "a" } })),
     );
     await endpoint()(request);
     expect(callers[0]?.requestId).toMatch(/^[0-9a-f-]{36}$/);

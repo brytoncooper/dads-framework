@@ -62,22 +62,16 @@ describe("applyDesiredAuthorizationSchema", () => {
       },
     });
 
-    expect(store.deletes).toEqual([
-      { resourceType: "docs/note", relation: "stale" },
-    ]);
+    expect(store.deletes).toEqual([{ resourceType: "docs/note", relation: "stale" }]);
     expect(store.writes).toEqual([DESIRED]);
-    expect(report.removedRelations).toEqual([
-      { resourceType: "docs/note", relation: "stale" },
-    ]);
+    expect(report.removedRelations).toEqual([{ resourceType: "docs/note", relation: "stale" }]);
     expect(snapshotCalls).toBe(1);
     expect(report.snapshot).toBe("cloned");
   });
 
   it("retries WriteSchema after deleting a named leftover filter", async () => {
     const store = fakeStore(DESIRED, [
-      new Error(
-        "cannot delete relation `stale` in object definition `docs/note`, as a relationship exists under it",
-      ),
+      new Error("cannot delete relation `stale` in object definition `docs/note`, as a relationship exists under it"),
     ]);
 
     await applyDesiredAuthorizationSchema({
@@ -85,9 +79,7 @@ describe("applyDesiredAuthorizationSchema", () => {
       desiredSchema: DESIRED,
     });
 
-    expect(store.deletes).toEqual([
-      { resourceType: "docs/note", relation: "stale" },
-    ]);
+    expect(store.deletes).toEqual([{ resourceType: "docs/note", relation: "stale" }]);
     expect(store.writeAttempts).toBe(2);
     expect(store.writes).toEqual([DESIRED]);
   });

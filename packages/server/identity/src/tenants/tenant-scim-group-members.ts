@@ -1,20 +1,14 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import type { TenantId } from "./tenant-access.js";
-import {
-  tenantScimGroup,
-  tenantScimGroupMember,
-} from "./tenant-scim-group-tables.js";
+import { tenantScimGroup, tenantScimGroupMember } from "./tenant-scim-group-tables.js";
 import { liveScimUser, scimIdSchema } from "./tenant-scim-membership.js";
 import { tenantScimUser } from "./tenant-scim-table.js";
 import { tenantTable } from "./tenant-tables.js";
 import type { TenantTransaction } from "./tenant-transaction.js";
 
 /** Serialize group member changes with user tombstones in this tenant. */
-export async function lockScimGroupMembershipChanges(
-  tx: TenantTransaction,
-  tenantId: TenantId,
-) {
+export async function lockScimGroupMembershipChanges(tx: TenantTransaction, tenantId: TenantId) {
   const [tenant] = await tx
     .select({ id: tenantTable.id })
     .from(tenantTable)
@@ -45,16 +39,9 @@ export async function replaceScimGroupMembers(
 ) {
   await tx
     .delete(tenantScimGroupMember)
-    .where(
-      and(
-        eq(tenantScimGroupMember.tenantId, tenantId),
-        eq(tenantScimGroupMember.groupId, groupId),
-      ),
-    );
+    .where(and(eq(tenantScimGroupMember.tenantId, tenantId), eq(tenantScimGroupMember.groupId, groupId)));
   if (userIds.length > 0)
-    await tx
-      .insert(tenantScimGroupMember)
-      .values(userIds.map((userId) => ({ tenantId, groupId, userId })));
+    await tx.insert(tenantScimGroupMember).values(userIds.map((userId) => ({ tenantId, groupId, userId })));
 }
 
 export async function removeUserFromScimGroups(
@@ -65,12 +52,7 @@ export async function removeUserFromScimGroups(
 ) {
   const links = await tx
     .delete(tenantScimGroupMember)
-    .where(
-      and(
-        eq(tenantScimGroupMember.tenantId, tenantId),
-        eq(tenantScimGroupMember.userId, userId),
-      ),
-    )
+    .where(and(eq(tenantScimGroupMember.tenantId, tenantId), eq(tenantScimGroupMember.userId, userId)))
     .returning({ groupId: tenantScimGroupMember.groupId });
   if (links.length === 0) return;
   await tx

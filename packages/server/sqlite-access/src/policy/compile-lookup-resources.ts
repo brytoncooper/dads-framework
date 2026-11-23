@@ -49,12 +49,7 @@ export function compileSqliteLookupResources(
   nowMs: number,
   request: SqliteResourceLookup,
 ): SqliteQuery {
-  const subquery = compileSqliteLookupSubquery(
-    model,
-    namespace,
-    nowMs,
-    request,
-  );
+  const subquery = compileSqliteLookupSubquery(model, namespace, nowMs, request);
   return Object.freeze({
     sql: `${subquery.sql} ORDER BY allowed_resource.resource_id`,
     params: subquery.params,
@@ -69,18 +64,8 @@ export function compileSqliteLookupSubquery(
   request: SqliteResourceLookup,
   options?: SqliteLookupSubqueryOptions,
 ): SqliteQuery {
-  return compileSqliteReverseSubquery(
-    model,
-    namespace,
-    nowMs,
-    request.subject,
-    options,
-    (context) =>
-      compileReversePermission(
-        context,
-        request.resourceType,
-        request.permission,
-      ),
+  return compileSqliteReverseSubquery(model, namespace, nowMs, request.subject, options, (context) =>
+    compileReversePermission(context, request.resourceType, request.permission),
   );
 }
 
@@ -94,13 +79,8 @@ export function compileSqliteExpressionSubquery(
   expression: SqlitePermissionExpression,
   options?: SqliteLookupSubqueryOptions,
 ): SqliteQuery {
-  return compileSqliteReverseSubquery(
-    model,
-    namespace,
-    nowMs,
-    subjectRef,
-    options,
-    (context) => compileReverseExpression(context, entity, expression),
+  return compileSqliteReverseSubquery(model, namespace, nowMs, subjectRef, options, (context) =>
+    compileReverseExpression(context, entity, expression),
   );
 }
 
@@ -142,10 +122,7 @@ function compileSqliteReverseSubquery(
   });
   const allowedIds = compileBody(context);
   const allCtes = joinChunks([reachCte, ...context.extraCtes], ", ");
-  const withKeyword =
-    includeSubjectSets || context.extraCtes.length > 0
-      ? "WITH RECURSIVE"
-      : "WITH";
+  const withKeyword = includeSubjectSets || context.extraCtes.length > 0 ? "WITH RECURSIVE" : "WITH";
   const selectKeyword = deduplicate ? "SELECT DISTINCT" : "SELECT";
   const b = new QueryBuilder();
   return b.finish(
@@ -153,17 +130,11 @@ function compileSqliteReverseSubquery(
   );
 }
 
-function compileReversePermission(
-  context: ReverseContext,
-  entity: string,
-  permissionName: string,
-): SqliteQuery {
+function compileReversePermission(context: ReverseContext, entity: string, permissionName: string): SqliteQuery {
   const key = permissionKey(entity, permissionName);
   const definition = context.model.permissionByKey.get(key);
   if (definition === undefined) {
-    throw new Error(
-      `SQLite policy cannot find permission ${entity}#${permissionName}`,
-    );
+    throw new Error(`SQLite policy cannot find permission ${entity}#${permissionName}`);
   }
   const scc = context.model.cyclicSccsByKey.get(key);
   if (scc !== undefined) {
@@ -187,19 +158,9 @@ function compileReverseExpression(
     case "relation":
       return compileReverseRelation(entity, expression.relation);
     case "through":
-      return compileReverseThrough(
-        context,
-        entity,
-        expression.relation,
-        expression.targets,
-      );
+      return compileReverseThrough(context, entity, expression.relation, expression.targets);
     case "through-all":
-      return compileReverseThroughAll(
-        context,
-        entity,
-        expression.relation,
-        expression.targets,
-      );
+      return compileReverseThroughAll(context, entity, expression.relation, expression.targets);
     case "exclude":
       return compileReverseExclude(context, entity, expression);
     case "any-of":
@@ -229,11 +190,7 @@ function compileReverseThrough(
         return { sql: "SELECT '' AS resource_id WHERE 0", params: [] };
       }
       const edge = context.nextAlias("rev_thr");
-      const related = compileReversePermission(
-        context,
-        target.entity,
-        target.permission,
-      );
+      const related = compileReversePermission(context, target.entity, target.permission);
       const b = new QueryBuilder();
       return b.finish(`${selectKeyword} ${edge}.${columnRel.idColumn} AS resource_id
         FROM (${b.append(related)}) rel_res
@@ -242,11 +199,7 @@ function compileReverseThrough(
           AND ${edge}.${columnRel.targetIdColumn} IS NOT NULL`);
     }
     const edge = context.nextAlias("rev_thr");
-    const related = compileReversePermission(
-      context,
-      target.entity,
-      target.permission,
-    );
+    const related = compileReversePermission(context, target.entity, target.permission);
     const b = new QueryBuilder();
     // CROSS JOIN pins `rel_res` as the outer loop in SQLite so the planner
     // always drives from the user's reached scopes via subject_lookup instead
@@ -294,12 +247,7 @@ function compileReverseThroughAll(
           AND NOT (${b.append(targetMatch)})
       )`);
   }
-  const targetMatch = compileForwardArrowTargets(
-    context.forward,
-    context.subject,
-    failAlias,
-    targets,
-  );
+  const targetMatch = compileForwardArrowTargets(context.forward, context.subject, failAlias, targets);
   return b.finish(`SELECT DISTINCT cand.resource_id
     FROM (${b.append(candidates)}) cand
     WHERE NOT EXISTS (
@@ -324,25 +272,15 @@ function compileReverseExclude(
   const inc = compileReverseExpression(context, entity, expression.include);
   const exc = compileReverseExpression(context, entity, expression.exclude);
   const b = new QueryBuilder();
-  return b.finish(
-    `SELECT resource_id FROM (${b.append(inc)}) EXCEPT SELECT resource_id FROM (${b.append(exc)})`,
-  );
+  return b.finish(`SELECT resource_id FROM (${b.append(inc)}) EXCEPT SELECT resource_id FROM (${b.append(exc)})`);
 }
 
 function compileReverseGroup(
   context: ReverseContext,
   entity: string,
-  expression: Extract<
-    SqlitePermissionExpression,
-    { kind: "any-of" | "all-of" }
-  >,
+  expression: Extract<SqlitePermissionExpression, { kind: "any-of" | "all-of" }>,
 ): SqliteQuery {
-  const operator =
-    expression.kind === "any-of"
-      ? context.deduplicate
-        ? " UNION "
-        : " UNION ALL "
-      : " INTERSECT ";
+  const operator = expression.kind === "any-of" ? (context.deduplicate ? " UNION " : " UNION ALL ") : " INTERSECT ";
   const branches = expression.expressions.map((child) => {
     const compiled = compileReverseExpression(context, entity, child);
     return {

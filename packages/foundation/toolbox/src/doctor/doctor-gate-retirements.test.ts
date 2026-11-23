@@ -19,8 +19,7 @@ const previous = {
 };
 
 afterEach(() => {
-  for (const root of files.splice(0))
-    rmSync(root, { recursive: true, force: true });
+  for (const root of files.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 function write(root: string, path: string, text: string): void {
@@ -43,22 +42,11 @@ async function compare(scenario: Scenario = {}) {
   const root = mkdtempSync(join(tmpdir(), "dad-retired-floors-"));
   files.push(root);
   const { owner, proof } = scenario;
-  write(
-    root,
-    projectPath,
-    JSON.stringify({ packages: owner && !scenario.undeclared ? [owner] : [] }),
-  );
+  write(root, projectPath, JSON.stringify({ packages: owner && !scenario.undeclared ? [owner] : [] }));
   write(root, baselinePath, JSON.stringify({ floors: scenario.floors ?? {} }));
-  if (owner)
-    write(
-      root,
-      `${owner.root}/package.json`,
-      JSON.stringify({ name: owner.name }),
-    );
-  if (scenario.oldPath)
-    write(root, `${former.root}/src/kept.ts`, "export {};\n");
-  if (proof !== undefined)
-    write(root, `${replacement.root}/type-tests/proof.ts`, proof);
+  if (owner) write(root, `${owner.root}/package.json`, JSON.stringify({ name: owner.name }));
+  if (scenario.oldPath) write(root, `${former.root}/src/kept.ts`, "export {};\n");
+  if (proof !== undefined) write(root, `${replacement.root}/type-tests/proof.ts`, proof);
   if (scenario.receipt) {
     write(
       root,
@@ -78,15 +66,10 @@ async function compare(scenario: Scenario = {}) {
     [
       baselinePath,
       JSON.stringify({
-        floors: scenario.global
-          ? { ...previous, soundnessCases: { cases: floor } }
-          : previous,
+        floors: scenario.global ? { ...previous, soundnessCases: { cases: floor } } : previous,
       }),
     ],
-    [
-      `${former.root}/package.json`,
-      JSON.stringify({ name: scenario.oldManifestName ?? former.name }),
-    ],
+    [`${former.root}/package.json`, JSON.stringify({ name: scenario.oldManifestName ?? former.name })],
   ]);
   return runDoctorGate({
     root,
@@ -104,28 +87,18 @@ async function compare(scenario: Scenario = {}) {
     },
     readAtRef: (_ref, path) => {
       const stdout = base.get(path);
-      return stdout === undefined
-        ? { status: 1, stdout: "" }
-        : { status: 0, stdout };
+      return stdout === undefined ? { status: 1, stdout: "" } : { status: 0, stdout };
     },
   });
 }
 
 it("allows exactly retired owner floors and leaves global floors held", async () => {
   const result = await compare({ global: true });
-  expect(result.findings.map(({ measure }) => measure)).toEqual([
-    "soundnessCases",
-  ]);
-  expect(result.output).toContain(
-    "former package @example/old at packages/server/old",
-  );
+  expect(result.findings.map(({ measure }) => measure)).toEqual(["soundnessCases"]);
+  expect(result.output).toContain("former package @example/old at packages/server/old");
 });
 
-it.each<Scenario>([
-  { oldManifestName: "@example/other" },
-  { oldPath: true },
-  { owner: replacement, undeclared: true },
-])(
+it.each<Scenario>([{ oldManifestName: "@example/other" }, { oldPath: true }, { owner: replacement, undeclared: true }])(
   "holds the floors when the former identity or retired path is unproven",
   async (scenario) => {
     expect((await compare(scenario)).findings).toHaveLength(2);
@@ -138,13 +111,10 @@ it("requires a same-name relocation to retain its invariant and prove an explici
     typeTestNegativeCases: { [replacement.root]: floor },
   };
   const attempt = { owner: replacement, floors: current, receipt: true };
-  const proof =
-    'import { expectTypeOf } from "vitest";\nexpectTypeOf<"unknown">().not.toExtend<"known">();\n';
+  const proof = 'import { expectTypeOf } from "vitest";\nexpectTypeOf<"unknown">().not.toExtend<"known">();\n';
   const quoted = `export const marker = "${TS_EXPECT_ERROR_MARK}";\n`;
   expect((await compare({ ...attempt, proof })).exitCode).toBe(0);
-  expect((await compare({ ...attempt, proof, receipt: false })).exitCode).toBe(
-    1,
-  );
+  expect((await compare({ ...attempt, proof, receipt: false })).exitCode).toBe(1);
   expect((await compare({ ...attempt, proof: quoted })).exitCode).toBe(1);
   expect(
     (

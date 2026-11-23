@@ -32,9 +32,7 @@ const previewSetting = z.strictObject({
 
 export type FeaturePreviewConfiguration = z.output<typeof previewSetting>;
 
-export function readFeaturePreview(
-  environment: NodeJS.ProcessEnv,
-): FeaturePreviewConfiguration | undefined {
+export function readFeaturePreview(environment: NodeJS.ProcessEnv): FeaturePreviewConfiguration | undefined {
   const raw = environment["DADS_FEATURE_PREVIEW"];
   if (raw === undefined) return undefined;
   try {
@@ -86,9 +84,7 @@ export function configureFeaturePreviews(options: {
         resolveContext: resolveTenant,
         findPreview: (token) => {
           const digest = createHash("sha256").update(token).digest();
-          return Promise.resolve(
-            timingSafeEqual(digest, expectedDigest) ? record : null,
-          );
+          return Promise.resolve(timingSafeEqual(digest, expectedDigest) ? record : null);
         },
         canPreview: ({ subject, context }) =>
           context.kind === "tenant"

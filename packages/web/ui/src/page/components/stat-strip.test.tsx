@@ -22,12 +22,8 @@ describe("StatStrip", () => {
     );
 
     const strip = screen.getByRole("group", { name: "Service Summary" });
-    const labels = Array.from(container.querySelectorAll("dt")).map(
-      (dt) => dt.textContent,
-    );
-    const values = Array.from(container.querySelectorAll("dd")).map(
-      (dd) => dd.textContent,
-    );
+    const labels = Array.from(container.querySelectorAll("dt")).map((dt) => dt.textContent);
+    const values = Array.from(container.querySelectorAll("dd")).map((dd) => dd.textContent);
 
     expect(strip.tagName).toBe("DL");
     expect(labels).toEqual(["Remaining", "Interval"]);
@@ -58,9 +54,7 @@ describe("StatStrip", () => {
     );
 
     expect(screen.getByText("1 day").className).toContain("text-destructive");
-    expect(screen.getByText("3 days").className).not.toContain(
-      "text-destructive",
-    );
+    expect(screen.getByText("3 days").className).not.toContain("text-destructive");
   });
 
   it("shows a hint line only when one is given", () => {
@@ -85,9 +79,7 @@ describe("StatStrip", () => {
 
     expect(cardStrip.getAttribute("data-variant")).toBe("card");
     expect(cardStrip.className).toContain("border");
-    expect(
-      card.container.querySelector('[data-slot="stat-item"]')?.className,
-    ).toContain("bg-card");
+    expect(card.container.querySelector('[data-slot="stat-item"]')?.className).toContain("bg-card");
     card.unmount();
 
     render(
@@ -99,8 +91,6 @@ describe("StatStrip", () => {
 
     expect(plainStrip.getAttribute("data-variant")).toBe("plain");
     expect(plainStrip.className).not.toContain("rounded-lg");
-    expect(
-      document.querySelector('[data-slot="stat-item"]')?.className,
-    ).not.toContain("bg-card");
+    expect(document.querySelector('[data-slot="stat-item"]')?.className).not.toContain("bg-card");
   });
 });

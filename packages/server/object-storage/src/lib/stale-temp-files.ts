@@ -84,8 +84,7 @@ class Sweep {
     for (const entry of entries) {
       const path = join(folder, entry.name);
       if (entry.isDirectory()) this.folders.push(path);
-      else if (entry.isFile() && entry.name.includes(TEMP_MARKER))
-        await this.removeIfStale(path);
+      else if (entry.isFile() && entry.name.includes(TEMP_MARKER)) await this.removeIfStale(path);
     }
   }
 
@@ -101,8 +100,7 @@ class Sweep {
   }
 
   private failUnlessGone(path: string, error: unknown): void {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT")
-      return;
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
     this.failed += 1;
     this.failedSample ??= path.slice(this.root.length + 1) || ".";
   }

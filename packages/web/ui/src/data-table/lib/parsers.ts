@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 import { dataTableConfig } from "../config/data-table.js";
-import type {
-  DataTableColumnId,
-  ExtendedColumnSort,
-} from "./data-table-types.js";
+import type { DataTableColumnId, ExtendedColumnSort } from "./data-table-types.js";
 
 export const sortingItemSchema = z.object({
   id: z.string(),
@@ -36,10 +33,7 @@ export function isKnownColumnId<TData>(
 }
 
 /** Read a sorting state out of unknown (URL-supplied) data, dropping junk. */
-export function parseSortingState<TData>(
-  value: unknown,
-  columnIds: ReadonlySet<string>,
-): ExtendedColumnSort<TData>[] {
+export function parseSortingState<TData>(value: unknown, columnIds: ReadonlySet<string>): ExtendedColumnSort<TData>[] {
   const parsed = z.array(sortingItemSchema).safeParse(value);
   if (!parsed.success) return [];
 

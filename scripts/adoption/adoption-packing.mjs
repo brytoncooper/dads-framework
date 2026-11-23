@@ -21,9 +21,7 @@ export function loadAdoptionPackages(root) {
   const visit = (directory) => {
     let manifest;
     try {
-      manifest = JSON.parse(
-        readFileSync(join(directory, "package.json"), "utf8"),
-      );
+      manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
     } catch (error) {
       if (error?.code !== "ENOENT") throw error;
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -48,20 +46,10 @@ export async function packAdoptionPackages({ context, tarballRoot, jobs }) {
         // Pack by directory: the native platform packages are not npm workspaces.
         const entry = await transcript.run(
           "npm",
-          [
-            "pack",
-            directory,
-            "--json",
-            "--pack-destination",
-            tarballRoot,
-            "--loglevel=error",
-          ],
+          ["pack", directory, "--json", "--pack-destination", tarballRoot, "--loglevel=error"],
           { cwd: context.root },
         );
-        context.tarballs.set(
-          packageName,
-          join(tarballRoot, packedFilename(packageName, entry.stdout)),
-        );
+        context.tarballs.set(packageName, join(tarballRoot, packedFilename(packageName, entry.stdout)));
       }),
   }));
   await runAdoptionTasks({ tasks, jobs, label: "pack" });
@@ -73,9 +61,7 @@ export function packedFilename(packageName, output) {
   try {
     packed = JSON.parse(output);
   } catch {
-    throw new Error(
-      `npm pack did not return JSON for ${packageName}: ${output}`,
-    );
+    throw new Error(`npm pack did not return JSON for ${packageName}: ${output}`);
   }
   const filename = Array.isArray(packed) ? packed[0]?.filename : undefined;
   if (typeof filename !== "string" || filename.length === 0) {
@@ -91,11 +77,8 @@ export function packedFilename(packageName, output) {
  */
 export function collectPackageClosure(packageName, packages, collected = []) {
   const declaration = packages.get(packageName);
-  if (!declaration)
-    throw new Error(`Unknown workspace package ${packageName}.`);
-  for (const dependencyName of Object.keys(
-    declaration.manifest.dependencies ?? {},
-  )) {
+  if (!declaration) throw new Error(`Unknown workspace package ${packageName}.`);
+  for (const dependencyName of Object.keys(declaration.manifest.dependencies ?? {})) {
     if (packages.has(dependencyName)) {
       collectPackageClosure(dependencyName, packages, collected);
     }

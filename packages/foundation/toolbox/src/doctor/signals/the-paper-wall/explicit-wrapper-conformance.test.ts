@@ -67,36 +67,29 @@ function inspectFiles(files: Readonly<Record<string, string>>): boolean {
 }
 
 describe("explicit wrapper conformance", () => {
-  const decoratorRun =
-    "laws((config) => decorated(config), (name, run) => { it(name, () => run()); });";
+  const decoratorRun = "laws((config) => decorated(config), (name, run) => { it(name, () => run()); });";
 
   it("accepts two implementations running the same suite", () => {
     expect(inspect(decoratorRun)).toBe(true);
   });
 
   it("rejects a second import alias for the same vendor provider", () => {
-    expect(
-      inspect(
-        decoratorRun.replace("decorated(config)", "new Alias(config)"),
-        NATIVE,
-      ),
-    ).toBe(false);
+    expect(inspect(decoratorRun.replace("decorated(config)", "new Alias(config)"), NATIVE)).toBe(false);
   });
 
   it("rejects an npm alias of the same provider package", () => {
     expect(
-      inspect(
-        decoratorRun.replace("decorated(config)", "new PackageAlias(config)"),
-        { module: "renamed-vendor-db", name: "Pool" },
-      ),
+      inspect(decoratorRun.replace("decorated(config)", "new PackageAlias(config)"), {
+        module: "renamed-vendor-db",
+        name: "Pool",
+      }),
     ).toBe(false);
   });
 
   it("rejects two local factories for the same provider class", () => {
     expect(
       inspect(
-        decoratorRun +
-          decoratorRun.replace("decorated(config)", "aliasedDecorator(config)"),
+        decoratorRun + decoratorRun.replace("decorated(config)", "aliasedDecorator(config)"),
         { module: "././decorator.js", name: "aliasedDecorator" },
         RUNNER,
         undefined,
@@ -111,9 +104,7 @@ describe("explicit wrapper conformance", () => {
   });
 
   it("rejects a test registration that never runs the law", () => {
-    expect(
-      inspect(decoratorRun.replace("() => run()", "() => undefined")),
-    ).toBe(false);
+    expect(inspect(decoratorRun.replace("() => run()", "() => undefined"))).toBe(false);
     expect(inspect(decoratorRun, DECORATED, RUNNER, "")).toBe(false);
   });
 });
@@ -166,28 +157,16 @@ describe("table-driven wrapper conformance", () => {
   });
 
   it("rejects fixtures without a provider law", () => {
-    expect(
-      inspectTable(TABLE_RUN, TABLE.replace("provider.connect();", "")),
-    ).toBe(false);
-    expect(
-      inspectTable(TABLE_RUN, `export const laws = [{ name: "connects" }];`),
-    ).toBe(false);
+    expect(inspectTable(TABLE_RUN, TABLE.replace("provider.connect();", ""))).toBe(false);
+    expect(inspectTable(TABLE_RUN, `export const laws = [{ name: "connects" }];`)).toBe(false);
   });
 
   it("rejects a constructed provider that is unused by the law", () => {
-    expect(
-      inspectTable(TABLE_RUN.replace("run({ provider })", "run(new Plain())")),
-    ).toBe(false);
+    expect(inspectTable(TABLE_RUN.replace("run({ provider })", "run(new Plain())"))).toBe(false);
   });
 
   it("rejects skipped registrations and shadowed provider imports", () => {
-    expect(inspectTable(TABLE_RUN.replace("describe(", "describe.skip("))).toBe(
-      false,
-    );
-    expect(
-      inspectTable(
-        TABLE_RUN.replace("  it.each", "  const Local = Plain; it.each"),
-      ),
-    ).toBe(false);
+    expect(inspectTable(TABLE_RUN.replace("describe(", "describe.skip("))).toBe(false);
+    expect(inspectTable(TABLE_RUN.replace("  it.each", "  const Local = Plain; it.each"))).toBe(false);
   });
 });

@@ -16,8 +16,7 @@ import type { z } from "zod";
  * `<domain>.<kebab-name>`, e.g. `identity.account-invitation`. The dot is the
  * owner: reading a template name tells you which library to open.
  */
-export const EMAIL_TEMPLATE_NAME_PATTERN =
-  /^[a-z][a-z0-9]*(-[a-z0-9]+)*\.[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+export const EMAIL_TEMPLATE_NAME_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*\.[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 /**
  * Long enough that "TODO" and "invite email" both fail. The description is

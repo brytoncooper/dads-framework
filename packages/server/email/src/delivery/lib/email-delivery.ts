@@ -4,10 +4,7 @@ import type { OutboundEmailTx } from "./database/outbound-email-store.js";
 import type { EmailEnvelope } from "./email-envelope.js";
 import type { EmailTemplate } from "./email-template-port.js";
 import type { OutboundEmailId } from "./outbound-email-status.js";
-import type {
-  EmailFailurePolicy,
-  QueuedEmailAttachment,
-} from "./queued-email-attachment.js";
+import type { EmailFailurePolicy, QueuedEmailAttachment } from "./queued-email-attachment.js";
 
 /** The structured logger this kit writes its delivery events to. */
 export type EmailDeliveryLog = {

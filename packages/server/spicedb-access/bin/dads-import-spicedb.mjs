@@ -13,13 +13,11 @@ async function loadOptionalPackage(packageName, purpose) {
     if (
       error &&
       typeof error === "object" &&
-      (error.code === "ERR_MODULE_NOT_FOUND" ||
-        error.code === "MODULE_NOT_FOUND")
+      (error.code === "ERR_MODULE_NOT_FOUND" || error.code === "MODULE_NOT_FOUND")
     ) {
-      throw new Error(
-        `Package "${packageName}" is required ${purpose}. Install it with: npm install ${packageName}`,
-        { cause: error },
-      );
+      throw new Error(`Package "${packageName}" is required ${purpose}. Install it with: npm install ${packageName}`, {
+        cause: error,
+      });
     }
     throw error;
   }
@@ -52,10 +50,7 @@ function createAuthzedParityClient(v1, client) {
           consistency,
         }),
       );
-      return (
-        response.permissionship ===
-        v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION
-      );
+      return response.permissionship === v1.CheckPermissionResponse_Permissionship.HAS_PERMISSION;
     },
     async lookupResources(query) {
       const responses = await client.promises.lookupResources(
@@ -67,10 +62,7 @@ function createAuthzedParityClient(v1, client) {
         }),
       );
       return responses
-        .filter(
-          (item) =>
-            item.permissionship === v1.LookupPermissionship.HAS_PERMISSION,
-        )
+        .filter((item) => item.permissionship === v1.LookupPermissionship.HAS_PERMISSION)
         .map((item) => item.resourceObjectId);
     },
   };
@@ -78,14 +70,9 @@ function createAuthzedParityClient(v1, client) {
 
 export const defaultConnectors = {
   async connectSpiceDb({ endpoint, token, insecure }) {
-    const authzed = await loadOptionalPackage(
-      "@authzed/authzed-node",
-      "to connect to SpiceDB",
-    );
+    const authzed = await loadOptionalPackage("@authzed/authzed-node", "to connect to SpiceDB");
     const { v1 } = authzed;
-    const security = insecure
-      ? v1.ClientSecurity.INSECURE_LOCALHOST_ALLOWED
-      : v1.ClientSecurity.SECURE;
+    const security = insecure ? v1.ClientSecurity.INSECURE_LOCALHOST_ALLOWED : v1.ClientSecurity.SECURE;
     const client = v1.NewClient(token, endpoint, security);
     return {
       source: client,
@@ -106,10 +93,7 @@ export const defaultConnectors = {
     return {
       executor: pool,
       async createParityClient({ model, namespace }) {
-        const pgAccess = await loadOptionalPackage(
-          "@dads-framework/postgres-access",
-          "for --verify parity checks",
-        );
+        const pgAccess = await loadOptionalPackage("@dads-framework/postgres-access", "for --verify parity checks");
         return new pgAccess.PostgresAuthorization({
           model,
           namespace,
@@ -149,8 +133,7 @@ async function main() {
   process.exitCode = result.exitCode;
 }
 
-const invokedPath =
-  process.argv[1] === undefined ? undefined : realpathSync(process.argv[1]);
+const invokedPath = process.argv[1] === undefined ? undefined : realpathSync(process.argv[1]);
 if (invokedPath === fileURLToPath(import.meta.url)) {
   await main();
 }

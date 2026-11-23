@@ -1,8 +1,4 @@
-import {
-  normalizeIdentityEmail,
-  type Identity,
-  type IdentitySession,
-} from "../../index.js";
+import { normalizeIdentityEmail, type Identity, type IdentitySession } from "../../index.js";
 import type { createAccountInvitations } from "./account-invitations.js";
 import type { configureBetterAuth } from "./configure-better-auth.js";
 import { IDENTITY_PATH } from "./identity-options.js";
@@ -17,10 +13,7 @@ const VENDOR_POST = new Set([
 const VENDOR_GET = new Set(["/verify-email", "/jwks", "/token"]);
 
 type BetterAuth = ReturnType<typeof configureBetterAuth>;
-type EnterpriseRoutes = (
-  request: Request,
-  route: string,
-) => Promise<Response | undefined>;
+type EnterpriseRoutes = (request: Request, route: string) => Promise<Response | undefined>;
 type AccountInvitations = ReturnType<typeof createAccountInvitations>;
 
 export function createIdentityHandler(
@@ -32,25 +25,13 @@ export function createIdentityHandler(
 ): Identity["handle"] {
   return async (request) => {
     const path = routeOf(request);
-    if (path === "GET /get-session")
-      return sessionResponse(readSession, request.headers);
+    if (path === "GET /get-session") return sessionResponse(readSession, request.headers);
     if (path === "POST /invite" || path === "POST /accept-invitation") {
-      return invitationResponse(
-        request,
-        path,
-        origin,
-        invitations,
-        readSession,
-      );
+      return invitationResponse(request, path, origin, invitations, readSession);
     }
     if (path === null) return json({ error: "not-found" }, 404);
     if (enterpriseRoutes !== undefined) {
-      const enterprise = await enterpriseResponse(
-        request,
-        path,
-        enterpriseRoutes,
-        readSession,
-      );
+      const enterprise = await enterpriseResponse(request, path, enterpriseRoutes, readSession);
       if (enterprise !== undefined) return enterprise;
     }
     if (!isVendorPath(request.method, path)) {
@@ -60,17 +41,9 @@ export function createIdentityHandler(
   };
 }
 
-async function sessionResponse(
-  readSession: Identity["readSession"],
-  headers: Headers,
-): Promise<Response> {
+async function sessionResponse(readSession: Identity["readSession"], headers: Headers): Promise<Response> {
   const session = await readSession(headers);
-  return json(
-    session === null
-      ? null
-      : { account: session.account, expiresAt: session.expiresAt },
-    200,
-  );
+  return json(session === null ? null : { account: session.account, expiresAt: session.expiresAt }, 200);
 }
 
 async function enterpriseResponse(
@@ -96,17 +69,14 @@ function isVendorPath(method: string, path: string): boolean {
   const suffix = path.slice(method.length + 1);
   if (method === "POST") return VENDOR_POST.has(suffix);
   if (method !== "GET") return false;
-  return (
-    VENDOR_GET.has(suffix) || /^\/reset-password\/[A-Za-z0-9_-]+$/u.test(suffix)
-  );
+  return VENDOR_GET.has(suffix) || /^\/reset-password\/[A-Za-z0-9_-]+$/u.test(suffix);
 }
 
 function vendorResponse(response: Response, path: string): Response {
   const headers = new Headers(response.headers);
   headers.set("cache-control", "no-store");
   headers.set("referrer-policy", "no-referrer");
-  const isPasswordSession =
-    path === "POST /sign-in/email" || path === "POST /sign-up/email";
+  const isPasswordSession = path === "POST /sign-in/email" || path === "POST /sign-up/email";
   if (response.ok && isPasswordSession) {
     headers.delete("content-length");
     return Response.json({ ok: true }, { headers, status: response.status });
@@ -121,22 +91,14 @@ async function invitationResponse(
   invitations: AccountInvitations,
   readSession: Identity["readSession"],
 ): Promise<Response> {
-  if (request.headers.get("origin") !== origin)
-    return json({ error: "forbidden" }, 403);
+  if (request.headers.get("origin") !== origin) return json({ error: "forbidden" }, 403);
   const session = await readSession(request.headers);
   if (session === null) return json({ error: "unauthorized" }, 401);
   const parsed: unknown = await request.json().catch(() => null);
-  if (typeof parsed !== "object" || parsed === null)
-    return json({ error: "invalid-input" }, 400);
-  if (path === "POST /invite")
-    return issueInvitation(invitations, session, parsed);
-  const accepted = await invitations.accept(
-    session,
-    "token" in parsed ? parsed.token : null,
-  );
-  return accepted
-    ? json({ ok: true }, 200)
-    : json({ error: "invitation-invalid" }, 400);
+  if (typeof parsed !== "object" || parsed === null) return json({ error: "invalid-input" }, 400);
+  if (path === "POST /invite") return issueInvitation(invitations, session, parsed);
+  const accepted = await invitations.accept(session, "token" in parsed ? parsed.token : null);
+  return accepted ? json({ ok: true }, 200) : json({ error: "invitation-invalid" }, 400);
 }
 
 async function issueInvitation(

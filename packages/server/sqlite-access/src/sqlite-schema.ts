@@ -57,12 +57,11 @@ export type SqliteSchemaMigration = {
 };
 
 /** Application-applied migration for the SQLite tuple store and its indexes. */
-export const sqliteRelationshipSchemaMigration: SqliteSchemaMigration =
-  Object.freeze({
-    id: "dad-authorization-relationship-sqlite-v1",
-    version: 1,
-    adapter: "sqlite-access",
-    checksum: createHash("sha256").update(relationshipSchemaSql).digest("hex"),
-    sql: relationshipSchemaSql,
-    statements,
-  });
+export const sqliteRelationshipSchemaMigration: SqliteSchemaMigration = Object.freeze({
+  id: "dad-authorization-relationship-sqlite-v1",
+  version: 1,
+  adapter: "sqlite-access",
+  checksum: createHash("sha256").update(relationshipSchemaSql).digest("hex"),
+  sql: relationshipSchemaSql,
+  statements,
+});

@@ -22,27 +22,13 @@ test("guide exports retain anchored prose, language, code whitespace and table c
     "<ol><li>Install dependencies.</li><li>Start PostgreSQL.</li></ol>",
     '</article><nav class="reader-pages">Next page</nav></main>',
   ].join("");
-  const markdown = exportMarkdown(
-    html,
-    origin + "/docs/quickstart",
-    canonicals,
-  );
+  const markdown = exportMarkdown(html, origin + "/docs/quickstart", canonicals);
 
   assert.match(markdown, /<a id="quickstart"><\/a>\n\n# Quickstart/u);
-  assert.match(
-    markdown,
-    /\[the guide\]\(https:\/\/dadsframework\.dev\/docs\/#notes\)/u,
-  );
-  assert.match(
-    markdown,
-    /\[jump\]\(https:\/\/dadsframework\.dev\/docs\/quickstart#setup\)/u,
-  );
-  assert.ok(
-    markdown.includes("```sh\nnpm create dads@latest my-app\ncd my-app\n```"),
-  );
-  assert.ok(
-    markdown.includes('```ts\n\n  export type Flag = "on" | "off";\n\n```'),
-  );
+  assert.match(markdown, /\[the guide\]\(https:\/\/dadsframework\.dev\/docs\/#notes\)/u);
+  assert.match(markdown, /\[jump\]\(https:\/\/dadsframework\.dev\/docs\/quickstart#setup\)/u);
+  assert.ok(markdown.includes("```sh\nnpm create dads@latest my-app\ncd my-app\n```"));
+  assert.ok(markdown.includes('```ts\n\n  export type Flag = "on" | "off";\n\n```'));
   assert.ok(markdown.includes("| `standard\\|strict` | Pick a profile. |"));
   assert.match(markdown, /2\. +Start PostgreSQL\./u);
   assert.doesNotMatch(markdown, /Search documentation|On this page|Next page/u);
@@ -64,11 +50,7 @@ test("home retains all sections and a fallback table while dropping interactive 
   assert.ok(markdown.includes("```sh\nnpm create dads@latest my-app\n```"));
   assert.ok(markdown.includes("```ts\n  listRoute({});\n```"));
   assert.ok(markdown.includes("Responses\n\n| API | HTTP |"));
-  for (const row of [
-    "| Member | 200 OK |",
-    "| Revoked | 404 |",
-    "| Staff | 404 |",
-  ]) {
+  for (const row of ["| Member | 200 OK |", "| Revoked | 404 |", "| Staff | 404 |"]) {
     assert.ok(markdown.includes(row));
   }
   assert.match(markdown, /## First card[\s\S]*## Second card/u);

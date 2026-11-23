@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  decideWorktreeRemoval,
-  type WorktreeRemovalFacts,
-} from "./worktree-decision.js";
+import { decideWorktreeRemoval, type WorktreeRemovalFacts } from "./worktree-decision.js";
 
 const merged: WorktreeRemovalFacts = {
   primary: false,
@@ -34,16 +31,12 @@ describe("worktree removal", () => {
       remove: true,
       reason: "merged-patch",
     });
-    expect(
-      decideWorktreeRemoval({ ...merged, mergedPatch: false }).remove,
-    ).toBe(false);
+    expect(decideWorktreeRemoval({ ...merged, mergedPatch: false }).remove).toBe(false);
   });
 
   it("requires sixty minutes of idleness for an empty checkout", () => {
     const empty = { ...merged, empty: true, mergedPatch: false };
-    expect(decideWorktreeRemoval({ ...empty, idleMinutes: 59.99 }).remove).toBe(
-      false,
-    );
+    expect(decideWorktreeRemoval({ ...empty, idleMinutes: 59.99 }).remove).toBe(false);
     expect(decideWorktreeRemoval({ ...empty, idleMinutes: 60 })).toEqual({
       remove: true,
       reason: "empty-and-idle",

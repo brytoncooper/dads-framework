@@ -30,15 +30,10 @@ export type SourceRoute = {
 };
 
 function mayDeclareRoutes(source: string): boolean {
-  return /\b(?:get|list|post|patch|put|delete)Route\b|\bdad\s*\.\s*(?:get|list|post|patch|put|delete)\b/.test(
-    source,
-  );
+  return /\b(?:get|list|post|patch|put|delete)Route\b|\bdad\s*\.\s*(?:get|list|post|patch|put|delete)\b/.test(source);
 }
 
-export function readRouteSource(
-  text: string,
-  file: string,
-): readonly SourceRoute[] {
+export function readRouteSource(text: string, file: string): readonly SourceRoute[] {
   if (!mayDeclareRoutes(text)) return [];
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const routes: SourceRoute[] = [];
@@ -53,23 +48,15 @@ export function readRouteSource(
   return routes;
 }
 
-function readRoute(
-  call: ts.CallExpression,
-  source: ts.SourceFile,
-): SourceRoute | undefined {
+function readRoute(call: ts.CallExpression, source: ts.SourceFile): SourceRoute | undefined {
   const builder = builderMethod(call.expression);
   const config = call.arguments[0];
-  if (!builder || !config || !ts.isObjectLiteralExpression(config))
-    return undefined;
+  if (!builder || !config || !ts.isObjectLiteralExpression(config)) return undefined;
   const routePath = readRoutePath(config);
   if (!routePath?.startsWith("/")) return undefined;
   const descriptor = readProperty(config, "route");
-  const method =
-    readDescriptorText(descriptor, "method") ??
-    readText(readProperty(config, "method")) ??
-    builder;
-  const operation =
-    readText(readProperty(config, "operation")) ?? `${method} ${routePath}`;
+  const method = readDescriptorText(descriptor, "method") ?? readText(readProperty(config, "method")) ?? builder;
+  const operation = readText(readProperty(config, "operation")) ?? `${method} ${routePath}`;
   return {
     operation,
     method,
@@ -84,50 +71,30 @@ function readRoute(
 function readAccessFacts(
   config: ts.ObjectLiteralExpression,
   source: ts.SourceFile,
-): Pick<
-  SourceRoute,
-  "declaresAccess" | "explicitlyPublic" | "resourceFreeTelemetry"
-> {
+): Pick<SourceRoute, "declaresAccess" | "explicitlyPublic" | "resourceFreeTelemetry"> {
   const access = readProperty(config, "access");
   if (usesPublicAccess(access, source)) {
     return {
       declaresAccess: true,
       explicitlyPublic: true,
-      ...(declaresResourceFreeTelemetry(config)
-        ? { resourceFreeTelemetry: true }
-        : {}),
+      ...(declaresResourceFreeTelemetry(config) ? { resourceFreeTelemetry: true } : {}),
     };
   }
   return { declaresAccess: access !== undefined };
 }
 
-function usesPublicAccess(
-  access: ts.Node | undefined,
-  source: ts.SourceFile,
-): boolean {
-  if (
-    access === undefined ||
-    !ts.isCallExpression(access) ||
-    access.arguments.length !== 0
-  )
-    return false;
+function usesPublicAccess(access: ts.Node | undefined, source: ts.SourceFile): boolean {
+  if (access === undefined || !ts.isCallExpression(access) || access.arguments.length !== 0) return false;
   if (!ts.isIdentifier(access.expression)) return false;
   const name = access.expression.text;
-  return (
-    importsPublicAccess(source, name) && !shadowsImportedName(source, name)
-  );
+  return importsPublicAccess(source, name) && !shadowsImportedName(source, name);
 }
 
 function importsPublicAccess(source: ts.SourceFile, name: string): boolean {
   return source.statements.some((statement) => {
-    if (
-      !ts.isImportDeclaration(statement) ||
-      !ts.isStringLiteral(statement.moduleSpecifier)
-    )
-      return false;
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) return false;
     if (statement.moduleSpecifier.text !== "@dads-framework/http") return false;
-    if (statement.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword)
-      return false;
+    if (statement.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword) return false;
     const bindings = statement.importClause?.namedBindings;
     if (bindings === undefined || !ts.isNamedImports(bindings)) return false;
     return bindings.elements.some(
@@ -158,9 +125,7 @@ function localName(node: ts.Node): string | undefined {
     ts.isFunctionExpression(node) ||
     ts.isClassExpression(node)
   ) {
-    return node.name !== undefined && ts.isIdentifier(node.name)
-      ? node.name.text
-      : undefined;
+    return node.name !== undefined && ts.isIdentifier(node.name) ? node.name.text : undefined;
   }
   return undefined;
 }
@@ -173,13 +138,8 @@ function readRoutePath(config: ts.ObjectLiteralExpression): string | undefined {
   );
 }
 
-function readDescriptorText(
-  descriptor: ts.Node | undefined,
-  key: string,
-): string | undefined {
-  return descriptor && ts.isObjectLiteralExpression(descriptor)
-    ? readText(readProperty(descriptor, key))
-    : undefined;
+function readDescriptorText(descriptor: ts.Node | undefined, key: string): string | undefined {
+  return descriptor && ts.isObjectLiteralExpression(descriptor) ? readText(readProperty(descriptor, key)) : undefined;
 }
 
 function builderMethod(expression: ts.Expression): string | undefined {

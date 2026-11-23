@@ -1,10 +1,6 @@
 import type * as ResendModule from "resend";
 import type { CreateEmailOptions, Resend } from "resend";
-import type {
-  EmailMessage,
-  EmailSender,
-  EmailSendReceipt,
-} from "../core/index.js";
+import type { EmailMessage, EmailSender, EmailSendReceipt } from "../core/index.js";
 import { loadOptionalPeer } from "../optional-peer.js";
 import { formatEmailAddress } from "./logic/format-email-address.js";
 
@@ -27,9 +23,7 @@ export class ResendEmailSender implements EmailSender {
       throw error;
     });
     const resend = await this.resend;
-    const { data, error } = await resend.emails.send(
-      toResendPayload(message, this.from),
-    );
+    const { data, error } = await resend.emails.send(toResendPayload(message, this.from));
     if (error) {
       throw new Error(`Resend rejected the email: ${error.message}`);
     }
@@ -53,34 +47,18 @@ async function createResendClient(apiKey: string): Promise<Resend> {
  * name/value pair while the shared envelope carries plain labels, so each tag is sent as
  * its own name and value.
  */
-function toResendPayload(
-  message: EmailMessage,
-  defaultFrom: string,
-): CreateEmailOptions {
+function toResendPayload(message: EmailMessage, defaultFrom: string): CreateEmailOptions {
   return {
-    from:
-      message.from === undefined
-        ? defaultFrom
-        : formatEmailAddress(message.from),
+    from: message.from === undefined ? defaultFrom : formatEmailAddress(message.from),
     to: message.to.map(formatEmailAddress),
     subject: message.subject,
     text: message.text,
     ...(message.html === undefined ? {} : { html: message.html }),
-    ...(message.cc === undefined
-      ? {}
-      : { cc: message.cc.map(formatEmailAddress) }),
-    ...(message.bcc === undefined
-      ? {}
-      : { bcc: message.bcc.map(formatEmailAddress) }),
-    ...(message.replyTo === undefined
-      ? {}
-      : { replyTo: formatEmailAddress(message.replyTo) }),
-    ...(message.headers === undefined
-      ? {}
-      : { headers: { ...message.headers } }),
-    ...(message.tags === undefined
-      ? {}
-      : { tags: message.tags.map((tag) => ({ name: tag, value: tag })) }),
+    ...(message.cc === undefined ? {} : { cc: message.cc.map(formatEmailAddress) }),
+    ...(message.bcc === undefined ? {} : { bcc: message.bcc.map(formatEmailAddress) }),
+    ...(message.replyTo === undefined ? {} : { replyTo: formatEmailAddress(message.replyTo) }),
+    ...(message.headers === undefined ? {} : { headers: { ...message.headers } }),
+    ...(message.tags === undefined ? {} : { tags: message.tags.map((tag) => ({ name: tag, value: tag })) }),
     ...(message.attachments === undefined
       ? {}
       : {

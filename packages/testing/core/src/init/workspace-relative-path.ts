@@ -10,10 +10,7 @@ import { relative, sep } from "node:path";
  */
 
 /** `target` as a `/`-separated path relative to `workspaceRoot`, or `.` for the root. */
-export function workspaceRelative(
-  workspaceRoot: string,
-  target: string,
-): string {
+export function workspaceRelative(workspaceRoot: string, target: string): string {
   const relativePath = relative(workspaceRoot, target);
   if (relativePath === "") return ".";
   return relativePath.split(sep).join("/");

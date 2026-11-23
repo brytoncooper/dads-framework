@@ -1,16 +1,7 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import type { DadsProjectTemplate } from "./dads-initialization-arguments.js";
-import {
-  renderStarterProjectFiles,
-  type StarterProjectFile,
-} from "./starter-project/render-starter-project.js";
+import { renderStarterProjectFiles, type StarterProjectFile } from "./starter-project/render-starter-project.js";
 import {
   inspectAgentSkillSynchronization,
   synchronizeAgentSkills,
@@ -35,17 +26,14 @@ export type DadsProjectInitialization = {
   readonly unchanged: readonly string[];
 };
 
-export function initializeDadsProject(
-  options: InitializeDadsProjectOptions,
-): DadsProjectInitialization {
+export function initializeDadsProject(options: InitializeDadsProjectOptions): DadsProjectInitialization {
   const projectRoot = resolveProjectRoot(options);
   const files = renderStarterProjectFiles({
     projectName: options.projectName,
     ...(options.template === undefined ? {} : { template: options.template }),
   });
   assertRecognizedProjectRoot(projectRoot);
-  const agentSkillSynchronization =
-    inspectAgentSkillSynchronization(projectRoot);
+  const agentSkillSynchronization = inspectAgentSkillSynchronization(projectRoot);
 
   const { created, unchanged } = classifyStarterFiles(projectRoot, files);
   recordAgentSkillPaths(agentSkillSynchronization, created, unchanged);
@@ -98,9 +86,7 @@ function writeStarterFiles(
   files: readonly StarterProjectFile[],
   created: readonly string[],
 ): void {
-  for (const file of files.filter((candidate) =>
-    created.includes(candidate.path),
-  )) {
+  for (const file of files.filter((candidate) => created.includes(candidate.path))) {
     const absolutePath = join(projectRoot, file.path);
     mkdirSync(dirname(absolutePath), { recursive: true });
     writeFileSync(absolutePath, file.content, {
@@ -111,13 +97,9 @@ function writeStarterFiles(
   synchronizeAgentSkills(projectRoot);
 }
 
-export function deriveDadsProjectName(
-  targetDirectory: string,
-  mode: "new" | "existing",
-): string {
+export function deriveDadsProjectName(targetDirectory: string, mode: "new" | "existing"): string {
   const directoryName = basename(resolve(targetDirectory));
-  const candidate =
-    mode === "existing" ? `${directoryName}-dads` : directoryName;
+  const candidate = mode === "existing" ? `${directoryName}-dads` : directoryName;
   const normalized = candidate
     .toLowerCase()
     .replaceAll(/[^a-z0-9._-]+/g, "-")
@@ -130,18 +112,13 @@ export function deriveDadsProjectName(
 
 function resolveProjectRoot(options: InitializeDadsProjectOptions): string {
   const targetDirectory = resolve(options.targetDirectory);
-  return options.mode === "existing"
-    ? join(targetDirectory, "dads")
-    : targetDirectory;
+  return options.mode === "existing" ? join(targetDirectory, "dads") : targetDirectory;
 }
 
 function assertRecognizedProjectRoot(projectRoot: string): void {
   if (!existsSync(projectRoot)) return;
   const entries = readdirSync(projectRoot);
-  if (
-    entries.length > 0 &&
-    !existsSync(join(projectRoot, "dads.project.json"))
-  ) {
+  if (entries.length > 0 && !existsSync(join(projectRoot, "dads.project.json"))) {
     throw new Error(
       `Refusing to initialize non-empty directory ${projectRoot}. Use existing-project mode to add an isolated Dads project.`,
     );

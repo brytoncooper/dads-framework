@@ -1,7 +1,4 @@
-import {
-  requestTraceAttributes,
-  type RequestTraceFacts,
-} from "../request-trace-attributes.js";
+import { requestTraceAttributes, type RequestTraceFacts } from "../request-trace-attributes.js";
 
 /** Records successive span attributes for a deterministic request-tracing test. */
 export function recordRequestTrace() {

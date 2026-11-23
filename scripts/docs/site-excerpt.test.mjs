@@ -31,18 +31,9 @@ test("includes the exact selected source lines", () => {
 });
 
 test("rejects stale, ambiguous, and inverted selections", () => {
-  assert.throws(
-    () => select("begin\nfinish"),
-    /exactly one line matching "end"/u,
-  );
-  assert.throws(
-    () => select("begin\nbegin\nend"),
-    /exactly one line matching "begin"/u,
-  );
-  assert.throws(
-    () => select("begin\nend\nend"),
-    /exactly one line matching "end"/u,
-  );
+  assert.throws(() => select("begin\nfinish"), /exactly one line matching "end"/u);
+  assert.throws(() => select("begin\nbegin\nend"), /exactly one line matching "begin"/u);
+  assert.throws(() => select("begin\nend\nend"), /exactly one line matching "end"/u);
   assert.throws(() => select("end\nbegin"), /end line precedes/u);
 });
 
@@ -59,25 +50,16 @@ test("includes only the selected declaration with multiline anchors", () => {
     from: "export function example() {\n  return 1;",
     through: "  return 1;\n}",
   };
-  assert.equal(
-    select(source, anchors).excerpt,
-    "export function example() {\n  return 1;\n}",
-  );
+  assert.equal(select(source, anchors).excerpt, "export function example() {\n  return 1;\n}");
   assert.throws(
     () => select(source, { ...anchors, through: "  return 1;\n  }" }),
     /expected exactly one block of lines/u,
   );
-  assert.throws(
-    () => select(source, { ...anchors, through: "}\n}" }),
-    /expected exactly one block of lines/u,
-  );
+  assert.throws(() => select(source, { ...anchors, through: "}\n}" }), /expected exactly one block of lines/u);
 });
 
 test("leaves ordinary comments alone", () => {
-  assert.equal(
-    sourceExcerpt({ token: "<!-- explanatory note -->" }),
-    undefined,
-  );
+  assert.equal(sourceExcerpt({ token: "<!-- explanatory note -->" }), undefined);
 });
 
 function guide(markdown) {
@@ -93,22 +75,14 @@ function guide(markdown) {
 
 test("renders standalone TSX excerpts in agent Markdown and HTML", () => {
   const fragment = "begin\n  <div>```</div>\nend";
-  const page = guide(
-    `# Guide\n\n${directive({ path: "sample.tsx", language: "tsx" })}\nNext.\n`,
-  );
+  const page = guide(`# Guide\n\n${directive({ path: "sample.tsx", language: "tsx" })}\nNext.\n`);
   page.markdown = expandPageExamples(page, (path) => {
     assert.equal(path, "sample.tsx");
     return fragment;
   });
-  assert.equal(
-    page.markdown,
-    "# Guide\n\n`sample.tsx`\n\n````tsx\n" + fragment + "\n````\n\nNext.\n",
-  );
+  assert.equal(page.markdown, "# Guide\n\n`sample.tsx`\n\n````tsx\n" + fragment + "\n````\n\nNext.\n");
   const html = renderPage({ page, pages: [page] });
-  assert.match(
-    html,
-    /<code class="language-tsx">begin\n {2}&lt;div&gt;`{3}&lt;\/div&gt;\nend/u,
-  );
+  assert.match(html, /<code class="language-tsx">begin\n {2}&lt;div&gt;`{3}&lt;\/div&gt;\nend/u);
   assert.match(html, /<p><code>sample\.tsx<\/code><\/p>\n<pre>/u);
   assert.doesNotMatch(html, /dads:excerpt/u);
 });
@@ -127,14 +101,8 @@ test("resolves starter examples and existing repo guides to the generated app pa
       assert.equal(path, repository);
       return "begin\nend";
     });
-    assert.match(
-      page.markdown,
-      /^`domains\/example\/server\/routes\.ts`\n\n```ts/u,
-    );
-    assert.match(
-      renderPage({ page, pages: [page] }),
-      /<code>domains\/example\/server\/routes\.ts<\/code>/u,
-    );
+    assert.match(page.markdown, /^`domains\/example\/server\/routes\.ts`\n\n```ts/u);
+    assert.match(renderPage({ page, pages: [page] }), /<code>domains\/example\/server\/routes\.ts<\/code>/u);
   }
 });
 
@@ -145,12 +113,7 @@ test("leaves an existing generated file label above an excerpt", () => {
 });
 
 test("rejects traversal and absolute starter excerpt paths before reading", () => {
-  for (const path of [
-    "../sample.ts",
-    "domains/../sample.ts",
-    "/sample.ts",
-    "..\\sample.ts",
-  ]) {
+  for (const path of ["../sample.ts", "domains/../sample.ts", "/sample.ts", "..\\sample.ts"]) {
     const page = {
       ...guide(directive({ path })),
       path: "apps/kit-workbench/examples/example.md",
@@ -188,10 +151,7 @@ test("allows labeled instructional fences and validates JSON", () => {
   ].join("\n");
   assert.equal(expandPageExamples(guide(markdown)), markdown);
   assert.throws(
-    () =>
-      expandPageExamples(
-        guide(markdown.replace('{"allow": false}', "{allow: false}")),
-      ),
+    () => expandPageExamples(guide(markdown.replace('{"allow": false}', "{allow: false}"))),
     /guide\.md: invalid JSON code block/u,
   );
 });
@@ -204,9 +164,6 @@ test("rejects authored executable, unlabeled, and indented code blocks", () => {
     "# Guide\n\n```\nconst value = 1;\n```\n",
     "# Guide\n\n    const value = 1;\n",
   ]) {
-    assert.throws(
-      () => expandPageExamples(guide(markdown)),
-      /source-backed excerpt/u,
-    );
+    assert.throws(() => expandPageExamples(guide(markdown)), /source-backed excerpt/u);
   }
 });

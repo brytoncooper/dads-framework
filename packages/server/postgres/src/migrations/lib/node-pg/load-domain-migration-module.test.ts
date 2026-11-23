@@ -4,10 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { loadDomainMigrationModule } from "./load-domain-migration-module.js";
-import {
-  defaultMigrationWorkspace,
-  type MigrationWorkspace,
-} from "./migration-workspace.js";
+import { defaultMigrationWorkspace, type MigrationWorkspace } from "./migration-workspace.js";
 
 const typedMigration = `import type { MigrationBuilder } from "node-pg-migrate";
 export function up(pgm: MigrationBuilder): void {}
@@ -36,16 +33,8 @@ describe("loadDomainMigrationModule", () => {
     const filePath = join(directory, "20260101120000_typed.migration.ts");
     await writeFile(filePath, typedMigration);
 
-    const loaded = await loadDomainMigrationModule(
-      filePath,
-      defaultMigrationWorkspace(process.cwd()),
-    );
-    if (
-      typeof loaded !== "object" ||
-      loaded === null ||
-      !("up" in loaded) ||
-      !("down" in loaded)
-    ) {
+    const loaded = await loadDomainMigrationModule(filePath, defaultMigrationWorkspace(process.cwd()));
+    if (typeof loaded !== "object" || loaded === null || !("up" in loaded) || !("down" in loaded)) {
       expect.fail("expected migration module");
       return;
     }
@@ -65,44 +54,26 @@ describe("loadDomainMigrationModule", () => {
     await writeFile(filePath, jsxMigration);
     await writeFile(join(directory, "email-template.tsx"), jsxModule);
 
-    await expect(
-      loadDomainMigrationModule(
-        filePath,
-        defaultMigrationWorkspace(process.cwd()),
-      ),
-    ).resolves.toBeDefined();
+    await expect(loadDomainMigrationModule(filePath, defaultMigrationWorkspace(process.cwd()))).resolves.toBeDefined();
   });
 
   it("resolves a caller-supplied alias to its one source file", async () => {
     directory = await mkdtemp(join(process.cwd(), ".aliased-migration-"));
-    const migrationDirectory = join(
-      directory,
-      "packages/server/example/src/lib/database/migrations",
-    );
-    const auditDirectory = join(
-      directory,
-      "packages/server/audit/src/lib/database",
-    );
+    const migrationDirectory = join(directory, "packages/server/example/src/lib/database/migrations");
+    const auditDirectory = join(directory, "packages/server/audit/src/lib/database");
     await mkdir(migrationDirectory, { recursive: true });
     await mkdir(auditDirectory, { recursive: true });
-    const filePath = join(
-      migrationDirectory,
-      "20260101120000_aliased.migration.ts",
-    );
+    const filePath = join(migrationDirectory, "20260101120000_aliased.migration.ts");
     await writeFile(
       filePath,
       'import { marker } from "@dads-framework/audit";\nexport const loadedMarker = marker;\nexport function up(): void {}\nexport const down = false;\n',
     );
-    await writeFile(
-      join(auditDirectory, "attach-audit-trigger.ts"),
-      'export const marker = "audit";\n',
-    );
+    await writeFile(join(auditDirectory, "attach-audit-trigger.ts"), 'export const marker = "audit";\n');
 
     const loaded = await loadDomainMigrationModule(
       filePath,
       aliasedWorkspace(directory, {
-        "@dads-framework/audit":
-          "packages/server/audit/src/lib/database/attach-audit-trigger.ts",
+        "@dads-framework/audit": "packages/server/audit/src/lib/database/attach-audit-trigger.ts",
       }),
     );
 
@@ -111,31 +82,21 @@ describe("loadDomainMigrationModule", () => {
 
   it("resolves every alias the caller supplies, not a fixed list", async () => {
     directory = await mkdtemp(join(process.cwd(), ".aliased-migration-"));
-    const migrationDirectory = join(
-      directory,
-      "packages/server/example/src/lib/database/migrations",
-    );
+    const migrationDirectory = join(directory, "packages/server/example/src/lib/database/migrations");
     const syncDirectory = join(directory, "packages/server/sync/src/lib");
     await mkdir(migrationDirectory, { recursive: true });
     await mkdir(syncDirectory, { recursive: true });
-    const filePath = join(
-      migrationDirectory,
-      "20260101120000_aliased.migration.ts",
-    );
+    const filePath = join(migrationDirectory, "20260101120000_aliased.migration.ts");
     await writeFile(
       filePath,
       'import { marker } from "@example/sync-helpers";\nexport const loadedMarker = marker;\nexport function up(): void {}\nexport const down = false;\n',
     );
-    await writeFile(
-      join(syncDirectory, "sync-log-trigger.ts"),
-      'export const marker = "sync";\n',
-    );
+    await writeFile(join(syncDirectory, "sync-log-trigger.ts"), 'export const marker = "sync";\n');
 
     const loaded = await loadDomainMigrationModule(
       filePath,
       aliasedWorkspace(directory, {
-        "@example/sync-helpers":
-          "packages/server/sync/src/lib/sync-log-trigger.ts",
+        "@example/sync-helpers": "packages/server/sync/src/lib/sync-log-trigger.ts",
       }),
     );
 
@@ -143,20 +104,10 @@ describe("loadDomainMigrationModule", () => {
   });
 });
 
-function isLoadedMigration(
-  value: unknown,
-): value is { up: unknown; down: unknown } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "up" in value &&
-    "down" in value
-  );
+function isLoadedMigration(value: unknown): value is { up: unknown; down: unknown } {
+  return typeof value === "object" && value !== null && "up" in value && "down" in value;
 }
 
-function aliasedWorkspace(
-  root: string,
-  moduleAliases: Readonly<Record<string, string>>,
-): MigrationWorkspace {
+function aliasedWorkspace(root: string, moduleAliases: Readonly<Record<string, string>>): MigrationWorkspace {
   return { ...defaultMigrationWorkspace(root), moduleAliases };
 }

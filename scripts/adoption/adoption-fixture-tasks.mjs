@@ -45,12 +45,7 @@ const FIXTURE_TSCONFIG = {
   include: ["*.ts"],
 };
 
-export function adoptionFixturesReceipt(
-  packages,
-  fixtures,
-  concurrency,
-  timings,
-) {
+export function adoptionFixturesReceipt(packages, fixtures, concurrency, timings) {
   return {
     ok: true,
     publicPackages: packages.size,
@@ -65,11 +60,7 @@ export function adoptionFixturesReceipt(
 export function createAdoptionFixtureTasks(context) {
   const fixtures = createAdoptionFixtures(context.root);
   const executableOnlyPackages = [...context.packages.keys()]
-    .filter((packageName) =>
-      isExecutableOnlyAdoptionPackage(
-        context.packages.get(packageName)?.manifest,
-      ),
-    )
+    .filter((packageName) => isExecutableOnlyAdoptionPackage(context.packages.get(packageName)?.manifest))
     .sort();
   return {
     executableOnlyPackages,
@@ -89,29 +80,20 @@ function packageImportTasks(context, executableOnlyPackages) {
     cost: TASK_SECONDS.packageImport,
     run: async (transcript) => {
       const executableOnly = executableOnlyPackages.includes(packageName);
-      const fixture = createFixtureDirectory(
-        context.workRoot,
-        `package-${safeName(packageName)}`,
-      );
+      const fixture = createFixtureDirectory(context.workRoot, `package-${safeName(packageName)}`);
       await context.time("package-install", () =>
         installPackageClosure(transcript, fixture, [packageName], context, {
           allowUnsupportedPlatform: executableOnly,
         }),
       );
       if (executableOnly) {
-        transcript.note(
-          `${packageName} is executable-only; there is nothing to import.`,
-        );
+        transcript.note(`${packageName} is executable-only; there is nothing to import.`);
         return;
       }
       await context.time("package-import", () =>
         transcript.run(
           process.execPath,
-          [
-            "--input-type=module",
-            "--eval",
-            packageEntryProof(context.root, packageName),
-          ],
+          ["--input-type=module", "--eval", packageEntryProof(context.root, packageName)],
           { cwd: fixture },
         ),
       );
@@ -126,10 +108,7 @@ function packageEntryProof(root, packageName) {
         import tokens from "@dads-framework/ui/tokens/default.tokens.json" with { type: "json" };
         import { Button } from "@dads-framework/ui/elements";
         import { defineCopy } from "@dads-framework/ui/copy";
-        ${readFileSync(
-          join(root, "packages/web/ui/styles/verify-styles.test.mjs"),
-          "utf8",
-        )}
+        ${readFileSync(join(root, "packages/web/ui/styles/verify-styles.test.mjs"), "utf8")}
         assert.equal(tokens.palette.$type, "color");
         assert.ok(tokens.light);
         assert.ok(tokens.dark);
@@ -137,10 +116,7 @@ function packageEntryProof(root, packageName) {
         assert.equal(typeof defineCopy, "function");
       `;
     default:
-      return (
-        consolidatedPackageProof(packageName) ??
-        `await import(${JSON.stringify(packageName)})`
-      );
+      return consolidatedPackageProof(packageName) ?? `await import(${JSON.stringify(packageName)})`;
   }
 }
 
@@ -151,33 +127,19 @@ function fixtureProgramTasks(context, fixtures) {
     run: async (transcript) => {
       const fixture = createFixtureDirectory(context.workRoot, definition.name);
       await context.time("fixture-install", () =>
-        installPackageClosure(
-          transcript,
-          fixture,
-          definition.packages,
-          context,
-          {
-            vendorTypePackages: definition.vendorTypePackages,
-          },
-        ),
+        installPackageClosure(transcript, fixture, definition.packages, context, {
+          vendorTypePackages: definition.vendorTypePackages,
+        }),
       );
       writeFixtureSources(fixture, definition);
       await context.time("fixture-compile", () =>
         transcript.run(
           process.execPath,
-          [
-            join(context.root, "node_modules/typescript/bin/tsc"),
-            "-p",
-            "tsconfig.json",
-            "--pretty",
-            "false",
-          ],
+          [join(context.root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.json", "--pretty", "false"],
           { cwd: fixture },
         ),
       );
-      await context.time("fixture-run", () =>
-        transcript.run(process.execPath, ["dist/index.js"], { cwd: fixture }),
-      );
+      await context.time("fixture-run", () => transcript.run(process.execPath, ["dist/index.js"], { cwd: fixture }));
     },
   }));
 }
@@ -187,33 +149,16 @@ function packedBoundaryTask(context) {
     name: "packed boundary verification",
     cost: TASK_SECONDS.packedBoundary,
     run: async (transcript) => {
-      const fixture = createFixtureDirectory(
-        context.workRoot,
-        "packed-boundary-verification",
-      );
+      const fixture = createFixtureDirectory(context.workRoot, "packed-boundary-verification");
       await context.time("boundary-install", () =>
-        installPackageClosure(
-          transcript,
-          fixture,
-          ["@dads-framework/access", "@dads-framework/toolbox"],
-          context,
-        ),
+        installPackageClosure(transcript, fixture, ["@dads-framework/access", "@dads-framework/toolbox"], context),
       );
       ensureBoundaryLockfile(fixture);
       await context.time("boundary-verify", () =>
-        transcript.run(
-          process.execPath,
-          [
-            join(
-              context.root,
-              "scripts/foundation/verify-boundary-verification.mjs",
-            ),
-          ],
-          {
-            cwd: context.root,
-            env: boundaryEnvironment(context.root, fixture),
-          },
-        ),
+        transcript.run(process.execPath, [join(context.root, "scripts/foundation/verify-boundary-verification.mjs")], {
+          cwd: context.root,
+          env: boundaryEnvironment(context.root, fixture),
+        }),
       );
     },
   };
@@ -222,19 +167,10 @@ function packedBoundaryTask(context) {
 function boundaryEnvironment(root, fixture) {
   return {
     ...process.env,
-    DADS_BOUNDARY_CLI_PATH: join(
-      fixture,
-      "node_modules/@dads-framework/toolbox/bin/dad.js",
-    ),
-    DADS_BOUNDARY_TYPESCRIPT_BIN: join(
-      fixture,
-      "node_modules/typescript/bin/tsc",
-    ),
+    DADS_BOUNDARY_CLI_PATH: join(fixture, "node_modules/@dads-framework/toolbox/bin/dad.js"),
+    DADS_BOUNDARY_TYPESCRIPT_BIN: join(fixture, "node_modules/typescript/bin/tsc"),
     DADS_BOUNDARY_VITEST_BIN: join(root, "node_modules/vitest/vitest.mjs"),
-    DADS_BOUNDARY_ACCESS_ROOT: join(
-      fixture,
-      "node_modules/@dads-framework/access",
-    ),
+    DADS_BOUNDARY_ACCESS_ROOT: join(fixture, "node_modules/@dads-framework/access"),
     DADS_BOUNDARY_LOCKFILE: join(fixture, "package-lock.json"),
   };
 }
@@ -262,9 +198,7 @@ function writeFixtureSources(fixture, definition) {
 function ensureBoundaryLockfile(fixture) {
   const lockfilePath = join(fixture, "package-lock.json");
   if (existsSync(lockfilePath)) return;
-  const manifest = JSON.parse(
-    readFileSync(join(fixture, "package.json"), "utf8"),
-  );
+  const manifest = JSON.parse(readFileSync(join(fixture, "package.json"), "utf8"));
   writeFileSync(
     lockfilePath,
     `${JSON.stringify({ lockfileVersion: 3, requires: true, packages: { "": manifest } }, null, 2)}\n`,
@@ -274,10 +208,7 @@ function ensureBoundaryLockfile(fixture) {
 function createFixtureDirectory(workRoot, name) {
   const fixture = join(workRoot, name);
   mkdirSync(fixture);
-  writeFileSync(
-    join(fixture, "package.json"),
-    JSON.stringify({ private: true, type: "module" }),
-  );
+  writeFileSync(join(fixture, "package.json"), JSON.stringify({ private: true, type: "module" }));
   return fixture;
 }
 
@@ -288,13 +219,7 @@ function createFixtureDirectory(workRoot, name) {
  * so the fixture does too: its tsconfig checks every declaration it loads
  * rather than skipping library checks.
  */
-function installPackageClosure(
-  transcript,
-  fixture,
-  requested,
-  context,
-  options = {},
-) {
+function installPackageClosure(transcript, fixture, requested, context, options = {}) {
   const ordered = [];
   for (const packageName of requested) {
     collectPackageClosure(packageName, context.packages, ordered);
@@ -309,9 +234,7 @@ function installPackageClosure(
       "--no-fund",
       "--loglevel=error",
       ...(options.allowUnsupportedPlatform ? ["--force"] : []),
-      ...ordered.map((packageName) =>
-        tarballFor(context.tarballs, packageName),
-      ),
+      ...ordered.map((packageName) => tarballFor(context.tarballs, packageName)),
       ...(options.vendorTypePackages ?? []),
     ],
     { cwd: fixture },

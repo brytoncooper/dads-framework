@@ -55,11 +55,7 @@ export function ListViewTabs<TValue extends string>({
   function chooseByOffset(from: TValue, offset: number | "first" | "last") {
     const index = views.findIndex((view) => view.value === from);
     const nextIndex =
-      offset === "first"
-        ? 0
-        : offset === "last"
-          ? views.length - 1
-          : (index + offset + views.length) % views.length;
+      offset === "first" ? 0 : offset === "last" ? views.length - 1 : (index + offset + views.length) % views.length;
     const next = views[nextIndex];
     if (next === undefined) return;
     onValueChange(next.value);
@@ -103,9 +99,7 @@ export function ListViewTabs<TValue extends string>({
             className={cn(
               "-mb-px inline-flex min-h-10 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-3 text-sm font-medium whitespace-nowrap text-foreground outline-none transition-colors motion-reduce:transition-none [@media(pointer:coarse)]:min-h-11",
               "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
-              isActive
-                ? "border-primary font-semibold text-foreground"
-                : "hover:border-border",
+              isActive ? "border-primary font-semibold text-foreground" : "hover:border-border",
             )}
             onClick={() => {
               onValueChange(view.value);
@@ -123,8 +117,7 @@ export function ListViewTabs<TValue extends string>({
                   className={cn(
                     "rounded-full bg-muted px-1.5 text-xs font-medium text-foreground tabular-nums",
                     isActive && "bg-primary/10 text-link",
-                    view.countTone === "critical" &&
-                      "bg-destructive/10 text-destructive",
+                    view.countTone === "critical" && "bg-destructive/10 text-destructive",
                   )}
                 >
                   <FormattedInteger value={view.count} />
@@ -152,6 +145,5 @@ const KEY_OFFSETS: Readonly<Record<string, number | "first" | "last">> = {
 function centreInRow(tab: HTMLButtonElement | null): void {
   const row = tab?.parentElement;
   if (!tab || !row) return;
-  row.scrollLeft =
-    tab.offsetLeft - row.offsetLeft - (row.clientWidth - tab.clientWidth) / 2;
+  row.scrollLeft = tab.offsetLeft - row.offsetLeft - (row.clientWidth - tab.clientWidth) / 2;
 }

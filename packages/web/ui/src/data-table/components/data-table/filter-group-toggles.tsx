@@ -1,9 +1,6 @@
 import { cn } from "../../../elements/index.js";
 
-import {
-  type FilterGroup,
-  toggleFilterValue,
-} from "../../lib/filter-groups.js";
+import { type FilterGroup, toggleFilterValue } from "../../lib/filter-groups.js";
 
 /**
  * A filter group laid flat for the phone Filters sheet: its name, then one

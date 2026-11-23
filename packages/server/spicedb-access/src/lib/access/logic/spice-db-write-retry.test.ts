@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  isRetryableSpiceDbWriteError,
-  spiceDbWriteRetryDelayMs,
-} from "./spice-db-write-retry.js";
+import { isRetryableSpiceDbWriteError, spiceDbWriteRetryDelayMs } from "./spice-db-write-retry.js";
 
 function withCode(code: unknown): Error {
   return Object.assign(new Error("grpc"), { code });

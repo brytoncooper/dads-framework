@@ -3,16 +3,15 @@ import type { WorkspacePackage } from "./package-inventory.js";
 import { assignProjectIds, sanitizeIdentifier } from "./project-ids.js";
 
 describe("project identifiers", () => {
-  const sanitized: readonly { readonly value: string; readonly id: string }[] =
-    [
-      { value: "@dads-framework/testing", id: "dads-framework-testing" },
-      { value: "core", id: "core" },
-      { value: "my package!", id: "my-package" },
-      { value: "@scope/", id: "scope" },
-      { value: "packages/alpha", id: "packages-alpha" },
-      { value: "---", id: "" },
-      { value: "a.b:c_d", id: "a.b:c_d" },
-    ];
+  const sanitized: readonly { readonly value: string; readonly id: string }[] = [
+    { value: "@dads-framework/testing", id: "dads-framework-testing" },
+    { value: "core", id: "core" },
+    { value: "my package!", id: "my-package" },
+    { value: "@scope/", id: "scope" },
+    { value: "packages/alpha", id: "packages-alpha" },
+    { value: "---", id: "" },
+    { value: "a.b:c_d", id: "a.b:c_d" },
+  ];
 
   for (const example of sanitized) {
     it(`reduces ${example.value} to ${example.id === "" ? "nothing" : example.id}`, () => {
@@ -44,12 +43,7 @@ describe("project identifiers", () => {
       workspacePackage("."),
     ]);
 
-    expect(assignments.map((assignment) => assignment.projectId)).toEqual([
-      "core",
-      "apps-core",
-      "tools-cli",
-      "root",
-    ]);
+    expect(assignments.map((assignment) => assignment.projectId)).toEqual(["core", "apps-core", "tools-cli", "root"]);
     expect(assignments.map((assignment) => assignment.source)).toEqual([
       "package-name",
       "directory",
@@ -60,13 +54,8 @@ describe("project identifiers", () => {
 
   it("refuses two packages that resolve to the same id", () => {
     expect(() =>
-      assignProjectIds([
-        workspacePackage("packages/alpha", "tools-cli"),
-        workspacePackage("tools/cli", "tools-cli"),
-      ]),
-    ).toThrow(
-      "Cannot assign a unique project id: packages/alpha and tools/cli both resolve to tools-cli.",
-    );
+      assignProjectIds([workspacePackage("packages/alpha", "tools-cli"), workspacePackage("tools/cli", "tools-cli")]),
+    ).toThrow("Cannot assign a unique project id: packages/alpha and tools/cli both resolve to tools-cli.");
   });
 });
 

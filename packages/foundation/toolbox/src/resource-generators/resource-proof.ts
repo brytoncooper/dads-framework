@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, pascal } from "./names.js";
 
-export function resourceProof(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function resourceProof(plan: GenerationPlan, domain: string, name: string): void {
   const item = camel(name);
   const record = pascal(name);
   plan.create(

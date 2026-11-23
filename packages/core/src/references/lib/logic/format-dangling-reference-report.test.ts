@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type {
-  CrossDomainReference,
-  DanglingReferenceFinding,
-} from "../cross-domain-reference.js";
-import {
-  formatCleanReport,
-  formatDanglingReferenceReport,
-} from "./format-dangling-reference-report.js";
+import type { CrossDomainReference, DanglingReferenceFinding } from "../cross-domain-reference.js";
+import { formatCleanReport, formatDanglingReferenceReport } from "./format-dangling-reference-report.js";
 
 const OWNER_ORGANIZATION: CrossDomainReference = {
   id: "facilities.owner_organization_id",
@@ -30,10 +24,7 @@ const ACTOR_USER: CrossDomainReference = {
   classification: "historical-document",
 };
 
-function finding(
-  reference: CrossDomainReference,
-  rows: number,
-): DanglingReferenceFinding {
+function finding(reference: CrossDomainReference, rows: number): DanglingReferenceFinding {
   return { reference, rows, distinctValues: 1, sampleIds: ["id-1"] };
 }
 
@@ -57,9 +48,7 @@ describe("formatDanglingReferenceReport", () => {
       85,
     );
 
-    expect(report).toContain(
-      "facilities.owner_organization_id → organizations.id",
-    );
+    expect(report).toContain("facilities.owner_organization_id → organizations.id");
     expect(report).toContain("3 rows, 2 distinct ids, live-association");
     expect(report).toContain("sample ids: id-1, id-2");
   });
@@ -81,10 +70,7 @@ describe("formatDanglingReferenceReport", () => {
   });
 
   it("puts the worst finding first", () => {
-    const report = formatDanglingReferenceReport(
-      [finding(ACTOR_USER, 2), finding(OWNER_ORGANIZATION, 9)],
-      85,
-    );
+    const report = formatDanglingReferenceReport([finding(ACTOR_USER, 2), finding(OWNER_ORGANIZATION, 9)], 85);
 
     expect(report.indexOf("facilities.owner_organization_id")).toBeLessThan(
       report.indexOf("support_session_events.actor_user_id"),
@@ -92,10 +78,7 @@ describe("formatDanglingReferenceReport", () => {
   });
 
   it("totals broken references and dangling rows in the header", () => {
-    const report = formatDanglingReferenceReport(
-      [finding(ACTOR_USER, 2), finding(OWNER_ORGANIZATION, 9)],
-      85,
-    );
+    const report = formatDanglingReferenceReport([finding(ACTOR_USER, 2), finding(OWNER_ORGANIZATION, 9)], 85);
 
     expect(report.split("\n")[0]).toBe(
       "cross-domain reference integrity: 85 references checked, 2 broken, 11 dangling rows",

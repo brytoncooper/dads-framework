@@ -80,13 +80,8 @@ describe("vendor named domains", () => {
           ],
         }),
       );
-      writeFileSync(
-        join(root, modulePath),
-        `import { Pool } from "${vendor}";\n${declaration}\n`,
-      );
-      const readings = await vendorNamedDomainSignal.run(
-        createDoctorContext({ root }),
-      );
+      writeFileSync(join(root, modulePath), `import { Pool } from "${vendor}";\n${declaration}\n`);
+      const readings = await vendorNamedDomainSignal.run(createDoctorContext({ root }));
       expect(readings.get(modulePath)?.value).toBe(expected);
     } finally {
       rmSync(root, { recursive: true, force: true });

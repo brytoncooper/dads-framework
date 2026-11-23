@@ -10,9 +10,7 @@ export function checkBoundaries(args: readonly string[], json: boolean): void {
     writeOutput(result, json);
   } else {
     for (const issue of result.violations) {
-      process.stderr.write(
-        `${issue.source}:${issue.line}:${issue.column} imports ${issue.target}. ${issue.message}\n`,
-      );
+      process.stderr.write(`${issue.source}:${issue.line}:${issue.column} imports ${issue.target}. ${issue.message}\n`);
     }
   }
   if (!result.ok) process.exitCode = 1;

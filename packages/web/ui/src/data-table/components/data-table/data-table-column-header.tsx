@@ -3,11 +3,10 @@ import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 
 import { cn } from "../../../elements/index.js";
 
-type DataTableColumnHeaderProps<TData, TValue> =
-  React.ComponentProps<"button"> & {
-    column: Column<TData, TValue>;
-    label: string;
-  };
+type DataTableColumnHeaderProps<TData, TValue> = React.ComponentProps<"button"> & {
+  column: Column<TData, TValue>;
+  label: string;
+};
 
 export function DataTableColumnHeader<TData, TValue>({
   column,
@@ -27,9 +26,7 @@ export function DataTableColumnHeader<TData, TValue>({
       type="button"
       className={cn(
         "-ml-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring [&_svg]:size-4 [&_svg]:shrink-0",
-        sortState === false
-          ? "[&_svg]:text-muted-foreground"
-          : "text-primary [&_svg]:text-primary",
+        sortState === false ? "[&_svg]:text-muted-foreground" : "text-primary [&_svg]:text-primary",
         className,
       )}
       onClick={(event) => {

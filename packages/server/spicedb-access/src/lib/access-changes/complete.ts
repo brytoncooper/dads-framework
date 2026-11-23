@@ -103,9 +103,7 @@ class CompleteAccessChangesLive extends CompleteAccessChanges {
   }
 
   /** Null only when the projector refused facts it was handed. */
-  private async project(
-    unfinished: readonly UnfinishedAccessChange[],
-  ): Promise<ApplyAccessChangesReport | null> {
+  private async project(unfinished: readonly UnfinishedAccessChange[]): Promise<ApplyAccessChangesReport | null> {
     if (unfinished.length === 0) return { claimed: 0, projected: 0, failed: 0 };
     const projected = await this.dependencies.projector.applyKeys({
       idempotencyKeys: unfinished.map((fact) => fact.idempotencyKey),
@@ -132,11 +130,7 @@ class CompleteAccessChangesLive extends CompleteAccessChanges {
   ): Promise<void> {
     for (const ownerPartitionId of ownerPartitionIds) {
       const idempotencyKeys = unfinished
-        .filter(
-          (fact) =>
-            fact.ownerPartitionId === ownerPartitionId &&
-            fact.status === "FAILED",
-        )
+        .filter((fact) => fact.ownerPartitionId === ownerPartitionId && fact.status === "FAILED")
         .map((fact) => fact.idempotencyKey);
       if (idempotencyKeys.length === 0) continue;
       await this.dependencies.ownerLock.run(ownerPartitionId, (lease) =>
@@ -151,9 +145,7 @@ class CompleteAccessChangesLive extends CompleteAccessChanges {
 }
 
 /** Creates strict completion without changing best-effort inline dispatch. */
-export function createCompleteAccessChanges(
-  dependencies: CompletionDependencies,
-): CompleteAccessChanges {
+export function createCompleteAccessChanges(dependencies: CompletionDependencies): CompleteAccessChanges {
   return new CompleteAccessChangesLive(dependencies);
 }
 
@@ -166,9 +158,7 @@ function hasNothingToFinish(
 }
 
 /** The caller's named facts, or null when every unfinished fact counts. */
-function namedFacts(
-  idempotencyKeys: readonly string[] | undefined,
-): ReadonlySet<string> | null {
+function namedFacts(idempotencyKeys: readonly string[] | undefined): ReadonlySet<string> | null {
   return idempotencyKeys === undefined ? null : new Set(idempotencyKeys);
 }
 
@@ -176,20 +166,15 @@ function namedFacts(
  * Some PENDING fact went unclaimed and nothing failed: another live worker
  * holds it. A FAILED fact is never claimable, so it does not count.
  */
-function heldByAnotherWorker(
-  unfinished: readonly UnfinishedAccessChange[],
-  report: ApplyAccessChangesReport,
-): boolean {
+function heldByAnotherWorker(unfinished: readonly UnfinishedAccessChange[], report: ApplyAccessChangesReport): boolean {
   const pending = unfinished.filter((fact) => fact.status === "PENDING");
   return report.failed === 0 && report.claimed < pending.length;
 }
 
 function incomplete(): Result<void> {
   return err(
-    conflict(
-      "AUTHORIZATION_ACCESS_CHANGES_INCOMPLETE",
-      "Access changes are not yet enforced; retry provisioning",
-      { retryable: true },
-    ),
+    conflict("AUTHORIZATION_ACCESS_CHANGES_INCOMPLETE", "Access changes are not yet enforced; retry provisioning", {
+      retryable: true,
+    }),
   );
 }

@@ -8,11 +8,7 @@
  * ceiling `files-over-ceiling` measures, nothing else.
  */
 
-import {
-  ESLINT_DISABLE_MARK,
-  TS_EXPECT_ERROR_MARK,
-  TS_IGNORE_MARK,
-} from "./hatch-names.js";
+import { ESLINT_DISABLE_MARK, TS_EXPECT_ERROR_MARK, TS_IGNORE_MARK } from "./hatch-names.js";
 import type { DaddyIssue } from "./issues.js";
 
 export const ENFORCEMENT_ISSUES: readonly DaddyIssue[] = [
@@ -83,8 +79,7 @@ export const ENFORCEMENT_ISSUES: readonly DaddyIssue[] = [
     id: "commitment-issues",
     title: "Commitment issues",
     anchor: "#commitment-issues",
-    sentence:
-      "You went no-contact with tests, then checked their status every five minutes in CI.",
+    sentence: "You went no-contact with tests, then checked their status every five minutes in CI.",
     questions: [
       {
         signals: ["mutations-without-ownership"],
@@ -144,10 +139,7 @@ export const ENFORCEMENT_ISSUES: readonly DaddyIssue[] = [
         text: "Was a migration the base line already holds modified, deleted, or renamed by a commit past the base?",
       },
       {
-        signals: [
-          "generated-tables-hand-edited",
-          "generated-access-hand-edited",
-        ],
+        signals: ["generated-tables-hand-edited", "generated-access-hand-edited"],
         text: "Was a generated table module or a generated access schema changed in a commit that changed nothing it is generated from?",
       },
     ],
@@ -182,8 +174,7 @@ export const ENFORCEMENT_ISSUES: readonly DaddyIssue[] = [
     id: "failure-to-launch",
     title: "Failure to launch",
     anchor: "#failure-to-launch",
-    sentence:
-      "You don’t need another reorganization. You need a strict profile.",
+    sentence: "You don’t need another reorganization. You need a strict profile.",
     questions: [
       {
         signals: ["logic-in-controllers"],
@@ -274,8 +265,7 @@ export const ENFORCEMENT_ISSUES: readonly DaddyIssue[] = [
     id: "dad-has-issues-too",
     title: "Dad has issues too",
     anchor: "#dad-has-issues-too",
-    sentence:
-      "A no that cannot explain itself is a no the kids will route around.",
+    sentence: "A no that cannot explain itself is a no the kids will route around.",
     questions: [
       {
         signals: ["rules-at-warn"],

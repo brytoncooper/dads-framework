@@ -12,14 +12,9 @@ import { attachAuditTrigger } from "../attach-audit-trigger.js";
  * - `audit_fixture_reports` has no primary key: it is named by a unique pair
  *   and partitioned by a uuid owner column, like the tables with a composite unique key.
  */
-export const AUDITED_FIXTURE_TABLES = [
-  "audit_fixture_parties",
-  "audit_fixture_reports",
-] as const;
+export const AUDITED_FIXTURE_TABLES = ["audit_fixture_parties", "audit_fixture_reports"] as const;
 
-export async function createAuditedFixtureTables(
-  pool: PostgresConnection["pool"],
-): Promise<void> {
+export async function createAuditedFixtureTables(pool: PostgresConnection["pool"]): Promise<void> {
   const statements: string[] = [
     `CREATE TABLE IF NOT EXISTS audit_fixture_parties (
        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

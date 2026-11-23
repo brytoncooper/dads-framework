@@ -1,9 +1,6 @@
 import type { AccessIrTerm } from "../core/ir.js";
 import type { SubjectRef } from "../runtime/authorization.js";
-import type {
-  IndexedAccessModel,
-  StoredAccessTuple,
-} from "./in-memory-model-index.js";
+import type { IndexedAccessModel, StoredAccessTuple } from "./in-memory-model-index.js";
 import {
   activeRoleTargets,
   checkRoleReachability,
@@ -13,13 +10,7 @@ import {
   valuationKey,
 } from "./in-memory-reachability.js";
 
-export {
-  activeRoleTargets,
-  checkRoleReachability,
-  isTupleActive,
-  type TupleGroups,
-  valuationKey,
-};
+export { activeRoleTargets, checkRoleReachability, isTupleActive, type TupleGroups, valuationKey };
 
 export function lookupTargetAccess(
   index: IndexedAccessModel,
@@ -33,20 +24,9 @@ export function lookupTargetAccess(
 ): boolean {
   const entityPermissions = index.permissionsByEntity.get(targetType);
   if (entityPermissions?.has(targetPermission) === true) {
-    return (
-      valuation.get(valuationKey(targetType, targetId, targetPermission)) ===
-      true
-    );
+    return valuation.get(valuationKey(targetType, targetId, targetPermission)) === true;
   }
-  return checkRoleReachability(
-    groups,
-    targetType,
-    targetId,
-    targetPermission,
-    actor,
-    nowMs,
-    new Set(),
-  ).matched;
+  return checkRoleReachability(groups, targetType, targetId, targetPermission, actor, nowMs, new Set()).matched;
 }
 
 type EvalContext = {
@@ -65,12 +45,7 @@ function evaluateThroughTerm(
   targetPermission: string,
   requireAll: boolean,
 ): boolean {
-  const targets = activeRoleTargets(
-    context.groups,
-    context.entityType,
-    context.resourceId,
-    roleName,
-  );
+  const targets = activeRoleTargets(context.groups, context.entityType, context.resourceId, roleName);
   if (requireAll && targets.length === 0) return false;
   const checkTarget = (target: StoredAccessTuple) =>
     lookupTargetAccess(
@@ -88,28 +63,16 @@ function evaluateThroughTerm(
 
 function evaluateCompoundTerm(
   context: EvalContext,
-  term: Extract<
-    AccessIrTerm,
-    { readonly kind: "gated" | "both" | "excluding" | "or" }
-  >,
+  term: Extract<AccessIrTerm, { readonly kind: "gated" | "both" | "excluding" | "or" }>,
 ): boolean {
   if (term.kind === "gated") {
-    return (
-      evaluateTermValue(context, term.term) &&
-      evaluateTermValue(context, term.condition)
-    );
+    return evaluateTermValue(context, term.term) && evaluateTermValue(context, term.condition);
   }
   if (term.kind === "both") {
-    return (
-      evaluateTermValue(context, term.left) &&
-      evaluateTermValue(context, term.right)
-    );
+    return evaluateTermValue(context, term.left) && evaluateTermValue(context, term.right);
   }
   if (term.kind === "excluding") {
-    return (
-      evaluateTermValue(context, term.term) &&
-      !evaluateTermValue(context, term.banned)
-    );
+    return evaluateTermValue(context, term.term) && !evaluateTermValue(context, term.banned);
   }
   return term.terms.some((branch) => evaluateTermValue(context, branch));
 }
@@ -127,19 +90,10 @@ function evaluateTermValue(context: EvalContext, term: AccessIrTerm): boolean {
     ).matched;
   }
   if (term.kind === "permission") {
-    return (
-      context.valuation.get(
-        valuationKey(context.entityType, context.resourceId, term.name),
-      ) === true
-    );
+    return context.valuation.get(valuationKey(context.entityType, context.resourceId, term.name)) === true;
   }
   if (term.kind === "through" || term.kind === "through-all") {
-    return evaluateThroughTerm(
-      context,
-      term.roleName,
-      term.targetPermission,
-      term.kind === "through-all",
-    );
+    return evaluateThroughTerm(context, term.roleName, term.targetPermission, term.kind === "through-all");
   }
   return evaluateCompoundTerm(context, term);
 }
@@ -155,14 +109,8 @@ function stepResourcePermissions(
 ): boolean {
   let changed = false;
   for (const permission of permissions) {
-    const allowed = permission.terms.some((term) =>
-      evaluateTermValue(context, term),
-    );
-    const key = valuationKey(
-      context.entityType,
-      context.resourceId,
-      permission.name,
-    );
+    const allowed = permission.terms.some((term) => evaluateTermValue(context, term));
+    const key = valuationKey(context.entityType, context.resourceId, permission.name);
     if ((current.get(key) ?? false) !== allowed) changed = true;
     if (allowed) next.set(key, true);
   }
@@ -192,9 +140,7 @@ function stepValuation(
         actor,
         nowMs,
       };
-      if (
-        stepResourcePermissions(context, definition.permissions, current, next)
-      ) {
+      if (stepResourcePermissions(context, definition.permissions, current, next)) {
         changed = true;
       }
     }
@@ -240,25 +186,15 @@ export function evaluateLookupResources(
   permissionName: string,
   nowMs: number,
 ): readonly string[] {
-  if (
-    index.permissionsByEntity.get(resourceType)?.has(permissionName) !== true
-  ) {
+  if (index.permissionsByEntity.get(resourceType)?.has(permissionName) !== true) {
     return [];
   }
-  const { groups, valuation } = computeActorValuation(
-    index,
-    tuples,
-    actor,
-    nowMs,
-  );
+  const { groups, valuation } = computeActorValuation(index, tuples, actor, nowMs);
   const candidateIds = groups.entitiesByType.get(resourceType);
   if (candidateIds === undefined) return [];
   const allowedIds: string[] = [];
   for (const resourceId of candidateIds) {
-    if (
-      valuation.get(valuationKey(resourceType, resourceId, permissionName)) ===
-      true
-    ) {
+    if (valuation.get(valuationKey(resourceType, resourceId, permissionName)) === true) {
       allowedIds.push(resourceId);
     }
   }

@@ -27,9 +27,7 @@ import { registerRoutes } from "./register-routes.js";
 const subjects: SubjectResolver = {
   resolve: (request) => {
     const id = request.headers["x-test-user"];
-    return Promise.resolve(
-      typeof id === "string" && id.length > 0 ? { type: "user", id } : null,
-    );
+    return Promise.resolve(typeof id === "string" && id.length > 0 ? { type: "user", id } : null);
   },
 };
 
@@ -104,9 +102,7 @@ const mintedTokenRoute = defineRawRoute({
     },
   },
   openapiComponents: {
-    PostMintedTokensResponse: apiResponseSchema(
-      z.object({ token: z.string().meta({ description: "Minted token" }) }),
-    ),
+    PostMintedTokensResponse: apiResponseSchema(z.object({ token: z.string().meta({ description: "Minted token" }) })),
   },
   handler: async ({ reply }) => {
     await reply.status(200).send({ data: { token: "minted" } });
@@ -141,12 +137,7 @@ async function buildApp() {
     logger: false,
   });
   registerRoutes(app, {
-    routes: routeGroup("Streams", [
-      sseRoute,
-      downloadRoute,
-      explodingRoute,
-      wildcardVaryRoute,
-    ]),
+    routes: routeGroup("Streams", [sseRoute, downloadRoute, explodingRoute, wildcardVaryRoute]),
     subjects,
     authorization,
   });
@@ -167,9 +158,7 @@ describe("defineRawRoute", () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("text/event-stream");
     expect(res.headers.vary?.toLowerCase()).toContain("accept-language");
-    expect(res.body).toBe(
-      "data: event-1\n\ndata: event-2\n\ndata: event-3\n\n",
-    );
+    expect(res.body).toBe("data: event-1\n\ndata: event-2\n\ndata: event-3\n\n");
   });
 
   it("streams a download with backpressure-safe send(stream)", async () => {
@@ -184,15 +173,11 @@ describe("defineRawRoute", () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toContain("text/csv");
-    const varyFields = (res.headers.vary ?? "")
-      .split(",")
-      .map((field) => field.trim().toLowerCase());
+    const varyFields = (res.headers.vary ?? "").split(",").map((field) => field.trim().toLowerCase());
     expect(varyFields).toContain("origin");
     expect(varyFields).toContain("x-export-format");
     expect(varyFields).toContain("accept-language");
-    expect(
-      varyFields.filter((field) => field === "accept-language"),
-    ).toHaveLength(1);
+    expect(varyFields.filter((field) => field === "accept-language")).toHaveLength(1);
     expect(res.body).toBe("row-1\nrow-2\nrow-3\n");
   });
 
@@ -255,16 +240,13 @@ describe("defineRawRoute", () => {
   });
 
   it("registers a raw route's declared components so its $ref resolves", () => {
-    const doc = buildOpenApiDocument(
-      routeGroup("Streams", [mintedTokenRoute]),
-      {
-        title: "t",
-        description: "d",
-        version: "1",
-        tags: [{ name: "Streams", description: "streams" }],
-        pathPrefix: "/api",
-      },
-    );
+    const doc = buildOpenApiDocument(routeGroup("Streams", [mintedTokenRoute]), {
+      title: "t",
+      description: "d",
+      version: "1",
+      tags: [{ name: "Streams", description: "streams" }],
+      pathPrefix: "/api",
+    });
     const parsed = z
       .object({
         components: z.object({

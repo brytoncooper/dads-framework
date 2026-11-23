@@ -52,21 +52,15 @@ describe("resolveInitialLocale", () => {
   });
 
   it("falls to the browser's list, in the order the browser gave it", () => {
-    expect(resolveInitialLocale({ browserLanguages: ["fr-FR", "en-GB"] })).toBe(
-      "en",
-    );
+    expect(resolveInitialLocale({ browserLanguages: ["fr-FR", "en-GB"] })).toBe("en");
   });
 
   it("ignores a saved choice this product no longer speaks", () => {
-    expect(
-      resolveInitialLocale({ preferred: "fr", browserLanguages: ["en"] }),
-    ).toBe("en");
+    expect(resolveInitialLocale({ preferred: "fr", browserLanguages: ["en"] })).toBe("en");
   });
 
   it("answers English when no signal names a supported language", () => {
-    expect(resolveInitialLocale({ browserLanguages: ["fr", "de"] })).toBe(
-      DEFAULT_LOCALE,
-    );
+    expect(resolveInitialLocale({ browserLanguages: ["fr", "de"] })).toBe(DEFAULT_LOCALE);
   });
 
   it("answers English when there are no signals at all", () => {
@@ -74,40 +68,20 @@ describe("resolveInitialLocale", () => {
   });
 
   it("never throws — an unreadable signal is a fallback, not a failure", () => {
-    expect(
-      resolveInitialLocale({ preferred: "", browserLanguages: [""] }),
-    ).toBe(DEFAULT_LOCALE);
+    expect(resolveInitialLocale({ preferred: "", browserLanguages: [""] })).toBe(DEFAULT_LOCALE);
   });
 });
 
 describe("resolveLocaleFromSignals", () => {
   it("uses the first supported browser language when no account choice exists", () => {
-    expect(
-      resolveLocaleFromSignals(
-        { browserLanguages: ["fr-FR", "es-MX", "en-US"] },
-        TWO_LOCALES,
-        "en",
-      ),
-    ).toBe("es");
+    expect(resolveLocaleFromSignals({ browserLanguages: ["fr-FR", "es-MX", "en-US"] }, TWO_LOCALES, "en")).toBe("es");
   });
 
   it("lets the saved account choice override the browser", () => {
-    expect(
-      resolveLocaleFromSignals(
-        { preferred: "en", browserLanguages: ["es-MX"] },
-        TWO_LOCALES,
-        "en",
-      ),
-    ).toBe("en");
+    expect(resolveLocaleFromSignals({ preferred: "en", browserLanguages: ["es-MX"] }, TWO_LOCALES, "en")).toBe("en");
   });
 
   it("treats a null account choice as Automatic and follows the browser", () => {
-    expect(
-      resolveLocaleFromSignals(
-        { preferred: null, browserLanguages: ["es-419"] },
-        TWO_LOCALES,
-        "en",
-      ),
-    ).toBe("es");
+    expect(resolveLocaleFromSignals({ preferred: null, browserLanguages: ["es-419"] }, TWO_LOCALES, "en")).toBe("es");
   });
 });

@@ -1,9 +1,6 @@
 import { notFound } from "@dads-framework/core/errors";
 
-import type {
-  FeatureFlagDefinition,
-  FeatureFlagHistoryEntry,
-} from "../../contract/index.js";
+import type { FeatureFlagDefinition, FeatureFlagHistoryEntry } from "../../contract/index.js";
 import type { FeatureFlagStore } from "../ports/feature-flag-store.js";
 
 /** History for flags that are still defined in code; any other slug is not found. */
@@ -13,11 +10,7 @@ export class ListFeatureFlagHistory {
     private readonly store: FeatureFlagStore,
   ) {}
 
-  async execute(input: {
-    readonly slug: string;
-    readonly page: number;
-    readonly perPage: number;
-  }): Promise<{
+  async execute(input: { readonly slug: string; readonly page: number; readonly perPage: number }): Promise<{
     readonly items: readonly FeatureFlagHistoryEntry[];
     readonly total: number;
   }> {

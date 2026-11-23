@@ -15,9 +15,7 @@ export type HealthRouteHandlers = {
 };
 
 /** Maps dependency probes to named route handlers. */
-export function createHealthRouteHandlers(
-  checks: ReadinessChecks,
-): HealthRouteHandlers {
+export function createHealthRouteHandlers(checks: ReadinessChecks): HealthRouteHandlers {
   function getHealth(): HealthStatus {
     return { status: "ok" };
   }
@@ -27,10 +25,7 @@ export function createHealthRouteHandlers(
       await checks.pingDatabase();
       await checks.pingCriticalServices();
     } catch {
-      throw new ServiceUnavailableError(
-        "NOT_READY",
-        "A critical dependency is unreachable",
-      );
+      throw new ServiceUnavailableError("NOT_READY", "A critical dependency is unreachable");
     }
     return { status: "ready" };
   }

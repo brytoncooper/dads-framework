@@ -107,9 +107,7 @@ describe("RecordClientDiagnostics", () => {
 
 it("accepts an anonymous diagnostic and refuses client-supplied attribution", async () => {
   const writer = new RecordingWriter();
-  const handlers = new ClientDiagnosticsRouteHandlers(
-    new RecordClientDiagnostics(writer, silentLog()),
-  );
+  const handlers = new ClientDiagnosticsRouteHandlers(new RecordClientDiagnostics(writer, silentLog()));
   const app = await buildTestApp({
     routes: createClientDiagnosticsRoutes(handlers),
     authorization: new FakeAuthorization({}),
@@ -130,9 +128,7 @@ it("accepts an anonymous diagnostic and refuses client-supplied attribution", as
     });
     expect(report.statusCode).toBe(200);
     expect(report.json()).toEqual({ data: { accepted: 1 } });
-    expect(writer.recorded).toEqual([
-      [expect.objectContaining({ actorKind: "anonymous", actorId: "" })],
-    ]);
+    expect(writer.recorded).toEqual([[expect.objectContaining({ actorKind: "anonymous", actorId: "" })]]);
   } finally {
     await app.close();
   }

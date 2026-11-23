@@ -28,14 +28,8 @@ export function loadSiteCatalog(root) {
   const { packages } = readJson(root, "dads.project.json");
   const owners = new Map(packages.map((entry) => [entry.name, entry]));
   const pages = catalog.pages.map((entry) => loadPage(root, entry));
-  const api = catalog.apiPackages.map((name) =>
-    referencePage(root, owners, name),
-  );
-  const packagePages = publicPackagePages(
-    root,
-    publicPackages(root, packages),
-    api,
-  );
+  const api = catalog.apiPackages.map((name) => referencePage(root, owners, name));
+  const packagePages = publicPackagePages(root, publicPackages(root, packages), api);
   const allPages = [
     ...pages,
     packageIndex(packagePages),
@@ -53,19 +47,9 @@ function publicPackagePages(root, packages, api) {
     .map((owner) => {
       const path = `${owner.root}/README.md`;
       const markdown = readPublicFile(root, path).toString("utf8");
-      const title = markdown
-        .trimStart()
-        .split("\n")[0]
-        .slice(2)
-        .trimEnd()
-        .replaceAll("`", "");
+      const title = markdown.trimStart().split("\n")[0].slice(2).trimEnd().replaceAll("`", "");
       const [, area, subdirectory] = owner.root.split("/");
-      const group =
-        area === "testing" && subdirectory === "native"
-          ? "native"
-          : subdirectory
-            ? area
-            : "shared";
+      const group = area === "testing" && subdirectory === "native" ? "native" : subdirectory ? area : "shared";
       if (!PACKAGE_GROUPS.some(([key]) => key === group)) {
         throw new Error(`${path}: unknown site package group ${group}.`);
       }
@@ -125,9 +109,7 @@ function loadPage(root, entry) {
     posix.normalize(path) !== path ||
     path.startsWith("../")
   ) {
-    throw new Error(
-      "Catalogue pages need a repository-relative Markdown path.",
-    );
+    throw new Error("Catalogue pages need a repository-relative Markdown path.");
   }
   return { ...entry, markdown: readPublicFile(root, path).toString("utf8") };
 }
@@ -140,10 +122,7 @@ function referencePage(root, owners, name) {
   const readme = `${owner.root}/README.md`;
   readPublicFile(root, readme);
   const purpose = apiPurpose(slug);
-  const report = buildReport(
-    { directory: join(root, owner.root), manifest, name },
-    owner.published === true,
-  );
+  const report = buildReport({ directory: join(root, owner.root), manifest, name }, owner.published === true);
   return {
     slug,
     title: name,
@@ -162,9 +141,7 @@ function referencePage(root, owners, name) {
 }
 
 function referenceIndex(pages) {
-  const links = pages.map(
-    ({ title, slug, purpose }) => `- [${title}](./${slug}.md) — ${purpose}`,
-  );
+  const links = pages.map(({ title, slug, purpose }) => `- [${title}](./${slug}.md) — ${purpose}`);
   return {
     slug: "api",
     title: "API reference",
@@ -187,16 +164,13 @@ function validatePages(pages, owners) {
   const slugs = new Set();
   const paths = new Set();
   for (const page of pages) {
-    if (!owners.has(page.owner))
-      throw new Error(`${page.path}: unknown owner ${page.owner}.`);
+    if (!owners.has(page.owner)) throw new Error(`${page.path}: unknown owner ${page.owner}.`);
     if (!SLUG.test(page.slug) || slugs.has(page.slug) || paths.has(page.path)) {
       throw new Error(`${page.path}: invalid slug or duplicate site page.`);
     }
-    if (!page.markdown.trimStart().startsWith("# "))
-      throw new Error(`${page.path}: missing H1.`);
+    if (!page.markdown.trimStart().startsWith("# ")) throw new Error(`${page.path}: missing H1.`);
     slugs.add(page.slug);
     paths.add(page.path);
   }
-  if (!slugs.has("index"))
-    throw new Error("The site catalogue needs an index page.");
+  if (!slugs.has("index")) throw new Error("The site catalogue needs an index page.");
 }

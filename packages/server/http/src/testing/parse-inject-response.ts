@@ -24,9 +24,7 @@ function jsonOf(response: InjectedResponse): unknown {
 }
 
 /** Parses an error response into its typed `error` envelope. */
-export function errorBodyOf(
-  response: InjectedResponse,
-): z.output<typeof errorEnvelopeSchema>["error"] {
+export function errorBodyOf(response: InjectedResponse): z.output<typeof errorEnvelopeSchema>["error"] {
   return errorEnvelopeSchema.parse(jsonOf(response)).error;
 }
 
@@ -34,18 +32,12 @@ const dataEnvelopeSchema = z.object({ data: z.unknown() });
 const listEnvelopeSchema = z.object({ data: z.unknown(), meta: z.unknown() });
 
 /** Parses a success envelope's `data` against the route's schema. */
-export function dataBodyOf<Schema extends z.ZodType>(
-  response: InjectedResponse,
-  schema: Schema,
-): z.output<Schema> {
+export function dataBodyOf<Schema extends z.ZodType>(response: InjectedResponse, schema: Schema): z.output<Schema> {
   return schema.parse(dataEnvelopeSchema.parse(jsonOf(response)).data);
 }
 
 /** Parses a `{ data, meta }` envelope against both route schemas. */
-export function listBodyOf<
-  DataSchema extends z.ZodType,
-  MetaSchema extends z.ZodType,
->(
+export function listBodyOf<DataSchema extends z.ZodType, MetaSchema extends z.ZodType>(
   response: InjectedResponse,
   data: DataSchema,
   meta: MetaSchema,

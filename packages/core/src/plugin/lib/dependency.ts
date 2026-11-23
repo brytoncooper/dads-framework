@@ -36,15 +36,11 @@ export type Dependency<DependencyName extends string, Value> = {
 export type AnyDependency = Dependency<string, unknown>;
 
 /** The value a dependency hands its dependents. */
-export type DependencyValue<Declared> =
-  Declared extends Dependency<string, infer Value> ? Value : never;
+export type DependencyValue<Declared> = Declared extends Dependency<string, infer Value> ? Value : never;
 
 /** Per-run storage for one offered value, typed without an assertion. */
 export class OfferedValues<Value> {
-  private readonly values = new WeakMap<
-    CompositionRun,
-    { readonly value: Value }
-  >();
+  private readonly values = new WeakMap<CompositionRun, { readonly value: Value }>();
 
   constructor(private readonly owner: string) {}
 

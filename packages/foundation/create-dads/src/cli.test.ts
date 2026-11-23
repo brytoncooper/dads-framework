@@ -1,24 +1,13 @@
 /** Proves the shipped executable keeps its exit code, stream, and envelope promises. */
 
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
-const executablePath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "bin",
-  "create-dads.js",
-);
+const executablePath = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "create-dads.js");
 
 /** What the stand-in `npm` writes to its standard error before failing. */
 const installationDiagnostic = "registry-unreachable-under-test";
@@ -36,10 +25,7 @@ describe("create-dads executable", () => {
     const targetDirectory = join(temporaryDirectory(), "json-api");
     const npm = failingNpmShim();
 
-    const completed = runCreateDads(
-      [targetDirectory, "--yes", "--json", "--skip-install"],
-      npm.pathValue,
-    );
+    const completed = runCreateDads([targetDirectory, "--yes", "--json", "--skip-install"], npm.pathValue);
 
     expect(completed.status).toBe(0);
     expect(completed.stderr).toBe("");
@@ -48,9 +34,7 @@ describe("create-dads executable", () => {
       installed: false,
       initialization: { projectRoot: targetDirectory, unchanged: [] },
     });
-    expect(
-      readFileSync(join(targetDirectory, "package.json"), "utf8"),
-    ).toContain("@dads-framework/http");
+    expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toContain("@dads-framework/http");
     expect(existsSync(npm.invocationLog)).toBe(false);
   });
 
@@ -58,10 +42,7 @@ describe("create-dads executable", () => {
     const targetDirectory = join(temporaryDirectory(), "install-failure-api");
     const npm = failingNpmShim();
 
-    const completed = runCreateDads(
-      [targetDirectory, "--yes", "--json"],
-      npm.pathValue,
-    );
+    const completed = runCreateDads([targetDirectory, "--yes", "--json"], npm.pathValue);
 
     expect(completed.status).toBe(1);
     expect(completed.stdout).toBe("");
@@ -103,8 +84,7 @@ describe("create-dads executable", () => {
       installed: true,
       development: {
         status: "deferred",
-        reason:
-          "Local development startup exited with code 1: Docker daemon unavailable",
+        reason: "Local development startup exited with code 1: Docker daemon unavailable",
       },
     });
     if (!("error" in result)) throw new Error("Expected a startup diagnostic.");
@@ -116,10 +96,7 @@ describe("create-dads executable", () => {
     const targetDirectory = join(temporaryDirectory(), "mistyped-api");
     const npm = failingNpmShim();
 
-    const completed = runCreateDads(
-      [targetDirectory, "--profil", "strict"],
-      npm.pathValue,
-    );
+    const completed = runCreateDads([targetDirectory, "--profil", "strict"], npm.pathValue);
 
     expect(completed.status).toBe(1);
     expect(completed.stdout).toBe("");
@@ -129,30 +106,19 @@ describe("create-dads executable", () => {
 
   it("prints the doctor's report over an existing application before it is ready", () => {
     const targetDirectory = temporaryDirectory();
-    writeFileSync(
-      join(targetDirectory, "package.json"),
-      '{"name":"existing-app"}\n',
-    );
+    writeFileSync(join(targetDirectory, "package.json"), '{"name":"existing-app"}\n');
     const npm = failingNpmShim();
 
-    const completed = runCreateDads(
-      [targetDirectory, "--existing", "--yes", "--skip-install"],
-      npm.pathValue,
-    );
+    const completed = runCreateDads([targetDirectory, "--existing", "--yes", "--skip-install"], npm.pathValue);
 
     expect(completed.status).toBe(0);
     expect(completed.stdout).toContain("Anxious attachment");
-    expect(completed.stdout.indexOf("Anxious attachment")).toBeLessThan(
-      completed.stdout.indexOf("Dads project files"),
-    );
+    expect(completed.stdout.indexOf("Anxious attachment")).toBeLessThan(completed.stdout.indexOf("Dads project files"));
   });
 
   it("carries the doctor's report inside the --json envelope", () => {
     const targetDirectory = temporaryDirectory();
-    writeFileSync(
-      join(targetDirectory, "package.json"),
-      '{"name":"existing-app"}\n',
-    );
+    writeFileSync(join(targetDirectory, "package.json"), '{"name":"existing-app"}\n');
     const npm = failingNpmShim();
 
     const completed = runCreateDads(
@@ -171,10 +137,7 @@ describe("create-dads executable", () => {
     const targetDirectory = join(temporaryDirectory(), "planned-api");
     const npm = failingNpmShim();
 
-    const completed = runCreateDads(
-      [targetDirectory, "--yes", "--json", "--dry-run"],
-      npm.pathValue,
-    );
+    const completed = runCreateDads([targetDirectory, "--yes", "--json", "--dry-run"], npm.pathValue);
 
     expect(completed.status).toBe(0);
     expect(parsedJsonObject(completed.stdout)).toMatchObject({
@@ -191,9 +154,7 @@ describe("create-dads executable", () => {
       const completed = runCreateDads([flag], npm.pathValue);
       expect(completed.status).toBe(0);
       expect(completed.stderr).toBe("");
-      expect(completed.stdout).toContain(
-        "Usage: create-dads <directory> [options]",
-      );
+      expect(completed.stdout).toContain("Usage: create-dads <directory> [options]");
       expect(completed.stdout).toContain("--template <minimal|example>");
       expect(existsSync(npm.invocationLog)).toBe(false);
     }
@@ -215,20 +176,13 @@ describe("create-dads executable", () => {
       installed: false,
       initialization: { projectRoot: targetDirectory },
     });
-    expect(existsSync(join(targetDirectory, "apps/customer/app.ts"))).toBe(
-      true,
-    );
+    expect(existsSync(join(targetDirectory, "apps/customer/app.ts"))).toBe(true);
     expect(existsSync(join(targetDirectory, "domains/notes"))).toBe(false);
 
     const rejectedDirectory = join(temporaryDirectory(), "bad-template-cli");
-    const rejected = runCreateDads(
-      [rejectedDirectory, "--template", "unknown", "--skip-install"],
-      npm.pathValue,
-    );
+    const rejected = runCreateDads([rejectedDirectory, "--template", "unknown", "--skip-install"], npm.pathValue);
     expect(rejected.status).toBe(1);
-    expect(rejected.stderr).toBe(
-      "Dads: --template must be minimal or example.\n",
-    );
+    expect(rejected.stderr).toBe("Dads: --template must be minimal or example.\n");
     expect(existsSync(rejectedDirectory)).toBe(false);
   });
 });

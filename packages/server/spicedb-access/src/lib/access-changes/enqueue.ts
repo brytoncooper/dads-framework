@@ -9,12 +9,7 @@ export {
   type OutboxOperation,
 } from "@dads-framework/access/runtime";
 
-export const OUTBOX_STATUS_VALUES = [
-  "PENDING",
-  "PROJECTED",
-  "FAILED",
-  "SUPERSEDED",
-] as const;
+export const OUTBOX_STATUS_VALUES = ["PENDING", "PROJECTED", "FAILED", "SUPERSEDED"] as const;
 
 export type OutboxStatus = (typeof OUTBOX_STATUS_VALUES)[number];
 
@@ -23,8 +18,7 @@ export type OutboxStatus = (typeof OUTBOX_STATUS_VALUES)[number];
  * Same-database authorization additionally requires execute on a real
  * transaction. Other writers and test doubles can still use the narrow port.
  */
-export type OutboxTx = Pick<DrizzleHandle, "insert" | "update"> &
-  Partial<Pick<DrizzleHandle, "execute">>;
+export type OutboxTx = Pick<DrizzleHandle, "insert" | "update"> & Partial<Pick<DrizzleHandle, "execute">>;
 
 export type EnqueueAccessChanges = AccessChangesEnqueuer<OutboxTx>;
 export const EnqueueAccessChanges = AccessChangesEnqueuer<OutboxTx>;

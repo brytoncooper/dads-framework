@@ -29,15 +29,10 @@ type OpenUpload = {
  */
 export class InMemoryDirectTransferStorage implements DirectTransferStorage {
   private readonly uploads = new Map<string, OpenUpload>();
-  private readonly metadataByKey = new Map<
-    string,
-    Readonly<Record<string, string>>
-  >();
+  private readonly metadataByKey = new Map<string, Readonly<Record<string, string>>>();
   private nextUploadNumber = 1;
 
-  constructor(
-    readonly objects: InMemoryObjectStorage = new InMemoryObjectStorage(),
-  ) {}
+  constructor(readonly objects: InMemoryObjectStorage = new InMemoryObjectStorage()) {}
 
   startMultipartUpload(input: {
     readonly key: string;
@@ -63,24 +58,18 @@ export class InMemoryDirectTransferStorage implements DirectTransferStorage {
       readonly expiresInSeconds: number;
     },
   ): Promise<string> {
-    if (input.byteSize !== undefined)
-      this.findOpen(input)?.partByteSizes.set(input.partNumber, input.byteSize);
+    if (input.byteSize !== undefined) this.findOpen(input)?.partByteSizes.set(input.partNumber, input.byteSize);
     return Promise.resolve(
       `memory://upload/${input.key}?uploadId=${input.storageUploadId}&partNumber=${input.partNumber.toString()}&expires=${input.expiresInSeconds.toString()}`,
     );
   }
 
   /** Plays the browser's PUT to a part URL and returns the part's ETag. */
-  receivePart(
-    upload: MultipartUploadRef,
-    partNumber: number,
-    bytes: Uint8Array,
-  ): string {
+  receivePart(upload: MultipartUploadRef, partNumber: number, bytes: Uint8Array): string {
     const open = this.findOpen(upload);
     if (!open) throw multipartError("NoSuchUpload");
     const expected = open.partByteSizes.get(partNumber);
-    if (expected !== undefined && bytes.byteLength !== expected)
-      throw multipartError("SignatureDoesNotMatch");
+    if (expected !== undefined && bytes.byteLength !== expected) throw multipartError("SignatureDoesNotMatch");
     const etag = `"${upload.storageUploadId}-${partNumber.toString()}-${bytes.byteLength.toString()}"`;
     open.parts.set(partNumber, { bytes, etag });
     return etag;
@@ -91,9 +80,7 @@ export class InMemoryDirectTransferStorage implements DirectTransferStorage {
     return this.findOpen(upload) !== undefined;
   }
 
-  listUploadedParts(
-    upload: MultipartUploadRef,
-  ): Promise<readonly UploadedPart[] | null> {
+  listUploadedParts(upload: MultipartUploadRef): Promise<readonly UploadedPart[] | null> {
     const open = this.findOpen(upload);
     if (!open) return Promise.resolve(null);
     return Promise.resolve(
@@ -116,8 +103,7 @@ export class InMemoryDirectTransferStorage implements DirectTransferStorage {
     if (!open) throw multipartError("NoSuchUpload");
     const chunks = input.parts.map((listed) => {
       const part = open.parts.get(listed.partNumber);
-      if (!part || part.etag !== listed.etag)
-        throw multipartError("InvalidPart");
+      if (!part || part.etag !== listed.etag) throw multipartError("InvalidPart");
       return part.bytes;
     });
     await this.objects.put(open.key, concatenate(chunks), open.contentType);
@@ -140,10 +126,7 @@ export class InMemoryDirectTransferStorage implements DirectTransferStorage {
     };
   }
 
-  async readObjectPrefix(
-    key: string,
-    byteCount: number,
-  ): Promise<Uint8Array | null> {
+  async readObjectPrefix(key: string, byteCount: number): Promise<Uint8Array | null> {
     const stored = await this.objects.get(key);
     return stored ? stored.body.slice(0, byteCount) : null;
   }

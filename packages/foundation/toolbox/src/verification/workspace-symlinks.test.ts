@@ -1,12 +1,4 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readlinkSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -33,9 +25,7 @@ describe("verification workspace copies", () => {
       writeFileSync(packageEntry, "original checkout changed");
 
       expect(readlinkSync(snapshotLink)).toBe(linkTarget);
-      expect(readFileSync(join(snapshotLink, "index.js"), "utf8")).toBe(
-        "captured module",
-      );
+      expect(readFileSync(join(snapshotLink, "index.js"), "utf8")).toBe("captured module");
     } finally {
       rmSync(temporaryRoot, { force: true, recursive: true });
     }

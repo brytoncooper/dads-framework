@@ -8,14 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { measureWork } from "@dads-framework/core/runtime/request-work";
 
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
-import {
-  relationshipWrite,
-  type RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
+import { relationshipWrite, type RelationshipWrite } from "@dads-framework/access/runtime";
 import {
   DEFAULT_AUTHORIZATION_GUARD_MARKS,
   GuardedAuthorization,
@@ -57,24 +51,14 @@ describe("GuardedAuthorization against SpiceDB (integration)", () => {
     await vendor.writeSchema(SCHEMA);
     const writes: RelationshipWrite[] = [];
     for (let index = 0; index < MACHINES; index += 1) {
-      writes.push(
-        relationshipWrite(
-          { type: "guardtest/machine", id: `machine-${index}` },
-          "viewer",
-          user,
-        ),
-      );
+      writes.push(relationshipWrite({ type: "guardtest/machine", id: `machine-${index}` }, "viewer", user));
     }
     for (let start = 0; start < writes.length; start += WRITE_BATCH) {
       await vendor.writeRelationships(writes.slice(start, start + WRITE_BATCH));
     }
-    guarded = new GuardedAuthorization(
-      new TalliedAuthorization(vendor),
-      DEFAULT_AUTHORIZATION_GUARD_MARKS,
-      {
-        mayLookup: (resourceType) => resourceType === "guardtest/machine",
-      },
-    );
+    guarded = new GuardedAuthorization(new TalliedAuthorization(vendor), DEFAULT_AUTHORIZATION_GUARD_MARKS, {
+      mayLookup: (resourceType) => resourceType === "guardtest/machine",
+    });
   }, 120_000);
 
   afterAll(async () => {

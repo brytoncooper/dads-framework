@@ -22,10 +22,7 @@ import {
   type VerificationReceiptLookup,
   type VerificationReceiptStore,
 } from "./receipt-store.js";
-import {
-  runCapturedVerification,
-  runVerificationTask,
-} from "./run-verification-task.js";
+import { runCapturedVerification, runVerificationTask } from "./run-verification-task.js";
 import { errorMessage } from "./verification-failure.js";
 import type {
   ControlledVerificationTask,
@@ -40,10 +37,7 @@ import {
   type CapturedVerificationSnapshot,
   type ControlledVerificationRequest,
 } from "./verification-inputs.js";
-import type {
-  ControlledVerificationExecution,
-  VerificationOutputFingerprint,
-} from "./verification-receipt.js";
+import type { ControlledVerificationExecution, VerificationOutputFingerprint } from "./verification-receipt.js";
 import type { VerifyTaskGraphRequest } from "./verify-task-graph.js";
 
 /** One task and everything already known about the run it belongs to. */
@@ -52,10 +46,7 @@ export type GraphTaskExecution = {
   readonly task: VerificationTaskDefinition;
   readonly recommendation: VerificationTaskRecommendation;
   readonly resultsByTask: ReadonlyMap<string, VerificationTaskResult>;
-  readonly outputsByTask: ReadonlyMap<
-    string,
-    readonly VerificationOutputFingerprint[]
-  >;
+  readonly outputsByTask: ReadonlyMap<string, readonly VerificationOutputFingerprint[]>;
 };
 
 type ControlledTaskExecution = Omit<GraphTaskExecution, "task"> & {
@@ -82,10 +73,7 @@ export function verifyTask(input: GraphTaskExecution): VerificationTaskResult {
   });
 }
 
-export function blockedResult(
-  recommendation: VerificationTaskRecommendation,
-  reason: string,
-): VerificationTaskResult {
+export function blockedResult(recommendation: VerificationTaskRecommendation, reason: string): VerificationTaskResult {
   return {
     taskId: recommendation.taskId,
     command: recommendation.command,
@@ -101,11 +89,7 @@ function executeShellTask(
   request: VerifyTaskGraphRequest,
   recommendation: VerificationTaskRecommendation,
 ): VerificationTaskResult {
-  const execution = runVerificationTask(
-    request.projectRoot,
-    recommendation,
-    request.captureOutput,
-  );
+  const execution = runVerificationTask(request.projectRoot, recommendation, request.captureOutput);
   return {
     taskId: recommendation.taskId,
     command: recommendation.command,
@@ -134,36 +118,21 @@ function lookUpReceipt(
   );
 }
 
-function verifyControlledTask(
-  input: ControlledTaskExecution,
-): VerificationTaskResult {
+function verifyControlledTask(input: ControlledTaskExecution): VerificationTaskResult {
   let snapshot: CapturedVerificationSnapshot;
   try {
-    snapshot = captureVerificationSnapshot(
-      createControlledRequest(input.request, input.task, input.outputsByTask),
-    );
+    snapshot = captureVerificationSnapshot(createControlledRequest(input.request, input.task, input.outputsByTask));
   } catch (error: unknown) {
     return failedResult(input.recommendation, errorMessage(error));
   }
 
   try {
     try {
-      assertConsumedArtifactsMatchProviders(
-        input.request.project,
-        input.task,
-        snapshot,
-        input.outputsByTask,
-      );
+      assertConsumedArtifactsMatchProviders(input.request.project, input.task, snapshot, input.outputsByTask);
     } catch (error: unknown) {
-      return failedResult(
-        input.recommendation,
-        errorMessage(error),
-        snapshot.identity.snapshotId,
-      );
+      return failedResult(input.recommendation, errorMessage(error), snapshot.identity.snapshotId);
     }
-    const store = createVerificationReceiptStore(
-      input.request.evidenceRoot ?? input.request.projectRoot,
-    );
+    const store = createVerificationReceiptStore(input.request.evidenceRoot ?? input.request.projectRoot);
     const projectMatchedBeforeLookup = capturedSnapshotMatchesProject(snapshot);
     const receipt = lookUpReceipt(input, store, snapshot.identity.snapshotId);
     const decision = decideTaskReuse({
@@ -174,10 +143,7 @@ function verifyControlledTask(
       receipt,
     });
     if (decision.decision === "reuse" && receipt.status === "match") {
-      if (
-        !projectMatchedBeforeLookup ||
-        !capturedSnapshotMatchesProject(snapshot)
-      ) {
+      if (!projectMatchedBeforeLookup || !capturedSnapshotMatchesProject(snapshot)) {
         return failedResult(
           input.recommendation,
           "Controlled inputs changed while selecting reusable evidence.",
@@ -225,11 +191,7 @@ function executeControlledTask(
     );
   }
   try {
-    publishTaskOutputs(
-      input.request.projectRoot,
-      snapshot,
-      input.task.execution.publishOutputs,
-    );
+    publishTaskOutputs(input.request.projectRoot, snapshot, input.task.execution.publishOutputs);
     if (!capturedSnapshotMatchesProject(snapshot)) {
       return failedResult(
         input.recommendation,
@@ -238,9 +200,7 @@ function executeControlledTask(
       );
     }
     const receipt = publishSuccessfulVerificationReceipt(
-      createVerificationReceiptStore(
-        input.request.evidenceRoot ?? input.request.projectRoot,
-      ),
+      createVerificationReceiptStore(input.request.evidenceRoot ?? input.request.projectRoot),
       execution,
     );
     return {
@@ -253,11 +213,7 @@ function executeControlledTask(
       outputs: execution.outputs,
     };
   } catch (error: unknown) {
-    return failedResult(
-      input.recommendation,
-      errorMessage(error),
-      execution.snapshotId,
-    );
+    return failedResult(input.recommendation, errorMessage(error), execution.snapshotId);
   }
 }
 
@@ -279,24 +235,15 @@ function createControlledRequest(
     outputFiles: task.execution.outputFiles,
     environment: task.execution.environment,
     prerequisiteIdentities: [
-      ...task.execution.prerequisiteOutputTaskIds.map((taskId) =>
-        outputIdentity(taskId, outputsByTask.get(taskId)),
-      ),
-      ...(request.gitEvidenceIdentity === undefined
-        ? []
-        : [`git-evidence:${request.gitEvidenceIdentity}`]),
+      ...task.execution.prerequisiteOutputTaskIds.map((taskId) => outputIdentity(taskId, outputsByTask.get(taskId))),
+      ...(request.gitEvidenceIdentity === undefined ? [] : [`git-evidence:${request.gitEvidenceIdentity}`]),
     ],
     timeoutMilliseconds: task.execution.timeoutMilliseconds,
   };
 }
 
 /** Evidence that failed to parse is removed, never trusted and never left to be re-read. */
-function discardInvalidReceipt(
-  receiptRoot: string,
-  projectId: string,
-  taskId: string,
-  snapshotId: string,
-): void {
+function discardInvalidReceipt(receiptRoot: string, projectId: string, taskId: string, snapshotId: string): void {
   const receiptPath = join(
     receiptRoot,
     receiptPathSegment(projectId),
@@ -320,11 +267,7 @@ function failedControlledResult(
   recommendation: VerificationTaskRecommendation,
   execution: ControlledVerificationExecution,
 ): VerificationTaskResult {
-  return failedResult(
-    recommendation,
-    execution.failure ?? "Controlled verification failed.",
-    execution.snapshotId,
-  );
+  return failedResult(recommendation, execution.failure ?? "Controlled verification failed.", execution.snapshotId);
 }
 
 function failedResult(

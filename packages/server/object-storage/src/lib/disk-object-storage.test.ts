@@ -8,14 +8,7 @@ import { objectStorageConformance } from "./object-storage-conformance.js";
  * read as missing so the caller fetches it again.
  */
 import { randomBytes } from "node:crypto";
-import {
-  readdir,
-  readFile,
-  rm,
-  stat,
-  utimes,
-  writeFile,
-} from "node:fs/promises";
+import { readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -78,9 +71,7 @@ describe("DiskObjectStorage", () => {
     const stored = await files.get("facilities/f1/images/a.png");
     expect(stored?.contentType).toBe("image/png");
     expect(new TextDecoder().decode(stored?.body)).toBe("png-bytes");
-    await expect(
-      readFile(join(root, "objects", "facilities/f1/images/a.png"), "utf8"),
-    ).resolves.toBe("png-bytes");
+    await expect(readFile(join(root, "objects", "facilities/f1/images/a.png"), "utf8")).resolves.toBe("png-bytes");
   });
 
   it("keeps an object across a new instance on the same root, as after a restart", async () => {
@@ -98,9 +89,7 @@ describe("DiskObjectStorage", () => {
     await files.put("a/c/d.txt", "1234567890", "text/plain");
 
     const sidecars = await Promise.all(
-      ["a/b.txt", "a/c/d.txt"].map((key) =>
-        readFile(join(root, "objects", `${key}.meta.json`)),
-      ),
+      ["a/b.txt", "a/c/d.txt"].map((key) => readFile(join(root, "objects", `${key}.meta.json`))),
     );
     await expect(files.storedBytes()).resolves.toBe(
       15 + sidecars.reduce((total, sidecar) => total + sidecar.byteLength, 0),
@@ -118,11 +107,7 @@ describe("DiskObjectStorage", () => {
     await files.put("builds/nested/c.json", "{}", "application/json");
     await files.put("releases/a.json", "{}", "application/json");
 
-    await expect(files.list("builds/")).resolves.toEqual([
-      "builds/a.json",
-      "builds/b.json",
-      "builds/nested/c.json",
-    ]);
+    await expect(files.list("builds/")).resolves.toEqual(["builds/a.json", "builds/b.json", "builds/nested/c.json"]);
     await expect(files.list("builds/a")).resolves.toEqual(["builds/a.json"]);
     await expect(files.list("missing/")).resolves.toEqual([]);
   });
@@ -152,21 +137,15 @@ describe("DiskObjectStorage", () => {
   ])("refuses %s before touching the disk", async (_label, key) => {
     const files = storage();
 
-    await expect(files.put(key, "x", "text/plain")).rejects.toBeInstanceOf(
-      InvalidObjectKey,
-    );
+    await expect(files.put(key, "x", "text/plain")).rejects.toBeInstanceOf(InvalidObjectKey);
     await expect(files.get(key)).rejects.toBeInstanceOf(InvalidObjectKey);
     await expect(files.delete(key)).rejects.toBeInstanceOf(InvalidObjectKey);
-    await expect(files.getSignedUrl(key, 60)).rejects.toBeInstanceOf(
-      InvalidObjectKey,
-    );
+    await expect(files.getSignedUrl(key, 60)).rejects.toBeInstanceOf(InvalidObjectKey);
     await expect(filesUnder(root)).resolves.toEqual([]);
   });
 
   it("refuses a prefix that climbs out of the root", async () => {
-    await expect(storage().list("../")).rejects.toBeInstanceOf(
-      InvalidObjectKey,
-    );
+    await expect(storage().list("../")).rejects.toBeInstanceOf(InvalidObjectKey);
   });
 
   it("answers null and logs site.files.corrupt (key only) when the body changed on disk", async () => {
@@ -175,9 +154,7 @@ describe("DiskObjectStorage", () => {
     await writeFile(join(root, "objects", "a/b.png"), "tampered");
 
     await expect(files.get("a/b.png")).resolves.toBeNull();
-    expect(logged.map((line) => line.fields)).toEqual([
-      { event: "site.files.corrupt", key: "a/b.png" },
-    ]);
+    expect(logged.map((line) => line.fields)).toEqual([{ event: "site.files.corrupt", key: "a/b.png" }]);
   });
 
   it("answers null when the sidecar is missing", async () => {
@@ -212,8 +189,7 @@ describe("DiskObjectStorage", () => {
     const files = storage();
     await files.put("a/b.txt", "0123456789", "text/plain");
 
-    const text = (bytes: Uint8Array | null): string | null =>
-      bytes === null ? null : new TextDecoder().decode(bytes);
+    const text = (bytes: Uint8Array | null): string | null => (bytes === null ? null : new TextDecoder().decode(bytes));
     expect(text(await files.readPrefix("a/b.txt", 4))).toBe("0123");
     expect(text(await files.readPrefix("a/b.txt", 100))).toBe("0123456789");
     expect(text(await files.readPrefix("a/b.txt", 0))).toBe("");
@@ -227,10 +203,7 @@ describe("DiskObjectStorage", () => {
     await files.put("a/b.png", "old", "image/png");
     // A power cut mid-put leaves only temp files beside the old object.
     await writeFile(join(root, "objects", "a/b.png.tmp-deadbeef"), "ne");
-    await writeFile(
-      join(root, "objects", "a/b.png.meta.json.tmp-deadbeef"),
-      "{",
-    );
+    await writeFile(join(root, "objects", "a/b.png.meta.json.tmp-deadbeef"), "{");
 
     const stored = await files.get("a/b.png");
     expect(new TextDecoder().decode(stored?.body)).toBe("old");
@@ -297,9 +270,7 @@ describe("DiskObjectStorage", () => {
     const files = storage();
     const bodies = Array.from({ length: 30 }, (_, n) => `body-${n.toString()}`);
 
-    await Promise.all(
-      bodies.map((body) => files.put("a/same.png", body, "image/png")),
-    );
+    await Promise.all(bodies.map((body) => files.put("a/same.png", body, "image/png")));
 
     const stored = await files.get("a/same.png");
     expect(stored).not.toBeNull();
@@ -343,14 +314,10 @@ describe("DiskObjectStorage", () => {
     let calls = 0;
     const files = storage(() => {
       calls += 1;
-      return calls === 1
-        ? Promise.resolve({ freeBytes: 0, totalBytes: 20 * GIB })
-        : PLENTY("");
+      return calls === 1 ? Promise.resolve({ freeBytes: 0, totalBytes: 20 * GIB }) : PLENTY("");
     });
 
-    await expect(files.put("a/b.png", "x", "image/png")).rejects.toBeInstanceOf(
-      SiteDiskLow,
-    );
+    await expect(files.put("a/b.png", "x", "image/png")).rejects.toBeInstanceOf(SiteDiskLow);
     await files.put("a/b.png", "y", "image/png");
 
     const stored = await files.get("a/b.png");
@@ -360,23 +327,16 @@ describe("DiskObjectStorage", () => {
   it("leaves no temp file behind after a put", async () => {
     await storage().put("a/b.png", "bytes", "image/png");
 
-    await expect(filesUnder(join(root, "objects", "a"))).resolves.toEqual([
-      "b.png",
-      "b.png.meta.json",
-    ]);
+    await expect(filesUnder(join(root, "objects", "a"))).resolves.toEqual(["b.png", "b.png.meta.json"]);
   });
 
   describe("disk floor", () => {
     it("refuses a put below 2 GB free, writes nothing and logs site.files.disk_low", async () => {
-      const files = storage(() =>
-        Promise.resolve({ freeBytes: GIB, totalBytes: 20 * GIB }),
-      );
+      const files = storage(() => Promise.resolve({ freeBytes: GIB, totalBytes: 20 * GIB }));
 
       const refused = files.put("a/b.png", "bytes", "image/png");
       await expect(refused).rejects.toBeInstanceOf(SiteDiskLow);
-      await expect(filesUnder(root)).resolves.not.toContain(
-        join("objects", "a", "b.png"),
-      );
+      await expect(filesUnder(root)).resolves.not.toContain(join("objects", "a", "b.png"));
       expect(logged.map((line) => line.fields)).toEqual([
         { event: "site.files.disk_low", freeBytes: GIB, floorBytes: 2 * GIB },
       ]);
@@ -384,23 +344,15 @@ describe("DiskObjectStorage", () => {
 
     it("uses 5 % of the volume when that is more than 2 GB", async () => {
       // 5 % of 100 GiB is 5 GiB, so 4 GiB free is below the floor.
-      const files = storage(() =>
-        Promise.resolve({ freeBytes: 4 * GIB, totalBytes: 100 * GIB }),
-      );
+      const files = storage(() => Promise.resolve({ freeBytes: 4 * GIB, totalBytes: 100 * GIB }));
 
-      await expect(
-        files.put("a/b.png", "bytes", "image/png"),
-      ).rejects.toBeInstanceOf(SiteDiskLow);
+      await expect(files.put("a/b.png", "bytes", "image/png")).rejects.toBeInstanceOf(SiteDiskLow);
     });
 
     it("refuses a body that would itself take the disk below the floor", async () => {
-      const files = storage(() =>
-        Promise.resolve({ freeBytes: 2 * GIB + 3, totalBytes: 20 * GIB }),
-      );
+      const files = storage(() => Promise.resolve({ freeBytes: 2 * GIB + 3, totalBytes: 20 * GIB }));
 
-      await expect(
-        files.put("a/b.png", "four", "image/png"),
-      ).rejects.toBeInstanceOf(SiteDiskLow);
+      await expect(files.put("a/b.png", "four", "image/png")).rejects.toBeInstanceOf(SiteDiskLow);
     });
   });
 
@@ -436,27 +388,17 @@ describe("DiskObjectStorage", () => {
       const staleSidecar = join(folder, "b.png.meta.json.tmp-deadbeef");
       const staleKey = join(root, "signing-key.tmp-deadbeef");
       const fresh = join(folder, "b.png.tmp-cafebabe");
-      for (const path of [stale, staleSidecar, staleKey, fresh])
-        await writeFile(path, "half");
+      for (const path of [stale, staleSidecar, staleKey, fresh]) await writeFile(path, "half");
       const elevenMinutesAgo = new Date(now.getTime() - 11 * 60_000);
-      for (const path of [stale, staleSidecar, staleKey])
-        await utimes(path, elevenMinutesAgo, elevenMinutesAgo);
+      for (const path of [stale, staleSidecar, staleKey]) await utimes(path, elevenMinutesAgo, elevenMinutesAgo);
       // The file's own clock: "fresh" was written just now.
       await utimes(fresh, now, now);
 
       await files.checkWritable();
 
-      await expect(filesUnder(folder)).resolves.toEqual([
-        "b.png",
-        "b.png.meta.json",
-        "b.png.tmp-cafebabe",
-      ]);
-      await expect(filesUnder(root)).resolves.not.toContain(
-        "signing-key.tmp-deadbeef",
-      );
-      expect(logged.map((line) => line.fields)).toEqual([
-        { event: "site.files.temp_swept", removed: 3 },
-      ]);
+      await expect(filesUnder(folder)).resolves.toEqual(["b.png", "b.png.meta.json", "b.png.tmp-cafebabe"]);
+      await expect(filesUnder(root)).resolves.not.toContain("signing-key.tmp-deadbeef");
+      expect(logged.map((line) => line.fields)).toEqual([{ event: "site.files.temp_swept", removed: 3 }]);
 
       // Once per process: a later probe does not sweep again.
       const later = join(folder, "b.png.tmp-0badf00d");
@@ -505,19 +447,13 @@ describe("DiskObjectStorage", () => {
 
 describe("foldersToSync", () => {
   it("syncs only the file's folder when mkdir made none", () => {
-    expect(foldersToSync("/r/objects/a/b", undefined)).toEqual([
-      "/r/objects/a/b",
-    ]);
+    expect(foldersToSync("/r/objects/a/b", undefined)).toEqual(["/r/objects/a/b"]);
   });
 
   it("syncs the file's folder and every parent of a folder mkdir made", () => {
     // mkdir made /r/objects/a and /r/objects/a/b: their entries live in
     // /r/objects and /r/objects/a.
-    expect(foldersToSync("/r/objects/a/b", "/r/objects/a")).toEqual([
-      "/r/objects/a/b",
-      "/r/objects/a",
-      "/r/objects",
-    ]);
+    expect(foldersToSync("/r/objects/a/b", "/r/objects/a")).toEqual(["/r/objects/a/b", "/r/objects/a", "/r/objects"]);
   });
 });
 
@@ -539,9 +475,7 @@ describe("loadOrCreateDiskSigningKey", () => {
   });
 
   it("agrees on one whole key when many boots make it at once (first writer wins)", async () => {
-    const keys = await Promise.all(
-      Array.from({ length: 20 }, () => loadOrCreateDiskSigningKey(root)),
-    );
+    const keys = await Promise.all(Array.from({ length: 20 }, () => loadOrCreateDiskSigningKey(root)));
 
     const first = Buffer.from(keys[0] ?? new Uint8Array());
     expect(first.byteLength).toBe(32);
@@ -558,9 +492,7 @@ describe("loadOrCreateDiskSigningKey", () => {
   it("refuses a key file of the wrong length", async () => {
     await writeFile(join(root, "signing-key"), randomBytes(5));
 
-    await expect(loadOrCreateDiskSigningKey(root)).rejects.toThrow(
-      /signing-key/,
-    );
+    await expect(loadOrCreateDiskSigningKey(root)).rejects.toThrow(/signing-key/);
   });
 
   it("keeps the key out of objects/, so no key can name it", async () => {

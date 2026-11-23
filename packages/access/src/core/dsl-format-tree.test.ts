@@ -144,17 +144,13 @@ describe("formatAccessTree and compileAccess options", () => {
       },
     ]);
     // Deduplicates repeated org entry cleanly.
-    expect(
-      model.definitions.filter((def) => def.entity.wireName === "organization"),
-    ).toHaveLength(1);
+    expect(model.definitions.filter((def) => def.entity.wireName === "organization")).toHaveLength(1);
 
     // Rejects two distinct resources with the same wireName.
     const duplicate = resource("organization", {
       roles: { admin: user },
       can: ({ admin }) => ({ view: admin }),
     });
-    expect(() => compileAccess([org, duplicate])).toThrow(
-      'duplicate DSL resource wireName "organization"',
-    );
+    expect(() => compileAccess([org, duplicate])).toThrow('duplicate DSL resource wireName "organization"');
   });
 });

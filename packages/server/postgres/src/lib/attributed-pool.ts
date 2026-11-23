@@ -33,11 +33,7 @@
  */
 
 import { Pool, type PoolClient, type PoolConfig } from "pg";
-import {
-  AUDIT_ACTOR_SETTING,
-  serializeAuditActor,
-  type AuditActor,
-} from "@dads-framework/core/audit-actor";
+import { AUDIT_ACTOR_SETTING, serializeAuditActor, type AuditActor } from "@dads-framework/core/audit-actor";
 
 import { countStatementsOn } from "./counting-client.js";
 
@@ -86,10 +82,7 @@ export type StampableClient = ActorStampableClient & {
  * call this once after connecting; the setting is session level, so every
  * statement that follows on that connection carries it.
  */
-export async function stampClientWithActor(
-  client: ActorStampableClient,
-  actor: AuditActor | undefined,
-): Promise<void> {
+export async function stampClientWithActor(client: ActorStampableClient, actor: AuditActor | undefined): Promise<void> {
   await client.query(AUDIT_ACTOR_STAMP_SQL, [
     AUDIT_ACTOR_SETTING,
     actor === undefined ? "" : serializeAuditActor(actor),
@@ -97,10 +90,7 @@ export async function stampClientWithActor(
 }
 
 /** The pool's form of the stamp: whoever the source names at checkout time. */
-export async function stampAuditActor(
-  client: StampableClient,
-  actorSource: AuditActorSource,
-): Promise<void> {
+export async function stampAuditActor(client: StampableClient, actorSource: AuditActorSource): Promise<void> {
   await stampClientWithActor(client, actorSource());
 }
 
@@ -154,10 +144,7 @@ class AttributedPool extends Pool {
   override connect(): Promise<PoolClient>;
   override connect(callback: CheckoutCallback): void;
   override connect(callback?: CheckoutCallback): Promise<PoolClient> | void {
-    const checkedOut = checkOutStampedClient(
-      () => super.connect(),
-      this.#actorSource,
-    );
+    const checkedOut = checkOutStampedClient(() => super.connect(), this.#actorSource);
     if (callback === undefined) return checkedOut;
     checkedOut.then(
       (client) => {
@@ -182,10 +169,7 @@ class AttributedPool extends Pool {
  * identity, and identity is the point — Drizzle's `instanceof Pool` check and
  * the `$client: Pool` type both need this object to BE a pool.
  */
-export function createAttributedPool(
-  config: PoolConfig,
-  actorSource: AuditActorSource,
-): Pool {
+export function createAttributedPool(config: PoolConfig, actorSource: AuditActorSource): Pool {
   return new AttributedPool(config, actorSource);
 }
 

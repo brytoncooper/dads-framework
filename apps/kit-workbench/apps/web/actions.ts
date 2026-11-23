@@ -37,10 +37,7 @@ export function useAction() {
     }
   }
 
-  function submit(
-    event: SubmitEvent<HTMLFormElement>,
-    action: (form: FormData) => Promise<void>,
-  ) {
+  function submit(event: SubmitEvent<HTMLFormElement>, action: (form: FormData) => Promise<void>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     void run(() => action(form));

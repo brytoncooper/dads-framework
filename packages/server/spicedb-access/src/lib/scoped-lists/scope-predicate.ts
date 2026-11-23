@@ -10,10 +10,7 @@ import { sql, type SQL } from "drizzle-orm";
 
 import type { ScopePlan } from "@dads-framework/access/scopes";
 
-import {
-  scopeQuestionKey,
-  type ScopeAnswer,
-} from "@dads-framework/access/runtime";
+import { scopeQuestionKey, type ScopeAnswer } from "@dads-framework/access/runtime";
 import type { RoleSql, ScopeSqlBindings } from "./scope-sql-bindings.js";
 
 /**
@@ -27,9 +24,7 @@ export function scopePredicate(
   related: readonly ScopeSqlBindings[] = [],
 ): SQL {
   if (bindings.wireName !== answer.resourceType) {
-    throw new Error(
-      `scope answer is for ${answer.resourceType} but the SQL bindings are for ${bindings.wireName}`,
-    );
+    throw new Error(`scope answer is for ${answer.resourceType} but the SQL bindings are for ${bindings.wireName}`);
   }
   return renderPlan(answer.plan, { answer, related }, bindings);
 }
@@ -39,11 +34,7 @@ type Rendering = {
   readonly related: readonly ScopeSqlBindings[];
 };
 
-function renderPlan(
-  plan: ScopePlan,
-  rendering: Rendering,
-  bindings: ScopeSqlBindings,
-): SQL {
+function renderPlan(plan: ScopePlan, rendering: Rendering, bindings: ScopeSqlBindings): SQL {
   switch (plan.kind) {
     case "lookup":
       return renderLookup(
@@ -57,13 +48,7 @@ function renderPlan(
     case "direct":
       return sql`${bindings.id} = ANY(${idsParameter(rendering.answer, bindings.wireName, plan.role)})`;
     case "via":
-      return renderVia(
-        plan.role,
-        plan.targetType,
-        plan.plan,
-        rendering,
-        bindings,
-      );
+      return renderVia(plan.role, plan.targetType, plan.plan, rendering, bindings);
     case "any":
       return joined(plan.plans, " OR ", sql`FALSE`, rendering, bindings);
     case "all":
@@ -75,12 +60,7 @@ function renderPlan(
   }
 }
 
-function renderLookup(
-  role: RoleSql,
-  ids: SQL,
-  bindings: ScopeSqlBindings,
-  roleName: string,
-): SQL {
+function renderLookup(role: RoleSql, ids: SQL, bindings: ScopeSqlBindings, roleName: string): SQL {
   switch (role.kind) {
     case "scope-column":
       return sql`${role.column} = ANY(${ids})`;
@@ -88,21 +68,13 @@ function renderLookup(
     case "derived":
       return sql`(${role.matches(ids)})`;
     case "tag":
-      throw new Error(
-        `${bindings.wireName} role ${roleName} is a tag, but the plan looks up scopes through it`,
-      );
+      throw new Error(`${bindings.wireName} role ${roleName} is a tag, but the plan looks up scopes through it`);
   }
 }
 
-function renderTag(
-  role: RoleSql,
-  bindings: ScopeSqlBindings,
-  roleName: string,
-): SQL {
+function renderTag(role: RoleSql, bindings: ScopeSqlBindings, roleName: string): SQL {
   if (role.kind !== "tag") {
-    throw new Error(
-      `${bindings.wireName} role ${roleName} is bound as ${role.kind}, but the plan uses it as a tag`,
-    );
+    throw new Error(`${bindings.wireName} role ${roleName} is bound as ${role.kind}, but the plan uses it as a tag`);
   }
   return sql`(${role.condition})`;
 }
@@ -121,13 +93,9 @@ function renderVia(
       `${bindings.wireName} role ${roleName} walks into ${targetType}, so it must be bound as scope-column, not ${role.kind}`,
     );
   }
-  const target = rendering.related.find(
-    (entry) => entry.wireName === targetType,
-  );
+  const target = rendering.related.find((entry) => entry.wireName === targetType);
   if (target === undefined) {
-    throw new Error(
-      `${bindings.wireName} role ${roleName} walks into ${targetType}, which has no scope SQL bindings`,
-    );
+    throw new Error(`${bindings.wireName} role ${roleName} walks into ${targetType}, which has no scope SQL bindings`);
   }
   if (target.table === bindings.table) {
     throw new Error(
@@ -154,22 +122,14 @@ function joined(
 function roleSql(bindings: ScopeSqlBindings, roleName: string): RoleSql {
   const role = bindings.roles[roleName];
   if (role === undefined) {
-    throw new Error(
-      `${bindings.wireName} role ${roleName} has no scope SQL binding`,
-    );
+    throw new Error(`${bindings.wireName} role ${roleName} has no scope SQL binding`);
   }
   return role;
 }
 
 /** One question's answer as a single `uuid[]` parameter. */
-function idsParameter(
-  answer: ScopeAnswer,
-  resourceType: string,
-  permission: string,
-): SQL {
-  const ids = answer.idsByQuestion.get(
-    scopeQuestionKey({ resourceType, permission }),
-  );
+function idsParameter(answer: ScopeAnswer, resourceType: string, permission: string): SQL {
+  const ids = answer.idsByQuestion.get(scopeQuestionKey({ resourceType, permission }));
   if (ids === undefined) {
     throw new Error(
       `scope answer has no ids for ${resourceType}#${permission}; build it with answerScope for the same plan`,

@@ -54,9 +54,7 @@ export const relationshipExpirationMigration = Object.freeze({
   adapter: "postgres-access",
   version: 2,
   id: "dad-authorization-relationship-expiration-v2",
-  checksum: createHash("sha256")
-    .update(relationshipExpirationSql)
-    .digest("hex"),
+  checksum: createHash("sha256").update(relationshipExpirationSql).digest("hex"),
   sql: relationshipExpirationSql,
   advisoryLockSql: "SELECT pg_advisory_xact_lock(hashtext($1))",
 });

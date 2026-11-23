@@ -30,9 +30,12 @@ it("checks deep arrows without timing out under the ordinary query deadline", as
       await expect(authorization.check(check)).resolves.toBe(true);
       await expect(authorization.check(wrongActor)).resolves.toBe(false);
       await expect(authorization.check(wrongLeaf)).resolves.toBe(false);
-      await expect(
-        authorization.checkMany([wrongActor, check, wrongLeaf, check]),
-      ).resolves.toEqual([false, true, false, true]);
+      await expect(authorization.checkMany([wrongActor, check, wrongLeaf, check])).resolves.toEqual([
+        false,
+        true,
+        false,
+        true,
+      ]);
     } finally {
       client.release();
     }

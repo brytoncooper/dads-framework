@@ -46,11 +46,7 @@ const UNIT_SECONDS = { oneRun: 2, twoRuns: 4 };
 export async function proveBaseline({ project, expectations }) {
   project.prepareIsolatedProject();
   project.append("src/access.ts", "\n// baseline verification trigger\n");
-  expectations.expectStates(
-    "baseline",
-    await expectations.runVerification(),
-    ALL_EXECUTED,
-  );
+  expectations.expectStates("baseline", await expectations.runVerification(), ALL_EXECUTED);
   project.commit("baseline");
 }
 
@@ -59,10 +55,7 @@ export const boundaryScenarios = [
     name: "clean checkout fallback",
     cost: UNIT_SECONDS.oneRun,
     async run({ expectations }) {
-      expectations.expectAllExecuted(
-        "clean checkout fallback",
-        await expectations.runVerification(),
-      );
+      expectations.expectAllExecuted("clean checkout fallback", await expectations.runVerification());
     },
   },
   {
@@ -80,11 +73,10 @@ export const boundaryScenarios = [
     cost: UNIT_SECONDS.oneRun,
     async run({ project, expectations }) {
       project.append("src/access.ts", "// source-only authoring extraction\n");
-      expectations.expectStates(
-        "unchanged artifact",
-        await expectations.runVerification(),
-        { ...ALL_EXECUTED, "consumer:artifact-check": "reused" },
-      );
+      expectations.expectStates("unchanged artifact", await expectations.runVerification(), {
+        ...ALL_EXECUTED,
+        "consumer:artifact-check": "reused",
+      });
     },
   },
   {
@@ -117,11 +109,7 @@ export const boundaryScenarios = [
     name: "injected consumer failure",
     cost: UNIT_SECONDS.twoRuns,
     async run({ project, expectations }) {
-      project.replace(
-        "src/read-document-result.ts",
-        "`document:${request.documentId}`",
-        "undefined",
-      );
+      project.replace("src/read-document-result.ts", "`document:${request.documentId}`", "undefined");
       expectations.expectConsumerFailed(
         "injected consumer failure",
         await expectations.runVerification({ allowFailure: true }),
@@ -143,10 +131,7 @@ export const boundaryScenarios = [
     async run({ project, expectations }) {
       const vitestPath = "src/read-document-unit.test.ts";
       const vitestSource = project.read(vitestPath);
-      project.append(
-        vitestPath,
-        '\nit("injected failure", () => { throw new Error("vitest proof executed"); });\n',
-      );
+      project.append(vitestPath, '\nit("injected failure", () => { throw new Error("vitest proof executed"); });\n');
       expectations.expectTaskFailed(
         "injected Vitest failure",
         "consumer:vitest",
@@ -154,10 +139,7 @@ export const boundaryScenarios = [
       );
       project.write(vitestPath, vitestSource);
 
-      project.append(
-        "type-tests/consumer.ts",
-        "\nconst injectedTypeFailure: string = 1;\n",
-      );
+      project.append("type-tests/consumer.ts", "\nconst injectedTypeFailure: string = 1;\n");
       expectations.expectTaskFailed(
         "injected type-test failure",
         "consumer:typecheck",
@@ -186,8 +168,7 @@ export const boundaryScenarios = [
     cost: UNIT_SECONDS.oneRun,
     async run({ project, expectations }) {
       project.updateManifest((manifest) => {
-        controlledConsumer(manifest).environment[0].value =
-          "changed-environment";
+        controlledConsumer(manifest).environment[0].value = "changed-environment";
       });
       await expectations.expectConsumerExecuted("declared environment");
     },
@@ -215,18 +196,14 @@ export const boundaryScenarios = [
     cost: UNIT_SECONDS.oneRun,
     async run({ project, expectations }) {
       project.write("verification/fail-provider", "fail\n");
-      expectations.expectStates(
-        "provider failure",
-        await expectations.runVerification({ allowFailure: true }),
-        {
-          "policy:check": "failed",
-          "policy:build": "blocked",
-          "consumer:artifact-check": "blocked",
-          "consumer:vitest": "blocked",
-          "consumer:typecheck": "blocked",
-          "authorization:live": "blocked",
-        },
-      );
+      expectations.expectStates("provider failure", await expectations.runVerification({ allowFailure: true }), {
+        "policy:check": "failed",
+        "policy:build": "blocked",
+        "consumer:artifact-check": "blocked",
+        "consumer:vitest": "blocked",
+        "consumer:typecheck": "blocked",
+        "authorization:live": "blocked",
+      });
     },
   },
   {
@@ -234,11 +211,7 @@ export const boundaryScenarios = [
     cost: UNIT_SECONDS.oneRun,
     async run({ project, expectations }) {
       project.append("src/access.ts", "// explicit full verification\n");
-      expectations.expectStates(
-        "full",
-        await expectations.runVerification({ full: true }),
-        ALL_EXECUTED,
-      );
+      expectations.expectStates("full", await expectations.runVerification({ full: true }), ALL_EXECUTED);
     },
   },
 ];
@@ -248,11 +221,7 @@ export const boundaryScenarios = [
  * again, whether it is the consumer's own source, its config, the engine it
  * resolved, the runner that binds them, or the lockfile underneath all of it.
  */
-function identityScenario(
-  name,
-  path,
-  suffix = `\n// ${name} identity change\n`,
-) {
+function identityScenario(name, path, suffix = `\n// ${name} identity change\n`) {
   return {
     name,
     cost: UNIT_SECONDS.oneRun,

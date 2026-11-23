@@ -83,10 +83,7 @@ function readToken(source: string, offset: number): JsonToken {
   if (character !== undefined && punctuationCharacters.includes(character)) {
     return { text: character, offset, punctuation: true };
   }
-  const text =
-    character === '"'
-      ? readStringLiteral(source, offset)
-      : readBareLiteral(source, offset);
+  const text = character === '"' ? readStringLiteral(source, offset) : readBareLiteral(source, offset);
   return { text, offset, punctuation: false };
 }
 
@@ -127,10 +124,7 @@ function endsBareLiteral(source: string, index: number): boolean {
 
 function isBlank(character: string | undefined): boolean {
   if (character === undefined) return false;
-  return (
-    whitespaceCharacters.includes(character) ||
-    character.codePointAt(0) === byteOrderMark
-  );
+  return whitespaceCharacters.includes(character) || character.codePointAt(0) === byteOrderMark;
 }
 
 // --- Values --------------------------------------------------------------
@@ -182,9 +176,7 @@ function readSeparator(cursor: TokenCursor, closing: "}" | "]"): boolean {
 }
 
 function propertyName(source: string, token: JsonToken): string {
-  const value: unknown = token.punctuation
-    ? undefined
-    : jsonValueOrNothing(token.text);
+  const value: unknown = token.punctuation ? undefined : jsonValueOrNothing(token.text);
   if (typeof value !== "string") {
     throw syntaxError(source, token.offset, "expected a property name");
   }
@@ -243,11 +235,7 @@ function consume(cursor: TokenCursor, text: string): boolean {
   return true;
 }
 
-function requirePunctuation(
-  cursor: TokenCursor,
-  text: string,
-  expectation: string,
-): void {
+function requirePunctuation(cursor: TokenCursor, text: string, expectation: string): void {
   const token = requireToken(cursor, expectation);
   if (token.text !== text) {
     throw syntaxError(cursor.source, token.offset, expectation);
@@ -257,21 +245,12 @@ function requirePunctuation(
 // --- Positions -----------------------------------------------------------
 
 /** Every failure names where reading stopped, in the file's own coordinates. */
-function syntaxError(
-  source: string,
-  offset: number,
-  expectation: string,
-): Error {
+function syntaxError(source: string, offset: number, expectation: string): Error {
   const position = positionOf(source, offset);
-  return new Error(
-    `${expectation} at line ${position.line}, column ${position.column}`,
-  );
+  return new Error(`${expectation} at line ${position.line}, column ${position.column}`);
 }
 
-function positionOf(
-  source: string,
-  offset: number,
-): { readonly line: number; readonly column: number } {
+function positionOf(source: string, offset: number): { readonly line: number; readonly column: number } {
   const end = Math.min(offset, source.length);
   let line = 1;
   let lineStart = 0;

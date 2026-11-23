@@ -10,10 +10,7 @@
 import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalJson, compareText, sha256 } from "./canonical-bytes.js";
-import {
-  normalizeRelativePath,
-  normalizeWorkingDirectory,
-} from "./filesystem-guards.js";
+import { normalizeRelativePath, normalizeWorkingDirectory } from "./filesystem-guards.js";
 import {
   assertCapturedFilesUnchanged,
   copyVerificationInputs,
@@ -41,8 +38,7 @@ export type DeclaredVerificationEnvironment = {
 };
 
 export type ControlledVerificationRequest = {
-  readonly executionClass:
-    "artifact-provider-v1" | "artifact-consumer-v1" | "live";
+  readonly executionClass: "artifact-provider-v1" | "artifact-consumer-v1" | "live";
   readonly projectId: string;
   readonly taskId: string;
   readonly projectRoot: string;
@@ -96,9 +92,7 @@ const fixedEnvironment = {
   TZ: "UTC",
 };
 
-export function captureVerificationSnapshot(
-  request: ControlledVerificationRequest,
-): CapturedVerificationSnapshot {
+export function captureVerificationSnapshot(request: ControlledVerificationRequest): CapturedVerificationSnapshot {
   const capturedRequest = copyControlledRequest(request);
   validateControlledRequest(capturedRequest);
   const projectRoot = realpathSync(capturedRequest.projectRoot);
@@ -107,11 +101,7 @@ export function captureVerificationSnapshot(
   const outputRoot = mkdtempSync(join(workRoot.outputs, "output-"));
 
   try {
-    const files = copyVerificationInputs(
-      projectRoot,
-      snapshotRoot,
-      capturedRequest.inputFiles,
-    );
+    const files = copyVerificationInputs(projectRoot, snapshotRoot, capturedRequest.inputFiles);
     const identity = createVerificationInputIdentity(capturedRequest, files);
     makeSnapshotReadOnly(snapshotRoot);
     assertSnapshotMatchesIdentity(snapshotRoot, identity);
@@ -130,57 +120,37 @@ export function captureVerificationSnapshot(
   }
 }
 
-export function assertSnapshotMatchesIdentity(
-  snapshotRoot: string,
-  identity: VerificationInputIdentity,
-): void {
+export function assertSnapshotMatchesIdentity(snapshotRoot: string, identity: VerificationInputIdentity): void {
   assertVerificationInputIdentity(identity);
   assertCapturedFilesUnchanged(snapshotRoot, identity.files);
 }
 
-export function capturedSnapshotMatchesProject(
-  snapshot: CapturedVerificationSnapshot,
-): boolean {
-  return projectFilesMatchCapture(
-    snapshot.projectRoot,
-    snapshot.identity.files,
-  );
+export function capturedSnapshotMatchesProject(snapshot: CapturedVerificationSnapshot): boolean {
+  return projectFilesMatchCapture(snapshot.projectRoot, snapshot.identity.files);
 }
 
-export function assertVerificationInputIdentity(
-  identity: VerificationInputIdentity,
-): void {
-  const expectedSnapshotId = createSnapshotId(
-    identityWithoutSnapshotId(identity),
-  );
+export function assertVerificationInputIdentity(identity: VerificationInputIdentity): void {
+  const expectedSnapshotId = createSnapshotId(identityWithoutSnapshotId(identity));
   if (expectedSnapshotId !== identity.snapshotId) {
     throw new Error("Verification snapshot identity checksum does not match.");
   }
 }
 
-export function discardVerificationSnapshot(
-  snapshot: CapturedVerificationSnapshot,
-): void {
+export function discardVerificationSnapshot(snapshot: CapturedVerificationSnapshot): void {
   removeCapturedTree(snapshot.snapshotRoot);
   rmSync(snapshot.outputRoot, { force: true, recursive: true });
 }
 
-export function verificationEnvironment(
-  snapshot: CapturedVerificationSnapshot,
-): Readonly<Record<string, string>> {
+export function verificationEnvironment(snapshot: CapturedVerificationSnapshot): Readonly<Record<string, string>> {
   return {
     ...fixedEnvironment,
-    ...Object.fromEntries(
-      snapshot.environment.map((entry) => [entry.name, entry.value]),
-    ),
+    ...Object.fromEntries(snapshot.environment.map((entry) => [entry.name, entry.value])),
     DADS_VERIFICATION_OUTPUT_DIR: snapshot.outputRoot,
     DADS_VERIFICATION_SNAPSHOT_ROOT: snapshot.snapshotRoot,
   };
 }
 
-function copyControlledRequest(
-  request: ControlledVerificationRequest,
-): ControlledVerificationRequest {
+function copyControlledRequest(request: ControlledVerificationRequest): ControlledVerificationRequest {
   return {
     ...request,
     runnerArguments: [...request.runnerArguments],
@@ -192,9 +162,7 @@ function copyControlledRequest(
 }
 
 /** Every rule a reusable request must satisfy, in the order a reader can follow. */
-function validateControlledRequest(
-  request: ControlledVerificationRequest,
-): void {
+function validateControlledRequest(request: ControlledVerificationRequest): void {
   assertReusableExecutionClass(request);
   assertNonEmptyIdentities(request);
   assertPositiveTimeout(request);
@@ -206,80 +174,55 @@ function validateControlledRequest(
     request.environment.map((entry) => entry.name),
     "verification environment name",
   );
-  assertUniqueValues(
-    request.prerequisiteIdentities,
-    "verification prerequisite identity",
-  );
+  assertUniqueValues(request.prerequisiteIdentities, "verification prerequisite identity");
   validateEnvironment(request);
 }
 
-function assertReusableExecutionClass(
-  request: ControlledVerificationRequest,
-): void {
-  if (
-    request.executionClass !== "artifact-provider-v1" &&
-    request.executionClass !== "artifact-consumer-v1"
-  ) {
+function assertReusableExecutionClass(request: ControlledVerificationRequest): void {
+  if (request.executionClass !== "artifact-provider-v1" && request.executionClass !== "artifact-consumer-v1") {
     throw new Error("Live verification tasks are not eligible for reuse.");
   }
 }
 
-function assertNonEmptyIdentities(
-  request: ControlledVerificationRequest,
-): void {
+function assertNonEmptyIdentities(request: ControlledVerificationRequest): void {
   readNonEmptyIdentity(request.projectId, "projectId");
   readNonEmptyIdentity(request.taskId, "taskId");
   readNonEmptyIdentity(request.runnerVersion, "runnerVersion");
 }
 
 function assertPositiveTimeout(request: ControlledVerificationRequest): void {
-  if (
-    !Number.isSafeInteger(request.timeoutMilliseconds) ||
-    request.timeoutMilliseconds < 1
-  ) {
+  if (!Number.isSafeInteger(request.timeoutMilliseconds) || request.timeoutMilliseconds < 1) {
     throw new Error("Verification timeoutMilliseconds must be positive.");
   }
 }
 
 /** Arguments could address the live checkout, so a controlled runner takes none. */
 function assertNoRunnerArguments(request: ControlledVerificationRequest): void {
-  if (
-    !request.runnerArguments.every((argument) => typeof argument === "string")
-  ) {
+  if (!request.runnerArguments.every((argument) => typeof argument === "string")) {
     throw new Error("Verification runner arguments must be strings.");
   }
   if (request.runnerArguments.length > 0) {
-    throw new Error(
-      "Controlled verification runner arguments are not allowed.",
-    );
+    throw new Error("Controlled verification runner arguments are not allowed.");
   }
 }
 
-function assertSnapshotWorkingDirectory(
-  request: ControlledVerificationRequest,
-): void {
+function assertSnapshotWorkingDirectory(request: ControlledVerificationRequest): void {
   if (request.workingDirectory !== ".") {
     throw new Error("Controlled verification must run from the snapshot root.");
   }
   normalizeWorkingDirectory(request.workingDirectory);
 }
 
-function assertEntrypointIsDeclaredInput(
-  request: ControlledVerificationRequest,
-): void {
+function assertEntrypointIsDeclaredInput(request: ControlledVerificationRequest): void {
   const entrypoint = normalizeRelativePath(request.runnerEntrypoint);
   const normalizedInputs = request.inputFiles.map((input) => {
     if (!isVerificationInputRole(input.role)) {
-      throw new Error(
-        `Unsupported verification input role ${String(input.role)}.`,
-      );
+      throw new Error(`Unsupported verification input role ${String(input.role)}.`);
     }
     return normalizeRelativePath(input.path);
   });
   if (!normalizedInputs.includes(entrypoint)) {
-    throw new Error(
-      "The controlled runner entrypoint must be a declared input.",
-    );
+    throw new Error("The controlled runner entrypoint must be a declared input.");
   }
   assertUniqueValues(normalizedInputs, "verification input path");
 }
@@ -300,11 +243,7 @@ function validateEnvironment(request: ControlledVerificationRequest): void {
     ...Object.keys(fixedEnvironment),
   ]);
   for (const entry of request.environment) {
-    if (
-      typeof entry.name !== "string" ||
-      typeof entry.value !== "string" ||
-      typeof entry.secret !== "boolean"
-    ) {
+    if (typeof entry.name !== "string" || typeof entry.value !== "string" || typeof entry.secret !== "boolean") {
       throw new Error("Verification environment entries are invalid.");
     }
     if (!/^[A-Z_][A-Z0-9_]*$/.test(entry.name)) {
@@ -323,55 +262,44 @@ function createVerificationInputIdentity(
   request: ControlledVerificationRequest,
   files: readonly VerificationInputFingerprint[],
 ): VerificationInputIdentity {
-  const environmentNames = request.environment
-    .map((entry) => entry.name)
-    .sort(compareText);
+  const environmentNames = request.environment.map((entry) => entry.name).sort(compareText);
   const environmentSha256 = sha256(
     canonicalJson(
       [...request.environment]
-        .sort((firstEntry, secondEntry) =>
-          compareText(firstEntry.name, secondEntry.name),
-        )
+        .sort((firstEntry, secondEntry) => compareText(firstEntry.name, secondEntry.name))
         .map((entry) => ({ name: entry.name, value: entry.value })),
     ),
   );
-  const identityWithoutSnapshot: Omit<VerificationInputIdentity, "snapshotId"> =
-    {
-      formatVersion: 1,
-      projectId: request.projectId,
-      taskId: request.taskId,
-      command: {
-        executable: process.execPath,
-        entrypoint: normalizeRelativePath(request.runnerEntrypoint),
-        arguments: [...request.runnerArguments],
-        workingDirectory: normalizeWorkingDirectory(request.workingDirectory),
-      },
-      runnerVersion: request.runnerVersion,
-      verifierSha256: readVerifierIdentity(),
-      files,
-      outputFiles: request.outputFiles
-        .map(normalizeRelativePath)
-        .sort(compareText),
-      environmentNames,
-      environmentSha256,
-      prerequisiteIdentities: [...request.prerequisiteIdentities].sort(
-        compareText,
-      ),
-      platform: process.platform,
-      architecture: process.arch,
-      nodeVersion: process.version,
-      nodeExecutableSha256: sha256(readFileSync(process.execPath)),
-      timeoutMilliseconds: request.timeoutMilliseconds,
-    };
+  const identityWithoutSnapshot: Omit<VerificationInputIdentity, "snapshotId"> = {
+    formatVersion: 1,
+    projectId: request.projectId,
+    taskId: request.taskId,
+    command: {
+      executable: process.execPath,
+      entrypoint: normalizeRelativePath(request.runnerEntrypoint),
+      arguments: [...request.runnerArguments],
+      workingDirectory: normalizeWorkingDirectory(request.workingDirectory),
+    },
+    runnerVersion: request.runnerVersion,
+    verifierSha256: readVerifierIdentity(),
+    files,
+    outputFiles: request.outputFiles.map(normalizeRelativePath).sort(compareText),
+    environmentNames,
+    environmentSha256,
+    prerequisiteIdentities: [...request.prerequisiteIdentities].sort(compareText),
+    platform: process.platform,
+    architecture: process.arch,
+    nodeVersion: process.version,
+    nodeExecutableSha256: sha256(readFileSync(process.execPath)),
+    timeoutMilliseconds: request.timeoutMilliseconds,
+  };
   return {
     ...identityWithoutSnapshot,
     snapshotId: createSnapshotId(identityWithoutSnapshot),
   };
 }
 
-function identityWithoutSnapshotId(
-  identity: VerificationInputIdentity,
-): Omit<VerificationInputIdentity, "snapshotId"> {
+function identityWithoutSnapshotId(identity: VerificationInputIdentity): Omit<VerificationInputIdentity, "snapshotId"> {
   return {
     formatVersion: identity.formatVersion,
     projectId: identity.projectId,
@@ -392,9 +320,7 @@ function identityWithoutSnapshotId(
   };
 }
 
-function createSnapshotId(
-  identity: Omit<VerificationInputIdentity, "snapshotId">,
-): string {
+function createSnapshotId(identity: Omit<VerificationInputIdentity, "snapshotId">): string {
   return sha256(canonicalJson(identity));
 }
 
@@ -405,10 +331,7 @@ function readNonEmptyIdentity(value: string, fieldName: string): void {
 }
 
 /** Refuses a repeated string; `project-orientation.ts` has `assertUniquePackageValues` for a package field. */
-function assertUniqueValues(
-  values: readonly string[],
-  description: string,
-): void {
+function assertUniqueValues(values: readonly string[], description: string): void {
   const uniqueValues = new Set(values);
   if (uniqueValues.size !== values.length) {
     throw new Error(`Duplicate ${description}.`);

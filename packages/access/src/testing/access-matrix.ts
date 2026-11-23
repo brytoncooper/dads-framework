@@ -1,8 +1,5 @@
 import type { PermissionQuery, SubjectRef } from "../runtime/authorization.js";
-import type {
-  MatrixDecision,
-  PermissionMatrixSpec,
-} from "./access-harness-types.js";
+import type { MatrixDecision, PermissionMatrixSpec } from "./access-harness-types.js";
 import { formatSubjectRef } from "./explain-format.js";
 
 export type MatrixMismatch = {
@@ -17,24 +14,16 @@ function padCell(text: string, width: number): string {
   return text.padEnd(width, " ");
 }
 
-function formatMatrixTable(
-  spec: PermissionMatrixSpec,
-  actualGrid: readonly (readonly MatrixDecision[])[],
-): string {
+function formatMatrixTable(spec: PermissionMatrixSpec, actualGrid: readonly (readonly MatrixDecision[])[]): string {
   const actorLabels = spec.cases.map(([actor]) => formatSubjectRef(actor));
-  const actorColumnWidth = Math.max(
-    "actor".length,
-    ...actorLabels.map((label) => label.length),
-  );
+  const actorColumnWidth = Math.max("actor".length, ...actorLabels.map((label) => label.length));
   const permWidths = spec.permissions.map((permission) =>
     Math.max(permission.permissionName.length, "allow (got deny)".length),
   );
 
   const headerCells = [
     padCell("actor", actorColumnWidth),
-    ...spec.permissions.map((permission, index) =>
-      padCell(permission.permissionName, permWidths[index] ?? 10),
-    ),
+    ...spec.permissions.map((permission, index) => padCell(permission.permissionName, permWidths[index] ?? 10)),
   ];
   const lines = [headerCells.join(" | ")];
   lines.push(headerCells.map((cell) => "-".repeat(cell.length)).join("-+-"));
@@ -48,8 +37,7 @@ function formatMatrixTable(
     for (let colIndex = 0; colIndex < spec.permissions.length; colIndex += 1) {
       const expected = expectedRow[colIndex] ?? "deny";
       const actual = actualRow[colIndex] ?? "deny";
-      const cellText =
-        expected === actual ? actual : `${expected} (got ${actual})`;
+      const cellText = expected === actual ? actual : `${expected} (got ${actual})`;
       cells.push(padCell(cellText, permWidths[colIndex] ?? 10));
     }
     lines.push(cells.join(" | "));
@@ -70,9 +58,7 @@ export function buildMatrixFailureMessage(input: {
   const table = formatMatrixTable(input.spec, input.actualGrid);
   const details = input.mismatches.map((mismatch) => {
     const summary = `- ${formatSubjectRef(mismatch.actor)} on ${mismatch.permissionName}: expected ${mismatch.expected}, got ${mismatch.actual}`;
-    return mismatch.explanation === undefined
-      ? summary
-      : `${summary}\n${mismatch.explanation}`;
+    return mismatch.explanation === undefined ? summary : `${summary}\n${mismatch.explanation}`;
   });
   return [header, "", table, "", ...details].join("\n");
 }

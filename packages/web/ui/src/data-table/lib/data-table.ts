@@ -2,12 +2,7 @@ import type { Column, Table } from "@tanstack/react-table";
 
 import { dataTableConfig } from "../config/data-table.js";
 import type { DataTableCopyKey } from "../copy/data-table-copy.js";
-import type {
-  DataTableFilterState,
-  ExtendedColumnFilter,
-  FilterOperator,
-  FilterVariant,
-} from "./data-table-types.js";
+import type { DataTableFilterState, ExtendedColumnFilter, FilterOperator, FilterVariant } from "./data-table-types.js";
 
 /**
  * The advanced-filter state `useDataTable` published on the table.
@@ -16,9 +11,7 @@ import type {
  * a table built by hand fails loudly here rather than rendering controls that
  * silently do nothing.
  */
-export function readDataTableFilterState<TData>(
-  table: Table<TData>,
-): DataTableFilterState<TData> {
+export function readDataTableFilterState<TData>(table: Table<TData>): DataTableFilterState<TData> {
   const filterState = table.options.meta?.dataTableFilterState;
   if (!filterState) {
     throw new Error(
@@ -46,10 +39,8 @@ export function getColumnPinningStyle<TData>({
   withBorder?: boolean;
 }): React.CSSProperties {
   const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === "left" && column.getIsLastColumn("left");
-  const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
+  const isLastLeftPinnedColumn = isPinned === "left" && column.getIsLastColumn("left");
+  const isFirstRightPinnedColumn = isPinned === "right" && column.getIsFirstColumn("right");
 
   return {
     boxShadow: withBorder
@@ -79,10 +70,7 @@ export function readColumnWidth<TData>(
   const width = column.columnDef.meta?.width;
   if (width === undefined) return column.getSize();
   if (width === "fit") return 1;
-  const totalFillShare = visibleColumns.reduce(
-    (total, visibleColumn) => total + readFillShare(visibleColumn),
-    0,
-  );
+  const totalFillShare = visibleColumns.reduce((total, visibleColumn) => total + readFillShare(visibleColumn), 0);
   return `${(width.fillShare / totalFillShare) * 100}%`;
 }
 
@@ -92,18 +80,13 @@ function readFillShare<TData>(column: Column<TData>): number {
 }
 
 /** The `data-pinned` value that gives a pinned cell its opaque surface, or undefined. */
-export function readPinnedAttribute<TData>(
-  column: Column<TData>,
-): "left" | "right" | undefined {
+export function readPinnedAttribute<TData>(column: Column<TData>): "left" | "right" | undefined {
   const isPinned = column.getIsPinned();
   return isPinned === false ? undefined : isPinned;
 }
 
 export function getFilterOperators(filterVariant: FilterVariant) {
-  const operatorMap: Record<
-    FilterVariant,
-    readonly { labelKey: DataTableCopyKey; value: FilterOperator }[]
-  > = {
+  const operatorMap: Record<FilterVariant, readonly { labelKey: DataTableCopyKey; value: FilterOperator }[]> = {
     text: dataTableConfig.textOperators,
     number: dataTableConfig.numericOperators,
     range: dataTableConfig.numericOperators,
@@ -123,15 +106,11 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
 }
 
-export function getValidFilters<TData>(
-  filters: ExtendedColumnFilter<TData>[],
-): ExtendedColumnFilter<TData>[] {
+export function getValidFilters<TData>(filters: ExtendedColumnFilter<TData>[]): ExtendedColumnFilter<TData>[] {
   return filters.filter(
     (filter) =>
       filter.operator === "isEmpty" ||
       filter.operator === "isNotEmpty" ||
-      (Array.isArray(filter.value)
-        ? filter.value.length > 0
-        : filter.value !== ""),
+      (Array.isArray(filter.value) ? filter.value.length > 0 : filter.value !== ""),
   );
 }

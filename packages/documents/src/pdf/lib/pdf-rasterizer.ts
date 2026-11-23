@@ -17,8 +17,5 @@ export type RasterizeOptions = Readonly<{
 }>;
 
 export abstract class PdfRasterizer {
-  abstract rasterize(
-    pdf: Uint8Array,
-    options: RasterizeOptions,
-  ): Promise<readonly RasterizedPdfPage[]>;
+  abstract rasterize(pdf: Uint8Array, options: RasterizeOptions): Promise<readonly RasterizedPdfPage[]>;
 }

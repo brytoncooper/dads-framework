@@ -27,9 +27,7 @@ describe("diagnose workspace", () => {
     expect(report.ok).toBe(true);
     expect(report.profile).toBe("standard");
     expect(report.today).toBeNull();
-    expect(report.issues.map((issue) => issue.id)).toEqual(
-      DADDY_ISSUES.map((issue) => issue.id),
-    );
+    expect(report.issues.map((issue) => issue.id)).toEqual(DADDY_ISSUES.map((issue) => issue.id));
   });
 
   it("narrows to the named issues and refuses an id nothing carries", async () => {
@@ -42,15 +40,12 @@ describe("diagnose workspace", () => {
       today: "2026-09-07",
     });
 
-    expect(report.issues.map((issue) => issue.id)).toEqual([
-      "daddy-issues",
-      "enmeshment",
-    ]);
+    expect(report.issues.map((issue) => issue.id)).toEqual(["daddy-issues", "enmeshment"]);
     expect(report.profile).toBe("strict");
     expect(report.today).toBe("2026-09-07");
-    await expect(
-      diagnoseWorkspace({ root, issues: ["separation-anxiety"] }),
-    ).rejects.toThrow("No daddy issue is named separation-anxiety.");
+    await expect(diagnoseWorkspace({ root, issues: ["separation-anxiety"] })).rejects.toThrow(
+      "No daddy issue is named separation-anxiety.",
+    );
   });
 
   it("records a signal that could not answer as a line rather than a failure", async () => {
@@ -59,9 +54,7 @@ describe("diagnose workspace", () => {
     const report = await diagnoseWorkspace({ root });
 
     const signals = report.issues.flatMap((issue) => issue.signals);
-    const unmeasured = signals.filter(
-      (signal) => signal.state === "not measured",
-    );
+    const unmeasured = signals.filter((signal) => signal.state === "not measured");
     expect(unmeasured.length).toBeGreaterThan(0);
     for (const signal of unmeasured) {
       expect(signal.failure).toBeTypeOf("string");

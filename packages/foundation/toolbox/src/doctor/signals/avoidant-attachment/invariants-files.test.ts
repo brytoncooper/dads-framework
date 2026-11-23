@@ -38,21 +38,13 @@ function contextOver(
   };
 }
 
-function declared(
-  name: string,
-  root: string,
-  kind: string | undefined,
-): DoctorPackage {
+function declared(name: string, root: string, kind: string | undefined): DoctorPackage {
   return { name, root, kind, allowedDependencies: [] };
 }
 
-async function readings(
-  context: DoctorContext,
-): Promise<Record<string, number>> {
+async function readings(context: DoctorContext): Promise<Record<string, number>> {
   const measured = await invariantsFilesSignal.run(context);
-  return Object.fromEntries(
-    [...measured].map(([key, reading]) => [key, reading.value]),
-  );
+  return Object.fromEntries([...measured].map(([key, reading]) => [key, reading.value]));
 }
 
 describe("the invariants floor", () => {
@@ -85,23 +77,15 @@ describe("the invariants floor", () => {
   });
 
   it("does not count a file nobody tracks", async () => {
-    const context = contextOver(
-      [declared("@dads/http-core", "packages/http/core", "core")],
-      [],
-    );
+    const context = contextOver([declared("@dads/http-core", "packages/http/core", "core")], []);
 
     expect(await readings(context)).toStrictEqual({ "@dads/http-core": 0 });
   });
 
   it("stops on a package that does not say what it is", () => {
-    const context = contextOver(
-      [declared("@dads/http-core", "packages/http/core", undefined)],
-      [],
-    );
+    const context = contextOver([declared("@dads/http-core", "packages/http/core", undefined)], []);
 
-    expect(() => invariantsFilesSignal.run(context)).toThrow(
-      'package "@dads/http-core" declares no kind',
-    );
+    expect(() => invariantsFilesSignal.run(context)).toThrow('package "@dads/http-core" declares no kind');
   });
 
   it("measures nothing at all where no project file declares packages", async () => {

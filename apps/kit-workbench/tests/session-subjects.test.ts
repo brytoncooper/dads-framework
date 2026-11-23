@@ -14,9 +14,7 @@ it("requires the tenant's session policy on tenant routes", async () => {
     expiresAt: new Date(),
   };
   const readSession = vi.fn(() => Promise.resolve(session));
-  const readTenantSession = vi
-    .fn<(headers: Headers, tenantId: string) => Promise<null>>()
-    .mockResolvedValue(null);
+  const readTenantSession = vi.fn<(headers: Headers, tenantId: string) => Promise<null>>().mockResolvedValue(null);
   const identity = {
     handle: () => Promise.resolve(new Response(null)),
     readSession,
@@ -32,18 +30,11 @@ it("requires the tenant's session policy on tenant routes", async () => {
       params: { tenantId: tenantId.toUpperCase() },
     }),
   ).toBeNull();
-  expect(readTenantSession).toHaveBeenCalledWith(
-    new Headers(headers),
-    tenantId,
-  );
-  expect(
-    await subjects.resolve({ headers, params: { tenantId: "invalid" } }),
-  ).toBeNull();
+  expect(readTenantSession).toHaveBeenCalledWith(new Headers(headers), tenantId);
+  expect(await subjects.resolve({ headers, params: { tenantId: "invalid" } })).toBeNull();
   expect(readTenantSession).toHaveBeenCalledTimes(1);
   expect(readSession).not.toHaveBeenCalled();
-  expect(
-    await subjects.resolve({ headers, url: "/api/tenants" }),
-  ).toMatchObject({
+  expect(await subjects.resolve({ headers, url: "/api/tenants" })).toMatchObject({
     id: session.account.id,
   });
 });

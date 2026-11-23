@@ -29,20 +29,14 @@ export type CatalogWithoutTable = {
 
 export type CatalogTableDeclaration = CatalogTable | CatalogWithoutTable;
 
-export function catalogTable(
-  entity: CatalogEntityRef,
-  table: Table,
-): CatalogTable {
+export function catalogTable(entity: CatalogEntityRef, table: Table): CatalogTable {
   if (entity.wireName.trim().length === 0) {
     throw new Error("catalog table declaration requires a non-empty wireName");
   }
   return { wireName: entity.wireName, tableName: getTableName(table) };
 }
 
-export function catalogWithoutTable(
-  entity: CatalogEntityRef,
-  reason: string,
-): CatalogWithoutTable {
+export function catalogWithoutTable(entity: CatalogEntityRef, reason: string): CatalogWithoutTable {
   if (entity.wireName.trim().length === 0) {
     throw new Error("catalog table declaration requires a non-empty wireName");
   }
@@ -52,9 +46,7 @@ export function catalogWithoutTable(
   return { wireName: entity.wireName, reason };
 }
 
-export function hasCatalogTable(
-  declaration: CatalogTableDeclaration,
-): declaration is CatalogTable {
+export function hasCatalogTable(declaration: CatalogTableDeclaration): declaration is CatalogTable {
   return "tableName" in declaration;
 }
 
@@ -80,8 +72,7 @@ export function catalogTableFailures(
       .filter((entry) => !catalogs.has(entry.wireName))
       .map((entry) => ({
         path: entry.wireName,
-        message:
-          "has a catalog table declaration but is not a registered catalog",
+        message: "has a catalog table declaration but is not a registered catalog",
       })),
   ];
 }

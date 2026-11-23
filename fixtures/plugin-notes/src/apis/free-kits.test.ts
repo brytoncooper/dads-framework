@@ -1,17 +1,9 @@
 import { join } from "node:path";
 
-import {
-  auditDepsService,
-  auditService,
-  createAuditPlugin,
-} from "@dads-framework/audit";
+import { auditDepsService, auditService, createAuditPlugin } from "@dads-framework/audit";
 import { configurePluginAuditTriggers } from "@dads-framework/audit/schema";
 import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
-import {
-  createFeatureFlagsPlugin,
-  featureFlagDepsService,
-  featureFlagsService,
-} from "@dads-framework/feature-flags";
+import { createFeatureFlagsPlugin, featureFlagDepsService, featureFlagsService } from "@dads-framework/feature-flags";
 import {
   FakeTenantDirectory,
   featureFlagDefinitionFactory,
@@ -52,13 +44,7 @@ const audit = createAuditPlugin({
   untrackedTables: ["short_lived_tokens"],
   scopes: [{ table: "notes", columns: { workspace: "workspace_key" } }],
 });
-const services = [
-  flagDeps,
-  auditDeps,
-  flags,
-  audit.audit,
-  featureFlagsPostgresSchema,
-];
+const services = [flagDeps, auditDeps, flags, audit.audit, featureFlagsPostgresSchema];
 
 it("declares the free kits once and lets hosts select their routes and jobs", async () => {
   const publicApi = composeApi("public", {
@@ -92,15 +78,9 @@ it("declares the free kits once and lets hosts select their routes and jobs", as
       "audit.prune-request-log",
       "audit.prune-client-diagnostics",
     ]);
-    expect(
-      (await publicHttp.inject({ url: "/feature-state/public" })).statusCode,
-    ).toBe(200);
-    expect(
-      (await publicHttp.inject({ url: "/feature-flags" })).statusCode,
-    ).toBe(404);
-    expect(
-      (await workerHttp.inject({ url: "/feature-state/public" })).statusCode,
-    ).toBe(404);
+    expect((await publicHttp.inject({ url: "/feature-state/public" })).statusCode).toBe(200);
+    expect((await publicHttp.inject({ url: "/feature-flags" })).statusCode).toBe(404);
+    expect((await workerHttp.inject({ url: "/feature-state/public" })).statusCode).toBe(404);
     const report = {
       method: "POST",
       url: "/client-diagnostics",
@@ -109,12 +89,7 @@ it("declares the free kits once and lets hosts select their routes and jobs", as
     expect((await publicHttp.inject(report)).statusCode).toBe(400);
     expect((await workerHttp.inject(report)).statusCode).toBe(404);
   } finally {
-    await Promise.all([
-      publicHttp.close(),
-      workerHttp.close(),
-      publicRun.stop(),
-      workerRun.stop(),
-    ]);
+    await Promise.all([publicHttp.close(), workerHttp.close(), publicRun.stop(), workerRun.stop()]);
   }
 });
 
@@ -127,15 +102,11 @@ it("feeds declared audit policy and original migration files to the host", async
     moduleAliases: {},
   };
   const migrations = await discoverDomainMigrations({ workspace });
-  expect(new Set(migrations.map(({ owner }) => owner))).toEqual(
-    new Set(["audit", "feature-flags-postgres"]),
-  );
+  expect(new Set(migrations.map(({ owner }) => owner))).toEqual(new Set(["audit", "feature-flags-postgres"]));
   const packaged = (await listShippedDatabaseMigrations(workspace))
     .filter(({ owner }) => owner === "feature-flags-postgres")
     .map(({ journalName, sha256 }) => ({ journalName, sha256 }));
-  const historical = (
-    await listShippedDatabaseMigrations(defaultMigrationWorkspace(root))
-  )
+  const historical = (await listShippedDatabaseMigrations(defaultMigrationWorkspace(root)))
     .filter(({ owner }) => owner === "feature-flags-postgres")
     .map(({ journalName, sha256 }) => ({ journalName, sha256 }));
   expect(packaged).toHaveLength(1);
@@ -143,10 +114,6 @@ it("feeds declared audit policy and original migration files to the host", async
   expect(api.untrackedAuditTables).toContain("short_lived_tokens");
   const sql = vi.fn<(statement: string) => void>();
   configurePluginAuditTriggers({ sql }, api, { notes: { keyColumns: ["id"] } });
-  expect(sql).toHaveBeenCalledWith(
-    expect.stringContaining(`'{"workspace":"workspace_key"}'`),
-  );
-  expect(sql).toHaveBeenCalledWith(
-    'DROP TRIGGER IF EXISTS audit_record ON public."short_lived_tokens"',
-  );
+  expect(sql).toHaveBeenCalledWith(expect.stringContaining(`'{"workspace":"workspace_key"}'`));
+  expect(sql).toHaveBeenCalledWith('DROP TRIGGER IF EXISTS audit_record ON public."short_lived_tokens"');
 });

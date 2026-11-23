@@ -1,19 +1,9 @@
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  resource,
-  world,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, resource, world } from "@dads-framework/access";
 import { proveAccess, proveWorld } from "@dads-framework/access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { describe, expect, it } from "vitest";
 
-import {
-  PostgresAuthorization,
-  preparePostgresChecks,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, preparePostgresChecks, relationshipSchemaMigration } from "./index.js";
 import { provePostgresFilterParity } from "./testing.js";
 
 function buildDocumentSchema() {
@@ -70,15 +60,9 @@ describe("@dads-framework/postgres-access/testing", () => {
 
       await proveAccess(model, { authorization }, (scenario) => {
         scenario.grant(workspace.roles.owner, "workspace-1").to(alice);
-        scenario
-          .grant(document.roles.scope_workspace, "doc-1")
-          .to(workspace, "workspace-1");
-        scenario
-          .grant(document.roles.scope_workspace, "doc-2")
-          .to(workspace, "workspace-1");
-        scenario
-          .grant(document.roles.scope_workspace, "doc-3")
-          .to(workspace, "workspace-2");
+        scenario.grant(document.roles.scope_workspace, "doc-1").to(workspace, "workspace-1");
+        scenario.grant(document.roles.scope_workspace, "doc-2").to(workspace, "workspace-1");
+        scenario.grant(document.roles.scope_workspace, "doc-3").to(workspace, "workspace-2");
         scenario.grant(document.roles.banned, "doc-2").to(alice);
         scenario.grant(document.roles.viewer, "doc-3").to(bob);
 
@@ -99,24 +83,17 @@ describe("@dads-framework/postgres-access/testing", () => {
         subjects: [alice, bob, stranger],
       });
 
-      const worldCheck = world(
-        "postgres world proof",
-        ({ user: person, entity, write, expect: expectAccess }) => {
-          const carol = person("carol");
-          write(workspace.roles.owner, "workspace-2").to(carol);
-          write(document.roles.scope_workspace, "doc-3").to(
-            entity(workspace, "workspace-2"),
-          );
-          expectAccess(carol).can(document.permissions.view, "doc-3");
-          expectAccess(carol).cannot(document.permissions.view, "doc-1");
-        },
-      );
+      const worldCheck = world("postgres world proof", ({ user: person, entity, write, expect: expectAccess }) => {
+        const carol = person("carol");
+        write(workspace.roles.owner, "workspace-2").to(carol);
+        write(document.roles.scope_workspace, "doc-3").to(entity(workspace, "workspace-2"));
+        expectAccess(carol).can(document.permissions.view, "doc-3");
+        expectAccess(carol).cannot(document.permissions.view, "doc-1");
+      });
       await proveWorld(model, worldCheck, { authorization });
 
       // Deliberately corrupt FK to verify parity helper catches scopeColumns / resolveFilter drift
-      await pool.query(
-        "UPDATE app_documents SET workspace_id = 'workspace-1' WHERE id = 'doc-3'",
-      );
+      await pool.query("UPDATE app_documents SET workspace_id = 'workspace-1' WHERE id = 'doc-3'");
       await expect(
         provePostgresFilterParity({
           db: pool,

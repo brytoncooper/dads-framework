@@ -32,9 +32,7 @@ export async function enforceScope(
     );
   }
   if (!ports.lookups) {
-    throw new HttpWiringError(
-      "requiresScoped route registered without a lookups port",
-    );
+    throw new HttpWiringError("requiresScoped route registered without a lookups port");
   }
   const scope = await answerScope({
     resourceType: access.resourceType,
@@ -53,10 +51,7 @@ export async function enforceScope(
  * A `requiresVisible` on a record refuses here too: it is the list a scope
  * plan exists to replace.
  */
-export function compileRouteScopePlan(
-  route: HttpRoute,
-  model: AccessModel | undefined,
-): ScopePlan | undefined {
+export function compileRouteScopePlan(route: HttpRoute, model: AccessModel | undefined): ScopePlan | undefined {
   refuseVisibleRecordList(route, model);
   const access = route.access;
   if (access.kind !== "scoped") return undefined;
@@ -66,16 +61,12 @@ export function compileRouteScopePlan(
     );
   }
   if (model === undefined) {
-    throw new HttpWiringError(
-      `${route.method} ${route.path} uses requiresScoped without an access model`,
-    );
+    throw new HttpWiringError(`${route.method} ${route.path} uses requiresScoped without an access model`);
   }
   try {
     return planScopedList(model, access.resourceType, access.permission);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new HttpWiringError(
-      `list route ${route.method} ${route.path} cannot be scoped: ${reason}`,
-    );
+    throw new HttpWiringError(`list route ${route.method} ${route.path} cannot be scoped: ${reason}`);
   }
 }

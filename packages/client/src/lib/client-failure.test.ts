@@ -6,12 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import {
-  ApiError,
-  NetworkError,
-  UnauthorizedError,
-  readClientFailure,
-} from "./api-error.js";
+import { ApiError, NetworkError, UnauthorizedError, readClientFailure } from "./api-error.js";
 
 describe("readClientFailure", () => {
   it("retains stable API fields without exposing the raw message", () => {
@@ -30,17 +25,11 @@ describe("readClientFailure", () => {
   });
 
   it("distinguishes session, network, and unexpected failures", () => {
-    expect(
-      readClientFailure(
-        new UnauthorizedError("UNAUTHENTICATED", "RAW_SESSION_MESSAGE"),
-      ),
-    ).toEqual({ kind: "session-expired" });
-    expect(
-      readClientFailure(new NetworkError(new TypeError("offline"))),
-    ).toMatchObject({ kind: "network" });
-    expect(
-      readClientFailure(new Error("RAW_JAVASCRIPT_MESSAGE")),
-    ).toMatchObject({ kind: "unexpected" });
+    expect(readClientFailure(new UnauthorizedError("UNAUTHENTICATED", "RAW_SESSION_MESSAGE"))).toEqual({
+      kind: "session-expired",
+    });
+    expect(readClientFailure(new NetworkError(new TypeError("offline")))).toMatchObject({ kind: "network" });
+    expect(readClientFailure(new Error("RAW_JAVASCRIPT_MESSAGE"))).toMatchObject({ kind: "unexpected" });
   });
 
   it("keeps the original error for telemetry instead of dropping it", () => {
@@ -67,9 +56,7 @@ describe("readClientFailure", () => {
     // `api-verbs` parses every response against the contract the client was
     // compiled with, so a ZodError here means the two ends disagree about the
     // wire — a deployment problem, not a logic bug in either of them.
-    const drifted = z
-      .object({ data: z.object({ quantity: z.number() }) })
-      .safeParse({ data: { quantity: "500" } });
+    const drifted = z.object({ data: z.object({ quantity: z.number() }) }).safeParse({ data: { quantity: "500" } });
     if (drifted.success) throw new Error("expected the fixture to fail");
 
     const failure = readClientFailure(drifted.error);
@@ -93,9 +80,7 @@ describe("readClientFailure", () => {
       })
       .safeParse({ reference: "customer-private-value" });
     if (drifted.success) throw new Error("expected the fixture to fail");
-    expect(drifted.error.issues[0]?.message).toContain(
-      "customer-private-value",
-    );
+    expect(drifted.error.issues[0]?.message).toContain("customer-private-value");
 
     const failure = readClientFailure(drifted.error);
 

@@ -5,21 +5,13 @@
  * reporting. Vendor-neutral: see ADR-0117 and
  * `docs/architecture/observability.md`.
  */
-export {
-  ClientTelemetry,
-  NoneClientTelemetry,
-  type TelemetryBreadcrumb,
-  type TelemetryContext,
-} from "./core/index.js";
+export { ClientTelemetry, NoneClientTelemetry, type TelemetryBreadcrumb, type TelemetryContext } from "./core/index.js";
 export {
   createClientTelemetry,
   type ClientTelemetryDriver,
   type CreateClientTelemetryOptions,
 } from "./lib/create-client-telemetry.js";
-export {
-  LocalClientTelemetry,
-  type LocalClientTelemetryOptions,
-} from "./lib/local-client-telemetry.js";
+export { LocalClientTelemetry, type LocalClientTelemetryOptions } from "./lib/local-client-telemetry.js";
 export {
   SentryClientTelemetry,
   type LoadVendorReporter,
@@ -34,17 +26,8 @@ export {
   type SentryConfigurationInput,
   type SentryReplayMasking,
 } from "./lib/logic/sentry-configuration.js";
-export {
-  describeClientError,
-  type DescribedClientError,
-} from "./lib/logic/describe-client-error.js";
-export {
-  installGlobalErrorReporting,
-  type GlobalErrorReportingOptions,
-} from "./lib/install-global-error-reporting.js";
+export { describeClientError, type DescribedClientError } from "./lib/logic/describe-client-error.js";
+export { installGlobalErrorReporting, type GlobalErrorReportingOptions } from "./lib/install-global-error-reporting.js";
 export { isChunkLoadFailure } from "./lib/logic/is-chunk-load-failure.js";
-export {
-  shouldReportFailure,
-  type FailureVerdict,
-} from "./lib/logic/should-report-failure.js";
+export { shouldReportFailure, type FailureVerdict } from "./lib/logic/should-report-failure.js";
 export { RefusedReadError, refusedReadOf } from "./lib/logic/refused-read.js";

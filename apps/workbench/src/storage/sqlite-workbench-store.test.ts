@@ -12,8 +12,7 @@ import { SqliteWorkbenchStore } from "./sqlite-workbench-store.js";
 
 const directories: string[] = [];
 afterEach(() => {
-  for (const directory of directories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
+  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
 describe("SQLite workbench storage", () => {
@@ -24,10 +23,7 @@ describe("SQLite workbench storage", () => {
     const store = new SqliteWorkbenchStore(path);
     const authorization = new WorkbenchMemoryAuthorization();
     const unavailableAuthorization = createAuthorizationDouble(authorization, {
-      writeRelationships: () =>
-        Promise.reject(
-          testAuthorizationFault("UNAVAILABLE", "Backend unavailable"),
-        ),
+      writeRelationships: () => Promise.reject(testAuthorizationFault("UNAVAILABLE", "Backend unavailable")),
     });
     let sequence = 0;
     const options = {
@@ -56,9 +52,7 @@ describe("SQLite workbench storage", () => {
     const reopened = new SqliteWorkbenchStore(path);
     try {
       expect((await reopened.read()).workspaces).toHaveLength(1);
-      expect((await reopened.read()).pendingAuthorizationChanges).toHaveLength(
-        1,
-      );
+      expect((await reopened.read()).pendingAuthorizationChanges).toHaveLength(1);
       const second = createWorkbench({
         ...options,
         store: reopened,

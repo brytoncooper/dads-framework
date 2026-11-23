@@ -1,8 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "../testing/start-test-postgres.js";
+import { startTestPostgres, type TestPostgres } from "../testing/start-test-postgres.js";
 import { createPostgresConnection } from "./create-postgres-connection.js";
 
 /**
@@ -30,10 +27,9 @@ describe("createPostgresConnection session settings (integration)", () => {
   async function settingOn(
     connection: ReturnType<typeof createPostgresConnection>,
   ): Promise<string | null | undefined> {
-    const result = await connection.pool.query<{ value: string | null }>(
-      "select current_setting($1, true) as value",
-      [SETTING],
-    );
+    const result = await connection.pool.query<{ value: string | null }>("select current_setting($1, true) as value", [
+      SETTING,
+    ]);
     return result.rows[0]?.value;
   }
 

@@ -2,20 +2,11 @@ import { Button, Card, CardContent } from "@dads-framework/ui/elements";
 import { Input, Label, Textarea } from "@dads-framework/ui/forms";
 import { useState } from "react";
 import { createNote } from "../../domains/notes/web-client/index.js";
-import {
-  inviteToTenant,
-  type Tenant,
-} from "../../domains/tenants/web-client/index.js";
+import { inviteToTenant, type Tenant } from "../../domains/tenants/web-client/index.js";
 import { field, useAction } from "./actions.js";
 import { useWorkbenchCopy } from "./copy/workbench-copy.js";
 
-export function NewNote({
-  tenantId,
-  onSaved,
-}: {
-  readonly tenantId: Tenant["id"];
-  readonly onSaved: () => void;
-}) {
+export function NewNote({ tenantId, onSaved }: { readonly tenantId: Tenant["id"]; readonly onSaved: () => void }) {
   const t = useWorkbenchCopy();
   const action = useAction();
   const [saved, setSaved] = useState(false);
@@ -59,11 +50,7 @@ export function NewNote({
   );
 }
 
-export function InviteCollaborator({
-  tenantId,
-}: {
-  readonly tenantId: Tenant["id"];
-}) {
+export function InviteCollaborator({ tenantId }: { readonly tenantId: Tenant["id"] }) {
   const t = useWorkbenchCopy();
   const action = useAction();
   const [invited, setInvited] = useState(false);

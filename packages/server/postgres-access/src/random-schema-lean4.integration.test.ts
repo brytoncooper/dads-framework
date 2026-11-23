@@ -9,19 +9,12 @@ import {
   type AccessModel,
   compileAccessFromIr,
 } from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/spicedb-access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/spicedb-access";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
 
 import { compileAccessPolicy } from "./compile-access-policy.js";
-import {
-  PostgresAuthorization,
-  preparePostgresChecks,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, preparePostgresChecks, relationshipSchemaMigration } from "./index.js";
 
 const ORACLE_BIN = path.resolve(
   import.meta.dirname,
@@ -49,15 +42,9 @@ const typeSub = (wireName: string): AccessIrSubject => ({
   kind: "type",
   wireName,
 });
-const roleDef = (
-  name: string,
-  subjects: readonly AccessIrSubject[],
-): AccessIrRole => ({ name, subjects });
+const roleDef = (name: string, subjects: readonly AccessIrSubject[]): AccessIrRole => ({ name, subjects });
 const roleTerm = (name: string): AccessIrTerm => ({ kind: "role", name });
-const arrowTerm = (
-  roleName: string,
-  targetPermission: string,
-): AccessIrTerm => ({
+const arrowTerm = (roleName: string, targetPermission: string): AccessIrTerm => ({
   kind: "through",
   roleName,
   targetPermission,
@@ -71,11 +58,7 @@ function makeRng(seed: number) {
   };
 }
 
-function pickOne<Item>(
-  pick: (bound: number) => number,
-  items: readonly Item[],
-  fallback: Item,
-): Item {
+function pickOne<Item>(pick: (bound: number) => number, items: readonly Item[], fallback: Item): Item {
   return items[pick(items.length)] ?? fallback;
 }
 
@@ -101,9 +84,7 @@ function callLeanOracle(payload: unknown): {
   }
   return {
     checks: parsed.checks.map((entry) => Boolean(entry)),
-    lookups: parsed.lookups.map((list) =>
-      Array.isArray(list) ? list.map(String) : [],
-    ),
+    lookups: parsed.lookups.map((list) => (Array.isArray(list) ? list.map(String) : [])),
   };
 }
 
@@ -137,10 +118,7 @@ function buildRandomSchema(seed: number): {
     ? [
         {
           wireName: "fuzz/node_a",
-          roles: [
-            roleDef("link", [typeSub("fuzz/org"), typeSub("fuzz/node_b")]),
-            roleDef("viewer", [USER_EXP]),
-          ],
+          roles: [roleDef("link", [typeSub("fuzz/org"), typeSub("fuzz/node_b")]), roleDef("viewer", [USER_EXP])],
           permissions: [
             {
               name: "view",
@@ -155,10 +133,7 @@ function buildRandomSchema(seed: number): {
         },
         {
           wireName: "fuzz/node_b",
-          roles: [
-            roleDef("link", [typeSub("fuzz/team"), typeSub("fuzz/node_a")]),
-            roleDef("viewer", [USER_EXP]),
-          ],
+          roles: [roleDef("link", [typeSub("fuzz/team"), typeSub("fuzz/node_a")]), roleDef("viewer", [USER_EXP])],
           permissions: [
             {
               name: "view",
@@ -176,11 +151,7 @@ function buildRandomSchema(seed: number): {
         {
           wireName: "fuzz/folder",
           roles: [
-            roleDef("parent", [
-              typeSub("fuzz/org"),
-              typeSub("fuzz/team"),
-              typeSub("fuzz/folder"),
-            ]),
+            roleDef("parent", [typeSub("fuzz/org"), typeSub("fuzz/team"), typeSub("fuzz/folder")]),
             roleDef("viewer", [USER_EXP, GROUP_EXP]),
           ],
           permissions: [
@@ -206,11 +177,7 @@ function buildRandomSchema(seed: number): {
   ];
   const scopedBase: AccessIrTerm = {
     kind: "or",
-    terms: [
-      arrowTerm("scope_org", "view"),
-      arrowTerm("scope_team", "view"),
-      roleTerm("viewer"),
-    ],
+    terms: [arrowTerm("scope_org", "view"), arrowTerm("scope_team", "view"), roleTerm("viewer")],
   };
   const definitions: AccessIrDefinition[] = [
     { wireName: "user", roles: [], permissions: [] },
@@ -221,11 +188,7 @@ function buildRandomSchema(seed: number): {
     },
     {
       wireName: "fuzz/org",
-      roles: [
-        roleDef("owner", [USER_EXP]),
-        roleDef("member", [USER_EXP, GROUP_EXP]),
-        roleDef("banned", [USER_EXP]),
-      ],
+      roles: [roleDef("owner", [USER_EXP]), roleDef("member", [USER_EXP, GROUP_EXP]), roleDef("banned", [USER_EXP])],
       permissions: [
         {
           name: "view",
@@ -244,11 +207,7 @@ function buildRandomSchema(seed: number): {
     },
     {
       wireName: "fuzz/team",
-      roles: [
-        roleDef("org", [typeSub("fuzz/org")]),
-        roleDef("lead", [USER_EXP]),
-        roleDef("banned", [USER_EXP]),
-      ],
+      roles: [roleDef("org", [typeSub("fuzz/org")]), roleDef("lead", [USER_EXP]), roleDef("banned", [USER_EXP])],
       permissions: [
         {
           name: "view",
@@ -279,9 +238,7 @@ function buildRandomSchema(seed: number): {
         { name: "p_compound", terms: [randomExpr(pick, itemAtoms, 3, true)] },
         {
           name: "p_scoped",
-          terms: [
-            { kind: "excluding", term: scopedBase, banned: roleTerm("banned") },
-          ],
+          terms: [{ kind: "excluding", term: scopedBase, banned: roleTerm("banned") }],
         },
         {
           name: "p_every",
@@ -434,9 +391,7 @@ function generateWrites(seed: number, nowMs: number, mutualRecursion: boolean) {
       writes.push({
         resource: { type: "fuzz/item", id: itemId },
         relation: "parent",
-        subject: mutualRecursion
-          ? { type: "fuzz/node_a", id: "a0" }
-          : { type: "fuzz/folder", id: "f1" },
+        subject: mutualRecursion ? { type: "fuzz/node_a", id: "a0" } : { type: "fuzz/folder", id: "f1" },
       });
     if (pick(2) === 0)
       writes.push({
@@ -465,9 +420,7 @@ it.runIf(existsSync(ORACLE_BIN))(
     try {
       const pool = postgres.pool;
       await pool.query(relationshipSchemaMigration.sql);
-      await pool.query(
-        "CREATE TABLE fuzz_items (id text PRIMARY KEY, org_id text NOT NULL, team_id text NOT NULL);",
-      );
+      await pool.query("CREATE TABLE fuzz_items (id text PRIMARY KEY, org_id text NOT NULL, team_id text NOT NULL);");
       const permNames = ["p_compound", "p_scoped", "p_every"] as const;
 
       for (let seed = 1; seed <= DEFAULT_SCHEMAS; seed += 1) {
@@ -476,11 +429,7 @@ it.runIf(existsSync(ORACLE_BIN))(
         await pool.query("TRUNCATE dad_authorization_relationship, fuzz_items");
         const { model, mutualRecursion } = buildRandomSchema(seed);
         const lowered = compileAccessPolicy(model).model;
-        const { users, items, rows, writes } = generateWrites(
-          seed,
-          nowMs,
-          mutualRecursion,
-        );
+        const { users, items, rows, writes } = generateWrites(seed, nowMs, mutualRecursion);
 
         const pgAuth = new PostgresAuthorization({
           model,
@@ -489,10 +438,11 @@ it.runIf(existsSync(ORACLE_BIN))(
         });
         await pgAuth.writeRelationships(writes);
         for (const row of rows) {
-          await pool.query(
-            "INSERT INTO fuzz_items (id, org_id, team_id) VALUES ($1, $2, $3)",
-            [row.id, row.orgId, row.teamId],
-          );
+          await pool.query("INSERT INTO fuzz_items (id, org_id, team_id) VALUES ($1, $2, $3)", [
+            row.id,
+            row.orgId,
+            row.teamId,
+          ]);
         }
 
         const storedRows = await pool.query<{
@@ -546,8 +496,7 @@ it.runIf(existsSync(ORACLE_BIN))(
             subjectId: row.subject_id,
             subjectRelation: row.subject_relation,
             subjectIsWildcard: row.subject_is_wildcard,
-            expiresAt:
-              row.expires_at_ms === null ? null : Number(row.expires_at_ms),
+            expiresAt: row.expires_at_ms === null ? null : Number(row.expires_at_ms),
           })),
           now: oracleNow,
           checks: checkQueries.map((query) => ({
@@ -579,9 +528,7 @@ it.runIf(existsSync(ORACLE_BIN))(
             `SELECT item.id FROM fuzz_items item WHERE ${resolved.sql} ORDER BY item.id`,
             [...resolved.values],
           );
-          expect(resolvedRows.rows.map((entry) => entry.id)).toEqual(
-            [...(oracle.lookups[index] ?? [])].sort(),
-          );
+          expect(resolvedRows.rows.map((entry) => entry.id)).toEqual([...(oracle.lookups[index] ?? [])].sort());
         }
       }
     } finally {

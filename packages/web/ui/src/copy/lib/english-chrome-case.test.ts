@@ -13,9 +13,7 @@ import { mergeCopy } from "./merge-copy.js";
 
 const ORDERS_FILE = "apps/example/features/orders/src/copy/orders-copy.ts";
 
-function ordersCopy(
-  entries: Readonly<Record<string, { readonly en: string }>>,
-) {
+function ordersCopy(entries: Readonly<Record<string, { readonly en: string }>>) {
   return mergeCopy([{ file: ORDERS_FILE, entries: defineCopy(entries) }]);
 }
 

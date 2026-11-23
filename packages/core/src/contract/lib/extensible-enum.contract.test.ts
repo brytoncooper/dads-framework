@@ -7,9 +7,7 @@ const surface = extensibleEnum(["maintenance", "people"], "A surface");
 
 describe("extensibleEnum", () => {
   it("accepts only its values on the server", () => {
-    expectTypeOf<z.infer<typeof surface>>().toEqualTypeOf<
-      "maintenance" | "people"
-    >();
+    expectTypeOf<z.infer<typeof surface>>().toEqualTypeOf<"maintenance" | "people">();
     expect(surface.parse("people")).toBe("people");
     expect(() => surface.parse("orders")).toThrow();
   });

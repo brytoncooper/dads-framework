@@ -49,11 +49,7 @@ export async function proveStarterScenario(urls, apiContainer, project) {
     session: owner.cookie,
     body: { email: guestEmail },
   });
-  const invite = await readMailLink(
-    project,
-    guestEmail,
-    "/accept-tenant-invitation",
-  );
+  const invite = await readMailLink(project, guestEmail, "/accept-tenant-invitation");
   const token = new URLSearchParams(invite.hash.slice(1)).get("token");
   assert.ok(token, "The development mailbox should contain the invitation");
   await data(urls.webUrl, "/api/tenants/invitations/accept", 200, {
@@ -62,11 +58,7 @@ export async function proveStarterScenario(urls, apiContainer, project) {
   });
   await assertVisibleNote(await readNotes(guest.cookie), text);
 
-  await proveOptionalCapabilities(
-    urls.webUrl,
-    notesPath + "/" + note.id,
-    owner.cookie,
-  );
+  await proveOptionalCapabilities(urls.webUrl, notesPath + "/" + note.id, owner.cookie);
   // The starter exposes invitations. This test administers the inverse via
   // the same tenant service to prove the normal read sees revocation.
   await revokeMembership(apiContainer, tenant.id, owner.id, guest.id);
@@ -74,14 +66,8 @@ export async function proveStarterScenario(urls, apiContainer, project) {
   await assertVisibleNote(await readNotes(owner.cookie), text);
 
   return async (webUrl) => {
-    await assertVisibleNote(
-      await request(webUrl, notesPath, { session: owner.cookie }),
-      text,
-    );
-    assert.equal(
-      (await request(webUrl, notesPath, { session: guest.cookie })).status,
-      404,
-    );
+    await assertVisibleNote(await request(webUrl, notesPath, { session: owner.cookie }), text);
+    assert.equal((await request(webUrl, notesPath, { session: guest.cookie })).status, 404);
   };
 }
 
@@ -109,16 +95,9 @@ async function signIn(origin, project, email) {
     body: { email, password, name: "Starter proof" },
   });
   assert.equal(signUp.status, 200);
-  const verification = await readMailLink(
-    project,
-    email,
-    "/api/auth/verify-email",
-  );
+  const verification = await readMailLink(project, email, "/api/auth/verify-email");
   assert.equal(verification.origin, origin);
-  const verified = await request(
-    origin,
-    verification.pathname + verification.search,
-  );
+  const verified = await request(origin, verification.pathname + verification.search);
   assert.ok([200, 302].includes(verified.status));
   const session = await request(origin, "/api/auth/sign-in/email", {
     body: { email, password },
@@ -153,11 +132,7 @@ async function readMailLink(project, email, preferredPath) {
 }
 
 async function findMailLink(project, email, preferredPath) {
-  const { stdout } = await execute(
-    "npm",
-    ["run", "--silent", "dev:mail", "--", "--json"],
-    { cwd: project },
-  );
+  const { stdout } = await execute("npm", ["run", "--silent", "dev:mail", "--", "--json"], { cwd: project });
   const receipt = JSON.parse(stdout);
   assert.equal(receipt.ok, true, "The development mailbox should be available");
   for (const message of receipt.mail) {
@@ -226,12 +201,7 @@ async function proveOptionalCapabilities(origin, path, session) {
   });
   assert.ok(attachment.fileId);
   const fetched = await waitForResult(async () => {
-    const result = await data(
-      origin,
-      path + "/attachments/" + attachment.fileId,
-      200,
-      { session },
-    );
+    const result = await data(origin, path + "/attachments/" + attachment.fileId, 200, { session });
     return result.inspection === null ? undefined : result;
   }, "Expected the attachment inspection job to finish");
   assert.equal(fetched.text, text);
@@ -239,17 +209,10 @@ async function proveOptionalCapabilities(origin, path, session) {
   assert.match(fetched.inspection.sha256, /^[a-f0-9]{64}$/);
   const csv = await data(origin, path + "/exports/csv", 200, { session });
   assert.match(csv.contentType, /^text\/csv/);
-  assert.ok(
-    Buffer.from(csv.base64, "base64")
-      .toString("utf8")
-      .includes("disposable starter proof note"),
-  );
+  assert.ok(Buffer.from(csv.base64, "base64").toString("utf8").includes("disposable starter proof note"));
   const pdf = await data(origin, path + "/exports/pdf", 200, { session });
   assert.equal(pdf.contentType, "application/pdf");
-  assert.equal(
-    Buffer.from(pdf.base64, "base64").subarray(0, 5).toString(),
-    "%PDF-",
-  );
+  assert.equal(Buffer.from(pdf.base64, "base64").subarray(0, 5).toString(), "%PDF-");
 }
 
 async function waitForResult(read, failure) {

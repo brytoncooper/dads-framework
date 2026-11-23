@@ -15,14 +15,8 @@
 
 import { NoneClientTelemetry, type ClientTelemetry } from "../core/index.js";
 import { FanOutClientTelemetry } from "./fan-out-client-telemetry.js";
-import {
-  LocalClientTelemetry,
-  type LocalClientTelemetryOptions,
-} from "./local-client-telemetry.js";
-import {
-  SentryClientTelemetry,
-  type LoadVendorReporter,
-} from "./sentry-client-telemetry.js";
+import { LocalClientTelemetry, type LocalClientTelemetryOptions } from "./local-client-telemetry.js";
+import { SentryClientTelemetry, type LoadVendorReporter } from "./sentry-client-telemetry.js";
 
 export type ClientTelemetryDriver = "none" | "local" | "local-and-vendor";
 
@@ -45,9 +39,7 @@ export type CreateClientTelemetryOptions = {
   readonly loadVendor?: LoadVendorReporter;
 };
 
-export function createClientTelemetry(
-  options: CreateClientTelemetryOptions,
-): ClientTelemetry {
+export function createClientTelemetry(options: CreateClientTelemetryOptions): ClientTelemetry {
   if (options.driver === "none") return new NoneClientTelemetry();
 
   const local = createLocalTelemetry(options);
@@ -55,9 +47,7 @@ export function createClientTelemetry(
   return new FanOutClientTelemetry([local, createVendorTelemetry(options)]);
 }
 
-function createLocalTelemetry(
-  options: CreateClientTelemetryOptions,
-): LocalClientTelemetry {
+function createLocalTelemetry(options: CreateClientTelemetryOptions): LocalClientTelemetry {
   const { endpoint, release, clientContext } = options;
   if (endpoint === undefined || endpoint.length === 0) {
     throw new Error("client telemetry driver 'local' requires an endpoint");
@@ -76,9 +66,7 @@ function createLocalTelemetry(
   });
 }
 
-function createVendorTelemetry(
-  options: CreateClientTelemetryOptions,
-): SentryClientTelemetry {
+function createVendorTelemetry(options: CreateClientTelemetryOptions): SentryClientTelemetry {
   const { vendorDsn, vendorTunnel, environment, release } = options;
   // Thrown rather than quietly downgraded to `local`. Whoever selected this
   // driver believes faults are reaching a vendor; a silent fallback would let

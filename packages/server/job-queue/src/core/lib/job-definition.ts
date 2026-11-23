@@ -24,8 +24,7 @@ export type IntervalJobSchedule<Payload> = {
 };
 
 /** A recurring cron or fixed-interval trigger for one job. */
-export type JobSchedule<Payload> =
-  CronJobSchedule<Payload> | IntervalJobSchedule<Payload>;
+export type JobSchedule<Payload> = CronJobSchedule<Payload> | IntervalJobSchedule<Payload>;
 
 /** Runtime-ready job edge after its payload type has been safely erased. */
 export type JobDefinition = {
@@ -44,8 +43,7 @@ export type JobDescription = {
 
 /** Payload-free cron or interval metadata exposed by inspection. */
 export type JobScheduleDescription =
-  | Omit<CronJobSchedule<unknown>, "payload">
-  | Omit<IntervalJobSchedule<unknown>, "payload">;
+  Omit<CronJobSchedule<unknown>, "payload"> | Omit<IntervalJobSchedule<unknown>, "payload">;
 
 type PayloadSchema<Payload> = {
   parse(payload: unknown): Payload;
@@ -60,9 +58,7 @@ type DefineJobOptions<Payload> = {
 };
 
 /** Bind a stable name, payload parser, retry policy, schedules, and operation. */
-export function defineJob<Payload>(
-  options: DefineJobOptions<Payload>,
-): JobDefinition {
+export function defineJob<Payload>(options: DefineJobOptions<Payload>): JobDefinition {
   requireName("Job", options.name);
   requirePositiveInteger("retry attempts", options.retry.attempts);
   requirePositiveInteger("retry backoffMs", options.retry.backoffMs);
@@ -77,9 +73,7 @@ export function defineJob<Payload>(
 }
 
 /** Declare a cron schedule beside the job it invokes. */
-export function cronSchedule<Payload>(
-  schedule: Omit<CronJobSchedule<Payload>, "kind">,
-): CronJobSchedule<Payload> {
+export function cronSchedule<Payload>(schedule: Omit<CronJobSchedule<Payload>, "kind">): CronJobSchedule<Payload> {
   requireName("Schedule", schedule.id);
   requireName("Cron pattern", schedule.pattern);
   requireName("Time zone", schedule.timeZone);
@@ -96,9 +90,7 @@ export function intervalSchedule<Payload>(
 }
 
 /** Return the safe, static inventory used by diagnostics and operator tooling. */
-export function describeJobs(
-  definitions: readonly JobDefinition[],
-): readonly JobDescription[] {
+export function describeJobs(definitions: readonly JobDefinition[]): readonly JobDescription[] {
   return definitions.map((definition) => ({
     name: definition.name,
     retry: definition.retry,
@@ -106,9 +98,7 @@ export function describeJobs(
   }));
 }
 
-function describeSchedule(
-  schedule: JobSchedule<unknown>,
-): JobScheduleDescription {
+function describeSchedule(schedule: JobSchedule<unknown>): JobScheduleDescription {
   if (schedule.kind === "cron") {
     return {
       id: schedule.id,

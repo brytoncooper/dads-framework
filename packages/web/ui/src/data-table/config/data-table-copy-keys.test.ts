@@ -17,9 +17,7 @@ describe("DataTable configuration copy ownership", () => {
       labelKey: "dataTable.operator.isBefore",
       value: "lt",
     });
-    expect(
-      dataTableConfig.textOperators.some((operator) => "label" in operator),
-    ).toBe(false);
+    expect(dataTableConfig.textOperators.some((operator) => "label" in operator)).toBe(false);
   });
 
   it("describes sort directions with copy keys instead of English labels", () => {

@@ -15,11 +15,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { RequestRecord } from "@dads-framework/http";
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateRequestLog,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateRequestLog } from "@dads-framework/postgres/testing";
 
 import { requestLog } from "../database/generated-tables/request-log.tables.js";
 import { PostgresRequestLogSink } from "./postgres-request-log-sink.js";
@@ -104,9 +100,10 @@ describe("PostgresRequestLogSink", () => {
     await truncateRequestLog(postgres.pool);
   });
 
-  function sinkWith(
-    options: ConstructorParameters<typeof PostgresRequestLogSink>[2] = {},
-  ): { sink: PostgresRequestLogSink; log: RecordingLog } {
+  function sinkWith(options: ConstructorParameters<typeof PostgresRequestLogSink>[2] = {}): {
+    sink: PostgresRequestLogSink;
+    log: RecordingLog;
+  } {
     const log = new RecordingLog();
     const sink = new PostgresRequestLogSink(db, log, options);
     sinks.push(sink);
@@ -249,10 +246,7 @@ describe("PostgresRequestLogSink", () => {
 });
 
 /** Poll rather than sleep a fixed span — the timer tick is not a promise we hold. */
-async function waitUntil(
-  predicate: () => Promise<boolean>,
-  timeoutMs = 5_000,
-): Promise<void> {
+async function waitUntil(predicate: () => Promise<boolean>, timeoutMs = 5_000): Promise<void> {
   const start = Date.now();
   while (!(await predicate())) {
     if (Date.now() - start > timeoutMs) {

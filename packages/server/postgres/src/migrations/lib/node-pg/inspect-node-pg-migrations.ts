@@ -13,11 +13,8 @@ export async function inspectNodePgMigrations(
   });
   const client = await connectPostgresClient(input.databaseUrl);
   try {
-    await client.query(
-      "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
-    );
-    if (await relationExists(client, "drizzle", "__drizzle_migrations"))
-      return "legacy-pending";
+    await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    if (await relationExists(client, "drizzle", "__drizzle_migrations")) return "legacy-pending";
     const { pending } = await readValidatedMigrationPlan(client, discovered);
     return pending.length === 0 ? "current" : "node-pg-pending";
   } finally {

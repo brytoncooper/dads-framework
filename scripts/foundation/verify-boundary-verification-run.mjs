@@ -18,20 +18,10 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 
-import {
-  chooseAdoptionJobs,
-  firstFailure,
-  runTaskPool,
-} from "../adoption/adoption-concurrency.mjs";
+import { chooseAdoptionJobs, firstFailure, runTaskPool } from "../adoption/adoption-concurrency.mjs";
 import { createBoundaryExpectations } from "./verify-boundary-verification-expectations.mjs";
-import {
-  copyPreparedProject,
-  createBoundaryProject,
-} from "./verify-boundary-verification-project.mjs";
-import {
-  boundaryScenarios,
-  proveBaseline,
-} from "./verify-boundary-verification-scenarios.mjs";
+import { copyPreparedProject, createBoundaryProject } from "./verify-boundary-verification-project.mjs";
+import { boundaryScenarios, proveBaseline } from "./verify-boundary-verification-scenarios.mjs";
 
 const LABEL = "boundary verification";
 
@@ -52,17 +42,12 @@ export async function runBoundaryProof(paths) {
   const baseline = boundarySeat(baselineRoot, paths);
   await proveBaseline(baseline);
 
-  const seats = boundaryScenarios.map((scenario, index) =>
-    scenarioSeat(scenario, index, baselineRoot, paths),
-  );
+  const seats = boundaryScenarios.map((scenario, index) => scenarioSeat(scenario, index, baselineRoot, paths));
   const jobs = await announceScenarioJobs(seats.length);
   const results = await runTaskPool(seats, jobs);
   const failure = firstFailure(results);
   if (failure) throw new BoundaryScenarioError(failureReport(results));
-  return [
-    ...baseline.expectations.scenarioCounts,
-    ...seats.flatMap((seat) => seat.expectations.scenarioCounts),
-  ];
+  return [...baseline.expectations.scenarioCounts, ...seats.flatMap((seat) => seat.expectations.scenarioCounts)];
 }
 
 /**
@@ -87,10 +72,7 @@ function boundarySeat(projectRoot, paths) {
 }
 
 function scenarioSeat(scenario, index, baselineRoot, paths) {
-  const projectRoot = join(
-    paths.temporaryRoot,
-    `${String(index).padStart(2, "0")}-${safeName(scenario.name)}`,
-  );
+  const projectRoot = join(paths.temporaryRoot, `${String(index).padStart(2, "0")}-${safeName(scenario.name)}`);
   const seat = boundarySeat(projectRoot, paths);
   return {
     ...seat,
@@ -104,10 +86,7 @@ function scenarioSeat(scenario, index, baselineRoot, paths) {
 }
 
 async function announceScenarioJobs(scenarioCount) {
-  const receipt = await chooseAdoptionJobs(
-    process.env.DADS_BOUNDARY_JOBS,
-    scenarioCount,
-  );
+  const receipt = await chooseAdoptionJobs(process.env.DADS_BOUNDARY_JOBS, scenarioCount);
   process.stderr.write(
     `${LABEL}: ${scenarioCount} scenarios, ${receipt.jobs} at a time (${receipt.mode}, ${receipt.limitingReasons.join("+") || "unbounded"}).\n`,
   );
@@ -118,18 +97,11 @@ function failureReport(results) {
   const lines = [`${LABEL} failed.`, ""];
   for (const result of results) {
     if (result.status !== "failed") continue;
-    lines.push(
-      `FAILED ${LABEL} / ${result.name}`,
-      errorMessage(result.error),
-      "",
-    );
+    lines.push(`FAILED ${LABEL} / ${result.name}`, errorMessage(result.error), "");
   }
   const skipped = results.filter((result) => result.status === "skipped");
   if (skipped.length > 0) {
-    lines.push(
-      `Not started after the failure: ${skipped.map((result) => result.name).join(", ")}.`,
-      "",
-    );
+    lines.push(`Not started after the failure: ${skipped.map((result) => result.name).join(", ")}.`, "");
   }
   lines.push(`First failure in declared order: ${firstFailure(results).name}.`);
   return lines.join("\n");

@@ -14,8 +14,7 @@ it("prepares stable single-check shapes within a fixed budget", async () => {
   expect(preparePostgresChecks(pool)).toBe(executor);
 
   const check = executor.queryCheck?.bind(executor);
-  if (check === undefined)
-    throw new Error("Expected a prepared check executor");
+  if (check === undefined) throw new Error("Expected a prepared check executor");
   const text = "SELECT $1::text";
   const first = { text, values: ["first"], query_timeout: 100 };
   const second = { text, values: ["second"], query_timeout: 100 };
@@ -27,12 +26,7 @@ it("prepares stable single-check shapes within a fixed budget", async () => {
 
   const name = calls[0]?.name;
   expect(name).toMatch(/^dad_check_[a-f0-9]{40}$/);
-  expect(calls.slice(0, 4)).toEqual([
-    { ...first, name },
-    { ...second, name },
-    first,
-    oversized,
-  ]);
+  expect(calls.slice(0, 4)).toEqual([{ ...first, name }, { ...second, name }, first, oversized]);
 
   for (let index = 0; index < 63; index += 1) {
     await check({ text: `SELECT $1::text /* ${String(index)} */` });

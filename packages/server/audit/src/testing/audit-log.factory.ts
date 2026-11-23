@@ -14,9 +14,7 @@ let auditLogCounter = 0;
  * test inserts. `position`, `transactionId`, and `recordedAt` are absent
  * because the database mints all three.
  */
-export function makeAuditLog(
-  overrides: Partial<AuditLogInsert> = {},
-): AuditLogInsert {
+export function makeAuditLog(overrides: Partial<AuditLogInsert> = {}): AuditLogInsert {
   auditLogCounter += 1;
   const rowId = deterministicUuid("audit-log-row", auditLogCounter);
   return {

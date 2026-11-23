@@ -1,15 +1,6 @@
-import {
-  assembleApp,
-  type ComposedApp,
-  type DependencyCheck,
-} from "./compose-app.js";
+import { assembleApp, type ComposedApp, type DependencyCheck } from "./compose-app.js";
 import type { Plugin } from "./define-plugin.js";
-import type {
-  AccessContribution,
-  NamedJob,
-  SluggedFlag,
-  StartedContributions,
-} from "./plugin-contributions.js";
+import type { AccessContribution, NamedJob, SluggedFlag, StartedContributions } from "./plugin-contributions.js";
 import { PluginCompositionError } from "./plugin-errors.js";
 import { startPlugins, type StartablePlugin } from "./start-plugins.js";
 
@@ -23,36 +14,9 @@ export type ApiSelection<
   ServiceName extends string,
   Access extends AccessContribution,
 > = {
-  readonly services: readonly Plugin<
-    Name,
-    Needed,
-    unknown,
-    unknown,
-    NamedJob,
-    Flag,
-    ServiceName,
-    Access
-  >[];
-  readonly routes: readonly Plugin<
-    Name,
-    Needed,
-    unknown,
-    Route,
-    NamedJob,
-    Flag,
-    ServiceName,
-    Access
-  >[];
-  readonly jobs: readonly Plugin<
-    Name,
-    Needed,
-    unknown,
-    unknown,
-    Job,
-    Flag,
-    ServiceName,
-    Access
-  >[];
+  readonly services: readonly Plugin<Name, Needed, unknown, unknown, NamedJob, Flag, ServiceName, Access>[];
+  readonly routes: readonly Plugin<Name, Needed, unknown, Route, NamedJob, Flag, ServiceName, Access>[];
+  readonly jobs: readonly Plugin<Name, Needed, unknown, unknown, Job, Flag, ServiceName, Access>[];
 };
 
 /** Compose one named API from its service, route, and job selections. */
@@ -72,11 +36,7 @@ export function composeApi<
 ): ComposedApp<Route, Job, Flag, Access> & { readonly name: ApiName } {
   try {
     if (unmet.length > 0) throw new PluginCompositionError(unmet.join(", "));
-    const entries = [
-      ...selection.services,
-      ...selection.routes,
-      ...selection.jobs,
-    ];
+    const entries = [...selection.services, ...selection.routes, ...selection.jobs];
     const plan = new Map<string, StartablePlugin<Route, Job>>();
     for (const plugin of selection.services) {
       plan.set(
@@ -96,18 +56,11 @@ export function composeApi<
         expose(plugin, ({ jobs }) => ({ routes: [], jobs })),
       );
     }
-    const composed = assembleApp<
-      Route,
-      Job,
-      Flag,
-      Access,
-      (typeof entries)[number]
-    >(entries, (ordered) =>
+    const composed = assembleApp<Route, Job, Flag, Access, (typeof entries)[number]>(entries, (ordered) =>
       startPlugins(
         ordered.map(({ name: pluginName }) => {
           const startable = plan.get(pluginName);
-          if (startable === undefined)
-            throw new Error(`No start plan for ${pluginName}`);
+          if (startable === undefined) throw new Error(`No start plan for ${pluginName}`);
           return startable;
         }),
       ),
@@ -122,16 +75,9 @@ export function composeApi<
 }
 
 /** Project one setup's result without replacing its dependency token. */
-function expose<
-  InputRoute,
-  InputJob extends NamedJob,
-  Route,
-  Job extends NamedJob,
->(
+function expose<InputRoute, InputJob extends NamedJob, Route, Job extends NamedJob>(
   plugin: StartablePlugin<InputRoute, InputJob>,
-  select: (
-    started: StartedContributions<InputRoute, InputJob>,
-  ) => StartedContributions<Route, Job>,
+  select: (started: StartedContributions<InputRoute, InputJob>) => StartedContributions<Route, Job>,
 ): StartablePlugin<Route, Job> {
   return {
     name: plugin.name,

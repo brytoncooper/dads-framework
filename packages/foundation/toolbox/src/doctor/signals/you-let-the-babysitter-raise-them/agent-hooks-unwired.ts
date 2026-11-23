@@ -19,27 +19,16 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  agentEntrypointPath,
-  wiredGuards,
-} from "../scanners/text-agent-harness.js";
+import type { DoctorSignal, SignalEvidence, SignalReadings } from "../../doctor-signal.js";
+import { agentEntrypointPath, wiredGuards } from "../scanners/text-agent-harness.js";
 
 function countUnwiredHarnesses(context: DoctorContext): SignalReadings {
   const entrypoint = agentEntrypointPath(context);
   if (entrypoint === undefined) return new Map();
   const guards = wiredGuards(context);
   const evidence: readonly SignalEvidence[] =
-    guards.length === 0
-      ? [{ path: entrypoint }]
-      : guards.map((guard) => ({ path: guard.path, name: guard.command }));
-  return new Map([
-    ["harnesses", { value: guards.length === 0 ? 1 : 0, evidence }],
-  ]);
+    guards.length === 0 ? [{ path: entrypoint }] : guards.map((guard) => ({ path: guard.path, name: guard.command }));
+  return new Map([["harnesses", { value: guards.length === 0 ? 1 : 0, evidence }]]);
 }
 
 export const agentHooksUnwiredSignal: DoctorSignal = {
@@ -50,7 +39,6 @@ export const agentHooksUnwiredSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: 0 },
-  sentence:
-    "A rule that only lives in a reviewer’s head is a rule that leaves when the reviewer does.",
+  sentence: "A rule that only lives in a reviewer’s head is a rule that leaves when the reviewer does.",
   run: (context) => Promise.resolve(countUnwiredHarnesses(context)),
 };

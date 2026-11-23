@@ -20,19 +20,13 @@ function makeFake() {
 describe("FakeAuthorization", () => {
   it("grants permissions through the configured relation table", async () => {
     const fake = makeFake();
-    await expect(
-      fake.check({ subject: ADMIN, permission: "view", resource: ORG }),
-    ).resolves.toBe(true);
-    await expect(
-      fake.check({ subject: ADMIN, permission: "manage", resource: ORG }),
-    ).resolves.toBe(true);
+    await expect(fake.check({ subject: ADMIN, permission: "view", resource: ORG })).resolves.toBe(true);
+    await expect(fake.check({ subject: ADMIN, permission: "manage", resource: ORG })).resolves.toBe(true);
   });
 
   it("denies a subject with no relationship path — the denial case", async () => {
     const fake = makeFake();
-    await expect(
-      fake.check({ subject: STRANGER, permission: "view", resource: ORG }),
-    ).resolves.toBe(false);
+    await expect(fake.check({ subject: STRANGER, permission: "view", resource: ORG })).resolves.toBe(false);
   });
 
   it("looks up only resources the subject can reach", async () => {
@@ -59,51 +53,36 @@ describe("FakeAuthorization", () => {
 
   it("writeRelationships grants and deleteRelationships revokes", async () => {
     const fake = makeFake();
-    const token = await fake.writeRelationships([
-      relationshipWrite(ORG, "member", STRANGER),
-    ]);
+    const token = await fake.writeRelationships([relationshipWrite(ORG, "member", STRANGER)]);
     expect(token).toMatch(/^fake-token-/);
-    await expect(
-      fake.check({ subject: STRANGER, permission: "view", resource: ORG }),
-    ).resolves.toBe(true);
+    await expect(fake.check({ subject: STRANGER, permission: "view", resource: ORG })).resolves.toBe(true);
 
     await fake.deleteRelationships({
       resourceType: ORG.type,
       resourceId: ORG.id,
       relation: "member",
     });
-    await expect(
-      fake.check({ subject: STRANGER, permission: "view", resource: ORG }),
-    ).resolves.toBe(false);
+    await expect(fake.check({ subject: STRANGER, permission: "view", resource: ORG })).resolves.toBe(false);
   });
 
   it("deleteRelationships with subject only removes that subject's tuple", async () => {
     const fake = makeFake();
     const other = { type: "user", id: "member-other" };
-    fake.seed(
-      relationshipWrite(ORG, "member", STRANGER),
-      relationshipWrite(ORG, "member", other),
-    );
+    fake.seed(relationshipWrite(ORG, "member", STRANGER), relationshipWrite(ORG, "member", other));
     await fake.deleteRelationships({
       resourceType: ORG.type,
       resourceId: ORG.id,
       relation: "member",
       subject: STRANGER,
     });
-    await expect(
-      fake.listDirectSubjects({ resource: ORG, relation: "member" }),
-    ).resolves.toEqual([other]);
+    await expect(fake.listDirectSubjects({ resource: ORG, relation: "member" })).resolves.toEqual([other]);
   });
 
   it("listDirectSubjects returns only holders of the named relation", async () => {
     const fake = makeFake();
     fake.seed(relationshipWrite(ORG, "member", STRANGER));
-    await expect(
-      fake.listDirectSubjects({ resource: ORG, relation: "admin" }),
-    ).resolves.toEqual([ADMIN]);
-    await expect(
-      fake.listDirectSubjects({ resource: ORG, relation: "member" }),
-    ).resolves.toEqual([STRANGER]);
+    await expect(fake.listDirectSubjects({ resource: ORG, relation: "admin" })).resolves.toEqual([ADMIN]);
+    await expect(fake.listDirectSubjects({ resource: ORG, relation: "member" })).resolves.toEqual([STRANGER]);
   });
 
   /**
@@ -124,10 +103,7 @@ describe("FakeAuthorization", () => {
       id: "set-1",
       relation: "member",
     };
-    fake.seed(
-      relationshipWrite(ORG, "member", memberSet),
-      relationshipWrite(ORG, "member", STRANGER),
-    );
+    fake.seed(relationshipWrite(ORG, "member", memberSet), relationshipWrite(ORG, "member", STRANGER));
 
     await fake.deleteRelationships({
       resourceType: ORG.type,
@@ -138,9 +114,7 @@ describe("FakeAuthorization", () => {
 
     // The set is gone and the bystander is untouched — a filter that matched
     // too broadly would take both.
-    await expect(
-      fake.listDirectSubjects({ resource: ORG, relation: "member" }),
-    ).resolves.toEqual([STRANGER]);
+    await expect(fake.listDirectSubjects({ resource: ORG, relation: "member" })).resolves.toEqual([STRANGER]);
   });
 
   it("keeps a subject-set tuple when the filter names a DIFFERENT subject relation", async () => {
@@ -158,10 +132,7 @@ describe("FakeAuthorization", () => {
       id: "set-1",
       relation: "manager",
     };
-    fake.seed(
-      relationshipWrite(ORG, "member", members),
-      relationshipWrite(ORG, "member", managers),
-    );
+    fake.seed(relationshipWrite(ORG, "member", members), relationshipWrite(ORG, "member", managers));
 
     await fake.deleteRelationships({
       resourceType: ORG.type,
@@ -170,8 +141,6 @@ describe("FakeAuthorization", () => {
       subject: members,
     });
 
-    await expect(
-      fake.listDirectSubjects({ resource: ORG, relation: "member" }),
-    ).resolves.toEqual([managers]);
+    await expect(fake.listDirectSubjects({ resource: ORG, relation: "member" })).resolves.toEqual([managers]);
   });
 });

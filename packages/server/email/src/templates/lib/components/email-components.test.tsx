@@ -38,11 +38,7 @@ const footerLogo = {
 
 function layout(children: ReactNode, branding?: EmailBranding) {
   return (
-    <EmailLayout
-      subject="Your invitation"
-      preview="Expires Friday"
-      branding={branding}
-    >
+    <EmailLayout subject="Your invitation" preview="Expires Friday" branding={branding}>
       {children}
     </EmailLayout>
   );
@@ -76,9 +72,7 @@ describe("EmailLayout", () => {
   });
 
   it("shows application-supplied logos with alternative text", async () => {
-    const { html, text } = await renderBoth(
-      layout(<Text>Body copy.</Text>, { headerLogo, footerLogo }),
-    );
+    const { html, text } = await renderBoth(layout(<Text>Body copy.</Text>, { headerLogo, footerLogo }));
 
     expect(html).toContain(`src="${headerLogo.src}"`);
     expect(html).toContain(`alt="${headerLogo.alt}"`);
@@ -113,9 +107,7 @@ describe("EmailLayout", () => {
 
   it("makes no network requests when application branding is omitted", async () => {
     const { html } = await renderBoth(layout(<Text>Body copy.</Text>));
-    const remote = [...html.matchAll(/(?:src|href)="(https?:[^"]+)"/g)].map(
-      (match) => match[1],
-    );
+    const remote = [...html.matchAll(/(?:src|href)="(https?:[^"]+)"/g)].map((match) => match[1]);
 
     expect(html).not.toContain("@font-face");
     expect(remote).toEqual([]);
@@ -124,9 +116,7 @@ describe("EmailLayout", () => {
 
 describe("EmailButton", () => {
   it("uses the default action color", async () => {
-    const { html } = await renderBoth(
-      layout(<EmailButton href={LINK}>Accept Invitation</EmailButton>),
-    );
+    const { html } = await renderBoth(layout(<EmailButton href={LINK}>Accept Invitation</EmailButton>));
 
     expect(html).toContain(`background-color:${emailTheme.color.primary}`);
     expect(html).toContain(`href="${LINK}"`);
@@ -136,9 +126,7 @@ describe("EmailButton", () => {
   });
 
   it("keeps its label in the text twin, where the fill is gone", async () => {
-    const { text } = await renderBoth(
-      layout(<EmailButton href={LINK}>Accept Invitation</EmailButton>),
-    );
+    const { text } = await renderBoth(layout(<EmailButton href={LINK}>Accept Invitation</EmailButton>));
 
     expect(text).toContain("Accept Invitation");
   });
@@ -183,18 +171,14 @@ describe("EmailDataTable", () => {
 
 describe("EmailBadge", () => {
   it("tints the word and its outline from the status ramp", async () => {
-    const { html } = await renderBoth(
-      layout(<EmailBadge tone="success">Ready for pickup</EmailBadge>),
-    );
+    const { html } = await renderBoth(layout(<EmailBadge tone="success">Ready for pickup</EmailBadge>));
 
     expect(html).toContain(`color:${emailTheme.color.success}`);
     expect(html).toContain(`border:1px solid ${emailTheme.color.success}`);
   });
 
   it("says the status in words, so colour is never the only signal", async () => {
-    const { text } = await renderBoth(
-      layout(<EmailBadge tone="danger">Cancelled</EmailBadge>),
-    );
+    const { text } = await renderBoth(layout(<EmailBadge tone="danger">Cancelled</EmailBadge>));
 
     expect(text).toContain("Cancelled");
   });
@@ -202,9 +186,7 @@ describe("EmailBadge", () => {
 
 describe("EmailCode", () => {
   it("sets the code large and mono, and keeps it in the text twin", async () => {
-    const { html, text } = await renderBoth(
-      layout(<EmailCode code="4F7QK2" />),
-    );
+    const { html, text } = await renderBoth(layout(<EmailCode code="4F7QK2" />));
 
     expect(html).toContain(`font-size:${emailTheme.fontSize.code}`);
     expect(html).toContain("IBM Plex Mono");

@@ -1,9 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type {
-  AuthorizationMigration,
-  LoadedAuthorizationMigration,
-} from "./journal-entry.js";
+import type { AuthorizationMigration, LoadedAuthorizationMigration } from "./journal-entry.js";
 
 /**
  * The journal definition every snapshot must contain — WriteSchema replaces
@@ -30,9 +27,7 @@ export async function loadJournal(
     journal.map(async (entry, index) => {
       const number = entryNumber(entry.id, index);
       if (!folders.includes(entry.id)) {
-        throw new Error(
-          `authorization journal entry "${entry.id}" has no folder under ${journalFolder}`,
-        );
+        throw new Error(`authorization journal entry "${entry.id}" has no folder under ${journalFolder}`);
       }
       const schema = await readSnapshot(journalFolder, entry.id);
       return { ...entry, number, schema };
@@ -42,9 +37,7 @@ export async function loadJournal(
   const registered = new Set(loaded.map((entry) => entry.id));
   const orphans = folders.filter((folder) => !registered.has(folder));
   if (orphans.length > 0) {
-    throw new Error(
-      `authorization journal folder(s) not registered in the journal index: ${orphans.join(", ")}`,
-    );
+    throw new Error(`authorization journal folder(s) not registered in the journal index: ${orphans.join(", ")}`);
   }
 
   return loaded;
@@ -53,9 +46,7 @@ export async function loadJournal(
 function entryNumber(entryId: string, index: number): number {
   const match = ENTRY_ID_PATTERN.exec(entryId);
   if (!match) {
-    throw new Error(
-      `authorization journal entry "${entryId}" is not named NNNN_slug`,
-    );
+    throw new Error(`authorization journal entry "${entryId}" is not named NNNN_slug`);
   }
   const number = Number(match[1]);
   if (number !== index + 1) {
@@ -72,15 +63,11 @@ function entryNumber(entryId: string, index: number): number {
  * journal folder, read without loading any entry. Throws when the folder is
  * missing: an absent journal is a misconfigured process, never "no entries".
  */
-export async function listShippedAuthorizationMigrationIds(
-  journalFolder: string,
-): Promise<readonly string[]> {
+export async function listShippedAuthorizationMigrationIds(journalFolder: string): Promise<readonly string[]> {
   return listEntryFolders(journalFolder);
 }
 
-async function listEntryFolders(
-  journalFolder: string,
-): Promise<readonly string[]> {
+async function listEntryFolders(journalFolder: string): Promise<readonly string[]> {
   const entries = await readdir(journalFolder, { withFileTypes: true });
   return entries
     .filter((entry) => entry.isDirectory())
@@ -89,10 +76,7 @@ async function listEntryFolders(
     .sort();
 }
 
-async function readSnapshot(
-  journalFolder: string,
-  entryId: string,
-): Promise<string> {
+async function readSnapshot(journalFolder: string, entryId: string): Promise<string> {
   const path = join(journalFolder, entryId, "schema.zed");
   const schema = await readFile(path, "utf8");
   if (schema.trim().length === 0) {

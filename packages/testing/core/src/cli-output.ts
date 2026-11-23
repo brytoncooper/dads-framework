@@ -5,12 +5,7 @@ import type { DadTestCliIo } from "./dad-test-cli.js";
  * envelope for machines, and a human line plus indented JSON for people. The
  * envelope is the contract; the human form is explicitly not.
  */
-export function writeCommandSuccess(
-  io: DadTestCliIo,
-  json: boolean,
-  operation: string,
-  result: unknown,
-): void {
+export function writeCommandSuccess(io: DadTestCliIo, json: boolean, operation: string, result: unknown): void {
   io.stdout(
     json
       ? `${JSON.stringify({ schemaVersion: 1, ok: true, result })}\n`

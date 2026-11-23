@@ -2,12 +2,7 @@ import type { StarterProjectFile } from "./render-starter-project.js";
 
 /** Assembly entrypoint, service composition, and session-subject files for the minimal app. */
 export function renderMinimalAssemblyFiles(): readonly StarterProjectFile[] {
-  return [
-    mainAssemblyFile(),
-    servicesAssemblyFile(),
-    sessionSubjectsFile(),
-    startAppAssemblyFile(),
-  ];
+  return [mainAssemblyFile(), servicesAssemblyFile(), sessionSubjectsFile(), startAppAssemblyFile()];
 }
 
 function mainAssemblyFile(): StarterProjectFile {

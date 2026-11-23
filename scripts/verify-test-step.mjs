@@ -20,13 +20,7 @@ import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
-import {
-  cacheKey,
-  hasPassed,
-  openStepCache,
-  readRecord,
-  writeRecord,
-} from "./verify-cache.mjs";
+import { cacheKey, hasPassed, openStepCache, readRecord, writeRecord } from "./verify-cache.mjs";
 import { readWorkspace } from "./verify-workspace.mjs";
 
 const ROOT = realpathSync(fileURLToPath(new URL("..", import.meta.url)));
@@ -42,10 +36,7 @@ const DEFAULT_MAX_WORKERS = 4;
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
 const NOT_COLLECTED = /(?:^|\/)(?:node_modules|dist)\/|\.test\.mjs$/u;
 
-export function resolveVitestMaxWorkers(
-  env = process.env,
-  parallelism = availableParallelism(),
-) {
+export function resolveVitestMaxWorkers(env = process.env, parallelism = availableParallelism()) {
   const configured = env.VITEST_MAX_WORKERS?.trim();
   if (configured !== undefined && configured.length > 0) return configured;
   return String(Math.max(1, Math.min(DEFAULT_MAX_WORKERS, parallelism)));
@@ -53,14 +44,10 @@ export function resolveVitestMaxWorkers(
 
 function runVitest(extraArgs) {
   const maxWorkers = resolveVitestMaxWorkers();
-  const run = spawnSync(
-    process.execPath,
-    [VITEST, ...BASE_ARGS, `--maxWorkers=${maxWorkers}`, ...extraArgs],
-    {
-      cwd: ROOT,
-      stdio: "inherit",
-    },
-  );
+  const run = spawnSync(process.execPath, [VITEST, ...BASE_ARGS, `--maxWorkers=${maxWorkers}`, ...extraArgs], {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
   return run.status ?? 1;
 }
 
@@ -96,15 +83,11 @@ export function planTestPackages(cache) {
 }
 
 function relativeName(suite) {
-  return suite.name.startsWith(`${ROOT}/`)
-    ? suite.name.slice(ROOT.length + 1)
-    : suite.name;
+  return suite.name.startsWith(`${ROOT}/`) ? suite.name.slice(ROOT.length + 1) : suite.name;
 }
 
 function suitesOf(report, directory) {
-  return report.testResults.filter((suite) =>
-    relativeName(suite).startsWith(`${directory}/`),
-  );
+  return report.testResults.filter((suite) => relativeName(suite).startsWith(`${directory}/`));
 }
 
 function recordPasses(cache, ran, report) {
@@ -123,9 +106,7 @@ function recordPasses(cache, ran, report) {
 /** The report `test-count` reads: this run's suites plus the cached ones. */
 function writeMergedReport(fresh, cachedSuites) {
   const testResults = [...fresh, ...cachedSuites];
-  const failed = testResults.filter(
-    (suite) => suite.status === "failed",
-  ).length;
+  const failed = testResults.filter((suite) => suite.status === "failed").length;
   const merged = {
     numTotalTestSuites: testResults.length,
     numFailedTestSuites: failed,
@@ -155,9 +136,7 @@ function readReport(path) {
 }
 
 function runPartitioned(cache, plan) {
-  const cached = plan.filter(({ directory, key }) =>
-    hasPassed(cache, "test", directory, key),
-  );
+  const cached = plan.filter(({ directory, key }) => hasPassed(cache, "test", directory, key));
   const toRun = plan.filter((item) => !cached.includes(item));
   const note = `${String(cached.length)} of ${String(plan.length)} packages cached`;
   if (toRun.length === 0) {
@@ -165,16 +144,8 @@ function runPartitioned(cache, plan) {
     process.stdout.write(`verify-cache: hit\n`);
     return 0;
   }
-  const freshPath = join(
-    cache.directory,
-    "runs",
-    cache.runId,
-    "vitest-report.json",
-  );
-  const exitCode = runVitest([
-    `--outputFile=${freshPath}`,
-    ...toRun.map(({ directory }) => `${directory}/`),
-  ]);
+  const freshPath = join(cache.directory, "runs", cache.runId, "vitest-report.json");
+  const exitCode = runVitest([`--outputFile=${freshPath}`, ...toRun.map(({ directory }) => `${directory}/`)]);
   const fresh = readReport(freshPath);
   if (fresh === null) return exitCode === 0 ? 1 : exitCode;
   recordPasses(cache, toRun, fresh);
@@ -199,17 +170,13 @@ function main() {
   return runPartitioned(cache, plan);
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+const isMainModule = process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
   try {
     process.exitCode = main();
   } catch (error) {
-    process.stderr.write(
-      `${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
   }
 }

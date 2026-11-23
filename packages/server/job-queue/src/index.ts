@@ -16,7 +16,4 @@ export {
   type JobQueueInspection,
   type RunningJobSchedule,
 } from "./core/index.js";
-export {
-  createJobQueue,
-  type CreateJobQueueOptions,
-} from "./lib/create-job-queue.js";
+export { createJobQueue, type CreateJobQueueOptions } from "./lib/create-job-queue.js";

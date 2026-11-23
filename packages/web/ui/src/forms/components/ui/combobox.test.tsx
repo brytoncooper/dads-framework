@@ -11,15 +11,7 @@
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   Combobox,
   ComboboxAction,
@@ -120,9 +112,7 @@ describe("an option picked out of a re-derived array", () => {
 
     expect(screen.getByTestId("chosen").textContent).toBe("SOY48");
     openList();
-    expect(
-      (await option("Soybean meal 48")).getAttribute("aria-selected"),
-    ).toBe("true");
+    expect((await option("Soybean meal 48")).getAttribute("aria-selected")).toBe("true");
   });
 
   it("stays selected across a re-render that maps the options again", async () => {
@@ -135,9 +125,7 @@ describe("an option picked out of a re-derived array", () => {
     expect(screen.getByTestId("chosen").textContent).toBe("SOY48");
     expect(input().getAttribute("value")).toBe("Soybean meal 48");
     openList();
-    expect(
-      (await option("Soybean meal 48")).getAttribute("aria-selected"),
-    ).toBe("true");
+    expect((await option("Soybean meal 48")).getAttribute("aria-selected")).toBe("true");
   });
 
   it("leaves the option that was not taken unselected", async () => {
@@ -147,9 +135,7 @@ describe("an option picked out of a re-derived array", () => {
     fireEvent.click(await option("Soybean meal 48"));
     openList();
 
-    expect((await option("Ground corn")).getAttribute("aria-selected")).toBe(
-      "false",
-    );
+    expect((await option("Ground corn")).getAttribute("aria-selected")).toBe("false");
   });
 });
 
@@ -205,12 +191,8 @@ describe("an item shape that carries no `value` key", () => {
     fireEvent.click(screen.getByRole("button", { name: /Re-render/ }));
 
     openList();
-    expect((await option("Ground corn")).getAttribute("aria-selected")).toBe(
-      "true",
-    );
-    expect(
-      (await option("Soybean meal 48")).getAttribute("aria-selected"),
-    ).toBe("false");
+    expect((await option("Ground corn")).getAttribute("aria-selected")).toBe("true");
+    expect((await option("Soybean meal 48")).getAttribute("aria-selected")).toBe("false");
   });
 });
 
@@ -242,11 +224,7 @@ describe("a closed trigger with search in the popup", () => {
 
   it("keeps the input out of the closed field and filters once the list is open", async () => {
     render(
-      <Combobox
-        items={deriveOptions()}
-        value={null}
-        onValueChange={() => undefined}
-      >
+      <Combobox items={deriveOptions()} value={null} onValueChange={() => undefined}>
         <ComboboxTrigger aria-label="Ingredient" size="default">
           <ComboboxValue placeholder="Choose an Ingredient" />
         </ComboboxTrigger>
@@ -269,9 +247,7 @@ describe("a closed trigger with search in the popup", () => {
     fireEvent.change(search, { target: { value: "ground" } });
 
     expect(await option("Ground corn")).toBeDefined();
-    expect(
-      screen.queryByRole("option", { name: "Soybean meal 48" }),
-    ).toBeNull();
+    expect(screen.queryByRole("option", { name: "Soybean meal 48" })).toBeNull();
   });
 });
 
@@ -280,11 +256,7 @@ describe("a combobox list mounted in a given container", () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     render(
-      <Combobox
-        items={deriveOptions()}
-        value={null}
-        onValueChange={() => undefined}
-      >
+      <Combobox items={deriveOptions()} value={null} onValueChange={() => undefined}>
         <ComboboxTrigger aria-label="Ingredient" size="default">
           <ComboboxValue placeholder="Choose an Ingredient" />
         </ComboboxTrigger>
@@ -313,11 +285,7 @@ describe("a combobox action", () => {
     const onAction = vi.fn();
     const onValueChange = vi.fn();
     render(
-      <Combobox
-        items={deriveOptions()}
-        value={null}
-        onValueChange={onValueChange}
-      >
+      <Combobox items={deriveOptions()} value={null} onValueChange={onValueChange}>
         <ComboboxInput aria-label="Ingredient" />
         <ComboboxContent>
           <ComboboxList>

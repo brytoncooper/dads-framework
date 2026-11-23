@@ -5,10 +5,7 @@ import {
   checkCrossDomainReferences,
   type CrossDomainReferenceQueryClient,
 } from "../database/check-cross-domain-references.js";
-import {
-  formatCleanReport,
-  formatDanglingReferenceReport,
-} from "../logic/format-dangling-reference-report.js";
+import { formatCleanReport, formatDanglingReferenceReport } from "../logic/format-dangling-reference-report.js";
 
 /** What one run of the check says, in the words the CLI prints. */
 export type CrossDomainReferenceCheckReport = {
@@ -38,17 +35,12 @@ export type CheckCrossDomainReferencesDependencies = {
  * engine serves the nightly CLI and this action.
  */
 export class CheckCrossDomainReferences {
-  constructor(
-    private readonly dependencies: CheckCrossDomainReferencesDependencies,
-  ) {}
+  constructor(private readonly dependencies: CheckCrossDomainReferencesDependencies) {}
 
   async execute(): Promise<Result<CrossDomainReferenceCheckReport>> {
     const { pool, references } = this.dependencies;
     const findings = await checkCrossDomainReferences(pool, references);
-    const danglingRows = findings.reduce(
-      (total, finding) => total + finding.rows,
-      0,
-    );
+    const danglingRows = findings.reduce((total, finding) => total + finding.rows, 0);
 
     return ok({
       checkedReferences: references.length,

@@ -23,3 +23,8 @@ LICENSE.md
 # `--suppress-all` and `--prune-suppressions`; reformatting it would make
 # every prune leave the tree dirty.
 eslint-suppressions.json
+
+# Committed database migrations and generated table modules are immutable
+# (`migrations-edited` and `generated-tables-hand-edited` budgets).
+**/*.migration.ts
+**/*.tables.ts

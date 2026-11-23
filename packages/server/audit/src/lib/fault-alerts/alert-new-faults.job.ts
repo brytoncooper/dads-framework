@@ -2,19 +2,11 @@ import { z } from "zod";
 
 import type { Clock } from "@dads-framework/core/runtime/clock";
 import type { EmailDelivery } from "@dads-framework/email/delivery";
-import {
-  cronSchedule,
-  defineJob,
-  type JobDefinition,
-  type JobLog,
-} from "@dads-framework/job-queue";
+import { cronSchedule, defineJob, type JobDefinition, type JobLog } from "@dads-framework/job-queue";
 
 import type { FaultAlertReader } from "../database/readers/fault-alert-reader.interface.js";
 import { describeFaultLine } from "./logic/describe-fault-line.js";
-import {
-  isWorthSending,
-  summarizeNewFaults,
-} from "./logic/summarize-new-faults.js";
+import { isWorthSending, summarizeNewFaults } from "./logic/summarize-new-faults.js";
 import { newFaultsEmailTemplate } from "./new-faults.email-template.js";
 
 export const ALERT_NEW_FAULTS_JOB = "audit.alert-new-faults";
@@ -63,9 +55,7 @@ export type CreateAlertNewFaultsJobDeps = {
  * **Enqueued, not sent in-band.** The outbox owns delivery and retry, so a
  * mail vendor having a bad day cannot fail this job or lose the alert.
  */
-export function createAlertNewFaultsJob(
-  deps: CreateAlertNewFaultsJobDeps,
-): JobDefinition {
+export function createAlertNewFaultsJob(deps: CreateAlertNewFaultsJobDeps): JobDefinition {
   requirePositiveIntegerWindow(deps.windowHours);
   return defineJob({
     name: ALERT_NEW_FAULTS_JOB,
@@ -81,16 +71,11 @@ export function createAlertNewFaultsJob(
     ],
     run: async () => {
       if (deps.recipients.length === 0) {
-        deps.log.info(
-          { event: "fault-alerts.no-recipients" },
-          "fault alerting has nobody to tell",
-        );
+        deps.log.info({ event: "fault-alerts.no-recipients" }, "fault alerting has nobody to tell");
         return;
       }
 
-      const since = new Date(
-        deps.clock.now().getTime() - deps.windowHours * MS_PER_HOUR,
-      );
+      const since = new Date(deps.clock.now().getTime() - deps.windowHours * MS_PER_HOUR);
       await learnWhatIsAlreadyBroken(deps, since);
 
       const [server, client] = await Promise.all([
@@ -142,10 +127,7 @@ export function createAlertNewFaultsJob(
  * nothing has broken yet this records nothing and the first fault to ever
  * happen still gets its alert.
  */
-async function learnWhatIsAlreadyBroken(
-  deps: CreateAlertNewFaultsJobDeps,
-  since: Date,
-): Promise<void> {
+async function learnWhatIsAlreadyBroken(deps: CreateAlertNewFaultsJobDeps, since: Date): Promise<void> {
   if (await deps.reader.hasRememberedAnyFault()) return;
   const learned = await deps.reader.rememberFaultsSeenBefore(since);
   if (learned === 0) return;
@@ -157,8 +139,6 @@ async function learnWhatIsAlreadyBroken(
 
 function requirePositiveIntegerWindow(windowHours: number): void {
   if (!Number.isInteger(windowHours) || windowHours <= 0) {
-    throw new Error(
-      `fault alert windowHours must be a positive integer, got ${windowHours}`,
-    );
+    throw new Error(`fault alert windowHours must be a positive integer, got ${windowHours}`);
   }
 }

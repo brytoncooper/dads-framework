@@ -16,21 +16,14 @@ import { join, posix, relative, resolve, sep } from "node:path";
 export function resolveInside(root: string, projectPath: string): string {
   const absolutePath = resolve(root, projectPath);
   const pathFromRoot = relative(root, absolutePath);
-  if (
-    pathFromRoot === ".." ||
-    pathFromRoot.startsWith(`..${sep}`) ||
-    absolutePath === resolve(root)
-  ) {
+  if (pathFromRoot === ".." || pathFromRoot.startsWith(`..${sep}`) || absolutePath === resolve(root)) {
     throw new Error(`Verification path escapes its root: ${projectPath}.`);
   }
   return absolutePath;
 }
 
 /** Refuses a path whose every component is not a real, present, non-symlink entry. */
-export function assertNoSymlinkComponents(
-  root: string,
-  projectPath: string,
-): void {
+export function assertNoSymlinkComponents(root: string, projectPath: string): void {
   let currentPath = root;
   for (const component of projectPath.split("/")) {
     currentPath = join(currentPath, component);
@@ -48,12 +41,7 @@ export function normalizeRelativePath(value: string): string {
     throw new Error(`Verification paths must use forward slashes: ${value}.`);
   }
   const normalized = posix.normalize(value);
-  if (
-    normalized === "." ||
-    normalized === ".." ||
-    normalized.startsWith("../") ||
-    normalized.startsWith("/")
-  ) {
+  if (normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.startsWith("/")) {
     throw new Error(`Expected a project-relative verification path: ${value}.`);
   }
   return normalized.replace(/^\.\//, "").replace(/\/$/, "");

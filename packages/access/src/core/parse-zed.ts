@@ -1,10 +1,4 @@
-import type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./ir.js";
 
 type PunctuationKind =
   | "arrow"
@@ -28,8 +22,7 @@ type IdentToken = {
   readonly line: number;
 };
 
-type Token =
-  IdentToken | { readonly kind: PunctuationKind; readonly line: number };
+type Token = IdentToken | { readonly kind: PunctuationKind; readonly line: number };
 
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (match) =>
@@ -78,9 +71,7 @@ function tokenize(source: string): Token[] {
       tokens.push({ kind, line });
     } else if (/^[A-Za-z]/.test(text)) {
       if (braceDepth === 0 && text === "caveat") {
-        throw new Error(
-          `line ${line}: unsupported SpiceDB construct "caveat" in zed`,
-        );
+        throw new Error(`line ${line}: unsupported SpiceDB construct "caveat" in zed`);
       }
       tokens.push({ kind: "ident", value: text, line });
     } else {
@@ -114,9 +105,7 @@ class ZedReader {
   eat(kind: Token["kind"]): Token {
     const token = this.take();
     if (token.kind !== kind) {
-      throw new Error(
-        `line ${token.line}: expected ${kind}, got ${token.kind}`,
-      );
+      throw new Error(`line ${token.line}: expected ${kind}, got ${token.kind}`);
     }
     return token;
   }
@@ -124,14 +113,10 @@ class ZedReader {
   eatIdentToken(expected?: string): IdentToken {
     const token = this.take();
     if (token.kind !== "ident") {
-      throw new Error(
-        `line ${token.line}: expected identifier, got ${token.kind}`,
-      );
+      throw new Error(`line ${token.line}: expected identifier, got ${token.kind}`);
     }
     if (expected !== undefined && token.value !== expected) {
-      throw new Error(
-        `line ${token.line}: expected ${expected}, got ${token.value}`,
-      );
+      throw new Error(`line ${token.line}: expected ${expected}, got ${token.value}`);
     }
     return token;
   }
@@ -158,9 +143,7 @@ class ZedReader {
       }
       if (this.atIdent("caveat")) {
         const token = this.take();
-        throw new Error(
-          `line ${token.line}: unsupported SpiceDB construct "caveat" in zed`,
-        );
+        throw new Error(`line ${token.line}: unsupported SpiceDB construct "caveat" in zed`);
       }
       definitions.push(this.parseDefinition());
     }
@@ -171,9 +154,7 @@ class ZedReader {
     this.eatIdent("use");
     const feature = this.eatIdentToken();
     if (feature.value !== "expiration") {
-      throw new Error(
-        `line ${feature.line}: unsupported pragma "use ${feature.value}" in zed`,
-      );
+      throw new Error(`line ${feature.line}: unsupported pragma "use ${feature.value}" in zed`);
     }
   }
 
@@ -193,9 +174,7 @@ class ZedReader {
         permissions.push(this.parsePermission());
         continue;
       }
-      throw new Error(
-        `line ${keyword.line}: unexpected ${keyword.value} in definition ${wireName}`,
-      );
+      throw new Error(`line ${keyword.line}: unexpected ${keyword.value} in definition ${wireName}`);
     }
     this.eat("rbrace");
     return { wireName, roles, permissions };
@@ -234,15 +213,11 @@ class ZedReader {
     const withToken = this.take();
     const qualifier = this.eatIdentToken();
     if (qualifier.value !== "expiration") {
-      throw new Error(
-        `line ${withToken.line}: unsupported caveat "with ${qualifier.value}" in zed`,
-      );
+      throw new Error(`line ${withToken.line}: unsupported caveat "with ${qualifier.value}" in zed`);
     }
     if (this.atIdent("and")) {
       const andToken = this.take();
-      throw new Error(
-        `line ${andToken.line}: unsupported caveat qualifier "and" in zed`,
-      );
+      throw new Error(`line ${andToken.line}: unsupported caveat qualifier "and" in zed`);
     }
     return { ...base, expiration: true };
   }
@@ -306,9 +281,7 @@ class ZedReader {
     this.eat("dot");
     const operator = this.eatIdentToken();
     if (operator.value !== "all" && operator.value !== "any") {
-      throw new Error(
-        `line ${operator.line}: unsupported arrow operator ".${operator.value}()" in zed`,
-      );
+      throw new Error(`line ${operator.line}: unsupported arrow operator ".${operator.value}()" in zed`);
     }
     this.eat("lparen");
     const targetPermission = this.eatIdent();
@@ -326,9 +299,7 @@ class ZedReader {
     }
     const token = this.eatIdentToken();
     if (token.value === "nil") {
-      throw new Error(
-        `line ${token.line}: unsupported SpiceDB construct "nil" in zed`,
-      );
+      throw new Error(`line ${token.line}: unsupported SpiceDB construct "nil" in zed`);
     }
     if (this.at("arrow")) {
       this.eat("arrow");

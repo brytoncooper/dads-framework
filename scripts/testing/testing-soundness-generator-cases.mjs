@@ -1,9 +1,5 @@
 import { mutationSource } from "./testing-soundness-generator-source.mjs";
-import {
-  PROJECT_IDS,
-  downstreamProjects,
-  taskIds,
-} from "./testing-soundness-generator-model.mjs";
+import { PROJECT_IDS, downstreamProjects, taskIds } from "./testing-soundness-generator-model.mjs";
 
 export function buildManifest(model) {
   const tasks = [];
@@ -128,9 +124,7 @@ export function buildGraph(model) {
 }
 
 function taskInputs(model, project) {
-  const upstreamValues = upstreamProjects(model, project.id).map(
-    (upstream) => `packages/${upstream}/src/value.ts`,
-  );
+  const upstreamValues = upstreamProjects(model, project.id).map((upstream) => `packages/${upstream}/src/value.ts`);
   return [
     {
       taskId: `${project.id}:lint`,
@@ -141,41 +135,28 @@ function taskInputs(model, project) {
     {
       taskId: `${project.id}:typecheck`,
       mode: "project",
-      declaredInputs: [
-        `${project.root}/src`,
-        `${project.root}/tsconfig.json`,
-        ...upstreamValues,
-      ],
+      declaredInputs: [`${project.root}/src`, `${project.root}/tsconfig.json`, ...upstreamValues],
       executedPaths: [`${project.root}/tsconfig.json`],
     },
     {
       taskId: `${project.id}:test`,
       mode: "reachability",
-      declaredInputs: [
-        `${project.root}/src/value.test.ts`,
-        `${project.root}/src/value.ts`,
-        ...upstreamValues,
-      ],
+      declaredInputs: [`${project.root}/src/value.test.ts`, `${project.root}/src/value.ts`, ...upstreamValues],
       executedPaths: [`${project.root}/src`],
     },
   ];
 }
 
 function upstreamProjects(model, projectId) {
-  const project = model.projects.find(
-    (candidate) => candidate.id === projectId,
-  );
-  if (project === undefined)
-    throw new Error(`Unknown generated project ${projectId}.`);
+  const project = model.projects.find((candidate) => candidate.id === projectId);
+  if (project === undefined) throw new Error(`Unknown generated project ${projectId}.`);
   const result = [];
   const pending = [...project.dependsOn];
   while (pending.length > 0) {
     const upstream = pending.shift();
     if (result.includes(upstream)) continue;
     result.push(upstream);
-    const dependency = model.projects.find(
-      (candidate) => candidate.id === upstream,
-    );
+    const dependency = model.projects.find((candidate) => candidate.id === upstream);
     if (dependency !== undefined) pending.push(...dependency.dependsOn);
   }
   return result;
@@ -212,23 +193,12 @@ function casesForProject(model, owner) {
       closure.map((project) => `${project}:test`),
     ),
     makeCase(model, owner, "unused-number", "control", controlTasks, []),
-    makeCase(model, owner, "unused-string", "breaking", controlTasks, [
-      `${owner}:typecheck`,
-    ]),
-    makeCase(model, owner, "unused-console", "breaking", allClosureTasks, [
-      `${owner}:lint`,
-    ]),
+    makeCase(model, owner, "unused-string", "breaking", controlTasks, [`${owner}:typecheck`]),
+    makeCase(model, owner, "unused-console", "breaking", allClosureTasks, [`${owner}:lint`]),
   ];
 }
 
-function makeCase(
-  model,
-  owner,
-  mutationKind,
-  classification,
-  selected,
-  changed,
-) {
+function makeCase(model, owner, mutationKind, classification, selected, changed) {
   const module = mutationKind === "value-export" ? "value" : "unused";
   const proofPath = `packages/${owner}/src/${module}.ts`;
   return {
@@ -254,9 +224,7 @@ function makeCase(
 function descriptionFor(kind, project, topology) {
   if (kind === "value-export")
     return `${project} value export mutation crosses the ${topology} value dependency closure.`;
-  if (kind === "unused-number")
-    return `${project} isolated numeric export control has no consumer reachability.`;
-  if (kind === "unused-string")
-    return `${project} isolated export receives an explicit number annotation violation.`;
+  if (kind === "unused-number") return `${project} isolated numeric export control has no consumer reachability.`;
+  if (kind === "unused-string") return `${project} isolated export receives an explicit number annotation violation.`;
   return `${project} isolated module receives an unattributed console statement.`;
 }

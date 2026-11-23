@@ -2,16 +2,9 @@ import { PermissionDecisionTable } from "@dads-framework/ui/display";
 import { Badge, Button, Card, CardContent } from "@dads-framework/ui/elements";
 import { Label } from "@dads-framework/ui/forms";
 import { useEffect, useState } from "react";
-import {
-  readMemberPermissions,
-  readPermissionRoster,
-  type Tenant,
-} from "../../domains/tenants/web-client/index.js";
+import { readMemberPermissions, readPermissionRoster, type Tenant } from "../../domains/tenants/web-client/index.js";
 import { describeFailure } from "./actions.js";
-import {
-  useWorkbenchCopy,
-  type WorkbenchCopyKey,
-} from "./copy/workbench-copy.js";
+import { useWorkbenchCopy, type WorkbenchCopyKey } from "./copy/workbench-copy.js";
 
 type Roster = Awaited<ReturnType<typeof readPermissionRoster>>;
 type Decisions = Awaited<ReturnType<typeof readMemberPermissions>>;
@@ -20,10 +13,7 @@ const permissionLabels = [
   ["view", "workbench.permissions.view"],
   ["manageMembers", "workbench.permissions.manageMembers"],
   ["manageTenant", "workbench.permissions.manageTenant"],
-] satisfies readonly (readonly [
-  Exclude<keyof Decisions, "role">,
-  WorkbenchCopyKey,
-])[];
+] satisfies readonly (readonly [Exclude<keyof Decisions, "role">, WorkbenchCopyKey])[];
 
 const roleLabels = {
   owner: "workbench.permissions.owner",
@@ -37,9 +27,7 @@ export function PermissionsDashboard({ tenant }: { readonly tenant: Tenant }) {
   const [roster, setRoster] = useState<Roster>();
   const [error, setError] = useState<WorkbenchCopyKey>();
   const [selected, setSelected] = useState("");
-  const member = roster?.members.find(
-    ({ accountId }) => accountId === selected,
-  );
+  const member = roster?.members.find(({ accountId }) => accountId === selected);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -73,17 +61,11 @@ export function PermissionsDashboard({ tenant }: { readonly tenant: Tenant }) {
       <Card>
         <CardContent className="permissions-content">
           {error && <PermissionFailure error={error} onRetry={refresh} />}
-          {roster === undefined && error === undefined && (
-            <p role="status">{t("workbench.permissions.loading")}</p>
-          )}
-          {roster?.members.length === 0 && (
-            <p>{t("workbench.permissions.empty")}</p>
-          )}
+          {roster === undefined && error === undefined && <p role="status">{t("workbench.permissions.loading")}</p>}
+          {roster?.members.length === 0 && <p>{t("workbench.permissions.empty")}</p>}
           {roster && roster.members.length > 0 && (
             <div className="field">
-              <Label htmlFor="permission-member">
-                {t("workbench.permissions.account")}
-              </Label>
+              <Label htmlFor="permission-member">{t("workbench.permissions.account")}</Label>
               <select
                 id="permission-member"
                 value={member?.accountId ?? ""}
@@ -143,8 +125,7 @@ function MemberDecisions({
   }, [tenantId, accountId]);
 
   if (error) return <PermissionFailure error={error} onRetry={onRefresh} />;
-  if (decisions === undefined)
-    return <p role="status">{t("workbench.permissions.checking")}</p>;
+  if (decisions === undefined) return <p role="status">{t("workbench.permissions.checking")}</p>;
 
   return (
     <>
@@ -168,13 +149,7 @@ function MemberDecisions({
   );
 }
 
-function PermissionFailure({
-  error,
-  onRetry,
-}: {
-  readonly error: WorkbenchCopyKey;
-  readonly onRetry: () => void;
-}) {
+function PermissionFailure({ error, onRetry }: { readonly error: WorkbenchCopyKey; readonly onRetry: () => void }) {
   const t = useWorkbenchCopy();
   return (
     <div>

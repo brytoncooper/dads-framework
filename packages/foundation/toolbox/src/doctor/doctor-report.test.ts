@@ -3,22 +3,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-  buildDoctorReport,
-  renderDoctorJson,
-  renderDoctorReport,
-  renderIssueExplanation,
-} from "./doctor-report.js";
+import { buildDoctorReport, renderDoctorJson, renderDoctorReport, renderIssueExplanation } from "./doctor-report.js";
 import type { DoctorSignal, SignalReadings } from "./doctor-signal.js";
 import type { SignalOutcome } from "./doctor-signals.js";
 import { DADDY_ISSUES, findDaddyIssue } from "./issues.js";
 
 const ENMESHMENT = DADDY_ISSUES.filter((issue) => issue.id === "enmeshment");
 
-function signalNamed(
-  id: string,
-  overrides: Partial<DoctorSignal> = {},
-): DoctorSignal {
+function signalNamed(id: string, overrides: Partial<DoctorSignal> = {}): DoctorSignal {
   return {
     id,
     issue: "enmeshment",
@@ -34,13 +26,8 @@ function signalNamed(
   };
 }
 
-function outcomeOf(
-  signal: DoctorSignal,
-  readings: readonly (readonly [string, number])[],
-): SignalOutcome {
-  const map: SignalReadings = new Map(
-    readings.map(([key, value]) => [key, { value, evidence: [{ path: key }] }]),
-  );
+function outcomeOf(signal: DoctorSignal, readings: readonly (readonly [string, number])[]): SignalOutcome {
+  const map: SignalReadings = new Map(readings.map(([key, value]) => [key, { value, evidence: [{ path: key }] }]));
   return { signal, readings: map, failure: undefined };
 }
 
@@ -56,9 +43,7 @@ function reportOf(outcomes: readonly SignalOutcome[], strict = false) {
 
 describe("the doctor report", () => {
   it("calls an issue present when a thresholded signal is over", () => {
-    const report = reportOf([
-      outcomeOf(signalNamed("files-over-ceiling"), [["big.ts", 401]]),
-    ]);
+    const report = reportOf([outcomeOf(signalNamed("files-over-ceiling"), [["big.ts", 401]])]);
 
     expect(report.issues[0]?.verdict).toBe("present");
     expect(report.issues[0]?.signals[0]?.state).toBe("over");
@@ -100,22 +85,15 @@ describe("the doctor report", () => {
   });
 
   it("calls an issue absent when every thresholded signal is under", () => {
-    const report = reportOf([
-      outcomeOf(signalNamed("files-over-ceiling"), [["small.ts", 12]]),
-    ]);
+    const report = reportOf([outcomeOf(signalNamed("files-over-ceiling"), [["small.ts", 12]])]);
 
     expect(report.issues[0]?.verdict).toBe("absent");
     expect(report.issues[0]?.signals[0]?.state).toBe("ok");
   });
 
   it("reports a cross-listed signal under every issue it evidences, measured once", () => {
-    const both = DADDY_ISSUES.filter(
-      (issue) => issue.id === "enmeshment" || issue.id === "anxious-attachment",
-    );
-    const outcome = outcomeOf(
-      signalNamed("copied-types", { alsoUnder: ["anxious-attachment"] }),
-      [["copied.ts", 401]],
-    );
+    const both = DADDY_ISSUES.filter((issue) => issue.id === "enmeshment" || issue.id === "anxious-attachment");
+    const outcome = outcomeOf(signalNamed("copied-types", { alsoUnder: ["anxious-attachment"] }), [["copied.ts", 401]]);
     const report = buildDoctorReport({
       root: "/repo",
       profile: "standard",
@@ -124,17 +102,10 @@ describe("the doctor report", () => {
       issues: both,
     });
 
-    const under = report.issues.filter((issue) =>
-      issue.signals.some((signal) => signal.id === "copied-types"),
-    );
-    expect(under.map((issue) => issue.id)).toEqual([
-      "anxious-attachment",
-      "enmeshment",
-    ]);
+    const under = report.issues.filter((issue) => issue.signals.some((signal) => signal.id === "copied-types"));
+    expect(under.map((issue) => issue.id)).toEqual(["anxious-attachment", "enmeshment"]);
     expect(under.every((issue) => issue.verdict === "present")).toBe(true);
-    expect(under[0]?.signals[0]?.readings).toEqual(
-      under[1]?.signals[0]?.readings,
-    );
+    expect(under[0]?.signals[0]?.readings).toEqual(under[1]?.signals[0]?.readings);
   });
 
   it("says a signal was not measured rather than reporting it at zero", () => {
@@ -163,10 +134,7 @@ describe("the doctor report", () => {
     ]);
     const text = renderDoctorReport(report);
 
-    expect(report.issues[0]?.signals.map((signal) => signal.state)).toEqual([
-      "ok",
-      "report",
-    ]);
+    expect(report.issues[0]?.signals.map((signal) => signal.state)).toEqual(["ok", "report"]);
     expect(text).toContain("files-over-ceiling                0 seen");
     expect(text).toContain("blast-radius                      0 seen");
     expect(text).not.toContain("no reading");
@@ -174,11 +142,7 @@ describe("the doctor report", () => {
 
   it("keeps the longest signal name a column of its own", () => {
     const text = renderDoctorReport(
-      reportOf([
-        outcomeOf(signalNamed("single-implementer-abstractions"), [
-          ["Clock", 1],
-        ]),
-      ]),
+      reportOf([outcomeOf(signalNamed("single-implementer-abstractions"), [["Clock", 1]])]),
     );
 
     expect(text).toContain("single-implementer-abstractions   0 of 1 over");
@@ -220,11 +184,7 @@ describe("the doctor report", () => {
   });
 
   it("carries the evidence for every reading it reports", () => {
-    const line = renderDoctorJson(
-      reportOf([
-        outcomeOf(signalNamed("files-over-ceiling"), [["big.ts", 401]]),
-      ]),
-    );
+    const line = renderDoctorJson(reportOf([outcomeOf(signalNamed("files-over-ceiling"), [["big.ts", 401]])]));
     const parsed: unknown = JSON.parse(line);
 
     expect(parsed).toMatchObject({
@@ -237,9 +197,7 @@ describe("the doctor report", () => {
           signals: [
             {
               id: "files-over-ceiling",
-              readings: [
-                { key: "big.ts", value: 401, evidence: [{ path: "big.ts" }] },
-              ],
+              readings: [{ key: "big.ts", value: 401, evidence: [{ path: "big.ts" }] }],
             },
           ],
         },
@@ -250,11 +208,7 @@ describe("the doctor report", () => {
   it("explains an issue with its test, its signals, and its cure", () => {
     const issue = findDaddyIssue("enmeshment");
     if (issue === undefined) throw new Error("enmeshment is missing.");
-    const text = renderIssueExplanation(
-      issue,
-      [signalNamed("files-over-ceiling")],
-      "standard",
-    );
+    const text = renderIssueExplanation(issue, [signalNamed("files-over-ceiling")], "standard");
 
     expect(text).toContain("Essay: DAD.md#enmeshment");
     expect(text).toContain("Companion: docs/daddy-issues.md#enmeshment");

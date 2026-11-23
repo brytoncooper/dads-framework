@@ -31,9 +31,7 @@ import { REMOVE_FILTER_SHORTCUTS } from "./data-table-filter-input-shared.js";
 const DEBOUNCE_MS = 300;
 const FILTER_SHORTCUT_KEY = "f";
 
-type DataTableFilterMenuProps<TData> = React.ComponentProps<
-  typeof PopoverContent
-> & {
+type DataTableFilterMenuProps<TData> = React.ComponentProps<typeof PopoverContent> & {
   table: Table<TData>;
   debounceMs?: number;
   disabled?: boolean;
@@ -52,19 +50,13 @@ export function DataTableFilterMenu<TData>({
   const { filters, onFiltersChange } = readDataTableFilterState(table);
 
   const columns = React.useMemo(() => {
-    return table
-      .getAllColumns()
-      .filter((column) => column.columnDef.enableColumnFilter);
+    return table.getAllColumns().filter((column) => column.columnDef.enableColumnFilter);
   }, [table]);
 
-  const columnIds = React.useMemo(
-    () => new Set(columns.map((column) => column.id)),
-    [columns],
-  );
+  const columnIds = React.useMemo(() => new Set(columns.map((column) => column.id)), [columns]);
 
   const [open, setOpen] = React.useState(false);
-  const [selectedColumn, setSelectedColumn] =
-    React.useState<Column<TData> | null>(null);
+  const [selectedColumn, setSelectedColumn] = React.useState<Column<TData> | null>(null);
   const [inputValue, setInputValue] = React.useState("");
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -82,11 +74,7 @@ export function DataTableFilterMenu<TData>({
 
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        !inputValue &&
-        selectedColumn
-      ) {
+      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) && !inputValue && selectedColumn) {
         event.preventDefault();
         setSelectedColumn(null);
       }
@@ -123,9 +111,7 @@ export function DataTableFilterMenu<TData>({
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      debouncedSetFilters(
-        filters.filter((filter) => filter.filterId !== filterId),
-      );
+      debouncedSetFilters(filters.filter((filter) => filter.filterId !== filterId));
       requestAnimationFrame(() => {
         triggerRef.current?.focus();
       });
@@ -134,15 +120,8 @@ export function DataTableFilterMenu<TData>({
   );
 
   const onFilterUpdate = React.useCallback(
-    (
-      filterId: string,
-      updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
-    ) => {
-      debouncedSetFilters(
-        filters.map((filter) =>
-          filter.filterId === filterId ? { ...filter, ...updates } : filter,
-        ),
-      );
+    (filterId: string, updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>) => {
+      debouncedSetFilters(filters.map((filter) => (filter.filterId === filterId ? { ...filter, ...updates } : filter)));
     },
     [filters, debouncedSetFilters],
   );
@@ -156,17 +135,12 @@ export function DataTableFilterMenu<TData>({
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
-        (event.target instanceof HTMLElement &&
-          event.target.contentEditable === "true")
+        (event.target instanceof HTMLElement && event.target.contentEditable === "true")
       ) {
         return;
       }
 
-      if (
-        event.key.toLowerCase() === FILTER_SHORTCUT_KEY &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey
-      ) {
+      if (event.key.toLowerCase() === FILTER_SHORTCUT_KEY && (event.ctrlKey || event.metaKey) && event.shiftKey) {
         event.preventDefault();
         setOpen((prev) => !prev);
       }
@@ -180,10 +154,7 @@ export function DataTableFilterMenu<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        filters.length > 0
-      ) {
+      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) && filters.length > 0) {
         event.preventDefault();
         onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
       }
@@ -230,10 +201,7 @@ export function DataTableFilterMenu<TData>({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className={cn(
-            "w-full max-w-(--radix-popover-content-available-width) p-0",
-            className,
-          )}
+          className={cn("w-full max-w-(--radix-popover-content-available-width) p-0", className)}
           {...props}
         >
           <Command loop className="[&_[cmdk-input-wrapper]_svg]:hidden">
@@ -286,9 +254,7 @@ function FilterMenuChoices<TData>({
   const t = useDataTableCopy();
   return selectedColumn ? (
     <>
-      {selectedColumn.columnDef.meta?.options && (
-        <CommandEmpty>{t("dataTable.state.noOptions")}</CommandEmpty>
-      )}
+      {selectedColumn.columnDef.meta?.options && <CommandEmpty>{t("dataTable.state.noOptions")}</CommandEmpty>}
       <FilterValueSelector
         column={selectedColumn}
         value={inputValue}
@@ -310,9 +276,7 @@ function FilterMenuChoices<TData>({
             }}
           >
             {column.columnDef.meta?.icon && <column.columnDef.meta.icon />}
-            <span className="truncate">
-              {column.columnDef.meta?.label ?? column.id}
-            </span>
+            <span className="truncate">{column.columnDef.meta?.label ?? column.id}</span>
           </CommandItem>
         ))}
       </CommandGroup>

@@ -18,25 +18,13 @@
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
 import { packageFiles, type GraphPackage } from "../scanners/package-graph.js";
-import {
-  operationEvidence,
-  operationKey,
-  readRouteModel,
-} from "../scanners/route-model.js";
+import { operationEvidence, operationKey, readRouteModel } from "../scanners/route-model.js";
 
-const OWNERSHIP_MARKS = [
-  "proveOwnershipIntent",
-  "relationships.add(",
-  ".owner(",
-  ".owner.",
-];
+const OWNERSHIP_MARKS = ["proveOwnershipIntent", "relationships.add(", ".owner(", ".owner."];
 const READABLE = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 
 /** True when anything in the package writes an ownership relationship. */
-function showsOwnership(
-  context: DoctorContext,
-  declared: GraphPackage,
-): boolean {
+function showsOwnership(context: DoctorContext, declared: GraphPackage): boolean {
   for (const path of packageFiles(context, declared)) {
     if (!READABLE.some((extension) => path.endsWith(extension))) continue;
     const text = context.read(path);
@@ -66,13 +54,11 @@ function countCreatorsWithoutOwnership(context: DoctorContext) {
 export const mutationsWithoutOwnershipSignal: DoctorSignal = {
   id: "mutations-without-ownership",
   issue: "commitment-issues",
-  question:
-    "Does a create route write no ownership tuple and carry no ownership proof?",
+  question: "Does a create route write no ownership tuple and carry no ownership proof?",
   reads: "routes",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You created the row. You did not write the ownership tuple. You said labels make you uncomfortable.",
+  sentence: "You created the row. You did not write the ownership tuple. You said labels make you uncomfortable.",
   run: (context) => Promise.resolve(countCreatorsWithoutOwnership(context)),
 };

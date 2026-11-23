@@ -31,9 +31,7 @@ describe("declareCrossDomainReferences", () => {
   });
 
   it("refuses two declarations sharing an id, because findings name it", () => {
-    expect(() =>
-      declareCrossDomainReferences([reference, { ...reference }]),
-    ).toThrow(/share the id/);
+    expect(() => declareCrossDomainReferences([reference, { ...reference }])).toThrow(/share the id/);
   });
 
   /**
@@ -87,9 +85,7 @@ describe("assembleCrossDomainReferences", () => {
   });
 
   it("refuses two domains claiming one id", () => {
-    expect(() =>
-      assembleCrossDomainReferences([[reference], [reference]]),
-    ).toThrow(/share the id/);
+    expect(() => assembleCrossDomainReferences([[reference], [reference]])).toThrow(/share the id/);
   });
 });
 

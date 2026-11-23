@@ -4,11 +4,7 @@ import { cn } from "../../../elements/index.js";
 
 type DataTableAdvancedToolbarProps = React.ComponentProps<"div">;
 
-export function DataTableAdvancedToolbar({
-  children,
-  className,
-  ...props
-}: DataTableAdvancedToolbarProps) {
+export function DataTableAdvancedToolbar({ children, className, ...props }: DataTableAdvancedToolbarProps) {
   return (
     <div
       role="toolbar"
@@ -20,9 +16,7 @@ export function DataTableAdvancedToolbar({
       )}
       {...props}
     >
-      <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:w-auto">
-        {children}
-      </div>
+      <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:w-auto">{children}</div>
     </div>
   );
 }

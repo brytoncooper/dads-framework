@@ -5,10 +5,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import {
-  type AuditActor,
-  currentAuditActor,
-} from "@dads-framework/core/audit-actor";
+import { type AuditActor, currentAuditActor } from "@dads-framework/core/audit-actor";
 
 import { InProcessJobQueue } from "./in-process-job-queue.js";
 import { cronSchedule, defineJob, intervalSchedule } from "../core/index.js";
@@ -69,9 +66,7 @@ describe("InProcessJobQueue", () => {
     await queue.start();
     await queue.enqueue("explode", {});
     await tick();
-    expect(failures).toEqual([
-      expect.objectContaining({ event: "job.failed", jobName: "explode" }),
-    ]);
+    expect(failures).toEqual([expect.objectContaining({ event: "job.failed", jobName: "explode" })]);
     expect(await queue.inspect()).toMatchObject({
       counts: { active: 0, completed: 0, failed: 1 },
     });
@@ -87,9 +82,7 @@ describe("InProcessJobQueue", () => {
       name: "x",
       payload: z.unknown(),
       retry: { attempts: 1, backoffMs: 1 },
-      schedules: [
-        intervalSchedule({ id: "same", everyMs: 1_000, payload: {} }),
-      ],
+      schedules: [intervalSchedule({ id: "same", everyMs: 1_000, payload: {} })],
       run: () => Promise.resolve(),
     });
     queue.register([job]);
@@ -106,9 +99,7 @@ describe("InProcessJobQueue", () => {
           name: "y",
           payload: z.unknown(),
           retry: { attempts: 1, backoffMs: 1 },
-          schedules: [
-            intervalSchedule({ id: "same", everyMs: 2_000, payload: {} }),
-          ],
+          schedules: [intervalSchedule({ id: "same", everyMs: 2_000, payload: {} })],
           run: () => Promise.resolve(),
         }),
       ]);
@@ -211,9 +202,7 @@ describe("InProcessJobQueue", () => {
       error: () => undefined,
     });
     await queue.start();
-    await expect(queue.start()).rejects.toThrow(
-      "Job queue has already been started",
-    );
+    await expect(queue.start()).rejects.toThrow("Job queue has already been started");
   });
 
   it("runs the job as its own system actor, and logs where to find its rows", async () => {

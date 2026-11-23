@@ -1,11 +1,7 @@
 import type { z } from "zod";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import type {
-  AnyOperationContract,
-  HttpMethod,
-  RouteContract,
-} from "@dads-framework/core/contract";
+import type { AnyOperationContract, HttpMethod, RouteContract } from "@dads-framework/core/contract";
 
 import { HttpWiringError } from "../http-errors.js";
 import type { RouteAccess } from "./access.js";
@@ -40,17 +36,13 @@ export type ErasedListConfig = {
   readonly query: z.ZodType;
   readonly item: z.ZodType;
   readonly meta?: z.ZodType;
-  handler(
-    ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>,
-  ): unknown;
+  handler(ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>): unknown;
 };
 
 /** Erased operation-backed input for response-producing verbs. */
 export type ErasedOperationVerbConfig = OperationVerbCommon<RouteAccess> & {
   readonly operation: AnyOperationContract;
-  handler(
-    ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef | null>,
-  ): unknown;
+  handler(ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef | null>): unknown;
 };
 
 /** Erased POST input with optional telemetry resource policy. */
@@ -64,17 +56,12 @@ export type ErasedOperationPostConfig = ErasedOperationVerbConfig & {
 };
 
 /** Erased operation-backed input for no-content verbs (DELETE, POST 204). */
-export type ErasedOperationNoContentConfig =
-  OperationVerbCommon<RouteAccess> & {
-    readonly operation: AnyOperationContract;
-    handler(
-      ctx: RouteHandlerContext<unknown, undefined, unknown, SubjectRef | null>,
-    ): Promise<void> | void;
-  };
+export type ErasedOperationNoContentConfig = OperationVerbCommon<RouteAccess> & {
+  readonly operation: AnyOperationContract;
+  handler(ctx: RouteHandlerContext<unknown, undefined, unknown, SubjectRef | null>): Promise<void> | void;
+};
 
-function hasOperation<T extends object>(
-  config: T,
-): config is T & { readonly operation: AnyOperationContract } {
+function hasOperation<T extends object>(config: T): config is T & { readonly operation: AnyOperationContract } {
   return "operation" in config && config.operation !== undefined;
 }
 
@@ -87,9 +74,7 @@ function invalidOperationError(
     typeof operation === "object" && operation !== null && "kind" in operation
       ? String(operation.kind)
       : typeof operation;
-  return new HttpWiringError(
-    `${verb} expected a "${expectedKind}" operation contract, received "${actualKind}"`,
-  );
+  return new HttpWiringError(`${verb} expected a "${expectedKind}" operation contract, received "${actualKind}"`);
 }
 
 function assertOperationShape(
@@ -117,12 +102,8 @@ function commonFieldsOf(config: OperationVerbCommon<RouteAccess>): {
   return {
     summary: config.summary,
     access: config.access,
-    ...(config.bodyLimitBytes === undefined
-      ? {}
-      : { bodyLimitBytes: config.bodyLimitBytes }),
-    ...(config.capabilities === undefined
-      ? {}
-      : { capabilities: config.capabilities }),
+    ...(config.bodyLimitBytes === undefined ? {} : { bodyLimitBytes: config.bodyLimitBytes }),
+    ...(config.capabilities === undefined ? {} : { capabilities: config.capabilities }),
   };
 }
 
@@ -146,9 +127,7 @@ function optionalSchemasOf(op: {
 }
 
 /** Normalize a getRoute config (inline or operation-backed) into ErasedVerbConfig. */
-export function resolveGetOperationConfig(
-  config: ErasedVerbConfig | ErasedOperationVerbConfig,
-): ErasedVerbConfig {
+export function resolveGetOperationConfig(config: ErasedVerbConfig | ErasedOperationVerbConfig): ErasedVerbConfig {
   if (!hasOperation(config)) return config;
   const op = config.operation;
   assertOperationShape("getRoute", "get", "GET", op);
@@ -165,9 +144,7 @@ export function resolveGetOperationConfig(
 }
 
 /** Normalize a listRoute config (inline or operation-backed) into ErasedListConfig. */
-export function resolveListOperationConfig(
-  config: ErasedListConfig | ErasedOperationVerbConfig,
-): ErasedListConfig {
+export function resolveListOperationConfig(config: ErasedListConfig | ErasedOperationVerbConfig): ErasedListConfig {
   if (!hasOperation(config)) return config;
   const op = config.operation;
   assertOperationShape("listRoute", "list", "GET", op);
@@ -198,9 +175,7 @@ export function resolvePostOperationConfig(
   return {
     ...commonFieldsOf(config),
     ...optionalSchemasOf(op),
-    ...(config.resourcePolicy === undefined
-      ? {}
-      : { resourcePolicy: config.resourcePolicy }),
+    ...(config.resourcePolicy === undefined ? {} : { resourcePolicy: config.resourcePolicy }),
     route: op,
     response: op.response,
     status: op.status,

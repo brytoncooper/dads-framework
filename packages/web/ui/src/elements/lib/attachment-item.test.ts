@@ -3,15 +3,9 @@ import { attachmentKindOf, fileSizeParts } from "./attachment-item.js";
 
 describe("attachmentKindOf", () => {
   it("trusts the MIME type first", () => {
-    expect(
-      attachmentKindOf({ contentType: "application/pdf", fileName: "a" }),
-    ).toBe("pdf");
-    expect(
-      attachmentKindOf({ contentType: "image/png", fileName: "scan.pdf" }),
-    ).toBe("image");
-    expect(
-      attachmentKindOf({ contentType: "image/jpeg", fileName: "photo" }),
-    ).toBe("image");
+    expect(attachmentKindOf({ contentType: "application/pdf", fileName: "a" })).toBe("pdf");
+    expect(attachmentKindOf({ contentType: "image/png", fileName: "scan.pdf" })).toBe("image");
+    expect(attachmentKindOf({ contentType: "image/jpeg", fileName: "photo" })).toBe("image");
   });
 
   it("ignores MIME parameters and letter case", () => {
@@ -30,9 +24,7 @@ describe("attachmentKindOf", () => {
         fileName: "Lockout-Procedure-Leg-1.PDF",
       }),
     ).toBe("pdf");
-    expect(attachmentKindOf({ contentType: "", fileName: "panel.JPeG" })).toBe(
-      "image",
-    );
+    expect(attachmentKindOf({ contentType: "", fileName: "panel.JPeG" })).toBe("image");
     expect(
       attachmentKindOf({
         contentType: "binary/octet-stream",
@@ -42,27 +34,19 @@ describe("attachmentKindOf", () => {
   });
 
   it("treats everything else as other", () => {
-    expect(
-      attachmentKindOf({ contentType: "text/csv", fileName: "parts.csv" }),
-    ).toBe("other");
+    expect(attachmentKindOf({ contentType: "text/csv", fileName: "parts.csv" })).toBe("other");
     expect(
       attachmentKindOf({
         contentType: "application/octet-stream",
         fileName: "README",
       }),
     ).toBe("other");
-    expect(attachmentKindOf({ contentType: "", fileName: ".pdf" })).toBe(
-      "other",
-    );
-    expect(attachmentKindOf({ contentType: "", fileName: "notes." })).toBe(
-      "other",
-    );
+    expect(attachmentKindOf({ contentType: "", fileName: ".pdf" })).toBe("other");
+    expect(attachmentKindOf({ contentType: "", fileName: "notes." })).toBe("other");
   });
 
   it("does not preview SVG images", () => {
-    expect(
-      attachmentKindOf({ contentType: "image/svg+xml", fileName: "logo.svg" }),
-    ).toBe("other");
+    expect(attachmentKindOf({ contentType: "image/svg+xml", fileName: "logo.svg" })).toBe("other");
   });
 });
 

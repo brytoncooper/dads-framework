@@ -15,9 +15,7 @@ export class RehearsalPostgres {
     postgres: RehearsalPostgres;
     stop: () => Promise<void>;
   }> {
-    const container = await new PostgreSqlContainer(
-      "postgres:16-alpine",
-    ).start();
+    const container = await new PostgreSqlContainer("postgres:16-alpine").start();
     return {
       postgres: new RehearsalPostgres(container.getConnectionUri()),
       stop: async () => {
@@ -26,18 +24,14 @@ export class RehearsalPostgres {
     };
   }
 
-  async createDatabase(
-    template?: string,
-  ): Promise<{ name: string; url: string }> {
+  async createDatabase(template?: string): Promise<{ name: string; url: string }> {
     const name = `rehearsal_${randomUUID().replaceAll("-", "")}`;
     const admin = await connectPostgresClient(this.connectionString);
     try {
       if (template !== undefined && !this.databases.has(template))
         throw new Error("rehearsal template must belong to this isolated run");
       await admin.query(
-        template === undefined
-          ? `CREATE DATABASE "${name}"`
-          : `CREATE DATABASE "${name}" TEMPLATE "${template}"`,
+        template === undefined ? `CREATE DATABASE "${name}"` : `CREATE DATABASE "${name}" TEMPLATE "${template}"`,
       );
       this.databases.add(name);
     } finally {
@@ -52,11 +46,7 @@ export class RehearsalPostgres {
     const client = await connectPostgresClient(this.connectionString);
     try {
       const hash = createHash("sha256");
-      for (const relation of [
-        "pg_authid",
-        "pg_auth_members",
-        "pg_db_role_setting",
-      ]) {
+      for (const relation of ["pg_authid", "pg_auth_members", "pg_db_role_setting"]) {
         const result = await client.query<{ row: string }>(
           `SELECT to_jsonb(state)::text AS row FROM pg_catalog.${relation} state ORDER BY to_jsonb(state)::text COLLATE "C"`,
         );

@@ -27,9 +27,7 @@ describe("parseSharedTestPostgresLease", () => {
   it("returns null for a half-written file rather than throwing", () => {
     expect(parseSharedTestPostgresLease("{ not json")).toBeNull();
     expect(parseSharedTestPostgresLease("null")).toBeNull();
-    expect(
-      parseSharedTestPostgresLease(JSON.stringify({ runId: 80 })),
-    ).toBeNull();
+    expect(parseSharedTestPostgresLease(JSON.stringify({ runId: 80 }))).toBeNull();
   });
 });
 
@@ -128,11 +126,7 @@ describe("decideSharedTestPostgres", () => {
 
 describe("sharedTestPostgresLeasePath", () => {
   it("names the file after the worktree, so two checkouts never share one", () => {
-    expect(sharedTestPostgresLeasePath("/t", "abc")).toBe(
-      "/t/command-test-postgres-abc.lease",
-    );
-    expect(sharedTestPostgresLeasePath("/t", "abc")).not.toBe(
-      sharedTestPostgresLeasePath("/t", "def"),
-    );
+    expect(sharedTestPostgresLeasePath("/t", "abc")).toBe("/t/command-test-postgres-abc.lease");
+    expect(sharedTestPostgresLeasePath("/t", "abc")).not.toBe(sharedTestPostgresLeasePath("/t", "def"));
   });
 });

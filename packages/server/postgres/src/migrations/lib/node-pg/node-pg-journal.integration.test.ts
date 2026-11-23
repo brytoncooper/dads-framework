@@ -17,8 +17,7 @@ import {
 import { startUnmigratedTestPostgres } from "../../../testing/index.js";
 import type { TestPostgres } from "../../../testing/index.js";
 
-const ORGANIZATIONS_MIGRATIONS =
-  "packages/server/organizations/src/lib/database/migrations";
+const ORGANIZATIONS_MIGRATIONS = "packages/server/organizations/src/lib/database/migrations";
 
 let postgresHandle: TestPostgres | undefined;
 
@@ -34,9 +33,7 @@ describe("node-pg checksum journal", () => {
   afterEach(async () => {
     await postgres.pool.query("DROP SCHEMA IF EXISTS public CASCADE");
     await postgres.pool.query("CREATE SCHEMA public");
-    await postgres.pool.query(
-      `DROP SCHEMA IF EXISTS "${NODE_PG_JOURNAL_SCHEMA}" CASCADE`,
-    );
+    await postgres.pool.query(`DROP SCHEMA IF EXISTS "${NODE_PG_JOURNAL_SCHEMA}" CASCADE`);
     if (workspaceRoot !== undefined) {
       await rm(workspaceRoot, { recursive: true, force: true });
     }
@@ -48,10 +45,7 @@ describe("node-pg checksum journal", () => {
 
   it("writes the checksum in the same apply as the schema change", async () => {
     workspaceRoot = await writeWorkspace({
-      "20260828120000_probe.migration.ts": reversibleTable(
-        "20260828120000",
-        "journal_probe",
-      ),
+      "20260828120000_probe.migration.ts": reversibleTable("20260828120000", "journal_probe"),
     });
 
     await runNodePgMigrations({
@@ -66,10 +60,7 @@ describe("node-pg checksum journal", () => {
 
   it("is a no-op on a second invocation", async () => {
     workspaceRoot = await writeWorkspace({
-      "20260828120000_probe.migration.ts": reversibleTable(
-        "20260828120000",
-        "journal_probe",
-      ),
+      "20260828120000_probe.migration.ts": reversibleTable("20260828120000", "journal_probe"),
     });
     await runNodePgMigrations({
       databaseUrl: postgres.connectionString,
@@ -86,10 +77,7 @@ describe("node-pg checksum journal", () => {
 
   it("rolls schema and checksums back when a later migration fails", async () => {
     workspaceRoot = await writeWorkspace({
-      "20260828120000_keep.migration.ts": reversibleTable(
-        "20260828120000",
-        "journal_keep",
-      ),
+      "20260828120000_keep.migration.ts": reversibleTable("20260828120000", "journal_keep"),
       "20260828120001_fail.migration.ts": failingMigration(),
     });
 
@@ -107,21 +95,14 @@ describe("node-pg checksum journal", () => {
 
   it("refuses a changed applied file without logging the database url", async () => {
     workspaceRoot = await writeWorkspace({
-      "20260828120000_probe.migration.ts": reversibleTable(
-        "20260828120000",
-        "journal_probe",
-      ),
+      "20260828120000_probe.migration.ts": reversibleTable("20260828120000", "journal_probe"),
     });
     await runNodePgMigrations({
       databaseUrl: postgres.connectionString,
       workspace: defaultMigrationWorkspace(workspaceRoot),
     });
     await writeFile(
-      join(
-        workspaceRoot,
-        ORGANIZATIONS_MIGRATIONS,
-        "20260828120000_probe.migration.ts",
-      ),
+      join(workspaceRoot, ORGANIZATIONS_MIGRATIONS, "20260828120000_probe.migration.ts"),
       reversibleTable("20260828120000", "journal_probe_changed"),
     );
 
@@ -146,10 +127,7 @@ describe("node-pg checksum journal", () => {
 
   it("refuses an unknown database-ahead entry", async () => {
     workspaceRoot = await writeWorkspace({
-      "20260828120000_probe.migration.ts": reversibleTable(
-        "20260828120000",
-        "journal_probe",
-      ),
+      "20260828120000_probe.migration.ts": reversibleTable("20260828120000", "journal_probe"),
     });
     await runNodePgMigrations({
       databaseUrl: postgres.connectionString,
@@ -177,22 +155,13 @@ describe("node-pg checksum journal", () => {
 
   it("refuses an applied file missing from the build", async () => {
     workspaceRoot = await writeWorkspace({
-      "20260828120000_probe.migration.ts": reversibleTable(
-        "20260828120000",
-        "journal_probe",
-      ),
+      "20260828120000_probe.migration.ts": reversibleTable("20260828120000", "journal_probe"),
     });
     await runNodePgMigrations({
       databaseUrl: postgres.connectionString,
       workspace: defaultMigrationWorkspace(workspaceRoot),
     });
-    await rm(
-      join(
-        workspaceRoot,
-        ORGANIZATIONS_MIGRATIONS,
-        "20260828120000_probe.migration.ts",
-      ),
-    );
+    await rm(join(workspaceRoot, ORGANIZATIONS_MIGRATIONS, "20260828120000_probe.migration.ts"));
 
     await expect(
       runNodePgMigrations({
@@ -215,11 +184,7 @@ async function writeWorkspace(files: Record<string, string>): Promise<string> {
   await mkdir(join(workspaceRoot, "packages/server"), {
     recursive: true,
   });
-  await Promise.all(
-    Object.entries(files).map(([fileName, contents]) =>
-      writeFile(join(folder, fileName), contents),
-    ),
-  );
+  await Promise.all(Object.entries(files).map(([fileName, contents]) => writeFile(join(folder, fileName), contents)));
   return workspaceRoot;
 }
 

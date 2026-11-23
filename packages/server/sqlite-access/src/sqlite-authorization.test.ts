@@ -1,12 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, resource, roleToken } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 
 import {
@@ -49,10 +43,7 @@ const doc = resource("doc", {
 
 const coreModel = compileAccess([user, group, workspace, doc]);
 
-function setupDatabase(options?: {
-  readonly namespace?: string;
-  readonly now?: () => Date;
-}) {
+function setupDatabase(options?: { readonly namespace?: string; readonly now?: () => Date }) {
   const db = new DatabaseSync(":memory:");
   const executor = createNodeSqliteExecutor(db);
   db.exec(sqliteRelationshipSchemaMigration.sql);
@@ -71,17 +62,13 @@ describe("SqliteAuthorization core behavior", () => {
     expect(sqliteRelationshipSchemaMigration.adapter).toBe("sqlite-access");
     expect(sqliteRelationshipSchemaMigration.version).toBe(1);
     expect(sqliteRelationshipSchemaMigration.statements).toHaveLength(3);
-    expect(sqliteRelationshipSchemaMigration.checksum).toMatch(
-      /^[a-f0-9]{64}$/,
-    );
+    expect(sqliteRelationshipSchemaMigration.checksum).toMatch(/^[a-f0-9]{64}$/);
     for (const statement of sqliteRelationshipSchemaMigration.statements) {
       db.exec(statement);
     }
     db.exec(sqliteRelationshipSchemaMigration.sql);
     const tables = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
-      )
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
       .all(SQLITE_RELATIONSHIP_TABLE);
     expect(tables).toHaveLength(1);
   });
@@ -159,9 +146,7 @@ describe("SqliteAuthorization core behavior", () => {
     const alice = { type: "user", id: "alice" };
     const bob = { type: "user", id: "bob" };
 
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(false);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(false);
     expect(
       await authz.relationshipExists({
         resourceType: "workspace",
@@ -176,12 +161,8 @@ describe("SqliteAuthorization core behavior", () => {
       relationshipWrite(w1, "member", { type: "user", id: "*" }),
     ]);
 
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(true);
-    expect(
-      await otherNs.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(false);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(true);
+    expect(await otherNs.check({ subject: alice, permission: "view", resource: w1 })).toBe(false);
     expect(
       await authz.relationshipExists({
         resourceType: "workspace",
@@ -189,9 +170,7 @@ describe("SqliteAuthorization core behavior", () => {
         relation: "member",
       }),
     ).toBe(true);
-    expect(
-      await authz.listDirectSubjects({ resource: w1, relation: "member" }),
-    ).toEqual([
+    expect(await authz.listDirectSubjects({ resource: w1, relation: "member" })).toEqual([
       { type: "user", id: "*" },
       { type: "user", id: "alice" },
       { type: "user", id: "bob" },
@@ -211,9 +190,7 @@ describe("SqliteAuthorization core behavior", () => {
         resource: w1,
       }),
     ).toBe(false);
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(true);
 
     // applyChanges removes exact tuple
     await authz.applyChanges([
@@ -224,12 +201,8 @@ describe("SqliteAuthorization core behavior", () => {
         ownerPartitionId: "workspace:w1",
       },
     ]);
-    expect(
-      await authz.check({ subject: alice, permission: "view", resource: w1 }),
-    ).toBe(false);
-    expect(
-      await authz.check({ subject: bob, permission: "view", resource: w1 }),
-    ).toBe(true);
+    expect(await authz.check({ subject: alice, permission: "view", resource: w1 })).toBe(false);
+    expect(await authz.check({ subject: bob, permission: "view", resource: w1 })).toBe(true);
 
     // Type-wide delete (id: "") clears remaining users on w1
     await authz.deleteRelationships({
@@ -262,10 +235,7 @@ describe("SqliteAuthorization core behavior", () => {
     const queries = Array.from({ length: 70 }, (_, idx) => ({
       subject: { type: "user", id: idx % 2 === 0 ? "alice" : "bob" },
       permission: idx % 3 === 0 ? "unknown" : "view",
-      resource:
-        idx % 2 === 0
-          ? { type: "doc", id: "d1" }
-          : { type: "workspace", id: "w1" },
+      resource: idx % 2 === 0 ? { type: "doc", id: "d1" } : { type: "workspace", id: "w1" },
     }));
 
     const batch = await authz.checkMany(queries);
@@ -404,10 +374,7 @@ describe("SqliteAuthorization core behavior", () => {
       async ({ executor: txExec, authorization: txAuth }) => {
         leakedAuth = txAuth;
         leakedExec = txExec;
-        await txExec.run("INSERT INTO items (id, name) VALUES (?, ?)", [
-          "item-1",
-          "Committed",
-        ]);
+        await txExec.run("INSERT INTO items (id, name) VALUES (?, ?)", ["item-1", "Committed"]);
         await txAuth.writeRelationships([
           relationshipWrite(
             { type: "workspace", id: "w1" },
@@ -449,14 +416,9 @@ describe("SqliteAuthorization core behavior", () => {
           resource: { type: "workspace", id: "w1" },
         }),
       ).rejects.toThrow(/scope has ended/);
-      await expect(leakedExec.all("SELECT 1")).rejects.toThrow(
-        /scope has ended/,
-      );
+      await expect(leakedExec.all("SELECT 1")).rejects.toThrow(/scope has ended/);
       await expect(
-        withProtectedSqliteTransaction(
-          { executor, authorization: leakedAuth },
-          () => Promise.resolve("nope"),
-        ),
+        withProtectedSqliteTransaction({ executor, authorization: leakedAuth }, () => Promise.resolve("nope")),
       ).rejects.toThrow(/scope has ended/);
     }
 
@@ -465,10 +427,7 @@ describe("SqliteAuthorization core behavior", () => {
       withProtectedSqliteTransaction(
         { executor, authorization: authz },
         async ({ executor: txExec, authorization: txAuth }) => {
-          await txExec.run("INSERT INTO items (id, name) VALUES (?, ?)", [
-            "item-2",
-            "RolledBack",
-          ]);
+          await txExec.run("INSERT INTO items (id, name) VALUES (?, ?)", ["item-2", "RolledBack"]);
           await txAuth.writeRelationships([
             relationshipWrite({ type: "workspace", id: "w2" }, "owner", {
               type: "user",

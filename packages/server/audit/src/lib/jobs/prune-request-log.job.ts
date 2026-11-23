@@ -1,19 +1,11 @@
 import { z } from "zod";
 
 import type { Clock } from "@dads-framework/core/runtime/clock";
-import {
-  cronSchedule,
-  defineJob,
-  type JobDefinition,
-  type JobLog,
-} from "@dads-framework/job-queue";
+import { cronSchedule, defineJob, type JobDefinition, type JobLog } from "@dads-framework/job-queue";
 
 import type { RequestLogWriter } from "../database/writers/request-log-writer.interface.js";
 
-import {
-  requirePositiveIntegerRetentionDays,
-  retentionCutoff,
-} from "./retention-window.js";
+import { requirePositiveIntegerRetentionDays, retentionCutoff } from "./retention-window.js";
 
 export const PRUNE_REQUEST_LOG_JOB = "audit.prune-request-log";
 
@@ -35,9 +27,7 @@ export type CreatePruneRequestLogJobDeps = {
  * the job queue driver before `run` is called — this job never touches actor
  * context itself.
  */
-export function createPruneRequestLogJob(
-  deps: CreatePruneRequestLogJobDeps,
-): JobDefinition {
+export function createPruneRequestLogJob(deps: CreatePruneRequestLogJobDeps): JobDefinition {
   requirePositiveIntegerRetentionDays(deps.retentionDays);
   return defineJob({
     name: PRUNE_REQUEST_LOG_JOB,
@@ -54,10 +44,7 @@ export function createPruneRequestLogJob(
     run: async () => {
       const cutoff = retentionCutoff(deps.clock.now(), deps.retentionDays);
       const deleted = await deps.writer.deleteRecordedBefore(cutoff);
-      deps.log.info(
-        { event: "request-log.pruned", deleted, cutoff },
-        "request_log rows pruned",
-      );
+      deps.log.info({ event: "request-log.pruned", deleted, cutoff }, "request_log rows pruned");
     },
   });
 }

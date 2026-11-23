@@ -16,10 +16,7 @@ export type ParsedSheetRow = {
  * the header row and provides the keys; every value is coerced to a trimmed
  * string; rows whose every cell is blank are skipped.
  */
-export async function parseWorkbookRows(
-  data: ArrayBuffer,
-  sheetName: string,
-): Promise<readonly ParsedSheetRow[]> {
+export async function parseWorkbookRows(data: ArrayBuffer, sheetName: string): Promise<readonly ParsedSheetRow[]> {
   const workbook = await createWorkbook();
   await workbook.xlsx.load(data);
 
@@ -72,10 +69,7 @@ export async function parseWorkbookSheets(
   return existingSheets(workbook, sheetNames);
 }
 
-function existingSheets(
-  workbook: Workbook,
-  sheetNames: readonly string[],
-): ParsedWorkbookSheet[] {
+function existingSheets(workbook: Workbook, sheetNames: readonly string[]): ParsedWorkbookSheet[] {
   return sheetNames.flatMap((sheetName) => {
     const sheet = workbook.getWorksheet(sheetName);
     if (sheet === undefined) return [];
@@ -83,9 +77,7 @@ function existingSheets(
   });
 }
 
-function readWorkbookMetadata(
-  workbook: Workbook,
-): Readonly<Record<string, string>> | null {
+function readWorkbookMetadata(workbook: Workbook): Readonly<Record<string, string>> | null {
   const sheet = workbook.getWorksheet(WORKBOOK_METADATA_SHEET_NAME);
   if (sheet === undefined) return null;
 
@@ -122,19 +114,14 @@ function readHeaderRow(sheet: Worksheet): ReadonlyMap<number, string> {
     const header = readCellText(cell.value);
     if (header === "") return;
     if ([...headerByColumnNumber.values()].includes(header)) {
-      throw new Error(
-        `The header row names "${header}" twice — every column header must be unique.`,
-      );
+      throw new Error(`The header row names "${header}" twice — every column header must be unique.`);
     }
     headerByColumnNumber.set(columnNumber, header);
   });
   return headerByColumnNumber;
 }
 
-function readRowCells(
-  row: Row,
-  headerByColumnNumber: ReadonlyMap<number, string>,
-): Record<string, string> {
+function readRowCells(row: Row, headerByColumnNumber: ReadonlyMap<number, string>): Record<string, string> {
   const cells: Record<string, string> = {};
   for (const [columnNumber, header] of headerByColumnNumber) {
     const text = readCellText(row.getCell(columnNumber).value);
@@ -153,10 +140,7 @@ function readCellText(value: CellValue): string {
 }
 
 function readStructuredCellText(
-  value: Exclude<
-    CellValue,
-    string | number | boolean | Date | null | undefined
-  >,
+  value: Exclude<CellValue, string | number | boolean | Date | null | undefined>,
 ): string {
   if ("richText" in value) {
     return value.richText

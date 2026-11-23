@@ -3,11 +3,7 @@ import { actor, compileAccess, resource } from "@dads-framework/access";
 import type { RelationshipWrite } from "@dads-framework/access/runtime";
 import { expect, it } from "vitest";
 
-import {
-  createNodeSqliteExecutor,
-  SqliteAuthorization,
-  sqliteRelationshipSchemaMigration,
-} from "./index.js";
+import { createNodeSqliteExecutor, SqliteAuthorization, sqliteRelationshipSchemaMigration } from "./index.js";
 
 const isBenchmark = process.env["VITEST_TIER"] === "benchmark";
 
@@ -21,8 +17,7 @@ async function sample(work: () => Promise<unknown>, trials = 11) {
   }
   times.sort((left, right) => left - right);
   const median = times[Math.floor(times.length / 2)] ?? 0;
-  const p95 =
-    times[Math.min(times.length - 1, Math.ceil(times.length * 0.95) - 1)] ?? 0;
+  const p95 = times[Math.min(times.length - 1, Math.ceil(times.length * 0.95) - 1)] ?? 0;
   return {
     medianMs: Number(median.toFixed(2)),
     p95Ms: Number(p95.toFixed(2)),
@@ -69,14 +64,10 @@ it.runIf(isBenchmark)(
     const model = compileAccess([workspace, folder]);
     const wsType = workspace.wireName;
     const docType = workspace.document.wireName;
-    const docParentRel = Object.keys(workspace.document.roles).find(
-      (role) => role !== "viewer",
-    );
+    const docParentRel = Object.keys(workspace.document.roles).find((role) => role !== "viewer");
     const folderType = folder.wireName;
     const fileType = folder.file.wireName;
-    const fileParentRel = Object.keys(folder.file.roles).find(
-      (role) => role !== "viewer",
-    );
+    const fileParentRel = Object.keys(folder.file.roles).find((role) => role !== "viewer");
     if (!docParentRel || !fileParentRel) {
       throw new Error("Missing parent role on child resource");
     }
@@ -95,9 +86,7 @@ it.runIf(isBenchmark)(
         CREATE INDEX bench_documents_ws_updated_idx
           ON bench_documents (workspace_id, updated_at DESC, id);
       `);
-      const insertDoc = db.prepare(
-        "INSERT INTO bench_documents (id, workspace_id, updated_at) VALUES (?, ?, ?)",
-      );
+      const insertDoc = db.prepare("INSERT INTO bench_documents (id, workspace_id, updated_at) VALUES (?, ?, ?)");
       const insertRel = db.prepare(`
         INSERT INTO dad_authorization_relationship
           (namespace, resource_kind, resource_id, relation, subject_kind, subject_id, subject_relation, subject_is_wildcard)

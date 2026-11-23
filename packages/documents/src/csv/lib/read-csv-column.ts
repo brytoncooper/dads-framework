@@ -3,10 +3,7 @@ const PATH_MEMBER =
   /[^.[\]]+|\[\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^\][^]+?))\s*\]|(?=(?:\.|\[\])(?:\.|\[\]|$))/g;
 
 /** A literal column name takes precedence over interpreting it as a path. */
-export function readCsvColumn(
-  row: Readonly<Record<string, unknown>>,
-  key: string,
-): unknown {
+export function readCsvColumn(row: Readonly<Record<string, unknown>>, key: string): unknown {
   if (key in row) return row[key];
   if (!/\.|\[[^\]]*\]/.test(key)) return undefined;
   const members = key.startsWith(".") ? [""] : [];

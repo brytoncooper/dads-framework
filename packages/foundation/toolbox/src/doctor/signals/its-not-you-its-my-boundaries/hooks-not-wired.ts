@@ -20,10 +20,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReadings } from "../../doctor-signal.js";
-import {
-  gitConfigValue,
-  requireGitWorkspace,
-} from "../scanners/git-history.js";
+import { gitConfigValue, requireGitWorkspace } from "../scanners/git-history.js";
 
 const HOOKS_PATH_SETTING = "core.hooksPath";
 const GIT_CONFIG = ".git/config";
@@ -50,9 +47,7 @@ function readHooksWiring(context: DoctorContext): SignalReadings {
       {
         value: hooks.length === 0 ? 1 : 0,
         evidence:
-          hooks.length === 0
-            ? [{ path: configured, name: HOOKS_PATH_SETTING }]
-            : hooks.map((path) => ({ path })),
+          hooks.length === 0 ? [{ path: configured, name: HOOKS_PATH_SETTING }] : hooks.map((path) => ({ path })),
       },
     ],
   ]);

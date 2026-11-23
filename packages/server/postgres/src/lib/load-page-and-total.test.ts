@@ -13,18 +13,13 @@ describe("loadPageAndTotal", () => {
   });
 
   it("treats a missing count row as zero (empty table)", async () => {
-    const result = await loadPageAndTotal(
-      Promise.resolve([]),
-      Promise.resolve([]),
-    );
+    const result = await loadPageAndTotal(Promise.resolve([]), Promise.resolve([]));
     expect(result.rows).toEqual([]);
     expect(result.total).toBe(0);
   });
 
   it("rejects when either query rejects", async () => {
-    await expect(
-      loadPageAndTotal(Promise.reject(new Error("boom")), Promise.resolve([])),
-    ).rejects.toThrow("boom");
+    await expect(loadPageAndTotal(Promise.reject(new Error("boom")), Promise.resolve([]))).rejects.toThrow("boom");
   });
 });
 

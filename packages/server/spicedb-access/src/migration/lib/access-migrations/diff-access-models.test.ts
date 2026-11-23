@@ -1,10 +1,4 @@
-import {
-  actor,
-  allOf,
-  compileAccess,
-  parseZed,
-  resource,
-} from "@dads-framework/access";
+import { actor, allOf, compileAccess, parseZed, resource } from "@dads-framework/access";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -26,10 +20,7 @@ describe("diffAccessModels", () => {
       can: ({ owner, editor }) => ({ view: [editor, owner] }),
     });
 
-    const diff = diffAccessModels(
-      compileAccess([user, docA]),
-      compileAccess([user, docB]),
-    );
+    const diff = diffAccessModels(compileAccess([user, docA]), compileAccess([user, docB]));
 
     expect(diff.requiresMigration).toBe(false);
     expect(diff.safe).toEqual([]);
@@ -110,8 +101,7 @@ describe("diffAccessModels", () => {
           kind: "modified",
           resource: "document",
           permission: "view",
-          description:
-            "Modified permission document#view: viewer -> viewer + editor",
+          description: "Modified permission document#view: viewer -> viewer + editor",
         }),
         expect.objectContaining({
           kind: "added",
@@ -159,10 +149,7 @@ describe("diffAccessModels", () => {
       }),
     });
 
-    const diff = diffAccessModels(
-      compileAccess([user, workspaceV1, docV1]),
-      compileAccess([user, workspaceV2]),
-    );
+    const diff = diffAccessModels(compileAccess([user, workspaceV1, docV1]), compileAccess([user, workspaceV2]));
 
     expect(diff.requiresMigration).toBe(true);
     expect(diff.breaking).toEqual([
@@ -234,15 +221,9 @@ describe("diffAccessModels", () => {
       }),
     });
 
-    const diff = diffAccessModels(
-      compileAccess([user, docV1]),
-      compileAccess([user, docV2]),
-    );
+    const diff = diffAccessModels(compileAccess([user, docV1]), compileAccess([user, docV2]));
 
     expect(diff.requiresMigration).toBe(false);
-    expect(diff.permissionChanges.map((entry) => entry.permission)).toEqual([
-      "publish",
-      "safe_view",
-    ]);
+    expect(diff.permissionChanges.map((entry) => entry.permission)).toEqual(["publish", "safe_view"]);
   });
 });

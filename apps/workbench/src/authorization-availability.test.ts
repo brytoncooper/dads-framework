@@ -1,10 +1,7 @@
 import { testAuthorizationFault } from "./testing/authorization-double.js";
 import { WorkbenchMemoryAuthorization } from "./testing/workbench-memory-authorization.js";
 /** Known authorization outages produce a typed denial; programming failures remain errors for the server boundary. */
-import {
-  executeWorkbenchRoute,
-  operationOf,
-} from "./testing/workbench-request.js";
+import { executeWorkbenchRoute, operationOf } from "./testing/workbench-request.js";
 import { describe, expect, it } from "vitest";
 import { createWorkbench } from "./create-workbench.js";
 import { MemoryWorkbenchStore } from "./storage/memory-workbench-store.js";
@@ -15,10 +12,7 @@ const outageCodes: readonly string[] = ["UNAVAILABLE", "LIMIT_EXCEEDED"];
 function createUnavailableApp(code: string) {
   const backing = new WorkbenchMemoryAuthorization();
   const authorization = createAuthorizationDouble(backing, {
-    check: () =>
-      Promise.reject(
-        testAuthorizationFault(code, "Private adapter diagnostic"),
-      ),
+    check: () => Promise.reject(testAuthorizationFault(code, "Private adapter diagnostic")),
   });
   return createWorkbench({
     store: new MemoryWorkbenchStore(),
@@ -30,9 +24,7 @@ function createUnavailableApp(code: string) {
 
 function readWorkspace(app: ReturnType<typeof createWorkbench>) {
   return executeWorkbenchRoute(
-    app.routes
-      .filter((route) => route.kind === "route")
-      .find((route) => operationOf(route) === "getWorkspace"),
+    app.routes.filter((route) => route.kind === "route").find((route) => operationOf(route) === "getWorkspace"),
     {
       params: { workspaceId: "workspace-1" },
       query: {},
@@ -56,15 +48,10 @@ describe("workbench authorization availability", () => {
   });
 
   it("does not relabel an invalid model as an outage", async () => {
-    expect(
-      await readWorkspace(createUnavailableApp("INVALID_MODEL")),
-    ).toMatchObject({ status: 500 });
+    expect(await readWorkspace(createUnavailableApp("INVALID_MODEL"))).toMatchObject({ status: 500 });
   });
 
-  it.each([
-    testAuthorizationFault("INVALID_MODEL", "Invalid write model"),
-    new TypeError("Unexpected adapter bug"),
-  ])(
+  it.each([testAuthorizationFault("INVALID_MODEL", "Invalid write model"), new TypeError("Unexpected adapter bug")])(
     "retains pending work without relabeling an unexpected write failure: %s",
     async (error) => {
       const store = new MemoryWorkbenchStore();

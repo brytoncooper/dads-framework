@@ -24,52 +24,35 @@ export class CloudFrontDownloadSigner {
       base.hash ||
       /[*?]/.test(base.pathname)
     ) {
-      throw new Error(
-        "CloudFront download base URL must be an HTTPS URL without credentials, query or fragment",
-      );
+      throw new Error("CloudFront download base URL must be an HTTPS URL without credentials, query or fragment");
     }
     this.baseUrl = base.href.replace(/\/$/, "");
     const privateKey = createPrivateKey(options.privateKey);
-    if (
-      privateKey.asymmetricKeyType !== "rsa" ||
-      privateKey.asymmetricKeyDetails?.modulusLength !== 2048
-    ) {
+    if (privateKey.asymmetricKeyType !== "rsa" || privateKey.asymmetricKeyDetails?.modulusLength !== 2048) {
       throw new Error("CloudFront signing requires a 2048-bit RSA private key");
     }
     this.now = options.now;
   }
 
   sign(key: string, expiresInSeconds: number, fileName?: string): string {
-    if (
-      !Number.isInteger(expiresInSeconds) ||
-      expiresInSeconds < 1 ||
-      expiresInSeconds > 3600
-    ) {
-      throw new Error(
-        "CloudFront download expiry must be between 1 and 3600 seconds",
-      );
+    if (!Number.isInteger(expiresInSeconds) || expiresInSeconds < 1 || expiresInSeconds > 3600) {
+      throw new Error("CloudFront download expiry must be between 1 and 3600 seconds");
     }
     if (
-      key
-        .split("/")
-        .some((part) => part === "" || part === "." || part === "..") ||
+      key.split("/").some((part) => part === "" || part === "." || part === "..") ||
       containsForbiddenKeyCharacter(key) ||
       key.startsWith("quarantine/")
     ) {
       throw new Error("Object download key must identify one published object");
     }
-    const url = new URL(
-      `${this.baseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`,
-    );
+    const url = new URL(`${this.baseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`);
     if (fileName !== undefined) url.searchParams.set("download", fileName);
     const { getSignedUrl } = loadCloudFrontSigner();
     return getSignedUrl({
       url: url.href.replace(/\*/g, "%2A"),
       keyPairId: this.options.keyPairId,
       privateKey: this.options.privateKey,
-      dateLessThan: new Date(
-        this.now().getTime() + expiresInSeconds * 1000,
-      ).toISOString(),
+      dateLessThan: new Date(this.now().getTime() + expiresInSeconds * 1000).toISOString(),
     });
   }
 }

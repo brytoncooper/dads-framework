@@ -1,18 +1,11 @@
-import {
-  type CompositionRun,
-  type Dependency,
-  OfferedValues,
-} from "./dependency.js";
+import { type CompositionRun, type Dependency, OfferedValues } from "./dependency.js";
 
 /**
  * A capability a plugin depends on without naming which plugin offers it.
  * Exactly one plugin in a composition implements it; the host can implement
  * one with `providePlugin` (a database pool, a clock).
  */
-export type Service<Name extends string, Value> = Dependency<
-  `service:${Name}`,
-  Value
-> & {
+export type Service<Name extends string, Value> = Dependency<`service:${Name}`, Value> & {
   readonly kind: "service";
   /** Called by the implementing plugin once per run, after its setup. */
   readonly bind: (run: CompositionRun, value: Value) => void;
@@ -45,9 +38,7 @@ export function defineService<const Name extends string>(
   return { ofType: () => createService(name) };
 }
 
-function createService<Name extends string, Value>(
-  name: Name,
-): Service<Name, Value> {
+function createService<Name extends string, Value>(name: Name): Service<Name, Value> {
   const values = new OfferedValues<Value>(`service ${name}`);
   const dependencyName: `service:${Name}` = `service:${name}`;
   return {

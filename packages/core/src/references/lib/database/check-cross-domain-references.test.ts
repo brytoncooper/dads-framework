@@ -6,10 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  buildDanglingValueQuery,
-  checkCrossDomainReferences,
-} from "./check-cross-domain-references.js";
+import { buildDanglingValueQuery, checkCrossDomainReferences } from "./check-cross-domain-references.js";
 
 describe("buildDanglingValueQuery", () => {
   const reference = {
@@ -25,18 +22,15 @@ describe("buildDanglingValueQuery", () => {
 
   it("rejects a query result with the wrong row shape", async () => {
     const client = {
-      query: () =>
-        Promise.resolve({ rows: [{ value: "id", occurrences: "2" }] }),
+      query: () => Promise.resolve({ rows: [{ value: "id", occurrences: "2" }] }),
     };
-    await expect(
-      checkCrossDomainReferences(client, [reference]),
-    ).rejects.toThrow("returned an invalid reconciliation row");
+    await expect(checkCrossDomainReferences(client, [reference])).rejects.toThrow(
+      "returned an invalid reconciliation row",
+    );
   });
 
   it("skips null references — absence is a valid state, not a break", () => {
-    expect(buildDanglingValueQuery(reference).text).toContain(
-      `referencing."owner_organization_id" IS NOT NULL`,
-    );
+    expect(buildDanglingValueQuery(reference).text).toContain(`referencing."owner_organization_id" IS NOT NULL`);
   });
 
   /**
@@ -60,9 +54,7 @@ describe("buildDanglingValueQuery", () => {
       consumerHoldsMany: true,
     });
 
-    expect(text).toContain(
-      `CROSS JOIN LATERAL unnest(referencing."loaded_facility_product_ids") AS element("value")`,
-    );
+    expect(text).toContain(`CROSS JOIN LATERAL unnest(referencing."loaded_facility_product_ids") AS element("value")`);
     expect(text).toContain(`referenced."id"::text = element."value"::text`);
     expect(text).toContain(`element."value" IS NOT NULL`);
   });
@@ -95,9 +87,7 @@ describe("buildDanglingValueQuery", () => {
       },
     });
 
-    expect(text).toContain(
-      `discriminator."id" = referencing."permission_set_id"`,
-    );
+    expect(text).toContain(`discriminator."id" = referencing."permission_set_id"`);
     expect(text).toContain(`discriminator."scope_type" = $1`);
     expect(values).toEqual(["ORGANIZATION"]);
   });

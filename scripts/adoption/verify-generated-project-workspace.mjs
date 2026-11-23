@@ -15,13 +15,7 @@ import { join } from "node:path";
 import { collectPackageClosure, tarballFor } from "./adoption-packing.mjs";
 import { buildInternalDependencyOverrides } from "./generated-project-installation.mjs";
 
-const INSTALL_FLAGS = [
-  "--no-save",
-  "--prefer-offline",
-  "--no-audit",
-  "--no-fund",
-  "--loglevel=error",
-];
+const INSTALL_FLAGS = ["--no-save", "--prefer-offline", "--no-audit", "--no-fund", "--loglevel=error"];
 
 export function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -35,38 +29,19 @@ export function readJson(path) {
 export async function installCreator(transcript, context) {
   const host = join(context.workRoot, "creator-host");
   mkdirSync(host);
-  writeFileSync(
-    join(host, "package.json"),
-    JSON.stringify({ private: true, type: "module" }),
-  );
+  writeFileSync(join(host, "package.json"), JSON.stringify({ private: true, type: "module" }));
   const packages = collectPackageClosure("create-dads", context.packages);
   await transcript.run(
     "npm",
-    [
-      "install",
-      ...INSTALL_FLAGS,
-      ...packages.map((packageName) =>
-        tarballFor(context.tarballs, packageName),
-      ),
-    ],
+    ["install", ...INSTALL_FLAGS, ...packages.map((packageName) => tarballFor(context.tarballs, packageName))],
     { cwd: host },
   );
-  const executable = join(
-    host,
-    "node_modules",
-    "create-dads",
-    "bin",
-    "create-dads.js",
-  );
+  const executable = join(host, "node_modules", "create-dads", "bin", "create-dads.js");
   assertExecutable(executable);
   return { host, executable };
 }
 
-export async function installGeneratedProject(
-  transcript,
-  projectRoot,
-  context,
-) {
+export async function installGeneratedProject(transcript, projectRoot, context) {
   const packageManifestPath = join(projectRoot, "package.json");
   const originalManifest = readFileSync(packageManifestPath, "utf8");
   const manifest = JSON.parse(originalManifest);
@@ -78,11 +53,7 @@ export async function installGeneratedProject(
   for (const packageName of requestedPackages) {
     collectPackageClosure(packageName, context.packages, packageNames);
   }
-  manifest.overrides = buildInternalDependencyOverrides(
-    packageNames,
-    context.packages,
-    context.tarballs,
-  );
+  manifest.overrides = buildInternalDependencyOverrides(packageNames, context.packages, context.tarballs);
   writeFileSync(packageManifestPath, JSON.stringify(manifest, null, 2) + "\n");
   try {
     await transcript.run(
@@ -91,9 +62,7 @@ export async function installGeneratedProject(
         "install",
         "--no-package-lock",
         ...INSTALL_FLAGS,
-        ...packageNames.map((packageName) =>
-          tarballFor(context.tarballs, packageName),
-        ),
+        ...packageNames.map((packageName) => tarballFor(context.tarballs, packageName)),
       ],
       { cwd: projectRoot },
     );

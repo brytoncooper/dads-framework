@@ -3,19 +3,11 @@ import { z } from "zod";
 import { listQuery, sortKeys } from "./list-query.js";
 import { paginationQuerySchema } from "./pagination.schema.js";
 
-const LONGHAND_SORT_VALUES = [
-  "createdAt",
-  "-createdAt",
-  "name",
-  "-name",
-] as const;
+const LONGHAND_SORT_VALUES = ["createdAt", "-createdAt", "name", "-name"] as const;
 
 const longhandQuerySchema = paginationQuerySchema.extend({
   status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
-  sort: z
-    .enum(LONGHAND_SORT_VALUES)
-    .default("name")
-    .meta({ description: "Sort key; -field sorts descending" }),
+  sort: z.enum(LONGHAND_SORT_VALUES).default("name").meta({ description: "Sort key; -field sorts descending" }),
 });
 
 const batteryQuerySchema = listQuery({
@@ -25,18 +17,11 @@ const batteryQuerySchema = listQuery({
 
 describe("sortKeys", () => {
   it("expands each field into its ascending and descending key", () => {
-    expect(sortKeys(["createdAt", "name"]).options).toEqual([
-      "createdAt",
-      "-createdAt",
-      "name",
-      "-name",
-    ]);
+    expect(sortKeys(["createdAt", "name"]).options).toEqual(["createdAt", "-createdAt", "name", "-name"]);
   });
 
   it("carries the grammar in the type, not only at runtime", () => {
-    expectTypeOf<
-      z.infer<ReturnType<typeof sortKeys<["name"]>>>
-    >().toEqualTypeOf<"name" | "-name">();
+    expectTypeOf<z.infer<ReturnType<typeof sortKeys<["name"]>>>>().toEqualTypeOf<"name" | "-name">();
   });
 });
 

@@ -21,17 +21,12 @@ const PARAM_SEGMENT = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 const HAS_PARAM_SEGMENT = /:([a-zA-Z_][a-zA-Z0-9_]*)/;
 
 /** Interpolate `:param` placeholders in a mount-relative template with URL encoding. */
-export function bindOperationPath(
-  template: string,
-  params?: Readonly<Record<string, string>>,
-): string {
+export function bindOperationPath(template: string, params?: Readonly<Record<string, string>>): string {
   validateTemplatePath(template);
   return template.replace(PARAM_SEGMENT, (_match, name: string) => {
     const value = params?.[name];
     if (typeof value !== "string" || value.length === 0) {
-      throw new Error(
-        `Missing required path parameter "${name}" for operation template "${template}".`,
-      );
+      throw new Error(`Missing required path parameter "${name}" for operation template "${template}".`);
     }
     return encodeURIComponent(value);
   });
@@ -39,29 +34,19 @@ export function bindOperationPath(
 
 function validateTemplatePath(template: string): void {
   if (!template.startsWith("/") || template.startsWith("//")) {
-    throw new Error(
-      `Operation path "${template}" must be mount-relative and start with a single "/".`,
-    );
+    throw new Error(`Operation path "${template}" must be mount-relative and start with a single "/".`);
   }
 }
 
-function parseParamRecord(
-  template: string,
-  paramsSchema: z.ZodType,
-  params: unknown,
-): Record<string, string> {
+function parseParamRecord(template: string, paramsSchema: z.ZodType, params: unknown): Record<string, string> {
   const parsed = paramsSchema.parse(params);
   if (typeof parsed !== "object" || parsed === null) {
-    throw new Error(
-      `Operation params schema for "${template}" must parse to a record of strings.`,
-    );
+    throw new Error(`Operation params schema for "${template}" must parse to a record of strings.`);
   }
   const record: Record<string, string> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (typeof value !== "string") {
-      throw new Error(
-        `Operation path parameter "${key}" for "${template}" must parse to a string.`,
-      );
+      throw new Error(`Operation path parameter "${key}" for "${template}" must parse to a string.`);
     }
     record[key] = value;
   }
@@ -78,16 +63,11 @@ function createBinder(
 } {
   validateTemplatePath(template);
   if (paramsSchema === undefined && HAS_PARAM_SEGMENT.test(template)) {
-    throw new Error(
-      `Operation path "${template}" declares path parameters and requires a params schema.`,
-    );
+    throw new Error(`Operation path "${template}" declares path parameters and requires a params schema.`);
   }
   const path = (params?: unknown): string => {
     if (paramsSchema === undefined) return template;
-    return bindOperationPath(
-      template,
-      parseParamRecord(template, paramsSchema, params),
-    );
+    return bindOperationPath(template, parseParamRecord(template, paramsSchema, params));
   };
   return {
     bind: (params?: unknown) => ({ method, template, path: path(params) }),
@@ -115,25 +95,17 @@ function buildOperation(
 export function getOperation<
   const Path extends string,
   ResponseSchema extends z.ZodType,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
   QuerySchema extends OperationQuerySchema | undefined = undefined,
   MetaSchema extends z.ZodType | undefined = undefined,
 >(
   config: {
     readonly path: LiteralMountRelativePath<Path>;
-    readonly response: ResponseSchema &
-      NonArrayOperationResponse<ResponseSchema>;
+    readonly response: ResponseSchema & NonArrayOperationResponse<ResponseSchema>;
     readonly query?: QuerySchema;
     readonly meta?: MetaSchema;
   } & OperationParamsOption<Path, ParamsSchema>,
-): GetOperationContract<
-  Path,
-  ResponseSchema,
-  ParamsSchema,
-  QuerySchema,
-  MetaSchema
->;
+): GetOperationContract<Path, ResponseSchema, ParamsSchema, QuerySchema, MetaSchema>;
 export function getOperation(config: {
   readonly path: string;
   readonly response: z.ZodType;
@@ -154,8 +126,7 @@ export function listOperation<
   const Path extends string,
   ItemSchema extends z.ZodType,
   QuerySchema extends PaginatedOperationQuerySchema,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
   MetaSchema extends z.ZodType<PaginationMeta> | undefined = undefined,
 >(
   config: {
@@ -164,13 +135,7 @@ export function listOperation<
     readonly query: QuerySchema;
     readonly meta?: MetaSchema;
   } & OperationParamsOption<Path, ParamsSchema>,
-): ListOperationContract<
-  Path,
-  ItemSchema,
-  QuerySchema,
-  ParamsSchema,
-  MetaSchema
->;
+): ListOperationContract<Path, ItemSchema, QuerySchema, ParamsSchema, MetaSchema>;
 export function listOperation(config: {
   readonly path: string;
   readonly item: z.ZodType;
@@ -190,8 +155,7 @@ export function listOperation(config: {
 export function postOperation<
   const Path extends string,
   ResponseSchema extends z.ZodType,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
   QuerySchema extends OperationQuerySchema | undefined = undefined,
   BodySchema extends z.ZodType | undefined = undefined,
   MetaSchema extends z.ZodType | undefined = undefined,
@@ -205,15 +169,7 @@ export function postOperation<
     readonly meta?: MetaSchema;
     readonly status?: Status;
   } & OperationParamsOption<Path, ParamsSchema>,
-): PostOperationContract<
-  Path,
-  ResponseSchema,
-  ParamsSchema,
-  QuerySchema,
-  BodySchema,
-  MetaSchema,
-  Status
->;
+): PostOperationContract<Path, ResponseSchema, ParamsSchema, QuerySchema, BodySchema, MetaSchema, Status>;
 export function postOperation(config: {
   readonly path: string;
   readonly response: z.ZodType;
@@ -238,8 +194,7 @@ export function patchOperation<
   const Path extends string,
   ResponseSchema extends z.ZodType,
   BodySchema extends z.ZodType,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
 >(
   config: {
     readonly path: LiteralMountRelativePath<Path>;
@@ -265,8 +220,7 @@ export function putOperation<
   const Path extends string,
   ResponseSchema extends z.ZodType,
   BodySchema extends z.ZodType,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
 >(
   config: {
     readonly path: LiteralMountRelativePath<Path>;
@@ -290,8 +244,7 @@ export function putOperation(config: {
 /** Define a standalone DELETE operation contract (`204 No Content`). */
 export function deleteOperation<
   const Path extends string,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
   BodySchema extends z.ZodType | undefined = undefined,
 >(
   config: {
@@ -313,8 +266,7 @@ export function deleteOperation(config: {
 /** Define a standalone no-content POST operation contract (`204 No Content`). */
 export function postNoContentOperation<
   const Path extends string,
-  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined =
-    undefined,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined = undefined,
   BodySchema extends z.ZodType | undefined = undefined,
 >(
   config: {

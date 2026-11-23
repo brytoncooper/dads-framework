@@ -25,22 +25,12 @@ import {
   taskGraphWidth,
   toolVersions,
 } from "./testing-soundness-execution.mjs";
-import {
-  parseShardOption,
-  shardCases,
-  shardReceipt,
-} from "./testing-soundness-shard.mjs";
+import { parseShardOption, shardCases, shardReceipt } from "./testing-soundness-shard.mjs";
 
 import { SOUNDNESS_OPTIONS } from "./testing-soundness-invocation.mjs";
 import { assertNativeRun } from "./testing-soundness-native.mjs";
-import {
-  caseProofContext,
-  readSoundnessCorpus,
-} from "./testing-soundness-context.mjs";
-import {
-  chooseCaseConcurrency,
-  orderedConcurrentMap,
-} from "./testing-soundness-concurrency.mjs";
+import { caseProofContext, readSoundnessCorpus } from "./testing-soundness-context.mjs";
+import { chooseCaseConcurrency, orderedConcurrentMap } from "./testing-soundness-concurrency.mjs";
 import {
   cloneBaseline,
   freezeBaseline,
@@ -58,22 +48,15 @@ const executionCounts = {
   nativeInvocations: 0,
 };
 const root = resolve(process.cwd());
-const argumentsByName = parseArguments(
-  process.argv.slice(2),
-  SOUNDNESS_OPTIONS,
-);
+const argumentsByName = parseArguments(process.argv.slice(2), SOUNDNESS_OPTIONS);
 const binary = resolve(requireOption(argumentsByName, "--dad-test"));
 const output = resolve(requireOption(argumentsByName, "--output"));
-const fixture = resolve(
-  argumentsByName.get("--fixture") ??
-    join(root, "fixtures", "testing-soundness"),
-);
+const fixture = resolve(argumentsByName.get("--fixture") ?? join(root, "fixtures", "testing-soundness"));
 const baseline = join(fixture, "baseline");
 const manifest = join(fixture, "dads.testing.json");
 const { corpus, context: corpusContext } = readSoundnessCorpus(fixture, root);
 
-if (!existsSync(baseline) || !existsSync(manifest))
-  throw new Error(`Soundness fixture is incomplete at ${fixture}.`);
+if (!existsSync(baseline) || !existsSync(manifest)) throw new Error(`Soundness fixture is incomplete at ${fixture}.`);
 if (!Array.isArray(corpus.cases) || !Array.isArray(corpus.allTaskIds))
   throw new Error("Soundness corpus must declare allTaskIds and cases.");
 const shard = parseShardOption(argumentsByName.get("--shard"));
@@ -106,17 +89,9 @@ if (shard !== null) {
   );
 }
 const sourceSha = git(root, ["rev-parse", "HEAD"]);
-const baselineReceipt = await observeBaseline(
-  root,
-  frozen,
-  timings,
-  executionEnvironment,
-  concurrency.taskJobs,
-);
+const baselineReceipt = await observeBaseline(root, frozen, timings, executionEnvironment, concurrency.taskJobs);
 const baselineOutcomes = baselineReceipt.outcomes;
-executionCounts.baselineTasks = baselineOutcomes.filter(
-  (task) => task.status !== "spawn-error",
-).length;
+executionCounts.baselineTasks = baselineOutcomes.filter((task) => task.status !== "spawn-error").length;
 let activeCases = 0;
 let peakCases = 0;
 let completedCases = 0;
@@ -147,9 +122,7 @@ async function runCase(testCase) {
       concurrency.taskJobs,
     );
     timings.mutantMs += performance.now() - mutantStarted;
-    executionCounts.mutantTasks += mutatedOutcomes.filter(
-      (task) => task.status !== "spawn-error",
-    ).length;
+    executionCounts.mutantTasks += mutatedOutcomes.filter((task) => task.status !== "spawn-error").length;
     assertObservedTasks(declaredManifest.tasks, mutatedOutcomes, "Mutation");
     const outcomes = compareTaskOutcomes(baselineOutcomes, mutatedOutcomes);
     assertExpectedOutcomes(testCase, outcomes.changedTaskIds);
@@ -158,11 +131,7 @@ async function runCase(testCase) {
     executionCounts.nativeInvocations += 1;
     const result = await invoke(
       binary,
-      nativeRequest(
-        nativeWorkspace.workspace,
-        nativeWorkspace.base,
-        nativeWorkspace.head,
-      ),
+      nativeRequest(nativeWorkspace.workspace, nativeWorkspace.base, nativeWorkspace.head),
       nativeWorkspace.workspace,
       executionEnvironment,
     ).finally(() => {
@@ -173,30 +142,15 @@ async function runCase(testCase) {
     ).length;
     const selected = selectedTaskIds(result.plan);
     const comparison = compareSoundness(testCase.requiredTaskIds, selected);
-    const nativeRun = assertNativeRun(
-      result,
-      declaredManifest.tasks,
-      selected,
-      mutatedOutcomes,
-    );
-    const skippedChangedOutcomes = outcomes.changedTaskIds.filter(
-      (id) => !selected.includes(id),
-    );
+    const nativeRun = assertNativeRun(result, declaredManifest.tasks, selected, mutatedOutcomes);
+    const skippedChangedOutcomes = outcomes.changedTaskIds.filter((id) => !selected.includes(id));
     const expectedSelectionTaskIds =
-      testCase.expectedSelectionTaskIds === undefined
-        ? null
-        : stableIds(testCase.expectedSelectionTaskIds);
+      testCase.expectedSelectionTaskIds === undefined ? null : stableIds(testCase.expectedSelectionTaskIds);
     const unexpectedSelection =
       expectedSelectionTaskIds === null
         ? null
-        : exactSelectionDifference(
-            expectedSelectionTaskIds,
-            comparison.selected,
-          );
-    const fallbackPolicyFailure = fallbackPolicyFailureFor(
-      testCase.fullFallbackPolicy,
-      result.plan.scope.fullFallback,
-    );
+        : exactSelectionDifference(expectedSelectionTaskIds, comparison.selected);
+    const fallbackPolicyFailure = fallbackPolicyFailureFor(testCase.fullFallbackPolicy, result.plan.scope.fullFallback);
     return {
       id: testCase.id,
       ...caseProofContext(testCase),
@@ -207,9 +161,7 @@ async function runCase(testCase) {
       expectedChangedTaskIds: stableIds(testCase.expectedChangedTaskIds),
       changedTaskIds: outcomes.changedTaskIds,
       skippedChangedOutcomes,
-      failedTaskIds: mutatedOutcomes
-        .filter((outcome) => outcome.status === "failed")
-        .map((outcome) => outcome.id),
+      failedTaskIds: mutatedOutcomes.filter((outcome) => outcome.status === "failed").map((outcome) => outcome.id),
       outcomes,
       changedPaths: stableIds(result.plan.scope.changedPaths),
       requiredTaskIds: comparison.required,
@@ -243,9 +195,7 @@ async function runCase(testCase) {
     removeWorkspace(nativeWorkspace?.workspace);
     activeCases -= 1;
     completedCases += 1;
-    process.stderr.write(
-      `soundness completed ${completedCases}/${orderedCases.length}: ${testCase.id}\n`,
-    );
+    process.stderr.write(`soundness completed ${completedCases}/${orderedCases.length}: ${testCase.id}\n`);
   }
 }
 
@@ -299,9 +249,7 @@ const evidence = {
     })),
   },
   cases: caseResults,
-  issues: caseResults.flatMap((result) =>
-    (result.issues ?? []).map((issue) => ({ caseId: result.id, ...issue })),
-  ),
+  issues: caseResults.flatMap((result) => (result.issues ?? []).map((issue) => ({ caseId: result.id, ...issue }))),
   summary: {
     cases: caseResults.length,
     falseNegatives: falseNegatives.length,
@@ -353,9 +301,7 @@ function assertTaskInventory(taskIds, tasks) {
 function assertExpectedOutcomes(testCase, changedTaskIds) {
   const expected = stableIds(testCase.expectedChangedTaskIds);
   if (expected.join(",") !== changedTaskIds.join(","))
-    throw new Error(
-      `${testCase.id} observed ${changedTaskIds.join(",")} but expected ${expected.join(",")}.`,
-    );
+    throw new Error(`${testCase.id} observed ${changedTaskIds.join(",")} but expected ${expected.join(",")}.`);
 }
 
 function compactDecision(task) {

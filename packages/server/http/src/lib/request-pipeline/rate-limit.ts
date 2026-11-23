@@ -18,14 +18,9 @@ export type RateLimiter = {
   readonly size: () => number;
 };
 
-export type RateVerdict =
-  | { readonly allowed: true }
-  | { readonly allowed: false; readonly retryAfterSeconds: number };
+export type RateVerdict = { readonly allowed: true } | { readonly allowed: false; readonly retryAfterSeconds: number };
 
-export function createRateLimiter(
-  limit: Exclude<RateLimitCapability, "unlimited">,
-  now: () => number,
-): RateLimiter {
+export function createRateLimiter(limit: Exclude<RateLimitCapability, "unlimited">, now: () => number): RateLimiter {
   const windows = new Map<string, Window>();
   let nextSweepAtMs = 0;
 
@@ -58,10 +53,7 @@ export function createRateLimiter(
       }
       return {
         allowed: false,
-        retryAfterSeconds: Math.max(
-          1,
-          Math.ceil((window.resetAtMs - at) / 1000),
-        ),
+        retryAfterSeconds: Math.max(1, Math.ceil((window.resetAtMs - at) / 1000)),
       };
     },
   };

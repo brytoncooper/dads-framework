@@ -22,9 +22,7 @@ export type SuppressionEntry = {
 };
 
 /** Every entry in the suppressions file, and none when there is no file. */
-export function suppressionEntries(
-  context: DoctorContext,
-): readonly SuppressionEntry[] {
+export function suppressionEntries(context: DoctorContext): readonly SuppressionEntry[] {
   if (!context.exists(SUPPRESSIONS_FILE)) return [];
   return suppressionEntriesIn(context.read(SUPPRESSIONS_FILE));
 }
@@ -35,20 +33,13 @@ export function suppressionEntries(
  * to count them the way the signals count the one on disk, or the two readings
  * would disagree about what the file says.
  */
-export function suppressionEntriesIn(
-  text: string,
-): readonly SuppressionEntry[] {
+export function suppressionEntriesIn(text: string): readonly SuppressionEntry[] {
   const parsed: unknown = JSON.parse(text);
   if (!isRecord(parsed)) return [];
-  return Object.entries(parsed).flatMap(([path, rules]) =>
-    entriesForFile(path, rules),
-  );
+  return Object.entries(parsed).flatMap(([path, rules]) => entriesForFile(path, rules));
 }
 
-function entriesForFile(
-  path: string,
-  rules: unknown,
-): readonly SuppressionEntry[] {
+function entriesForFile(path: string, rules: unknown): readonly SuppressionEntry[] {
   if (!isRecord(rules)) return [];
   return Object.entries(rules).map(([rule, entry]) => ({
     path,

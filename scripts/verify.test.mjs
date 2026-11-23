@@ -13,17 +13,8 @@ import process from "node:process";
 import test from "node:test";
 import { URL, fileURLToPath } from "node:url";
 
-import {
-  budgetFromResources,
-  budgetReceipt,
-  requestedBudget,
-  sampleVerifyResources,
-} from "./verify-budget.mjs";
-import {
-  VERIFY_STEPS,
-  topologicalOrder,
-  verifySteps,
-} from "./verify-graph.mjs";
+import { budgetFromResources, budgetReceipt, requestedBudget, sampleVerifyResources } from "./verify-budget.mjs";
+import { VERIFY_STEPS, topologicalOrder, verifySteps } from "./verify-graph.mjs";
 import { criticalPath } from "./verify-report.mjs";
 import { runVerifyGraph, slotsFor } from "./verify-scheduler.mjs";
 import { spawnStep } from "./verify-spawn.mjs";
@@ -98,10 +89,7 @@ test("a need that names no declared step fails loudly", () => {
 });
 
 test("a cycle fails loudly instead of running", () => {
-  const steps = [
-    sleeper("a", { needs: ["b"] }),
-    sleeper("b", { needs: ["a"] }),
-  ];
+  const steps = [sleeper("a", { needs: ["b"] }), sleeper("b", { needs: ["a"] })];
   assert.throws(() => topologicalOrder(steps), /cycle/u);
 });
 
@@ -133,10 +121,7 @@ test("the running weights stay inside the budget", async () => {
   const outcome = await run(steps, { budget: 4 });
   const byId = new Map(steps.map((step) => [step.id, step]));
   for (const overlap of outcome.overlaps) {
-    const weight = [...overlap].reduce(
-      (total, id) => total + slotsFor(byId.get(id), 4),
-      0,
-    );
+    const weight = [...overlap].reduce((total, id) => total + slotsFor(byId.get(id), 4), 0);
     assert.ok(weight <= 4, `overlap weighed ${weight}: ${[...overlap]}`);
   }
 });
@@ -188,13 +173,7 @@ test("serial runs the declared order, one step at a time", async () => {
     sleeper("fifth", { ms: 20 }),
   ];
   const outcome = await run(steps, { budget: 1, serial: true });
-  assert.deepEqual(outcome.startOrder, [
-    "first",
-    "second",
-    "third",
-    "fourth",
-    "fifth",
-  ]);
+  assert.deepEqual(outcome.startOrder, ["first", "second", "third", "fourth", "fifth"]);
   assert.equal(outcome.peak, 1);
   assert.equal(outcome.exitCode, 0);
 });
@@ -244,10 +223,7 @@ test("the host sample is usable whether or not the corpus probe is", async () =>
   const budget = budgetFromResources(sample);
   assert.ok(budget.jobs >= 1);
   assert.match(budgetReceipt(budget), /limited by/u);
-  assert.equal(
-    budgetReceipt(requestedBudget(2, "--jobs")),
-    "budget 2 slots (--jobs)",
-  );
+  assert.equal(budgetReceipt(requestedBudget(2, "--jobs")), "budget 2 slots (--jobs)");
 });
 
 test("a requested budget refuses anything but a positive whole number", () => {
@@ -261,10 +237,7 @@ test("an all-weight step books half the budget and at least one slot", () => {
   assert.equal(slotsFor(wide, 1), 1);
   assert.equal(slotsFor(wide, 8), 4);
   assert.equal(slotsFor(wide, 13), 7);
-  assert.throws(
-    () => slotsFor({ id: "bad", weight: 0, needs: [] }, 8),
-    /positive whole number or "all"/u,
-  );
+  assert.throws(() => slotsFor({ id: "bad", weight: 0, needs: [] }, 8), /positive whole number or "all"/u);
 });
 
 test("the critical path is the longest measured chain through the graph", () => {
@@ -284,24 +257,16 @@ test("the declared graph runs the same proofs the chain ran", () => {
   assert.equal(new Set(ids).size, ids.length, "step ids must be unique");
   for (const step of VERIFY_STEPS) {
     assert.ok(step.args.length > 0, `${step.id} declares no arguments`);
-    assert.ok(
-      step.weight === "all" || Number.isSafeInteger(step.weight),
-      `${step.id} declares an unusable weight`,
-    );
+    assert.ok(step.weight === "all" || Number.isSafeInteger(step.weight), `${step.id} declares an unusable weight`);
   }
-  const needsBuild = VERIFY_STEPS.filter((step) =>
-    step.needs.includes("build"),
-  ).map((step) => step.id);
+  const needsBuild = VERIFY_STEPS.filter((step) => step.needs.includes("build")).map((step) => step.id);
   assert.ok(needsBuild.includes("eslint"));
   assert.ok(needsBuild.includes("test"));
   assert.ok(needsBuild.includes("api-report"));
   assert.ok(needsBuild.includes("docs"));
   // The ratchet is now the product behind a wrapper, so it needs the build for
   // `dist/cli.js` as well as the test step for the Vitest report.
-  assert.deepEqual(
-    VERIFY_STEPS.find((step) => step.id === "source-budgets")?.needs,
-    ["build", "test"],
-  );
+  assert.deepEqual(VERIFY_STEPS.find((step) => step.id === "source-budgets")?.needs, ["build", "test"]);
 });
 
 test("--full adds every proof CI runs elsewhere, behind the build and the engine", () => {
@@ -312,9 +277,7 @@ test("--full adds every proof CI runs elsewhere, behind the build and the engine
     assert.ok(full.includes(id), `${id} missing from --full`);
   }
   assert.equal(new Set(full).size, full.length, "step ids must be unique");
-  const order = topologicalOrder(verifySteps({ full: true })).map(
-    (step) => step.id,
-  );
+  const order = topologicalOrder(verifySteps({ full: true })).map((step) => step.id);
   assert.ok(order.indexOf("build") < order.indexOf("adoption"));
   assert.ok(order.indexOf("rust-format") < order.indexOf("rust-lint"));
   assert.ok(order.indexOf("rust-test") < order.indexOf("engine"));
@@ -323,20 +286,11 @@ test("--full adds every proof CI runs elsewhere, behind the build and the engine
 });
 
 test("CI runs the full graph across independent jobs without cached results", () => {
-  const workflow = readFileSync(
-    new URL("../.github/workflows/verify.yml", import.meta.url),
-    "utf8",
-  );
-  const commands = [...workflow.matchAll(/^ +run: (.+)$/gmu)].map(
-    ([, command]) => command,
-  );
-  assert.ok(
-    commands.includes("npm run verify -- --no-cache --require-receipt"),
-  );
+  const workflow = readFileSync(new URL("../.github/workflows/verify.yml", import.meta.url), "utf8");
+  const commands = [...workflow.matchAll(/^ +run: (.+)$/gmu)].map(([, command]) => command);
+  assert.ok(commands.includes("npm run verify -- --no-cache --require-receipt"));
   assert.ok(commands.includes("npm run verify:adoption"));
-  const rust = verifySteps({ full: true }).filter(
-    (step) => step.command === "cargo",
-  );
+  const rust = verifySteps({ full: true }).filter((step) => step.command === "cargo");
   for (const step of rust) {
     const command = [step.command, ...step.args].join(" ");
     assert.ok(commands.includes(command), `CI omits ${step.id}`);
@@ -344,16 +298,12 @@ test("CI runs the full graph across independent jobs without cached results", ()
   assert.match(workflow, /matrix:\n +shard: \[1, 2, 3\]/u);
   assert.ok(
     commands.some((command) =>
-      command.startsWith(
-        "npm run testing:soundness -- --dad-test target/debug/dad-test --shard ",
-      ),
+      command.startsWith("npm run testing:soundness -- --dad-test target/debug/dad-test --shard "),
     ),
   );
   assert.match(workflow, /^ +needs: corpus$/mu);
   const evidence = commands.find((command) =>
-    command.startsWith(
-      "node scripts/testing/verify-testing-release.mjs --soundness ",
-    ),
+    command.startsWith("node scripts/testing/verify-testing-release.mjs --soundness "),
   );
   assert.ok(evidence);
   for (const shard of [1, 2, 3]) {

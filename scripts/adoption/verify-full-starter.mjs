@@ -11,16 +11,8 @@ import { isIP } from "node:net";
 import process from "node:process";
 import { URL } from "node:url";
 
-import {
-  loadAdoptionPackages,
-  packAdoptionPackages,
-} from "./adoption-packing.mjs";
-import {
-  createAdoptionWorkspace,
-  createPhaseTimer,
-  createProofContext,
-  reportFatal,
-} from "./adoption-proof-run.mjs";
+import { loadAdoptionPackages, packAdoptionPackages } from "./adoption-packing.mjs";
+import { createAdoptionWorkspace, createPhaseTimer, createProofContext, reportFatal } from "./adoption-proof-run.mjs";
 import { runAdoptionTasks } from "./adoption-task-runner.mjs";
 import { proveStarterFrontend } from "./full-starter-browser.mjs";
 import { startStarterRegistry } from "./full-starter-registry.mjs";
@@ -67,11 +59,7 @@ async function verifyStarter(transcript, context, workspace) {
     "{{(index .IPAM.Config 0).Gateway}}",
   ]);
   const registryHost = gateway.stdout.trim();
-  assert.equal(
-    isIP(registryHost),
-    4,
-    "The proof requires an IPv4 Docker bridge gateway",
-  );
+  assert.equal(isIP(registryHost), 4, "The proof requires an IPv4 Docker bridge gateway");
   const env = {
     ...process.env,
     npm_config_audit: "false",
@@ -81,16 +69,10 @@ async function verifyStarter(transcript, context, workspace) {
   };
   const project = join(context.workRoot, appName);
   const projectLabel =
-    "label=com.docker.compose.project=dads-" +
-    createHash("sha256").update(project).digest("hex").slice(0, 20);
-  const run = (program, args) =>
-    transcript.run(program, args, { cwd: project, env });
+    "label=com.docker.compose.project=dads-" + createHash("sha256").update(project).digest("hex").slice(0, 20);
+  const run = (program, args) => transcript.run(program, args, { cwd: project, env });
   const docker = (args) => transcript.run("docker", args);
-  const registry = await startStarterRegistry(
-    context,
-    workspace.tarballRoot,
-    registryHost,
-  );
+  const registry = await startStarterRegistry(context, workspace.tarballRoot, registryHost);
   env.npm_config_registry = registry.origin;
   try {
     const created = await transcript.run(
@@ -118,11 +100,7 @@ async function verifyStarter(transcript, context, workspace) {
     ]);
     const apiContainer = api.stdout.trim();
     assert.match(apiContainer, /^[a-f0-9]+$/);
-    const proveRetainedData = await proveStarterScenario(
-      urls,
-      apiContainer,
-      project,
-    );
+    const proveRetainedData = await proveStarterScenario(urls, apiContainer, project);
     const resumed = await run("npm", ["--silent", "start", "--", "--json"]);
     assert.deepEqual(readUrls(JSON.parse(resumed.stdout)), urls);
     await proveRetainedData(urls.webUrl);
@@ -153,20 +131,13 @@ async function verifyStarter(transcript, context, workspace) {
 function readUrls(value) {
   const { webUrl, apiUrl, staffUrl } = value;
   const urls = [webUrl, apiUrl, staffUrl].map((url) => new URL(url));
-  assert.ok(
-    urls.every(
-      (url) =>
-        url.protocol === "http:" && url.hostname === "127.0.0.1" && url.port,
-    ),
-  );
+  assert.ok(urls.every((url) => url.protocol === "http:" && url.hostname === "127.0.0.1" && url.port));
   assert.equal(new Set(urls.map((url) => url.port)).size, 3);
   return { webUrl, apiUrl, staffUrl };
 }
 
 async function proveLock(project, registry) {
-  const manifest = JSON.parse(
-    await readFile(join(project, "package.json"), "utf8"),
-  );
+  const manifest = JSON.parse(await readFile(join(project, "package.json"), "utf8"));
   const rawLock = await readFile(join(project, "package-lock.json"), "utf8");
   const lock = JSON.parse(rawLock);
   const scoped = Object.keys({
@@ -186,16 +157,8 @@ async function assertStopped(docker, label) {
     docker(["container", "ls", "--all", "--quiet", "--filter", label]),
     docker(["network", "ls", "--quiet", "--filter", label]),
   ]);
-  assert.equal(
-    containers.stdout.trim(),
-    "",
-    "dev:down should remove project containers",
-  );
-  assert.equal(
-    networks.stdout.trim(),
-    "",
-    "dev:down should remove the project network",
-  );
+  assert.equal(containers.stdout.trim(), "", "dev:down should remove project containers");
+  assert.equal(networks.stdout.trim(), "", "dev:down should remove the project network");
 }
 
 async function removeProjectResources(docker, label) {
@@ -205,22 +168,10 @@ async function removeProjectResources(docker, label) {
     ["volume", []],
   ]) {
     const list = () =>
-      docker([
-        resource,
-        "ls",
-        "--quiet",
-        "--filter",
-        label,
-        ...(resource === "container" ? ["--all"] : []),
-      ]);
+      docker([resource, "ls", "--quiet", "--filter", label, ...(resource === "container" ? ["--all"] : [])]);
     const existing = (await list()).stdout.trim();
-    if (existing)
-      await docker([resource, "rm", ...flags, ...existing.split(/\s+/)]);
-    assert.equal(
-      (await list()).stdout.trim(),
-      "",
-      "Expected disposable Docker " + resource + " cleanup",
-    );
+    if (existing) await docker([resource, "rm", ...flags, ...existing.split(/\s+/)]);
+    assert.equal((await list()).stdout.trim(), "", "Expected disposable Docker " + resource + " cleanup");
   }
 }
 

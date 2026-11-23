@@ -35,33 +35,18 @@ export type CardFieldPlan = {
  * reader hid is never a summary field; it waits in the details.
  */
 export function planCardFields(columns: readonly CardColumn[]): CardFieldPlan {
-  const selectionId = columns.find((column) =>
-    isSelectionColumnId(column.id),
-  )?.id;
-  const actionsId = columns.find(
-    (column) => column.id === ACTIONS_COLUMN_ID,
-  )?.id;
-  const content = columns.filter(
-    (column) =>
-      !isSelectionColumnId(column.id) && column.id !== ACTIONS_COLUMN_ID,
-  );
-  const heading =
-    content.find((column) => column.cardHeading === true) ?? content[0];
+  const selectionId = columns.find((column) => isSelectionColumnId(column.id))?.id;
+  const actionsId = columns.find((column) => column.id === ACTIONS_COLUMN_ID)?.id;
+  const content = columns.filter((column) => !isSelectionColumnId(column.id) && column.id !== ACTIONS_COLUMN_ID);
+  const heading = content.find((column) => column.cardHeading === true) ?? content[0];
   const fields = content.filter((column) => column !== heading);
   const shownFields = fields.filter((column) => column.readerHidden !== true);
 
   const optedIn = shownFields.filter((column) => column.cardSummary === true);
-  const summaryCandidates =
-    optedIn.length > 0
-      ? optedIn
-      : shownFields.filter((column) => column.cardSummary !== false);
-  const summaryIds = summaryCandidates
-    .slice(0, CARD_SUMMARY_LIMIT)
-    .map((column) => column.id);
+  const summaryCandidates = optedIn.length > 0 ? optedIn : shownFields.filter((column) => column.cardSummary !== false);
+  const summaryIds = summaryCandidates.slice(0, CARD_SUMMARY_LIMIT).map((column) => column.id);
   const summarySet = new Set(summaryIds);
-  const detailIds = fields
-    .filter((column) => !summarySet.has(column.id))
-    .map((column) => column.id);
+  const detailIds = fields.filter((column) => !summarySet.has(column.id)).map((column) => column.id);
 
   return {
     selectionId,

@@ -1,13 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, every, resource } from "@dads-framework/access";
 import type { PermissionQuery } from "@dads-framework/access/runtime";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -67,9 +61,7 @@ function buildColumnAccessModel() {
   };
 }
 
-function createColumnBindings(
-  schema: ReturnType<typeof buildColumnAccessModel>,
-): readonly ColumnRelationBinding[] {
+function createColumnBindings(schema: ReturnType<typeof buildColumnAccessModel>): readonly ColumnRelationBinding[] {
   return [
     {
       role: schema.folder.roles.org,
@@ -130,9 +122,7 @@ describe("PostgreSQL column-backed relations", () => {
   });
 
   async function resetSeedData(): Promise<void> {
-    await postgres.pool.query(
-      "TRUNCATE TABLE dad_authorization_relationship, documents, folders",
-    );
+    await postgres.pool.query("TRUNCATE TABLE dad_authorization_relationship, documents, folders");
     await postgres.pool.query(`
       INSERT INTO folders (id, org_id, parent_id) VALUES
         ('folder-root', 'org-1', NULL),
@@ -281,9 +271,7 @@ describe("PostgreSQL column-backed relations", () => {
     await withProtectedPgTransaction(
       { pool: postgres.pool, authorization: authz, retries: 2 },
       async ({ client, authorization: scoped }) => {
-        await client.query(
-          "UPDATE documents SET owner_id = 'alice' WHERE id = 'doc-null'",
-        );
+        await client.query("UPDATE documents SET owner_id = 'alice' WHERE id = 'doc-null'");
         expect(
           await scoped.check({
             subject: { type: "user", id: "alice" },
@@ -323,9 +311,7 @@ describe("PostgreSQL column-backed relations", () => {
     ).rejects.toThrow("column-backed by documents.org_id");
 
     const beforeIndexes = await authz.verifyColumnRelations();
-    expect(beforeIndexes.every((entry) => !entry.hasRecommendedIndex)).toBe(
-      true,
-    );
+    expect(beforeIndexes.every((entry) => !entry.hasRecommendedIndex)).toBe(true);
     for (const ddl of columnRelationIndexSql(bindings)) {
       await postgres.pool.query(ddl);
     }
@@ -345,9 +331,7 @@ describe("PostgreSQL column-backed relations", () => {
         },
       ],
     });
-    await expect(missingColAuthz.verifyColumnRelations()).rejects.toThrow(
-      "documents.does_not_exist",
-    );
+    await expect(missingColAuthz.verifyColumnRelations()).rejects.toThrow("documents.does_not_exist");
   });
 
   it("matches the formally verified Lean 4 oracle across check, checkMany, lookupResources, and auto filters", async () => {
@@ -386,13 +370,7 @@ describe("PostgreSQL column-backed relations", () => {
     ];
     await authz.writeRelationships(tupleFacts);
 
-    const materializedColumnTuples: readonly (readonly [
-      string,
-      string,
-      string,
-      string,
-      string,
-    ])[] = [
+    const materializedColumnTuples: readonly (readonly [string, string, string, string, string])[] = [
       ["folder", "folder-root", "org", "org", "org-1"],
       ["folder", "folder-mid", "parent", "folder", "folder-root"],
       ["folder", "folder-leaf", "parent", "folder", "folder-mid"],
@@ -414,28 +392,21 @@ describe("PostgreSQL column-backed relations", () => {
         subjectIsWildcard: false,
         expiresAt: null,
       })),
-      ...materializedColumnTuples.map(
-        ([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
-          resourceKind,
-          resourceId,
-          relation,
-          subjectKind,
-          subjectId,
-          subjectRelation: "",
-          subjectIsWildcard: false,
-          expiresAt: null,
-        }),
-      ),
+      ...materializedColumnTuples.map(([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
+        resourceKind,
+        resourceId,
+        relation,
+        subjectKind,
+        subjectId,
+        subjectRelation: "",
+        subjectIsWildcard: false,
+        expiresAt: null,
+      })),
     ];
 
     const actors = ["alice", "bob", "carol", "dave", "eve", "nobody"];
     const docs = ["doc-both", "doc-nested", "doc-null", "doc-org", "doc-owned"];
-    const folders = [
-      "folder-leaf",
-      "folder-mid",
-      "folder-orphan",
-      "folder-root",
-    ];
+    const folders = ["folder-leaf", "folder-mid", "folder-orphan", "folder-root"];
     const checkQueries: PermissionQuery[] = [];
     for (const actorId of actors) {
       for (const docId of docs) {
@@ -535,9 +506,7 @@ describe("PostgreSQL column-backed relations", () => {
       const lookupSpec = oraclePayload.lookups[index];
       if (lookupSpec === undefined) continue;
       const rawExpected = oracleLookups[index];
-      const expected = Array.isArray(rawExpected)
-        ? rawExpected.map(String)
-        : [];
+      const expected = Array.isArray(rawExpected) ? rawExpected.map(String) : [];
       const actualLookup = await authz.lookupResources({
         subject: { type: lookupSpec.subjectKind, id: lookupSpec.subjectId },
         permission: lookupSpec.permission,

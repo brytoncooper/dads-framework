@@ -13,11 +13,7 @@ import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-
 import { measureRequestWork } from "@dads-framework/core/runtime/request-work/testing";
 
 import { AnswerOnceAuthorization } from "@dads-framework/access/runtime";
-import {
-  Authorization,
-  type PermissionCheckOutcome,
-  type PermissionQuery,
-} from "@dads-framework/access/runtime";
+import { Authorization, type PermissionCheckOutcome, type PermissionQuery } from "@dads-framework/access/runtime";
 import {
   authorizationKinds,
   DEFAULT_AUTHORIZATION_GUARD_MARKS,
@@ -74,9 +70,7 @@ describe("AnswerOnceAuthorization", () => {
     const inner = Object.assign(new CountingAuthorization(), {
       checkMany: (queries: readonly PermissionQuery[]) => {
         batches.push(queries);
-        return Promise.resolve(
-          queries.map((query) => query.permission === "administer"),
-        );
+        return Promise.resolve(queries.map((query) => query.permission === "administer"));
       },
     });
     const authorization = new AnswerOnceAuthorization(inner);
@@ -84,9 +78,7 @@ describe("AnswerOnceAuthorization", () => {
 
     await answeringEachQuestionOnce(async () => {
       await authorization.check(checkQuery);
-      await expect(
-        authorization.checkMany([checkQuery, denied, denied]),
-      ).resolves.toEqual([true, false, false]);
+      await expect(authorization.checkMany([checkQuery, denied, denied])).resolves.toEqual([true, false, false]);
       await expect(authorization.check(denied)).resolves.toBe(false);
       await expect(authorization.checkMany([denied])).resolves.toEqual([false]);
     });
@@ -128,13 +120,9 @@ describe("AnswerOnceAuthorization", () => {
     const authorization = new AnswerOnceAuthorization(inner);
 
     await answeringEachQuestionOnce(async () => {
-      await expect(authorization.checkMany([checkQuery])).resolves.toEqual([
-        true,
-      ]);
+      await expect(authorization.checkMany([checkQuery])).resolves.toEqual([true]);
       await authorization.writeRelationships([]);
-      await expect(authorization.checkMany([checkQuery])).resolves.toEqual([
-        false,
-      ]);
+      await expect(authorization.checkMany([checkQuery])).resolves.toEqual([false]);
     });
     expect(batches).toBe(2);
   });
@@ -142,12 +130,10 @@ describe("AnswerOnceAuthorization", () => {
   it("falls back to individual checks for implementations without batching", async () => {
     const inner = new CountingAuthorization();
     const authorization = new AnswerOnceAuthorization(inner);
-    await expect(
-      authorization.checkMany([
-        checkQuery,
-        { ...checkQuery, permission: "view" },
-      ]),
-    ).resolves.toEqual([true, true]);
+    await expect(authorization.checkMany([checkQuery, { ...checkQuery, permission: "view" }])).resolves.toEqual([
+      true,
+      true,
+    ]);
     expect(inner.checks).toBe(2);
   });
 
@@ -165,9 +151,7 @@ describe("AnswerOnceAuthorization", () => {
 
     await answeringEachQuestionOnce(async () => {
       await expect(authorization.checkMany([checkQuery])).rejects.toBe(failure);
-      await expect(authorization.checkMany([checkQuery])).resolves.toEqual([
-        true,
-      ]);
+      await expect(authorization.checkMany([checkQuery])).resolves.toEqual([true]);
     });
     expect(attempts).toBe(2);
   });
@@ -215,14 +199,10 @@ describe("AnswerOnceAuthorization", () => {
   });
 
   it.each([
-    [
-      "writeRelationships",
-      (authorization: Authorization) => authorization.writeRelationships([]),
-    ],
+    ["writeRelationships", (authorization: Authorization) => authorization.writeRelationships([])],
     [
       "deleteRelationships",
-      (authorization: Authorization) =>
-        authorization.deleteRelationships({ resourceType: "platform" }),
+      (authorization: Authorization) => authorization.deleteRelationships({ resourceType: "platform" }),
     ],
   ])("forgets every answer after %s", async (_name, write) => {
     const inner = new CountingAuthorization();
@@ -239,9 +219,7 @@ describe("AnswerOnceAuthorization", () => {
 
   it("counts only real round trips when it sits in front of the tally", async () => {
     const inner = new CountingAuthorization();
-    const authorization = new AnswerOnceAuthorization(
-      new TalliedAuthorization(inner),
-    );
+    const authorization = new AnswerOnceAuthorization(new TalliedAuthorization(inner));
     const tally = await measureRequestWork(() =>
       answeringEachQuestionOnce(async () => {
         await authorization.check(checkQuery);
@@ -262,9 +240,7 @@ describe("AnswerOnceAuthorization", () => {
         return Promise.resolve(queries.map(() => true));
       },
     });
-    const authorization = new AnswerOnceAuthorization(
-      new TalliedAuthorization(inner),
-    );
+    const authorization = new AnswerOnceAuthorization(new TalliedAuthorization(inner));
     const other = { ...checkQuery, permission: "view" };
     const tally = await measureRequestWork(() =>
       answeringEachQuestionOnce(async () => {
@@ -303,9 +279,7 @@ describe("AnswerOnceAuthorization", () => {
     inner.failNextCheck = true;
     const authorization = new AnswerOnceAuthorization(inner);
     await answeringEachQuestionOnce(async () => {
-      await expect(authorization.check(checkQuery)).rejects.toThrow(
-        "SpiceDB unavailable",
-      );
+      await expect(authorization.check(checkQuery)).rejects.toThrow("SpiceDB unavailable");
       await expect(authorization.check(checkQuery)).resolves.toBe(true);
     });
     expect(inner.checks).toBe(2);
@@ -327,9 +301,7 @@ class BulkCountingAuthorization extends CountingAuthorization {
     this.#failsBatch = failsBatch;
   }
 
-  override checkEach(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  override checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     this.batches.push(queries);
     if (this.#failsBatch(queries)) {
       return Promise.reject(new Error("SpiceDB unavailable"));
@@ -337,9 +309,7 @@ class BulkCountingAuthorization extends CountingAuthorization {
     return Promise.resolve(
       queries.map((query): PermissionCheckOutcome => {
         const answer = this.#answers(query);
-        return answer instanceof Error
-          ? { kind: "failed", error: answer }
-          : { kind: "answered", allowed: answer };
+        return answer instanceof Error ? { kind: "failed", error: answer } : { kind: "answered", allowed: answer };
       }),
     );
   }
@@ -357,9 +327,7 @@ const readerAsks = (permission: string, id: string): PermissionQuery => ({
 describe("AnswerOnceAuthorization gathering checks made together", () => {
   it("sends concurrent checks as one round trip", async () => {
     const inner = new BulkCountingAuthorization();
-    const authorization = new AnswerOnceAuthorization(
-      new TalliedAuthorization(inner),
-    );
+    const authorization = new AnswerOnceAuthorization(new TalliedAuthorization(inner));
     const permissions = [
       "administer",
       "execute_live_environment_actions",
@@ -372,17 +340,11 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
 
     const tally = await measureRequestWork(() =>
       answeringEachQuestionOnce(() =>
-        Promise.all(
-          permissions.map((permission) =>
-            authorization.check({ ...checkQuery, permission }),
-          ),
-        ),
+        Promise.all(permissions.map((permission) => authorization.check({ ...checkQuery, permission }))),
       ),
     );
 
-    expect(inner.batches.map((batch) => batch.length)).toEqual([
-      permissions.length,
-    ]);
+    expect(inner.batches.map((batch) => batch.length)).toEqual([permissions.length]);
     expect(inner.checks).toBe(0);
     expect(tally.authzCheckCount).toBe(1);
   });
@@ -428,11 +390,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
     const pinnedB: PermissionQuery = { ...plainB, consistencyToken: "token-1" };
 
     await answeringEachQuestionOnce(() =>
-      Promise.all(
-        [plainA, currentA, pinnedA, plainB, currentB, pinnedB].map((query) =>
-          authorization.check(query),
-        ),
-      ),
+      Promise.all([plainA, currentA, pinnedA, plainB, currentB, pinnedB].map((query) => authorization.check(query))),
     );
 
     expect(inner.batches).toEqual([
@@ -467,9 +425,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
         { status: "fulfilled", value: false },
       ]);
       // The failure is not kept: the next ask reaches the vendor again.
-      await expect(authorization.check(readerAsks("view", "b"))).resolves.toBe(
-        true,
-      );
+      await expect(authorization.check(readerAsks("view", "b"))).resolves.toBe(true);
     });
 
     expect(inner.batches).toHaveLength(1);
@@ -479,8 +435,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
   it("rejects only the callers whose batch failed", async () => {
     const inner = new BulkCountingAuthorization(
       () => true,
-      (queries) =>
-        queries.some((query) => query.consistency === "fully-consistent"),
+      (queries) => queries.some((query) => query.consistency === "fully-consistent"),
     );
     const authorization = new AnswerOnceAuthorization(inner);
     const plainA = readerAsks("view", "a");
@@ -495,12 +450,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
       ]),
     );
 
-    expect(answers.map((answer) => answer.status)).toEqual([
-      "fulfilled",
-      "rejected",
-      "fulfilled",
-      "rejected",
-    ]);
+    expect(answers.map((answer) => answer.status)).toEqual(["fulfilled", "rejected", "fulfilled", "rejected"]);
     expect(inner.batches).toHaveLength(2);
   });
 
@@ -514,17 +464,10 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
     const questions = [readerAsks("view", "a"), readerAsks("view", "b")];
 
     await answeringEachQuestionOnce(async () => {
-      const failed = await Promise.allSettled(
-        questions.map((query) => authorization.check(query)),
-      );
-      expect(failed.map((answer) => answer.status)).toEqual([
-        "rejected",
-        "rejected",
-      ]);
+      const failed = await Promise.allSettled(questions.map((query) => authorization.check(query)));
+      expect(failed.map((answer) => answer.status)).toEqual(["rejected", "rejected"]);
       failing = false;
-      await expect(
-        Promise.all(questions.map((query) => authorization.check(query))),
-      ).resolves.toEqual([true, true]);
+      await expect(Promise.all(questions.map((query) => authorization.check(query)))).resolves.toEqual([true, true]);
     });
 
     expect(inner.batches).toEqual([questions, questions]);
@@ -538,9 +481,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
 
     await answeringEachQuestionOnce(async () => {
       await authorization.check(known);
-      await Promise.all(
-        [known, ...misses].map((query) => authorization.check(query)),
-      );
+      await Promise.all([known, ...misses].map((query) => authorization.check(query)));
     });
 
     expect(inner.checks).toBe(1);
@@ -548,9 +489,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
   });
 
   it("sends a question asked twice in one tick as one item", async () => {
-    const inner = new BulkCountingAuthorization(
-      (query) => query.resource.id === "a",
-    );
+    const inner = new BulkCountingAuthorization((query) => query.resource.id === "a");
     const authorization = new AnswerOnceAuthorization(inner);
 
     const answers = await answeringEachQuestionOnce(() =>
@@ -562,9 +501,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
     );
 
     expect(answers).toEqual([true, false, true]);
-    expect(inner.batches).toEqual([
-      [readerAsks("view", "a"), readerAsks("view", "b")],
-    ]);
+    expect(inner.batches).toEqual([[readerAsks("view", "a"), readerAsks("view", "b")]]);
   });
 
   it("keeps the plain check for checks awaited one after another", async () => {
@@ -581,15 +518,9 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
   });
 
   it("splits more than 128 concurrent checks into bulk calls of 128", async () => {
-    const inner = new BulkCountingAuthorization(
-      (query) => Number(query.resource.id) % 2 === 0,
-    );
-    const authorization = new AnswerOnceAuthorization(
-      new TalliedAuthorization(inner),
-    );
-    const questions = Array.from({ length: 130 }, (_, index) =>
-      readerAsks("view", String(index)),
-    );
+    const inner = new BulkCountingAuthorization((query) => Number(query.resource.id) % 2 === 0);
+    const authorization = new AnswerOnceAuthorization(new TalliedAuthorization(inner));
+    const questions = Array.from({ length: 130 }, (_, index) => readerAsks("view", String(index)));
 
     let answers: readonly boolean[] = [];
     const tally = await measureRequestWork(async () => {
@@ -608,10 +539,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
     const authorization = new AnswerOnceAuthorization(inner);
     const oneRequest = (id: string) =>
       answeringEachQuestionOnce(() =>
-        Promise.all([
-          authorization.check(readerAsks("view", id)),
-          authorization.check(readerAsks("edit", id)),
-        ]),
+        Promise.all([authorization.check(readerAsks("view", id)), authorization.check(readerAsks("edit", id))]),
       );
 
     await Promise.all([oneRequest("a"), oneRequest("b")]);
@@ -630,9 +558,7 @@ describe("AnswerOnceAuthorization gathering checks made together", () => {
     const withoutBulk = new AnswerOnceAuthorization(single);
 
     await Promise.all(questions.map((query) => outsideScope.check(query)));
-    await answeringEachQuestionOnce(() =>
-      Promise.all(questions.map((query) => withoutBulk.check(query))),
-    );
+    await answeringEachQuestionOnce(() => Promise.all(questions.map((query) => withoutBulk.check(query))));
 
     expect([bulk.checks, bulk.batches.length]).toEqual([2, 0]);
     expect(single.checks).toBe(2);

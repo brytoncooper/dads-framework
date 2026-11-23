@@ -7,14 +7,7 @@
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  Dialog,
-  DialogCancel,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogTitle,
-} from "./dialog.js";
+import { Dialog, DialogCancel, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "./dialog.js";
 
 afterEach(cleanup);
 
@@ -36,9 +29,7 @@ function renderOpenDialog(onOpenChange = vi.fn()) {
 describe("dialog dismiss", () => {
   it("does not mark the dialog modal so a portaled picker stays usable", () => {
     renderOpenDialog();
-    expect(screen.getByRole("dialog").getAttribute("aria-modal")).not.toBe(
-      "true",
-    );
+    expect(screen.getByRole("dialog").getAttribute("aria-modal")).not.toBe("true");
   });
 
   it("does not close when the overlay is clicked", () => {

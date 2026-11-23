@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineCopy } from "./localized-text.js";
 import { mergeCopy } from "./merge-copy.js";
-import {
-  checkProductVocabulary,
-  defineProductVocabulary,
-} from "./product-vocabulary.js";
+import { checkProductVocabulary, defineProductVocabulary } from "./product-vocabulary.js";
 
 /**
  * What: the three kinds of refusal — a word refused everywhere, a word refused
@@ -39,10 +36,7 @@ const EXAMPLE_VOCABULARY = defineProductVocabulary([
 ]);
 
 function refusedIn(entries: Readonly<Record<string, { readonly en: string }>>) {
-  return checkProductVocabulary(
-    mergeCopy([{ file: FEATURE_FILE, entries: defineCopy(entries) }]),
-    EXAMPLE_VOCABULARY,
-  );
+  return checkProductVocabulary(mergeCopy([{ file: FEATURE_FILE, entries: defineCopy(entries) }]), EXAMPLE_VOCABULARY);
 }
 
 describe("checkProductVocabulary", () => {
@@ -52,10 +46,7 @@ describe("checkProductVocabulary", () => {
       "example.kits.description": { en: "Every widget bundle you sell." },
     });
 
-    expect(violations.map(({ found }) => found)).toEqual([
-      "Widget Bundles",
-      "widget bundle",
-    ]);
+    expect(violations.map(({ found }) => found)).toEqual(["Widget Bundles", "widget bundle"]);
   });
 
   it("names the key, the file and what to write instead", () => {
@@ -91,10 +82,7 @@ describe("checkProductVocabulary", () => {
       "example.nav.folder": { en: "folder" },
     });
 
-    expect(violations.map(({ key }) => key)).toEqual([
-      "example.page.title",
-      "example.nav.folder",
-    ]);
+    expect(violations.map(({ key }) => key)).toEqual(["example.page.title", "example.nav.folder"]);
   });
 
   it("allows a naming word in ordinary prose where it names nothing", () => {
@@ -114,10 +102,7 @@ describe("checkProductVocabulary", () => {
       "example.description": { en: "Review access in Folder." },
     });
 
-    expect(violations.map(({ key }) => key).sort()).toEqual([
-      "example.action.open",
-      "example.description",
-    ]);
+    expect(violations.map(({ key }) => key).sort()).toEqual(["example.action.open", "example.description"]);
   });
 
   it("refuses a naming word that opens a phrase naming a screen", () => {

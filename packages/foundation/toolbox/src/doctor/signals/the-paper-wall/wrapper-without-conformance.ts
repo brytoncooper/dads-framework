@@ -35,41 +35,20 @@ import { hasExplicitWrapperConformance } from "./explicit-wrapper-conformance.js
 const CONFORMANCE_MARK = "conformance";
 const STAND_IN_MARK = "in-memory";
 
-function coresAdaptedBy(
-  graph: PackageGraph,
-  adapter: GraphPackage,
-): readonly GraphPackage[] {
-  return graph.packages.filter(
-    (declared) =>
-      declared.kind === "core" && declaresModule(adapter, declared.name),
-  );
+function coresAdaptedBy(graph: PackageGraph, adapter: GraphPackage): readonly GraphPackage[] {
+  return graph.packages.filter((declared) => declared.kind === "core" && declaresModule(adapter, declared.name));
 }
 
-function ownsFileNamed(
-  context: DoctorContext,
-  declared: GraphPackage,
-  mark: string,
-): boolean {
-  return context
-    .files()
-    .some(
-      (path) => path.startsWith(`${declared.root}/`) && path.includes(mark),
-    );
+function ownsFileNamed(context: DoctorContext, declared: GraphPackage, mark: string): boolean {
+  return context.files().some((path) => path.startsWith(`${declared.root}/`) && path.includes(mark));
 }
 
 function providersOf(graph: PackageGraph, core: GraphPackage): number {
-  return graph.packages.filter(
-    (declared) =>
-      declared.kind === "adapter" && declaresModule(declared, core.name),
-  ).length;
+  return graph.packages.filter((declared) => declared.kind === "adapter" && declaresModule(declared, core.name)).length;
 }
 
 /** True when the capability has a suite and a second provider to run it. */
-function isCovered(
-  context: DoctorContext,
-  graph: PackageGraph,
-  adapter: GraphPackage,
-): boolean {
+function isCovered(context: DoctorContext, graph: PackageGraph, adapter: GraphPackage): boolean {
   if (hasExplicitWrapperConformance(context, adapter.root)) return true;
   return coresAdaptedBy(graph, adapter).some((core) => {
     if (!ownsFileNamed(context, core, CONFORMANCE_MARK)) return false;

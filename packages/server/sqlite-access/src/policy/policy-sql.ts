@@ -1,9 +1,6 @@
 import { SQLITE_RELATIONSHIP_TABLE } from "../sqlite-schema.js";
 import type { SqliteQuery, SqliteValue } from "../sqlite-types.js";
-import type {
-  CompiledSqliteColumnRelation,
-  SqliteAuthorizationModel,
-} from "./policy-model.js";
+import type { CompiledSqliteColumnRelation, SqliteAuthorizationModel } from "./policy-model.js";
 
 /** The single relationship table every compiled SQLite statement reads. */
 export const TUPLES = SQLITE_RELATIONSHIP_TABLE;
@@ -35,10 +32,7 @@ export class QueryBuilder {
 }
 
 /** Combine an array of SQL chunks with a separator while keeping `?` parameters aligned. */
-export function joinChunks(
-  chunks: readonly SqliteQuery[],
-  separator: string,
-): SqliteQuery {
+export function joinChunks(chunks: readonly SqliteQuery[], separator: string): SqliteQuery {
   const sqlParts: string[] = [];
   const params: SqliteValue[] = [];
   for (const chunk of chunks) {
@@ -49,21 +43,13 @@ export function joinChunks(
 }
 
 /** SQL condition asserting a tuple row is active at `nowMs`. */
-export function activeTupleCondition(
-  alias: string,
-  builder: QueryBuilder,
-  nowMs: number,
-): string {
+export function activeTupleCondition(alias: string, builder: QueryBuilder, nowMs: number): string {
   return `(${alias}.expires_at IS NULL OR ${alias}.expires_at > ${builder.value(nowMs)})`;
 }
 
 /** True when any relation in the SQLite model accepts a `subject-set` (`group#member`) target. */
-export function modelHasSubjectSetTargets(
-  model: SqliteAuthorizationModel,
-): boolean {
-  return model.relations.some((relation) =>
-    relation.targets.some((target) => target.kind === "subject-set"),
-  );
+export function modelHasSubjectSetTargets(model: SqliteAuthorizationModel): boolean {
+  return model.relations.some((relation) => relation.targets.some((target) => target.kind === "subject-set"));
 }
 
 /**
@@ -77,8 +63,7 @@ export function subjectReachabilityCte(options: {
   readonly subjectId: string;
   readonly nowMs: number;
   readonly includeSubjectSets?: boolean;
-  readonly columnRelations?:
-    readonly CompiledSqliteColumnRelation[] | undefined;
+  readonly columnRelations?: readonly CompiledSqliteColumnRelation[] | undefined;
 }): SqliteQuery {
   const b = new QueryBuilder();
   const directSql = `SELECT dt.resource_kind, dt.resource_id, dt.relation
@@ -109,9 +94,7 @@ export function subjectReachabilityCte(options: {
     );
   const baseParts = [directSql, wildcardSql, ...columnParts];
   if (options.includeSubjectSets === false) {
-    return b.finish(
-      `subject_reachable(resource_kind, resource_id, relation) AS (${baseParts.join(" UNION ALL ")})`,
-    );
+    return b.finish(`subject_reachable(resource_kind, resource_id, relation) AS (${baseParts.join(" UNION ALL ")})`);
   }
   const stepSql = `SELECT pt.resource_kind, pt.resource_id, pt.relation
     FROM subject_reachable sr

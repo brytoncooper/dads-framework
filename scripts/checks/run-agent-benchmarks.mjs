@@ -4,9 +4,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
-const benchmark = JSON.parse(
-  readFileSync(join(root, ".agents/benchmarks/http-agent-tasks.json"), "utf8"),
-);
+const benchmark = JSON.parse(readFileSync(join(root, ".agents/benchmarks/http-agent-tasks.json"), "utf8"));
 
 const results = benchmark.tasks.map((task) => {
   const completed = spawnSync(
@@ -15,13 +13,10 @@ const results = benchmark.tasks.map((task) => {
     { cwd: root, encoding: "utf8" },
   );
   if (completed.status !== 0) {
-    throw new Error(
-      `${task.name} failed to orient: ${completed.stderr.trim()}`,
-    );
+    throw new Error(`${task.name} failed to orient: ${completed.stderr.trim()}`);
   }
   const response = JSON.parse(completed.stdout);
-  const packageMatches =
-    response.orientation.packageName === task.expectedPackage;
+  const packageMatches = response.orientation.packageName === task.expectedPackage;
   const outputFits = completed.stdout.length <= task.maxOutputCharacters;
   if (!packageMatches || !outputFits) {
     throw new Error(

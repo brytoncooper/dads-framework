@@ -1,14 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, allOf, anyOf, compileAccess, every, resource, roleToken } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 
 import {
@@ -65,14 +57,7 @@ const strictDoc = resource("strict_doc", {
   }),
 });
 
-const model = compileAccess([
-  user,
-  group,
-  workspace,
-  folder,
-  document,
-  strictDoc,
-]);
+const model = compileAccess([user, group, workspace, folder, document, strictDoc]);
 
 function setupFilterDb(initialTimeMs = 10_000) {
   let nowMs = initialTimeMs;
@@ -103,15 +88,9 @@ function setupFilterDb(initialTimeMs = 10_000) {
     setNow: (ms: number) => {
       nowMs = ms;
     },
-    queryDocs: (
-      active: number,
-      sqlFilter: string,
-      values: readonly SqliteValue[],
-    ) =>
+    queryDocs: (active: number, sqlFilter: string, values: readonly SqliteValue[]) =>
       db
-        .prepare(
-          `SELECT d.id, d.title FROM documents d WHERE d.active = ? AND (${sqlFilter}) ORDER BY d.title LIMIT 2`,
-        )
+        .prepare(`SELECT d.id, d.title FROM documents d WHERE d.active = ? AND (${sqlFilter}) ORDER BY d.title LIMIT 2`)
         .all(active, ...values),
   };
 }
@@ -177,9 +156,7 @@ describe("SqliteAuthorization.compileFilter", () => {
 
     // Without LIMIT 2: d3 is banned, d5 is inactive, d4 is wildcard-visible
     const allAllowed = db
-      .prepare(
-        `SELECT d.id FROM documents d WHERE d.active = ? AND (${directFilter.sql}) ORDER BY d.title`,
-      )
+      .prepare(`SELECT d.id FROM documents d WHERE d.active = ? AND (${directFilter.sql}) ORDER BY d.title`)
       .all(1, ...directFilter.values);
     expect(allAllowed).toEqual([{ id: "d1" }, { id: "d2" }, { id: "d4" }]);
 
@@ -190,9 +167,7 @@ describe("SqliteAuthorization.compileFilter", () => {
       resourceType: "document",
       idColumn: "d.id",
     });
-    expect(queryDocs(1, publishFilter.sql, publishFilter.values)).toEqual([
-      { id: "d2", title: "Bravo" },
-    ]);
+    expect(queryDocs(1, publishFilter.sql, publishFilter.values)).toEqual([{ id: "d2", title: "Bravo" }]);
   });
 
   it("filters rows across workspace inheritance, nested recursive folders, and folder cycles", async () => {
@@ -270,15 +245,9 @@ describe("SqliteAuthorization.compileFilter", () => {
     ]);
 
     const fullList = db
-      .prepare(
-        `SELECT d.id FROM documents d WHERE d.active = ? AND (${filter.sql}) ORDER BY d.title`,
-      )
+      .prepare(`SELECT d.id FROM documents d WHERE d.active = ? AND (${filter.sql}) ORDER BY d.title`)
       .all(1, ...filter.values);
-    expect(fullList).toEqual([
-      { id: "d-ws" },
-      { id: "d-deep" },
-      { id: "d-cyc" },
-    ]);
+    expect(fullList).toEqual([{ id: "d-ws" }, { id: "d-deep" }, { id: "d-cyc" }]);
 
     const strangerFilter = authz.compileFilter({
       subject: { type: "user", id: "stranger" },
@@ -329,9 +298,7 @@ describe("SqliteAuthorization.compileFilter", () => {
       idColumn: "d.id",
       now: new Date(5_000),
     });
-    expect(queryDocs(1, futureOverride.sql, futureOverride.values)).toEqual([
-      { id: "d-perm", title: "Permanent" },
-    ]);
+    expect(queryDocs(1, futureOverride.sql, futureOverride.values)).toEqual([{ id: "d-perm", title: "Permanent" }]);
 
     setNow(6_000);
     const after = authz.compileFilter({
@@ -340,9 +307,7 @@ describe("SqliteAuthorization.compileFilter", () => {
       resourceType: "document",
       idColumn: "d.id",
     });
-    expect(queryDocs(1, after.sql, after.values)).toEqual([
-      { id: "d-perm", title: "Permanent" },
-    ]);
+    expect(queryDocs(1, after.sql, after.values)).toEqual([{ id: "d-perm", title: "Permanent" }]);
   });
 
   it("enforces every() / throughAll non-vacuously inside compileFilter", async () => {
@@ -389,9 +354,7 @@ describe("SqliteAuthorization.compileFilter", () => {
     });
     expect(
       db
-        .prepare(
-          `SELECT id FROM strict_docs WHERE active = ? AND (${aliceFilter.sql}) ORDER BY id`,
-        )
+        .prepare(`SELECT id FROM strict_docs WHERE active = ? AND (${aliceFilter.sql}) ORDER BY id`)
         .all(1, ...aliceFilter.values),
     ).toEqual([{ id: "s-both" }, { id: "s-one" }]);
 
@@ -403,18 +366,14 @@ describe("SqliteAuthorization.compileFilter", () => {
     });
     expect(
       db
-        .prepare(
-          `SELECT id FROM strict_docs WHERE active = ? AND (${bobFilter.sql}) ORDER BY id`,
-        )
+        .prepare(`SELECT id FROM strict_docs WHERE active = ? AND (${bobFilter.sql}) ORDER BY id`)
         .all(1, ...bobFilter.values),
     ).toEqual([{ id: "s-one" }]);
   });
 
   it("fails closed on unknown permission or resourceType and rejects invalid idColumn or subjects", () => {
     const { db, authz, queryDocs } = setupFilterDb();
-    db.exec(
-      `INSERT INTO documents (id, title, active) VALUES ('d1', 'Alpha', 1);`,
-    );
+    db.exec(`INSERT INTO documents (id, title, active) VALUES ('d1', 'Alpha', 1);`);
 
     const unknownPerm = authz.compileFilter({
       subject: { type: "user", id: "alice" },

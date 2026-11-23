@@ -85,11 +85,7 @@ describe("providePlugin", () => {
       },
     });
 
-    const running = await composeApp([
-      serviceConsumer,
-      directConsumer,
-      hostClock,
-    ]).start();
+    const running = await composeApp([serviceConsumer, directConsumer, hostClock]).start();
     try {
       const provided = running.read(hostClock);
       const viaService = running.read(clockService);

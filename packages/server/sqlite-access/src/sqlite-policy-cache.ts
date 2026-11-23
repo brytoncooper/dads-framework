@@ -1,14 +1,8 @@
 import type { AccessModel } from "@dads-framework/access";
 import type { SqliteColumnRelationBinding } from "./policy/column-relations.js";
-import {
-  compileAccessPolicy,
-  type CompiledSqliteAccessPolicy,
-} from "./policy/compile-access-policy.js";
+import { compileAccessPolicy, type CompiledSqliteAccessPolicy } from "./policy/compile-access-policy.js";
 
-const compiledPolicyCache = new WeakMap<
-  AccessModel,
-  CompiledSqliteAccessPolicy
->();
+const compiledPolicyCache = new WeakMap<AccessModel, CompiledSqliteAccessPolicy>();
 
 export function getOrCompileSqlitePolicy(
   model: AccessModel,

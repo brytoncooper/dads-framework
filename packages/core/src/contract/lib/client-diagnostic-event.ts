@@ -111,25 +111,17 @@ export const clientDiagnosticEventSchema = z.strictObject({
 
 export type ClientDiagnosticEvent = z.infer<typeof clientDiagnosticEventSchema>;
 export type ClientDiagnosticFrame = z.infer<typeof clientDiagnosticFrameSchema>;
-export type ClientDiagnosticBreadcrumb = z.infer<
-  typeof clientDiagnosticBreadcrumbSchema
->;
+export type ClientDiagnosticBreadcrumb = z.infer<typeof clientDiagnosticBreadcrumbSchema>;
 
 /** The request body: a small batch, so a burst costs one round trip. */
 export const reportClientDiagnosticsBodySchema = z.strictObject({
-  events: z
-    .array(clientDiagnosticEventSchema)
-    .min(1)
-    .max(CLIENT_DIAGNOSTIC_MAX_EVENTS)
-    .meta({
-      description:
-        "The faults this client hit, at least one and at most twenty. A batch so that a page failing several ways at once reports in one request rather than twenty.",
-    }),
+  events: z.array(clientDiagnosticEventSchema).min(1).max(CLIENT_DIAGNOSTIC_MAX_EVENTS).meta({
+    description:
+      "The faults this client hit, at least one and at most twenty. A batch so that a page failing several ways at once reports in one request rather than twenty.",
+  }),
 });
 
-export type ReportClientDiagnosticsBody = z.infer<
-  typeof reportClientDiagnosticsBodySchema
->;
+export type ReportClientDiagnosticsBody = z.infer<typeof reportClientDiagnosticsBodySchema>;
 
 /**
  * What the API answers: how many of the batch it stored.
@@ -145,6 +137,4 @@ export const reportedClientDiagnosticsSchema = z.strictObject({
   }),
 });
 
-export type ReportedClientDiagnostics = z.infer<
-  typeof reportedClientDiagnosticsSchema
->;
+export type ReportedClientDiagnostics = z.infer<typeof reportedClientDiagnosticsSchema>;

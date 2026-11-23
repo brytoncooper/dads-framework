@@ -1,10 +1,6 @@
 import { isRecord } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 const TIMING_FILE = ".dads/hook-timings.jsonl";
 const RECENT_SAMPLES = 20;
@@ -25,12 +21,7 @@ function addSample(line: string, samples: Map<string, number[]>): void {
   samples.get(hook)?.push(duration);
 }
 
-function hookReading(
-  hook: string,
-  samples: readonly number[],
-  budget: number,
-  context: DoctorContext,
-): SignalReading {
+function hookReading(hook: string, samples: readonly number[], budget: number, context: DoctorContext): SignalReading {
   const recent = samples.slice(-RECENT_SAMPLES).sort((a, b) => a - b);
   const middle = Math.floor(recent.length / 2);
   const upper = recent[middle] ?? 0;
@@ -45,11 +36,8 @@ function hookReading(
 }
 
 function measureHookRuntime(context: DoctorContext): SignalReadings {
-  if (!context.exists(TIMING_FILE))
-    throw new Error("no local hook timing samples");
-  const samples = new Map<string, number[]>(
-    Object.keys(BUDGETS).map((hook) => [hook, []]),
-  );
+  if (!context.exists(TIMING_FILE)) throw new Error("no local hook timing samples");
+  const samples = new Map<string, number[]>(Object.keys(BUDGETS).map((hook) => [hook, []]));
   for (const line of context.read(TIMING_FILE).split("\n")) {
     addSample(line, samples);
   }
@@ -59,8 +47,7 @@ function measureHookRuntime(context: DoctorContext): SignalReadings {
     if (measured === undefined || measured.length === 0) continue;
     readings.set(hook, hookReading(hook, measured, budget, context));
   }
-  if (readings.size === 0)
-    throw new Error("no valid local hook timing samples");
+  if (readings.size === 0) throw new Error("no valid local hook timing samples");
   return readings;
 }
 
@@ -73,7 +60,6 @@ export const hookRuntimeSignal: DoctorSignal = {
   direction: "ceiling",
   thresholds: { standard: null, strict: null },
   reportOnly: true,
-  sentence:
-    "A no that cannot explain itself is a no the kids will route around.",
+  sentence: "A no that cannot explain itself is a no the kids will route around.",
   run: (context) => Promise.resolve(measureHookRuntime(context)),
 };

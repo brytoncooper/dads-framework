@@ -6,14 +6,7 @@
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableCell,
-} from "./table.js";
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "./table.js";
 
 afterEach(cleanup);
 
@@ -42,9 +35,7 @@ describe("table header hover", () => {
     expect(header?.className).not.toContain("hover:bg-table-row-hover");
     expect(headerCell.className).not.toContain("hover:bg-table-row-hover");
     expect(bodyRow?.className).toContain("hover:[&>td]:bg-table-row-hover");
-    expect(bodyRow?.className.split(/\s+/)).not.toContain(
-      "hover:bg-table-row-hover",
-    );
+    expect(bodyRow?.className.split(/\s+/)).not.toContain("hover:bg-table-row-hover");
     expect(bodyCell.className.split(/\s+/)).toContain("relative");
   });
 });

@@ -1,9 +1,5 @@
 export { DrizzleFeatureFlagStore } from "./drizzle-feature-flag-store.js";
-export {
-  featureFlagChangeEvents,
-  featureFlagStates,
-  featureFlagTenantTargets,
-} from "./feature-flag-tables.js";
+export { featureFlagChangeEvents, featureFlagStates, featureFlagTenantTargets } from "./feature-flag-tables.js";
 export {
   down as removeFeatureFlagSchemaV1,
   up as installFeatureFlagSchemaV1,

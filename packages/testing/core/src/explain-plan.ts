@@ -1,17 +1,8 @@
 import { owningProjectForPath } from "./path-ownership.js";
 import { reasonTexts } from "./plan-reasons.js";
 export { reasonTexts } from "./plan-reasons.js";
-import {
-  formatIssueLocation,
-  issueScope,
-  issueSeverity,
-} from "./plan-issues.js";
-import type {
-  TestingPlanIssue,
-  TestingPlanResult,
-  TestingTaskCause,
-  TestingTaskDecision,
-} from "./testing-api.js";
+import { formatIssueLocation, issueScope, issueSeverity } from "./plan-issues.js";
+import type { TestingPlanIssue, TestingPlanResult, TestingTaskCause, TestingTaskDecision } from "./testing-api.js";
 import type { TestingManifest } from "./testing-manifest.js";
 
 /**
@@ -92,19 +83,12 @@ const derivedSymbolNote = " (symbol not reported by this dad-test build)";
  * something useful about a plan whose manifest cannot be read; without it,
  * derived mode has no project ownership and reports fewer causes.
  */
-export function explainPlan(
-  plan: TestingPlanResult,
-  manifest?: TestingManifest,
-): PlanExplanation {
+export function explainPlan(plan: TestingPlanResult, manifest?: TestingManifest): PlanExplanation {
   // One task without causes makes the whole explanation derived: mixing proven
   // and inferred causes in one report would leave `detail` meaningless.
-  const detail = plan.tasks.every((task) => task.causes !== undefined)
-    ? "engine"
-    : "derived";
+  const detail = plan.tasks.every((task) => task.causes !== undefined) ? "engine" : "derived";
   const tasks = plan.tasks.map((task) =>
-    detail === "engine"
-      ? explainWithEngineCauses(task, plan.issues)
-      : explainWithDerivedCauses(task, plan, manifest),
+    detail === "engine" ? explainWithEngineCauses(task, plan.issues) : explainWithDerivedCauses(task, plan, manifest),
   );
   const selected = plan.tasks.filter((task) => task.decision === "run").length;
 
@@ -118,15 +102,10 @@ export function explainPlan(
       widened: plan.tasks.filter((task) => task.widened).length,
       byReason: countByReason(plan.tasks),
       fullFallback: plan.scope.fullFallback,
-      fullFallbackCauses:
-        detail === "engine"
-          ? engineFullFallbackCauses(plan)
-          : derivedFullFallbackCauses(plan),
+      fullFallbackCauses: detail === "engine" ? engineFullFallbackCauses(plan) : derivedFullFallbackCauses(plan),
     },
     tasks,
-    informational: plan.issues
-      .filter((issue) => issueSeverity(issue) === "info")
-      .map(explainIssue),
+    informational: plan.issues.filter((issue) => issueSeverity(issue) === "info").map(explainIssue),
     detail,
   };
 }
@@ -160,10 +139,7 @@ export function renderPlanExplanation(explanation: PlanExplanation): string {
 
 // --- Engine causes -------------------------------------------------------
 
-function explainWithEngineCauses(
-  task: TestingTaskDecision,
-  issues: readonly TestingPlanIssue[],
-): ExplainedTask {
+function explainWithEngineCauses(task: TestingTaskDecision, issues: readonly TestingPlanIssue[]): ExplainedTask {
   return {
     ...taskHeadFields(task, task.project),
     reasonText: reasonTexts[task.reason] ?? task.reason,
@@ -171,10 +147,7 @@ function explainWithEngineCauses(
   };
 }
 
-function explainCause(
-  cause: TestingTaskCause,
-  issues: readonly TestingPlanIssue[],
-): ExplanationCause {
+function explainCause(cause: TestingTaskCause, issues: readonly TestingPlanIssue[]): ExplanationCause {
   switch (cause.kind) {
     case "direct-task-input":
       return { kind: "direct-task-input", taskId: cause.taskId };
@@ -191,9 +164,7 @@ function explainCause(
     case "reached-import": {
       // The location is carried only when it says more than the path already does.
       const location =
-        cause.line === undefined
-          ? undefined
-          : formatSourceLocation(cause.path, cause.line, cause.column);
+        cause.line === undefined ? undefined : formatSourceLocation(cause.path, cause.line, cause.column);
       return {
         kind: "reached-import",
         path: cause.path,
@@ -209,9 +180,7 @@ function explainCause(
   }
 }
 
-function engineFullFallbackCauses(
-  plan: TestingPlanResult,
-): readonly ExplainedIssue[] {
+function engineFullFallbackCauses(plan: TestingPlanResult): readonly ExplainedIssue[] {
   const indexes = new Set<number>();
   for (const task of plan.tasks) {
     if (task.reason !== "full-fallback") continue;
@@ -219,9 +188,7 @@ function engineFullFallbackCauses(
       if (cause.kind === "issue") indexes.add(cause.index);
     }
   }
-  return [...indexes]
-    .sort((left, right) => left - right)
-    .map((index) => explainIssueAt(plan.issues, index));
+  return [...indexes].sort((left, right) => left - right).map((index) => explainIssueAt(plan.issues, index));
 }
 
 // --- Derived causes ------------------------------------------------------
@@ -231,16 +198,11 @@ function explainWithDerivedCauses(
   plan: TestingPlanResult,
   manifest: TestingManifest | undefined,
 ): ExplainedTask {
-  const project =
-    task.project ??
-    manifest?.tasks.find((candidate) => candidate.id === task.id)?.project;
+  const project = task.project ?? manifest?.tasks.find((candidate) => candidate.id === task.id)?.project;
   const reasonText = reasonTexts[task.reason] ?? task.reason;
   return {
     ...taskHeadFields(task, project),
-    reasonText:
-      task.reason === "graph-symbol-importer"
-        ? `${reasonText}${derivedSymbolNote}`
-        : reasonText,
+    reasonText: task.reason === "graph-symbol-importer" ? `${reasonText}${derivedSymbolNote}` : reasonText,
     causes: deriveCauses(task, plan, manifest, project),
   };
 }
@@ -273,9 +235,7 @@ function deriveCauses(
   }
 }
 
-function derivedFullFallbackCauses(
-  plan: TestingPlanResult,
-): readonly ExplainedIssue[] {
+function derivedFullFallbackCauses(plan: TestingPlanResult): readonly ExplainedIssue[] {
   if (!plan.tasks.some((task) => task.reason === "full-fallback")) return [];
   return workspaceUncertaintyIssues(plan.issues);
 }
@@ -287,9 +247,7 @@ function ownedChangedPathCauses(
 ): readonly ExplanationCause[] {
   if (manifest === undefined || project === undefined) return [];
   return plan.scope.changedPaths
-    .filter(
-      (path) => owningProjectForPath(manifest.projects, path)?.id === project,
-    )
+    .filter((path) => owningProjectForPath(manifest.projects, path)?.id === project)
     .map((path): ExplanationCause => ({ kind: "changed-path", path }));
 }
 
@@ -299,9 +257,7 @@ function prerequisiteCauses(
   manifest: TestingManifest | undefined,
 ): readonly ExplanationCause[] {
   if (manifest === undefined) return [];
-  const selected = new Set(
-    plan.tasks.filter((task) => task.decision === "run").map((task) => task.id),
-  );
+  const selected = new Set(plan.tasks.filter((task) => task.decision === "run").map((task) => task.id));
   return manifest.tasks
     .filter((task) => selected.has(task.id) && task.dependsOn.includes(taskId))
     .map((task): ExplanationCause => ({
@@ -310,14 +266,9 @@ function prerequisiteCauses(
     }));
 }
 
-function workspaceUncertaintyIssues(
-  issues: readonly TestingPlanIssue[],
-): readonly ExplainedIssue[] {
+function workspaceUncertaintyIssues(issues: readonly TestingPlanIssue[]): readonly ExplainedIssue[] {
   return issues
-    .filter(
-      (issue) =>
-        issueScope(issue) === "workspace" && issueSeverity(issue) !== "info",
-    )
+    .filter((issue) => issueScope(issue) === "workspace" && issueSeverity(issue) !== "info")
     .map(explainIssue);
 }
 
@@ -359,9 +310,7 @@ function taskHeadFields(
   };
 }
 
-function countByReason(
-  tasks: readonly TestingTaskDecision[],
-): Readonly<Record<string, number>> {
+function countByReason(tasks: readonly TestingTaskDecision[]): Readonly<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const task of tasks) {
     counts[task.reason] = (counts[task.reason] ?? 0) + 1;
@@ -386,10 +335,7 @@ function explainIssue(issue: TestingPlanIssue): ExplainedIssue {
  * as its own uncertainty rather than dropped: a cause that cannot be shown is
  * still a cause, and losing it would make the explanation look complete.
  */
-function explainIssueAt(
-  issues: readonly TestingPlanIssue[],
-  index: number,
-): ExplainedIssue {
+function explainIssueAt(issues: readonly TestingPlanIssue[], index: number): ExplainedIssue {
   const issue = issues[index];
   if (issue === undefined) {
     return {
@@ -403,11 +349,7 @@ function explainIssueAt(
 }
 
 /** Formats a source position exactly as an issue location is formatted. */
-function formatSourceLocation(
-  path: string,
-  line: number | undefined,
-  column: number | undefined,
-): string {
+function formatSourceLocation(path: string, line: number | undefined, column: number | undefined): string {
   return (
     formatIssueLocation({
       code: "source-location",
@@ -432,11 +374,7 @@ function renderScope(scope: TestingPlanResult["scope"]): string {
 function renderTaskHeadline(task: ExplainedTask): string {
   const tokens = [task.decision === "run" ? "RUN" : "SKIP", task.id];
   if (task.project !== undefined) tokens.push(`project=${task.project}`);
-  tokens.push(
-    `reason=${task.reason}`,
-    `confidence=${task.confidence}`,
-    `widened=${task.widened ? "yes" : "no"}`,
-  );
+  tokens.push(`reason=${task.reason}`, `confidence=${task.confidence}`, `widened=${task.widened ? "yes" : "no"}`);
   return tokens.join(" ");
 }
 
@@ -447,8 +385,7 @@ function renderCause(cause: ExplanationCause): string {
     case "changed-export":
       return `export ${cause.symbol} ${cause.path}`;
     case "reached-import": {
-      const symbols =
-        cause.symbols.length === 0 ? "" : ` ${cause.symbols.join(",")}`;
+      const symbols = cause.symbols.length === 0 ? "" : ` ${cause.symbols.join(",")}`;
       return `import ${cause.location ?? cause.path} from ${cause.importedFrom}${symbols}`;
     }
     case "prerequisite-of":

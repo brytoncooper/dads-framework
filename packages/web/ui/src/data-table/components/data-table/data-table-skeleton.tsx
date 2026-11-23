@@ -1,17 +1,9 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../display/index.js";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../display/index.js";
 import { Skeleton, cn } from "../../../elements/index.js";
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { useIsPhoneWidth } from "../../hooks/use-is-phone-width.js";
 
-type ToolbarControlWidth =
-  "narrow" | "medium" | "select" | "wide" | "extraWide" | "search";
+type ToolbarControlWidth = "narrow" | "medium" | "select" | "wide" | "extraWide" | "search";
 
 const TOOLBAR_CONTROL_WIDTHS: Record<ToolbarControlWidth, string> = {
   narrow: "w-24",
@@ -63,10 +55,7 @@ export function DataTableSkeleton({
       data-slot="data-table-skeleton"
       className={cn("flex min-w-0 w-full flex-col gap-2.5", className)}
     >
-      <DataTableSkeletonToolbar
-        filterWidths={filterWidths}
-        actionWidths={actionWidths}
-      />
+      <DataTableSkeletonToolbar filterWidths={filterWidths} actionWidths={actionWidths} />
       {isPhoneWidth ? (
         <DataTableCardsSkeleton rowCount={rowCount} />
       ) : (
@@ -77,27 +66,16 @@ export function DataTableSkeleton({
           shrinkZero={shrinkZero}
         />
       )}
-      {withPagination && (
-        <DataTableSkeletonPagination
-          withSelectionStatus={withSelectionStatus}
-        />
-      )}
+      {withPagination && <DataTableSkeletonPagination withSelectionStatus={withSelectionStatus} />}
     </div>
   );
 }
 
 function DataTableCardsSkeleton({ rowCount }: { readonly rowCount: number }) {
   return (
-    <ul
-      aria-hidden="true"
-      data-slot="data-table-skeleton-cards"
-      className="flex flex-col gap-2"
-    >
+    <ul aria-hidden="true" data-slot="data-table-skeleton-cards" className="flex flex-col gap-2">
       {Array.from({ length: rowCount }).map((_, index) => (
-        <li
-          key={index}
-          className="flex flex-col gap-2 rounded-md border bg-card p-3"
-        >
+        <li key={index} className="flex flex-col gap-2 rounded-md border bg-card p-3">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
@@ -123,15 +101,9 @@ function DataTableSkeletonToolbar({
       data-slot="data-table-skeleton-toolbar"
       className="flex w-full flex-col flex-wrap gap-2 p-1 [@media(pointer:coarse)]:[&_[data-slot=skeleton]]:min-h-11 [@media(pointer:coarse)]:[&_[data-slot=skeleton]]:min-w-11 sm:flex-row sm:items-center sm:justify-between"
     >
-      <div
-        data-slot="data-table-skeleton-filters"
-        className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
-      >
+      <div data-slot="data-table-skeleton-filters" className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         {filterWidths.map((width, index) => (
-          <Skeleton
-            key={`${index}-${width}`}
-            className={cn("h-8 border-dashed", TOOLBAR_CONTROL_WIDTHS[width])}
-          />
+          <Skeleton key={`${index}-${width}`} className={cn("h-8 border-dashed", TOOLBAR_CONTROL_WIDTHS[width])} />
         ))}
       </div>
       {actionWidths.length > 0 ? (
@@ -140,10 +112,7 @@ function DataTableSkeletonToolbar({
           className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end"
         >
           {actionWidths.map((width, index) => (
-            <Skeleton
-              key={`${index}-${width}`}
-              className={cn("h-8", TOOLBAR_CONTROL_WIDTHS[width])}
-            />
+            <Skeleton key={`${index}-${width}`} className={cn("h-8", TOOLBAR_CONTROL_WIDTHS[width])} />
           ))}
         </div>
       ) : null}
@@ -151,11 +120,7 @@ function DataTableSkeletonToolbar({
   );
 }
 
-function DataTableSkeletonPagination({
-  withSelectionStatus,
-}: {
-  withSelectionStatus: boolean;
-}) {
+function DataTableSkeletonPagination({ withSelectionStatus }: { withSelectionStatus: boolean }) {
   return (
     <div
       data-slot="data-table-skeleton-pagination"
@@ -192,10 +157,7 @@ function DataTableDesktopSkeleton({
   rowCount: number;
   shrinkZero: boolean;
 }) {
-  const widths = Array.from(
-    { length: columnCount },
-    (_, index) => cellWidths[index % cellWidths.length] ?? "auto",
-  );
+  const widths = Array.from({ length: columnCount }, (_, index) => cellWidths[index % cellWidths.length] ?? "auto");
 
   return (
     <div className="rounded-md border">

@@ -20,9 +20,7 @@ describe("request metadata composition", () => {
     registerRequestMetadata(
       (request) => {
         const context = request.headers?.["x-test-caller-context"];
-        return context === undefined
-          ? undefined
-          : { "x-test-client-state-hash": `hash:${context}` };
+        return context === undefined ? undefined : { "x-test-client-state-hash": `hash:${context}` };
       },
       (response, request) => {
         observed.push({
@@ -34,9 +32,7 @@ describe("request metadata composition", () => {
     const seen: Headers[] = [];
     vi.stubGlobal("fetch", (_url: string, init: RequestInit) => {
       seen.push(new Headers(init.headers));
-      return Promise.resolve(
-        new Response(JSON.stringify({ code: "REJECTED" }), { status: 409 }),
-      );
+      return Promise.resolve(new Response(JSON.stringify({ code: "REJECTED" }), { status: 409 }));
     });
 
     const call = getFromApi({
@@ -54,14 +50,10 @@ describe("request metadata composition", () => {
     const contexts: string[] = [];
     registerRequestMetadata((request) => {
       const context = request.headers?.["x-test-caller-context"];
-      return context === undefined
-        ? undefined
-        : { "x-test-client-state-hash": context };
+      return context === undefined ? undefined : { "x-test-client-state-hash": context };
     }, undefined);
     vi.stubGlobal("fetch", (_url: string, init: RequestInit) => {
-      contexts.push(
-        new Headers(init.headers).get("x-test-client-state-hash") ?? "missing",
-      );
+      contexts.push(new Headers(init.headers).get("x-test-client-state-hash") ?? "missing");
       return Promise.resolve(
         new Response(JSON.stringify({ data: { id: "state" } }), {
           status: 200,

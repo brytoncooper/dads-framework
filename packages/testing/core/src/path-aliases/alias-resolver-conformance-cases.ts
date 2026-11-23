@@ -110,8 +110,7 @@ const packageExtendsCase: ResolutionCase = {
   tsconfig: "tsconfig.json",
   files: {
     "tsconfig.json": '{ "extends": "@fixture/config" }\n',
-    "node_modules/@fixture/config/package.json":
-      '{ "name": "@fixture/config", "version": "0.0.0" }\n',
+    "node_modules/@fixture/config/package.json": '{ "name": "@fixture/config", "version": "0.0.0" }\n',
     "node_modules/@fixture/config/tsconfig.json":
       '{ "compilerOptions": { "paths": { "@fixture/core": ["./src/core.ts"] } } }\n',
     "node_modules/@fixture/config/src/core.ts": emptyModule,
@@ -143,15 +142,13 @@ const packageEntryCases: readonly PackageEntryCase[] = [
   {
     name: "exports-import-condition",
     law: "resolves-package-entry",
-    manifest:
-      '{ "exports": { ".": { "import": "./exported.mjs" } }, "module": "./module.mjs", "main": "./main.cjs" }',
+    manifest: '{ "exports": { ".": { "import": "./exported.mjs" } }, "module": "./module.mjs", "main": "./main.cjs" }',
     entry: "exported.mjs",
   },
   {
     name: "exports-default-condition",
     law: "resolves-package-entry",
-    manifest:
-      '{ "exports": { ".": { "default": "./exported.mjs" } }, "main": "./main.cjs" }',
+    manifest: '{ "exports": { ".": { "default": "./exported.mjs" } }, "main": "./main.cjs" }',
     entry: "exported.mjs",
   },
   {
@@ -169,8 +166,7 @@ const packageEntryCases: readonly PackageEntryCase[] = [
   {
     name: "exports-of-another-condition-falls-to-module",
     law: "resolves-package-entry",
-    manifest:
-      '{ "exports": { ".": { "require": "./main.cjs" } }, "module": "./module.mjs", "main": "./main.cjs" }',
+    manifest: '{ "exports": { ".": { "require": "./main.cjs" } }, "module": "./module.mjs", "main": "./main.cjs" }',
     entry: "module.mjs",
   },
   {
@@ -204,12 +200,9 @@ const packageEntryCases: readonly PackageEntryCase[] = [
   },
 ];
 
-function packageEntryResolutionCase(
-  declared: PackageEntryCase,
-): ResolutionCase {
+function packageEntryResolutionCase(declared: PackageEntryCase): ResolutionCase {
   const files: Record<string, string> = {
-    "tsconfig.json":
-      '{ "compilerOptions": { "paths": { "@fixture/package": ["./src/package"] } } }\n',
+    "tsconfig.json": '{ "compilerOptions": { "paths": { "@fixture/package": ["./src/package"] } } }\n',
     "src/package/exported.mjs": emptyModule,
     "src/package/module.mjs": emptyModule,
     "src/package/main.cjs": emptyModule,
@@ -234,11 +227,7 @@ function packageEntryResolutionCase(
 
 /** Every case whose law is an answer the resolver must give. */
 export function aliasResolutionCases(): readonly ResolutionCase[] {
-  return [
-    inheritedAliasesCase,
-    packageExtendsCase,
-    ...packageEntryCases.map(packageEntryResolutionCase),
-  ];
+  return [inheritedAliasesCase, packageExtendsCase, ...packageEntryCases.map(packageEntryResolutionCase)];
 }
 
 // --- Configurations that are refused --------------------------------------
@@ -255,23 +244,20 @@ export const aliasRefusalCases: readonly RefusalCase[] = [
     law: "refuses-missing-tsconfig",
     files: {},
     tsconfig: "absent.json",
-    message: (at) =>
-      `Dads path aliases tsconfig is not a readable file: ${at("absent.json")}`,
+    message: (at) => `Dads path aliases tsconfig is not a readable file: ${at("absent.json")}`,
   },
   {
     name: "a-tsconfig-that-is-a-directory",
     law: "refuses-directory-tsconfig",
     files: { "directory.json/inside.txt": "" },
     tsconfig: "directory.json",
-    message: (at) =>
-      `Dads path aliases tsconfig is not a readable file: ${at("directory.json")}`,
+    message: (at) => `Dads path aliases tsconfig is not a readable file: ${at("directory.json")}`,
   },
   {
     name: "a-config-that-does-not-parse",
     law: "refuses-unparsable-config",
     files: {
-      "tsconfig.json":
-        "{ compilerOptions: { paths: { '@fixture/*': ['src/*'] } } }\n",
+      "tsconfig.json": "{ compilerOptions: { paths: { '@fixture/*': ['src/*'] } } }\n",
     },
     tsconfig: "tsconfig.json",
     message: (at) =>
@@ -300,29 +286,24 @@ export const aliasRefusalCases: readonly RefusalCase[] = [
     name: "an-alias-with-two-targets",
     law: "refuses-alias-without-one-target",
     files: {
-      "tsconfig.json": aliasesTsconfig(
-        '{ "@fixture/*": ["src/*", "fallback/*"] }',
-      ),
+      "tsconfig.json": aliasesTsconfig('{ "@fixture/*": ["src/*", "fallback/*"] }'),
     },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path alias @fixture/* in ${at("tsconfig.json")} must have exactly one target.`,
+    message: (at) => `Dads path alias @fixture/* in ${at("tsconfig.json")} must have exactly one target.`,
   },
   {
     name: "an-alias-with-no-target",
     law: "refuses-alias-without-one-target",
     files: { "tsconfig.json": aliasesTsconfig('{ "@fixture/*": [] }') },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path alias @fixture/* in ${at("tsconfig.json")} must have exactly one target.`,
+    message: (at) => `Dads path alias @fixture/* in ${at("tsconfig.json")} must have exactly one target.`,
   },
   {
     name: "an-alias-whose-target-is-not-a-string",
     law: "refuses-alias-without-one-target",
     files: { "tsconfig.json": aliasesTsconfig('{ "@fixture/*": [null] }') },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path alias @fixture/* in ${at("tsconfig.json")} must have exactly one target.`,
+    message: (at) => `Dads path alias @fixture/* in ${at("tsconfig.json")} must have exactly one target.`,
   },
   {
     name: "an-alias-with-two-wildcards",
@@ -331,8 +312,7 @@ export const aliasRefusalCases: readonly RefusalCase[] = [
       "tsconfig.json": aliasesTsconfig('{ "@fixture/*/*": ["./src/*/*"] }'),
     },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path alias @fixture/*/* in ${at("tsconfig.json")} must use zero or one matching wildcard.`,
+    message: (at) => `Dads path alias @fixture/*/* in ${at("tsconfig.json")} must use zero or one matching wildcard.`,
   },
   {
     name: "a-target-that-drops-the-wildcard",
@@ -341,8 +321,7 @@ export const aliasRefusalCases: readonly RefusalCase[] = [
       "tsconfig.json": aliasesTsconfig('{ "@fixture/*": ["./src/one"] }'),
     },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path alias @fixture/* in ${at("tsconfig.json")} must use zero or one matching wildcard.`,
+    message: (at) => `Dads path alias @fixture/* in ${at("tsconfig.json")} must use zero or one matching wildcard.`,
   },
   {
     name: "a-target-that-adds-a-wildcard",
@@ -351,31 +330,26 @@ export const aliasRefusalCases: readonly RefusalCase[] = [
       "tsconfig.json": aliasesTsconfig('{ "@fixture/exact": ["./src/*"] }'),
     },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path alias @fixture/exact in ${at("tsconfig.json")} must use zero or one matching wildcard.`,
+    message: (at) => `Dads path alias @fixture/exact in ${at("tsconfig.json")} must use zero or one matching wildcard.`,
   },
   {
     name: "an-extends-of-another-shape",
     law: "refuses-extends-shape",
     files: {
-      "tsconfig.json":
-        '{ "extends": null, "compilerOptions": { "paths": { "@fixture/*": ["./src/*"] } } }\n',
+      "tsconfig.json": '{ "extends": null, "compilerOptions": { "paths": { "@fixture/*": ["./src/*"] } } }\n',
     },
     tsconfig: "tsconfig.json",
-    message: () =>
-      "Dads path aliases supports tsconfig extends only as a string or string array.",
+    message: () => "Dads path aliases supports tsconfig extends only as a string or string array.",
   },
   {
     name: "a-relative-extends-that-names-no-file",
     law: "refuses-unresolvable-relative-extends",
     files: {
       "base/keep.txt": "",
-      "tsconfig.json":
-        '{ "extends": "./base", "compilerOptions": { "paths": { "@fixture/*": ["./src/*"] } } }\n',
+      "tsconfig.json": '{ "extends": "./base", "compilerOptions": { "paths": { "@fixture/*": ["./src/*"] } } }\n',
     },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path aliases cannot resolve tsconfig extends ./base from ${at("tsconfig.json")}.`,
+    message: (at) => `Dads path aliases cannot resolve tsconfig extends ./base from ${at("tsconfig.json")}.`,
   },
   {
     name: "a-package-extends-that-cannot-be-resolved",
@@ -399,7 +373,6 @@ export const aliasRefusalCases: readonly RefusalCase[] = [
         '{ "extends": ["./left.json", "./right.json"], "compilerOptions": { "paths": { "@fixture/*": ["./src/*"] } } }\n',
     },
     tsconfig: "tsconfig.json",
-    message: (at) =>
-      `Dads path aliases found a circular tsconfig extends chain at ${at("shared.json")}.`,
+    message: (at) => `Dads path aliases found a circular tsconfig extends chain at ${at("shared.json")}.`,
   },
 ];

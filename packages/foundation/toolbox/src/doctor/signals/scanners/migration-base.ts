@@ -28,16 +28,11 @@ export type MigrationBase = {
 };
 
 /** The note a signal leaves when there was no base to judge against. */
-export const NO_BASE_NOTE =
-  "no base ref (origin/main or main): every change after a migration's first commit counts";
+export const NO_BASE_NOTE = "no base ref (origin/main or main): every change after a migration's first commit counts";
 
 function resolveBase(root: string, candidates: readonly string[]) {
   for (const ref of candidates) {
-    const result = runGit(root, "rev-parse", [
-      "--verify",
-      "--quiet",
-      `${ref}^{commit}`,
-    ]);
+    const result = runGit(root, "rev-parse", ["--verify", "--quiet", `${ref}^{commit}`]);
     if (result.status === 0) return { ref, commit: result.stdout.trim() };
   }
   return undefined;
@@ -45,26 +40,16 @@ function resolveBase(root: string, candidates: readonly string[]) {
 
 function listedLines(root: string, commandArguments: readonly string[]) {
   const listed = runGit(root, "log", commandArguments);
-  return listed.status === 0
-    ? listed.stdout.split("\n").filter((line) => line.length > 0)
-    : [];
+  return listed.status === 0 ? listed.stdout.split("\n").filter((line) => line.length > 0) : [];
 }
 
 /** The base this run judges migrations against, or nothing when none resolves. */
-export function readMigrationBase(
-  context: DoctorContext,
-): MigrationBase | undefined {
-  const candidates =
-    context.base === undefined ? DEFAULT_BASES : [context.base];
+export function readMigrationBase(context: DoctorContext): MigrationBase | undefined {
+  const candidates = context.base === undefined ? DEFAULT_BASES : [context.base];
   const base = resolveBase(context.root, candidates);
   if (base === undefined) return undefined;
   const commits = listedLines(context.root, ["--format=%H", base.commit]);
-  const touched = listedLines(context.root, [
-    "--format=",
-    "--name-only",
-    "--no-renames",
-    base.commit,
-  ]);
+  const touched = listedLines(context.root, ["--format=", "--name-only", "--no-renames", base.commit]);
   return {
     ref: base.ref,
     commits: new Set(commits),

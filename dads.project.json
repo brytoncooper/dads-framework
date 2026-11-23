@@ -72,11 +72,7 @@
       "root": "crates/dads-testing-cli",
       "responsibility": "Answers one Dads Testing request per process over stdin and stdout, and owns no selection or execution semantics of its own.",
       "kind": "core",
-      "allowedDependencies": [
-        "dads-testing-core",
-        "dads-testing-javascript",
-        "dads-testing-store"
-      ],
+      "allowedDependencies": ["dads-testing-core", "dads-testing-javascript", "dads-testing-store"],
       "verification": ["cargo test -p dad-test"],
       "skills": ["dads-orient"]
     },
@@ -146,12 +142,7 @@
       "responsibility": "Explains Dads ownership and runs deterministic agent workflows.",
       "kind": "tooling",
       "published": true,
-      "allowedDependencies": [
-        "@dads-framework/access",
-        "@dads-framework/testing",
-        "typescript",
-        "zod"
-      ],
+      "allowedDependencies": ["@dads-framework/access", "@dads-framework/testing", "typescript", "zod"],
       "verification": ["npm test -w @dads-framework/toolbox"],
       "skills": ["dads-orient"]
     },
@@ -181,11 +172,7 @@
         "zod"
       ],
       "verification": ["npm run verify:workbench-app"],
-      "skills": [
-        "add-http-operation",
-        "secure-http-operation",
-        "verify-http-work"
-      ]
+      "skills": ["add-http-operation", "secure-http-operation", "verify-http-work"]
     },
     {
       "name": "@dads-fixture/boundary-verification",
@@ -210,9 +197,7 @@
         "node-pg-migrate",
         "zod"
       ],
-      "verification": [
-        "npm run test:integration -w @dads-fixture/default-services"
-      ],
+      "verification": ["npm run test:integration -w @dads-fixture/default-services"],
       "skills": ["dads-orient"]
     },
     {
@@ -266,14 +251,8 @@
       "responsibility": "Minimal 4-file standalone example showing how to adopt `@dads-framework/access` and `@dads-framework/postgres-access` inside an existing Node + Postgres codebase without the rest of the framework.",
       "kind": "composition",
       "published": false,
-      "allowedDependencies": [
-        "@dads-framework/access",
-        "@dads-framework/postgres-access",
-        "pg"
-      ],
-      "verification": [
-        "npx vitest run fixtures/standalone-access/src/access/model.test.ts"
-      ],
+      "allowedDependencies": ["@dads-framework/access", "@dads-framework/postgres-access", "pg"],
+      "verification": ["npx vitest run fixtures/standalone-access/src/access/model.test.ts"],
       "skills": ["dads-orient"]
     },
     {
@@ -290,9 +269,7 @@
         "pg",
         "zod"
       ],
-      "verification": [
-        "npx vitest run fixtures/dads-app-access/domains/documents/server/access.test.ts"
-      ],
+      "verification": ["npx vitest run fixtures/dads-app-access/domains/documents/server/access.test.ts"],
       "skills": ["dads-orient"]
     },
     {
@@ -365,11 +342,7 @@
       "responsibility": "Postgres backend for the composed access model and transactional relationship facts. Status: Trusted experimental.",
       "kind": "binding",
       "published": true,
-      "allowedDependencies": [
-        "@dads-framework/access",
-        "@dads-framework/postgres",
-        "drizzle-orm"
-      ],
+      "allowedDependencies": ["@dads-framework/access", "@dads-framework/postgres", "drizzle-orm"],
       "verification": ["npm test -w @dads-framework/postgres-access"],
       "skills": ["dads-orient"]
     },
@@ -420,12 +393,7 @@
       "responsibility": "Document export and parsing utilities: CSV, PDF generation/rendering, and XLSX spreadsheets with optional heavy peer dependencies.",
       "kind": "adapter",
       "published": true,
-      "allowedDependencies": [
-        "@napi-rs/canvas",
-        "exceljs",
-        "pdfjs-dist",
-        "pdfmake"
-      ],
+      "allowedDependencies": ["@napi-rs/canvas", "exceljs", "pdfjs-dist", "pdfmake"],
       "verification": ["npm test -w @dads-framework/documents"],
       "skills": ["dads-orient"]
     },
@@ -435,11 +403,7 @@
       "responsibility": "Put, get, delete, and sign download or single-PUT upload URLs for object bytes. The composition",
       "kind": "adapter",
       "published": true,
-      "allowedDependencies": [
-        "@aws-sdk/client-s3",
-        "@aws-sdk/cloudfront-signer",
-        "@aws-sdk/s3-request-presigner"
-      ],
+      "allowedDependencies": ["@aws-sdk/client-s3", "@aws-sdk/cloudfront-signer", "@aws-sdk/s3-request-presigner"],
       "verification": ["npm test -w @dads-framework/object-storage"],
       "skills": ["dads-orient"]
     },
@@ -589,10 +553,7 @@
         "tw-animate-css",
         "zod"
       ],
-      "verification": [
-        "npm run build -w @dads-framework/ui",
-        "npm test -w @dads-framework/ui"
-      ],
+      "verification": ["npm run build -w @dads-framework/ui", "npm test -w @dads-framework/ui"],
       "skills": ["dads-orient"]
     },
     {
@@ -641,10 +602,7 @@
         "tsx",
         "zod"
       ],
-      "verification": [
-        "npm test -w @dads-fixture/kit-workbench",
-        "npm run typecheck -w @dads-fixture/kit-workbench"
-      ],
+      "verification": ["npm test -w @dads-fixture/kit-workbench", "npm run typecheck -w @dads-fixture/kit-workbench"],
       "skills": ["verify-http-work"]
     }
   ]

@@ -1,18 +1,10 @@
 import { getDefaultFilterOperator } from "./data-table.js";
-import type {
-  ExtendedColumnFilter,
-  FilterVariant,
-} from "./data-table-types.js";
+import type { ExtendedColumnFilter, FilterVariant } from "./data-table-types.js";
 import type { FilterParamItem } from "./filter-param.js";
 import { isKnownColumnId } from "./parsers.js";
 
 /** Variants whose control offers a set of choices, so their value is a list. */
-const LIST_VALUE_VARIANTS: ReadonlySet<FilterVariant> = new Set([
-  "select",
-  "multiSelect",
-  "range",
-  "dateRange",
-]);
+const LIST_VALUE_VARIANTS: ReadonlySet<FilterVariant> = new Set(["select", "multiSelect", "range", "dateRange"]);
 
 /**
  * Put a URL's filters back together as the table's own filters.
@@ -69,10 +61,7 @@ export function toUrlFilters<TData>(
   });
 }
 
-function matchValueToVariant(
-  value: string | string[],
-  variant: FilterVariant,
-): string | string[] {
+function matchValueToVariant(value: string | string[], variant: FilterVariant): string | string[] {
   const values = Array.isArray(value) ? value : [value];
   if (LIST_VALUE_VARIANTS.has(variant)) return values;
 

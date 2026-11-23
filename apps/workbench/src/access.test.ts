@@ -1,10 +1,6 @@
 /** Proves ergonomic access declarations preserve the workbench's persisted SpiceDB contract. */
 
-import {
-  accessIrDefinitionsDiff,
-  emitAccessIr,
-  parseZed,
-} from "@dads-framework/access";
+import { accessIrDefinitionsDiff, emitAccessIr, parseZed } from "@dads-framework/access";
 import { describe, expect, it } from "vitest";
 import { workbenchAccessModel } from "./access.js";
 
@@ -25,8 +21,6 @@ definition task {
   permission manage = workspace->manage
 }
 `);
-    expect(
-      accessIrDefinitionsDiff(previous, emitAccessIr(workbenchAccessModel)),
-    ).toEqual([]);
+    expect(accessIrDefinitionsDiff(previous, emitAccessIr(workbenchAccessModel))).toEqual([]);
   });
 });

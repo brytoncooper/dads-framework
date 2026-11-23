@@ -73,9 +73,7 @@ try {
   } else {
     const message = error instanceof Error ? error.message : "Unknown failure.";
     if (wantsJson) {
-      process.stderr.write(
-        `${JSON.stringify({ ok: false, error: message })}\n`,
-      );
+      process.stderr.write(`${JSON.stringify({ ok: false, error: message })}\n`);
     } else {
       process.stderr.write(`Dad: ${message}\n`);
     }

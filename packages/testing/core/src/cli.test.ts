@@ -16,10 +16,7 @@ afterEach(() => {
   }
 });
 
-const packageDirectory = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "..",
-);
+const packageDirectory = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const builtCli = join(packageDirectory, "dist", "cli.js");
 
 const planResult = {
@@ -44,9 +41,7 @@ describe("dad-test command line", () => {
     const exitCode = await runDadTestCli(["plan", "--json"], harness.io);
 
     expect(exitCode).toBe(0);
-    expect(harness.stdout()).toBe(
-      `${JSON.stringify({ schemaVersion: 1, ok: true, result: planResult })}\n`,
-    );
+    expect(harness.stdout()).toBe(`${JSON.stringify({ schemaVersion: 1, ok: true, result: planResult })}\n`);
     expect(harness.stderr()).toBe("");
     expect(fixture.readRequest()).toEqual({
       schemaVersion: 1,
@@ -74,10 +69,7 @@ describe("dad-test command line", () => {
     });
     const harness = createHarness(directory, fixture.binary);
 
-    const exitCode = await runDadTestCli(
-      ["run", "--all", "--jobs", "2", "--json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["run", "--all", "--jobs", "2", "--json"], harness.io);
 
     expect(exitCode).toBe(3);
     expect(fixture.readRequest()).toMatchObject({
@@ -108,14 +100,10 @@ describe("dad-test command line", () => {
   it("names every operation when the operation is missing or unknown", async () => {
     const harness = createHarness();
     expect(await runDadTestCli(["frobnicate"], harness.io)).toBe(1);
-    expect(harness.stderr()).toBe(
-      "dad-test: Expected operation plan, run, explain, or init.\n",
-    );
+    expect(harness.stderr()).toBe("dad-test: Expected operation plan, run, explain, or init.\n");
 
     const jsonHarness = createHarness();
-    expect(await runDadTestCli(["frobnicate", "--json"], jsonHarness.io)).toBe(
-      1,
-    );
+    expect(await runDadTestCli(["frobnicate", "--json"], jsonHarness.io)).toBe(1);
     expect(jsonHarness.stderr()).toBe(
       `${JSON.stringify({
         schemaVersion: 1,
@@ -165,8 +153,7 @@ describe("dad-test command line", () => {
   }
 });
 
-const spawnTestName =
-  "runs plan through the published bin with DADS_TEST_NATIVE_BINARY";
+const spawnTestName = "runs plan through the published bin with DADS_TEST_NATIVE_BINARY";
 
 function spawnPublishedBin(): void {
   const directory = makeTemporaryDirectory();
@@ -175,15 +162,11 @@ function spawnPublishedBin(): void {
     ok: true,
     result: { operation: "plan", plan: planResult },
   });
-  const result = spawnSync(
-    process.execPath,
-    [join(packageDirectory, "bin", "dad-test.js"), "plan", "--json"],
-    {
-      cwd: directory,
-      encoding: "utf8",
-      env: { ...process.env, DADS_TEST_NATIVE_BINARY: fixture.binary },
-    },
-  );
+  const result = spawnSync(process.execPath, [join(packageDirectory, "bin", "dad-test.js"), "plan", "--json"], {
+    cwd: directory,
+    encoding: "utf8",
+    env: { ...process.env, DADS_TEST_NATIVE_BINARY: fixture.binary },
+  });
   expect(result.stderr).toBe("");
   expect(result.status).toBe(0);
   const envelope: unknown = JSON.parse(result.stdout);

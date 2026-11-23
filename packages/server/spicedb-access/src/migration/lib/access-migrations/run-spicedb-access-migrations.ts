@@ -1,15 +1,9 @@
 import { emitZed } from "@dads-framework/access";
 import type { RelationshipWrite } from "@dads-framework/access/runtime";
 
-import type {
-  AuthorizationMigrationClient,
-  AuthorizationMigrationStore,
-} from "../journal/journal-entry.js";
+import type { AuthorizationMigrationClient, AuthorizationMigrationStore } from "../journal/journal-entry.js";
 import { buildMigrationBridgeSchema } from "../scaffold/build-migration-bridge-schema.js";
-import type {
-  AccessMigrationStepOp,
-  DefinedAccessMigration,
-} from "./define-access-migration.js";
+import type { AccessMigrationStepOp, DefinedAccessMigration } from "./define-access-migration.js";
 
 /**
  * Execute compiled `(from, to)` access migration step ops against a SpiceDB

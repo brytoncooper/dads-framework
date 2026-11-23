@@ -1,8 +1,5 @@
 import type { SqliteQuery } from "../sqlite-types.js";
-import {
-  compileSqliteThrough,
-  compileSqliteThroughAll,
-} from "./compile-check-through.js";
+import { compileSqliteThrough, compileSqliteThroughAll } from "./compile-check-through.js";
 import {
   columnChunk,
   compileArrowTargetDisjunction,
@@ -26,13 +23,7 @@ import {
 import { compileRelationMembership } from "./compile-relation-membership.js";
 import { joinChunks, QueryBuilder } from "./policy-sql.js";
 
-export {
-  columnChunk,
-  literalChunk,
-  type ForwardCompileContext,
-  type SqlResource,
-  type SqlSubject,
-};
+export { columnChunk, literalChunk, type ForwardCompileContext, type SqlResource, type SqlSubject };
 
 /** Compile a single concrete permission check into a parameterized SQLite Boolean query. */
 export function compileSqliteCheck(
@@ -85,26 +76,15 @@ export function compileSqliteCheckMany(
     (request, ordinal) =>
       `(${b.value(ordinal)}, ${b.value(request.subject.type)}, ${b.value(request.subject.id)}, ${b.value(request.resource.type)}, ${b.value(request.resource.id)}, ${b.value(request.permission)})`,
   );
-  const identities = [
-    ...new Set(
-      requests.map((entry) =>
-        permissionKey(entry.resource.type, entry.permission),
-      ),
-    ),
-  ];
-  const branches = identities.map((identity) =>
-    compileBatchBranch(context, identity),
-  );
+  const identities = [...new Set(requests.map((entry) => permissionKey(entry.resource.type, entry.permission)))];
+  const branches = identities.map((identity) => compileBatchBranch(context, identity));
   const branchSql = branches.map((branch) => b.append(branch)).join(" ");
   return b.finish(
     `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (VALUES ${rows.join(", ")}) SELECT i.ordinal AS ordinal, CASE ${branchSql} ELSE 0 END AS allowed FROM input i ORDER BY i.ordinal`,
   );
 }
 
-function compileBatchBranch(
-  context: ForwardCompileContext,
-  identity: string,
-): SqliteQuery {
+function compileBatchBranch(context: ForwardCompileContext, identity: string): SqliteQuery {
   const [resourceType, permission] = splitPermissionKey(identity);
   const predicate = compileForwardPermission(
     context,
@@ -136,27 +116,13 @@ export function compileForwardPermission(
   const key = permissionKey(resource.entity, permissionName);
   const definition = context.model.permissionByKey.get(key);
   if (definition === undefined) {
-    throw new Error(
-      `SQLite policy cannot find permission ${resource.entity}#${permissionName}`,
-    );
+    throw new Error(`SQLite policy cannot find permission ${resource.entity}#${permissionName}`);
   }
   const scc = context.model.cyclicSccsByKey.get(key);
   if (scc !== undefined) {
-    return compileForwardCyclicScc(
-      context,
-      scc,
-      subject,
-      resource,
-      permissionName,
-      compileForwardExpression,
-    );
+    return compileForwardCyclicScc(context, scc, subject, resource, permissionName, compileForwardExpression);
   }
-  return compileForwardExpression(
-    context,
-    subject,
-    resource,
-    definition.expression,
-  );
+  return compileForwardExpression(context, subject, resource, definition.expression);
 }
 
 /** Compile a forward Boolean predicate for a single compiled expression. */
@@ -168,12 +134,7 @@ export function compileForwardExpression(
 ): SqliteQuery {
   switch (expression.kind) {
     case "relation":
-      return compileRelationMembership(
-        context,
-        subject,
-        resource,
-        expression.relation,
-      );
+      return compileRelationMembership(context, subject, resource, expression.relation);
     case "through":
       return compileSqliteThrough(
         context,
@@ -207,13 +168,7 @@ export function compileForwardArrowTargets(
   tupleAlias: string,
   targets: readonly SqliteArrowTarget[],
 ): SqliteQuery {
-  return compileArrowTargetDisjunction(
-    context,
-    subject,
-    tupleAlias,
-    targets,
-    compileForwardPermission,
-  );
+  return compileArrowTargetDisjunction(context, subject, tupleAlias, targets, compileForwardPermission);
 }
 
 /** Compile a disjunction over column-backed arrow targets using forward permission checks. */
@@ -224,14 +179,7 @@ export function compileForwardColumnArrowTargets(
   targetIdExpr: SqliteQuery,
   targets: readonly SqliteArrowTarget[],
 ): SqliteQuery {
-  return compileColumnArrowTargets(
-    context,
-    subject,
-    targetEntity,
-    targetIdExpr,
-    targets,
-    compileForwardPermission,
-  );
+  return compileColumnArrowTargets(context, subject, targetEntity, targetIdExpr, targets, compileForwardPermission);
 }
 
 /** Compile external guard conditions using forward expression checks. */
@@ -241,13 +189,7 @@ export function compileForwardGuards(
   resource: SqlResource,
   guards: readonly GuardCondition[],
 ): SqliteQuery | undefined {
-  return compileGuardConditions(
-    context,
-    subject,
-    resource,
-    guards,
-    compileForwardExpression,
-  );
+  return compileGuardConditions(context, subject, resource, guards, compileForwardExpression);
 }
 
 function compileExclude(
@@ -257,18 +199,8 @@ function compileExclude(
   expression: Extract<SqlitePermissionExpression, { kind: "exclude" }>,
 ): SqliteQuery {
   const b = new QueryBuilder();
-  const inc = compileForwardExpression(
-    context,
-    subject,
-    resource,
-    expression.include,
-  );
-  const exc = compileForwardExpression(
-    context,
-    subject,
-    resource,
-    expression.exclude,
-  );
+  const inc = compileForwardExpression(context, subject, resource, expression.include);
+  const exc = compileForwardExpression(context, subject, resource, expression.exclude);
   return b.finish(`((${b.append(inc)}) AND NOT (${b.append(exc)}))`);
 }
 
@@ -276,19 +208,11 @@ function compileGroup(
   context: ForwardCompileContext,
   subject: SqlSubject,
   resource: SqlResource,
-  expression: Extract<
-    SqlitePermissionExpression,
-    { kind: "any-of" | "all-of" }
-  >,
+  expression: Extract<SqlitePermissionExpression, { kind: "any-of" | "all-of" }>,
 ): SqliteQuery {
   const joiner = expression.kind === "any-of" ? " OR " : " AND ";
   const parts = expression.expressions.map((child) => {
-    const compiled = compileForwardExpression(
-      context,
-      subject,
-      resource,
-      child,
-    );
+    const compiled = compileForwardExpression(context, subject, resource, child);
     return { sql: `(${compiled.sql})`, params: compiled.params };
   });
   const combined = joinChunks(parts, joiner);

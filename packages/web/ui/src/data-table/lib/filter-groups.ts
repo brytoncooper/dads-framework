@@ -45,10 +45,7 @@ export function optionsMatchingSearch(
   includes: (value: string, query: string) => boolean,
 ): readonly FilterGroupOption[] {
   if (term.trim().length === 0) return group.options;
-  return group.options.filter(
-    (option) =>
-      group.selected.includes(option.value) || includes(option.label, term),
-  );
+  return group.options.filter((option) => group.selected.includes(option.value) || includes(option.label, term));
 }
 
 /** One applied value, as its removable chip names it. */
@@ -72,17 +69,12 @@ export function toggleFilterValue(
   const isSelected = group.selected.includes(value);
   if (group.multiple === false) return isSelected ? [] : [value];
 
-  const next = isSelected
-    ? group.selected.filter((selected) => selected !== value)
-    : [...group.selected, value];
+  const next = isSelected ? group.selected.filter((selected) => selected !== value) : [...group.selected, value];
   return inOptionOrder(group.options, next);
 }
 
 /** The selection without one value, in option order. */
-export function removeFilterValue(
-  group: Pick<FilterGroup, "options" | "selected">,
-  value: string,
-): readonly string[] {
+export function removeFilterValue(group: Pick<FilterGroup, "options" | "selected">, value: string): readonly string[] {
   return inOptionOrder(
     group.options,
     group.selected.filter((selected) => selected !== value),
@@ -90,18 +82,12 @@ export function removeFilterValue(
 }
 
 /** The labels of a group's selected values, in option order. */
-export function selectedFilterLabels(
-  group: Pick<FilterGroup, "options" | "selected">,
-): readonly string[] {
-  return group.options
-    .filter((option) => group.selected.includes(option.value))
-    .map((option) => option.label);
+export function selectedFilterLabels(group: Pick<FilterGroup, "options" | "selected">): readonly string[] {
+  return group.options.filter((option) => group.selected.includes(option.value)).map((option) => option.label);
 }
 
 /** Every applied value across the groups, in group then option order. */
-export function listAppliedFilterValues(
-  groups: readonly FilterGroup[],
-): readonly AppliedFilterValue[] {
+export function listAppliedFilterValues(groups: readonly FilterGroup[]): readonly AppliedFilterValue[] {
   return groups.flatMap((group) =>
     group.options
       .filter((option) => group.selected.includes(option.value))
@@ -115,17 +101,10 @@ export function listAppliedFilterValues(
 }
 
 /** How many values are applied across the groups. */
-export function countAppliedFilterValues(
-  groups: readonly FilterGroup[],
-): number {
+export function countAppliedFilterValues(groups: readonly FilterGroup[]): number {
   return listAppliedFilterValues(groups).length;
 }
 
-function inOptionOrder(
-  options: readonly FilterGroupOption[],
-  values: readonly string[],
-): readonly string[] {
-  return options
-    .map((option) => option.value)
-    .filter((value) => values.includes(value));
+function inOptionOrder(options: readonly FilterGroupOption[], values: readonly string[]): readonly string[] {
+  return options.map((option) => option.value).filter((value) => values.includes(value));
 }

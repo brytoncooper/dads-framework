@@ -41,10 +41,7 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
       "-out",
       certFile,
     ]);
-    const [privateKey, signingCertificate] = await Promise.all([
-      readFile(keyFile, "utf8"),
-      readFile(certFile, "utf8"),
-    ]);
+    const [privateKey, signingCertificate] = await Promise.all([readFile(keyFile, "utf8"), readFile(certFile, "utf8")]);
     await runNodePgMigrations({
       databaseUrl: database.connectionString,
       workspace: {
@@ -73,14 +70,8 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
       emailAttribute: "email",
       signingCertificate,
     } satisfies EnterpriseSsoProvider;
-    const proof = enterpriseSsoDomainChallenge(
-      secret,
-      provider.tenantId,
-      provider.domain,
-    );
-    vi.mocked(resolveTxt).mockImplementation((name) =>
-      Promise.resolve(name === proof.name ? [[proof.value]] : []),
-    );
+    const proof = enterpriseSsoDomainChallenge(secret, provider.tenantId, provider.domain);
+    vi.mocked(resolveTxt).mockImplementation((name) => Promise.resolve(name === proof.name ? [[proof.value]] : []));
     const identity = await createEnterpriseBetterAuthIdentity(
       {
         database,
@@ -93,9 +84,7 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
     );
 
     const metadata = await identity.handle(
-      new Request(
-        `${origin}/api/auth/sso/saml2/sp/metadata?providerId=${provider.id}`,
-      ),
+      new Request(`${origin}/api/auth/sso/saml2/sp/metadata?providerId=${provider.id}`),
     );
     expect(metadata.status).toBe(200);
     const sp = ServiceProvider({
@@ -106,8 +95,7 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
       entityID: provider.entityId,
       privateKey,
       signingCert: signingCertificate,
-      requestSignatureAlgorithm:
-        "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+      requestSignatureAlgorithm: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
       nameIDFormat: ["urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"],
       singleSignOnService: [
         {
@@ -135,22 +123,14 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
       );
       expect(start.status).toBe(200);
       const payload: unknown = await start.json();
-      if (
-        typeof payload !== "object" ||
-        payload === null ||
-        !("url" in payload) ||
-        typeof payload.url !== "string"
-      )
+      if (typeof payload !== "object" || payload === null || !("url" in payload) || typeof payload.url !== "string")
         throw new Error("Expected SAML authorization URL.");
       const redirect = new URL(payload.url);
       const relay = redirect.searchParams.get("RelayState");
-      const requestId = inflateRawSync(
-        Buffer.from(redirect.searchParams.get("SAMLRequest") ?? "", "base64"),
-      )
+      const requestId = inflateRawSync(Buffer.from(redirect.searchParams.get("SAMLRequest") ?? "", "base64"))
         .toString("utf8")
         .match(/\bID="([^"]+)"/u)?.[1];
-      if (relay === null || requestId === undefined)
-        throw new Error("Expected a SAML request and RelayState.");
+      if (relay === null || requestId === undefined) throw new Error("Expected a SAML request and RelayState.");
       const assertion = await idp.createLoginResponse(
         sp,
         { extract: { request: { id: requestId } } },
@@ -160,15 +140,7 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
           relayState: relay,
           customTagReplacement: (template) => ({
             id: "unused-test-renderer-id",
-            context: render(
-              template,
-              sp.entityMeta.getEntityID(),
-              acs,
-              provider.entityId,
-              requestId,
-              subject,
-              email,
-            ),
+            context: render(template, sp.entityMeta.getEntityID(), acs, provider.entityId, requestId, subject, email),
           }),
         },
       );
@@ -196,30 +168,18 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
     expect(success.status, await success.clone().text()).toBe(302);
     expect(success.headers.get("location")).toBe(origin + "/welcome");
     const headers = new Headers({ cookie: browserCookies(success) });
-    const original = await identity.readEnterpriseSession(
-      headers,
-      provider.tenantId,
-      60_000,
-    );
+    const original = await identity.readEnterpriseSession(headers, provider.tenantId, 60_000);
     expect(original?.account).toMatchObject({ email, emailVerified: true });
     expect(original?.providerId).toBe(provider.id);
-    expect(
-      await identity.readEnterpriseSession(headers, "wrong-tenant"),
-    ).toBeNull();
-    expect(
-      await identity.readEnterpriseSession(headers, provider.tenantId, -1),
-    ).toBeNull();
-    expect(
-      browserCookies(await callback(first.body, first.cookie)),
-    ).not.toContain("session_token");
+    expect(await identity.readEnterpriseSession(headers, "wrong-tenant")).toBeNull();
+    expect(await identity.readEnterpriseSession(headers, provider.tenantId, -1)).toBeNull();
+    expect(browserCookies(await callback(first.body, first.cookie))).not.toContain("session_token");
 
     await database.pool.query(
       `UPDATE identity_sessions SET "createdAt" = now() - interval '10 minutes' WHERE id = $1`,
       [original?.sessionId],
     );
-    expect(
-      await identity.readEnterpriseSession(headers, provider.tenantId, 60_000),
-    ).toBeNull();
+    expect(await identity.readEnterpriseSession(headers, provider.tenantId, 60_000)).toBeNull();
 
     const repeated = await roundtrip("subject-1", email);
     const refreshed = await callback(repeated.body, repeated.cookie);
@@ -229,18 +189,12 @@ it("authenticates a signed SAML assertion from the initiating browser and reject
       60_000,
     );
     expect(fresh?.account.id).toBe(original?.account.id);
-    expect(fresh?.authenticatedAt.getTime()).toBeGreaterThan(
-      original?.authenticatedAt.getTime() ?? 0,
-    );
+    expect(fresh?.authenticatedAt.getTime()).toBeGreaterThan(original?.authenticatedAt.getTime() ?? 0);
 
     const wrongSubject = await roundtrip("substitute-subject", email);
-    expect(
-      browserCookies(await callback(wrongSubject.body, wrongSubject.cookie)),
-    ).not.toContain("session_token");
+    expect(browserCookies(await callback(wrongSubject.body, wrongSubject.cookie))).not.toContain("session_token");
     const wrongDomain = await roundtrip("subject-1", "another@outside.test");
-    expect(
-      browserCookies(await callback(wrongDomain.body, wrongDomain.cookie)),
-    ).not.toContain("session_token");
+    expect(browserCookies(await callback(wrongDomain.body, wrongDomain.cookie))).not.toContain("session_token");
     const tampered = await roundtrip("subject-1", email);
     const assertion = Buffer.from(tampered.body.SAMLResponse, "base64")
       .toString("utf8")

@@ -58,9 +58,7 @@ export type AccessMigrationRunResult = {
   readonly skipped: readonly string[];
 };
 
-export function createSqliteMigrationExecutor(
-  database: SqliteSyncDatabaseLike,
-): SqliteMigrationExecutor {
+export function createSqliteMigrationExecutor(database: SqliteSyncDatabaseLike): SqliteMigrationExecutor {
   return {
     all(sql, params = []) {
       return database.prepare(sql).all(...params);
@@ -85,9 +83,7 @@ export function toSqliteMigrationExecutor(
 
 export function assertSqlIdentifier(name: string, label: string): string {
   if (!SQL_IDENTIFIER_PATTERN.test(name)) {
-    throw new Error(
-      `Invalid SQL identifier for ${label}: "${name}". Expected letters, digits, and underscores.`,
-    );
+    throw new Error(`Invalid SQL identifier for ${label}: "${name}". Expected letters, digits, and underscores.`);
   }
   return name;
 }
@@ -116,10 +112,7 @@ export function assertPositiveInt(value: number, name: string): number {
   return value;
 }
 
-export function readStringField(
-  row: Readonly<Record<string, unknown>>,
-  column: string,
-): string {
+export function readStringField(row: Readonly<Record<string, unknown>>, column: string): string {
   const value = row[column];
   if (typeof value !== "string") {
     throw new Error(`Expected string column "${column}" in migration query`);

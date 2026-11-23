@@ -23,21 +23,16 @@ type SlotEnvironment = z.infer<typeof environmentSchema>;
 async function supervise(directory: string): Promise<void> {
   const status = join(directory, "status.json");
   const plan = planSchema.parse(await readJson(join(directory, "plan.json")));
-  const environment = environmentSchema.parse(
-    await readJson(join(dirname(directory), "environment.json")),
-  );
+  const environment = environmentSchema.parse(await readJson(join(dirname(directory), "environment.json")));
   const children: ChildProcess[] = [];
   const outcome = { failed: false };
   try {
     await bootServices(plan, environment, directory, children, outcome);
     await writeJson(status, "running");
-    while (!outcome.failed && !(await stopRequested(directory)))
-      await setTimeout(150);
+    while (!outcome.failed && !(await stopRequested(directory))) await setTimeout(150);
   } catch (error) {
     outcome.failed = true;
-    process.stderr.write(
-      `Slot supervisor: ${error instanceof Error ? error.message : "unknown failure"}\n`,
-    );
+    process.stderr.write(`Slot supervisor: ${error instanceof Error ? error.message : "unknown failure"}\n`);
   } finally {
     const finalStatus = outcome.failed ? "failed" : "stopped";
     await stopProcesses(children);
@@ -77,13 +72,7 @@ async function bootServices(
     );
     children.push(child);
     void childFinished(child).then(childStopped, childStopped);
-    await waitForReady(
-      port,
-      service.readyPath,
-      () => outcome.failed,
-      stopped,
-      deadline,
-    );
+    await waitForReady(port, service.readyPath, () => outcome.failed, stopped, deadline);
   }
 }
 
@@ -108,8 +97,7 @@ async function waitForPreparation(
   while (!completion.done && Date.now() < deadline && !(await stopped())) {
     await setTimeout(100);
   }
-  if (completion.code !== 0)
-    throw new Error("Slot preparation failed or timed out.");
+  if (completion.code !== 0) throw new Error("Slot preparation failed or timed out.");
 }
 
 async function stopRequested(directory: string): Promise<boolean> {

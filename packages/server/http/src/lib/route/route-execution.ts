@@ -3,21 +3,11 @@ import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import type { HttpMethod, RouteContract } from "@dads-framework/core/contract";
 
-import {
-  HttpWiringError,
-  type RequestPart,
-  RequestValidationError,
-  ResponseDriftError,
-} from "../http-errors.js";
+import { HttpWiringError, type RequestPart, RequestValidationError, ResponseDriftError } from "../http-errors.js";
 import { isObjectValue } from "../object-value.js";
 import type { RouteAccess } from "./access.js";
 import type { RouteCapabilities } from "./capabilities.js";
-import type {
-  RawRouteInput,
-  RouteBlueprint,
-  RouteHandlerContext,
-  RouteResult,
-} from "./route-definition.js";
+import type { RawRouteInput, RouteBlueprint, RouteHandlerContext, RouteResult } from "./route-definition.js";
 
 /**
  * The type-erased view verb builders hand to route execution. Public verb
@@ -39,9 +29,7 @@ export type ErasedRouteConfig = {
   readonly params?: z.ZodType;
   readonly query?: z.ZodType;
   readonly body?: z.ZodType;
-  handler(
-    context: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>,
-  ): unknown;
+  handler(context: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>): unknown;
 };
 
 /** Erased form of a no-content (DELETE) route. */
@@ -56,9 +44,7 @@ export type ErasedNoContentConfig = {
   readonly access: RouteAccess;
   readonly params?: z.ZodType;
   readonly body?: z.ZodType;
-  handler(
-    context: RouteHandlerContext<unknown, undefined, unknown, SubjectRef>,
-  ): Promise<void> | void;
+  handler(context: RouteHandlerContext<unknown, undefined, unknown, SubjectRef>): Promise<void> | void;
 };
 
 /** The execution engine behind response-producing route verbs. */
@@ -68,10 +54,7 @@ export function buildDefinition(config: ErasedRouteConfig): RouteBlueprint {
   const execute = async (raw: RawRouteInput): Promise<RouteResult> => {
     const subject = raw.subject;
     assertSubjectAllowed(config, subject);
-    const authenticatedSubject = resolveAuthenticatedSubject(
-      config.access,
-      raw,
-    );
+    const authenticatedSubject = resolveAuthenticatedSubject(config.access, raw);
     assertSubjectAllowed(config, authenticatedSubject);
     const inputs = parseInputs(config, raw);
     const result = await config.handler({
@@ -103,16 +86,11 @@ export function buildDefinition(config: ErasedRouteConfig): RouteBlueprint {
 }
 
 /** The execution engine behind deleteRoute: parse inputs, then return 204. */
-export function buildNoContentDefinition(
-  config: ErasedNoContentConfig,
-): RouteBlueprint {
+export function buildNoContentDefinition(config: ErasedNoContentConfig): RouteBlueprint {
   const execute = async (raw: RawRouteInput): Promise<RouteResult> => {
     const subject = raw.subject;
     assertSubjectAllowed(config, subject);
-    const authenticatedSubject = resolveAuthenticatedSubject(
-      config.access,
-      raw,
-    );
+    const authenticatedSubject = resolveAuthenticatedSubject(config.access, raw);
     assertSubjectAllowed(config, authenticatedSubject);
     const inputs = parseInputs(config, raw);
     await config.handler({
@@ -144,54 +122,34 @@ export function buildNoContentDefinition(
   };
 }
 
-type HandlerContext = RouteHandlerContext<
-  unknown,
-  unknown,
-  unknown,
-  SubjectRef
->;
+type HandlerContext = RouteHandlerContext<unknown, unknown, unknown, SubjectRef>;
 
 /** Who the caller is beyond the subject, each part only when enforcement set it. */
 function forwardedIdentity(
   raw: RawRouteInput,
-): Pick<
-  HandlerContext,
-  | "untrustedAuthorizationContext"
-  | "authorizationContext"
-  | "sessionReauthenticatedAt"
-> {
+): Pick<HandlerContext, "untrustedAuthorizationContext" | "authorizationContext" | "sessionReauthenticatedAt"> {
   return {
     ...(raw.untrustedAuthorizationContext === undefined
       ? {}
       : { untrustedAuthorizationContext: raw.untrustedAuthorizationContext }),
-    ...(raw.authorizationContext === undefined
-      ? {}
-      : { authorizationContext: raw.authorizationContext }),
-    ...(raw.sessionReauthenticatedAt === undefined
-      ? {}
-      : { sessionReauthenticatedAt: raw.sessionReauthenticatedAt }),
+    ...(raw.authorizationContext === undefined ? {} : { authorizationContext: raw.authorizationContext }),
+    ...(raw.sessionReauthenticatedAt === undefined ? {} : { sessionReauthenticatedAt: raw.sessionReauthenticatedAt }),
   };
 }
 
 /** What a visibility, scoped or feature-state route was given to read with. */
-function forwardedReads(
-  raw: RawRouteInput,
-): Pick<HandlerContext, "visibleIds" | "scope" | "featureState"> {
+function forwardedReads(raw: RawRouteInput): Pick<HandlerContext, "visibleIds" | "scope" | "featureState"> {
   return {
     ...(raw.visibleIds === undefined ? {} : { visibleIds: raw.visibleIds }),
     ...(raw.scope === undefined ? {} : { scope: raw.scope }),
-    ...(raw.featureState === undefined
-      ? {}
-      : { featureState: raw.featureState }),
+    ...(raw.featureState === undefined ? {} : { featureState: raw.featureState }),
   };
 }
 
 function bodyLimitOf(config: { readonly bodyLimitBytes?: number }): {
   bodyLimitBytes?: number;
 } {
-  return config.bodyLimitBytes === undefined
-    ? {}
-    : { bodyLimitBytes: config.bodyLimitBytes };
+  return config.bodyLimitBytes === undefined ? {} : { bodyLimitBytes: config.bodyLimitBytes };
 }
 
 /** The request schemas a route declared; an undeclared part stays absent. */
@@ -209,18 +167,10 @@ function requestSchemasOf(config: {
   };
 }
 
-function resolveAuthenticatedSubject(
-  access: RouteAccess,
-  raw: RawRouteInput,
-): SubjectRef | null {
+function resolveAuthenticatedSubject(access: RouteAccess, raw: RawRouteInput): SubjectRef | null {
   if (access.kind !== "public" && access.authorizationContext !== undefined) {
-    if (
-      raw.authenticatedSubject === undefined ||
-      raw.authenticatedSubject === null
-    ) {
-      throw new HttpWiringError(
-        "authorization-context route ran without its authenticated identity",
-      );
+    if (raw.authenticatedSubject === undefined || raw.authenticatedSubject === null) {
+      throw new HttpWiringError("authorization-context route ran without its authenticated identity");
     }
     return raw.authenticatedSubject;
   }
@@ -242,11 +192,7 @@ function parseInputs(
   };
 }
 
-function parsePart(
-  part: RequestPart,
-  schema: z.ZodType | undefined,
-  raw: unknown,
-): unknown {
+function parsePart(part: RequestPart, schema: z.ZodType | undefined, raw: unknown): unknown {
   if (schema === undefined) {
     return undefined;
   }
@@ -268,10 +214,7 @@ function assertSubjectAllowed(
   }
 }
 
-function parseHandlerResult(
-  config: ErasedRouteConfig,
-  raw: unknown,
-): RouteResult {
+function parseHandlerResult(config: ErasedRouteConfig, raw: unknown): RouteResult {
   if (config.meta === undefined) {
     return { data: parseHalf(config.path, config.response, raw) };
   }
@@ -286,11 +229,7 @@ function parseHandlerResult(
   };
 }
 
-function parseHalf(
-  routePath: string,
-  schema: z.ZodType,
-  candidate: unknown,
-): unknown {
+function parseHalf(routePath: string, schema: z.ZodType, candidate: unknown): unknown {
   const parsed = schema.safeParse(candidate);
   if (!parsed.success) {
     throw new ResponseDriftError(routePath, parsed.error);

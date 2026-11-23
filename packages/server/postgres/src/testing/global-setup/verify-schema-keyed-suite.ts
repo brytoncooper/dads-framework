@@ -28,14 +28,8 @@ const PROJECT_ROOTS = ["apps", "libs", "packages", "tests", "tools"] as const;
 const SKIPPED_FOLDERS = new Set(["node_modules", "dist", ".nx", "tmp"]);
 
 /** `test_<prefix>_m_<uuid>` from the template, `test_<prefix>_u_<uuid>` without. */
-export function privateDatabaseName(
-  prefix: string | undefined,
-  migrated: boolean,
-  unique: string,
-): string {
-  return prefix === undefined || prefix === ""
-    ? `test_${unique}`
-    : `test_${prefix}_${migrated ? "m" : "u"}_${unique}`;
+export function privateDatabaseName(prefix: string | undefined, migrated: boolean, unique: string): string {
+  return prefix === undefined || prefix === "" ? `test_${unique}` : `test_${prefix}_${migrated ? "m" : "u"}_${unique}`;
 }
 
 /**
@@ -57,22 +51,14 @@ export async function verifySchemaKeyedSuite(input: {
   readonly workspaceRoot: string;
 }): Promise<void> {
   const project = input.env["NX_TASK_TARGET_PROJECT"];
-  if (
-    project === undefined ||
-    input.env["NX_TASK_TARGET_TARGET"] !== "test:integration"
-  ) {
+  if (project === undefined || input.env["NX_TASK_TARGET_TARGET"] !== "test:integration") {
     return;
   }
   const recordTo = input.env[RECORD_SCHEMA_KEYED_REACH];
-  const declaration = readSchemaKeyedDeclaration(
-    findIntegrationInputs(input.workspaceRoot, project),
-  );
+  const declaration = readSchemaKeyedDeclaration(findIntegrationInputs(input.workspaceRoot, project));
   if (!declaration.schemaKeyed && recordTo === undefined) return;
 
-  const { touched, unmigratedDatabases } = await readTouchedTables(
-    input.sharedUrl,
-    input.prefix,
-  );
+  const { touched, unmigratedDatabases } = await readTouchedTables(input.sharedUrl, input.prefix);
   const report = checkSchemaKeyedCoverage({
     declaration,
     tableOwners: readTableOwners(input.workspaceRoot),
@@ -103,16 +89,10 @@ export function refuseUnverifiableSchemaKeyedRun(input: {
   readonly workspaceRoot: string;
 }): void {
   const project = input.env["NX_TASK_TARGET_PROJECT"];
-  if (
-    project === undefined ||
-    input.containerPerFile ||
-    input.env["NX_TASK_TARGET_TARGET"] !== "test:integration"
-  ) {
+  if (project === undefined || input.containerPerFile || input.env["NX_TASK_TARGET_TARGET"] !== "test:integration") {
     return;
   }
-  const declaration = readSchemaKeyedDeclaration(
-    findIntegrationInputs(input.workspaceRoot, project),
-  );
+  const declaration = readSchemaKeyedDeclaration(findIntegrationInputs(input.workspaceRoot, project));
   if (!declaration.schemaKeyed) return;
   throw new Error(
     `${project}:test:integration is schema-keyed but started a Postgres outside the shared container, so nothing can check which tables it touched. Use the shared database Vitest global setup provided by @dads-framework/postgres/testing.`,
@@ -147,11 +127,7 @@ async function readTouchedTables(
   return { touched: [...touched.values()], unmigratedDatabases };
 }
 
-async function collectRetiredTouches(
-  admin: Pool,
-  prefix: string,
-  touched: Map<string, TouchedTable>,
-): Promise<number> {
+async function collectRetiredTouches(admin: Pool, prefix: string, touched: Map<string, TouchedTable>): Promise<number> {
   // Databases already dropped under TEST_POSTGRES_STORAGE=ram.
   const retired = await readRetiredDatabaseTouches(admin, prefix);
   const retiredUnmigrated = new Set<string>();
@@ -177,10 +153,7 @@ async function collectDatabaseTouches(
   // A file that never called stop() still holds connections whose
   // counters are only published when the backend exits.
   await admin.query(`ALTER DATABASE "${name}" ALLOW_CONNECTIONS true`);
-  await admin.query(
-    "SELECT pg_terminate_backend(pid, 5000) FROM pg_stat_activity WHERE datname = $1",
-    [name],
-  );
+  await admin.query("SELECT pg_terminate_backend(pid, 5000) FROM pg_stat_activity WHERE datname = $1", [name]);
   const pool = new Pool({
     connectionString: withDatabase(sharedUrl, name),
     max: 1,
@@ -205,10 +178,7 @@ async function collectDatabaseTouches(
 }
 
 /** The project's own `test:integration` inputs, or undefined when it has none. */
-function findIntegrationInputs(
-  workspaceRoot: string,
-  project: string,
-): readonly unknown[] | undefined {
+function findIntegrationInputs(workspaceRoot: string, project: string): readonly unknown[] | undefined {
   for (const file of walk(workspaceRoot, PROJECT_ROOTS, "project.json")) {
     const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
     if (!isRecord(parsed) || parsed["name"] !== project) continue;
@@ -226,20 +196,14 @@ function readTableOwners(workspaceRoot: string): Map<string, string> {
   for (const file of walk(workspaceRoot, PROJECT_ROOTS, ".tables.ts")) {
     const folder = relative(workspaceRoot, join(file, ".."));
     if (!folder.endsWith("/generated-tables")) continue;
-    for (const match of readFileSync(file, "utf8").matchAll(
-      /pgTable\(\s*"([a-z0-9_]+)"/g,
-    )) {
+    for (const match of readFileSync(file, "utf8").matchAll(/pgTable\(\s*"([a-z0-9_]+)"/g)) {
       if (match[1] !== undefined) owners.set(match[1], folder);
     }
   }
   return owners;
 }
 
-function walk(
-  workspaceRoot: string,
-  roots: readonly string[],
-  suffix: string,
-): string[] {
+function walk(workspaceRoot: string, roots: readonly string[], suffix: string): string[] {
   const found: string[] = [];
   const visit = (directory: string): void => {
     let entries;
@@ -250,8 +214,7 @@ function walk(
     }
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        if (!SKIPPED_FOLDERS.has(entry.name))
-          visit(join(directory, entry.name));
+        if (!SKIPPED_FOLDERS.has(entry.name)) visit(join(directory, entry.name));
       } else if (entry.name.endsWith(suffix)) {
         found.push(join(directory, entry.name));
       }

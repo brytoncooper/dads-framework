@@ -30,13 +30,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import {
-  REGENERATE_HINT,
-  ReportError,
-  buildReport,
-  compareStrings,
-  diffLines,
-} from "./generate-api-report-lib.mjs";
+import { REGENERATE_HINT, ReportError, buildReport, compareStrings, diffLines } from "./generate-api-report-lib.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PACKAGES_DIRECTORY = "packages";
@@ -67,8 +61,7 @@ export function parseArguments(argv) {
       throw new ReportError(`Unknown argument ${argument}.`);
     }
     const value = argv[index + 1];
-    if (value === undefined)
-      throw new ReportError(`${argument} needs a value.`);
+    if (value === undefined) throw new ReportError(`${argument} needs a value.`);
     options.set(argument, value);
     index += 1;
   }
@@ -109,9 +102,7 @@ export function discoverPackages(root) {
       });
     }
   }
-  return found.sort((left, right) =>
-    compareStrings(left.reportPath, right.reportPath),
-  );
+  return found.sort((left, right) => compareStrings(left.reportPath, right.reportPath));
 }
 
 /**
@@ -136,25 +127,17 @@ export function readPublishedFlags(root) {
 
 function reviewPackage(packageEntry, { root, publishedFlags, check }) {
   const relativeDirectory = toPosix(relative(root, packageEntry.directory));
-  const published =
-    publishedFlags.get(relativeDirectory) ??
-    publishedFlags.get(packageEntry.name) ??
-    false;
+  const published = publishedFlags.get(relativeDirectory) ?? publishedFlags.get(packageEntry.name) ?? false;
   const report = buildReport(packageEntry, published);
   const reportPath = join(packageEntry.directory, REPORT_FILE);
-  const committed = existsSync(reportPath)
-    ? readFileSync(reportPath, "utf8")
-    : "";
+  const committed = existsSync(reportPath) ? readFileSync(reportPath, "utf8") : "";
   const changed = committed !== report.text;
   if (changed && !check) writeFileSync(reportPath, report.text);
   return {
     changed,
     diff: changed && check ? diffLines(committed, report.text) : [],
     entryPoints: report.sections.length,
-    exports: report.sections.reduce(
-      (total, section) => total + section.exports.length,
-      0,
-    ),
+    exports: report.sections.reduce((total, section) => total + section.exports.length, 0),
     name: packageEntry.name,
     published,
     report: packageEntry.reportPath,
@@ -178,25 +161,16 @@ function renderOutput({ json, check, reviewed, errors }) {
   const lines = [];
   for (const entry of check ? drifted : reviewed) {
     if (check) {
-      lines.push(
-        `--- ${entry.report} (committed)`,
-        `+++ ${entry.report} (regenerated)`,
-        ...entry.diff,
-      );
+      lines.push(`--- ${entry.report} (committed)`, `+++ ${entry.report} (regenerated)`, ...entry.diff);
       continue;
     }
     const state = entry.changed ? "written" : "unchanged";
-    lines.push(
-      `${entry.report}: ${entry.exports} exports across ` +
-        `${entry.entryPoints} entry points (${state})`,
-    );
+    lines.push(`${entry.report}: ${entry.exports} exports across ` + `${entry.entryPoints} entry points (${state})`);
   }
   lines.push(...errors);
 
   if (drifted.length > 0 && check) {
-    lines.push(
-      `api-report: ${drifted.length} report(s) out of date. ${REGENERATE_HINT}`,
-    );
+    lines.push(`api-report: ${drifted.length} report(s) out of date. ${REGENERATE_HINT}`);
   } else if (ok) {
     lines.push(
       check
@@ -235,9 +209,7 @@ export function main(argv, { root = REPO_ROOT } = {}) {
   const errors = [];
   for (const packageEntry of packages) {
     try {
-      reviewed.push(
-        reviewPackage(packageEntry, { root, publishedFlags, check }),
-      );
+      reviewed.push(reviewPackage(packageEntry, { root, publishedFlags, check }));
     } catch (error) {
       if (!(error instanceof ReportError)) throw error;
       errors.push(error.message);
@@ -246,9 +218,7 @@ export function main(argv, { root = REPO_ROOT } = {}) {
   return renderOutput({ json, check, reviewed, errors });
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const result = main(process.argv.slice(2));

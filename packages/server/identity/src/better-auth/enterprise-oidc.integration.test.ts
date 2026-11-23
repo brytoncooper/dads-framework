@@ -1,10 +1,5 @@
 import { Buffer } from "node:buffer";
-import {
-  createHash,
-  generateKeyPairSync,
-  randomBytes,
-  sign,
-} from "node:crypto";
+import { createHash, generateKeyPairSync, randomBytes, sign } from "node:crypto";
 import { resolveTxt } from "node:dns/promises";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
@@ -47,10 +42,7 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
     request.on("end", () => {
       const body = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
       const verifier = body.get("code_verifier");
-      if (
-        verifier === null ||
-        createHash("sha256").update(verifier).digest("base64url") !== challenge
-      ) {
+      if (verifier === null || createHash("sha256").update(verifier).digest("base64url") !== challenge) {
         response.writeHead(400).end("{}");
         return;
       }
@@ -81,8 +73,7 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
   try {
     await new Promise<void>((resolve) => idp.listen(0, "127.0.0.1", resolve));
     const bound = idp.address();
-    if (typeof bound !== "object" || bound === null)
-      throw new Error("Expected a listening IdP.");
+    if (typeof bound !== "object" || bound === null) throw new Error("Expected a listening IdP.");
     origin = `http://127.0.0.1:${bound.port}`;
     await runNodePgMigrations({
       databaseUrl: database.connectionString,
@@ -100,14 +91,8 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
       },
     });
     const secret = randomBytes(32).toString("hex");
-    const proof = enterpriseSsoDomainChallenge(
-      secret,
-      "tenant-one",
-      "example.test",
-    );
-    vi.mocked(resolveTxt).mockImplementation((name) =>
-      Promise.resolve(name === proof.name ? [[proof.value]] : []),
-    );
+    const proof = enterpriseSsoDomainChallenge(secret, "tenant-one", "example.test");
+    vi.mocked(resolveTxt).mockImplementation((name) => Promise.resolve(name === proof.name ? [[proof.value]] : []));
     const provider = {
       id: "sso-tenant-one",
       tenantId: "tenant-one",
@@ -138,31 +123,15 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
       name: "Local account",
       password: "a-long-example-password",
     };
-    expect(
-      (
-        await passwordOnly.handle(
-          authRequest(origin, "/sign-up/email", password),
-        )
-      ).status,
-    ).toBe(200);
-    expect(
-      (await passwordOnly.handle(new Request(verificationLink))).status,
-    ).toBe(302);
-    const passwordCookie = browserCookies(
-      await passwordOnly.handle(
-        authRequest(origin, "/sign-in/email", password),
-      ),
-    );
+    expect((await passwordOnly.handle(authRequest(origin, "/sign-up/email", password))).status).toBe(200);
+    expect((await passwordOnly.handle(new Request(verificationLink))).status).toBe(302);
+    const passwordCookie = browserCookies(await passwordOnly.handle(authRequest(origin, "/sign-in/email", password)));
     expect(passwordCookie).toContain("session_token");
 
     await expect(
-      createEnterpriseBetterAuthIdentity(options, [
-        { ...provider, tenantId: "tenant-two" },
-      ]),
+      createEnterpriseBetterAuthIdentity(options, [{ ...provider, tenantId: "tenant-two" }]),
     ).rejects.toThrow("Enterprise SSO domain verification failed");
-    const identity = await createEnterpriseBetterAuthIdentity(options, [
-      provider,
-    ]);
+    const identity = await createEnterpriseBetterAuthIdentity(options, [provider]);
     const read = (cookie: string) => new Headers({ cookie });
     expect(await identity.readSession(read(passwordCookie))).toBeNull();
     expect(
@@ -174,13 +143,8 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
         )
       ).status,
     ).toBe(401);
-    expect(
-      (await identity.handle(authRequest(origin, "/sign-in/email", password)))
-        .ok,
-    ).toBe(false);
-    expect(
-      (await identity.handle(authRequest(origin, "/sso/register", {}))).status,
-    ).toBe(404);
+    expect((await identity.handle(authRequest(origin, "/sign-in/email", password))).ok).toBe(false);
+    expect((await identity.handle(authRequest(origin, "/sso/register", {}))).status).toBe(404);
     expect(
       (
         await identity.handle(
@@ -202,25 +166,15 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
       const response = await identity.handle(start);
       expect(response.status).toBe(200);
       const payload: unknown = await response.json();
-      if (
-        typeof payload !== "object" ||
-        payload === null ||
-        !("url" in payload) ||
-        typeof payload.url !== "string"
-      )
+      if (typeof payload !== "object" || payload === null || !("url" in payload) || typeof payload.url !== "string")
         throw new Error("Expected OIDC authorization URL.");
       const authorize = new URL(payload.url);
       challenge = authorize.searchParams.get("code_challenge") ?? "";
       expect(challenge).not.toBe("");
       expect(authorize.searchParams.get("code_challenge_method")).toBe("S256");
-      const callback = new URL(
-        authorize.searchParams.get("redirect_uri") ?? "",
-      );
+      const callback = new URL(authorize.searchParams.get("redirect_uri") ?? "");
       callback.searchParams.set("code", "fixture-code");
-      callback.searchParams.set(
-        "state",
-        authorize.searchParams.get("state") ?? "",
-      );
+      callback.searchParams.set("state", authorize.searchParams.get("state") ?? "");
       const cookie = browserCookies(response);
       return { callback, cookie };
     }
@@ -231,45 +185,21 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
     }
 
     const attempt = await begin();
-    expect((await identity.handle(new Request(attempt.callback))).status).toBe(
-      403,
-    );
-    const success = await identity.handle(
-      new Request(attempt.callback, { headers: read(attempt.cookie) }),
-    );
+    expect((await identity.handle(new Request(attempt.callback))).status).toBe(403);
+    const success = await identity.handle(new Request(attempt.callback, { headers: read(attempt.cookie) }));
     expect(success.status, await success.clone().text()).toBe(302);
     expect(success.headers.get("location")).toBe(origin + "/welcome");
     const enterpriseCookie = browserCookies(success);
-    const session = await identity.readEnterpriseSession(
-      read(enterpriseCookie),
-      "tenant-one",
-      60_000,
-    );
+    const session = await identity.readEnterpriseSession(read(enterpriseCookie), "tenant-one", 60_000);
     expect(session?.account.email).toBe(email);
     expect(session?.providerId).toBe(provider.id);
+    expect(await identity.readEnterpriseSession(read(enterpriseCookie), "tenant-two")).toBeNull();
+    expect(await identity.readEnterpriseSession(read(enterpriseCookie), "tenant-one", -1)).toBeNull();
+    expect((await identity.readTenantSession(read(enterpriseCookie), "tenant-one"))?.account.id).toBe(
+      session?.account.id,
+    );
     expect(
-      await identity.readEnterpriseSession(
-        read(enterpriseCookie),
-        "tenant-two",
-      ),
-    ).toBeNull();
-    expect(
-      await identity.readEnterpriseSession(
-        read(enterpriseCookie),
-        "tenant-one",
-        -1,
-      ),
-    ).toBeNull();
-    expect(
-      (await identity.readTenantSession(read(enterpriseCookie), "tenant-one"))
-        ?.account.id,
-    ).toBe(session?.account.id);
-    expect(
-      browserCookies(
-        await identity.handle(
-          new Request(attempt.callback, { headers: read(attempt.cookie) }),
-        ),
-      ),
+      browserCookies(await identity.handle(new Request(attempt.callback, { headers: read(attempt.cookie) }))),
     ).not.toContain("session_token");
 
     subject = "subject-two";
@@ -287,10 +217,7 @@ it("authenticates a verified OIDC identity and enforces tenant scope, required m
     email = "new-oidc-user@example.test";
     const enrolled = await finish();
     expect(enrolled.headers.get("location")).toBe(origin + "/welcome");
-    const newSession = await identity.readEnterpriseSession(
-      read(browserCookies(enrolled)),
-      provider.tenantId,
-    );
+    const newSession = await identity.readEnterpriseSession(read(browserCookies(enrolled)), provider.tenantId);
     expect(newSession?.account).toMatchObject({ email, emailVerified: true });
     const persistedTokens = await database.pool.query<{ count: number }>(
       'SELECT count(*)::integer AS count FROM identity_credentials WHERE "idToken" IS NOT NULL OR "accessToken" IS NOT NULL',

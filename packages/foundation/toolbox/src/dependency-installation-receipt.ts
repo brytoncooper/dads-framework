@@ -8,10 +8,7 @@ const receiptPath = ".dads/dependency-installation.sha256";
 export function dependenciesAreInstalled(projectRoot: string): boolean {
   if (!existsSync(join(projectRoot, "node_modules"))) return false;
   try {
-    return (
-      readFileSync(join(projectRoot, receiptPath), "utf8").trim() ===
-      hashInstallationInputs(projectRoot)
-    );
+    return readFileSync(join(projectRoot, receiptPath), "utf8").trim() === hashInstallationInputs(projectRoot);
   } catch (error: unknown) {
     if (isMissingPathError(error)) return false;
     throw error;
@@ -21,10 +18,7 @@ export function dependenciesAreInstalled(projectRoot: string): boolean {
 export function recordDadsDependencyInstallation(projectRoot: string): void {
   const absoluteReceiptPath = join(projectRoot, receiptPath);
   mkdirSync(dirname(absoluteReceiptPath), { recursive: true });
-  writeFileSync(
-    absoluteReceiptPath,
-    `${hashInstallationInputs(projectRoot)}\n`,
-  );
+  writeFileSync(absoluteReceiptPath, `${hashInstallationInputs(projectRoot)}\n`);
 }
 
 function hashInstallationInputs(projectRoot: string): string {

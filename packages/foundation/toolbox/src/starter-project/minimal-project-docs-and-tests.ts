@@ -2,12 +2,7 @@ import type { StarterProjectFile } from "./render-starter-project.js";
 
 /** Minimal documentation and starter test suite without example domains. */
 export function renderMinimalDocsAndTestFiles(): readonly StarterProjectFile[] {
-  return [
-    minimalReadmeFile(),
-    minimalDeployFile(),
-    sessionSubjectsTestFile(),
-    starterIntegrationTestFile(),
-  ];
+  return [minimalReadmeFile(), minimalDeployFile(), sessionSubjectsTestFile(), starterIntegrationTestFile()];
 }
 
 function minimalReadmeFile(): StarterProjectFile {

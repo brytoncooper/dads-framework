@@ -27,10 +27,7 @@ export const DEFAULT_MAX_ATTEMPTS = 5;
  * re-claimed. This is what stops a crashed worker parking a fact forever: the
  * worker is gone, its lock is stale, and the next run takes the row back.
  */
-export function leaseCutoff(
-  now: Date,
-  leaseMs: number = DEFAULT_LEASE_MS,
-): Date {
+export function leaseCutoff(now: Date, leaseMs: number = DEFAULT_LEASE_MS): Date {
   return new Date(now.getTime() - leaseMs);
 }
 
@@ -65,7 +62,5 @@ export function outcomeAfterFailure(
  */
 export function summarizeError(error: unknown, maxLength = 500): string {
   const message = error instanceof Error ? error.message : String(error);
-  return message.length <= maxLength
-    ? message
-    : `${message.slice(0, maxLength - 1)}…`;
+  return message.length <= maxLength ? message : `${message.slice(0, maxLength - 1)}…`;
 }

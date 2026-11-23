@@ -1,20 +1,7 @@
 import { sql } from "drizzle-orm";
-import {
-  check,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
-import {
-  FEATURE_FLAG_AUDIENCE_MODES,
-  type FeatureFlagState,
-} from "../index.js";
+import { FEATURE_FLAG_AUDIENCE_MODES, type FeatureFlagState } from "../index.js";
 
 /**
  * Drizzle's view of the tables `20261119180000_feature_flags.migration.ts`
@@ -31,12 +18,8 @@ export const featureFlagStates = pgTable(
       enum: FEATURE_FLAG_AUDIENCE_MODES,
     }).notNull(),
     globalEnabledAt: timestamp("global_enabled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     updatedBy: text("updated_by").notNull(),
     rowVersion: integer("row_version").default(1).notNull(),
   },
@@ -60,19 +43,11 @@ export const featureFlagTenantTargets = pgTable(
     tenantId: text("tenant_id").notNull(),
     tenantName: text("tenant_name").notNull(),
     enabledAt: timestamp("enabled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("feature_flag_tenant_targets_state_tenant_uidx").on(
-      table.featureFlagStateId,
-      table.tenantId,
-    ),
-    index("feature_flag_tenant_targets_tenant_enabled_idx").on(
-      table.tenantId,
-      table.enabledAt,
-    ),
+    uniqueIndex("feature_flag_tenant_targets_state_tenant_uidx").on(table.featureFlagStateId, table.tenantId),
+    index("feature_flag_tenant_targets_tenant_enabled_idx").on(table.tenantId, table.enabledAt),
   ],
 );
 
@@ -87,16 +62,11 @@ export const featureFlagChangeEvents = pgTable(
     previousState: jsonb("previous_state").notNull().$type<FeatureFlagState>(),
     nextState: jsonb("next_state").notNull().$type<FeatureFlagState>(),
     note: text("note"),
-    changedAt: timestamp("changed_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).defaultNow().notNull(),
     changedBy: text("changed_by").notNull(),
   },
   (table) => [
-    index("feature_flag_change_events_slug_revision_idx").on(
-      table.slug,
-      table.revision,
-    ),
+    index("feature_flag_change_events_slug_revision_idx").on(table.slug, table.revision),
     index("feature_flag_change_events_batch_idx").on(table.batchId),
   ],
 );

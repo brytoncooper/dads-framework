@@ -17,9 +17,7 @@ export function formatEmailAddress(address: EmailAddress): string {
 }
 
 /** Every addressee in one header value, in the order given. */
-export function formatEmailAddresses(
-  addresses: readonly EmailAddress[],
-): string {
+export function formatEmailAddresses(addresses: readonly EmailAddress[]): string {
   return addresses.map(formatEmailAddress).join(", ");
 }
 

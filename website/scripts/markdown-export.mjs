@@ -19,11 +19,7 @@ const CHROME = [
 ].join(", ");
 
 function escapeAttribute(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
 function normalizeUrl(target, pageUrl, canonicalPaths) {
@@ -55,9 +51,7 @@ function labelHomepageCode(content, document) {
 }
 
 function makeLinksAbsolute(content, pageUrl, canonicalPaths) {
-  for (const link of Array.from(
-    content.querySelectorAll("a[href], img[src]"),
-  )) {
+  for (const link of Array.from(content.querySelectorAll("a[href], img[src]"))) {
     const attribute = link.tagName === "A" ? "href" : "src";
     const target = link.getAttribute(attribute);
     link.setAttribute(attribute, normalizeUrl(target, pageUrl, canonicalPaths));
@@ -65,9 +59,7 @@ function makeLinksAbsolute(content, pageUrl, canonicalPaths) {
 }
 
 function preserveCaptions(content, document) {
-  for (const caption of Array.from(
-    content.querySelectorAll("table > caption"),
-  )) {
+  for (const caption of Array.from(content.querySelectorAll("table > caption"))) {
     const table = caption.parentNode;
     const label = document.createElement("p");
     label.innerHTML = caption.innerHTML;
@@ -91,13 +83,10 @@ function addExportRules(converter) {
     filter: (node) => node.nodeName === "PRE",
     replacement(_content, node) {
       const code = node.querySelector("code");
-      const language =
-        code?.className.match(/(?:^|\s)language-([\w+.-]+)/u)?.[1] ?? "";
+      const language = code?.className.match(/(?:^|\s)language-([\w+.-]+)/u)?.[1] ?? "";
       const text = code?.textContent ?? node.textContent;
       const runs = text.match(/`+/gu) ?? [];
-      const fence = "`".repeat(
-        Math.max(3, ...runs.map((run) => run.length + 1)),
-      );
+      const fence = "`".repeat(Math.max(3, ...runs.map((run) => run.length + 1)));
       const newline = text.endsWith("\n") ? "" : "\n";
       return `\n\n${fence}${language}\n${text}${newline}${fence}\n\n`;
     },
@@ -126,25 +115,18 @@ export function exportMarkdown(html, canonical, canonicalPaths) {
   const document = domino.createDocument(html);
   const main = document.querySelector("main");
   if (!main) throw new Error(`Missing content in ${canonical}.`);
-  const article = Array.from(main.children).find(
-    (element) => element.tagName === "ARTICLE",
-  );
+  const article = Array.from(main.children).find((element) => element.tagName === "ARTICLE");
   const content = article ?? main;
   const pageUrl = new URL(canonical);
   const reference = main.querySelector('footer a[href*="reference/api-"]');
-  const rawReport = reference
-    ? normalizeUrl(reference.getAttribute("href"), pageUrl, canonicalPaths)
-    : undefined;
+  const rawReport = reference ? normalizeUrl(reference.getAttribute("href"), pageUrl, canonicalPaths) : undefined;
 
   labelHomepageCode(content, document);
-  for (const element of Array.from(content.querySelectorAll(CHROME)))
-    element.remove();
+  for (const element of Array.from(content.querySelectorAll(CHROME))) element.remove();
   makeLinksAbsolute(content, pageUrl, canonicalPaths);
   preserveCaptions(content, document);
 
   const markdown = converter.turndown(content.innerHTML);
-  const declarations = rawReport
-    ? `\n\n[Full exported declarations (raw Markdown)](${rawReport})`
-    : "";
+  const declarations = rawReport ? `\n\n[Full exported declarations (raw Markdown)](${rawReport})` : "";
   return `${markdown}${declarations}\n\nCanonical page: <${canonical}>\n`;
 }

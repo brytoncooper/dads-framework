@@ -41,9 +41,7 @@ export type RefusedWord = {
 export type ProductVocabulary = readonly RefusedWord[];
 
 /** Declare a product's refused words, exactly as `defineCopy` and `defineGlossary`. */
-export function defineProductVocabulary<const T extends ProductVocabulary>(
-  vocabulary: T,
-): T {
+export function defineProductVocabulary<const T extends ProductVocabulary>(vocabulary: T): T {
   return vocabulary;
 }
 
@@ -84,14 +82,8 @@ function anySpellingOf(words: readonly string[]): string {
   return words.map((word) => escaped(word).replace(/\s+/g, "\\s+")).join("|");
 }
 
-function firstWholeWordMatch(
-  phrase: string,
-  spellings: string,
-): string | undefined {
-  const match = new RegExp(
-    `${UNICODE_WORD_START}(${spellings})${UNICODE_WORD_END}`,
-    "iu",
-  ).exec(phrase);
+function firstWholeWordMatch(phrase: string, spellings: string): string | undefined {
+  const match = new RegExp(`${UNICODE_WORD_START}(${spellings})${UNICODE_WORD_END}`, "iu").exec(phrase);
   return match?.[1];
 }
 
@@ -110,24 +102,14 @@ function matchStart(match: RegExpExecArray, found: string): number {
 }
 
 /** The first use of the word that is NOT part of the compound it belongs to. */
-function firstUseOutside(
-  phrase: string,
-  spellings: string,
-  compoundStart: string,
-): string | undefined {
-  const uses = new RegExp(
-    `${UNICODE_WORD_START}(${spellings})${UNICODE_WORD_END}`,
-    "giu",
-  );
+function firstUseOutside(phrase: string, spellings: string, compoundStart: string): string | undefined {
+  const uses = new RegExp(`${UNICODE_WORD_START}(${spellings})${UNICODE_WORD_END}`, "giu");
 
   for (const match of phrase.matchAll(uses)) {
     const found = match[1];
     if (found === undefined) continue;
     const before = phrase.slice(0, matchStart(match, found));
-    const isCompound = new RegExp(
-      `${UNICODE_WORD_START}${escaped(compoundStart)}\\s+$`,
-      "iu",
-    ).test(before);
+    const isCompound = new RegExp(`${UNICODE_WORD_START}${escaped(compoundStart)}\\s+$`, "iu").test(before);
     if (!isCompound) return found;
   }
   return undefined;
@@ -136,9 +118,7 @@ function firstUseOutside(
 /** `people` becomes `People` — the one spelling that can be naming something. */
 function asAName(word: string): string {
   const [first] = word;
-  return first === undefined
-    ? word
-    : first.toLocaleUpperCase("en") + word.slice(1);
+  return first === undefined ? word : first.toLocaleUpperCase("en") + word.slice(1);
 }
 
 /**
@@ -148,14 +128,8 @@ function asAName(word: string): string {
  * A phrase starts with a capital whatever it means, so position zero alone
  * proves nothing — that is the whole reason this is not a plain match.
  */
-function firstUseAsAName(
-  phrase: string,
-  words: readonly string[],
-): string | undefined {
-  const names = new RegExp(
-    `${UNICODE_WORD_START}(${anySpellingOf(words.map(asAName))})${UNICODE_WORD_END}`,
-    "gu",
-  );
+function firstUseAsAName(phrase: string, words: readonly string[]): string | undefined {
+  const names = new RegExp(`${UNICODE_WORD_START}(${anySpellingOf(words.map(asAName))})${UNICODE_WORD_END}`, "gu");
 
   for (const match of phrase.matchAll(names)) {
     const found = match[1];
@@ -169,11 +143,7 @@ function firstUseAsAName(
   return undefined;
 }
 
-function foundIn(
-  key: string,
-  phrase: string,
-  refused: RefusedWord,
-): string | undefined {
+function foundIn(key: string, phrase: string, refused: RefusedWord): string | undefined {
   const spellings = anySpellingOf(refused.words);
   if (refused.onlyAsAName === true && !isSurfaceNameKey(key)) {
     return firstUseAsAName(phrase, refused.words);
@@ -184,11 +154,7 @@ function foundIn(
   return firstWholeWordMatch(phrase, spellings);
 }
 
-function findingsFor(
-  key: string,
-  phrase: string,
-  vocabulary: ProductVocabulary,
-): ProductVocabularyFinding[] {
+function findingsFor(key: string, phrase: string, vocabulary: ProductVocabulary): ProductVocabularyFinding[] {
   const findings: ProductVocabularyFinding[] = [];
   for (const refused of vocabulary) {
     const found = foundIn(key, phrase, refused);

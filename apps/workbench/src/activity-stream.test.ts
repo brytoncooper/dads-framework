@@ -24,9 +24,7 @@ describe("Workbench activity stream", () => {
           name: "Stream workspace",
         }),
       });
-      const workspace = z
-        .object({ data: z.object({ id: z.string() }) })
-        .parse(await created.json());
+      const workspace = z.object({ data: z.object({ id: z.string() }) }).parse(await created.json());
       const url = `${server.url}/api/workspaces/${workspace.data.id}/activity`;
       await fetch(`${server.url}/api/workspaces/${workspace.data.id}/members`, {
         method: "POST",
@@ -41,12 +39,9 @@ describe("Workbench activity stream", () => {
         signal: AbortSignal.timeout(5_000),
       });
       expect(response.status).toBe(200);
-      expect(response.headers.get("content-type")).toContain(
-        "text/event-stream",
-      );
+      expect(response.headers.get("content-type")).toContain("text/event-stream");
       const feed = response.body?.getReader();
-      if (feed === undefined)
-        throw new Error("Expected an activity response stream");
+      if (feed === undefined) throw new Error("Expected an activity response stream");
       try {
         let output = "";
         const decoder = new TextDecoder();
@@ -60,13 +55,10 @@ describe("Workbench activity stream", () => {
       } finally {
         await feed.cancel();
       }
-      await fetch(
-        `${server.url}/api/workspaces/${workspace.data.id}/members/bob`,
-        {
-          method: "DELETE",
-          headers: { "x-workbench-user": "alice" },
-        },
-      );
+      await fetch(`${server.url}/api/workspaces/${workspace.data.id}/members/bob`, {
+        method: "DELETE",
+        headers: { "x-workbench-user": "alice" },
+      });
       expect(
         (
           await fetch(`${url}/stream`, {

@@ -27,10 +27,7 @@ describe("development failure diagnostics", () => {
   it("preserves safe recovery guidance for failed cleanup and timeouts", () => {
     const controller = new AbortController();
     controller.abort();
-    for (const error of [
-      new AggregateError([new Error("private error")]),
-      new Error("private timeout"),
-    ]) {
+    for (const error of [new AggregateError([new Error("private error")]), new Error("private timeout")]) {
       const failure = describeDevelopmentFailure(error, controller.signal);
       expect(failure.exitCode).toBe(1);
       expect(failure.message).toContain("run workbench:stop");

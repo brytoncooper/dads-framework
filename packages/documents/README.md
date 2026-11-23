@@ -18,10 +18,7 @@ Save this as `example.mts` and run `npx tsx example.mts`.
 ```ts
 import { toCsv } from "@dads-framework/documents/csv";
 
-const csv = toCsv(
-  [{ customer: { name: "River, Inc." } }],
-  [{ key: "customer.name", header: "Customer" }],
-);
+const csv = toCsv([{ customer: { name: "River, Inc." } }], [{ key: "customer.name", header: "Customer" }]);
 process.stdout.write(csv);
 ```
 

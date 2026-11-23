@@ -29,12 +29,7 @@ export {
   authorizationConsistencySetCookie,
   authorizationConsistencyTokenFromCookieHeader,
 } from "./authorization-consistency-cookie.js";
-export {
-  RequestSubject,
-  type AuthMethod,
-  type RequestHeaders,
-  type ResolvedSubject,
-} from "./request-subject.js";
+export { RequestSubject, type AuthMethod, type RequestHeaders, type ResolvedSubject } from "./request-subject.js";
 export {
   evaluateRouteAccess,
   type ResourceIdSource,
@@ -61,10 +56,7 @@ export {
 } from "./access-changes.js";
 export { ApplyAccessChangesAfterCommit } from "./apply-access-changes-after-commit.js";
 export { OwnerLock, OwnerLockLease } from "./owner-lock.js";
-export type {
-  RelationshipPage,
-  RelationshipPageRequest,
-} from "./relationship-page.js";
+export type { RelationshipPage, RelationshipPageRequest } from "./relationship-page.js";
 export { AnswerOnceAuthorization } from "./answer-once-authorization.js";
 export {
   createAccessClient,
@@ -82,7 +74,4 @@ export {
   type ShadowErrorOperation,
   type ShadowMismatchEvent,
 } from "./shadow-authorization.js";
-export {
-  resolveReadConsistency,
-  type ReadConsistencyDecision,
-} from "./resolve-read-consistency.js";
+export { resolveReadConsistency, type ReadConsistencyDecision } from "./resolve-read-consistency.js";

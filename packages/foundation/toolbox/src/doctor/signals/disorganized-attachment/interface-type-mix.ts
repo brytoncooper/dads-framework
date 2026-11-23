@@ -27,13 +27,11 @@ function countInterfaces(context: DoctorContext): SignalReadings {
 export const interfaceTypeMixSignal: DoctorSignal = {
   id: "interface-type-mix",
   issue: "disorganized-attachment",
-  question:
-    "Does any file declare an `interface` where the house rule is `type`?",
+  question: "Does any file declare an `interface` where the house rule is `type`?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "Zod in public. A hand-written interface in private. `as` after midnight.",
+  sentence: "Zod in public. A hand-written interface in private. `as` after midnight.",
   run: (context) => Promise.resolve(countInterfaces(context)),
 };

@@ -18,9 +18,7 @@ describe("parseWriteSchemaBlocker", () => {
 
   it("reads a leftover object definition", () => {
     expect(
-      parseWriteSchemaBlocker(
-        "cannot delete object definition `leftover/report` as a relationship exists under it",
-      ),
+      parseWriteSchemaBlocker("cannot delete object definition `leftover/report` as a relationship exists under it"),
     ).toEqual({
       kind: "removed-type",
       resourceType: "leftover/report",

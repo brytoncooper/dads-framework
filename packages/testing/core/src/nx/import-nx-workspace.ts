@@ -79,16 +79,10 @@ type ProjectConversion = {
  * Imports only fully materialized, shell-free Nx run-commands targets. The
  * output is a Dads-owned manifest; Nx is not read when the manifest executes.
  */
-export async function importNxTestingWorkspace(
-  options: ImportNxTestingOptions,
-): Promise<ImportNxTestingResult> {
+export async function importNxTestingWorkspace(options: ImportNxTestingOptions): Promise<ImportNxTestingResult> {
   const workspaceRoot = path.resolve(options.workspaceRoot);
   const runner = options.runner ?? runProcess;
-  const source = await readNxSource(
-    workspaceRoot,
-    options.expectedGitSha,
-    runner,
-  );
+  const source = await readNxSource(workspaceRoot, options.expectedGitSha, runner);
   const graph = await readGraphOrReport(workspaceRoot, source, runner);
   const workspace = await readWorkspaceProjects(workspaceRoot, source, runner);
   const fallbackDependencies = await resolveFallbackOrReport({
@@ -97,10 +91,7 @@ export async function importNxTestingWorkspace(
     workspace,
     graph,
   });
-  const conversion = await convertProjects(
-    workspaceRoot,
-    workspace.parsedProjects,
-  );
+  const conversion = await convertProjects(workspaceRoot, workspace.parsedProjects);
   const manifest = buildManifest(workspace, conversion, fallbackDependencies);
   const manifestContents = stableJson(manifest);
   const report = buildReport({
@@ -116,16 +107,8 @@ export async function importNxTestingWorkspace(
 // --- Phases --------------------------------------------------------------
 
 /** Pins the source tree, then reads everything that is not a project. */
-async function readNxSource(
-  workspaceRoot: string,
-  expectedGitSha: string,
-  runner: NxCommandRunner,
-): Promise<NxSource> {
-  const gitSnapshot = await requireCleanCommittedWorkspace(
-    workspaceRoot,
-    expectedGitSha,
-    runner,
-  );
+async function readNxSource(workspaceRoot: string, expectedGitSha: string, runner: NxCommandRunner): Promise<NxSource> {
+  const gitSnapshot = await requireCleanCommittedWorkspace(workspaceRoot, expectedGitSha, runner);
   const nxExecutable = await resolveLocalNxCli(workspaceRoot);
   const versions = await readVersions(workspaceRoot, nxExecutable, runner);
   const rootInputs = await digestInputs(workspaceRoot);
@@ -143,11 +126,7 @@ async function readNxSource(
 }
 
 /** Reads the project graph, or leaves a report saying why it could not. */
-async function readGraphOrReport(
-  workspaceRoot: string,
-  source: NxSource,
-  runner: NxCommandRunner,
-): Promise<JsonValue> {
+async function readGraphOrReport(workspaceRoot: string, source: NxSource, runner: NxCommandRunner): Promise<JsonValue> {
   try {
     return await readProjectGraph(workspaceRoot, source.nxExecutable, runner);
   } catch (error: unknown) {
@@ -171,17 +150,10 @@ async function readWorkspaceProjects(
   const snapshots = await Promise.all(
     source.projects.map(async (project) => ({
       name: project,
-      value: await readNxProjectConfiguration(
-        workspaceRoot,
-        source.nxExecutable,
-        runner,
-        project,
-      ),
+      value: await readNxProjectConfiguration(workspaceRoot, source.nxExecutable, runner, project),
     })),
   );
-  const parsed = snapshots.map((snapshot) =>
-    parseProject(snapshot.value, snapshot.name),
-  );
+  const parsed = snapshots.map((snapshot) => parseProject(snapshot.value, snapshot.name));
   const inputs = await digestProjectInputs(
     workspaceRoot,
     source.rootInputs,
@@ -189,9 +161,7 @@ async function readWorkspaceProjects(
   );
   return {
     snapshots,
-    parsedProjects: [...parsed].sort((left, right) =>
-      left.name.localeCompare(right.name),
-    ),
+    parsedProjects: [...parsed].sort((left, right) => left.name.localeCompare(right.name)),
     inputs,
   };
 }
@@ -204,10 +174,7 @@ async function resolveFallbackOrReport(input: {
   readonly graph: JsonValue;
 }): Promise<ReadonlyMap<string, readonly string[]>> {
   try {
-    return parseNxGraphFallbackDependencies(
-      input.graph,
-      input.workspace.parsedProjects,
-    );
+    return parseNxGraphFallbackDependencies(input.graph, input.workspace.parsedProjects);
   } catch (error: unknown) {
     const message = failureMessage(error, "Unknown Nx graph shape failure.");
     await writeUnsupportedGraphReport({
@@ -223,10 +190,7 @@ async function resolveFallbackOrReport(input: {
 }
 
 /** Converts every target of every project, keeping the audit for each one. */
-async function convertProjects(
-  workspaceRoot: string,
-  projects: readonly NxProject[],
-): Promise<ProjectConversion> {
+async function convertProjects(workspaceRoot: string, projects: readonly NxProject[]): Promise<ProjectConversion> {
   const conversions: TargetConversion[] = [];
   const executors = new Set<string>();
   let targetCount = 0;
@@ -235,9 +199,7 @@ async function convertProjects(
     for (const target of project.targets) {
       targetCount += 1;
       if (target.executor) executors.add(target.executor);
-      conversions.push(
-        await convertTarget({ workspaceRoot, project, target, sourceLocation }),
-      );
+      conversions.push(await convertTarget({ workspaceRoot, project, target, sourceLocation }));
     }
   }
   return {
@@ -273,9 +235,7 @@ function buildManifest(
         fallbackDependencies: fallbackDependencies.get(project.name) ?? [],
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
-    tasks: [...conversion.tasks].sort((left, right) =>
-      left.id.localeCompare(right.id),
-    ),
+    tasks: [...conversion.tasks].sort((left, right) => left.id.localeCompare(right.id)),
   };
 }
 
@@ -317,9 +277,7 @@ function buildReport(input: {
     },
     tasks: [...conversion.audits].sort(byAuditIdentity),
     droppedFields: [...conversion.droppedFields].sort(byDroppedFieldIdentity),
-    failures: [...conversion.failures].sort((left, right) =>
-      left.subject.localeCompare(right.subject),
-    ),
+    failures: [...conversion.failures].sort((left, right) => left.subject.localeCompare(right.subject)),
   };
 }
 
@@ -351,9 +309,7 @@ async function writeImportOutputs(
   if (manifest.tasks.length === 0) {
     const contents = stableJson(noStandaloneReport(report));
     await writeOutputsAtomically([{ path: reportPath, contents }]);
-    throw new Error(
-      "No standalone Nx tasks were convertible; see dads.testing.import-report.json.",
-    );
+    throw new Error("No standalone Nx tasks were convertible; see dads.testing.import-report.json.");
   }
   await writeOutputsAtomically([
     { path: manifestPath, contents: manifestContents },
@@ -437,19 +393,11 @@ function failureMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function byAuditIdentity(
-  left: ImportedTaskAudit,
-  right: ImportedTaskAudit,
-): number {
-  return `${left.project}:${left.target}`.localeCompare(
-    `${right.project}:${right.target}`,
-  );
+function byAuditIdentity(left: ImportedTaskAudit, right: ImportedTaskAudit): number {
+  return `${left.project}:${left.target}`.localeCompare(`${right.project}:${right.target}`);
 }
 
-function byDroppedFieldIdentity(
-  left: DroppedField,
-  right: DroppedField,
-): number {
+function byDroppedFieldIdentity(left: DroppedField, right: DroppedField): number {
   return `${left.project}:${left.target}:${left.field}`.localeCompare(
     `${right.project}:${right.target}:${right.field}`,
   );

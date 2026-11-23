@@ -4,16 +4,7 @@
  * volume's free space, and the box's signing key.
  */
 import { createHash, randomBytes } from "node:crypto";
-import {
-  link,
-  mkdir,
-  open,
-  readdir,
-  readFile,
-  rm,
-  stat,
-  statfs,
-} from "node:fs/promises";
+import { link, mkdir, open, readdir, readFile, rm, stat, statfs } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 /** Free and total bytes of the volume the root is on. */
@@ -46,11 +37,7 @@ export function sha256Hex(bytes: Uint8Array): string {
  * place. The temp path is pushed to `written` before any byte, so the caller
  * can remove it whatever fails.
  */
-export async function writeTemp(
-  path: string,
-  bytes: Uint8Array,
-  written: string[],
-): Promise<string> {
+export async function writeTemp(path: string, bytes: Uint8Array, written: string[]): Promise<string> {
   const temp = `${path}${TEMP_MARKER}${randomBytes(6).toString("hex")}`;
   const handle = await open(temp, "wx", 0o640);
   written.push(temp);
@@ -79,10 +66,7 @@ export async function fsyncFolder(folder: string): Promise<void> {
  * one it made), the parent of each, up to and including the folder that
  * holds `firstCreated`.
  */
-export function foldersToSync(
-  folder: string,
-  firstCreated: string | undefined,
-): string[] {
+export function foldersToSync(folder: string, firstCreated: string | undefined): string[] {
   const folders = [folder];
   if (firstCreated === undefined) return folders;
   const top = dirname(firstCreated);
@@ -119,10 +103,7 @@ export type DiskObjectHead = {
 };
 
 /** The file's size from its directory entry, with the sidecar's content type; null when the file is missing. */
-export async function headOfFile(
-  path: string,
-  sidecar: Sidecar,
-): Promise<DiskObjectHead | null> {
+export async function headOfFile(path: string, sidecar: Sidecar): Promise<DiskObjectHead | null> {
   try {
     const { size } = await stat(path);
     return { byteSize: size, contentType: sidecar.contentType };
@@ -133,10 +114,7 @@ export async function headOfFile(
 }
 
 /** The file's first `byteCount` bytes (fewer for a shorter file), never the rest; null when it is missing. */
-export async function readPrefixIfPresent(
-  path: string,
-  byteCount: number,
-): Promise<Uint8Array | null> {
+export async function readPrefixIfPresent(path: string, byteCount: number): Promise<Uint8Array | null> {
   let handle;
   try {
     handle = await open(path, "r");
@@ -220,9 +198,7 @@ export async function readVolumeSpace(directory: string): Promise<DiskSpace> {
  * replaces a key already there, so the first of two racing boots wins) and
  * the folder fsynced. A power cut never leaves a short key behind.
  */
-export async function loadOrCreateDiskSigningKey(
-  rootDirectory: string,
-): Promise<Uint8Array> {
+export async function loadOrCreateDiskSigningKey(rootDirectory: string): Promise<Uint8Array> {
   const path = join(rootDirectory, SIGNING_KEY_FILE);
   await mkdir(rootDirectory, { recursive: true });
   const temp = `${path}${TEMP_MARKER}${randomBytes(6).toString("hex")}`;
@@ -241,9 +217,7 @@ export async function loadOrCreateDiskSigningKey(
   await fsyncFolder(rootDirectory);
   const key = await readFile(path);
   if (key.byteLength !== SIGNING_KEY_BYTES) {
-    throw new Error(
-      `${path}: the site files signing-key must be ${SIGNING_KEY_BYTES.toString()} bytes`,
-    );
+    throw new Error(`${path}: the site files signing-key must be ${SIGNING_KEY_BYTES.toString()} bytes`);
   }
   return new Uint8Array(key);
 }
@@ -269,9 +243,5 @@ function isSidecar(value: unknown): value is Sidecar {
 }
 
 function errorCode(error: unknown): string | undefined {
-  return error instanceof Error &&
-    "code" in error &&
-    typeof error.code === "string"
-    ? error.code
-    : undefined;
+  return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : undefined;
 }

@@ -5,10 +5,7 @@ import { promisify } from "node:util";
 
 const execute = promisify(execFile);
 
-export async function git(
-  cwd: string,
-  args: readonly string[],
-): Promise<string> {
+export async function git(cwd: string, args: readonly string[]): Promise<string> {
   const result = await execute("git", ["--no-optional-locks", ...args], {
     cwd,
     encoding: "utf8",
@@ -18,13 +15,8 @@ export async function git(
 }
 
 export async function findRepository(cwd: string) {
-  const worktree = await realpath(
-    await git(cwd, ["rev-parse", "--show-toplevel"]),
-  );
-  const sharedGitDir = resolve(
-    worktree,
-    await git(worktree, ["rev-parse", "--git-common-dir"]),
-  );
+  const worktree = await realpath(await git(cwd, ["rev-parse", "--show-toplevel"]));
+  const sharedGitDir = resolve(worktree, await git(worktree, ["rev-parse", "--git-common-dir"]));
   return { worktree, sharedGitDir };
 }
 
@@ -48,17 +40,12 @@ export async function gitWorktrees(cwd: string): Promise<GitWorktree[]> {
             path,
             head,
             primary: index === 0,
-            locked: rows.some(
-              (row) => row === "locked" || row.startsWith("locked "),
-            ),
+            locked: rows.some((row) => row === "locked" || row.startsWith("locked ")),
           },
         ];
   });
 }
 
 export async function isDirty(path: string): Promise<boolean> {
-  return (
-    (await git(path, ["status", "--porcelain=v1", "--untracked-files=all"]))
-      .length > 0
-  );
+  return (await git(path, ["status", "--porcelain=v1", "--untracked-files=all"])).length > 0;
 }

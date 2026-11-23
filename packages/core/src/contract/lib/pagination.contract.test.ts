@@ -14,19 +14,14 @@ describe("pagination contract", () => {
   it("parses a captured paginated list", () => {
     const schema = paginatedResponseSchema(z.object({ id: z.uuid() }));
     const fixture: unknown = JSON.parse(
-      readFileSync(
-        join(import.meta.dirname, "__fixtures__", "paginated-list.json"),
-        "utf8",
-      ),
+      readFileSync(join(import.meta.dirname, "__fixtures__", "paginated-list.json"), "utf8"),
     );
     expect(() => schema.parse(fixture)).not.toThrow();
   });
 
   it("strips undeclared data from returned pagination metadata", () => {
     const meta = { total: 1, page: 1, perPage: 25 };
-    expect(paginationMetaSchema.parse({ ...meta, internalCount: 42 })).toEqual(
-      meta,
-    );
+    expect(paginationMetaSchema.parse({ ...meta, internalCount: 42 })).toEqual(meta);
   });
 
   it("applies documented defaults", () => {
@@ -41,17 +36,13 @@ describe("pagination contract", () => {
   });
 
   it("pins the perPage ceiling", () => {
-    expect(() =>
-      paginationQuerySchema.parse({ perPage: PAGINATION_MAX_PER_PAGE + 1 }),
-    ).toThrow();
+    expect(() => paginationQuerySchema.parse({ perPage: PAGINATION_MAX_PER_PAGE + 1 })).toThrow();
   });
 });
 
 describe("pagination strictness", () => {
   it("rejects an unmodelled query parameter", () => {
-    expect(() =>
-      paginationQuerySchema.parse({ page: "1", perPagee: "25" }),
-    ).toThrow();
+    expect(() => paginationQuerySchema.parse({ page: "1", perPagee: "25" })).toThrow();
   });
 
   it("keeps strictness through .extend(), which is how list queries inherit it", () => {

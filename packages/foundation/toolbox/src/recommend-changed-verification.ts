@@ -1,9 +1,6 @@
 import type { DadsProject } from "./project-orientation.js";
 import { collectCandidateTasks } from "./verification/logic/collect-candidate-tasks.js";
-import type {
-  VerificationPlan,
-  VerificationTaskRecommendation,
-} from "./verification/verification-contract.js";
+import type { VerificationPlan, VerificationTaskRecommendation } from "./verification/verification-contract.js";
 
 export type VerificationRecommendation = {
   readonly packageName: string;
@@ -27,8 +24,7 @@ export function recommendChangedVerification(
   options: { readonly trustEmptyScope?: boolean } = {},
 ): ChangedVerification {
   const plan = collectCandidateTasks(project, changedPaths, {
-    forceFullFallback:
-      changedPaths.length === 0 && options.trustEmptyScope === false,
+    forceFullFallback: changedPaths.length === 0 && options.trustEmptyScope === false,
     fallbackReason: "The clean checkout has no explicitly trusted baseline.",
   });
   return {
@@ -42,9 +38,7 @@ export function recommendChangedVerification(
   };
 }
 
-function groupTasksByPackage(
-  plan: VerificationPlan,
-): readonly VerificationRecommendation[] {
+function groupTasksByPackage(plan: VerificationPlan): readonly VerificationRecommendation[] {
   const tasksByPackage = new Map<string, VerificationTaskRecommendation[]>();
   for (const task of plan.tasks) {
     const packageTasks = tasksByPackage.get(task.packageName) ?? [];
@@ -57,7 +51,5 @@ function groupTasksByPackage(
       reason: tasks.map((task) => task.reason).join(" "),
       commands: [...new Set(tasks.map((task) => task.command))],
     }))
-    .sort((firstPackage, secondPackage) =>
-      firstPackage.packageName.localeCompare(secondPackage.packageName),
-    );
+    .sort((firstPackage, secondPackage) => firstPackage.packageName.localeCompare(secondPackage.packageName));
 }

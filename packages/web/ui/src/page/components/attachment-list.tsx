@@ -12,20 +12,8 @@ import {
   type AttachmentKind,
   type AttachmentOpenHandler,
 } from "../../elements/index.js";
-import {
-  Download,
-  File,
-  FileImage,
-  FileSpreadsheet,
-  FileText,
-  Loader2,
-} from "../../icons/index.js";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../../overlays/index.js";
+import { Download, File, FileImage, FileSpreadsheet, FileText, Loader2 } from "../../icons/index.js";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../overlays/index.js";
 
 import { usePageCopy, type PageCopyTranslator } from "../copy/page-copy.js";
 
@@ -56,13 +44,7 @@ type AttachmentListProps = {
  * downloading never opens and opening never downloads. The caller owns where
  * files come from, what opening does, and any error message.
  */
-export function AttachmentList({
-  status = "ready",
-  emptyMessage,
-  failure,
-  className,
-  ...shown
-}: AttachmentListProps) {
+export function AttachmentList({ status = "ready", emptyMessage, failure, className, ...shown }: AttachmentListProps) {
   const t = usePageCopy();
   const hasFailure = failure !== undefined && failure !== null;
 
@@ -117,23 +99,16 @@ function AttachmentListBody({
 // Container queries: the list lives in cards and drawers of varying width.
 const LIST_CLASS = "grid gap-1.5 @md:grid-cols-2 @3xl:grid-cols-3";
 
-const OPEN_FOCUS_CLASS =
-  "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
+const OPEN_FOCUS_CLASS = "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-type ItemProps = Pick<
-  AttachmentListProps,
-  "onOpen" | "onDownload" | "itemActions"
-> & { readonly item: AttachmentItem };
+type ItemProps = Pick<AttachmentListProps, "onOpen" | "onDownload" | "itemActions"> & { readonly item: AttachmentItem };
 
 function AttachmentRow({ item, onOpen, onDownload, itemActions }: ItemProps) {
   const metaId = useId();
   const rowContent = (
     <>
       <FileTypeIcon item={item} />
-      <span
-        className="min-w-0 flex-1 truncate text-sm font-medium"
-        title={item.fileName}
-      >
+      <span className="min-w-0 flex-1 truncate text-sm font-medium" title={item.fileName}>
         {item.fileName}
       </span>
       <AttachmentMeta item={item} id={metaId} />
@@ -191,10 +166,7 @@ function OpenArea({
   );
 }
 
-function DownloadButton({
-  item,
-  onDownload,
-}: Pick<ItemProps, "item" | "onDownload">) {
+function DownloadButton({ item, onDownload }: Pick<ItemProps, "item" | "onDownload">) {
   const t = usePageCopy();
   const [busy, setBusy] = useState(false);
   const mounted = useRef(true);
@@ -236,10 +208,7 @@ function DownloadButton({
             onClick={download}
           >
             {busy ? (
-              <Loader2
-                aria-hidden="true"
-                className="animate-spin motion-reduce:animate-none"
-              />
+              <Loader2 aria-hidden="true" className="animate-spin motion-reduce:animate-none" />
             ) : (
               <Download aria-hidden="true" />
             )}
@@ -254,10 +223,7 @@ function DownloadButton({
 function FileTypeIcon({ item }: { readonly item: AttachmentItem }) {
   const Icon = iconFor(item);
   return (
-    <span
-      aria-hidden="true"
-      className="grid size-5 shrink-0 place-items-center text-muted-foreground"
-    >
+    <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center text-muted-foreground">
       <Icon className="size-4" />
     </span>
   );
@@ -272,41 +238,22 @@ function iconFor(item: AttachmentItem) {
   return File;
 }
 
-const SPREADSHEET_EXTENSIONS: ReadonlySet<string> = new Set([
-  "csv",
-  "xls",
-  "xlsx",
-]);
+const SPREADSHEET_EXTENSIONS: ReadonlySet<string> = new Set(["csv", "xls", "xlsx"]);
 
-function kindLabel(
-  item: AttachmentItem,
-  kind: AttachmentKind,
-  t: PageCopyTranslator,
-): string {
+function kindLabel(item: AttachmentItem, kind: AttachmentKind, t: PageCopyTranslator): string {
   if (kind === "pdf") return t("page.attachments.kind.pdf");
   if (kind === "image") return t("page.attachments.kind.image");
   const extension = attachmentExtensionOf(item.fileName);
-  return extension === ""
-    ? t("page.attachments.kind.file")
-    : extension.toUpperCase();
+  return extension === "" ? t("page.attachments.kind.file") : extension.toUpperCase();
 }
 
 /** Muted "PDF · 25 kB" line under a file name. */
-function AttachmentMeta({
-  item,
-  id,
-}: {
-  readonly item: AttachmentItem;
-  readonly id?: string;
-}) {
+function AttachmentMeta({ item, id }: { readonly item: AttachmentItem; readonly id?: string }) {
   const t = usePageCopy();
   const { formatNumber } = useLocaleFormatting();
   const sizeText = formatFileSize(item.byteSize, formatNumber);
   return (
-    <span
-      id={id}
-      className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-    >
+    <span id={id} className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
       {kindLabel(item, attachmentKindOf(item), t)} {"·"} {sizeText}
     </span>
   );

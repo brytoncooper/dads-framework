@@ -23,12 +23,7 @@ type TarjanState = {
 export function analyzePermissionCycles(
   permissions: readonly SqliteAuthorizationPermission[],
 ): ReadonlyMap<string, CompiledCyclicScc> {
-  const byKey = new Map(
-    permissions.map((entry) => [
-      permissionKey(entry.entity, entry.wireName),
-      entry,
-    ]),
-  );
+  const byKey = new Map(permissions.map((entry) => [permissionKey(entry.entity, entry.wireName), entry]));
   const edges = buildDependencyGraph(permissions);
   const components = findStronglyConnectedComponents(edges);
   const result = new Map<string, CompiledCyclicScc>();
@@ -58,10 +53,7 @@ function buildDependencyGraph(
   return graph;
 }
 
-function collectArrowTargets(
-  expression: SqlitePermissionExpression,
-  targets: Set<string>,
-): void {
+function collectArrowTargets(expression: SqlitePermissionExpression, targets: Set<string>): void {
   switch (expression.kind) {
     case "relation":
       return;
@@ -103,11 +95,7 @@ function findStronglyConnectedComponents(
   return state.components;
 }
 
-function strongConnect(
-  node: string,
-  edges: ReadonlyMap<string, ReadonlySet<string>>,
-  state: TarjanState,
-): void {
+function strongConnect(node: string, edges: ReadonlyMap<string, ReadonlySet<string>>, state: TarjanState): void {
   const index = state.nextIndex;
   state.nextIndex += 1;
   state.indexByNode.set(node, index);
@@ -122,11 +110,7 @@ function strongConnect(
   }
 }
 
-function visitNeighbors(
-  node: string,
-  edges: ReadonlyMap<string, ReadonlySet<string>>,
-  state: TarjanState,
-): void {
+function visitNeighbors(node: string, edges: ReadonlyMap<string, ReadonlySet<string>>, state: TarjanState): void {
   const neighbors = edges.get(node);
   if (neighbors === undefined) return;
   for (const neighbor of neighbors) {
@@ -141,11 +125,7 @@ function visitNeighbors(
   }
 }
 
-function updateLowlink(
-  node: string,
-  candidate: number | undefined,
-  state: TarjanState,
-): void {
+function updateLowlink(node: string, candidate: number | undefined, state: TarjanState): void {
   const current = state.lowlinkByNode.get(node);
   if (current !== undefined && candidate !== undefined && candidate < current) {
     state.lowlinkByNode.set(node, candidate);
@@ -164,10 +144,7 @@ function popComponent(root: string, state: TarjanState): void {
   state.components.push(component);
 }
 
-function isCyclicComponent(
-  component: readonly string[],
-  edges: ReadonlyMap<string, ReadonlySet<string>>,
-): boolean {
+function isCyclicComponent(component: readonly string[], edges: ReadonlyMap<string, ReadonlySet<string>>): boolean {
   if (component.length > 1) return true;
   const [only] = component;
   if (only === undefined) return false;
@@ -186,12 +163,7 @@ function compileCyclicScc(
   for (const key of component) {
     const permission = byKey.get(key);
     if (permission === undefined) continue;
-    const clauses = decomposeExpression(
-      permission.entity,
-      permission.wireName,
-      permission.expression,
-      members,
-    );
+    const clauses = decomposeExpression(permission.entity, permission.wireName, permission.expression, members);
     for (const clause of clauses) {
       if (clause.kind === "base") {
         baseClauses.push(clause);
@@ -203,28 +175,18 @@ function compileCyclicScc(
   return { id, members, baseClauses, stepClauses };
 }
 
-function referencesScc(
-  expression: SqlitePermissionExpression,
-  members: ReadonlySet<string>,
-): boolean {
+function referencesScc(expression: SqlitePermissionExpression, members: ReadonlySet<string>): boolean {
   switch (expression.kind) {
     case "relation":
       return false;
     case "through":
     case "through-all":
-      return expression.targets.some((target) =>
-        members.has(permissionKey(target.entity, target.permission)),
-      );
+      return expression.targets.some((target) => members.has(permissionKey(target.entity, target.permission)));
     case "exclude":
-      return (
-        referencesScc(expression.include, members) ||
-        referencesScc(expression.exclude, members)
-      );
+      return referencesScc(expression.include, members) || referencesScc(expression.exclude, members);
     case "any-of":
     case "all-of":
-      return expression.expressions.some((child) =>
-        referencesScc(child, members),
-      );
+      return expression.expressions.some((child) => referencesScc(child, members));
   }
 }
 
@@ -241,9 +203,7 @@ function decomposeExpression(
     case "relation":
       return [{ kind: "base", entity, permission, expression }];
     case "any-of":
-      return expression.expressions.flatMap((child) =>
-        decomposeExpression(entity, permission, child, members),
-      );
+      return expression.expressions.flatMap((child) => decomposeExpression(entity, permission, child, members));
     case "through":
       return decomposeThrough(entity, permission, expression, members);
     case "through-all":
@@ -263,12 +223,8 @@ function decomposeThrough(
   expression: Extract<SqlitePermissionExpression, { kind: "through" }>,
   members: ReadonlySet<string>,
 ): readonly NormalizedClause[] {
-  const external = expression.targets.filter(
-    (target) => !members.has(permissionKey(target.entity, target.permission)),
-  );
-  const recursive = expression.targets.filter((target) =>
-    members.has(permissionKey(target.entity, target.permission)),
-  );
+  const external = expression.targets.filter((target) => !members.has(permissionKey(target.entity, target.permission)));
+  const recursive = expression.targets.filter((target) => members.has(permissionKey(target.entity, target.permission)));
   const clauses: NormalizedClause[] = [];
   if (external.length > 0) {
     clauses.push({
@@ -307,12 +263,7 @@ function decomposeExclude(
       `SQLite authorization does not support non-monotonic cycle through excluding on ${entity}#${permission}`,
     );
   }
-  const inner = decomposeExpression(
-    entity,
-    permission,
-    expression.include,
-    members,
-  );
+  const inner = decomposeExpression(entity, permission, expression.include, members);
   return attachGuard(inner, {
     positive: false,
     expression: expression.exclude,
@@ -325,12 +276,8 @@ function decomposeAllOf(
   expression: Extract<SqlitePermissionExpression, { kind: "all-of" }>,
   members: ReadonlySet<string>,
 ): readonly NormalizedClause[] {
-  const recursive = expression.expressions.filter((child) =>
-    referencesScc(child, members),
-  );
-  const external = expression.expressions.filter(
-    (child) => !referencesScc(child, members),
-  );
+  const recursive = expression.expressions.filter((child) => referencesScc(child, members));
+  const external = expression.expressions.filter((child) => !referencesScc(child, members));
   if (recursive.length > 1 || recursive[0] === undefined) {
     throw new Error(
       `SQLite authorization does not support non-linear recursive intersection on ${entity}#${permission}`,
@@ -343,10 +290,7 @@ function decomposeAllOf(
   return clauses;
 }
 
-function attachGuard(
-  clauses: readonly NormalizedClause[],
-  guard: GuardCondition,
-): readonly NormalizedClause[] {
+function attachGuard(clauses: readonly NormalizedClause[], guard: GuardCondition): readonly NormalizedClause[] {
   return clauses.map((clause) => {
     if (clause.kind === "step") {
       return { ...clause, guards: [...clause.guards, guard] };

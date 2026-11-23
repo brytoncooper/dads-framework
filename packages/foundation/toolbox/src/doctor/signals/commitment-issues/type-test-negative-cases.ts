@@ -14,12 +14,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { TS_EXPECT_ERROR_MARK } from "../../hatch-names.js";
 import { ts } from "../scanners/typescript-program.js";
 
@@ -32,17 +27,10 @@ export function countNegativeCases(context: DoctorContext): SignalReadings {
     const prefix = TYPE_TEST.exec(path)?.[1];
     if (prefix === undefined) continue;
     const owner =
-      roots
-        .filter((root) => path.startsWith(`${root}/`))
-        .sort((left, right) => right.length - left.length)[0] ??
+      roots.filter((root) => path.startsWith(`${root}/`)).sort((left, right) => right.length - left.length)[0] ??
       prefix.slice(0, -1);
-    const source = ts.createSourceFile(
-      path,
-      context.read(path),
-      ts.ScriptTarget.Latest,
-    );
-    const found =
-      countExpectError(source) + countVitestNegativeAssertions(source);
+    const source = ts.createSourceFile(path, context.read(path), ts.ScriptTarget.Latest);
+    const found = countExpectError(source) + countVitestNegativeAssertions(source);
     const known = readings.get(owner);
     const evidence: SignalEvidence[] = [...(known?.evidence ?? []), { path }];
     readings.set(owner, { value: (known?.value ?? 0) + found, evidence });
@@ -85,40 +73,24 @@ function vitestMatchers(statement: ts.Statement): readonly string[] {
   const bindings = statement.importClause?.namedBindings;
   if (bindings === undefined || !ts.isNamedImports(bindings)) return [];
   return bindings.elements
-    .filter(
-      (entry) => (entry.propertyName ?? entry.name).text === "expectTypeOf",
-    )
+    .filter((entry) => (entry.propertyName ?? entry.name).text === "expectTypeOf")
     .map((entry) => entry.name.text);
 }
 
-function isNegativeAssertion(
-  node: ts.Node,
-  names: ReadonlySet<string>,
-): boolean {
-  if (
-    !ts.isCallExpression(node) ||
-    !ts.isPropertyAccessExpression(node.expression)
-  )
-    return false;
+function isNegativeAssertion(node: ts.Node, names: ReadonlySet<string>): boolean {
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return false;
   const matcher = node.expression;
-  if (matcher.name.text !== "toExtend" && matcher.name.text !== "toEqualTypeOf")
-    return false;
+  if (matcher.name.text !== "toExtend" && matcher.name.text !== "toEqualTypeOf") return false;
   const negated = matcher.expression;
-  if (!ts.isPropertyAccessExpression(negated) || negated.name.text !== "not")
-    return false;
+  if (!ts.isPropertyAccessExpression(negated) || negated.name.text !== "not") return false;
   const call = negated.expression;
-  return (
-    ts.isCallExpression(call) &&
-    ts.isIdentifier(call.expression) &&
-    names.has(call.expression.text)
-  );
+  return ts.isCallExpression(call) && ts.isIdentifier(call.expression) && names.has(call.expression.text);
 }
 
 export const typeTestNegativeCasesSignal: DoctorSignal = {
   id: "type-test-negative-cases",
   issue: "commitment-issues",
-  question:
-    "Has any package's count of negative type tests fallen below its recorded floor?",
+  question: "Has any package's count of negative type tests fallen below its recorded floor?",
   reads: "text",
   unit: "count",
   direction: "floor",

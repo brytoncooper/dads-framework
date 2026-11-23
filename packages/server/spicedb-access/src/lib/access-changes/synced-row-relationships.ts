@@ -27,11 +27,7 @@ export type ReadSyncedRowRelationships<Table extends string, Tx> = (
 /** The outbox a copy records into: plain facts, and facts that replace a waiting opposite. */
 export type SyncedRowOutbox<Tx> = {
   enqueue(entries: readonly AccessChange[], tx: Tx): Promise<void>;
-  enqueueReplacingOpposite(
-    entries: readonly AccessChange[],
-    tx: Tx,
-    lease: OwnerLockLease,
-  ): Promise<void>;
+  enqueueReplacingOpposite(entries: readonly AccessChange[], tx: Tx, lease: OwnerLockLease): Promise<void>;
 };
 
 /**
@@ -58,8 +54,7 @@ export function syncedRowWriterWithRelationships<Table extends string, Tx>(
 ): SyncedRowWriter<Table, Tx> {
   const moveKeyHoldersAside = writer.moveKeyHoldersAside?.bind(writer);
 
-  const record = (tx: Tx, facts: readonly AccessChange[]) =>
-    recordFacts(outbox, partitions, tx, facts);
+  const record = (tx: Tx, facts: readonly AccessChange[]) => recordFacts(outbox, partitions, tx, facts);
 
   return {
     async upsert(tx, change) {
@@ -121,10 +116,7 @@ async function recordFacts<Tx>(
 ): Promise<void> {
   for (const [partition, group] of byPartition(facts)) {
     if (partition === null) await outbox.enqueue(group, tx);
-    else
-      await partitions.run(partition, (lease) =>
-        outbox.enqueueReplacingOpposite(group, tx, lease),
-      );
+    else await partitions.run(partition, (lease) => outbox.enqueueReplacingOpposite(group, tx, lease));
   }
 }
 
@@ -158,24 +150,13 @@ function isGroupList(
   return Array.isArray(answer);
 }
 
-function changedFacts(
-  before: readonly Placed[],
-  after: readonly Placed[],
-  cause: string,
-): AccessChange[] {
+function changedFacts(before: readonly Placed[], after: readonly Placed[], cause: string): AccessChange[] {
   const kept = new Set(after.map(placedKey));
   const gone = before.filter((entry) => !kept.has(placedKey(entry)));
-  return [
-    ...factsFor("DELETE", gone, cause),
-    ...factsFor("WRITE", after, cause),
-  ];
+  return [...factsFor("DELETE", gone, cause), ...factsFor("WRITE", after, cause)];
 }
 
-function factsFor(
-  operation: "WRITE" | "DELETE",
-  entries: readonly Placed[],
-  cause: string,
-): AccessChange[] {
+function factsFor(operation: "WRITE" | "DELETE", entries: readonly Placed[], cause: string): AccessChange[] {
   return entries.map(({ relationship, ownerPartitionId }) => ({
     idempotencyKey: outboxKeyForRelationship(operation, relationship, cause),
     operation,
@@ -185,9 +166,7 @@ function factsFor(
 }
 
 /** Facts grouped by authority slice, in the order each slice first appears. */
-function byPartition(
-  facts: readonly AccessChange[],
-): Map<string | null, AccessChange[]> {
+function byPartition(facts: readonly AccessChange[]): Map<string | null, AccessChange[]> {
   const groups = new Map<string | null, AccessChange[]>();
   for (const fact of facts) {
     const group = groups.get(fact.ownerPartitionId) ?? [];

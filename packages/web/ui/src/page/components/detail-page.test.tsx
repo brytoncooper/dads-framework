@@ -11,14 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TabsContent, TabsTrigger } from "../../display/index.js";
 import { Button } from "../../elements/index.js";
 
-import {
-  DetailBackLink,
-  DetailHeader,
-  DetailPage,
-  DetailSection,
-  DetailState,
-  DetailTabs,
-} from "./detail-page.js";
+import { DetailBackLink, DetailHeader, DetailPage, DetailSection, DetailState, DetailTabs } from "./detail-page.js";
 
 afterEach(cleanup);
 
@@ -80,17 +73,13 @@ describe("detail-page composition", () => {
     expect(page.className).toContain("gap-6");
     expect(backLink.getAttribute("href")).toBe("/products");
     expect(backLink.className).toContain("text-link");
-    expect(
-      backLink.querySelector('[data-slot="detail-back-icon"]'),
-    ).not.toBeNull();
+    expect(backLink.querySelector('[data-slot="detail-back-icon"]')).not.toBeNull();
     expect(heading.className).toContain("text-3xl");
     expect(screen.getByText("PC-100").tagName).toBe("P");
     expect(screen.getByText("Archived")).toBeDefined();
     expect(screen.getByRole("button", { name: "Restore" })).toBeDefined();
     expect(sectionHeading.className).toContain("text-2xl");
-    expect(
-      screen.getByText("Facilities that may handle this product.").tagName,
-    ).toBe("P");
+    expect(screen.getByText("Facilities that may handle this product.").tagName).toBe("P");
     expect(tabs.getAttribute("data-variant")).toBe("default");
     expect(tabsRoot?.className).toContain("gap-0");
     expect(tabsRoot?.className).toContain("[&_[data-slot=tabs-content]]:mt-6");
@@ -99,11 +88,7 @@ describe("detail-page composition", () => {
   it("gives stacked and tabbed loading states distinct trustworthy geometry", () => {
     render(
       <div>
-        <DetailState
-          variant="loading"
-          layout="stacked"
-          label="Loading Product"
-        />
+        <DetailState variant="loading" layout="stacked" label="Loading Product" />
         <DetailState variant="loading" layout="tabbed" label="Loading Order" />
       </div>,
     );
@@ -115,20 +100,14 @@ describe("detail-page composition", () => {
     expect(stacked.getAttribute("data-layout")).toBe("stacked");
     expect(stacked.querySelector('[data-slot="detail-state-tabs"]')).toBeNull();
     expect(tabbed.getAttribute("data-layout")).toBe("tabbed");
-    expect(
-      tabbed.querySelector('[data-slot="detail-state-tabs"]'),
-    ).not.toBeNull();
+    expect(tabbed.querySelector('[data-slot="detail-state-tabs"]')).not.toBeNull();
 
-    for (const skeleton of Array.from(
-      document.querySelectorAll<HTMLElement>('[data-slot="skeleton"]'),
-    )) {
+    for (const skeleton of Array.from(document.querySelectorAll<HTMLElement>('[data-slot="skeleton"]'))) {
       expect(skeleton.className).toContain("motion-reduce:animate-none");
     }
 
     for (const boundedSkeleton of Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '[data-slot="skeleton"][class*="max-w-"]',
-      ),
+      document.querySelectorAll<HTMLElement>('[data-slot="skeleton"][class*="max-w-"]'),
     )) {
       expect(boundedSkeleton.className.split(" ")).toContain("w-full");
     }
@@ -136,11 +115,7 @@ describe("detail-page composition", () => {
 
   it("keeps feature-owned error copy and retry actions in a scoped state", () => {
     render(
-      <DetailState
-        variant="error"
-        title="Product Could Not Be Loaded"
-        description="The request timed out."
-      >
+      <DetailState variant="error" title="Product Could Not Be Loaded" description="The request timed out.">
         <Button>Try Again</Button>
       </DetailState>,
     );
@@ -150,26 +125,15 @@ describe("detail-page composition", () => {
     expect(screen.getByText("Product Could Not Be Loaded")).toBeDefined();
     expect(screen.getByText("The request timed out.")).toBeDefined();
     expect(
-      screen
-        .getByRole("button", { name: "Try Again" })
-        .closest('[data-slot="detail-state-actions"]'),
+      screen.getByRole("button", { name: "Try Again" }).closest('[data-slot="detail-state-actions"]'),
     ).not.toBeNull();
   });
 
   it("omits optional slots when conditional feature content resolves false", () => {
     const { container } = render(
       <>
-        <DetailHeader
-          title="Portland Cement"
-          subtitle={false}
-          status={false}
-          actions={false}
-        />
-        <DetailState
-          variant="error"
-          title="Product Could Not Be Loaded"
-          description={false}
-        >
+        <DetailHeader title="Portland Cement" subtitle={false} status={false} actions={false} />
+        <DetailState variant="error" title="Product Could Not Be Loaded" description={false}>
           {false}
         </DetailState>
       </>,
@@ -177,8 +141,6 @@ describe("detail-page composition", () => {
 
     expect(container.querySelector("header p")).toBeNull();
     expect(container.querySelector('[data-slot="detail-actions"]')).toBeNull();
-    expect(
-      container.querySelector('[data-slot="detail-state-actions"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-slot="detail-state-actions"]')).toBeNull();
   });
 });

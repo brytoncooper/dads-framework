@@ -2,9 +2,7 @@ const HIT_AREA_SLOT = "data-table-row-hit-area";
 
 export function readPrimaryRowAnchor(row: Element): HTMLAnchorElement | null {
   const links = [...row.querySelectorAll("a[href]")];
-  const primary = links.find(
-    (link) => link.getAttribute("data-slot") !== HIT_AREA_SLOT,
-  );
+  const primary = links.find((link) => link.getAttribute("data-slot") !== HIT_AREA_SLOT);
   return primary instanceof HTMLAnchorElement ? primary : null;
 }
 

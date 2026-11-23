@@ -22,25 +22,11 @@ function publicGrant(grant: ImpersonationStoredGrant): ImpersonationGrant {
 }
 
 function validId(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length <= 256 &&
-    value.trim().length > 0 &&
-    !value.includes("\0")
-  );
+  return typeof value === "string" && value.length <= 256 && value.trim().length > 0 && !value.includes("\0");
 }
 
-export function createImpersonation(
-  options: ImpersonationOptions,
-): Impersonation {
-  const {
-    authorize,
-    identity,
-    lifetimeMs,
-    store,
-    writeAudit,
-    now = Date.now,
-  } = options;
+export function createImpersonation(options: ImpersonationOptions): Impersonation {
+  const { authorize, identity, lifetimeMs, store, writeAudit, now = Date.now } = options;
   if (!Number.isSafeInteger(lifetimeMs) || lifetimeMs <= 0) {
     throw new RangeError("Impersonation lifetime must be a positive integer");
   }
@@ -54,17 +40,11 @@ export function createImpersonation(
       action,
       actorAccountId: null,
       staffAccountId: null,
-      effectiveAccountId: validId(initial.effectiveAccountId)
-        ? initial.effectiveAccountId
-        : null,
+      effectiveAccountId: validId(initial.effectiveAccountId) ? initial.effectiveAccountId : null,
       tenantId: validId(initial.tenantId) ? initial.tenantId : null,
       grantId: validId(initial.grantId) ? initial.grantId : null,
     };
-    const { audit, authorizedEvent } = createImpersonationAudit(
-      writeAudit,
-      now,
-      context,
-    );
+    const { audit, authorizedEvent } = createImpersonationAudit(writeAudit, now, context);
     const session = async () => {
       const session = await identity.readSession(headers);
       context.actorAccountId = session?.account.id ?? null;
@@ -98,12 +78,7 @@ export function createImpersonation(
     return request.run(async () => {
       const session = await request.session();
       const { tenantId, effectiveAccountId } = scope;
-      if (
-        !session ||
-        !validId(session.sessionId) ||
-        !validId(tenantId) ||
-        !validId(effectiveAccountId)
-      ) {
+      if (!session || !validId(session.sessionId) || !validId(tenantId) || !validId(effectiveAccountId)) {
         await request.audit("denied");
         return null;
       }
@@ -117,10 +92,7 @@ export function createImpersonation(
         expiresAtMs: Math.min(now() + lifetimeMs, session.expiresAt.getTime()),
       };
       request.recordGrant(grant);
-      if (
-        staffAccountId === effectiveAccountId ||
-        !(await permitted("start", staffAccountId, grant))
-      ) {
+      if (staffAccountId === effectiveAccountId || !(await permitted("start", staffAccountId, grant))) {
         await request.audit("denied");
         return null;
       }
@@ -133,10 +105,7 @@ export function createImpersonation(
     });
   }
 
-  async function use(
-    headers: Headers,
-    input: { readonly grantId: string; readonly tenantId: string },
-  ) {
+  async function use(headers: Headers, input: { readonly grantId: string; readonly tenantId: string }) {
     const request = attempt("use", headers, input);
     return request.run(async () => {
       const session = await request.session();
@@ -144,8 +113,7 @@ export function createImpersonation(
       if (session && grant && matchesUse(session, input.tenantId, grant)) {
         if (await permitted("use", session.account.id, grant)) {
           await request.audit("authorized");
-          if (await stillActive(grant, session.expiresAt.getTime()))
-            return publicGrant(grant);
+          if (await stillActive(grant, session.expiresAt.getTime())) return publicGrant(grant);
         }
       }
       await request.audit("denied");
@@ -153,32 +121,15 @@ export function createImpersonation(
     });
   }
 
-  function matchesUse(
-    session: IdentitySession,
-    tenantId: string,
-    grant: ImpersonationStoredGrant,
-  ) {
-    return (
-      ownsGrant(session, grant) &&
-      grant.tenantId === tenantId &&
-      grant.expiresAtMs > now()
-    );
+  function matchesUse(session: IdentitySession, tenantId: string, grant: ImpersonationStoredGrant) {
+    return ownsGrant(session, grant) && grant.tenantId === tenantId && grant.expiresAtMs > now();
   }
 
-  function ownsGrant(
-    session: IdentitySession,
-    grant: ImpersonationStoredGrant,
-  ) {
-    return (
-      session.account.id === grant.staffAccountId &&
-      session.sessionId === grant.staffSessionId
-    );
+  function ownsGrant(session: IdentitySession, grant: ImpersonationStoredGrant) {
+    return session.account.id === grant.staffAccountId && session.sessionId === grant.staffSessionId;
   }
 
-  async function stillActive(
-    grant: ImpersonationStoredGrant,
-    sessionExpiresAtMs: number,
-  ) {
+  async function stillActive(grant: ImpersonationStoredGrant, sessionExpiresAtMs: number) {
     const current = await store.read(grant.id);
     return (
       current?.id === grant.id &&
@@ -191,11 +142,7 @@ export function createImpersonation(
     );
   }
 
-  function permitted(
-    action: "start" | "use" | "revoke",
-    actorAccountId: string,
-    grant: ImpersonationGrant,
-  ) {
+  function permitted(action: "start" | "use" | "revoke", actorAccountId: string, grant: ImpersonationGrant) {
     return authorize({
       action,
       actorAccountId,
@@ -205,32 +152,21 @@ export function createImpersonation(
     });
   }
 
-  async function end(
-    action: "stop" | "revoke",
-    headers: Headers,
-    grantId: string,
-  ) {
+  async function end(action: "stop" | "revoke", headers: Headers, grantId: string) {
     const request = attempt(action, headers, { grantId });
     return request.run(async () => {
       const session = await request.session();
       const grant = await request.readGrant(grantId);
       if (session && grant && (await mayEnd(action, session, grant))) {
-        if (await store.remove(grant.id, request.authorizedEvent()))
-          return true;
+        if (await store.remove(grant.id, request.authorizedEvent())) return true;
       }
       await request.audit("denied");
       return false;
     });
   }
 
-  function mayEnd(
-    action: "stop" | "revoke",
-    session: IdentitySession,
-    grant: ImpersonationStoredGrant,
-  ) {
-    return action === "stop"
-      ? ownsGrant(session, grant)
-      : permitted(action, session.account.id, grant);
+  function mayEnd(action: "stop" | "revoke", session: IdentitySession, grant: ImpersonationStoredGrant) {
+    return action === "stop" ? ownsGrant(session, grant) : permitted(action, session.account.id, grant);
   }
 
   return {

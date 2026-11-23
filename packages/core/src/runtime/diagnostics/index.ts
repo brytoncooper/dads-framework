@@ -16,12 +16,6 @@ export {
   type CreateDiagnosticsReporterOptions,
   type DiagnosticsDriver,
 } from "./lib/create-diagnostics-reporter.js";
-export {
-  LogDiagnosticsReporter,
-  type DiagnosticsLog,
-} from "./lib/log-diagnostics-reporter.js";
+export { LogDiagnosticsReporter, type DiagnosticsLog } from "./lib/log-diagnostics-reporter.js";
 export { NoneDiagnosticsReporter } from "./lib/none-diagnostics-reporter.js";
-export {
-  describeException,
-  type DescribedException,
-} from "./lib/logic/describe-exception.js";
+export { describeException, type DescribedException } from "./lib/logic/describe-exception.js";

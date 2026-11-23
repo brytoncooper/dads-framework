@@ -12,12 +12,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  fileReading,
-  type DoctorSignal,
-  type SignalReading,
-  type SignalReadings,
-} from "../../doctor-signal.js";
+import { fileReading, type DoctorSignal, type SignalReading, type SignalReadings } from "../../doctor-signal.js";
 import { TS_EXPECT_ERROR_MARK, TS_IGNORE_MARK } from "../../hatch-names.js";
 import { isTypeScriptSource } from "../scanners/source-classification.js";
 
@@ -30,10 +25,7 @@ function countTypeSuppressions(context: DoctorContext): SignalReadings {
     if (!isTypeScriptSource(path)) continue;
     if (path.includes(TYPE_TEST_DIRECTORY)) continue;
     const text = context.read(path);
-    const found = MARKS.reduce(
-      (total, mark) => total + text.split(mark).length - 1,
-      0,
-    );
+    const found = MARKS.reduce((total, mark) => total + text.split(mark).length - 1, 0);
     readings.set(path, fileReading(path, found));
   }
   return readings;

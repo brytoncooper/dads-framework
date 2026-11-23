@@ -31,11 +31,7 @@ describe("planCardFields", () => {
   });
 
   it("keeps the name as the phone card heading when Code is the first table column", () => {
-    const plan = planCardFields([
-      { id: "code" },
-      { id: "name", cardHeading: true },
-      { id: "status" },
-    ]);
+    const plan = planCardFields([{ id: "code" }, { id: "name", cardHeading: true }, { id: "status" }]);
 
     expect(plan.headingId).toBe("name");
     expect(plan.summaryIds).toEqual(["code", "status"]);
@@ -54,11 +50,7 @@ describe("planCardFields", () => {
   });
 
   it("keeps opted-out columns in the details", () => {
-    const plan = planCardFields([
-      { id: "name" },
-      { id: "notes", cardSummary: false },
-      { id: "status" },
-    ]);
+    const plan = planCardFields([{ id: "name" }, { id: "notes", cardSummary: false }, { id: "status" }]);
 
     expect(plan.summaryIds).toEqual(["status"]);
     expect(plan.detailIds).toEqual(["notes"]);
@@ -79,13 +71,7 @@ describe("planCardFields", () => {
   it("drops no visible column", () => {
     const ids = ["select", "a", "b", "c", "d", "e", "f", "actions"];
     const plan = planCardFields(ids.map((id) => ({ id })));
-    const placed = [
-      plan.selectionId,
-      plan.headingId,
-      ...plan.summaryIds,
-      ...plan.detailIds,
-      plan.actionsId,
-    ];
+    const placed = [plan.selectionId, plan.headingId, ...plan.summaryIds, ...plan.detailIds, plan.actionsId];
 
     expect(placed.sort()).toEqual([...ids].sort());
   });

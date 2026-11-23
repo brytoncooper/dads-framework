@@ -10,14 +10,10 @@ import {
 /** One JSON line per event, the shape a log shipper reads without a library. */
 export const migrationLog = {
   info(context: object, message: string): void {
-    process.stdout.write(
-      `${JSON.stringify({ level: "info", ...context, message })}\n`,
-    );
+    process.stdout.write(`${JSON.stringify({ level: "info", ...context, message })}\n`);
   },
   error(context: object, message: string): void {
-    process.stderr.write(
-      `${JSON.stringify({ level: "error", ...context, message })}\n`,
-    );
+    process.stderr.write(`${JSON.stringify({ level: "error", ...context, message })}\n`);
   },
 };
 

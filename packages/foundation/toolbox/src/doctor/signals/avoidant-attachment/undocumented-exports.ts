@@ -15,12 +15,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   declaredNames,
   evidenceAt,
@@ -63,9 +58,7 @@ function countUndocumentedExports(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const [root, counted] of perPackage) {
     if (counted.declarations === 0) continue;
-    const share = Math.round(
-      (counted.undocumented.length / counted.declarations) * 100,
-    );
+    const share = Math.round((counted.undocumented.length / counted.declarations) * 100);
     if (share < CEILING) continue;
     readings.set(root, { value: share, evidence: counted.undocumented });
   }
@@ -75,8 +68,7 @@ function countUndocumentedExports(context: DoctorContext): SignalReadings {
 export const undocumentedExportsSignal: DoctorSignal = {
   id: "undocumented-exports",
   issue: "avoidant-attachment",
-  question:
-    "Is the share of exported declarations with no doc comment above the profile's threshold?",
+  question: "Is the share of exported declarations with no doc comment above the profile's threshold?",
   reads: "typescript",
   unit: "percent",
   direction: "ceiling",

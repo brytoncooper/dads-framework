@@ -1,7 +1,4 @@
-import type {
-  FeatureFlagHistoryEntry,
-  FeatureFlagState,
-} from "../contract/index.js";
+import type { FeatureFlagHistoryEntry, FeatureFlagState } from "../contract/index.js";
 import { featureFlagBatchIdSchema } from "../contract/index.js";
 import type { FeatureFlagStore } from "../lib/ports/feature-flag-store.js";
 
@@ -10,9 +7,7 @@ export type FeatureFlagStoreFactory = () => Promise<FeatureFlagStore>;
 
 const FIRST = "conformance.first";
 const SECOND = "conformance.second";
-const BATCH_ID = featureFlagBatchIdSchema.parse(
-  "01990000-0000-7000-8000-000000000001",
-);
+const BATCH_ID = featureFlagBatchIdSchema.parse("01990000-0000-7000-8000-000000000001");
 
 /**
  * Proves a `FeatureFlagStore` keeps the port's promises: it reads back what
@@ -21,9 +16,7 @@ const BATCH_ID = featureFlagBatchIdSchema.parse(
  * included, so a test that passes on the stand-in means the same on Postgres.
  * Throws an `Error` naming the first promise broken.
  */
-export async function verifyFeatureFlagStoreConformance(
-  createStore: FeatureFlagStoreFactory,
-): Promise<void> {
+export async function verifyFeatureFlagStoreConformance(createStore: FeatureFlagStoreFactory): Promise<void> {
   await readsBackWhatItWrote(await createStore());
   await refusesAStaleBatchWhole(await createStore());
   await pagesHistoryNewestFirst(await createStore());
@@ -72,18 +65,12 @@ function assertSame(actual: unknown, expected: unknown, promise: string): void {
 function sortedTenants(states: readonly FeatureFlagState[]) {
   return states.map((state) => ({
     ...state,
-    rememberedTenants: [...state.rememberedTenants].sort((a, b) =>
-      a.tenantId.localeCompare(b.tenantId),
-    ),
+    rememberedTenants: [...state.rememberedTenants].sort((a, b) => a.tenantId.localeCompare(b.tenantId)),
   }));
 }
 
 async function readsBackWhatItWrote(store: FeatureFlagStore): Promise<void> {
-  assertSame(
-    await store.listStates([FIRST]),
-    [],
-    "an empty store lists nothing",
-  );
+  assertSame(await store.listStates([FIRST]), [], "an empty store lists nothing");
   const first = stateAt(FIRST, 1);
   const outcome = await store.applyBatch({
     expectedRevisions: new Map([[FIRST, 0]]),
@@ -122,11 +109,7 @@ async function refusesAStaleBatchWhole(store: FeatureFlagStore): Promise<void> {
     history: [historyFor(fresh), historyFor(stale)],
   });
   assertSame(outcome, "revision-conflict", "a stale revision is refused");
-  assertSame(
-    await store.listStates([FIRST]),
-    [],
-    "a refused batch writes none of its states",
-  );
+  assertSame(await store.listStates([FIRST]), [], "a refused batch writes none of its states");
   const history = await store.listHistory({
     slug: FIRST,
     page: 1,
@@ -151,9 +134,5 @@ async function pagesHistoryNewestFirst(store: FeatureFlagStore): Promise<void> {
     [1],
     "history pages newest first",
   );
-  assertSame(
-    page.rows[0]?.nextState.rememberedTenants.length,
-    2,
-    "history keeps the whole state",
-  );
+  assertSame(page.rows[0]?.nextState.rememberedTenants.length, 2, "history keeps the whole state");
 }

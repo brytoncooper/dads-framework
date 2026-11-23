@@ -1,10 +1,4 @@
-import {
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -144,9 +138,7 @@ describe("plan/run --report", () => {
     const exitCode = await runDadTestCli(["plan", "--json"], harness.io);
 
     expect(exitCode).toBe(0);
-    expect(harness.stdout()).toBe(
-      `${JSON.stringify({ schemaVersion: 1, ok: true, result: planResult })}\n`,
-    );
+    expect(harness.stdout()).toBe(`${JSON.stringify({ schemaVersion: 1, ok: true, result: planResult })}\n`);
   });
 
   it("writes the report file and embeds it when --report has a value", async () => {
@@ -158,10 +150,7 @@ describe("plan/run --report", () => {
     });
     const harness = createHarness(directory, fixture.binary);
 
-    const exitCode = await runDadTestCli(
-      ["plan", "--report", "r.json", "--json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["plan", "--report", "r.json", "--json"], harness.io);
 
     expect(exitCode).toBe(0);
     const envelope: unknown = JSON.parse(harness.stdout());
@@ -170,9 +159,7 @@ describe("plan/run --report", () => {
       ok: true,
       result: { ...planResult, report: expectedPlanReport },
     });
-    const written: unknown = JSON.parse(
-      readFileSync(join(directory, "r.json"), "utf8"),
-    );
+    const written: unknown = JSON.parse(readFileSync(join(directory, "r.json"), "utf8"));
     expect(written).toEqual(expectedPlanReport);
   });
 
@@ -186,10 +173,7 @@ describe("plan/run --report", () => {
     });
     const harness = createHarness(directory, fixture.binary);
 
-    const exitCode = await runDadTestCli(
-      ["plan", "--report", "--json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["plan", "--report", "--json"], harness.io);
 
     expect(exitCode).toBe(0);
     const envelope: unknown = JSON.parse(harness.stdout());
@@ -198,9 +182,7 @@ describe("plan/run --report", () => {
       ok: true,
       result: { ...planResult, report: expectedPlanReport },
     });
-    expect(readdirSync(directory).sort()).toEqual(
-      [...filesBefore, "fake-native-binary.mjs", "request.json"].sort(),
-    );
+    expect(readdirSync(directory).sort()).toEqual([...filesBefore, "fake-native-binary.mjs", "request.json"].sort());
   });
 
   it("prints the report-written line in human mode after a run", async () => {
@@ -212,17 +194,12 @@ describe("plan/run --report", () => {
     });
     const harness = createHarness(directory, fixture.binary);
 
-    const exitCode = await runDadTestCli(
-      ["run", "--all", "--report", "out.json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["run", "--all", "--report", "out.json"], harness.io);
 
     expect(exitCode).toBe(0);
     expect(harness.stdout()).toContain("run completed.");
     expect(harness.stdout().endsWith("report written: out.json\n")).toBe(true);
-    const written: unknown = JSON.parse(
-      readFileSync(join(directory, "out.json"), "utf8"),
-    );
+    const written: unknown = JSON.parse(readFileSync(join(directory, "out.json"), "utf8"));
     expect(written).toEqual(expectedRunReport);
   });
 
@@ -235,10 +212,7 @@ describe("plan/run --report", () => {
     });
     const harness = createHarness(directory, fixture.binary);
 
-    const exitCode = await runDadTestCli(
-      ["plan", "--report", "r.json", "--json"],
-      harness.io,
-    );
+    const exitCode = await runDadTestCli(["plan", "--report", "r.json", "--json"], harness.io);
 
     expect(exitCode).toBe(1);
     expect(harness.stdout()).toBe("");
@@ -256,11 +230,7 @@ function makeTemporaryDirectory(): string {
 
 function makeManifestDirectory(): string {
   const directory = makeTemporaryDirectory();
-  writeFileSync(
-    join(directory, "dads.testing.json"),
-    singleProjectManifest,
-    "utf8",
-  );
+  writeFileSync(join(directory, "dads.testing.json"), singleProjectManifest, "utf8");
   return directory;
 }
 

@@ -30,10 +30,7 @@ const KIND_TO_STATUS: Record<DomainErrorKind, number> = {
   conflict: 409,
 };
 
-export function mapErrorToHttpResponse(
-  error: unknown,
-  requestId: string,
-): HttpErrorResponse {
+export function mapErrorToHttpResponse(error: unknown, requestId: string): HttpErrorResponse {
   if (error instanceof DomainError) {
     return {
       status: KIND_TO_STATUS[error.kind],

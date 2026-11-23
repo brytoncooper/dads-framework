@@ -12,14 +12,8 @@ export type RunDatabaseMigrationsInput = {
 };
 
 /** Applies pending node-pg migrations. Stamps a leftover equal schema once. */
-export async function runDatabaseMigrations(
-  input: RunDatabaseMigrationsInput,
-  log: MigrationLog,
-): Promise<void> {
-  const outcome = await stampJournalWhenSchemaMatches(
-    input.databaseUrl,
-    input.workspace,
-  );
+export async function runDatabaseMigrations(input: RunDatabaseMigrationsInput, log: MigrationLog): Promise<void> {
+  const outcome = await stampJournalWhenSchemaMatches(input.databaseUrl, input.workspace);
   if (outcome === "stamped") {
     log.info(
       {

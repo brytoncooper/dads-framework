@@ -8,10 +8,7 @@ import { createHttpApp } from "../create-http-app.js";
 import { requireSession } from "../route/access.js";
 import { postRoute } from "../route/post-route.js";
 import { routeGroup } from "../route/route-group.js";
-import type {
-  FeatureStateProtocol,
-  FeatureStateSnapshot,
-} from "./feature-state.js";
+import type { FeatureStateProtocol, FeatureStateSnapshot } from "./feature-state.js";
 import { registerRoutes } from "./register-routes.js";
 
 const subject: SubjectRef = { type: "user", id: "user-1" };
@@ -35,10 +32,7 @@ function protocol(read: () => "before" | "after"): FeatureStateProtocol {
   };
 }
 
-async function buildApp(input: {
-  readonly state: () => "before" | "after";
-  readonly mutate: () => void;
-}) {
+async function buildApp(input: { readonly state: () => "before" | "after"; readonly mutate: () => void }) {
   const app = await createHttpApp({
     nodeEnv: "test",
     trustedOrigins: [],

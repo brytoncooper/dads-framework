@@ -1,24 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import { test } from "node:test";
 import { URL } from "node:url";
 
-const realBin = new URL(
-  "../../packages/foundation/toolbox/bin/",
-  import.meta.url,
-);
+const realBin = new URL("../../packages/foundation/toolbox/bin/", import.meta.url);
 
 function fixture(t, packagePath) {
   const root = mkdtempSync(join(tmpdir(), "dad-cli-bootstrap-"));
@@ -81,10 +70,7 @@ test("help in a source checkout requires no build; orient builds once", (t) => {
 test("source CLI does no build in install scripts or Git commit hooks", (t) => {
   const { root, toolbox, run } = fixture(t, "packages/foundation/toolbox");
   addSourceCompiler(root, toolbox);
-  for (const env of [
-    { npm_lifecycle_event: "prepare" },
-    { GIT_INDEX_FILE: join(root, "commit.index") },
-  ]) {
+  for (const env of [{ npm_lifecycle_event: "prepare" }, { GIT_INDEX_FILE: join(root, "commit.index") }]) {
     const orient = run(["orient", "src/cli.ts", "--json"], env);
     assert.equal(orient.status, 1);
     assert.match(JSON.parse(orient.stderr).error, /npm run build:cli/);
@@ -96,8 +82,5 @@ test("a broken installed toolbox asks for reinstall without trying a compiler", 
   const { run } = fixture(t, "node_modules/@dads-framework/toolbox");
   const orient = run(["orient", "src/cli.ts", "--json"]);
   assert.equal(orient.status, 1);
-  assert.match(
-    JSON.parse(orient.stderr).error,
-    /Reinstall @dads-framework\/toolbox/,
-  );
+  assert.match(JSON.parse(orient.stderr).error, /Reinstall @dads-framework\/toolbox/);
 });

@@ -17,13 +17,11 @@ import { nativeNoticeFiles } from "./native-package-notices.mjs";
 
 export function requireFile(path, label) {
   try {
-    if (!statSync(path).isFile() || statSync(path).size === 0)
-      throw new Error("not a non-empty file");
+    if (!statSync(path).isFile() || statSync(path).size === 0) throw new Error("not a non-empty file");
   } catch (error) {
-    throw new Error(
-      `Missing ${label}: ${path} (${error instanceof Error ? error.message : String(error)})`,
-      { cause: error },
-    );
+    throw new Error(`Missing ${label}: ${path} (${error instanceof Error ? error.message : String(error)})`, {
+      cause: error,
+    });
   }
 }
 
@@ -31,48 +29,27 @@ export function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
   } catch (error) {
-    throw new Error(
-      `Unable to read ${path}: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
+    throw new Error(`Unable to read ${path}: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
   }
 }
 
-export function packPackage(
-  root,
-  packageDirectory,
-  destinationDirectory,
-  manifest,
-  label,
-) {
+export function packPackage(root, packageDirectory, destinationDirectory, manifest, label) {
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-  const output = execFileSync(
-    npm,
-    [
-      "pack",
-      packageDirectory,
-      "--pack-destination",
-      destinationDirectory,
-      "--json",
-    ],
-    {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "inherit"],
-    },
-  );
+  const output = execFileSync(npm, ["pack", packageDirectory, "--pack-destination", destinationDirectory, "--json"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
   const report = parsePackReport(output, label);
   const tarball = resolve(destinationDirectory, report.filename);
   if (dirname(tarball) !== resolve(destinationDirectory)) {
-    throw new Error(
-      `${label} npm pack filename escaped its temporary destination: ${report.filename}`,
-    );
+    throw new Error(`${label} npm pack filename escaped its temporary destination: ${report.filename}`);
   }
   requireFile(tarball, `${label} tarball`);
   if (!tarball.endsWith(`-${manifest.version}.tgz`)) {
-    throw new Error(
-      `${label} tarball has an unexpected versioned filename: ${tarball}`,
-    );
+    throw new Error(`${label} tarball has an unexpected versioned filename: ${tarball}`);
   }
   return { path: tarball, files: report.files };
 }
@@ -88,47 +65,29 @@ function parsePackReport(output, label) {
     );
   }
   const report = Array.isArray(parsed) ? parsed[0] : undefined;
-  if (
-    report === undefined ||
-    typeof report.filename !== "string" ||
-    !Array.isArray(report.files)
-  ) {
+  if (report === undefined || typeof report.filename !== "string" || !Array.isArray(report.files)) {
     throw new Error(`npm pack returned incomplete metadata for ${label}.`);
   }
   const files = report.files
     .map((entry) =>
-      typeof entry === "object" &&
-      entry !== null &&
-      "path" in entry &&
-      typeof entry.path === "string"
+      typeof entry === "object" && entry !== null && "path" in entry && typeof entry.path === "string"
         ? entry.path
         : undefined,
     )
     .filter((entry) => entry !== undefined);
-  if (files.length !== report.files.length)
-    throw new Error(`npm pack returned an invalid file list for ${label}.`);
+  if (files.length !== report.files.length) throw new Error(`npm pack returned an invalid file list for ${label}.`);
   return { filename: report.filename, files };
 }
 
-export function verifyPackedContents(
-  packed,
-  label,
-  manifest,
-  nativePackageName,
-) {
+export function verifyPackedContents(packed, label, manifest, nativePackageName) {
   const files = packed.files;
   const forbidden = files.filter((file) => {
     if (/(^|\/)(src|native|target|node_modules)(\/|$)/.test(file)) return true;
     if (!/(^|\/)nx(\/|$)/i.test(file)) return false;
-    return (
-      label !== "facade" ||
-      (!file.startsWith("dist/nx/") && file !== "nx/README.md")
-    );
+    return label !== "facade" || (!file.startsWith("dist/nx/") && file !== "nx/README.md");
   });
   if (forbidden.length > 0)
-    throw new Error(
-      `${label} package leaks forbidden source/runtime paths: ${forbidden.join(", ")}.`,
-    );
+    throw new Error(`${label} package leaks forbidden source/runtime paths: ${forbidden.join(", ")}.`);
   if (!files.includes("package.json") || !files.includes("README.md")) {
     throw new Error(`${label} package is missing package.json or README.md.`);
   }
@@ -143,32 +102,17 @@ export function verifyPackedContents(
       "nx/README.md",
     ];
     for (const file of requiredFiles) {
-      if (!files.includes(file))
-        throw new Error(`Testing package does not contain ${file}.`);
+      if (!files.includes(file)) throw new Error(`Testing package does not contain ${file}.`);
     }
-    for (const field of [
-      "dependencies",
-      "devDependencies",
-      "peerDependencies",
-      "optionalDependencies",
-    ]) {
+    for (const field of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
       if (manifest[field]?.nx !== undefined) {
         throw new Error(`Testing package declares Nx in ${field}.`);
       }
     }
   } else {
-    const expectedBinary =
-      process.platform === "win32" ? "bin/dad-test.exe" : "bin/dad-test";
-    const expectedFiles = [
-      "package.json",
-      "README.md",
-      expectedBinary,
-      ...nativeNoticeFiles,
-    ];
-    if (
-      files.length !== expectedFiles.length ||
-      expectedFiles.some((file) => !files.includes(file))
-    ) {
+    const expectedBinary = process.platform === "win32" ? "bin/dad-test.exe" : "bin/dad-test";
+    const expectedFiles = ["package.json", "README.md", expectedBinary, ...nativeNoticeFiles];
+    if (files.length !== expectedFiles.length || expectedFiles.some((file) => !files.includes(file))) {
       throw new Error(
         `${nativePackageName} package must contain its executable, manifest, README and license notices.`,
       );
@@ -178,9 +122,7 @@ export function verifyPackedContents(
       manifest.devDependencies !== undefined ||
       manifest.peerDependencies !== undefined
     ) {
-      throw new Error(
-        `${nativePackageName} package must not declare dependencies.`,
-      );
+      throw new Error(`${nativePackageName} package must not declare dependencies.`);
     }
   }
 }

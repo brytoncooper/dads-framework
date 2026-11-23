@@ -1,10 +1,7 @@
 import type { AuditScopeContribution } from "@dads-framework/core/plugin";
 
 import type { AuditTriggerMigrationBuilder } from "./attach-audit-trigger.js";
-import {
-  configureAuditTriggers,
-  type AuditTriggerConfiguration,
-} from "./configure-audit-triggers.js";
+import { configureAuditTriggers, type AuditTriggerConfiguration } from "./configure-audit-triggers.js";
 
 type PluginAuditPolicy = {
   readonly auditScopes: readonly AuditScopeContribution[];
@@ -24,9 +21,7 @@ export function configurePluginAuditTriggers(
       throw new Error(`Audit scope declared for unknown table ${table}`);
     }
     if (options.scopeColumns !== undefined) {
-      throw new Error(
-        `Audit scope declared by both the application and a plugin for ${table}`,
-      );
+      throw new Error(`Audit scope declared by both the application and a plugin for ${table}`);
     }
     Object.defineProperty(configuredTables, table, {
       value: { ...options, scopeColumns: columns },

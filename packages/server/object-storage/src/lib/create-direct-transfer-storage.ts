@@ -12,10 +12,6 @@ import { S3DirectTransferStorage } from "./s3-direct-transfer-storage.js";
  * the two share one root, signing key and per-key write queue; called here
  * with `disk`, this answers the empty in-memory one.
  */
-export function createDirectTransferStorage(
-  options: CreateObjectStorageOptions,
-): DirectTransferStorage {
-  return options.driver === "s3"
-    ? new S3DirectTransferStorage(options)
-    : new InMemoryDirectTransferStorage();
+export function createDirectTransferStorage(options: CreateObjectStorageOptions): DirectTransferStorage {
+  return options.driver === "s3" ? new S3DirectTransferStorage(options) : new InMemoryDirectTransferStorage();
 }

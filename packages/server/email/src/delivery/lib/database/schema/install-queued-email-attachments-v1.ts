@@ -13,20 +13,12 @@ export function installQueuedEmailAttachmentsV1(pgm: MigrationBuilder): void {
     attachments: { type: "jsonb", notNull: true },
     failure_policy: { type: "text", notNull: true },
   });
-  pgm.addConstraint(
-    "outbound_email_documents",
-    "outbound_email_documents_policy_check",
-    {
-      check: "failure_policy IN ('retry', 'manual-review')",
-    },
-  );
-  pgm.addConstraint(
-    "outbound_email_documents",
-    "outbound_email_documents_attachments_check",
-    {
-      check: "jsonb_typeof(attachments) = 'array'",
-    },
-  );
+  pgm.addConstraint("outbound_email_documents", "outbound_email_documents_policy_check", {
+    check: "failure_policy IN ('retry', 'manual-review')",
+  });
+  pgm.addConstraint("outbound_email_documents", "outbound_email_documents_attachments_check", {
+    check: "jsonb_typeof(attachments) = 'array'",
+  });
   pgm.sql(
     `CREATE TRIGGER audit_record AFTER INSERT OR UPDATE OR DELETE ON outbound_email_documents FOR EACH ROW EXECUTE FUNCTION audit_record('outbound_email_id', '')`,
   );

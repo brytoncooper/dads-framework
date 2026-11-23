@@ -21,16 +21,11 @@ const JOURNAL_SCHEMA_LINES =
 
 const silentLog = { info: () => undefined };
 
-function writeJournalFolder(
-  entries: readonly { id: string; body?: string }[],
-): string {
+function writeJournalFolder(entries: readonly { id: string; body?: string }[]): string {
   const folder = mkdtempSync(join(tmpdir(), "authz-run-"));
   for (const entry of entries) {
     mkdirSync(join(folder, entry.id));
-    writeFileSync(
-      join(folder, entry.id, "schema.zed"),
-      `// ${entry.id}\n${JOURNAL_SCHEMA_LINES}${entry.body ?? ""}`,
-    );
+    writeFileSync(join(folder, entry.id, "schema.zed"), `// ${entry.id}\n${JOURNAL_SCHEMA_LINES}${entry.body ?? ""}`);
   }
   return folder;
 }
@@ -46,10 +41,7 @@ function journaledStore(applied: readonly string[]): FakeSchemaStore {
 
 describe("runAuthorizationMigrations", () => {
   it("genesis on an empty store: converges the first entry, applies the rest strictly", async () => {
-    const journalFolder = writeJournalFolder([
-      { id: "0001_baseline" },
-      { id: "0002_next" },
-    ]);
+    const journalFolder = writeJournalFolder([{ id: "0001_baseline" }, { id: "0002_next" }]);
     const steps: string[] = [];
     const journal: readonly AuthorizationMigration[] = [
       { id: "0001_baseline" },
@@ -72,13 +64,8 @@ describe("runAuthorizationMigrations", () => {
 
     expect(store.appliedMarkers).toEqual(["0001_baseline", "0002_next"]);
     expect(steps).toEqual(["before:0002_next"]);
-    const schemaWrites = store.operations.filter((operation) =>
-      operation.startsWith("writeSchema:"),
-    );
-    expect(schemaWrites).toEqual([
-      "writeSchema:0001_baseline",
-      "writeSchema:0002_next",
-    ]);
+    const schemaWrites = store.operations.filter((operation) => operation.startsWith("writeSchema:"));
+    expect(schemaWrites).toEqual(["writeSchema:0001_baseline", "writeSchema:0002_next"]);
   });
 
   it("genesis on a pre-journal store deletes tuples left under removed shapes, then journals", async () => {
@@ -86,8 +73,7 @@ describe("runAuthorizationMigrations", () => {
     const store = new FakeSchemaStore({
       // Pre-journal live schema with a relation the baseline no longer has —
       // the AWS-prototype cutover case.
-      initialSchema:
-        "definition user {}\ndefinition test/thing { relation gone: user }\n",
+      initialSchema: "definition user {}\ndefinition test/thing { relation gone: user }\n",
     });
 
     await runAuthorizationMigrations({
@@ -102,10 +88,7 @@ describe("runAuthorizationMigrations", () => {
   });
 
   it("skips already-applied entries and applies only the pending tail", async () => {
-    const journalFolder = writeJournalFolder([
-      { id: "0001_baseline" },
-      { id: "0002_next" },
-    ]);
+    const journalFolder = writeJournalFolder([{ id: "0001_baseline" }, { id: "0002_next" }]);
     const store = journaledStore(["0001_baseline"]);
 
     await runAuthorizationMigrations({
@@ -115,9 +98,7 @@ describe("runAuthorizationMigrations", () => {
       log: silentLog,
     });
 
-    const schemaWrites = store.operations.filter((operation) =>
-      operation.startsWith("writeSchema:"),
-    );
+    const schemaWrites = store.operations.filter((operation) => operation.startsWith("writeSchema:"));
     expect(schemaWrites).toEqual(["writeSchema:0002_next"]);
   });
 
@@ -170,18 +151,12 @@ describe("runAuthorizationMigrations", () => {
   });
 
   it("names the missing relationship step when SpiceDB refuses a destructive write, and resumes on re-run", async () => {
-    const journalFolder = writeJournalFolder([
-      { id: "0001_baseline" },
-      { id: "0002_next" },
-    ]);
+    const journalFolder = writeJournalFolder([{ id: "0001_baseline" }, { id: "0002_next" }]);
     const store = journaledStore(["0001_baseline"]);
     store.failOnNextSchemaWrite(
       "unable to update schema: cannot delete relation `editor` in object definition `test/document`, as a relationship exists with it",
     );
-    const journal: readonly AuthorizationMigration[] = [
-      { id: "0001_baseline" },
-      { id: "0002_next" },
-    ];
+    const journal: readonly AuthorizationMigration[] = [{ id: "0001_baseline" }, { id: "0002_next" }];
 
     await expect(
       runAuthorizationMigrations({
@@ -190,9 +165,7 @@ describe("runAuthorizationMigrations", () => {
         store,
         log: silentLog,
       }),
-    ).rejects.toThrow(
-      /0002_next is destructive for test\/document#editor but its relationship step did not clear/,
-    );
+    ).rejects.toThrow(/0002_next is destructive for test\/document#editor but its relationship step did not clear/);
     expect(store.appliedMarkers).toEqual(["0001_baseline"]);
 
     await runAuthorizationMigrations({
@@ -205,10 +178,7 @@ describe("runAuthorizationMigrations", () => {
   });
 
   it("names the entry and phase when a relationship step fails", async () => {
-    const journalFolder = writeJournalFolder([
-      { id: "0001_baseline" },
-      { id: "0002_next" },
-    ]);
+    const journalFolder = writeJournalFolder([{ id: "0001_baseline" }, { id: "0002_next" }]);
     const store = journaledStore(["0001_baseline"]);
 
     await expect(
@@ -217,17 +187,14 @@ describe("runAuthorizationMigrations", () => {
           { id: "0001_baseline" },
           {
             id: "0002_next",
-            beforeSchemaWrite: () =>
-              Promise.reject(new Error("TODO: write the tuple step")),
+            beforeSchemaWrite: () => Promise.reject(new Error("TODO: write the tuple step")),
           },
         ],
         journalFolder,
         store,
         log: silentLog,
       }),
-    ).rejects.toThrow(
-      /authorization migration 0002_next failed during beforeSchemaWrite: TODO/,
-    );
+    ).rejects.toThrow(/authorization migration 0002_next failed during beforeSchemaWrite: TODO/);
     expect(store.appliedMarkers).toEqual(["0001_baseline"]);
   });
 
@@ -246,10 +213,7 @@ describe("runAuthorizationMigrations", () => {
   });
 
   it("refuses applied entries that are not a journal prefix", async () => {
-    const journalFolder = writeJournalFolder([
-      { id: "0001_baseline" },
-      { id: "0002_next" },
-    ]);
+    const journalFolder = writeJournalFolder([{ id: "0001_baseline" }, { id: "0002_next" }]);
     const store = journaledStore(["0002_next"]);
 
     await expect(
@@ -290,9 +254,7 @@ describe("pendingAuthorizationMigrationIds", () => {
 describe("readAppliedAuthorizationMigrationIds", () => {
   it("returns the applied markers of a journaled store, sorted", async () => {
     await expect(
-      readAppliedAuthorizationMigrationIds(
-        journaledStore(["0002_split_roles", "0001_baseline"]),
-      ),
+      readAppliedAuthorizationMigrationIds(journaledStore(["0002_split_roles", "0001_baseline"])),
     ).resolves.toEqual(["0001_baseline", "0002_split_roles"]);
   });
 
@@ -300,8 +262,6 @@ describe("readAppliedAuthorizationMigrationIds", () => {
     const store = new FakeSchemaStore();
     store.appliedMarkers.push("0001_baseline");
 
-    await expect(readAppliedAuthorizationMigrationIds(store)).resolves.toEqual(
-      [],
-    );
+    await expect(readAppliedAuthorizationMigrationIds(store)).resolves.toEqual([]);
   });
 });

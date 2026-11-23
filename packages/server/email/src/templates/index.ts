@@ -25,33 +25,12 @@ export {
 export { componentShowcaseEmailTemplate } from "./lib/component-showcase.email-template.js";
 export type { EmailBranding, EmailLogo } from "./lib/email-branding.js";
 export { emailTheme, type EmailTheme } from "./lib/email-theme.js";
-export {
-  EmailLayout,
-  type EmailLayoutProps,
-} from "./lib/components/email-layout.js";
-export {
-  EmailButton,
-  type EmailButtonProps,
-} from "./lib/components/email-button.js";
-export {
-  EmailDataTable,
-  type EmailDataFact,
-  type EmailDataTableProps,
-} from "./lib/components/email-data-table.js";
-export {
-  EmailBadge,
-  type EmailBadgeProps,
-  type EmailBadgeTone,
-} from "./lib/components/email-badge.js";
+export { EmailLayout, type EmailLayoutProps } from "./lib/components/email-layout.js";
+export { EmailButton, type EmailButtonProps } from "./lib/components/email-button.js";
+export { EmailDataTable, type EmailDataFact, type EmailDataTableProps } from "./lib/components/email-data-table.js";
+export { EmailBadge, type EmailBadgeProps, type EmailBadgeTone } from "./lib/components/email-badge.js";
 export { EmailCode, type EmailCodeProps } from "./lib/components/email-code.js";
-export {
-  EmailHeading,
-  type EmailHeadingProps,
-} from "./lib/components/email-heading.js";
+export { EmailHeading, type EmailHeadingProps } from "./lib/components/email-heading.js";
 export { EmailLink, type EmailLinkProps } from "./lib/components/email-link.js";
-export {
-  EmailFinePrint,
-  EmailText,
-  type EmailTextProps,
-} from "./lib/components/email-text.js";
+export { EmailFinePrint, EmailText, type EmailTextProps } from "./lib/components/email-text.js";
 export type { EmailDocumentRenderer } from "./lib/email-document-renderer.js";

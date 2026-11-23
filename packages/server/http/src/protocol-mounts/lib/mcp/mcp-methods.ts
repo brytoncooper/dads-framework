@@ -1,17 +1,8 @@
 import { z } from "zod";
 
-import {
-  type AuditActor,
-  runWithAuditActor,
-} from "@dads-framework/core/audit-actor";
+import { type AuditActor, runWithAuditActor } from "@dads-framework/core/audit-actor";
 import type { AuditActorForSubject } from "../../../index.js";
-import type {
-  IsMcpToolSetOn,
-  McpCaller,
-  McpTool,
-  McpToolResult,
-  McpToolSet,
-} from "../../../index.js";
+import type { IsMcpToolSetOn, McpCaller, McpTool, McpToolResult, McpToolSet } from "../../../index.js";
 
 import {
   JSON_RPC_ERROR,
@@ -89,10 +80,7 @@ export type McpMethodsOptions = Readonly<{
 }>;
 
 export type McpMethods = {
-  answer(
-    request: JsonRpcRequest,
-    session: McpSession,
-  ): Promise<McpMethodOutcome>;
+  answer(request: JsonRpcRequest, session: McpSession): Promise<McpMethodOutcome>;
 };
 
 type RegisteredTool = Readonly<{
@@ -114,13 +102,9 @@ const initializeParamsSchema = z.object({
 export function createMcpMethods(options: McpMethodsOptions): McpMethods {
   const tools = registerTools(options.toolSets);
   requireListingWithin(tools, options.maxListingBytes);
-  const isToolSetOn: IsMcpToolSetOn =
-    options.isToolSetOn ?? (() => Promise.resolve(true));
+  const isToolSetOn: IsMcpToolSetOn = options.isToolSetOn ?? (() => Promise.resolve(true));
 
-  async function answer(
-    request: JsonRpcRequest,
-    session: McpSession,
-  ): Promise<McpMethodOutcome> {
+  async function answer(request: JsonRpcRequest, session: McpSession): Promise<McpMethodOutcome> {
     switch (request.method) {
       case "initialize":
         return answered(jsonRpcResult(request.id, initializeResult(request)));
@@ -135,13 +119,7 @@ export function createMcpMethods(options: McpMethodsOptions): McpMethods {
       case "tools/call":
         return callTool(request, session);
       default:
-        return answered(
-          jsonRpcError(
-            request.id,
-            JSON_RPC_ERROR.methodNotFound,
-            `Method not found: ${request.method}`,
-          ),
-        );
+        return answered(jsonRpcError(request.id, JSON_RPC_ERROR.methodNotFound, `Method not found: ${request.method}`));
     }
   }
 
@@ -149,23 +127,16 @@ export function createMcpMethods(options: McpMethodsOptions): McpMethods {
     const params = initializeParamsSchema.safeParse(request.params ?? {});
     const requested = params.success ? params.data.protocolVersion : undefined;
     const protocolVersion =
-      requested !== undefined && SUPPORTED_PROTOCOL_VERSIONS.includes(requested)
-        ? requested
-        : LATEST_PROTOCOL_VERSION;
+      requested !== undefined && SUPPORTED_PROTOCOL_VERSIONS.includes(requested) ? requested : LATEST_PROTOCOL_VERSION;
     return {
       protocolVersion,
       capabilities: { tools: { listChanged: false } },
       serverInfo: options.serverInfo,
-      ...(options.instructions === undefined
-        ? {}
-        : { instructions: options.instructions }),
+      ...(options.instructions === undefined ? {} : { instructions: options.instructions }),
     };
   }
 
-  async function callTool(
-    request: JsonRpcRequest,
-    session: McpSession,
-  ): Promise<McpMethodOutcome> {
+  async function callTool(request: JsonRpcRequest, session: McpSession): Promise<McpMethodOutcome> {
     const params = toolCallParamsSchema.safeParse(request.params);
     if (!params.success) {
       return answered(
@@ -177,17 +148,8 @@ export function createMcpMethods(options: McpMethodsOptions): McpMethods {
       );
     }
     const registered = tools.get(params.data.name);
-    if (
-      registered === undefined ||
-      !(await isToolSetOn(registered.toolSet, session.caller))
-    ) {
-      return answered(
-        jsonRpcError(
-          request.id,
-          JSON_RPC_ERROR.invalidParams,
-          `Unknown tool: ${params.data.name}`,
-        ),
-      );
+    if (registered === undefined || !(await isToolSetOn(registered.toolSet, session.caller))) {
+      return answered(jsonRpcError(request.id, JSON_RPC_ERROR.invalidParams, `Unknown tool: ${params.data.name}`));
     }
     if (!session.scopes.includes(registered.scope)) {
       return {
@@ -200,24 +162,14 @@ export function createMcpMethods(options: McpMethodsOptions): McpMethods {
         ),
       };
     }
-    const result = await runTool(
-      registered.tool,
-      params.data.arguments ?? {},
-      session.caller,
-    );
+    const result = await runTool(registered.tool, params.data.arguments ?? {}, session.caller);
     return answered(jsonRpcResult(request.id, result));
   }
 
-  async function runTool(
-    tool: McpTool,
-    input: Record<string, unknown>,
-    caller: McpCaller,
-  ): Promise<McpToolResult> {
+  async function runTool(tool: McpTool, input: Record<string, unknown>, caller: McpCaller): Promise<McpToolResult> {
     const parsed = tool.inputSchema.safeParse(input);
     if (!parsed.success) {
-      return refusal(
-        `The arguments for ${tool.name} are not valid:\n${z.prettifyError(parsed.error)}`,
-      );
+      return refusal(`The arguments for ${tool.name} are not valid:\n${z.prettifyError(parsed.error)}`);
     }
     let result: McpToolResult;
     try {
@@ -230,9 +182,7 @@ export function createMcpMethods(options: McpMethodsOptions): McpMethods {
         requestId: caller.requestId,
         error,
       });
-      return refusal(
-        `${tool.name} failed unexpectedly. Quote request id ${caller.requestId} if you report it.`,
-      );
+      return refusal(`${tool.name} failed unexpectedly. Quote request id ${caller.requestId} if you report it.`);
     }
     const size = Buffer.byteLength(JSON.stringify(result), "utf8");
     if (size > options.maxResultBytes) {
@@ -297,28 +247,18 @@ async function listTools(
     setsOn.set(toolSet, decided);
     return decided;
   };
-  const granted = [...tools.values()].filter((registered) =>
-    session.scopes.includes(registered.scope),
-  );
-  const on = await Promise.all(
-    granted.map((registered) => isOn(registered.toolSet)),
-  );
-  return granted
-    .filter((_, index) => on[index] === true)
-    .map((registered) => registered.listing);
+  const granted = [...tools.values()].filter((registered) => session.scopes.includes(registered.scope));
+  const on = await Promise.all(granted.map((registered) => isOn(registered.toolSet)));
+  return granted.filter((_, index) => on[index] === true).map((registered) => registered.listing);
 }
 
 /** Every tool by name, with its listing rendered once. Two tools may not share a name. */
-function registerTools(
-  toolSets: readonly McpToolSet[],
-): ReadonlyMap<string, RegisteredTool> {
+function registerTools(toolSets: readonly McpToolSet[]): ReadonlyMap<string, RegisteredTool> {
   const tools = new Map<string, RegisteredTool>();
   for (const toolSet of toolSets) {
     for (const tool of toolSet.tools) {
       if (tools.has(tool.name)) {
-        throw new Error(
-          `MCP tool "${tool.name}" is defined twice; tool names are one namespace across every tool set`,
-        );
+        throw new Error(`MCP tool "${tool.name}" is defined twice; tool names are one namespace across every tool set`);
       }
       tools.set(tool.name, {
         tool,
@@ -331,10 +271,7 @@ function registerTools(
   return tools;
 }
 
-function requireListingWithin(
-  tools: ReadonlyMap<string, RegisteredTool>,
-  maxListingBytes: number | undefined,
-): void {
+function requireListingWithin(tools: ReadonlyMap<string, RegisteredTool>, maxListingBytes: number | undefined): void {
   if (maxListingBytes === undefined) return;
   const listing = [...tools.values()].map((registered) => registered.listing);
   const size = Buffer.byteLength(JSON.stringify({ tools: listing }), "utf8");

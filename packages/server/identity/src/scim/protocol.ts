@@ -10,13 +10,7 @@ export const schemaSchema = `${schemaRoot}core:2.0:Schema`;
 export const patchSchema = `${messageRoot}PatchOp`;
 
 export type ScimErrorType =
-  | "invalidSyntax"
-  | "invalidValue"
-  | "invalidFilter"
-  | "invalidPath"
-  | "mutability"
-  | "noTarget"
-  | "uniqueness";
+  "invalidSyntax" | "invalidValue" | "invalidFilter" | "invalidPath" | "mutability" | "noTarget" | "uniqueness";
 
 export class ScimError extends Error {
   constructor(
@@ -28,11 +22,7 @@ export class ScimError extends Error {
   }
 }
 
-export function scimJson(
-  body: unknown,
-  status = 200,
-  headers?: Record<string, string>,
-): Response {
+export function scimJson(body: unknown, status = 200, headers?: Record<string, string>): Response {
   const responseHeaders = new Headers(headers);
   responseHeaders.set("Content-Type", "application/scim+json");
   responseHeaders.set("Cache-Control", "no-store");
@@ -43,8 +33,7 @@ export function scimJson(
 }
 
 export function scimError(error: ScimError): Response {
-  const headers =
-    error.status === 401 ? { "WWW-Authenticate": "Bearer" } : undefined;
+  const headers = error.status === 401 ? { "WWW-Authenticate": "Bearer" } : undefined;
   return scimJson(
     {
       schemas: [`${messageRoot}Error`],
@@ -57,11 +46,7 @@ export function scimError(error: ScimError): Response {
   );
 }
 
-export function scimList(
-  resources: readonly unknown[],
-  totalResults = resources.length,
-  startIndex = 1,
-): Response {
+export function scimList(resources: readonly unknown[], totalResults = resources.length, startIndex = 1): Response {
   return scimJson({
     schemas: [`${messageRoot}ListResponse`],
     totalResults,
@@ -76,20 +61,15 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function attributes(value: unknown): Record<string, unknown> {
-  if (!isRecord(value))
-    throw new ScimError(400, "Expected an object.", "invalidValue");
-  const entries = Object.entries(value).map(
-    ([key, item]): [string, unknown] => [key.toLowerCase(), item],
-  );
+  if (!isRecord(value)) throw new ScimError(400, "Expected an object.", "invalidValue");
+  const entries = Object.entries(value).map(([key, item]): [string, unknown] => [key.toLowerCase(), item]);
   return Object.fromEntries(entries);
 }
 
 export function attributePath(path: string, schema: string): string {
   const normalized = path.trim().toLowerCase();
   const prefix = `${schema.toLowerCase()}:`;
-  return normalized.startsWith(prefix)
-    ? normalized.slice(prefix.length)
-    : normalized;
+  return normalized.startsWith(prefix) ? normalized.slice(prefix.length) : normalized;
 }
 
 export function userAttributePath(path: string): string {
@@ -121,10 +101,7 @@ async function readScimPayload(request: Request): Promise<string> {
   }
 }
 
-export async function scimBody(
-  request: Request,
-  schema: string,
-): Promise<Record<string, unknown>> {
+export async function scimBody(request: Request, schema: string): Promise<Record<string, unknown>> {
   const text = await readScimPayload(request);
   let payload: unknown;
   try {
@@ -134,16 +111,8 @@ export async function scimBody(
   }
   const body = attributes(payload);
   const schemas = body["schemas"];
-  if (
-    !Array.isArray(schemas) ||
-    schemas.length !== 1 ||
-    schemas[0] !== schema
-  ) {
-    throw new ScimError(
-      400,
-      `The request must declare the ${schema} schema.`,
-      "invalidSyntax",
-    );
+  if (!Array.isArray(schemas) || schemas.length !== 1 || schemas[0] !== schema) {
+    throw new ScimError(400, `The request must declare the ${schema} schema.`, "invalidSyntax");
   }
   return body;
 }

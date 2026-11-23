@@ -29,10 +29,7 @@
  * the request's, and it is issued before this wrapper is installed.
  */
 
-import {
-  chargeDatabaseQuery,
-  countDatabaseQuery,
-} from "@dads-framework/core/runtime/request-work";
+import { chargeDatabaseQuery, countDatabaseQuery } from "@dads-framework/core/runtime/request-work";
 
 /**
  * A function this module is willing to call with whatever it was handed.
@@ -96,10 +93,7 @@ function countingQuery(issueStatement: ForwardingCall): ForwardingCall {
  * The same arguments, with the caller's callback wrapped so the statement is
  * charged the moment `pg` reports it done — success or failure alike.
  */
-function chargedCallbackArgs(
-  args: readonly unknown[],
-  callback: ForwardingCall,
-): readonly unknown[] {
+function chargedCallbackArgs(args: readonly unknown[], callback: ForwardingCall): readonly unknown[] {
   const startedAt = performance.now();
   const charged = (...callbackArgs: readonly unknown[]): unknown => {
     countDatabaseQuery(performance.now() - startedAt);
@@ -114,10 +108,5 @@ function chargeThenable(outcome: PromiseLike<unknown>): Promise<unknown> {
 }
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "then" in value &&
-    typeof value.then === "function"
-  );
+  return typeof value === "object" && value !== null && "then" in value && typeof value.then === "function";
 }

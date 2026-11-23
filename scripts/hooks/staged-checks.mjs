@@ -8,13 +8,7 @@ import { recordHookTiming } from "./record-hook-timing.mjs";
 import { isCleanWorktree } from "./staged-clean-worktree.mjs";
 import { linkStagedDependencies } from "./staged-dependencies.mjs";
 import { applyStagedFixes } from "./staged-fixes.mjs";
-import {
-  changedIndexPaths,
-  git,
-  isRegular,
-  treeEntries,
-  writeSnapshot,
-} from "./staged-snapshot.mjs";
+import { changedIndexPaths, git, isRegular, treeEntries, writeSnapshot } from "./staged-snapshot.mjs";
 
 const lintable = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const formattable = /\.(?:json|md|css|html|yml|yaml)$/;
@@ -33,16 +27,12 @@ function runNode(cwd, executable, args, tool, pathCount) {
   }
   if (result.status !== 0) {
     const paths = pathCount === 1 ? "path" : "paths";
-    throw new Error(
-      `${tool} failed while checking ${pathCount} staged ${paths}.`,
-    );
+    throw new Error(`${tool} failed while checking ${pathCount} staged ${paths}.`);
   }
 }
 
 function checkText(root, worktree, paths, fix) {
-  const formatPaths = paths.filter(
-    (path) => formattable.test(path) || lintable.test(path),
-  );
+  const formatPaths = paths.filter((path) => formattable.test(path) || lintable.test(path));
   const lintPaths = paths.filter((path) => lintable.test(path));
   return (
     runTextTool(root, worktree, fix, formatPaths, "prettier/bin/prettier.cjs", [
@@ -75,24 +65,16 @@ function runTextTool(root, worktree, fix, paths, executable, options) {
 }
 
 function checkBudgets(root, snapshot, paths) {
-  const measured = paths.filter(
-    (path) => lintable.test(path) || path.endsWith(".rs"),
-  );
+  const measured = paths.filter((path) => lintable.test(path) || path.endsWith(".rs"));
   if (measured.length === 0) return;
   const toolbox = join(root, "packages/foundation/toolbox");
   if (!existsSync(join(toolbox, "dist/cli.js"))) {
-    throw new Error(
-      "The source ratchet needs a built toolbox. Run npm run build first.",
-    );
+    throw new Error("The source ratchet needs a built toolbox. Run npm run build first.");
   }
   runNode(
     snapshot,
     join(toolbox, "bin/dad.js"),
-    [
-      "doctor",
-      snapshot,
-      ...measured.flatMap((path) => ["--file", `./${path}`]),
-    ],
+    ["doctor", snapshot, ...measured.flatMap((path) => ["--file", `./${path}`])],
     "Source budgets",
     measured.length,
   );
@@ -111,8 +93,7 @@ function runStagedChecks(root) {
 }
 
 function checkCleanWorktree(root, before, paths) {
-  if (!isCleanWorktree(root) || !checkText(root, root, paths, false))
-    return false;
+  if (!isCleanWorktree(root) || !checkText(root, root, paths, false)) return false;
   checkBudgets(root, root, paths);
   const after = git(root, ["write-tree"], { encoding: "utf8" }).trim();
   return before === after && isCleanWorktree(root);

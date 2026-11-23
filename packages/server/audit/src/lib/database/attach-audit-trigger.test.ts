@@ -9,11 +9,7 @@
  * `owner_partition_id`, which reads as "nothing to say" rather than as a bug.
  */
 import { describe, expect, it } from "vitest";
-import {
-  attachAuditTrigger,
-  detachAuditTrigger,
-  type AuditTriggerMigrationBuilder,
-} from "./attach-audit-trigger.js";
+import { attachAuditTrigger, detachAuditTrigger, type AuditTriggerMigrationBuilder } from "./attach-audit-trigger.js";
 
 function recordingMigrationBuilder(): {
   pgm: AuditTriggerMigrationBuilder;

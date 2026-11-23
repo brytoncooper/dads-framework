@@ -1,7 +1,4 @@
-import type {
-  FeatureFlagHistoryEntry,
-  FeatureFlagState,
-} from "../contract/index.js";
+import type { FeatureFlagHistoryEntry, FeatureFlagState } from "../contract/index.js";
 import {
   type FeatureFlagBatchWrite,
   type FeatureFlagHistoryPage,
@@ -31,21 +28,14 @@ export class InMemoryFeatureFlagStore extends FeatureFlagStore {
     readonly page: number;
     readonly perPage: number;
   }): Promise<FeatureFlagHistoryPage> {
-    const rows = this.history
-      .filter((entry) => entry.slug === input.slug)
-      .sort((a, b) => b.revision - a.revision);
+    const rows = this.history.filter((entry) => entry.slug === input.slug).sort((a, b) => b.revision - a.revision);
     return Promise.resolve({
-      rows: rows.slice(
-        (input.page - 1) * input.perPage,
-        input.page * input.perPage,
-      ),
+      rows: rows.slice((input.page - 1) * input.perPage, input.page * input.perPage),
       total: rows.length,
     });
   }
 
-  applyBatch(
-    input: FeatureFlagBatchWrite,
-  ): Promise<"applied" | "revision-conflict"> {
+  applyBatch(input: FeatureFlagBatchWrite): Promise<"applied" | "revision-conflict"> {
     for (const [slug, expectedRevision] of input.expectedRevisions) {
       if ((this.states.get(slug)?.revision ?? 0) !== expectedRevision) {
         return Promise.resolve("revision-conflict");

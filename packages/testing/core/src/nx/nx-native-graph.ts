@@ -16,18 +16,13 @@ type NativeGraph = {
 };
 
 /** Every project a collected graph declares; `nx-workspace-reader.ts` has `readProjects` for Nx's own answer. */
-export function readNativeProjects(
-  value: unknown,
-): ReadonlyMap<string, NativeProject> {
+export function readNativeProjects(value: unknown): ReadonlyMap<string, NativeProject> {
   const graph = readGraph(value);
   const result = new Map<string, NativeProject>();
   const roots = new Set<string>();
-  for (const [name, node] of Object.entries(graph.nodes).sort(
-    ([left], [right]) => left.localeCompare(right),
-  )) {
+  for (const [name, node] of Object.entries(graph.nodes).sort(([left], [right]) => left.localeCompare(right))) {
     const project = readNativeProject(name, node, graph);
-    if (roots.has(project.root))
-      throw new Error(`Ambiguous Nx project root ${project.root}.`);
+    if (roots.has(project.root)) throw new Error(`Ambiguous Nx project root ${project.root}.`);
     roots.add(project.root);
     result.set(name, project);
   }
@@ -42,8 +37,7 @@ function readGraph(value: unknown): NativeGraph {
     throw new Error("Nx graph requires nodes and dependencies.");
   const externalNames = readExternalNames(graph["externalNodes"]);
   for (const name of externalNames) {
-    if (Object.hasOwn(graph["nodes"], name))
-      throw new Error(`Ambiguous external Nx identity ${name}.`);
+    if (Object.hasOwn(graph["nodes"], name)) throw new Error(`Ambiguous external Nx identity ${name}.`);
   }
   return {
     nodes: graph["nodes"],
@@ -53,27 +47,16 @@ function readGraph(value: unknown): NativeGraph {
 }
 
 /** One graph node as a project; `nx-workspace-reader.ts` has `readNxProjectConfiguration` for Nx's own answer. */
-function readNativeProject(
-  name: string,
-  node: unknown,
-  graph: NativeGraph,
-): NativeProject {
+function readNativeProject(name: string, node: unknown, graph: NativeGraph): NativeProject {
   const data = readProjectData(name, node);
   const root = projectRoot(data["root"]);
-  if (!isRecord(data["targets"]))
-    throw new Error(`Missing Nx targets for ${name}.`);
+  if (!isRecord(data["targets"])) throw new Error(`Missing Nx targets for ${name}.`);
   const edges = graph.dependencies[name];
-  if (!Array.isArray(edges))
-    throw new Error(`Missing Nx dependency array for ${name}.`);
+  if (!Array.isArray(edges)) throw new Error(`Missing Nx dependency array for ${name}.`);
   const dependencies = new Set<string>();
   const externalDependencies = new Set<string>();
   for (const edge of edges) {
-    const target = readNativeEdgeTarget(
-      name,
-      edge,
-      graph,
-      "Invalid Nx dependency",
-    );
+    const target = readNativeEdgeTarget(name, edge, graph, "Invalid Nx dependency");
     if (graph.externalNames.has(target)) externalDependencies.add(target);
     else if (target !== name) dependencies.add(target);
   }
@@ -87,34 +70,18 @@ function readNativeProject(
   };
 }
 
-function readProjectData(
-  name: string,
-  node: unknown,
-): Readonly<Record<string, unknown>> {
+function readProjectData(name: string, node: unknown): Readonly<Record<string, unknown>> {
   validateProjectName(name);
-  if (!isRecord(node) || !isRecord(node["data"]))
-    throw new Error(`Missing Nx project data for ${name}.`);
+  if (!isRecord(node) || !isRecord(node["data"])) throw new Error(`Missing Nx project data for ${name}.`);
   const data = node["data"];
-  if (
-    data["name"] !== name ||
-    (node["name"] !== undefined && node["name"] !== name)
-  )
+  if (data["name"] !== name || (node["name"] !== undefined && node["name"] !== name))
     throw new Error(`Nx project identity mismatch for ${name}.`);
   return data;
 }
 
 /** The project a collected graph edge points at; `nx-graph-fallback.ts` has `readEdgeTarget` for the imported graph. */
-function readNativeEdgeTarget(
-  source: string,
-  edge: unknown,
-  graph: NativeGraph,
-  failure: string,
-): string {
-  if (
-    !isRecord(edge) ||
-    edge["source"] !== source ||
-    typeof edge["target"] !== "string"
-  )
+function readNativeEdgeTarget(source: string, edge: unknown, graph: NativeGraph, failure: string): string {
+  if (!isRecord(edge) || edge["source"] !== source || typeof edge["target"] !== "string")
     throw new Error(`${failure} for ${source}.`);
   const target = edge["target"];
   if (!Object.hasOwn(graph.nodes, target) && !graph.externalNames.has(target))
@@ -128,10 +95,8 @@ function validateDependencySources(graph: NativeGraph): void {
       throw new Error(`Unknown Nx dependency source ${name}.`);
     if (!graph.externalNames.has(name)) continue;
     const edges = graph.dependencies[name];
-    if (!Array.isArray(edges))
-      throw new Error(`Invalid external dependency array ${name}.`);
-    for (const edge of edges)
-      readNativeEdgeTarget(name, edge, graph, "Invalid external Nx dependency");
+    if (!Array.isArray(edges)) throw new Error(`Invalid external dependency array ${name}.`);
+    for (const edge of edges) readNativeEdgeTarget(name, edge, graph, "Invalid external Nx dependency");
   }
 }
 
@@ -139,12 +104,7 @@ function readExternalNames(value: unknown): ReadonlySet<string> {
   if (value === undefined) return new Set();
   if (!isRecord(value)) throw new Error("Invalid Nx externalNodes.");
   for (const [name, node] of Object.entries(value)) {
-    if (
-      !name.trim() ||
-      !isRecord(node) ||
-      node["name"] !== name ||
-      !isRecord(node["data"])
-    )
+    if (!name.trim() || !isRecord(node) || node["name"] !== name || !isRecord(node["data"]))
       throw new Error(`Invalid external Nx node ${name}.`);
   }
   return new Set(Object.keys(value));
@@ -169,12 +129,6 @@ function projectRoot(value: unknown): string {
 }
 
 function validateProjectName(name: string): void {
-  if (
-    !name.trim() ||
-    name !== name.trim() ||
-    name.includes(":") ||
-    /\s/.test(name) ||
-    name.includes("\0")
-  )
+  if (!name.trim() || name !== name.trim() || name.includes(":") || /\s/.test(name) || name.includes("\0"))
     throw new Error("Nx project identity is empty or ambiguous.");
 }

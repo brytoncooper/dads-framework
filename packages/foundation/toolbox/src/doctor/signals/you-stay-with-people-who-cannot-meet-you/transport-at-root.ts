@@ -36,9 +36,7 @@ function countTransportsOutsideAdapters(context: DoctorContext) {
   if (!graph.declared) return readings;
   for (const declared of graph.packages) {
     if (declared.kind === "adapter") continue;
-    const reached = vendorImports(graph, declared).filter(
-      (entry) => transportNamed(entry.module ?? "") !== undefined,
-    );
+    const reached = vendorImports(graph, declared).filter((entry) => transportNamed(entry.module ?? "") !== undefined);
     readings.set(declared.name, {
       value: reached.length,
       evidence: reached.map((entry) => ({

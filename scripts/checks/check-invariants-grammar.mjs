@@ -67,9 +67,7 @@ const SOURCE_EXTENSIONS = [
   "yml",
   "yaml",
 ];
-const PATH_PATTERN = new RegExp(
-  `^[\\w@./-]+\\.(?:${SOURCE_EXTENSIONS.join("|")})$`,
-);
+const PATH_PATTERN = new RegExp(`^[\\w@./-]+\\.(?:${SOURCE_EXTENSIONS.join("|")})$`);
 
 /**
  * Every bullet in the file, with the continuation lines an entry wraps onto
@@ -148,9 +146,7 @@ function* scanTokens(clause) {
   let match = TOKEN_PATTERN.exec(clause);
   while (match !== null) {
     const [, code, quoted] = match;
-    yield code === undefined
-      ? { quoted: true, text: quoted }
-      : { quoted: false, text: code };
+    yield code === undefined ? { quoted: true, text: quoted } : { quoted: false, text: code };
     match = TOKEN_PATTERN.exec(clause);
   }
 }
@@ -207,10 +203,7 @@ function readEntry(id, body, line) {
   if (!enforced.some((citation) => citation.kind === "file")) {
     return { problem: `"${ENFORCED_BY}" names no file` };
   }
-  const proven =
-    clauses.proven === undefined
-      ? []
-      : readCitations(clauses.proven, { bareSymbols: false });
+  const proven = clauses.proven === undefined ? [] : readCitations(clauses.proven, { bareSymbols: false });
   if (clauses.proven !== undefined && !proven.some((c) => c.kind === "file")) {
     return { problem: `"${PROVEN_BY}" names no file` };
   }

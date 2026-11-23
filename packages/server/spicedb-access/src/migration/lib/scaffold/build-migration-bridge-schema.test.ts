@@ -18,23 +18,16 @@ describe("buildMigrationBridgeSchema", () => {
   });
 
   it("refuses removed definitions or relation-to-permission renames that need a deliberate bridge", () => {
-    expect(() =>
-      buildMigrationBridgeSchema(old, "definition user {}\n"),
-    ).toThrow("removed definition");
+    expect(() => buildMigrationBridgeSchema(old, "definition user {}\n")).toThrow("removed definition");
     expect(() =>
       buildMigrationBridgeSchema(
         old,
-        next.replace(
-          "permission manage = admin",
-          "permission creator = admin\n  permission manage = admin",
-        ),
+        next.replace("permission manage = admin", "permission creator = admin\n  permission manage = admin"),
       ),
     ).toThrow("permission collision");
   });
 
   it("generates the same bridge on a repeated invocation", () => {
-    expect(buildMigrationBridgeSchema(old, next)).toEqual(
-      buildMigrationBridgeSchema(old, next),
-    );
+    expect(buildMigrationBridgeSchema(old, next)).toEqual(buildMigrationBridgeSchema(old, next));
   });
 });

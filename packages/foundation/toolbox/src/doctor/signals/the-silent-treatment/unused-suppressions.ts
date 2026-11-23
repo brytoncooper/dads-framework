@@ -16,15 +16,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  SUPPRESSIONS_FILE,
-  suppressionEntries,
-} from "../scanners/text-suppressions-file.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { SUPPRESSIONS_FILE, suppressionEntries } from "../scanners/text-suppressions-file.js";
 
 function countStaleSuppressions(context: DoctorContext): SignalReadings {
   const tracked = new Set(context.files());
@@ -42,13 +35,11 @@ function countStaleSuppressions(context: DoctorContext): SignalReadings {
 export const unusedSuppressionsSignal: DoctorSignal = {
   id: "unused-suppressions",
   issue: "the-silent-treatment",
-  question:
-    "Does the suppressions file list a rule and file that no longer produce a violation?",
+  question: "Does the suppressions file list a rule and file that no longer produce a violation?",
   reads: "text",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "A ratchet is a list of things Dad knows about, not a list of things you hoped he would not notice.",
+  sentence: "A ratchet is a list of things Dad knows about, not a list of things you hoped he would not notice.",
   run: (context) => Promise.resolve(countStaleSuppressions(context)),
 };

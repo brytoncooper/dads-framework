@@ -42,8 +42,7 @@ export type SiteServing = "served" | "write_door" | "cloud_only";
  *                   (enrollment, check-in, the sync feed, releases)
  *   NOT_YET         should work at a site; `ticket` names the work
  */
-export type CloudOnlyRouteReason =
-  "STAFF_TOOLS" | "COMPANY_DESK" | "NEEDS_INTERNET" | "FLEET" | "NOT_YET";
+export type CloudOnlyRouteReason = "STAFF_TOOLS" | "COMPANY_DESK" | "NEEDS_INTERNET" | "FLEET" | "NOT_YET";
 
 /**
  * The reason on a `cloud_only` label: one closed `reason` plus one plain
@@ -115,18 +114,13 @@ export function resolveCapabilities(
   const merged: RouteCapabilities = { ...app, ...group, ...route };
   const rungs = [app, group, route];
   const siteRung = lastRungSetting(rungs, (rung) => rung.site !== undefined);
-  const reasonRung = lastRungSetting(
-    rungs,
-    (rung) => rung.cloudOnly !== undefined,
-  );
+  const reasonRung = lastRungSetting(rungs, (rung) => rung.cloudOnly !== undefined);
   const labelOverridden = reasonRung < siteRung && merged.site !== "cloud_only";
   return labelOverridden ? withoutCloudOnlyLabel(merged) : merged;
 }
 
 /** The capabilities with the cloud-only reason removed, not set to undefined. */
-function withoutCloudOnlyLabel(
-  capabilities: RouteCapabilities,
-): RouteCapabilities {
+function withoutCloudOnlyLabel(capabilities: RouteCapabilities): RouteCapabilities {
   const copy = { ...capabilities };
   delete copy.cloudOnly;
   return copy;

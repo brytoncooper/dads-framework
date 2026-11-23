@@ -10,10 +10,7 @@ const log = { info: vi.fn(), error: vi.fn() };
 
 describe("createJobQueue", () => {
   it("returns an in-process queue whose close resolves", async () => {
-    const jobs = createJobQueue(
-      { driver: "in-process", queueName: "dads-api" },
-      log,
-    );
+    const jobs = createJobQueue({ driver: "in-process", queueName: "dads-api" }, log);
     expect(jobs).toBeInstanceOf(InProcessJobQueue);
     await expect(jobs.inspect()).resolves.toMatchObject({
       queueName: "dads-api",
@@ -22,8 +19,6 @@ describe("createJobQueue", () => {
   });
 
   it("fails loudly when bullmq is selected without a redis url", () => {
-    expect(() =>
-      createJobQueue({ driver: "bullmq", queueName: "dads-api" }, log),
-    ).toThrow(/REDIS_URL/);
+    expect(() => createJobQueue({ driver: "bullmq", queueName: "dads-api" }, log)).toThrow(/REDIS_URL/);
   });
 });

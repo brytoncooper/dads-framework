@@ -13,12 +13,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  fileReading,
-  type DoctorSignal,
-  type SignalReading,
-  type SignalReadings,
-} from "../../doctor-signal.js";
+import { fileReading, type DoctorSignal, type SignalReading, type SignalReadings } from "../../doctor-signal.js";
 import { isRustSource } from "../scanners/source-classification.js";
 
 const INLINE_TEST_MODULE = /#\[cfg\(test\)\]\s*mod\s+tests\s*\{/g;

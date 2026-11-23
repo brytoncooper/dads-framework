@@ -1,8 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-const AUTHORIZATION_PARTITION_LEASE_TOKEN = Symbol(
-  "authorization-partition-lease",
-);
+const AUTHORIZATION_PARTITION_LEASE_TOKEN = Symbol("authorization-partition-lease");
 
 type DeferredProjection = () => Promise<void>;
 
@@ -68,39 +66,27 @@ export class OwnerLockLease {
 
 /** Cross-process ordering boundary for one authorization owner partition. */
 export abstract class OwnerLock {
-  async run<T>(
-    ownerPartitionId: string,
-    operation: (lease: OwnerLockLease) => Promise<T>,
-  ): Promise<T> {
+  async run<T>(ownerPartitionId: string, operation: (lease: OwnerLockLease) => Promise<T>): Promise<T> {
     refuseReentry(ownerPartitionId);
     const deferred: DeferredProjection[] = [];
-    const lease = new OwnerLockLease(
-      ownerPartitionId,
-      deferred,
-      AUTHORIZATION_PARTITION_LEASE_TOKEN,
-    );
+    const lease = new OwnerLockLease(ownerPartitionId, deferred, AUTHORIZATION_PARTITION_LEASE_TOKEN);
     // The deferred projections run OUTSIDE this scope, which is the whole
     // point of `afterRelease`: by then the lock is gone and the partition is
     // free for the projector to take on its own session.
-    const result = await partitionsHeldOnThisPath.run(
-      alsoHolding(ownerPartitionId),
-      () =>
-        this.runLocked(ownerPartitionId, async () => {
-          try {
-            return await operation(lease);
-          } finally {
-            lease.close();
-          }
-        }),
+    const result = await partitionsHeldOnThisPath.run(alsoHolding(ownerPartitionId), () =>
+      this.runLocked(ownerPartitionId, async () => {
+        try {
+          return await operation(lease);
+        } finally {
+          lease.close();
+        }
+      }),
     );
     for (const projection of deferred) await projection();
     return result;
   }
 
-  protected abstract runLocked<T>(
-    ownerPartitionId: string,
-    operation: () => Promise<T>,
-  ): Promise<T>;
+  protected abstract runLocked<T>(ownerPartitionId: string, operation: () => Promise<T>): Promise<T>;
 }
 
 /**
@@ -113,9 +99,7 @@ export abstract class OwnerLock {
  * nested call is an artifact of the test, not a design the wall should allow.
  * Production code that wants the lock released has `lease.afterRelease`.
  */
-export function runOutsideHeldPartitions<T>(
-  operation: () => Promise<T>,
-): Promise<T> {
+export function runOutsideHeldPartitions<T>(operation: () => Promise<T>): Promise<T> {
   return partitionsHeldOnThisPath.exit(operation);
 }
 

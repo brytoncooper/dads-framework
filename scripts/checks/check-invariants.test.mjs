@@ -4,11 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
-import {
-  checkInvariants,
-  createDiskWorld,
-  render,
-} from "./check-invariants.mjs";
+import { checkInvariants, createDiskWorld, render } from "./check-invariants.mjs";
 
 const ROUTE_SOURCE = [
   'import { parseRequest } from "@dads-framework/http";',
@@ -42,13 +38,7 @@ const ROUTE_TEST = [
   "",
 ].join("\n");
 
-const PLAN_RUST = [
-  "pub fn build_plan() {}",
-  "",
-  "#[test]",
-  "fn a_zero_job_limit_is_refused() {}",
-  "",
-].join("\n");
+const PLAN_RUST = ["pub fn build_plan() {}", "", "#[test]", "fn a_zero_job_limit_is_refused() {}", ""].join("\n");
 
 /**
  * The smallest workspace the gate reads: one package with an `INVARIANTS.md`,
@@ -69,10 +59,7 @@ function createWorkspace(t, entries) {
   write("packages/server/http/src/route-behavior.test.ts", ROUTE_TEST);
   write("packages/server/http/package.json", "{}\n");
   write("crates/planner/src/plan.rs", PLAN_RUST);
-  write(
-    "packages/server/http/INVARIANTS.md",
-    `# HTTP invariants\n\n${entries.join("\n")}\n`,
-  );
+  write("packages/server/http/INVARIANTS.md", `# HTTP invariants\n\n${entries.join("\n")}\n`);
   return checkInvariants(createDiskWorld(root));
 }
 
@@ -100,9 +87,7 @@ test("two entries sharing one id fail, naming where it was first declared", (t) 
     "- INV-HTTP-1: A route also refuses — enforced by `src/execute-route.ts#deniedOutcome`.",
   ]);
 
-  assert.deepEqual(problems(result), [
-    "duplicate id, already declared in packages/server/http/INVARIANTS.md",
-  ]);
+  assert.deepEqual(problems(result), ["duplicate id, already declared in packages/server/http/INVARIANTS.md"]);
   assert.equal(result.failures[0].id, "INV-HTTP-1");
   assert.equal(result.failures[0].citation, null);
 });
@@ -122,9 +107,7 @@ test("a cited symbol the file does not declare fails", (t) => {
     "- INV-HTTP-1: A route refuses — enforced by `src/execute-route.ts#executeRouteOnce`.",
   ]);
 
-  assert.deepEqual(problems(result), [
-    "packages/server/http/src/execute-route.ts declares no executeRouteOnce",
-  ]);
+  assert.deepEqual(problems(result), ["packages/server/http/src/execute-route.ts declares no executeRouteOnce"]);
 });
 
 test("a cited test name the file does not use fails", (t) => {
@@ -132,19 +115,12 @@ test("a cited test name the file does not use fails", (t) => {
     '- INV-HTTP-1: A route refuses — enforced by `src/execute-route.ts#executeRoute`, proven by `src/route-behavior.test.ts` "refuses an unauthenticated call".',
   ]);
 
-  assert.deepEqual(problems(result), [
-    "packages/server/http/src/route-behavior.test.ts names no such test",
-  ]);
-  assert.equal(
-    result.failures[0].citation,
-    '`src/route-behavior.test.ts` "refuses an unauthenticated call"',
-  );
+  assert.deepEqual(problems(result), ["packages/server/http/src/route-behavior.test.ts names no such test"]);
+  assert.equal(result.failures[0].citation, '`src/route-behavior.test.ts` "refuses an unauthenticated call"');
 });
 
 test("a symbol cited against a file that declares none fails", (t) => {
-  const result = createWorkspace(t, [
-    "- INV-HTTP-1: A package is declared — enforced by `package.json#name`.",
-  ]);
+  const result = createWorkspace(t, ["- INV-HTTP-1: A package is declared — enforced by `package.json#name`."]);
 
   assert.deepEqual(problems(result), ["a .json file declares no symbols"]);
 });
@@ -154,21 +130,14 @@ test("a Rust test cited by a quoted name fails", (t) => {
     '- INV-HTTP-1: A plan is finite — enforced by `crates/planner/src/plan.rs#build_plan`, proven by `crates/planner/src/plan.rs` "a zero job limit is refused".',
   ]);
 
-  assert.deepEqual(problems(result), [
-    "a Rust test is cited as crates/planner/src/plan.rs#<fn>, not by a quoted name",
-  ]);
+  assert.deepEqual(problems(result), ["a Rust test is cited as crates/planner/src/plan.rs#<fn>, not by a quoted name"]);
 });
 
 test("a bullet with no invariant id is a parse failure naming its text", (t) => {
-  const result = createWorkspace(t, [
-    "- The compiler plan is trusted SQL text plus values.",
-  ]);
+  const result = createWorkspace(t, ["- The compiler plan is trusted SQL text plus values."]);
 
   assert.equal(result.entryCount, 0);
-  assert.match(
-    result.failures[0].problem,
-    /line 3: bullet is not an invariant/,
-  );
+  assert.match(result.failures[0].problem, /line 3: bullet is not an invariant/);
   assert.match(result.failures[0].problem, /The compiler plan is trusted SQL/);
   assert.equal(result.failures[0].id, null);
 });
@@ -202,14 +171,9 @@ test("the human report ends with the counts, and --json says the same", (t) => {
   const clean = createWorkspace(t, [
     "- INV-HTTP-1: A route refuses — enforced by `src/execute-route.ts#executeRoute`.",
   ]);
-  const broken = createWorkspace(t, [
-    "- INV-HTTP-1: A route refuses — enforced by `src/execute-route.ts#gone`.",
-  ]);
+  const broken = createWorkspace(t, ["- INV-HTTP-1: A route refuses — enforced by `src/execute-route.ts#gone`."]);
 
-  assert.equal(
-    render(clean, false),
-    "invariants: 1 entries, 2 citations, ok\n",
-  );
+  assert.equal(render(clean, false), "invariants: 1 entries, 2 citations, ok\n");
   assert.equal(
     render(broken, false),
     "packages/server/http/INVARIANTS.md INV-HTTP-1: `src/execute-route.ts#gone`:" +

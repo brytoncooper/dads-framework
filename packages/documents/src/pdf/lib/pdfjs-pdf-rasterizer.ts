@@ -5,11 +5,7 @@ import type * as NapiCanvas from "@napi-rs/canvas";
 import type * as PdfjsLegacy from "pdfjs-dist/legacy/build/pdf.mjs";
 
 import { loadOptionalPeer } from "../../optional-peer.js";
-import {
-  PdfRasterizer,
-  type RasterizedPdfPage,
-  type RasterizeOptions,
-} from "./pdf-rasterizer.js";
+import { PdfRasterizer, type RasterizedPdfPage, type RasterizeOptions } from "./pdf-rasterizer.js";
 
 /** PDF points per inch. */
 const POINTS_PER_INCH = 72;
@@ -40,10 +36,7 @@ export function loadPdfRasterizerPeers(loaders: PdfRasterizerPeerLoaders = {}) {
  * them external because pdf.js is ESM-only and the canvas is native.
  */
 export class PdfjsPdfRasterizer extends PdfRasterizer {
-  async rasterize(
-    pdf: Uint8Array,
-    options: RasterizeOptions,
-  ): Promise<readonly RasterizedPdfPage[]> {
+  async rasterize(pdf: Uint8Array, options: RasterizeOptions): Promise<readonly RasterizedPdfPage[]> {
     const [pdfjs, canvasModule] = await loadPdfRasterizerPeers();
     const document = await pdfjs.getDocument({
       // pdf.js takes ownership of (and detaches) the buffer it is given.

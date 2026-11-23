@@ -14,11 +14,7 @@
  * This one is the grouped, queryable twin.
  */
 
-import {
-  DiagnosticsReporter,
-  severityOf,
-  type FaultEvent,
-} from "./diagnostics-reporter.js";
+import { DiagnosticsReporter, severityOf, type FaultEvent } from "./diagnostics-reporter.js";
 import { describeException } from "./logic/describe-exception.js";
 
 /** The narrow logger this needs; the kit never holds a whole pino instance. */
@@ -43,18 +39,12 @@ export class LogDiagnosticsReporter extends DiagnosticsReporter {
           fingerprint: event.fingerprint ?? described.fingerprint,
           message: described.message,
           stack: described.stack,
-          ...(event.requestId === undefined
-            ? {}
-            : { requestId: event.requestId }),
+          ...(event.requestId === undefined ? {} : { requestId: event.requestId }),
           ...(event.routeId === undefined ? {} : { routeId: event.routeId }),
           ...(event.jobName === undefined ? {} : { jobName: event.jobName }),
-          ...(event.actor === undefined
-            ? {}
-            : { actorKind: event.actor.kind, actorId: event.actor.id }),
+          ...(event.actor === undefined ? {} : { actorKind: event.actor.kind, actorId: event.actor.id }),
           ...(event.release === undefined ? {} : { release: event.release }),
-          ...(event.instanceId === undefined
-            ? {}
-            : { instanceId: event.instanceId }),
+          ...(event.instanceId === undefined ? {} : { instanceId: event.instanceId }),
         },
         "fault captured",
       );

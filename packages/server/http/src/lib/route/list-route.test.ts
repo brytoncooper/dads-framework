@@ -9,10 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import {
-  paginationMetaSchema,
-  paginationQuerySchema,
-} from "@dads-framework/core/contract";
+import { paginationMetaSchema, paginationQuerySchema } from "@dads-framework/core/contract";
 
 import { bodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";

@@ -27,14 +27,9 @@ import {
 import { DataTableRangeFilter } from "./data-table-range-filter.js";
 
 import { renderFilterDateInput } from "./data-table-filter-date-input.js";
-import {
-  isValuelessOperator,
-  type FilterMenuInputProps,
-} from "./data-table-filter-input-shared.js";
+import { isValuelessOperator, type FilterMenuInputProps } from "./data-table-filter-input-shared.js";
 
-export function renderFilterListInput<TData>(
-  props: FilterMenuInputProps<TData>,
-): React.ReactNode {
+export function renderFilterListInput<TData>(props: FilterMenuInputProps<TData>): React.ReactNode {
   if (isValuelessOperator(props.filter.operator)) {
     return renderEmptyStatus(props);
   }
@@ -55,21 +50,14 @@ export function renderFilterListInput<TData>(
   }
 }
 
-function renderEmptyStatus<TData>({
-  filter,
-  column,
-  inputId,
-  copy,
-}: FilterMenuInputProps<TData>) {
+function renderEmptyStatus<TData>({ filter, column, inputId, copy }: FilterMenuInputProps<TData>) {
   const columnMeta = column.columnDef.meta;
   return (
     <div
       id={inputId}
       role="status"
       aria-label={copy(
-        filter.operator === "isEmpty"
-          ? "dataTable.filter.namedEmpty"
-          : "dataTable.filter.namedNotEmpty",
+        filter.operator === "isEmpty" ? "dataTable.filter.namedEmpty" : "dataTable.filter.namedNotEmpty",
         { columnLabel: String(columnMeta?.label) },
       )}
       aria-live="polite"
@@ -78,24 +66,11 @@ function renderEmptyStatus<TData>({
   );
 }
 
-function renderTextInput<TData>({
-  filter,
-  column,
-  inputId,
-  copy,
-  onFilterUpdate,
-}: FilterMenuInputProps<TData>) {
+function renderTextInput<TData>({ filter, column, inputId, copy, onFilterUpdate }: FilterMenuInputProps<TData>) {
   const columnMeta = column.columnDef.meta;
 
   if (filter.operator === "isBetween") {
-    return (
-      <DataTableRangeFilter
-        filter={filter}
-        column={column}
-        inputId={inputId}
-        onFilterUpdate={onFilterUpdate}
-      />
-    );
+    return <DataTableRangeFilter filter={filter} column={column} inputId={inputId} onFilterUpdate={onFilterUpdate} />;
   }
 
   const isNumber = filter.variant === "number" || filter.variant === "range";
@@ -110,9 +85,7 @@ function renderTextInput<TData>({
       })}
       aria-describedby={`${inputId}-description`}
       {...(isNumber ? { inputMode: "numeric" } : {})}
-      placeholder={
-        columnMeta?.placeholder ?? copy("dataTable.filter.enterAValue")
-      }
+      placeholder={columnMeta?.placeholder ?? copy("dataTable.filter.enterAValue")}
       className="h-8 w-full rounded"
       defaultValue={typeof filter.value === "string" ? filter.value : undefined}
       onChange={(event) => {
@@ -159,18 +132,12 @@ function renderBooleanInput<TData>({
         })}
         className="w-full rounded"
       >
-        <SelectValue
-          placeholder={copy(
-            filter.value ? "dataTable.filter.true" : "dataTable.filter.false",
-          )}
-        />
+        <SelectValue placeholder={copy(filter.value ? "dataTable.filter.true" : "dataTable.filter.false")} />
       </SelectTrigger>
       <SelectContent id={inputListboxId}>
         <SelectGroup>
           <SelectItem value="true">{copy("dataTable.filter.true")}</SelectItem>
-          <SelectItem value="false">
-            {copy("dataTable.filter.false")}
-          </SelectItem>
+          <SelectItem value="false">{copy("dataTable.filter.false")}</SelectItem>
         </SelectGroup>
       </SelectContent>
     </Select>
@@ -194,15 +161,9 @@ function renderOptionsInput<TData>({
   const multiple = filter.variant === "multiSelect";
   const selectedValues = getFacetedValue(filter.value, multiple);
   const columnLabel = String(columnMeta?.label);
-  const searchPlaceholder =
-    columnMeta?.placeholder ?? copy("dataTable.filter.searchOptions");
+  const searchPlaceholder = columnMeta?.placeholder ?? copy("dataTable.filter.searchOptions");
   const placeholder =
-    columnMeta?.placeholder ??
-    copy(
-      multiple
-        ? "dataTable.filter.selectOptions"
-        : "dataTable.filter.selectOption",
-    );
+    columnMeta?.placeholder ?? copy(multiple ? "dataTable.filter.selectOptions" : "dataTable.filter.selectOption");
 
   return (
     <Faceted
@@ -220,12 +181,7 @@ function renderOptionsInput<TData>({
         <Button
           id={inputId}
           aria-controls={inputListboxId}
-          aria-label={copy(
-            multiple
-              ? "dataTable.filter.namedValues"
-              : "dataTable.filter.namedValue",
-            { columnLabel },
-          )}
+          aria-label={copy(multiple ? "dataTable.filter.namedValues" : "dataTable.filter.namedValue", { columnLabel })}
           variant="outline"
           className="w-full rounded font-normal"
         >

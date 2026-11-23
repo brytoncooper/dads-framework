@@ -1,10 +1,6 @@
 import * as React from "react";
 
-import {
-  keepTableWhileChecking,
-  type ListEmptiness,
-  readListEmptiness,
-} from "../lib/list-emptiness.js";
+import { keepTableWhileChecking, type ListEmptiness, readListEmptiness } from "../lib/list-emptiness.js";
 
 /**
  * {@link readListEmptiness} for a list page, remembering whether the page has
@@ -21,8 +17,7 @@ export function useListEmptiness(
   counts: Parameters<typeof readListEmptiness>[0] | undefined,
   scope: readonly unknown[],
 ): ListEmptiness | undefined {
-  const emptiness =
-    counts === undefined ? undefined : readListEmptiness(counts);
+  const emptiness = counts === undefined ? undefined : readListEmptiness(counts);
   const scopeKey = JSON.stringify(scope);
   // The scope the table was last shown for, if any.
   const [tableShownFor, setTableShownFor] = React.useState<string>();

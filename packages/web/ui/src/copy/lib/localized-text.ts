@@ -48,9 +48,6 @@ export function isSupportedLocale(value: string): value is Locale {
  * The application’s locale parity test is where the two tuples are
  * pinned to each other.
  */
-export function resolveLocalizedText(
-  text: LocalizedText,
-  locale: Locale,
-): string {
+export function resolveLocalizedText(text: LocalizedText, locale: Locale): string {
   return text[locale];
 }

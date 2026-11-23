@@ -23,9 +23,7 @@ const listeners = new Set<UnauthorizedResponseListener>();
  * Subscribe to refused requests. Returns the unsubscribe function, so a caller
  * that mounts and unmounts (a React effect, a test) can undo itself.
  */
-export function onUnauthorizedResponse(
-  listener: UnauthorizedResponseListener,
-): () => void {
+export function onUnauthorizedResponse(listener: UnauthorizedResponseListener): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

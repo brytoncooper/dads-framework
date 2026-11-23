@@ -1,14 +1,7 @@
-import type {
-  ColumnDef,
-  ColumnPinningState,
-  VisibilityState,
-} from "@tanstack/react-table";
+import type { ColumnDef, ColumnPinningState, VisibilityState } from "@tanstack/react-table";
 
 /** The column ids a row-selection checkbox column uses by convention. */
-const SELECTION_COLUMN_IDS: ReadonlySet<string> = new Set([
-  "select",
-  "selection",
-]);
+const SELECTION_COLUMN_IDS: ReadonlySet<string> = new Set(["select", "selection"]);
 
 /** Whether `id` names a row-selection checkbox column ("select" or "selection"). */
 export function isSelectionColumnId(id: string | undefined): boolean {
@@ -22,9 +15,7 @@ export const ACTIONS_COLUMN_ID = "actions";
  * The id TanStack gives a column definition: its `id`, else its string
  * `accessorKey`. Undefined for a definition with neither (TanStack rejects it).
  */
-export function readColumnDefId<TData>(
-  column: ColumnDef<TData>,
-): string | undefined {
+export function readColumnDefId<TData>(column: ColumnDef<TData>): string | undefined {
   if (column.id !== undefined) return column.id;
   if ("accessorKey" in column && typeof column.accessorKey === "string") {
     return column.accessorKey;
@@ -37,28 +28,19 @@ export function readColumnDefId<TData>(
  * checkbox. It is pinned left on wide screens, heads each card on phones, and
  * can never be hidden.
  */
-export function readIdentifyingColumnId<TData>(
-  columns: readonly ColumnDef<TData>[],
-): string | undefined {
-  return columns
-    .map((column) => readColumnDefId(column))
-    .find((id) => id !== undefined && !isSelectionColumnId(id));
+export function readIdentifyingColumnId<TData>(columns: readonly ColumnDef<TData>[]): string | undefined {
+  return columns.map((column) => readColumnDefId(column)).find((id) => id !== undefined && !isSelectionColumnId(id));
 }
 
 /**
  * The same definitions with hiding switched off for the columns a reader may
  * never hide: the identifying column, the selection checkbox, and the actions.
  */
-export function withColumnRoles<TData>(
-  columns: readonly ColumnDef<TData>[],
-): ColumnDef<TData>[] {
+export function withColumnRoles<TData>(columns: readonly ColumnDef<TData>[]): ColumnDef<TData>[] {
   const identifyingId = readIdentifyingColumnId(columns);
   return columns.map((column) => {
     const id = readColumnDefId(column);
-    const alwaysShown =
-      id === identifyingId ||
-      isSelectionColumnId(id) ||
-      id === ACTIONS_COLUMN_ID;
+    const alwaysShown = id === identifyingId || isSelectionColumnId(id) || id === ACTIONS_COLUMN_ID;
     return alwaysShown ? { ...column, enableHiding: false } : column;
   });
 }
@@ -68,9 +50,7 @@ export function withColumnRoles<TData>(
  * column right, so a row stays recognisable and actionable while the columns
  * between them scroll sideways.
  */
-export function defaultColumnPinning<TData>(
-  columns: readonly ColumnDef<TData>[],
-): ColumnPinningState {
+export function defaultColumnPinning<TData>(columns: readonly ColumnDef<TData>[]): ColumnPinningState {
   const ids = columns.flatMap((column) => readColumnDefId(column) ?? []);
   const identifyingId = readIdentifyingColumnId(columns);
   const left = [
@@ -82,9 +62,7 @@ export function defaultColumnPinning<TData>(
 }
 
 /** Ids of the columns a reader may hide, given definitions from `withColumnRoles`. */
-export function readHideableColumnIds<TData>(
-  columns: readonly ColumnDef<TData>[],
-): ReadonlySet<string> {
+export function readHideableColumnIds<TData>(columns: readonly ColumnDef<TData>[]): ReadonlySet<string> {
   return new Set(
     columns.flatMap((column) => {
       const id = readColumnDefId(column);
@@ -94,22 +72,12 @@ export function readHideableColumnIds<TData>(
 }
 
 /** Only the visibility entries a reader controls — what is worth remembering. */
-export function pickReaderVisibility(
-  visibility: VisibilityState,
-  hideableIds: ReadonlySet<string>,
-): VisibilityState {
-  return Object.fromEntries(
-    Object.entries(visibility).filter(([id]) => hideableIds.has(id)),
-  );
+export function pickReaderVisibility(visibility: VisibilityState, hideableIds: ReadonlySet<string>): VisibilityState {
+  return Object.fromEntries(Object.entries(visibility).filter(([id]) => hideableIds.has(id)));
 }
 
 /** `visibility` with every column the reader may hide shown again. */
-export function showEveryHideableColumn(
-  visibility: VisibilityState,
-  hideableIds: Iterable<string>,
-): VisibilityState {
-  const shown = Object.fromEntries(
-    [...hideableIds].map((id) => [id, true] as const),
-  );
+export function showEveryHideableColumn(visibility: VisibilityState, hideableIds: Iterable<string>): VisibilityState {
+  const shown = Object.fromEntries([...hideableIds].map((id) => [id, true] as const));
   return { ...visibility, ...shown };
 }

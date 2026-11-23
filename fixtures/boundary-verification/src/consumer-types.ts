@@ -13,6 +13,4 @@ export type DocumentReadRequest = DocumentReadIdentity & {
   readonly readers: readonly DocumentReader[];
 };
 
-export type CanReadDocument = (
-  request: DocumentReadIdentity,
-) => Promise<boolean>;
+export type CanReadDocument = (request: DocumentReadIdentity) => Promise<boolean>;

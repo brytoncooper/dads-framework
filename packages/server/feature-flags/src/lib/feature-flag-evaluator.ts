@@ -9,10 +9,7 @@ import type { GetEffectiveFeatureState } from "./queries/get-effective-feature-s
 export class FeatureFlagEvaluator {
   constructor(private readonly effective: GetEffectiveFeatureState) {}
 
-  async isActive(input: {
-    readonly slug: string;
-    readonly context: FeatureFlagContext;
-  }): Promise<boolean> {
+  async isActive(input: { readonly slug: string; readonly context: FeatureFlagContext }): Promise<boolean> {
     const state = await this.effective.execute(input.context);
     return state.features.includes(input.slug);
   }

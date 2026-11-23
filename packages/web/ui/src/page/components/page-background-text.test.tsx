@@ -35,10 +35,7 @@ function isGreyTextClass(className: string): boolean {
   if (variants.includes("_svg") || variants.includes("data-[placeholder]")) {
     return false;
   }
-  return (
-    utility === "text-muted-foreground" ||
-    /^text-foreground\/\d+$/.test(utility)
-  );
+  return utility === "text-muted-foreground" || /^text-foreground\/\d+$/.test(utility);
 }
 
 function greyTextClasses(container: HTMLElement): string[] {
@@ -55,10 +52,7 @@ function greyTextClasses(container: HTMLElement): string[] {
 
 const ignore = () => undefined;
 
-const PAGE_BACKGROUND_PRIMITIVES: readonly (readonly [
-  string,
-  () => React.ReactElement,
-])[] = [
+const PAGE_BACKGROUND_PRIMITIVES: readonly (readonly [string, () => React.ReactElement])[] = [
   [
     "ListPageHeader",
     () => (
@@ -97,11 +91,7 @@ const PAGE_BACKGROUND_PRIMITIVES: readonly (readonly [
   [
     "ListEmptyState",
     () => (
-      <ListEmptyState
-        icon={<svg />}
-        title="No orders yet"
-        description="Orders you create appear here."
-      >
+      <ListEmptyState icon={<svg />} title="No orders yet" description="Orders you create appear here.">
         <button type="button">New Order</button>
       </ListEmptyState>
     ),
@@ -168,11 +158,8 @@ const PAGE_BACKGROUND_PRIMITIVES: readonly (readonly [
 ];
 
 describe("text on the page background", () => {
-  it.each(PAGE_BACKGROUND_PRIMITIVES)(
-    "%s never sets grey text on the grey page",
-    (_name, renderPrimitive) => {
-      const { container } = render(renderPrimitive());
-      expect(greyTextClasses(container)).toEqual([]);
-    },
-  );
+  it.each(PAGE_BACKGROUND_PRIMITIVES)("%s never sets grey text on the grey page", (_name, renderPrimitive) => {
+    const { container } = render(renderPrimitive());
+    expect(greyTextClasses(container)).toEqual([]);
+  });
 });

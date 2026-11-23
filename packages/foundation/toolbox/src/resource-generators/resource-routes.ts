@@ -2,11 +2,7 @@ import { registerRoutes } from "./endpoint-generator.js";
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, pascal, title } from "./names.js";
 
-export function resourceRoutes(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function resourceRoutes(plan: GenerationPlan, domain: string, name: string): void {
   const id = camel(name);
   const kind = pascal(name);
   const file = `${name}-resource`;

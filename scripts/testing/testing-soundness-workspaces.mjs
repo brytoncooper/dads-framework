@@ -51,12 +51,7 @@ export function cloneBaseline(frozen, testCase) {
     if (testCase) {
       applyFixtureOperations(workspace, testCase.operations);
       git(workspace, ["add", "--all"]);
-      git(workspace, [
-        "commit",
-        "--quiet",
-        "--message",
-        `mutation ${testCase.id}`,
-      ]);
+      git(workspace, ["commit", "--quiet", "--message", `mutation ${testCase.id}`]);
     }
     return {
       workspace,
@@ -69,13 +64,7 @@ export function cloneBaseline(frozen, testCase) {
   }
 }
 
-export async function observeBaseline(
-  root,
-  frozen,
-  timings,
-  environment = {},
-  taskJobs = 1,
-) {
+export async function observeBaseline(root, frozen, timings, environment = {}, taskJobs = 1) {
   const receipt = {
     base: frozen.base,
     tree: frozen.tree,
@@ -103,8 +92,7 @@ export async function observeBaseline(
       timings.baselineMs += performance.now() - started;
     }
   } catch (error) {
-    receipt.executionError =
-      error instanceof Error ? error.message : String(error);
+    receipt.executionError = error instanceof Error ? error.message : String(error);
   } finally {
     removeWorkspace(baseline?.workspace);
   }
@@ -116,9 +104,7 @@ export function removeWorkspace(workspace) {
 }
 
 function temporaryWorkspace() {
-  return mkdtempSync(
-    join(process.env.TMPDIR || "/tmp", "dads-testing-soundness-"),
-  );
+  return mkdtempSync(join(process.env.TMPDIR || "/tmp", "dads-testing-soundness-"));
 }
 
 function configureGit(workspace) {

@@ -64,9 +64,7 @@ describe("signed download links", () => {
     await files.put("a/c.png", "other", "image/png");
     const url = await files.getSignedUrl("a/b.png", 300);
 
-    await expect(
-      files.readSignedDownload({ ...linkParts(url), ...change }),
-    ).resolves.toBeNull();
+    await expect(files.readSignedDownload({ ...linkParts(url), ...change })).resolves.toBeNull();
   });
 
   it("answers null for an upload link used to download (another method)", async () => {
@@ -79,9 +77,7 @@ describe("signed download links", () => {
       expiresInSeconds: 300,
     });
 
-    await expect(
-      files.readSignedDownload(linkParts(upload.url)),
-    ).resolves.toBeNull();
+    await expect(files.readSignedDownload(linkParts(upload.url))).resolves.toBeNull();
   });
 
   it("answers null for a link from another box's key", async () => {
@@ -167,9 +163,7 @@ describe("signed uploads", () => {
     const files = storage();
     const { received } = await signedUpload(files);
 
-    await expect(
-      files.receiveSignedUpload({ ...received, ...change }),
-    ).resolves.toBe("refused");
+    await expect(files.receiveSignedUpload({ ...received, ...change })).resolves.toBe("refused");
     await expect(files.list("a/")).resolves.toEqual([]);
   });
 
@@ -187,8 +181,6 @@ describe("signed uploads", () => {
     const { received } = await signedUpload(files);
     const download = linkParts(await files.getSignedUrl("a/up.png", 300));
 
-    await expect(
-      files.receiveSignedUpload({ ...received, ...download }),
-    ).resolves.toBe("refused");
+    await expect(files.receiveSignedUpload({ ...received, ...download })).resolves.toBe("refused");
   });
 });

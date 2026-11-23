@@ -90,10 +90,7 @@ describe("outsideRequestAnswers", () => {
 
     const [inherited, outside] = await answeringEachQuestionOnce(async () => {
       await question.ask();
-      return Promise.all([
-        onTimer(() => question.ask()),
-        onTimer(() => outsideRequestAnswers(() => question.ask())),
-      ]);
+      return Promise.all([onTimer(() => question.ask()), onTimer(() => outsideRequestAnswers(() => question.ask()))]);
     });
 
     expect(inherited).toBe(1);

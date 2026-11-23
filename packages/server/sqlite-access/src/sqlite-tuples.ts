@@ -11,17 +11,11 @@ import type {
   SqliteAuthorizationModel,
   SqliteRelationTarget,
 } from "./policy/policy-model.js";
-import {
-  activeTupleCondition,
-  QueryBuilder,
-  TUPLES,
-} from "./policy/policy-sql.js";
+import { activeTupleCondition, QueryBuilder, TUPLES } from "./policy/policy-sql.js";
 import type { SqliteExecutor } from "./sqlite-executor.js";
 import { readStringColumn } from "./sqlite-types.js";
 
-type ExactFilter = Required<
-  Pick<RelationshipFilter, "resourceType" | "resourceId" | "relation">
->;
+type ExactFilter = Required<Pick<RelationshipFilter, "resourceType" | "resourceId" | "relation">>;
 
 const UPSERT_SQL = `INSERT INTO ${TUPLES} (
   namespace, resource_kind, resource_id, relation,
@@ -41,11 +35,7 @@ export class SqliteTuples {
   readonly #namespace: string;
   readonly #executor: SqliteExecutor;
 
-  constructor(
-    model: SqliteAuthorizationModel,
-    namespace: string,
-    executor: SqliteExecutor,
-  ) {
+  constructor(model: SqliteAuthorizationModel, namespace: string, executor: SqliteExecutor) {
     this.#model = model;
     this.#namespace = namespace;
     this.#executor = executor;
@@ -88,35 +78,22 @@ export class SqliteTuples {
       throw new Error("SQLite authorization requires a resource type");
     }
     if (filter.relation !== undefined && filter.relation !== "") {
-      const columnRel = findSqliteColumnRelation(
-        this.#model,
-        filter.resourceType,
-        filter.relation,
-      );
+      const columnRel = findSqliteColumnRelation(this.#model, filter.resourceType, filter.relation);
       if (columnRel !== undefined) {
         throw sqliteColumnMutationError(columnRel);
       }
     }
     const b = new QueryBuilder();
-    const clauses = [
-      `namespace = ${b.value(this.#namespace)}`,
-      `resource_kind = ${b.value(filter.resourceType)}`,
-    ];
+    const clauses = [`namespace = ${b.value(this.#namespace)}`, `resource_kind = ${b.value(filter.resourceType)}`];
     appendDeleteResourceClauses(clauses, b, filter);
     appendDeleteSubjectClauses(clauses, b, filter.subject);
-    const query = b.finish(
-      `DELETE FROM ${TUPLES} WHERE ${clauses.join(" AND ")}`,
-    );
+    const query = b.finish(`DELETE FROM ${TUPLES} WHERE ${clauses.join(" AND ")}`);
     await this.#executor.run(query.sql, query.params);
   }
 
   async exists(filter: ExactFilter, nowMs: number): Promise<boolean> {
     requireExact(filter.resourceType, filter.resourceId, filter.relation);
-    const columnRel = findSqliteColumnRelation(
-      this.#model,
-      filter.resourceType,
-      filter.relation,
-    );
+    const columnRel = findSqliteColumnRelation(this.#model, filter.resourceType, filter.relation);
     if (columnRel !== undefined) {
       const rows = await this.#executor.all(
         `SELECT 1 AS present FROM ${columnRel.table} WHERE ${columnRel.idColumn} = ? AND ${columnRel.targetIdColumn} IS NOT NULL LIMIT 1`,
@@ -132,16 +109,9 @@ export class SqliteTuples {
     return rows.length > 0;
   }
 
-  async list(
-    query: DirectSubjectLookup,
-    nowMs: number,
-  ): Promise<readonly SubjectRef[]> {
+  async list(query: DirectSubjectLookup, nowMs: number): Promise<readonly SubjectRef[]> {
     requireExact(query.resource.type, query.resource.id, query.relation);
-    const columnRel = findSqliteColumnRelation(
-      this.#model,
-      query.resource.type,
-      query.relation,
-    );
+    const columnRel = findSqliteColumnRelation(this.#model, query.resource.type, query.relation);
     if (columnRel !== undefined) {
       const rows = await this.#executor.all(
         `SELECT DISTINCT ${columnRel.targetIdColumn} AS subject_id FROM ${columnRel.table} WHERE ${columnRel.idColumn} = ? AND ${columnRel.targetIdColumn} IS NOT NULL ORDER BY ${columnRel.targetIdColumn}`,
@@ -168,46 +138,25 @@ export class SqliteTuples {
   }
 
   #validateWrite(write: RelationshipWrite): RelationshipWrite {
-    const columnRel = findSqliteColumnRelation(
-      this.#model,
-      write.resource.type,
-      write.relation,
-    );
+    const columnRel = findSqliteColumnRelation(this.#model, write.resource.type, write.relation);
     if (columnRel !== undefined) {
       throw sqliteColumnMutationError(columnRel);
     }
     const relation = this.#model.relations.find(
-      (entry) =>
-        entry.entity === write.resource.type &&
-        entry.wireName === write.relation,
+      (entry) => entry.entity === write.resource.type && entry.wireName === write.relation,
     );
-    if (
-      relation === undefined ||
-      !relation.targets.some((target) => matchesTarget(target, write.subject))
-    ) {
-      throw new Error(
-        `Invalid authorization relationship ${write.resource.type}#${write.relation}`,
-      );
+    if (relation === undefined || !relation.targets.some((target) => matchesTarget(target, write.subject))) {
+      throw new Error(`Invalid authorization relationship ${write.resource.type}#${write.relation}`);
     }
-    if (
-      write.resource.id === "" ||
-      write.resource.id === "*" ||
-      write.subject.id === ""
-    ) {
-      throw new Error(
-        "An authorization relationship requires resource and subject identifiers",
-      );
+    if (write.resource.id === "" || write.resource.id === "*" || write.subject.id === "") {
+      throw new Error("An authorization relationship requires resource and subject identifiers");
     }
     encodeExpiresAt(write.expiresAt);
     return write;
   }
 }
 
-function appendDeleteResourceClauses(
-  clauses: string[],
-  b: QueryBuilder,
-  filter: RelationshipFilter,
-): void {
+function appendDeleteResourceClauses(clauses: string[], b: QueryBuilder, filter: RelationshipFilter): void {
   if (filter.resourceId !== undefined && filter.resourceId !== "") {
     clauses.push(`resource_id = ${b.value(filter.resourceId)}`);
   }
@@ -216,11 +165,7 @@ function appendDeleteResourceClauses(
   }
 }
 
-function appendDeleteSubjectClauses(
-  clauses: string[],
-  b: QueryBuilder,
-  subject: SubjectRef | undefined,
-): void {
+function appendDeleteSubjectClauses(clauses: string[], b: QueryBuilder, subject: SubjectRef | undefined): void {
   if (subject === undefined) return;
   clauses.push(`subject_kind = ${b.value(subject.type)}`);
   if (subject.id === "*") {
@@ -238,43 +183,28 @@ function encodeExpiresAt(expiresAt: Date | undefined): number | null {
   if (expiresAt === undefined) return null;
   const ms = expiresAt.getTime();
   if (!Number.isFinite(ms)) {
-    throw new Error(
-      "Authorization relationship expiresAt must be a valid Date",
-    );
+    throw new Error("Authorization relationship expiresAt must be a valid Date");
   }
   return ms;
 }
 
-function matchesTarget(
-  target: SqliteRelationTarget,
-  subject: SubjectRef,
-): boolean {
+function matchesTarget(target: SqliteRelationTarget, subject: SubjectRef): boolean {
   if (target.entity !== subject.type) return false;
   if (target.kind === "wildcard") {
     return subject.id === "*" && subject.relation === undefined;
   }
   if (subject.id === "*") return false;
-  return target.kind === "subject-set"
-    ? target.relation === subject.relation
-    : subject.relation === undefined;
+  return target.kind === "subject-set" ? target.relation === subject.relation : subject.relation === undefined;
 }
 
-function sqliteColumnMutationError(
-  columnRel: CompiledSqliteColumnRelation,
-): Error {
+function sqliteColumnMutationError(columnRel: CompiledSqliteColumnRelation): Error {
   return new Error(
     `Relation ${columnRel.entity}#${columnRel.relation} is column-backed by ${columnRel.table}.${columnRel.targetIdColumn}; update the application table directly`,
   );
 }
 
-function requireExact(
-  resourceType: string,
-  resourceId: string,
-  relation: string,
-): void {
+function requireExact(resourceType: string, resourceId: string, relation: string): void {
   if (!resourceType || !resourceId || !relation) {
-    throw new Error(
-      "SQLite authorization requires an exact resource type, resource id, and relation",
-    );
+    throw new Error("SQLite authorization requires an exact resource type, resource id, and relation");
   }
 }

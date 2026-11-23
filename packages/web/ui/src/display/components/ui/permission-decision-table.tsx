@@ -1,12 +1,5 @@
 import { Badge } from "../../../elements/index.js";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./table.js";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table.js";
 
 export type PermissionDecision = {
   readonly id: string;
@@ -48,9 +41,7 @@ export function PermissionDecisionTable({
               {label}
             </th>
             <TableCell>
-              <Badge variant={allowed ? "secondary" : "outline"}>
-                {allowed ? allowedLabel : deniedLabel}
-              </Badge>
+              <Badge variant={allowed ? "secondary" : "outline"}>{allowed ? allowedLabel : deniedLabel}</Badge>
             </TableCell>
           </TableRow>
         ))}

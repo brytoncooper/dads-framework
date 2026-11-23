@@ -31,11 +31,7 @@ export class PluginLeakError extends Error {
 }
 
 /** Start a composed plugin set for one test. */
-export async function startForTest<
-  Route,
-  Job extends NamedJob,
-  Flag extends SluggedFlag,
->(
+export async function startForTest<Route, Job extends NamedJob, Flag extends SluggedFlag>(
   app: ComposedApp<Route, Job, Flag>,
   options: StartForTestOptions = {},
 ): Promise<PluginTestHarness<Route, Job>> {
@@ -48,21 +44,15 @@ export async function startForTest<
       assertNoLiveEffects(running);
       const after = options.leakProbe?.();
       if (before !== undefined && after !== undefined && after > before) {
-        throw new PluginLeakError(
-          `the leak probe read ${String(before)} before start and ${String(after)} after stop`,
-        );
+        throw new PluginLeakError(`the leak probe read ${String(before)} before start and ${String(after)} after stop`);
       }
     },
   };
 }
 
 /** Refuse a stopped app whose plugins still hold live effects. */
-export function assertNoLiveEffects(
-  running: RunningApp<unknown, NamedJob>,
-): void {
-  const leftover = running
-    .effects()
-    .filter((ledger) => !ledger.disposed || ledger.live > 0);
+export function assertNoLiveEffects(running: RunningApp<unknown, NamedJob>): void {
+  const leftover = running.effects().filter((ledger) => !ledger.disposed || ledger.live > 0);
   if (leftover.length > 0) {
     throw new PluginLeakError(
       `plugins still hold effects after stop: ${leftover

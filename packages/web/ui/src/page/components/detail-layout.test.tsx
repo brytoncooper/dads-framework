@@ -24,13 +24,9 @@ describe("detail layout", () => {
       </DetailColumns>,
     );
 
-    expect(container.querySelector('[data-slot="detail-columns"]')).not.toBe(
-      null,
-    );
+    expect(container.querySelector('[data-slot="detail-columns"]')).not.toBe(null);
     expect(container.querySelector('[data-slot="detail-main"]')).not.toBe(null);
-    expect(
-      screen.getByRole("complementary", { name: "Reference" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("complementary", { name: "Reference" })).toBeTruthy();
     expect(screen.getByText("Main content")).toBeTruthy();
     expect(screen.getByText("Aside content")).toBeTruthy();
   });
@@ -48,9 +44,7 @@ describe("detail layout", () => {
 
     if (!main || !aside) throw new Error("expected main and aside slots");
 
-    expect(
-      main.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(main.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("splits into two columns only at lg", () => {

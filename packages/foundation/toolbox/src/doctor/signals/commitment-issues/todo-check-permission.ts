@@ -24,16 +24,9 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { scanComments } from "../scanners/text-comment-scan.js";
-import {
-  DEFERRED_WORK_MARK,
-  PERMISSION_WORD,
-} from "../scanners/text-permission-marks.js";
+import { DEFERRED_WORK_MARK, PERMISSION_WORD } from "../scanners/text-permission-marks.js";
 
 const SCANNED_EXTENSIONS = [".ts", ".tsx", ".mjs", ".cjs", ".js"];
 const NEARBY_LINES = 20;
@@ -58,10 +51,7 @@ function isNearARoute(line: number, routes: readonly number[]): boolean {
   return routes.some((route) => Math.abs(route - line) <= NEARBY_LINES);
 }
 
-function deferredNear(
-  text: string,
-  routes: readonly number[],
-): readonly number[] {
+function deferredNear(text: string, routes: readonly number[]): readonly number[] {
   return scanComments(text)
     .filter(
       (comment) =>
@@ -91,13 +81,11 @@ function countDeferredAccessDecisions(context: DoctorContext): SignalReadings {
 export const todoCheckPermissionSignal: DoctorSignal = {
   id: "todo-check-permission",
   issue: "commitment-issues",
-  question:
-    "Is there a TODO or FIXME mentioning permission or auth within twenty lines of a route?",
+  question: "Is there a TODO or FIXME mentioning permission or auth within twenty lines of a route?",
   reads: "text",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You left a breadcrumb instead: `TODO: check permission` on a route that’s been in prod since March.",
+  sentence: "You left a breadcrumb instead: `TODO: check permission` on a route that’s been in prod since March.",
   run: (context) => Promise.resolve(countDeferredAccessDecisions(context)),
 };

@@ -21,10 +21,7 @@ export function readDecisionFlag(row: SqliteRow | undefined): boolean {
 }
 
 /** Read a required string column from a SQLite result row. */
-export function readStringColumn(
-  row: SqliteRow | undefined,
-  column: string,
-): string {
+export function readStringColumn(row: SqliteRow | undefined, column: string): string {
   const value = row?.[column];
   if (typeof value !== "string") {
     throw new Error(`SQLite authorization returned an invalid ${column}`);
@@ -33,10 +30,7 @@ export function readStringColumn(
 }
 
 /** Read a SQLite integer boolean column (0/1 or boolean). */
-export function readBooleanColumn(
-  row: SqliteRow | undefined,
-  column: string,
-): boolean {
+export function readBooleanColumn(row: SqliteRow | undefined, column: string): boolean {
   const value = row?.[column];
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;

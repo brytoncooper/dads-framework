@@ -4,10 +4,7 @@ import type { JobDefinition } from "@dads-framework/job-queue/core";
 
 import type { OutboundEmailStore } from "./database/outbound-email-store.js";
 import type { EmailDelivery, EmailDeliveryLog } from "./email-delivery.js";
-import type {
-  EmailTemplateCatalog,
-  RenderEmailTemplate,
-} from "./email-template-port.js";
+import type { EmailTemplateCatalog, RenderEmailTemplate } from "./email-template-port.js";
 import { createDeliverOutboundEmailJob } from "./jobs/deliver-outbound-email.job.js";
 import { createSweepOutboundEmailsJob } from "./jobs/sweep-outbound-emails.job.js";
 import { DeliverOutboundEmail } from "./mutations/deliver-outbound-email.mutation.js";
@@ -45,14 +42,9 @@ export type AssembledEmailDelivery = {
 export type EmailDeliveryJobDependencies = EmailDeliveryDeps;
 
 /** Delivery jobs without an operator portal or that portal's product permissions. */
-export function createEmailDeliveryJobs(
-  deps: EmailDeliveryJobDependencies,
-): readonly JobDefinition[] {
+export function createEmailDeliveryJobs(deps: EmailDeliveryJobDependencies): readonly JobDefinition[] {
   const operations = createDeliveryOperations(deps);
-  return [
-    createDeliverOutboundEmailJob(operations.deliver),
-    createSweepOutboundEmailsJob(operations.sweep),
-  ];
+  return [createDeliverOutboundEmailJob(operations.deliver), createSweepOutboundEmailsJob(operations.sweep)];
 }
 
 function createDeliveryOperations(deps: EmailDeliveryJobDependencies) {
@@ -64,9 +56,7 @@ function createDeliveryOperations(deps: EmailDeliveryJobDependencies) {
       emailSender: deps.emailSender,
       clock: deps.clock,
       log: deps.log,
-      ...(deps.loadAttachment === undefined
-        ? {}
-        : { loadAttachment: deps.loadAttachment }),
+      ...(deps.loadAttachment === undefined ? {} : { loadAttachment: deps.loadAttachment }),
     }),
     sweep: new SweepOutboundEmails({
       store: deps.store,
@@ -85,9 +75,7 @@ function createDeliveryOperations(deps: EmailDeliveryJobDependencies) {
  * from `createEmailDelivery` — the delivery job needs a complete catalog, and
  * the catalog is not complete until every domain has been assembled.
  */
-export function composeEmailDelivery(
-  deps: EmailDeliveryDeps,
-): AssembledEmailDelivery {
+export function composeEmailDelivery(deps: EmailDeliveryDeps): AssembledEmailDelivery {
   const operations = createDeliveryOperations(deps);
   const sendTestEmail = new SendTestEmail({
     catalog: deps.catalog,
@@ -99,10 +87,7 @@ export function composeEmailDelivery(
   });
 
   return {
-    jobs: [
-      createDeliverOutboundEmailJob(operations.deliver),
-      createSweepOutboundEmailsJob(operations.sweep),
-    ],
+    jobs: [createDeliverOutboundEmailJob(operations.deliver), createSweepOutboundEmailsJob(operations.sweep)],
     operatorOperations: {
       sendTestEmail,
       retryFailedOutboundEmails,

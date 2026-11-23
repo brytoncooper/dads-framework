@@ -111,8 +111,7 @@ export type DirectSubjectLookup = {
  * vendor reported for that question alone.
  */
 export type PermissionCheckOutcome =
-  | { readonly kind: "answered"; readonly allowed: boolean }
-  | { readonly kind: "failed"; readonly error: Error };
+  { readonly kind: "answered"; readonly allowed: boolean } | { readonly kind: "failed"; readonly error: Error };
 
 /** Opaque consistency token — pass back for read-your-writes flows. */
 export type SpiceDbConsistencyToken = string;
@@ -128,12 +127,8 @@ function optionalConsistencyFields(
 ): Pick<PermissionQuery, "consistencyToken" | "consistency"> {
   if (options === undefined) return {};
   return {
-    ...(options.consistencyToken !== undefined
-      ? { consistencyToken: options.consistencyToken }
-      : {}),
-    ...(options.consistency !== undefined
-      ? { consistency: options.consistency }
-      : {}),
+    ...(options.consistencyToken !== undefined ? { consistencyToken: options.consistencyToken } : {}),
+    ...(options.consistency !== undefined ? { consistency: options.consistency } : {}),
   };
 }
 
@@ -145,8 +140,7 @@ export function permissionQueryFromCan(
   maybeOptions: AuthorizationCanOptions | undefined,
 ): PermissionQuery {
   if (permissionOrTarget.kind === "dsl-permission-target") {
-    const options =
-      typeof resourceIdOrOptions === "string" ? undefined : resourceIdOrOptions;
+    const options = typeof resourceIdOrOptions === "string" ? undefined : resourceIdOrOptions;
     return {
       subject,
       permission: permissionOrTarget.permissionName,
@@ -155,9 +149,7 @@ export function permissionQueryFromCan(
     };
   }
   if (typeof resourceIdOrOptions !== "string") {
-    throw new Error(
-      "can(subject, permissionToken, resourceId) requires a string resourceId.",
-    );
+    throw new Error("can(subject, permissionToken, resourceId) requires a string resourceId.");
   }
   return {
     subject,
@@ -185,43 +177,29 @@ export abstract class Authorization {
    * error is that item's `failed` outcome, never a deny; a batch failure
    * propagates. How concurrent single checks share one round trip.
    */
-  checkEach?(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]>;
+  checkEach?(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]>;
   /** Authorized collection; never a union from before a revocation the server wrote. */
   abstract lookupResources(query: ResourceLookup): Promise<readonly string[]>;
   /** Transitive subjects of `subjectType` holding `permission` on `resource`. */
   lookupSubjects?(query: SubjectLookup): Promise<SubjectLookupResult>;
-  abstract writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken>;
-  abstract deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken>;
+  abstract writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken>;
+  abstract deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken>;
   /**
    * True when at least one subject holds `relation` on the resource —
    * used by ownership reconciliation (row without parent tuple).
    */
-  abstract relationshipExists(filter: {
-    resourceType: string;
-    resourceId: string;
-    relation: string;
-  }): Promise<boolean>;
+  abstract relationshipExists(filter: { resourceType: string; resourceId: string; relation: string }): Promise<boolean>;
   /**
    * Subjects with a direct `relation` tuple on `resource` — for grant lists.
    */
-  abstract listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]>;
+  abstract listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]>;
 }
 
 /**
  * One plain check as a `checkEach` outcome: what a decorator answers per item
  * when the port behind it has no bulk `checkEach`.
  */
-export async function checkOutcome(
-  check: () => Promise<boolean>,
-): Promise<PermissionCheckOutcome> {
+export async function checkOutcome(check: () => Promise<boolean>): Promise<PermissionCheckOutcome> {
   try {
     return { kind: "answered", allowed: await check() };
   } catch (error) {

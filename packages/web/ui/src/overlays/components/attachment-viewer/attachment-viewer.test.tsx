@@ -6,30 +6,15 @@
  * in jsdom, so the PDF adapter is replaced by a stand-in.
  * @vitest-environment jsdom
  */
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AttachmentItem } from "../../../elements/index.js";
 
-import {
-  AttachmentViewer,
-  DEFAULT_MAX_PREVIEW_BYTES,
-} from "./attachment-viewer.js";
-import type {
-  AttachmentDownloadOutcome,
-  AttachmentViewerProps,
-} from "./attachment-viewer.js";
-import type {
-  AttachmentSource,
-  AttachmentSourceLoader,
-} from "./use-attachment-source.js";
+import { AttachmentViewer, DEFAULT_MAX_PREVIEW_BYTES } from "./attachment-viewer.js";
+import type { AttachmentDownloadOutcome, AttachmentViewerProps } from "./attachment-viewer.js";
+import type { AttachmentSource, AttachmentSourceLoader } from "./use-attachment-source.js";
 
 import {
   deferred,
@@ -81,10 +66,7 @@ describe("AttachmentViewer", () => {
     const view = await screen.findByTestId("pdf-view");
 
     expect(view.getAttribute("data-bytes")).toBe("32");
-    expect(props.loadSource).toHaveBeenCalledWith(
-      pdfItem,
-      expect.any(AbortSignal),
-    );
+    expect(props.loadSource).toHaveBeenCalledWith(pdfItem, expect.any(AbortSignal));
     expect(fetchStub).toHaveBeenCalledTimes(1);
     const [fetchedUrl, fetchInit] = fetchStub.mock.calls[0] ?? [];
     expect(fetchedUrl).toBe("https://files.test/signed");
@@ -103,9 +85,7 @@ describe("AttachmentViewer", () => {
       const fetchStub = stubFetchOk();
       const { props } = renderViewer({ item: hugePdf });
 
-      expect(
-        await screen.findByText("This File Is Too Large to Preview"),
-      ).toBeTruthy();
+      expect(await screen.findByText("This File Is Too Large to Preview")).toBeTruthy();
       expect(screen.getByText(/It is 26\.2 MB\./)).toBeTruthy();
       expect(props.loadSource).not.toHaveBeenCalled();
       expect(fetchStub).not.toHaveBeenCalled();
@@ -116,9 +96,7 @@ describe("AttachmentViewer", () => {
       const { props } = renderViewer({ item: hugePdf });
       await screen.findByText("This File Is Too Large to Preview");
 
-      const panelDownload = screen
-        .getAllByRole("button", { name: "Download" })
-        .at(-1);
+      const panelDownload = screen.getAllByRole("button", { name: "Download" }).at(-1);
       if (panelDownload === undefined) {
         throw new Error("expected the too-large panel's Download button");
       }
@@ -184,14 +162,8 @@ describe("AttachmentViewer", () => {
     });
 
     async function openSizedPhoto() {
-      const widthDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLElement.prototype,
-        "clientWidth",
-      );
-      const heightDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLElement.prototype,
-        "clientHeight",
-      );
+      const widthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+      const heightDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientHeight");
       Object.defineProperty(HTMLElement.prototype, "clientWidth", {
         configurable: true,
         get: () => stageWidth,
@@ -202,18 +174,10 @@ describe("AttachmentViewer", () => {
       });
       restoreSizes = () => {
         if (widthDescriptor !== undefined) {
-          Object.defineProperty(
-            HTMLElement.prototype,
-            "clientWidth",
-            widthDescriptor,
-          );
+          Object.defineProperty(HTMLElement.prototype, "clientWidth", widthDescriptor);
         }
         if (heightDescriptor !== undefined) {
-          Object.defineProperty(
-            HTMLElement.prototype,
-            "clientHeight",
-            heightDescriptor,
-          );
+          Object.defineProperty(HTMLElement.prototype, "clientHeight", heightDescriptor);
         }
       };
 
@@ -257,31 +221,21 @@ describe("AttachmentViewer", () => {
       // On its side the photo's 4000px edge must fit the 800px of height.
       expect(image.style.width).toBe("800px");
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Rotate Counterclockwise" }),
-      );
+      fireEvent.click(screen.getByRole("button", { name: "Rotate Counterclockwise" }));
       expect(image.style.transform).toContain("rotate(0deg)");
     });
 
     it("groups the image controls in a labelled toolbar", async () => {
       await openSizedPhoto();
 
-      expect(
-        screen.getByRole("toolbar", { name: "Image Controls" }),
-      ).toBeTruthy();
+      expect(screen.getByRole("toolbar", { name: "Image Controls" })).toBeTruthy();
     });
   });
 
   it("draws a blob image from an object URL and revokes it on close", async () => {
     // jsdom has no object URLs; the originals are restored afterwards.
-    const originalCreate = Object.getOwnPropertyDescriptor(
-      URL,
-      "createObjectURL",
-    );
-    const originalRevoke = Object.getOwnPropertyDescriptor(
-      URL,
-      "revokeObjectURL",
-    );
+    const originalCreate = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
+    const originalRevoke = Object.getOwnPropertyDescriptor(URL, "revokeObjectURL");
     const createObjectURL = vi.fn(() => "blob:preview-1");
     const revokeObjectURL = vi.fn();
     defineUrlMethod("createObjectURL", {
@@ -319,10 +273,7 @@ describe("AttachmentViewer", () => {
 
   it("makes no object URL when the viewer closes before the blob source arrives", async () => {
     // jsdom has no object URLs; the originals are restored afterwards.
-    const originalCreate = Object.getOwnPropertyDescriptor(
-      URL,
-      "createObjectURL",
-    );
+    const originalCreate = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
     const createObjectURL = vi.fn(() => "blob:never-revoked");
     defineUrlMethod("createObjectURL", {
       value: createObjectURL,
@@ -362,9 +313,7 @@ describe("AttachmentViewer", () => {
   it("offers Download for a type it cannot preview, without loading it", async () => {
     const { props } = renderViewer({ item: spreadsheetItem });
 
-    expect(
-      await screen.findByText("We Can't Preview This File Type"),
-    ).toBeTruthy();
+    expect(await screen.findByText("We Can't Preview This File Type")).toBeTruthy();
     expect(props.loadSource).not.toHaveBeenCalled();
 
     const [downloadButton] = screen.getAllByRole("button", {
@@ -381,9 +330,7 @@ describe("AttachmentViewer", () => {
     });
 
     expect(await screen.findByText("Couldn't Open This File")).toBeTruthy();
-    expect(
-      screen.getAllByRole("button", { name: "Download" }).length,
-    ).toBeGreaterThan(1);
+    expect(screen.getAllByRole("button", { name: "Download" }).length).toBeGreaterThan(1);
   });
 
   it("shows the failure when the file cannot be fetched (for example blocked by CORS)", async () => {
@@ -417,9 +364,7 @@ describe("AttachmentViewer", () => {
     stubFetchOk();
     renderViewer();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Simulate render failure" }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Simulate render failure" }));
 
     expect(await screen.findByText("Couldn't Open This File")).toBeTruthy();
     expect(screen.queryByTestId("pdf-view")).toBeNull();
@@ -467,9 +412,7 @@ describe("AttachmentViewer", () => {
     fireEvent.click(screen.getByRole("button", { name: "Download" }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe(
-      "The file couldn't be downloaded. Try again.",
-    );
+    expect(alert.textContent).toBe("The file couldn't be downloaded. Try again.");
     // The preview stays up: a failed download is not a failed preview.
     expect(screen.getByTestId("pdf-view")).toBeTruthy();
 
@@ -590,15 +533,11 @@ describe("AttachmentViewer", () => {
 
   it("does not reload the file when the parent re-renders with a new loader function", async () => {
     stubFetchOk();
-    const firstLoader = vi.fn<AttachmentSourceLoader>(() =>
-      Promise.resolve(urlSource("https://files.test/signed")),
-    );
+    const firstLoader = vi.fn<AttachmentSourceLoader>(() => Promise.resolve(urlSource("https://files.test/signed")));
     const { rerender, props } = renderViewer({ loadSource: firstLoader });
     await screen.findByTestId("pdf-view");
 
-    const secondLoader = vi.fn<AttachmentSourceLoader>(() =>
-      Promise.resolve(urlSource("https://files.test/other")),
-    );
+    const secondLoader = vi.fn<AttachmentSourceLoader>(() => Promise.resolve(urlSource("https://files.test/other")));
     rerender(<AttachmentViewer {...props} loadSource={secondLoader} />);
 
     expect(firstLoader).toHaveBeenCalledTimes(1);
@@ -625,9 +564,7 @@ describe("AttachmentViewer", () => {
             onOpenChange={(open) => {
               if (!open) setItem(null);
             }}
-            loadSource={() =>
-              Promise.resolve(urlSource("https://files.test/signed"))
-            }
+            loadSource={() => Promise.resolve(urlSource("https://files.test/signed"))}
             onDownload={() => Promise.resolve("saved")}
           />
         </>

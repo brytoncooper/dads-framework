@@ -1,10 +1,6 @@
 import type { FastifyRequest } from "fastify";
 
-import type {
-  RawRouteInput,
-  RouteDefinition,
-  RouteResult,
-} from "../route/route-definition.js";
+import type { RawRouteInput, RouteDefinition, RouteResult } from "../route/route-definition.js";
 import type { AccessDecision } from "./enforce-access.js";
 import type { FeatureStateSnapshot } from "./feature-state.js";
 import { requestIdOf } from "./request-id.js";
@@ -20,11 +16,7 @@ function forwardedDecision(
 ): Partial<
   Pick<
     RawRouteInput,
-    | "untrustedAuthorizationContext"
-    | "authorizationContext"
-    | "sessionReauthenticatedAt"
-    | "visibleIds"
-    | "scope"
+    "untrustedAuthorizationContext" | "authorizationContext" | "sessionReauthenticatedAt" | "visibleIds" | "scope"
   >
 > {
   return {
@@ -33,15 +25,11 @@ function forwardedDecision(
       : {
           untrustedAuthorizationContext: decision.untrustedAuthorizationContext,
         }),
-    ...(decision.authorizationContext === undefined
-      ? {}
-      : { authorizationContext: decision.authorizationContext }),
+    ...(decision.authorizationContext === undefined ? {} : { authorizationContext: decision.authorizationContext }),
     ...(decision.sessionReauthenticatedAt === undefined
       ? {}
       : { sessionReauthenticatedAt: decision.sessionReauthenticatedAt }),
-    ...(decision.visibleIds === undefined
-      ? {}
-      : { visibleIds: decision.visibleIds }),
+    ...(decision.visibleIds === undefined ? {} : { visibleIds: decision.visibleIds }),
     ...(decision.scope === undefined ? {} : { scope: decision.scope }),
   };
 }

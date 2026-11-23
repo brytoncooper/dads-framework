@@ -2,11 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setImmediate } from "node:timers";
 
-import {
-  adoptionJobsFromResources,
-  firstFailure,
-  runTaskPool,
-} from "./adoption-concurrency.mjs";
+import { adoptionJobsFromResources, firstFailure, runTaskPool } from "./adoption-concurrency.mjs";
 
 function resources(overrides = {}) {
   return {
@@ -28,31 +24,19 @@ test("spends the idle machine minus one core", () => {
 });
 
 test("takes a busy machine's idle fraction seriously", () => {
-  const receipt = adoptionJobsFromResources(
-    undefined,
-    100,
-    resources({ cpuCapacity: 8, cpuIdleFraction: 0.5 }),
-  );
+  const receipt = adoptionJobsFromResources(undefined, 100, resources({ cpuCapacity: 8, cpuIdleFraction: 0.5 }));
 
   assert.equal(receipt.jobs, 3);
 });
 
 test("never returns less than one job", () => {
-  const receipt = adoptionJobsFromResources(
-    undefined,
-    100,
-    resources({ cpuCapacity: 1, cpuIdleFraction: 0.1 }),
-  );
+  const receipt = adoptionJobsFromResources(undefined, 100, resources({ cpuCapacity: 1, cpuIdleFraction: 0.1 }));
 
   assert.equal(receipt.jobs, 1);
 });
 
 test("lets memory bind before the cores do", () => {
-  const receipt = adoptionJobsFromResources(
-    undefined,
-    100,
-    resources({ availableMemoryBytes: 4 * 1024 ** 3 }),
-  );
+  const receipt = adoptionJobsFromResources(undefined, 100, resources({ availableMemoryBytes: 4 * 1024 ** 3 }));
 
   assert.equal(receipt.memoryBudget, 4);
   assert.equal(receipt.jobs, 4);
@@ -87,14 +71,8 @@ test("an explicit override wins and is recorded as one", () => {
 });
 
 test("rejects an override that is not a positive integer", () => {
-  assert.throws(
-    () => adoptionJobsFromResources("0", 10, resources()),
-    /DADS_ADOPTION_JOBS/,
-  );
-  assert.throws(
-    () => adoptionJobsFromResources("many", 10, resources()),
-    /DADS_ADOPTION_JOBS/,
-  );
+  assert.throws(() => adoptionJobsFromResources("0", 10, resources()), /DADS_ADOPTION_JOBS/);
+  assert.throws(() => adoptionJobsFromResources("many", 10, resources()), /DADS_ADOPTION_JOBS/);
 });
 
 test("an empty task list spends nothing", () => {
@@ -163,10 +141,7 @@ test("starts the longest task first and still reports in declared order", async 
     },
   });
 
-  const results = await runTaskPool(
-    [task("import", 2), task("fixture", 5), task("boundary", 40)],
-    1,
-  );
+  const results = await runTaskPool([task("import", 2), task("fixture", 5), task("boundary", 40)], 1);
 
   assert.deepEqual(started, ["boundary", "fixture", "import"]);
   assert.deepEqual(

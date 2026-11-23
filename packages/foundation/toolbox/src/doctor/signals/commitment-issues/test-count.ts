@@ -16,20 +16,14 @@
 
 import { isRecord, isString, isUnknownArray } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 const REPORT_FILE = "node_modules/.dads/vitest-report.json";
 const COUNTED = new Set(["passed", "failed"]);
 const MANIFEST_SUFFIX = "/package.json";
 
 /** Every package directory in the file list mapped to its declared name. */
-function packageDirectories(
-  context: DoctorContext,
-): ReadonlyMap<string, string> {
+function packageDirectories(context: DoctorContext): ReadonlyMap<string, string> {
   const owners = new Map<string, string>();
   for (const path of context.files()) {
     if (!path.endsWith(MANIFEST_SUFFIX)) continue;
@@ -40,10 +34,7 @@ function packageDirectories(
   return owners;
 }
 
-function readSuiteOwnerName(
-  context: DoctorContext,
-  path: string,
-): string | undefined {
+function readSuiteOwnerName(context: DoctorContext, path: string): string | undefined {
   try {
     const parsed: unknown = JSON.parse(context.read(path));
     const name: unknown = isRecord(parsed) ? parsed["name"] : undefined;
@@ -54,10 +45,7 @@ function readSuiteOwnerName(
 }
 
 /** The most specific package directory that contains `path`. */
-function ownerOf(
-  path: string,
-  owners: ReadonlyMap<string, string>,
-): string | undefined {
+function ownerOf(path: string, owners: ReadonlyMap<string, string>): string | undefined {
   let best: string | undefined;
   for (const directory of owners.keys()) {
     if (!path.startsWith(`${directory}/`)) continue;
@@ -113,15 +101,13 @@ function countTestsPerPackage(context: DoctorContext): SignalReadings {
 export const testCountSignal: DoctorSignal = {
   id: "test-count",
   issue: "commitment-issues",
-  question:
-    "Has any package's passing test count fallen below its recorded floor?",
+  question: "Has any package's passing test count fallen below its recorded floor?",
   reads: "text",
   unit: "count",
   direction: "floor",
   thresholds: { standard: null, strict: null },
   reportOnly: true,
-  sentence:
-    "You went no-contact with tests, then checked their status every five minutes in CI.",
+  sentence: "You went no-contact with tests, then checked their status every five minutes in CI.",
   measure: "testCount",
   run: (context) => Promise.resolve(countTestsPerPackage(context)),
 };

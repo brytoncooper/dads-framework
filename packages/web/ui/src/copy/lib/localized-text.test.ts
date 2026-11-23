@@ -50,9 +50,7 @@ describe("SUPPORTED_LOCALES", () => {
 describe("resolveLocalizedText", () => {
   it("reads the asked-for locale", () => {
     const locale: Locale = "en";
-    expect(resolveLocalizedText({ en: "Facilities" }, locale)).toBe(
-      "Facilities",
-    );
+    expect(resolveLocalizedText({ en: "Facilities" }, locale)).toBe("Facilities");
   });
 
   it("accepts a structurally identical phrase declared elsewhere", () => {

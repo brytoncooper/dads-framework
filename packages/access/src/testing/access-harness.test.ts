@@ -1,15 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-  roleToken,
-  world,
-} from "../index.js";
+import { actor, allOf, anyOf, compileAccess, every, resource, roleToken, world } from "../index.js";
 import {
   createAccessHarness,
   defineAccessScenario,
@@ -75,8 +66,7 @@ function buildTestSchema() {
 
 describe("createAccessHarness (zero-await policy testing)", () => {
   it("evaluates inheritance, cycles, groups, expiration, revocation, and bans synchronously", () => {
-    const { user, group, workspace, folder, document, model } =
-      buildTestSchema();
+    const { user, group, workspace, folder, document, model } = buildTestSchema();
     const access = createAccessHarness(model);
     const alice = access.actor(user, "alice");
     const bob = user("bob");
@@ -92,9 +82,7 @@ describe("createAccessHarness (zero-await policy testing)", () => {
 
     // Group + expiring direct grant for Bob
     access.grant(group.roles.member, "team-1").expiringIn("1h").to(bob);
-    access
-      .grant(document.roles.viewer, "doc-1")
-      .to(access.members(group.roles.member, "team-1"));
+    access.grant(document.roles.viewer, "doc-1").to(access.members(group.roles.member, "team-1"));
     access.grant(document.roles.approver, "doc-1").to(bob);
 
     access.assertCan(alice, document.permissions.view, "doc-1");
@@ -156,11 +144,7 @@ describe("createAccessHarness (zero-await policy testing)", () => {
     access.grant(document.roles.approver, "doc-1").to(publisher);
 
     access.assertMatrix(document, "doc-1", {
-      permissions: [
-        document.permissions.view,
-        document.permissions.strict_view,
-        document.permissions.publish,
-      ],
+      permissions: [document.permissions.view, document.permissions.strict_view, document.permissions.publish],
       cases: [
         [owner, ["allow", "allow", "deny"]],
         [publisher, ["allow", "deny", "allow"]],
@@ -186,9 +170,7 @@ describe("executable world(), defineAccessScenario(), and proveAccess()", () => 
         const alice = person("alice");
         const stranger = person("stranger");
         write(workspace.roles.owner, "workspace-1").to(alice);
-        write(document.roles.parent, "doc-1").to(
-          entity(workspace, "workspace-1"),
-        );
+        write(document.roles.parent, "doc-1").to(entity(workspace, "workspace-1"));
         expectAccess(alice).can(document.permissions.view, "doc-1");
         expectAccess(stranger).cannot(document.permissions.view, "doc-1");
       },
@@ -201,33 +183,22 @@ describe("executable world(), defineAccessScenario(), and proveAccess()", () => 
   it("composes reusable scenarios with include() and runs under a single await", async () => {
     const { user, workspace, document, model } = buildTestSchema();
 
-    const baseWorkspace = defineAccessScenario(
-      "workspace setup",
-      (scenario) => {
-        const alice = scenario.actor(user, "alice");
-        scenario.grant(workspace.roles.owner, "workspace-1").to(alice);
-        scenario
-          .grant(document.roles.parent, "doc-1")
-          .to(workspace, "workspace-1");
-      },
-    );
+    const baseWorkspace = defineAccessScenario("workspace setup", (scenario) => {
+      const alice = scenario.actor(user, "alice");
+      scenario.grant(workspace.roles.owner, "workspace-1").to(alice);
+      scenario.grant(document.roles.parent, "doc-1").to(workspace, "workspace-1");
+    });
 
-    const expirationScenario = defineAccessScenario(
-      "expiring guest viewer",
-      (scenario) => {
-        scenario.include(baseWorkspace);
-        const alice = scenario.actor(user, "alice");
-        const guest = scenario.actor(user, "guest");
-        scenario
-          .grant(document.roles.viewer, "doc-1")
-          .expiringIn("15m")
-          .to(guest);
-        scenario.assertCan(alice, document.permissions.view, "doc-1");
-        scenario.assertCan(guest, document.permissions.view, "doc-1");
-        scenario.advanceTime("30m");
-        scenario.assertCannot(guest, document.permissions.view, "doc-1");
-      },
-    );
+    const expirationScenario = defineAccessScenario("expiring guest viewer", (scenario) => {
+      scenario.include(baseWorkspace);
+      const alice = scenario.actor(user, "alice");
+      const guest = scenario.actor(user, "guest");
+      scenario.grant(document.roles.viewer, "doc-1").expiringIn("15m").to(guest);
+      scenario.assertCan(alice, document.permissions.view, "doc-1");
+      scenario.assertCan(guest, document.permissions.view, "doc-1");
+      scenario.advanceTime("30m");
+      scenario.assertCannot(guest, document.permissions.view, "doc-1");
+    });
 
     proveScenarioSync(model, expirationScenario);
     await proveScenario(model, expirationScenario);

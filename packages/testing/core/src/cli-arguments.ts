@@ -49,33 +49,21 @@ export function parseCommandOptions(
   for (let index = 0; index < argumentsAfterCommand.length; index += 1) {
     const argument = argumentsAfterCommand[index];
     if (argument === undefined) break;
-    index += collectOption(
-      collected,
-      requireDeclaredKind(argument, kinds),
-      argument,
-      argumentsAfterCommand[index + 1],
-    );
+    index += collectOption(collected, requireDeclaredKind(argument, kinds), argument, argumentsAfterCommand[index + 1]);
   }
 
   return collected;
 }
 
 /** `--json` is accepted everywhere, so every command's kinds start with it. */
-function declaredOptionKinds(
-  specification: readonly OptionSpecification[],
-): ReadonlyMap<string, OptionKind> {
-  const kinds = new Map<string, OptionKind>([
-    [jsonOption.name, jsonOption.kind],
-  ]);
+function declaredOptionKinds(specification: readonly OptionSpecification[]): ReadonlyMap<string, OptionKind> {
+  const kinds = new Map<string, OptionKind>([[jsonOption.name, jsonOption.kind]]);
   for (const option of specification) kinds.set(option.name, option.kind);
   return kinds;
 }
 
 /** Anything the command did not declare is a command-line error, not a positional. */
-function requireDeclaredKind(
-  argument: string,
-  kinds: ReadonlyMap<string, OptionKind>,
-): OptionKind {
+function requireDeclaredKind(argument: string, kinds: ReadonlyMap<string, OptionKind>): OptionKind {
   if (!argument.startsWith("--")) {
     throw new Error(`Unexpected argument ${argument}.`);
   }
@@ -126,12 +114,7 @@ function requireUsableValue(
   }
 }
 
-function recordValue(
-  collected: CollectedOptions,
-  kind: OptionKind,
-  argument: string,
-  value: string,
-): void {
+function recordValue(collected: CollectedOptions, kind: OptionKind, argument: string, value: string): void {
   if (kind !== "repeatable") {
     collected.values.set(argument, value);
     return;

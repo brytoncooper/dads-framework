@@ -12,17 +12,7 @@ import {
 } from "./verify-testing-release.mjs";
 
 const sealedCaseIds = JSON.parse(
-  readFileSync(
-    resolve(
-      import.meta.dirname,
-      "..",
-      "..",
-      "fixtures",
-      "testing-soundness",
-      "cases.json",
-    ),
-    "utf8",
-  ),
+  readFileSync(resolve(import.meta.dirname, "..", "..", "fixtures", "testing-soundness", "cases.json"), "utf8"),
 )
   .cases.map((testCase) => testCase.id)
   .sort((left, right) => left.localeCompare(right));
@@ -101,9 +91,7 @@ test("rejects a false-negative, whether flagged by count or by status", () => {
       }),
     });
     assert.equal(result.ok, false);
-    assert.ok(
-      result.failures.some((message) => message.includes("false-negative")),
-    );
+    assert.ok(result.failures.some((message) => message.includes("false-negative")));
   }
 });
 
@@ -114,9 +102,7 @@ test("rejects an unexpected precision-case selection", () => {
     }),
   });
   assert.equal(result.ok, false);
-  assert.ok(
-    result.failures.some((message) => message.includes("precision-case")),
-  );
+  assert.ok(result.failures.some((message) => message.includes("precision-case")));
 });
 
 test("rejects a fallback-policy failure", () => {
@@ -126,9 +112,7 @@ test("rejects a fallback-policy failure", () => {
     }),
   });
   assert.equal(result.ok, false);
-  assert.ok(
-    result.failures.some((message) => message.includes("precision collapse")),
-  );
+  assert.ok(result.failures.some((message) => message.includes("precision collapse")));
 });
 
 test("rejects a clean summary that omits a skipped changed failing task", () => {
@@ -156,11 +140,7 @@ test("rejects a clean summary that omits a skipped changed failing task", () => 
   };
   const result = verifyTestingReleaseEvidence({ soundness });
   assert.equal(result.ok, false);
-  assert.ok(
-    result.failures.some((message) =>
-      message.includes("selected plan omitted a changed task outcome"),
-    ),
-  );
+  assert.ok(result.failures.some((message) => message.includes("selected plan omitted a changed task outcome")));
 });
 
 test("rejects a native receipt that claims success for a failed oracle task", () => {
@@ -197,16 +177,8 @@ test("rejects an unexplained blocked native receipt", () => {
 });
 
 test("parseTestingReleaseArguments accepts one file per shard", () => {
-  const parsed = parseTestingReleaseArguments([
-    "--soundness",
-    "a.json",
-    "--soundness",
-    "b.json",
-  ]);
-  assert.deepEqual(parsed["--soundness"], [
-    resolve("a.json"),
-    resolve("b.json"),
-  ]);
+  const parsed = parseTestingReleaseArguments(["--soundness", "a.json", "--soundness", "b.json"]);
+  assert.deepEqual(parsed["--soundness"], [resolve("a.json"), resolve("b.json")]);
 });
 
 test("parseTestingReleaseArguments rejects bad input with ReleaseUsageError", () => {
@@ -218,15 +190,9 @@ test("parseTestingReleaseArguments rejects bad input with ReleaseUsageError", ()
     ["--soundness", "--other"],
   ];
   for (const argumentsList of invalidArgumentLists) {
-    assert.throws(
-      () => parseTestingReleaseArguments(argumentsList),
-      ReleaseUsageError,
-    );
+    assert.throws(() => parseTestingReleaseArguments(argumentsList), ReleaseUsageError);
   }
-  assert.throws(
-    () => parseTestingReleaseArguments("--soundness"),
-    ReleaseUsageError,
-  );
+  assert.throws(() => parseTestingReleaseArguments("--soundness"), ReleaseUsageError);
 });
 
 test("main accepts passing evidence read from disk", () => {
@@ -317,9 +283,7 @@ test("rejects shards that run the same case twice", () => {
     assert.equal(response.code, 1);
     assert.ok(
       response.result.failures.some(
-        (message) =>
-          message.includes("ran the same case twice") &&
-          message.includes(repeated),
+        (message) => message.includes("ran the same case twice") && message.includes(repeated),
       ),
       JSON.stringify(response.result.failures),
     );
@@ -335,9 +299,7 @@ test("rejects shards that disagree about the tools they ran", () => {
   try {
     const response = main(fixture.argumentsList);
     assert.equal(response.code, 1);
-    assert.deepEqual(response.result.failures, [
-      "soundness shards disagree on toolVersions",
-    ]);
+    assert.deepEqual(response.result.failures, ["soundness shards disagree on toolVersions"]);
   } finally {
     fixture.cleanup();
   }

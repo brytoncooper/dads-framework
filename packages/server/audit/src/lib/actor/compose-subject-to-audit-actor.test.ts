@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AuditActor } from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/spicedb-access";
 
-import {
-  composeSubjectToAuditActor,
-  type ResolvedSubject,
-} from "./compose-subject-to-audit-actor.js";
+import { composeSubjectToAuditActor, type ResolvedSubject } from "./compose-subject-to-audit-actor.js";
 
 const REQUEST_ID = "01990000-0000-7000-8000-000000000001";
 const USER: SubjectRef = { type: "user", id: "user-1" };
@@ -49,18 +46,15 @@ const cases: readonly {
 ];
 
 describe("composeSubjectToAuditActor", () => {
-  it.each(cases)(
-    "maps $kind",
-    ({ subject, authenticatedSubject, expected }) => {
-      expect(
-        subjectToAuditActor({
-          subject,
-          authenticatedSubject,
-          requestId: REQUEST_ID,
-        }),
-      ).toEqual(expected);
-    },
-  );
+  it.each(cases)("maps $kind", ({ subject, authenticatedSubject, expected }) => {
+    expect(
+      subjectToAuditActor({
+        subject,
+        authenticatedSubject,
+        requestId: REQUEST_ID,
+      }),
+    ).toEqual(expected);
+  });
 
   it("falls back to the proven identity for a subject type it does not know", () => {
     expect(

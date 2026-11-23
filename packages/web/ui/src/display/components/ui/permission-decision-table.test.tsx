@@ -21,16 +21,8 @@ it("pairs each accessible permission row with the decision supplied by the host"
   );
 
   const table = screen.getByRole("table", { name: "Effective permissions" });
-  expect(
-    within(table).getByRole("columnheader", { name: "Action" }),
-  ).toBeDefined();
-  expect(
-    within(table).getByRole("rowheader", { name: "View details" }),
-  ).toBeDefined();
-  expect(
-    within(table).getByRole("row", { name: "View details Allowed" }),
-  ).toBeDefined();
-  expect(
-    within(table).getByRole("row", { name: "Edit details Denied" }),
-  ).toBeDefined();
+  expect(within(table).getByRole("columnheader", { name: "Action" })).toBeDefined();
+  expect(within(table).getByRole("rowheader", { name: "View details" })).toBeDefined();
+  expect(within(table).getByRole("row", { name: "View details Allowed" })).toBeDefined();
+  expect(within(table).getByRole("row", { name: "Edit details Denied" })).toBeDefined();
 });

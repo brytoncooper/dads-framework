@@ -277,9 +277,7 @@ describe("ShadowAuthorization", () => {
       "lookupSubjects",
       "deleteRelationships",
     ]);
-    expect(
-      errors.every((entry) => entry.error.message === "shadow outage"),
-    ).toBe(true);
+    expect(errors.every((entry) => entry.error.message === "shadow outage")).toBe(true);
   });
 
   it("serves shadow as authoritative in primary-new mode and isolates primary errors", async () => {

@@ -1,16 +1,9 @@
 import { MigrationBuilder } from "node-pg-migrate";
-import type {
-  PostgresClient as Client,
-  PostgresQueryConfig as QueryConfig,
-} from "../../../index.js";
+import type { PostgresClient as Client, PostgresQueryConfig as QueryConfig } from "../../../index.js";
 import { applyConcurrentIndexMigration } from "./apply-concurrent-index-migration.js";
 import type { DiscoveredDomainMigration } from "./domain-migration.js";
 import { NodePgMigrationJournalError } from "./migration-journal-error.js";
-import {
-  NODE_PG_APPLIED_TABLE,
-  NODE_PG_GRAPH_PROTOCOL,
-  NODE_PG_JOURNAL_SCHEMA,
-} from "./node-pg-journal.js";
+import { NODE_PG_APPLIED_TABLE, NODE_PG_GRAPH_PROTOCOL, NODE_PG_JOURNAL_SCHEMA } from "./node-pg-journal.js";
 
 /**
  * The protocol fence, DDL, applied rows and trigger-written checksums commit
@@ -47,10 +40,7 @@ function splitIntoTransactions(
   const batches: DiscoveredDomainMigration[][] = [];
   let shared: DiscoveredDomainMigration[] | undefined;
   for (const migration of pending) {
-    if (
-      migration.ownTransaction === true ||
-      migration.buildsIndexesConcurrently === true
-    ) {
+    if (migration.ownTransaction === true || migration.buildsIndexesConcurrently === true) {
       batches.push([migration]);
       shared = undefined;
     } else if (shared === undefined) {
@@ -73,10 +63,7 @@ async function applyBatch(
     if (recordProtocol) await recordApplied(client, NODE_PG_GRAPH_PROTOCOL);
     const database = {
       query: client.query.bind(client),
-      select: async (
-        query: string | QueryConfig,
-        values?: unknown[],
-      ): Promise<unknown[]> =>
+      select: async (query: string | QueryConfig, values?: unknown[]): Promise<unknown[]> =>
         (await client.query<Record<string, unknown>>(query, values)).rows,
     };
     for (const migration of batch) {

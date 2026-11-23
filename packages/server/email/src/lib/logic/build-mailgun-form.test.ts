@@ -21,10 +21,7 @@ function textValues(form: FormData, field: string): string[] {
 
 describe("buildMailgunForm", () => {
   it("sends the configured from address when the message names none", () => {
-    const form = buildMailgunForm(
-      { to: [{ address: "a@b.test" }], subject: "Hello", text: "Body" },
-      DEFAULT_FROM,
-    );
+    const form = buildMailgunForm({ to: [{ address: "a@b.test" }], subject: "Hello", text: "Body" }, DEFAULT_FROM);
 
     expect(textValues(form, "from")).toEqual([DEFAULT_FROM]);
     expect(textValues(form, "subject")).toEqual(["Hello"]);
@@ -43,18 +40,13 @@ describe("buildMailgunForm", () => {
       DEFAULT_FROM,
     );
 
-    expect(textValues(form, "from")).toEqual([
-      "Order desk <orders@example.test>",
-    ]);
+    expect(textValues(form, "from")).toEqual(["Order desk <orders@example.test>"]);
   });
 
   it("repeats a field per recipient rather than joining them", () => {
     const form = buildMailgunForm(
       {
-        to: [
-          { address: "first@b.test", name: "First Person" },
-          { address: "second@b.test" },
-        ],
+        to: [{ address: "first@b.test", name: "First Person" }, { address: "second@b.test" }],
         cc: [{ address: "cc@b.test" }],
         bcc: [{ address: "bcc@b.test" }],
         subject: "Hello",
@@ -63,10 +55,7 @@ describe("buildMailgunForm", () => {
       DEFAULT_FROM,
     );
 
-    expect(textValues(form, "to")).toEqual([
-      "First Person <first@b.test>",
-      "second@b.test",
-    ]);
+    expect(textValues(form, "to")).toEqual(["First Person <first@b.test>", "second@b.test"]);
     expect(textValues(form, "cc")).toEqual(["cc@b.test"]);
     expect(textValues(form, "bcc")).toEqual(["bcc@b.test"]);
   });

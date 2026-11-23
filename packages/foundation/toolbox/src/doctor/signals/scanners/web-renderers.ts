@@ -13,11 +13,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import {
-  manifestRootOf,
-  readPackageGraph,
-  type PackageManifestFacts,
-} from "./package-graph.js";
+import { manifestRootOf, readPackageGraph, type PackageManifestFacts } from "./package-graph.js";
 import { isProductionModule, type DoctorModule } from "./typescript-program.js";
 
 const REACT = "react";
@@ -33,15 +29,9 @@ export type RendererScope = {
   usesCatalog(module: DoctorModule): boolean;
 };
 
-function dependsOn(
-  manifest: PackageManifestFacts | undefined,
-  name: string,
-): boolean {
+function dependsOn(manifest: PackageManifestFacts | undefined, name: string): boolean {
   if (manifest === undefined) return false;
-  return (
-    manifest.dependencies.includes(name) ||
-    manifest.requiredPeerDependencies.includes(name)
-  );
+  return manifest.dependencies.includes(name) || manifest.requiredPeerDependencies.includes(name);
 }
 
 function isRenderedPath(path: string): boolean {
@@ -53,10 +43,7 @@ function isRenderedPath(path: string): boolean {
 /** The renderer scope for this run, from the manifests the tree holds. */
 export function readRendererScope(context: DoctorContext): RendererScope {
   const manifests = new Map(
-    readPackageGraph(context).manifests.map((manifest) => [
-      manifestRootOf(manifest),
-      manifest,
-    ]),
+    readPackageGraph(context).manifests.map((manifest) => [manifestRootOf(manifest), manifest]),
   );
   const isRenderer = (module: DoctorModule): boolean => {
     if (!isRenderedPath(module.path)) return false;
@@ -65,8 +52,6 @@ export function readRendererScope(context: DoctorContext): RendererScope {
   };
   return {
     isRenderer,
-    usesCatalog: (module) =>
-      isRenderer(module) &&
-      dependsOn(manifests.get(module.packageRoot), COPY_KIT),
+    usesCatalog: (module) => isRenderer(module) && dependsOn(manifests.get(module.packageRoot), COPY_KIT),
   };
 }

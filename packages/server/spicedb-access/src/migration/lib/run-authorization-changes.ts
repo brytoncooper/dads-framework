@@ -36,22 +36,12 @@ export async function runPreparedAuthorizationChanges(
     prepared.baseline,
     prepared.ordered.filter((change) => prepared.applied.has(change.id)),
   );
-  const initialPending = prepared.ordered.filter(
-    (change) => !prepared.applied.has(change.id),
-  );
-  const resumed = await resumeStartedAuthorizationChange(
-    prepared,
-    initialSchema,
-    initialPending,
-    options,
-  );
+  const initialPending = prepared.ordered.filter((change) => !prepared.applied.has(change.id));
+  const resumed = await resumeStartedAuthorizationChange(prepared, initialSchema, initialPending, options);
   let schema = resumed.schema;
   if (resumed.pending.length > 0 && !prepared.barrier)
-    await options.store.writeRelationships([
-      markerFact(prepared.barrierMarker),
-    ]);
-  for (const change of resumed.pending)
-    schema = await runPendingAuthorizationChange(change, schema, options);
+    await options.store.writeRelationships([markerFact(prepared.barrierMarker)]);
+  for (const change of resumed.pending) schema = await runPendingAuthorizationChange(change, schema, options);
   const applied = resumed.applied + resumed.pending.length;
   options.log.info(
     {
@@ -95,14 +85,7 @@ async function resumeStartedAuthorizationChange(
   }
   const after = applyAuthorizationDefinitionPatches(schema, change);
   const schemaWritten = verifyStartedSchema(active, schema, after, live);
-  await applyChange(
-    change,
-    schema,
-    after,
-    active.marker,
-    schemaWritten,
-    options,
-  );
+  await applyChange(change, schema, after, active.marker, schemaWritten, options);
   return {
     schema: after,
     pending: pending.filter((entry) => entry.id !== change.id),
@@ -110,13 +93,8 @@ async function resumeStartedAuthorizationChange(
   };
 }
 
-function assertCorrectionBeforeSchemaWrite(
-  active: StartedChange,
-  before: string,
-  live: string,
-): void {
-  if (authorizationSchemaFingerprint(before) !== active.beforeHash)
-    throw driftFailure(before, live);
+function assertCorrectionBeforeSchemaWrite(active: StartedChange, before: string, live: string): void {
+  if (authorizationSchemaFingerprint(before) !== active.beforeHash) throw driftFailure(before, live);
   const liveHash = authorizationSchemaFingerprint(live);
   if (liveHash === active.beforeHash) return;
   if (liveHash === active.afterHash)
@@ -135,10 +113,7 @@ function requiredStartedChange(
   const change = pending.find((candidate) => candidate.id === active.id);
   if (
     change === undefined ||
-    !change.dependsOn.every(
-      (dependency) =>
-        dependency === change.legacyHead || applied.has(dependency),
-    )
+    !change.dependsOn.every((dependency) => dependency === change.legacyHead || applied.has(dependency))
   )
     throw new AuthorizationChangeError(
       "AUTHZ_CHANGE_HISTORY",
@@ -147,12 +122,7 @@ function requiredStartedChange(
   return change;
 }
 
-function verifyStartedSchema(
-  active: StartedChange,
-  before: string,
-  after: string,
-  live: string,
-): boolean {
+function verifyStartedSchema(active: StartedChange, before: string, after: string, live: string): boolean {
   const beforeHash = authorizationSchemaFingerprint(before);
   const afterHash = authorizationSchemaFingerprint(after);
   const liveHash = authorizationSchemaFingerprint(live);
@@ -166,11 +136,7 @@ function verifyStartedSchema(
   return liveHash === afterHash && beforeHash !== afterHash;
 }
 
-function assertCompletedStartedSchema(
-  schema: string,
-  live: string,
-  active: StartedChange,
-): void {
+function assertCompletedStartedSchema(schema: string, live: string, active: StartedChange): void {
   if (
     authorizationSchemaFingerprint(live) !== active.afterHash ||
     authorizationSchemaFingerprint(schema) !== active.afterHash
@@ -179,11 +145,7 @@ function assertCompletedStartedSchema(
 }
 
 function assertRecordedSchema(schema: string, live: string): void {
-  if (
-    authorizationSchemaFingerprint(live) !==
-    authorizationSchemaFingerprint(schema)
-  )
-    throw driftFailure(schema, live);
+  if (authorizationSchemaFingerprint(live) !== authorizationSchemaFingerprint(schema)) throw driftFailure(schema, live);
 }
 
 async function runPendingAuthorizationChange(
@@ -210,9 +172,7 @@ async function applyChange(
   if (!schemaWritten) {
     const classification = classifySchemaDiff(previous, next);
     if (classification.kind === "destructive") {
-      const snapshot = options.snapshotDatastore
-        ? await options.snapshotDatastore()
-        : "skipped";
+      const snapshot = options.snapshotDatastore ? await options.snapshotDatastore() : "skipped";
       log.info(
         {
           event: "authorization.migrate.snapshot",
@@ -223,8 +183,7 @@ async function applyChange(
         "destructive change — datastore snapshot before applying",
       );
     }
-    if (change.beforeSchemaWrite !== undefined)
-      await change.beforeSchemaWrite(store);
+    if (change.beforeSchemaWrite !== undefined) await change.beforeSchemaWrite(store);
     try {
       await store.writeSchema(next);
     } catch (error) {
@@ -241,14 +200,10 @@ async function applyChange(
       );
     }
   }
-  if (change.afterSchemaWrite !== undefined)
-    await change.afterSchemaWrite(store);
+  if (change.afterSchemaWrite !== undefined) await change.afterSchemaWrite(store);
   await store.writeRelationships([markerFact(appliedMarker(change))]);
   await store.deleteExactRelationship(markerFact(startedMarker));
-  log.info(
-    { event: "authorization.change.applied", entry: change.id },
-    "authorization definition change applied",
-  );
+  log.info({ event: "authorization.change.applied", entry: change.id }, "authorization definition change applied");
 }
 
 function markerFact(marker: string): RelationshipWrite {
@@ -259,27 +214,16 @@ function markerFact(marker: string): RelationshipWrite {
   };
 }
 
-function driftFailure(
-  expected: string,
-  observed: string,
-): AuthorizationChangeError {
+function driftFailure(expected: string, observed: string): AuthorizationChangeError {
   const before = authorizationSchemaDefinitions(expected);
   const after = authorizationSchemaDefinitions(observed);
   const definition = [...new Set([...before.keys(), ...after.keys()])]
     .sort()
     .find((name) => before.get(name) !== after.get(name));
-  const previous = (
-    definition === undefined ? "" : (before.get(definition) ?? "<absent>")
-  ).split(" ");
-  const next = (
-    definition === undefined ? "" : (after.get(definition) ?? "<absent>")
-  ).split(" ");
+  const previous = (definition === undefined ? "" : (before.get(definition) ?? "<absent>")).split(" ");
+  const next = (definition === undefined ? "" : (after.get(definition) ?? "<absent>")).split(" ");
   let position = 0;
-  while (
-    position < Math.max(previous.length, next.length) &&
-    previous[position] === next[position]
-  )
-    position += 1;
+  while (position < Math.max(previous.length, next.length) && previous[position] === next[position]) position += 1;
   const start = Math.max(0, position - 6);
   const context =
     definition === undefined

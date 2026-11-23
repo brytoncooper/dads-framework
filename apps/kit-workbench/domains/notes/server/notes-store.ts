@@ -1,8 +1,5 @@
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import {
-  tenantIdSchema,
-  type TenantId,
-} from "@dads-framework/identity/tenants";
+import { tenantIdSchema, type TenantId } from "@dads-framework/identity/tenants";
 import { count, eq } from "drizzle-orm";
 import { noteTable } from "./tables.js";
 
@@ -23,9 +20,7 @@ export type ListTenantNotesResult = {
   readonly total: number;
 };
 
-export type NoteWriteTransaction = Parameters<
-  Parameters<DrizzleHandle["transaction"]>[0]
->[0];
+export type NoteWriteTransaction = Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
 
 export type NotesStore = {
   listNotes(input: ListTenantNotesInput): Promise<ListTenantNotesResult>;
@@ -57,10 +52,7 @@ export async function listTenantNotes(
   };
 }
 
-export async function insertTenantNote(
-  tx: NoteWriteTransaction,
-  value: NoteRecord,
-): Promise<NoteRecord> {
+export async function insertTenantNote(tx: NoteWriteTransaction, value: NoteRecord): Promise<NoteRecord> {
   await tx.insert(noteTable).values(value);
   return value;
 }

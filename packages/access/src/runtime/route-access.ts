@@ -51,9 +51,7 @@ export type RouteAccessVerdict =
  * Two-phase evaluation: call once without checkResult to learn whether a
  * check() is needed (outcome "check"), then again with the result.
  */
-export function evaluateRouteAccess(
-  input: RouteAccessInput,
-): RouteAccessVerdict {
+export function evaluateRouteAccess(input: RouteAccessInput): RouteAccessVerdict {
   if (input.isPublic) {
     return { outcome: "allow" };
   }

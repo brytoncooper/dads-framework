@@ -14,17 +14,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { environmentWithoutGitVariables } from "./git-environment.js";
-import {
-  captureWorkspaceSnapshot,
-  discardWorkspaceSnapshot,
-  readWorkspaceIdentity,
-} from "./workspace-snapshot.js";
+import { captureWorkspaceSnapshot, discardWorkspaceSnapshot, readWorkspaceIdentity } from "./workspace-snapshot.js";
 
 const privateReferencesScript = fileURLToPath(
-  new URL(
-    "../../../../../scripts/checks/check-private-references.mjs",
-    import.meta.url,
-  ),
+  new URL("../../../../../scripts/checks/check-private-references.mjs", import.meta.url),
 );
 const temporaryProjects: string[] = [];
 
@@ -42,16 +35,10 @@ describe("Git workspace snapshots", () => {
     const expectedHead = git(projectRoot, ["rev-parse", "HEAD"]).trim();
     const snapshot = captureSnapshot(projectRoot);
 
-    expect(
-      realpathSync(git(snapshot.root, ["rev-parse", "--show-toplevel"]).trim()),
-    ).toBe(realpathSync(snapshot.root));
+    expect(realpathSync(git(snapshot.root, ["rev-parse", "--show-toplevel"]).trim())).toBe(realpathSync(snapshot.root));
     expect(git(snapshot.root, ["rev-parse", "HEAD"]).trim()).toBe(expectedHead);
-    expect(git(snapshot.root, ["rev-parse", "refs/heads/main"]).trim()).toBe(
-      expectedHead,
-    );
-    expect(
-      git(snapshot.root, ["rev-parse", "--abbrev-ref", "HEAD"]).trim(),
-    ).toBe("HEAD");
+    expect(git(snapshot.root, ["rev-parse", "refs/heads/main"]).trim()).toBe(expectedHead);
+    expect(git(snapshot.root, ["rev-parse", "--abbrev-ref", "HEAD"]).trim()).toBe("HEAD");
     expect(git(snapshot.root, ["remote"]).trim()).toBe("");
     expect(git(projectRoot, ["branch", "--show-current"]).trim()).toBe("main");
     expect(git(snapshot.root, ["ls-files", "-z"]).split("\0")).toEqual(
@@ -68,34 +55,23 @@ describe("Git workspace snapshots", () => {
     ["tracked", "tracked.txt", false],
     ["staged-new", "staged-new-hit.txt", true],
     ["untracked", "untracked-hit.txt", false],
-  ])(
-    "copies %s source content into the Git inventory so planted references fail",
-    (_state, relativePath, stage) => {
-      const projectRoot = createCommittedRepository();
-      const absolutePath = join(projectRoot, relativePath);
-      writeFileSync(absolutePath, `see ${localWorkspaceReference()}\n`);
-      if (stage) git(projectRoot, ["add", "--", relativePath]);
+  ])("copies %s source content into the Git inventory so planted references fail", (_state, relativePath, stage) => {
+    const projectRoot = createCommittedRepository();
+    const absolutePath = join(projectRoot, relativePath);
+    writeFileSync(absolutePath, `see ${localWorkspaceReference()}\n`);
+    if (stage) git(projectRoot, ["add", "--", relativePath]);
 
-      const snapshot = captureSnapshot(projectRoot);
-      const result = runPrivateReferenceCheck(snapshot.root);
+    const snapshot = captureSnapshot(projectRoot);
+    const result = runPrivateReferenceCheck(snapshot.root);
 
-      expect(result.status).toBe(1);
-      expect(result.stdout).toMatch(
-        new RegExp(`${escapeRegExp(relativePath)}:1: local-machine-path`),
-      );
-      discardWorkspaceSnapshot(snapshot);
-    },
-  );
+    expect(result.status).toBe(1);
+    expect(result.stdout).toMatch(new RegExp(`${escapeRegExp(relativePath)}:1: local-machine-path`));
+    discardWorkspaceSnapshot(snapshot);
+  });
 
   it("does not copy ignored notes or node_modules into the snapshot inventory", () => {
-    const projectRoot = createCommittedRepository([
-      ".gitignore",
-      "notes.txt\nnode_modules/\n",
-    ]);
-    writeFileSync(
-      join(projectRoot, "notes.txt"),
-      `see ${localWorkspaceReference("ignored-notes")}\n`,
-    );
+    const projectRoot = createCommittedRepository([".gitignore", "notes.txt\nnode_modules/\n"]);
+    writeFileSync(join(projectRoot, "notes.txt"), `see ${localWorkspaceReference("ignored-notes")}\n`);
     mkdirSync(join(projectRoot, "node_modules", "ignored-package"), {
       recursive: true,
     });
@@ -110,22 +86,14 @@ describe("Git workspace snapshots", () => {
     expect(result.status).toBe(0);
     expect(existsSync(join(snapshot.root, "notes.txt"))).toBe(true);
     expect(existsSync(join(snapshot.root, "node_modules"))).toBe(true);
-    expect(git(snapshot.root, ["ls-files", "-z"])).not.toMatch(
-      /notes\.txt|node_modules/,
-    );
+    expect(git(snapshot.root, ["ls-files", "-z"])).not.toMatch(/notes\.txt|node_modules/);
     discardWorkspaceSnapshot(snapshot);
   });
 
   it("includes a force-added ignored path with a literal tricky name", () => {
-    const projectRoot = createCommittedRepository([
-      ".gitignore",
-      "force-added*\n",
-    ]);
+    const projectRoot = createCommittedRepository([".gitignore", "force-added*\n"]);
     const relativePath = "force-added\nhit.txt";
-    writeFileSync(
-      join(projectRoot, relativePath),
-      `see ${localWorkspaceReference("force-added")}\n`,
-    );
+    writeFileSync(join(projectRoot, relativePath), `see ${localWorkspaceReference("force-added")}\n`);
     git(projectRoot, ["add", "-f", "--", relativePath]);
 
     const snapshot = captureSnapshot(projectRoot);
@@ -162,10 +130,7 @@ describe("Git workspace snapshots", () => {
         },
       ]),
     );
-    writeFileSync(
-      join(projectRoot, "allowed.txt"),
-      `see ${localWorkspaceReference("reviewed-project")}\n`,
-    );
+    writeFileSync(join(projectRoot, "allowed.txt"), `see ${localWorkspaceReference("reviewed-project")}\n`);
     writeFileSync(join(projectRoot, "docs.md"), "Zorblax lives here\n");
     git(projectRoot, ["add", "--all"]);
 
@@ -173,9 +138,7 @@ describe("Git workspace snapshots", () => {
     const result = runPrivateReferenceCheck(snapshot.root);
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toMatch(
-      /allowed: allowed\.txt: local-machine-path \(reviewed fixture\)/,
-    );
+    expect(result.stdout).toMatch(/allowed: allowed\.txt: local-machine-path \(reviewed fixture\)/);
     expect(result.stdout).toMatch(/docs\.md:1: zorblax-mention/);
     discardWorkspaceSnapshot(snapshot);
   });
@@ -186,21 +149,14 @@ describe("Git workspace snapshots", () => {
     const identity = readWorkspaceIdentity(projectRoot);
     const snapshot = captureSnapshot(projectRoot, identity);
 
-    writeFileSync(
-      join(projectRoot, "tracked.txt"),
-      `see ${localWorkspaceReference("changed-live-source")}\n`,
-    );
+    writeFileSync(join(projectRoot, "tracked.txt"), `see ${localWorkspaceReference("changed-live-source")}\n`);
     git(projectRoot, ["add", "tracked.txt"]);
     writeFileSync(join(projectRoot, "live-only.txt"), "live index change\n");
     git(projectRoot, ["add", "live-only.txt"]);
 
-    expect(readFileSync(join(snapshot.root, "tracked.txt"), "utf8")).toBe(
-      "tracked source\n",
-    );
+    expect(readFileSync(join(snapshot.root, "tracked.txt"), "utf8")).toBe("tracked source\n");
     expect(git(snapshot.root, ["rev-parse", "HEAD"]).trim()).toBe(expectedHead);
-    expect(git(snapshot.root, ["ls-files", "-z"])).not.toContain(
-      "live-only.txt",
-    );
+    expect(git(snapshot.root, ["ls-files", "-z"])).not.toContain("live-only.txt");
     expect(runPrivateReferenceCheck(snapshot.root).status).toBe(0);
     discardWorkspaceSnapshot(snapshot);
   });
@@ -209,13 +165,7 @@ describe("Git workspace snapshots", () => {
     const projectRoot = createCommittedRepository();
     const identity = readWorkspaceIdentity(projectRoot);
 
-    git(projectRoot, [
-      "commit",
-      "--quiet",
-      "--allow-empty",
-      "-m",
-      "metadata-only",
-    ]);
+    git(projectRoot, ["commit", "--quiet", "--allow-empty", "-m", "metadata-only"]);
 
     expect(readWorkspaceIdentity(projectRoot)).not.toBe(identity);
   });
@@ -227,32 +177,18 @@ describe("Git workspace snapshots", () => {
     const ignorePath = join(configuration, "ignore");
     const configPath = join(configuration, "config");
     writeFileSync(ignorePath, "global-note.txt\n");
-    git(projectRoot, [
-      "config",
-      "--file",
-      configPath,
-      "core.excludesFile",
-      ignorePath,
-    ]);
+    git(projectRoot, ["config", "--file", configPath, "core.excludesFile", ignorePath]);
     vi.stubEnv("GIT_CONFIG_GLOBAL", configPath);
-    writeFileSync(
-      join(projectRoot, "global-note.txt"),
-      localWorkspaceReference(),
-    );
+    writeFileSync(join(projectRoot, "global-note.txt"), localWorkspaceReference());
 
     const snapshot = captureSnapshot(projectRoot);
     expect(existsSync(join(snapshot.root, "global-note.txt"))).toBe(true);
-    expect(git(snapshot.root, ["ls-files", "-z"])).not.toContain(
-      "global-note.txt\0",
-    );
+    expect(git(snapshot.root, ["ls-files", "-z"])).not.toContain("global-note.txt\0");
     expect(runPrivateReferenceCheck(snapshot.root).status).toBe(0);
   });
 
   it("prunes HEAD entries removed from the source index while retaining their ignored bytes", () => {
-    const projectRoot = createCommittedRepository([
-      "notes.txt",
-      "harmless baseline\n",
-    ]);
+    const projectRoot = createCommittedRepository(["notes.txt", "harmless baseline\n"]);
     writeFileSync(join(projectRoot, ".gitignore"), "notes.txt\n");
     git(projectRoot, ["add", ".gitignore"]);
     git(projectRoot, ["commit", "--quiet", "-m", "ignore local notes"]);
@@ -291,9 +227,7 @@ describe("Git workspace snapshots", () => {
     });
     expect(remote.status).not.toBe(0);
     expect(remote.stdout).toBe("");
-    expect(existsSync(join(gitDirectory, "objects/info/alternates"))).toBe(
-      false,
-    );
+    expect(existsSync(join(gitDirectory, "objects/info/alternates"))).toBe(false);
     expect(lstatSync(gitDirectory).isSymbolicLink()).toBe(false);
     discardWorkspaceSnapshot(snapshot);
   });
@@ -312,9 +246,7 @@ describe("Git workspace snapshots", () => {
     const snapshot = captureSnapshot(projectRoot, identity);
 
     expect(existsSync(join(snapshot.root, ".git"))).toBe(false);
-    expect(readFileSync(join(snapshot.root, "plain.txt"), "utf8")).toBe(
-      "plain workspace\n",
-    );
+    expect(readFileSync(join(snapshot.root, "plain.txt"), "utf8")).toBe("plain workspace\n");
     const result = runPrivateReferenceCheck(snapshot.root, true);
     expect(result.status).toBe(0);
     discardWorkspaceSnapshot(snapshot);
@@ -330,16 +262,10 @@ describe("Git workspace snapshots", () => {
       readFileSync(privateReferencesScript),
     );
     writeFileSync(join(projectRoot, "unborn.txt"), "unborn workspace\n");
-    git(projectRoot, [
-      "add",
-      "unborn.txt",
-      "scripts/checks/check-private-references.mjs",
-    ]);
+    git(projectRoot, ["add", "unborn.txt", "scripts/checks/check-private-references.mjs"]);
 
     const snapshot = captureSnapshot(projectRoot);
-    expect(
-      git(snapshot.root, ["rev-parse", "--is-inside-work-tree"]).trim(),
-    ).toBe("true");
+    expect(git(snapshot.root, ["rev-parse", "--is-inside-work-tree"]).trim()).toBe("true");
     expect(() => git(snapshot.root, ["rev-parse", "HEAD"])).toThrow();
     expect(git(snapshot.root, ["ls-files", "-z"])).toContain("unborn.txt\0");
     expect(runPrivateReferenceCheck(snapshot.root).status).toBe(0);
@@ -347,9 +273,7 @@ describe("Git workspace snapshots", () => {
   });
 });
 
-function createCommittedRepository(
-  extraFile?: readonly [string, string],
-): string {
+function createCommittedRepository(extraFile?: readonly [string, string]): string {
   const projectRoot = mkdtempSync(join(tmpdir(), "dads-git-workspace-"));
   temporaryProjects.push(projectRoot);
   git(projectRoot, ["init", "--quiet"]);
@@ -369,21 +293,14 @@ function createCommittedRepository(
 }
 
 function captureSnapshot(projectRoot: string, expectedIdentity?: string) {
-  const snapshot = captureWorkspaceSnapshot(
-    projectRoot,
-    expectedIdentity ?? readWorkspaceIdentity(projectRoot),
-  );
+  const snapshot = captureWorkspaceSnapshot(projectRoot, expectedIdentity ?? readWorkspaceIdentity(projectRoot));
   temporaryProjects.push(snapshot.root);
   return snapshot;
 }
 
 function runPrivateReferenceCheck(projectRoot: string, usePaths = false) {
-  const scriptPath = realpathSync(
-    join(projectRoot, "scripts/checks/check-private-references.mjs"),
-  );
-  const argumentsForCheck = usePaths
-    ? [scriptPath, "--paths", projectRoot, "--root", projectRoot]
-    : [scriptPath];
+  const scriptPath = realpathSync(join(projectRoot, "scripts/checks/check-private-references.mjs"));
+  const argumentsForCheck = usePaths ? [scriptPath, "--paths", projectRoot, "--root", projectRoot] : [scriptPath];
   const result = spawnSync(process.execPath, argumentsForCheck, {
     cwd: projectRoot,
     encoding: "utf8",
@@ -396,10 +313,7 @@ function runPrivateReferenceCheck(projectRoot: string, usePaths = false) {
   };
 }
 
-function git(
-  projectRoot: string,
-  argumentsAfterGit: readonly string[],
-): string {
+function git(projectRoot: string, argumentsAfterGit: readonly string[]): string {
   const result = spawnSync("git", argumentsAfterGit, {
     cwd: projectRoot,
     encoding: "utf8",

@@ -16,9 +16,7 @@ describe("display semantics", () => {
   it("renders empty-state descriptive copy as a paragraph", () => {
     render(<EmptyDescription>Nothing matches these filters.</EmptyDescription>);
 
-    expect(screen.getByText("Nothing matches these filters.").tagName).toBe(
-      "P",
-    );
+    expect(screen.getByText("Nothing matches these filters.").tagName).toBe("P");
   });
 
   it("keeps a horizontal tab list inside narrow viewports with scrolling", () => {

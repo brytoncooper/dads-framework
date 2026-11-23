@@ -1,10 +1,7 @@
 // A signed upload sends exactly the signed headers to the storage URL, and a refusal is an error, not a silent success.
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  putToSignedUrl,
-  SignedUploadRefusedError,
-} from "./signed-url-upload.js";
+import { putToSignedUrl, SignedUploadRefusedError } from "./signed-url-upload.js";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -35,9 +32,7 @@ describe("putToSignedUrl", () => {
   });
 
   it("rejects when storage refuses the bytes", async () => {
-    vi.stubGlobal("fetch", () =>
-      Promise.resolve(new Response(null, { status: 403 })),
-    );
+    vi.stubGlobal("fetch", () => Promise.resolve(new Response(null, { status: 403 })));
     await expect(
       putToSignedUrl({
         url: "https://storage.test/object",

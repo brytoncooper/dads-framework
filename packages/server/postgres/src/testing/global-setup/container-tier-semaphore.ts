@@ -23,9 +23,7 @@ export type ContainerTierSemaphoreDecision =
  * Parses a slot file, tolerating anything a half-written file might contain —
  * including a record written before slots knew about worktrees.
  */
-export function parseContainerTestRunLock(
-  text: string,
-): ContainerTestRunLock | null {
+export function parseContainerTestRunLock(text: string): ContainerTestRunLock | null {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -45,16 +43,9 @@ function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
 
-function hasRequiredSlotFields(
-  raw: unknown,
-): raw is Record<"pid" | "tier" | "startedAt" | "runId", unknown> {
+function hasRequiredSlotFields(raw: unknown): raw is Record<"pid" | "tier" | "startedAt" | "runId", unknown> {
   return (
-    typeof raw === "object" &&
-    raw !== null &&
-    "pid" in raw &&
-    "tier" in raw &&
-    "startedAt" in raw &&
-    "runId" in raw
+    typeof raw === "object" && raw !== null && "pid" in raw && "tier" in raw && "startedAt" in raw && "runId" in raw
   );
 }
 
@@ -82,9 +73,7 @@ function refusal(input: {
   const killHint = first === undefined ? "" : `    kill ${String(first.pid)}\n`;
   return (
     `${input.headline}\n` +
-    input.holders
-      .map((held) => `  holder: ${describeHolder(held, input.now)}\n`)
-      .join("") +
+    input.holders.map((held) => `  holder: ${describeHolder(held, input.now)}\n`).join("") +
     `  Stacked runs cannot finish: they compete for the same Docker daemon and CPU,\n` +
     `  so each one looks slow and invites another retry. Kill one or wait.\n` +
     killHint +
@@ -122,9 +111,7 @@ type SemaphoreState = {
   readonly waitBudgetMs: number;
 };
 
-export function decideContainerTierSemaphore(
-  input: SemaphoreState,
-): ContainerTierSemaphoreDecision {
+export function decideContainerTierSemaphore(input: SemaphoreState): ContainerTierSemaphoreDecision {
   const { slots, isAlive, now, tier, runId } = input;
 
   // Same nx invocation: a sibling project already holds a slot. One
@@ -137,8 +124,7 @@ export function decideContainerTierSemaphore(
   if (queuedBehindWorktree !== null) return queuedBehindWorktree;
 
   for (const [index, held] of slots.entries()) {
-    if (held === null)
-      return { action: "take", slot: index + 1, message: null };
+    if (held === null) return { action: "take", slot: index + 1, message: null };
   }
 
   for (const [index, held] of slots.entries()) {
@@ -151,9 +137,7 @@ export function decideContainerTierSemaphore(
     }
   }
 
-  const holders = slots.filter(
-    (held): held is ContainerTestRunLock => held !== null,
-  );
+  const holders = slots.filter((held): held is ContainerTestRunLock => held !== null);
   const [first] = holders;
   const busy = `${String(holders.length)} of ${String(slots.length)} container-tier slots busy`;
   return waitOrRefuse({
@@ -171,16 +155,11 @@ export function decideContainerTierSemaphore(
   });
 }
 
-function decideWorktreeWait(
-  input: SemaphoreState,
-): ContainerTierSemaphoreDecision | null {
+function decideWorktreeWait(input: SemaphoreState): ContainerTierSemaphoreDecision | null {
   const { slots, isAlive, now, tier, worktree } = input;
   const mine = slots.find(
     (held): held is ContainerTestRunLock =>
-      held !== null &&
-      held.worktree.length > 0 &&
-      held.worktree === worktree &&
-      isAlive(held.pid),
+      held !== null && held.worktree.length > 0 && held.worktree === worktree && isAlive(held.pid),
   );
   if (mine === undefined) return null;
   return waitOrRefuse({

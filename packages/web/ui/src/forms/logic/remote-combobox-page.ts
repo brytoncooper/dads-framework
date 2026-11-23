@@ -9,9 +9,7 @@ export type RemoteComboboxLoadArgs = {
   readonly signal: AbortSignal;
 };
 
-export type LoadRemoteComboboxPage<Item> = (
-  args: RemoteComboboxLoadArgs,
-) => Promise<RemoteComboboxPage<Item>>;
+export type LoadRemoteComboboxPage<Item> = (args: RemoteComboboxLoadArgs) => Promise<RemoteComboboxPage<Item>>;
 
 export function pageHasMore(meta: {
   readonly page: number;
@@ -29,15 +27,9 @@ export function nextRemoteComboboxItems<Item>(input: {
 }): readonly Item[] {
   if (input.page <= 1) return input.incoming;
   const seen = new Set(input.current.map(input.itemKey));
-  return [
-    ...input.current,
-    ...input.incoming.filter((item) => !seen.has(input.itemKey(item))),
-  ];
+  return [...input.current, ...input.incoming.filter((item) => !seen.has(input.itemKey(item)))];
 }
 
-export function shouldPrefetchNextPage(input: {
-  readonly hasMore: boolean;
-  readonly loading: boolean;
-}): boolean {
+export function shouldPrefetchNextPage(input: { readonly hasMore: boolean; readonly loading: boolean }): boolean {
   return input.hasMore && !input.loading;
 }

@@ -13,15 +13,9 @@ import {
   type SentEmail,
 } from "./email-delivery.js";
 import { type EmailEnvelope, emailEnvelopeSchema } from "./email-envelope.js";
-import type {
-  EmailTemplate,
-  RenderEmailTemplate,
-} from "./email-template-port.js";
+import type { EmailTemplate, RenderEmailTemplate } from "./email-template-port.js";
 import { EMAIL_DELIVER_JOB } from "./jobs/email-job-names.js";
-import {
-  deliveryErrorName,
-  summarizeDeliveryError,
-} from "./logic/summarize-delivery-error.js";
+import { deliveryErrorName, summarizeDeliveryError } from "./logic/summarize-delivery-error.js";
 import { toEmailMessage } from "./logic/to-email-message.js";
 import type { OutboundEmailId } from "./outbound-email-status.js";
 import { queuedEmailAttachmentsSchema } from "./queued-email-attachment.js";
@@ -65,9 +59,7 @@ export class LiveEmailDelivery implements EmailDelivery {
         envelope: parsedEnvelope,
         sendAt,
         dedupeKey: options.dedupeKey ?? null,
-        attachments: queuedEmailAttachmentsSchema.parse(
-          options.attachments ?? [],
-        ),
+        attachments: queuedEmailAttachmentsSchema.parse(options.attachments ?? []),
         failurePolicy: options.failurePolicy ?? "retry",
       },
       options.tx,
@@ -75,8 +67,7 @@ export class LiveEmailDelivery implements EmailDelivery {
 
     // With a transaction the row does not exist for anyone else yet, and a
     // future `sendAt` belongs to the sweep — both are somebody else's cue.
-    const dispatchNow =
-      options.tx === undefined && sendAt.getTime() <= now.getTime();
+    const dispatchNow = options.tx === undefined && sendAt.getTime() <= now.getTime();
     if (dispatchNow) await this.dispatch([id]);
     return { id, deduplicated, dispatched: dispatchNow };
   }
@@ -115,9 +106,7 @@ export class LiveEmailDelivery implements EmailDelivery {
 
     try {
       const rendered = await this.dependencies.render(template, parsedProps);
-      const receipt = await this.dependencies.emailSender.send(
-        toEmailMessage(parsedEnvelope, rendered, attachments),
-      );
+      const receipt = await this.dependencies.emailSender.send(toEmailMessage(parsedEnvelope, rendered, attachments));
       const { id } = await this.dependencies.store.recordImmediate({
         templateName: template.name,
         props: parsedProps,
@@ -164,15 +153,10 @@ export class LiveEmailDelivery implements EmailDelivery {
  * A template whose parser refuses is a programming error, not a delivery
  * failure, so this throws rather than recording a row nobody can send.
  */
-function parseProps(
-  template: EmailTemplate,
-  props: Record<string, unknown>,
-): Record<string, unknown> {
+function parseProps(template: EmailTemplate, props: Record<string, unknown>): Record<string, unknown> {
   const parsed: unknown = template.props.parse(props);
   if (!isJsonObject(parsed)) {
-    throw new Error(
-      `Email template ${template.name} parsed its props into something that is not an object`,
-    );
+    throw new Error(`Email template ${template.name} parsed its props into something that is not an object`);
   }
   return parsed;
 }

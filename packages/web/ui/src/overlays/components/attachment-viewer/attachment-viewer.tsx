@@ -1,11 +1,4 @@
-import {
-  DownloadIcon,
-  FileIcon,
-  FileImageIcon,
-  FileTextIcon,
-  FileXIcon,
-  LoaderCircleIcon,
-} from "lucide-react";
+import { DownloadIcon, FileIcon, FileImageIcon, FileTextIcon, FileXIcon, LoaderCircleIcon } from "lucide-react";
 import * as React from "react";
 
 import { useLocaleFormatting } from "../../../copy/index.js";
@@ -18,17 +11,8 @@ import {
   type AttachmentItem,
   type AttachmentKind,
 } from "../../../elements/index.js";
-import {
-  useOverlaysCopy,
-  type OverlaysCopyKey,
-} from "../../copy/overlays-copy.js";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "../ui/dialog.js";
+import { useOverlaysCopy, type OverlaysCopyKey } from "../../copy/overlays-copy.js";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog.js";
 import { ImageStage } from "./image-stage.js";
 import type { PdfDocumentViewProps } from "./pdf-document-view.js";
 import {
@@ -39,10 +23,7 @@ import {
 } from "./use-attachment-source.js";
 
 export { DEFAULT_MAX_PREVIEW_BYTES } from "./use-attachment-source.js";
-export type {
-  AttachmentSource,
-  AttachmentSourceLoader,
-} from "./use-attachment-source.js";
+export type { AttachmentSource, AttachmentSourceLoader } from "./use-attachment-source.js";
 
 const KIND_LABEL_KEY: Record<AttachmentKind, OverlaysCopyKey> = {
   pdf: "overlays.attachmentViewer.kind.pdf",
@@ -71,9 +52,7 @@ export type AttachmentViewerProps = {
    * error beside its Download button; a message shown behind the dialog would
    * go unseen.
    */
-  readonly onDownload: (
-    item: AttachmentItem,
-  ) => Promise<AttachmentDownloadOutcome>;
+  readonly onDownload: (item: AttachmentItem) => Promise<AttachmentDownloadOutcome>;
 };
 
 /**
@@ -90,16 +69,10 @@ export function AttachmentViewer({
   maxPreviewBytes = DEFAULT_MAX_PREVIEW_BYTES,
   onDownload,
 }: AttachmentViewerProps) {
-  const { state, markFailed } = useAttachmentSource(
-    item,
-    loadSource,
-    maxPreviewBytes,
-  );
+  const { state, markFailed } = useAttachmentSource(item, loadSource, maxPreviewBytes);
   const t = useOverlaysCopy();
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
-  const [downloadFailedId, setDownloadFailedId] = React.useState<string | null>(
-    null,
-  );
+  const [downloadFailedId, setDownloadFailedId] = React.useState<string | null>(null);
 
   // The dialog keeps animating for a moment after `item` becomes null. Without
   // the last opened file the content would vanish before the dialog does.
@@ -169,10 +142,7 @@ export function AttachmentViewer({
               onDownload={() => void download(shown.item)}
             />
             {downloadFailedId === shown.item.id && (
-              <p
-                role="alert"
-                className="border-b bg-destructive/10 px-4 py-2 text-sm text-destructive"
-              >
+              <p role="alert" className="border-b bg-destructive/10 px-4 py-2 text-sm text-destructive">
                 {t("overlays.attachmentViewer.download.failed")}
               </p>
             )}
@@ -209,10 +179,7 @@ function ViewerHeader({
         <KindIcon kind={kind} className="size-5" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <DialogTitle
-          className="truncate text-base leading-tight"
-          title={item.fileName}
-        >
+        <DialogTitle className="truncate text-base leading-tight" title={item.fileName}>
           {item.fileName}
         </DialogTitle>
         <DialogDescription className="text-xs">
@@ -251,11 +218,7 @@ function DownloadButton({
         if (!isBusy) onClick();
       }}
     >
-      {isBusy ? (
-        <LoaderCircleIcon className="animate-spin motion-reduce:animate-none" />
-      ) : (
-        <DownloadIcon />
-      )}
+      {isBusy ? <LoaderCircleIcon className="animate-spin motion-reduce:animate-none" /> : <DownloadIcon />}
       {t("overlays.attachmentViewer.download")}
     </Button>
   );
@@ -315,11 +278,7 @@ function ViewerBody({
       );
     case "ready":
       return state.prepared.kind === "pdf" ? (
-        <PdfStage
-          key={item.id}
-          data={state.prepared.data}
-          onFailed={onPreviewFailed}
-        />
+        <PdfStage key={item.id} data={state.prepared.data} onFailed={onPreviewFailed} />
       ) : (
         <ImageStage
           key={state.prepared.src}
@@ -363,11 +322,7 @@ function FallbackPanel({
         <p className="text-base font-medium">{title}</p>
         <p className="text-sm text-muted-foreground">{hint}</p>
       </div>
-      <DownloadButton
-        variant="default"
-        isBusy={isDownloading}
-        onClick={onDownload}
-      />
+      <DownloadButton variant="default" isBusy={isDownloading} onClick={onDownload} />
     </div>
   );
 }
@@ -376,9 +331,7 @@ type PdfStageView = React.ComponentType<PdfDocumentViewProps>;
 
 /** Fetches the pdf.js chunk on first use; a failed fetch shows the Download fallback. */
 function PdfStage({ data, onFailed }: PdfDocumentViewProps) {
-  const [loaded, setLoaded] = React.useState<{ View: PdfStageView } | null>(
-    null,
-  );
+  const [loaded, setLoaded] = React.useState<{ View: PdfStageView } | null>(null);
   const onFailedRef = React.useRef(onFailed);
   React.useEffect(() => {
     onFailedRef.current = onFailed;
@@ -403,13 +356,7 @@ function PdfStage({ data, onFailed }: PdfDocumentViewProps) {
   return <loaded.View data={data} onFailed={onFailed} />;
 }
 
-function KindIcon({
-  kind,
-  className,
-}: {
-  kind: AttachmentKind;
-  className?: string;
-}) {
+function KindIcon({ kind, className }: { kind: AttachmentKind; className?: string }) {
   switch (kind) {
     case "pdf":
       return <FileTextIcon className={className} />;

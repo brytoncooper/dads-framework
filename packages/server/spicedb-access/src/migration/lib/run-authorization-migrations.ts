@@ -1,7 +1,4 @@
-import {
-  applyDesiredAuthorizationSchema,
-  parseWriteSchemaBlocker,
-} from "@dads-framework/access/schema";
+import { applyDesiredAuthorizationSchema, parseWriteSchemaBlocker } from "@dads-framework/access/schema";
 
 import { authorizationLegacyJournalChecksum } from "./journal/authorization-change-files.js";
 import type {
@@ -56,9 +53,7 @@ const VERSION_DEFINITION = "authz/migration_version";
  * refusal naming the blocking relation when a destructive write has no step.
  * A failure leaves the marker unwritten, so the next run resumes there.
  */
-export async function runAuthorizationMigrations(
-  options: RunAuthorizationMigrationsOptions,
-): Promise<void> {
+export async function runAuthorizationMigrations(options: RunAuthorizationMigrationsOptions): Promise<void> {
   const { store, log } = options;
   const journal = await loadJournal(options.journal, options.journalFolder);
 
@@ -69,11 +64,7 @@ export async function runAuthorizationMigrations(
   const legacyApplied = graph?.legacyApplied ?? applied;
   const pending = pendingEntries(journal, legacyApplied);
 
-  let previousSchema = previousAuthorizationSchema(
-    journal,
-    legacyApplied,
-    liveSchema,
-  );
+  let previousSchema = previousAuthorizationSchema(journal, legacyApplied, liveSchema);
 
   for (const entry of pending) {
     const genesisConvergence = !journaled && entry === pending[0];
@@ -94,10 +85,7 @@ export async function runAuthorizationMigrations(
     );
   }
 
-  const appliedChanges =
-    graph === undefined
-      ? 0
-      : await runPreparedAuthorizationChanges(graph, options);
+  const appliedChanges = graph === undefined ? 0 : await runPreparedAuthorizationChanges(graph, options);
 
   log.info(
     {
@@ -115,29 +103,19 @@ export async function runAuthorizationMigrations(
  * The status command and `--check` mode report from this.
  */
 export async function pendingAuthorizationMigrationIds(
-  options: Pick<
-    RunAuthorizationMigrationsOptions,
-    "journal" | "journalFolder" | "changesFolder" | "store"
-  >,
+  options: Pick<RunAuthorizationMigrationsOptions, "journal" | "journalFolder" | "changesFolder" | "store">,
 ): Promise<readonly string[]> {
   const journal = await loadJournal(options.journal, options.journalFolder);
   const applied = await readAppliedAuthorizationMigrationIds(options.store);
   const graph = await loadAuthorizationGraph(options, journal, applied);
   return [
-    ...pendingEntries(journal, graph?.legacyApplied ?? applied).map(
-      (entry) => entry.id,
-    ),
-    ...(graph?.ordered
-      .filter((change) => !graph.applied.has(change.id))
-      .map((change) => change.id) ?? []),
+    ...pendingEntries(journal, graph?.legacyApplied ?? applied).map((entry) => entry.id),
+    ...(graph?.ordered.filter((change) => !graph.applied.has(change.id)).map((change) => change.id) ?? []),
   ];
 }
 
 async function loadAuthorizationGraph(
-  options: Pick<
-    RunAuthorizationMigrationsOptions,
-    "changesFolder" | "journalFolder"
-  >,
+  options: Pick<RunAuthorizationMigrationsOptions, "changesFolder" | "journalFolder">,
   journal: readonly LoadedAuthorizationMigration[],
   applied: readonly string[],
 ): Promise<PreparedAuthorizationChanges | undefined> {
@@ -175,18 +153,13 @@ async function convergePreJournalStore(
   await applyDesiredAuthorizationSchema({
     store: options.store,
     desiredSchema: entry.schema,
-    ...(options.snapshotDatastore
-      ? { snapshotDatastore: options.snapshotDatastore }
-      : {}),
+    ...(options.snapshotDatastore ? { snapshotDatastore: options.snapshotDatastore } : {}),
     log: options.log,
   });
 }
 
 /** What reading the applied markers needs — no schema or relationship writes. */
-export type AuthorizationJournalMarkerReader = Pick<
-  AuthorizationMigrationStore,
-  "readSchema" | "listDirectSubjects"
->;
+export type AuthorizationJournalMarkerReader = Pick<AuthorizationMigrationStore, "readSchema" | "listDirectSubjects">;
 
 /**
  * The journal entry ids this store holds an applied marker for, sorted —
@@ -204,9 +177,7 @@ function isJournaledSchema(liveSchema: string): boolean {
   return liveSchema.includes(`definition ${JOURNAL_DEFINITION}`);
 }
 
-async function readAppliedEntryIds(
-  store: AuthorizationJournalMarkerReader,
-): Promise<readonly string[]> {
+async function readAppliedEntryIds(store: AuthorizationJournalMarkerReader): Promise<readonly string[]> {
   const subjects = await store.listDirectSubjects({
     resource: JOURNAL_RESOURCE,
     relation: APPLIED_RELATION,
@@ -257,9 +228,7 @@ async function applyEntry(
 
   const classification = classifySchemaDiff(previousSchema, entry.schema);
   if (classification.kind === "destructive") {
-    const snapshot = options.snapshotDatastore
-      ? await options.snapshotDatastore()
-      : "skipped";
+    const snapshot = options.snapshotDatastore ? await options.snapshotDatastore() : "skipped";
     log.info(
       {
         event: "authorization.migrate.snapshot",
@@ -272,11 +241,7 @@ async function applyEntry(
   }
 
   if (entry.beforeSchemaWrite) {
-    await runStep(
-      entry,
-      "beforeSchemaWrite",
-      () => entry.beforeSchemaWrite?.(store) ?? Promise.resolve(),
-    );
+    await runStep(entry, "beforeSchemaWrite", () => entry.beforeSchemaWrite?.(store) ?? Promise.resolve());
   }
 
   try {
@@ -286,11 +251,7 @@ async function applyEntry(
   }
 
   if (entry.afterSchemaWrite) {
-    await runStep(
-      entry,
-      "afterSchemaWrite",
-      () => entry.afterSchemaWrite?.(store) ?? Promise.resolve(),
-    );
+    await runStep(entry, "afterSchemaWrite", () => entry.afterSchemaWrite?.(store) ?? Promise.resolve());
   }
 }
 
@@ -311,17 +272,11 @@ async function recordAppliedMarker(
  * A refused schema write is the journal's teaching moment: when SpiceDB
  * names the blocker, say exactly which relationship step is missing.
  */
-function schemaWriteFailure(
-  entry: LoadedAuthorizationMigration,
-  error: unknown,
-): Error {
+function schemaWriteFailure(entry: LoadedAuthorizationMigration, error: unknown): Error {
   const message = error instanceof Error ? error.message : String(error);
   const blocker = parseWriteSchemaBlocker(message);
   if (blocker === undefined) {
-    return new Error(
-      `authorization migration ${entry.id} failed during schema write: ${message}`,
-      { cause: error },
-    );
+    return new Error(`authorization migration ${entry.id} failed during schema write: ${message}`, { cause: error });
   }
   const blocked =
     blocker.kind === "removed-type"
@@ -334,18 +289,11 @@ function schemaWriteFailure(
   );
 }
 
-async function runStep(
-  entry: LoadedAuthorizationMigration,
-  phase: string,
-  step: () => Promise<void>,
-): Promise<void> {
+async function runStep(entry: LoadedAuthorizationMigration, phase: string, step: () => Promise<void>): Promise<void> {
   try {
     await step();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `authorization migration ${entry.id} failed during ${phase}: ${message}`,
-      { cause: error },
-    );
+    throw new Error(`authorization migration ${entry.id} failed during ${phase}: ${message}`, { cause: error });
   }
 }

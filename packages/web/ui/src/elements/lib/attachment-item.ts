@@ -14,24 +14,14 @@ export type AttachmentItem = {
 /** Called when a person asks to look at a file in place (not download it). */
 export type AttachmentOpenHandler = (item: AttachmentItem) => void;
 
-const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
-  "png",
-  "jpg",
-  "jpeg",
-  "gif",
-  "webp",
-  "avif",
-  "bmp",
-]);
+const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(["png", "jpg", "jpeg", "gif", "webp", "avif", "bmp"]);
 
 /**
  * What the viewer can show for a file. The MIME type decides first; the file
  * extension is only a fallback for generic types such as
  * `application/octet-stream`, which browsers and uploaders often send.
  */
-export function attachmentKindOf(
-  item: Pick<AttachmentItem, "contentType" | "fileName">,
-): AttachmentKind {
+export function attachmentKindOf(item: Pick<AttachmentItem, "contentType" | "fileName">): AttachmentKind {
   const mimeType = item.contentType.split(";")[0]?.trim().toLowerCase() ?? "";
   if (mimeType === "application/pdf") return "pdf";
   if (mimeType.startsWith("image/")) {

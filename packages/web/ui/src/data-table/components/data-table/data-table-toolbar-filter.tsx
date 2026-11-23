@@ -15,18 +15,13 @@ type DataTableToolbarFilterProps<TData> = {
   column: Column<TData>;
 };
 
-export function DataTableToolbarFilter<TData>({
-  column,
-}: DataTableToolbarFilterProps<TData>) {
+export function DataTableToolbarFilter<TData>({ column }: DataTableToolbarFilterProps<TData>) {
   const variant = column.columnDef.meta?.variant;
   if (!variant) return null;
   return renderColumnFilter(column, variant);
 }
 
-function renderColumnFilter<TData>(
-  column: Column<TData>,
-  variant: FilterVariant,
-) {
+function renderColumnFilter<TData>(column: Column<TData>, variant: FilterVariant) {
   const title = readColumnFilterTitle(column);
   switch (variant) {
     case "text":
@@ -40,13 +35,7 @@ function renderColumnFilter<TData>(
 
     case "date":
     case "dateRange":
-      return (
-        <DataTableDateFilter
-          column={column}
-          title={title}
-          multiple={variant === "dateRange"}
-        />
-      );
+      return <DataTableDateFilter column={column} title={title} multiple={variant === "dateRange"} />;
 
     case "select":
     case "multiSelect":
@@ -57,9 +46,7 @@ function renderColumnFilter<TData>(
   }
 }
 
-function DataTableNumberFilter<TData>({
-  column,
-}: DataTableToolbarFilterProps<TData>) {
+function DataTableNumberFilter<TData>({ column }: DataTableToolbarFilterProps<TData>) {
   const columnMeta = column.columnDef.meta;
   const unit = columnMeta?.unit;
   const placeholder = columnMeta?.placeholder ?? columnMeta?.label;
@@ -86,9 +73,7 @@ function DataTableNumberFilter<TData>({
   );
 }
 
-function DataTableTextFilter<TData>({
-  column,
-}: DataTableToolbarFilterProps<TData>) {
+function DataTableTextFilter<TData>({ column }: DataTableToolbarFilterProps<TData>) {
   const t = useDataTableCopy();
   const columnMeta = column.columnDef.meta;
   return (
@@ -107,10 +92,7 @@ function DataTableTextFilter<TData>({
   );
 }
 
-function DataTableOptionsFilter<TData>({
-  column,
-  title,
-}: DataTableToolbarFilterProps<TData> & { title: string }) {
+function DataTableOptionsFilter<TData>({ column, title }: DataTableToolbarFilterProps<TData> & { title: string }) {
   const columnMeta = column.columnDef.meta;
   return (
     <DataTableFacetedFilter

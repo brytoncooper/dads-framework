@@ -1,9 +1,6 @@
 import { artifactAndActivityOperations } from "./artifacts-and-activity.js";
 import { memberOperations } from "./members.js";
-import {
-  OperationCoordinator,
-  type OperationDependencies,
-} from "./operation-coordinator.js";
+import { OperationCoordinator, type OperationDependencies } from "./operation-coordinator.js";
 import { taskOperations } from "./tasks.js";
 import { workspaceOperations } from "./workspaces.js";
 

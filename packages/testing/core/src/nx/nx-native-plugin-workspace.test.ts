@@ -1,11 +1,4 @@
-import {
-  chmod,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
@@ -53,24 +46,15 @@ beforeAll(async () => {
     nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
   });
   coverage = result.coverage;
-  const captured: unknown = JSON.parse(
-    await readFile(
-      path.join(workspace, "tmp", "captured-manifest.json"),
-      "utf8",
-    ),
-  );
-  if (!isManifest(captured))
-    throw new Error("The adapter wrote a manifest this fixture cannot read.");
+  const captured: unknown = JSON.parse(await readFile(path.join(workspace, "tmp", "captured-manifest.json"), "utf8"));
+  if (!isManifest(captured)) throw new Error("The adapter wrote a manifest this fixture cannot read.");
   manifest = captured;
 });
 
 /** The manifest fields these assertions read, checked rather than asserted. */
 function isManifest(value: unknown): value is Manifest {
   return (
-    isRecord(value) &&
-    isRecord(value["workspace"]) &&
-    Array.isArray(value["projects"]) &&
-    Array.isArray(value["tasks"])
+    isRecord(value) && isRecord(value["workspace"]) && Array.isArray(value["projects"]) && Array.isArray(value["tasks"])
   );
 }
 
@@ -81,15 +65,9 @@ afterAll(async () => {
 describe("native Nx scopes for a plugin-inferred workspace", () => {
   it("narrows a plugin-inferred workspace to the changed project and its dependents", () => {
     expect(coverage).toMatchObject({ projects: 6, registered: 11, always: 2 });
-    expect(selected("libs/platform/src/index.ts")).toEqual(
-      ids(["platform", "catalog", "storefront", "reporting"]),
-    );
-    expect(selected("libs/catalog/src/index.ts")).toEqual(
-      ids(["catalog", "storefront", "reporting"]),
-    );
-    expect(selected("apps/standalone/src/index.ts")).toEqual(
-      ids(["standalone", "reporting"]),
-    );
+    expect(selected("libs/platform/src/index.ts")).toEqual(ids(["platform", "catalog", "storefront", "reporting"]));
+    expect(selected("libs/catalog/src/index.ts")).toEqual(ids(["catalog", "storefront", "reporting"]));
+    expect(selected("apps/standalone/src/index.ts")).toEqual(ids(["standalone", "reporting"]));
   });
 
   it("follows a prerequisite into a project the dependency graph does not reach", () => {
@@ -130,14 +108,8 @@ describe("native Nx scopes for a plugin-inferred workspace", () => {
   });
 
   it("sends an unowned root configuration change to the complete fallback", () => {
-    expect(
-      manifest.projects.some((project) =>
-        pathIsInside("workspace-checks.json", project.root),
-      ),
-    ).toBe(false);
-    expect(selected("workspace-checks.json")).toEqual(
-      manifest.workspace.fullFallback.taskIds,
-    );
+    expect(manifest.projects.some((project) => pathIsInside("workspace-checks.json", project.root))).toBe(false);
+    expect(selected("workspace-checks.json")).toEqual(manifest.workspace.fullFallback.taskIds);
   });
 
   it("keeps a runtime named input on always and counts exactly those tasks", () => {
@@ -148,17 +120,11 @@ describe("native Nx scopes for a plugin-inferred workspace", () => {
         .sort(),
     ).toEqual(ids(["reporting"]));
     for (const audit of coverage.tasks) {
-      if (
-        audit.project !== "reporting" ||
-        audit.classification !== "registered"
-      )
-        continue;
+      if (audit.project !== "reporting" || audit.classification !== "registered") continue;
       expect(audit.impactMode).toBe("always");
       expect(audit.reason).toBe("non-file or unresolved input");
     }
-    const narrowed = coverage.tasks.find(
-      (audit) => audit.project === "catalog",
-    );
+    const narrowed = coverage.tasks.find((audit) => audit.project === "catalog");
     expect(narrowed?.impactMode).toBe("changed-files");
     expect(narrowed?.reason).toContain("plugin-inferred inputs assumed");
   });
@@ -176,26 +142,19 @@ describe("native Nx scopes for a plugin-inferred workspace", () => {
  * adapter actually sent rather than on a canned plan.
  */
 function selected(changedPath: string): readonly string[] {
-  const owned = manifest.projects.some((project) =>
-    pathIsInside(changedPath, project.root),
-  );
+  const owned = manifest.projects.some((project) => pathIsInside(changedPath, project.root));
   if (!owned) return [...manifest.workspace.fullFallback.taskIds].sort();
   return manifest.tasks
     .filter(
       (task) =>
-        task.impact.mode === "always" ||
-        (task.impact.paths ?? []).some((owner) =>
-          pathIsInside(changedPath, owner),
-        ),
+        task.impact.mode === "always" || (task.impact.paths ?? []).some((owner) => pathIsInside(changedPath, owner)),
     )
     .map((task) => task.id)
     .sort();
 }
 
 function pathIsInside(candidate: string, owner: string): boolean {
-  return (
-    owner === "." || candidate === owner || candidate.startsWith(`${owner}/`)
-  );
+  return owner === "." || candidate === owner || candidate.startsWith(`${owner}/`);
 }
 
 function ids(projects: readonly string[]): readonly string[] {
@@ -241,27 +200,15 @@ async function createPluginWorkspace(): Promise<string> {
   const root = await mkdtemp(path.join(tmpdir(), "dads-testing-nx-plugin-"));
   await writeFile(path.join(root, ".gitignore"), "tmp/\nnode_modules/\n");
   await writeFile(path.join(root, "nx.json"), stableJson(nxConfiguration()));
-  await writeFile(
-    path.join(root, "graph-definition.json"),
-    stableJson(projectGraph()),
-  );
-  await writeFile(
-    path.join(root, "package.json"),
-    '{"name":"plugin-fixture"}\n',
-  );
+  await writeFile(path.join(root, "graph-definition.json"), stableJson(projectGraph()));
+  await writeFile(path.join(root, "package.json"), '{"name":"plugin-fixture"}\n');
   await writeFile(path.join(root, "eslint.config.js"), "export default [];\n");
   await writeFile(path.join(root, "workspace-checks.json"), "{}\n");
   await mkdir(path.join(root, "tooling"), { recursive: true });
-  await writeFile(
-    path.join(root, "tooling", "vitest-preset.ts"),
-    "export const preset = {};\n",
-  );
+  await writeFile(path.join(root, "tooling", "vitest-preset.ts"), "export const preset = {};\n");
   for (const directory of Object.values(projectRoots)) {
     await mkdir(path.join(root, directory, "src"), { recursive: true });
-    await writeFile(
-      path.join(root, directory, "src", "index.ts"),
-      "export const value = 1;\n",
-    );
+    await writeFile(path.join(root, directory, "src", "index.ts"), "export const value = 1;\n");
   }
   await writeFile(path.join(root, "fake-dad-test.mjs"), fakeDadTestSource());
   await chmod(path.join(root, "fake-dad-test.mjs"), 0o755);
@@ -285,10 +232,7 @@ async function installFakeNx(root: string): Promise<void> {
   await mkdir(path.join(nxDirectory, "bin"), { recursive: true });
   await writeFile(path.join(nxDirectory, "bin", "nx.mjs"), fakeNxSource());
   await chmod(path.join(nxDirectory, "bin", "nx.mjs"), 0o755);
-  await writeFile(
-    path.join(nxDirectory, "package.json"),
-    '{"name":"nx","bin":{"nx":"./bin/nx.mjs"}}\n',
-  );
+  await writeFile(path.join(nxDirectory, "package.json"), '{"name":"nx","bin":{"nx":"./bin/nx.mjs"}}\n');
 }
 
 function stableJson(value: unknown): string {
@@ -307,11 +251,7 @@ function nxConfiguration(): Record<string, unknown> {
     targetDefaults: {
       lint: { inputs: ["default", "{workspaceRoot}/eslint.config.js"] },
       "@nx/vite:test": {
-        inputs: [
-          "default",
-          "^production",
-          { externalDependencies: ["vitest"] },
-        ],
+        inputs: ["default", "^production", { externalDependencies: ["vitest"] }],
       },
     },
   };
@@ -347,9 +287,7 @@ function inferredTargets(name: string): Record<string, unknown> {
       options: { config: "vite.config.ts" },
       configurations: { ci: { reporters: ["default"] } },
       defaultConfiguration: "ci",
-      ...(name === "catalog"
-        ? { dependsOn: [{ projects: ["codegen"], target: "build" }] }
-        : {}),
+      ...(name === "catalog" ? { dependsOn: [{ projects: ["codegen"], target: "build" }] } : {}),
       ...(name === "reporting" ? runtimeInputs : {}),
     },
     lint: {

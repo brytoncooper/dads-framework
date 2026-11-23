@@ -1,12 +1,4 @@
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  permissionToken,
-  resource,
-  world,
-} from "@dads-framework/access";
+import { actor, allOf, anyOf, compileAccess, permissionToken, resource, world } from "@dads-framework/access";
 
 const userActor = actor("user");
 const team = resource("parity/team", {
@@ -22,9 +14,7 @@ const note = resource("parity/note", {
   roles: { folder, shared: userActor.anyone, restricted: userActor },
   can: ({ folder: folderRef, shared, restricted }) => ({
     parent_view: folderRef.enter,
-    view: allOf(permissionToken("parity/note", "parent_view"), shared).unless(
-      restricted,
-    ),
+    view: allOf(permissionToken("parity/note", "parent_view"), shared).unless(restricted),
   }),
 });
 
@@ -40,9 +30,7 @@ export const noteWorld = world(
     write(team.roles.member, "team1").to(alice);
     write(team.roles.member, "team1").to(bob);
     write(folder.roles.team, "folder1").to(entity(team, "team1"));
-    write(folder.roles.viewer, "folder2").to(
-      members(team.roles.member, "team1"),
-    );
+    write(folder.roles.viewer, "folder2").to(members(team.roles.member, "team1"));
     write(note.roles.folder, "note1").to(entity(folder, "folder1"));
     write(note.roles.folder, "note1").to(entity(folder, "folder2"));
     write(note.roles.folder, "note2").to(entity(folder, "folder2"));

@@ -23,8 +23,7 @@ import type { DaddyIssueId } from "./issues.js";
 export type DoctorProfile = "standard" | "strict";
 
 /** The input a signal needs, which decides the order signals run in. */
-export type SignalInput =
-  "text" | "typescript" | "packages" | "routes" | "git" | "online";
+export type SignalInput = "text" | "typescript" | "packages" | "routes" | "git" | "online";
 
 /** What the number counts, printed beside the threshold. */
 export type SignalUnit = "count" | "lines" | "files" | "days" | "percent";
@@ -103,19 +102,11 @@ export function fileReading(path: string, value: number): SignalReading {
  * under every issue it evidences, and `--issue`, which selects it under any of
  * them.
  */
-export function signalEvidences(
-  signal: DoctorSignal,
-  issue: DaddyIssueId,
-): boolean {
+export function signalEvidences(signal: DoctorSignal, issue: DaddyIssueId): boolean {
   return signal.issue === issue || (signal.alsoUnder ?? []).includes(issue);
 }
 
 /** The threshold a profile applies, or `null` when the signal is report-only. */
-export function thresholdFor(
-  signal: DoctorSignal,
-  profile: DoctorProfile,
-): number | null {
-  return profile === "strict"
-    ? signal.thresholds.strict
-    : signal.thresholds.standard;
+export function thresholdFor(signal: DoctorSignal, profile: DoctorProfile): number | null {
+  return profile === "strict" ? signal.thresholds.strict : signal.thresholds.standard;
 }

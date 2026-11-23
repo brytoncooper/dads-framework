@@ -14,16 +14,13 @@ import { dadsTsconfigPaths } from "./dads-tsconfig-paths.js";
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
+  for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
 describe("dadsTsconfigPaths", () => {
   it("refuses a blank tsconfig option before reading anything", () => {
     for (const tsconfig of ["", "   "]) {
-      expect(() => dadsTsconfigPaths({ tsconfig })).toThrow(
-        "dadsTsconfigPaths requires a non-empty tsconfig path.",
-      );
+      expect(() => dadsTsconfigPaths({ tsconfig })).toThrow("dadsTsconfigPaths requires a non-empty tsconfig path.");
     }
   });
 
@@ -39,9 +36,7 @@ describe("dadsTsconfigPaths", () => {
   it("answers resolveId with the resolver's path, and defers what it does not own", () => {
     const fixture = createFixture();
 
-    const resolveId = resolveIdOf(
-      dadsTsconfigPaths({ tsconfig: fixture.tsconfig }),
-    );
+    const resolveId = resolveIdOf(dadsTsconfigPaths({ tsconfig: fixture.tsconfig }));
 
     expect(resolveId("@fixture/core")).toBe(fixture.coreFile);
     expect(resolveId("react")).toBeNull();
@@ -65,9 +60,7 @@ function resolveIdOf(plugin: Plugin): (specifier: string) => unknown {
   return hook;
 }
 
-function isResolveIdHook(
-  value: unknown,
-): value is (specifier: string) => unknown {
+function isResolveIdHook(value: unknown): value is (specifier: string) => unknown {
   return typeof value === "function";
 }
 
@@ -80,10 +73,7 @@ function createFixture(): {
   const coreFile = join(root, "src", "core.ts");
   writeFileSync(coreFile, "export {};\n");
   const tsconfig = join(root, "tsconfig.json");
-  writeFileSync(
-    tsconfig,
-    '{ "compilerOptions": { "paths": { "@fixture/core": ["./src/core.ts"] } } }\n',
-  );
+  writeFileSync(tsconfig, '{ "compilerOptions": { "paths": { "@fixture/core": ["./src/core.ts"] } } }\n');
   return { tsconfig, coreFile: resolve(coreFile) };
 }
 

@@ -9,7 +9,5 @@
 
 /** `error.message`, or a fixed sentence when a non-`Error` value was thrown. */
 export function errorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "Unknown verification failure.";
+  return error instanceof Error ? error.message : "Unknown verification failure.";
 }

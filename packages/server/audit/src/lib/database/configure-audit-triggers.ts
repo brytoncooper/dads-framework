@@ -16,15 +16,9 @@ export function configureAuditTriggers(
   pgm: AuditTriggerMigrationBuilder,
   configuration: AuditTriggerConfiguration,
 ): void {
-  const excluded = new Set<string>([
-    ...AUDIT_TRIGGER_ALLOWLIST,
-    ...(configuration.excludeTables ?? []),
-  ]);
+  const excluded = new Set<string>([...AUDIT_TRIGGER_ALLOWLIST, ...(configuration.excludeTables ?? [])]);
   for (const table of excluded) requireAuditIdentifier(table, "excluded table");
-  const tables = new Set([
-    ...Object.keys(configuration.tables),
-    ...(configuration.excludeTables ?? []),
-  ]);
+  const tables = new Set([...Object.keys(configuration.tables), ...(configuration.excludeTables ?? [])]);
   for (const table of tables) {
     requireAuditIdentifier(table, "table");
     pgm.sql(`DROP TRIGGER IF EXISTS audit_record ON public."${table}"`);

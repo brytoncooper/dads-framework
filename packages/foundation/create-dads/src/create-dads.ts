@@ -18,9 +18,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export type CreateDadsDependencies = {
   readonly installDependencies: (projectRoot: string) => Promise<void>;
-  readonly startDevelopment?: (
-    projectRoot: string,
-  ) => Promise<DadsDevelopmentUrls>;
+  readonly startDevelopment?: (projectRoot: string) => Promise<DadsDevelopmentUrls>;
   /**
    * Where the doctor's report is written, before anything is created. A caller
    * that only wants the report as data leaves it out and reads `doctor` on the
@@ -59,9 +57,7 @@ export async function createDads(
   const diagnosis = readDiagnosisArguments(argumentsAfterExecutable);
   const request = parseDadsInitializationArguments(diagnosis.remaining);
   const doctor = await diagnoseBeforeCreating(request, diagnosis, dependencies);
-  const projectName =
-    request.projectName ??
-    deriveDadsProjectName(request.targetDirectory, request.mode);
+  const projectName = request.projectName ?? deriveDadsProjectName(request.targetDirectory, request.mode);
   const initialization = initializeDadsProject({
     targetDirectory: request.targetDirectory,
     mode: request.mode,
@@ -69,20 +65,14 @@ export async function createDads(
     template: request.template,
     dryRun: request.dryRun,
   });
-  const installed =
-    !request.dryRun &&
-    !request.skipInstall &&
-    !dependenciesAreInstalled(initialization.projectRoot);
+  const installed = !request.dryRun && !request.skipInstall && !dependenciesAreInstalled(initialization.projectRoot);
   if (installed) {
     await dependencies.installDependencies(initialization.projectRoot);
     recordDadsDependencyInstallation(initialization.projectRoot);
   }
   const development: DadsDevelopment =
     request.mode === "new" && !request.dryRun && !request.skipInstall
-      ? await prepareDevelopment(
-          initialization.projectRoot,
-          dependencies.startDevelopment,
-        )
+      ? await prepareDevelopment(initialization.projectRoot, dependencies.startDevelopment)
       : { status: "skipped" };
   return { initialization, installed, doctor, development };
 }
@@ -97,10 +87,7 @@ async function prepareDevelopment(
   } catch (failure: unknown) {
     return {
       status: "deferred",
-      reason:
-        failure instanceof Error
-          ? failure.message
-          : "Development startup failed.",
+      reason: failure instanceof Error ? failure.message : "Development startup failed.",
     };
   }
 }
@@ -122,9 +109,7 @@ type DiagnosisArguments = {
  * the recipe, and the parser that owns the recipe refuses an option it does
  * not know rather than ignoring it.
  */
-function readDiagnosisArguments(
-  argumentsAfterExecutable: readonly string[],
-): DiagnosisArguments {
+function readDiagnosisArguments(argumentsAfterExecutable: readonly string[]): DiagnosisArguments {
   const remaining: string[] = [];
   let skip = false;
   let today: string | undefined;
@@ -177,11 +162,7 @@ async function diagnoseBeforeCreating(
   const subject = classifyTarget(root, request.mode);
   if (subject === "unrecognized") return null;
   if (subject === "fresh") {
-    announce(
-      request,
-      dependencies,
-      `No existing project at ${root}: skipping the doctor.\n`,
-    );
+    announce(request, dependencies, `No existing project at ${root}: skipping the doctor.\n`);
     return null;
   }
   const report = await diagnoseWorkspace({
@@ -202,13 +183,9 @@ async function diagnoseBeforeCreating(
  * of the way of that refusal rather than printing a scorecard for a run that
  * is about to stop.
  */
-function classifyTarget(
-  root: string,
-  mode: "new" | "existing",
-): "project" | "fresh" | "unrecognized" {
+function classifyTarget(root: string, mode: "new" | "existing"): "project" | "fresh" | "unrecognized" {
   if (!existsSync(root) || readdirSync(root).length === 0) return "fresh";
-  if (mode === "existing" || existsSync(join(root, PROJECT_FILE)))
-    return "project";
+  if (mode === "existing" || existsSync(join(root, PROJECT_FILE))) return "project";
   return "unrecognized";
 }
 
@@ -217,11 +194,7 @@ function classifyTarget(
  * whole output is the single line at the end, which carries the same report
  * under `doctor`.
  */
-function announce(
-  request: DadsInitializationArguments,
-  dependencies: CreateDadsDependencies,
-  text: string,
-): void {
+function announce(request: DadsInitializationArguments, dependencies: CreateDadsDependencies, text: string): void {
   if (request.json) return;
   dependencies.write?.(text);
 }

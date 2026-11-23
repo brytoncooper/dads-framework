@@ -27,9 +27,7 @@ describe("a destructive alert-dialog action", () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Product?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This product leaves the active catalog.
-            </AlertDialogDescription>
+            <AlertDialogDescription>This product leaves the active catalog.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -39,8 +37,6 @@ describe("a destructive alert-dialog action", () => {
       </AlertDialog>,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Archive" }).dataset["variant"],
-    ).toBe("destructive");
+    expect(screen.getByRole("button", { name: "Archive" }).dataset["variant"]).toBe("destructive");
   });
 });

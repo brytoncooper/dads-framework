@@ -1,28 +1,15 @@
-import {
-  type Cell,
-  type Column,
-  flexRender,
-  type Row,
-  type Table as TanstackTable,
-} from "@tanstack/react-table";
+import { type Cell, type Column, flexRender, type Row, type Table as TanstackTable } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import * as React from "react";
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../../../display/index.js";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../display/index.js";
 import { cn } from "../../../elements/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { planCardFields, type CardColumn } from "../../lib/card-fields.js";
 import { readColumnLabel } from "../../lib/column-label.js";
 import { readPrimaryCardHref } from "../../lib/read-primary-row-link.js";
-import {
-  type DataTableRowGroupOf,
-  startsRowGroup,
-} from "../../lib/row-groups.js";
+import { type DataTableRowGroupOf, startsRowGroup } from "../../lib/row-groups.js";
 import { DataTableRowHitArea } from "./data-table-row-hit-area.js";
 
 const CARD_TOGGLE_SLOT = "data-table-card-toggle";
@@ -51,12 +38,8 @@ export function DataTableCardList<TData>({
     <ul data-slot="data-table-cards" className="flex flex-col gap-2">
       {table.getRowModel().rows.map((row, index, rows) => (
         <React.Fragment key={row.id}>
-          {rowGroupOf !== undefined &&
-          startsRowGroup(rows, index, rowGroupOf) ? (
-            <li
-              data-slot="data-table-card-group"
-              className="px-1 pt-2 font-semibold text-muted-foreground text-xs"
-            >
+          {rowGroupOf !== undefined && startsRowGroup(rows, index, rowGroupOf) ? (
+            <li data-slot="data-table-card-group" className="px-1 pt-2 font-semibold text-muted-foreground text-xs">
               {rowGroupOf(row.original).label}
             </li>
           ) : null}
@@ -83,11 +66,7 @@ function DataTableCard<TData>({ row }: { readonly row: Row<TData> }) {
         INTERACTIVE_ABOVE_CARD_TARGET,
       )}
     >
-      <Collapsible
-        open={expandable && expanded}
-        onOpenChange={setExpanded}
-        className="flex flex-col gap-2"
-      >
+      <Collapsible open={expandable && expanded} onOpenChange={setExpanded} className="flex flex-col gap-2">
         {href ? <DataTableRowHitArea href={href} /> : null}
         {expandable ? (
           <CollapsibleTrigger asChild>
@@ -99,21 +78,11 @@ function DataTableCard<TData>({ row }: { readonly row: Row<TData> }) {
             />
           </CollapsibleTrigger>
         ) : null}
-        <CardHeading
-          cells={cells}
-          opensRecord={href !== null}
-          expandable={expandable}
-          expanded={expanded}
-        />
-        {cells.summary.length > 0 ? (
-          <CardFieldList slot="data-table-card-summary" cells={cells.summary} />
-        ) : null}
+        <CardHeading cells={cells} opensRecord={href !== null} expandable={expandable} expanded={expanded} />
+        {cells.summary.length > 0 ? <CardFieldList slot="data-table-card-summary" cells={cells.summary} /> : null}
         {expandable ? (
           <CollapsibleContent>
-            <CardFieldList
-              slot="data-table-card-details"
-              cells={cells.details}
-            />
+            <CardFieldList slot="data-table-card-details" cells={cells.details} />
           </CollapsibleContent>
         ) : null}
         {cells.actions ? <CardActions cell={cells.actions} /> : null}
@@ -155,13 +124,10 @@ function useCardCells<TData>(row: Row<TData>): {
   return { cardRef, href, cells: placeCardCells(cells) };
 }
 
-function placeCardCells<TData>(
-  cells: readonly Cell<TData, unknown>[],
-): CardCells<TData> {
+function placeCardCells<TData>(cells: readonly Cell<TData, unknown>[]): CardCells<TData> {
   const cellById = new Map(cells.map((cell) => [cell.column.id, cell]));
   const plan = planCardFields(cells.map((cell) => toCardColumn(cell.column)));
-  const pick = (id: string | undefined) =>
-    id === undefined ? undefined : cellById.get(id);
+  const pick = (id: string | undefined) => (id === undefined ? undefined : cellById.get(id));
   return {
     selection: pick(plan.selectionId),
     heading: pick(plan.headingId),
@@ -186,28 +152,18 @@ function CardHeading<TData>({
     <div className="flex min-w-0 items-start gap-2">
       {cells.selection ? <CellContent cell={cells.selection} /> : null}
       {cells.heading ? (
-        <div
-          data-slot="data-table-card-heading"
-          className="min-w-0 flex-1 font-medium break-words"
-        >
+        <div data-slot="data-table-card-heading" className="min-w-0 flex-1 font-medium break-words">
           <CellContent cell={cells.heading} />
         </div>
       ) : null}
-      <CardChevron
-        opensRecord={opensRecord}
-        expandable={expandable}
-        expanded={expanded}
-      />
+      <CardChevron opensRecord={opensRecord} expandable={expandable} expanded={expanded} />
     </div>
   );
 }
 
 function CardActions<TData>({ cell }: { readonly cell: Cell<TData, unknown> }) {
   return (
-    <div
-      data-slot="data-table-card-actions"
-      className="flex flex-wrap items-center justify-end gap-2"
-    >
+    <div data-slot="data-table-card-actions" className="flex flex-wrap items-center justify-end gap-2">
       <CellContent cell={cell} />
     </div>
   );
@@ -245,9 +201,7 @@ function CardChevron({
 }
 
 function readCardCells<TData>(row: Row<TData>): Cell<TData, unknown>[] {
-  return row
-    .getAllCells()
-    .filter((cell) => cell.column.getIsVisible() || cell.column.getCanHide());
+  return row.getAllCells().filter((cell) => cell.column.getIsVisible() || cell.column.getCanHide());
 }
 
 function CardFieldList<TData>({
@@ -258,10 +212,7 @@ function CardFieldList<TData>({
   readonly slot: string;
 }) {
   return (
-    <dl
-      data-slot={slot}
-      className="grid grid-cols-[minmax(6rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-1.5"
-    >
+    <dl data-slot={slot} className="grid grid-cols-[minmax(6rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-1.5">
       {cells.map((cell) => (
         <div key={cell.id} className="contents">
           <dt className="text-muted-foreground">
@@ -290,11 +241,7 @@ function toCardColumn<TData>(column: Column<TData>): CardColumn {
   return {
     id: column.id,
     readerHidden: !column.getIsVisible(),
-    ...(meta?.cardHeading === undefined
-      ? {}
-      : { cardHeading: meta.cardHeading }),
-    ...(meta?.cardSummary === undefined
-      ? {}
-      : { cardSummary: meta.cardSummary }),
+    ...(meta?.cardHeading === undefined ? {} : { cardHeading: meta.cardHeading }),
+    ...(meta?.cardSummary === undefined ? {} : { cardSummary: meta.cardSummary }),
   };
 }

@@ -29,9 +29,7 @@ describe("local development state", () => {
     expect(initial?.databasePassword).not.toBe(initial?.identitySecret);
     expect(readLocalState(root, true)).toEqual(initial);
     if (process.platform !== "win32") {
-      expect(statSync(join(root, ".dads/local-dev.json")).mode & 0o777).toBe(
-        0o600,
-      );
+      expect(statSync(join(root, ".dads/local-dev.json")).mode & 0o777).toBe(0o600);
     }
     const second = readLocalState(project(), true);
     expect(second?.project).not.toBe(initial?.project);
@@ -42,19 +40,14 @@ describe("local development state", () => {
     const root = project();
     const assembly = fileURLToPath(new URL("../assembly", import.meta.url));
     cpSync(assembly, join(root, "assembly"), { recursive: true });
-    const launch = spawnSync(
-      process.execPath,
-      ["assembly/dev.mjs", "up", "--json"],
-      {
-        cwd: root,
-        encoding: "utf8",
-      },
-    );
+    const launch = spawnSync(process.execPath, ["assembly/dev.mjs", "up", "--json"], {
+      cwd: root,
+      encoding: "utf8",
+    });
     expect(launch.status).toBe(1);
     expect(JSON.parse(launch.stdout)).toEqual({
       ok: false,
-      error:
-        "Run npm install to create package-lock.json before starting the local stack.",
+      error: "Run npm install to create package-lock.json before starting the local stack.",
     });
     expect(existsSync(join(root, ".dads"))).toBe(false);
   });

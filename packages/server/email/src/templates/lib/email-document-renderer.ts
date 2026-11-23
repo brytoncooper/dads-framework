@@ -12,14 +12,9 @@ export type EmailDocumentRenderer = {
 };
 
 export function loadReactEmailRender(
-  load: () => Promise<typeof ReactEmailRender> = () =>
-    import("@react-email/render"),
+  load: () => Promise<typeof ReactEmailRender> = () => import("@react-email/render"),
 ): Promise<typeof ReactEmailRender> {
-  return loadOptionalPeer(
-    "@dads-framework/email/templates",
-    "@react-email/render",
-    load,
-  );
+  return loadOptionalPeer("@dads-framework/email/templates", "@react-email/render", load);
 }
 
 class ReactEmailDocumentRenderer implements EmailDocumentRenderer {

@@ -1,20 +1,8 @@
-import {
-  configSchema,
-  groupSchema,
-  resourceSchema,
-  schemaSchema,
-  scimJson,
-  scimList,
-  userSchema,
-} from "./protocol.js";
+import { configSchema, groupSchema, resourceSchema, schemaSchema, scimJson, scimList, userSchema } from "./protocol.js";
 import { nameAttributes } from "./user-data.js";
 import { maxPageSize } from "./user-query.js";
 
-function schemaAttribute(
-  name: string,
-  type = "string",
-  options: Record<string, unknown> = {},
-) {
+function schemaAttribute(name: string, type = "string", options: Record<string, unknown> = {}) {
   return {
     name,
     type,
@@ -28,27 +16,18 @@ function schemaAttribute(
   };
 }
 
-export function scimDiscovery(
-  path: string,
-  baseUrl: string,
-  hasGroups: boolean,
-): Response | null {
+export function scimDiscovery(path: string, baseUrl: string, hasGroups: boolean): Response | null {
   const normalized = path.toLowerCase();
-  if (normalized === "serviceproviderconfig")
-    return serviceProviderConfig(baseUrl);
+  if (normalized === "serviceproviderconfig") return serviceProviderConfig(baseUrl);
   const entries = hasGroups ? ["User", "Group"] : ["User"];
   const [collection, id] = normalized.split("/");
   if (collection === "resourcetypes") {
-    if (!id)
-      return scimList(entries.map((name) => resourceType(baseUrl, name)));
+    if (!id) return scimList(entries.map((name) => resourceType(baseUrl, name)));
     const name = entries.find((entry) => id === entry.toLowerCase());
     return name ? scimJson(resourceType(baseUrl, name)) : null;
   }
   if (collection === "schemas") {
-    if (!id)
-      return scimList(
-        entries.map((name) => resourceSchemaDescription(baseUrl, name)),
-      );
+    if (!id) return scimList(entries.map((name) => resourceSchemaDescription(baseUrl, name)));
     const name = entries.find((entry) => id === schemaFor(entry).toLowerCase());
     return name ? scimJson(resourceSchemaDescription(baseUrl, name)) : null;
   }

@@ -21,10 +21,7 @@ function paramOf(params: unknown, name: string): string | undefined {
 }
 
 /** Resolve only the explicitly declared request source for a permission check. */
-export function resolveResourceId(
-  source: ResourceIdSource,
-  request: SourceReadableRequest,
-): string | undefined {
+export function resolveResourceId(source: ResourceIdSource, request: SourceReadableRequest): string | undefined {
   switch (source.kind) {
     case "fixed":
       return source.id;
@@ -35,11 +32,7 @@ export function resolveResourceId(
     case "query":
       return paramOf(request.query, source.name);
     case "header":
-      return singleRequestHeader(
-        source.name,
-        request.headers,
-        request.raw?.rawHeaders,
-      );
+      return singleRequestHeader(source.name, request.headers, request.raw?.rawHeaders);
     default: {
       const _exhaustive: never = source;
       return _exhaustive;
@@ -48,12 +41,8 @@ export function resolveResourceId(
 }
 
 /** Only omission selects technical identity; present malformed inputs still fail resolution. */
-export function isTechnicalContextAbsent(
-  source: ResourceIdSource,
-  request: SourceReadableRequest,
-): boolean {
-  if (source.kind === "header")
-    return request.headers[source.name.toLowerCase()] === undefined;
+export function isTechnicalContextAbsent(source: ResourceIdSource, request: SourceReadableRequest): boolean {
+  if (source.kind === "header") return request.headers[source.name.toLowerCase()] === undefined;
   if (source.kind !== "query") return false;
   if (request.query === undefined) return true;
   return (

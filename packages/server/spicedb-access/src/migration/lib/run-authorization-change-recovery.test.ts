@@ -5,10 +5,7 @@ import type { RelationshipWrite } from "@dads-framework/access/runtime";
 import { authorizationSchemaFingerprint } from "../definition-changes.mjs";
 import { FakeSchemaStore } from "../testing/fake-schema-store.js";
 import type { LoadedAuthorizationChange } from "./journal/load-authorization-changes.js";
-import {
-  prepareAuthorizationChanges,
-  runPreparedAuthorizationChanges,
-} from "./run-authorization-changes.js";
+import { prepareAuthorizationChanges, runPreparedAuthorizationChanges } from "./run-authorization-changes.js";
 
 const BASELINE = "0001_baseline";
 const ID = "20261023090000_aaaaaaaa_alpha";
@@ -16,9 +13,7 @@ const SCHEMA = `definition authz/migration_journal { relation applied: authz/mig
 definition authz/migration_version {}
 definition user {}`;
 
-function change(
-  overrides: Partial<LoadedAuthorizationChange> = {},
-): LoadedAuthorizationChange {
+function change(overrides: Partial<LoadedAuthorizationChange> = {}): LoadedAuthorizationChange {
   return {
     id: ID,
     legacyHead: BASELINE,
@@ -38,13 +33,8 @@ function change(
 class RetryStartedMarkerStore extends FakeSchemaStore {
   failNextStartedWrite = false;
 
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<string> {
-    if (
-      this.failNextStartedWrite &&
-      writes.some((write) => write.subject.id.startsWith("authz_started_"))
-    ) {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<string> {
+    if (this.failNextStartedWrite && writes.some((write) => write.subject.id.startsWith("authz_started_"))) {
       this.failNextStartedWrite = false;
       return Promise.reject(new Error("started marker unavailable"));
     }
@@ -78,47 +68,31 @@ describe("authorization change recovery", () => {
   it("retries corrected hook and patch content while the live schema remains at its recorded before state", async () => {
     const input = fixture();
     const unfinished = change({
-      beforeSchemaWrite: () =>
-        Promise.reject(new Error("relationship step unfinished")),
+      beforeSchemaWrite: () => Promise.reject(new Error("relationship step unfinished")),
     });
-    await expect(input.run(unfinished)).rejects.toThrow(
-      "relationship step unfinished",
-    );
+    await expect(input.run(unfinished)).rejects.toThrow("relationship step unfinished");
     const corrected = change({
       checksum: "b".repeat(64),
       definitions: [
         {
           name: "test/alpha",
           before: null,
-          after:
-            "definition test/alpha { relation owner: user permission view = owner }",
+          after: "definition test/alpha { relation owner: user permission view = owner }",
         },
       ],
     });
     await expect(input.run(corrected)).resolves.toBe(1);
     expect(await input.store.readSchema()).toContain("permission view");
-    expect(input.store.appliedMarkers).toContain(
-      `authz_applied_${ID}_${corrected.checksum}`,
-    );
-    expect(
-      input.store.appliedMarkers.some((marker) =>
-        marker.startsWith("authz_started_"),
-      ),
-    ).toBe(false);
+    expect(input.store.appliedMarkers).toContain(`authz_applied_${ID}_${corrected.checksum}`);
+    expect(input.store.appliedMarkers.some((marker) => marker.startsWith("authz_started_"))).toBe(false);
   });
 
   it("allows correction after a rejected schema write without dropping the immutable barrier", async () => {
     const input = fixture();
     input.store.failOnNextSchemaWrite("schema write unavailable");
-    await expect(input.run(change())).rejects.toThrow(
-      "schema write unavailable",
-    );
-    const barrier = input.store.appliedMarkers.find((marker) =>
-      marker.startsWith("authz_graph_"),
-    );
-    await expect(input.run(change({ checksum: "b".repeat(64) }))).resolves.toBe(
-      1,
-    );
+    await expect(input.run(change())).rejects.toThrow("schema write unavailable");
+    const barrier = input.store.appliedMarkers.find((marker) => marker.startsWith("authz_graph_"));
+    await expect(input.run(change({ checksum: "b".repeat(64) }))).resolves.toBe(1);
     expect(input.store.appliedMarkers).toContain(barrier);
   });
 
@@ -133,15 +107,9 @@ describe("authorization change recovery", () => {
     ).rejects.toThrow("unfinished");
     input.store.failNextStartedWrite = true;
     const corrected = change({ checksum: "b".repeat(64) });
-    await expect(input.run(corrected)).rejects.toThrow(
-      "started marker unavailable",
-    );
+    await expect(input.run(corrected)).rejects.toThrow("started marker unavailable");
     expect(await input.store.readSchema()).toBe(SCHEMA);
-    expect(
-      input.store.appliedMarkers.some((marker) =>
-        marker.startsWith("authz_started_"),
-      ),
-    ).toBe(false);
+    expect(input.store.appliedMarkers.some((marker) => marker.startsWith("authz_started_"))).toBe(false);
     await expect(input.run(corrected)).resolves.toBe(1);
   });
 
@@ -172,9 +140,7 @@ describe("authorization change recovery", () => {
     });
     await expect(input.run(corrected)).rejects.toThrow("backfill unavailable");
     expect(
-      input.store.appliedMarkers.some((marker) =>
-        marker.startsWith(`authz_started_${ID}_${corrected.checksum}_`),
-      ),
+      input.store.appliedMarkers.some((marker) => marker.startsWith(`authz_started_${ID}_${corrected.checksum}_`)),
     ).toBe(true);
     await expect(input.run(corrected)).resolves.toBe(1);
     expect(beforeCalls).toBe(1);
@@ -194,9 +160,9 @@ describe("authorization change recovery", () => {
     });
     await expect(input.run(original)).rejects.toThrow("backfill unavailable");
     const operations = [...input.store.operations];
-    await expect(
-      input.run(change({ checksum: "b".repeat(64) })),
-    ).rejects.toMatchObject({ code: "AUTHZ_CHANGE_CHECKSUM" });
+    await expect(input.run(change({ checksum: "b".repeat(64) }))).rejects.toMatchObject({
+      code: "AUTHZ_CHANGE_CHECKSUM",
+    });
     expect(input.store.operations).toEqual(operations);
     await input.run(original);
   });
@@ -212,9 +178,7 @@ describe("authorization change recovery", () => {
     ).rejects.toThrow("unfinished");
     await input.store.writeSchema(`${SCHEMA}\ndefinition test/drift {}`);
     const markers = [...input.store.appliedMarkers];
-    await expect(
-      input.run(change({ checksum: "b".repeat(64) })),
-    ).rejects.toMatchObject({ code: "AUTHZ_CHANGE_DRIFT" });
+    await expect(input.run(change({ checksum: "b".repeat(64) }))).rejects.toMatchObject({ code: "AUTHZ_CHANGE_DRIFT" });
     expect(input.store.appliedMarkers).toEqual(markers);
   });
 
@@ -239,9 +203,7 @@ describe("authorization change recovery", () => {
       definitions: [],
       beforeSchemaWrite: () => {
         calls += 1;
-        return calls === 1
-          ? Promise.reject(new Error("unfinished"))
-          : Promise.resolve();
+        return calls === 1 ? Promise.reject(new Error("unfinished")) : Promise.resolve();
       },
     });
     await expect(input.run(entry)).rejects.toThrow("unfinished");

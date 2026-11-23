@@ -18,13 +18,9 @@ describe("createPostgresConnection", () => {
       { schema, connectionString: "postgres://nobody:nope@127.0.0.1:1/void" },
       { error: vi.fn() },
     );
-    expectTypeOf<DrizzleHandle>().toEqualTypeOf<
-      NodePgDatabase<Record<string, unknown>>
-    >();
+    expectTypeOf<DrizzleHandle>().toEqualTypeOf<NodePgDatabase<Record<string, unknown>>>();
     expectTypeOf<RootHandle>().toEqualTypeOf<DrizzleHandle>();
-    expectTypeOf<DrizzleHandle<typeof schema>>().toEqualTypeOf<
-      NodePgDatabase<typeof schema>
-    >();
+    expectTypeOf<DrizzleHandle<typeof schema>>().toEqualTypeOf<NodePgDatabase<typeof schema>>();
     expectTypeOf(connection.drizzle).toExtend<DrizzleHandle<typeof schema>>();
     expect(connection.drizzle.$client).toBe(connection.pool);
     await connection.close();
@@ -47,10 +43,7 @@ describe("createPostgresConnection", () => {
   it("caps the pool at maxConnections, attributed or not, and keeps pg's 10 otherwise", async () => {
     const connectionString = "postgres://nobody:nope@127.0.0.1:1/void";
     const log = { error: vi.fn() };
-    const capped = createPostgresConnection(
-      { schema: {}, connectionString, maxConnections: 4 },
-      log,
-    );
+    const capped = createPostgresConnection({ schema: {}, connectionString, maxConnections: 4 }, log);
     const attributed = createPostgresConnection(
       {
         schema: {},
@@ -60,10 +53,7 @@ describe("createPostgresConnection", () => {
       },
       log,
     );
-    const uncapped = createPostgresConnection(
-      { schema: {}, connectionString },
-      log,
-    );
+    const uncapped = createPostgresConnection({ schema: {}, connectionString }, log);
 
     expect(capped.pool.options.max).toBe(4);
     expect(attributed.pool.options.max).toBe(3);
@@ -91,10 +81,7 @@ describe("createPostgresConnection", () => {
       },
       log,
     );
-    const none = createPostgresConnection(
-      { schema: {}, connectionString },
-      log,
-    );
+    const none = createPostgresConnection({ schema: {}, connectionString }, log);
 
     expect(plain.pool.options.options).toBe("-c app.one=on -c app.two=off");
     expect(attributed.pool.options.options).toBe("-c app.one=on");
@@ -111,12 +98,9 @@ describe("createPostgresConnection", () => {
       { "app.one": "" },
     ];
     for (const sessionSettings of refusedSettings) {
-      expect(() =>
-        createPostgresConnection(
-          { schema: {}, connectionString, sessionSettings },
-          log,
-        ),
-      ).toThrow(/not a plain word/);
+      expect(() => createPostgresConnection({ schema: {}, connectionString, sessionSettings }, log)).toThrow(
+        /not a plain word/,
+      );
     }
   });
 });

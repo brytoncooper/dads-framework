@@ -32,10 +32,7 @@ const planResponse = {
 describe("dad-test init", () => {
   it("writes the versioned envelope, then refuses to overwrite without --force", async () => {
     const workspaceRoot = makeWorkspace();
-    const nativeBinary = createFakeNativeBinary(
-      makeTemporaryDirectory(),
-      planResponse,
-    ).binary;
+    const nativeBinary = createFakeNativeBinary(makeTemporaryDirectory(), planResponse).binary;
 
     const first = createHarness(workspaceRoot, nativeBinary);
     expect(await runDadTestCli(["init", "--json"], first.io)).toBe(0);

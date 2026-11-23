@@ -11,14 +11,10 @@ export function resolveReadConsistency(input: {
   readonly queryToken?: string;
   readonly requestToken?: string;
 }): ReadConsistencyDecision {
-  if (
-    input.adapterConsistency === "fully-consistent" ||
-    input.queryConsistency === "fully-consistent"
-  ) {
+  if (input.adapterConsistency === "fully-consistent" || input.queryConsistency === "fully-consistent") {
     return { kind: "fully-consistent" };
   }
-  const token =
-    presentToken(input.queryToken) ?? presentToken(input.requestToken);
+  const token = presentToken(input.queryToken) ?? presentToken(input.requestToken);
   if (token !== undefined) {
     return { kind: "at-least-as-fresh", token };
   }

@@ -3,21 +3,9 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { expect, it } from "vitest";
 
-import {
-  actor,
-  allOf,
-  anyOf,
-  compileAccess,
-  emitAccessIr,
-  every,
-  resource,
-  roleToken,
-} from "../index.js";
+import { actor, allOf, anyOf, compileAccess, emitAccessIr, every, resource, roleToken } from "../index.js";
 import type { AccessIrDefinition, AccessIrTerm } from "../core/ir.js";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "../runtime/authorization.js";
+import type { PermissionQuery, RelationshipWrite } from "../runtime/authorization.js";
 import { InMemoryAuthorization } from "./in-memory-authorization.js";
 
 const ORACLE_BIN = path.resolve(
@@ -47,9 +35,7 @@ function callLeanOracle(payload: unknown): {
   }
   return {
     checks: parsed.checks.map((entry) => Boolean(entry)),
-    lookups: parsed.lookups.map((list) =>
-      Array.isArray(list) ? list.map(String) : [],
-    ),
+    lookups: parsed.lookups.map((list) => (Array.isArray(list) ? list.map(String) : [])),
   };
 }
 
@@ -71,22 +57,16 @@ function lowerTermForOracle(
     case "role":
       return { kind: "relation", relation: term.name };
     case "permission": {
-      const targetPerm = currentDef?.permissions.find(
-        (perm) => perm.name === term.name,
-      );
+      const targetPerm = currentDef?.permissions.find((perm) => perm.name === term.name);
       if (targetPerm === undefined) return { kind: "any-of", expressions: [] };
       return {
         kind: "any-of",
-        expressions: targetPerm.terms.map((child) =>
-          lowerTermForOracle(child, entityWireName, definitionsByName),
-        ),
+        expressions: targetPerm.terms.map((child) => lowerTermForOracle(child, entityWireName, definitionsByName)),
       };
     }
     case "through":
     case "through-all": {
-      const role = currentDef?.roles.find(
-        (entry) => entry.name === term.roleName,
-      );
+      const role = currentDef?.roles.find((entry) => entry.name === term.roleName);
       const targets = (role?.subjects ?? [])
         .filter((subject) => subject.kind === "type")
         .map((subject) => ({
@@ -118,23 +98,13 @@ function lowerTermForOracle(
     case "excluding":
       return {
         kind: "exclude",
-        include: lowerTermForOracle(
-          term.term,
-          entityWireName,
-          definitionsByName,
-        ),
-        exclude: lowerTermForOracle(
-          term.banned,
-          entityWireName,
-          definitionsByName,
-        ),
+        include: lowerTermForOracle(term.term, entityWireName, definitionsByName),
+        exclude: lowerTermForOracle(term.banned, entityWireName, definitionsByName),
       };
     case "or":
       return {
         kind: "any-of",
-        expressions: term.terms.map((child) =>
-          lowerTermForOracle(child, entityWireName, definitionsByName),
-        ),
+        expressions: term.terms.map((child) => lowerTermForOracle(child, entityWireName, definitionsByName)),
       };
   }
 }
@@ -151,11 +121,7 @@ function buildAdversarialSchema() {
   const workspace = resource("fuzz/workspace", {
     roles: {
       owner: user.expiring,
-      member: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      member: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       banned: user,
     },
     can: ({ owner, member, banned }) => ({
@@ -175,11 +141,7 @@ function buildAdversarialSchema() {
   const document = resource("fuzz/document", {
     parents: [workspace, folder],
     roles: {
-      viewer: [
-        user.expiring,
-        group.roles.member.expiring,
-        user.anyone.expiring,
-      ],
+      viewer: [user.expiring, group.roles.member.expiring, user.anyone.expiring],
       approver: user,
       banned: user,
     },
@@ -354,9 +316,7 @@ it.runIf(existsSync(ORACLE_BIN))(
   () => {
     const model = buildAdversarialSchema();
     const irDefinitions = emitAccessIr(model);
-    const definitionsByName = new Map(
-      irDefinitions.map((definition) => [definition.wireName, definition]),
-    );
+    const definitionsByName = new Map(irDefinitions.map((definition) => [definition.wireName, definition]));
     const oracleModel = {
       relations: irDefinitions.flatMap((definition) =>
         definition.roles.map((role) => ({
@@ -383,19 +343,11 @@ it.runIf(existsSync(ORACLE_BIN))(
           wireName: permission.name,
           expression:
             permission.terms.length === 1 && permission.terms[0] !== undefined
-              ? lowerTermForOracle(
-                  permission.terms[0],
-                  definition.wireName,
-                  definitionsByName,
-                )
+              ? lowerTermForOracle(permission.terms[0], definition.wireName, definitionsByName)
               : {
                   kind: "any-of",
                   expressions: permission.terms.map((term) =>
-                    lowerTermForOracle(
-                      term,
-                      definition.wireName,
-                      definitionsByName,
-                    ),
+                    lowerTermForOracle(term, definition.wireName, definitionsByName),
                   ),
                 },
         })),
@@ -415,15 +367,7 @@ it.runIf(existsSync(ORACLE_BIN))(
       const authorization = new InMemoryAuthorization(model, {
         startTime: nowMs,
       });
-      const writes = generateRandomWrites(
-        seed * 131,
-        nowMs,
-        users,
-        groups,
-        workspaces,
-        folders,
-        documents,
-      );
+      const writes = generateRandomWrites(seed * 131, nowMs, users, groups, workspaces, folders, documents);
       authorization.writeRelationshipsSync(writes);
 
       const checkQueries: PermissionQuery[] = [];
@@ -483,9 +427,7 @@ it.runIf(existsSync(ORACLE_BIN))(
           resourceType: spec.resourceKind,
           permission: spec.permission,
         });
-        expect([...actualIds].sort()).toEqual(
-          [...(oracle.lookups[index] ?? [])].sort(),
-        );
+        expect([...actualIds].sort()).toEqual([...(oracle.lookups[index] ?? [])].sort());
         totalQueriesVerified += 1;
       }
     }

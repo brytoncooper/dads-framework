@@ -3,18 +3,11 @@ import { Slot } from "radix-ui";
 import * as React from "react";
 
 import { cn, Skeleton } from "../../../elements/index.js";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../../../overlays/index.js";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../../overlays/index.js";
 
 import { useSidebar } from "./sidebar-context.js";
 
-export function SidebarMenu({
-  className,
-  ...props
-}: React.ComponentProps<"ul">) {
+export function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
       data-slot="sidebar-menu"
@@ -25,10 +18,7 @@ export function SidebarMenu({
   );
 }
 
-export function SidebarMenuItem({
-  className,
-  ...props
-}: React.ComponentProps<"li">) {
+export function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
   return (
     <li
       data-slot="sidebar-menu-item"
@@ -45,12 +35,10 @@ const sidebarMenuButtonVariants = cva(
     variants: {
       variant: {
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        outline:
-          "border border-sidebar-border bg-sidebar hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        outline: "border border-sidebar-border bg-sidebar hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       },
       size: {
-        default:
-          "h-8 text-[15px] in-data-[mobile=true]:min-h-11 in-data-[mobile=true]:px-3 md:h-8 md:px-2",
+        default: "h-8 text-[15px] in-data-[mobile=true]:min-h-11 in-data-[mobile=true]:px-3 md:h-8 md:px-2",
         sm: "h-7 text-xs in-data-[mobile=true]:min-h-11 in-data-[mobile=true]:px-3 md:h-7 md:px-2",
         lg: "h-12 text-[15px] group-data-[collapsible=icon]:p-0!",
       },
@@ -112,12 +100,7 @@ export function SidebarMenuButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent
-        side="right"
-        align="center"
-        hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
-      />
+      <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...tooltip} />
     </Tooltip>
   );
 }
@@ -150,10 +133,7 @@ export function SidebarMenuAction({
   );
 }
 
-export function SidebarMenuBadge({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export function SidebarMenuBadge({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sidebar-menu-badge"
@@ -191,25 +171,13 @@ export function SidebarMenuSkeleton({
       className={cn("flex h-8 items-center gap-2 rounded-md px-2", className)}
       {...props}
     >
-      {showIcon && (
-        <Skeleton
-          className="size-4 rounded-md"
-          data-sidebar="menu-skeleton-icon"
-        />
-      )}
-      <Skeleton
-        className="h-4 flex-1"
-        data-sidebar="menu-skeleton-text"
-        style={{ maxWidth: width }}
-      />
+      {showIcon && <Skeleton className="size-4 rounded-md" data-sidebar="menu-skeleton-icon" />}
+      <Skeleton className="h-4 flex-1" data-sidebar="menu-skeleton-text" style={{ maxWidth: width }} />
     </div>
   );
 }
 
-export function SidebarMenuSub({
-  className,
-  ...props
-}: React.ComponentProps<"ul">) {
+export function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
       data-slot="sidebar-menu-sub"
@@ -224,10 +192,7 @@ export function SidebarMenuSub({
   );
 }
 
-export function SidebarMenuSubItem({
-  className,
-  ...props
-}: React.ComponentProps<"li">) {
+export function SidebarMenuSubItem({ className, ...props }: React.ComponentProps<"li">) {
   return (
     <li
       data-slot="sidebar-menu-sub-item"

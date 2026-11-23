@@ -8,15 +8,8 @@ function isWorkbookConstructor(value: unknown): value is WorkbookConstructor {
   return typeof value === "function";
 }
 
-function workbookConstructorFrom(
-  value: unknown,
-): WorkbookConstructor | undefined {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "Workbook" in value &&
-    isWorkbookConstructor(value.Workbook)
-  ) {
+function workbookConstructorFrom(value: unknown): WorkbookConstructor | undefined {
+  if (typeof value === "object" && value !== null && "Workbook" in value && isWorkbookConstructor(value.Workbook)) {
     return value.Workbook;
   }
   return undefined;
@@ -39,14 +32,8 @@ function unwrapWorkbookConstructor(loaded: unknown): WorkbookConstructor {
  * spreadsheet ever use it — so it is loaded here on demand instead of riding
  * in the bundle every visitor downloads before the first screen paints.
  */
-export async function createWorkbook(
-  load: () => Promise<unknown> = () => import("exceljs"),
-): Promise<Workbook> {
-  const loaded = await loadOptionalPeer(
-    "@dads-framework/documents/xlsx",
-    "exceljs",
-    load,
-  );
+export async function createWorkbook(load: () => Promise<unknown> = () => import("exceljs")): Promise<Workbook> {
+  const loaded = await loadOptionalPeer("@dads-framework/documents/xlsx", "exceljs", load);
   const WorkbookEngine = unwrapWorkbookConstructor(loaded);
   return new WorkbookEngine();
 }

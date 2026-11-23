@@ -9,9 +9,7 @@ const rawProject: unknown = JSON.parse(readFileSync(manifest, "utf8"));
 const project = parseDadsProject(rawProject);
 
 it("selects the registered stylesheet compiler for a changed package asset", () => {
-  const plan = collectCandidateTasks(project, [
-    "packages/web/ui/styles/utilities.css",
-  ]);
+  const plan = collectCandidateTasks(project, ["packages/web/ui/styles/utilities.css"]);
 
   expect(plan.usedFullFallback).toBe(false);
   expect(plan.unknownPaths).toEqual([]);

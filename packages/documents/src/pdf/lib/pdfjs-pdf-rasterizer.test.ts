@@ -34,10 +34,7 @@ async function inkedShare(png: Uint8Array): Promise<number> {
 
 describe("PdfjsPdfRasterizer", () => {
   it("renders every page of a real PDF as a PNG at the asked resolution", async () => {
-    const pages = await new PdfjsPdfRasterizer().rasterize(
-      await twoPageReceipt(),
-      { dpi: 144, maxPages: 10 },
-    );
+    const pages = await new PdfjsPdfRasterizer().rasterize(await twoPageReceipt(), { dpi: 144, maxPages: 10 });
 
     expect(pages).toHaveLength(2);
     for (const page of pages) {
@@ -53,10 +50,7 @@ describe("PdfjsPdfRasterizer", () => {
   }, 30_000);
 
   it("stops at maxPages", async () => {
-    const pages = await new PdfjsPdfRasterizer().rasterize(
-      await twoPageReceipt(),
-      { dpi: 72, maxPages: 1 },
-    );
+    const pages = await new PdfjsPdfRasterizer().rasterize(await twoPageReceipt(), { dpi: 72, maxPages: 1 });
 
     expect(pages).toHaveLength(1);
   }, 30_000);

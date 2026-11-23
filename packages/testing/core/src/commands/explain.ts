@@ -27,10 +27,7 @@ export const explainCommand: DadTestCommand = {
   options: explainOptions,
   execute: async (parsed, io, json) => {
     const plan = await planTesting(buildOperationRequest(parsed, io));
-    const manifest = readTestingManifest(
-      io.cwd,
-      parsed.values.get("--manifest"),
-    );
+    const manifest = readTestingManifest(io.cwd, parsed.values.get("--manifest"));
     const explanation = explainPlan(plan, manifest);
     if (json) {
       writeCommandSuccess(io, json, "explain", explanation);

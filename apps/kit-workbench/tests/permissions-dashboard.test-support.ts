@@ -1,7 +1,4 @@
-import {
-  ACCESS_REFUSAL_HEADER,
-  ACCESS_REFUSAL_VALUE,
-} from "@dads-framework/core/contract";
+import { ACCESS_REFUSAL_HEADER, ACCESS_REFUSAL_VALUE } from "@dads-framework/core/contract";
 import { expect } from "vitest";
 import { z } from "zod";
 
@@ -11,9 +8,7 @@ type Http = Awaited<ReturnType<typeof startApp>>;
 type RequestHeaders = (cookie?: string) => Record<string, string>;
 
 const rosterResponse = z.strictObject({
-  data: z.array(
-    z.strictObject({ accountId: z.string().min(1), role: z.string() }),
-  ),
+  data: z.array(z.strictObject({ accountId: z.string().min(1), role: z.string() })),
   meta: z.object({ total: z.number() }),
 });
 
@@ -78,8 +73,7 @@ export async function provePermissionsAfterInvite(
   });
   const { data } = rosterResponse.parse(rosterRead.json());
   const selected = data.find(({ role }) => role === "member");
-  if (selected === undefined)
-    throw new Error("Expected an ordinary workspace member.");
+  if (selected === undefined) throw new Error("Expected an ordinary workspace member.");
   const url = `${roster}/${encodeURIComponent(selected.accountId)}/permissions`;
   const inspected = await http.inject({
     method: "GET",

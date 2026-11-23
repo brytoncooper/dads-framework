@@ -7,9 +7,5 @@ export type { NodePgDatabase as DrizzleDatabase } from "drizzle-orm/node-postgre
  * pool-owned client. Keep the schema inferred from the factory result and
  * preserve the historical unconfigured schema default.
  */
-export type DrizzleHandle<
-  TSchema extends Record<string, unknown> = Record<string, unknown>,
-> =
-  ReturnType<typeof drizzle<TSchema>> extends NodePgDatabase<infer Schema>
-    ? NodePgDatabase<Schema>
-    : never;
+export type DrizzleHandle<TSchema extends Record<string, unknown> = Record<string, unknown>> =
+  ReturnType<typeof drizzle<TSchema>> extends NodePgDatabase<infer Schema> ? NodePgDatabase<Schema> : never;

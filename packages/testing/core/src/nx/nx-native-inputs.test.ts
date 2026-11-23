@@ -41,10 +41,7 @@ describe("native Nx conservative input scopes", () => {
       namedInputs: undefined,
       dependencies: [],
     };
-    const withRootProject = new Map([
-      ...projects,
-      [rootProject.name, rootProject],
-    ]);
+    const withRootProject = new Map([...projects, [rootProject.name, rootProject]]);
     for (const pattern of ["+(alpha|beta)", "@(alpha|beta)", "!(alpha)"]) {
       const scope = inputScope(
         harbor,
@@ -54,31 +51,18 @@ describe("native Nx conservative input scopes", () => {
         {},
       );
       expect(scope.mode).toBe("changed-files");
-      expect(scope.paths).toEqual(
-        [
-          ...globalPolicyPaths,
-          "apps/harbor",
-          "libs/shared",
-          "other-libraries",
-        ].sort(),
-      );
+      expect(scope.paths).toEqual([...globalPolicyPaths, "apps/harbor", "libs/shared", "other-libraries"].sort());
     }
   });
 
   it("expands named inputs using each dependency project's overrides", () => {
-    const scope = inputScope(
-      harbor,
-      "test",
-      { inputs: ["shared", "^shared"] },
-      projects,
-      {
-        namedInputs: {
-          default: ["{projectRoot}/**/*", "global"],
-          global: ["{workspaceRoot}/config/global.json"],
-          shared: ["{workspaceRoot}/unused/**/*"],
-        },
+    const scope = inputScope(harbor, "test", { inputs: ["shared", "^shared"] }, projects, {
+      namedInputs: {
+        default: ["{projectRoot}/**/*", "global"],
+        global: ["{workspaceRoot}/config/global.json"],
+        shared: ["{workspaceRoot}/unused/**/*"],
       },
-    );
+    });
     expect(scope.mode).toBe("changed-files");
     expect(scope.paths).toEqual(
       [
@@ -109,14 +93,7 @@ describe("native Nx conservative input scopes", () => {
     );
     expect(scope.mode).toBe("changed-files");
     expect(scope.paths).toEqual(
-      [
-        ...globalPolicyPaths,
-        "apps/harbor",
-        "assets",
-        "config",
-        "libs/shared",
-        "settings",
-      ].sort(),
+      [...globalPolicyPaths, "apps/harbor", "assets", "config", "libs/shared", "settings"].sort(),
     );
   });
 
@@ -154,13 +131,7 @@ describe("native Nx conservative input scopes", () => {
     );
     expect(scope.mode).toBe("changed-files");
     expect(scope.paths).toEqual(
-      [
-        ...globalPolicyPaths,
-        "apps/harbor",
-        "apps/harbor/src",
-        "libs/shared",
-        "release/versions.json",
-      ].sort(),
+      [...globalPolicyPaths, "apps/harbor", "apps/harbor/src", "libs/shared", "release/versions.json"].sort(),
     );
   });
 
@@ -181,9 +152,7 @@ describe("native Nx conservative input scopes", () => {
     );
     expect(scope.mode).toBe("changed-files");
     expect(scope.reason).toContain("plugin-inferred inputs assumed");
-    expect(scope.paths).toEqual(
-      [...globalPolicyPaths, "apps/harbor", "libs/shared"].sort(),
-    );
+    expect(scope.paths).toEqual([...globalPolicyPaths, "apps/harbor", "libs/shared"].sort());
   });
 
   it("takes targetDefaults inputs only for a target that declares none of its own", () => {
@@ -195,23 +164,10 @@ describe("native Nx conservative input scopes", () => {
         lint: { inputs: [{ runtime: "eslint --version" }] },
       },
     };
-    const inherited = inputScope(
-      harbor,
-      "test",
-      { executor: "@nx/vite:test" },
-      projects,
-      configuration,
-    );
+    const inherited = inputScope(harbor, "test", { executor: "@nx/vite:test" }, projects, configuration);
     expect(inherited.mode).toBe("changed-files");
     expect(inherited.paths).toEqual(
-      [
-        ...globalPolicyPaths,
-        "apps/harbor",
-        "every-target",
-        "libs/shared",
-        "vite-shared",
-        "vitest.setup.ts",
-      ].sort(),
+      [...globalPolicyPaths, "apps/harbor", "every-target", "libs/shared", "vite-shared", "vitest.setup.ts"].sort(),
     );
     const declared = inputScope(
       harbor,
@@ -220,17 +176,8 @@ describe("native Nx conservative input scopes", () => {
       projects,
       configuration,
     );
-    expect(declared.paths).toEqual(
-      [
-        ...globalPolicyPaths,
-        "apps/harbor",
-        "apps/harbor/src",
-        "libs/shared",
-      ].sort(),
-    );
-    expect(inputScope(harbor, "lint", {}, projects, configuration).mode).toBe(
-      "always",
-    );
+    expect(declared.paths).toEqual([...globalPolicyPaths, "apps/harbor", "apps/harbor/src", "libs/shared"].sort());
+    expect(inputScope(harbor, "lint", {}, projects, configuration).mode).toBe("always");
   });
 
   it("unions the inputs every configuration adds to the default ones", () => {
@@ -257,13 +204,8 @@ describe("native Nx conservative input scopes", () => {
         "local-overrides",
       ].sort(),
     );
-    expect(
-      inputScope(harbor, "test", { configurations: 4 }, projects, {}).mode,
-    ).toBe("always");
-    expect(
-      inputScope(harbor, "test", { configurations: { ci: 4 } }, projects, {})
-        .mode,
-    ).toBe("always");
+    expect(inputScope(harbor, "test", { configurations: 4 }, projects, {}).mode).toBe("always");
+    expect(inputScope(harbor, "test", { configurations: { ci: 4 } }, projects, {}).mode).toBe("always");
   });
 
   it("follows a prerequisite to the exact projects Nx names for it", () => {
@@ -284,26 +226,12 @@ describe("native Nx conservative input scopes", () => {
     );
     expect(scope.mode).toBe("changed-files");
     expect(scope.paths).toEqual(
-      [
-        ...globalPolicyPaths,
-        "apps/harbor",
-        "codegen-config",
-        "libs/shared",
-        "tools/codegen",
-      ].sort(),
+      [...globalPolicyPaths, "apps/harbor", "codegen-config", "libs/shared", "tools/codegen"].sort(),
     );
     expect(
-      inputScope(
-        harbor,
-        "test",
-        { dependsOn: [{ projects: ["tag:missing"], target: "build" }] },
-        withTooling,
-        {},
-      ).mode,
+      inputScope(harbor, "test", { dependsOn: [{ projects: ["tag:missing"], target: "build" }] }, withTooling, {}).mode,
     ).toBe("always");
-    expect(
-      inputScope(harbor, "test", { dependsOn: "build" }, withTooling, {}).mode,
-    ).toBe("always");
+    expect(inputScope(harbor, "test", { dependsOn: "build" }, withTooling, {}).mode).toBe("always");
   });
 
   it("falls back for cyclic definitions and invalid configuration boundaries", () => {
@@ -313,19 +241,9 @@ describe("native Nx conservative input scopes", () => {
       { targetDefaults: 4 },
       { namedInputs: { default: ["first"], first: ["default"] } },
     ]) {
-      expect(inputScope(harbor, "test", {}, projects, configuration).mode).toBe(
-        "always",
-      );
+      expect(inputScope(harbor, "test", {}, projects, configuration).mode).toBe("always");
     }
-    expect(
-      inputScope(
-        harbor,
-        "test",
-        { inputs: ["{workspaceRoot}/**/*"] },
-        projects,
-        {},
-      ).mode,
-    ).toBe("always");
+    expect(inputScope(harbor, "test", { inputs: ["{workspaceRoot}/**/*"] }, projects, {}).mode).toBe("always");
   });
 
   it("keeps a workspace-root project and an unresolved dependency at always", () => {
@@ -343,18 +261,10 @@ describe("native Nx conservative input scopes", () => {
       namedInputs: undefined,
       dependencies: ["workspace"],
     };
-    const withRoot = new Map([
-      ...projects,
-      [rooted.name, rooted],
-      [dependent.name, dependent],
-    ]);
-    expect(inputScope(rooted, "test", {}, withRoot, {}).reason).toContain(
-      "workspace-root project",
-    );
+    const withRoot = new Map([...projects, [rooted.name, rooted], [dependent.name, dependent]]);
+    expect(inputScope(rooted, "test", {}, withRoot, {}).reason).toContain("workspace-root project");
     expect(inputScope(dependent, "test", {}, withRoot, {}).mode).toBe("always");
     const orphan: NativeProject = { ...harbor, dependencies: ["absent"] };
-    expect(inputScope(orphan, "test", {}, projects, {}).reason).toContain(
-      "unresolved project dependency",
-    );
+    expect(inputScope(orphan, "test", {}, projects, {}).reason).toContain("unresolved project dependency");
   });
 });

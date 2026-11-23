@@ -2,18 +2,10 @@ import type { GenerationPlan } from "./generation-plan.js";
 import { camel, title } from "./names.js";
 import { exposeWebArtifact } from "./web-client-exports.js";
 
-export function addPage(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function addPage(plan: GenerationPlan, domain: string, name: string): void {
   const functionName = `render${capitalized(camel(name))}Page`;
   const path = `domains/${domain}/web-client`;
-  exposeWebArtifact(
-    plan,
-    domain,
-    `export { ${functionName} } from "./${name}-page.js";`,
-  );
+  exposeWebArtifact(plan, domain, `export { ${functionName} } from "./${name}-page.js";`);
   plan.create(
     `${path}/${name}-page.ts`,
     `export function ${functionName}(): string {

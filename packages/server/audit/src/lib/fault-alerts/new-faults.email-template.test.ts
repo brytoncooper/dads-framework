@@ -10,10 +10,7 @@ import { describe, expect, it } from "vitest";
 
 describe("newFaultsEmailTemplate", () => {
   it("renders every sample under the server's TSX loader", () => {
-    const templateUrl = new URL(
-      "./new-faults.email-template.tsx",
-      import.meta.url,
-    ).href;
+    const templateUrl = new URL("./new-faults.email-template.tsx", import.meta.url).href;
     const source = `
       import { renderEmailTemplate } from "@dads-framework/email/templates";
       import { newFaultsEmailTemplate as template } from ${JSON.stringify(templateUrl)};
@@ -21,14 +18,10 @@ describe("newFaultsEmailTemplate", () => {
         await renderEmailTemplate(template, props);
       process.stdout.write("rendered");
     `;
-    const result = spawnSync(
-      process.execPath,
-      ["--import", "tsx", "--input-type=module", "-e", source],
-      {
-        encoding: "utf8",
-        env: { ...process.env, TSX_TSCONFIG_PATH: undefined },
-      },
-    );
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", source], {
+      encoding: "utf8",
+      env: { ...process.env, TSX_TSCONFIG_PATH: undefined },
+    });
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toBe("rendered");

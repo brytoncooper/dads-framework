@@ -14,31 +14,19 @@ const STATUS_BADGE_CLASS: Record<StatusTone, string> = {
   information: "border-info/50 bg-info/10 text-foreground",
 };
 
-type StatusBadgeProps = Omit<
-  React.ComponentProps<typeof Badge>,
-  "asChild" | "children" | "variant"
-> & {
+type StatusBadgeProps = Omit<React.ComponentProps<typeof Badge>, "asChild" | "children" | "variant"> & {
   tone: StatusTone;
   children: React.ReactNode;
 };
 
 /** A visible status word paired with a decorative semantic lamp. */
-export function StatusBadge({
-  tone,
-  className,
-  children,
-  ...props
-}: StatusBadgeProps) {
+export function StatusBadge({ tone, className, children, ...props }: StatusBadgeProps) {
   return (
     <Badge
       {...props}
       data-slot="status-badge"
       variant="outline"
-      className={cn(
-        "gap-1.5 border font-normal",
-        STATUS_BADGE_CLASS[tone],
-        className,
-      )}
+      className={cn("gap-1.5 border font-normal", STATUS_BADGE_CLASS[tone], className)}
     >
       <StatusLamp tone={tone} data-slot="status-badge-lamp" />
       {children}
@@ -57,11 +45,7 @@ export function StatusLamp({ tone, className, ...props }: StatusLampProps) {
       data-slot="status-lamp"
       {...props}
       aria-hidden="true"
-      className={cn(
-        "size-1.5 shrink-0 rounded-full",
-        STATUS_LAMP_CLASS[tone],
-        className,
-      )}
+      className={cn("size-1.5 shrink-0 rounded-full", STATUS_LAMP_CLASS[tone], className)}
     />
   );
 }

@@ -1,9 +1,6 @@
 import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import type {
-  OperationPathParamsShape,
-  PostNoContentOperationContract,
-} from "@dads-framework/core/contract";
+import type { OperationPathParamsShape, PostNoContentOperationContract } from "@dads-framework/core/contract";
 import type { PermissionAccess, SessionAccess } from "./access.js";
 import {
   resolveNoContentOperationConfig,
@@ -38,12 +35,7 @@ export type PostNoContentRouteConfig<
 > = VerbCommon<"POST", Path, Access> & {
   readonly body?: BodySchema;
   handler(
-    ctx: RouteHandlerContext<
-      SchemaOutput<ParamsSchema>,
-      undefined,
-      SchemaOutput<BodySchema>,
-      SubjectRef
-    >,
+    ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, undefined, SchemaOutput<BodySchema>, SubjectRef>,
   ): Promise<void> | void;
 } & VerbParams<Path, ParamsSchema>;
 
@@ -76,18 +68,11 @@ export function postNoContentRoute<
   config: PostNoContentContractSource<Path, ParamsSchema, BodySchema> &
     OperationVerbCommon<Access> & {
       handler(
-        ctx: RouteHandlerContext<
-          SchemaOutput<ParamsSchema>,
-          undefined,
-          SchemaOutput<BodySchema>,
-          SubjectRef
-        >,
+        ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, undefined, SchemaOutput<BodySchema>, SubjectRef>,
       ): Promise<void> | void;
     },
 ): RouteBlueprint;
-export function postNoContentRoute(
-  config: ErasedNoContentVerbConfig | ErasedOperationNoContentConfig,
-): RouteBlueprint {
+export function postNoContentRoute(config: ErasedNoContentVerbConfig | ErasedOperationNoContentConfig): RouteBlueprint {
   const normalized = resolveNoContentOperationConfig(config, "post-no-content");
   return buildNoContentDefinition({
     ...normalized,

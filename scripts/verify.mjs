@@ -32,27 +32,12 @@
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
-import {
-  budgetFromResources,
-  budgetReceipt,
-  requestedBudget,
-  sampleVerifyResources,
-} from "./verify-budget.mjs";
-import {
-  finishRunCache,
-  openVerifyCache,
-  runThroughCache,
-} from "./verify-cache.mjs";
+import { budgetFromResources, budgetReceipt, requestedBudget, sampleVerifyResources } from "./verify-budget.mjs";
+import { finishRunCache, openVerifyCache, runThroughCache } from "./verify-cache.mjs";
 import { captureFingerprint } from "./verify-fingerprint.mjs";
 import { withCacheScopes } from "./verify-cache-scopes.mjs";
 import { verifySteps } from "./verify-graph.mjs";
-import {
-  blockedLine,
-  failureBlock,
-  finishLine,
-  startLine,
-  summaryBlock,
-} from "./verify-report.mjs";
+import { blockedLine, failureBlock, finishLine, startLine, summaryBlock } from "./verify-report.mjs";
 import { captureProof, recordProof } from "./verify-receipt.mjs";
 import { runVerifyGraph } from "./verify-scheduler.mjs";
 import { spawnStep } from "./verify-spawn.mjs";
@@ -85,21 +70,15 @@ function parseArguments(argv) {
     else if (flag === "--no-fail-fast") options.failFast = false;
     else if (flag === "--no-cache") options.noCache = true;
     else if (flag === "--require-receipt") options.requireReceipt = true;
-    else if (flag === "--jobs")
-      options.jobs = wholeNumber(rest.shift(), "--jobs");
-    else
-      throw new Error(
-        `Unknown option "${String(flag)}". Known options: ${USAGE}.`,
-      );
+    else if (flag === "--jobs") options.jobs = wholeNumber(rest.shift(), "--jobs");
+    else throw new Error(`Unknown option "${String(flag)}". Known options: ${USAGE}.`);
   }
   return options;
 }
 
 function wholeNumber(value, origin) {
   if (typeof value !== "string" || !/^[1-9]\d*$/u.test(value)) {
-    throw new Error(
-      `${origin} needs a positive whole number, not "${String(value)}".`,
-    );
+    throw new Error(`${origin} needs a positive whole number, not "${String(value)}".`);
   }
   return Number(value);
 }
@@ -112,10 +91,7 @@ async function resolveBudget(options, environment) {
   if (options.serial) return requestedBudget(1, "--serial");
   const requested = environment.DADS_VERIFY_JOBS;
   if (requested !== undefined && requested !== "") {
-    return requestedBudget(
-      wholeNumber(requested, "DADS_VERIFY_JOBS"),
-      "DADS_VERIFY_JOBS",
-    );
+    return requestedBudget(wholeNumber(requested, "DADS_VERIFY_JOBS"), "DADS_VERIFY_JOBS");
   }
   return budgetFromResources(await sampleVerifyResources());
 }
@@ -149,17 +125,14 @@ async function main() {
   const before = captureProof(ROOT, cache?.fingerprint);
   if (options.requireReceipt && before === null) {
     if (cache !== null) finishRunCache(cache, cache.fingerprint);
-    throw new Error(
-      "Verification receipts require a clean, committed checkout.",
-    );
+    throw new Error("Verification receipts require a clean, committed checkout.");
   }
   const run = await runVerifyGraph({
     steps,
     budget: budget.jobs,
     serial: options.serial,
     failFast: options.failFast ?? false,
-    runStep: (step) =>
-      runThroughCache(cache, step, () => spawnStep(step, ROOT)),
+    runStep: (step) => runThroughCache(cache, step, () => spawnStep(step, ROOT)),
     onEvent: printEvent,
   });
   const after = cache === null ? undefined : captureFingerprint(ROOT);
@@ -168,19 +141,10 @@ async function main() {
   if (options.withDoctor) printCheckup();
   process.exitCode = run.exitCode;
   if (run.exitCode === 0) {
-    const recorded = recordProof(
-      ROOT,
-      before,
-      run,
-      { full: options.full, uncached: cache === null },
-      after,
-    );
-    if (recorded)
-      say("verify: recorded a proof receipt for the committed checkout");
+    const recorded = recordProof(ROOT, before, run, { full: options.full, uncached: cache === null }, after);
+    if (recorded) say("verify: recorded a proof receipt for the committed checkout");
     else if (options.requireReceipt)
-      throw new Error(
-        "No proof receipt was recorded. Check that verification left its inputs unchanged.",
-      );
+      throw new Error("No proof receipt was recorded. Check that verification left its inputs unchanged.");
   }
 }
 
@@ -194,11 +158,10 @@ function printCheckup() {
   say("");
   say(`checkup: dad doctor . --today ${today}`);
   say("");
-  const report = spawnSync(
-    process.execPath,
-    [DOCTOR, "doctor", ".", "--today", today],
-    { cwd: ROOT, encoding: "utf8" },
-  );
+  const report = spawnSync(process.execPath, [DOCTOR, "doctor", ".", "--today", today], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
   process.stdout.write(report.stdout);
   if (report.status !== 0) {
     say(`checkup: the doctor exited ${String(report.status)}`);
@@ -209,8 +172,6 @@ function printCheckup() {
 try {
   await main();
 } catch (error) {
-  process.stderr.write(
-    `${error instanceof Error ? error.message : String(error)}\n`,
-  );
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
 }

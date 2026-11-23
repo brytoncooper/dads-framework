@@ -16,10 +16,7 @@ import {
 } from "@dads-framework/core/contract";
 
 import { getFromApi, sendToApi } from "./api-verbs.js";
-import {
-  currentClientContextHeader,
-  setClientContextProvider,
-} from "./client-context.js";
+import { currentClientContextHeader, setClientContextProvider } from "./client-context.js";
 
 const widgetSchema = z.object({ id: z.string() });
 

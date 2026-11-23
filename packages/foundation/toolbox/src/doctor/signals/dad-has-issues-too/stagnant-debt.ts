@@ -19,16 +19,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  daysBefore,
-  requireGitWorkspace,
-  requireToday,
-} from "../scanners/git-history.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { daysBefore, requireGitWorkspace, requireToday } from "../scanners/git-history.js";
 import {
   BASELINE_PATH,
   NO_RATCHET_BASELINE,
@@ -60,8 +52,7 @@ function ageRecordedDebt(context: DoctorContext): SignalReadings {
 export const stagnantDebtSignal: DoctorSignal = {
   id: "stagnant-debt",
   issue: "dad-has-issues-too",
-  question:
-    "Is any baseline entry older than the profile's threshold whose mark never moved?",
+  question: "Is any baseline entry older than the profile's threshold whose mark never moved?",
   reads: "git",
   unit: "days",
   direction: "ceiling",

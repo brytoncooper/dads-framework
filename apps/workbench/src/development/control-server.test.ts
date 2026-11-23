@@ -32,10 +32,7 @@ describe("local development control", () => {
         expect(result.status).toBe(404);
       }
       expect(stops).toBe(0);
-      await Promise.all([
-        requestDevelopmentStop(control),
-        requestDevelopmentStop(control),
-      ]);
+      await Promise.all([requestDevelopmentStop(control), requestDevelopmentStop(control)]);
       expect(stops).toBe(1);
     } finally {
       await control.close();

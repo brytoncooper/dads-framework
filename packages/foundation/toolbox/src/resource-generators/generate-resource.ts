@@ -7,12 +7,7 @@ import { resourceRoutes } from "./resource-routes.js";
 import { resourceStore } from "./resource-store.js";
 import { addTable } from "./table-generator.js";
 
-export function addResource(
-  plan: GenerationPlan,
-  root: string,
-  domain: string,
-  name: string,
-): void {
+export function addResource(plan: GenerationPlan, root: string, domain: string, name: string): void {
   addTable(plan, root, domain, name);
   addResourceGuards(plan, domain, name);
   resourceContract(plan, domain, name);

@@ -1,15 +1,7 @@
 /** Verify the objects Git is sending, including refs outside the current checkout. */
 
 import { spawnSync } from "node:child_process";
-import {
-  accessSync,
-  constants,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-} from "node:fs";
+import { accessSync, constants, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -17,12 +9,7 @@ import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
 import { recordHookTiming } from "./hooks/record-hook-timing.mjs";
 import { git, gitEnvironment, sameHistory } from "./verify-fingerprint.mjs";
-import {
-  captureProof,
-  committedProofContext,
-  hasProof,
-  proofKey,
-} from "./verify-receipt.mjs";
+import { captureProof, committedProofContext, hasProof, proofKey } from "./verify-receipt.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -75,8 +62,7 @@ function verifyDetached(root, object) {
     verify(checkout);
   } finally {
     try {
-      if (existsSync(join(checkout, ".git")))
-        git(root, ["worktree", "remove", "--force", checkout]);
+      if (existsSync(join(checkout, ".git"))) git(root, ["worktree", "remove", "--force", checkout]);
     } finally {
       rmSync(scratch, { force: true, recursive: true });
     }
@@ -86,8 +72,7 @@ function verifyDetached(root, object) {
 export function verifyPush(root, input) {
   const objectFormat = git(root, ["rev-parse", "--show-object-format"]).trim();
   const oidLength = { sha1: 40, sha256: 64 }[objectFormat];
-  if (!Number.isInteger(oidLength))
-    throw new Error("Unsupported Git object format.");
+  if (!Number.isInteger(oidLength)) throw new Error("Unsupported Git object format.");
   const objects = pushedObjects(input, oidLength);
   let current;
   let cached = objects.size > 0;
@@ -97,31 +82,21 @@ export function verifyPush(root, input) {
     const cleanKey = proofKey(committed, []);
     if (hasProof(root, committed, cleanKey)) continue;
     current ??= captureProof(root) ?? false;
-    const inPlace =
-      current !== false &&
-      sameHistory(current.committed.history, committed.history);
+    const inPlace = current !== false && sameHistory(current.committed.history, committed.history);
     if (inPlace && hasProof(root, committed, current.key)) continue;
     cached = false;
     if (inPlace) verify(root);
     else verifyDetached(root, committed.history.commit);
     const verified = committedProofContext(root, object);
-    if (
-      proofKey(verified, []) !== cleanKey ||
-      !hasProof(root, committed, inPlace ? current.key : cleanKey)
-    ) {
-      throw new Error(
-        `No passing verification receipt for pushed object ${object}.`,
-      );
+    if (proofKey(verified, []) !== cleanKey || !hasProof(root, committed, inPlace ? current.key : cleanKey)) {
+      throw new Error(`No passing verification receipt for pushed object ${object}.`);
     }
   }
   return cached;
 }
 
 function localHook(root, input, args) {
-  const hook = resolve(
-    root,
-    git(root, ["rev-parse", "--git-path", "hooks/pre-push.local"]).trim(),
-  );
+  const hook = resolve(root, git(root, ["rev-parse", "--git-path", "hooks/pre-push.local"]).trim());
   try {
     accessSync(hook, constants.X_OK);
   } catch (error) {
@@ -135,10 +110,7 @@ function localHook(root, input, args) {
   });
 }
 
-if (
-  process.argv[1] !== undefined &&
-  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+if (process.argv[1] !== undefined && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const startedAt = performance.now();
     const input = readFileSync(0, "utf8");

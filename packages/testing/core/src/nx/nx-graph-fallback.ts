@@ -43,21 +43,13 @@ export function parseNxGraphFallbackDependencies(
 
 /** The `graph.nodes` and `graph.dependencies` objects, or a refusal. */
 function readGraphBody(graph: JsonValue): NxGraphBody {
-  if (!isJsonRecord(graph))
-    throw new Error(
-      "Unsupported Nx graph shape: graph output must be a JSON object.",
-    );
+  if (!isJsonRecord(graph)) throw new Error("Unsupported Nx graph shape: graph output must be a JSON object.");
   const graphBody = readOptionalJsonRecord(graph, "graph");
-  if (!graphBody)
-    throw new Error(
-      "Unsupported Nx graph shape: expected top-level graph object.",
-    );
+  if (!graphBody) throw new Error("Unsupported Nx graph shape: expected top-level graph object.");
   const nodes = readOptionalJsonRecord(graphBody, "nodes");
   const dependencies = readOptionalJsonRecord(graphBody, "dependencies");
   if (!nodes || !dependencies)
-    throw new Error(
-      "Unsupported Nx graph shape: expected graph.nodes and graph.dependencies objects.",
-    );
+    throw new Error("Unsupported Nx graph shape: expected graph.nodes and graph.dependencies objects.");
   return { nodes, dependencies };
 }
 
@@ -82,20 +74,13 @@ function projectDependencies(
 }
 
 /** The declared edges leaving one project, or a refusal. */
-function readProjectEdges(
-  body: NxGraphBody,
-  projectName: string,
-): readonly JsonValue[] {
+function readProjectEdges(body: NxGraphBody, projectName: string): readonly JsonValue[] {
   if (!isJsonRecord(body.nodes[projectName])) {
-    throw new Error(
-      `Unsupported Nx graph shape: graph.nodes is missing object node ${projectName}.`,
-    );
+    throw new Error(`Unsupported Nx graph shape: graph.nodes is missing object node ${projectName}.`);
   }
   const edges = body.dependencies[projectName];
   if (!isJsonArray(edges)) {
-    throw new Error(
-      `Unsupported Nx graph shape: graph.dependencies is missing edge array ${projectName}.`,
-    );
+    throw new Error(`Unsupported Nx graph shape: graph.dependencies is missing edge array ${projectName}.`);
   }
   return edges;
 }
@@ -103,9 +88,7 @@ function readProjectEdges(
 /** The project one edge points at, or a refusal naming what was missing; `nx-native-graph.ts` has `readNativeEdgeTarget`. */
 function readEdgeTarget(edge: JsonValue, projectName: string): string {
   if (!isJsonRecord(edge))
-    throw new Error(
-      `Unsupported Nx graph shape: dependency edge for ${projectName} is not an object.`,
-    );
+    throw new Error(`Unsupported Nx graph shape: dependency edge for ${projectName} is not an object.`);
   const source = readOptionalString(edge, "source");
   const target = readOptionalString(edge, "target");
   if (source !== projectName || target === undefined) {

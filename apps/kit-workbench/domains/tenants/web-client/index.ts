@@ -1,8 +1,5 @@
 import { getPageFromApi, sendToApi } from "@dads-framework/client";
-import {
-  defineRoute,
-  paginationQuerySchema,
-} from "@dads-framework/core/contract";
+import { defineRoute, paginationQuerySchema } from "@dads-framework/core/contract";
 import type { z } from "zod";
 import {
   tenantInput,
@@ -17,11 +14,7 @@ export type Tenant = z.output<typeof tenantRecord>;
 
 const list = defineRoute("GET", "/tenants", () => "/tenants");
 const create = defineRoute("POST", "/tenants", () => "/tenants");
-const accept = defineRoute(
-  "POST",
-  "/tenants/invitations/accept",
-  () => "/tenants/invitations/accept",
-);
+const accept = defineRoute("POST", "/tenants/invitations/accept", () => "/tenants/invitations/accept");
 const invite = defineRoute(
   "POST",
   "/tenants/:tenantId/invitations",
@@ -38,8 +31,7 @@ export async function listTenants(signal?: AbortSignal): Promise<Tenant[]> {
       ...(signal === undefined ? {} : { signal }),
     });
     tenants.push(...items);
-    if (items.length === 0 || meta.page * meta.perPage >= meta.total)
-      return tenants;
+    if (items.length === 0 || meta.page * meta.perPage >= meta.total) return tenants;
   }
 }
 

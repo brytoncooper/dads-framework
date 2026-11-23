@@ -1,17 +1,12 @@
 import { createHash } from "node:crypto";
 
-import type {
-  FeatureFlagDefinition,
-  FeatureFlagState,
-} from "../../contract/index.js";
+import type { FeatureFlagDefinition, FeatureFlagState } from "../../contract/index.js";
 
 /**
  * Whose answer is being asked for. `platform` counts flags that are on for
  * everyone only; `tenant` also counts that tenant's pilot selection.
  */
-export type FeatureFlagContext =
-  | { readonly kind: "platform" }
-  | { readonly kind: "tenant"; readonly tenantId: string };
+export type FeatureFlagContext = { readonly kind: "platform" } | { readonly kind: "tenant"; readonly tenantId: string };
 
 /**
  * The sorted allow-list for one context. It walks the definitions, so a stored
@@ -29,10 +24,7 @@ export function evaluateFeatureFlags(input: {
     .sort();
 }
 
-function isOn(
-  state: FeatureFlagState | undefined,
-  context: FeatureFlagContext,
-): boolean {
+function isOn(state: FeatureFlagState | undefined, context: FeatureFlagContext): boolean {
   if (state === undefined) return false;
   switch (state.audienceMode) {
     case "OFF":
@@ -45,9 +37,7 @@ function isOn(
 }
 
 function isSelected(state: FeatureFlagState, tenantId: string): boolean {
-  return state.rememberedTenants.some(
-    (tenant) => tenant.tenantId === tenantId && tenant.enabledAt !== null,
-  );
+  return state.rememberedTenants.some((tenant) => tenant.tenantId === tenantId && tenant.enabledAt !== null);
 }
 
 /** SHA-256 of the sorted allow-list: equal lists hash equal, whatever order they arrived in. */

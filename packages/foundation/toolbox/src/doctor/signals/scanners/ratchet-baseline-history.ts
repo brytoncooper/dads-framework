@@ -22,11 +22,7 @@
  */
 
 import { isRecord, isString } from "../../../parse-guards.js";
-import {
-  readFileAtRevision,
-  readPathRevisions,
-  type GitRevision,
-} from "./git-history.js";
+import { readFileAtRevision, readPathRevisions, type GitRevision } from "./git-history.js";
 
 /** The file the source budgets are recorded in, in every adopting repository. */
 export const BASELINE_PATH = ".agents/source-budgets.json";
@@ -64,11 +60,7 @@ export type BaselineRevision = {
  * True when the move from `earlier` to `later` is the direction the ratchet
  * forbids: a ceiling that rose, or a floor that fell.
  */
-export function isLoosening(
-  earlier: number,
-  later: number,
-  section: string,
-): boolean {
+export function isLoosening(earlier: number, later: number, section: string): boolean {
   return section === "ceilings" ? later > earlier : later < earlier;
 }
 
@@ -96,9 +88,7 @@ export function transferCoversFall(
 }
 
 /** Every entry one revision of the baseline recorded, keyed by section path. */
-export function readBaselineEntries(
-  text: string,
-): ReadonlyMap<string, BaselineEntry> {
+export function readBaselineEntries(text: string): ReadonlyMap<string, BaselineEntry> {
   const entries = new Map<string, BaselineEntry>();
   const parsed = parseBaseline(text);
   if (parsed === undefined) return entries;
@@ -117,12 +107,7 @@ function parseBaseline(text: string): Record<string, unknown> | undefined {
   }
 }
 
-function collectSection(
-  entries: Map<string, BaselineEntry>,
-  value: unknown,
-  section: string,
-  field: string,
-): void {
+function collectSection(entries: Map<string, BaselineEntry>, value: unknown, section: string, field: string): void {
   if (!isRecord(value)) return;
   for (const [measure, keys] of Object.entries(value)) {
     if (!isRecord(keys)) continue;
@@ -151,11 +136,7 @@ function textField(entry: unknown, field: string): string | undefined {
  * entry's own section, so it is read under the same section path and a name
  * that reaches outside one simply matches nothing.
  */
-function sectionPath(
-  section: string,
-  measure: string,
-  key: string | undefined,
-): string | undefined {
+function sectionPath(section: string, measure: string, key: string | undefined): string | undefined {
   return key === undefined ? undefined : `${section}/${measure}/${key}`;
 }
 
@@ -177,10 +158,7 @@ export function readBaselineHistory(root: string): readonly BaselineRevision[] {
  * Revisions arrive newest first, so the first pair that disagrees about the
  * value is the most recent move.
  */
-export function lastMoveDate(
-  history: readonly BaselineRevision[],
-  key: string,
-): string | undefined {
+export function lastMoveDate(history: readonly BaselineRevision[], key: string): string | undefined {
   let introduced: string | undefined;
   for (let index = 0; index < history.length; index += 1) {
     const current = history[index]?.entries.get(key);

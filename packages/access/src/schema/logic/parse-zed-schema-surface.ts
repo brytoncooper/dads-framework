@@ -25,22 +25,14 @@ export function parseZedSchemaSurface(schema: string): ZedSchemaSurface {
     }
     const closeBraceIndex = matchingBraceIndex(text, openBraceIndex);
     resourceTypes.add(resourceType);
-    relations.push(
-      ...relationsInDefinition(
-        resourceType,
-        text.slice(openBraceIndex + 1, closeBraceIndex),
-      ),
-    );
+    relations.push(...relationsInDefinition(resourceType, text.slice(openBraceIndex + 1, closeBraceIndex)));
     match = definitionPattern.exec(text);
   }
 
   return { resourceTypes, relations };
 }
 
-function relationsInDefinition(
-  resourceType: string,
-  body: string,
-): readonly ZedRelation[] {
+function relationsInDefinition(resourceType: string, body: string): readonly ZedRelation[] {
   const relations: ZedRelation[] = [];
   const relationPattern = /\brelation\s+([A-Za-z][A-Za-z0-9_]*)\s*:/g;
   let relationMatch = relationPattern.exec(body);

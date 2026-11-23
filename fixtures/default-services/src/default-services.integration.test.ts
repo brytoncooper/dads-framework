@@ -4,25 +4,15 @@ import { runNodePgMigrations } from "@dads-framework/postgres/migrations";
 import { readAppliedNodePgJournal } from "@dads-framework/postgres/migrations/journal-status";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
-import {
-  PostgresAuthorization,
-  TransactionalAccessChanges,
-} from "@dads-framework/postgres-access";
-import {
-  createTenantAccess,
-  TenantUnavailableError,
-  Tenants,
-} from "@dads-framework/identity/tenants";
+import { PostgresAuthorization, TransactionalAccessChanges } from "@dads-framework/postgres-access";
+import { createTenantAccess, TenantUnavailableError, Tenants } from "@dads-framework/identity/tenants";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { z } from "zod";
 
 it("runs the documented migration and preserves default identity and tenant data on replay", async () => {
   const database = await startUnmigratedTestPostgres();
-  const connection = createPostgresConnection(
-    { connectionString: database.connectionString, schema: {} },
-    console,
-  );
+  const connection = createPostgresConnection({ connectionString: database.connectionString, schema: {} }, console);
   try {
     const migrate = () =>
       runNodePgMigrations({
@@ -43,9 +33,7 @@ it("runs the documented migration and preserves default identity and tenant data
     await migrate();
     const journal = await readAppliedNodePgJournal(database.pool);
     expect(journal).toHaveLength(1);
-    expect(journal[0]?.journalName).toBe(
-      "20261120000000_default_services.migration",
-    );
+    expect(journal[0]?.journalName).toBe("20261120000000_default_services.migration");
     expect(journal[0]?.ranAt).toBeInstanceOf(Date);
     expect(journal[0]?.sha256).toMatch(/^[0-9a-f]{64}$/);
 
@@ -71,16 +59,10 @@ it("runs the documented migration and preserves default identity and tenant data
           body: JSON.stringify(body),
         }),
       );
-    expect(
-      (await post("/sign-up/email", { name: "Member", email, password }))
-        .status,
-    ).toBe(200);
+    expect((await post("/sign-up/email", { name: "Member", email, password })).status).toBe(200);
     await expect.poll(() => verificationUrl).toBeDefined();
-    if (verificationUrl === undefined)
-      throw new Error("Verification email was not sent.");
-    expect((await identity.handle(new Request(verificationUrl))).status).toBe(
-      302,
-    );
+    if (verificationUrl === undefined) throw new Error("Verification email was not sent.");
+    expect((await identity.handle(new Request(verificationUrl))).status).toBe(302);
     const signedIn = await post("/sign-in/email", { email, password });
     expect(signedIn.status).toBe(200);
     const headers = new Headers({
@@ -90,8 +72,7 @@ it("runs the documented migration and preserves default identity and tenant data
         .join("; "),
     });
     const session = await identity.readSession(headers);
-    if (!session?.account.emailVerified)
-      throw new Error("Expected a verified account.");
+    if (!session?.account.emailVerified) throw new Error("Expected a verified account.");
 
     const account = actor("account", { id: z.string() });
     const tenantAccess = createTenantAccess(account);
@@ -106,32 +87,17 @@ it("runs the documented migration and preserves default identity and tenant data
       database: connection.drizzle,
       access: tenantAccess,
       authorizationAt: (tx) => authorization.inDrizzleTransaction(tx),
-      changes: new TransactionalAccessChanges(
-        authorization,
-        connection.drizzle,
-      ),
+      changes: new TransactionalAccessChanges(authorization, connection.drizzle),
     });
     const tenant = await tenants.create("fixture-owner", "Default services");
-    const invite = await tenants.invitations.issue(
-      "fixture-owner",
-      tenant.id,
-      email,
-    );
-    await expect(
-      tenants.context(session.account.id, tenant.id),
-    ).rejects.toBeInstanceOf(TenantUnavailableError);
-    await expect(
-      tenants.invitations.accept(invite.token, session.account),
-    ).resolves.toBe(tenant.id);
+    const invite = await tenants.invitations.issue("fixture-owner", tenant.id, email);
+    await expect(tenants.context(session.account.id, tenant.id)).rejects.toBeInstanceOf(TenantUnavailableError);
+    await expect(tenants.invitations.accept(invite.token, session.account)).resolves.toBe(tenant.id);
 
     await migrate();
     expect(await readAppliedNodePgJournal(database.pool)).toEqual(journal);
-    expect((await identity.readSession(headers))?.account.id).toBe(
-      session.account.id,
-    );
-    expect(
-      (await tenants.context(session.account.id, tenant.id)).tenant,
-    ).toEqual(tenant);
+    expect((await identity.readSession(headers))?.account.id).toBe(session.account.id);
+    expect((await tenants.context(session.account.id, tenant.id)).tenant).toEqual(tenant);
   } finally {
     await connection.close();
     await database.stop();

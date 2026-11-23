@@ -9,19 +9,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { EffectiveFeatureState } from "../../contract/index.js";
 
-import {
-  type FeatureStateLoader,
-  FeatureStateRuntime,
-} from "./feature-state-runtime.js";
+import { type FeatureStateLoader, FeatureStateRuntime } from "./feature-state-runtime.js";
 
-function loaderFrom(
-  states: Readonly<Record<string, EffectiveFeatureState>>,
-): FeatureStateLoader {
+function loaderFrom(states: Readonly<Record<string, EffectiveFeatureState>>): FeatureStateLoader {
   return (contextKey) => {
     const state = states[contextKey];
-    return state === undefined
-      ? Promise.reject(new Error(`no state for ${contextKey}`))
-      : Promise.resolve(state);
+    return state === undefined ? Promise.reject(new Error(`no state for ${contextKey}`)) : Promise.resolve(state);
   };
 }
 
@@ -36,9 +29,7 @@ describe("FeatureStateRuntime", () => {
   });
 
   it("reuses one snapshot per context until that context's state changes", async () => {
-    const runtime = new FeatureStateRuntime(
-      loaderFrom({ "t-1": { features: ["orders.bulk"], stateHash: "a" } }),
-    );
+    const runtime = new FeatureStateRuntime(loaderFrom({ "t-1": { features: ["orders.bulk"], stateHash: "a" } }));
     const first = runtime.snapshot("t-1");
     expect(runtime.snapshot("t-1")).toBe(first);
     expect(runtime.snapshot("t-2")).not.toBe(first);
@@ -101,9 +92,7 @@ describe("FeatureStateRuntime", () => {
   });
 
   it("tells subscribers when a context's state changes", async () => {
-    const runtime = new FeatureStateRuntime(
-      loaderFrom({ "t-1": { features: [], stateHash: "a" } }),
-    );
+    const runtime = new FeatureStateRuntime(loaderFrom({ "t-1": { features: [], stateHash: "a" } }));
     const listener = vi.fn();
     const unsubscribe = runtime.subscribe(listener);
     await runtime.hydrate("t-1");

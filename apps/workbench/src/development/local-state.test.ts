@@ -1,12 +1,5 @@
 // Local launches must share durable credentials but never share an active writer.
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -22,8 +15,7 @@ import {
 
 const directories: string[] = [];
 afterEach(() => {
-  for (const directory of directories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
+  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
 function directory() {
@@ -51,9 +43,7 @@ describe("workbench local state", () => {
     const path = directory();
     const file = join(path, "state.json");
     writeFileSync(file, '{"token":"private-value"}', { mode: 0o600 });
-    expect(() => readOrCreateDevelopmentState(path)).toThrow(
-      expect.objectContaining({ code: "INVALID_STATE" }),
-    );
+    expect(() => readOrCreateDevelopmentState(path)).toThrow(expect.objectContaining({ code: "INVALID_STATE" }));
     expect(readFileSync(file, "utf8")).toContain("private-value");
   });
 
@@ -62,9 +52,7 @@ describe("workbench local state", () => {
     writeFileSync(join(path, "workbench.sqlite"), "retained-data", {
       mode: 0o600,
     });
-    expect(() => readOrCreateDevelopmentState(path)).toThrow(
-      expect.objectContaining({ code: "INVALID_STATE" }),
-    );
+    expect(() => readOrCreateDevelopmentState(path)).toThrow(expect.objectContaining({ code: "INVALID_STATE" }));
   });
 
   it("upgrades v1 state as a SpiceDB instance instead of silently changing its backend", () => {
@@ -84,9 +72,7 @@ describe("workbench local state", () => {
       adapter: "spicedb",
       initialized: true,
     });
-    expect(
-      JSON.parse(readFileSync(join(path, "state.json"), "utf8")),
-    ).toMatchObject({
+    expect(JSON.parse(readFileSync(join(path, "state.json"), "utf8"))).toMatchObject({
       version: 2,
       adapter: "spicedb",
     });
@@ -107,15 +93,11 @@ describe("workbench local state", () => {
     markDevelopmentInitialized(path);
     expect(readOrCreateDevelopmentState(path).initialized).toBe(true);
     rmSync(database);
-    expect(() => prepareWorkbenchDatabase(path, true)).toThrow(
-      expect.objectContaining({ code: "INVALID_STATE" }),
-    );
+    expect(() => prepareWorkbenchDatabase(path, true)).toThrow(expect.objectContaining({ code: "INVALID_STATE" }));
     const target = join(path, "unrelated.sqlite");
     writeFileSync(target, "do-not-mutate", { mode: 0o600 });
     symlinkSync(target, database);
-    expect(() => prepareWorkbenchDatabase(path, false)).toThrow(
-      expect.objectContaining({ code: "INVALID_STATE" }),
-    );
+    expect(() => prepareWorkbenchDatabase(path, false)).toThrow(expect.objectContaining({ code: "INVALID_STATE" }));
     expect(readFileSync(target, "utf8")).toBe("do-not-mutate");
   });
 
@@ -123,9 +105,7 @@ describe("workbench local state", () => {
     const path = directory();
     const first = acquireDevelopmentLease(path);
     try {
-      expect(() => acquireDevelopmentLease(path)).toThrow(
-        expect.objectContaining({ code: "ALREADY_RUNNING" }),
-      );
+      expect(() => acquireDevelopmentLease(path)).toThrow(expect.objectContaining({ code: "ALREADY_RUNNING" }));
     } finally {
       first.close();
     }
@@ -137,9 +117,11 @@ describe("workbench local state", () => {
 
 describe("development arguments", () => {
   it("supports explicit isolated instances and an OS-selected test port", () => {
-    expect(
-      parseDevelopmentArguments(["up", "--instance", "proof-1", "--port", "0"]),
-    ).toEqual({ action: "up", instance: "proof-1", port: 0 });
+    expect(parseDevelopmentArguments(["up", "--instance", "proof-1", "--port", "0"])).toEqual({
+      action: "up",
+      instance: "proof-1",
+      port: 0,
+    });
     expect(parseDevelopmentArguments(["stop", "--instance", "proof"])).toEqual({
       action: "stop",
       instance: "proof",
@@ -165,8 +147,6 @@ describe("development arguments", () => {
     ["up", "--adapter", "mysql"],
     ["stop", "--adapter", "spicedb"],
   ])("rejects unsafe or ambiguous arguments %j", (...args) => {
-    expect(() => parseDevelopmentArguments(args)).toThrow(
-      expect.objectContaining({ code: "INVALID_ARGUMENT" }),
-    );
+    expect(() => parseDevelopmentArguments(args)).toThrow(expect.objectContaining({ code: "INVALID_ARGUMENT" }));
   });
 });

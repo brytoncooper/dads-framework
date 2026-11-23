@@ -14,21 +14,14 @@ import {
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { readColumnLabel } from "../../lib/column-label.js";
-import {
-  readReaderHideableColumns,
-  showAllColumns,
-} from "../../lib/reader-hidden-columns.js";
+import { readReaderHideableColumns, showAllColumns } from "../../lib/reader-hidden-columns.js";
 
 /**
  * The toolbar's Columns menu: one checkbox per column the reader may hide,
  * plus Show All. Nothing is hidden until the reader unticks it here; the
  * identifying, selection, and actions columns are never offered.
  */
-export function DataTableColumnsMenu<TData>({
-  table,
-}: {
-  readonly table: Table<TData>;
-}) {
+export function DataTableColumnsMenu<TData>({ table }: { readonly table: Table<TData> }) {
   const t = useDataTableCopy();
   const columns = readReaderHideableColumns(table);
   if (columns.length === 0) return null;

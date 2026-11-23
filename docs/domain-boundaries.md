@@ -27,10 +27,7 @@ its own owner. A plain path assigns the entire directory to one owner.
   "domainBoundaries": {
     "domains": ["domains/*"],
     "libraries": ["libraries/*"],
-    "composition": [
-      "apps/customer/src/composition",
-      "apps/staff/src/composition"
-    ]
+    "composition": ["apps/customer/src/composition", "apps/staff/src/composition"]
   }
 }
 ```

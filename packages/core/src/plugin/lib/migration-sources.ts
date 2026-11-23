@@ -40,9 +40,7 @@ export function migrationSourcesFor(
     }
     return {
       root: relative,
-      files: new RegExp(
-        `^${escapeForPattern(relative)}/[^/]+\\.migration\\.ts$`,
-      ),
+      files: new RegExp(`^${escapeForPattern(relative)}/[^/]+\\.migration\\.ts$`),
       owner: folder.owner,
       required: folder.required ?? true,
     };

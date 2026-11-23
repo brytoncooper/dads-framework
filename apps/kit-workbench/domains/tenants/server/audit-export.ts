@@ -1,24 +1,11 @@
-import {
-  createAuditLogExporter,
-  DrizzleAuditLogReader,
-  type AuditLogCursor,
-} from "@dads-framework/audit";
+import { createAuditLogExporter, DrizzleAuditLogReader, type AuditLogCursor } from "@dads-framework/audit";
 import { notFound, validation } from "@dads-framework/core/errors";
-import {
-  defineRawRoute,
-  fromParam,
-  requires,
-  routeGroup,
-} from "@dads-framework/http";
+import { defineRawRoute, fromParam, requires, routeGroup } from "@dads-framework/http";
 import { definePlugin } from "@dads-framework/core/plugin";
 import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
-import {
-  starterServices,
-  tenantAccess,
-  type StarterServices,
-} from "../../../libraries/app-runtime/index.js";
+import { starterServices, tenantAccess, type StarterServices } from "../../../libraries/app-runtime/index.js";
 import { auditExportCopy } from "../copy/audit-export-openapi.js";
 
 const tenantParams = z.strictObject({ tenantId: tenantIdSchema });
@@ -47,10 +34,7 @@ export const tenantAuditExportPlugin = definePlugin({
   }),
 });
 
-function tenantAuditExportRoutes({
-  db,
-  authorization,
-}: Pick<StarterServices, "db" | "authorization">) {
+function tenantAuditExportRoutes({ db, authorization }: Pick<StarterServices, "db" | "authorization">) {
   const reader = new DrizzleAuditLogReader(db);
   return routeGroup(auditExportCopy["tenants.auditExport.tag"].en, [
     defineRawRoute({
@@ -75,15 +59,13 @@ function tenantAuditExportRoutes({
             name: "beforeRecordedAt",
             in: "query",
             schema: { type: "string", format: "date-time" },
-            description:
-              auditExportCopy["tenants.auditExport.beforeRecordedAt"].en,
+            description: auditExportCopy["tenants.auditExport.beforeRecordedAt"].en,
           },
           {
             name: "beforePosition",
             in: "query",
             schema: { type: "integer", minimum: 1 },
-            description:
-              auditExportCopy["tenants.auditExport.beforePosition"].en,
+            description: auditExportCopy["tenants.auditExport.beforePosition"].en,
           },
         ],
         responses: {
@@ -91,8 +73,7 @@ function tenantAuditExportRoutes({
             description: auditExportCopy["tenants.auditExport.success"].en,
             headers: {
               Link: {
-                description:
-                  auditExportCopy["tenants.auditExport.continuation"].en,
+                description: auditExportCopy["tenants.auditExport.continuation"].en,
                 schema: { type: "string" },
               },
             },
@@ -102,12 +83,10 @@ function tenantAuditExportRoutes({
             description: auditExportCopy["tenants.auditExport.invalidInput"].en,
           },
           "401": {
-            description:
-              auditExportCopy["tenants.auditExport.authenticationRequired"].en,
+            description: auditExportCopy["tenants.auditExport.authenticationRequired"].en,
           },
           "404": {
-            description:
-              auditExportCopy["tenants.auditExport.tenantUnavailable"].en,
+            description: auditExportCopy["tenants.auditExport.tenantUnavailable"].en,
           },
         },
       },
@@ -115,10 +94,7 @@ function tenantAuditExportRoutes({
         const params = tenantParams.safeParse(request.params);
         const query = querySchema.safeParse(request.query);
         if (!params.success || !query.success)
-          throw validation(
-            "INVALID_AUDIT_EXPORT",
-            "Supply a tenant and a valid export page.",
-          );
+          throw validation("INVALID_AUDIT_EXPORT", "Supply a tenant and a valid export page.");
         const { tenantId } = params.data;
         const exportPage = createAuditLogExporter({
           reader,
@@ -151,19 +127,12 @@ function tenantAuditExportRoutes({
               }
             : {}),
         });
-        if (page.kind === "denied")
-          throw notFound("RESOURCE_NOT_FOUND", "Resource not found");
+        if (page.kind === "denied") throw notFound("RESOURCE_NOT_FOUND", "Resource not found");
         if (page.nextCursor !== null)
-          void reply.header(
-            "link",
-            nextPageLink(tenantId, input.pageSize, page.nextCursor),
-          );
+          void reply.header("link", nextPageLink(tenantId, input.pageSize, page.nextCursor));
         await reply
           .header("cache-control", "no-store")
-          .header(
-            "content-disposition",
-            'attachment; filename="audit-log.ndjson"',
-          )
+          .header("content-disposition", 'attachment; filename="audit-log.ndjson"')
           .type(page.contentType)
           .send(page.body);
       },
@@ -171,20 +140,13 @@ function tenantAuditExportRoutes({
   ]);
 }
 
-function nextPageLink(
-  tenantId: string,
-  pageSize: number,
-  next: AuditLogCursor,
-): string {
+function nextPageLink(tenantId: string, pageSize: number, next: AuditLogCursor): string {
   const query = new URLSearchParams({
     pageSize: String(pageSize),
     beforePosition: String(next.position),
     beforeRecordedAt: next.recordedAt,
   });
-  const tenantPath = auditExportPath.replace(
-    ":tenantId",
-    encodeURIComponent(tenantId),
-  );
+  const tenantPath = auditExportPath.replace(":tenantId", encodeURIComponent(tenantId));
   const nextUrl = `/api${tenantPath}?${query}`;
   return `<${nextUrl}>; ${nextLinkRelation}`;
 }

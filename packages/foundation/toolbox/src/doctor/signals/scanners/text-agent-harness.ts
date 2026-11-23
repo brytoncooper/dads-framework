@@ -20,13 +20,7 @@ import { isRecord, isString } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
 
 /** Root files that count as an entrypoint an automated contributor reads. */
-export const AGENT_ENTRYPOINTS = [
-  "AGENTS.md",
-  "AGENT.md",
-  "CLAUDE.md",
-  "GEMINI.md",
-  ".cursorrules",
-];
+export const AGENT_ENTRYPOINTS = ["AGENTS.md", "AGENT.md", "CLAUDE.md", "GEMINI.md", ".cursorrules"];
 
 /** Where each harness keeps the hooks it runs around a tool call. */
 export const HARNESS_CONFIGURATIONS = [
@@ -55,9 +49,7 @@ export type WiredGuard = {
 };
 
 /** The entrypoint at the root, or `undefined` when there is none. */
-export function agentEntrypointPath(
-  context: DoctorContext,
-): string | undefined {
+export function agentEntrypointPath(context: DoctorContext): string | undefined {
   return AGENT_ENTRYPOINTS.find((path) => context.exists(path));
 }
 
@@ -68,15 +60,12 @@ export function isWorkingRepository(context: DoctorContext): boolean {
 
 /** Every program the harness configurations run, with the file that wires it. */
 export function wiredGuards(context: DoctorContext): readonly WiredGuard[] {
-  return HARNESS_CONFIGURATIONS.filter((path) => context.exists(path)).flatMap(
-    (path) => guardsInConfiguration(path, context.read(path)),
+  return HARNESS_CONFIGURATIONS.filter((path) => context.exists(path)).flatMap((path) =>
+    guardsInConfiguration(path, context.read(path)),
   );
 }
 
-function guardsInConfiguration(
-  path: string,
-  text: string,
-): readonly WiredGuard[] {
+function guardsInConfiguration(path: string, text: string): readonly WiredGuard[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -101,8 +90,6 @@ function collectCommands(value: unknown): readonly string[] {
 
 /** The repository-relative script a wired command runs, when it names one. */
 export function guardScriptOf(command: string): string | undefined {
-  const found = /(?:^|[\s"'])([\w./-]+\.(?:mjs|cjs|js|ts|sh|py))\b/.exec(
-    command,
-  );
+  const found = /(?:^|[\s"'])([\w./-]+\.(?:mjs|cjs|js|ts|sh|py))\b/.exec(command);
   return found?.[1];
 }

@@ -29,9 +29,9 @@ describe("Dads Testing native facade refusals", () => {
       result: { operation: "plan", plan: planPayload() },
     });
 
-    await expect(
-      planTesting({ workspaceRoot: directory, nativeBinary: binary }),
-    ).rejects.toThrow("Unsupported native response schemaVersion 2.");
+    await expect(planTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
+      "Unsupported native response schemaVersion 2.",
+    );
   });
 
   it("refuses a non-ok envelope, reporting the engine's own error message", async () => {
@@ -42,9 +42,9 @@ describe("Dads Testing native facade refusals", () => {
       error: "--all cannot be combined with --base or --head.",
     });
 
-    await expect(
-      planTesting({ workspaceRoot: directory, nativeBinary: binary }),
-    ).rejects.toThrow("--all cannot be combined with --base or --head.");
+    await expect(planTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
+      "--all cannot be combined with --base or --head.",
+    );
   });
 
   it("refuses an ok envelope that carries no result at all", async () => {
@@ -54,9 +54,7 @@ describe("Dads Testing native facade refusals", () => {
       ok: true,
     });
 
-    await expect(
-      planTesting({ workspaceRoot: directory, nativeBinary: binary }),
-    ).rejects.toThrow(
+    await expect(planTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
       "The native testing engine failed without an error message.",
     );
   });
@@ -69,9 +67,9 @@ describe("Dads Testing native facade refusals", () => {
       result: { operation: "run", plan: planPayload() },
     });
 
-    await expect(
-      planTesting({ workspaceRoot: directory, nativeBinary: binary }),
-    ).rejects.toThrow("The native testing engine returned run for plan.");
+    await expect(planTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
+      "The native testing engine returned run for plan.",
+    );
   });
 
   it("refuses a run result that carries a plan but no run details", async () => {
@@ -82,24 +80,16 @@ describe("Dads Testing native facade refusals", () => {
       result: { operation: "run", plan: planPayload() },
     });
 
-    await expect(
-      runTesting({ workspaceRoot: directory, nativeBinary: binary }),
-    ).rejects.toThrow(
+    await expect(runTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
       "The native testing engine returned a run response without run details.",
     );
   });
 
   it("refuses a response that is not JSON, quoting what the engine wrote to stderr", async () => {
     const directory = makeTemporaryDirectory();
-    const binary = createRawNativeBinary(
-      directory,
-      "thread 'main' panicked\n",
-      "manifest not found\n",
-    );
+    const binary = createRawNativeBinary(directory, "thread 'main' panicked\n", "manifest not found\n");
 
-    await expect(
-      planTesting({ workspaceRoot: directory, nativeBinary: binary }),
-    ).rejects.toThrow(
+    await expect(planTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
       "The native testing engine did not return JSON: manifest not found",
     );
   });
@@ -117,9 +107,7 @@ describe("Dads Testing native facade refusals", () => {
 
     for (const response of cases) {
       const { binary } = createFakeNativeBinary(directory, response);
-      await expect(
-        planTesting({ workspaceRoot: directory, nativeBinary: binary }),
-      ).rejects.toThrow(
+      await expect(planTesting({ workspaceRoot: directory, nativeBinary: binary })).rejects.toThrow(
         "The native testing engine returned an invalid response.",
       );
     }
@@ -149,11 +137,7 @@ function planPayload(): unknown {
  * `test-support` always emits valid JSON, and the parse failure needs output
  * that is not.
  */
-function createRawNativeBinary(
-  directory: string,
-  stdout: string,
-  stderr: string,
-): string {
+function createRawNativeBinary(directory: string, stdout: string, stderr: string): string {
   const binary = join(directory, "raw-native-binary.mjs");
   writeFileSync(
     binary,

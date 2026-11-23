@@ -105,8 +105,7 @@ export type ImportedTaskAudit = {
   readonly project: string;
   readonly target: string;
   readonly sourceLocation: string;
-  readonly classification:
-    "converted" | "native-adapter-needed" | "opaque" | "excluded";
+  readonly classification: "converted" | "native-adapter-needed" | "opaque" | "excluded";
   readonly reason: string;
   readonly executor?: string;
   readonly substitutions: readonly PlaceholderSubstitution[];

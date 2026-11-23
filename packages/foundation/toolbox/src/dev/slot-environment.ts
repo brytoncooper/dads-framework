@@ -5,39 +5,20 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { DevConfig } from "./dev-config.js";
-import {
-  readSlots,
-  slotDirectory,
-  writeJson,
-  writeSlots,
-  type Slot,
-} from "./slot-state.js";
+import { readSlots, slotDirectory, writeJson, writeSlots, type Slot } from "./slot-state.js";
 
-export async function reserveSlot(
-  root: string,
-  worktree: string,
-  config: DevConfig,
-): Promise<Slot> {
+export async function reserveSlot(root: string, worktree: string, config: DevConfig): Promise<Slot> {
   const slots = await readSlots(root);
   const existing = slots.find((slot) => slot.worktree === worktree);
   const slot = existing ?? (await allocate(worktree, config, slots));
   if (slot.portCount !== config.portsPerSlot)
-    throw new Error(
-      "The configured block size differs from this checkout's reservation.",
-    );
+    throw new Error("The configured block size differs from this checkout's reservation.");
   const updated = { ...slot, lastUsed: Date.now() };
-  await writeSlots(root, [
-    ...slots.filter((entry) => entry.worktree !== worktree),
-    updated,
-  ]);
+  await writeSlots(root, [...slots.filter((entry) => entry.worktree !== worktree), updated]);
   return updated;
 }
 
-async function allocate(
-  worktree: string,
-  config: DevConfig,
-  slots: readonly Slot[],
-): Promise<Slot> {
+async function allocate(worktree: string, config: DevConfig, slots: readonly Slot[]): Promise<Slot> {
   for (let index = 0; index < config.maxSlots; index++) {
     const firstPort = config.basePort + config.portsPerSlot * index;
     const portCount = config.portsPerSlot;
@@ -55,20 +36,11 @@ async function allocate(
 }
 
 function overlaps(slot: Slot, firstPort: number, portCount: number): boolean {
-  return (
-    slot.firstPort < firstPort + portCount &&
-    firstPort < slot.firstPort + slot.portCount
-  );
+  return slot.firstPort < firstPort + portCount && firstPort < slot.firstPort + slot.portCount;
 }
 
-export async function slotPortsAvailable(
-  firstPort: number,
-  portCount: number,
-): Promise<boolean> {
-  const ports = Array.from(
-    { length: portCount },
-    (_, offset) => firstPort + offset,
-  );
+export async function slotPortsAvailable(firstPort: number, portCount: number): Promise<boolean> {
+  const ports = Array.from({ length: portCount }, (_, offset) => firstPort + offset);
   return (await Promise.all(ports.map(portAvailable))).every(Boolean);
 }
 
@@ -103,9 +75,7 @@ export async function prepareSlot(root: string, slot: Slot): Promise<void> {
 
 function maintenanceUrl(value: string | undefined): URL {
   if (value === undefined || !URL.canParse(value))
-    throw new Error(
-      "Set DADS_DEV_POSTGRES_URL to a local PostgreSQL maintenance URL.",
-    );
+    throw new Error("Set DADS_DEV_POSTGRES_URL to a local PostgreSQL maintenance URL.");
   const url = new URL(value);
   if (
     !["postgresql:", "postgres:"].includes(url.protocol) ||
@@ -116,9 +86,7 @@ function maintenanceUrl(value: string | undefined): URL {
   }
   for (const parameter of url.searchParams.keys()) {
     if (parameter !== "sslmode" && parameter !== "connect_timeout") {
-      throw new Error(
-        "Unsupported PostgreSQL connection option in DADS_DEV_POSTGRES_URL.",
-      );
+      throw new Error("Unsupported PostgreSQL connection option in DADS_DEV_POSTGRES_URL.");
     }
   }
   return url;
@@ -129,24 +97,20 @@ async function ensureDatabase(url: URL, database: string): Promise<void> {
   const psql = async (statement: string) => {
     try {
       return (
-        await execute(
-          "psql",
-          ["-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", statement],
-          {
-            env: {
-              PATH: process.env["PATH"],
-              HOME: process.env["HOME"],
-              PGHOST: url.hostname.replace(/^\[|\]$/g, ""),
-              PGPORT: url.port || "5432",
-              PGUSER: decodeURIComponent(url.username),
-              PGPASSWORD: decodeURIComponent(url.password),
-              PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
-              PGSSLMODE: url.searchParams.get("sslmode") ?? "prefer",
-              PGCONNECT_TIMEOUT: url.searchParams.get("connect_timeout") ?? "3",
-            },
-            timeout: 15_000,
+        await execute("psql", ["-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", statement], {
+          env: {
+            PATH: process.env["PATH"],
+            HOME: process.env["HOME"],
+            PGHOST: url.hostname.replace(/^\[|\]$/g, ""),
+            PGPORT: url.port || "5432",
+            PGUSER: decodeURIComponent(url.username),
+            PGPASSWORD: decodeURIComponent(url.password),
+            PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
+            PGSSLMODE: url.searchParams.get("sslmode") ?? "prefer",
+            PGCONNECT_TIMEOUT: url.searchParams.get("connect_timeout") ?? "3",
           },
-        )
+          timeout: 15_000,
+        })
       ).stdout.trim();
     } catch (error) {
       throw new Error(
@@ -155,11 +119,7 @@ async function ensureDatabase(url: URL, database: string): Promise<void> {
       );
     }
   };
-  if (
-    (await psql(
-      `SELECT datname FROM pg_database WHERE datname = '${database}'`,
-    )) !== database
-  ) {
+  if ((await psql(`SELECT datname FROM pg_database WHERE datname = '${database}'`)) !== database) {
     await psql(`CREATE DATABASE "${database}"`);
   }
 }

@@ -30,8 +30,6 @@ export const VITEST_TIER = "VITEST_TIER";
 export const CONTAINER_TEST_TIER = "integration";
 
 /** True when this run selected the files that boot a real vendor. */
-export function isContainerTestRun(
-  env: Readonly<Record<string, string | undefined>>,
-): boolean {
+export function isContainerTestRun(env: Readonly<Record<string, string | undefined>>): boolean {
   return env[VITEST_TIER] === CONTAINER_TEST_TIER;
 }

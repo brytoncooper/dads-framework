@@ -22,9 +22,7 @@ describe("OwnerLock", () => {
     const coordinator = new InMemoryOwnerLock();
 
     await expect(
-      coordinator.run(PARTITION, () =>
-        coordinator.run(PARTITION, () => Promise.resolve("nested")),
-      ),
+      coordinator.run(PARTITION, () => coordinator.run(PARTITION, () => Promise.resolve("nested"))),
     ).rejects.toThrow("already held on this call path");
   });
 
@@ -34,20 +32,16 @@ describe("OwnerLock", () => {
     const outer = new InMemoryOwnerLock();
     const inner = new InMemoryOwnerLock();
 
-    await expect(
-      outer.run(PARTITION, () =>
-        inner.run(PARTITION, () => Promise.resolve("nested")),
-      ),
-    ).rejects.toThrow("already held on this call path");
+    await expect(outer.run(PARTITION, () => inner.run(PARTITION, () => Promise.resolve("nested")))).rejects.toThrow(
+      "already held on this call path",
+    );
   });
 
   it("allows a nested acquisition of a different partition", async () => {
     const coordinator = new InMemoryOwnerLock();
 
     await expect(
-      coordinator.run(PARTITION, () =>
-        coordinator.run(OTHER_PARTITION, () => Promise.resolve("nested")),
-      ),
+      coordinator.run(PARTITION, () => coordinator.run(OTHER_PARTITION, () => Promise.resolve("nested"))),
     ).resolves.toBe("nested");
   });
 
@@ -99,9 +93,7 @@ describe("OwnerLock", () => {
 
     await coordinator.run(PARTITION, () => Promise.resolve());
 
-    await expect(
-      coordinator.run(PARTITION, () => Promise.resolve("again")),
-    ).resolves.toBe("again");
+    await expect(coordinator.run(PARTITION, () => Promise.resolve("again"))).resolves.toBe("again");
   });
 
   it("closes the lease when the operation throws, so nothing can defer onto a dead lock", async () => {

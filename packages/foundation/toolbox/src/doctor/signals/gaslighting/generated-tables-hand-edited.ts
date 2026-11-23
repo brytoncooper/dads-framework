@@ -22,15 +22,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  isBrandOnlyEdit,
-  isGeneratedTableModule,
-} from "../scanners/generated-artifacts.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { isBrandOnlyEdit, isGeneratedTableModule } from "../scanners/generated-artifacts.js";
 import {
   readCommitLog,
   readFileAtRevision,
@@ -47,11 +40,7 @@ const WRITTEN = new Set(["A", "M"]);
 const MODIFIED = "M";
 
 /** True when this change wrote a generated table module by hand. */
-function isHandEdit(
-  root: string,
-  commit: GitCommit,
-  change: GitChange,
-): boolean {
+function isHandEdit(root: string, commit: GitCommit, change: GitChange): boolean {
   const after = readFileAtRevision(root, commit.sha, change.path);
   if (after === undefined || !isGeneratedTableModule(after)) return false;
   if (change.status !== MODIFIED) return true;
@@ -59,11 +48,7 @@ function isHandEdit(
   return before === undefined || !isBrandOnlyEdit(before, after);
 }
 
-function handEdits(
-  root: string,
-  commits: readonly GitCommit[],
-  readings: Map<string, SignalReading>,
-): void {
+function handEdits(root: string, commits: readonly GitCommit[], readings: Map<string, SignalReading>): void {
   for (const commit of commits) {
     if (commit.changes.some((change) => isMigrationFile(change.path))) continue;
     for (const change of commit.changes) {
@@ -93,8 +78,7 @@ function countHandEditedTables(context: DoctorContext): SignalReadings {
 export const generatedTablesHandEditedSignal: DoctorSignal = {
   id: "generated-tables-hand-edited",
   issue: "gaslighting",
-  question:
-    "Was a generated table module changed in a commit that changed no migration, beyond a brand annotation?",
+  question: "Was a generated table module changed in a commit that changed no migration, beyond a brand annotation?",
   reads: "git",
   unit: "count",
   direction: "ceiling",

@@ -49,31 +49,17 @@ export function testPostgresStorage(
   const value = env[TEST_POSTGRES_STORAGE];
   if (value === undefined || value === "" || value === "disk") return "disk";
   if (value === "ram") return "ram";
-  throw new Error(
-    `${TEST_POSTGRES_STORAGE} must be "disk" or "ram", not "${value}".`,
-  );
+  throw new Error(`${TEST_POSTGRES_STORAGE} must be "disk" or "ram", not "${value}".`);
 }
 
 /** Extra `postgres -c` settings for the chosen storage. */
-export function postgresStorageSettings(
-  storage: TestPostgresStorage,
-): readonly string[] {
+export function postgresStorageSettings(storage: TestPostgresStorage): readonly string[] {
   if (storage === "disk") return [];
-  return [
-    "-c",
-    "fsync=off",
-    "-c",
-    "synchronous_commit=off",
-    "-c",
-    "full_page_writes=off",
-  ];
+  return ["-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"];
 }
 
 /** Mount the data directory in memory when the storage is `ram`. */
-export function withPostgresStorage(
-  container: PostgreSqlContainer,
-  storage: TestPostgresStorage,
-): PostgreSqlContainer {
+export function withPostgresStorage(container: PostgreSqlContainer, storage: TestPostgresStorage): PostgreSqlContainer {
   if (storage === "disk") return container;
   return container.withTmpFs({
     [POSTGRES_DATA_DIRECTORY]: `rw,size=${RAM_DATA_DIRECTORY_LIMIT}`,
@@ -91,14 +77,9 @@ export function testPostgresMemoryLimitGb(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): number {
   const raw = env[TEST_POSTGRES_MEMORY_GB];
-  const processGb =
-    raw === undefined || raw.trim() === ""
-      ? DEFAULT_POSTGRES_MEMORY_GB
-      : Number(raw);
+  const processGb = raw === undefined || raw.trim() === "" ? DEFAULT_POSTGRES_MEMORY_GB : Number(raw);
   if (!Number.isFinite(processGb) || processGb <= 0) {
-    throw new Error(
-      `${TEST_POSTGRES_MEMORY_GB} must be a number of GB above 0 — got "${String(raw)}"`,
-    );
+    throw new Error(`${TEST_POSTGRES_MEMORY_GB} must be a number of GB above 0 — got "${String(raw)}"`);
   }
   return storage === "ram" ? processGb + RAM_DATA_DIRECTORY_GB : processGb;
 }

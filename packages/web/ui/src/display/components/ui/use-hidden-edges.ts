@@ -1,10 +1,6 @@
 import * as React from "react";
 
-import {
-  hiddenEdges,
-  NO_HIDDEN_EDGES,
-  type HiddenEdges,
-} from "./logic/horizontal-overflow-edges.js";
+import { hiddenEdges, NO_HIDDEN_EDGES, type HiddenEdges } from "./logic/horizontal-overflow-edges.js";
 
 /** Hidden edges, plus how far pinned columns reach in from each side (px). */
 export type ScrollerEdges = HiddenEdges & {
@@ -27,9 +23,7 @@ const NO_EDGES: ScrollerEdges = {
  * resizes, so the answer follows window resizes, loaded rows, and columns the
  * reader shows or hides. Without `ResizeObserver` it still follows scrolling.
  */
-export function useHiddenEdges(
-  scrollerRef: React.RefObject<HTMLElement | null>,
-): ScrollerEdges {
+export function useHiddenEdges(scrollerRef: React.RefObject<HTMLElement | null>): ScrollerEdges {
   const [edges, setEdges] = React.useState<ScrollerEdges>(NO_EDGES);
 
   React.useLayoutEffect(() => {
@@ -43,10 +37,7 @@ export function useHiddenEdges(
     measure();
 
     scroller.addEventListener("scroll", measure, { passive: true });
-    const resizeObserver =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(measure);
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     resizeObserver?.observe(scroller);
     for (const child of scroller.children) {
       resizeObserver?.observe(child);
@@ -70,21 +61,11 @@ function pinnedReach(scroller: HTMLElement): {
   let pinnedRight = 0;
   const firstRow = scroller.querySelector("tr");
   if (firstRow === null) return { pinnedLeft, pinnedRight };
-  for (const cell of firstRow.querySelectorAll<HTMLElement>(
-    ':scope > [data-pinned="left"]',
-  )) {
-    pinnedLeft = Math.max(
-      pinnedLeft,
-      cell.getBoundingClientRect().right - frame.left,
-    );
+  for (const cell of firstRow.querySelectorAll<HTMLElement>(':scope > [data-pinned="left"]')) {
+    pinnedLeft = Math.max(pinnedLeft, cell.getBoundingClientRect().right - frame.left);
   }
-  for (const cell of firstRow.querySelectorAll<HTMLElement>(
-    ':scope > [data-pinned="right"]',
-  )) {
-    pinnedRight = Math.max(
-      pinnedRight,
-      frame.right - cell.getBoundingClientRect().left,
-    );
+  for (const cell of firstRow.querySelectorAll<HTMLElement>(':scope > [data-pinned="right"]')) {
+    pinnedRight = Math.max(pinnedRight, frame.right - cell.getBoundingClientRect().left);
   }
   return {
     pinnedLeft: Math.round(pinnedLeft),
@@ -93,10 +74,5 @@ function pinnedReach(scroller: HTMLElement): {
 }
 
 function sameEdges(a: ScrollerEdges, b: ScrollerEdges): boolean {
-  return (
-    a.left === b.left &&
-    a.right === b.right &&
-    a.pinnedLeft === b.pinnedLeft &&
-    a.pinnedRight === b.pinnedRight
-  );
+  return a.left === b.left && a.right === b.right && a.pinnedLeft === b.pinnedLeft && a.pinnedRight === b.pinnedRight;
 }

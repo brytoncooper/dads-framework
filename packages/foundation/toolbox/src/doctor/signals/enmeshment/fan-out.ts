@@ -16,15 +16,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  isProductionModule,
-  moduleImports,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { isProductionModule, moduleImports } from "../scanners/typescript-program.js";
 
 /** The count `strict` refuses, which is also the count worth reporting. */
 const CEILING = 15;
@@ -41,9 +34,7 @@ function countFanOut(context: DoctorContext): SignalReadings {
     if (reached.size <= CEILING) continue;
     readings.set(module.path, {
       value: reached.size,
-      evidence: [...reached]
-        .sort()
-        .map((specifier) => ({ path: module.path, name: specifier })),
+      evidence: [...reached].sort().map((specifier) => ({ path: module.path, name: specifier })),
     });
   }
   return readings;
@@ -57,7 +48,6 @@ export const fanOutSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: CEILING },
-  sentence:
-    "Enmeshed families cannot tell you who they are. They can only tell you who they are standing next to.",
+  sentence: "Enmeshed families cannot tell you who they are. They can only tell you who they are standing next to.",
   run: (context) => Promise.resolve(countFanOut(context)),
 };

@@ -22,37 +22,18 @@ const SAMPLE_MS = 250;
  * `requested` case count keeps its literal meaning: one task at a time per
  * case, so the run holds exactly that many task processes.
  */
-export async function chooseCaseConcurrency(
-  requested,
-  caseCount,
-  taskGraphWidth = 1,
-) {
+export async function chooseCaseConcurrency(requested, caseCount, taskGraphWidth = 1) {
   const explicit = parseRequested(requested);
   validateCaseCount(caseCount);
   validateTaskGraphWidth(taskGraphWidth);
   if (explicit !== null || caseCount === 0) {
-    return caseConcurrencyFromResources(
-      requested,
-      caseCount,
-      null,
-      taskGraphWidth,
-    );
+    return caseConcurrencyFromResources(requested, caseCount, null, taskGraphWidth);
   }
-  return caseConcurrencyFromResources(
-    requested,
-    caseCount,
-    await sampleResources(),
-    taskGraphWidth,
-  );
+  return caseConcurrencyFromResources(requested, caseCount, await sampleResources(), taskGraphWidth);
 }
 
 /** The pure half of `chooseCaseConcurrency`, given an already sampled host. */
-export function caseConcurrencyFromResources(
-  requested,
-  caseCount,
-  resources,
-  taskGraphWidth = 1,
-) {
+export function caseConcurrencyFromResources(requested, caseCount, resources, taskGraphWidth = 1) {
   const explicit = parseRequested(requested);
   validateCaseCount(caseCount);
   validateTaskGraphWidth(taskGraphWidth);
@@ -89,22 +70,14 @@ function explicitBudget(receipt, explicit, caseCount) {
 }
 
 function sampledBudget(receipt, caseCount, resources) {
-  receipt.cpuBudget = Math.max(
-    1,
-    Math.floor(resources.cpuCapacity * resources.cpuIdleFraction - 1),
-  );
-  receipt.memoryBudget = Math.floor(
-    Math.max(0, resources.availableMemoryBytes - GIBIBYTE) / GIBIBYTE,
-  );
+  receipt.cpuBudget = Math.max(1, Math.floor(resources.cpuCapacity * resources.cpuIdleFraction - 1));
+  receipt.memoryBudget = Math.floor(Math.max(0, resources.availableMemoryBytes - GIBIBYTE) / GIBIBYTE);
   receipt.taskJobs = Math.min(receipt.cpuBudget, receipt.taskGraphWidth);
   receipt.nativeJobs = receipt.taskJobs;
   // Rounded, not floored: on a wide machine the remainder of the budget is
   // worth more as one more case, half a case's tasks over the budget, than as
   // idle cores; the budget already keeps one core in reserve.
-  const cpuCaseLimit = Math.max(
-    1,
-    Math.round(receipt.cpuBudget / receipt.taskJobs),
-  );
+  const cpuCaseLimit = Math.max(1, Math.round(receipt.cpuBudget / receipt.taskJobs));
   const limit = Math.min(caseCount, cpuCaseLimit, receipt.memoryBudget);
   receipt.caseJobs = Math.max(1, limit);
   recordLimitingReasons(receipt, caseCount, cpuCaseLimit, limit);
@@ -113,11 +86,9 @@ function sampledBudget(receipt, caseCount, resources) {
 
 function recordLimitingReasons(receipt, caseCount, cpuCaseLimit, limit) {
   if (cpuCaseLimit === limit) receipt.limitingReasons.push("cpu-budget");
-  if (receipt.memoryBudget === limit)
-    receipt.limitingReasons.push("memory-budget");
+  if (receipt.memoryBudget === limit) receipt.limitingReasons.push("memory-budget");
   if (caseCount === limit) receipt.limitingReasons.push("case-count");
-  if (receipt.taskJobs === receipt.taskGraphWidth)
-    receipt.limitingReasons.push("task-graph-width");
+  if (receipt.taskJobs === receipt.taskGraphWidth) receipt.limitingReasons.push("task-graph-width");
   if (limit < 1) receipt.limitingReasons.push("minimum-one-case");
 }
 
@@ -142,23 +113,15 @@ export async function orderedConcurrentMap(items, limit, worker) {
       }
     }
   }
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, consume),
-  );
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, consume));
   if (failed) throw firstError;
   return results;
 }
 
 function parseRequested(requested) {
   if (requested === undefined || requested === "auto") return null;
-  if (
-    typeof requested !== "string" ||
-    !/^[1-9]\d*$/.test(requested) ||
-    !Number.isSafeInteger(Number(requested))
-  ) {
-    throw new Error(
-      "Case jobs must be auto or a positive safe integer string.",
-    );
+  if (typeof requested !== "string" || !/^[1-9]\d*$/.test(requested) || !Number.isSafeInteger(Number(requested))) {
+    throw new Error("Case jobs must be auto or a positive safe integer string.");
   }
   return Number(requested);
 }
@@ -171,9 +134,7 @@ function validateCaseCount(caseCount) {
 
 function validateTaskGraphWidth(taskGraphWidth) {
   if (!Number.isSafeInteger(taskGraphWidth) || taskGraphWidth < 1) {
-    throw new Error(
-      "Invalid task graph width: expected a positive safe integer.",
-    );
+    throw new Error("Invalid task graph width: expected a positive safe integer.");
   }
 }
 
@@ -218,13 +179,7 @@ export async function sampleResources() {
     for (let index = 0; index < before.length; index += 1) {
       const idle = after[index].idle - before[index].idle;
       const total = after[index].total - before[index].total;
-      if (
-        !Number.isFinite(idle) ||
-        !Number.isFinite(total) ||
-        idle < 0 ||
-        total <= 0 ||
-        idle > total
-      ) {
+      if (!Number.isFinite(idle) || !Number.isFinite(total) || idle < 0 || total <= 0 || idle > total) {
         throw new Error("CPU time sample has invalid deltas.");
       }
       idleDelta += idle;
@@ -236,16 +191,12 @@ export async function sampleResources() {
   }
   try {
     resources.availableMemoryBytes =
-      typeof process.availableMemory === "function"
-        ? process.availableMemory()
-        : freemem();
+      typeof process.availableMemory === "function" ? process.availableMemory() : freemem();
   } catch (error) {
     resources.probeErrors.push(`Memory probe: ${errorMessage(error)}`);
   }
   if (!validResources(resources) && resources.probeErrors.length === 0) {
-    resources.probeErrors.push(
-      "Resource sample contains missing or invalid readings.",
-    );
+    resources.probeErrors.push("Resource sample contains missing or invalid readings.");
   }
   return resources;
 }

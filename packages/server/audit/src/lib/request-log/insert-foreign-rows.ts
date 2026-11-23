@@ -7,8 +7,7 @@ import { requestLog } from "../database/generated-tables/request-log.tables.js";
  * A database handle or an open transaction on it, so a caller can commit
  * these rows together with its own bookkeeping row.
  */
-export type ForeignRowsHandle =
-  DrizzleHandle | Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
+export type ForeignRowsHandle = DrizzleHandle | Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
 
 /**
  * Inserts `request_log` rows recorded by another process of the same product

@@ -2,11 +2,7 @@ import { z } from "zod";
 
 import type { CatalogOnlyCapability } from "./catalog-only.js";
 import { parentRoleNameOf } from "./dsl-actor.js";
-import {
-  buildRoleTokens,
-  createInstanceProxy,
-  createPermissionBag,
-} from "./dsl-resource-helpers.js";
+import { buildRoleTokens, createInstanceProxy, createPermissionBag } from "./dsl-resource-helpers.js";
 import type {
   AnyDslChildSpec,
   ContextualInlineChildSpec,
@@ -18,13 +14,7 @@ import type {
   ResolvedInheritedPerms,
   ValidatedResourceResult,
 } from "./dsl-resource-types.js";
-import type {
-  AnyDslResource,
-  DslGrantingSpec,
-  DslPermissionExpr,
-  DslRolesSpec,
-  DslSubjectInput,
-} from "./dsl-types.js";
+import type { AnyDslResource, DslGrantingSpec, DslPermissionExpr, DslRolesSpec, DslSubjectInput } from "./dsl-types.js";
 import { entityHandle } from "./entity-handle.js";
 import type { EntityHandle } from "./entity-handle.js";
 import type { RoleToken } from "./refs.js";
@@ -54,10 +44,7 @@ export type DslResourceRecord = {
   readonly parents: readonly AnyDslResource[];
   readonly recursive: boolean;
   readonly canFn:
-    | ((
-        context: Readonly<Record<string, unknown>>,
-      ) => Record<string, InlineChildPermissionExpr>)
-    | undefined;
+    ((context: Readonly<Record<string, unknown>>) => Record<string, InlineChildPermissionExpr>) | undefined;
   readonly granting: DslGrantingSpec | undefined;
   readonly catalogOnly: readonly CatalogOnlyCapability[];
   readonly childNodes: AnyDslResource[];
@@ -67,21 +54,15 @@ const resourceRecords = new WeakMap<object, DslResourceRecord>();
 const roleTokenOwners = new WeakMap<RoleToken, AnyDslResource>();
 const expirableUsersetOwners = new WeakMap<object, AnyDslResource>();
 
-export function getDslResourceRecord(
-  node: AnyDslResource,
-): DslResourceRecord | undefined {
+export function getDslResourceRecord(node: AnyDslResource): DslResourceRecord | undefined {
   return resourceRecords.get(node);
 }
 
-export function getRoleTokenOwner(
-  token: RoleToken,
-): AnyDslResource | undefined {
+export function getRoleTokenOwner(token: RoleToken): AnyDslResource | undefined {
   return roleTokenOwners.get(token);
 }
 
-export function getExpirableUsersetOwner(
-  holder: object,
-): AnyDslResource | undefined {
+export function getExpirableUsersetOwner(holder: object): AnyDslResource | undefined {
   return expirableUsersetOwners.get(holder);
 }
 
@@ -94,14 +75,10 @@ type InternalResourceInit = {
   readonly parents: readonly AnyDslResource[];
   readonly recursive: boolean;
   readonly canFn:
-    | ((
-        context: Readonly<Record<string, unknown>>,
-      ) => Record<string, InlineChildPermissionExpr>)
-    | undefined;
+    ((context: Readonly<Record<string, unknown>>) => Record<string, InlineChildPermissionExpr>) | undefined;
   readonly granting: DslGrantingSpec | undefined;
   readonly catalogOnly: readonly CatalogOnlyCapability[];
-  readonly inlineChildren:
-    Readonly<Record<string, AnyDslChildSpec>> | undefined;
+  readonly inlineChildren: Readonly<Record<string, AnyDslChildSpec>> | undefined;
 };
 
 function isAnyDslResource(value: unknown): value is AnyDslResource {
@@ -116,16 +93,13 @@ function isValidatedResource<
 >(
   value: AnyDslResource,
   wireName: WireName,
-): value is ValidatedResourceResult<WireName, RoleSubjects, Perms, Children> &
-  AnyDslResource {
+): value is ValidatedResourceResult<WireName, RoleSubjects, Perms, Children> & AnyDslResource {
   return value.wireName === wireName;
 }
 
 function isCanFn(
   value: unknown,
-): value is (
-  context: Readonly<Record<string, unknown>>,
-) => Record<string, InlineChildPermissionExpr> {
+): value is (context: Readonly<Record<string, unknown>>) => Record<string, InlineChildPermissionExpr> {
   return typeof value === "function";
 }
 
@@ -136,16 +110,9 @@ function attachInlineChildren(
 ): void {
   for (const [childWireName, childSpec] of Object.entries(inlineChildren)) {
     if (RESERVED_RESOURCE_PROPS.has(childWireName)) {
-      throw new Error(
-        `child name "${childWireName}" conflicts with reserved resource property`,
-      );
+      throw new Error(`child name "${childWireName}" conflicts with reserved resource property`);
     }
-    const childNode = createChildNode(
-      parentNode,
-      record,
-      childWireName,
-      childSpec,
-    );
+    const childNode = createChildNode(parentNode, record, childWireName, childSpec);
     Object.defineProperty(parentNode, childWireName, {
       value: childNode,
       enumerable: true,
@@ -200,10 +167,7 @@ function createInternalResource(init: InternalResourceInit): AnyDslResource {
   }
 
   const childNodes: AnyDslResource[] = [];
-  const parentRoleName =
-    init.parentResource === undefined
-      ? undefined
-      : parentRoleNameOf(init.parentResource.wireName);
+  const parentRoleName = init.parentResource === undefined ? undefined : parentRoleNameOf(init.parentResource.wireName);
 
   const nodeBase = Object.assign(callResource, {
     kind: "dsl-resource",
@@ -214,10 +178,7 @@ function createInternalResource(init: InternalResourceInit): AnyDslResource {
     roles,
     can: permissions,
     permissions,
-    child: (
-      childWireName: string,
-      childSpec: AnyDslChildSpec,
-    ): AnyDslResource =>
+    child: (childWireName: string, childSpec: AnyDslChildSpec): AnyDslResource =>
       createChildNode(node, record, childWireName, childSpec),
   });
 
@@ -263,15 +224,9 @@ export function resource<
   const WireName extends string,
   const RolesSpec extends DslRolesSpec = Record<never, never>,
   const Parents extends readonly AnyDslResource[] = readonly [],
-  const CanResult extends Record<string, DslPermissionExpr> = Record<
-    never,
-    never
-  >,
+  const CanResult extends Record<string, DslPermissionExpr> = Record<never, never>,
   const Recursive extends boolean = false,
-  const Children extends Readonly<Record<string, AnyDslChildSpec>> = Record<
-    never,
-    never
-  >,
+  const Children extends Readonly<Record<string, AnyDslChildSpec>> = Record<never, never>,
 >(
   wireName: WireName,
   spec: {
@@ -279,25 +234,11 @@ export function resource<
     readonly roles?: RolesSpec;
     readonly parents?: Parents;
     readonly recursive?: Recursive;
-    readonly can?: (
-      context: DslCanContext<
-        RolesSpec,
-        never,
-        never,
-        Parents,
-        WireName,
-        Recursive
-      >,
-    ) => CanResult;
+    readonly can?: (context: DslCanContext<RolesSpec, never, never, Parents, WireName, Recursive>) => CanResult;
     readonly granting?: DslGrantingSpec<keyof CanResult & string>;
     readonly catalogOnly?: readonly CatalogOnlyCapability[];
     readonly children?: Children &
-      Readonly<
-        Record<
-          string,
-          ContextualInlineChildSpec<NoInfer<keyof CanResult & string>>
-        >
-      >;
+      Readonly<Record<string, ContextualInlineChildSpec<NoInfer<keyof CanResult & string>>>>;
   },
 ): ValidatedResourceResult<
   WireName,

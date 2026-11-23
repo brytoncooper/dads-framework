@@ -4,12 +4,7 @@ import { setTimeout } from "node:timers/promises";
 import type { DevCommand } from "./dev-config.js";
 import { hasCode, pidIsAlive } from "./process-inspection.js";
 
-export function launch(
-  command: DevCommand,
-  cwd: string,
-  env: NodeJS.ProcessEnv,
-  log: string,
-): ChildProcess {
+export function launch(command: DevCommand, cwd: string, env: NodeJS.ProcessEnv, log: string): ChildProcess {
   const [file, ...args] = command;
   const output = openSync(log, "a", 0o600);
   try {
@@ -31,32 +26,17 @@ export function childFinished(child: ChildProcess): Promise<number | null> {
   });
 }
 
-export async function stopProcesses(
-  children: readonly ChildProcess[],
-): Promise<void> {
+export async function stopProcesses(children: readonly ChildProcess[]): Promise<void> {
   const running = children.flatMap((child) => {
-    if (
-      child.pid === undefined ||
-      child.exitCode !== null ||
-      child.signalCode !== null
-    )
-      return [];
+    if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return [];
     return [child.pid];
   });
   for (const pid of running) signalProcessGroup(pid, "SIGTERM");
   const deadline = Date.now() + 5_000;
-  while (Date.now() < deadline && running.some(pidIsAlive))
-    await setTimeout(50);
+  while (Date.now() < deadline && running.some(pidIsAlive)) await setTimeout(50);
   for (const pid of running) {
     // Only target a surviving group while its original leader is still alive.
-    if (
-      children.some(
-        (child) =>
-          child.pid === pid &&
-          child.exitCode === null &&
-          child.signalCode === null,
-      )
-    ) {
+    if (children.some((child) => child.pid === pid && child.exitCode === null && child.signalCode === null)) {
       signalProcessGroup(pid, "SIGKILL");
     }
   }

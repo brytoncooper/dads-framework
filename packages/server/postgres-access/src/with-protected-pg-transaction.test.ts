@@ -46,10 +46,7 @@ function createFakePgPool(options: FakePoolOptions = {}) {
   let txStatus: "I" | "T" | "E" = "I";
 
   const client: PgClientLike = {
-    async query(
-      query: string | PostgresQuery,
-      values?: PostgresValue[],
-    ): Promise<PostgresQueryResult> {
+    async query(query: string | PostgresQuery, values?: PostgresValue[]): Promise<PostgresQueryResult> {
       const text = typeof query === "string" ? query : query.text;
       const boundValues = typeof query === "string" ? values : query.values;
       clientQueries.push({ text, values: boundValues });
@@ -72,16 +69,11 @@ function createFakePgPool(options: FakePoolOptions = {}) {
     release(destroy?: Error | boolean) {
       releases.push(destroy);
     },
-    ...(options.trackTransactionStatus === false
-      ? {}
-      : { getTransactionStatus: () => txStatus }),
+    ...(options.trackTransactionStatus === false ? {} : { getTransactionStatus: () => txStatus }),
   };
 
   const pool: PgPoolLike = {
-    query(
-      query: string | PostgresQuery,
-      values?: PostgresValue[],
-    ): Promise<PostgresQueryResult> {
+    query(query: string | PostgresQuery, values?: PostgresValue[]): Promise<PostgresQueryResult> {
       const text = typeof query === "string" ? query : query.text;
       const boundValues = typeof query === "string" ? values : query.values;
       poolQueries.push({ text, values: boundValues });
@@ -163,13 +155,10 @@ describe("withProtectedPgTransaction", () => {
     const failure = new Error("application validation failed");
 
     await expect(
-      withProtectedPgTransaction(
-        { pool: fake.pool, authorization },
-        async ({ client }) => {
-          await client.query("INSERT INTO docs (id) VALUES ($1)", ["doc-2"]);
-          throw failure;
-        },
-      ),
+      withProtectedPgTransaction({ pool: fake.pool, authorization }, async ({ client }) => {
+        await client.query("INSERT INTO docs (id) VALUES ($1)", ["doc-2"]);
+        throw failure;
+      }),
     ).rejects.toBe(failure);
 
     expect(fake.clientQueries.map((entry) => entry.text)).toEqual([
@@ -191,9 +180,7 @@ describe("withProtectedPgTransaction", () => {
     const original = new Error("original write error");
 
     await expect(
-      withProtectedPgTransaction({ pool: fake.pool, authorization }, () =>
-        Promise.reject(original),
-      ),
+      withProtectedPgTransaction({ pool: fake.pool, authorization }, () => Promise.reject(original)),
     ).rejects.toBe(original);
 
     expect(fake.releases).toEqual([true]);
@@ -210,14 +197,10 @@ describe("withProtectedPgTransaction", () => {
     const authorization = createAuth(fake.pool);
     const work = vi.fn(() => Promise.resolve());
 
-    await expect(
-      withProtectedPgTransaction({ pool: fake.pool, authorization }, work),
-    ).rejects.toBe(beginFailure);
+    await expect(withProtectedPgTransaction({ pool: fake.pool, authorization }, work)).rejects.toBe(beginFailure);
 
     expect(work).not.toHaveBeenCalled();
-    expect(fake.clientQueries.map((entry) => entry.text)).toEqual([
-      "BEGIN ISOLATION LEVEL SERIALIZABLE",
-    ]);
+    expect(fake.clientQueries.map((entry) => entry.text)).toEqual(["BEGIN ISOLATION LEVEL SERIALIZABLE"]);
     expect(fake.releases).toEqual([true]);
   });
 
@@ -231,9 +214,8 @@ describe("withProtectedPgTransaction", () => {
     });
     const authorization = createAuth(fake.pool);
 
-    const thrown = await withProtectedPgTransaction(
-      { pool: fake.pool, authorization },
-      ({ client }) => client.query("UPDATE docs SET title = 'v2'"),
+    const thrown = await withProtectedPgTransaction({ pool: fake.pool, authorization }, ({ client }) =>
+      client.query("UPDATE docs SET title = 'v2'"),
     ).catch((error: unknown) => error);
 
     expect(thrown).toBeInstanceOf(PostgresSerializationConflict);
@@ -261,12 +243,9 @@ describe("withProtectedPgTransaction", () => {
     });
     const authorization = createAuth(fake.pool);
 
-    const thrown = await withProtectedPgTransaction(
-      { pool: fake.pool, authorization },
-      async ({ client }) => {
-        await client.query("UPDATE docs SET title = 'v3'");
-      },
-    ).catch((error: unknown) => error);
+    const thrown = await withProtectedPgTransaction({ pool: fake.pool, authorization }, async ({ client }) => {
+      await client.query("UPDATE docs SET title = 'v3'");
+    }).catch((error: unknown) => error);
 
     expect(thrown).toBeInstanceOf(PostgresSerializationConflict);
     if (!(thrown instanceof PostgresSerializationConflict)) {
@@ -294,10 +273,7 @@ describe("withProtectedPgTransaction", () => {
     const authorization = createAuth(fake.pool);
 
     await expect(
-      withProtectedPgTransaction(
-        { pool: fake.pool, authorization },
-        ({ client }) => client.query("SELECT 1 / 0"),
-      ),
+      withProtectedPgTransaction({ pool: fake.pool, authorization }, ({ client }) => client.query("SELECT 1 / 0")),
     ).rejects.toBe(divisionByZero);
   });
 
@@ -358,16 +334,10 @@ describe("withProtectedPgTransaction", () => {
     const authorization = createAuth(fake.pool);
 
     await expect(
-      withProtectedPgTransaction(
-        { pool: fake.pool, authorization, retries: -1 },
-        () => Promise.resolve(),
-      ),
+      withProtectedPgTransaction({ pool: fake.pool, authorization, retries: -1 }, () => Promise.resolve()),
     ).rejects.toThrow("non-negative integer");
     await expect(
-      withProtectedPgTransaction(
-        { pool: fake.pool, authorization, retryBaseDelayMs: -5 },
-        () => Promise.resolve(),
-      ),
+      withProtectedPgTransaction({ pool: fake.pool, authorization, retryBaseDelayMs: -5 }, () => Promise.resolve()),
     ).rejects.toThrow("non-negative integer");
   });
 
@@ -375,14 +345,11 @@ describe("withProtectedPgTransaction", () => {
     const fake = createFakePgPool();
     const authorization = createAuth(fake.pool);
 
-    const leaked = await withProtectedPgTransaction(
-      { pool: fake.pool, authorization },
-      ({ authorization: scoped }) => Promise.resolve(scoped),
+    const leaked = await withProtectedPgTransaction({ pool: fake.pool, authorization }, ({ authorization: scoped }) =>
+      Promise.resolve(scoped),
     );
 
-    await expect(leaked.check(editCheck("doc-1", "alice"))).rejects.toThrow(
-      "scope has ended",
-    );
+    await expect(leaked.check(editCheck("doc-1", "alice"))).rejects.toThrow("scope has ended");
     await expect(
       leaked.writeRelationships([
         {
@@ -392,17 +359,12 @@ describe("withProtectedPgTransaction", () => {
         },
       ]),
     ).rejects.toThrow("scope has ended");
-    await expect(
-      leaked.deleteRelationships({ resourceType: doc.wireName }),
-    ).rejects.toThrow("scope has ended");
+    await expect(leaked.deleteRelationships({ resourceType: doc.wireName })).rejects.toThrow("scope has ended");
     expect(() => leaked.inTransaction(fake.client)).toThrow("scope has ended");
 
     const beforeConnects = fake.getConnectCount();
     await expect(
-      withProtectedPgTransaction(
-        { pool: fake.pool, authorization: leaked },
-        () => Promise.resolve(),
-      ),
+      withProtectedPgTransaction({ pool: fake.pool, authorization: leaked }, () => Promise.resolve()),
     ).rejects.toThrow("scope has ended");
     expect(fake.getConnectCount()).toBe(beforeConnects);
   });
@@ -411,19 +373,13 @@ describe("withProtectedPgTransaction", () => {
     const fake = createFakePgPool();
     const authorization = createAuth(fake.pool);
 
-    await withProtectedPgTransaction(
-      { pool: fake.pool, authorization },
-      async ({ authorization: scoped }) => {
-        const beforeConnects = fake.getConnectCount();
-        await expect(
-          withProtectedPgTransaction(
-            { pool: fake.pool, authorization: scoped },
-            () => Promise.resolve(),
-          ),
-        ).rejects.toThrow("can only join its own Postgres transaction");
-        expect(fake.getConnectCount()).toBe(beforeConnects);
-      },
-    );
+    await withProtectedPgTransaction({ pool: fake.pool, authorization }, async ({ authorization: scoped }) => {
+      const beforeConnects = fake.getConnectCount();
+      await expect(
+        withProtectedPgTransaction({ pool: fake.pool, authorization: scoped }, () => Promise.resolve()),
+      ).rejects.toThrow("can only join its own Postgres transaction");
+      expect(fake.getConnectCount()).toBe(beforeConnects);
+    });
   });
 
   it("dispatches withProtectedPostgresTransaction({ pool, authorization }) to plain pg", async () => {
@@ -444,9 +400,7 @@ describe("withProtectedPgTransaction", () => {
       "SELECT 1",
       "COMMIT",
     ]);
-    await expect(leaked.check(editCheck("doc-1", "alice"))).rejects.toThrow(
-      "scope has ended",
-    );
+    await expect(leaked.check(editCheck("doc-1", "alice"))).rejects.toThrow("scope has ended");
   });
 
   it("keeps core modules free of drizzle-orm and @dads-framework/postgres imports", () => {
@@ -466,13 +420,10 @@ describe("withProtectedPgTransaction", () => {
     ];
     for (const file of coreFiles) {
       const source = readFileSync(join(srcDir, file), "utf8");
-      expect(source, `${file} must not import drizzle-orm`).not.toMatch(
-        /from\s+["']drizzle-orm/,
+      expect(source, `${file} must not import drizzle-orm`).not.toMatch(/from\s+["']drizzle-orm/);
+      expect(source, `${file} must not import @dads-framework/postgres`).not.toMatch(
+        /from\s+["']@dads-framework\/postgres/,
       );
-      expect(
-        source,
-        `${file} must not import @dads-framework/postgres`,
-      ).not.toMatch(/from\s+["']@dads-framework\/postgres/);
     }
   });
 });

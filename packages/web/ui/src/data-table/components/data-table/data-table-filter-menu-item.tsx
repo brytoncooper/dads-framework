@@ -4,14 +4,7 @@ import * as React from "react";
 
 import { useLocaleFormatting } from "../../../copy/index.js";
 import { Button } from "../../../elements/index.js";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../forms/index.js";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../../forms/index.js";
 import {
   Command,
   CommandEmpty,
@@ -25,21 +18,12 @@ import {
 } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
-import {
-  getDefaultFilterOperator,
-  getFilterOperators,
-} from "../../lib/data-table.js";
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-} from "../../lib/data-table-types.js";
+import { getDefaultFilterOperator, getFilterOperators } from "../../lib/data-table.js";
+import type { ExtendedColumnFilter, FilterOperator } from "../../lib/data-table-types.js";
 import { isKnownColumnId } from "../../lib/parsers.js";
 
 import { renderFilterMenuInput } from "./data-table-filter-menu-input.js";
-import {
-  REMOVE_FILTER_SHORTCUTS,
-  type FilterMenuUpdate,
-} from "./data-table-filter-input-shared.js";
+import { REMOVE_FILTER_SHORTCUTS, type FilterMenuUpdate } from "./data-table-filter-input-shared.js";
 
 type DataTableFilterItemProps<TData> = {
   filter: ExtendedColumnFilter<TData>;
@@ -63,26 +47,18 @@ export function DataTableFilterItem<TData>({
   const [showValueSelector, setShowValueSelector] = React.useState(false);
 
   const column = columns.find((column) => column.id === filter.id);
-  const columnIds = React.useMemo(
-    () => new Set(columns.map((column) => column.id)),
-    [columns],
-  );
+  const columnIds = React.useMemo(() => new Set(columns.map((column) => column.id)), [columns]);
 
   const operatorListboxId = `${filterItemId}-operator-listbox`;
   const inputId = `${filterItemId}-input`;
 
   const columnMeta = column?.columnDef.meta;
   const filterOperators = getFilterOperators(filter.variant);
-  const selectedOperator = filterOperators.find(
-    (operator) => operator.value === filter.operator,
-  );
+  const selectedOperator = filterOperators.find((operator) => operator.value === filter.operator);
 
   const onItemKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
@@ -95,13 +71,7 @@ export function DataTableFilterItem<TData>({
         onFilterRemove(filter.filterId);
       }
     },
-    [
-      filter.filterId,
-      showFieldSelector,
-      showOperatorSelector,
-      showValueSelector,
-      onFilterRemove,
-    ],
+    [filter.filterId, showFieldSelector, showOperatorSelector, showValueSelector, onFilterRemove],
   );
 
   if (!column) return null;
@@ -120,9 +90,7 @@ export function DataTableFilterItem<TData>({
             variant="outline"
             className="rounded-none rounded-l-md border border-input border-r-0 font-normal dark:bg-input/30"
           >
-            {columnMeta?.icon && (
-              <columnMeta.icon className="text-muted-foreground" />
-            )}
+            {columnMeta?.icon && <columnMeta.icon className="text-muted-foreground" />}
             {columnMeta?.label ?? column.id}
           </Button>
         </PopoverTrigger>
@@ -153,12 +121,8 @@ export function DataTableFilterItem<TData>({
                       setShowFieldSelector(false);
                     }}
                   >
-                    {column.columnDef.meta?.icon && (
-                      <column.columnDef.meta.icon />
-                    )}
-                    <span className="truncate">
-                      {column.columnDef.meta?.label ?? column.id}
-                    </span>
+                    {column.columnDef.meta?.icon && <column.columnDef.meta.icon />}
+                    <span className="truncate">{column.columnDef.meta?.label ?? column.id}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -173,8 +137,7 @@ export function DataTableFilterItem<TData>({
         onValueChange={(value: FilterOperator) => {
           onFilterUpdate(filter.filterId, {
             operator: value,
-            value:
-              value === "isEmpty" || value === "isNotEmpty" ? "" : filter.value,
+            value: value === "isEmpty" || value === "isNotEmpty" ? "" : filter.value,
           });
         }}
       >
@@ -183,20 +146,12 @@ export function DataTableFilterItem<TData>({
           aria-controls={operatorListboxId}
           className="h-8 rounded-none border-r-0 px-2.5 lowercase data-size:h-8 [&_svg]:hidden"
         >
-          <SelectValue
-            placeholder={
-              selectedOperator ? t(selectedOperator.labelKey) : filter.operator
-            }
-          />
+          <SelectValue placeholder={selectedOperator ? t(selectedOperator.labelKey) : filter.operator} />
         </SelectTrigger>
         <SelectContent id={operatorListboxId}>
           <SelectGroup>
             {filterOperators.map((operator) => (
-              <SelectItem
-                key={operator.value}
-                className="lowercase"
-                value={operator.value}
-              >
+              <SelectItem key={operator.value} className="lowercase" value={operator.value}>
                 {t(operator.labelKey)}
               </SelectItem>
             ))}

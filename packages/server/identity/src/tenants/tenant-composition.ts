@@ -5,9 +5,7 @@ import { tenantTable } from "./tenant-tables.js";
 import type { TenantDatabase } from "./tenant-transaction.js";
 
 /** Use only behind platform authorization, such as flag management. */
-export function createTenantDirectory(
-  database: Pick<TenantDatabase, "select">,
-) {
+export function createTenantDirectory(database: Pick<TenantDatabase, "select">) {
   return {
     async findActiveTenants(ids: readonly string[]) {
       const accepted: TenantId[] = [];
@@ -16,11 +14,7 @@ export function createTenantDirectory(
         if (parsed.success) accepted.push(parsed.data);
       }
       if (accepted.length === 0) return [];
-      return database
-        .select()
-        .from(tenantTable)
-        .where(inArray(tenantTable.id, accepted))
-        .orderBy(tenantTable.id);
+      return database.select().from(tenantTable).where(inArray(tenantTable.id, accepted)).orderBy(tenantTable.id);
     },
   };
 }
@@ -34,10 +28,5 @@ export const tenantAuditConfiguration = {
       scopeColumns: { tenant_id: "tenant_id" },
     },
   },
-  excludeTables: [
-    "tenant_invitation",
-    "tenant_scim_user",
-    "tenant_scim_group",
-    "tenant_scim_group_member",
-  ],
+  excludeTables: ["tenant_invitation", "tenant_scim_user", "tenant_scim_group", "tenant_scim_group_member"],
 };

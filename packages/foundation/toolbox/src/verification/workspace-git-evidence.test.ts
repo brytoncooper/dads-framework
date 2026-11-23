@@ -7,11 +7,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { environmentWithoutGitVariables } from "./git-environment.js";
 import { readSnapshotGitEvidence } from "./workspace-git-evidence.js";
-import {
-  captureWorkspaceSnapshot,
-  discardWorkspaceSnapshot,
-  readWorkspaceIdentity,
-} from "./workspace-snapshot.js";
+import { captureWorkspaceSnapshot, discardWorkspaceSnapshot, readWorkspaceIdentity } from "./workspace-snapshot.js";
 
 const roots: string[] = [];
 
@@ -50,31 +46,20 @@ it("retains read-only history and hook facts in an offline graph snapshot", () =
   try {
     expect(git(snapshot.root, "rev-parse", "origin/main")).toBe(boundary);
     expect(git(snapshot.root, "cat-file", "-t", boundary)).toBe("commit");
-    expect(
-      git(snapshot.root, "config", "--local", "--get", "core.hooksPath"),
-    ).toBe(".githooks");
+    expect(git(snapshot.root, "config", "--local", "--get", "core.hooksPath")).toBe(".githooks");
     expect(git(snapshot.root, "remote")).toBe("");
   } finally {
     discardWorkspaceSnapshot(snapshot);
   }
 
-  git(
-    root,
-    "update-ref",
-    "refs/remotes/origin/main",
-    git(root, "rev-parse", "HEAD"),
-  );
+  git(root, "update-ref", "refs/remotes/origin/main", git(root, "rev-parse", "HEAD"));
   expect(git(root, "remote")).toBe("origin");
-  expect(git(root, "config", "--local", "--get", "core.hooksPath")).toBe(
-    ".githooks",
-  );
+  expect(git(root, "config", "--local", "--get", "core.hooksPath")).toBe(".githooks");
   expect(readWorkspaceIdentity(root)).not.toBe(identity);
   const movedBoundaryIdentity = readWorkspaceIdentity(root);
   git(root, "config", "core.hooksPath", "verification-hooks");
   expect(readWorkspaceIdentity(root)).not.toBe(movedBoundaryIdentity);
-  expect(() => captureWorkspaceSnapshot(root, identity)).toThrow(
-    /identity changed/,
-  );
+  expect(() => captureWorkspaceSnapshot(root, identity)).toThrow(/identity changed/);
 });
 
 it("keeps absolute and escaping hook paths out of snapshot configuration", () => {

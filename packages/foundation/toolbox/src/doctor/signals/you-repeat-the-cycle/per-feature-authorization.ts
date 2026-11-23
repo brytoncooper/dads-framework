@@ -15,19 +15,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  evidenceAt,
-  isProductionModule,
-  ts,
-  visitNodes,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { evidenceAt, isProductionModule, ts, visitNodes, type DoctorModule } from "../scanners/typescript-program.js";
 
 const DECIDES_ACCESS = /^(?:authorize|isAllowed|can)(?:[A-Z0-9]|$)/;
 const AUTHORIZATION_PACKAGE = /(?:authorization|(?:^|\/|-)access)(?:$|\/)/;
@@ -39,9 +28,7 @@ function isFunctionValue(node: ts.Node): boolean {
 /** The name a node declares, when the node declares a function. */
 function declaredFunctionName(node: ts.Node): string | undefined {
   if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) {
-    return node.name !== undefined && ts.isIdentifier(node.name)
-      ? node.name.text
-      : undefined;
+    return node.name !== undefined && ts.isIdentifier(node.name) ? node.name.text : undefined;
   }
   if (!ts.isVariableDeclaration(node)) return undefined;
   if (node.initializer === undefined || !isFunctionValue(node.initializer)) {
@@ -74,8 +61,7 @@ function countFeatureAuthorization(context: DoctorContext): SignalReadings {
 export const perFeatureAuthorizationSignal: DoctorSignal = {
   id: "per-feature-authorization",
   issue: "you-repeat-the-cycle",
-  question:
-    "Is a function named `authorize*`, `can*`, or `isAllowed*` defined outside the authorization package?",
+  question: "Is a function named `authorize*`, `can*`, or `isAllowed*` defined outside the authorization package?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

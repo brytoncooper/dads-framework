@@ -10,10 +10,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import type {
-  EmailTemplate,
-  EmailTemplateCatalog,
-} from "../email-template-port.js";
+import type { EmailTemplate, EmailTemplateCatalog } from "../email-template-port.js";
 import { FakeEmailDelivery } from "../testing/fake-email-delivery.js";
 import { SendTestEmail, TEST_SEND_TAG } from "./send-test-email.mutation.js";
 
@@ -97,9 +94,7 @@ describe("SendTestEmail", () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(!result.ok && result.error.code).toBe(
-      "EMAIL_TEMPLATE_SAMPLE_NOT_FOUND",
-    );
+    expect(!result.ok && result.error.code).toBe("EMAIL_TEMPLATE_SAMPLE_NOT_FOUND");
     expect(emailDelivery.enqueued).toEqual([]);
   });
 });

@@ -73,8 +73,7 @@ const TEMPLATES = {
         note: "Import rules enforced in CI",
       },
     ],
-    caption:
-      "Full backend shape, zero demo code. Add your first resource with <code>npx dad add resource</code>.",
+    caption: "Full backend shape, zero demo code. Add your first resource with <code>npx dad add resource</code>.",
   },
   example: {
     command: "npm create dads@latest my-app",
@@ -129,8 +128,7 @@ const TEMPLATES = {
         note: "Server startup, Postgres & env",
       },
     ],
-    caption:
-      "Complete runnable app with notes, permissions dashboard, attachments, exports, and multi-user examples.",
+    caption: "Complete runnable app with notes, permissions dashboard, attachments, exports, and multi-user examples.",
   },
 };
 
@@ -186,8 +184,7 @@ if (copy && command) {
       range.selectNodeContents(command);
       selection.removeAllRanges();
       selection.addRange(range);
-      if (copyStatus)
-        copyStatus.textContent = "Install command selected for manual copying.";
+      if (copyStatus) copyStatus.textContent = "Install command selected for manual copying.";
       copy.textContent = "Selected";
     }
     resetCopyFeedback = setTimeout(() => {
@@ -204,9 +201,7 @@ if (codeBox) {
   const tabs = [...tabList.querySelectorAll('[role="tab"]')];
   const fileLabel = codeBox.querySelector("#code-box-file");
   const copyBtn = codeBox.querySelector("#code-box-copy");
-  let activePanel = document.getElementById(
-    tabs[0].getAttribute("aria-controls"),
-  );
+  let activePanel = document.getElementById(tabs[0].getAttribute("aria-controls"));
   let resetCodeCopy;
 
   const activateTab = (selected) => {
@@ -235,8 +230,7 @@ if (codeBox) {
     const index = tabs.indexOf(event.target);
     if (index < 0) return;
     let next;
-    if (event.key === "ArrowLeft")
-      next = tabs[(index - 1 + tabs.length) % tabs.length];
+    if (event.key === "ArrowLeft") next = tabs[(index - 1 + tabs.length) % tabs.length];
     else if (event.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
     else if (event.key === "Home") next = tabs[0];
     else if (event.key === "End") next = tabs.at(-1);

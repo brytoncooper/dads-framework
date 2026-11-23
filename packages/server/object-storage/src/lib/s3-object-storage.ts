@@ -2,12 +2,7 @@ import type { S3Client } from "@aws-sdk/client-s3";
 import { loadS3Sdk, loadS3Presigner } from "./load-s3-sdk.js";
 
 import type { CloudFrontDownloadSigner } from "./cloudfront-download-signer.js";
-import type {
-  ObjectStorage,
-  SignedUpload,
-  SignedUploadRequest,
-  StoredObject,
-} from "../core.js";
+import type { ObjectStorage, SignedUpload, SignedUploadRequest, StoredObject } from "../core.js";
 
 /** A fixed access key pair, e.g. MinIO's root user in development. */
 export type S3StaticCredentials = {
@@ -71,11 +66,7 @@ export class S3ObjectStorage implements ObjectStorage {
     return { sdk, client };
   }
 
-  async put(
-    key: string,
-    body: Uint8Array | string,
-    contentType: string,
-  ): Promise<void> {
+  async put(key: string, body: Uint8Array | string, contentType: string): Promise<void> {
     const { sdk, client } = await this.loadClient();
     await client.send(
       new sdk.PutObjectCommand({
@@ -90,9 +81,7 @@ export class S3ObjectStorage implements ObjectStorage {
   async get(key: string): Promise<StoredObject | null> {
     try {
       const { sdk, client } = await this.loadClient();
-      const response = await client.send(
-        new sdk.GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
-      );
+      const response = await client.send(new sdk.GetObjectCommand({ Bucket: this.options.bucket, Key: key }));
       const body = await response.Body?.transformToByteArray();
       if (!body) return null;
       return {
@@ -100,10 +89,7 @@ export class S3ObjectStorage implements ObjectStorage {
         contentType: response.ContentType ?? "application/octet-stream",
       };
     } catch (error: unknown) {
-      if (
-        error instanceof Error &&
-        (error.name === "NoSuchKey" || error.name === "NotFound")
-      ) {
+      if (error instanceof Error && (error.name === "NoSuchKey" || error.name === "NotFound")) {
         return null;
       }
       throw error;
@@ -111,23 +97,15 @@ export class S3ObjectStorage implements ObjectStorage {
   }
 
   async getSignedUrl(key: string, expiresInSeconds: number): Promise<string> {
-    if (this.options.downloadSigner)
-      return Promise.resolve(
-        this.options.downloadSigner.sign(key, expiresInSeconds),
-      );
+    if (this.options.downloadSigner) return Promise.resolve(this.options.downloadSigner.sign(key, expiresInSeconds));
     const { sdk, client } = await this.loadClient();
     const { getSignedUrl } = await loadS3Presigner();
-    return getSignedUrl(
-      client,
-      new sdk.GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
-      { expiresIn: expiresInSeconds },
-    );
+    return getSignedUrl(client, new sdk.GetObjectCommand({ Bucket: this.options.bucket, Key: key }), {
+      expiresIn: expiresInSeconds,
+    });
   }
 
-  async getSignedUpload(
-    key: string,
-    request: SignedUploadRequest,
-  ): Promise<SignedUpload> {
+  async getSignedUpload(key: string, request: SignedUploadRequest): Promise<SignedUpload> {
     const checksum = Buffer.from(request.sha256, "hex").toString("base64");
     const { sdk, client } = await this.loadClient();
     const { getSignedUrl } = await loadS3Presigner();
@@ -145,11 +123,7 @@ export class S3ObjectStorage implements ObjectStorage {
         // The presigner leaves these unsigned by default. Signing them makes
         // storage refuse other bytes, so a PUT after finalize can only write
         // the bytes already verified.
-        signableHeaders: new Set([
-          "content-type",
-          "content-length",
-          "x-amz-checksum-sha256",
-        ]),
+        signableHeaders: new Set(["content-type", "content-length", "x-amz-checksum-sha256"]),
         unhoistableHeaders: new Set(["x-amz-checksum-sha256"]),
       },
     );
@@ -165,9 +139,7 @@ export class S3ObjectStorage implements ObjectStorage {
 
   async delete(key: string): Promise<void> {
     const { sdk, client } = await this.loadClient();
-    await client.send(
-      new sdk.DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
-    );
+    await client.send(new sdk.DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }));
   }
 
   async list(prefix: string): Promise<string[]> {
@@ -185,9 +157,7 @@ export class S3ObjectStorage implements ObjectStorage {
       for (const object of response.Contents ?? []) {
         if (object.Key !== undefined) keys.push(object.Key);
       }
-      continuationToken = response.IsTruncated
-        ? response.NextContinuationToken
-        : undefined;
+      continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
     } while (continuationToken !== undefined);
     return keys;
   }

@@ -161,12 +161,7 @@ export function ExampleTable({
       {...withRowGrouping(rowGroupOf)}
     >
       {withToolbar && (
-        <ExampleToolbar
-          table={table}
-          trailing={trailing}
-          chipGroups={chipGroups}
-          withExtraAction={withExtraAction}
-        />
+        <ExampleToolbar table={table} trailing={trailing} chipGroups={chipGroups} withExtraAction={withExtraAction} />
       )}
     </DataTable>
   );
@@ -185,15 +180,11 @@ function ExampleToolbar({
 }) {
   return (
     <DataTableToolbar table={table} trailing={trailing} chipGroups={chipGroups}>
-      {withExtraAction ? (
-        <Button variant="outline">{fixtureCopy.extraFilter}</Button>
-      ) : null}
+      {withExtraAction ? <Button variant="outline">{fixtureCopy.extraFilter}</Button> : null}
     </DataTableToolbar>
   );
 }
 
-function withRowGrouping(
-  rowGroupOf: DataTableRowGroupOf<ExampleRow> | undefined,
-) {
+function withRowGrouping(rowGroupOf: DataTableRowGroupOf<ExampleRow> | undefined) {
   return rowGroupOf ? { rowGroupOf } : {};
 }

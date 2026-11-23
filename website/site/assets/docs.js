@@ -3,19 +3,13 @@ import { enableExampleCopy } from "./docs-copy.js";
 
 function isTypingTarget(target) {
   if (!target || typeof target.matches !== "function") return false;
-  return (
-    target.matches("input, textarea, select") ||
-    Boolean(target.isContentEditable)
-  );
+  return target.matches("input, textarea, select") || Boolean(target.isContentEditable);
 }
 
 function isOutsideDialog(event, dialog) {
   const rect = dialog.getBoundingClientRect();
   return (
-    event.clientX < rect.left ||
-    event.clientX > rect.right ||
-    event.clientY < rect.top ||
-    event.clientY > rect.bottom
+    event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom
   );
 }
 
@@ -31,20 +25,15 @@ export function enableSearchModal(doc = document, win = window) {
 
   search.placeholder = "Search permissions, routes, migrations";
 
-  if (
-    shortcutBadge &&
-    !/Mac|iPhone|iPad|iPod/iu.test(win?.navigator?.userAgent ?? "")
-  ) {
+  if (shortcutBadge && !/Mac|iPhone|iPad|iPod/iu.test(win?.navigator?.userAgent ?? "")) {
     shortcutBadge.textContent = "Ctrl K";
   }
 
   let activeIndex = -1;
 
-  const isOpen = () =>
-    Boolean(dialog && (dialog.open || dialog.hasAttribute("open")));
+  const isOpen = () => Boolean(dialog && (dialog.open || dialog.hasAttribute("open")));
 
-  const resultLinks = () =>
-    results ? Array.from(results.querySelectorAll("a")) : [];
+  const resultLinks = () => (results ? Array.from(results.querySelectorAll("a")) : []);
 
   const setActive = (index) => {
     const links = resultLinks();
@@ -97,8 +86,7 @@ export function enableSearchModal(doc = document, win = window) {
   }
 
   const hasNativeClosedBy =
-    typeof win?.HTMLDialogElement === "function" &&
-    "closedBy" in win.HTMLDialogElement.prototype;
+    typeof win?.HTMLDialogElement === "function" && "closedBy" in win.HTMLDialogElement.prototype;
   if (dialog && !hasNativeClosedBy) {
     let pressedOutside = false;
     dialog.addEventListener("pointerdown", (event) => {
@@ -186,10 +174,7 @@ function enableFileGroups(article) {
         else tab.setAttribute("tabindex", "-1");
       }
       for (const panel of panels) {
-        panel.setAttribute(
-          "data-active",
-          panel.id === targetId ? "true" : "false",
-        );
+        panel.setAttribute("data-active", panel.id === targetId ? "true" : "false");
       }
       if (moveFocus) nextTab.focus();
     };
@@ -242,9 +227,7 @@ function enableTocScrollspy() {
   };
 
   const resolveActive = () => {
-    const nearBottom =
-      window.innerHeight + window.scrollY >=
-      document.documentElement.scrollHeight - 24;
+    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24;
     if (nearBottom) {
       setActive(items[items.length - 1].id);
       return;
@@ -304,8 +287,7 @@ if (typeof document !== "undefined" && typeof window !== "undefined") {
   if (scrollAreas.length > 0 && "ResizeObserver" in window) {
     const resize = new ResizeObserver((entries) => {
       for (const { target } of entries) {
-        if (target.scrollWidth > target.clientWidth)
-          target.setAttribute("tabindex", "0");
+        if (target.scrollWidth > target.clientWidth) target.setAttribute("tabindex", "0");
         else target.removeAttribute("tabindex");
       }
     });

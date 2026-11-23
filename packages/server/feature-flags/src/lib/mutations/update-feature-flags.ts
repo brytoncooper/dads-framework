@@ -34,9 +34,7 @@ export class UpdateFeatureFlags {
       definitions: this.definitions,
       request: input.request,
     });
-    const tenantNames = await this.activeTenantNames(
-      selectedTenantIds(input.request),
-    );
+    const tenantNames = await this.activeTenantNames(selectedTenantIds(input.request));
     const plan = planFeatureFlagBatch({
       actorId: input.actorId,
       batchId: featureFlagBatchIdSchema.parse(mintUuidV7()),
@@ -51,16 +49,11 @@ export class UpdateFeatureFlags {
     return plan.nextStates;
   }
 
-  private async activeTenantNames(
-    ids: readonly string[],
-  ): Promise<ReadonlyMap<string, string>> {
+  private async activeTenantNames(ids: readonly string[]): Promise<ReadonlyMap<string, string>> {
     const active = await this.tenants.findActiveTenants(ids);
     const names = new Map(active.map((tenant) => [tenant.id, tenant.name]));
     if (ids.some((id) => !names.has(id))) {
-      throw notFound(
-        "FEATURE_FLAG_TENANT_NOT_FOUND",
-        "A selected tenant is not active",
-      );
+      throw notFound("FEATURE_FLAG_TENANT_NOT_FOUND", "A selected tenant is not active");
     }
     return names;
   }

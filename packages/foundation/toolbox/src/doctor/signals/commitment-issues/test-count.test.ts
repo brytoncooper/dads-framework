@@ -16,8 +16,7 @@ function contextWithReport(report: string | undefined): DoctorContext {
       }
       return report ?? "";
     },
-    exists: (path) =>
-      path === "node_modules/.dads/vitest-report.json" && report !== undefined,
+    exists: (path) => path === "node_modules/.dads/vitest-report.json" && report !== undefined,
     packages: () => [],
     exec: () => ({ status: 1, stdout: "" }),
     online: false,
@@ -32,15 +31,11 @@ function contextWithReport(report: string | undefined): DoctorContext {
 
 describe("test-count signal", () => {
   it("throws when the Vitest report is missing so doctor marks it not measured", () => {
-    expect(() => testCountSignal.run(contextWithReport(undefined))).toThrow(
-      "run npm test first",
-    );
+    expect(() => testCountSignal.run(contextWithReport(undefined))).toThrow("run npm test first");
   });
 
   it("throws when the Vitest report has no testResults array", () => {
-    expect(() => testCountSignal.run(contextWithReport("{}"))).toThrow(
-      "invalid test report",
-    );
+    expect(() => testCountSignal.run(contextWithReport("{}"))).toThrow("invalid test report");
   });
 
   it("counts passed and failed assertions while excluding skipped tests", async () => {
@@ -48,11 +43,7 @@ describe("test-count signal", () => {
       testResults: [
         {
           name: "/repo/packages/demo/src/a.test.ts",
-          assertionResults: [
-            { status: "passed" },
-            { status: "failed" },
-            { status: "skipped" },
-          ],
+          assertionResults: [{ status: "passed" }, { status: "failed" }, { status: "skipped" }],
         },
       ],
     });

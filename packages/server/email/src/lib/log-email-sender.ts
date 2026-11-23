@@ -1,8 +1,4 @@
-import type {
-  EmailMessage,
-  EmailSender,
-  EmailSendReceipt,
-} from "../core/index.js";
+import type { EmailMessage, EmailSender, EmailSendReceipt } from "../core/index.js";
 import { describeEmailMessage } from "./logic/describe-email-message.js";
 
 /**
@@ -10,9 +6,7 @@ import { describeEmailMessage } from "./logic/describe-email-message.js";
  * drops the body so addresses and tokens never appear in logs.
  */
 export class LogEmailSender implements EmailSender {
-  constructor(
-    private readonly log: { info(obj: object, msg?: string): void },
-  ) {}
+  constructor(private readonly log: { info(obj: object, msg?: string): void }) {}
 
   send(message: EmailMessage): Promise<EmailSendReceipt> {
     this.log.info({

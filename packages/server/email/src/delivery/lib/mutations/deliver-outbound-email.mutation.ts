@@ -2,21 +2,11 @@ import type { Clock } from "@dads-framework/core/runtime/clock";
 import type { EmailSender } from "../../../core/index.js";
 import { ok, type Result } from "@dads-framework/core/errors";
 
-import type {
-  ClaimedOutboundEmail,
-  OutboundEmailStore,
-} from "../database/outbound-email-store.js";
+import type { ClaimedOutboundEmail, OutboundEmailStore } from "../database/outbound-email-store.js";
 import type { EmailDeliveryLog } from "../email-delivery.js";
-import type {
-  EmailTemplateCatalog,
-  EmailTemplate,
-  RenderEmailTemplate,
-} from "../email-template-port.js";
+import type { EmailTemplateCatalog, EmailTemplate, RenderEmailTemplate } from "../email-template-port.js";
 import { nextAttemptAt } from "../logic/next-attempt-at.js";
-import {
-  deliveryErrorName,
-  summarizeDeliveryError,
-} from "../logic/summarize-delivery-error.js";
+import { deliveryErrorName, summarizeDeliveryError } from "../logic/summarize-delivery-error.js";
 import { toEmailMessage } from "../logic/to-email-message.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
 import {
@@ -61,13 +51,9 @@ export type DeliverOutboundEmailDependencies = {
  * retry happen, because the job itself runs once (INV-EMAILDELIVERY-3).
  */
 export class DeliverOutboundEmail {
-  constructor(
-    private readonly dependencies: DeliverOutboundEmailDependencies,
-  ) {}
+  constructor(private readonly dependencies: DeliverOutboundEmailDependencies) {}
 
-  async execute(
-    input: DeliverOutboundEmailInput,
-  ): Promise<Result<DeliverOutboundEmailReport>> {
+  async execute(input: DeliverOutboundEmailInput): Promise<Result<DeliverOutboundEmailReport>> {
     const { store, catalog, log } = this.dependencies;
     const now = this.dependencies.clock.now();
 
@@ -111,9 +97,7 @@ export class DeliverOutboundEmail {
       const rendered = await this.dependencies.render(template, claimed.props);
       const attachments = await this.loadAttachments(claimed);
       transportStarted = true;
-      const receipt = await this.dependencies.emailSender.send(
-        toEmailMessage(claimed.envelope, rendered, attachments),
-      );
+      const receipt = await this.dependencies.emailSender.send(toEmailMessage(claimed.envelope, rendered, attachments));
       await store.markSent(claimed.id, {
         providerMessageId: receipt.providerMessageId,
         sentAt: this.dependencies.clock.now(),
@@ -144,17 +128,14 @@ export class DeliverOutboundEmail {
     }
   }
 
-  private async loadAttachments(claimed: {
-    attachments: readonly QueuedEmailAttachment[];
-  }) {
+  private async loadAttachments(claimed: { attachments: readonly QueuedEmailAttachment[] }) {
     const load = this.dependencies.loadAttachment;
     if (claimed.attachments.length > 0 && load === undefined) {
       throw new Error("Queued email attachment loader is not configured");
     }
     const attachments = [];
     for (const reference of claimed.attachments) {
-      if (load === undefined)
-        throw new Error("Queued email attachment loader is not configured");
+      if (load === undefined) throw new Error("Queued email attachment loader is not configured");
       attachments.push({
         filename: reference.filename,
         contentType: reference.contentType,

@@ -1,31 +1,16 @@
-import {
-  chmod,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  planNativeNxTesting,
-  runNativeNxTesting,
-} from "./nx-native-workspace.js";
+import { planNativeNxTesting, runNativeNxTesting } from "./nx-native-workspace.js";
 
 const run = promisify(execFile);
 const temporaryWorkspaces: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    temporaryWorkspaces
-      .splice(0)
-      .map((workspace) => rm(workspace, { recursive: true, force: true })),
-  );
+  await Promise.all(temporaryWorkspaces.splice(0).map((workspace) => rm(workspace, { recursive: true, force: true })));
 });
 
 describe("native Nx workspace wrapper", () => {
@@ -49,10 +34,7 @@ describe("native Nx workspace wrapper", () => {
       nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
     });
     expect(first.coverage.registered).toBe(1);
-    await writeFile(
-      path.join(workspace, "graph-definition.json"),
-      graphDefinition(2),
-    );
+    await writeFile(path.join(workspace, "graph-definition.json"), graphDefinition(2));
     const second = await planNativeNxTesting({
       workspaceRoot: workspace,
       nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
@@ -62,45 +44,27 @@ describe("native Nx workspace wrapper", () => {
 
   it("cleans scratch after graph failure and rejects source mutation before native", async () => {
     const workspace = await createWorkspace();
-    await writeFile(
-      path.join(workspace, "graph-definition.json"),
-      graphDefinition(1, true),
-    );
+    await writeFile(path.join(workspace, "graph-definition.json"), graphDefinition(1, true));
     await expect(
       planNativeNxTesting({
         workspaceRoot: workspace,
         nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
       }),
     ).rejects.toThrow("workspace changed during Nx discovery");
-    await expect(
-      readFile(path.join(workspace, "native-called")),
-    ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(
-      await readdir(
-        path.join(workspace, "node_modules", ".cache", "dads-testing"),
-      ),
-    ).toEqual([]);
-    await writeFile(
-      path.join(workspace, "graph-definition.json"),
-      '{"invalid":',
-    );
+    await expect(readFile(path.join(workspace, "native-called"))).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readdir(path.join(workspace, "node_modules", ".cache", "dads-testing"))).toEqual([]);
+    await writeFile(path.join(workspace, "graph-definition.json"), '{"invalid":');
     await expect(
       planNativeNxTesting({
         workspaceRoot: workspace,
         nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
       }),
     ).rejects.toThrow();
-    expect(
-      await readdir(
-        path.join(workspace, "node_modules", ".cache", "dads-testing"),
-      ),
-    ).toEqual([]);
+    expect(await readdir(path.join(workspace, "node_modules", ".cache", "dads-testing"))).toEqual([]);
   });
 
   it("requires the scratch directory itself to be ignored", async () => {
-    const workspace = await createWorkspace(
-      "manifest.json\nnode_modules/nx/\n",
-    );
+    const workspace = await createWorkspace("manifest.json\nnode_modules/nx/\n");
     await expect(
       planNativeNxTesting({
         workspaceRoot: workspace,
@@ -128,11 +92,7 @@ describe("native Nx workspace wrapper", () => {
       notApplicable: 0,
     });
     expect(result.run?.exitCode).toBe(0);
-    expect(
-      await readdir(
-        path.join(workspace, "node_modules", ".cache", "dads-testing"),
-      ),
-    ).toEqual([]);
+    expect(await readdir(path.join(workspace, "node_modules", ".cache", "dads-testing"))).toEqual([]);
   });
 
   it("rejects a workspace changed by the native run", async () => {
@@ -143,38 +103,19 @@ describe("native Nx workspace wrapper", () => {
         nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
         targetNames: ["test"],
       }),
-    ).rejects.toThrow(
-      "workspace changed during Nx discovery, planning, or execution",
-    );
+    ).rejects.toThrow("workspace changed during Nx discovery, planning, or execution");
   });
 });
 
-async function createWorkspace(
-  gitignore = "tmp/\nnode_modules/\n",
-  mutateOnRun = true,
-): Promise<string> {
-  const workspace = await mkdtemp(
-    path.join(tmpdir(), "dads-testing-native-workspace-"),
-  );
+async function createWorkspace(gitignore = "tmp/\nnode_modules/\n", mutateOnRun = true): Promise<string> {
+  const workspace = await mkdtemp(path.join(tmpdir(), "dads-testing-native-workspace-"));
   temporaryWorkspaces.push(workspace);
   await writeFile(path.join(workspace, ".gitignore"), gitignore);
-  await writeFile(
-    path.join(workspace, "nx.json"),
-    '{"namedInputs":{"default":["{projectRoot}/**/*"]}}\n',
-  );
-  await writeFile(
-    path.join(workspace, "graph-definition.json"),
-    graphDefinition(1),
-  );
+  await writeFile(path.join(workspace, "nx.json"), '{"namedInputs":{"default":["{projectRoot}/**/*"]}}\n');
+  await writeFile(path.join(workspace, "graph-definition.json"), graphDefinition(1));
   await writeFile(path.join(workspace, "package.json"), '{"name":"fixture"}\n');
-  await writeFile(
-    path.join(workspace, "source.ts"),
-    "export const value = 1;\n",
-  );
-  await writeFile(
-    path.join(workspace, "fake-dad-test.mjs"),
-    fakeDadTestSource(mutateOnRun),
-  );
+  await writeFile(path.join(workspace, "source.ts"), "export const value = 1;\n");
+  await writeFile(path.join(workspace, "fake-dad-test.mjs"), fakeDadTestSource(mutateOnRun));
   await chmod(path.join(workspace, "fake-dad-test.mjs"), 0o755);
   await writeFile(path.join(workspace, "nx-cli.mjs"), fakeNxSource());
   await chmod(path.join(workspace, "nx-cli.mjs"), 0o755);
@@ -189,14 +130,8 @@ async function createWorkspace(
   await mkdir(path.join(nxDirectory, "bin"), { recursive: true });
   await writeFile(path.join(nxDirectory, "bin", "nx.mjs"), fakeNxSource());
   await chmod(path.join(nxDirectory, "bin", "nx.mjs"), 0o755);
-  await writeFile(
-    path.join(nxDirectory, "package.json"),
-    '{"name":"nx","bin":{"nx":"./bin/nx.mjs"}}\n',
-  );
-  await writeFile(
-    path.join(workspace, "node_modules", ".package-lock.json"),
-    "{}\n",
-  );
+  await writeFile(path.join(nxDirectory, "package.json"), '{"name":"nx","bin":{"nx":"./bin/nx.mjs"}}\n');
+  await writeFile(path.join(workspace, "node_modules", ".package-lock.json"), "{}\n");
   return workspace;
 }
 

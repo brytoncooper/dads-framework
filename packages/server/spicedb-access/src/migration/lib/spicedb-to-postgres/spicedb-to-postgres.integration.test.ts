@@ -1,12 +1,5 @@
 import { v1 } from "@authzed/authzed-node";
-import {
-  actor,
-  allOf,
-  compileAccess,
-  emitZed,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, allOf, compileAccess, emitZed, resource, roleToken } from "@dads-framework/access";
 import { SpiceDbAuthorization } from "../../../index.js";
 import { startTestSpiceDb } from "../../../testing/index.js";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
@@ -66,13 +59,7 @@ const documentAccess = resource("document", {
   }),
 });
 
-const liveModel = compileAccess([
-  user,
-  groupAccess,
-  workspaceAccess,
-  folderAccess,
-  documentAccess,
-]);
+const liveModel = compileAccess([user, groupAccess, workspaceAccess, folderAccess, documentAccess]);
 
 function makeRelationship(
   resourceType: string,
@@ -96,9 +83,7 @@ function makeRelationship(
           objectType: subjectType,
           objectId: subjectId,
         }),
-        ...(options?.subjectRelation === undefined
-          ? {}
-          : { optionalRelation: options.subjectRelation }),
+        ...(options?.subjectRelation === undefined ? {} : { optionalRelation: options.subjectRelation }),
       }),
       ...(expiresAt === undefined
         ? {}
@@ -118,9 +103,7 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
   let spice: Awaited<ReturnType<typeof startTestSpiceDb>>;
   let rawSpiceClient: v1.ZedClientInterface;
   let spiceAuth: SpiceDbAuthorization;
-  const activeExpiry = new Date(
-    Math.floor((Date.now() + 600_000) / 1000) * 1000,
-  );
+  const activeExpiry = new Date(Math.floor((Date.now() + 600_000) / 1000) * 1000);
   const expiredAt = new Date(Math.floor((Date.now() - 60_000) / 1000) * 1000);
 
   beforeAll(async () => {
@@ -129,11 +112,7 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
     spice = await startTestSpiceDb();
     disposers.push(spice.stop);
 
-    rawSpiceClient = v1.NewClient(
-      spice.presharedKey,
-      spice.endpoint,
-      v1.ClientSecurity.INSECURE_LOCALHOST_ALLOWED,
-    );
+    rawSpiceClient = v1.NewClient(spice.presharedKey, spice.endpoint, v1.ClientSecurity.INSECURE_LOCALHOST_ALLOWED);
     disposers.push(() => {
       rawSpiceClient.close();
       return Promise.resolve();
@@ -176,9 +155,7 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
       makeRelationship("document", "doc_deep", "editor", "user", "carol"),
     ];
 
-    await rawSpiceClient.promises.writeRelationships(
-      v1.WriteRelationshipsRequest.create({ updates }),
-    );
+    await rawSpiceClient.promises.writeRelationships(v1.WriteRelationshipsRequest.create({ updates }));
   }, 60_000);
 
   afterAll(async () => {
@@ -305,12 +282,7 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
     const workspaceV2 = resource("workspace", {
       id: idSchema,
       roles: {
-        participant: [
-          user,
-          user.expiring,
-          groupAccess.roles.member,
-          user.anyone,
-        ],
+        participant: [user, user.expiring, groupAccess.roles.member, user.anyone],
         banned: user,
       },
       can: ({ participant, banned }) => ({
@@ -340,28 +312,16 @@ describe("Live Docker SpiceDB -> Postgres migration & parity", () => {
         publish: allOf(editor, approved),
       }),
     });
-    const modelV2 = compileAccess([
-      user,
-      groupAccess,
-      workspaceV2,
-      folderV2,
-      documentV2,
-    ]);
+    const modelV2 = compileAccess([user, groupAccess, workspaceV2, folderV2, documentV2]);
 
-    const migration = defineAccessMigration(
-      "0001_workspace_member_to_participant",
-      {
-        from: liveModel,
-        to: modelV2,
-        steps: (ops) => [
-          ops.copyRole(
-            workspaceAccess.roles.member,
-            workspaceV2.roles.participant,
-          ),
-          ops.dropRole(workspaceAccess.roles.member),
-        ],
-      },
-    );
+    const migration = defineAccessMigration("0001_workspace_member_to_participant", {
+      from: liveModel,
+      to: modelV2,
+      steps: (ops) => [
+        ops.copyRole(workspaceAccess.roles.member, workspaceV2.roles.participant),
+        ops.dropRole(workspaceAccess.roles.member),
+      ],
+    });
 
     await expect(
       assertAccessMigrationsUpToDate({

@@ -4,15 +4,8 @@ import type { PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "../testing/start-test-postgres.js";
-import {
-  applySyncedRows,
-  type SyncedRowChange,
-  type SyncedRowWriter,
-} from "./synced-rows.js";
+import { startTestPostgres, type TestPostgres } from "../testing/start-test-postgres.js";
+import { applySyncedRows, type SyncedRowChange, type SyncedRowWriter } from "./synced-rows.js";
 
 /**
  * What: a synced row whose unique key a stale row holds, and whose parent is
@@ -38,9 +31,7 @@ const WRITER: SyncedRowWriter<Table> = {
     return true;
   },
   async delete(tx, _table, id) {
-    const deleted = await tx.execute(
-      sql`DELETE FROM synced_rows_kit_child WHERE id = ${id}`,
-    );
+    const deleted = await tx.execute(sql`DELETE FROM synced_rows_kit_child WHERE id = ${id}`);
     return (deleted.rowCount ?? 0) > 0;
   },
   async moveKeyHoldersAside(tx, change) {
@@ -52,11 +43,7 @@ const WRITER: SyncedRowWriter<Table> = {
   },
 };
 
-function childChange(
-  id: string,
-  parentId: string,
-  key: string,
-): SyncedRowChange<Table> {
+function childChange(id: string, parentId: string, key: string): SyncedRowChange<Table> {
   return {
     table: "synced_rows_kit_child",
     op: "upsert",
@@ -93,9 +80,7 @@ describe("applySyncedRows (integration)", () => {
 
   /** One page, in one transaction on the connection that holds the tables. */
   function applyPage(changes: readonly SyncedRowChange<Table>[]) {
-    return drizzle(client).transaction((tx) =>
-      applySyncedRows(tx, changes, ["synced_rows_kit_child"], WRITER),
-    );
+    return drizzle(client).transaction((tx) => applySyncedRows(tx, changes, ["synced_rows_kit_child"], WRITER));
   }
 
   async function keys(): Promise<Record<string, string>> {

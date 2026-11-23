@@ -25,13 +25,7 @@ export const INITIAL_FIND_BAR_STATE: FindBarState = {
 };
 
 /** The control a reader touched, named by intent rather than by pdf.js's event type. */
-export type FindAction =
-  | "search"
-  | "next"
-  | "previous"
-  | "highlight-all"
-  | "case-sensitive"
-  | "entire-word";
+export type FindAction = "search" | "next" | "previous" | "highlight-all" | "case-sensitive" | "entire-word";
 
 /**
  * The `find` event payload pdf.js reads. An empty `type` starts a fresh
@@ -58,10 +52,7 @@ const FIND_ACTION_TYPE: Readonly<Record<FindAction, string>> = {
 };
 
 /** Turns the bar's settings plus the touched control into a `find` request. */
-export function buildFindCommand(
-  state: FindBarState,
-  action: FindAction,
-): FindCommand {
+export function buildFindCommand(state: FindBarState, action: FindAction): FindCommand {
   return {
     type: FIND_ACTION_TYPE[action],
     query: state.query,
@@ -89,10 +80,7 @@ const FIND_STATE_PENDING = 3;
  * Turns pdf.js's result code into a tone. An empty query is always `idle`, so
  * clearing the box drops the not-found styling instead of stranding it.
  */
-export function findResultTone(
-  resultCode: number | null,
-  query: string,
-): FindResultTone {
+export function findResultTone(resultCode: number | null, query: string): FindResultTone {
   if (query.trim().length === 0) return "idle";
   switch (resultCode) {
     case FIND_STATE_PENDING:
@@ -129,10 +117,7 @@ export type FindCounter =
  * and "N of M" once there is at least one hit. It stays blank while a hit is
  * still being counted, so it never flashes a zero.
  */
-export function findCounter(
-  tone: FindResultTone,
-  count: FindMatchCount,
-): FindCounter {
+export function findCounter(tone: FindResultTone, count: FindMatchCount): FindCounter {
   if (tone === "not-found") return { kind: "no-matches" };
   if (tone === "idle" || count.total <= 0) return { kind: "blank" };
   return { kind: "match", current: count.current, total: count.total };

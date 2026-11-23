@@ -1,9 +1,6 @@
 import type { MigrationWorkspace } from "./node-pg/migration-workspace.js";
 import { randomBytes } from "node:crypto";
-import {
-  connectPostgresClient,
-  type PostgresClient as Client,
-} from "../../index.js";
+import { connectPostgresClient, type PostgresClient as Client } from "../../index.js";
 import { journalStampDecision } from "./logic/journal-stamp-decision.js";
 import { siblingDatabaseUrl } from "./logic/sibling-database-url.js";
 import {
@@ -12,18 +9,13 @@ import {
   runNodePgMigrations,
   stampNodePgJournalAsApplied,
 } from "./node-pg/run-node-pg-migrations.js";
-import {
-  publicSchemaFingerprint,
-  publicTableCount,
-} from "./public-schema-fingerprint.js";
+import { publicSchemaFingerprint, publicTableCount } from "./public-schema-fingerprint.js";
 
 export class EquivalentSchemaMismatchError extends Error {
   readonly code = "NODE_PG_SCHEMA_NOT_EQUIVALENT";
 
   constructor() {
-    super(
-      "public schema does not match the checked-in journal; refusing to drop or stamp",
-    );
+    super("public schema does not match the checked-in journal; refusing to drop or stamp");
     this.name = "EquivalentSchemaMismatchError";
   }
 }
@@ -57,10 +49,7 @@ export async function stampJournalWhenSchemaMatches(
   }
 }
 
-async function expectedJournalFingerprint(
-  databaseUrl: string,
-  workspace: MigrationWorkspace,
-): Promise<string> {
+async function expectedJournalFingerprint(databaseUrl: string, workspace: MigrationWorkspace): Promise<string> {
   const shadowName = `dads_adopt_${randomBytes(8).toString("hex")}`;
   await createSiblingDatabase(databaseUrl, shadowName);
   const shadowUrl = siblingDatabaseUrl(databaseUrl, shadowName);
@@ -80,10 +69,7 @@ async function expectedJournalFingerprint(
   }
 }
 
-async function createSiblingDatabase(
-  databaseUrl: string,
-  databaseName: string,
-): Promise<void> {
+async function createSiblingDatabase(databaseUrl: string, databaseName: string): Promise<void> {
   const client = await connectPostgresClient(databaseUrl);
   try {
     await client.query(`CREATE DATABASE "${databaseName}"`);
@@ -92,25 +78,19 @@ async function createSiblingDatabase(
   }
 }
 
-async function dropSiblingDatabase(
-  databaseUrl: string,
-  databaseName: string,
-): Promise<void> {
+async function dropSiblingDatabase(databaseUrl: string, databaseName: string): Promise<void> {
   const client = await connectPostgresClient(databaseUrl);
   try {
-    await client.query(
-      `DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`,
-    );
+    await client.query(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`);
   } finally {
     await client.end();
   }
 }
 
 async function appliedJournalCount(client: Client): Promise<number> {
-  const existing = await client.query<{ exists: boolean }>(
-    `SELECT to_regclass($1) IS NOT NULL AS exists`,
-    [`${NODE_PG_JOURNAL_SCHEMA}.${NODE_PG_APPLIED_TABLE}`],
-  );
+  const existing = await client.query<{ exists: boolean }>(`SELECT to_regclass($1) IS NOT NULL AS exists`, [
+    `${NODE_PG_JOURNAL_SCHEMA}.${NODE_PG_APPLIED_TABLE}`,
+  ]);
   if (existing.rows[0]?.exists !== true) {
     return 0;
   }

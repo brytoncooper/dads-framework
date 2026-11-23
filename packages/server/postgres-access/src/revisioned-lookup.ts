@@ -34,10 +34,7 @@ export class RevisionedLookup {
     private readonly readRows: ReadRows,
   ) {}
 
-  async lookup(
-    input: ResourceLookup,
-    compile: () => PostgresQuery,
-  ): Promise<readonly string[]> {
+  async lookup(input: ResourceLookup, compile: () => PostgresQuery): Promise<readonly string[]> {
     const key = JSON.stringify([
       input.resourceType,
       input.permission,
@@ -48,8 +45,7 @@ export class RevisionedLookup {
     ]);
     const previouslyLoaded = this.#entries.get(key);
     if (previouslyLoaded !== undefined) {
-      if ((await this.#currentStamp()) === previouslyLoaded.stamp)
-        return previouslyLoaded.ids;
+      if ((await this.#currentStamp()) === previouslyLoaded.stamp) return previouslyLoaded.ids;
       if (this.#entries.get(key) === previouslyLoaded) this.#remove(key);
     }
 
@@ -75,26 +71,17 @@ export class RevisionedLookup {
     }
   }
 
-  async #fill(
-    key: string,
-    compile: () => PostgresQuery,
-  ): Promise<RevisionedResult> {
+  async #fill(key: string, compile: () => PostgresQuery): Promise<RevisionedResult> {
     const previous = this.#entries.get(key);
     const generation = this.#generation;
     const read = this.#read(compile());
     const share =
-      key.length <= MAX_IN_FLIGHT_KEY_UNITS &&
-      !this.#pending.has(key) &&
-      this.#pending.size < MAX_IN_FLIGHT;
+      key.length <= MAX_IN_FLIGHT_KEY_UNITS && !this.#pending.has(key) && this.#pending.size < MAX_IN_FLIGHT;
     if (share) this.#pending.set(key, read);
     try {
       const result = await read;
       // An older or slower load may not replace a newer fill.
-      if (
-        this.#generation === generation &&
-        this.#entries.get(key) === previous
-      )
-        this.#retain(key, result);
+      if (this.#generation === generation && this.#entries.get(key) === previous) this.#retain(key, result);
       return result;
     } catch (error) {
       this.#invalidate();
@@ -115,9 +102,7 @@ export class RevisionedLookup {
   #retain(key: string, result: RevisionedResult): void {
     if (result.ids.length > MAX_ENTRY_IDS) return;
     const bytes =
-      (key.length + result.stamp.length) * 2 +
-      128 +
-      result.ids.reduce((sum, id) => sum + id.length * 2 + 32, 0);
+      (key.length + result.stamp.length) * 2 + 128 + result.ids.reduce((sum, id) => sum + id.length * 2 + 32, 0);
     if (bytes > MAX_BYTES) return;
     this.#remove(key);
     while (

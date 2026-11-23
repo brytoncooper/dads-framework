@@ -17,15 +17,10 @@
  * it", which is a different question and not this one.
  */
 
-import {
-  countAuthorizationCheck,
-  countDatabaseQuery,
-} from "./request-work-tally.js";
+import { countAuthorizationCheck, countDatabaseQuery } from "./request-work-tally.js";
 
 /** Charges one database statement to the current request, if there is one. */
-export async function chargeDatabaseQuery<T>(
-  work: () => Promise<T> | T,
-): Promise<T> {
+export async function chargeDatabaseQuery<T>(work: () => Promise<T> | T): Promise<T> {
   const startedAt = performance.now();
   try {
     return await work();
@@ -35,9 +30,7 @@ export async function chargeDatabaseQuery<T>(
 }
 
 /** Charges one authorization call to the current request, if there is one. */
-export async function chargeAuthorizationCheck<T>(
-  work: () => Promise<T> | T,
-): Promise<T> {
+export async function chargeAuthorizationCheck<T>(work: () => Promise<T> | T): Promise<T> {
   const startedAt = performance.now();
   try {
     return await work();

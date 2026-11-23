@@ -26,27 +26,24 @@ export async function listVisibleDocuments(
   authorization: PostgresAuthorization,
   userId: string,
 ): Promise<readonly DocumentRow[]> {
-  return withReadSnapshot(
-    { pool, authorization },
-    async ({ client, authorization: scopedAuthorization }) => {
-      const filter = await scopedAuthorization.resolveFilter({
-        subject: user(userId),
-        permission: document.permissions.view,
-        idColumn: "doc.id",
-        scopeColumns: "auto",
-      });
+  return withReadSnapshot({ pool, authorization }, async ({ client, authorization: scopedAuthorization }) => {
+    const filter = await scopedAuthorization.resolveFilter({
+      subject: user(userId),
+      permission: document.permissions.view,
+      idColumn: "doc.id",
+      scopeColumns: "auto",
+    });
 
-      const result = await client.query(
-        `SELECT doc.id, doc.title
+    const result = await client.query(
+      `SELECT doc.id, doc.title
            FROM documents doc
           WHERE ${filter.sql}
           ORDER BY doc.updated_at DESC, doc.id DESC
           LIMIT 50`,
-        [...filter.values],
-      );
-      return result.rows.map(toDocumentRow);
-    },
-  );
+      [...filter.values],
+    );
+    return result.rows.map(toDocumentRow);
+  });
 }
 
 /** Protected write: re-checks permission and updates the row in one transaction. */
@@ -58,17 +55,10 @@ export async function renameDocument(
   return withProtectedPgTransaction(
     { pool, authorization, retries: 2 },
     async ({ client, authorization: scopedAuthorization }) => {
-      const allowed = await scopedAuthorization.can(
-        user(input.userId),
-        document.permissions.edit,
-        input.documentId,
-      );
+      const allowed = await scopedAuthorization.can(user(input.userId), document.permissions.edit, input.documentId);
       if (!allowed) return false;
 
-      await client.query("UPDATE documents SET title = $1 WHERE id = $2", [
-        input.title,
-        input.documentId,
-      ]);
+      await client.query("UPDATE documents SET title = $1 WHERE id = $2", [input.title, input.documentId]);
       return true;
     },
   );

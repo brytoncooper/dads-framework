@@ -3,10 +3,7 @@ import { join } from "node:path";
 import { isRecord, isUnknownArray } from "../parse-guards.js";
 import type { InitUnsupported } from "./infer-testing-manifest.js";
 import { parsePnpmWorkspaceFile } from "./pnpm-workspace-yaml.js";
-import {
-  compileWorkspaceGlob,
-  expandWorkspaceGlobs,
-} from "./workspace-glob.js";
+import { compileWorkspaceGlob, expandWorkspaceGlobs } from "./workspace-glob.js";
 
 /**
  * What `dad-test init` can learn about a workspace from the files a workspace
@@ -17,11 +14,9 @@ import {
 
 export type PackageManager = "npm" | "yarn" | "pnpm";
 
-export type PackageManagerSource =
-  "pnpm-lock.yaml" | "yarn.lock" | "package-lock.json" | "default";
+export type PackageManagerSource = "pnpm-lock.yaml" | "yarn.lock" | "package-lock.json" | "default";
 
-export type WorkspacePatternSource =
-  "pnpm-workspace.yaml" | "package.json#workspaces" | "single-package";
+export type WorkspacePatternSource = "pnpm-workspace.yaml" | "package.json#workspaces" | "single-package";
 
 export type DetectedWorkspace = {
   readonly packageManager: PackageManager;
@@ -51,9 +46,7 @@ const lockfiles: readonly {
 export function detectWorkspace(workspaceRoot: string): DetectedWorkspace {
   const unsupported: InitUnsupported[] = [];
   const declared = readDeclaredPatterns(workspaceRoot, unsupported);
-  const patterns = declared.patterns.filter((pattern) =>
-    patternIsSupported(pattern, unsupported),
-  );
+  const patterns = declared.patterns.filter((pattern) => patternIsSupported(pattern, unsupported));
 
   // A workspace that declares no package patterns is one package: the root.
   // Where patterns do exist, the root package is never one of the projects.
@@ -98,16 +91,10 @@ function detectPackageManager(workspaceRoot: string): {
  * An unreadable `pnpm-workspace.yaml` is not treated as an absent one — that
  * would quietly generate a manifest with one project instead of many.
  */
-function readDeclaredPatterns(
-  workspaceRoot: string,
-  unsupported: InitUnsupported[],
-): DeclaredPatterns {
+function readDeclaredPatterns(workspaceRoot: string, unsupported: InitUnsupported[]): DeclaredPatterns {
   const pnpmFile = join(workspaceRoot, "pnpm-workspace.yaml");
   if (existsSync(pnpmFile)) {
-    const parsed = parsePnpmWorkspaceFile(
-      readFileSync(pnpmFile, "utf8"),
-      "pnpm-workspace.yaml",
-    );
+    const parsed = parsePnpmWorkspaceFile(readFileSync(pnpmFile, "utf8"), "pnpm-workspace.yaml");
     return {
       source: "pnpm-workspace.yaml",
       patterns: parsed.packages,
@@ -121,10 +108,7 @@ function readDeclaredPatterns(
   };
 }
 
-function readPackageJsonWorkspaces(
-  workspaceRoot: string,
-  unsupported: InitUnsupported[],
-): readonly string[] {
+function readPackageJsonWorkspaces(workspaceRoot: string, unsupported: InitUnsupported[]): readonly string[] {
   const document = readRootPackageJson(workspaceRoot);
   if (document === undefined) return [];
   const workspaces = document["workspaces"];
@@ -135,17 +119,12 @@ function readPackageJsonWorkspaces(
   if (isRecord(workspaces)) {
     const packages = workspaces["packages"];
     if (isUnknownArray(packages)) {
-      return readPatternArray(
-        packages,
-        "package.json#workspaces.packages",
-        unsupported,
-      );
+      return readPatternArray(packages, "package.json#workspaces.packages", unsupported);
     }
   }
   unsupported.push({
     subject: "package.json#workspaces",
-    message:
-      "workspaces must be an array of patterns or an object with a packages array.",
+    message: "workspaces must be an array of patterns or an object with a packages array.",
   });
   return [];
 }
@@ -174,10 +153,7 @@ function readPatternArray(
  * failing the whole command: the rest of the workspace still generates, and the
  * report says which packages were not looked for.
  */
-function patternIsSupported(
-  pattern: string,
-  unsupported: InitUnsupported[],
-): boolean {
+function patternIsSupported(pattern: string, unsupported: InitUnsupported[]): boolean {
   try {
     compileWorkspaceGlob(pattern);
     return true;
@@ -191,13 +167,9 @@ function patternIsSupported(
 }
 
 /** An unreadable root `package.json` is reported by the package inventory. */
-function readRootPackageJson(
-  workspaceRoot: string,
-): Record<string, unknown> | undefined {
+function readRootPackageJson(workspaceRoot: string): Record<string, unknown> | undefined {
   try {
-    const parsed: unknown = JSON.parse(
-      readFileSync(join(workspaceRoot, "package.json"), "utf8"),
-    );
+    const parsed: unknown = JSON.parse(readFileSync(join(workspaceRoot, "package.json"), "utf8"));
     return isRecord(parsed) ? parsed : undefined;
   } catch {
     return undefined;

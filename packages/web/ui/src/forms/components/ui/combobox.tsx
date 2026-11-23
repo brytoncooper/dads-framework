@@ -5,12 +5,7 @@ import { ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
 import { Button, cn } from "../../../elements/index.js";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "./input-group.js";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "./input-group.js";
 
 /** What an option is matched by when it is not matched by identity. */
 type ComboboxItemKey = string | number;
@@ -78,12 +73,7 @@ function Combobox<Value, Multiple extends boolean | undefined = false>({
     };
   }, [isItemEqualToValue, getKey]);
 
-  return (
-    <ComboboxPrimitive.Root<Value, Multiple>
-      isItemEqualToValue={matchesValue}
-      {...props}
-    />
-  );
+  return <ComboboxPrimitive.Root<Value, Multiple> isItemEqualToValue={matchesValue} {...props} />;
 }
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
@@ -184,13 +174,8 @@ function ComboboxInput({
 }) {
   return (
     <InputGroup size={size} className={cn("w-auto min-w-0", className)}>
-      {startAddon != null ? (
-        <InputGroupAddon align="inline-start">{startAddon}</InputGroupAddon>
-      ) : null}
-      <ComboboxPrimitive.Input
-        render={<InputGroupInput disabled={disabled} />}
-        {...props}
-      />
+      {startAddon != null ? <InputGroupAddon align="inline-start">{startAddon}</InputGroupAddon> : null}
+      <ComboboxPrimitive.Input render={<InputGroupInput disabled={disabled} />} {...props} />
       {showTrigger || showClear ? (
         <InputGroupAddon align="inline-end">
           {showTrigger && (
@@ -230,10 +215,7 @@ function ComboboxSearch({
       <ComboboxInput
         showTrigger={showTrigger}
         startAddon={startAddon ?? <SearchIcon aria-hidden />}
-        className={cn(
-          "min-w-0 w-full rounded-md before:rounded-[calc(var(--radius-md)-1px)]",
-          className,
-        )}
+        className={cn("min-w-0 w-full rounded-md before:rounded-[calc(var(--radius-md)-1px)]", className)}
         {...props}
       />
     </div>
@@ -243,8 +225,7 @@ function ComboboxSearch({
 function ComboboxChips({
   className,
   ...props
-}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
-  ComboboxPrimitive.Chips.Props) {
+}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props) {
   return (
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
@@ -288,17 +269,11 @@ function ComboboxChip({
   );
 }
 
-function ComboboxChipsInput({
-  className,
-  ...props
-}: Omit<ComboboxPrimitive.Input.Props, "children">) {
+function ComboboxChipsInput({ className, ...props }: Omit<ComboboxPrimitive.Input.Props, "children">) {
   return (
     <ComboboxPrimitive.Input
       data-slot="combobox-chip-input"
-      className={cn(
-        "min-w-16 flex-1 outline-none placeholder:text-muted-foreground",
-        className,
-      )}
+      className={cn("min-w-16 flex-1 outline-none placeholder:text-muted-foreground", className)}
       {...props}
     />
   );

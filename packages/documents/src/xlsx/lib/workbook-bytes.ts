@@ -7,8 +7,6 @@ export function toArrayBuffer(written: ArrayBuffer): ArrayBuffer {
   if (!ArrayBuffer.isView(written)) return written;
 
   const copy = new ArrayBuffer(written.byteLength);
-  new Uint8Array(copy).set(
-    new Uint8Array(written.buffer, written.byteOffset, written.byteLength),
-  );
+  new Uint8Array(copy).set(new Uint8Array(written.buffer, written.byteOffset, written.byteLength));
   return copy;
 }

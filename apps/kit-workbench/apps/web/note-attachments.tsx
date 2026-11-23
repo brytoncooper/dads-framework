@@ -5,11 +5,7 @@ import { Paperclip, RefreshCw } from "@dads-framework/ui/icons";
 import { useState, type SubmitEvent } from "react";
 import { field, useAction } from "./actions.js";
 import { useWorkbenchCopy } from "./copy/workbench-copy.js";
-import {
-  readNoteAttachment,
-  uploadNoteAttachment,
-  type NoteAttachmentRecord,
-} from "./note-attachments-client.js";
+import { readNoteAttachment, uploadNoteAttachment, type NoteAttachmentRecord } from "./note-attachments-client.js";
 
 type AttachmentItem = {
   readonly fileId: string;
@@ -32,23 +28,14 @@ export function NoteAttachments({ tenantId, noteId }: NoteAttachmentsProps) {
     setItems((current) => [{ fileId, record, expanded: true }, ...current]);
   }
 
-  function updateAttachment(
-    fileId: string,
-    updater: (item: AttachmentItem) => AttachmentItem,
-  ) {
-    setItems((current) =>
-      current.map((item) => (item.fileId === fileId ? updater(item) : item)),
-    );
+  function updateAttachment(fileId: string, updater: (item: AttachmentItem) => AttachmentItem) {
+    setItems((current) => current.map((item) => (item.fileId === fileId ? updater(item) : item)));
   }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     const element = event.currentTarget;
     upload.submit(event, async (form) => {
-      const created = await uploadNoteAttachment(
-        tenantId,
-        noteId,
-        field(form, "attachment"),
-      );
+      const created = await uploadNoteAttachment(tenantId, noteId, field(form, "attachment"));
       const record = await readNoteAttachment(tenantId, noteId, created.fileId);
       element.reset();
       prependAttachment(created.fileId, record);
@@ -63,17 +50,13 @@ export function NoteAttachments({ tenantId, noteId }: NoteAttachmentsProps) {
           {t("workbench.notes.attachments.title")}
         </span>
         {items.length > 0 && (
-          <Badge variant="secondary">
-            {t("workbench.notes.attachments.count", { count: items.length })}
-          </Badge>
+          <Badge variant="secondary">{t("workbench.notes.attachments.count", { count: items.length })}</Badge>
         )}
       </summary>
       <div className="note-attachments-body">
         <form className="fields" onSubmit={handleSubmit}>
           <div className="field">
-            <Label htmlFor={inputId}>
-              {t("workbench.notes.attachments.label")}
-            </Label>
+            <Label htmlFor={inputId}>{t("workbench.notes.attachments.label")}</Label>
             <Textarea
               id={inputId}
               name="attachment"
@@ -118,17 +101,10 @@ type AttachmentRowProps = {
   readonly tenantId: string;
   readonly noteId: string;
   readonly item: AttachmentItem;
-  readonly onUpdate: (
-    updater: (item: AttachmentItem) => AttachmentItem,
-  ) => void;
+  readonly onUpdate: (updater: (item: AttachmentItem) => AttachmentItem) => void;
 };
 
-function AttachmentRow({
-  tenantId,
-  noteId,
-  item,
-  onUpdate,
-}: AttachmentRowProps) {
+function AttachmentRow({ tenantId, noteId, item, onUpdate }: AttachmentRowProps) {
   const t = useWorkbenchCopy();
   const inspectAction = useAction();
 
@@ -153,9 +129,7 @@ function AttachmentRow({
   return (
     <li className="attachment-item">
       <div className="attachment-row-header">
-        <code className="note-id-chip">
-          {t("workbench.notes.attachments.fileLabel", { shortId })}
-        </code>
+        <code className="note-id-chip">{t("workbench.notes.attachments.fileLabel", { shortId })}</code>
         <div className="attachment-row-actions">
           <Button
             type="button"
@@ -167,17 +141,8 @@ function AttachmentRow({
             <RefreshCw className="size-3" aria-hidden="true" />
             {t("workbench.notes.attachments.refresh")}
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="xs"
-            onClick={toggleExpanded}
-          >
-            {t(
-              item.expanded
-                ? "workbench.notes.attachments.hide"
-                : "workbench.notes.attachments.inspect",
-            )}
+          <Button type="button" variant="secondary" size="xs" onClick={toggleExpanded}>
+            {t(item.expanded ? "workbench.notes.attachments.hide" : "workbench.notes.attachments.inspect")}
           </Button>
         </div>
       </div>
@@ -190,9 +155,7 @@ function AttachmentRow({
             })}
           </StatusBadge>
         ) : (
-          <StatusBadge tone="information">
-            {t("workbench.notes.attachments.pendingDigest")}
-          </StatusBadge>
+          <StatusBadge tone="information">{t("workbench.notes.attachments.pendingDigest")}</StatusBadge>
         )}
       </div>
       {inspectAction.error && (
@@ -200,9 +163,7 @@ function AttachmentRow({
           {t(inspectAction.error)}
         </p>
       )}
-      {item.expanded && item.record && (
-        <pre className="attachment-preview">{item.record.text}</pre>
-      )}
+      {item.expanded && item.record && <pre className="attachment-preview">{item.record.text}</pre>}
     </li>
   );
 }

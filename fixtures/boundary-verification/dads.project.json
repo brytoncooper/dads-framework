@@ -40,10 +40,7 @@
         "command": "node verification/provider-runner.mjs",
         "dependsOn": ["policy:check"],
         "sourceInputs": ["src/access.ts", "src/build-policy.ts"],
-        "nonSourceInputs": [
-          "verification/provider-runner.mjs",
-          "verification/vendor/access"
-        ],
+        "nonSourceInputs": ["verification/provider-runner.mjs", "verification/vendor/access"],
         "reusePolicy": "never",
         "execution": {
           "kind": "controlled-node",
@@ -208,10 +205,7 @@
         "packageName": "boundary-verification",
         "command": "node verification/run-vitest.mjs",
         "dependsOn": ["policy:build"],
-        "sourceInputs": [
-          "src/read-document-result.ts",
-          "src/read-document-unit.test.ts"
-        ],
+        "sourceInputs": ["src/read-document-result.ts", "src/read-document-unit.test.ts"],
         "nonSourceInputs": ["package.json", "verification/run-vitest.mjs"],
         "reusePolicy": "never",
         "execution": {
@@ -224,10 +218,7 @@
         "command": "node verification/run-type-tests.mjs",
         "dependsOn": ["policy:build"],
         "sourceInputs": ["src/consumer-types.ts", "type-tests/consumer.ts"],
-        "nonSourceInputs": [
-          "type-tests/tsconfig.json",
-          "verification/run-type-tests.mjs"
-        ],
+        "nonSourceInputs": ["type-tests/tsconfig.json", "verification/run-type-tests.mjs"],
         "reusePolicy": "never",
         "execution": {
           "kind": "shell"

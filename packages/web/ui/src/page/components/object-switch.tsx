@@ -75,10 +75,7 @@ export function ObjectSwitch<TValue extends string>({
             className="inline-flex min-h-11 items-center gap-1.5 rounded-md text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:hidden"
           >
             <span className="truncate">{current?.label}</span>
-            <ChevronDown
-              aria-hidden="true"
-              className="size-5 shrink-0 text-foreground"
-            />
+            <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-foreground" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-40">

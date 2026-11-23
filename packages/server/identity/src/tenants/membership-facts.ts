@@ -1,16 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  outboxKeyForRelationship,
-  type AccessChange,
-  type RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { outboxKeyForRelationship, type AccessChange, type RelationshipWrite } from "@dads-framework/access/runtime";
 
-import {
-  tenantRoleToken,
-  type TenantId,
-  type TenantRole,
-} from "./tenant-access.js";
+import { tenantRoleToken, type TenantId, type TenantRole } from "./tenant-access.js";
 import { accountSubject, type TenantsOptions } from "./tenant-transaction.js";
 
 export function membershipFact(
@@ -27,11 +19,7 @@ export function membershipFact(
     subject: accountSubject(options, accountId),
   };
   return {
-    idempotencyKey: outboxKeyForRelationship(
-      operation,
-      relationship,
-      randomUUID(),
-    ),
+    idempotencyKey: outboxKeyForRelationship(operation, relationship, randomUUID()),
     relationship,
     operation,
     ownerPartitionId: tenantId,

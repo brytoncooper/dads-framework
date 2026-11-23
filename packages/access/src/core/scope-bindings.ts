@@ -29,12 +29,11 @@ export type RoleBinding =
  * reaches an unbound role is refused. `Roles` keeps each role's declared kind
  * in the type, so the list seam can require the matching SQL for each role.
  */
-export type ScopeBindings<Roles extends ScopeRoleBindings = ScopeRoleBindings> =
-  {
-    readonly entity: EntityHandle;
-    readonly kind: "record";
-    readonly roles: Roles;
-  };
+export type ScopeBindings<Roles extends ScopeRoleBindings = ScopeRoleBindings> = {
+  readonly entity: EntityHandle;
+  readonly kind: "record";
+  readonly roles: Roles;
+};
 
 /** Each bound role of one record, by role name. */
 export type ScopeRoleBindings = Readonly<Record<string, RoleBinding>>;
@@ -52,8 +51,7 @@ export function scopeBindings<
     readonly entity: EntityHandle;
     readonly roles: RoleTable;
   },
-  roles: Roles &
-    Readonly<Record<Exclude<keyof Roles, keyof RoleTable & string>, never>>,
+  roles: Roles & Readonly<Record<Exclude<keyof Roles, keyof RoleTable & string>, never>>,
 ): ScopeBindings<Roles> {
   return { entity: definition.entity, kind: "record", roles };
 }

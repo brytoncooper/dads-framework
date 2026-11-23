@@ -44,19 +44,10 @@ export function createPhaseTimer(now = () => performance.now()) {
 export function formatPhaseTable(title, report) {
   const rows = [
     ["phase", "runs", "total s", "wall s"],
-    ...report.map((entry) => [
-      entry.phase,
-      String(entry.runs),
-      seconds(entry.totalMs),
-      seconds(entry.spanMs),
-    ]),
+    ...report.map((entry) => [entry.phase, String(entry.runs), seconds(entry.totalMs), seconds(entry.spanMs)]),
   ];
-  const widths = rows[0].map((_, column) =>
-    Math.max(...rows.map((row) => row[column].length)),
-  );
-  const lines = rows.map((row) =>
-    row.map((cell, column) => pad(cell, widths[column], column)).join("  "),
-  );
+  const widths = rows[0].map((_, column) => Math.max(...rows.map((row) => row[column].length)));
+  const lines = rows.map((row) => row.map((cell, column) => pad(cell, widths[column], column)).join("  "));
   lines.splice(1, 0, widths.map((width) => "-".repeat(width)).join("  "));
   return [`${title}:`, ...lines.map((line) => `  ${line}`)].join("\n");
 }

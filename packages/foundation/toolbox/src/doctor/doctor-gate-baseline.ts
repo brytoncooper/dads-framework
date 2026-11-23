@@ -84,11 +84,7 @@ function readSections(value: unknown, field: string): BaselineSections {
  * can judge, so it is not read as one and its key is treated as unlisted; an
  * entry with no reason is read and fails, which is the point.
  */
-function readEntries(
-  value: unknown,
-  field: string,
-  section: string,
-): BaselineEntries {
+function readEntries(value: unknown, field: string, section: string): BaselineEntries {
   const entries = new Map<string, BaselineEntry>();
   if (!isRecord(value)) return entries;
   for (const [key, entry] of Object.entries(value)) {
@@ -112,21 +108,13 @@ function readEntries(
  * name; so is a value that is not a key, rather than being read as absent and
  * turning a fall nobody declared into a fall the file appears to declare.
  */
-function readMovedTo(
-  value: unknown,
-  field: string,
-  subject: string,
-): { movedTo?: string } {
+function readMovedTo(value: unknown, field: string, subject: string): { movedTo?: string } {
   if (value === undefined) return {};
   if (field !== FLOOR_FIELD) {
-    throw new Error(
-      `${BASELINE_PATH}: ${subject}: movedTo belongs to a floor entry.`,
-    );
+    throw new Error(`${BASELINE_PATH}: ${subject}: movedTo belongs to a floor entry.`);
   }
   if (!isString(value) || value.trim().length === 0) {
-    throw new Error(
-      `${BASELINE_PATH}: ${subject}: movedTo must name another key in this section.`,
-    );
+    throw new Error(`${BASELINE_PATH}: ${subject}: movedTo must name another key in this section.`);
   }
   return { movedTo: value };
 }
@@ -180,10 +168,7 @@ type PlainSections = Record<string, Record<string, PlainEntry>>;
  * the map holds is written, so the serialization is a function of the map and
  * a section is dropped where it is emptied rather than here.
  */
-function plainSections(
-  sections: BaselineSections,
-  field: string,
-): PlainSections {
+function plainSections(sections: BaselineSections, field: string): PlainSections {
   const plain: PlainSections = {};
   for (const name of sortedKeys(sections.keys())) {
     const entries = sections.get(name) ?? new Map<string, BaselineEntry>();
@@ -232,11 +217,7 @@ function patternFor(character: string): string {
   return character.replace(GLOB_SPECIALS, "\\$&");
 }
 
-function plainEntry(
-  entries: BaselineEntries,
-  key: string,
-  field: string,
-): PlainEntry {
+function plainEntry(entries: BaselineEntries, key: string, field: string): PlainEntry {
   const entry = entries.get(key);
   const written: PlainEntry = {};
   if (entry === undefined) return written;

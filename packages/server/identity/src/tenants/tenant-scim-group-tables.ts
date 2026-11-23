@@ -1,10 +1,4 @@
-import {
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import type { TenantId } from "./tenant-access.js";
 import { tenantTable } from "./tenant-tables.js";
@@ -39,7 +33,5 @@ export const tenantScimGroupMember = pgTable(
     groupId: uuid("group_id").notNull(),
     userId: uuid("user_id").notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.tenantId, table.groupId, table.userId] }),
-  ],
+  (table) => [primaryKey({ columns: [table.tenantId, table.groupId, table.userId] })],
 );

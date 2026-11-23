@@ -11,16 +11,10 @@ import { formatEmailAddress } from "./format-email-address.js";
  * Pure: no network, no clock, no env. The driver adds only the host and the
  * credential.
  */
-export function buildMailgunForm(
-  message: EmailMessage,
-  defaultFrom: string,
-): FormData {
+export function buildMailgunForm(message: EmailMessage, defaultFrom: string): FormData {
   const form = new FormData();
 
-  form.append(
-    "from",
-    message.from === undefined ? defaultFrom : formatEmailAddress(message.from),
-  );
+  form.append("from", message.from === undefined ? defaultFrom : formatEmailAddress(message.from));
   appendAddresses(form, "to", message.to);
   appendAddresses(form, "cc", message.cc);
   appendAddresses(form, "bcc", message.bcc);
@@ -41,28 +35,18 @@ export function buildMailgunForm(
   return form;
 }
 
-function appendAddresses(
-  form: FormData,
-  field: string,
-  addresses: EmailMessage["to"] | undefined,
-): void {
+function appendAddresses(form: FormData, field: string, addresses: EmailMessage["to"] | undefined): void {
   for (const address of addresses ?? []) {
     form.append(field, formatEmailAddress(address));
   }
 }
 
-function appendAttachments(
-  form: FormData,
-  attachments: EmailMessage["attachments"],
-): void {
+function appendAttachments(form: FormData, attachments: EmailMessage["attachments"]): void {
   for (const attachment of attachments ?? []) {
     // Copied into its own buffer because `File` accepts only ArrayBuffer-backed
     // bytes, and an `EmailAttachment` may be a view over a SharedArrayBuffer.
     // The copy is the honest way to say that; a cast would only hide it.
     const bytes = new Uint8Array(attachment.content);
-    form.append(
-      "attachment",
-      new File([bytes], attachment.filename, { type: attachment.contentType }),
-    );
+    form.append("attachment", new File([bytes], attachment.filename, { type: attachment.contentType }));
   }
 }

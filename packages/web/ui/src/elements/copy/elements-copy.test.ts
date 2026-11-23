@@ -11,15 +11,11 @@ import { elementsCopy } from "./elements-copy.js";
 
 describe("elementsCopy", () => {
   it("owns the primitive's default accessibility labels", () => {
-    expect(translate(elementsCopy, "en", "elements.loading.label")).toBe(
-      "Loading",
-    );
+    expect(translate(elementsCopy, "en", "elements.loading.label")).toBe("Loading");
   });
 
   it("has every supported locale for every phrase", () => {
-    const merged = mergeCopy([
-      { file: "elements-copy.ts", entries: elementsCopy },
-    ]);
+    const merged = mergeCopy([{ file: "elements-copy.ts", entries: elementsCopy }]);
     expect(() => {
       assertCatalogParity(merged);
     }).not.toThrow();

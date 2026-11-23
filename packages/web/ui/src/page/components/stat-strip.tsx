@@ -35,11 +35,7 @@ const STAT_ITEM_VARIANT_CLASS: Record<StatStripVariant, string> = {
 const StatStripVariantContext = React.createContext<StatStripVariant>("card");
 
 /** A responsive row of key numbers; features format every value and label. */
-export function StatStrip({
-  variant = "card",
-  className,
-  ...props
-}: StatStripProps) {
+export function StatStrip({ variant = "card", className, ...props }: StatStripProps) {
   return (
     <StatStripVariantContext.Provider value={variant}>
       <dl
@@ -58,14 +54,7 @@ export function StatStrip({
 }
 
 /** One labelled number inside a StatStrip. */
-export function StatItem({
-  label,
-  value,
-  hint,
-  tone,
-  className,
-  ...props
-}: StatItemProps) {
+export function StatItem({ label, value, hint, tone, className, ...props }: StatItemProps) {
   const variant = React.useContext(StatStripVariantContext);
   const hasHint = React.Children.toArray(hint).length > 0;
 
@@ -88,9 +77,7 @@ export function StatItem({
       >
         {value}
       </dd>
-      {hasHint ? (
-        <dd className="mt-0.5 text-xs text-muted-foreground">{hint}</dd>
-      ) : null}
+      {hasHint ? <dd className="mt-0.5 text-xs text-muted-foreground">{hint}</dd> : null}
     </div>
   );
 }

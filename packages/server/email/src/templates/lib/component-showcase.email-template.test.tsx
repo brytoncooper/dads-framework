@@ -28,12 +28,8 @@ describe("componentShowcaseEmailTemplate", () => {
   it("renders every sample, so every component, under the server's TSX loader", () => {
     // The dev API runs through tsx with classic JSX; a component that leaves
     // React out of scope fails delivery with "React is not defined".
-    const rendererUrl = new URL("./render-email-template.tsx", import.meta.url)
-      .href;
-    const templateUrl = new URL(
-      "./component-showcase.email-template.tsx",
-      import.meta.url,
-    ).href;
+    const rendererUrl = new URL("./render-email-template.tsx", import.meta.url).href;
+    const templateUrl = new URL("./component-showcase.email-template.tsx", import.meta.url).href;
     const source = `
       import { renderEmailTemplate } from ${JSON.stringify(rendererUrl)};
       import { componentShowcaseEmailTemplate as template } from ${JSON.stringify(templateUrl)};
@@ -41,14 +37,10 @@ describe("componentShowcaseEmailTemplate", () => {
         await renderEmailTemplate(template, props);
       process.stdout.write("rendered");
     `;
-    const result = spawnSync(
-      process.execPath,
-      ["--import", "tsx", "--input-type=module", "-e", source],
-      {
-        encoding: "utf8",
-        env: { ...process.env, TSX_TSCONFIG_PATH: undefined },
-      },
-    );
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", source], {
+      encoding: "utf8",
+      env: { ...process.env, TSX_TSCONFIG_PATH: undefined },
+    });
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toBe("rendered");
@@ -75,25 +67,19 @@ describe("componentShowcaseEmailTemplate", () => {
     expect(rendered.preview).toBe("Pickup code 4F7QK2");
   });
 
-  it.each(sampleNames)(
-    "renders every component into both bodies for the %s sample",
-    async (sampleName) => {
-      const { html, text } = await renderEmailTemplate(
-        template,
-        sample(sampleName),
-      );
+  it.each(sampleNames)("renders every component into both bodies for the %s sample", async (sampleName) => {
+    const { html, text } = await renderEmailTemplate(template, sample(sampleName));
 
-      // The badge's word, the table's labels, the code, the button's label
-      // and the raw link — every component, proven by what it put on the
-      // page rather than by the tag it emitted.
-      for (const shown of ["Order", "Status", "View Order"]) {
-        expect(html).toContain(shown);
-        expect(text).toContain(shown);
-      }
-      expect(html).toContain("https://app.example/orders/SO-10428");
-      expect(text).toContain("https://app.example/orders/SO-10428");
-    },
-  );
+    // The badge's word, the table's labels, the code, the button's label
+    // and the raw link — every component, proven by what it put on the
+    // page rather than by the tag it emitted.
+    for (const shown of ["Order", "Status", "View Order"]) {
+      expect(html).toContain(shown);
+      expect(text).toContain(shown);
+    }
+    expect(html).toContain("https://app.example/orders/SO-10428");
+    expect(text).toContain("https://app.example/orders/SO-10428");
+  });
 
   it("paints with the theme's palette and nothing else", async () => {
     const { html } = await renderEmailTemplate(template, sample("default"));
@@ -103,9 +89,7 @@ describe("componentShowcaseEmailTemplate", () => {
     // colour of its own — a vendor default, a hand-picked hex — shows up
     // here and nowhere else.
     const used = new Set(html.match(/#[0-9a-f]{6}\b/gi) ?? []);
-    const strangers = [...used].filter(
-      (hex) => !palette.has(hex.toLowerCase()),
-    );
+    const strangers = [...used].filter((hex) => !palette.has(hex.toLowerCase()));
 
     expect(strangers).toEqual([]);
   });

@@ -1,18 +1,9 @@
 import { z } from "zod";
 
-import {
-  cronSchedule,
-  defineJob,
-  type JobDefinition,
-  type JobLog,
-} from "@dads-framework/job-queue/core";
+import { cronSchedule, defineJob, type JobDefinition, type JobLog } from "@dads-framework/job-queue/core";
 
 import type { CatalogSizeReader } from "./catalog-size-reader.js";
-import {
-  type CatalogTable,
-  type CatalogTableDeclaration,
-  hasCatalogTable,
-} from "./catalog-tables.js";
+import { type CatalogTable, type CatalogTableDeclaration, hasCatalogTable } from "./catalog-tables.js";
 
 export const AUDIT_CATALOG_SIZES_JOB = "authorization.audit-catalog-sizes";
 
@@ -59,13 +50,9 @@ export type CreateAuditCatalogSizesJobDeps = {
  * reports rather than throws: an oversized catalog is a finding, not a failed
  * job to retry.
  */
-export function createAuditCatalogSizesJob(
-  deps: CreateAuditCatalogSizesJobDeps,
-): JobDefinition {
+export function createAuditCatalogSizesJob(deps: CreateAuditCatalogSizesJobDeps): JobDefinition {
   if (!Number.isInteger(deps.warnRows) || deps.warnRows <= 0) {
-    throw new Error(
-      `catalog size warnRows must be a positive integer, got ${deps.warnRows}`,
-    );
+    throw new Error(`catalog size warnRows must be a positive integer, got ${deps.warnRows}`);
   }
   return defineJob({
     name: AUDIT_CATALOG_SIZES_JOB,
@@ -94,19 +81,11 @@ export function createAuditCatalogSizesJob(
 
 /** Every declared catalog table whose estimate is past the mark. */
 export async function auditCatalogSizes(
-  deps: Pick<
-    CreateAuditCatalogSizesJobDeps,
-    "catalogTables" | "reader" | "warnRows" | "log"
-  >,
+  deps: Pick<CreateAuditCatalogSizesJobDeps, "catalogTables" | "reader" | "warnRows" | "log">,
 ): Promise<readonly OversizedCatalog[]> {
-  const tables: readonly CatalogTable[] =
-    deps.catalogTables.filter(hasCatalogTable);
-  const estimates = await deps.reader.estimatedRows(
-    tables.map((table) => table.tableName),
-  );
-  const unsized = tables
-    .filter((table) => !estimates.has(table.tableName))
-    .map((table) => table.tableName);
+  const tables: readonly CatalogTable[] = deps.catalogTables.filter(hasCatalogTable);
+  const estimates = await deps.reader.estimatedRows(tables.map((table) => table.tableName));
+  const unsized = tables.filter((table) => !estimates.has(table.tableName)).map((table) => table.tableName);
   deps.log.info(
     {
       event: "authorization.catalog-sizes-audited",

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_REQUEST_LOCALE,
-  preferredLocaleOf,
-  requestLocaleOf,
-  resolveRequestLocale,
-} from "./request-locale.js";
+import { DEFAULT_REQUEST_LOCALE, preferredLocaleOf, requestLocaleOf, resolveRequestLocale } from "./request-locale.js";
 
 /**
  * What: an `Accept-Language` header, however hostile, becomes one language this
@@ -95,9 +90,7 @@ describe("resolveRequestLocale", () => {
 
 describe("requestLocaleOf", () => {
   it("reads the language off the request's own header", () => {
-    expect(requestLocaleOf({ headers: { "accept-language": "en-US" } })).toBe(
-      "en",
-    );
+    expect(requestLocaleOf({ headers: { "accept-language": "en-US" } })).toBe("en");
   });
 
   it("answers English when the request said nothing about language", () => {

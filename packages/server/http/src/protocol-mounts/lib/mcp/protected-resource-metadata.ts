@@ -22,9 +22,7 @@ export function protectedResourceMetadataDocument(
     authorization_servers: options.authorizationServers,
     scopes_supported: options.scopesSupported,
     bearer_methods_supported: ["header"],
-    ...(options.resourceName === undefined
-      ? {}
-      : { resource_name: options.resourceName }),
+    ...(options.resourceName === undefined ? {} : { resource_name: options.resourceName }),
   };
 }
 
@@ -35,9 +33,7 @@ export function createProtectedResourceMetadataHandler(
   const body = JSON.stringify(protectedResourceMetadataDocument(options));
   return (request) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return Promise.resolve(
-        new Response(null, { status: 405, headers: { allow: "GET, HEAD" } }),
-      );
+      return Promise.resolve(new Response(null, { status: 405, headers: { allow: "GET, HEAD" } }));
     }
     return Promise.resolve(
       new Response(request.method === "HEAD" ? null : body, {

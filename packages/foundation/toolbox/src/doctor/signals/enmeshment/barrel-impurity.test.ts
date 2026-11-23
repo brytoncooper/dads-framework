@@ -20,10 +20,7 @@ describe("barrel impurity", () => {
       'export const VERSION = "1";',
       "export type Local = { id: string };",
     ].join("\n");
-    const pure = [
-      'export * from "./route.js";',
-      'export type { RouteCard } from "./route-card.js";',
-    ].join("\n");
+    const pure = ['export * from "./route.js";', 'export type { RouteCard } from "./route-card.js";'].join("\n");
 
     expect(countImpureStatements(mixed)).toBe(3);
     expect(countImpureStatements(pure)).toBe(0);

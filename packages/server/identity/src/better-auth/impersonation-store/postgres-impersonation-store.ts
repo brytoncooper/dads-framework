@@ -1,13 +1,9 @@
-import type {
-  ImpersonationStoredGrant,
-  ImpersonationOptions,
-} from "../../impersonation/index.js";
+import type { ImpersonationStoredGrant, ImpersonationOptions } from "../../impersonation/index.js";
 import type { PostgresPool } from "kysely";
 
 function storedText(row: object, column: string): string {
   const value: unknown = Reflect.get(row, column);
-  if (typeof value !== "string")
-    throw new Error("Invalid stored impersonation grant");
+  if (typeof value !== "string") throw new Error("Invalid stored impersonation grant");
   return value;
 }
 
@@ -17,8 +13,7 @@ function parseGrant(row: unknown): ImpersonationStoredGrant | null {
     throw new Error("Invalid stored impersonation grant");
   }
   const expiresAtMs = Number(storedText(row, "expires_at_ms"));
-  if (!Number.isSafeInteger(expiresAtMs))
-    throw new Error("Invalid impersonation grant expiry");
+  if (!Number.isSafeInteger(expiresAtMs)) throw new Error("Invalid impersonation grant expiry");
   return {
     id: storedText(row, "id"),
     tenantId: storedText(row, "tenant_id"),
@@ -86,10 +81,7 @@ export function createPostgresImpersonationStore(
       },
     },
     async writeAudit(event) {
-      await query(
-        "INSERT INTO identity_staff_impersonation_audit (event) VALUES ($1::jsonb)",
-        [JSON.stringify(event)],
-      );
+      await query("INSERT INTO identity_staff_impersonation_audit (event) VALUES ($1::jsonb)", [JSON.stringify(event)]);
     },
   };
 }

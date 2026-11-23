@@ -19,17 +19,8 @@ import {
 import * as React from "react";
 
 import { toColumnFilters, toUrlFilters } from "../lib/column-filters.js";
-import {
-  type DataTableState,
-  DEFAULT_PER_PAGE,
-  defaultDataTableState,
-} from "../lib/data-table-search-params.js";
-import type {
-  ExtendedColumnFilter,
-  ExtendedColumnSort,
-  FilterVariant,
-  JoinOperator,
-} from "../lib/data-table-types.js";
+import { type DataTableState, DEFAULT_PER_PAGE, defaultDataTableState } from "../lib/data-table-search-params.js";
+import type { ExtendedColumnFilter, ExtendedColumnSort, FilterVariant, JoinOperator } from "../lib/data-table-types.js";
 import { parseSortingState } from "../lib/parsers.js";
 import { useReaderColumnLayout } from "./use-reader-column-layout.js";
 
@@ -92,42 +83,24 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     ...tableProps
   } = props;
 
-  const {
-    columns,
-    defaultPinning,
-    columnVisibility,
-    onColumnVisibilityChange,
-  } = useReaderColumnLayout({
+  const { columns, defaultPinning, columnVisibility, onColumnVisibilityChange } = useReaderColumnLayout({
     callerColumns,
     initialVisibility: initialState?.columnVisibility,
     tableId,
   });
 
-  const [localState, setLocalState] = React.useState<DataTableState>(() =>
-    toInitialState(initialState),
-  );
+  const [localState, setLocalState] = React.useState<DataTableState>(() => toInitialState(initialState));
   const state = stateProp ?? localState;
   const onStateChange = onStateChangeProp ?? setLocalState;
 
   const columnVariants = React.useMemo(
     () =>
-      new Map(
-        columns.flatMap((column) =>
-          column.id
-            ? [[column.id, column.meta?.variant ?? "text"] as const]
-            : [],
-        ),
-      ),
+      new Map(columns.flatMap((column) => (column.id ? [[column.id, column.meta?.variant ?? "text"] as const] : []))),
     [columns],
   );
-  const columnIds = React.useMemo(
-    () => new Set(columnVariants.keys()),
-    [columnVariants],
-  );
+  const columnIds = React.useMemo(() => new Set(columnVariants.keys()), [columnVariants]);
 
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
-    initialState?.rowSelection ?? {},
-  );
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(initialState?.rowSelection ?? {});
   const pinnedInitialState = React.useMemo(
     () => ({
       ...initialState,
@@ -141,10 +114,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     [state.page, state.perPage],
   );
 
-  const sorting = React.useMemo(
-    () => parseSortingState<TData>(state.sort, columnIds),
-    [state.sort, columnIds],
-  );
+  const sorting = React.useMemo(() => parseSortingState<TData>(state.sort, columnIds), [state.sort, columnIds]);
 
   const filters = React.useMemo(
     () => toColumnFilters<TData>(state.filters, columnVariants),
@@ -244,9 +214,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   return React.useMemo(() => ({ table, state }), [table, state]);
 }
 
-function toInitialState<TData>(
-  initialState?: DataTableInitialState<TData>,
-): DataTableState {
+function toInitialState<TData>(initialState?: DataTableInitialState<TData>): DataTableState {
   return {
     ...defaultDataTableState,
     page: (initialState?.pagination?.pageIndex ?? 0) + 1,
@@ -265,9 +233,7 @@ function mergeColumnFilters<TData>(
   previous: ExtendedColumnFilter<TData>[],
   columnVariants: ReadonlyMap<string, FilterVariant>,
 ): ExtendedColumnFilter<TData>[] {
-  const previousById = new Map<string, ExtendedColumnFilter<TData>>(
-    previous.map((filter) => [filter.id, filter]),
-  );
+  const previousById = new Map<string, ExtendedColumnFilter<TData>>(previous.map((filter) => [filter.id, filter]));
 
   return toColumnFilters<TData>(
     columnFilters.flatMap((columnFilter) => {

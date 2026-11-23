@@ -1,7 +1,4 @@
-import type {
-  Authorization,
-  PermissionQuery,
-} from "@dads-framework/access/runtime";
+import type { Authorization, PermissionQuery } from "@dads-framework/access/runtime";
 
 /**
  * Answers every query in input order: one `checkMany` where the adapter

@@ -17,10 +17,7 @@ import {
   putOperation,
 } from "./operation-contract.js";
 import type { AnyOperationContract } from "./operation-contract-types.js";
-import {
-  paginationMetaSchema,
-  paginationQuerySchema,
-} from "./pagination.schema.js";
+import { paginationMetaSchema, paginationQuerySchema } from "./pagination.schema.js";
 
 const noteSchema = z.object({ id: z.string(), title: z.string() });
 const noteBodySchema = z.strictObject({ title: z.string().min(1) });
@@ -44,12 +41,8 @@ describe("bindOperationPath", () => {
   });
 
   it("rejects missing or empty parameter values", () => {
-    expect(() => bindOperationPath("/notes/:id")).toThrow(
-      /Missing required path parameter "id"/,
-    );
-    expect(() => bindOperationPath("/notes/:id", { id: "" })).toThrow(
-      /Missing required path parameter "id"/,
-    );
+    expect(() => bindOperationPath("/notes/:id")).toThrow(/Missing required path parameter "id"/);
+    expect(() => bindOperationPath("/notes/:id", { id: "" })).toThrow(/Missing required path parameter "id"/);
   });
 
   it("rejects paths that are not single-slash mount-relative", () => {
@@ -72,9 +65,7 @@ describe("operation constructors", () => {
     expect(getNote.kind).toBe("get");
     expect(getNote.method).toBe("GET");
     expect(getNote.template).toBe("/tenants/:tenantId/notes/:noteId");
-    expect(getNote.path({ tenantId: "t/1", noteId: "n 2" })).toBe(
-      "/tenants/t%2F1/notes/n%202",
-    );
+    expect(getNote.path({ tenantId: "t/1", noteId: "n 2" })).toBe("/tenants/t%2F1/notes/n%202");
     expect(getNote.bind({ tenantId: "t1", noteId: "n2" })).toEqual({
       method: "GET",
       template: "/tenants/:tenantId/notes/:noteId",
@@ -199,14 +190,10 @@ describe("operation constructors", () => {
 
   it("rejects malformed paths and missing params schemas at runtime", () => {
     expect(() => {
-      Reflect.apply(getOperation, undefined, [
-        { path: "notes", response: noteSchema },
-      ]);
+      Reflect.apply(getOperation, undefined, [{ path: "notes", response: noteSchema }]);
     }).toThrow(/mount-relative/);
     expect(() => {
-      Reflect.apply(getOperation, undefined, [
-        { path: "/notes/:id", response: noteSchema },
-      ]);
+      Reflect.apply(getOperation, undefined, [{ path: "/notes/:id", response: noteSchema }]);
     }).toThrow(/requires a params schema/);
   });
 });

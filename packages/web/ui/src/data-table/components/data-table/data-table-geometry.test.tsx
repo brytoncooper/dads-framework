@@ -34,40 +34,26 @@ describe("DataTable compact responsive geometry", () => {
 
     const toolbar = screen.getByRole("toolbar");
     expect(toolbar.className).toContain("flex-col");
-    expect(
-      toolbar.querySelector('[data-slot="data-table-toolbar-row"]')?.className,
-    ).toContain("flex-wrap");
+    expect(toolbar.querySelector('[data-slot="data-table-toolbar-row"]')?.className).toContain("flex-wrap");
     expect(toolbar.className).toContain("[&_[data-slot=button]]:h-8");
-    expect(toolbar.className).toContain(
-      "[&_[data-slot=button][data-variant=outline]]:border-input",
-    );
+    expect(toolbar.className).toContain("[&_[data-slot=button][data-variant=outline]]:border-input");
 
     const filterInput = screen.getByPlaceholderText("Search");
     expect(filterInput.getAttribute("data-size")).toBe("sm");
     expect(filterInput.className).toContain("h-8");
 
     const extraFilter = screen.getByRole("button", { name: "Extra Filter" });
-    expect(extraFilter.className).toContain(
-      "[@media(pointer:coarse)]:min-h-11",
-    );
-    expect(extraFilter.className).toContain(
-      "[@media(pointer:coarse)]:min-w-11",
-    );
+    expect(extraFilter.className).toContain("[@media(pointer:coarse)]:min-h-11");
+    expect(extraFilter.className).toContain("[@media(pointer:coarse)]:min-w-11");
 
-    const popoverTriggers = Array.from(
-      toolbar.querySelectorAll<HTMLElement>('[data-slot="popover-trigger"]'),
-    );
+    const popoverTriggers = Array.from(toolbar.querySelectorAll<HTMLElement>('[data-slot="popover-trigger"]'));
     expect(popoverTriggers).toHaveLength(3);
     for (const trigger of popoverTriggers) {
       expect(trigger.className).toContain("h-8");
       expect(trigger.className).toContain("border-input");
     }
 
-    for (const name of [
-      "Clear Status Filter",
-      "Clear Created Filter",
-      "Clear Amount Filter",
-    ]) {
+    for (const name of ["Clear Status Filter", "Clear Created Filter", "Clear Amount Filter"]) {
       const clearButton = screen.getByRole("button", { name });
       expect(clearButton.className).toContain("size-8");
       expect(clearButton.className).toContain("border-input");
@@ -76,37 +62,17 @@ describe("DataTable compact responsive geometry", () => {
 
   it("uses live 32-pixel geometry in toolbar and pagination skeletons", () => {
     const { container } = render(
-      <DataTableSkeleton
-        actionWidths={["select"]}
-        columnCount={4}
-        filterWidths={["search", "narrow"]}
-        rowCount={2}
-      />,
+      <DataTableSkeleton actionWidths={["select"]} columnCount={4} filterWidths={["search", "narrow"]} rowCount={2} />,
     );
 
-    const skeletons = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-slot="skeleton"]'),
-    );
-    expect(
-      skeletons.some((skeleton) => skeleton.className.includes("h-7")),
-    ).toBe(false);
-    expect(
-      skeletons.some((skeleton) => skeleton.className.includes("size-7")),
-    ).toBe(false);
+    const skeletons = Array.from(container.querySelectorAll<HTMLElement>('[data-slot="skeleton"]'));
+    expect(skeletons.some((skeleton) => skeleton.className.includes("h-7"))).toBe(false);
+    expect(skeletons.some((skeleton) => skeleton.className.includes("size-7"))).toBe(false);
 
-    for (const slot of [
-      "data-table-skeleton-toolbar",
-      "data-table-skeleton-pagination",
-    ]) {
-      const region = container.querySelector<HTMLElement>(
-        `[data-slot="${slot}"]`,
-      );
-      expect(region?.className).toContain(
-        "[@media(pointer:coarse)]:[&_[data-slot=skeleton]]:min-h-11",
-      );
-      expect(region?.className).toContain(
-        "[@media(pointer:coarse)]:[&_[data-slot=skeleton]]:min-w-11",
-      );
+    for (const slot of ["data-table-skeleton-toolbar", "data-table-skeleton-pagination"]) {
+      const region = container.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
+      expect(region?.className).toContain("[@media(pointer:coarse)]:[&_[data-slot=skeleton]]:min-h-11");
+      expect(region?.className).toContain("[@media(pointer:coarse)]:[&_[data-slot=skeleton]]:min-w-11");
     }
   });
 
@@ -121,46 +87,26 @@ describe("DataTable compact responsive geometry", () => {
     );
 
     const filterWidths = Array.from(
-      container.querySelectorAll<HTMLElement>(
-        '[data-slot="data-table-skeleton-filters"] [data-slot="skeleton"]',
-      ),
+      container.querySelectorAll<HTMLElement>('[data-slot="data-table-skeleton-filters"] [data-slot="skeleton"]'),
     ).map((skeleton) => skeleton.className);
     const actionWidths = Array.from(
-      container.querySelectorAll<HTMLElement>(
-        '[data-slot="data-table-skeleton-actions"] [data-slot="skeleton"]',
-      ),
+      container.querySelectorAll<HTMLElement>('[data-slot="data-table-skeleton-actions"] [data-slot="skeleton"]'),
     ).map((skeleton) => skeleton.className);
 
-    expect(filterWidths).toEqual([
-      expect.stringContaining("w-40"),
-      expect.stringContaining("w-24"),
-    ]);
-    expect(actionWidths).toEqual([
-      expect.stringContaining("w-44"),
-      expect.stringContaining("w-32"),
-    ]);
+    expect(filterWidths).toEqual([expect.stringContaining("w-40"), expect.stringContaining("w-24")]);
+    expect(actionWidths).toEqual([expect.stringContaining("w-44"), expect.stringContaining("w-32")]);
   });
 
   it("places trailing content in the columns region before the Columns menu", () => {
-    render(
-      <ExampleTable
-        withToolbar
-        trailing={<Button variant="outline">Trailing Pill</Button>}
-      />,
-    );
+    render(<ExampleTable withToolbar trailing={<Button variant="outline">Trailing Pill</Button>} />);
 
-    const columnsRegion = screen
-      .getByRole("toolbar")
-      .querySelector('[data-slot="data-table-toolbar-columns"]');
+    const columnsRegion = screen.getByRole("toolbar").querySelector('[data-slot="data-table-toolbar-columns"]');
     const trailingPill = screen.getByRole("button", { name: "Trailing Pill" });
     const columnsMenu = screen.getByRole("button", { name: "Columns" });
 
     expect(columnsRegion?.contains(trailingPill)).toBe(true);
     expect(columnsRegion?.contains(columnsMenu)).toBe(true);
-    expect(
-      trailingPill.compareDocumentPosition(columnsMenu) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(trailingPill.compareDocumentPosition(columnsMenu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows a chip for a caller-rendered filter group without adding a pill for it", () => {
@@ -184,20 +130,14 @@ describe("DataTable compact responsive geometry", () => {
 
     expect(screen.getByText("Facility: North Plant")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Facility/ })).toBeNull();
-    fireEvent.click(
-      screen.getByRole("button", { name: /Remove .*Facility.*North Plant/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Remove .*Facility.*North Plant/ }));
     expect(onSelectedChange).toHaveBeenCalledWith([]);
   });
 
   it("omits the unused toolbar actions slot when there is no extra action", () => {
-    const { container, rerender } = render(
-      <ExampleTable withExtraAction={false} withToolbar />,
-    );
+    const { container, rerender } = render(<ExampleTable withExtraAction={false} withToolbar />);
 
-    expect(
-      container.querySelector('[data-slot="data-table-toolbar-actions"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-slot="data-table-toolbar-actions"]')).toBeNull();
     expect(screen.queryByRole("button", { name: "View" })).toBeNull();
 
     function AdvancedToolbarExample() {
@@ -209,20 +149,10 @@ describe("DataTable compact responsive geometry", () => {
     }
 
     rerender(<AdvancedToolbarExample />);
-    expect(
-      container.querySelector('[data-slot="data-table-toolbar-actions"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-slot="data-table-toolbar-actions"]')).toBeNull();
 
-    rerender(
-      <DataTableSkeleton
-        columnCount={4}
-        filterWidths={["search"]}
-        rowCount={2}
-      />,
-    );
-    expect(
-      container.querySelector('[data-slot="data-table-skeleton-actions"]'),
-    ).toBeNull();
+    rerender(<DataTableSkeleton columnCount={4} filterWidths={["search"]} rowCount={2} />);
+    expect(container.querySelector('[data-slot="data-table-skeleton-actions"]')).toBeNull();
   });
 
   it("cycles a sortable column through ascending, descending, and reset", () => {
@@ -242,9 +172,7 @@ describe("DataTable compact responsive geometry", () => {
       return (
         <>
           <DataTableColumnHeader column={nameColumn} label="Name" />
-          <output aria-label="Sort State">
-            {String(nameColumn.getIsSorted())}
-          </output>
+          <output aria-label="Sort State">{String(nameColumn.getIsSorted())}</output>
         </>
       );
     }
@@ -269,13 +197,9 @@ describe("DataTable compact responsive geometry", () => {
   });
 
   it("omits empty toolbar geometry when the live table has no toolbar", () => {
-    const { container } = render(
-      <DataTableSkeleton columnCount={4} filterWidths={[]} rowCount={2} />,
-    );
+    const { container } = render(<DataTableSkeleton columnCount={4} filterWidths={[]} rowCount={2} />);
 
-    expect(
-      container.querySelector('[data-slot="data-table-skeleton-toolbar"]'),
-    ).toBeNull();
+    expect(container.querySelector('[data-slot="data-table-skeleton-toolbar"]')).toBeNull();
   });
 
   it("wraps pagination controls instead of relying on horizontal overflow", () => {
@@ -289,18 +213,12 @@ describe("DataTable compact responsive geometry", () => {
     }
 
     const { container } = render(<PaginationExample />);
-    const pagination = container.querySelector<HTMLElement>(
-      '[data-slot="data-table-pagination"]',
-    );
+    const pagination = container.querySelector<HTMLElement>('[data-slot="data-table-pagination"]');
 
     expect(pagination).not.toBeNull();
     expect(pagination?.className).toContain("flex-wrap");
     expect(pagination?.className).not.toContain("overflow-auto");
-    expect(
-      pagination
-        ?.querySelector('[data-slot="select-trigger"]')
-        ?.getAttribute("data-size"),
-    ).toBe("sm");
+    expect(pagination?.querySelector('[data-slot="select-trigger"]')?.getAttribute("data-size")).toBe("sm");
   });
 
   it("keeps an empty result set on a coherent first page", () => {
@@ -316,15 +234,7 @@ describe("DataTable compact responsive geometry", () => {
     render(<EmptyPaginationExample />);
 
     expect(screen.getByText("Page 1 of 1")).toBeDefined();
-    expect(
-      screen
-        .getByRole("button", { name: "Go to Previous Page" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
-    expect(
-      screen
-        .getByRole("button", { name: "Go to Next Page" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+    expect(screen.getByRole("button", { name: "Go to Previous Page" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Go to Next Page" }).hasAttribute("disabled")).toBe(true);
   });
 });

@@ -42,9 +42,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   const columnFilterValue = column?.getFilterValue();
   const selectedValues = new Set(
     Array.isArray(columnFilterValue)
-      ? columnFilterValue.filter(
-          (value): value is string => typeof value === "string",
-        )
+      ? columnFilterValue.filter((value): value is string => typeof value === "string")
       : [],
   );
   const clearLabel = title
@@ -84,28 +82,17 @@ export function DataTableFacetedFilter<TData, TValue>({
     <div className="flex items-center gap-1">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="border-input border-dashed font-normal"
-          >
+          <Button type="button" variant="outline" size="sm" className="border-input border-dashed font-normal">
             <PlusCircle />
             {title}
-            <FacetedFilterSelection
-              options={options}
-              selectedValues={selectedValues}
-              multiple={multiple === true}
-            />
+            <FacetedFilterSelection options={options} selectedValues={selectedValues} multiple={multiple === true} />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-50 p-0" align="start">
           <Command>
             <CommandInput placeholder={title} />
             <CommandList className="max-h-full">
-              <CommandEmpty>
-                {t("dataTable.state.noFilterResults")}
-              </CommandEmpty>
+              <CommandEmpty>{t("dataTable.state.noFilterResults")}</CommandEmpty>
               <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
                 {options.map((option) => {
                   const isSelected = selectedValues.has(option.value);
@@ -122,9 +109,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                           data-slot="data-table-multi-select-checkbox"
                           className={cn(
                             "flex size-4 items-center justify-center rounded-sm border border-primary",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50 [&_svg]:invisible",
+                            isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible",
                           )}
                         >
                           <Check />
@@ -138,10 +123,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                         </span>
                       )}
                       {!multiple && isSelected ? (
-                        <Check
-                          data-slot="data-table-single-select-indicator"
-                          className="ml-auto"
-                        />
+                        <Check data-slot="data-table-single-select-indicator" className="ml-auto" />
                       ) : null}
                     </CommandItem>
                   );
@@ -151,10 +133,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                 <>
                   <CommandSeparator />
                   <CommandGroup>
-                    <CommandItem
-                      onSelect={onReset}
-                      className="justify-center text-center"
-                    >
+                    <CommandItem onSelect={onReset} className="justify-center text-center">
                       {t("dataTable.action.clearFilters")}
                     </CommandItem>
                   </CommandGroup>
@@ -180,10 +159,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   );
 }
 
-function selectedOptions(
-  options: Option[],
-  selectedValues: ReadonlySet<string>,
-) {
+function selectedOptions(options: Option[], selectedValues: ReadonlySet<string>) {
   return options
     .filter((option) => selectedValues.has(option.value))
     .map((option) => <SelectedOption key={option.value} option={option} />);
@@ -221,24 +197,15 @@ function FacetedFilterSelection({
 
   return (
     <>
-      <Separator
-        orientation="vertical"
-        className="mx-0.5 data-[orientation=vertical]:h-4"
-      />
+      <Separator orientation="vertical" className="mx-0.5 data-[orientation=vertical]:h-4" />
       {multiple ? (
         <>
-          <Badge
-            variant="secondary"
-            className="rounded-sm px-1 font-normal lg:hidden"
-          >
+          <Badge variant="secondary" className="rounded-sm px-1 font-normal lg:hidden">
             {selectedValues.size}
           </Badge>
           <div className="hidden items-center gap-1 lg:flex">
             {selectedValues.size > 2 ? (
-              <Badge
-                variant="secondary"
-                className="rounded-sm px-1 font-normal"
-              >
+              <Badge variant="secondary" className="rounded-sm px-1 font-normal">
                 {t("dataTable.filter.selectedCount", {
                   count: selectedValues.size,
                 })}

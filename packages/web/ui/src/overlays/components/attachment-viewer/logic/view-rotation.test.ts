@@ -14,10 +14,7 @@ import {
   type ViewRotation,
 } from "./view-rotation.js";
 
-const DIRECTIONS: readonly RotateDirection[] = [
-  "clockwise",
-  "counterclockwise",
-];
+const DIRECTIONS: readonly RotateDirection[] = ["clockwise", "counterclockwise"];
 
 describe("nextRotation", () => {
   it("turns a quarter at a time in each direction", () => {
@@ -45,9 +42,7 @@ describe("nextRotation", () => {
   });
 
   it("cancels a clockwise press with a counterclockwise one", () => {
-    expect(
-      nextRotation(nextRotation(180, "clockwise"), "counterclockwise"),
-    ).toBe(180);
+    expect(nextRotation(nextRotation(180, "clockwise"), "counterclockwise")).toBe(180);
   });
 
   it("accepts out-of-range input and lands on a valid rotation", () => {

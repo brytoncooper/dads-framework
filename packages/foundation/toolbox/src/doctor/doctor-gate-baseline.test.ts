@@ -12,36 +12,18 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  matchesExemptGlob,
-  parseGateBaseline,
-  serializeBaseline,
-} from "./doctor-gate-baseline.js";
+import { matchesExemptGlob, parseGateBaseline, serializeBaseline } from "./doctor-gate-baseline.js";
 import { BASELINE_PATH, type BaselineSections } from "./doctor-gate-model.js";
 
-const WORKSPACE_ROOT = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-);
+const WORKSPACE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
 
 const SEEDED = "seeded before the gate existed";
 
-function sections(
-  raw: Record<string, Record<string, { value: number; reason?: string }>>,
-): BaselineSections {
+function sections(raw: Record<string, Record<string, { value: number; reason?: string }>>): BaselineSections {
   return new Map(
     Object.entries(raw).map(([name, entries]) => [
       name,
-      new Map(
-        Object.entries(entries).map(([key, entry]) => [
-          key,
-          { value: entry.value, reason: entry.reason },
-        ]),
-      ),
+      new Map(Object.entries(entries).map(([key, entry]) => [key, { value: entry.value, reason: entry.reason }])),
     ]),
   );
 }
@@ -66,15 +48,10 @@ describe("the baseline the gate writes", () => {
     expect(text).toBe(serializeBaseline(parseGateBaseline(text)));
     expect(text.endsWith("}\n")).toBe(true);
     expect(text).toContain('\n  "ceilings": {');
-    expect(text.indexOf('"fileLines"')).toBeLessThan(
-      text.indexOf('"testFileLines"'),
-    );
+    expect(text.indexOf('"fileLines"')).toBeLessThan(text.indexOf('"testFileLines"'));
     expect(text.indexOf('"src/a.ts"')).toBeLessThan(text.indexOf('"src/z.ts"'));
     expect(text.indexOf('"mark": 700')).toBeLessThan(text.indexOf('"reason"'));
-    expect(parseGateBaseline(text).exempt).toStrictEqual([
-      "**/*.generated.ts",
-      "**/dist/**",
-    ]);
+    expect(parseGateBaseline(text).exempt).toStrictEqual(["**/*.generated.ts", "**/dist/**"]);
   });
 
   it("is shaped the way Prettier would shape it", () => {
@@ -94,9 +71,7 @@ describe("the baseline the gate writes", () => {
     });
 
     expect(short).toContain('\n  "exempt": ["a/**", "b/**"],\n');
-    expect(short.endsWith('\n  "ceilings": {},\n  "floors": {}\n}\n')).toBe(
-      true,
-    );
+    expect(short.endsWith('\n  "ceilings": {},\n  "floors": {}\n}\n')).toBe(true);
     expect(long).toContain('\n  "exempt": [\n    "aaa');
     expect(long).toBe(serializeBaseline(parseGateBaseline(long)));
   });
@@ -126,32 +101,26 @@ describe("the baseline the gate writes", () => {
     });
 
     expect(text.indexOf('"floor": 4')).toBeLessThan(text.indexOf('"movedTo"'));
-    expect(text.indexOf('"movedTo": "@scope/to"')).toBeLessThan(
-      text.indexOf(`"reason": ${JSON.stringify(moved)}`),
-    );
+    expect(text.indexOf('"movedTo": "@scope/to"')).toBeLessThan(text.indexOf(`"reason": ${JSON.stringify(moved)}`));
     expect(serializeBaseline(parseGateBaseline(text))).toBe(text);
-    expect(
-      parseGateBaseline(text).floors.get("testCount")?.get("@scope/from"),
-    ).toStrictEqual({ value: 4, reason: moved, movedTo: "@scope/to" });
+    expect(parseGateBaseline(text).floors.get("testCount")?.get("@scope/from")).toStrictEqual({
+      value: 4,
+      reason: moved,
+      movedTo: "@scope/to",
+    });
   });
 
   it("refuses a movedTo that names nothing, and one on a ceiling", () => {
+    expect(() => parseGateBaseline('{"ceilings":{},"floors":{"testCount":{"a":{"floor":4,"movedTo":7}}}}')).toThrow(
+      /testCount a: movedTo must name another key in this section/,
+    );
     expect(() =>
-      parseGateBaseline(
-        '{"ceilings":{},"floors":{"testCount":{"a":{"floor":4,"movedTo":7}}}}',
-      ),
-    ).toThrow(/testCount a: movedTo must name another key in this section/);
-    expect(() =>
-      parseGateBaseline(
-        '{"ceilings":{"fileLines":{"src/a.ts":{"mark":420,"movedTo":"src/b.ts"}}},"floors":{}}',
-      ),
+      parseGateBaseline('{"ceilings":{"fileLines":{"src/a.ts":{"mark":420,"movedTo":"src/b.ts"}}},"floors":{}}'),
     ).toThrow(/fileLines src\/a\.ts: movedTo belongs to a floor entry/);
   });
 
   it("reads an entry with no reason rather than dropping it", () => {
-    const parsed = parseGateBaseline(
-      '{"ceilings":{"fileLines":{"src/a.ts":{"mark":420}}},"floors":{}}',
-    );
+    const parsed = parseGateBaseline('{"ceilings":{"fileLines":{"src/a.ts":{"mark":420}}},"floors":{}}');
 
     expect(parsed.ceilings.get("fileLines")?.get("src/a.ts")).toStrictEqual({
       value: 420,
@@ -162,29 +131,11 @@ describe("the baseline the gate writes", () => {
 
 describe("what a baseline exempts", () => {
   it("matches ** across separators, * inside one, and nothing else", () => {
-    expect(
-      matchesExemptGlob(
-        "packages/a/src/schema.generated.ts",
-        "**/*.generated.ts",
-      ),
-    ).toBe(true);
-    expect(matchesExemptGlob("schema.generated.ts", "**/*.generated.ts")).toBe(
-      true,
-    );
-    expect(matchesExemptGlob("packages/a/dist/index.js", "**/dist/**")).toBe(
-      true,
-    );
-    expect(matchesExemptGlob("packages/a/src/index.ts", "**/dist/**")).toBe(
-      false,
-    );
-    expect(
-      matchesExemptGlob(
-        "packages/a/src/legacy/one.ts",
-        "packages/a/src/legacy/**",
-      ),
-    ).toBe(true);
-    expect(matchesExemptGlob("packages/a/b/one.ts", "packages/*/one.ts")).toBe(
-      false,
-    );
+    expect(matchesExemptGlob("packages/a/src/schema.generated.ts", "**/*.generated.ts")).toBe(true);
+    expect(matchesExemptGlob("schema.generated.ts", "**/*.generated.ts")).toBe(true);
+    expect(matchesExemptGlob("packages/a/dist/index.js", "**/dist/**")).toBe(true);
+    expect(matchesExemptGlob("packages/a/src/index.ts", "**/dist/**")).toBe(false);
+    expect(matchesExemptGlob("packages/a/src/legacy/one.ts", "packages/a/src/legacy/**")).toBe(true);
+    expect(matchesExemptGlob("packages/a/b/one.ts", "packages/*/one.ts")).toBe(false);
   });
 });

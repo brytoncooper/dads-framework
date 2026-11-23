@@ -18,11 +18,7 @@ import { count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 
 import { type AccessChange, outboxKeyForRelationship } from "../enqueue.js";
 import { authorizationOutbox } from "./access-changes.tables.js";
@@ -100,11 +96,7 @@ describe("PostgresEnqueueAccessChanges (integration)", () => {
     await outbox.enqueue(
       [
         {
-          idempotencyKey: outboxKeyForRelationship(
-            "WRITE",
-            relationship,
-            "permission-set",
-          ),
+          idempotencyKey: outboxKeyForRelationship("WRITE", relationship, "permission-set"),
           operation: "WRITE",
           relationship,
           ownerPartitionId: null,
@@ -130,9 +122,7 @@ describe("PostgresEnqueueAccessChanges (integration)", () => {
       }),
     ).rejects.toThrow("something after the writes went wrong");
 
-    const [facts] = await db
-      .select({ total: count() })
-      .from(authorizationOutbox);
+    const [facts] = await db.select({ total: count() }).from(authorizationOutbox);
     expect(facts?.total).toBe(0);
   });
 
@@ -157,9 +147,7 @@ describe("PostgresEnqueueAccessChanges (integration)", () => {
 
   it("enqueuing nothing touches nothing", async () => {
     await outbox.enqueue([], db);
-    const [facts] = await db
-      .select({ total: count() })
-      .from(authorizationOutbox);
+    const [facts] = await db.select({ total: count() }).from(authorizationOutbox);
     expect(facts?.total).toBe(0);
   });
 
@@ -175,9 +163,7 @@ describe("PostgresEnqueueAccessChanges (integration)", () => {
     await outbox.append([entryFor("revoked")]);
     await outbox.append([entryFor("revoked")]);
 
-    const [facts] = await db
-      .select({ total: count() })
-      .from(authorizationOutbox);
+    const [facts] = await db.select({ total: count() }).from(authorizationOutbox);
     expect(facts?.total).toBe(1);
   });
 });

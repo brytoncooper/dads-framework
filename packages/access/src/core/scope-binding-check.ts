@@ -12,22 +12,16 @@ const LIST_PERMISSION = "view";
  * and no rule loops. Opt-in by presence: with no bindings registered it
  * returns no failures.
  */
-export function checkScopeBindings(
-  model: AccessModel,
-): readonly ScopePlanFailure[] {
+export function checkScopeBindings(model: AccessModel): readonly ScopePlanFailure[] {
   return checkScopeBindingsInSchema(scopeSchema(model));
 }
 
-export function checkScopeBindingsInSchema(
-  schema: ScopeSchema,
-): readonly ScopePlanFailure[] {
+export function checkScopeBindingsInSchema(schema: ScopeSchema): readonly ScopePlanFailure[] {
   const failures: ScopePlanFailure[] = [];
 
   for (const [wireName, roles] of schema.bindings) {
     const path = `${wireName}.${LIST_PERMISSION}`;
-    const definition = schema.definitions.find(
-      (entry) => entry.wireName === wireName,
-    );
+    const definition = schema.definitions.find((entry) => entry.wireName === wireName);
     if (definition === undefined) {
       failures.push({
         path,
@@ -49,11 +43,7 @@ export function checkScopeBindingsInSchema(
         });
       }
     }
-    if (
-      !definition.permissions.some(
-        (permission) => permission.name === LIST_PERMISSION,
-      )
-    ) {
+    if (!definition.permissions.some((permission) => permission.name === LIST_PERMISSION)) {
       failures.push({
         path,
         message: `${wireName} has scope bindings but no ${LIST_PERMISSION} permission`,

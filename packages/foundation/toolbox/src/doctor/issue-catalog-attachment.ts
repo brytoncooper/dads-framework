@@ -8,12 +8,7 @@
  * ceiling `files-over-ceiling` measures, nothing else.
  */
 
-import {
-  ESLINT_DISABLES_SIGNAL,
-  ESLINT_DISABLE_MARK,
-  TS_EXPECT_ERROR_MARK,
-  TS_IGNORE_MARK,
-} from "./hatch-names.js";
+import { ESLINT_DISABLES_SIGNAL, ESLINT_DISABLE_MARK, TS_EXPECT_ERROR_MARK, TS_IGNORE_MARK } from "./hatch-names.js";
 import type { DaddyIssue } from "./issues.js";
 
 export const ATTACHMENT_ISSUES: readonly DaddyIssue[] = [
@@ -105,8 +100,7 @@ export const ATTACHMENT_ISSUES: readonly DaddyIssue[] = [
     id: "disorganized-attachment",
     title: "Disorganized attachment",
     anchor: "#disorganized-attachment",
-    sentence:
-      "The compiler is not confused. The compiler is the only one being honest with you.",
+    sentence: "The compiler is not confused. The compiler is the only one being honest with you.",
     questions: [
       {
         signals: ["interface-type-mix"],
@@ -139,8 +133,7 @@ export const ATTACHMENT_ISSUES: readonly DaddyIssue[] = [
     id: "enmeshment",
     title: "Enmeshment",
     anchor: "#enmeshment",
-    sentence:
-      "Dad’s answer is not a bigger house. It is a wall. One responsibility per file.",
+    sentence: "Dad’s answer is not a bigger house. It is a wall. One responsibility per file.",
     questions: [
       {
         signals: ["files-over-ceiling", "test-files-over-ceiling"],
@@ -169,8 +162,7 @@ export const ATTACHMENT_ISSUES: readonly DaddyIssue[] = [
     id: "you-are-looking-for-a-father-figure",
     title: "You are looking for a father figure",
     anchor: "#you-are-looking-for-a-father-figure",
-    sentence:
-      "A vendor can implement a capability. It cannot tell you what the capability _is_.",
+    sentence: "A vendor can implement a capability. It cannot tell you what the capability _is_.",
     questions: [
       {
         signals: ["framework-in-core"],
@@ -199,8 +191,7 @@ export const ATTACHMENT_ISSUES: readonly DaddyIssue[] = [
     id: "you-repeat-the-cycle",
     title: "You repeat the cycle",
     anchor: "#you-repeat-the-cycle",
-    sentence:
-      "Latchkey routes. Nobody home. No access declaration. Dinner is `console.log`.",
+    sentence: "Latchkey routes. Nobody home. No access declaration. Dinner is `console.log`.",
     questions: [
       {
         signals: ["tenant-column-authorization"],

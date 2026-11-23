@@ -28,20 +28,13 @@ import {
 } from "../scanners/package-graph.js";
 
 function keepersOf(graph: PackageGraph, module: string): readonly string[] {
-  return graph.packages
-    .filter((declared) => declaresModule(declared, module))
-    .map((declared) => declared.name);
+  return graph.packages.filter((declared) => declaresModule(declared, module)).map((declared) => declared.name);
 }
 
-function crossingsBy(
-  graph: PackageGraph,
-  declared: GraphPackage,
-): SignalReading {
+function crossingsBy(graph: PackageGraph, declared: GraphPackage): SignalReading {
   const crossings = vendorImports(graph, declared).filter((entry) => {
     const module = entry.module ?? "";
-    return (
-      !declaresModule(declared, module) && keepersOf(graph, module).length > 0
-    );
+    return !declaresModule(declared, module) && keepersOf(graph, module).length > 0;
   });
   return {
     value: crossings.length,
@@ -65,8 +58,7 @@ function countCrossings(context: DoctorContext) {
 export const vendorOutsideAdapterSignal: DoctorSignal = {
   id: "vendor-outside-adapter",
   issue: "anxious-attachment",
-  question:
-    "Is a vendor module imported outside the integration package declaring it?",
+  question: "Is a vendor module imported outside the integration package declaring it?",
   reads: "packages",
   unit: "files",
   direction: "ceiling",

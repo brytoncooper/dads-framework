@@ -2,11 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { inspectMemberPermissions } from "./membership-permissions.js";
 import { membershipFact } from "./membership-facts.js";
-import {
-  assignableTenantRoleSchema,
-  type TenantId,
-  type TenantRole,
-} from "./tenant-access.js";
+import { assignableTenantRoleSchema, type TenantId, type TenantRole } from "./tenant-access.js";
 import { tenantMembership, tenantMembershipKey } from "./tenant-tables.js";
 import {
   accountSubject,
@@ -21,21 +17,10 @@ export type TenantMembership = typeof tenantMembership.$inferSelect;
 export class TenantMemberships {
   constructor(private readonly options: TenantsOptions) {}
 
-  roster(
-    actorId: string,
-    tenantId: TenantId,
-  ): Promise<readonly TenantMembership[]> {
+  roster(actorId: string, tenantId: TenantId): Promise<readonly TenantMembership[]> {
     const actor = accountSubject(this.options, actorId);
     return tenantTransaction(this.options, async (tx) => {
-      if (
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          actor,
-          tenantId,
-          "manage_members",
-        ))
-      )
+      if (!(await checkTenantPermission(this.options, tx, actor, tenantId, "manage_members")))
         throw new TenantUnavailableError();
       return tx
         .select()
@@ -62,98 +47,41 @@ export class TenantMemberships {
     const assignable = assignableTenantRoleSchema.safeParse(role);
     if (!assignable.success) throw new TenantUnavailableError();
     return tenantTransaction(this.options, async (tx) => {
-      if (
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          actor,
-          tenantId,
-          "manage_tenant",
-        ))
-      )
+      if (!(await checkTenantPermission(this.options, tx, actor, tenantId, "manage_tenant")))
         throw new TenantUnavailableError();
       const match = tenantMembershipKey(tenantId, target.id);
-      const [member] = await tx
-        .select()
-        .from(tenantMembership)
-        .where(match)
-        .for("update");
-      if (member === undefined || member.role === "owner")
-        throw new TenantUnavailableError();
+      const [member] = await tx.select().from(tenantMembership).where(match).for("update");
+      if (member === undefined || member.role === "owner") throw new TenantUnavailableError();
       if (member.role === assignable.data) return;
-      await tx
-        .update(tenantMembership)
-        .set({ role: assignable.data })
-        .where(match);
+      await tx.update(tenantMembership).set({ role: assignable.data }).where(match);
       await this.options.changes.enqueue(
         [
-          membershipFact(
-            this.options,
-            tenantId,
-            target.id,
-            member.role,
-            "DELETE",
-          ),
-          membershipFact(
-            this.options,
-            tenantId,
-            target.id,
-            assignable.data,
-            "WRITE",
-          ),
+          membershipFact(this.options, tenantId, target.id, member.role, "DELETE"),
+          membershipFact(this.options, tenantId, target.id, assignable.data, "WRITE"),
         ],
         tx,
       );
     });
   }
 
-  removeMember(
-    actorId: string,
-    tenantId: TenantId,
-    accountId: string,
-  ): Promise<void> {
+  removeMember(actorId: string, tenantId: TenantId, accountId: string): Promise<void> {
     const actor = accountSubject(this.options, actorId);
     const target = accountSubject(this.options, accountId);
     return tenantTransaction(this.options, async (tx) => {
-      const canManage = await checkTenantPermission(
-        this.options,
-        tx,
-        actor,
-        tenantId,
-        "manage_members",
-      );
+      const canManage = await checkTenantPermission(this.options, tx, actor, tenantId, "manage_members");
       if (!canManage) throw new TenantUnavailableError();
       const match = tenantMembershipKey(tenantId, target.id);
-      const [member] = await tx
-        .select()
-        .from(tenantMembership)
-        .where(match)
-        .for("update");
-      if (member === undefined || member.role === "owner")
-        throw new TenantUnavailableError();
+      const [member] = await tx.select().from(tenantMembership).where(match).for("update");
+      if (member === undefined || member.role === "owner") throw new TenantUnavailableError();
       if (
         member.role === "admin" &&
-        !(await checkTenantPermission(
-          this.options,
-          tx,
-          actor,
-          tenantId,
-          "manage_tenant",
-        ))
+        !(await checkTenantPermission(this.options, tx, actor, tenantId, "manage_tenant"))
       ) {
         throw new TenantUnavailableError();
       }
       await tx.delete(tenantMembership).where(match);
       await this.options.changes.enqueue(
-        [
-          membershipFact(
-            this.options,
-            tenantId,
-            target.id,
-            member.role,
-            "DELETE",
-          ),
-        ],
+        [membershipFact(this.options, tenantId, target.id, member.role, "DELETE")],
         tx,
       );
     });

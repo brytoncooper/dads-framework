@@ -28,13 +28,8 @@ export type GlobalErrorReportingOptions = {
 };
 
 /** Installs the listeners and returns the function that removes them. */
-export function installGlobalErrorReporting(
-  options: GlobalErrorReportingOptions,
-): () => void {
-  const report = (
-    error: unknown,
-    kind: "window-error" | "unhandled-rejection",
-  ) => {
+export function installGlobalErrorReporting(options: GlobalErrorReportingOptions): () => void {
+  const report = (error: unknown, kind: "window-error" | "unhandled-rejection") => {
     if (isChunkLoadFailure(error)) {
       if (options.staleBuildExplains?.() === true) return;
       // The reload path did NOT explain it, so this is the rare real one: a

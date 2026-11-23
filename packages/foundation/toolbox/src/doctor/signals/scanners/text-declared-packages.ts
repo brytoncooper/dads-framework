@@ -27,9 +27,7 @@ export type DeclaredPackage = {
 };
 
 /** Every package the project file declares, and none when there is no file. */
-export function declaredPackages(
-  context: DoctorContext,
-): readonly DeclaredPackage[] {
+export function declaredPackages(context: DoctorContext): readonly DeclaredPackage[] {
   if (!context.exists(PROJECT_DECLARATION)) return [];
   const parsed: unknown = JSON.parse(context.read(PROJECT_DECLARATION));
   if (!isRecord(parsed)) return [];

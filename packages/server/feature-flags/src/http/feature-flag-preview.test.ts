@@ -1,37 +1,21 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  composeFeatureFlags,
-  effectiveFeatureStateSchema,
-  hashFeatureState,
-} from "../index.js";
+import { composeFeatureFlags, effectiveFeatureStateSchema, hashFeatureState } from "../index.js";
 import {
   FakeTenantDirectory,
   featureFlagDefinitionFactory,
   FixedClock,
   InMemoryFeatureFlagStore,
 } from "../testing/index.js";
-import {
-  fromFixed,
-  getRoute,
-  requireSession,
-  routeGroup,
-} from "@dads-framework/http";
-import {
-  buildTestApp,
-  TEST_SUBJECT_HEADER,
-  type TestApp,
-} from "@dads-framework/http/testing";
+import { fromFixed, getRoute, requireSession, routeGroup } from "@dads-framework/http";
+import { buildTestApp, TEST_SUBJECT_HEADER, type TestApp } from "@dads-framework/http/testing";
 
 import {
   createFeatureFlagPreviewResolver,
   type FeatureFlagPreviewRecord,
   readFeatureFlagPreview,
 } from "./feature-flag-preview.js";
-import {
-  type FeatureFlagContextResolver,
-  FeatureFlagRequestEvaluator,
-} from "./feature-flag-request-evaluator.js";
+import { type FeatureFlagContextResolver, FeatureFlagRequestEvaluator } from "./feature-flag-request-evaluator.js";
 import { createFeatureFlagRoutes } from "./feature-flag-routes.js";
 
 const flag = featureFlagDefinitionFactory({ slug: "orders.bulk-import" });
@@ -47,9 +31,7 @@ const preview: FeatureFlagPreviewRecord = {
 };
 
 const resolveContext: FeatureFlagContextResolver = ({ context }) =>
-  context === "pilot" || context === "other"
-    ? { kind: "tenant", tenantId: context }
-    : null;
+  context === "pilot" || context === "other" ? { kind: "tenant", tenantId: context } : null;
 
 let app: TestApp | undefined;
 
@@ -86,16 +68,14 @@ describe("feature flag previews", () => {
             access: requireSession(),
             response: effectiveFeatureStateSchema,
             handler: async () => {
-              const own =
-                await flags.evaluatorReadingStatesOncePerRequest.isActive({
-                  slug: flag.slug,
-                  context: preview.context,
-                });
-              const other =
-                await flags.evaluatorReadingStatesOncePerRequest.isActive({
-                  slug: flag.slug,
-                  context: { kind: "tenant", tenantId: "other" },
-                });
+              const own = await flags.evaluatorReadingStatesOncePerRequest.isActive({
+                slug: flag.slug,
+                context: preview.context,
+              });
+              const other = await flags.evaluatorReadingStatesOncePerRequest.isActive({
+                slug: flag.slug,
+                context: { kind: "tenant", tenantId: "other" },
+              });
               expect(own).toBe(true);
               expect(other).toBe(false);
               return flags.effective.execute(preview.context);
@@ -104,10 +84,7 @@ describe("feature flag previews", () => {
         ]),
       ],
       featureState: {
-        evaluator: new FeatureFlagRequestEvaluator(
-          flags.effective,
-          resolveContext,
-        ),
+        evaluator: new FeatureFlagRequestEvaluator(flags.effective, resolveContext),
         hashHeader: "x-test-state",
         clientHashHeader: "x-test-expected-state",
         contextHeader: "x-test-context",
@@ -115,10 +92,8 @@ describe("feature flag previews", () => {
           resolver: createFeatureFlagPreviewResolver({
             definitions: [flag],
             resolveContext,
-            findPreview: (id) =>
-              Promise.resolve(id === "preview-1" ? preview : null),
-            canPreview: ({ subject }) =>
-              Promise.resolve(subject.id === owner.id),
+            findPreview: (id) => Promise.resolve(id === "preview-1" ? preview : null),
+            canPreview: ({ subject }) => Promise.resolve(subject.id === owner.id),
             now: () => now,
           }),
           requestHeader: "x-test-preview",
@@ -177,24 +152,21 @@ describe("feature flag previews", () => {
     ["expired record", { ...preview, expiresAt: now }, owner, true],
     ["undefined flag", { ...preview, feature: "removed.flag" }, owner, true],
     ["acting as another person", preview, { ...owner, id: "other" }, true],
-  ] as const)(
-    "drops a preview with %s",
-    async (_case, record, subject, authorized) => {
-      const resolver = createFeatureFlagPreviewResolver({
-        definitions: [flag],
-        resolveContext,
-        findPreview: () => Promise.resolve(record),
-        canPreview: () => Promise.resolve(authorized),
-        now: () => now,
-      });
-      await expect(
-        resolver.resolve({
-          previewId: "preview-1",
-          authenticatedSubject: owner,
-          subject,
-          context: "pilot",
-        }),
-      ).resolves.toBeNull();
-    },
-  );
+  ] as const)("drops a preview with %s", async (_case, record, subject, authorized) => {
+    const resolver = createFeatureFlagPreviewResolver({
+      definitions: [flag],
+      resolveContext,
+      findPreview: () => Promise.resolve(record),
+      canPreview: () => Promise.resolve(authorized),
+      now: () => now,
+    });
+    await expect(
+      resolver.resolve({
+        previewId: "preview-1",
+        authenticatedSubject: owner,
+        subject,
+        context: "pilot",
+      }),
+    ).resolves.toBeNull();
+  });
 });

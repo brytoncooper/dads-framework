@@ -1,12 +1,6 @@
 /** Proves changed-scope discovery and candidate planning fail closed before reuse exists. */
 
-import {
-  mkdirSync,
-  mkdtempSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -33,9 +27,7 @@ describe("verification task candidates", () => {
       schemaVersion: 2,
       packages: [packageDeclaration("toolbox", "packages/toolbox", [])],
       verification: {
-        tasks: [
-          verificationTask("toolbox:test", "toolbox", "packages/toolbox"),
-        ],
+        tasks: [verificationTask("toolbox:test", "toolbox", "packages/toolbox")],
         fullFallbackTaskIds: ["toolbox:test"],
       },
     });
@@ -45,9 +37,7 @@ describe("verification task candidates", () => {
     });
 
     expect(recommendation.usedFullFallback).toBe(true);
-    expect(recommendation.tasks.map((task) => task.taskId)).toEqual([
-      "toolbox:test",
-    ]);
+    expect(recommendation.tasks.map((task) => task.taskId)).toEqual(["toolbox:test"]);
     expect(recommendation.tasks[0]?.state).toBe("unknown-scope");
   });
 
@@ -71,9 +61,7 @@ describe("verification task candidates", () => {
       },
     });
 
-    const plan = collectCandidateTasks(project, [
-      "packages/policy/src/access.ts",
-    ]);
+    const plan = collectCandidateTasks(project, ["packages/policy/src/access.ts"]);
 
     expect(plan.tasks.map(({ taskId, state }) => ({ taskId, state }))).toEqual([
       { taskId: "policy:check", state: "run" },
@@ -101,14 +89,9 @@ describe("verification task candidates", () => {
       },
     });
 
-    const plan = collectCandidateTasks(project, [
-      "packages/server/src/read-document.ts",
-    ]);
+    const plan = collectCandidateTasks(project, ["packages/server/src/read-document.ts"]);
 
-    expect(plan.tasks.map((task) => task.taskId)).toEqual([
-      "policy:check",
-      "server:test",
-    ]);
+    expect(plan.tasks.map((task) => task.taskId)).toEqual(["policy:check", "server:test"]);
   });
 
   it("uses a declared non-source check for documentation history", () => {
@@ -127,9 +110,7 @@ describe("verification task candidates", () => {
       },
     });
 
-    const plan = collectCandidateTasks(project, [
-      ".agents/plans/verification.md",
-    ]);
+    const plan = collectCandidateTasks(project, [".agents/plans/verification.md"]);
 
     expect(plan.tasks.map((task) => task.taskId)).toEqual(["docs:check"]);
     expect(plan.unknownPaths).toEqual([]);
@@ -141,17 +122,12 @@ describe("verification task candidates", () => {
       schemaVersion: 2,
       packages: [packageDeclaration("toolbox", "packages/toolbox", [])],
       verification: {
-        tasks: [
-          verificationTask("toolbox:test", "toolbox", "packages/toolbox"),
-        ],
+        tasks: [verificationTask("toolbox:test", "toolbox", "packages/toolbox")],
         fullFallbackTaskIds: ["toolbox:test"],
       },
     });
 
-    const plan = collectCandidateTasks(project, [
-      "packages/toolbox/src/cli.ts",
-      "tools/release.mjs",
-    ]);
+    const plan = collectCandidateTasks(project, ["packages/toolbox/src/cli.ts", "tools/release.mjs"]);
 
     expect(plan.tasks.map(({ taskId, state }) => ({ taskId, state }))).toEqual([
       { taskId: "toolbox:test", state: "unknown-scope" },
@@ -166,9 +142,7 @@ describe("verification task candidates", () => {
       schemaVersion: 2,
       packages: [packageDeclaration("toolbox", "packages/toolbox", [])],
       verification: {
-        tasks: [
-          verificationTask("toolbox:test", "toolbox", "packages/toolbox"),
-        ],
+        tasks: [verificationTask("toolbox:test", "toolbox", "packages/toolbox")],
         fullFallbackTaskIds: [],
       },
     });
@@ -177,9 +151,7 @@ describe("verification task candidates", () => {
 
     expect(plan.complete).toBe(false);
     expect(plan.tasks).toEqual([]);
-    expect(plan.issues).toEqual([
-      "Unknown changed paths have no configured full fallback task.",
-    ]);
+    expect(plan.issues).toEqual(["Unknown changed paths have no configured full fallback task."]);
   });
 
   it("detects dependency cycles instead of pruning them", () => {
@@ -201,15 +173,11 @@ describe("verification task candidates", () => {
       },
     });
 
-    const plan = collectCandidateTasks(project, [
-      "packages/toolbox/src/cli.ts",
-    ]);
+    const plan = collectCandidateTasks(project, ["packages/toolbox/src/cli.ts"]);
 
     expect(plan.complete).toBe(false);
     expect(plan.tasks.map((task) => task.taskId)).toEqual(["first", "second"]);
-    expect(plan.issues).toEqual([
-      "The verification task graph contains a dependency cycle.",
-    ]);
+    expect(plan.issues).toEqual(["The verification task graph contains a dependency cycle."]);
   });
 });
 
@@ -221,18 +189,13 @@ describe("git changed scope", () => {
     git(repository, ["add", "source.ts"]);
     git(repository, ["commit", "-m", "change source"]);
 
-    expect(readChangedScope(repository, { baseRef: base }).paths).toEqual([
-      "source.ts",
-    ]);
+    expect(readChangedScope(repository, { baseRef: base }).paths).toEqual(["source.ts"]);
   });
 
   it("preserves staged, unstaged, untracked, deleted and both renamed paths", () => {
     const repository = createGitRepository();
     const base = git(repository, ["rev-parse", "HEAD"]).trim();
-    renameSync(
-      join(repository, "rename-old.ts"),
-      join(repository, "renamed file.ts"),
-    );
+    renameSync(join(repository, "rename-old.ts"), join(repository, "renamed file.ts"));
     rmSync(join(repository, "delete.ts"));
     writeFileSync(join(repository, "source.ts"), "export const value = 2;\n");
     git(repository, ["add", "--all"]);
@@ -258,18 +221,16 @@ describe("git changed scope", () => {
     vi.stubEnv("GIT_DIR", join(hookRepository, ".git"));
     vi.stubEnv("GIT_WORK_TREE", hookRepository);
 
-    expect(readChangedScope(repository, { baseRef: base }).paths).toEqual([
-      "source.ts",
-    ]);
+    expect(readChangedScope(repository, { baseRef: base }).paths).toEqual(["source.ts"]);
     expect(git(hookRepository, ["status", "--porcelain"])).toBe("");
   });
 
   it("rejects an invalid explicit base", () => {
     const repository = createGitRepository();
 
-    expect(() =>
-      readChangedScope(repository, { baseRef: "missing-verification-base" }),
-    ).toThrow(/invalid verification base/i);
+    expect(() => readChangedScope(repository, { baseRef: "missing-verification-base" })).toThrow(
+      /invalid verification base/i,
+    );
   });
 });
 
@@ -295,11 +256,7 @@ describe("verification task execution", () => {
   });
 });
 
-function packageDeclaration(
-  name: string,
-  root: string,
-  allowedDependencies: readonly string[],
-): object {
+function packageDeclaration(name: string, root: string, allowedDependencies: readonly string[]): object {
   return {
     name,
     root,
@@ -310,11 +267,7 @@ function packageDeclaration(
   };
 }
 
-function verificationTask(
-  id: string,
-  packageName: string,
-  sourceInput: string,
-): object {
+function verificationTask(id: string, packageName: string, sourceInput: string): object {
   return {
     id,
     packageName,

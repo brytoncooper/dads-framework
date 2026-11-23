@@ -64,14 +64,9 @@ describe("scaffoldMigration", () => {
       id: "0002_add_folders",
       classification: { kind: "additive" },
     });
-    const migrationFile = readFileSync(
-      join(folder, "0002_add_folders", "migration.ts"),
-      "utf8",
-    );
+    const migrationFile = readFileSync(join(folder, "0002_add_folders", "migration.ts"), "utf8");
     expect(migrationFile).not.toContain("TODO(");
-    expect(
-      readFileSync(join(folder, "0002_add_folders", "schema.zed"), "utf8"),
-    ).toBe(SCHEMA_V2_ADDITIVE);
+    expect(readFileSync(join(folder, "0002_add_folders", "schema.zed"), "utf8")).toBe(SCHEMA_V2_ADDITIVE);
   });
 
   it("scaffolds a destructive entry with a refuse-to-run TODO naming the removals", async () => {
@@ -91,10 +86,7 @@ describe("scaffoldMigration", () => {
         removals: ["relation test/document#editor"],
       },
     });
-    const migrationFile = readFileSync(
-      join(folder, "0002_drop_editors", "migration.ts"),
-      "utf8",
-    );
+    const migrationFile = readFileSync(join(folder, "0002_drop_editors", "migration.ts"), "utf8");
     expect(migrationFile).toContain(
       "TODO(0002_drop_editors): write the relationship steps for: relation test/document#editor",
     );
@@ -110,12 +102,8 @@ describe("scaffoldMigration", () => {
     });
 
     const index = readFileSync(join(folder, "index.ts"), "utf8");
-    expect(index).toContain(
-      'import { migration as m0001_baseline } from "./0001_baseline/migration";',
-    );
-    expect(index).toContain(
-      'import { migration as m0002_add_folders } from "./0002_add_folders/migration";',
-    );
+    expect(index).toContain('import { migration as m0001_baseline } from "./0001_baseline/migration";');
+    expect(index).toContain('import { migration as m0002_add_folders } from "./0002_add_folders/migration";');
     expect(index).toContain("[m0001_baseline, m0002_add_folders]");
   });
 
@@ -128,9 +116,7 @@ describe("scaffoldMigration", () => {
     });
 
     expect(result).toEqual({ action: "rebaselined", id: "0001_baseline" });
-    expect(
-      readFileSync(join(folder, "0001_baseline", "schema.zed"), "utf8"),
-    ).toBe(SCHEMA_V2_DESTRUCTIVE);
+    expect(readFileSync(join(folder, "0001_baseline", "schema.zed"), "utf8")).toBe(SCHEMA_V2_DESTRUCTIVE);
   });
 
   it("rejects a slug that is not lowercase_words", async () => {

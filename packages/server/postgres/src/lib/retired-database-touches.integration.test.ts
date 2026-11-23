@@ -7,10 +7,7 @@ import {
   readRetiredDatabaseTouches,
   recordRetiredDatabaseTouches,
 } from "../testing/global-setup/retired-database-touches.js";
-import {
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "../testing/start-test-postgres.js";
+import { startUnmigratedTestPostgres, type TestPostgres } from "../testing/start-test-postgres.js";
 
 /**
  * The ledger that keeps the schema-keyed check honest under
@@ -37,10 +34,9 @@ describe("retired database touches ledger", () => {
   // on a disk-backed shared server forces a checkpoint that can outlast the
   // hook timeout on a loaded runner (start-test-postgres.ts).
   afterAll(async () => {
-    const made = await admin?.query<{ datname: string }>(
-      "SELECT datname FROM pg_database WHERE datname = ANY($1)",
-      [[busyName, idleName]],
-    );
+    const made = await admin?.query<{ datname: string }>("SELECT datname FROM pg_database WHERE datname = ANY($1)", [
+      [busyName, idleName],
+    ]);
     for (const { datname } of made?.rows ?? []) {
       await admin?.query(`ALTER DATABASE "${datname}" ALLOW_CONNECTIONS false`);
     }
@@ -84,9 +80,7 @@ describe("retired database touches ledger", () => {
         { databaseName: idleName, schemaName: null, tableName: null },
       ]),
     );
-    expect(await readRetiredDatabaseTouches(admin, `other${prefix}`)).toEqual(
-      [],
-    );
+    expect(await readRetiredDatabaseTouches(admin, `other${prefix}`)).toEqual([]);
   });
 });
 
@@ -97,11 +91,7 @@ function withDatabase(url: string, database: string): string {
 }
 
 /** The ledger reads through a connection its caller owns, as stop() does. */
-async function recordThroughReader(
-  admin: Pool,
-  databaseUrl: string,
-  name: string,
-): Promise<void> {
+async function recordThroughReader(admin: Pool, databaseUrl: string, name: string): Promise<void> {
   const reader = new Client({ connectionString: databaseUrl });
   await reader.connect();
   try {

@@ -4,11 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import {
-  loadAdoptionPackages,
-  packedFilename,
-  tarballFor,
-} from "./adoption-packing.mjs";
+import { loadAdoptionPackages, packedFilename, tarballFor } from "./adoption-packing.mjs";
 
 test("packs published libraries and native binaries while leaving private migration history in the repo", (t) => {
   const root = mkdtempSync(join(tmpdir(), "adoption-inventory-"));
@@ -22,10 +18,7 @@ test("packs published libraries and native binaries while leaving private migrat
     mkdirSync(path, { recursive: true });
     writeFileSync(join(path, "package.json"), JSON.stringify(manifest));
   }
-  assert.deepEqual([...loadAdoptionPackages(root).keys()].sort(), [
-    "flags",
-    "linux-binary",
-  ]);
+  assert.deepEqual([...loadAdoptionPackages(root).keys()].sort(), ["flags", "linux-binary"]);
 });
 
 test("reads the tarball name npm reported", () => {
@@ -46,14 +39,8 @@ test("fails loudly when npm pack did not answer in JSON", () => {
 });
 
 test("fails loudly when npm pack named no tarball", () => {
-  assert.throws(
-    () => packedFilename("@dads-framework/http", "[]"),
-    /did not name a tarball/,
-  );
-  assert.throws(
-    () => packedFilename("@dads-framework/http", '[{"id":"x"}]'),
-    /did not name a tarball/,
-  );
+  assert.throws(() => packedFilename("@dads-framework/http", "[]"), /did not name a tarball/);
+  assert.throws(() => packedFilename("@dads-framework/http", '[{"id":"x"}]'), /did not name a tarball/);
 });
 
 test("fails loudly when a package was never packed", () => {
@@ -62,10 +49,7 @@ test("fails loudly when a package was never packed", () => {
     /Missing packed tarball for @dads-framework\/toolbox/,
   );
   assert.equal(
-    tarballFor(
-      new Map([["@dads-framework/toolbox", "/tmp/toolbox.tgz"]]),
-      "@dads-framework/toolbox",
-    ),
+    tarballFor(new Map([["@dads-framework/toolbox", "/tmp/toolbox.tgz"]]), "@dads-framework/toolbox"),
     "/tmp/toolbox.tgz",
   );
 });

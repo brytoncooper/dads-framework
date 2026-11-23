@@ -17,10 +17,7 @@
  * of them one email is allowed to carry, and in what order.
  */
 
-import type {
-  FaultGroup,
-  FaultOrigin,
-} from "../../database/readers/fault-alert-reader.interface.js";
+import type { FaultGroup, FaultOrigin } from "../../database/readers/fault-alert-reader.interface.js";
 
 /** One fault as the email renders it. */
 export type AlertableFault = {

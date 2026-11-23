@@ -2,14 +2,8 @@
 
 import { diffAccessSources, type ZedSchemaDiffResult } from "./access-diff.js";
 import { formatAccessDiffReport } from "./access-diff-format.js";
-import {
-  importZedSchema,
-  type ZedSchemaImportResult,
-} from "./access-import.js";
-import {
-  scaffoldAccessMigrationFromSources,
-  type AccessMigrationScaffoldResult,
-} from "./access-migrate.js";
+import { importZedSchema, type ZedSchemaImportResult } from "./access-import.js";
+import { scaffoldAccessMigrationFromSources, type AccessMigrationScaffoldResult } from "./access-migrate.js";
 import { renderAccessTree, type AccessTreeResult } from "./access-tree.js";
 import {
   parseAccessDiffArguments,
@@ -26,10 +20,7 @@ const ACCESS_USAGE = [
   "       dad access migrate <slug> --from <before> --to <after> [--out <dir>] [--dry-run] [--json]",
 ].join("\n");
 
-export async function accessCommand(
-  args: readonly string[],
-  json: boolean,
-): Promise<void> {
+export async function accessCommand(args: readonly string[], json: boolean): Promise<void> {
   const [subcommand, ...rest] = args;
   if (subcommand === "import") {
     runImport(rest, json);
@@ -80,10 +71,7 @@ async function runDiff(rest: readonly string[], json: boolean): Promise<void> {
   writeAccessDiffOutput(result, json);
 }
 
-async function runMigrate(
-  rest: readonly string[],
-  json: boolean,
-): Promise<void> {
+async function runMigrate(rest: readonly string[], json: boolean): Promise<void> {
   const parsed = parseAccessMigrateArguments(rest);
   const result = await scaffoldAccessMigrationFromSources({
     slug: parsed.slug,
@@ -96,10 +84,7 @@ async function runMigrate(
   writeAccessMigrateOutput(result, json);
 }
 
-function writeAccessImportOutput(
-  result: ZedSchemaImportResult,
-  json: boolean,
-): void {
+function writeAccessImportOutput(result: ZedSchemaImportResult, json: boolean): void {
   if (json) {
     writeOutput({ ok: true, ...result }, true);
     return;
@@ -109,12 +94,9 @@ function writeAccessImportOutput(
     return;
   }
   const noun = result.definitionCount === 1 ? "definition" : "definitions";
-  const list =
-    result.definitions.length > 0 ? ` (${result.definitions.join(", ")})` : "";
+  const list = result.definitions.length > 0 ? ` (${result.definitions.join(", ")})` : "";
   const verb = result.written ? "Imported" : "Dry run: would import";
-  process.stdout.write(
-    `${verb} ${String(result.definitionCount)} ${noun}${list} to ${result.outPath}\n`,
-  );
+  process.stdout.write(`${verb} ${String(result.definitionCount)} ${noun}${list} to ${result.outPath}\n`);
 }
 
 function writeAccessTreeOutput(result: AccessTreeResult, json: boolean): void {
@@ -127,10 +109,7 @@ function writeAccessTreeOutput(result: AccessTreeResult, json: boolean): void {
   }
 }
 
-function writeAccessDiffOutput(
-  result: ZedSchemaDiffResult,
-  json: boolean,
-): void {
+function writeAccessDiffOutput(result: ZedSchemaDiffResult, json: boolean): void {
   if (json) {
     writeOutput(
       {
@@ -146,10 +125,7 @@ function writeAccessDiffOutput(
   process.stdout.write(formatAccessDiffReport(result.diff));
 }
 
-function writeAccessMigrateOutput(
-  result: AccessMigrationScaffoldResult,
-  json: boolean,
-): void {
+function writeAccessMigrateOutput(result: AccessMigrationScaffoldResult, json: boolean): void {
   if (json) {
     writeOutput({ ok: true, ...result }, true);
     return;

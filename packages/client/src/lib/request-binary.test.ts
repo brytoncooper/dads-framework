@@ -23,13 +23,12 @@ describe("requestBinary", () => {
       }),
       observed,
     );
-    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(
-      () =>
-        Promise.resolve(
-          new Response("%PDF-1.7", {
-            headers: { "Content-Type": "application/pdf" },
-          }),
-        ),
+    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(() =>
+      Promise.resolve(
+        new Response("%PDF-1.7", {
+          headers: { "Content-Type": "application/pdf" },
+        }),
+      ),
     );
     vi.stubGlobal("fetch", fetch);
 
@@ -62,8 +61,8 @@ describe("requestBinary", () => {
   });
 
   it("validates POST bodies and defaults to a binary response", async () => {
-    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(
-      () => Promise.resolve(new Response("pdf")),
+    const fetch = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(() =>
+      Promise.resolve(new Response("pdf")),
     );
     vi.stubGlobal("fetch", fetch);
     await requestBinary({
@@ -74,9 +73,7 @@ describe("requestBinary", () => {
       },
     });
     expect(fetch.mock.calls[0]?.[1].body).toBe('{"label":"Gross"}');
-    expect(new Headers(fetch.mock.calls[0]?.[1].headers).get("Accept")).toBe(
-      "application/octet-stream",
-    );
+    expect(new Headers(fetch.mock.calls[0]?.[1].headers).get("Accept")).toBe("application/octet-stream");
 
     await expect(
       requestBinary({

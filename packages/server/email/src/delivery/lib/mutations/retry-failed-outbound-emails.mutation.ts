@@ -27,16 +27,10 @@ export type RetryFailedOutboundEmailsDependencies = {
  * look first, which is what makes this an action rather than a job.
  */
 export class RetryFailedOutboundEmails {
-  constructor(
-    private readonly dependencies: RetryFailedOutboundEmailsDependencies,
-  ) {}
+  constructor(private readonly dependencies: RetryFailedOutboundEmailsDependencies) {}
 
-  async execute(
-    input: RetryFailedOutboundEmailsInput = {},
-  ): Promise<Result<RetryFailedOutboundEmailsReport>> {
-    const requeued = await this.dependencies.store.requeueFailed(
-      input.outboundEmailIds,
-    );
+  async execute(input: RetryFailedOutboundEmailsInput = {}): Promise<Result<RetryFailedOutboundEmailsReport>> {
+    const requeued = await this.dependencies.store.requeueFailed(input.outboundEmailIds);
     await this.dependencies.delivery.dispatch(requeued);
     return ok({ requeued: requeued.length });
   }

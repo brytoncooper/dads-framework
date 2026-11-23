@@ -1,9 +1,5 @@
 import type { AccessIrDefinition } from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  ResourceLookup,
-  SubjectRef,
-} from "@dads-framework/access/runtime";
+import type { PermissionQuery, ResourceLookup, SubjectRef } from "@dads-framework/access/runtime";
 
 import type { SpiceDbExportedTuple } from "./authzed-client-adapter.js";
 
@@ -64,11 +60,7 @@ export function deriveParityQueries(
 ): DerivedParityQueries {
   const resourcesByType = collectResourcesByType(tuples);
   const actorTypes = leafSubjectTypes(definitions);
-  const subjectsByType = collectSubjectsByType(
-    tuples,
-    actorTypes,
-    negativeSubjectIds,
-  );
+  const subjectsByType = collectSubjectsByType(tuples, actorTypes, negativeSubjectIds);
   const allSubjects = flattenSubjects(subjectsByType);
 
   const checkQueries: PermissionQuery[] = [];
@@ -79,13 +71,7 @@ export function deriveParityQueries(
     const resourceIds = [...(resourcesByType.get(definition.wireName) ?? [])];
     if (resourceIds.length === 0) continue;
 
-    appendQueriesForDefinition(
-      definition,
-      resourceIds,
-      allSubjects,
-      checkQueries,
-      lookupQueries,
-    );
+    appendQueriesForDefinition(definition, resourceIds, allSubjects, checkQueries, lookupQueries);
   }
 
   return { checkQueries, lookupQueries };
@@ -100,35 +86,15 @@ export async function verifySpiceDbPostgresParity(
 ): Promise<ParityVerificationResult> {
   const derived =
     options.definitions !== undefined && options.tuples !== undefined
-      ? deriveParityQueries(
-          options.definitions,
-          options.tuples,
-          options.negativeSubjectIds,
-        )
+      ? deriveParityQueries(options.definitions, options.tuples, options.negativeSubjectIds)
       : { checkQueries: [], lookupQueries: [] };
 
-  const checkQueries = deduplicateCheckQueries([
-    ...derived.checkQueries,
-    ...(options.checkQueries ?? []),
-  ]);
-  const lookupQueries = deduplicateLookupQueries([
-    ...derived.lookupQueries,
-    ...(options.lookupQueries ?? []),
-  ]);
+  const checkQueries = deduplicateCheckQueries([...derived.checkQueries, ...(options.checkQueries ?? [])]);
+  const lookupQueries = deduplicateLookupQueries([...derived.lookupQueries, ...(options.lookupQueries ?? [])]);
 
   const mismatches: ParityMismatch[] = [];
-  await compareCheckQueries(
-    options.spiceDb,
-    options.postgres,
-    checkQueries,
-    mismatches,
-  );
-  await compareLookupQueries(
-    options.spiceDb,
-    options.postgres,
-    lookupQueries,
-    mismatches,
-  );
+  await compareCheckQueries(options.spiceDb, options.postgres, checkQueries, mismatches);
+  await compareLookupQueries(options.spiceDb, options.postgres, lookupQueries, mismatches);
 
   const total = checkQueries.length + lookupQueries.length;
   return {
@@ -145,10 +111,7 @@ async function compareCheckQueries(
   mismatches: ParityMismatch[],
 ): Promise<void> {
   for (const query of queries) {
-    const [spiceAllowed, pgAllowed] = await Promise.all([
-      spiceDb.check(query),
-      postgres.check(query),
-    ]);
+    const [spiceAllowed, pgAllowed] = await Promise.all([spiceDb.check(query), postgres.check(query)]);
     if (spiceAllowed !== pgAllowed) {
       mismatches.push({
         kind: "check",
@@ -167,10 +130,7 @@ async function compareLookupQueries(
   mismatches: ParityMismatch[],
 ): Promise<void> {
   for (const query of queries) {
-    const [spiceIds, pgIds] = await Promise.all([
-      spiceDb.lookupResources(query),
-      postgres.lookupResources(query),
-    ]);
+    const [spiceIds, pgIds] = await Promise.all([spiceDb.lookupResources(query), postgres.lookupResources(query)]);
     const sortedSpice = [...new Set(spiceIds)].sort();
     const sortedPg = [...new Set(pgIds)].sort();
     if (!stringArraysEqual(sortedSpice, sortedPg)) {
@@ -198,13 +158,7 @@ function appendQueriesForDefinition(
         permission: permission.name,
         resourceType: definition.wireName,
       });
-      appendChecksForResourceIds(
-        definition.wireName,
-        permission.name,
-        subject,
-        resourceIds,
-        checkQueries,
-      );
+      appendChecksForResourceIds(definition.wireName, permission.name, subject, resourceIds, checkQueries);
     }
   }
 }
@@ -225,9 +179,7 @@ function appendChecksForResourceIds(
   }
 }
 
-function collectResourcesByType(
-  tuples: readonly SpiceDbExportedTuple[],
-): Map<string, Set<string>> {
+function collectResourcesByType(tuples: readonly SpiceDbExportedTuple[]): Map<string, Set<string>> {
   const byType = new Map<string, Set<string>>();
   for (const tuple of tuples) {
     addToSetMap(byType, tuple.resource.type, tuple.resource.id);
@@ -235,13 +187,9 @@ function collectResourcesByType(
   return byType;
 }
 
-function leafSubjectTypes(
-  definitions: readonly AccessIrDefinition[],
-): ReadonlySet<string> {
+function leafSubjectTypes(definitions: readonly AccessIrDefinition[]): ReadonlySet<string> {
   return new Set(
-    definitions
-      .filter((def) => def.roles.length === 0 && def.permissions.length === 0)
-      .map((def) => def.wireName),
+    definitions.filter((def) => def.roles.length === 0 && def.permissions.length === 0).map((def) => def.wireName),
   );
 }
 
@@ -274,13 +222,9 @@ function ensureSetEntry(map: Map<string, Set<string>>, key: string): void {
   }
 }
 
-function flattenSubjects(
-  byType: ReadonlyMap<string, ReadonlySet<string>>,
-): readonly SubjectRef[] {
+function flattenSubjects(byType: ReadonlyMap<string, ReadonlySet<string>>): readonly SubjectRef[] {
   const subjects: SubjectRef[] = [];
-  for (const [type, ids] of [...byType.entries()].sort(([a], [b]) =>
-    a.localeCompare(b),
-  )) {
+  for (const [type, ids] of [...byType.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     for (const id of [...ids].sort()) {
       subjects.push({ type, id });
     }
@@ -288,11 +232,7 @@ function flattenSubjects(
   return subjects;
 }
 
-function addToSetMap(
-  map: Map<string, Set<string>>,
-  key: string,
-  value: string,
-): void {
+function addToSetMap(map: Map<string, Set<string>>, key: string, value: string): void {
   let set = map.get(key);
   if (set === undefined) {
     set = new Set();
@@ -301,9 +241,7 @@ function addToSetMap(
   set.add(value);
 }
 
-function deduplicateCheckQueries(
-  queries: readonly PermissionQuery[],
-): readonly PermissionQuery[] {
+function deduplicateCheckQueries(queries: readonly PermissionQuery[]): readonly PermissionQuery[] {
   const byKey = new Map<string, PermissionQuery>();
   for (const q of queries) {
     const key = [
@@ -319,27 +257,16 @@ function deduplicateCheckQueries(
   return [...byKey.values()];
 }
 
-function deduplicateLookupQueries(
-  queries: readonly ResourceLookup[],
-): readonly ResourceLookup[] {
+function deduplicateLookupQueries(queries: readonly ResourceLookup[]): readonly ResourceLookup[] {
   const byKey = new Map<string, ResourceLookup>();
   for (const q of queries) {
-    const key = [
-      q.subject.type,
-      q.subject.id,
-      q.subject.relation ?? "",
-      q.permission,
-      q.resourceType,
-    ].join("\u0000");
+    const key = [q.subject.type, q.subject.id, q.subject.relation ?? "", q.permission, q.resourceType].join("\u0000");
     if (!byKey.has(key)) byKey.set(key, q);
   }
   return [...byKey.values()];
 }
 
-function stringArraysEqual(
-  left: readonly string[],
-  right: readonly string[],
-): boolean {
+function stringArraysEqual(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
 }

@@ -22,8 +22,7 @@ const aliases = new Map([
   ["neutral", "plaintext"],
 ]);
 
-const FILE_PATH_PATTERN =
-  /^[a-zA-Z0-9._@-]+(?:\/[a-zA-Z0-9._@-]+)*\.[a-zA-Z0-9]+$/u;
+const FILE_PATH_PATTERN = /^[a-zA-Z0-9._@-]+(?:\/[a-zA-Z0-9._@-]+)*\.[a-zA-Z0-9]+$/u;
 
 const FOLDER_ICON = `<svg class="df-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.75 3.5A1.25 1.25 0 0 1 3 2.25h3.1c.33 0 .65.13.88.37l.9.9H13A1.25 1.25 0 0 1 14.25 4.77v6.98A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25V3.5Z" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>`;
 
@@ -101,10 +100,7 @@ function groupConsecutiveFiles(document) {
   let index = 0;
   while (index < children.length) {
     const start = children[index];
-    if (
-      !start.classList.contains("docs-example") ||
-      !start.hasAttribute("data-file-path")
-    ) {
+    if (!start.classList.contains("docs-example") || !start.hasAttribute("data-file-path")) {
       index += 1;
       continue;
     }
@@ -186,11 +182,7 @@ export function renderDocsCode(html) {
     const syntax = aliases.get(language) ?? language;
     const grammar = syntax && highlighter.getLanguage(syntax);
     const label =
-      labels.get(grammar?.name?.toLowerCase()) ??
-      labels.get(syntax) ??
-      grammar?.name ??
-      language ??
-      "Plain text";
+      labels.get(grammar?.name?.toLowerCase()) ?? labels.get(syntax) ?? grammar?.name ?? language ?? "Plain text";
     if (grammar && syntax !== "plaintext") {
       code.innerHTML = highlighter.highlight(code.textContent, {
         language: syntax,
@@ -222,9 +214,7 @@ export function renderDocsCode(html) {
       noteEl.textContent = fileMeta.note;
       wrapper.querySelector(".docs-example-meta").appendChild(noteEl);
     }
-    wrapper
-      .querySelector("button")
-      .setAttribute("aria-label", `Copy ${displayLabel} code`);
+    wrapper.querySelector("button").setAttribute("aria-label", `Copy ${displayLabel} code`);
     block.setAttribute("role", "region");
     block.setAttribute("aria-label", `${displayLabel} code`);
     block.setAttribute("tabindex", "0");

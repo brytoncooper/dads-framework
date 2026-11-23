@@ -1,11 +1,5 @@
 /** Duration accepted by test clocks and expiring grants (ms or `"30m"`, `"2h"`, `"7d"`). */
-export type TestDuration =
-  | number
-  | `${number}ms`
-  | `${number}s`
-  | `${number}m`
-  | `${number}h`
-  | `${number}d`;
+export type TestDuration = number | `${number}ms` | `${number}s` | `${number}m` | `${number}h` | `${number}d`;
 
 const DURATION_UNITS_MS: Readonly<Record<string, number>> = {
   ms: 1,
@@ -53,15 +47,11 @@ export function formatRelativeDuration(deltaMs: number): string {
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMinutes = totalMinutes % 60;
   if (totalHours < 24) {
-    return remainingMinutes === 0
-      ? `${String(totalHours)}h`
-      : `${String(totalHours)}h ${String(remainingMinutes)}m`;
+    return remainingMinutes === 0 ? `${String(totalHours)}h` : `${String(totalHours)}h ${String(remainingMinutes)}m`;
   }
   const totalDays = Math.floor(totalHours / 24);
   const remainingHours = totalHours % 24;
-  return remainingHours === 0
-    ? `${String(totalDays)}d`
-    : `${String(totalDays)}d ${String(remainingHours)}h`;
+  return remainingHours === 0 ? `${String(totalDays)}d` : `${String(totalDays)}d ${String(remainingHours)}h`;
 }
 
 /** Deterministic clock for testing expiring relationships without real timers. */
@@ -69,8 +59,7 @@ export class ControllableClock {
   private currentMs: number;
 
   constructor(initialTime: Date | number = Date.UTC(2026, 0, 1, 0, 0, 0)) {
-    this.currentMs =
-      initialTime instanceof Date ? initialTime.getTime() : initialTime;
+    this.currentMs = initialTime instanceof Date ? initialTime.getTime() : initialTime;
   }
 
   now(): Date {

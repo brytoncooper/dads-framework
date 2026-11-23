@@ -63,13 +63,9 @@ it("reuses immutable answers only for current committed facts under a restricted
       GRANT USAGE ON SCHEMA dad_lookup_revision TO lookup_runtime;
       GRANT SELECT ON dad_lookup_revision.epoch, dad_lookup_revision.namespace TO lookup_runtime;
     `);
+    await expect(pool.query("UPDATE dad_lookup_revision.epoch SET revision = 1")).rejects.toThrow();
     await expect(
-      pool.query("UPDATE dad_lookup_revision.epoch SET revision = 1"),
-    ).rejects.toThrow();
-    await expect(
-      pool.query(
-        "ALTER TABLE public.dad_authorization_relationship DISABLE TRIGGER dad_lookup_revision_delete",
-      ),
+      pool.query("ALTER TABLE public.dad_authorization_relationship DISABLE TRIGGER dad_lookup_revision_delete"),
     ).rejects.toThrow();
 
     single = createPostgresConnection(
@@ -89,29 +85,17 @@ it("reuses immutable answers only for current committed facts under a restricted
     const leaked = await single.pool.connect();
     await leaked.query("BEGIN READ ONLY");
     leaked.release();
-    await expect(singleLookup.lookupResources(query)).rejects.toThrow(
-      "idle pool connection",
-    );
-    await expect(singleLookup.lookupResources(query)).resolves.toEqual(
-      expected,
-    );
+    await expect(singleLookup.lookupResources(query)).rejects.toThrow("idle pool connection");
+    await expect(singleLookup.lookupResources(query)).resolves.toEqual(expected);
 
     const loaded = await first.lookupResources(query);
     expect(loaded).toEqual(expected);
     expect(Object.isFrozen(loaded)).toBe(true);
     expect(await first.lookupResources(query)).toBe(loaded);
-    await owner.pool.query(
-      "REVOKE SELECT ON public.dad_authorization_relationship FROM lookup_runtime",
-    );
-    await expect(first.lookupResources(query)).rejects.toThrow(
-      "restricted runtime role",
-    );
-    await expect(uncached.lookupResources(query)).rejects.toThrow(
-      "permission denied",
-    );
-    await owner.pool.query(
-      "GRANT SELECT ON public.dad_authorization_relationship TO lookup_runtime",
-    );
+    await owner.pool.query("REVOKE SELECT ON public.dad_authorization_relationship FROM lookup_runtime");
+    await expect(first.lookupResources(query)).rejects.toThrow("restricted runtime role");
+    await expect(uncached.lookupResources(query)).rejects.toThrow("permission denied");
+    await owner.pool.query("GRANT SELECT ON public.dad_authorization_relationship TO lookup_runtime");
     const regranted = await first.lookupResources(query);
     expect(regranted).toEqual(expected);
     expect(regranted).not.toBe(loaded);
@@ -129,10 +113,7 @@ it("reuses immutable answers only for current committed facts under a restricted
     const refreshed = await pending;
     expect(refreshed).toEqual(expected);
     await expect(first.lookupResources(mutable)).resolves.toEqual([]);
-    const empty = await Promise.all([
-      second.lookupResources(query),
-      second.lookupResources(query),
-    ]);
+    const empty = await Promise.all([second.lookupResources(query), second.lookupResources(query)]);
     expect(empty).toEqual([[], []]);
     expect(empty[0]).toBe(empty[1]);
 
@@ -175,9 +156,7 @@ it("reuses immutable answers only for current committed facts under a restricted
     await owner.pool.query(
       "ALTER TABLE public.dad_authorization_relationship DISABLE TRIGGER dad_lookup_revision_delete",
     );
-    await expect(first.lookupResources(query)).rejects.toThrow(
-      "restricted runtime role",
-    );
+    await expect(first.lookupResources(query)).rejects.toThrow("restricted runtime role");
     await expect(uncached.lookupResources(query)).resolves.toEqual([]);
   } finally {
     await single?.close();

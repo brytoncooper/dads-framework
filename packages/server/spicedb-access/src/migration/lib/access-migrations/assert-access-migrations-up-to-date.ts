@@ -42,35 +42,19 @@ export async function assertAccessMigrationsUpToDate(
   options: AssertAccessMigrationsUpToDateOptions,
 ): Promise<AssertAccessMigrationsResult> {
   const namespace = assertNamespace(options.namespace);
-  const migrationsTable = assertSqlIdentifier(
-    options.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE,
-    "migrationsTable",
-  );
-  const declaredIds = options.migrations.map((entry) =>
-    typeof entry === "string" ? entry : entry.id,
-  );
+  const migrationsTable = assertSqlIdentifier(options.migrationsTable ?? DEFAULT_MIGRATIONS_TABLE, "migrationsTable");
+  const declaredIds = options.migrations.map((entry) => (typeof entry === "string" ? entry : entry.id));
   assertUniqueMigrationIds(declaredIds);
 
   const applied =
     options.dialect === "postgres"
-      ? await readAppliedIdsFromPostgres(
-          options.executor,
-          migrationsTable,
-          namespace,
-        )
-      : await readAppliedIdsFromSqlite(
-          toSqliteMigrationExecutor(options.executor),
-          migrationsTable,
-          namespace,
-        );
+      ? await readAppliedIdsFromPostgres(options.executor, migrationsTable, namespace)
+      : await readAppliedIdsFromSqlite(toSqliteMigrationExecutor(options.executor), migrationsTable, namespace);
 
   const appliedSet = new Set(applied);
   const missing = declaredIds.filter((id) => !appliedSet.has(id));
   if (missing.length > 0) {
-    const runner =
-      options.dialect === "postgres"
-        ? "runPostgresAccessMigrations"
-        : "runSqliteAccessMigrations";
+    const runner = options.dialect === "postgres" ? "runPostgresAccessMigrations" : "runSqliteAccessMigrations";
     throw new Error(
       `Access migrations for namespace "${namespace}" are behind by ${missing.length} migration(s): ${missing.join(", ")}. Run ${runner} before starting the application.`,
     );
@@ -84,10 +68,9 @@ async function readAppliedIdsFromPostgres(
   namespace: string,
 ): Promise<readonly string[]> {
   try {
-    const result = await executor.query(
-      `SELECT id FROM ${migrationsTable} WHERE namespace = $1 ORDER BY id`,
-      [namespace],
-    );
+    const result = await executor.query(`SELECT id FROM ${migrationsTable} WHERE namespace = $1 ORDER BY id`, [
+      namespace,
+    ]);
     return result.rows.map((row) => readStringField(row, "id"));
   } catch (error) {
     if (isMissingTableError(error)) {
@@ -103,10 +86,7 @@ async function readAppliedIdsFromSqlite(
   namespace: string,
 ): Promise<readonly string[]> {
   try {
-    const rows = await executor.all(
-      `SELECT id FROM ${migrationsTable} WHERE namespace = ? ORDER BY id`,
-      [namespace],
-    );
+    const rows = await executor.all(`SELECT id FROM ${migrationsTable} WHERE namespace = ? ORDER BY id`, [namespace]);
     return rows.map((row) => readStringField(row, "id"));
   } catch (error) {
     if (isMissingTableError(error)) {
@@ -121,8 +101,5 @@ function isMissingTableError(error: unknown): boolean {
     if (error.code === "42P01") return true;
   }
   const message = error instanceof Error ? error.message : String(error);
-  return (
-    /no such table/i.test(message) ||
-    /relation .+ does not exist/i.test(message)
-  );
+  return /no such table/i.test(message) || /relation .+ does not exist/i.test(message);
 }

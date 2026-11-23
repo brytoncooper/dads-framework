@@ -1,9 +1,6 @@
 export type JournalStampDecision = "skip" | "stamp-if-equivalent";
 
-export function journalStampDecision(input: {
-  appliedCount: number;
-  publicTableCount: number;
-}): JournalStampDecision {
+export function journalStampDecision(input: { appliedCount: number; publicTableCount: number }): JournalStampDecision {
   if (input.appliedCount > 0) {
     return "skip";
   }

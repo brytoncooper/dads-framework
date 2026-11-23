@@ -1,27 +1,15 @@
-import {
-  sso,
-  type SSOOptions,
-  type SSOUserResolutionInput,
-  type SSOUserResolution,
-} from "@better-auth/sso";
+import { sso, type SSOOptions, type SSOUserResolutionInput, type SSOUserResolution } from "@better-auth/sso";
 import { APIError } from "better-auth/api";
 import type { BetterAuthOptions } from "better-auth";
 import { normalizeIdentityEmail } from "../../index.js";
-import {
-  enterpriseProviderBinding,
-  enterpriseEmailDomain,
-  type EnterpriseSsoProvider,
-} from "./enterprise-options.js";
+import { enterpriseProviderBinding, enterpriseEmailDomain, type EnterpriseSsoProvider } from "./enterprise-options.js";
 import { enterpriseCallback } from "./enterprise-callback-context.js";
 import { IDENTITY_PATH } from "./identity-options.js";
 
 export const OIDC_CALLBACK = "/sso/callback";
 export const SAML_CALLBACK = "/sso/saml2/sp/acs";
 
-export function enterpriseSsoPlugin(
-  providers: readonly EnterpriseSsoProvider[],
-  origin: string,
-) {
+export function enterpriseSsoPlugin(providers: readonly EnterpriseSsoProvider[], origin: string) {
   return sso({
     modelName: "identity_sso_providers",
     providersLimit: 0,
@@ -52,8 +40,7 @@ export function enterpriseDatabaseHooks(
           const callback = enterpriseCallback();
           if (callback === undefined) {
             return Promise.resolve(
-              ctx?.path === "/sign-up/email" &&
-                forEmail(providers, user.email)?.mode === "required"
+              ctx?.path === "/sign-up/email" && forEmail(providers, user.email)?.mode === "required"
                 ? false
                 : undefined,
             );
@@ -64,9 +51,7 @@ export function enterpriseDatabaseHooks(
           )
             throw denied();
           return Promise.resolve(
-            callback.provider.protocol === "saml"
-              ? { data: { ...user, emailVerified: true } }
-              : undefined,
+            callback.provider.protocol === "saml" ? { data: { ...user, emailVerified: true } } : undefined,
           );
         },
       },
@@ -76,11 +61,7 @@ export function enterpriseDatabaseHooks(
         before: (account) => {
           const callback = enterpriseCallback();
           if (callback === undefined) return Promise.resolve();
-          if (
-            !callback.profileApproved ||
-            account.providerId !== callback.provider.id
-          )
-            throw denied();
+          if (!callback.profileApproved || account.providerId !== callback.provider.id) throw denied();
           return Promise.resolve({
             data: {
               ...account,
@@ -96,9 +77,7 @@ export function enterpriseDatabaseHooks(
     session: {
       create: {
         before: async (session, ctx) => {
-          const user = await ctx?.context.internalAdapter.findUserById(
-            session.userId,
-          );
+          const user = await ctx?.context.internalAdapter.findUserById(session.userId);
           if (user === null || user === undefined) return false;
           const provider = forEmail(providers, user.email);
           const callback = enterpriseCallback();
@@ -106,8 +85,7 @@ export function enterpriseDatabaseHooks(
             if (provider?.mode === "required") throw denied();
             return undefined;
           }
-          if (callback.provider !== provider || !callback.profileApproved)
-            throw denied();
+          if (callback.provider !== provider || !callback.profileApproved) throw denied();
           return {
             data: {
               ...session,
@@ -120,10 +98,7 @@ export function enterpriseDatabaseHooks(
   };
 }
 
-export function forEmail(
-  providers: readonly EnterpriseSsoProvider[],
-  email: unknown,
-) {
+export function forEmail(providers: readonly EnterpriseSsoProvider[], email: unknown) {
   const domain = enterpriseEmailDomain(email);
   return providers.find((provider) => provider.domain === domain);
 }
@@ -133,10 +108,7 @@ const rejectEnterpriseSso: SSOUserResolution = {
   code: "ENTERPRISE_SSO_SIGN_IN_DENIED",
 };
 
-const resolveEnterpriseUser: NonNullable<SSOOptions["resolveUser"]> = async (
-  input,
-  { database },
-) => {
+const resolveEnterpriseUser: NonNullable<SSOOptions["resolveUser"]> = async (input, { database }) => {
   const callback = enterpriseCallback();
   if (callback === undefined) return rejectEnterpriseSso;
   const provider = callback.provider;
@@ -159,18 +131,11 @@ const resolveEnterpriseUser: NonNullable<SSOOptions["resolveUser"]> = async (
     emailVerified: boolean;
   }>({
     model: "user",
-    where: [
-      linked === null
-        ? { field: "email", value: email }
-        : { field: "id", value: linked.userId },
-    ],
+    where: [linked === null ? { field: "email", value: email } : { field: "id", value: linked.userId }],
   });
-  if (!isVerifiedLocalBinding(user, linked, provider, email))
-    return rejectEnterpriseSso;
+  if (!isVerifiedLocalBinding(user, linked, provider, email)) return rejectEnterpriseSso;
   callback.profileApproved = true;
-  return user === null
-    ? { action: "continue" }
-    : { action: "link", userId: user.id, profile: "preserve" };
+  return user === null ? { action: "continue" } : { action: "link", userId: user.id, profile: "preserve" };
 };
 
 function isVerifiedLocalBinding(
@@ -179,19 +144,12 @@ function isVerifiedLocalBinding(
   provider: EnterpriseSsoProvider,
   email: string,
 ): boolean {
-  if (
-    linked !== null &&
-    (user === null ||
-      linked.ssoProviderBinding !== enterpriseProviderBinding(provider))
-  )
+  if (linked !== null && (user === null || linked.ssoProviderBinding !== enterpriseProviderBinding(provider)))
     return false;
   return user === null || (user.emailVerified && user.email === email);
 }
 
-function verifiedProfileEmail(
-  input: SSOUserResolutionInput,
-  provider: EnterpriseSsoProvider,
-): string | null {
+function verifiedProfileEmail(input: SSOUserResolutionInput, provider: EnterpriseSsoProvider): string | null {
   const email = normalizeIdentityEmail(input.providerUser.email);
   if (
     input.providerReference.source.type !== "configured" ||
@@ -205,30 +163,18 @@ function verifiedProfileEmail(
   return claimMatches(input, provider, email) ? email : null;
 }
 
-function claimMatches(
-  input: SSOUserResolutionInput,
-  provider: EnterpriseSsoProvider,
-  email: string,
-): boolean {
+function claimMatches(input: SSOUserResolutionInput, provider: EnterpriseSsoProvider, email: string): boolean {
   if (input.protocol === "oidc" && provider.protocol === "oidc") {
-    return (
-      input.accountKey.issuer === provider.issuer &&
-      input.verifiedIdTokenClaims["email_verified"] === true
-    );
+    return input.accountKey.issuer === provider.issuer && input.verifiedIdTokenClaims["email_verified"] === true;
   }
   if (input.protocol === "saml" && provider.protocol === "saml") {
     const claim = input.providerAttributes[provider.emailAttribute ?? "email"];
-    return (
-      input.accountKey.issuer === provider.entityId &&
-      singleSamlEmail(claim) === email
-    );
+    return input.accountKey.issuer === provider.entityId && singleSamlEmail(claim) === email;
   }
   return false;
 }
 
-function singleSamlEmail(
-  claim: string | readonly string[] | undefined,
-): string | null {
+function singleSamlEmail(claim: string | readonly string[] | undefined): string | null {
   if (typeof claim === "string") return normalizeIdentityEmail(claim);
   return claim?.length === 1 ? normalizeIdentityEmail(claim[0]) : null;
 }

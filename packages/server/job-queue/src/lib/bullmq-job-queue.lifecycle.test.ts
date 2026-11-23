@@ -149,10 +149,7 @@ describe("BullMqJobQueue lifecycle", () => {
 
     await queue.close();
 
-    expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual([
-      "worker.close",
-      "queue.close",
-    ]);
+    expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual(["worker.close", "queue.close"]);
   });
 
   it("closes the worker it created when startup never becomes ready", async () => {
@@ -186,10 +183,7 @@ describe("BullMqJobQueue lifecycle", () => {
     await starting;
     await closing;
 
-    expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual([
-      "worker.close",
-      "queue.close",
-    ]);
+    expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual(["worker.close", "queue.close"]);
   });
 
   it("closes the worker once when a close overlaps a start that fails", async () => {
@@ -213,9 +207,7 @@ describe("BullMqJobQueue lifecycle", () => {
       await closing;
       await settle();
 
-      expect(
-        bullmq.lifecycle.filter((step) => step.endsWith(".close")),
-      ).toEqual(["worker.close", "queue.close"]);
+      expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual(["worker.close", "queue.close"]);
       expect(unhandled).toEqual([]);
     } finally {
       process.off("unhandledRejection", recordUnhandled);
@@ -249,9 +241,11 @@ describe("BullMqJobQueue lifecycle", () => {
       // holding its Redis connections after shutdown resolved.
       expect(bullmq.workers).toHaveLength(2);
       expect(bullmq.workers.map((worker) => worker.closeCount)).toEqual([1, 1]);
-      expect(
-        bullmq.lifecycle.filter((step) => step.endsWith(".close")),
-      ).toEqual(["worker.close", "worker.close", "queue.close"]);
+      expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual([
+        "worker.close",
+        "worker.close",
+        "queue.close",
+      ]);
       expect(unhandled).toEqual([]);
     } finally {
       process.off("unhandledRejection", recordUnhandled);
@@ -268,9 +262,6 @@ describe("BullMqJobQueue lifecycle", () => {
 
     await Promise.all([queue.close(), queue.close()]);
 
-    expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual([
-      "worker.close",
-      "queue.close",
-    ]);
+    expect(bullmq.lifecycle.filter((step) => step.endsWith(".close"))).toEqual(["worker.close", "queue.close"]);
   });
 });

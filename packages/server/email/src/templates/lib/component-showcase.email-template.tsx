@@ -38,18 +38,10 @@ const STATUS_PRESENTATION: Record<
 };
 
 const props = z.object({
-  recipientName: z
-    .string()
-    .meta({ description: "Who the message greets, as they are addressed" }),
-  orderNumber: z
-    .string()
-    .meta({ description: "The order this message is about" }),
-  pickupCode: z
-    .string()
-    .meta({ description: "The code the driver reads out at the gate" }),
-  status: z
-    .enum(SHOWCASE_STATUSES)
-    .meta({ description: "Where the order stands" }),
+  recipientName: z.string().meta({ description: "Who the message greets, as they are addressed" }),
+  orderNumber: z.string().meta({ description: "The order this message is about" }),
+  pickupCode: z.string().meta({ description: "The code the driver reads out at the gate" }),
+  status: z.enum(SHOWCASE_STATUSES).meta({ description: "Where the order stands" }),
 });
 
 const SHOWCASE_LINK = "https://app.example/orders/SO-10428";
@@ -67,8 +59,7 @@ export const componentShowcaseEmailTemplate = defineEmailTemplate({
       <>
         <EmailHeading>{`Order ${orderNumber}`}</EmailHeading>
         <Text>
-          {recipientName}, your order is{" "}
-          <EmailBadge tone={presentation.tone}>{presentation.label}</EmailBadge>
+          {recipientName}, your order is <EmailBadge tone={presentation.tone}>{presentation.label}</EmailBadge>
         </Text>
         <EmailDataTable
           rows={[

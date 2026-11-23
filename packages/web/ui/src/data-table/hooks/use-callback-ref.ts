@@ -16,10 +16,7 @@ function useCallbackRef<TArgs extends unknown[], TResult>(
     callbackRef.current = callback;
   });
 
-  return React.useCallback(
-    (...args: TArgs) => callbackRef.current?.(...args),
-    [],
-  );
+  return React.useCallback((...args: TArgs) => callbackRef.current?.(...args), []);
 }
 
 export { useCallbackRef };

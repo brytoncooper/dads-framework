@@ -1,21 +1,11 @@
-import {
-  mkdir,
-  mkdtemp,
-  readdir,
-  rm,
-  utimes,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { DiskReadinessProbe } from "./disk-readiness-probe.js";
-import {
-  NODE_SWEEP_FILE_SYSTEM,
-  type SweepFileSystem,
-} from "./stale-temp-files.js";
+import { NODE_SWEEP_FILE_SYSTEM, type SweepFileSystem } from "./stale-temp-files.js";
 
 type Logged = { readonly fields: Record<string, unknown> };
 
@@ -35,14 +25,9 @@ function denied(path: string): Error {
 function refusing(lockedFolder: string, stuckFile: string): SweepFileSystem {
   return {
     readdir: (folder) =>
-      folder === lockedFolder
-        ? Promise.reject(denied(folder))
-        : NODE_SWEEP_FILE_SYSTEM.readdir(folder),
+      folder === lockedFolder ? Promise.reject(denied(folder)) : NODE_SWEEP_FILE_SYSTEM.readdir(folder),
     stat: NODE_SWEEP_FILE_SYSTEM.stat,
-    rm: (path) =>
-      path === stuckFile
-        ? Promise.reject(denied(path))
-        : NODE_SWEEP_FILE_SYSTEM.rm(path),
+    rm: (path) => (path === stuckFile ? Promise.reject(denied(path)) : NODE_SWEEP_FILE_SYSTEM.rm(path)),
   };
 }
 
@@ -92,9 +77,7 @@ describe("DiskReadinessProbe", () => {
     expect(swept).toEqual({ event: "site.files.temp_swept", removed: 2 });
     expect(failed?.["event"]).toBe("site.files.temp_sweep_failed");
     expect(failed?.["failed"]).toBe(2);
-    expect(["objects/locked", "objects/open/a.png.tmp-stuck"]).toContain(
-      failed?.["sample"],
-    );
+    expect(["objects/locked", "objects/open/a.png.tmp-stuck"]).toContain(failed?.["sample"]);
     expect(logged).toHaveLength(2);
   });
 
@@ -107,13 +90,7 @@ describe("DiskReadinessProbe", () => {
     await staleFile(join(root, "b.tmp-later"));
     await readiness.run();
 
-    await expect(readdir(root)).resolves.toEqual(
-      expect.arrayContaining(["a.tmp-stuck", "b.tmp-later"]),
-    );
-    expect(
-      logged.filter(
-        (line) => line.fields["event"] === "site.files.temp_sweep_failed",
-      ),
-    ).toHaveLength(1);
+    await expect(readdir(root)).resolves.toEqual(expect.arrayContaining(["a.tmp-stuck", "b.tmp-later"]));
+    expect(logged.filter((line) => line.fields["event"] === "site.files.temp_sweep_failed")).toHaveLength(1);
   });
 });

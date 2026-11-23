@@ -58,8 +58,6 @@ describe("requestOriginOr", () => {
   });
 
   it("answers the fallback outside any request", () => {
-    expect(requestOriginOr("https://fallback.example")).toBe(
-      "https://fallback.example",
-    );
+    expect(requestOriginOr("https://fallback.example")).toBe("https://fallback.example");
   });
 });

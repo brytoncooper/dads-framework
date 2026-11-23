@@ -20,11 +20,7 @@
 
 import { isRecord, isString } from "../../../parse-guards.js";
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 
 const MANIFEST_SUFFIX = "package.json";
 const REPORT_FILE = "api-report.md";
@@ -32,9 +28,7 @@ const DECLARATION_SUFFIX = ".d.ts";
 
 /** True when the manifest names a TypeScript declaration a consumer compiles. */
 export function publishesTypes(manifest: Record<string, unknown>): boolean {
-  return namesADeclaration(
-    manifest["types"] ?? manifest["typings"] ?? manifest["exports"],
-  );
+  return namesADeclaration(manifest["types"] ?? manifest["typings"] ?? manifest["exports"]);
 }
 
 function namesADeclaration(value: unknown): boolean {
@@ -45,18 +39,10 @@ function namesADeclaration(value: unknown): boolean {
 }
 
 function manifestPaths(context: DoctorContext): readonly string[] {
-  return context
-    .files()
-    .filter(
-      (path) =>
-        path === MANIFEST_SUFFIX || path.endsWith(`/${MANIFEST_SUFFIX}`),
-    );
+  return context.files().filter((path) => path === MANIFEST_SUFFIX || path.endsWith(`/${MANIFEST_SUFFIX}`));
 }
 
-function readPackageManifest(
-  context: DoctorContext,
-  path: string,
-): Record<string, unknown> | undefined {
+function readPackageManifest(context: DoctorContext, path: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(context.read(path));
     return isRecord(parsed) ? parsed : undefined;
@@ -91,7 +77,6 @@ export const packagesWithoutSurfaceSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: null },
-  sentence:
-    "Four years. Still lives in the controller. Still no public contract. Still “figuring things out.”",
+  sentence: "Four years. Still lives in the controller. Still no public contract. Still “figuring things out.”",
   run: (context) => Promise.resolve(countPackagesWithoutSurface(context)),
 };

@@ -18,15 +18,8 @@ export {
   type ProtocolMountOptions,
   type ProtocolRateLimit,
 } from "./lib/protocol-mount/mount-fetch-handler.js";
-export {
-  toWebRequest,
-  type IncomingProtocolRequest,
-} from "./lib/protocol-mount/to-web-request.js";
-export {
-  createMcpEndpoint,
-  type McpEndpoint,
-  type McpEndpointOptions,
-} from "./lib/mcp/mcp-endpoint.js";
+export { toWebRequest, type IncomingProtocolRequest } from "./lib/protocol-mount/to-web-request.js";
+export { createMcpEndpoint, type McpEndpoint, type McpEndpointOptions } from "./lib/mcp/mcp-endpoint.js";
 export {
   LATEST_PROTOCOL_VERSION as MCP_LATEST_PROTOCOL_VERSION,
   SUPPORTED_PROTOCOL_VERSIONS as MCP_SUPPORTED_PROTOCOL_VERSIONS,

@@ -4,11 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import {
-  nativeArchiveTarget,
-  nativeArchiveRustTarget,
-  verifyNativeExecutable,
-} from "./native-executable.mjs";
+import { nativeArchiveTarget, nativeArchiveRustTarget, verifyNativeExecutable } from "./native-executable.mjs";
 import { releaseVersion } from "./release-version.mjs";
 
 test("release archives require the exact release version in their name and manifest", (context) => {
@@ -39,28 +35,13 @@ test("release archives require the exact release version in their name and manif
 
   const expectedVersion = releaseVersion(root);
   assert.equal(nativeArchiveTarget(archive, expectedVersion), platform);
-  assert.equal(
-    verifyNativeExecutable(packageRoot, archive, expectedVersion),
-    binary,
-  );
+  assert.equal(verifyNativeExecutable(packageRoot, archive, expectedVersion), binary);
   for (const wrongVersion of ["0.1.0", "0X2X0-rcX1"]) {
-    assert.equal(
-      nativeArchiveTarget(
-        `${archivePrefix}${wrongVersion}.tgz`,
-        expectedVersion,
-      ),
-      undefined,
-    );
+    assert.equal(nativeArchiveTarget(`${archivePrefix}${wrongVersion}.tgz`, expectedVersion), undefined);
   }
 
-  writeFileSync(
-    manifestPath,
-    JSON.stringify({ ...manifest, version: "0.1.0" }),
-  );
-  assert.throws(
-    () => verifyNativeExecutable(packageRoot, archive, expectedVersion),
-    /manifest does not match/,
-  );
+  writeFileSync(manifestPath, JSON.stringify({ ...manifest, version: "0.1.0" }));
+  assert.throws(() => verifyNativeExecutable(packageRoot, archive, expectedVersion), /manifest does not match/);
 });
 
 test("matches each hosted Rust build record to its versioned npm tarball", () => {
@@ -76,8 +57,5 @@ test("matches each hosted Rust build record to its versioned npm tarball", () =>
     assert.equal(nativeArchiveRustTarget(filename, "0.3.0"), rustTarget);
     assert.equal(nativeArchiveRustTarget(filename, "0.1.0"), undefined);
   }
-  assert.equal(
-    nativeArchiveRustTarget("dads-framework-testing-0.3.0.tgz", "0.3.0"),
-    undefined,
-  );
+  assert.equal(nativeArchiveRustTarget("dads-framework-testing-0.3.0.tgz", "0.3.0"), undefined);
 });

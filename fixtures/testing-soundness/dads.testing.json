@@ -39,11 +39,7 @@
       "kind": "typecheck",
       "execution": {
         "executable": "node",
-        "args": [
-          "node_modules/typescript-native/bin/tsc",
-          "--project",
-          "packages/core/tsconfig.json"
-        ]
+        "args": ["node_modules/typescript-native/bin/tsc", "--project", "packages/core/tsconfig.json"]
       },
       "dependsOn": ["core:lint"],
       "impact": { "mode": "project" }
@@ -76,11 +72,7 @@
       "kind": "typecheck",
       "execution": {
         "executable": "node",
-        "args": [
-          "node_modules/typescript-native/bin/tsc",
-          "--project",
-          "apps/api/tsconfig.json"
-        ]
+        "args": ["node_modules/typescript-native/bin/tsc", "--project", "apps/api/tsconfig.json"]
       },
       "dependsOn": ["core:test", "api:lint"],
       "impact": { "mode": "project" }
@@ -113,11 +105,7 @@
       "kind": "typecheck",
       "execution": {
         "executable": "node",
-        "args": [
-          "node_modules/typescript-native/bin/tsc",
-          "--project",
-          "apps/web/tsconfig.json"
-        ]
+        "args": ["node_modules/typescript-native/bin/tsc", "--project", "apps/web/tsconfig.json"]
       },
       "dependsOn": ["core:test", "web:lint"],
       "impact": { "mode": "project" }

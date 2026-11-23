@@ -1,16 +1,7 @@
 import type { Plugin } from "./define-plugin.js";
-import {
-  migrationSourcesFor,
-  type OwnedMigrationFolder,
-  type PluginMigrationSource,
-} from "./migration-sources.js";
+import { migrationSourcesFor, type OwnedMigrationFolder, type PluginMigrationSource } from "./migration-sources.js";
 import { orderPlugins } from "./order-plugins.js";
-import type {
-  AccessContribution,
-  AuditScopeContribution,
-  NamedJob,
-  SluggedFlag,
-} from "./plugin-contributions.js";
+import type { AccessContribution, AuditScopeContribution, NamedJob, SluggedFlag } from "./plugin-contributions.js";
 import { PluginCompositionError } from "./plugin-errors.js";
 import { refuseDuplicates } from "./refuse-duplicates.js";
 import { type RunningApp, startPlugins } from "./start-plugins.js";
@@ -21,9 +12,7 @@ import { type RunningApp, startPlugins } from "./start-plugins.js";
  * required extra argument whose type names what is missing, so the call
  * fails to compile ("Expected 2 arguments") and the hover says why.
  */
-export type DependencyCheck<Offered extends string, Needed extends string> = [
-  Exclude<Needed, Offered>,
-] extends [never]
+export type DependencyCheck<Offered extends string, Needed extends string> = [Exclude<Needed, Offered>] extends [never]
   ? []
   : [unmetDependency: `unmet dependency: ${Exclude<Needed, Offered>}`];
 
@@ -44,9 +33,7 @@ export type ComposedApp<
   readonly untrackedAuditTables: readonly string[];
   readonly auditScopes: readonly AuditScopeContribution[];
   /** Migration sources for a workspace rooted at `workspaceRoot`. */
-  readonly migrationSources: (
-    workspaceRoot: string,
-  ) => readonly PluginMigrationSource[];
+  readonly migrationSources: (workspaceRoot: string) => readonly PluginMigrationSource[];
   /** Run every setup in order. Each call is an independent run. */
   readonly start: () => Promise<RunningApp<Route, Job>>;
 };
@@ -71,20 +58,11 @@ export function composeApp<
   Job extends NamedJob,
   Flag extends SluggedFlag,
   ServiceName extends string = never,
-  const Access extends readonly AccessContribution[] =
-    readonly AccessContribution[],
+  const Access extends readonly AccessContribution[] = readonly AccessContribution[],
 >(
   // The tuple infers each plugin's contribution separately. The array
   // infers the shared route, job, flag, and dependency types.
-  plugins: readonly Plugin<
-    Name,
-    Needed,
-    unknown,
-    Route,
-    Job,
-    Flag,
-    ServiceName
-  >[] & {
+  plugins: readonly Plugin<Name, Needed, unknown, Route, Job, Flag, ServiceName>[] & {
     readonly [Index in keyof Access]: {
       readonly contributes: { readonly access: readonly Access[Index][] };
     };
@@ -94,23 +72,8 @@ export function composeApp<
   if (unmet.length > 0) {
     throw new PluginCompositionError(unmet.join(", "));
   }
-  const entries: readonly Plugin<
-    Name,
-    Needed,
-    unknown,
-    Route,
-    Job,
-    Flag,
-    ServiceName,
-    Access[number]
-  >[] = plugins;
-  return assembleApp<
-    Route,
-    Job,
-    Flag,
-    Access[number],
-    (typeof entries)[number]
-  >(entries, startPlugins);
+  const entries: readonly Plugin<Name, Needed, unknown, Route, Job, Flag, ServiceName, Access[number]>[] = plugins;
+  return assembleApp<Route, Job, Flag, Access[number], (typeof entries)[number]>(entries, startPlugins);
 }
 
 /** Validate and aggregate the original plugin identities before exposing surfaces. */
@@ -130,12 +93,9 @@ export function assembleApp<
     plugins: ordered.map((plugin) => plugin.name),
     access: ordered.flatMap((plugin) => plugin.contributes.access),
     flags: ordered.flatMap((plugin) => plugin.contributes.flags),
-    untrackedAuditTables: ordered.flatMap(
-      (plugin) => plugin.contributes.untrackedTables,
-    ),
+    untrackedAuditTables: ordered.flatMap((plugin) => plugin.contributes.untrackedTables),
     auditScopes: ordered.flatMap((plugin) => plugin.contributes.auditScopes),
-    migrationSources: (workspaceRoot) =>
-      migrationSourcesFor(ownedMigrationFolders(ordered), workspaceRoot),
+    migrationSources: (workspaceRoot) => migrationSourcesFor(ownedMigrationFolders(ordered), workspaceRoot),
     start: () => start(ordered),
   };
 }
@@ -151,20 +111,12 @@ function ownedMigrationFolders(
   );
 }
 
-function refuseDeclaredDuplicates(
-  plugins: readonly ComposablePlugin<unknown, NamedJob, SluggedFlag>[],
-): void {
-  const claims = (
-    keysOf: (plugin: (typeof plugins)[number]) => readonly string[],
-  ) =>
-    plugins.flatMap((plugin) =>
-      keysOf(plugin).map((key) => ({ key, pluginName: plugin.name })),
-    );
+function refuseDeclaredDuplicates(plugins: readonly ComposablePlugin<unknown, NamedJob, SluggedFlag>[]): void {
+  const claims = (keysOf: (plugin: (typeof plugins)[number]) => readonly string[]) =>
+    plugins.flatMap((plugin) => keysOf(plugin).map((key) => ({ key, pluginName: plugin.name })));
   refuseDuplicates(
     "access entity",
-    claims((plugin) =>
-      plugin.contributes.access.map((item) => item.entity.wireName),
-    ),
+    claims((plugin) => plugin.contributes.access.map((item) => item.entity.wireName)),
   );
   refuseDuplicates(
     "feature flag",
@@ -179,8 +131,6 @@ function refuseDeclaredDuplicates(
   );
   refuseDuplicates(
     "migration folder",
-    claims((plugin) =>
-      plugin.contributes.migrations.map((folder) => folder.directory),
-    ),
+    claims((plugin) => plugin.contributes.migrations.map((folder) => folder.directory)),
   );
 }

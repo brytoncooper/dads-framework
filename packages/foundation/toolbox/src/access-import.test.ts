@@ -1,24 +1,12 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { importZedSchema } from "./access-import.js";
 
-const dadExecutable = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "bin",
-  "dad.js",
-);
+const dadExecutable = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "dad.js");
 
 const RICH_ZED_SCHEMA = `use expiration
 
@@ -81,13 +69,7 @@ describe("importZedSchema", () => {
     expect(result.inputPath).toBe(schemaPath);
     expect(result.outPath).toBeNull();
     expect(result.definitionCount).toBe(5);
-    expect(result.definitions).toEqual([
-      "user",
-      "group",
-      "organization",
-      "folder",
-      "document",
-    ]);
+    expect(result.definitions).toEqual(["user", "group", "organization", "folder", "document"]);
     expect(result.dryRun).toBe(false);
     expect(result.written).toBe(false);
     expect(result.code).toContain('from "@dads-framework/access"');
@@ -150,22 +132,14 @@ describe("dad access import CLI", () => {
     writeFileSync(join(workspace, "schema.zed"), RICH_ZED_SCHEMA, "utf8");
     const outPath = join(workspace, "generated", "access.ts");
 
-    const completed = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--out",
-      "generated/access.ts",
-    ]);
+    const completed = runDad(workspace, ["access", "import", "schema.zed", "--out", "generated/access.ts"]);
 
     expect(completed.status).toBe(0);
     expect(completed.stderr).toBe("");
     expect(completed.stdout).toContain("Imported 5 definitions");
     expect(completed.stdout).toContain(outPath);
     expect(existsSync(outPath)).toBe(true);
-    expect(readFileSync(outPath, "utf8")).toContain(
-      "export const access = compileAccess(",
-    );
+    expect(readFileSync(outPath, "utf8")).toContain("export const access = compileAccess(");
   });
 
   it("does not write the file when --dry-run is passed", () => {
@@ -173,14 +147,7 @@ describe("dad access import CLI", () => {
     writeFileSync(join(workspace, "schema.zed"), RICH_ZED_SCHEMA, "utf8");
     const outPath = join(workspace, "dry", "access.ts");
 
-    const completed = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--out",
-      "dry/access.ts",
-      "--dry-run",
-    ]);
+    const completed = runDad(workspace, ["access", "import", "schema.zed", "--out", "dry/access.ts", "--dry-run"]);
 
     expect(completed.status).toBe(0);
     expect(completed.stderr).toBe("");
@@ -212,19 +179,11 @@ describe("dad access import CLI", () => {
     expect(parsed["inputPath"]).toBe(schemaPath);
     expect(parsed["outPath"]).toBe(outPath);
     expect(parsed["definitionCount"]).toBe(5);
-    expect(parsed["definitions"]).toEqual([
-      "user",
-      "group",
-      "organization",
-      "folder",
-      "document",
-    ]);
+    expect(parsed["definitions"]).toEqual(["user", "group", "organization", "folder", "document"]);
     expect(parsed["dryRun"]).toBe(true);
     expect(parsed["written"]).toBe(false);
     expect(typeof parsed["code"]).toBe("string");
-    expect(String(parsed["code"])).toContain(
-      "export const access = compileAccess(",
-    );
+    expect(String(parsed["code"])).toContain("export const access = compileAccess(");
   });
 
   it("returns nonzero exit with line-numbered error on unsupported caveat", () => {
@@ -237,12 +196,7 @@ describe("dad access import CLI", () => {
     expect(plain.stderr).toContain("line 3:");
     expect(plain.stderr).toContain('unsupported SpiceDB construct "caveat"');
 
-    const jsonRun = runDad(workspace, [
-      "access",
-      "import",
-      "caveat.zed",
-      "--json",
-    ]);
+    const jsonRun = runDad(workspace, ["access", "import", "caveat.zed", "--json"]);
     expect(jsonRun.status).toBe(1);
     expect(jsonRun.stdout).toBe("");
     const payload = parseJsonRecord(jsonRun.stderr);
@@ -253,50 +207,28 @@ describe("dad access import CLI", () => {
 
   it("rejects missing input files, unknown flags, and malformed arguments", () => {
     const workspace = createWorkspace();
-    writeFileSync(
-      join(workspace, "schema.zed"),
-      "definition user {}\n",
-      "utf8",
-    );
+    writeFileSync(join(workspace, "schema.zed"), "definition user {}\n", "utf8");
 
-    const missing = runDad(workspace, [
-      "access",
-      "import",
-      "does-not-exist.zed",
-    ]);
+    const missing = runDad(workspace, ["access", "import", "does-not-exist.zed"]);
     expect(missing.status).toBe(1);
     expect(missing.stdout).toBe("");
     expect(missing.stderr).toContain("Zed schema file not found:");
 
-    const unknownFlag = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--wat",
-    ]);
+    const unknownFlag = runDad(workspace, ["access", "import", "schema.zed", "--wat"]);
     expect(unknownFlag.status).toBe(1);
     expect(unknownFlag.stderr).toContain("Dad: Unknown option --wat.");
 
     const missingPath = runDad(workspace, ["access", "import"]);
     expect(missingPath.status).toBe(1);
-    expect(missingPath.stderr).toContain(
-      "Dad: access import requires a path to a .zed schema file.",
-    );
+    expect(missingPath.stderr).toContain("Dad: access import requires a path to a .zed schema file.");
 
-    const missingOutValue = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--out",
-    ]);
+    const missingOutValue = runDad(workspace, ["access", "import", "schema.zed", "--out"]);
     expect(missingOutValue.status).toBe(1);
     expect(missingOutValue.stderr).toContain("Dad: --out requires a value.");
 
     const unknownSubcommand = runDad(workspace, ["access", "export"]);
     expect(unknownSubcommand.status).toBe(1);
-    expect(unknownSubcommand.stderr).toContain(
-      "Usage: dad access import <schema.zed>",
-    );
+    expect(unknownSubcommand.stderr).toContain("Usage: dad access import <schema.zed>");
   });
 
   it("prints help for dad access --help and dad access import --help", () => {
@@ -305,9 +237,7 @@ describe("dad access import CLI", () => {
     const accessHelp = runDad(workspace, ["access", "--help"]);
     expect(accessHelp.status).toBe(0);
     expect(accessHelp.stdout).toContain("Usage: dad access <subcommand>");
-    expect(accessHelp.stdout).toContain(
-      "access import <schema.zed> [--out <path>] [--dry-run] [--json]",
-    );
+    expect(accessHelp.stdout).toContain("access import <schema.zed> [--out <path>] [--dry-run] [--json]");
 
     const importHelp = runDad(workspace, ["access", "import", "--help"]);
     expect(importHelp.status).toBe(0);
@@ -322,11 +252,7 @@ type DadRun = {
 };
 
 function runDad(cwd: string, commandArguments: readonly string[]): DadRun {
-  const completed = spawnSync(
-    process.execPath,
-    [dadExecutable, ...commandArguments],
-    { cwd, encoding: "utf8" },
-  );
+  const completed = spawnSync(process.execPath, [dadExecutable, ...commandArguments], { cwd, encoding: "utf8" });
   if (completed.error) throw completed.error;
   return {
     status: completed.status,

@@ -8,9 +8,6 @@ export type DataEnvelope<T, Meta = undefined> = Meta extends undefined
   ? { readonly data: T }
   : { readonly data: T; readonly meta: Meta };
 
-export function envelope(
-  data: unknown,
-  meta?: unknown,
-): { data: unknown; meta?: unknown } {
+export function envelope(data: unknown, meta?: unknown): { data: unknown; meta?: unknown } {
   return meta === undefined ? { data } : { data, meta };
 }

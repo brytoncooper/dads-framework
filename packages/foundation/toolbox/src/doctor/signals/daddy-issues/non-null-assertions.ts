@@ -26,8 +26,7 @@ function countNonNullAssertions(context: DoctorContext): SignalReadings {
 export const nonNullAssertionsSignal: DoctorSignal = {
   id: "non-null-assertions",
   issue: "daddy-issues",
-  question:
-    "Does any hand-written file use `as` other than `as const`, or a postfix `!`?",
+  question: "Does any hand-written file use `as` other than `as const`, or a postfix `!`?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

@@ -22,17 +22,9 @@ export const channelNameSchema = z
 export const channelEnvelopeSchema = z
   .strictObject({
     channel: channelNameSchema,
-    seq: z
-      .number()
-      .int()
-      .nonnegative()
-      .meta({ description: "Publisher-monotonic sequence number" }),
-    at: z.iso
-      .datetime()
-      .meta({ description: "Publish time (ISO 8601, publisher clock)" }),
-    payload: z
-      .unknown()
-      .meta({ description: "Domain-owned payload; opaque to the platform" }),
+    seq: z.number().int().nonnegative().meta({ description: "Publisher-monotonic sequence number" }),
+    at: z.iso.datetime().meta({ description: "Publish time (ISO 8601, publisher clock)" }),
+    payload: z.unknown().meta({ description: "Domain-owned payload; opaque to the platform" }),
   })
   .meta({ description: "One channel delta" });
 

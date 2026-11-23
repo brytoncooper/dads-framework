@@ -1890,11 +1890,11 @@
         "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
       },
       "packages/core": {
-        "floor": 7,
+        "floor": 16,
         "reason": "preserves contract and core negative type assertions under consolidated packages/core (recorded 2026-11-22)"
       },
       "packages/server/http": {
-        "floor": 18,
+        "floor": 24,
         "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
       },
       "packages/server/spicedb-access": {

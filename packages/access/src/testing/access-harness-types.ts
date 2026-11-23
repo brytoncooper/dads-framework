@@ -1,9 +1,5 @@
 import type { DslNode } from "../core/dsl-resource-types.js";
-import type {
-  DslPermissionTarget,
-  DslRoleSlot,
-  DslWildcardActorHolder,
-} from "../core/dsl-types.js";
+import type { DslPermissionTarget, DslRoleSlot, DslWildcardActorHolder } from "../core/dsl-types.js";
 import type { EntityHandle } from "../core/entity-handle.js";
 import { isWildcardHolder, type WildcardHolder } from "../core/holders.js";
 import type { PermissionToken, RoleToken } from "../core/refs.js";
@@ -17,12 +13,10 @@ import type {
 import type { ControllableClock, TestDuration } from "./duration.js";
 
 /** Any entity or DSL node whose wire name can identify an actor or resource. */
-export type HarnessEntityTarget =
-  EntityHandle | DslNode | { readonly wireName: string };
+export type HarnessEntityTarget = EntityHandle | DslNode | { readonly wireName: string };
 
 /** Any subject value accepted directly by `.to(...)` or `.from(...)`. */
-export type HarnessSubjectInput =
-  SubjectRef | WildcardHolder | DslWildcardActorHolder;
+export type HarnessSubjectInput = SubjectRef | WildcardHolder | DslWildcardActorHolder;
 
 /** Target for `grant(...)` / `revoke(...)`: either a `(roleToken, resourceId)` pair or a `resource(id).role` slot. */
 export type HarnessRoleTarget = {
@@ -40,10 +34,7 @@ export type HarnessPermissionTarget = {
 
 export type MatrixDecision = "allow" | "deny";
 
-export type MatrixRow = readonly [
-  actor: SubjectRef,
-  expected: readonly MatrixDecision[],
-];
+export type MatrixRow = readonly [actor: SubjectRef, expected: readonly MatrixDecision[]];
 
 export type PermissionMatrixSpec = {
   readonly permissions: readonly PermissionToken[];
@@ -125,16 +116,8 @@ export type AccessScenarioVerbs = {
     (actor: SubjectRef, target: DslPermissionTarget): void;
     (actor: SubjectRef, permission: PermissionToken, resourceId: string): void;
   };
-  readonly assertVisible: (
-    actor: SubjectRef,
-    permission: PermissionToken,
-    expectedIds: readonly string[],
-  ) => void;
-  readonly assertMatrix: (
-    target: HarnessEntityTarget,
-    resourceId: string,
-    spec: PermissionMatrixSpec,
-  ) => void;
+  readonly assertVisible: (actor: SubjectRef, permission: PermissionToken, expectedIds: readonly string[]) => void;
+  readonly assertMatrix: (target: HarnessEntityTarget, resourceId: string, spec: PermissionMatrixSpec) => void;
 };
 
 export type ProveAccessOptions = {
@@ -147,17 +130,12 @@ export function resolveWireName(target: HarnessEntityTarget): string {
   return "handle" in target ? target.handle.wireName : target.wireName;
 }
 
-function isHarnessEntityTarget(
-  value: HarnessSubjectInput | HarnessEntityTarget,
-): value is HarnessEntityTarget {
+function isHarnessEntityTarget(value: HarnessSubjectInput | HarnessEntityTarget): value is HarnessEntityTarget {
   if ("handle" in value && typeof value.handle === "object") return true;
   return "wireName" in value && typeof value.wireName === "string";
 }
 
-export function resolveSubjectInput(
-  first: HarnessSubjectInput | HarnessEntityTarget,
-  secondId?: string,
-): SubjectRef {
+export function resolveSubjectInput(first: HarnessSubjectInput | HarnessEntityTarget, secondId?: string): SubjectRef {
   if (secondId !== undefined) {
     if (isHarnessEntityTarget(first)) {
       return { type: resolveWireName(first), id: secondId };
@@ -180,10 +158,7 @@ export function resolveSubjectInput(
   );
 }
 
-export function resolveRoleTarget(
-  roleOrSlot: RoleToken | DslRoleSlot,
-  resourceId?: string,
-): HarnessRoleTarget {
+export function resolveRoleTarget(roleOrSlot: RoleToken | DslRoleSlot, resourceId?: string): HarnessRoleTarget {
   if ("kind" in roleOrSlot && roleOrSlot.kind === "dsl-role-slot") {
     return {
       entityWireName: roleOrSlot.entityWireName,
@@ -192,9 +167,7 @@ export function resolveRoleTarget(
     };
   }
   if (resourceId === undefined) {
-    throw new Error(
-      `Missing resourceId for role "${roleOrSlot.entityWireName}#${roleOrSlot.roleName}"`,
-    );
+    throw new Error(`Missing resourceId for role "${roleOrSlot.entityWireName}#${roleOrSlot.roleName}"`);
   }
   return {
     entityWireName: roleOrSlot.entityWireName,
@@ -207,10 +180,7 @@ export function resolvePermissionTarget(
   permissionOrTarget: PermissionToken | DslPermissionTarget,
   resourceId?: string,
 ): HarnessPermissionTarget {
-  if (
-    "kind" in permissionOrTarget &&
-    permissionOrTarget.kind === "dsl-permission-target"
-  ) {
+  if ("kind" in permissionOrTarget && permissionOrTarget.kind === "dsl-permission-target") {
     return {
       entityWireName: permissionOrTarget.entityWireName,
       permissionName: permissionOrTarget.permissionName,

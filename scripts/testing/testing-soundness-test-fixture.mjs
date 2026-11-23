@@ -1,19 +1,10 @@
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import process from "node:process";
 
-const runner = resolve(
-  process.env.DADS_SOUNDNESS_TEST_RUNNER ??
-    "scripts/testing/testing-soundness.mjs",
-);
+const runner = resolve(process.env.DADS_SOUNDNESS_TEST_RUNNER ?? "scripts/testing/testing-soundness.mjs");
 
 export function runFixture(fixture, failBaseline = false, options = {}) {
   const output = join(fixture.root, "evidence.json");
@@ -22,9 +13,7 @@ export function runFixture(fixture, failBaseline = false, options = {}) {
     [
       ...(options.nodeArguments ?? []),
       runner,
-      ...(options.caseJobs === undefined
-        ? []
-        : ["--case-jobs", options.caseJobs]),
+      ...(options.caseJobs === undefined ? [] : ["--case-jobs", options.caseJobs]),
       "--fixture",
       fixture.root,
       "--dad-test",

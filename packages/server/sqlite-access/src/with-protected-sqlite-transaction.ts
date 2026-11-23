@@ -34,10 +34,7 @@ export async function withProtectedSqliteTransaction<Result>(
   let open = true;
   const isActive = (): boolean => open && (parent?.active() ?? true);
   const scopedExecutor = createScopedExecutor(options.executor, isActive);
-  const txAuth = options.authorization.inTransaction(
-    scopedExecutor,
-    () => new Date(pinnedMs),
-  );
+  const txAuth = options.authorization.inTransaction(scopedExecutor, () => new Date(pinnedMs));
   activeScopes.set(txAuth, { active: isActive });
 
   await options.executor.exec("BEGIN IMMEDIATE");
@@ -63,25 +60,15 @@ function assertActiveScope(authorization: SqliteAuthorization): void {
   }
 }
 
-function resolvePinnedTimestamp(
-  options: ProtectedSqliteTransactionOptions,
-): number {
-  const ms =
-    options.now !== undefined
-      ? options.now().getTime()
-      : options.authorization.currentTimeMs();
+function resolvePinnedTimestamp(options: ProtectedSqliteTransactionOptions): number {
+  const ms = options.now !== undefined ? options.now().getTime() : options.authorization.currentTimeMs();
   if (!Number.isFinite(ms)) {
-    throw new Error(
-      "Protected SQLite transaction clock must return a valid Date",
-    );
+    throw new Error("Protected SQLite transaction clock must return a valid Date");
   }
   return ms;
 }
 
-function createScopedExecutor(
-  inner: SqliteExecutor,
-  isActive: () => boolean,
-): SqliteExecutor {
+function createScopedExecutor(inner: SqliteExecutor, isActive: () => boolean): SqliteExecutor {
   return {
     all(sql, params) {
       if (!isActive()) return Promise.reject(scopeEndedError());

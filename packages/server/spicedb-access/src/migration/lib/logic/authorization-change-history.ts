@@ -8,8 +8,7 @@ import type { LoadedAuthorizationChange } from "../journal/load-authorization-ch
 
 const BARRIER_PREFIX = "authz_graph_v1_";
 const APPLIED_PREFIX = "authz_applied_";
-const STARTED_PATTERN =
-  /^authz_started_(.+)_([a-f0-9]{64})_([a-f0-9]{64})_([a-f0-9]{64})$/;
+const STARTED_PATTERN = /^authz_started_(.+)_([a-f0-9]{64})_([a-f0-9]{64})_([a-f0-9]{64})$/;
 
 export type StartedChange = {
   readonly id: string;
@@ -63,20 +62,9 @@ export function prepareAuthorizationChanges(
     );
   const ordered = orderAuthorizationChanges(changes, latest.id);
   const barrierMarker = `${BARRIER_PREFIX}${legacyChecksum}`;
-  const history = readAuthorizationChangeHistory(
-    journal,
-    ordered,
-    markers,
-    barrierMarker,
-  );
+  const history = readAuthorizationChangeHistory(journal, ordered, markers, barrierMarker);
   const barrier = markers.includes(barrierMarker);
-  assertAuthorizationChangeHistory(
-    history,
-    ordered,
-    latest.id,
-    journal.length,
-    barrier,
-  );
+  assertAuthorizationChangeHistory(history, ordered, latest.id, journal.length, barrier);
   composeAuthorizationChanges(latest.schema, ordered);
   return {
     ordered,
@@ -98,9 +86,7 @@ function readAuthorizationChangeHistory(
   const known: KnownAuthorizationHistory = {
     legacyIds: new Set(journal.map((entry) => entry.id)),
     changes: new Map(ordered.map((change) => [change.id, change])),
-    finishedMarkers: new Map(
-      ordered.map((change) => [authorizationAppliedMarker(change), change.id]),
-    ),
+    finishedMarkers: new Map(ordered.map((change) => [authorizationAppliedMarker(change), change.id])),
     barrierMarker,
   };
   const history: AuthorizationChangeHistory = {
@@ -117,10 +103,7 @@ function readAuthorizationChangeHistory(
   return history;
 }
 
-function classifyHistoryMarker(
-  marker: string,
-  known: KnownAuthorizationHistory,
-): HistoryMarker {
+function classifyHistoryMarker(marker: string, known: KnownAuthorizationHistory): HistoryMarker {
   if (known.legacyIds.has(marker)) return { kind: "legacy", id: marker };
   if (marker === known.barrierMarker) return { kind: "barrier" };
   if (marker.startsWith(BARRIER_PREFIX))
@@ -132,9 +115,7 @@ function classifyHistoryMarker(
   if (finished !== undefined) return { kind: "applied", id: finished };
   const started = readStartedChange(marker, known.changes);
   if (started !== undefined) return { kind: "started", entry: started };
-  const edited = [...known.changes.values()].find((change) =>
-    marker.startsWith(`${APPLIED_PREFIX}${change.id}_`),
-  );
+  const edited = [...known.changes.values()].find((change) => marker.startsWith(`${APPLIED_PREFIX}${change.id}_`));
   if (edited !== undefined) throw checksumFailure(edited.id);
   throw new AuthorizationChangeError(
     "AUTHZ_CHANGE_HISTORY",
@@ -149,12 +130,7 @@ function readStartedChange(
   const match = STARTED_PATTERN.exec(marker);
   if (match === null) return undefined;
   const [, id, checksum, beforeHash, afterHash] = match;
-  if (
-    id === undefined ||
-    checksum === undefined ||
-    beforeHash === undefined ||
-    afterHash === undefined
-  )
+  if (id === undefined || checksum === undefined || beforeHash === undefined || afterHash === undefined)
     throw new AuthorizationChangeError(
       "AUTHZ_CHANGE_HISTORY",
       "authorization store has a malformed in-progress marker",
@@ -190,9 +166,7 @@ function assertAuthorizationChangeHistory(
       "AUTHZ_CHANGE_HISTORY",
       "authorization store has multiple in-progress changes; only one migrator may write at a time",
     );
-  for (const change of ordered.filter((candidate) =>
-    history.applied.has(candidate.id),
-  )) {
+  for (const change of ordered.filter((candidate) => history.applied.has(candidate.id))) {
     assertAppliedChangeHistory(change, history, legacyHead);
   }
 }
@@ -203,23 +177,15 @@ function assertAppliedChangeHistory(
   legacyHead: string,
 ): void {
   const started = history.started.find((entry) => entry.id === change.id);
-  if (started !== undefined && started.checksum !== change.checksum)
-    throw checksumFailure(change.id);
-  if (
-    !change.dependsOn.every(
-      (dependency) =>
-        dependency === legacyHead || history.applied.has(dependency),
-    )
-  )
+  if (started !== undefined && started.checksum !== change.checksum) throw checksumFailure(change.id);
+  if (!change.dependsOn.every((dependency) => dependency === legacyHead || history.applied.has(dependency)))
     throw new AuthorizationChangeError(
       "AUTHZ_CHANGE_HISTORY",
       `applied authorization change ${change.id} is missing an applied prerequisite`,
     );
 }
 
-export function authorizationAppliedMarker(
-  change: LoadedAuthorizationChange,
-): string {
+export function authorizationAppliedMarker(change: LoadedAuthorizationChange): string {
   return `${APPLIED_PREFIX}${change.id}_${change.checksum}`;
 }
 

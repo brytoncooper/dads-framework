@@ -5,10 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  createDomainMigration,
-  resolveMigrationOwnerFolder,
-} from "./new-migration.js";
+import { createDomainMigration, resolveMigrationOwnerFolder } from "./new-migration.js";
 
 describe("createDomainMigration", () => {
   let workspaceRoot: string | undefined;
@@ -50,10 +47,7 @@ describe("createDomainMigration", () => {
 
   it("captures every known independent frontier without a shared numbering file", async () => {
     workspaceRoot = await createWorkspace();
-    const folder = join(
-      workspaceRoot,
-      "packages/server/organizations/src/lib/database/migrations",
-    );
+    const folder = join(workspaceRoot, "packages/server/organizations/src/lib/database/migrations");
     await mkdir(folder, { recursive: true });
     await writeFile(
       join(folder, "20260828100000_alpha.migration.ts"),
@@ -83,14 +77,9 @@ describe("createDomainMigration", () => {
     });
 
     expect(resolveMigrationOwnerFolder(workspaceRoot, "authorization")).toBe(
-      join(
-        workspaceRoot,
-        "packages/server/authorization/src/lib/database/migrations",
-      ),
+      join(workspaceRoot, "packages/server/authorization/src/lib/database/migrations"),
     );
-    expect(resolveMigrationOwnerFolder(workspaceRoot, "app")).toBe(
-      join(workspaceRoot, "migrations"),
-    );
+    expect(resolveMigrationOwnerFolder(workspaceRoot, "app")).toBe(join(workspaceRoot, "migrations"));
   });
 
   it("refuses an unknown owner instead of guessing from a table name", async () => {
@@ -124,18 +113,12 @@ describe("createDomainMigration", () => {
         now: new Date("2026-08-28T15:04:05.000Z"),
       }),
     ).rejects.toThrow(/already exists/);
-    expect(await readFile(existing, "utf8")).toBe(
-      "export const kept = true;\n",
-    );
+    expect(await readFile(existing, "utf8")).toBe("export const kept = true;\n");
   });
 });
 
 async function createWorkspace(): Promise<string> {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "new-domain-migration-"));
-  await Promise.all(
-    ["packages/server"].map((root) =>
-      mkdir(join(workspaceRoot, root), { recursive: true }),
-    ),
-  );
+  await Promise.all(["packages/server"].map((root) => mkdir(join(workspaceRoot, root), { recursive: true })));
   return workspaceRoot;
 }

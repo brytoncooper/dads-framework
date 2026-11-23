@@ -68,9 +68,7 @@ export abstract class DirectTransferStorage {
   ): Promise<string>;
 
   /** The parts the bucket holds, in part order; null once the upload is completed, aborted or unknown. */
-  abstract listUploadedParts(
-    upload: MultipartUploadRef,
-  ): Promise<readonly UploadedPart[] | null>;
+  abstract listUploadedParts(upload: MultipartUploadRef): Promise<readonly UploadedPart[] | null>;
 
   /** Assembles the given parts, in order, into the object at the upload's key. */
   abstract completeMultipartUpload(
@@ -86,10 +84,7 @@ export abstract class DirectTransferStorage {
   abstract headObject(key: string): Promise<StoredObjectHead | null>;
 
   /** The first `byteCount` bytes of a stored object (all of it when shorter); null when there is none. */
-  abstract readObjectPrefix(
-    key: string,
-    byteCount: number,
-  ): Promise<Uint8Array | null>;
+  abstract readObjectPrefix(key: string, byteCount: number): Promise<Uint8Array | null>;
 
   /** A GET URL that downloads the object as an attachment under `fileName`. */
   abstract presignAttachmentDownload(input: {
@@ -106,16 +101,12 @@ export abstract class DirectTransferStorage {
   abstract deleteObject(key: string): Promise<void>;
 
   /** One PUT of exactly these bytes, refused by storage if any object already exists at the key. */
-  abstract presignWriteOnceUpload(
-    input: WriteOnceUploadRequest,
-  ): Promise<SignedUpload>;
+  abstract presignWriteOnceUpload(input: WriteOnceUploadRequest): Promise<SignedUpload>;
 
   /**
    * Size and lowercase hex SHA-256 of a stored object; null when there is
    * none. `sha256` is null when the object has no full-object SHA-256, such as
    * a multipart upload.
    */
-  abstract headObjectChecksum(
-    key: string,
-  ): Promise<StoredObjectChecksum | null>;
+  abstract headObjectChecksum(key: string): Promise<StoredObjectChecksum | null>;
 }

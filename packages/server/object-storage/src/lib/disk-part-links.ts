@@ -43,8 +43,7 @@ export type PartLinkValues = {
 };
 
 /** The disk twin's own upload ids: lowercase UUIDs, so one can never name a path. */
-const STORAGE_UPLOAD_ID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const STORAGE_UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 /** S3's part numbers: 1 to 10000. */
 const PART_NUMBER = /^[1-9][0-9]{0,4}$/;
 const MAX_PART_NUMBER = 10_000;
@@ -53,10 +52,7 @@ const BYTE_COUNT = /^(0|[1-9][0-9]{0,11})$/;
 const PART_LINK_METHOD = "PUT-PART";
 
 /** The values a new part link signs, expiring at `expires` (unix seconds). */
-export function partLinkValues(
-  request: PartUploadLinkRequest,
-  expires: string,
-): PartLinkValues {
+export function partLinkValues(request: PartUploadLinkRequest, expires: string): PartLinkValues {
   return {
     key: request.key,
     upload: request.storageUploadId,
@@ -67,10 +63,7 @@ export function partLinkValues(
 }
 
 /** The link's query string; `bytes` is left out when the link names no byte count. */
-export function partLinkQueryString(
-  values: PartLinkValues,
-  sig: string,
-): string {
+export function partLinkQueryString(values: PartLinkValues, sig: string): string {
   return new URLSearchParams({
     key: values.key,
     upload: values.upload,
@@ -83,14 +76,7 @@ export function partLinkQueryString(
 
 /** The fields the HMAC covers, in order. */
 export function partSignedFields(values: PartLinkValues): string[] {
-  return [
-    PART_LINK_METHOD,
-    values.key,
-    values.upload,
-    values.part,
-    values.bytes,
-    values.expires,
-  ];
+  return [PART_LINK_METHOD, values.key, values.upload, values.part, values.bytes, values.expires];
 }
 
 /**
@@ -98,13 +84,10 @@ export function partSignedFields(values: PartLinkValues): string[] {
  * count are in shape; null otherwise. It checks neither the key, the expiry
  * nor the signature: `DiskObjectStorage.readSignedPartUpload` does.
  */
-export function partNamedByQuery(
-  query: SignedPartUploadQuery,
-): SignedPartUpload | null {
+export function partNamedByQuery(query: SignedPartUploadQuery): SignedPartUpload | null {
   const bytes = query.bytes ?? "";
   if (!STORAGE_UPLOAD_ID.test(query.upload)) return null;
-  if (!PART_NUMBER.test(query.part) || Number(query.part) > MAX_PART_NUMBER)
-    return null;
+  if (!PART_NUMBER.test(query.part) || Number(query.part) > MAX_PART_NUMBER) return null;
   if (bytes !== "" && !BYTE_COUNT.test(bytes)) return null;
   return {
     key: query.key,

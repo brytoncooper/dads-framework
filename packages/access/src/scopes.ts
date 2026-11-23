@@ -1,17 +1,7 @@
-export {
-  checkScopeBindings,
-  checkScopeBindingsInSchema,
-} from "./core/scope-binding-check.js";
+export { checkScopeBindings, checkScopeBindingsInSchema } from "./core/scope-binding-check.js";
 export { scopeBindings } from "./core/scope-bindings.js";
-export type {
-  RoleBinding,
-  ScopeBindings,
-  ScopeRoleBindings,
-} from "./core/scope-bindings.js";
-export {
-  isLookupResourcesAllowed,
-  isSparseDirectGrant,
-} from "./core/scope-lookup-policy.js";
+export type { RoleBinding, ScopeBindings, ScopeRoleBindings } from "./core/scope-bindings.js";
+export { isLookupResourcesAllowed, isSparseDirectGrant } from "./core/scope-lookup-policy.js";
 export {
   compileScopePlan,
   compileScopePlanInSchema,

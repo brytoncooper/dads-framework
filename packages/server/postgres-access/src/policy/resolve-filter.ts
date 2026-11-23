@@ -4,14 +4,8 @@ import type {
   CompiledPermissionExpression,
   NormalizedResourceLookup,
 } from "./policy-model.js";
-import {
-  compileReverseExpressionQuery,
-  compileReversePermission,
-} from "./compile-reverse-policy.js";
-import type {
-  PostgresAccessFilter,
-  ValidatedPostgresFilterInput,
-} from "./compile-filter.js";
+import { compileReverseExpressionQuery, compileReversePermission } from "./compile-reverse-policy.js";
+import type { PostgresAccessFilter, ValidatedPostgresFilterInput } from "./compile-filter.js";
 import {
   directSubjectReachability,
   modelHasUsersetTargets,
@@ -52,12 +46,7 @@ export async function resolvePostgresFilter(
   runQuery: (query: PostgresQuery) => Promise<readonly PostgresRow[]>,
   fallback: () => PostgresAccessFilter,
 ): Promise<PostgresAccessFilter> {
-  const plan = buildPostgresResolveFilterPlan(
-    model,
-    namespace,
-    request,
-    options,
-  );
+  const plan = buildPostgresResolveFilterPlan(model, namespace, request, options);
   if (plan === undefined) return fallback();
   const rows = await runQuery(plan.query);
   return finalizePostgresResolvedFilter(plan, rows, options.paramOffset);
@@ -76,9 +65,7 @@ export function buildPostgresResolveFilterPlan(
 ): ResolvedFilterPlan | undefined {
   if (options.scopeColumns === undefined) return undefined;
   const definition = model.permissions.find(
-    (candidate) =>
-      candidate.entity === request.resourceType &&
-      candidate.wireName === request.permission,
+    (candidate) => candidate.entity === request.resourceType && candidate.wireName === request.permission,
   );
   if (definition === undefined) return undefined;
 
@@ -102,22 +89,9 @@ export function buildPostgresResolveFilterPlan(
 
   const usesUsersets = modelHasUsersetTargets(model);
   const reachCte = usesUsersets
-    ? subjectReachability(
-        namespaceSql,
-        subjectTypeSql,
-        subjectIdSql,
-        model.columnRelations,
-        builder,
-      )
-    : directSubjectReachability(
-        namespaceSql,
-        subjectTypeSql,
-        subjectIdSql,
-        model.columnRelations,
-        builder,
-      );
-  const withKeyword =
-    usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
+    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder)
+    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder);
+  const withKeyword = usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
   const tagged = branches.map(
     (branch, index) =>
       `SELECT ${String(index)} AS branch, allowed_resource.resource_id FROM (${branch.innerSql}) allowed_resource`,
@@ -165,30 +139,17 @@ export function finalizePostgresResolvedFilter(
     return Object.freeze({ sql: "FALSE", values: [] });
   }
   const includeSql =
-    includeParts.length === 1 && includeParts[0] !== undefined
-      ? includeParts[0]
-      : `(${includeParts.join(" OR ")})`;
-  const fullSql =
-    excludeParts.length === 0
-      ? includeSql
-      : `(${includeSql} AND ${excludeParts.join(" AND ")})`;
+    includeParts.length === 1 && includeParts[0] !== undefined ? includeParts[0] : `(${includeParts.join(" OR ")})`;
+  const fullSql = excludeParts.length === 0 ? includeSql : `(${includeSql} AND ${excludeParts.join(" AND ")})`;
   return Object.freeze({ sql: fullSql, values });
 }
 
-function bucketResolvedRows(
-  branchCount: number,
-  rows: readonly PostgresRow[],
-): readonly Set<string>[] {
+function bucketResolvedRows(branchCount: number, rows: readonly PostgresRow[]): readonly Set<string>[] {
   const buckets = Array.from({ length: branchCount }, () => new Set<string>());
   for (const row of rows) {
     const branch = Number(row["branch"]);
     const id = row["resource_id"];
-    if (
-      Number.isInteger(branch) &&
-      branch >= 0 &&
-      branch < buckets.length &&
-      typeof id === "string"
-    ) {
+    if (Number.isInteger(branch) && branch >= 0 && branch < buckets.length && typeof id === "string") {
       buckets[branch]?.add(id);
     }
   }
@@ -213,10 +174,7 @@ function collectResolvedBranches(
     new Set(),
     { deduplicate: false },
   );
-  return [
-    ...includeBranches,
-    { kind: "exclude", column: ctx.idColumn, innerSql: excludeSql },
-  ];
+  return [...includeBranches, { kind: "exclude", column: ctx.idColumn, innerSql: excludeSql }];
 }
 
 function collectPositiveBranches(
@@ -268,9 +226,7 @@ function collectScopedAnyOfBranches(
   if (branches.length === 0) return undefined;
   if (remainder.length > 0) {
     const restExpr: CompiledPermissionExpression =
-      remainder.length === 1 && remainder[0] !== undefined
-        ? remainder[0]
-        : { kind: "any-of", expressions: remainder };
+      remainder.length === 1 && remainder[0] !== undefined ? remainder[0] : { kind: "any-of", expressions: remainder };
     const restSql = compileReverseExpressionQuery(
       ctx.model,
       ctx.builder,

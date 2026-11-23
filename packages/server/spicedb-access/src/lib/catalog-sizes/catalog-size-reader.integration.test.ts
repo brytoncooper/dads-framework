@@ -12,10 +12,7 @@ import { z } from "zod";
 
 import { resource } from "@dads-framework/access";
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import {
-  startUnmigratedTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startUnmigratedTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { auditCatalogSizes } from "./audit-catalog-sizes.job.js";
 import { PostgresCatalogSizeReader } from "./catalog-size-reader.js";
@@ -38,15 +35,9 @@ describe("PostgresCatalogSizeReader (integration)", () => {
   beforeAll(async () => {
     postgres = await startUnmigratedTestPostgres({ attributed: false });
     db = drizzle(postgres.pool);
-    await db.execute(
-      sql`CREATE TABLE size_audit_machines (id text PRIMARY KEY)`,
-    );
-    await db.execute(
-      sql`CREATE TABLE size_audit_recipes (id text PRIMARY KEY)`,
-    );
-    await db.execute(
-      sql`INSERT INTO size_audit_machines SELECT 'm-' || n FROM generate_series(1, 1200) AS n`,
-    );
+    await db.execute(sql`CREATE TABLE size_audit_machines (id text PRIMARY KEY)`);
+    await db.execute(sql`CREATE TABLE size_audit_recipes (id text PRIMARY KEY)`);
+    await db.execute(sql`INSERT INTO size_audit_machines SELECT 'm-' || n FROM generate_series(1, 1200) AS n`);
     await db.execute(sql`ANALYZE size_audit_machines`);
   }, 120_000);
 
@@ -67,10 +58,7 @@ describe("PostgresCatalogSizeReader (integration)", () => {
 
   it("names the seeded catalog past the mark", async () => {
     const oversized = await auditCatalogSizes({
-      catalogTables: [
-        catalogTable(Machine, machines),
-        catalogTable(Recipe, recipes),
-      ],
+      catalogTables: [catalogTable(Machine, machines), catalogTable(Recipe, recipes)],
       reader: new PostgresCatalogSizeReader(db),
       warnRows: 1_000,
       log: silent,

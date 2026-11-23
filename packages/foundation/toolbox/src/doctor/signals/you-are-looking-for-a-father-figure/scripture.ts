@@ -21,16 +21,8 @@
  */
 
 import type { DoctorContext, DoctorPackage } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  readCommitLog,
-  requireGitWorkspace,
-  type GitCommit,
-} from "../scanners/git-history.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { readCommitLog, requireGitWorkspace, type GitCommit } from "../scanners/git-history.js";
 
 const INVARIANTS_FILE = "INVARIANTS.md";
 const CONCENTRATION_PERCENT = 80;
@@ -40,10 +32,7 @@ const WHOLE = 100;
 type AuthorCounts = ReadonlyMap<string, number>;
 
 /** The longest declared root that contains the path, so nesting resolves. */
-function packageOwningPath(
-  path: string,
-  roots: readonly string[],
-): string | undefined {
+function packageOwningPath(path: string, roots: readonly string[]): string | undefined {
   let owner: string | undefined;
   for (const root of roots) {
     if (!path.startsWith(`${root}/`)) continue;
@@ -67,10 +56,7 @@ function countAuthorsPerPackage(
     );
     for (const root of touched) {
       const authors = counted.get(root) ?? new Map<string, number>();
-      authors.set(
-        commit.authorEmail,
-        (authors.get(commit.authorEmail) ?? 0) + 1,
-      );
+      authors.set(commit.authorEmail, (authors.get(commit.authorEmail) ?? 0) + 1);
       counted.set(root, authors);
     }
   }
@@ -95,15 +81,11 @@ function leadingAuthor(authors: AuthorCounts): LeadingAuthor | undefined {
   return leader === undefined ? undefined : { ...leader, total };
 }
 
-function readOnePackage(
-  declared: DoctorPackage,
-  authors: AuthorCounts,
-): SignalReading | undefined {
+function readOnePackage(declared: DoctorPackage, authors: AuthorCounts): SignalReading | undefined {
   const leader = leadingAuthor(authors);
   if (leader === undefined) return undefined;
   const share = Math.round((leader.commits * WHOLE) / leader.total);
-  const concentrated =
-    leader.total >= MINIMUM_COMMITS && share > CONCENTRATION_PERCENT;
+  const concentrated = leader.total >= MINIMUM_COMMITS && share > CONCENTRATION_PERCENT;
   return {
     value: concentrated ? share : 0,
     evidence: [
@@ -119,18 +101,13 @@ function measureAuthorConcentration(context: DoctorContext): SignalReadings {
   requireGitWorkspace(context.root);
   const measured = context
     .packages()
-    .filter(
-      (declared) =>
-        declared.root.length > 0 &&
-        !context.exists(`${declared.root}/${INVARIANTS_FILE}`),
-    );
+    .filter((declared) => declared.root.length > 0 && !context.exists(`${declared.root}/${INVARIANTS_FILE}`));
   const roots = measured.map((declared) => declared.root);
   const counted = countAuthorsPerPackage(readCommitLog(context.root), roots);
   const readings = new Map<string, SignalReading>();
   for (const declared of measured) {
     const authors = counted.get(declared.root);
-    const reading =
-      authors === undefined ? undefined : readOnePackage(declared, authors);
+    const reading = authors === undefined ? undefined : readOnePackage(declared, authors);
     if (reading !== undefined) readings.set(declared.name, reading);
   }
   return readings;

@@ -24,13 +24,9 @@ import type {
 import type { EntityHandle } from "./entity-handle.js";
 import type { ScopeBindings } from "./scope-bindings.js";
 
-export type DslInheritOption<ParentPerms extends string> =
-  "all" | "none" | readonly ParentPerms[];
+export type DslInheritOption<ParentPerms extends string> = "all" | "none" | readonly ParentPerms[];
 
-export type ResolvedInheritedPerms<
-  ParentPerms extends string,
-  Inherit,
-> = Inherit extends "all"
+export type ResolvedInheritedPerms<ParentPerms extends string, Inherit> = Inherit extends "all"
   ? ParentPerms
   : Inherit extends "none"
     ? never
@@ -46,9 +42,7 @@ export type DslCanContext<
   SelfWire extends string = never,
   Recursive extends boolean = false,
 > = {
-  readonly [K in keyof RolesSpec & string]: DslRoleRef<
-    TargetPermsOfHolder<RolesSpec[K]>
-  >;
+  readonly [K in keyof RolesSpec & string]: DslRoleRef<TargetPermsOfHolder<RolesSpec[K]>>;
 } & ([ParentWire] extends [never]
   ? unknown
   : {
@@ -78,9 +72,7 @@ export type EffectiveRoleSubjects<
   ([ParentWire] extends [never]
     ? unknown
     : {
-        readonly [
-          K in ParentRoleName<ParentWire>
-        ]: ResourceSubjectRef<ParentWire>;
+        readonly [K in ParentRoleName<ParentWire>]: ResourceSubjectRef<ParentWire>;
       }) &
   (Parents extends readonly []
     ? unknown
@@ -108,19 +100,12 @@ export type DslResourceInstance<
     },
     (keyof RoleSubjects & string) | Perms
   > & {
-    readonly [R in keyof RoleSubjects & string]: DslRoleSlot<
-      WireName,
-      R,
-      RoleSubjects[R]
-    >;
+    readonly [R in keyof RoleSubjects & string]: DslRoleSlot<WireName, R, RoleSubjects[R]>;
   } & {
-    readonly [
-      P in Exclude<Perms, keyof RoleSubjects & string>
-    ]: DslPermissionTarget<WireName, P>;
+    readonly [P in Exclude<Perms, keyof RoleSubjects & string>]: DslPermissionTarget<WireName, P>;
   };
 
-export type InlineChildPermissionExpr =
-  DslPermissionExpr | undefined | readonly (DslPermissionExpr | undefined)[];
+export type InlineChildPermissionExpr = DslPermissionExpr | undefined | readonly (DslPermissionExpr | undefined)[];
 
 export type AnyDslChildSpec = {
   readonly id?: z.ZodType<string>;
@@ -145,9 +130,7 @@ export type ContextualInlineChildSpec<ParentPerms extends string> = {
   ) => Record<string, InlineChildPermissionExpr>;
   readonly granting?: DslGrantingSpec;
   readonly catalogOnly?: readonly CatalogOnlyCapability[];
-  readonly children?: Readonly<
-    Record<string, ContextualInlineChildSpec<string>>
-  >;
+  readonly children?: Readonly<Record<string, ContextualInlineChildSpec<string>>>;
 };
 
 export type DslChildSpec<
@@ -165,26 +148,16 @@ export type DslChildSpec<
   readonly recursive?: Recursive;
   readonly roles?: RolesSpec;
   readonly can?: (
-    context: DslCanContext<
-      RolesSpec,
-      ParentWire,
-      ParentPerms,
-      readonly [],
-      ChildWire,
-      Recursive
-    >,
+    context: DslCanContext<RolesSpec, ParentWire, ParentPerms, readonly [], ChildWire, Recursive>,
   ) => CanResult;
-  readonly granting?: DslGrantingSpec<
-    ResolvedInheritedPerms<ParentPerms, Inherit> | (keyof CanResult & string)
-  >;
+  readonly granting?: DslGrantingSpec<ResolvedInheritedPerms<ParentPerms, Inherit> | (keyof CanResult & string)>;
   readonly catalogOnly?: readonly CatalogOnlyCapability[];
   readonly children?: Children &
     Readonly<
       Record<
         string,
         ContextualInlineChildSpec<
-          | ResolvedInheritedPerms<ParentPerms, NoInfer<Inherit>>
-          | (keyof NoInfer<CanResult> & string)
+          ResolvedInheritedPerms<ParentPerms, NoInfer<Inherit>> | (keyof NoInfer<CanResult> & string)
         >
       >
     >;
@@ -208,9 +181,7 @@ type ExtractCanKeysFromSpec<Spec> = Spec extends {
   ? keyof R & string
   : never;
 
-type ExtractInheritFromSpec<Spec> = Spec extends { readonly inherit: infer I }
-  ? I
-  : "none";
+type ExtractInheritFromSpec<Spec> = Spec extends { readonly inherit: infer I } ? I : "none";
 
 type ExtractChildrenFromSpec<Spec> = Spec extends {
   readonly children: infer C extends Readonly<Record<string, AnyDslChildSpec>>;
@@ -218,36 +189,23 @@ type ExtractChildrenFromSpec<Spec> = Spec extends {
   ? C
   : Record<never, never>;
 
-export type InvalidInheritKeys<
-  ParentPerms extends string,
-  Inherit,
-> = Inherit extends "all" | "none"
+export type InvalidInheritKeys<ParentPerms extends string, Inherit> = Inherit extends "all" | "none"
   ? never
   : Inherit extends readonly (infer K extends string)[]
     ? Exclude<K, ParentPerms>
     : never;
 
-export type InvalidInlineChildrenError<ParentPerms extends string, Children> = [
-  keyof Children & string,
-] extends [never]
+export type InvalidInlineChildrenError<ParentPerms extends string, Children> = [keyof Children & string] extends [never]
   ? never
   : string extends keyof Children
     ? never
     : {
         readonly [ChildWire in keyof Children & string]:
-          | InvalidInheritKeys<
-              ParentPerms,
-              ExtractInheritFromSpec<Children[ChildWire]>
-            >
-          | ([
-              keyof ExtractChildrenFromSpec<Children[ChildWire]> & string,
-            ] extends [never]
+          | InvalidInheritKeys<ParentPerms, ExtractInheritFromSpec<Children[ChildWire]>>
+          | ([keyof ExtractChildrenFromSpec<Children[ChildWire]> & string] extends [never]
               ? never
               : InvalidInlineChildrenError<
-                  | ResolvedInheritedPerms<
-                      ParentPerms,
-                      ExtractInheritFromSpec<Children[ChildWire]>
-                    >
+                  | ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Children[ChildWire]>>
                   | ExtractCanKeysFromSpec<Children[ChildWire]>,
                   ExtractChildrenFromSpec<Children[ChildWire]>
                 >);
@@ -260,28 +218,18 @@ export type MaterializeChildResource<
   Spec,
 > = DslResource<
   ChildWire,
-  EffectiveRoleSubjects<
-    ChildWire,
-    ExtractRolesFromSpec<Spec>,
-    ParentWire,
-    readonly [],
-    ExtractRecursiveFromSpec<Spec>
-  >,
-  | ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Spec>>
-  | ExtractCanKeysFromSpec<Spec>,
+  EffectiveRoleSubjects<ChildWire, ExtractRolesFromSpec<Spec>, ParentWire, readonly [], ExtractRecursiveFromSpec<Spec>>,
+  ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Spec>> | ExtractCanKeysFromSpec<Spec>,
   MaterializeChildrenMap<
     ChildWire,
-    | ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Spec>>
-    | ExtractCanKeysFromSpec<Spec>,
+    ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Spec>> | ExtractCanKeysFromSpec<Spec>,
     ExtractChildrenFromSpec<Spec>
   >
 >;
 
-export type MaterializeChildrenMap<
-  ParentWire extends string,
-  ParentPerms extends string,
-  Children,
-> = [keyof Children & string] extends [never]
+export type MaterializeChildrenMap<ParentWire extends string, ParentPerms extends string, Children> = [
+  keyof Children & string,
+] extends [never]
   ? Record<never, never>
   : {
       readonly [ChildWire in keyof Children & string]: MaterializeChildResource<
@@ -298,17 +246,9 @@ export type ValidatedResourceResult<
   Perms extends string,
   Children,
 > = [InvalidInlineChildrenError<Perms, Children>] extends [never]
-  ? DslResource<
-      WireName,
-      RoleSubjects,
-      Perms,
-      MaterializeChildrenMap<WireName, Perms, Children>
-    >
+  ? DslResource<WireName, RoleSubjects, Perms, MaterializeChildrenMap<WireName, Perms, Children>>
   : {
-      readonly __dslInvalidInheritPermission: InvalidInlineChildrenError<
-        Perms,
-        Children
-      >;
+      readonly __dslInvalidInheritPermission: InvalidInlineChildrenError<Perms, Children>;
     };
 
 export type DslResource<
@@ -323,11 +263,7 @@ export type DslResource<
   readonly handle: EntityHandle<WireName>;
   readonly entity: EntityHandle;
   readonly roles: {
-    readonly [R in keyof RoleSubjects & string]: DslRoleToken<
-      WireName,
-      R,
-      RoleSubjects[R]
-    >;
+    readonly [R in keyof RoleSubjects & string]: DslRoleToken<WireName, R, RoleSubjects[R]>;
   };
   readonly can: {
     readonly [P in Perms]: DslPermissionToken<WireName, P>;
@@ -339,34 +275,15 @@ export type DslResource<
     const ChildWire extends string,
     const Inherit extends DslInheritOption<Perms>,
     const RolesSpec extends DslRolesSpec = Record<never, never>,
-    const CanResult extends Record<string, DslPermissionExpr> = Record<
-      never,
-      never
-    >,
+    const CanResult extends Record<string, DslPermissionExpr> = Record<never, never>,
     const Recursive extends boolean = false,
-    const GrandChildren extends Readonly<Record<string, AnyDslChildSpec>> =
-      Record<never, never>,
+    const GrandChildren extends Readonly<Record<string, AnyDslChildSpec>> = Record<never, never>,
   >(
     childWireName: ChildWire,
-    childSpec: DslChildSpec<
-      WireName,
-      Perms,
-      ChildWire,
-      Inherit,
-      RolesSpec,
-      CanResult,
-      Recursive,
-      GrandChildren
-    >,
+    childSpec: DslChildSpec<WireName, Perms, ChildWire, Inherit, RolesSpec, CanResult, Recursive, GrandChildren>,
   ) => ValidatedResourceResult<
     ChildWire,
-    EffectiveRoleSubjects<
-      ChildWire,
-      RolesSpec,
-      WireName,
-      readonly [],
-      Recursive
-    >,
+    EffectiveRoleSubjects<ChildWire, RolesSpec, WireName, readonly [], Recursive>,
     ResolvedInheritedPerms<Perms, Inherit> | (keyof CanResult & string),
     GrandChildren
   >;

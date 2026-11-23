@@ -1,8 +1,4 @@
-import {
-  emitTypeScriptFromZed,
-  parseZed,
-  type AccessIrDefinition,
-} from "@dads-framework/access";
+import { emitTypeScriptFromZed, parseZed, type AccessIrDefinition } from "@dads-framework/access";
 
 import {
   assertNamespace,
@@ -65,14 +61,8 @@ export async function migrateSpiceDbToPostgres(
     options.relationshipTable ?? DEFAULT_RELATIONSHIP_TABLE,
     "relationshipTable",
   );
-  const batchSize = assertPositiveInt(
-    options.batchSize ?? DEFAULT_BATCH_SIZE,
-    "batchSize",
-  );
-  const exportPageSize = assertPositiveInt(
-    options.exportPageSize ?? DEFAULT_PAGE_SIZE,
-    "exportPageSize",
-  );
+  const batchSize = assertPositiveInt(options.batchSize ?? DEFAULT_BATCH_SIZE, "batchSize");
+  const exportPageSize = assertPositiveInt(options.exportPageSize ?? DEFAULT_PAGE_SIZE, "exportPageSize");
 
   const source = isAuthzedV1ClientLike(options.spiceDb)
     ? createAuthzedMigrationSource(options.spiceDb)
@@ -90,11 +80,7 @@ export async function migrateSpiceDbToPostgres(
 
   // Step 2: Ensure Postgres relationship schema and expiration column exist.
   if (options.skipSchemaSetup !== true) {
-    await ensurePostgresRelationshipSchema(
-      options.postgres,
-      relationshipTable,
-      options.schemaSql,
-    );
+    await ensurePostgresRelationshipSchema(options.postgres, relationshipTable, options.schemaSql);
   }
 
   // Step 3: Stream tuples from SpiceDB and upsert in idempotent batches.
@@ -127,8 +113,7 @@ type StreamUpsertInput = {
   readonly batchSize: number;
   readonly exportPageSize: number;
   readonly zedToken: string | undefined;
-  readonly onBatch:
-    ((batch: readonly SpiceDbExportedTuple[]) => void) | undefined;
+  readonly onBatch: ((batch: readonly SpiceDbExportedTuple[]) => void) | undefined;
 };
 
 async function streamAndUpsertTuples(
@@ -161,17 +146,9 @@ async function streamAndUpsertTuples(
   return { exportedCount, writtenCount };
 }
 
-async function flushTupleBatch(
-  input: StreamUpsertInput,
-  batch: readonly SpiceDbExportedTuple[],
-): Promise<number> {
+async function flushTupleBatch(input: StreamUpsertInput, batch: readonly SpiceDbExportedTuple[]): Promise<number> {
   const rows = deduplicateTuples(batch);
-  await upsertPostgresTupleBatch(
-    input.postgres,
-    input.relationshipTable,
-    input.namespace,
-    rows,
-  );
+  await upsertPostgresTupleBatch(input.postgres, input.relationshipTable, input.namespace, rows);
   input.onBatch?.(rows);
   return rows.length;
 }
@@ -211,9 +188,7 @@ async function upsertPostgresTupleBatch(
   );
 }
 
-function deduplicateTuples(
-  tuples: readonly SpiceDbExportedTuple[],
-): readonly SpiceDbExportedTuple[] {
+function deduplicateTuples(tuples: readonly SpiceDbExportedTuple[]): readonly SpiceDbExportedTuple[] {
   const byKey = new Map<string, SpiceDbExportedTuple>();
   for (const tuple of tuples) {
     const isWildcard = tuple.subject.id === "*";

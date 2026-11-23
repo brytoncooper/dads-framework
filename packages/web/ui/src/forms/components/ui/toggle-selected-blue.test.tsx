@@ -14,9 +14,7 @@ afterEach(cleanup);
 
 function expectPrimaryBlueSelectedLook(element: HTMLElement) {
   expect(element.className).toContain("data-[state=on]:bg-primary");
-  expect(element.className).toContain(
-    "data-[state=on]:text-primary-foreground",
-  );
+  expect(element.className).toContain("data-[state=on]:text-primary-foreground");
   expect(element.className).not.toContain("bg-accent");
 }
 

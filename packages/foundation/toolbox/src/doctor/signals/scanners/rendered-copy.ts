@@ -32,25 +32,10 @@ const VISIBLE_PROPS = new Set([
   "title",
 ]);
 
-const COPY_PROPERTIES = new Set([
-  "description",
-  "heading",
-  "label",
-  "message",
-  "title",
-]);
+const COPY_PROPERTIES = new Set(["description", "heading", "label", "message", "title"]);
 
 const TOAST = "toast";
-const TOAST_METHODS = new Set([
-  "custom",
-  "error",
-  "info",
-  "loading",
-  "message",
-  "success",
-  "warn",
-  "warning",
-]);
+const TOAST_METHODS = new Set(["custom", "error", "info", "loading", "message", "success", "warn", "warning"]);
 
 const BRANCH_OPERATORS = new Set<ts.SyntaxKind>([
   ts.SyntaxKind.AmpersandAmpersandToken,
@@ -79,16 +64,10 @@ function literalText(node: ts.Node | undefined): string | undefined {
     return node.text;
   }
   if (!ts.isTemplateExpression(node)) return undefined;
-  return [
-    node.head.text,
-    ...node.templateSpans.map((span) => span.literal.text),
-  ].join("");
+  return [node.head.text, ...node.templateSpans.map((span) => span.literal.text)].join("");
 }
 
-function branchedSpans(
-  node: ts.Expression | undefined,
-  seam: string,
-): readonly CopySpan[] {
+function branchedSpans(node: ts.Expression | undefined, seam: string): readonly CopySpan[] {
   if (node === undefined) return [];
   const text = literalText(node);
   if (text !== undefined) return [{ node, text, seam }];
@@ -96,17 +75,11 @@ function branchedSpans(
     return branchedSpans(node.expression, seam);
   }
   if (ts.isConditionalExpression(node)) {
-    return [
-      ...branchedSpans(node.whenTrue, seam),
-      ...branchedSpans(node.whenFalse, seam),
-    ];
+    return [...branchedSpans(node.whenTrue, seam), ...branchedSpans(node.whenFalse, seam)];
   }
   if (!ts.isBinaryExpression(node)) return [];
   if (!BRANCH_OPERATORS.has(node.operatorToken.kind)) return [];
-  return [
-    ...branchedSpans(node.left, seam),
-    ...branchedSpans(node.right, seam),
-  ];
+  return [...branchedSpans(node.left, seam), ...branchedSpans(node.right, seam)];
 }
 
 function jsxAttributeSpans(node: ts.JsxAttribute): readonly CopySpan[] {
@@ -115,8 +88,7 @@ function jsxAttributeSpans(node: ts.JsxAttribute): readonly CopySpan[] {
   const value = node.initializer;
   const seam = `${name} prop`;
   if (value === undefined) return [];
-  if (ts.isStringLiteral(value))
-    return [{ node: value, text: value.text, seam }];
+  if (ts.isStringLiteral(value)) return [{ node: value, text: value.text, seam }];
   return ts.isJsxExpression(value) ? branchedSpans(value.expression, seam) : [];
 }
 
@@ -146,10 +118,7 @@ function isToastCall(callee: ts.Expression): boolean {
 }
 
 function propertySpans(node: ts.PropertyAssignment): readonly CopySpan[] {
-  const name =
-    ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)
-      ? node.name.text
-      : undefined;
+  const name = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) ? node.name.text : undefined;
   const text = literalText(node.initializer);
   if (name === undefined || text === undefined) return [];
   if (!COPY_PROPERTIES.has(name)) return [];
@@ -161,12 +130,9 @@ function codeSpans(node: ts.Node): readonly CopySpan[] {
   if (ts.isCallExpression(node) && isToastCall(node.expression)) {
     const first = node.arguments[0];
     const text = literalText(first);
-    return first === undefined || text === undefined
-      ? []
-      : [{ node: first, text, seam: "toast" }];
+    return first === undefined || text === undefined ? [] : [{ node: first, text, seam: "toast" }];
   }
-  if (ts.isReturnStatement(node))
-    return branchedSpans(node.expression, "return");
+  if (ts.isReturnStatement(node)) return branchedSpans(node.expression, "return");
   if (!ts.isArrowFunction(node) || ts.isBlock(node.body)) return [];
   return branchedSpans(node.body, "return");
 }

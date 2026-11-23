@@ -24,56 +24,35 @@ function createSite(root) {
   const byPath = new Map(pages.map((page) => [page.path, page]));
   for (const page of pages) {
     files.set(`source/${page.path}`, page.sourceMarkdown ?? page.markdown);
-    files.set(
-      `${page.slug}.html`,
-      renderPage({ root, page, pages, byPath, files }),
-    );
+    files.set(`${page.slug}.html`, renderPage({ root, page, pages, byPath, files }));
   }
   const index = pages.map(({ slug, title, markdown }) => ({
     path: `${slug}.html`,
     title,
     text: markdown,
   }));
-  files.set(
-    "search-index.js",
-    `globalThis.dadsDocsSearch = ${JSON.stringify(index)};\n`,
-  );
+  files.set("search-index.js", `globalThis.dadsDocsSearch = ${JSON.stringify(index)};\n`);
   files.set("llms.txt", agentIndex(pages));
   for (const asset of ASSETS) {
-    files.set(
-      `assets/${asset}`,
-      readFileSync(join(root, "scripts/docs/assets", asset)),
-    );
+    files.set(`assets/${asset}`, readFileSync(join(root, "scripts/docs/assets", asset)));
   }
   return { pages, files };
 }
 
 function agentIndex(pages) {
-  const lines = [
-    "# Dads documentation",
-    "",
-    "> Guides and API reports for the current workspace.",
-  ];
+  const lines = ["# Dads documentation", "", "> Guides and API reports for the current workspace."];
   for (const [section, entries] of Map.groupBy(pages, (page) => page.section)) {
     lines.push("", `## ${section}`, "");
-    lines.push(
-      ...entries.map(
-        (page) => `- [${page.title}](source/${page.path}) — ${page.owner}`,
-      ),
-    );
+    lines.push(...entries.map((page) => `- [${page.title}](source/${page.path}) — ${page.owner}`));
   }
   return `${lines.join("\n")}\n`;
 }
 
 export function checkDocsSite(root) {
-  execFileSync(
-    process.execPath,
-    ["scripts/build/sync-kit-starter.mjs", "--check"],
-    {
-      cwd: root,
-      stdio: "inherit",
-    },
-  );
+  execFileSync(process.execPath, ["scripts/build/sync-kit-starter.mjs", "--check"], {
+    cwd: root,
+    stdio: "inherit",
+  });
   const { pages } = createSite(root);
   const tests = checkExamples(root, pages);
   const readmes = checkPackageExamples(root);
@@ -92,13 +71,9 @@ function writeDocsSite(root) {
   return `Built ${String(pages.length)} pages at ${join(output, "index.html")}\n`;
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const command = process.argv[2];
   if (command === "--check") process.stdout.write(checkDocsSite(rootDirectory));
-  else if (command === undefined)
-    process.stdout.write(writeDocsSite(rootDirectory));
+  else if (command === undefined) process.stdout.write(writeDocsSite(rootDirectory));
   else throw new Error("Usage: node scripts/docs/site-build.mjs [--check]");
 }

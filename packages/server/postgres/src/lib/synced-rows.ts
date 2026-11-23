@@ -4,9 +4,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { DrizzleHandle } from "../drizzle.js";
 
 /** The transaction a page of synced rows is written in; the caller owns its commit. */
-export type SyncedRowTransaction = Parameters<
-  Parameters<DrizzleHandle["transaction"]>[0]
->[0];
+export type SyncedRowTransaction = Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
 
 /**
  * One row of a copy kept in step with another database, as that database
@@ -40,8 +38,7 @@ export type SyncedRowChange<Table extends string> =
 export type SyncedRowOutcome<Table extends string> = {
   readonly table: Table;
   readonly id: string;
-  readonly outcome:
-    "applied" | "already_current" | "missing_parent" | "refused";
+  readonly outcome: "applied" | "already_current" | "missing_parent" | "refused";
   readonly code: string | null;
 };
 
@@ -63,9 +60,7 @@ export type SyncedRowWriter<Table extends string, Tx = SyncedRowTransaction> = {
   upsert(
     tx: Tx,
     change: Extract<SyncedRowChange<Table>, { op: "upsert" }>,
-  ): Promise<
-    boolean | typeof SYNCED_VALUE_UNKNOWN | typeof SYNCED_ROW_IMMUTABLE_DIFFERS
-  >;
+  ): Promise<boolean | typeof SYNCED_VALUE_UNKNOWN | typeof SYNCED_ROW_IMMUTABLE_DIFFERS>;
   delete(tx: Tx, table: Table, id: string): Promise<boolean>;
   /**
    * Moves aside the other stored rows holding a unique value this upsert
@@ -74,10 +69,7 @@ export type SyncedRowWriter<Table extends string, Tx = SyncedRowTransaction> = {
    * row still applies. Answers how many it moved. A table whose unique
    * values cannot trade places leaves it out.
    */
-  moveKeyHoldersAside?(
-    tx: Tx,
-    change: Extract<SyncedRowChange<Table>, { op: "upsert" }>,
-  ): Promise<number>;
+  moveKeyHoldersAside?(tx: Tx, change: Extract<SyncedRowChange<Table>, { op: "upsert" }>): Promise<number>;
 };
 
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -118,10 +110,7 @@ async function applyOne<Table extends string>(
   change: SyncedRowChange<Table>,
   writer: SyncedRowWriter<Table>,
 ): Promise<SyncedRowOutcome<Table>> {
-  const outcome = (
-    result: SyncedRowOutcome<Table>["outcome"],
-    code: string | null,
-  ): SyncedRowOutcome<Table> => ({
+  const outcome = (result: SyncedRowOutcome<Table>["outcome"], code: string | null): SyncedRowOutcome<Table> => ({
     table: change.table,
     id: change.id,
     outcome: result,
@@ -129,21 +118,15 @@ async function applyOne<Table extends string>(
   });
   try {
     const written = await tx.transaction((savepoint) =>
-      change.op === "delete"
-        ? writer.delete(savepoint, change.table, change.id)
-        : writer.upsert(savepoint, change),
+      change.op === "delete" ? writer.delete(savepoint, change.table, change.id) : writer.upsert(savepoint, change),
     );
-    if (written === SYNCED_VALUE_UNKNOWN)
-      return outcome("refused", "SYNC_VALUE_UNKNOWN");
-    if (written === SYNCED_ROW_IMMUTABLE_DIFFERS)
-      return outcome("refused", "SYNC_IMMUTABLE_ROW_DIFFERS");
+    if (written === SYNCED_VALUE_UNKNOWN) return outcome("refused", "SYNC_VALUE_UNKNOWN");
+    if (written === SYNCED_ROW_IMMUTABLE_DIFFERS) return outcome("refused", "SYNC_IMMUTABLE_ROW_DIFFERS");
     return outcome(written ? "applied" : "already_current", null);
   } catch (error) {
     const code = sqlStateOf(error);
     if (code === FOREIGN_KEY_VIOLATION) {
-      return change.op === "upsert"
-        ? outcome("missing_parent", null)
-        : outcome("refused", "SYNC_ROW_HAS_CHILDREN");
+      return change.op === "upsert" ? outcome("missing_parent", null) : outcome("refused", "SYNC_ROW_HAS_CHILDREN");
     }
     if (code === UNIQUE_VIOLATION && change.op === "upsert") {
       const moved = await afterMovingAside(tx, change, writer);
@@ -180,16 +163,14 @@ async function afterMovingAside<Table extends string>(
       const moved = await writer.moveKeyHoldersAside?.(savepoint, change);
       // Nothing written: roll the move back with the savepoint.
       if (moved === undefined || moved === 0) throw new NotWrittenAfterMove();
-      if ((await writer.upsert(savepoint, change)) !== true)
-        throw new NotWrittenAfterMove();
+      if ((await writer.upsert(savepoint, change)) !== true) throw new NotWrittenAfterMove();
     });
     return { outcome: "applied", code: null };
   } catch (error) {
     if (error instanceof NotWrittenAfterMove) return keyTaken;
     const code = sqlStateOf(error);
     if (code === UNIQUE_VIOLATION) return keyTaken;
-    if (code === FOREIGN_KEY_VIOLATION)
-      return { outcome: "missing_parent", code: null };
+    if (code === FOREIGN_KEY_VIOLATION) return { outcome: "missing_parent", code: null };
     throw error;
   }
 }
@@ -204,14 +185,10 @@ function writeOrder<Table extends string>(
 ): SyncedRowChange<Table>[] {
   const ordered: SyncedRowChange<Table>[] = [];
   for (const table of tablesParentsFirst) {
-    ordered.push(
-      ...changes.filter((c) => c.op === "upsert" && c.table === table),
-    );
+    ordered.push(...changes.filter((c) => c.op === "upsert" && c.table === table));
   }
   for (const table of [...tablesParentsFirst].reverse()) {
-    ordered.push(
-      ...changes.filter((c) => c.op === "delete" && c.table === table),
-    );
+    ordered.push(...changes.filter((c) => c.op === "delete" && c.table === table));
   }
   return ordered;
 }
@@ -246,9 +223,7 @@ export function excludedAll<Name extends string>(
   columns: Readonly<Record<Name, AnyPgColumn>>,
 ): Partial<Record<Name, SQL>> {
   const set: Partial<Record<Name, SQL>> = {};
-  for (const name of Object.keys(columns).filter((key): key is Name =>
-    Object.hasOwn(columns, key),
-  )) {
+  for (const name of Object.keys(columns).filter((key): key is Name => Object.hasOwn(columns, key))) {
     set[name] = excluded(columns[name]);
   }
   return set;

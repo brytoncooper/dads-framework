@@ -51,12 +51,7 @@ the surrounding definitions and host wiring.
 
 ```ts
 import { compileAccess } from "@dads-framework/access";
-import {
-  composeApp,
-  definePlugin,
-  defineService,
-  providePlugin,
-} from "@dads-framework/core/plugin";
+import { composeApp, definePlugin, defineService, providePlugin } from "@dads-framework/core/plugin";
 
 type Clock = { readonly now: () => Date };
 const clockService = defineService("clock").ofType<Clock>();
@@ -65,9 +60,7 @@ const notes = definePlugin({
   name: "notes",
   requires: [clockService],
   contributes: {
-    migrations: [
-      { directory: fileURLToPath(new URL("./migrations/", import.meta.url)) },
-    ],
+    migrations: [{ directory: fileURLToPath(new URL("./migrations/", import.meta.url)) }],
     access: [noteResource], // the value resource() returned
     flags: [sharingFlag], // a feature-flag definition
     audit: { untrackedTables: ["notes_read_marks"] },

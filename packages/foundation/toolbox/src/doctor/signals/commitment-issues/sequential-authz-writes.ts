@@ -22,12 +22,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   containsInScope,
   evidenceAt,
@@ -47,9 +42,7 @@ const OUTBOX_SEAM = /\bEnqueueAccessChanges\b|\baccessChangesToWrite\b/;
 
 function callsMethod(node: ts.Node, method: string): boolean {
   return (
-    ts.isCallExpression(node) &&
-    ts.isPropertyAccessExpression(node.expression) &&
-    node.expression.name.text === method
+    ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === method
   );
 }
 
@@ -118,7 +111,6 @@ export const sequentialAuthzWritesSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You created the row. You did not write the ownership tuple. You said labels make you uncomfortable.",
+  sentence: "You created the row. You did not write the ownership tuple. You said labels make you uncomfortable.",
   run: (context) => Promise.resolve(countTwoStepWrites(context)),
 };

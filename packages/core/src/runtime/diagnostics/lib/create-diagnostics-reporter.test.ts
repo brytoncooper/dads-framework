@@ -13,9 +13,7 @@ import { NoneDiagnosticsReporter } from "./none-diagnostics-reporter.js";
 
 describe("createDiagnosticsReporter", () => {
   it("builds the none driver without anything else", () => {
-    expect(createDiagnosticsReporter({ driver: "none" })).toBeInstanceOf(
-      NoneDiagnosticsReporter,
-    );
+    expect(createDiagnosticsReporter({ driver: "none" })).toBeInstanceOf(NoneDiagnosticsReporter);
   });
 
   it("builds the log driver with a logger", () => {
@@ -28,9 +26,7 @@ describe("createDiagnosticsReporter", () => {
   });
 
   it("refuses to boot a log driver with nowhere to write", () => {
-    expect(() => createDiagnosticsReporter({ driver: "log" })).toThrow(
-      /requires a logger/,
-    );
+    expect(() => createDiagnosticsReporter({ driver: "log" })).toThrow(/requires a logger/);
   });
 
   it("refuses to boot a sentry driver with nowhere to send", () => {

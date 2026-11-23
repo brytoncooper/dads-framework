@@ -19,10 +19,7 @@ import type { DiagnosticsReporter } from "@dads-framework/core/runtime/diagnosti
 import { requestWorkOf } from "@dads-framework/core/runtime/request-work";
 
 import { requestIdOf } from "../request-pipeline/request-id.js";
-import type {
-  AuthorizationWarningFaults,
-  RecordedWarningFault,
-} from "./authorization-warning-faults.js";
+import type { AuthorizationWarningFaults, RecordedWarningFault } from "./authorization-warning-faults.js";
 import type { RequestLogSink } from "./request-log-sink.js";
 import { requestOutcomeOf } from "./request-outcome.js";
 import { buildRequestRecord, type RequestRecord } from "./request-record.js";
@@ -89,25 +86,16 @@ export function captureRequestRecord(
     const routePattern = request.routeOptions.url;
     if (isQuiet(routePattern, options.quietPaths)) return;
     const warningFault = recordWarningFault(request, routePattern, options);
-    if (
-      warningFault === undefined &&
-      !isWorthRecording(request.method, reply.statusCode, sink)
-    ) {
+    if (warningFault === undefined && !isWorthRecording(request.method, reply.statusCode, sink)) {
       return;
     }
     sink.record(rowFor(request, reply, routePattern, options, warningFault));
   } catch (error) {
-    request.log.error(
-      { event: "request-log.capture-failed", err: error },
-      "request log capture failed",
-    );
+    request.log.error({ event: "request-log.capture-failed", err: error }, "request log capture failed");
   }
 }
 
-function isQuiet(
-  routePattern: string | undefined,
-  quietPaths: ReadonlySet<string>,
-): boolean {
+function isQuiet(routePattern: string | undefined, quietPaths: ReadonlySet<string>): boolean {
   return routePattern !== undefined && quietPaths.has(routePattern);
 }
 
@@ -126,11 +114,7 @@ function recordWarningFault(
   if (warning === undefined || options.warningFaults === undefined) {
     return undefined;
   }
-  const fault = options.warningFaults.recordable(
-    warning,
-    routePattern,
-    Date.now(),
-  );
+  const fault = options.warningFaults.recordable(warning, routePattern, Date.now());
   if (fault === undefined) return undefined;
   const requestId = requestIdOf(request);
   request.log.warn(
@@ -158,11 +142,7 @@ function recordWarningFault(
 }
 
 /** Everything that changed something, plus everything that went wrong. */
-function isWorthRecording(
-  method: string,
-  status: number,
-  sink: RequestLogSink,
-): boolean {
+function isWorthRecording(method: string, status: number, sink: RequestLogSink): boolean {
   if (sink.includeSuccessfulReads) return true;
   return !NOTHING_CHANGED_METHODS.has(method) || status >= 400;
 }

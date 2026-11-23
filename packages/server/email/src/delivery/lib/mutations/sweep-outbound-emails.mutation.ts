@@ -43,9 +43,7 @@ export class SweepOutboundEmails {
     const { store, log } = this.dependencies;
     const now = this.dependencies.clock.now();
 
-    const staleFailed = await store.failStaleClaims(
-      new Date(now.getTime() - STALE_CLAIM_WINDOW_MS),
-    );
+    const staleFailed = await store.failStaleClaims(new Date(now.getTime() - STALE_CLAIM_WINDOW_MS));
     const due = await store.listDue(now, SWEEP_BATCH_LIMIT);
     await this.dependencies.delivery.dispatch(due);
 

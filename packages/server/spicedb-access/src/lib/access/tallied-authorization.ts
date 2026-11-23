@@ -39,9 +39,7 @@ export class TalliedAuthorization extends Authorization {
     return chargeAuthorizationCheck(async () => this.#inner.check(query));
   }
 
-  override async checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  override async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     if (queries.length === 0) return [];
     const checkMany = this.#inner.checkMany?.bind(this.#inner);
     if (checkMany !== undefined) {
@@ -52,36 +50,24 @@ export class TalliedAuthorization extends Authorization {
     return decisions;
   }
 
-  override async checkEach(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  override async checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     if (queries.length === 0) return [];
     const checkEach = this.#inner.checkEach?.bind(this.#inner);
     if (checkEach !== undefined) {
       return chargeAuthorizationCheck(async () => checkEach(queries));
     }
-    return Promise.all(
-      queries.map((query) => checkOutcome(() => this.check(query))),
-    );
+    return Promise.all(queries.map((query) => checkOutcome(() => this.check(query))));
   }
 
-  override async lookupResources(
-    query: ResourceLookup,
-  ): Promise<readonly string[]> {
-    return chargeAuthorizationCheck(async () =>
-      this.#inner.lookupResources(query),
-    );
+  override async lookupResources(query: ResourceLookup): Promise<readonly string[]> {
+    return chargeAuthorizationCheck(async () => this.#inner.lookupResources(query));
   }
 
-  override async writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override async writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     return this.#inner.writeRelationships(writes);
   }
 
-  override async deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  override async deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     return this.#inner.deleteRelationships(filter);
   }
 
@@ -93,9 +79,7 @@ export class TalliedAuthorization extends Authorization {
     return this.#inner.relationshipExists(filter);
   }
 
-  override async listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  override async listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     return this.#inner.listDirectSubjects(query);
   }
 }

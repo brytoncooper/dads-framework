@@ -1,9 +1,6 @@
 import { deadlineInterceptor, v1 } from "@authzed/authzed-node";
 
-import {
-  resolveSpiceDbSecurityMode,
-  type SpiceDbSecurityMode,
-} from "./logic/spice-db-security.js";
+import { resolveSpiceDbSecurityMode, type SpiceDbSecurityMode } from "./logic/spice-db-security.js";
 
 type SpiceDbConnection = ReturnType<typeof v1.NewClient>;
 
@@ -22,18 +19,12 @@ export function connectSpiceDb(
   },
   relationshipWriteDeadlineMs: number,
 ): { readonly reads: SpiceDbConnection; readonly writes: SpiceDbConnection } {
-  const security = toClientSecurity(
-    resolveSpiceDbSecurityMode(options.endpoint, options.insecure),
-  );
+  const security = toClientSecurity(resolveSpiceDbSecurityMode(options.endpoint, options.insecure));
   return {
     reads: v1.NewClient(options.presharedKey, options.endpoint, security),
-    writes: v1.NewClient(
-      options.presharedKey,
-      options.endpoint,
-      security,
-      undefined,
-      { interceptors: [deadlineInterceptor(relationshipWriteDeadlineMs)] },
-    ),
+    writes: v1.NewClient(options.presharedKey, options.endpoint, security, undefined, {
+      interceptors: [deadlineInterceptor(relationshipWriteDeadlineMs)],
+    }),
   };
 }
 

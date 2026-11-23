@@ -15,40 +15,24 @@ import { shouldReportFailure } from "./should-report-failure.js";
 describe("shouldReportFailure", () => {
   it("ignores an expired session", () => {
     // Already handled end to end by returning the user to login.
-    expect(
-      shouldReportFailure(new UnauthorizedError("UNAUTHENTICATED", "no")),
-    ).toBe("ignore");
+    expect(shouldReportFailure(new UnauthorizedError("UNAUTHENTICATED", "no"))).toBe("ignore");
   });
 
   it("ignores every 4xx, because the API said no on purpose", () => {
-    expect(shouldReportFailure(new ApiError(404, "NOT_FOUND", "x"))).toBe(
-      "ignore",
-    );
-    expect(shouldReportFailure(new ApiError(403, "FORBIDDEN", "x"))).toBe(
-      "ignore",
-    );
-    expect(shouldReportFailure(new ApiError(409, "CONFLICT", "x"))).toBe(
-      "ignore",
-    );
-    expect(
-      shouldReportFailure(new ApiError(429, "TOO_MANY_REQUESTS", "x")),
-    ).toBe("ignore");
+    expect(shouldReportFailure(new ApiError(404, "NOT_FOUND", "x"))).toBe("ignore");
+    expect(shouldReportFailure(new ApiError(403, "FORBIDDEN", "x"))).toBe("ignore");
+    expect(shouldReportFailure(new ApiError(409, "CONFLICT", "x"))).toBe("ignore");
+    expect(shouldReportFailure(new ApiError(429, "TOO_MANY_REQUESTS", "x"))).toBe("ignore");
   });
 
   it("reports a 5xx, because that is the server failing", () => {
-    expect(shouldReportFailure(new ApiError(500, "INTERNAL_ERROR", "x"))).toBe(
-      "report",
-    );
-    expect(
-      shouldReportFailure(new ApiError(503, "SERVICE_UNAVAILABLE", "x")),
-    ).toBe("report");
+    expect(shouldReportFailure(new ApiError(500, "INTERNAL_ERROR", "x"))).toBe("report");
+    expect(shouldReportFailure(new ApiError(503, "SERVICE_UNAVAILABLE", "x"))).toBe("report");
   });
 
   it("keeps a network failure as context, not as an event", () => {
     // Kiosks and plant-local deployments are offline by design.
-    expect(shouldReportFailure(new NetworkError(new TypeError("x")))).toBe(
-      "breadcrumb",
-    );
+    expect(shouldReportFailure(new NetworkError(new TypeError("x")))).toBe("breadcrumb");
   });
 
   it("ignores an aborted request", () => {
@@ -58,9 +42,7 @@ describe("shouldReportFailure", () => {
   });
 
   it("reports everything else, including a thrown non-error", () => {
-    expect(
-      shouldReportFailure(new TypeError("undefined is not a function")),
-    ).toBe("report");
+    expect(shouldReportFailure(new TypeError("undefined is not a function"))).toBe("report");
     expect(shouldReportFailure("a thrown string")).toBe("report");
   });
 });

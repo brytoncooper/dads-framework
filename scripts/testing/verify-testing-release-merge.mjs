@@ -60,9 +60,7 @@ export function mergeSoundnessShards(documents, sealedCaseIds) {
 
 export function stableIds(values) {
   return Array.isArray(values)
-    ? [...new Set(values)].sort((left, right) =>
-        String(left).localeCompare(String(right)),
-      )
+    ? [...new Set(values)].sort((left, right) => String(left).localeCompare(String(right)))
     : [];
 }
 
@@ -72,10 +70,7 @@ export function sameIds(left, right) {
 
 function shardRecord({ path, evidence }, failures) {
   const label = `soundness shard ${path}`;
-  if (
-    evidence?.kind !== "dads-testing-soundness" ||
-    evidence?.schemaVersion !== 2
-  ) {
+  if (evidence?.kind !== "dads-testing-soundness" || evidence?.schemaVersion !== 2) {
     failures.push(`${label} is not schema version 2 soundness evidence`);
     return null;
   }
@@ -84,8 +79,7 @@ function shardRecord({ path, evidence }, failures) {
     return null;
   }
   const caseIds = (evidence.cases ?? []).map((testCase) => testCase?.id);
-  if (!sameIds(caseIds, evidence.shard.caseIds))
-    failures.push(`${label} ran cases its shard receipt does not declare`);
+  if (!sameIds(caseIds, evidence.shard.caseIds)) failures.push(`${label} ran cases its shard receipt does not declare`);
   return { path, evidence, shard: evidence.shard, caseIds };
 }
 
@@ -104,18 +98,13 @@ function isShardReceipt(shard) {
 
 function checkAgreement(shards, failures) {
   for (const field of AGREED_FIELDS) {
-    const values = new Set(
-      shards.map((shard) => JSON.stringify(field.of(shard.evidence) ?? null)),
-    );
-    if (values.size > 1)
-      failures.push(`soundness shards disagree on ${field.name}`);
+    const values = new Set(shards.map((shard) => JSON.stringify(field.of(shard.evidence) ?? null)));
+    if (values.size > 1) failures.push(`soundness shards disagree on ${field.name}`);
   }
   const counts = new Set(shards.map((shard) => shard.shard.count));
-  if (counts.size > 1)
-    failures.push("soundness shards disagree on the shard count");
+  if (counts.size > 1) failures.push("soundness shards disagree on the shard count");
   const indexes = shards.map((shard) => shard.shard.index);
-  if (new Set(indexes).size !== indexes.length)
-    failures.push("soundness shards repeat a shard index");
+  if (new Set(indexes).size !== indexes.length) failures.push("soundness shards repeat a shard index");
 }
 
 function checkCoverage(shards, sealedCaseIds, failures) {
@@ -127,24 +116,16 @@ function checkCoverage(shards, sealedCaseIds, failures) {
       executed.add(id);
     }
   }
-  if (repeated.length > 0)
-    failures.push(
-      `soundness shards ran the same case twice: ${stableIds(repeated).join(", ")}`,
-    );
+  if (repeated.length > 0) failures.push(`soundness shards ran the same case twice: ${stableIds(repeated).join(", ")}`);
   reportCoverageGaps(executed, sealedCaseIds, failures);
 }
 
 function reportCoverageGaps(executed, sealedCaseIds, failures) {
   const missing = sealedCaseIds.filter((id) => !executed.has(id));
-  if (missing.length > 0)
-    failures.push(
-      `soundness shards did not run corpus cases: ${missing.join(", ")}`,
-    );
+  if (missing.length > 0) failures.push(`soundness shards did not run corpus cases: ${missing.join(", ")}`);
   const unknown = [...executed].filter((id) => !sealedCaseIds.includes(id));
   if (unknown.length > 0)
-    failures.push(
-      `soundness shards ran cases outside the sealed corpus: ${stableIds(unknown).join(", ")}`,
-    );
+    failures.push(`soundness shards ran cases outside the sealed corpus: ${stableIds(unknown).join(", ")}`);
 }
 
 function mergedEvidence(shards) {
@@ -161,8 +142,7 @@ function mergedEvidence(shards) {
     cases: mergedCases(shards),
     summary: mergedSummary(shards),
   };
-  for (const field of MERGED_LISTS)
-    merged[field] = shards.flatMap((shard) => shard.evidence[field] ?? []);
+  for (const field of MERGED_LISTS) merged[field] = shards.flatMap((shard) => shard.evidence[field] ?? []);
   return merged;
 }
 
@@ -187,16 +167,11 @@ function mergedCases(shards) {
 function mergedSummary(shards) {
   const summary = { status: mergedStatus(shards) };
   for (const field of SUMMED_COUNTS) {
-    summary[field] = shards.reduce(
-      (total, shard) => total + Number(shard.evidence.summary?.[field]),
-      0,
-    );
+    summary[field] = shards.reduce((total, shard) => total + Number(shard.evidence.summary?.[field]), 0);
   }
   return summary;
 }
 
 function mergedStatus(shards) {
-  return shards.every((shard) => shard.evidence.summary?.status === "pass")
-    ? "pass"
-    : "fail";
+  return shards.every((shard) => shard.evidence.summary?.status === "pass") ? "pass" : "fail";
 }

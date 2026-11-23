@@ -9,12 +9,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { installBrokenPipeHandler, isBrokenPipeError } from "./cli-io.js";
 
-const dadExecutable = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "bin",
-  "dad.js",
-);
+const dadExecutable = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "dad.js");
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -34,18 +29,12 @@ function createLargeDoctorFixture(): string {
   temporaryDirectories.push(root);
   mkdirSync(join(root, "packages", "demo"), { recursive: true });
   mkdirSync(join(root, "node_modules", ".dads"), { recursive: true });
-  writeFileSync(
-    join(root, "packages", "demo", "package.json"),
-    JSON.stringify({ name: "@fixture/demo" }),
-  );
+  writeFileSync(join(root, "packages", "demo", "package.json"), JSON.stringify({ name: "@fixture/demo" }));
   const testResults = Array.from({ length: 4000 }, (_, index) => ({
     name: `${root}/packages/demo/src/suite-${index}.test.ts`,
     assertionResults: [{ status: "passed" }],
   }));
-  writeFileSync(
-    join(root, "node_modules", ".dads", "vitest-report.json"),
-    JSON.stringify({ testResults }),
-  );
+  writeFileSync(join(root, "node_modules", ".dads", "vitest-report.json"), JSON.stringify({ testResults }));
   return root;
 }
 
@@ -98,19 +87,12 @@ type EarlyCloseResult = {
   readonly receivedOutput: boolean;
 };
 
-function runDadWithEarlyClose(
-  cwd: string,
-  commandArguments: readonly string[],
-): Promise<EarlyCloseResult> {
+function runDadWithEarlyClose(cwd: string, commandArguments: readonly string[]): Promise<EarlyCloseResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [dadExecutable, ...commandArguments],
-      {
-        cwd,
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
+    const child = spawn(process.execPath, [dadExecutable, ...commandArguments], {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stderr = "";
     let receivedOutput = false;
 

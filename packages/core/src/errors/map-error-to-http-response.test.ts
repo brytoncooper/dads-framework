@@ -11,10 +11,7 @@ describe("mapErrorToHttpResponse", () => {
     ["not-found", 404],
     ["conflict", 409],
   ] as const)("maps DomainError kind %s to %d", (kind, status) => {
-    const mapped = mapErrorToHttpResponse(
-      new DomainError(kind, "SOME_CODE", "message"),
-      "req-1",
-    );
+    const mapped = mapErrorToHttpResponse(new DomainError(kind, "SOME_CODE", "message"), "req-1");
     expect(mapped.status).toBe(status);
     expect(mapped.unexpected).toBe(false);
     expect(mapped.body).toEqual({
@@ -33,10 +30,7 @@ describe("mapErrorToHttpResponse", () => {
   });
 
   it("hides internals on unknown errors and echoes the request id", () => {
-    const mapped = mapErrorToHttpResponse(
-      new Error("secret stack detail"),
-      "req-9",
-    );
+    const mapped = mapErrorToHttpResponse(new Error("secret stack detail"), "req-9");
     expect(mapped.status).toBe(500);
     expect(mapped.unexpected).toBe(true);
     expect(mapped.body).toEqual({

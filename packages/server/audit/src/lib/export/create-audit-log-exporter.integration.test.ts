@@ -2,11 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  startTestPostgres,
-  truncateAuditLog,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, truncateAuditLog, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { DrizzleAuditLogReader, createAuditLogExporter } from "../../index.js";
 
@@ -58,10 +54,7 @@ it("exports tenant metadata through exact timestamp pages and rechecks the grant
       .trimEnd()
       .split("\n")
       .map((line) => z.json().parse(JSON.parse(line))),
-  ).toEqual([
-    expect.objectContaining({ requestId: "newest" }),
-    expect.objectContaining({ requestId: "middle" }),
-  ]);
+  ).toEqual([expect.objectContaining({ requestId: "newest" }), expect.objectContaining({ requestId: "middle" })]);
 
   const continuation = {
     tenantId: "mine",
@@ -72,9 +65,7 @@ it("exports tenant metadata through exact timestamp pages and rechecks the grant
   if (last.kind !== "page") throw new Error("Expected the final page");
   expect(last.nextCursor).toBeNull();
   expect(last.body).toMatch(/^\{[^\n]+\}\n$/u);
-  const lastRecord = z
-    .looseObject({ position: z.int().positive() })
-    .parse(JSON.parse(last.body));
+  const lastRecord = z.looseObject({ position: z.int().positive() }).parse(JSON.parse(last.body));
   expect(lastRecord).toEqual({
     position: lastRecord.position,
     recordedAt: "2026-10-22T10:00:00.123455Z",
@@ -86,9 +77,7 @@ it("exports tenant metadata through exact timestamp pages and rechecks the grant
     operation: "insert",
     changedColumns: null,
   });
-  await expect(
-    exportPage({ ...continuation, tenantId: "theirs" }),
-  ).resolves.toEqual({ kind: "denied" });
+  await expect(exportPage({ ...continuation, tenantId: "theirs" })).resolves.toEqual({ kind: "denied" });
   grant = false;
   await expect(exportPage(continuation)).resolves.toEqual({ kind: "denied" });
 });

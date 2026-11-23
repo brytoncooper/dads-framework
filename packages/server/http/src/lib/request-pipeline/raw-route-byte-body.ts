@@ -23,10 +23,6 @@ export function parseBodyAsBytes(request: FastifyRequest): void {
 }
 
 /** The `content-type` the client sent on a byte-body route's request; undefined if it sent none. */
-export function contentTypeSentWithBytes(
-  request: FastifyRequest,
-): string | undefined {
-  return sentContentTypes.has(request)
-    ? sentContentTypes.get(request)
-    : request.headers["content-type"];
+export function contentTypeSentWithBytes(request: FastifyRequest): string | undefined {
+  return sentContentTypes.has(request) ? sentContentTypes.get(request) : request.headers["content-type"];
 }

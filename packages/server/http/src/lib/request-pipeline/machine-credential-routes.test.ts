@@ -11,10 +11,7 @@ import { defineRawRoute } from "../route/define-raw-route.js";
 import { getRoute } from "../route/get-route.js";
 import { type HttpRoute, routeGroup } from "../route/route-group.js";
 import type { PermissionChecker, SubjectResolver } from "./enforce-access.js";
-import {
-  registerRoutes,
-  type RegisterRoutesOptions,
-} from "./register-routes.js";
+import { registerRoutes, type RegisterRoutesOptions } from "./register-routes.js";
 
 /**
  * The `machineCredential` capability: a route that names one resolves its
@@ -26,10 +23,7 @@ const sessionUser: SubjectRef = { type: "user", id: "u1" };
 const connection: SubjectRef = { type: "integrations/connection", id: "c1" };
 
 const sessionCookieResolver: SubjectResolver = {
-  resolve: (request) =>
-    Promise.resolve(
-      request.headers["cookie"] === "session=valid" ? sessionUser : null,
-    ),
+  resolve: (request) => Promise.resolve(request.headers["cookie"] === "session=valid" ? sessionUser : null),
 };
 
 type CountingResolver = SubjectResolver & { readonly calls: () => number };
@@ -39,11 +33,7 @@ function machineResolver(): CountingResolver {
   return {
     resolve: (request) => {
       calls += 1;
-      return Promise.resolve(
-        request.headers["authorization"] === "Bearer machine-secret"
-          ? connection
-          : null,
-      );
+      return Promise.resolve(request.headers["authorization"] === "Bearer machine-secret" ? connection : null);
     },
     calls: () => calls,
   };
@@ -86,10 +76,7 @@ const rawMachineRoute = defineRawRoute({
 
 let apps: { close: () => Promise<void> }[] = [];
 
-async function buildApp(
-  routes: readonly HttpRoute[],
-  overrides: Partial<RegisterRoutesOptions> = {},
-) {
+async function buildApp(routes: readonly HttpRoute[], overrides: Partial<RegisterRoutesOptions> = {}) {
   const app = await createHttpApp({
     nodeEnv: "test",
     trustedOrigins: [],
@@ -149,10 +136,9 @@ describe("machineCredential capability", () => {
 
   it("never consults the machine resolver for a plain route", async () => {
     const machine = machineResolver();
-    const app = await buildApp(
-      routeGroup("Mixed", [sessionRoute, machineRoute]),
-      { machineCredentials: { "integration-connection": machine } },
-    );
+    const app = await buildApp(routeGroup("Mixed", [sessionRoute, machineRoute]), {
+      machineCredentials: { "integration-connection": machine },
+    });
 
     const withSession = await app.inject({
       method: "GET",
@@ -173,12 +159,9 @@ describe("machineCredential capability", () => {
 
   it("applies when declared on the group", async () => {
     const machine = machineResolver();
-    const app = await buildApp(
-      routeGroup("Inbound", { machineCredential: "integration-connection" }, [
-        sessionRoute,
-      ]),
-      { machineCredentials: { "integration-connection": machine } },
-    );
+    const app = await buildApp(routeGroup("Inbound", { machineCredential: "integration-connection" }, [sessionRoute]), {
+      machineCredentials: { "integration-connection": machine },
+    });
 
     const res = await app.inject({
       method: "GET",
@@ -271,9 +254,7 @@ describe("site capability at the app rung", () => {
   });
 
   it("registers a route whose group declares a site label", async () => {
-    const app = await buildApp(
-      routeGroup("Plain", { site: "served" }, [sessionRoute]),
-    );
+    const app = await buildApp(routeGroup("Plain", { site: "served" }, [sessionRoute]));
     const response = await app.inject({
       method: "GET",
       url: "/me",

@@ -1,25 +1,15 @@
 /** Proves an installation is only claimed when node_modules exists and the receipt still matches the manifest and lockfile. */
 
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  dependenciesAreInstalled,
-  recordDadsDependencyInstallation,
-} from "./dependency-installation-receipt.js";
+import { dependenciesAreInstalled, recordDadsDependencyInstallation } from "./dependency-installation-receipt.js";
 
 const temporaryProjects: string[] = [];
 
 afterEach(() => {
-  for (const projectRoot of temporaryProjects.splice(0))
-    rmSync(projectRoot, { recursive: true, force: true });
+  for (const projectRoot of temporaryProjects.splice(0)) rmSync(projectRoot, { recursive: true, force: true });
 });
 
 describe("dependency installation receipt", () => {
@@ -43,12 +33,7 @@ describe("dependency installation receipt", () => {
     recordDadsDependencyInstallation(projectRoot);
 
     expect(dependenciesAreInstalled(projectRoot)).toBe(true);
-    expect(
-      readFileSync(
-        join(projectRoot, ".dads/dependency-installation.sha256"),
-        "utf8",
-      ),
-    ).toMatch(/^[a-f0-9]{64}\n$/);
+    expect(readFileSync(join(projectRoot, ".dads/dependency-installation.sha256"), "utf8")).toMatch(/^[a-f0-9]{64}\n$/);
   });
 
   it("stops reporting an installation once the manifest changes", () => {
@@ -83,13 +68,7 @@ describe("dependency installation receipt", () => {
 function createProject(): string {
   const projectRoot = mkdtempSync(join(tmpdir(), "dads-install-receipt-"));
   temporaryProjects.push(projectRoot);
-  writeFileSync(
-    join(projectRoot, "package.json"),
-    `${JSON.stringify({ name: "api", dependencies: {} })}\n`,
-  );
-  writeFileSync(
-    join(projectRoot, "package-lock.json"),
-    '{"name":"api","lockfileVersion":3}\n',
-  );
+  writeFileSync(join(projectRoot, "package.json"), `${JSON.stringify({ name: "api", dependencies: {} })}\n`);
+  writeFileSync(join(projectRoot, "package-lock.json"), '{"name":"api","lockfileVersion":3}\n');
   return projectRoot;
 }

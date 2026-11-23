@@ -30,22 +30,13 @@ import { readCodeSkeleton } from "./top-level-declarations.js";
 
 const PROJECT_FILE = "dads.project.json";
 const MANIFEST_NAME = "package.json";
-const MODULE_EXTENSIONS = [
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".cts",
-  ".js",
-  ".mjs",
-  ".cjs",
-];
+const MODULE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 const NOT_PRODUCTION = ["/type-tests/", "/test-support/", "/__tests__/"];
 const TEST_SUFFIXES = [".test.ts", ".test.tsx", ".test.mjs", ".test.js"];
 const CLEAN_STRIP: StripState = { block: false, literal: undefined };
 
 /** `from "x"`, `import "x"`, `import("x")`, `require("x")`, with the specifier. */
-const SPECIFIER_WITH_TEXT =
-  /(?:\bfrom|\bimport|\brequire)\s*\(?\s*(["'])([^"'\n]*)\1/g;
+const SPECIFIER_WITH_TEXT = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*(["'])([^"'\n]*)\1/g;
 /** The same shapes in a skeleton, where every string has been emptied. */
 const SPECIFIER_IN_SKELETON = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*(["'])\1/g;
 
@@ -106,13 +97,9 @@ function buildPackageGraph(context: DoctorContext): PackageGraph {
   const manifests = readManifestFacts(context);
   const declared = context.packages();
   const workspaceNames = new Set(
-    declared
-      .map((entry) => entry.name)
-      .concat(manifests.flatMap((entry) => (entry.name ? [entry.name] : []))),
+    declared.map((entry) => entry.name).concat(manifests.flatMap((entry) => (entry.name ? [entry.name] : []))),
   );
-  const byRoot = new Map(
-    manifests.map((entry) => [manifestRootOf(entry), entry]),
-  );
+  const byRoot = new Map(manifests.map((entry) => [manifestRootOf(entry), entry]));
   const packages = declared.map((entry) =>
     joinPackage(context, entry.name, entry.root, {
       kind: entry.kind,
@@ -134,15 +121,8 @@ type JoinedFacts = {
   readonly manifest: PackageManifestFacts | undefined;
 };
 
-function joinPackage(
-  context: DoctorContext,
-  name: string,
-  root: string,
-  facts: JoinedFacts,
-): GraphPackage {
-  const sources = context
-    .files()
-    .filter((path) => isPackageProductionSource(path, root));
+function joinPackage(context: DoctorContext, name: string, root: string, facts: JoinedFacts): GraphPackage {
+  const sources = context.files().filter((path) => isPackageProductionSource(path, root));
   return {
     name,
     root,
@@ -150,9 +130,7 @@ function joinPackage(
     allowedDependencies: facts.allowedDependencies,
     manifest: facts.manifest,
     sources,
-    imports: sources.flatMap((path) =>
-      readSourceImports(path, context.read(path)),
-    ),
+    imports: sources.flatMap((path) => readSourceImports(path, context.read(path))),
   };
 }
 
@@ -172,10 +150,7 @@ function isPackageProductionSource(path: string, root: string): boolean {
 }
 
 /** Every file of a package, tests included, in the order the file list gave them. */
-export function packageFiles(
-  context: DoctorContext,
-  declared: GraphPackage,
-): readonly string[] {
+export function packageFiles(context: DoctorContext, declared: GraphPackage): readonly string[] {
   return context.files().filter((path) => path.startsWith(`${declared.root}/`));
 }
 
@@ -183,9 +158,7 @@ export function packageFiles(
 // Manifests
 // ---------------------------------------------------------------------------
 
-function readManifestFacts(
-  context: DoctorContext,
-): readonly PackageManifestFacts[] {
+function readManifestFacts(context: DoctorContext): readonly PackageManifestFacts[] {
   const found: PackageManifestFacts[] = [];
   for (const path of context.files()) {
     if (path !== MANIFEST_NAME && !path.endsWith(`/${MANIFEST_NAME}`)) continue;
@@ -195,10 +168,7 @@ function readManifestFacts(
   return found;
 }
 
-function parseManifest(
-  context: DoctorContext,
-  path: string,
-): PackageManifestFacts | undefined {
+function parseManifest(context: DoctorContext, path: string): PackageManifestFacts | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(context.read(path));
@@ -208,9 +178,7 @@ function parseManifest(
   if (!isRecord(parsed)) return undefined;
   const name: unknown = parsed["name"];
   const peers = readDependencyNames(parsed["peerDependencies"]);
-  const peerMeta = isRecord(parsed["peerDependenciesMeta"])
-    ? parsed["peerDependenciesMeta"]
-    : undefined;
+  const peerMeta = isRecord(parsed["peerDependenciesMeta"]) ? parsed["peerDependenciesMeta"] : undefined;
   const requiredPeers = peers.filter((peer) => {
     const entry = peerMeta?.[peer];
     return !(isRecord(entry) && entry["optional"] === true);
@@ -250,10 +218,7 @@ export function manifestRootOf(manifest: PackageManifestFacts): string {
  * readings disagree about how many imports it holds is skipped, because a
  * scanner that cannot be sure has nothing to say.
  */
-function readSourceImports(
-  path: string,
-  text: string,
-): readonly PackageImport[] {
+function readSourceImports(path: string, text: string): readonly PackageImport[] {
   const skeleton = readCodeSkeleton(text);
   const stripped = strippedSourceLines(text);
   const found: PackageImport[] = [];
@@ -303,9 +268,7 @@ function bareModuleOf(specifier: string): string | undefined {
   if (/^[./#]/.test(specifier)) return undefined;
   if (specifier.startsWith("node:")) return undefined;
   const segments = specifier.split("/");
-  const bare = specifier.startsWith("@")
-    ? segments.slice(0, 2).join("/")
-    : (segments[0] ?? "");
+  const bare = specifier.startsWith("@") ? segments.slice(0, 2).join("/") : (segments[0] ?? "");
   return bare.length === 0 ? undefined : bare;
 }
 
@@ -319,50 +282,28 @@ function isWorkspaceModule(graph: PackageGraph, module: string): boolean {
 }
 
 /** Every import of a module outside the workspace, builtins excluded. */
-export function vendorImports(
-  graph: PackageGraph,
-  declared: GraphPackage,
-): readonly PackageImport[] {
+export function vendorImports(graph: PackageGraph, declared: GraphPackage): readonly PackageImport[] {
   return declared.imports.filter(
-    (entry) =>
-      entry.module !== undefined &&
-      entry.module !== declared.name &&
-      !isWorkspaceModule(graph, entry.module),
+    (entry) => entry.module !== undefined && entry.module !== declared.name && !isWorkspaceModule(graph, entry.module),
   );
 }
 
 /** True when the package says, anywhere it may say it, that it uses the module. */
-export function declaresModule(
-  declared: GraphPackage,
-  module: string,
-): boolean {
+export function declaresModule(declared: GraphPackage, module: string): boolean {
   if (declared.allowedDependencies.includes(module)) return true;
   const manifest = declared.manifest;
   if (manifest === undefined) return false;
-  return (
-    manifest.dependencies.includes(module) ||
-    manifest.peerDependencies.includes(module)
-  );
+  return manifest.dependencies.includes(module) || manifest.peerDependencies.includes(module);
 }
 
 /** Every package that names another package as a dependency it may use. */
-export function declaredImportersOf(
-  graph: PackageGraph,
-  name: string,
-): readonly GraphPackage[] {
-  return graph.packages.filter(
-    (declared) => declared.name !== name && declaresModule(declared, name),
-  );
+export function declaredImportersOf(graph: PackageGraph, name: string): readonly GraphPackage[] {
+  return graph.packages.filter((declared) => declared.name !== name && declaresModule(declared, name));
 }
 
 /** Every package whose production sources import another workspace package. */
-export function importersOf(
-  graph: PackageGraph,
-  name: string,
-): readonly GraphPackage[] {
+export function importersOf(graph: PackageGraph, name: string): readonly GraphPackage[] {
   return graph.packages.filter(
-    (declared) =>
-      declared.name !== name &&
-      declared.imports.some((entry) => entry.module === name),
+    (declared) => declared.name !== name && declared.imports.some((entry) => entry.module === name),
   );
 }

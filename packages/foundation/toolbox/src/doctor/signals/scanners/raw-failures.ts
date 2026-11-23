@@ -31,27 +31,18 @@ function propertyName(node: ts.Expression): string | undefined {
   return ts.isStringLiteral(argument) ? argument.text : undefined;
 }
 
-function isFailure(
-  node: ts.Expression,
-  bindings: ReadonlySet<string>,
-): boolean {
+function isFailure(node: ts.Expression, bindings: ReadonlySet<string>): boolean {
   if (ts.isParenthesizedExpression(node)) {
     return isFailure(node.expression, bindings);
   }
   if (ts.isIdentifier(node)) {
     return bindings.has(node.text) || FAILURE_NAME.test(node.text);
   }
-  if (
-    !ts.isPropertyAccessExpression(node) &&
-    !ts.isElementAccessExpression(node)
-  ) {
+  if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) {
     return false;
   }
   const name = propertyName(node);
-  return (
-    (name !== undefined && FAILURE_NAME.test(name)) ||
-    isFailure(node.expression, bindings)
-  );
+  return (name !== undefined && FAILURE_NAME.test(name)) || isFailure(node.expression, bindings);
 }
 
 function recordBinding(node: ts.Node, bindings: Set<string>): void {
@@ -67,19 +58,13 @@ function recordBinding(node: ts.Node, bindings: Set<string>): void {
 }
 
 function isMessageRead(node: ts.Node, bindings: ReadonlySet<string>): boolean {
-  if (
-    !ts.isPropertyAccessExpression(node) &&
-    !ts.isElementAccessExpression(node)
-  ) {
+  if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) {
     return false;
   }
   return propertyName(node) === MESSAGE && isFailure(node.expression, bindings);
 }
 
-function isMessageDestructured(
-  node: ts.Node,
-  bindings: ReadonlySet<string>,
-): boolean {
+function isMessageDestructured(node: ts.Node, bindings: ReadonlySet<string>): boolean {
   if (!ts.isVariableDeclaration(node)) return false;
   if (!ts.isObjectBindingPattern(node.name)) return false;
   if (node.initializer === undefined) return false;
@@ -98,17 +83,12 @@ function isStringified(node: ts.Node, bindings: ReadonlySet<string>): boolean {
   return first !== undefined && isFailure(first, bindings);
 }
 
-function spanAt(
-  node: ts.Node,
-  bindings: ReadonlySet<string>,
-): FailureSpan | undefined {
+function spanAt(node: ts.Node, bindings: ReadonlySet<string>): FailureSpan | undefined {
   if (isMessageRead(node, bindings)) return { node, seam: "raw message" };
   if (isMessageDestructured(node, bindings)) {
     return { node, seam: "destructured message" };
   }
-  return isStringified(node, bindings)
-    ? { node, seam: "stringified failure" }
-    : undefined;
+  return isStringified(node, bindings) ? { node, seam: "stringified failure" } : undefined;
 }
 
 /** Every raw failure read in a module, in source order. */

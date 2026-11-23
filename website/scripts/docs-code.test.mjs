@@ -30,9 +30,7 @@ const markup = "&lt;button&gt;&amp;copy;&lt;/button&gt;";
     originalCode.map((code) => code.textContent),
   );
   assert.deepEqual(
-    examples.map(
-      (example) => example.querySelector(".docs-example-language").textContent,
-    ),
+    examples.map((example) => example.querySelector(".docs-example-language").textContent),
     ["TypeScript", "Shell", "JSON", "Plain text", "unknown"],
   );
   assert.deepEqual(

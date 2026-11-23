@@ -12,10 +12,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { DiskDirectTransferStorage } from "./disk-direct-transfer-storage.js";
-import {
-  type DiskFreeSpace,
-  DiskObjectStorage,
-} from "./disk-object-storage.js";
+import { type DiskFreeSpace, DiskObjectStorage } from "./disk-object-storage.js";
 import type { SignedPartUploadQuery } from "./disk-part-links.js";
 
 const PREFIX = "/api/site/files";
@@ -25,8 +22,7 @@ let root: string;
 let now: Date;
 
 function objects(
-  freeSpace: DiskFreeSpace = () =>
-    Promise.resolve({ freeBytes: 500 * 1024 ** 3, totalBytes: 1024 ** 4 }),
+  freeSpace: DiskFreeSpace = () => Promise.resolve({ freeBytes: 500 * 1024 ** 3, totalBytes: 1024 ** 4 }),
 ): DiskObjectStorage {
   return new DiskObjectStorage({
     rootDirectory: root,
@@ -101,10 +97,7 @@ describe("DiskDirectTransferStorage", () => {
 
     const parts = await transfers.listUploadedParts(upload);
     expect(parts?.map((part) => part.partNumber)).toEqual([1, 2]);
-    expect(parts?.map((part) => part.etag)).toEqual([
-      first?.etag,
-      second?.etag,
-    ]);
+    expect(parts?.map((part) => part.etag)).toEqual([first?.etag, second?.etag]);
 
     await transfers.completeMultipartUpload({ ...upload, parts: parts ?? [] });
 
@@ -169,9 +162,7 @@ describe("DiskDirectTransferStorage", () => {
     expect(await transfers.listUploadedParts(upload)).toBeNull();
     expect(await readdir(join(root, "multipart"))).toEqual([]);
     // Aborting again succeeds: the upload is already gone.
-    await expect(
-      transfers.abortMultipartUpload(upload),
-    ).resolves.toBeUndefined();
+    await expect(transfers.abortMultipartUpload(upload)).resolves.toBeUndefined();
   });
 
   it("drops a part an abort overtook mid-write and answers as for a missing upload", async () => {
@@ -256,8 +247,7 @@ describe("DiskDirectTransferStorage", () => {
       { ...signed, sig: "0".repeat(64) },
       { ...signed, upload: "../escape" },
     ];
-    for (const query of refused)
-      expect(await transfers.receivePart(query, bytes("abc"))).toBeNull();
+    for (const query of refused) expect(await transfers.receivePart(query, bytes("abc"))).toBeNull();
     expect(await transfers.receivePart(signed, bytes("abcd"))).toBeNull();
 
     now = new Date(now.getTime() + 301_000);

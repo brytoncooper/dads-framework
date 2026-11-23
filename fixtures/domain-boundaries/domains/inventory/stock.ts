@@ -1,8 +1,6 @@
 import type { ProductId } from "../../libraries/product-id/src/index.js";
 
-export function createInventory(
-  initialStock: Readonly<Record<ProductId, number>>,
-) {
+export function createInventory(initialStock: Readonly<Record<ProductId, number>>) {
   const stock = new Map(Object.entries(initialStock));
   function available(productId: ProductId): number {
     return stock.get(productId) ?? 0;

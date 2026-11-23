@@ -15,8 +15,7 @@ export type ConcurrentIndexStatement =
   | { kind: "drop"; sql: string };
 
 export type ConcurrentIndexStatementParse =
-  | { ok: true; statement: ConcurrentIndexStatement }
-  | { ok: false; reason: string };
+  { ok: true; statement: ConcurrentIndexStatement } | { ok: false; reason: string };
 
 const IDENTIFIER = String.raw`(?:"(?:[^"]|"")+"|[A-Za-z_][A-Za-z0-9_$]*)`;
 const QUALIFIED = String.raw`${IDENTIFIER}(?:\s*\.\s*${IDENTIFIER})?`;
@@ -46,20 +45,15 @@ const ALLOWED =
  * A `;` anywhere but the end, or any comment, is refused: a second statement
  * hidden behind one would run outside the transaction too.
  */
-export function parseConcurrentIndexStatement(
-  step: string,
-): ConcurrentIndexStatementParse {
+export function parseConcurrentIndexStatement(step: string): ConcurrentIndexStatementParse {
   const sql = step.trim().replace(/;\s*$/, "").trim();
-  if (sql.includes(";"))
-    return { ok: false, reason: `one statement per step; ${ALLOWED}` };
-  if (sql.includes("--") || sql.includes("/*"))
-    return { ok: false, reason: `comments are not allowed; ${ALLOWED}` };
+  if (sql.includes(";")) return { ok: false, reason: `one statement per step; ${ALLOWED}` };
+  if (sql.includes("--") || sql.includes("/*")) return { ok: false, reason: `comments are not allowed; ${ALLOWED}` };
 
   const create = CREATE_PATTERN.exec(sql);
   if (create !== null) {
     const [, rawName, tableReference] = create;
-    if (rawName === undefined || tableReference === undefined)
-      return { ok: false, reason: ALLOWED };
+    if (rawName === undefined || tableReference === undefined) return { ok: false, reason: ALLOWED };
     const indexName = storedIdentifier(rawName);
     if (Buffer.byteLength(indexName, "utf8") > MAX_IDENTIFIER_BYTES)
       return {
@@ -71,14 +65,11 @@ export function parseConcurrentIndexStatement(
       statement: { kind: "create", sql, indexName, tableReference },
     };
   }
-  if (DROP_PATTERN.test(sql))
-    return { ok: true, statement: { kind: "drop", sql } };
+  if (DROP_PATTERN.test(sql)) return { ok: true, statement: { kind: "drop", sql } };
   return { ok: false, reason: ALLOWED };
 }
 
 /** `"Mixed""Name"` becomes `Mixed"Name`; `Plain` becomes `plain`, as PostgreSQL folds it. */
 function storedIdentifier(raw: string): string {
-  return raw.startsWith('"')
-    ? raw.slice(1, -1).replaceAll('""', '"')
-    : raw.toLowerCase();
+  return raw.startsWith('"') ? raw.slice(1, -1).replaceAll('""', '"') : raw.toLowerCase();
 }

@@ -6,11 +6,7 @@ export {
   type AuthorizationMigrationsLog,
   type RunAuthorizationMigrationsOptions,
 } from "./lib/run-authorization-migrations.js";
-export {
-  JOURNAL_DEFINITION,
-  listShippedAuthorizationMigrationIds,
-  loadJournal,
-} from "./lib/journal/load-journal.js";
+export { JOURNAL_DEFINITION, listShippedAuthorizationMigrationIds, loadJournal } from "./lib/journal/load-journal.js";
 export type {
   AuthorizationMigration,
   AuthorizationMigrationClient,
@@ -18,10 +14,7 @@ export type {
   AuthorizationMigrationStore,
   LoadedAuthorizationMigration,
 } from "./lib/journal/journal-entry.js";
-export {
-  classifySchemaDiff,
-  type SchemaDiffClassification,
-} from "./lib/logic/classify-schema-diff.js";
+export { classifySchemaDiff, type SchemaDiffClassification } from "./lib/logic/classify-schema-diff.js";
 export {
   scaffoldMigration,
   type ScaffoldMigrationInput,

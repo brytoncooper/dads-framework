@@ -1,21 +1,12 @@
 import ts from "typescript";
 
-const fields = [
-  "params",
-  "body",
-  "query",
-  "headers",
-  "response",
-  "item",
-] as const;
+const fields = ["params", "body", "query", "headers", "response", "item"] as const;
 type SchemaField = (typeof fields)[number];
 
 export function readProperty(object: ts.ObjectLiteralExpression, key: string) {
   const property = object.properties.find(({ name }) => {
     if (!name) return false;
-    return (
-      (ts.isIdentifier(name) || ts.isStringLiteral(name)) && name.text === key
-    );
+    return (ts.isIdentifier(name) || ts.isStringLiteral(name)) && name.text === key;
   });
   if (!property) return undefined;
   if (ts.isPropertyAssignment(property)) return property.initializer;
@@ -29,9 +20,7 @@ export function readText(node: ts.Node | undefined): string | undefined {
 }
 
 /** Match an explicit public telemetry declaration without accepting spread overrides. */
-export function declaresResourceFreeTelemetry(
-  config: ts.ObjectLiteralExpression,
-): boolean {
+export function declaresResourceFreeTelemetry(config: ts.ObjectLiteralExpression): boolean {
   const policy = readProperty(config, "resourcePolicy");
   const status = readProperty(config, "status");
   return (
@@ -60,10 +49,7 @@ export function readRouteSchemas(
   return schemas;
 }
 
-export function readRouteHandler(
-  config: ts.ObjectLiteralExpression,
-  source: ts.SourceFile,
-) {
+export function readRouteHandler(config: ts.ObjectLiteralExpression, source: ts.SourceFile) {
   const handler = readProperty(config, "handler");
   if (!handler) return { handlerStatements: 0, handlerText: "" };
   const body = handlerBody(handler);
@@ -74,11 +60,7 @@ export function readRouteHandler(
 }
 
 function handlerBody(handler: ts.Node) {
-  if (
-    ts.isArrowFunction(handler) ||
-    ts.isFunctionExpression(handler) ||
-    ts.isMethodDeclaration(handler)
-  ) {
+  if (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler) || ts.isMethodDeclaration(handler)) {
     return handler.body;
   }
   return undefined;

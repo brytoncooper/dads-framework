@@ -17,17 +17,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  evidenceAt,
-  exportedStatements,
-  ts,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { evidenceAt, exportedStatements, ts, type DoctorModule } from "../scanners/typescript-program.js";
 
 /** The share `strict` refuses, which is also the share worth reporting. */
 const CEILING = 50;
@@ -40,58 +31,38 @@ type FieldTally = {
 };
 
 function tallyTypeLiteral(type: ts.TypeLiteralNode): FieldTally {
-  const properties = type.members.flatMap((member) =>
-    ts.isPropertySignature(member) ? [member] : [],
-  );
+  const properties = type.members.flatMap((member) => (ts.isPropertySignature(member) ? [member] : []));
   return {
     fields: properties.length,
-    optional: properties.filter((member) => member.questionToken !== undefined)
-      .length,
+    optional: properties.filter((member) => member.questionToken !== undefined).length,
   };
 }
 
-function tallySchemaObject(
-  object: ts.ObjectLiteralExpression,
-  module: DoctorModule,
-): FieldTally {
-  const properties = object.properties.flatMap((property) =>
-    ts.isPropertyAssignment(property) ? [property] : [],
-  );
+function tallySchemaObject(object: ts.ObjectLiteralExpression, module: DoctorModule): FieldTally {
+  const properties = object.properties.flatMap((property) => (ts.isPropertyAssignment(property) ? [property] : []));
   return {
     fields: properties.length,
-    optional: properties.filter((property) =>
-      OPTIONAL_CALLS.test(property.initializer.getText(module.source)),
-    ).length,
+    optional: properties.filter((property) => OPTIONAL_CALLS.test(property.initializer.getText(module.source))).length,
   };
 }
 
 /** The object literal a `z.object({…})` call describes. */
-function optionalSchemaObject(
-  node: ts.Node,
-): ts.ObjectLiteralExpression | undefined {
+function optionalSchemaObject(node: ts.Node): ts.ObjectLiteralExpression | undefined {
   if (!ts.isCallExpression(node)) return undefined;
   const callee = node.expression;
   if (!ts.isPropertyAccessExpression(callee)) return undefined;
   if (callee.name.text !== "object") return undefined;
   const argument = node.arguments[0];
-  return argument !== undefined && ts.isObjectLiteralExpression(argument)
-    ? argument
-    : undefined;
+  return argument !== undefined && ts.isObjectLiteralExpression(argument) ? argument : undefined;
 }
 
-function tallyOf(
-  statement: ts.Statement,
-  module: DoctorModule,
-): FieldTally | undefined {
+function tallyOf(statement: ts.Statement, module: DoctorModule): FieldTally | undefined {
   if (ts.isTypeAliasDeclaration(statement)) {
-    return ts.isTypeLiteralNode(statement.type)
-      ? tallyTypeLiteral(statement.type)
-      : undefined;
+    return ts.isTypeLiteralNode(statement.type) ? tallyTypeLiteral(statement.type) : undefined;
   }
   if (!ts.isVariableStatement(statement)) return undefined;
   const initializer = statement.declarationList.declarations[0]?.initializer;
-  const object =
-    initializer === undefined ? undefined : optionalSchemaObject(initializer);
+  const object = initializer === undefined ? undefined : optionalSchemaObject(initializer);
   return object === undefined ? undefined : tallySchemaObject(object, module);
 }
 
@@ -99,15 +70,10 @@ function outputName(statement: ts.Statement): string | undefined {
   if (ts.isTypeAliasDeclaration(statement)) return statement.name.text;
   if (!ts.isVariableStatement(statement)) return undefined;
   const declared = statement.declarationList.declarations[0]?.name;
-  return declared !== undefined && ts.isIdentifier(declared)
-    ? declared.text
-    : undefined;
+  return declared !== undefined && ts.isIdentifier(declared) ? declared.text : undefined;
 }
 
-function readOptionalShares(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function readOptionalShares(module: DoctorModule, readings: Map<string, SignalReading>): void {
   for (const statement of exportedStatements(module)) {
     const name = outputName(statement);
     if (name === undefined || !OUTPUT_NAME.test(name)) continue;
@@ -133,8 +99,7 @@ function countOptionalCreep(context: DoctorContext): SignalReadings {
 export const optionalCreepSignal: DoctorSignal = {
   id: "optional-creep",
   issue: "people-pleasing",
-  question:
-    "Is the share of optional fields in output schemas above the profile's threshold?",
+  question: "Is the share of optional fields in output schemas above the profile's threshold?",
   reads: "typescript",
   unit: "percent",
   direction: "ceiling",

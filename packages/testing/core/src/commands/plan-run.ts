@@ -4,11 +4,7 @@ import { readPositiveInteger } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
 import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
 import { planTesting, runTesting } from "../testing-api.js";
-import type {
-  TestingOperationRequest,
-  TestingPlanResult,
-  TestingRunResult,
-} from "../testing-api.js";
+import type { TestingOperationRequest, TestingPlanResult, TestingRunResult } from "../testing-api.js";
 import { readTestingManifest } from "../testing-manifest.js";
 import { buildTestingReport } from "../testing-report.js";
 import type { TestingReport } from "../testing-report.js";
@@ -30,12 +26,7 @@ export const planCommand: DadTestCommand = {
   execute: async (parsed, io, json) => {
     const plan = await planTesting(buildOperationRequest(parsed, io));
     const report = buildReportIfRequested(parsed, io, plan);
-    writeCommandSuccess(
-      io,
-      json,
-      "plan",
-      report === undefined ? plan : { ...plan, report },
-    );
+    writeCommandSuccess(io, json, "plan", report === undefined ? plan : { ...plan, report });
     writeReportWrittenLine(parsed, io, json, report);
     return 0;
   },
@@ -50,9 +41,7 @@ export const runCommand: DadTestCommand = {
       io,
       json,
       "run",
-      report === undefined
-        ? result
-        : { plan: result.plan, run: result.run, report },
+      report === undefined ? result : { plan: result.plan, run: result.run, report },
     );
     writeReportWrittenLine(parsed, io, json, report);
     return result.run.exitCode;
@@ -103,10 +92,7 @@ function writeReportWrittenLine(
 }
 
 /** Builds the one request the native engine receives for `plan` and `run`. */
-export function buildOperationRequest(
-  parsed: ParsedArguments,
-  io: DadTestCliIo,
-): TestingOperationRequest {
+export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo): TestingOperationRequest {
   const manifestPath = parsed.values.get("--manifest");
   const base = parsed.values.get("--base");
   const head = parsed.values.get("--head");
@@ -118,9 +104,7 @@ export function buildOperationRequest(
     ...(head === undefined ? {} : { head }),
     all: parsed.flags.has("--all"),
     taskIds: parsed.repeated.get("--task") ?? [],
-    ...(jobs === undefined
-      ? {}
-      : { jobs: readPositiveInteger(jobs, "--jobs") }),
+    ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
   };
 }

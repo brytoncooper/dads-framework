@@ -9,10 +9,7 @@ import { join } from "node:path";
 
 import { compileAccess, emitAccessIr } from "@dads-framework/access";
 import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
-import {
-  buildTestApp,
-  TEST_SUBJECT_HEADER,
-} from "@dads-framework/http/testing";
+import { buildTestApp, TEST_SUBJECT_HEADER } from "@dads-framework/http/testing";
 import { createJobQueue } from "@dads-framework/job-queue";
 import { discoverDomainMigrations } from "@dads-framework/postgres/migrations";
 import { composeApp, providePlugin } from "@dads-framework/core/plugin";
@@ -106,25 +103,18 @@ describe("the notes plugin, composed", () => {
       workspace: { root: WORKSPACE_ROOT, sources, moduleAliases: {} },
     });
 
-    expect(
-      migrations.map((migration) => [migration.owner, migration.journalName]),
-    ).toEqual([["notes", "20261119000000_notes_create_notes.migration"]]);
+    expect(migrations.map((migration) => [migration.owner, migration.journalName])).toEqual([
+      ["notes", "20261119000000_notes_create_notes.migration"],
+    ]);
   });
 
   it("contributes its access definition, which the access kit emits", () => {
     const model = compileAccess(composeNotesApp().access);
     const emitted = emitAccessIr(model);
 
-    expect(emitted.map((definition) => definition.wireName)).toEqual([
-      "notes_user",
-      "notes/note",
-    ]);
-    expect(emitted[1]?.permissions).toEqual([
-      { name: "view", terms: [{ kind: "role", name: "author" }] },
-    ]);
-    expect(composeNotesApp().untrackedAuditTables).toEqual([
-      "notes_read_marks",
-    ]);
+    expect(emitted.map((definition) => definition.wireName)).toEqual(["notes_user", "notes/note"]);
+    expect(emitted[1]?.permissions).toEqual([{ name: "view", terms: [{ kind: "role", name: "author" }] }]);
+    expect(composeNotesApp().untrackedAuditTables).toEqual(["notes_read_marks"]);
   });
 
   it("disposes its prune timer when the app stops", async () => {

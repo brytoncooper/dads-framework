@@ -67,9 +67,7 @@ describe("controlled execution references", () => {
 
     expect(() => {
       assertExecutionReferences(consumer, graph(providerTask(), consumer));
-    }).toThrow(
-      "Controlled verification command for consumer:test must exactly name its runner entrypoint.",
-    );
+    }).toThrow("Controlled verification command for consumer:test must exactly name its runner entrypoint.");
   });
 
   it("refuses an output prerequisite no task in the graph declares", () => {
@@ -82,9 +80,7 @@ describe("controlled execution references", () => {
 
     expect(() => {
       assertExecutionReferences(consumer, graph(providerTask(), consumer));
-    }).toThrow(
-      "output prerequisites for consumer:test references unknown task policy:absent.",
-    );
+    }).toThrow("output prerequisites for consumer:test references unknown task policy:absent.");
   });
 
   it("refuses an output prerequisite that is not an execution dependency", () => {
@@ -92,9 +88,7 @@ describe("controlled execution references", () => {
 
     expect(() => {
       assertExecutionReferences(consumer, graph(providerTask(), consumer));
-    }).toThrow(
-      "Output prerequisite policy:build must be an execution dependency of consumer:test.",
-    );
+    }).toThrow("Output prerequisite policy:build must be an execution dependency of consumer:test.");
   });
 
   it("refuses an output prerequisite that is not a controlled task", () => {
@@ -121,9 +115,7 @@ describe("controlled execution references", () => {
 
     expect(() => {
       assertExecutionReferences(consumer, graph(providerTask(), consumer));
-    }).toThrow(
-      "consumer:test must consume published output generated/policy.json as an artifact.",
-    );
+    }).toThrow("consumer:test must consume published output generated/policy.json as an artifact.");
   });
 
   it("refuses an output prerequisite that publishes no generated artifact", () => {
@@ -140,9 +132,7 @@ describe("controlled execution references", () => {
 
     expect(() => {
       assertExecutionReferences(consumer, graph(emptyProvider, consumer));
-    }).toThrow(
-      "Output prerequisite policy:build must publish a generated artifact.",
-    );
+    }).toThrow("Output prerequisite policy:build must publish a generated artifact.");
   });
 
   it("refuses a published output the task does not require back", () => {
@@ -153,9 +143,7 @@ describe("controlled execution references", () => {
 
     expect(() => {
       assertExecutionReferences(provider, graph(provider));
-    }).toThrow(
-      "Published output policy.json is not required from policy:build.",
-    );
+    }).toThrow("Published output policy.json is not required from policy:build.");
   });
 
   it("refuses an artifact provider that is reusable, publishes nothing, or consumes a prerequisite", () => {
@@ -187,9 +175,7 @@ describe("controlled execution references", () => {
     const publishingConsumer = consumerTask({
       execution: consumerExecution({
         outputFiles: ["result.json", "policy.json"],
-        publishOutputs: [
-          { outputPath: "policy.json", projectPath: "generated/copy.json" },
-        ],
+        publishOutputs: [{ outputPath: "policy.json", projectPath: "generated/copy.json" }],
       }),
     });
     const rootlessConsumer = consumerTask({
@@ -203,22 +189,13 @@ describe("controlled execution references", () => {
       "Artifact consumer consumer:test must be reusable, consume a prerequisite, and publish no project output.";
 
     expect(() => {
-      assertExecutionReferences(
-        neverReusedConsumer,
-        graph(provider, neverReusedConsumer),
-      );
+      assertExecutionReferences(neverReusedConsumer, graph(provider, neverReusedConsumer));
     }).toThrow(consumerMessage);
     expect(() => {
-      assertExecutionReferences(
-        publishingConsumer,
-        graph(provider, publishingConsumer),
-      );
+      assertExecutionReferences(publishingConsumer, graph(provider, publishingConsumer));
     }).toThrow(consumerMessage);
     expect(() => {
-      assertExecutionReferences(
-        rootlessConsumer,
-        graph(provider, rootlessConsumer),
-      );
+      assertExecutionReferences(rootlessConsumer, graph(provider, rootlessConsumer));
     }).toThrow(consumerMessage);
   });
 });
@@ -239,9 +216,7 @@ type ControlledTaskOverrides = {
   readonly execution?: VerificationControlledExecution;
 };
 
-function providerExecution(
-  overrides: ControlledExecutionOverrides = {},
-): VerificationControlledExecution {
+function providerExecution(overrides: ControlledExecutionOverrides = {}): VerificationControlledExecution {
   return {
     kind: "controlled-node",
     adapter: "artifact-provider-v1",
@@ -249,22 +224,16 @@ function providerExecution(
     runnerEntrypoint: "provider.mjs",
     runnerArguments: overrides.runnerArguments ?? [],
     runnerVersion: "boundary-runner-v1",
-    inputFiles: overrides.inputFiles ?? [
-      { path: "provider.mjs", role: "test" },
-    ],
+    inputFiles: overrides.inputFiles ?? [{ path: "provider.mjs", role: "test" }],
     outputFiles: overrides.outputFiles ?? ["policy.json"],
-    publishOutputs: overrides.publishOutputs ?? [
-      { outputPath: "policy.json", projectPath: "generated/policy.json" },
-    ],
+    publishOutputs: overrides.publishOutputs ?? [{ outputPath: "policy.json", projectPath: "generated/policy.json" }],
     environment: [],
     prerequisiteOutputTaskIds: overrides.prerequisiteOutputTaskIds ?? [],
     timeoutMilliseconds: 5_000,
   };
 }
 
-function consumerExecution(
-  overrides: ControlledExecutionOverrides = {},
-): VerificationControlledExecution {
+function consumerExecution(overrides: ControlledExecutionOverrides = {}): VerificationControlledExecution {
   return {
     kind: "controlled-node",
     adapter: "artifact-consumer-v1",
@@ -279,16 +248,12 @@ function consumerExecution(
     outputFiles: overrides.outputFiles ?? ["result.json"],
     publishOutputs: overrides.publishOutputs ?? [],
     environment: [],
-    prerequisiteOutputTaskIds: overrides.prerequisiteOutputTaskIds ?? [
-      "policy:build",
-    ],
+    prerequisiteOutputTaskIds: overrides.prerequisiteOutputTaskIds ?? ["policy:build"],
     timeoutMilliseconds: 5_000,
   };
 }
 
-function providerTask(
-  overrides: ControlledTaskOverrides = {},
-): VerificationTaskDefinition {
+function providerTask(overrides: ControlledTaskOverrides = {}): VerificationTaskDefinition {
   return {
     id: "policy:build",
     packageName: "boundary",
@@ -301,9 +266,7 @@ function providerTask(
   };
 }
 
-function consumerTask(
-  overrides: ControlledTaskOverrides = {},
-): VerificationTaskDefinition {
+function consumerTask(overrides: ControlledTaskOverrides = {}): VerificationTaskDefinition {
   return {
     id: "consumer:test",
     packageName: "boundary",
@@ -316,8 +279,6 @@ function consumerTask(
   };
 }
 
-function graph(
-  ...tasks: readonly VerificationTaskDefinition[]
-): ReadonlyMap<string, VerificationTaskDefinition> {
+function graph(...tasks: readonly VerificationTaskDefinition[]): ReadonlyMap<string, VerificationTaskDefinition> {
   return new Map(tasks.map((task) => [task.id, task]));
 }

@@ -20,10 +20,7 @@ export function toFilterText(value: unknown): string {
 }
 
 /** Two dates that land on the same calendar day. Absent dates never match. */
-export function isSameDay(
-  left: Date | undefined,
-  right: Date | undefined,
-): boolean {
+export function isSameDay(left: Date | undefined, right: Date | undefined): boolean {
   if (!left || !right) return false;
   return left.toDateString() === right.toDateString();
 }
@@ -46,7 +43,4 @@ export function formatDate(
     return "";
   }
 }
-import type {
-  ExplicitDateTimeFormatOptions,
-  LocaleFormatting,
-} from "../../copy/index.js";
+import type { ExplicitDateTimeFormatOptions, LocaleFormatting } from "../../copy/index.js";

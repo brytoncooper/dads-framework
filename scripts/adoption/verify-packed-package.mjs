@@ -1,13 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -31,42 +23,26 @@ mkdirSync(tarballRoot);
 mkdirSync(fixtureRoot);
 
 try {
-  const installOrder = collectInternalDependencies(
-    requestedPackage,
-    workspacePackages,
-  );
+  const installOrder = collectInternalDependencies(requestedPackage, workspacePackages);
   const tarballs = installOrder.map(packWorkspacePackage);
-  writeFileSync(
-    join(fixtureRoot, "package.json"),
-    JSON.stringify({ private: true, type: "module" }),
-    { flag: "wx" },
-  );
+  writeFileSync(join(fixtureRoot, "package.json"), JSON.stringify({ private: true, type: "module" }), { flag: "wx" });
   for (const tarball of tarballs) {
-    execFileSync(
-      "npm",
-      ["install", "--prefer-offline", "--no-audit", "--no-fund", tarball],
-      {
-        cwd: fixtureRoot,
-        stdio: "inherit",
-      },
-    );
+    execFileSync("npm", ["install", "--prefer-offline", "--no-audit", "--no-fund", tarball], {
+      cwd: fixtureRoot,
+      stdio: "inherit",
+    });
   }
 
-  const installedManifest = readJson(
-    join(fixtureRoot, "node_modules", requestedPackage, "package.json"),
-  );
+  const installedManifest = readJson(join(fixtureRoot, "node_modules", requestedPackage, "package.json"));
   if (installedManifest.name !== requestedPackage) {
-    throw new Error(
-      `Installed ${String(installedManifest.name)}, expected ${requestedPackage}.`,
-    );
+    throw new Error(`Installed ${String(installedManifest.name)}, expected ${requestedPackage}.`);
   }
   execFileSync(
     process.execPath,
     [
       "--input-type=module",
       "--eval",
-      consolidatedPackageProof(requestedPackage) ??
-        `await import(${JSON.stringify(requestedPackage)})`,
+      consolidatedPackageProof(requestedPackage) ?? `await import(${JSON.stringify(requestedPackage)})`,
     ],
     { cwd: fixtureRoot, stdio: "inherit" },
   );
@@ -90,13 +66,8 @@ function verifyDadExecutable(fixtureRoot) {
     cwd: fixtureRoot,
     encoding: "utf8",
   });
-  if (
-    completed.status !== 1 ||
-    !completed.stderr.startsWith("Dad: Usage: dad init")
-  ) {
-    throw new Error(
-      `The packed dad CLI did not report its expected usage. ${completed.stderr}`,
-    );
+  if (completed.status !== 1 || !completed.stderr.startsWith("Dad: Usage: dad init")) {
+    throw new Error(`The packed dad CLI did not report its expected usage. ${completed.stderr}`);
   }
 }
 
@@ -148,11 +119,9 @@ function packWorkspacePackage(packageName) {
   execFileSync("npm", ["run", "build", "-w", packageName], {
     stdio: "inherit",
   });
-  const packOutput = execFileSync(
-    "npm",
-    ["pack", "-w", packageName, "--json", "--pack-destination", tarballRoot],
-    { encoding: "utf8" },
-  );
+  const packOutput = execFileSync("npm", ["pack", "-w", packageName, "--json", "--pack-destination", tarballRoot], {
+    encoding: "utf8",
+  });
   const packed = JSON.parse(packOutput);
   const filename = packed[0]?.filename;
   if (typeof filename !== "string") {

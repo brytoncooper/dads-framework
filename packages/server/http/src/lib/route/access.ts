@@ -129,18 +129,10 @@ export type ScopedAccess = {
   readonly authorizationContextMode?: "technical-or-business";
 };
 
-export type RouteAccess =
-  | PermissionAccess
-  | SessionAccess
-  | PublicAccess
-  | VisibilityAccess
-  | ScopedAccess;
+export type RouteAccess = PermissionAccess | SessionAccess | PublicAccess | VisibilityAccess | ScopedAccess;
 
 /** Require a relationship on the resource identified by the supplied source. */
-export function requires(
-  token: PermissionToken,
-  resourceId: ResourceIdSource,
-): PermissionAccess {
+export function requires(token: PermissionToken, resourceId: ResourceIdSource): PermissionAccess {
   return {
     kind: "permission",
     resourceType: token.entityWireName,
@@ -168,30 +160,19 @@ export function requiresScoped(token: PermissionToken): ScopedAccess {
 }
 
 /** Resolve explicit caller authority before checking this route's business access. */
-export function withAuthorizationContext<
-  Access extends Exclude<RouteAccess, PublicAccess>,
->(
+export function withAuthorizationContext<Access extends Exclude<RouteAccess, PublicAccess>>(
   access: Access,
   source: ResourceIdSource,
 ): Access & { readonly authorizationContext: ResourceIdSource } {
-  if (
-    access.kind === "session" &&
-    access.authorizationContextInput !== undefined
-  )
-    throw new Error(
-      "Resolved and input-only authorization contexts cannot be combined",
-    );
+  if (access.kind === "session" && access.authorizationContextInput !== undefined)
+    throw new Error("Resolved and input-only authorization contexts cannot be combined");
   if (access.authorizationContextMode !== undefined)
-    throw new Error(
-      "Required and technical-or-business authorization contexts cannot be combined",
-    );
+    throw new Error("Required and technical-or-business authorization contexts cannot be combined");
   return { ...access, authorizationContext: source };
 }
 
 /** Explicitly technical routes may omit context; any supplied context must resolve and never falls back to technical identity. */
-export function withTechnicalOrBusinessAuthorizationContext<
-  Access extends Exclude<RouteAccess, PublicAccess>,
->(
+export function withTechnicalOrBusinessAuthorizationContext<Access extends Exclude<RouteAccess, PublicAccess>>(
   access: Access,
   source: ResourceIdSource,
 ): Access & {
@@ -199,17 +180,12 @@ export function withTechnicalOrBusinessAuthorizationContext<
   readonly authorizationContextMode: "technical-or-business";
 } {
   if (source.kind !== "header" && source.kind !== "query")
-    throw new Error(
-      "Technical-or-business context requires a declared header or query",
-    );
+    throw new Error("Technical-or-business context requires a declared header or query");
   if (
     access.authorizationContext !== undefined ||
-    (access.kind === "session" &&
-      access.authorizationContextInput !== undefined)
+    (access.kind === "session" && access.authorizationContextInput !== undefined)
   )
-    throw new Error(
-      "Technical-or-business authorization cannot be combined with another context declaration",
-    );
+    throw new Error("Technical-or-business authorization cannot be combined with another context declaration");
   return {
     ...access,
     authorizationContext: source,
@@ -227,9 +203,7 @@ export function withAuthorizationContextInput(
   source: ResourceIdSource,
 ): SessionAccess & { readonly authorizationContextInput: ResourceIdSource } {
   if (access.authorizationContext !== undefined)
-    throw new Error(
-      "Resolved and input-only authorization contexts cannot be combined",
-    );
+    throw new Error("Resolved and input-only authorization contexts cannot be combined");
   return { ...access, authorizationContextInput: source };
 }
 

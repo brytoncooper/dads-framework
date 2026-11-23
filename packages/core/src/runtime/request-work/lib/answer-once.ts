@@ -13,9 +13,7 @@ const currentScope = new AsyncLocalStorage<object>();
  * every answer the request holds. The scope must end with the request: never
  * open one around work that outlives it.
  */
-export function answeringEachQuestionOnce<T>(
-  work: () => Promise<T>,
-): Promise<T> {
+export function answeringEachQuestionOnce<T>(work: () => Promise<T>): Promise<T> {
   if (currentScope.getStore() !== undefined) return work();
   return currentScope.run({}, work);
 }

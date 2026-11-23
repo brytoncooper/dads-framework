@@ -17,18 +17,14 @@ describe("composeWebApp", () => {
       pages: [{ path: "/settings", title: "Settings" }],
     });
 
-    expect(
-      composeWebApp([notes, settings]).pages.map((page) => page.path),
-    ).toEqual(["/notes", "/settings"]);
+    expect(composeWebApp([notes, settings]).pages.map((page) => page.path)).toEqual(["/notes", "/settings"]);
   });
 
   it("refuses two plugins claiming one page path", () => {
     const one = defineWebPlugin({ name: "one", pages: [{ path: "/home" }] });
     const two = defineWebPlugin({ name: "two", pages: [{ path: "/home" }] });
 
-    expect(() => composeWebApp([one, two])).toThrow(
-      "page /home is contributed by both one and two",
-    );
+    expect(() => composeWebApp([one, two])).toThrow("page /home is contributed by both one and two");
   });
 
   it("refuses a repeated web plugin name", () => {

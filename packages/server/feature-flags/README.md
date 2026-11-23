@@ -25,14 +25,8 @@ The script enables invoice export for one tenant in memory.
 <!-- dads:check-example -->
 
 ```ts
-import {
-  composeFeatureFlags,
-  defineFeatureFlag,
-} from "@dads-framework/feature-flags";
-import {
-  InMemoryFeatureFlagStore,
-  FakeTenantDirectory,
-} from "@dads-framework/feature-flags/testing";
+import { composeFeatureFlags, defineFeatureFlag } from "@dads-framework/feature-flags";
+import { InMemoryFeatureFlagStore, FakeTenantDirectory } from "@dads-framework/feature-flags/testing";
 import { SystemClock } from "@dads-framework/core/runtime/clock";
 
 const bulkExport = defineFeatureFlag({
@@ -186,10 +180,7 @@ import {
 } from "@dads-framework/feature-flags/testing";
 import { createFeatureFlagRoutes } from "@dads-framework/feature-flags/http";
 import { fromFixed } from "@dads-framework/http";
-import {
-  buildTestApp,
-  TEST_SUBJECT_HEADER,
-} from "@dads-framework/http/testing";
+import { buildTestApp, TEST_SUBJECT_HEADER } from "@dads-framework/http/testing";
 
 const exportFlag = featureFlagDefinitionFactory({ slug: "orders.export" });
 const flags = composeFeatureFlags({
@@ -333,20 +324,13 @@ Save as `read-flag-store.mts` and run `node read-flag-store.mts` with Node.js
 <!-- dads:check-example -->
 
 ```ts
-import {
-  DrizzleFeatureFlagStore,
-  featureFlagStates,
-} from "@dads-framework/feature-flags/postgres";
+import { DrizzleFeatureFlagStore, featureFlagStates } from "@dads-framework/feature-flags/postgres";
 import { createPostgresConnection } from "@dads-framework/postgres";
 
 const connectionString = process.env.DATABASE_URL;
-if (!connectionString)
-  throw new Error("Set DATABASE_URL before running this script.");
+if (!connectionString) throw new Error("Set DATABASE_URL before running this script.");
 
-const connection = createPostgresConnection(
-  { connectionString, schema: { featureFlagStates } },
-  console,
-);
+const connection = createPostgresConnection({ connectionString, schema: { featureFlagStates } }, console);
 try {
   const store = new DrizzleFeatureFlagStore(connection.drizzle);
   console.log(await store.listStates(["orders.export"]));

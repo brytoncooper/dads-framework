@@ -6,9 +6,7 @@ type ModuleReference = {
   readonly require: boolean;
 };
 
-export function moduleReferences(
-  source: ts.SourceFile,
-): readonly ModuleReference[] {
+export function moduleReferences(source: ts.SourceFile): readonly ModuleReference[] {
   const references: ModuleReference[] = [];
   function visit(node: ts.Node): void {
     const reference = moduleReference(node);
@@ -39,12 +37,6 @@ function moduleReference(node: ts.Node): ModuleReference | undefined {
   return undefined;
 }
 
-function fromLiteral(
-  literal: ts.Node | undefined,
-  node: ts.Node,
-  require = false,
-): ModuleReference | undefined {
-  return literal && ts.isStringLiteralLike(literal)
-    ? { literal, node, require }
-    : undefined;
+function fromLiteral(literal: ts.Node | undefined, node: ts.Node, require = false): ModuleReference | undefined {
+  return literal && ts.isStringLiteralLike(literal) ? { literal, node, require } : undefined;
 }

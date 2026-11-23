@@ -51,16 +51,9 @@ const KEPT_BASE_PATHS = new Set<string>([
   "tsconfig.json",
 ]);
 
-const DROPPED_PACKAGES = new Set<string>([
-  "domains-notes",
-  "domains-support",
-  "libraries-sign-in-options",
-]);
+const DROPPED_PACKAGES = new Set<string>(["domains-notes", "domains-support", "libraries-sign-in-options"]);
 
-const DROPPED_DEPENDENCIES = new Set<string>([
-  "@dads-framework/documents",
-  "marked",
-]);
+const DROPPED_DEPENDENCIES = new Set<string>(["@dads-framework/documents", "marked"]);
 
 const DROPPED_COMPOSE_ENV_KEYS = [
   "DADS_ENTERPRISE_SSO_PROVIDERS:",
@@ -70,13 +63,9 @@ const DROPPED_COMPOSE_ENV_KEYS = [
 ] as const;
 
 /** Render the lean Dads app skeleton with full framework shape and zero example domains. */
-export function renderMinimalProjectFiles(options: {
-  readonly projectName: string;
-}): readonly StarterProjectFile[] {
+export function renderMinimalProjectFiles(options: { readonly projectName: string }): readonly StarterProjectFile[] {
   if (!PROJECT_NAME_PATTERN.test(options.projectName)) {
-    throw new Error(
-      "Dads project names must use lowercase letters, numbers, dots, dashes, or underscores.",
-    );
+    throw new Error("Dads project names must use lowercase letters, numbers, dots, dashes, or underscores.");
   }
   const overrides = new Map<string, StarterProjectFile>(
     [
@@ -87,22 +76,15 @@ export function renderMinimalProjectFiles(options: {
     ].map((file) => [file.path, file]),
   );
   const kept = kitStarterFiles
-    .filter(
-      (file) => KEPT_BASE_PATHS.has(file.path) && !overrides.has(file.path),
-    )
+    .filter((file) => KEPT_BASE_PATHS.has(file.path) && !overrides.has(file.path))
     .map((file) => transformMinimalBaseFile(file, options.projectName));
 
-  return [
-    ...kept,
-    ...overrides.values(),
-    ...renderStarterVerificationFiles(),
-  ].sort((left, right) => left.path.localeCompare(right.path));
+  return [...kept, ...overrides.values(), ...renderStarterVerificationFiles()].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
 }
 
-function transformMinimalBaseFile(
-  file: StarterProjectFile,
-  projectName: string,
-): StarterProjectFile {
+function transformMinimalBaseFile(file: StarterProjectFile, projectName: string): StarterProjectFile {
   if (file.path === "package.json") {
     return {
       ...file,
@@ -134,8 +116,7 @@ function minimalPackageManifest(content: string, projectName: string): string {
     ...scripts,
     start: "node assembly/dev.mjs up",
     verify: "node scripts/verify.mjs",
-    "verify:checks":
-      "npm run check:boundaries && npm run typecheck && npm run build:web && npm test",
+    "verify:checks": "npm run check:boundaries && npm run typecheck && npm run build:web && npm test",
     "check:boundaries": "dad check boundaries",
     "hooks:install": "sh .githooks/install",
   };
@@ -155,10 +136,7 @@ function minimalProjectManifest(content: string): string {
     throw new Error("Starter dads.project.json must declare packages.");
   }
   const packages = parsed["packages"].filter(
-    (entry) =>
-      isRecord(entry) &&
-      typeof entry["name"] === "string" &&
-      !DROPPED_PACKAGES.has(entry["name"]),
+    (entry) => isRecord(entry) && typeof entry["name"] === "string" && !DROPPED_PACKAGES.has(entry["name"]),
   );
   return `${JSON.stringify({ ...parsed, packages }, null, 2)}\n`;
 }
@@ -166,12 +144,7 @@ function minimalProjectManifest(content: string): string {
 function minimalComposeFile(content: string): string {
   return content
     .split("\n")
-    .filter(
-      (line) =>
-        !DROPPED_COMPOSE_ENV_KEYS.some((key) =>
-          line.trimStart().startsWith(key),
-        ),
-    )
+    .filter((line) => !DROPPED_COMPOSE_ENV_KEYS.some((key) => line.trimStart().startsWith(key)))
     .join("\n");
 }
 
@@ -189,12 +162,7 @@ function minimalTenantsWebClient(content: string): string {
     .replace(/\n{3,}$/u, "\n");
 }
 
-function omitKeys(
-  value: unknown,
-  excluded: ReadonlySet<string>,
-): Record<string, unknown> {
+function omitKeys(value: unknown, excluded: ReadonlySet<string>): Record<string, unknown> {
   if (!isRecord(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value).filter(([key]) => !excluded.has(key)),
-  );
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !excluded.has(key)));
 }

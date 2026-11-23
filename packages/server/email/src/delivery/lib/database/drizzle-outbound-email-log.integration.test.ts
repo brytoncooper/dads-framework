@@ -1,18 +1,11 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 import { mintUuidV7 } from "@dads-framework/core/contract";
 
 import type { EmailEnvelope } from "../email-envelope.js";
-import {
-  type OutboundEmailId,
-  outboundEmailIdSchema,
-} from "../outbound-email-status.js";
+import { type OutboundEmailId, outboundEmailIdSchema } from "../outbound-email-status.js";
 import { DrizzleOutboundEmailLog } from "./drizzle-outbound-email-log.js";
 import { outboundEmail } from "./generated-tables/outbound-emails.tables.js";
 
@@ -38,10 +31,7 @@ describe("DrizzleOutboundEmailLog (integration)", () => {
     await truncateTables(postgres.pool, ["outbound_emails"]);
   });
 
-  async function seed(input: {
-    readonly envelope: EmailEnvelope;
-    readonly createdAt: Date;
-  }): Promise<OutboundEmailId> {
+  async function seed(input: { readonly envelope: EmailEnvelope; readonly createdAt: Date }): Promise<OutboundEmailId> {
     const id = outboundEmailIdSchema.parse(mintUuidV7());
     await db.insert(outboundEmail).values({
       id,
@@ -126,8 +116,6 @@ describe("DrizzleOutboundEmailLog (integration)", () => {
   });
 
   it("finds nothing for an id with no row", async () => {
-    expect(
-      await log.find(outboundEmailIdSchema.parse(mintUuidV7())),
-    ).toBeNull();
+    expect(await log.find(outboundEmailIdSchema.parse(mintUuidV7()))).toBeNull();
   });
 });

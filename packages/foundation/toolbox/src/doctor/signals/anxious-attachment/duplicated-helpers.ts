@@ -20,16 +20,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  isProductionTypeScript,
-  packageRootOf,
-} from "../scanners/source-classification.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { isProductionTypeScript, packageRootOf } from "../scanners/source-classification.js";
 import { topLevelFunctionNames } from "../scanners/top-level-declarations.js";
 
 function countRedeclaredHelpers(context: DoctorContext): SignalReadings {
@@ -56,8 +48,7 @@ function countRedeclaredHelpers(context: DoctorContext): SignalReadings {
 export const duplicatedHelpersSignal: DoctorSignal = {
   id: "duplicated-helpers",
   issue: "anxious-attachment",
-  question:
-    "Is the same function name defined in more than one production file of one package?",
+  question: "Is the same function name defined in more than one production file of one package?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

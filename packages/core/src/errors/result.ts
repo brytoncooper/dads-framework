@@ -7,8 +7,7 @@ import type { DomainError } from "./domain-error.js";
  * unexpected faults where the only sane response is a 500 and a log line.
  */
 export type Result<T, E = DomainError> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: E };
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
 
 export function ok<T>(value: T): { readonly ok: true; readonly value: T } {
   return { ok: true, value };

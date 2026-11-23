@@ -11,18 +11,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-  createDoctorContext,
-  NOT_MEASURED_OFFLINE,
-  type DoctorContext,
-  type DoctorFetch,
-} from "./doctor-context.js";
+import { createDoctorContext, NOT_MEASURED_OFFLINE, type DoctorContext, type DoctorFetch } from "./doctor-context.js";
 import { runDoctorSignals } from "./doctor-signals.js";
 import { ONLINE_SIGNALS } from "./signals/registry/online.js";
-import {
-  parseRemoteUrl,
-  readJsonObject,
-} from "./signals/scanners/online-requests.js";
+import { parseRemoteUrl, readJsonObject } from "./signals/scanners/online-requests.js";
 import { unmaintainedDependenciesSignal } from "./signals/you-stay-with-people-who-cannot-meet-you/unmaintained-dependencies.js";
 
 const ORIGIN = "git@github.com:fixture-owner/fixture-repo.git";
@@ -50,19 +42,13 @@ describe("a doctor run that was not given a network", () => {
   it("reports every online signal as not measured, with the reason", async () => {
     const context = createDoctorContext({ root: process.cwd(), files: [] });
 
-    expect(await failuresOf(context)).toStrictEqual([
-      NOT_MEASURED_OFFLINE,
-      NOT_MEASURED_OFFLINE,
-      NOT_MEASURED_OFFLINE,
-    ]);
+    expect(await failuresOf(context)).toStrictEqual([NOT_MEASURED_OFFLINE, NOT_MEASURED_OFFLINE, NOT_MEASURED_OFFLINE]);
   });
 
   it("refuses the request itself, so no signal can reach out by forgetting", async () => {
     const context = createDoctorContext({ root: process.cwd(), files: [] });
 
-    await expect(context.fetch(REPOSITORY)).rejects.toThrow(
-      NOT_MEASURED_OFFLINE,
-    );
+    await expect(context.fetch(REPOSITORY)).rejects.toThrow(NOT_MEASURED_OFFLINE);
   });
 });
 
@@ -76,13 +62,9 @@ describe("a doctor run that was given a network but no day", () => {
         throw new Error("nothing should be asked without a day");
       },
     });
-    const outcomes = await runDoctorSignals(context, [
-      unmaintainedDependenciesSignal,
-    ]);
+    const outcomes = await runDoctorSignals(context, [unmaintainedDependenciesSignal]);
 
-    expect(outcomes.map((outcome) => outcome.failure)).toStrictEqual([
-      "no --today given",
-    ]);
+    expect(outcomes.map((outcome) => outcome.failure)).toStrictEqual(["no --today given"]);
   });
 });
 
@@ -121,19 +103,13 @@ describe("a request the doctor makes", () => {
       }),
     );
 
-    await expect(readJsonObject(context, REPOSITORY)).rejects.toThrow(
-      `${REPOSITORY} answered ${REFUSED}`,
-    );
+    await expect(readJsonObject(context, REPOSITORY)).rejects.toThrow(`${REPOSITORY} answered ${REFUSED}`);
   });
 
   it("is a failure when a 200 carries a body that is not a JSON object", async () => {
-    const context = onlineContext(() =>
-      Promise.resolve({ status: 200, text: () => Promise.resolve("<html>") }),
-    );
+    const context = onlineContext(() => Promise.resolve({ status: 200, text: () => Promise.resolve("<html>") }));
 
-    await expect(readJsonObject(context, REPOSITORY)).rejects.toThrow(
-      "answered 200 with no JSON object",
-    );
+    await expect(readJsonObject(context, REPOSITORY)).rejects.toThrow("answered 200 with no JSON object");
   });
 });
 
@@ -149,14 +125,7 @@ describe("the repository a remote names", () => {
     ].map((url) => parseRemoteUrl(url));
     const expected = { owner: "fixture-owner", repository: "fixture-repo" };
 
-    expect(named).toStrictEqual([
-      expected,
-      expected,
-      expected,
-      expected,
-      expected,
-      expected,
-    ]);
+    expect(named).toStrictEqual([expected, expected, expected, expected, expected, expected]);
   });
 
   it("names nothing for a remote this signal cannot ask about", () => {
@@ -168,12 +137,6 @@ describe("the repository a remote names", () => {
       "",
     ].map((url) => parseRemoteUrl(url));
 
-    expect(named).toStrictEqual([
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-    ]);
+    expect(named).toStrictEqual([undefined, undefined, undefined, undefined, undefined]);
   });
 });

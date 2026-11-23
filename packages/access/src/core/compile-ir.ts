@@ -1,20 +1,11 @@
 import { z } from "zod";
 
-import {
-  finalizeAccessModel,
-  type AccessModel,
-  type ResolvedAccessDefinition,
-} from "./access-model.js";
+import { finalizeAccessModel, type AccessModel, type ResolvedAccessDefinition } from "./access-model.js";
 import { both, excluding, gated, through, throughAll } from "./combinators.js";
 import type { CompileAccessOptions } from "./dsl-resource-types.js";
 import { entityHandle } from "./entity-handle.js";
 import { wildcard, withExpiration, type SingleRoleValue } from "./holders.js";
-import type {
-  AccessIrDefinition,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./ir.js";
+import type { AccessIrDefinition, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./ir.js";
 import {
   permissionToken,
   roleToken,
@@ -34,9 +25,7 @@ function lowerSubject(subject: AccessIrSubject): SingleRoleValue {
       idSchema: defaultIdSchema,
     });
   } else if (subject.kind === "wildcard") {
-    base = wildcard(
-      entityHandle({ wireName: subject.wireName, idSchema: defaultIdSchema }),
-    );
+    base = wildcard(entityHandle({ wireName: subject.wireName, idSchema: defaultIdSchema }));
   } else {
     base = {
       kind: "userset",
@@ -53,10 +42,7 @@ function lowerRoleHolder(role: AccessIrRole): RoleHolder {
   return lowered.length === 1 && only !== undefined ? only : lowered;
 }
 
-function firstTargetWireName(
-  roleDef: AccessIrRole | undefined,
-  fallback: string,
-): string {
+function firstTargetWireName(roleDef: AccessIrRole | undefined, fallback: string): string {
   const firstType = roleDef?.subjects.find((entry) => entry.kind === "type");
   return firstType?.wireName ?? roleDef?.subjects[0]?.wireName ?? fallback;
 }
@@ -67,16 +53,10 @@ function lowerArrowTerm(
   roles: Readonly<Record<string, RoleToken>>,
   roleDefs: ReadonlyMap<string, AccessIrRole>,
 ): PermissionTerm {
-  const role =
-    roles[term.roleName] ?? roleToken(ownerWireName, term.roleName, []);
-  const targetWire = firstTargetWireName(
-    roleDefs.get(term.roleName),
-    ownerWireName,
-  );
+  const role = roles[term.roleName] ?? roleToken(ownerWireName, term.roleName, []);
+  const targetWire = firstTargetWireName(roleDefs.get(term.roleName), ownerWireName);
   const target = permissionToken(targetWire, term.targetPermission);
-  return term.kind === "through"
-    ? through(role, target)
-    : throughAll(role, target);
+  return term.kind === "through" ? through(role, target) : throughAll(role, target);
 }
 
 function lowerTerm(
@@ -94,9 +74,7 @@ function lowerTerm(
   if (term.kind === "or") {
     return {
       kind: "or",
-      terms: term.terms.map((entry) =>
-        lowerTerm(entry, ownerWireName, roles, roleDefs),
-      ),
+      terms: term.terms.map((entry) => lowerTerm(entry, ownerWireName, roles, roleDefs)),
     };
   }
   if (term.kind === "gated") {
@@ -117,9 +95,7 @@ function lowerTerm(
   );
 }
 
-function lowerDefinition(
-  definition: AccessIrDefinition,
-): ResolvedAccessDefinition {
+function lowerDefinition(definition: AccessIrDefinition): ResolvedAccessDefinition {
   const entity = entityHandle({
     wireName: definition.wireName,
     idSchema: defaultIdSchema,
@@ -127,21 +103,14 @@ function lowerDefinition(
   const roles: Record<string, RoleToken> = {};
   const roleDefs = new Map<string, AccessIrRole>();
   for (const role of definition.roles) {
-    roles[role.name] = roleToken(
-      definition.wireName,
-      role.name,
-      lowerRoleHolder(role),
-    );
+    roles[role.name] = roleToken(definition.wireName, role.name, lowerRoleHolder(role));
     roleDefs.set(role.name, role);
   }
 
   const permissions: Record<string, PermissionToken> = {};
   const expressions: Record<string, readonly PermissionTerm[]> = {};
   for (const permission of definition.permissions) {
-    permissions[permission.name] = permissionToken(
-      definition.wireName,
-      permission.name,
-    );
+    permissions[permission.name] = permissionToken(definition.wireName, permission.name);
     expressions[permission.name] = permission.terms.map((term) =>
       lowerTerm(term, definition.wireName, roles, roleDefs),
     );

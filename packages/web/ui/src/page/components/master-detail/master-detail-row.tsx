@@ -2,10 +2,7 @@ import type * as React from "react";
 
 import { cn } from "../../../elements/index.js";
 
-import {
-  type MasterDetailListSearch,
-  useMasterDetailListSearch,
-} from "./master-detail-layout.js";
+import { type MasterDetailListSearch, useMasterDetailListSearch } from "./master-detail-layout.js";
 
 export type MasterDetailLinkProps = React.ComponentPropsWithoutRef<"a"> & {
   readonly href: string;
@@ -24,15 +21,9 @@ function MasterDetailAnchor({ href, search, ...props }: MasterDetailLinkProps) {
   const pathAndQuery = fragmentIndex < 0 ? href : href.slice(0, fragmentIndex);
   const fragment = fragmentIndex < 0 ? "" : href.slice(fragmentIndex);
   const queryIndex = pathAndQuery.indexOf("?");
-  const path =
-    queryIndex < 0 ? pathAndQuery : pathAndQuery.slice(0, queryIndex);
+  const path = queryIndex < 0 ? pathAndQuery : pathAndQuery.slice(0, queryIndex);
   const query = params.toString();
-  return (
-    <a
-      href={query ? `${path}?${query}${fragment}` : `${path}${fragment}`}
-      {...props}
-    />
-  );
+  return <a href={query ? `${path}?${query}${fragment}` : `${path}${fragment}`} {...props} />;
 }
 
 /**
@@ -70,16 +61,13 @@ export function MasterDetailRow({
       className={cn(
         "flex min-h-14 items-center gap-2 border-b border-l-2 border-border border-l-transparent px-3 py-2 text-sm outline-none transition-colors motion-reduce:transition-none",
         "hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
-        selected &&
-          "border-l-primary bg-primary/10 font-semibold hover:bg-primary/10",
+        selected && "border-l-primary bg-primary/10 font-semibold hover:bg-primary/10",
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-foreground leading-snug">{title}</span>
         {subtitle ? (
-          <span className="truncate font-normal text-muted-foreground text-xs leading-snug">
-            {subtitle}
-          </span>
+          <span className="truncate font-normal text-muted-foreground text-xs leading-snug">{subtitle}</span>
         ) : null}
         {contextLabel ? (
           <span

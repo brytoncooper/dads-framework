@@ -19,9 +19,7 @@ function duplicates(names: readonly string[]): readonly string[] {
 
 describe("the concatenated signal registry", () => {
   it("carries each id once, so no lane can shadow another lane's signal", () => {
-    expect(duplicates(DOCTOR_SIGNALS.map((signal) => signal.id))).toStrictEqual(
-      [],
-    );
+    expect(duplicates(DOCTOR_SIGNALS.map((signal) => signal.id))).toStrictEqual([]);
   });
 
   it("reports every signal under an issue the catalog declares", () => {
@@ -40,9 +38,7 @@ describe("the concatenated signal registry", () => {
   });
 
   it("keeps the sixteen section names the source-budget measures wrote", () => {
-    const named = DOCTOR_SIGNALS.flatMap((signal) =>
-      signal.measure === undefined ? [] : [signal.measure],
-    ).sort();
+    const named = DOCTOR_SIGNALS.flatMap((signal) => (signal.measure === undefined ? [] : [signal.measure])).sort();
 
     expect(named).toStrictEqual([
       "barrelImpurity",

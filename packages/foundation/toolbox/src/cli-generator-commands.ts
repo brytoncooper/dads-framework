@@ -1,48 +1,30 @@
 import { writeOutput } from "./cli-io.js";
 import { addAccess } from "./resource-generators/access-generator.js";
-import {
-  ensureDomain,
-  mountDomain,
-  requireDomain,
-} from "./resource-generators/domain-generator.js";
+import { ensureDomain, mountDomain, requireDomain } from "./resource-generators/domain-generator.js";
 import { addEmail } from "./resource-generators/email-generator.js";
 import { addEndpoint } from "./resource-generators/endpoint-generator.js";
 import { addFlag } from "./resource-generators/flag-generator.js";
 import { addResource } from "./resource-generators/generate-resource.js";
 import { GenerationPlan } from "./resource-generators/generation-plan.js";
-import {
-  parseGeneratorArguments,
-  type GeneratorArguments,
-} from "./resource-generators/generator-arguments.js";
+import { parseGeneratorArguments, type GeneratorArguments } from "./resource-generators/generator-arguments.js";
 import { ensureGeneratorDependencies } from "./resource-generators/generator-dependencies.js";
 import { addPage } from "./resource-generators/page-generator.js";
 import { addTable } from "./resource-generators/table-generator.js";
 
-export function addProjectArtifact(
-  args: readonly string[],
-  json: boolean,
-): void {
+export function addProjectArtifact(args: readonly string[], json: boolean): void {
   writeOutput(
     {
       ok: true,
-      result: generateProjectArtifact(
-        process.cwd(),
-        parseGeneratorArguments(args),
-      ),
+      result: generateProjectArtifact(process.cwd(), parseGeneratorArguments(args)),
     },
     json,
   );
 }
 
-export function generateProjectArtifact(
-  root: string,
-  options: GeneratorArguments,
-) {
+export function generateProjectArtifact(root: string, options: GeneratorArguments) {
   const plan = new GenerationPlan(root);
-  if (plan.read("dads.project.json") === undefined)
-    throw new Error("Run this generator from a Dads application root.");
-  if (options.kind === "domain" || options.kind === "resource")
-    ensureDomain(plan, options.domain);
+  if (plan.read("dads.project.json") === undefined) throw new Error("Run this generator from a Dads application root.");
+  if (options.kind === "domain" || options.kind === "resource") ensureDomain(plan, options.domain);
   else requireDomain(plan, options.domain);
 
   writeArtifacts(plan, root, options);
@@ -56,11 +38,7 @@ export function generateProjectArtifact(
   };
 }
 
-function writeArtifacts(
-  plan: GenerationPlan,
-  root: string,
-  { kind, domain, name }: GeneratorArguments,
-): void {
+function writeArtifacts(plan: GenerationPlan, root: string, { kind, domain, name }: GeneratorArguments): void {
   switch (kind) {
     case "domain":
       return;

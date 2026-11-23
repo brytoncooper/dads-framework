@@ -1,13 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -55,33 +47,16 @@ it(
         mode: "new",
         projectName: "starter-verification",
       });
-      expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toBe(
-        "@AGENTS.md\n",
-      );
+      expect(readFileSync(join(root, "CLAUDE.md"), "utf8")).toBe("@AGENTS.md\n");
       expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe(
-        readFileSync(
-          new URL(
-            "../../../../../apps/kit-workbench/AGENTS.md",
-            import.meta.url,
-          ),
-          "utf8",
-        ),
+        readFileSync(new URL("../../../../../apps/kit-workbench/AGENTS.md", import.meta.url), "utf8"),
       );
       expect(existsSync(join(root, "DEPLOY.md"))).toBe(true);
-      expect(existsSync(join(root, ".github/workflows/verify.yml"))).toBe(
-        false,
-      );
+      expect(existsSync(join(root, ".github/workflows/verify.yml"))).toBe(false);
       expect(existsSync(join(root, ".gitlab-ci.yml"))).toBe(false);
-      for (const path of [
-        "ci/verify.sh",
-        "ci/github-actions/verify.yml",
-        "ci/gitlab/verify.yml",
-      ]) {
+      for (const path of ["ci/verify.sh", "ci/github-actions/verify.yml", "ci/gitlab/verify.yml"]) {
         expect(readFileSync(join(root, path), "utf8")).toBe(
-          readFileSync(
-            new URL(`../../../../../${path}`, import.meta.url),
-            "utf8",
-          ),
+          readFileSync(new URL(`../../../../../${path}`, import.meta.url), "utf8"),
         );
       }
       // Use an offline verification check that reads tracked content. The
@@ -124,19 +99,13 @@ it(
       );
 
       mkdirSync(join(root, "node_modules", ".bin"), { recursive: true });
-      symlinkSync(
-        resolve(import.meta.dirname, "../../bin/dad.js"),
-        join(root, "node_modules", ".bin", "dad"),
-      );
+      symlinkSync(resolve(import.meta.dirname, "../../bin/dad.js"), join(root, "node_modules", ".bin", "dad"));
 
       const beforeCi = createDoctorContext({ root });
       const before = await ciWithoutVerifySignal.run(beforeCi);
       expect(before.get("verify")?.value).toBe(1);
       expect(beforeCi.notes).toContain("no recognized CI workflow");
-      writeFileSync(
-        join(root, ".gitlab-ci.yml"),
-        readFileSync(join(root, "ci/gitlab/verify.yml"), "utf8"),
-      );
+      writeFileSync(join(root, ".gitlab-ci.yml"), readFileSync(join(root, "ci/gitlab/verify.yml"), "utf8"));
       succeeded(root, "git", "add", ".");
       stage(root, "bad whitespace \n");
       const refused = execute(root, "git", ["commit", "-m", "bad whitespace"]);
@@ -148,29 +117,16 @@ it(
       writeFileSync(file, "export const input: any = 1;\n");
       succeeded(root, "git", "add", "proof-source.ts");
       writeFileSync(file, "export const input: number = 1;\n");
-      const unsafe = execute(root, "git", [
-        "commit",
-        "-m",
-        "unsafe staged code",
-      ]);
+      const unsafe = execute(root, "git", ["commit", "-m", "unsafe staged code"]);
       expect(unsafe.status).not.toBe(0);
       expect(unsafe.stdout + unsafe.stderr).toContain("disallowed AnyKeyword");
       succeeded(root, "git", "add", "proof-source.ts");
       const budgetPath = join(root, "apps", "customer", "oversized.ts");
       writeFileSync(budgetPath, "export {};\n".repeat(401));
       succeeded(root, "git", "add", "apps/customer/oversized.ts");
-      const aboveBudget = execute(root, "git", [
-        "commit",
-        "-m",
-        "oversized staged code",
-      ]);
-      expect(
-        aboveBudget.status,
-        aboveBudget.stdout + aboveBudget.stderr,
-      ).not.toBe(0);
-      expect(aboveBudget.stdout + aboveBudget.stderr).toContain(
-        "fileLines apps/customer/oversized.ts",
-      );
+      const aboveBudget = execute(root, "git", ["commit", "-m", "oversized staged code"]);
+      expect(aboveBudget.status, aboveBudget.stdout + aboveBudget.stderr).not.toBe(0);
+      expect(aboveBudget.stdout + aboveBudget.stderr).toContain("fileLines apps/customer/oversized.ts");
       rmSync(budgetPath);
       succeeded(root, "git", "add", "-u", "apps/customer/oversized.ts");
       succeeded(root, "git", "commit", "-m", "bad content");
@@ -185,26 +141,13 @@ it(
       succeeded(root, "npm", "run", "verify");
       succeeded(root, "git", "push", "origin", "main");
       const ciCheckout = join(directory, "ci-checkout");
-      succeeded(
-        directory,
-        "git",
-        "clone",
-        "--branch",
-        "main",
-        remote,
-        ciCheckout,
-      );
+      succeeded(directory, "git", "clone", "--branch", "main", remote, ciCheckout);
       const gitlab = readFileSync(join(ciCheckout, ".gitlab-ci.yml"), "utf8");
       expect(gitlab).toMatch(/^ {4}- sh ci\/verify\.sh$/mu);
       const ciVerification = execute(ciCheckout, "sh", ["ci/verify.sh"]);
-      expect(
-        ciVerification.status,
-        ciVerification.stdout + ciVerification.stderr,
-      ).toBe(0);
+      expect(ciVerification.status, ciVerification.stdout + ciVerification.stderr).toBe(0);
       expect(ciVerification.stdout).toContain("CI mode verified");
-      expect(
-        existsSync(join(ciCheckout, ".git/dads/starter-verification")),
-      ).toBe(false);
+      expect(existsSync(join(ciCheckout, ".git/dads/starter-verification"))).toBe(false);
 
       succeeded(root, "git", "commit", "--allow-empty", "-m", "reject history");
       const sameTreePush = execute(root, "git", ["push", "origin", "main"]);
@@ -214,9 +157,7 @@ it(
       const context = createDoctorContext({ root });
       const timing = await hookRuntimeSignal.run(context);
       expect([...timing.keys()]).toStrictEqual(["pre-commit", "pre-push"]);
-      expect(context.notes?.join("\n")).toMatch(
-        /pre-push median .*budget 60000 ms/,
-      );
+      expect(context.notes?.join("\n")).toMatch(/pre-push median .*budget 60000 ms/);
       const ci = await ciWithoutVerifySignal.run(context);
       expect(ci.get("verify")).toMatchObject({
         value: 0,

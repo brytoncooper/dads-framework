@@ -23,14 +23,7 @@ export async function runDevCommand(argv: readonly string[]): Promise<string> {
     case "sweep":
     case "prune":
       return withSlotLock(root, async () =>
-        json(
-          await cleanupWorktrees(
-            worktree,
-            root,
-            command === "prune",
-            requestedBase(args),
-          ),
-        ),
+        json(await cleanupWorktrees(worktree, root, command === "prune", requestedBase(args))),
       );
     case "status":
       validateEmpty(args);
@@ -47,53 +40,32 @@ export async function runDevCommand(argv: readonly string[]): Promise<string> {
   }
 }
 
-async function bringUp(
-  root: string,
-  worktree: string,
-  command: "up" | "ready",
-): Promise<string> {
+async function bringUp(root: string, worktree: string, command: "up" | "ready"): Promise<string> {
   const config = await readDevConfig(worktree);
   const slot = await reserveSlot(root, worktree, config);
   if ((await runStatus(slotDirectory(root, slot))) !== "running") {
     await prepareSlot(root, slot);
-    if (command === "ready")
-      await installLocalServiceDependencies(
-        worktree,
-        slotDirectory(root, slot),
-      );
+    if (command === "ready") await installLocalServiceDependencies(worktree, slotDirectory(root, slot));
     if (command === "up") await startSlot(root, slot, config);
   }
   return json(await describeSlots(root, worktree));
 }
 
 async function bringDown(root: string, worktree: string): Promise<string> {
-  const slot = (await readSlots(root)).find(
-    (candidate) => candidate.worktree === worktree,
-  );
+  const slot = (await readSlots(root)).find((candidate) => candidate.worktree === worktree);
   if (slot !== undefined) await stopSlot(root, slot);
   return json(await describeSlots(root, worktree));
 }
 
-async function installLocalServiceDependencies(
-  worktree: string,
-  state: string,
-): Promise<void> {
+async function installLocalServiceDependencies(worktree: string, state: string): Promise<void> {
   try {
     await access(join(worktree, "package-lock.json"));
   } catch (error) {
     if (hasCode(error, "ENOENT")) return;
     throw error;
   }
-  const child = launch(
-    ["npm", "ci"],
-    worktree,
-    process.env,
-    join(state, "install.log"),
-  );
-  if ((await childFinished(child)) !== 0)
-    throw new Error(
-      `Dependency installation failed. See ${state}/install.log.`,
-    );
+  const child = launch(["npm", "ci"], worktree, process.env, join(state, "install.log"));
+  if ((await childFinished(child)) !== 0) throw new Error(`Dependency installation failed. See ${state}/install.log.`);
 }
 
 async function describeSlots(root: string, worktree: string) {
@@ -120,10 +92,7 @@ async function serviceUrls(worktree: string, firstPort: number) {
   try {
     const config = await readDevConfig(worktree);
     return Object.fromEntries(
-      config.services.map((service) => [
-        service.name,
-        `http://127.0.0.1:${firstPort + service.portOffset}`,
-      ]),
+      config.services.map((service) => [service.name, `http://127.0.0.1:${firstPort + service.portOffset}`]),
     );
   } catch {
     return {};
@@ -133,24 +102,13 @@ async function serviceUrls(worktree: string, firstPort: number) {
 function requestedBase(args: readonly string[]): string {
   if (args.length === 0) return "origin/main";
   const [option, base] = args;
-  if (
-    args.length === 2 &&
-    option === "--base" &&
-    base !== undefined &&
-    !base.startsWith("-")
-  )
-    return base;
+  if (args.length === 2 && option === "--base" && base !== undefined && !base.startsWith("-")) return base;
   throw new Error("Use --base followed by a Git revision.");
 }
 
-async function runScratch(
-  cwd: string,
-  stateRoot: string,
-  args: readonly string[],
-): Promise<void> {
+async function runScratch(cwd: string, stateRoot: string, args: readonly string[]): Promise<void> {
   const [separator, command, ...rest] = args;
-  if (separator !== "--" || command === undefined)
-    throw new Error("Use scratch -- <command> [arguments].");
+  if (separator !== "--" || command === undefined) throw new Error("Use scratch -- <command> [arguments].");
   await scratchWorktree(cwd, stateRoot, "HEAD", [command, ...rest]);
 }
 

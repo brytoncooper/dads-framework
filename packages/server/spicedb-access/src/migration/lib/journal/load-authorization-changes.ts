@@ -2,15 +2,10 @@ import { resolve } from "node:path";
 import { z } from "zod";
 
 import { AuthorizationChangeError } from "../../definition-changes.mjs";
-import {
-  type AuthorizationChangeFile,
-  loadAuthorizationChangeFiles,
-} from "./authorization-change-files.js";
+import { type AuthorizationChangeFile, loadAuthorizationChangeFiles } from "./authorization-change-files.js";
 import type { AuthorizationMigrationStep } from "./journal-entry.js";
 
-const stepSchema = z.custom<AuthorizationMigrationStep>(
-  (value) => typeof value === "function",
-);
+const stepSchema = z.custom<AuthorizationMigrationStep>((value) => typeof value === "function");
 const hooksSchema = z
   .object({
     beforeSchemaWrite: stepSchema.optional(),
@@ -23,12 +18,9 @@ export type AuthorizationChangeHooks = {
   readonly beforeSchemaWrite?: AuthorizationMigrationStep;
   readonly afterSchemaWrite?: AuthorizationMigrationStep;
 };
-export type LoadedAuthorizationChange = AuthorizationChangeFile &
-  AuthorizationChangeHooks;
+export type LoadedAuthorizationChange = AuthorizationChangeFile & AuthorizationChangeHooks;
 
-export async function loadAuthorizationChanges(
-  folder: string,
-): Promise<readonly LoadedAuthorizationChange[]> {
+export async function loadAuthorizationChanges(folder: string): Promise<readonly LoadedAuthorizationChange[]> {
   const changes = await loadAuthorizationChangeFiles(folder);
   const loaded: LoadedAuthorizationChange[] = [];
   for (const change of changes) {

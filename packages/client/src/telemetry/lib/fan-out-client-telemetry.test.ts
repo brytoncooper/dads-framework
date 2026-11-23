@@ -9,11 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ClientTelemetry,
-  type TelemetryBreadcrumb,
-  type TelemetryContext,
-} from "../core/index.js";
+import { ClientTelemetry, type TelemetryBreadcrumb, type TelemetryContext } from "../core/index.js";
 import { FanOutClientTelemetry } from "./fan-out-client-telemetry.js";
 
 class RecordingTelemetry extends ClientTelemetry {
@@ -87,14 +83,8 @@ describe("FanOutClientTelemetry", () => {
   });
 
   it("reports delivered only when all of them did", async () => {
-    const all = new FanOutClientTelemetry([
-      new RecordingTelemetry(true),
-      new RecordingTelemetry(true),
-    ]);
-    const partial = new FanOutClientTelemetry([
-      new RecordingTelemetry(true),
-      new RecordingTelemetry(false),
-    ]);
+    const all = new FanOutClientTelemetry([new RecordingTelemetry(true), new RecordingTelemetry(true)]);
+    const partial = new FanOutClientTelemetry([new RecordingTelemetry(true), new RecordingTelemetry(false)]);
 
     expect(await all.flush(1_000)).toBe(true);
     expect(await partial.flush(1_000)).toBe(false);

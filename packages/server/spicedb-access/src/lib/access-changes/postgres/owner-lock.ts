@@ -9,10 +9,7 @@ const DEFAULT_ACQUISITION_TIMEOUT_MS = 2_000;
 const DEFAULT_RETRY_DELAY_MS = 10;
 
 type AuthorizationLockClient = {
-  query(
-    statement: string,
-    values: readonly unknown[],
-  ): Promise<{ readonly rows: readonly Record<string, unknown>[] }>;
+  query(statement: string, values: readonly unknown[]): Promise<{ readonly rows: readonly Record<string, unknown>[] }>;
   release(destroy?: boolean): void;
 };
 
@@ -56,9 +53,7 @@ const lockConnectionsHeld = new WeakMap<LockConnectionPool, number>();
  * that keeps a pooled connection while its operation runs calls this around
  * that operation.
  */
-export function runHoldingLockConnection<T>(
-  operation: () => Promise<T>,
-): Promise<T> {
+export function runHoldingLockConnection<T>(operation: () => Promise<T>): Promise<T> {
   return lockConnectionHeldOnThisPath.run(true, operation);
 }
 
@@ -70,9 +65,7 @@ export function runHoldingLockConnection<T>(
  * lock's connection is back in the pool. A pool that reports no `max` is
  * not limited, only counted.
  */
-export function reserveLockConnection(
-  pool: LockConnectionPool,
-): (() => void) | null {
+export function reserveLockConnection(pool: LockConnectionPool): (() => void) | null {
   const held = lockConnectionsHeld.get(pool) ?? 0;
   const max = pool.options?.max;
   if (max !== undefined) {
@@ -126,21 +119,16 @@ export class PostgresOwnerLock extends OwnerLock {
     options: CoordinatorOptions = {},
   ) {
     super();
-    this.acquisitionTimeoutMs =
-      options.acquisitionTimeoutMs ?? DEFAULT_ACQUISITION_TIMEOUT_MS;
+    this.acquisitionTimeoutMs = options.acquisitionTimeoutMs ?? DEFAULT_ACQUISITION_TIMEOUT_MS;
     this.retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
     const poolMaximum = pool.options?.max ?? 3;
-    this.maxConcurrentLockClients =
-      options.maxConcurrentLockClients ?? Math.max(1, poolMaximum - 2);
+    this.maxConcurrentLockClients = options.maxConcurrentLockClients ?? Math.max(1, poolMaximum - 2);
     this.now = options.now ?? Date.now;
     this.delay = options.delay ?? sleep;
     this.log = options.log ?? SILENT_LOG;
   }
 
-  protected async runLocked<T>(
-    ownerPartitionId: string,
-    operation: () => Promise<T>,
-  ): Promise<T> {
+  protected async runLocked<T>(ownerPartitionId: string, operation: () => Promise<T>): Promise<T> {
     const acquired = await this.acquire(ownerPartitionId);
     try {
       return await runHoldingLockConnection(operation);
@@ -159,10 +147,7 @@ export class PostgresOwnerLock extends OwnerLock {
     throw acquisitionTimeout();
   }
 
-  private async tryAcquire(
-    ownerPartitionId: string,
-    deadline: number,
-  ): Promise<AcquiredLock | null> {
+  private async tryAcquire(ownerPartitionId: string, deadline: number): Promise<AcquiredLock | null> {
     const releasePermit = this.tryAcquirePermit();
     if (releasePermit === null) return null;
     let client: AuthorizationLockClient;
@@ -181,10 +166,10 @@ export class PostgresOwnerLock extends OwnerLock {
     ownerPartitionId: string,
   ): Promise<AcquiredLock | null> {
     try {
-      const result = await client.query(
-        "select pg_try_advisory_lock(hashtextextended($1, $2)) as acquired",
-        [ownerPartitionId, AUTHORIZATION_PARTITION_LOCK_NAMESPACE],
-      );
+      const result = await client.query("select pg_try_advisory_lock(hashtextextended($1, $2)) as acquired", [
+        ownerPartitionId,
+        AUTHORIZATION_PARTITION_LOCK_NAMESPACE,
+      ]);
       if (result.rows[0]?.["acquired"] === true) {
         return { client, releasePermit };
       }
@@ -198,16 +183,13 @@ export class PostgresOwnerLock extends OwnerLock {
     }
   }
 
-  private async release(
-    acquired: AcquiredLock,
-    ownerPartitionId: string,
-  ): Promise<void> {
+  private async release(acquired: AcquiredLock, ownerPartitionId: string): Promise<void> {
     let unlockFailure: Error | null = null;
     try {
-      const result = await acquired.client.query(
-        "select pg_advisory_unlock(hashtextextended($1, $2)) as unlocked",
-        [ownerPartitionId, AUTHORIZATION_PARTITION_LOCK_NAMESPACE],
-      );
+      const result = await acquired.client.query("select pg_advisory_unlock(hashtextextended($1, $2)) as unlocked", [
+        ownerPartitionId,
+        AUTHORIZATION_PARTITION_LOCK_NAMESPACE,
+      ]);
       if (result.rows[0]?.["unlocked"] !== true) {
         unlockFailure = new Error("authorization partition lock was not held");
       }
@@ -281,14 +263,9 @@ function connectBefore(
 }
 
 function acquisitionTimeout(): Error {
-  return conflict(
-    "AUTHORIZATION_PARTITION_BUSY",
-    "Authorization partition is temporarily busy",
-  );
+  return conflict("AUTHORIZATION_PARTITION_BUSY", "Authorization partition is temporarily busy");
 }
 
 function normalizeError(error: unknown): Error {
-  return error instanceof Error
-    ? error
-    : new Error("authorization partition operation failed");
+  return error instanceof Error ? error : new Error("authorization partition operation failed");
 }

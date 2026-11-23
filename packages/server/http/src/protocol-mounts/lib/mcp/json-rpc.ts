@@ -82,12 +82,7 @@ export function jsonRpcResult(id: JsonRpcId, result: unknown): JsonRpcSuccess {
   return { jsonrpc: "2.0", id, result };
 }
 
-export function jsonRpcError(
-  id: JsonRpcId | null,
-  code: number,
-  message: string,
-  data?: unknown,
-): JsonRpcFailure {
+export function jsonRpcError(id: JsonRpcId | null, code: number, message: string, data?: unknown): JsonRpcFailure {
   return {
     jsonrpc: "2.0",
     id,

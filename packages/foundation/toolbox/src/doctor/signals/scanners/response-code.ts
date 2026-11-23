@@ -21,11 +21,7 @@ const HTTP_DIRECTORY = /\/src\/(?:[^/]+\/)*http\//;
 
 /** True for a call to a route builder. */
 export function isRouteBuilderCall(node: ts.Node): boolean {
-  return (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    ROUTE_BUILDER.test(node.expression.text)
-  );
+  return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ROUTE_BUILDER.test(node.expression.text);
 }
 
 /** True when a module calls a route builder anywhere in it. */

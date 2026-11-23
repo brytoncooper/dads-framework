@@ -45,9 +45,7 @@ export async function applyConcurrentIndexMigration(
  * Collects the file's SQL without a live database: `pgm.db` refuses, so the
  * file cannot run anything the statement check never saw.
  */
-async function readIndexStatements(
-  migration: DiscoveredDomainMigration,
-): Promise<ConcurrentIndexStatement[]> {
+async function readIndexStatements(migration: DiscoveredDomainMigration): Promise<ConcurrentIndexStatement[]> {
   const refuseDirectQuery = (): Promise<never> =>
     Promise.reject(
       new NodePgMigrationJournalError(
@@ -56,12 +54,11 @@ async function readIndexStatements(
         "a buildsIndexesConcurrently migration cannot query the database directly",
       ),
     );
-  const builder = new MigrationBuilder(
-    { query: refuseDirectQuery, select: refuseDirectQuery },
-    undefined,
-    false,
-    { info: () => undefined, warn: () => undefined, error: () => undefined },
-  );
+  const builder = new MigrationBuilder({ query: refuseDirectQuery, select: refuseDirectQuery }, undefined, false, {
+    info: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  });
   await migration.up(builder);
 
   const steps = builder.getSqlSteps();
@@ -105,10 +102,7 @@ async function buildIndex(
   }
 }
 
-async function dropInvalidIndex(
-  client: Client,
-  statement: CreateStatement,
-): Promise<void> {
+async function dropInvalidIndex(client: Client, statement: CreateStatement): Promise<void> {
   const invalid = await client.query<{ qualified_name: string }>(
     `SELECT format('%I.%I', n.nspname, c.relname) AS qualified_name
      FROM pg_index i
@@ -118,16 +112,11 @@ async function dropInvalidIndex(
     [statement.tableReference, statement.indexName],
   );
   for (const row of invalid.rows) {
-    await client.query(
-      `DROP INDEX CONCURRENTLY IF EXISTS ${row.qualified_name}`,
-    );
+    await client.query(`DROP INDEX CONCURRENTLY IF EXISTS ${row.qualified_name}`);
   }
 }
 
-async function validIndexExists(
-  client: Client,
-  statement: CreateStatement,
-): Promise<boolean> {
+async function validIndexExists(client: Client, statement: CreateStatement): Promise<boolean> {
   const result = await client.query<{ exists: boolean }>(
     `SELECT EXISTS (
        SELECT 1

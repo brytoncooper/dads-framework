@@ -45,31 +45,21 @@ export class FakeSchemaStore implements AuthorizationMigrationStore {
 
   writeRelationships(writes: readonly RelationshipWrite[]): Promise<string> {
     for (const write of writes) {
-      if (
-        write.resource.type === JOURNAL_DEFINITION &&
-        write.relation === "applied"
-      ) {
+      if (write.resource.type === JOURNAL_DEFINITION && write.relation === "applied") {
         this.appliedMarkers.push(write.subject.id);
       }
-      this.operations.push(
-        `write:${write.resource.type}:${write.resource.id}:${write.relation}:${write.subject.id}`,
-      );
+      this.operations.push(`write:${write.resource.type}:${write.resource.id}:${write.relation}:${write.subject.id}`);
     }
     return Promise.resolve("");
   }
 
   deleteRelationships(filter: RelationshipFilter): Promise<string> {
-    this.operations.push(
-      `delete:${filter.resourceType}${filter.relation === undefined ? "" : `#${filter.relation}`}`,
-    );
+    this.operations.push(`delete:${filter.resourceType}${filter.relation === undefined ? "" : `#${filter.relation}`}`);
     return Promise.resolve("");
   }
 
   deleteExactRelationship(fact: RelationshipWrite): Promise<string> {
-    if (
-      fact.resource.type === JOURNAL_DEFINITION &&
-      fact.relation === "applied"
-    ) {
+    if (fact.resource.type === JOURNAL_DEFINITION && fact.relation === "applied") {
       const marker = this.appliedMarkers.indexOf(fact.subject.id);
       if (marker !== -1) this.appliedMarkers.splice(marker, 1);
     }
@@ -79,9 +69,7 @@ export class FakeSchemaStore implements AuthorizationMigrationStore {
     return Promise.resolve("");
   }
 
-  listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     if (query.resource.type !== JOURNAL_DEFINITION) {
       return Promise.resolve([]);
     }

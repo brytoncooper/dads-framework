@@ -14,31 +14,15 @@
  */
 
 import { spawnSync } from "node:child_process";
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  statSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, statSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 /** The `consumer:artifact-check` task's execution block inside a manifest. */
 export function controlledConsumer(manifest) {
-  return manifest.verification.tasks.find(
-    (task) => task.id === "consumer:artifact-check",
-  ).execution;
+  return manifest.verification.tasks.find((task) => task.id === "consumer:artifact-check").execution;
 }
 
-export function createBoundaryProject({
-  projectRoot,
-  fixtureSource,
-  lockfileSource,
-  accessPackageSource,
-}) {
+export function createBoundaryProject({ projectRoot, fixtureSource, lockfileSource, accessPackageSource }) {
   function git(argumentsForGit) {
     const completed = spawnSync("git", argumentsForGit, {
       cwd: projectRoot,
@@ -51,9 +35,7 @@ export function createBoundaryProject({
   }
 
   function copyAccessDependencies() {
-    const manifest = JSON.parse(
-      readFileSync(join(accessPackageSource, "package.json"), "utf8"),
-    );
+    const manifest = JSON.parse(readFileSync(join(accessPackageSource, "package.json"), "utf8"));
     const required = Object.keys(manifest.dependencies ?? {});
     // Looked up only when there is something to look up: the workspace copy of
     // the authorization package sits in `packages/`, not under a
@@ -64,9 +46,7 @@ export function createBoundaryProject({
     for (const peerName of required) {
       const source = join(sourceNodeModules, peerName);
       if (!existsSync(source)) {
-        throw new Error(
-          `Packed access dependency ${peerName} is missing beside ${accessPackageSource}.`,
-        );
+        throw new Error(`Packed access dependency ${peerName} is missing beside ${accessPackageSource}.`);
       }
       const target = join(projectRoot, "node_modules", peerName);
       mkdirSync(dirname(target), { recursive: true });
@@ -97,20 +77,10 @@ export function createBoundaryProject({
       delete tsconfig.references;
       writeFileSync(tsconfigPath, `${JSON.stringify(tsconfig, null, 2)}\n`);
       cpSync(lockfileSource, join(projectRoot, "package-lock.json"));
-      const accessPackageRoot = join(
-        projectRoot,
-        "node_modules/@dads-framework/access",
-      );
+      const accessPackageRoot = join(projectRoot, "node_modules/@dads-framework/access");
       mkdirSync(accessPackageRoot, { recursive: true });
-      cpSync(
-        join(accessPackageSource, "package.json"),
-        join(accessPackageRoot, "package.json"),
-      );
-      cpSync(
-        join(accessPackageSource, "dist"),
-        join(accessPackageRoot, "dist"),
-        { recursive: true },
-      );
+      cpSync(join(accessPackageSource, "package.json"), join(accessPackageRoot, "package.json"));
+      cpSync(join(accessPackageSource, "dist"), join(accessPackageRoot, "dist"), { recursive: true });
       copyAccessDependencies();
       const vendorRoot = join(projectRoot, "verification/vendor/access");
       mkdirSync(vendorRoot, { recursive: true });
@@ -135,10 +105,7 @@ export function createBoundaryProject({
 
     append(path, suffix) {
       const absolutePath = join(projectRoot, path);
-      writeFileSync(
-        absolutePath,
-        `${readFileSync(absolutePath, "utf8")}${suffix}`,
-      );
+      writeFileSync(absolutePath, `${readFileSync(absolutePath, "utf8")}${suffix}`);
     },
 
     read(path) {
@@ -171,8 +138,7 @@ export function createBoundaryProject({
 
     corruptConsumerReceipts() {
       const receipts = consumerReceipts();
-      if (receipts.length === 0)
-        throw new Error("No consumer receipt to corrupt.");
+      if (receipts.length === 0) throw new Error("No consumer receipt to corrupt.");
       for (const receipt of receipts) writeFileSync(receipt, "{corrupt\n");
     },
 

@@ -19,11 +19,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReadings } from "../../doctor-signal.js";
 import {
   readCommitLog,
   requireGitWorkspace,
@@ -45,10 +41,7 @@ function isGeneratedPath(path: string): boolean {
 
 /** True when the commit touched something and all of it was generated. */
 function isGeneratedOnly(commit: GitCommit): boolean {
-  return (
-    commit.changes.length > 0 &&
-    commit.changes.every((change) => isGeneratedPath(change.path))
-  );
+  return commit.changes.length > 0 && commit.changes.every((change) => isGeneratedPath(change.path));
 }
 
 function countGeneratedChurn(context: DoctorContext): SignalReadings {
@@ -69,12 +62,7 @@ function countGeneratedChurn(context: DoctorContext): SignalReadings {
       churn.set(change.path, found);
     }
   }
-  return new Map(
-    [...churn].map(([path, evidence]) => [
-      path,
-      { value: evidence.length, evidence },
-    ]),
-  );
+  return new Map([...churn].map(([path, evidence]) => [path, { value: evidence.length, evidence }]));
 }
 
 export const nondeterministicGeneratedFilesSignal: DoctorSignal = {

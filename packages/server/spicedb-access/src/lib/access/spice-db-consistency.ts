@@ -2,10 +2,7 @@ import { v1 } from "@authzed/authzed-node";
 
 import type { AuthorizationReadFreshness } from "@dads-framework/core/runtime/request-work";
 
-import type {
-  PermissionQuery,
-  SpiceDbConsistencyToken,
-} from "@dads-framework/access/runtime";
+import type { PermissionQuery, SpiceDbConsistencyToken } from "@dads-framework/access/runtime";
 import type { ReadConsistencyDecision } from "@dads-framework/access/runtime";
 
 /** SpiceDB's consistency requirements, built once for the adapter. */
@@ -26,9 +23,7 @@ export function atLeastAsFresh(token: SpiceDbConsistencyToken): v1.Consistency {
 }
 
 /** A display-read decision as SpiceDB's requirement; none means minimize latency. */
-export function toSpiceDbConsistency(
-  decision: ReadConsistencyDecision,
-): v1.Consistency | undefined {
+export function toSpiceDbConsistency(decision: ReadConsistencyDecision): v1.Consistency | undefined {
   if (decision.kind === "fully-consistent") return FULLY_CONSISTENT;
   if (decision.kind === "at-least-as-fresh") {
     return atLeastAsFresh(decision.token);
@@ -62,7 +57,5 @@ export function askedConsistency(
   queries: readonly Pick<PermissionQuery, "consistency">[],
   enforcement: () => v1.Consistency,
 ): v1.Consistency {
-  return queries.some((query) => query.consistency === "fully-consistent")
-    ? FULLY_CONSISTENT
-    : enforcement();
+  return queries.some((query) => query.consistency === "fully-consistent") ? FULLY_CONSISTENT : enforcement();
 }

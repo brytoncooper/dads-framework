@@ -28,7 +28,4 @@ assert.equal(
   "The serialized policy did not grant the declared reader.",
 );
 
-writeFileSync(
-  join(outputRoot, "consumer-result.json"),
-  `${JSON.stringify({ denied: true, granted: true })}\n`,
-);
+writeFileSync(join(outputRoot, "consumer-result.json"), `${JSON.stringify({ denied: true, granted: true })}\n`);

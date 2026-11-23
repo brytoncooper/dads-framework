@@ -48,12 +48,7 @@ export class ApiError extends Error {
  * number every caller has to remember.
  */
 export class UnauthorizedError extends ApiError {
-  constructor(
-    code: string,
-    message: string,
-    details?: Record<string, unknown>,
-    requestId?: string,
-  ) {
+  constructor(code: string, message: string, details?: Record<string, unknown>, requestId?: string) {
     super(401, code, message, details, requestId);
     this.name = "UnauthorizedError";
   }
@@ -161,11 +156,7 @@ const UNAUTHORIZED_STATUS = 401;
  * with HTML, and the caller still deserves a typed failure rather than a
  * parse error from the transport.
  */
-export function toApiError(
-  status: number,
-  body: unknown,
-  fallbackRequestId: string,
-): ApiError {
+export function toApiError(status: number, body: unknown, fallbackRequestId: string): ApiError {
   const envelope = apiErrorSchema.safeParse(body);
   const failure = envelope.success
     ? envelope.data.error
@@ -178,18 +169,7 @@ export function toApiError(
   const requestId = failure.requestId ?? fallbackRequestId;
 
   if (status === UNAUTHORIZED_STATUS) {
-    return new UnauthorizedError(
-      failure.code,
-      failure.message,
-      failure.details,
-      requestId,
-    );
+    return new UnauthorizedError(failure.code, failure.message, failure.details, requestId);
   }
-  return new ApiError(
-    status,
-    failure.code,
-    failure.message,
-    failure.details,
-    requestId,
-  );
+  return new ApiError(status, failure.code, failure.message, failure.details, requestId);
 }

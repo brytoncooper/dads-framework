@@ -37,9 +37,7 @@ export function routeOptionsFor<Options extends MachineCredentialOptions>(
 }
 
 /** A machine credential is declared by a route or its group, never app-wide. */
-export function assertNoAppMachineCredential(
-  capabilities: RouteCapabilities | undefined,
-): void {
+export function assertNoAppMachineCredential(capabilities: RouteCapabilities | undefined): void {
   if (capabilities?.machineCredential !== undefined) {
     throw new HttpWiringError(
       "registerRoutes capabilities.machineCredential is not allowed — a machine credential is declared by a route or its group, never app-wide",

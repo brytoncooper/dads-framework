@@ -13,17 +13,9 @@ import { configureFeaturePreviews } from "./feature-previews.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";
 import { sessionSubjects } from "./session-subjects.js";
 import { createSignInOptionsRoutes } from "./sign-in-options-route.js";
-import {
-  openServices,
-  provideServices,
-  type ServiceConfiguration,
-} from "./services.js";
+import { openServices, provideServices, type ServiceConfiguration } from "./services.js";
 
-export async function startApp(
-  name: ApiName,
-  config: ServiceConfiguration,
-  telemetry?: TelemetryRuntime,
-) {
+export async function startApp(name: ApiName, config: ServiceConfiguration, telemetry?: TelemetryRuntime) {
   const provider = provideServices((scope) => {
     return openServices(scope, config, model, composed.flags, name === "staff");
   });
@@ -106,8 +98,7 @@ export async function startApp(
                 ? scimBindingRoutes(
                     tenants,
                     invitationOrigin,
-                    config.enterprise?.scim?.map(({ tenantId }) => tenantId) ??
-                      [],
+                    config.enterprise?.scim?.map(({ tenantId }) => tenantId) ?? [],
                   )
                 : []),
               ...createSignInOptionsRoutes(enterpriseIdentity !== undefined),
@@ -117,9 +108,7 @@ export async function startApp(
             authorization,
             ...(featureState === undefined ? {} : { featureState }),
             auditActorForSubject: ({ subject, requestId }) =>
-              subject === null
-                ? anonymousActor(requestId)
-                : { kind: "account", id: subject.id, requestId },
+              subject === null ? anonymousActor(requestId) : { kind: "account", id: subject.id, requestId },
           });
           done();
         },

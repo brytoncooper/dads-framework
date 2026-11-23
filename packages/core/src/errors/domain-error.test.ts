@@ -1,23 +1,13 @@
 import { describe, expect, it } from "vitest";
-import {
-  conflict,
-  DomainError,
-  forbidden,
-  isDomainError,
-  notFound,
-  validation,
-} from "./domain-error.js";
+import { conflict, DomainError, forbidden, isDomainError, notFound, validation } from "./domain-error.js";
 
 /** What: DomainError discriminant + constructors. Why: kind in the constructor name. */
 
 describe("DomainError", () => {
   it("carries the discriminant kind and stable code", () => {
-    const error = new DomainError(
-      "conflict",
-      "ORGANIZATION_SLUG_TAKEN",
-      'Organization slug "acme" is already taken',
-      { slug: "acme" },
-    );
+    const error = new DomainError("conflict", "ORGANIZATION_SLUG_TAKEN", 'Organization slug "acme" is already taken', {
+      slug: "acme",
+    });
     expect(error.kind).toBe("conflict");
     expect(error.code).toBe("ORGANIZATION_SLUG_TAKEN");
     expect(error.details).toEqual({ slug: "acme" });

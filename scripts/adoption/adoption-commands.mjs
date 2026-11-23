@@ -49,11 +49,7 @@ export function formatTranscript(transcript) {
       lines.push(`# ${entry.note}`);
       continue;
     }
-    lines.push(
-      `$ ${describeCommand(entry)}`,
-      ...indent(entry.stdout),
-      ...indent(entry.stderr),
-    );
+    lines.push(`$ ${describeCommand(entry)}`, ...indent(entry.stdout), ...indent(entry.stderr));
   }
   return lines.join("\n");
 }
@@ -67,16 +63,10 @@ export function formatTranscript(transcript) {
 export function formatFailure(name, error, transcript) {
   const lines = [`FAILED ${name}`];
   if (transcript && transcript.entries.length > 0) {
-    lines.push(
-      "  transcript:",
-      ...indent(formatTranscript(transcript), "    "),
-    );
+    lines.push("  transcript:", ...indent(formatTranscript(transcript), "    "));
   }
   if (error instanceof AdoptionCommandError) {
-    lines.push(
-      `  command: ${describeCommand(error.entry)}`,
-      `  exit: ${describeExit(error.entry)}`,
-    );
+    lines.push(`  command: ${describeCommand(error.entry)}`, `  exit: ${describeExit(error.entry)}`);
     return lines.join("\n");
   }
   return [...lines, "  error:", ...indent(stackOf(error), "    ")].join("\n");
@@ -84,9 +74,7 @@ export function formatFailure(name, error, transcript) {
 
 function execute(command, argumentList, options) {
   if (typeof command !== "string" || !Array.isArray(argumentList)) {
-    throw new Error(
-      "A command needs an executable string and an argument array.",
-    );
+    throw new Error("A command needs an executable string and an argument array.");
   }
   return new Promise((resolve, reject) => {
     const child = spawn(command, argumentList, {
@@ -119,9 +107,7 @@ function describeCommand(entry) {
 }
 
 function describeExit(entry) {
-  return entry.signal === null || entry.signal === undefined
-    ? `status ${entry.status}`
-    : `signal ${entry.signal}`;
+  return entry.signal === null || entry.signal === undefined ? `status ${entry.status}` : `signal ${entry.signal}`;
 }
 
 function indent(text, prefix = "  ") {

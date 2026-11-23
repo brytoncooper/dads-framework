@@ -74,15 +74,11 @@ function isCapabilityShape(members: readonly ts.TypeElement[]): boolean {
 
 function capabilityName(statement: ts.Statement): string | undefined {
   if (ts.isInterfaceDeclaration(statement)) {
-    return isCapabilityShape([...statement.members])
-      ? statement.name.text
-      : undefined;
+    return isCapabilityShape([...statement.members]) ? statement.name.text : undefined;
   }
   if (!ts.isTypeAliasDeclaration(statement)) return undefined;
   if (!ts.isTypeLiteralNode(statement.type)) return undefined;
-  return isCapabilityShape([...statement.type.members])
-    ? statement.name.text
-    : undefined;
+  return isCapabilityShape([...statement.type.members]) ? statement.name.text : undefined;
 }
 
 function declarationsIn(module: DoctorModule): readonly Declaration[] {
@@ -130,10 +126,7 @@ function declaredValueName(node: ts.Node): string {
   if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
     return node.name.text;
   }
-  if (
-    (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
-    node.name !== undefined
-  ) {
+  if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name !== undefined) {
     return node.name.text;
   }
   return "anonymous";
@@ -146,10 +139,9 @@ function recordImplementers(
 ): void {
   visitNodes(module.source, (node) => {
     const claimed = claimedName(node);
-    const names = [
-      ...(claimed === undefined ? [] : [claimed]),
-      ...implementedByClass(node),
-    ].filter((name) => known.has(name));
+    const names = [...(claimed === undefined ? [] : [claimed]), ...implementedByClass(node)].filter((name) =>
+      known.has(name),
+    );
     for (const name of names) {
       const found = implementers.get(name) ?? [];
       found.push({
@@ -162,9 +154,7 @@ function recordImplementers(
 }
 
 /** Every capability the workspace declares, with who answers to it. */
-export function readCapabilities(
-  program: DoctorProgram,
-): readonly Capability[] {
+export function readCapabilities(program: DoctorProgram): readonly Capability[] {
   const declarations = program.modules.flatMap(declarationsIn);
   const known = new Set(declarations.map((declared) => declared.name));
   if (known.size === 0) return [];
@@ -180,25 +170,13 @@ export function readCapabilities(
   }
 
   return declarations.map((declared) =>
-    assemble(
-      declared,
-      implementers.get(declared.name) ?? [],
-      consumers.get(declared.name) ?? [],
-    ),
+    assemble(declared, implementers.get(declared.name) ?? [], consumers.get(declared.name) ?? []),
   );
 }
 
-function assemble(
-  declared: Declaration,
-  found: readonly Implementation[],
-  importers: readonly string[],
-): Capability {
-  const implementing = found.filter(
-    (implementation) => implementation.foundIn !== declared.declaredIn,
-  );
-  const implementers = new Set(
-    implementing.map((implementation) => implementation.foundIn),
-  );
+function assemble(declared: Declaration, found: readonly Implementation[], importers: readonly string[]): Capability {
+  const implementing = found.filter((implementation) => implementation.foundIn !== declared.declaredIn);
+  const implementers = new Set(implementing.map((implementation) => implementation.foundIn));
   return {
     name: declared.name,
     declaredIn: declared.declaredIn,

@@ -53,8 +53,7 @@ export type WorkbookInstructionSheetSpec = {
   readonly instructions: readonly WorkbookInstruction[];
 };
 
-export type WorkbookSheetSpec =
-  WorkbookTableSheetSpec | WorkbookInstructionSheetSpec;
+export type WorkbookSheetSpec = WorkbookTableSheetSpec | WorkbookInstructionSheetSpec;
 
 /** Version and context hints stored on the workbook's very-hidden metadata sheet. */
 export type WorkbookMetadata = {

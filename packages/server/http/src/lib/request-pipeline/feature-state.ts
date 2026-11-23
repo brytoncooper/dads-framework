@@ -38,9 +38,7 @@ export type FeatureStateProtocol = {
   /** Request header naming the caller's context, handed to the evaluator. */
   readonly contextHeader: string;
   /** Derives context from matched route parameters instead of reading its context header. */
-  readonly contextFromRequest?: (request: {
-    readonly params: unknown;
-  }) => string | undefined;
+  readonly contextFromRequest?: (request: { readonly params: unknown }) => string | undefined;
   /**
    * Optional per-caller preview of one feature. Omitted, a preview id header
    * is ignored like any unknown header.
@@ -96,21 +94,16 @@ export function assertFeatureStateWriteIsCurrent(input: {
   if (!input.snapshot) return;
   const supplied = oneHeader(input.request, input.clientHashHeader);
   const writes =
-    input.method === "POST" ||
-    input.method === "PUT" ||
-    input.method === "PATCH" ||
-    input.method === "DELETE";
+    input.method === "POST" || input.method === "PUT" || input.method === "PATCH" || input.method === "DELETE";
   if (
     writes &&
     input.featureStateWrite === "sensitive" &&
     supplied !== undefined &&
     supplied !== input.snapshot.stateHash
   ) {
-    throw conflict(
-      "STALE_FEATURE_STATE",
-      "Feature state changed; refresh before retrying this write",
-      { currentFeatureStateHash: input.snapshot.stateHash },
-    );
+    throw conflict("STALE_FEATURE_STATE", "Feature state changed; refresh before retrying this write", {
+      currentFeatureStateHash: input.snapshot.stateHash,
+    });
   }
 }
 

@@ -20,10 +20,7 @@ describe("InProcessEventBus", () => {
 
     await bus.publish("organization.deleted", { organizationId: "org-1" });
 
-    expect(seen).toEqual([
-      { organizationId: "org-1" },
-      { organizationId: "org-1" },
-    ]);
+    expect(seen).toEqual([{ organizationId: "org-1" }, { organizationId: "org-1" }]);
   });
 
   it("isolates a throwing handler — later subscribers still run, publish resolves", async () => {
@@ -40,9 +37,7 @@ describe("InProcessEventBus", () => {
       return Promise.resolve();
     });
 
-    await expect(
-      bus.publish("organization.deleted", {}),
-    ).resolves.toBeUndefined();
+    await expect(bus.publish("organization.deleted", {})).resolves.toBeUndefined();
     expect(errors).toEqual(["organization.deleted"]);
     expect(seen).toEqual(["second ran"]);
   });

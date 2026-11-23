@@ -21,11 +21,7 @@ import type {
   VerificationTaskResult,
 } from "./verification-contract.js";
 import type { VerificationOutputFingerprint } from "./verification-receipt.js";
-import {
-  captureWorkspaceSnapshot,
-  discardWorkspaceSnapshot,
-  readWorkspaceIdentity,
-} from "./workspace-snapshot.js";
+import { captureWorkspaceSnapshot, discardWorkspaceSnapshot, readWorkspaceIdentity } from "./workspace-snapshot.js";
 
 export type VerifyTaskGraphRequest = {
   readonly projectRoot: string;
@@ -43,11 +39,8 @@ export type VerifyTaskGraphRequest = {
   readonly evidenceRoot?: string;
 };
 
-export function verifyTaskGraph(
-  request: VerifyTaskGraphRequest,
-): VerificationGraphReport {
-  const expectedIdentity =
-    request.workspaceIdentity ?? readWorkspaceIdentity(request.projectRoot);
+export function verifyTaskGraph(request: VerifyTaskGraphRequest): VerificationGraphReport {
+  const expectedIdentity = request.workspaceIdentity ?? readWorkspaceIdentity(request.projectRoot);
   let workspace;
   try {
     workspace = captureWorkspaceSnapshot(request.projectRoot, expectedIdentity);
@@ -60,9 +53,7 @@ export function verifyTaskGraph(
       ...request,
       projectRoot: workspace.root,
       workspaceIdentity: expectedIdentity,
-      ...(workspace.gitEvidenceIdentity === undefined
-        ? {}
-        : { gitEvidenceIdentity: workspace.gitEvidenceIdentity }),
+      ...(workspace.gitEvidenceIdentity === undefined ? {} : { gitEvidenceIdentity: workspace.gitEvidenceIdentity }),
       evidenceRoot: request.evidenceRoot ?? request.projectRoot,
     });
     if (readWorkspaceIdentity(request.projectRoot) !== expectedIdentity) {
@@ -80,30 +71,20 @@ export function verifyTaskGraph(
   }
 }
 
-function verifyCapturedTaskGraph(
-  request: VerifyTaskGraphRequest,
-): VerificationGraphReport {
+function verifyCapturedTaskGraph(request: VerifyTaskGraphRequest): VerificationGraphReport {
   if (request.recommendation.tasks.length === 0) {
     return createReport(request.full, [], request.recommendation.issues);
   }
   if (!request.recommendation.complete) {
     const blocked = request.recommendation.tasks.map((task) =>
-      blockedResult(
-        task,
-        `Verification planning is incomplete: ${request.recommendation.issues.join(" ")}`,
-      ),
+      blockedResult(task, `Verification planning is incomplete: ${request.recommendation.issues.join(" ")}`),
     );
     return createReport(request.full, blocked, request.recommendation.issues);
   }
 
-  const taskById = new Map(
-    request.project.verificationPolicy.tasks.map((task) => [task.id, task]),
-  );
+  const taskById = new Map(request.project.verificationPolicy.tasks.map((task) => [task.id, task]));
   const resultsByTask = new Map<string, VerificationTaskResult>();
-  const outputsByTask = new Map<
-    string,
-    readonly VerificationOutputFingerprint[]
-  >();
+  const outputsByTask = new Map<string, readonly VerificationOutputFingerprint[]>();
   const results: VerificationTaskResult[] = [];
 
   for (const recommendation of request.recommendation.tasks) {
@@ -116,10 +97,7 @@ function verifyCapturedTaskGraph(
           resultsByTask,
           outputsByTask,
         })
-      : blockedResult(
-          recommendation,
-          "The selected task is missing from the current verification graph.",
-        );
+      : blockedResult(recommendation, "The selected task is missing from the current verification graph.");
     results.push(result);
     resultsByTask.set(result.taskId, result);
     if (result.status === "executed" || result.status === "reused") {
@@ -131,15 +109,10 @@ function verifyCapturedTaskGraph(
 }
 
 /** A snapshot that carries its own manifest must describe the graph we planned. */
-function assertSnapshotManifest(
-  snapshotRoot: string,
-  project: DadsProject,
-): void {
+function assertSnapshotManifest(snapshotRoot: string, project: DadsProject): void {
   const manifestPath = join(snapshotRoot, "dads.project.json");
   if (!existsSync(manifestPath)) return;
-  const capturedProject = parseDadsProject(
-    JSON.parse(readFileSync(manifestPath, "utf8")),
-  );
+  const capturedProject = parseDadsProject(JSON.parse(readFileSync(manifestPath, "utf8")));
   if (JSON.stringify(capturedProject) !== JSON.stringify(project)) {
     throw new Error("Captured manifest does not match the planned task graph.");
   }
@@ -166,9 +139,6 @@ function createReport(
   };
 }
 
-function countStatus(
-  results: readonly VerificationTaskResult[],
-  status: VerificationTaskResult["status"],
-): number {
+function countStatus(results: readonly VerificationTaskResult[], status: VerificationTaskResult["status"]): number {
   return results.filter((result) => result.status === status).length;
 }

@@ -1,12 +1,7 @@
 // What/why: lock the reviewed liveness/readiness route cards and behavior.
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  buildTestApp,
-  dataBodyOf,
-  errorBodyOf,
-  type TestApp,
-} from "../../testing/index.js";
+import { buildTestApp, dataBodyOf, errorBodyOf, type TestApp } from "../../testing/index.js";
 
 import { createHealthRoutes } from "../index.js";
 import { healthStatusSchema, readyStatusSchema } from "./health.schemas.js";

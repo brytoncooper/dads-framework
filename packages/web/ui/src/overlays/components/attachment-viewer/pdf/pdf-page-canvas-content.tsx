@@ -1,18 +1,10 @@
-import type {
-  PDFDocumentLoadingTask,
-  RenderTask,
-} from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { PDFDocumentLoadingTask, RenderTask } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as React from "react";
 
 import type { PdfPageCanvasProps } from "../pdf-page-canvas.js";
 import { openPdfDocument } from "./pdfjs-document.js";
 
-export function PdfPageCanvasContent({
-  bytes,
-  scale,
-  className,
-  onError,
-}: PdfPageCanvasProps) {
+export function PdfPageCanvasContent({ bytes, scale, className, onError }: PdfPageCanvasProps) {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const onErrorRef = React.useRef(onError);
   onErrorRef.current = onError;

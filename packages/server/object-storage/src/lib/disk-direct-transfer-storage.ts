@@ -11,19 +11,8 @@ import {
   type UploadedPart,
   type WriteOnceUploadRequest,
 } from "./direct-transfer-storage.js";
-import {
-  foldersToSync,
-  fsyncFolder,
-  fsyncFolderIfPresent,
-  readIfPresent,
-  sha256Hex,
-  writeTemp,
-} from "./disk-files.js";
-import {
-  type DiskObjectStorage,
-  InvalidObjectKey,
-  isValidKey,
-} from "./disk-object-storage.js";
+import { foldersToSync, fsyncFolder, fsyncFolderIfPresent, readIfPresent, sha256Hex, writeTemp } from "./disk-files.js";
+import { type DiskObjectStorage, InvalidObjectKey, isValidKey } from "./disk-object-storage.js";
 import type { SignedPartUploadQuery } from "./disk-part-links.js";
 import type { SignedUpload } from "../core.js";
 
@@ -46,8 +35,7 @@ const MULTIPART_FOLDER = "multipart";
 const OBJECT_METADATA_FOLDER = "object-metadata";
 const MANIFEST_FILE = "upload.json";
 const METADATA_SUFFIX = ".json";
-const STORAGE_UPLOAD_ID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const STORAGE_UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 /** A part's file name is its number; a temp file (`<n>.tmp-…`) never matches. */
 const PART_FILE = /^[1-9][0-9]{0,4}$/;
 
@@ -73,10 +61,7 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
   constructor(private readonly objects: DiskObjectStorage) {
     super();
     this.multipartDirectory = join(objects.rootDirectory, MULTIPART_FOLDER);
-    this.metadataDirectory = join(
-      objects.rootDirectory,
-      OBJECT_METADATA_FOLDER,
-    );
+    this.metadataDirectory = join(objects.rootDirectory, OBJECT_METADATA_FOLDER);
   }
 
   async startMultipartUpload(input: {
@@ -91,10 +76,7 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
       contentType: input.contentType,
       metadata: { ...input.metadata },
     };
-    await writeWhole(
-      join(this.uploadFolder(storageUploadId), MANIFEST_FILE),
-      encodeJson(manifest),
-    );
+    await writeWhole(join(this.uploadFolder(storageUploadId), MANIFEST_FILE), encodeJson(manifest));
     return { key: input.key, storageUploadId };
   }
 
@@ -114,21 +96,14 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
    * longer open (also when it was aborted while this part was written) or is
    * for another key, or a body whose size differs from the one the link names. Throws `SiteDiskLow` below the disk floor.
    */
-  async receivePart(
-    query: SignedPartUploadQuery,
-    body: Uint8Array,
-  ): Promise<ReceivedPart | null> {
+  async receivePart(query: SignedPartUploadQuery, body: Uint8Array): Promise<ReceivedPart | null> {
     const part = await this.objects.readSignedPartUpload(query);
     if (part === null) return null;
     const manifest = await this.readManifest(part);
     if (manifest === null) return null;
-    if (part.byteSize !== null && body.byteLength !== part.byteSize)
-      return null;
+    if (part.byteSize !== null && body.byteLength !== part.byteSize) return null;
     await this.objects.ensureRoomFor(body.byteLength);
-    await writeWhole(
-      join(this.uploadFolder(part.storageUploadId), String(part.partNumber)),
-      body,
-    );
+    await writeWhole(join(this.uploadFolder(part.storageUploadId), String(part.partNumber)), body);
     // An abort that landed during the write removed the folder, and the
     // write made it again around this part alone: the upload is closed, so
     // drop what the write left and answer as for a missing upload.
@@ -144,14 +119,10 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
     };
   }
 
-  async listUploadedParts(
-    upload: MultipartUploadRef,
-  ): Promise<readonly UploadedPart[] | null> {
+  async listUploadedParts(upload: MultipartUploadRef): Promise<readonly UploadedPart[] | null> {
     if ((await this.readManifest(upload)) === null) return null;
     const folder = this.uploadFolder(upload.storageUploadId);
-    const names = (await readdir(folder)).filter((name) =>
-      PART_FILE.test(name),
-    );
+    const names = (await readdir(folder)).filter((name) => PART_FILE.test(name));
     const parts: UploadedPart[] = [];
     for (const name of names) {
       const bytes = await readIfPresent(join(folder, name));
@@ -175,24 +146,14 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
     const folder = this.uploadFolder(input.storageUploadId);
     const chunks: Uint8Array[] = [];
     for (const listed of input.parts) {
-      const bytes = await readIfPresent(
-        join(folder, String(listed.partNumber)),
-      );
-      if (bytes === null || etagOf(bytes) !== listed.etag)
-        throw multipartError("InvalidPart");
+      const bytes = await readIfPresent(join(folder, String(listed.partNumber)));
+      if (bytes === null || etagOf(bytes) !== listed.etag) throw multipartError("InvalidPart");
       chunks.push(bytes);
     }
     // The metadata first: an object is never read without the metadata its
     // upload fixed. A cut between the two leaves only an unread file.
-    await writeWhole(
-      this.metadataPathOf(manifest.key),
-      encodeJson(manifest.metadata),
-    );
-    await this.objects.put(
-      manifest.key,
-      concatenate(chunks),
-      manifest.contentType,
-    );
+    await writeWhole(this.metadataPathOf(manifest.key), encodeJson(manifest.metadata));
+    await this.objects.put(manifest.key, concatenate(chunks), manifest.contentType);
     await this.removeUploadFolder(input.storageUploadId);
   }
 
@@ -257,27 +218,17 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
     upload: Pick<MultipartUploadRef, "key" | "storageUploadId">,
   ): Promise<OpenUploadManifest | null> {
     if (!STORAGE_UPLOAD_ID.test(upload.storageUploadId)) return null;
-    const bytes = await readIfPresent(
-      join(this.uploadFolder(upload.storageUploadId), MANIFEST_FILE),
-    );
+    const bytes = await readIfPresent(join(this.uploadFolder(upload.storageUploadId), MANIFEST_FILE));
     const manifest = bytes === null ? null : decodeJson(bytes);
-    return isManifest(manifest) && manifest.key === upload.key
-      ? manifest
-      : null;
+    return isManifest(manifest) && manifest.key === upload.key ? manifest : null;
   }
 
-  private async hasManifest(
-    upload: Pick<MultipartUploadRef, "storageUploadId">,
-  ): Promise<boolean> {
-    const bytes = await readIfPresent(
-      join(this.uploadFolder(upload.storageUploadId), MANIFEST_FILE),
-    );
+  private async hasManifest(upload: Pick<MultipartUploadRef, "storageUploadId">): Promise<boolean> {
+    const bytes = await readIfPresent(join(this.uploadFolder(upload.storageUploadId), MANIFEST_FILE));
     return bytes !== null;
   }
 
-  private async readMetadata(
-    key: string,
-  ): Promise<Readonly<Record<string, string>>> {
+  private async readMetadata(key: string): Promise<Readonly<Record<string, string>>> {
     const bytes = await readIfPresent(this.metadataPathOf(key));
     const metadata = bytes === null ? null : decodeJson(bytes);
     return isStringRecord(metadata) ? metadata : {};
@@ -293,8 +244,7 @@ export class DiskDirectTransferStorage extends DirectTransferStorage {
 
   /** Only ever called with an id `STORAGE_UPLOAD_ID` accepts, so it never names a path outside. */
   private uploadFolder(storageUploadId: string): string {
-    if (!STORAGE_UPLOAD_ID.test(storageUploadId))
-      throw new InvalidObjectKey(storageUploadId);
+    if (!STORAGE_UPLOAD_ID.test(storageUploadId)) throw new InvalidObjectKey(storageUploadId);
     return join(this.multipartDirectory, storageUploadId);
   }
 

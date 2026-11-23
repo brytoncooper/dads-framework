@@ -3,12 +3,8 @@ import { migrationStatusFailure } from "./read-database-journal-status-result.js
 
 describe("migrationStatusFailure", () => {
   it("reports edited or missing recorded checksums as checksum failures", () => {
-    expect(
-      migrationStatusFailure({ code: "NODE_PG_MIGRATION_CHECKSUM_MISMATCH" }),
-    ).toBe("checksum-mismatch");
-    expect(
-      migrationStatusFailure({ code: "NODE_PG_MIGRATION_CHECKSUM_MISSING" }),
-    ).toBe("checksum-mismatch");
+    expect(migrationStatusFailure({ code: "NODE_PG_MIGRATION_CHECKSUM_MISMATCH" })).toBe("checksum-mismatch");
+    expect(migrationStatusFailure({ code: "NODE_PG_MIGRATION_CHECKSUM_MISSING" })).toBe("checksum-mismatch");
   });
 
   it("reports unknown applied state and protocol or dependency drift as unsafe history", () => {
@@ -24,9 +20,7 @@ describe("migrationStatusFailure", () => {
 
   it("leaves connection and malformed failures unavailable", () => {
     expect(migrationStatusFailure({ code: "ECONNREFUSED" })).toBeUndefined();
-    expect(
-      migrationStatusFailure(new Error("connection failed")),
-    ).toBeUndefined();
+    expect(migrationStatusFailure(new Error("connection failed"))).toBeUndefined();
     expect(migrationStatusFailure(null)).toBeUndefined();
   });
 });

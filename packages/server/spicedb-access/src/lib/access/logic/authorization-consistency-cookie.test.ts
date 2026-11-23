@@ -23,15 +23,11 @@ describe("authorization consistency cookie", () => {
     const setCookie = authorizationConsistencySetCookie("a+b/c==");
     const tokenPair = setCookie.split(";", 1)[0] ?? "";
     const header = tokenPair;
-    expect(authorizationConsistencyTokenFromCookieHeader(header)).toBe(
-      "a+b/c==",
-    );
+    expect(authorizationConsistencyTokenFromCookieHeader(header)).toBe("a+b/c==");
   });
 
   it("returns nothing when the cookie is absent", () => {
-    expect(
-      authorizationConsistencyTokenFromCookieHeader("session=abc"),
-    ).toBeUndefined();
+    expect(authorizationConsistencyTokenFromCookieHeader("session=abc")).toBeUndefined();
   });
 
   it("writes an HttpOnly Lax cookie on the API path", () => {
@@ -41,9 +37,7 @@ describe("authorization consistency cookie", () => {
   });
 
   it("marks the cookie Secure on HTTPS", () => {
-    expect(
-      authorizationConsistencySetCookie("written-at-3", { secure: true }),
-    ).toContain("Secure");
+    expect(authorizationConsistencySetCookie("written-at-3", { secure: true })).toContain("Secure");
   });
 
   it("expires the cookie on the same Path so sign-out can drop it", () => {
@@ -53,8 +47,6 @@ describe("authorization consistency cookie", () => {
   });
 
   it("marks the expired cookie Secure on HTTPS", () => {
-    expect(authorizationConsistencyClearCookie({ secure: true })).toContain(
-      "Secure",
-    );
+    expect(authorizationConsistencyClearCookie({ secure: true })).toContain("Secure");
   });
 });

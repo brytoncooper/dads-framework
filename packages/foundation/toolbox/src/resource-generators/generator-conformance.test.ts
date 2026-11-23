@@ -1,12 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -33,10 +25,7 @@ beforeEach(() => {
   );
   setup("apps/customer/app.ts", api);
   setup("apps/staff/app.ts", api);
-  setup(
-    "assembly/migrations.ts",
-    "// dad:add imports\nconst migrations = [\n  // dad:add migrations\n];\n",
-  );
+  setup("assembly/migrations.ts", "// dad:add imports\nconst migrations = [\n  // dad:add migrations\n];\n");
 });
 
 afterEach(() => {
@@ -89,9 +78,7 @@ it("generates all individual artifacts with no implicit API registration", () =>
   expect(generatedAccess).not.toContain('kind: "record"');
   expect(generatedAccess).not.toContain("accountEntity");
 
-  const generatedEndpointTest = read(
-    "domains/inventory/server/status-endpoint.test.ts",
-  );
+  const generatedEndpointTest = read("domains/inventory/server/status-endpoint.test.ts");
   expect(generatedEndpointTest).toContain("account.wireName");
   expect(generatedEndpointTest).not.toContain("accountEntity");
 
@@ -101,61 +88,34 @@ it("generates all individual artifacts with no implicit API registration", () =>
 });
 
 it("chains resource pieces, preserves migration identity, and selects only the requested API", () => {
-  const args = [
-    "resource",
-    "catalog",
-    "--domain",
-    "inventory",
-    "--api",
-    "customer",
-  ];
-  expect(add(...args).files).toContain(
-    "domains/inventory/server/catalog-resource.test.ts",
-  );
+  const args = ["resource", "catalog", "--domain", "inventory", "--api", "customer"];
+  expect(add(...args).files).toContain("domains/inventory/server/catalog-resource.test.ts");
   expect(read("apps/customer/app.ts")).toContain("inventoryPlugin,");
   expect(read("apps/staff/app.ts")).toBe(api);
-  expect(read("domains/inventory/contract/catalog-resource.ts")).toContain(
-    "...expectedRowVersionFields",
-  );
-  expect(read("domains/inventory/server/catalog-writer.ts")).toContain(
-    "updateAtRowVersion",
-  );
-  expect(read("domains/inventory/web-client/catalog-client.ts")).toContain(
-    "saveWithRefresh",
-  );
+  expect(read("domains/inventory/contract/catalog-resource.ts")).toContain("...expectedRowVersionFields");
+  expect(read("domains/inventory/server/catalog-writer.ts")).toContain("updateAtRowVersion");
+  expect(read("domains/inventory/web-client/catalog-client.ts")).toContain("saveWithRefresh");
   const generatedGuards = read("domains/inventory/access/catalog-guards.ts");
   expect(generatedGuards).toContain("requires(");
   expect(generatedGuards).not.toContain('kind: "permission"');
   expect(generatedGuards).not.toContain("accountEntity");
 
-  const generatedProof = read(
-    "domains/inventory/server/catalog-resource.test.ts",
-  );
+  const generatedProof = read("domains/inventory/server/catalog-resource.test.ts");
   expect(generatedProof).toContain("@dads-framework/access/testing");
   expect(generatedProof).toContain("account.wireName");
   expect(generatedProof).not.toContain("accountEntity");
-  expect(generatedProof).not.toContain(
-    "@dads-framework/spicedb-access/testing",
-  );
+  expect(generatedProof).not.toContain("@dads-framework/spicedb-access/testing");
 
   expect(read("assembly/migrations.ts")).toContain("inventoryMigrations,");
   const web = read("domains/inventory/web-client/index.ts");
-  expect(web).toContain(
-    'export { listCatalog, readCatalog, saveCatalog } from "./catalog-client.js";',
-  );
-  expect(web).toContain(
-    'export { CatalogListPage, CatalogDetailPage } from "./catalog-pages.js";',
-  );
+  expect(web).toContain('export { listCatalog, readCatalog, saveCatalog } from "./catalog-client.js";');
+  expect(web).toContain('export { CatalogListPage, CatalogDetailPage } from "./catalog-pages.js";');
   expect(add(...args).files).toEqual([]);
-  expect(
-    readdirSync(join(root, "domains/inventory/server/migrations")),
-  ).toHaveLength(1);
+  expect(readdirSync(join(root, "domains/inventory/server/migrations"))).toHaveLength(1);
 });
 
 it("preflights invalid selections and collisions before writing and supports dry runs", () => {
-  expect(() => add("resource", "catalog", "--api", "unknown")).toThrow(
-    "Required registry",
-  );
+  expect(() => add("resource", "catalog", "--api", "unknown")).toThrow("Required registry");
   expect(existsSync(join(root, "domains/catalog"))).toBe(false);
 
   const preview = add("resource", "catalog", "--api", "customer", "--dry-run");
@@ -164,11 +124,7 @@ it("preflights invalid selections and collisions before writing and supports dry
   expect(read("apps/customer/app.ts")).toBe(api);
 
   setup("domains/catalog/server/catalog-table.ts", "locally authored");
-  expect(() => add("resource", "catalog", "--api", "customer")).toThrow(
-    "File already exists",
-  );
-  expect(read("domains/catalog/server/catalog-table.ts")).toBe(
-    "locally authored",
-  );
+  expect(() => add("resource", "catalog", "--api", "customer")).toThrow("File already exists");
+  expect(read("domains/catalog/server/catalog-table.ts")).toBe("locally authored");
   expect(existsSync(join(root, "domains/catalog/index.ts"))).toBe(false);
 });

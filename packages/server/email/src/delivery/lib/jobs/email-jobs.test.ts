@@ -12,10 +12,7 @@ import { describeJobs } from "@dads-framework/job-queue/core";
 
 import { createDeliverOutboundEmailJob } from "./deliver-outbound-email.job.js";
 import { EMAIL_DELIVER_JOB, EMAIL_SWEEP_JOB } from "./email-job-names.js";
-import {
-  createSweepOutboundEmailsJob,
-  EMAIL_SWEEP_SCHEDULE_ID,
-} from "./sweep-outbound-emails.job.js";
+import { createSweepOutboundEmailsJob, EMAIL_SWEEP_SCHEDULE_ID } from "./sweep-outbound-emails.job.js";
 
 const OUTBOUND_EMAIL_ID = "0199a1f0-0000-7000-8000-000000000001";
 
@@ -37,9 +34,7 @@ describe("createDeliverOutboundEmailJob", () => {
     });
 
     await expect(job.run({ outboundEmailId: "not-a-uuid" })).rejects.toThrow();
-    await expect(
-      job.run({ outboundEmailId: OUTBOUND_EMAIL_ID, extra: true }),
-    ).rejects.toThrow();
+    await expect(job.run({ outboundEmailId: OUTBOUND_EMAIL_ID, extra: true })).rejects.toThrow();
   });
 
   it("runs once, leaving retries to the row", () => {

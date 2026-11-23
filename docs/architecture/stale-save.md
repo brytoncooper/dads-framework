@@ -46,8 +46,7 @@ the latest record after a stale refusal.
 
 ```ts
 const result = await saveWithRefresh({
-  save: () =>
-    saveNote(id, { title: draft.title, expectedRowVersion: draft.rowVersion }),
+  save: () => saveNote(id, { title: draft.title, expectedRowVersion: draft.rowVersion }),
   refresh: () => getNote(id),
 });
 

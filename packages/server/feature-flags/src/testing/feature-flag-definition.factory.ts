@@ -1,9 +1,7 @@
 import type { FeatureFlagDefinition } from "../contract/index.js";
 
 /** A valid definition for tests; override what the test is about. */
-export function featureFlagDefinitionFactory(
-  overrides: Partial<FeatureFlagDefinition> = {},
-): FeatureFlagDefinition {
+export function featureFlagDefinitionFactory(overrides: Partial<FeatureFlagDefinition> = {}): FeatureFlagDefinition {
   return {
     slug: "orders.bulk-import",
     name: "Bulk import",

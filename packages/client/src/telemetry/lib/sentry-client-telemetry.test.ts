@@ -15,11 +15,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { TelemetryBreadcrumb } from "../core/index.js";
 import { clientTelemetryConformance } from "../testing.js";
 import type { SentryConfiguration } from "./logic/sentry-configuration.js";
-import {
-  SentryClientTelemetry,
-  type LoadVendorReporter,
-  type VendorCaptureHint,
-} from "./sentry-client-telemetry.js";
+import { SentryClientTelemetry, type LoadVendorReporter, type VendorCaptureHint } from "./sentry-client-telemetry.js";
 
 const OPTIONS = {
   dsn: "https://publickey@o0.ingest.example.com/1",
@@ -144,9 +140,7 @@ describe("SentryClientTelemetry", () => {
     expect(vendor.captured).toHaveLength(50);
     const oldestKept = vendor.captured[0]?.error;
     expect(oldestKept).toBeInstanceOf(Error);
-    expect(oldestKept instanceof Error ? oldestKept.message : "").toBe(
-      "fault 10",
-    );
+    expect(oldestKept instanceof Error ? oldestKept.message : "").toBe("fault 10");
   });
 
   it("stays harmless when the SDK never arrives", async () => {

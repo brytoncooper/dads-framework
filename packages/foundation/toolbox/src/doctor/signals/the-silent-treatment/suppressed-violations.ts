@@ -18,15 +18,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  SUPPRESSIONS_FILE,
-  suppressionEntries,
-} from "../scanners/text-suppressions-file.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { SUPPRESSIONS_FILE, suppressionEntries } from "../scanners/text-suppressions-file.js";
 
 function countSuppressedViolations(context: DoctorContext): SignalReadings {
   const tracked = new Set(context.files());
@@ -36,10 +29,7 @@ function countSuppressedViolations(context: DoctorContext): SignalReadings {
     const known = readings.get(entry.path);
     readings.set(entry.path, {
       value: (known?.value ?? 0) + entry.count,
-      evidence: [
-        ...(known?.evidence ?? []),
-        { path: SUPPRESSIONS_FILE, name: `${entry.path}: ${entry.rule}` },
-      ],
+      evidence: [...(known?.evidence ?? []), { path: SUPPRESSIONS_FILE, name: `${entry.path}: ${entry.rule}` }],
     });
   }
   return readings;
@@ -48,13 +38,11 @@ function countSuppressedViolations(context: DoctorContext): SignalReadings {
 export const suppressedViolationsSignal: DoctorSignal = {
   id: "suppressed-violations",
   issue: "the-silent-treatment",
-  question:
-    "Does the suppressions file hold more entries than its recorded ceiling?",
+  question: "Does the suppressions file hold more entries than its recorded ceiling?",
   reads: "text",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: null },
-  sentence:
-    "A suppressions file nobody has opened since the day it was generated.",
+  sentence: "A suppressions file nobody has opened since the day it was generated.",
   run: (context) => Promise.resolve(countSuppressedViolations(context)),
 };

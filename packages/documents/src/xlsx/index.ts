@@ -8,10 +8,7 @@ export {
   type ParsedWorkbookSheet,
 } from "./lib/parse-workbook.js";
 export { saveArrayBufferAsFile } from "./lib/save-blob.js";
-export {
-  updateWorkbookCells,
-  type WorkbookCellUpdate,
-} from "./lib/update-workbook.js";
+export { updateWorkbookCells, type WorkbookCellUpdate } from "./lib/update-workbook.js";
 export type {
   WorkbookColumn,
   WorkbookInstruction,

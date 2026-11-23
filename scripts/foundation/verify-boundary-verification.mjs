@@ -14,42 +14,20 @@ import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import {
-  BoundaryScenarioError,
-  runBoundaryProof,
-} from "./verify-boundary-verification-run.mjs";
+import { BoundaryScenarioError, runBoundaryProof } from "./verify-boundary-verification-run.mjs";
 
-const repositoryRoot = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-);
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const temporaryRoot = mkdtempSync(join(tmpdir(), "dads-boundary-proof-"));
 
 try {
   const scenarios = await runBoundaryProof({
     temporaryRoot,
     fixtureSource: join(repositoryRoot, "fixtures/boundary-verification"),
-    cliPath: fromEnvironment(
-      "DADS_BOUNDARY_CLI_PATH",
-      "packages/foundation/toolbox/bin/dad.js",
-    ),
-    typescriptBin: fromEnvironment(
-      "DADS_BOUNDARY_TYPESCRIPT_BIN",
-      "node_modules/typescript/bin/tsc",
-    ),
-    vitestBin: fromEnvironment(
-      "DADS_BOUNDARY_VITEST_BIN",
-      "node_modules/vitest/vitest.mjs",
-    ),
-    accessPackageSource: fromEnvironment(
-      "DADS_BOUNDARY_ACCESS_ROOT",
-      "packages/access",
-    ),
-    lockfileSource: fromEnvironment(
-      "DADS_BOUNDARY_LOCKFILE",
-      "package-lock.json",
-    ),
+    cliPath: fromEnvironment("DADS_BOUNDARY_CLI_PATH", "packages/foundation/toolbox/bin/dad.js"),
+    typescriptBin: fromEnvironment("DADS_BOUNDARY_TYPESCRIPT_BIN", "node_modules/typescript/bin/tsc"),
+    vitestBin: fromEnvironment("DADS_BOUNDARY_VITEST_BIN", "node_modules/vitest/vitest.mjs"),
+    accessPackageSource: fromEnvironment("DADS_BOUNDARY_ACCESS_ROOT", "packages/access"),
+    lockfileSource: fromEnvironment("DADS_BOUNDARY_LOCKFILE", "package-lock.json"),
   });
   process.stdout.write(`${JSON.stringify({ ok: true, scenarios })}\n`);
 } catch (error) {

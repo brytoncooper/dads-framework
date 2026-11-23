@@ -7,7 +7,5 @@ import { z } from "zod";
  */
 export const auditTimestamps = {
   createdAt: z.iso.datetime().meta({ description: "Creation (ISO 8601 UTC)" }),
-  updatedAt: z.iso
-    .datetime()
-    .meta({ description: "Last update (ISO 8601 UTC)" }),
+  updatedAt: z.iso.datetime().meta({ description: "Last update (ISO 8601 UTC)" }),
 };

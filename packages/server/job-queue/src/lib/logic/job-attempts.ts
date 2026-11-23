@@ -21,9 +21,7 @@ export type JobAttempts = {
 };
 
 /** What BullMQ knows about this job's attempts, defaulted for a job it lost. */
-export function attemptsOf(
-  job: { attemptsMade?: number; opts?: { attempts?: number } } | undefined,
-): JobAttempts {
+export function attemptsOf(job: { attemptsMade?: number; opts?: { attempts?: number } } | undefined): JobAttempts {
   return {
     made: job?.attemptsMade ?? 0,
     // A job with no configured attempts gets one. Defaulting to zero would

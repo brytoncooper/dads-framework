@@ -33,9 +33,7 @@ export type VerificationReceiptLookup =
       readonly receipt: SuccessfulVerificationReceipt;
     };
 
-export function createVerificationReceiptStore(
-  projectRoot: string,
-): VerificationReceiptStore {
+export function createVerificationReceiptStore(projectRoot: string): VerificationReceiptStore {
   const canonicalProjectRoot = realpathSync(projectRoot);
   const dadsRoot = ensureReceiptDirectory(canonicalProjectRoot, ".dads");
   const verificationRoot = ensureReceiptDirectory(dadsRoot, "verification");
@@ -48,11 +46,7 @@ export function publishSuccessfulVerificationReceipt(
 ): SuccessfulVerificationReceipt {
   assertRealDirectory(store.root);
   const receipt = createSuccessfulVerificationReceipt(execution);
-  const taskDirectory = ensureReceiptTaskDirectory(
-    store,
-    receipt.projectId,
-    receipt.taskId,
-  );
+  const taskDirectory = ensureReceiptTaskDirectory(store, receipt.projectId, receipt.taskId);
   const lockDirectory = `${taskDirectory}.lock`;
   acquireTaskLock(lockDirectory);
   const receiptPath = join(taskDirectory, `${receipt.snapshotId}.json`);
@@ -87,18 +81,11 @@ export function findSuccessfulVerificationReceipt(
     const receiptPath = join(taskDirectory, `${snapshotId}.json`);
     if (!existsSync(receiptPath)) return { status: "missing" };
     assertRegularReceiptFile(receiptPath);
-    const receipt = parseSuccessfulVerificationReceipt(
-      JSON.parse(readFileSync(receiptPath, "utf8")),
-    );
-    if (
-      receipt.projectId !== projectId ||
-      receipt.taskId !== taskId ||
-      receipt.snapshotId !== snapshotId
-    ) {
+    const receipt = parseSuccessfulVerificationReceipt(JSON.parse(readFileSync(receiptPath, "utf8")));
+    if (receipt.projectId !== projectId || receipt.taskId !== taskId || receipt.snapshotId !== snapshotId) {
       return {
         status: "invalid",
-        reason:
-          "Receipt does not belong to the requested project, task, and snapshot.",
+        reason: "Receipt does not belong to the requested project, task, and snapshot.",
       };
     }
     return { status: "match", receipt };
@@ -110,15 +97,8 @@ export function findSuccessfulVerificationReceipt(
   }
 }
 
-function ensureReceiptTaskDirectory(
-  store: VerificationReceiptStore,
-  projectId: string,
-  taskId: string,
-): string {
-  const projectDirectory = ensureReceiptDirectory(
-    store.root,
-    scopedHash(projectId),
-  );
+function ensureReceiptTaskDirectory(store: VerificationReceiptStore, projectId: string, taskId: string): string {
+  const projectDirectory = ensureReceiptDirectory(store.root, scopedHash(projectId));
   return ensureReceiptDirectory(projectDirectory, scopedHash(taskId));
 }
 
@@ -126,10 +106,7 @@ function acquireTaskLock(lockDirectory: string): void {
   try {
     mkdirSync(lockDirectory);
   } catch (error: unknown) {
-    throw new Error(
-      `Verification receipt task is already owned: ${lockErrorMessage(error)}`,
-      { cause: error },
-    );
+    throw new Error(`Verification receipt task is already owned: ${lockErrorMessage(error)}`, { cause: error });
   }
 }
 
@@ -139,9 +116,7 @@ function readExistingReceipt(
 ): SuccessfulVerificationReceipt | undefined {
   if (!existsSync(receiptPath)) return undefined;
   assertRegularReceiptFile(receiptPath);
-  const existingReceipt = parseSuccessfulVerificationReceipt(
-    JSON.parse(readFileSync(receiptPath, "utf8")),
-  );
+  const existingReceipt = parseSuccessfulVerificationReceipt(JSON.parse(readFileSync(receiptPath, "utf8")));
   if (
     existingReceipt.projectId !== expectedReceipt.projectId ||
     existingReceipt.taskId !== expectedReceipt.taskId ||
@@ -149,26 +124,16 @@ function readExistingReceipt(
   ) {
     throw new Error("Existing verification receipt has the wrong identity.");
   }
-  if (
-    JSON.stringify(existingReceipt.identity) !==
-    JSON.stringify(expectedReceipt.identity)
-  ) {
+  if (JSON.stringify(existingReceipt.identity) !== JSON.stringify(expectedReceipt.identity)) {
     throw new Error("Existing verification receipt has different inputs.");
   }
-  if (
-    JSON.stringify(existingReceipt.outputs) !==
-    JSON.stringify(expectedReceipt.outputs)
-  ) {
+  if (JSON.stringify(existingReceipt.outputs) !== JSON.stringify(expectedReceipt.outputs)) {
     throw new Error("Existing verification receipt has different outputs.");
   }
   return existingReceipt;
 }
 
-function writeAtomicFile(
-  temporaryPath: string,
-  receiptPath: string,
-  contents: string,
-): void {
+function writeAtomicFile(temporaryPath: string, receiptPath: string, contents: string): void {
   const descriptor = openSync(temporaryPath, "wx", 0o600);
   try {
     writeFileSync(descriptor, contents, "utf8");
@@ -230,8 +195,7 @@ function assertRealDirectory(directory: string): void {
 
 /** Mints a receipt scope directory name, refusing a blank scope; `execute-graph-task.ts` has `receiptPathSegment`. */
 function scopedHash(value: string): string {
-  if (value.trim().length === 0)
-    throw new Error("Receipt scope must be non-empty.");
+  if (value.trim().length === 0) throw new Error("Receipt scope must be non-empty.");
   return createHash("sha256").update(value).digest("hex");
 }
 

@@ -18,20 +18,12 @@ type ChangeRecord = {
   readonly nextFieldIndex: number;
 };
 
-export function readChangedScope(
-  projectRoot: string,
-  options: ReadChangedScopeOptions = {},
-): ChangedScope {
+export function readChangedScope(projectRoot: string, options: ReadChangedScopeOptions = {}): ChangedScope {
   const requestedBase = options.baseRef ?? "HEAD";
   const comparisonBase = resolveCommit(projectRoot, requestedBase);
   const trackedChanges = readTrackedChanges(projectRoot, comparisonBase);
   const untrackedChanges = readNullSeparatedPaths(
-    runGitForOutput(projectRoot, [
-      "ls-files",
-      "--others",
-      "--exclude-standard",
-      "-z",
-    ]),
+    runGitForOutput(projectRoot, ["ls-files", "--others", "--exclude-standard", "-z"]),
   );
   return {
     comparisonBase,
@@ -41,12 +33,7 @@ export function readChangedScope(
 }
 
 function resolveCommit(projectRoot: string, requestedBase: string): string {
-  const completed = spawnGit(projectRoot, [
-    "rev-parse",
-    "--verify",
-    "--end-of-options",
-    `${requestedBase}^{commit}`,
-  ]);
+  const completed = spawnGit(projectRoot, ["rev-parse", "--verify", "--end-of-options", `${requestedBase}^{commit}`]);
   if (completed.error) {
     throw new Error(`Unable to launch git: ${completed.error.message}`);
   }
@@ -56,19 +43,9 @@ function resolveCommit(projectRoot: string, requestedBase: string): string {
   return completed.stdout.trim();
 }
 
-function readTrackedChanges(
-  projectRoot: string,
-  comparisonBase: string,
-): readonly string[] {
+function readTrackedChanges(projectRoot: string, comparisonBase: string): readonly string[] {
   const fields = readChangeFields(
-    runGitForOutput(projectRoot, [
-      "diff",
-      "--name-status",
-      "-z",
-      "--find-renames",
-      comparisonBase,
-      "--",
-    ]),
+    runGitForOutput(projectRoot, ["diff", "--name-status", "-z", "--find-renames", comparisonBase, "--"]),
   );
   const paths: string[] = [];
   let fieldIndex = 0;
@@ -86,10 +63,7 @@ function readChangeFields(output: string): readonly string[] {
   return fields;
 }
 
-function readChangeRecord(
-  fields: readonly string[],
-  statusIndex: number,
-): ChangeRecord {
+function readChangeRecord(fields: readonly string[], statusIndex: number): ChangeRecord {
   const status = fields[statusIndex];
   if (!status) throw new Error("Git returned a changed path without a status.");
   if (status.startsWith("R") || status.startsWith("C")) {
@@ -115,10 +89,7 @@ function readNullSeparatedPaths(output: string): readonly string[] {
 }
 
 /** Runs git for its stdout, refusing any failure; `workspace-git-context.ts` has `runSourceGit` for a result. */
-function runGitForOutput(
-  projectRoot: string,
-  argumentsForGit: readonly string[],
-): string {
+function runGitForOutput(projectRoot: string, argumentsForGit: readonly string[]): string {
   const completed = spawnGit(projectRoot, argumentsForGit);
   if (completed.error) {
     throw new Error(`Unable to launch git: ${completed.error.message}`);
@@ -126,9 +97,7 @@ function runGitForOutput(
   if (completed.status !== 0) {
     const detail = completed.stderr.trim();
     throw new Error(
-      detail.length > 0
-        ? `Unable to read the changed git scope: ${detail}`
-        : "Unable to read the changed git scope.",
+      detail.length > 0 ? `Unable to read the changed git scope: ${detail}` : "Unable to read the changed git scope.",
     );
   }
   return completed.stdout;
@@ -138,10 +107,7 @@ function runGitForOutput(
  * Every `git` here runs against the root it was handed, never against a
  * repository a caller's environment names.
  */
-function spawnGit(
-  projectRoot: string,
-  argumentsForGit: readonly string[],
-): SpawnSyncReturns<string> {
+function spawnGit(projectRoot: string, argumentsForGit: readonly string[]): SpawnSyncReturns<string> {
   return spawnSync("git", argumentsForGit, {
     cwd: projectRoot,
     encoding: "utf8",

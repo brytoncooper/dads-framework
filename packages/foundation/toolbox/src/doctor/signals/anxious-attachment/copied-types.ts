@@ -15,18 +15,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  evidenceAt,
-  exportedStatements,
-  ts,
-  type DoctorModule,
-} from "../scanners/typescript-program.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { evidenceAt, exportedStatements, ts, type DoctorModule } from "../scanners/typescript-program.js";
 
 /** One exported shape: where it is, which package owns it, and its fields. */
 type DeclaredShape = {
@@ -39,8 +29,7 @@ type DeclaredShape = {
 function fieldSignature(members: readonly ts.TypeElement[]): string {
   return members
     .flatMap((member) =>
-      (ts.isPropertySignature(member) || ts.isMethodSignature(member)) &&
-      ts.isIdentifier(member.name)
+      (ts.isPropertySignature(member) || ts.isMethodSignature(member)) && ts.isIdentifier(member.name)
         ? [member.name.text]
         : [],
     )
@@ -50,10 +39,7 @@ function fieldSignature(members: readonly ts.TypeElement[]): string {
 
 function shapeOf(statement: ts.Statement): readonly ts.TypeElement[] | null {
   if (ts.isInterfaceDeclaration(statement)) return statement.members;
-  if (
-    ts.isTypeAliasDeclaration(statement) &&
-    ts.isTypeLiteralNode(statement.type)
-  ) {
+  if (ts.isTypeAliasDeclaration(statement) && ts.isTypeLiteralNode(statement.type)) {
     return statement.type.members;
   }
   return null;
@@ -65,10 +51,7 @@ function shapeName(statement: ts.Statement): string | undefined {
   return undefined;
 }
 
-function declaredShapes(
-  module: DoctorModule,
-  found: Map<string, DeclaredShape[]>,
-): void {
+function declaredShapes(module: DoctorModule, found: Map<string, DeclaredShape[]>): void {
   for (const statement of exportedStatements(module)) {
     const members = shapeOf(statement);
     const name = shapeName(statement);
@@ -85,9 +68,7 @@ function declaredShapes(
 }
 
 /** The largest set of distinct packages that declare one name identically. */
-function widestCopy(
-  shapes: readonly DeclaredShape[],
-): readonly DeclaredShape[] {
+function widestCopy(shapes: readonly DeclaredShape[]): readonly DeclaredShape[] {
   const byFields = new Map<string, DeclaredShape[]>();
   for (const shape of shapes) {
     const matching = byFields.get(shape.fields) ?? [];
@@ -96,10 +77,7 @@ function widestCopy(
     }
     byFields.set(shape.fields, matching);
   }
-  return [...byFields.values()].reduce(
-    (widest, group) => (group.length > widest.length ? group : widest),
-    [],
-  );
+  return [...byFields.values()].reduce((widest, group) => (group.length > widest.length ? group : widest), []);
 }
 
 function countCopiedTypes(context: DoctorContext): SignalReadings {
@@ -121,8 +99,7 @@ function countCopiedTypes(context: DoctorContext): SignalReadings {
 export const copiedTypesSignal: DoctorSignal = {
   id: "copied-types",
   issue: "anxious-attachment",
-  question:
-    "Is the same exported type name declared in more than one package with a similar shape?",
+  question: "Is the same exported type name declared in more than one package with a similar shape?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",

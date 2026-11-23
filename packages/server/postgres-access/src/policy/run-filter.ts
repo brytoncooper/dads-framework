@@ -15,20 +15,11 @@ const FALSE_FILTER: PostgresAccessFilter = Object.freeze({
   values: [],
 });
 
-function preparePostgresFilter(
-  policy: CompiledAccessPolicy,
-  query: PostgresFilterQuery,
-) {
+function preparePostgresFilter(policy: CompiledAccessPolicy, query: PostgresFilterQuery) {
   requireConcreteSubject(query.subject);
   const target = resolvePostgresFilterTarget(query);
-  const validated = validatePostgresFilterQuery(
-    { ...query, resourceType: target.resourceType },
-    policy.model,
-  );
-  const permission = policy.permissionName(
-    target.resourceType,
-    target.permission,
-  );
+  const validated = validatePostgresFilterQuery({ ...query, resourceType: target.resourceType }, policy.model);
+  const permission = policy.permissionName(target.resourceType, target.permission);
   if (permission === undefined) return undefined;
   return {
     validated,
@@ -47,12 +38,7 @@ export function runCompilePostgresFilter(
 ): PostgresAccessFilter {
   const prepared = preparePostgresFilter(policy, query);
   if (prepared === undefined) return FALSE_FILTER;
-  return compilePostgresFilter(
-    policy.model,
-    namespace,
-    prepared.normalized,
-    prepared.validated,
-  );
+  return compilePostgresFilter(policy.model, namespace, prepared.normalized, prepared.validated);
 }
 
 export async function runResolvePostgresFilter(
@@ -63,18 +49,7 @@ export async function runResolvePostgresFilter(
 ): Promise<PostgresAccessFilter> {
   const prepared = preparePostgresFilter(policy, query);
   if (prepared === undefined) return FALSE_FILTER;
-  return resolvePostgresFilter(
-    policy.model,
-    namespace,
-    prepared.normalized,
-    prepared.validated,
-    executePlan,
-    () =>
-      compilePostgresFilter(
-        policy.model,
-        namespace,
-        prepared.normalized,
-        prepared.validated,
-      ),
+  return resolvePostgresFilter(policy.model, namespace, prepared.normalized, prepared.validated, executePlan, () =>
+    compilePostgresFilter(policy.model, namespace, prepared.normalized, prepared.validated),
   );
 }

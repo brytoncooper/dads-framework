@@ -1,8 +1,4 @@
-import type {
-  TestingManifest,
-  TestingManifestProject,
-  TestingManifestTask,
-} from "../testing-manifest.js";
+import type { TestingManifest, TestingManifestProject, TestingManifestTask } from "../testing-manifest.js";
 
 /**
  * The native engine's manifest validation, mirrored in TypeScript so a
@@ -12,9 +8,7 @@ import type {
  * same rule. The engine stops at the first violation; this returns every one it
  * finds, because a generator wants the whole list at once.
  */
-export function checkTestingManifest(
-  manifest: TestingManifest,
-): readonly string[] {
+export function checkTestingManifest(manifest: TestingManifest): readonly string[] {
   const messages: string[] = [];
   const root = manifest.workspace.root;
   if (root !== undefined) {
@@ -28,11 +22,7 @@ export function checkTestingManifest(
   addUnknownDependencyProblems(messages, manifest.tasks, taskIds);
   addCycleProblem(messages, manifest.tasks);
 
-  addFullFallbackProblems(
-    messages,
-    manifest.workspace.fullFallback.taskIds,
-    taskIds,
-  );
+  addFullFallbackProblems(messages, manifest.workspace.fullFallback.taskIds, taskIds);
   if (manifest.tasks.length === 0) {
     messages.push("Manifest must declare at least one task.");
   }
@@ -40,10 +30,7 @@ export function checkTestingManifest(
 }
 
 /** Collects every declared project id while reporting the ones that cannot be used. */
-function addProjectProblems(
-  messages: string[],
-  projects: readonly TestingManifestProject[],
-): ReadonlySet<string> {
+function addProjectProblems(messages: string[], projects: readonly TestingManifestProject[]): ReadonlySet<string> {
   const projectIds = new Set<string>();
   for (const project of projects) {
     addIdentifierProblem(messages, project.id, "project id");
@@ -69,9 +56,7 @@ function addUnknownFallbackProblems(
   for (const project of projects) {
     for (const dependency of project.fallbackDependencies) {
       if (projectIds.has(dependency)) continue;
-      messages.push(
-        `Project ${project.id} references unknown fallback dependency ${dependency}.`,
-      );
+      messages.push(`Project ${project.id} references unknown fallback dependency ${dependency}.`);
     }
   }
 }
@@ -88,9 +73,7 @@ function addTaskProblems(
     if (taskIds.has(task.id)) messages.push(`Duplicate task id ${task.id}.`);
     taskIds.add(task.id);
     if (!projectIds.has(task.project)) {
-      messages.push(
-        `Task ${task.id} references unknown project ${task.project}.`,
-      );
+      messages.push(`Task ${task.id} references unknown project ${task.project}.`);
     }
     addExecutionProblems(messages, task);
     addImpactProblems(messages, task);
@@ -98,10 +81,7 @@ function addTaskProblems(
   return taskIds;
 }
 
-function addExecutionProblems(
-  messages: string[],
-  task: TestingManifestTask,
-): void {
+function addExecutionProblems(messages: string[], task: TestingManifestTask): void {
   if (task.execution.executable.trim().length === 0) {
     messages.push(`Task ${task.id} is missing execution.executable.`);
   }
@@ -112,10 +92,7 @@ function addExecutionProblems(
 }
 
 /** `changed-files` is scoped by its paths alone, so an empty list selects nothing. */
-function addImpactProblems(
-  messages: string[],
-  task: TestingManifestTask,
-): void {
+function addImpactProblems(messages: string[], task: TestingManifestTask): void {
   for (const path of task.impact.paths) {
     addRelativePathProblem(messages, path, "impact.paths");
   }
@@ -137,9 +114,7 @@ function addUnknownDependencyProblems(
         continue;
       }
       if (taskIds.has(dependency)) continue;
-      messages.push(
-        `Task ${task.id} references unknown dependency ${dependency}.`,
-      );
+      messages.push(`Task ${task.id} references unknown dependency ${dependency}.`);
     }
   }
 }
@@ -157,21 +132,12 @@ function addFullFallbackProblems(
   if (fallbackSet.size !== fallbackIds.length) {
     messages.push("fullFallback.taskIds contains duplicate task ids.");
   }
-  if (
-    fallbackSet.size !== taskIds.size ||
-    [...taskIds].some((id) => !fallbackSet.has(id))
-  ) {
-    messages.push(
-      "workspace.fullFallback.taskIds must contain every declared task exactly once.",
-    );
+  if (fallbackSet.size !== taskIds.size || [...taskIds].some((id) => !fallbackSet.has(id))) {
+    messages.push("workspace.fullFallback.taskIds must contain every declared task exactly once.");
   }
 }
 
-function addIdentifierProblem(
-  messages: string[],
-  value: string,
-  field: string,
-): void {
+function addIdentifierProblem(messages: string[], value: string, field: string): void {
   if (value.length > 0 && !/[^A-Za-z0-9\-_.:]/.test(value)) return;
   messages.push(`${field} must use letters, numbers, -, _, ., or :.`);
 }
@@ -180,29 +146,19 @@ function addIdentifierProblem(
  * Absoluteness is judged the same way on every platform, because the manifest
  * is a document a workspace shares rather than a local path.
  */
-function addRelativePathProblem(
-  messages: string[],
-  value: string,
-  field: string,
-): void {
+function addRelativePathProblem(messages: string[], value: string, field: string): void {
   if (value.trim().length === 0) {
     messages.push(`${field} must not be empty.`);
     return;
   }
-  const isAbsolute =
-    value.startsWith("/") || value.startsWith("\\") || /^[A-Za-z]:/.test(value);
+  const isAbsolute = value.startsWith("/") || value.startsWith("\\") || /^[A-Za-z]:/.test(value);
   if (isAbsolute || value.split(/[\\/]/).includes("..")) {
-    messages.push(
-      `${field} must be a workspace-relative path without parent traversal.`,
-    );
+    messages.push(`${field} must be a workspace-relative path without parent traversal.`);
   }
 }
 
 /** Reports the first cycle only: one message names the loop that must be cut. */
-function addCycleProblem(
-  messages: string[],
-  tasks: readonly TestingManifestTask[],
-): void {
+function addCycleProblem(messages: string[], tasks: readonly TestingManifestTask[]): void {
   const byId = new Map(tasks.map((task) => [task.id, task]));
   const active = new Set<string>();
   const complete = new Set<string>();

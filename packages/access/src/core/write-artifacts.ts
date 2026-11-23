@@ -9,12 +9,8 @@ export type AccessArtifactTarget = {
   readonly wireNames: readonly string[];
 };
 
-function definitionMap(
-  definitions: readonly AccessIrDefinition[],
-): Map<string, AccessIrDefinition> {
-  return new Map(
-    definitions.map((definition) => [definition.wireName, definition]),
-  );
+function definitionMap(definitions: readonly AccessIrDefinition[]): Map<string, AccessIrDefinition> {
+  return new Map(definitions.map((definition) => [definition.wireName, definition]));
 }
 
 function selectDefinitions(

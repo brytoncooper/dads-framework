@@ -1,9 +1,5 @@
 export { composeApi, type ApiSelection } from "./lib/compose-api.js";
-export {
-  composeApp,
-  type ComposedApp,
-  type DependencyCheck,
-} from "./lib/compose-app.js";
+export { composeApp, type ComposedApp, type DependencyCheck } from "./lib/compose-app.js";
 export {
   definePlugin,
   type AnyPlugin,
@@ -11,12 +7,7 @@ export {
   type PluginSetupContext,
   type PluginSpec,
 } from "./lib/define-plugin.js";
-export {
-  defineService,
-  type AnyServiceBinding,
-  type Service,
-  type ServiceBinding,
-} from "./lib/define-service.js";
+export { defineService, type AnyServiceBinding, type Service, type ServiceBinding } from "./lib/define-service.js";
 export {
   CompositionRun,
   type AnyDependency,
@@ -43,11 +34,6 @@ export {
   PluginStopError,
   type PluginDisposalFailure,
 } from "./lib/plugin-errors.js";
-export {
-  PluginScopeClosedError,
-  type Disposer,
-  type PluginScope,
-  type ScopeLedger,
-} from "./lib/plugin-scope.js";
+export { PluginScopeClosedError, type Disposer, type PluginScope, type ScopeLedger } from "./lib/plugin-scope.js";
 export { providePlugin } from "./lib/provide-plugin.js";
 export type { RunningApp } from "./lib/start-plugins.js";

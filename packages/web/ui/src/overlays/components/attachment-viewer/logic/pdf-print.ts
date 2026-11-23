@@ -34,11 +34,7 @@ export type PrintScaleOptions = {
  * target DPI; a page that would pass the pixel budget is trimmed by the square
  * root of the overshoot, so it lands on the budget and keeps its shape.
  */
-export function printRenderScale(
-  widthPt: number,
-  heightPt: number,
-  options: PrintScaleOptions = {},
-): number {
+export function printRenderScale(widthPt: number, heightPt: number, options: PrintScaleOptions = {}): number {
   const targetDpi = options.targetDpi ?? PRINT_TARGET_DPI;
   const maxPixels = options.maxPagePixels ?? PRINT_MAX_PAGE_PIXELS;
   const safeWidth = widthPt > 0 ? widthPt : 1;
@@ -57,10 +53,7 @@ export type PrintPageSize = {
 };
 
 /** The paper size a printed page is laid out to, from its point size. */
-export function printPageSize(
-  widthPt: number,
-  heightPt: number,
-): PrintPageSize {
+export function printPageSize(widthPt: number, heightPt: number): PrintPageSize {
   const safeWidth = widthPt > 0 ? widthPt : PDF_POINTS_PER_INCH;
   const safeHeight = heightPt > 0 ? heightPt : PDF_POINTS_PER_INCH;
   return {
@@ -70,10 +63,7 @@ export function printPageSize(
 }
 
 /** Splits a page count into ordered batches of 1-based page numbers. */
-export function chunkPages(
-  pageCount: number,
-  batchSize: number = PRINT_RENDER_BATCH_SIZE,
-): number[][] {
+export function chunkPages(pageCount: number, batchSize: number = PRINT_RENDER_BATCH_SIZE): number[][] {
   const size = Math.max(1, Math.trunc(batchSize));
   const count = Math.max(0, Math.trunc(pageCount));
   const batches: number[][] = [];

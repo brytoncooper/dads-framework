@@ -14,14 +14,10 @@ let requestLogCounter = 0;
  * no trigger fills it in — so this factory builds the row a caller would
  * actually insert, not a row the database minted.
  */
-export function makeRequestLog(
-  overrides: Partial<RequestLogInsert> = {},
-): RequestLogInsert {
+export function makeRequestLog(overrides: Partial<RequestLogInsert> = {}): RequestLogInsert {
   requestLogCounter += 1;
   return {
-    requestId: requestIdSchema.parse(
-      deterministicUuid("request", requestLogCounter),
-    ),
+    requestId: requestIdSchema.parse(deterministicUuid("request", requestLogCounter)),
     method: "POST",
     routeId: "/organizations/:organizationId/orders",
     path: "/organizations/:organizationId/orders",

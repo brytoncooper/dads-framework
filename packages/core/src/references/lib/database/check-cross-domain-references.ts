@@ -6,18 +6,11 @@
  * so adding a domain is adding rows (detection wall).
  */
 import { SAMPLE_LIMIT } from "../cross-domain-reference.js";
-import type {
-  CrossDomainReference,
-  DanglingReferenceFinding,
-  ReferenceFilter,
-} from "../cross-domain-reference.js";
+import type { CrossDomainReference, DanglingReferenceFinding, ReferenceFilter } from "../cross-domain-reference.js";
 
 /** Executes the reconciliation query through an application-owned connection. */
 export type CrossDomainReferenceQueryClient = {
-  query(
-    text: string,
-    values: string[],
-  ): Promise<{ readonly rows: readonly unknown[] }>;
+  query(text: string, values: string[]): Promise<{ readonly rows: readonly unknown[] }>;
 };
 
 /** One dangling value and how often it occurs, as the grouped query returns it. */
@@ -98,9 +91,7 @@ function parseDanglingValue(row: unknown, referenceId: string): DanglingValue {
   ) {
     return { value: row.value, occurrences: row.occurrences };
   }
-  throw new Error(
-    `Reference ${referenceId} returned an invalid reconciliation row`,
-  );
+  throw new Error(`Reference ${referenceId} returned an invalid reconciliation row`);
 }
 
 /** The LEFT JOIN anti-join for one reference, with its filter values bound. */
@@ -111,18 +102,13 @@ export function buildDanglingValueQuery(reference: CrossDomainReference): {
   const consumerColumn = `${REFERENCING}.${quote(reference.consumerColumn)}`;
   // An array column is checked one element at a time: each element is a
   // reference of its own, and an empty array contributes no rows at all.
-  const referencingColumn = reference.consumerHoldsMany
-    ? `${ELEMENT}."value"`
-    : consumerColumn;
+  const referencingColumn = reference.consumerHoldsMany ? `${ELEMENT}."value"` : consumerColumn;
   const unnestElements = reference.consumerHoldsMany
     ? `\n  CROSS JOIN LATERAL unnest(${consumerColumn}) AS ${ELEMENT}("value")`
     : "";
   const referencedColumn = `${REFERENCED}.${quote(reference.providerColumn)}`;
 
-  const conditions = [
-    `${referencingColumn} IS NOT NULL`,
-    `${referencedColumn} IS NULL`,
-  ];
+  const conditions = [`${referencingColumn} IS NOT NULL`, `${referencedColumn} IS NULL`];
   const values: string[] = [];
 
   for (const filter of reference.filters ?? []) {
@@ -158,11 +144,7 @@ export function buildDanglingValueQuery(reference: CrossDomainReference): {
 }
 
 /** Adds one filter's value to the bind list and returns its SQL condition. */
-function bindFilter(
-  alias: string,
-  filter: ReferenceFilter,
-  values: string[],
-): string {
+function bindFilter(alias: string, filter: ReferenceFilter, values: string[]): string {
   values.push(filter.equals);
   return `${alias}.${quote(filter.column)} = $${String(values.length)}`;
 }
@@ -176,9 +158,7 @@ function bindFilter(
  */
 function quote(identifier: string): string {
   if (!SAFE_IDENTIFIER.test(identifier)) {
-    throw new Error(
-      `registry identifier \`${identifier}\` is not a plain lower_snake_case Postgres identifier`,
-    );
+    throw new Error(`registry identifier \`${identifier}\` is not a plain lower_snake_case Postgres identifier`);
   }
   return `"${identifier}"`;
 }

@@ -17,11 +17,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  operationEvidence,
-  operationKey,
-  readRouteModel,
-} from "../scanners/route-model.js";
+import { operationEvidence, operationKey, readRouteModel } from "../scanners/route-model.js";
 
 function countHandlerWork(context: DoctorContext) {
   const readings = new Map<string, SignalReading>();
@@ -42,7 +38,6 @@ export const logicInControllersSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 20, strict: 10 },
-  sentence:
-    "Four years. Still lives in the controller. Still no public contract.",
+  sentence: "Four years. Still lives in the controller. Still no public contract.",
   run: (context) => Promise.resolve(countHandlerWork(context)),
 };

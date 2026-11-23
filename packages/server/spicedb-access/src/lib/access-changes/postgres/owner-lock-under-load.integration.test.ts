@@ -9,10 +9,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { PostgresOwnerLock } from "./owner-lock.js";
 
@@ -43,9 +40,7 @@ describe("PostgresOwnerLock under plain load (integration)", () => {
     const sawCallersWaiting = pool.waitingCount > 0;
 
     const lock = new PostgresOwnerLock(pool);
-    const servedAt = await lock.run("organization:under-load", () =>
-      Promise.resolve(Date.now()),
-    );
+    const servedAt = await lock.run("organization:under-load", () => Promise.resolve(Date.now()));
 
     expect(sawCallersWaiting).toBe(true);
     expect(servedAt).toBeLessThan(loadEndsAt);

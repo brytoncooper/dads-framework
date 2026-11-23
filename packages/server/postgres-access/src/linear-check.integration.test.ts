@@ -9,11 +9,7 @@ import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
 import { makeChain } from "../test-support/benchmark-chain.js";
-import {
-  PostgresAuthorization,
-  preparePostgresChecks,
-  relationshipSchemaMigration,
-} from "./index.js";
+import { PostgresAuthorization, preparePostgresChecks, relationshipSchemaMigration } from "./index.js";
 
 it("checks linear policies against wide, duplicate, wildcard and cyclic data", async () => {
   const postgres = await startUnmigratedTestPostgres({ attributed: false });
@@ -61,14 +57,10 @@ it("checks linear policies against wide, duplicate, wildcard and cyclic data", a
           resource: { ...check.resource, id },
           subject: { ...check.subject, id: actor },
         });
-        await expect(native.check(request("wide", "private"))).resolves.toBe(
-          false,
-        );
+        await expect(native.check(request("wide", "private"))).resolves.toBe(false);
         expect(preparedChecks).toBe(1);
         expect(unnamedChecks).toBe(1);
-        await expect(
-          native.check(request("public", "public-user")),
-        ).resolves.toBe(true);
+        await expect(native.check(request("public", "public-user"))).resolves.toBe(true);
         expect(preparedChecks).toBe(2);
         expect(unnamedChecks).toBe(1);
         const queries = [
@@ -83,18 +75,13 @@ it("checks linear policies against wide, duplicate, wildcard and cyclic data", a
         await prove(baseline, queries, [false, true, true, true, false, true]);
 
         const member = facts[0];
-        if (member === undefined)
-          throw new Error("Expected terminal membership");
+        if (member === undefined) throw new Error("Expected terminal membership");
         const terminal = {
           ...check,
           resource: { ...member.resource, id: "nested" },
         };
         await expect(
-          native.checkMany([
-            terminal,
-            ...queries,
-            { ...terminal, subject: { ...terminal.subject, id: "private" } },
-          ]),
+          native.checkMany([terminal, ...queries, { ...terminal, subject: { ...terminal.subject, id: "private" } }]),
         ).resolves.toEqual([true, false, true, true, true, false, true, false]);
         await native.writeRelationships(cyclicFacts(member));
         for (const engine of [native, baseline]) {
@@ -107,21 +94,11 @@ it("checks linear policies against wide, duplicate, wildcard and cyclic data", a
           await engine.deleteRelationships(filter);
           await prove(
             engine,
-            [
-              request("wide"),
-              request("parent"),
-              request("public", "public-user"),
-            ],
+            [request("wide"), request("parent"), request("public", "public-user")],
             [false, false, true],
           );
-          await engine.writeRelationships([
-            { ...member, resource: { ...member.resource, id: "nested" } },
-          ]);
-          await prove(
-            engine,
-            [request("wide"), request("diamond")],
-            [true, true],
-          );
+          await engine.writeRelationships([{ ...member, resource: { ...member.resource, id: "nested" } }]);
+          await prove(engine, [request("wide"), request("diamond")], [true, true]);
         }
       } finally {
         client.release();
@@ -134,22 +111,15 @@ it("checks linear policies against wide, duplicate, wildcard and cyclic data", a
   }
 }, 60_000);
 
-async function prove(
-  engine: Authorization,
-  queries: readonly PermissionQuery[],
-  expected: readonly boolean[],
-) {
+async function prove(engine: Authorization, queries: readonly PermissionQuery[], expected: readonly boolean[]) {
   const points = [];
   for (const query of queries) points.push(await engine.check(query));
   expect(points).toEqual(expected);
-  if (!engine.checkMany)
-    throw new Error("Benchmark engine omitted batch checks");
+  if (!engine.checkMany) throw new Error("Benchmark engine omitted batch checks");
   expect(await engine.checkMany(queries)).toEqual(expected);
 }
 
-function branchingFacts(
-  chain: readonly RelationshipWrite[],
-): readonly RelationshipWrite[] {
+function branchingFacts(chain: readonly RelationshipWrite[]): readonly RelationshipWrite[] {
   const first = chain[0];
   const root = chain.at(-1);
   const parent = chain.at(-2);
@@ -211,10 +181,7 @@ function cyclicFacts(member: RelationshipWrite): readonly RelationshipWrite[] {
   ];
 }
 
-async function install(
-  engine: Authorization,
-  rows: readonly RelationshipWrite[],
-) {
+async function install(engine: Authorization, rows: readonly RelationshipWrite[]) {
   for (let offset = 0; offset < rows.length; offset += 1_000) {
     await engine.writeRelationships(rows.slice(offset, offset + 1_000));
   }

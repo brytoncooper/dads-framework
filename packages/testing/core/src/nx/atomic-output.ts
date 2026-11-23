@@ -30,17 +30,11 @@ export async function writeOutputsAtomically(
     temporaryPath: `${output.path}.${randomUUID()}.tmp`,
   }));
   try {
-    await Promise.all(
-      temporary.map((output) =>
-        fs.writeFile(output.temporaryPath, output.contents, "utf8"),
-      ),
-    );
+    await Promise.all(temporary.map((output) => fs.writeFile(output.temporaryPath, output.contents, "utf8")));
     for (const output of temporary) {
       await fs.rename(output.temporaryPath, output.path);
     }
   } finally {
-    await Promise.all(
-      temporary.map((output) => fs.rm(output.temporaryPath, { force: true })),
-    );
+    await Promise.all(temporary.map((output) => fs.rm(output.temporaryPath, { force: true })));
   }
 }

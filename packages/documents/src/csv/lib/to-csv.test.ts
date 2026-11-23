@@ -23,23 +23,12 @@ describe("toCsv", () => {
 });
 
 it("writes an LF-terminated header for an empty export", () => {
-  expect(toCsv([], [{ key: "value", header: 'name,"label"' }])).toBe(
-    '"name,""label"""\n',
-  );
+  expect(toCsv([], [{ key: "value", header: 'name,"label"' }])).toBe('"name,""label"""\n');
   expect(toCsv([], [])).toBe("\n");
 });
 
 it("preserves nulls, booleans, dates, numbers, and structured cells", () => {
-  const keys = [
-    "missing",
-    "nil",
-    "truth",
-    "falsehood",
-    "at",
-    "n",
-    "big",
-    "data",
-  ];
+  const keys = ["missing", "nil", "truth", "falsehood", "at", "n", "big", "data"];
   expect(
     toCsv(
       [
@@ -55,9 +44,7 @@ it("preserves nulls, booleans, dates, numbers, and structured cells", () => {
       ],
       keys.map((key) => ({ key, header: key })),
     ),
-  ).toBe(
-    'missing,nil,truth,falsehood,at,n,big,data\n,,1,,42,-2.5,12,"{""a"":1}"\n',
-  );
+  ).toBe('missing,nil,truth,falsehood,at,n,big,data\n,,1,,42,-2.5,12,"{""a"":1}"\n');
 });
 
 it("reads nested keys and lets a literal key take precedence", () => {
@@ -76,25 +63,15 @@ it("reads nested keys and lets a literal key take precedence", () => {
         header: key,
       })),
     ),
-  ).toBe(
-    'nested.value,"nested[""a.b""]",items[0]\nliteral,quoted,one\nfallback,,two\n',
-  );
+  ).toBe('nested.value,"nested[""a.b""]",items[0]\nliteral,quoted,one\nfallback,,two\n');
 });
 
 it("quotes carriage returns and refuses values without a CSV representation", () => {
-  expect(
-    toCsv([{ value: "part\rrest" }], [{ key: "value", header: "Value" }]),
-  ).toBe('Value\n"part\rrest"\n');
-  expect(() =>
-    toCsv([{ value: Symbol("invalid") }], [{ key: "value", header: "Value" }]),
-  ).toThrow(TypeError);
+  expect(toCsv([{ value: "part\rrest" }], [{ key: "value", header: "Value" }])).toBe('Value\n"part\rrest"\n');
+  expect(() => toCsv([{ value: Symbol("invalid") }], [{ key: "value", header: "Value" }])).toThrow(TypeError);
 });
 
 it("does not treat a literal unmatched bracket as a nested path", () => {
-  expect(toCsv([{ a: "unrelated" }], [{ key: "a[", header: "Value" }])).toBe(
-    "Value\n\n",
-  );
-  expect(() => toCsv([], [{ key: "", header: "Value" }])).toThrow(
-    "column key is required",
-  );
+  expect(toCsv([{ a: "unrelated" }], [{ key: "a[", header: "Value" }])).toBe("Value\n\n");
+  expect(() => toCsv([], [{ key: "", header: "Value" }])).toThrow("column key is required");
 });

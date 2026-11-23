@@ -33,8 +33,7 @@ export async function buildWorkbook(spec: WorkbookSpec): Promise<ArrayBuffer> {
       continue;
     }
 
-    const lastValidatedRow =
-      (sheet.validatedDataRowCount ?? DEFAULT_TEMPLATE_ROW_COUNT) + 1;
+    const lastValidatedRow = (sheet.validatedDataRowCount ?? DEFAULT_TEMPLATE_ROW_COUNT) + 1;
     const dataSheet = workbook.addWorksheet(sheet.sheetName, {
       views: [
         {
@@ -48,13 +47,7 @@ export async function buildWorkbook(spec: WorkbookSpec): Promise<ArrayBuffer> {
     writeExampleRows(dataSheet, sheet);
     applyColumnFormats(dataSheet, sheet.columns, lastValidatedRow);
     applyHeaderFilter(dataSheet, sheet);
-    nextLookupColumn = writeDropdowns(
-      workbook,
-      dataSheet,
-      sheet.columns,
-      nextLookupColumn,
-      lastValidatedRow,
-    );
+    nextLookupColumn = writeDropdowns(workbook, dataSheet, sheet.columns, nextLookupColumn, lastValidatedRow);
   }
 
   if (spec.metadata !== undefined) {
@@ -64,10 +57,7 @@ export async function buildWorkbook(spec: WorkbookSpec): Promise<ArrayBuffer> {
   return toArrayBuffer(await workbook.xlsx.writeBuffer());
 }
 
-function writeInstructionSheet(
-  sheet: Worksheet,
-  spec: WorkbookInstructionSheetSpec,
-): void {
+function writeInstructionSheet(sheet: Worksheet, spec: WorkbookInstructionSheetSpec): void {
   sheet.columns = [{ width: 30 }, { width: 90 }];
   sheet.mergeCells("A1:B1");
   sheet.getCell("A1").value = spec.title;
@@ -94,10 +84,7 @@ function writeInstructionSheet(
   }
 }
 
-function writeHeaderRow(
-  dataSheet: Worksheet,
-  columns: readonly WorkbookColumn[],
-): void {
+function writeHeaderRow(dataSheet: Worksheet, columns: readonly WorkbookColumn[]): void {
   dataSheet.columns = columns.map((column) => ({
     header: column.header,
     key: column.key,
@@ -116,10 +103,7 @@ function writeHeaderRow(
   });
 }
 
-function writeExampleRows(
-  dataSheet: Worksheet,
-  spec: WorkbookTableSheetSpec,
-): void {
+function writeExampleRows(dataSheet: Worksheet, spec: WorkbookTableSheetSpec): void {
   for (const exampleRow of spec.exampleRows ?? []) {
     const rowByColumnKey: Record<string, string | number | Date> = {};
     for (const column of spec.columns) {
@@ -131,18 +115,12 @@ function writeExampleRows(
   }
 }
 
-function exampleCellValue(
-  column: WorkbookColumn,
-  value: string,
-): string | number | Date {
+function exampleCellValue(column: WorkbookColumn, value: string): string | number | Date {
   if (column.cellKind === "date") return isoDate(value) ?? value;
   if (column.cellKind === "time") {
     const match = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/.exec(value);
     if (match === null) return value;
-    return (
-      (Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3])) /
-      86400
-    );
+    return (Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3])) / 86400;
   }
   if (column.cellKind === "number") {
     const parsed = Number(value);
@@ -151,11 +129,7 @@ function exampleCellValue(
   return value;
 }
 
-function applyColumnFormats(
-  dataSheet: Worksheet,
-  columns: readonly WorkbookColumn[],
-  lastValidatedRow: number,
-): void {
+function applyColumnFormats(dataSheet: Worksheet, columns: readonly WorkbookColumn[], lastValidatedRow: number): void {
   columns.forEach((column, index) => {
     const columnNumber = index + 1;
     if (column.cellKind === "text") {
@@ -180,10 +154,7 @@ function applyColumnFormats(
   });
 }
 
-function applyHeaderFilter(
-  dataSheet: Worksheet,
-  sheet: WorkbookTableSheetSpec,
-): void {
+function applyHeaderFilter(dataSheet: Worksheet, sheet: WorkbookTableSheetSpec): void {
   if (sheet.showFilter !== true || sheet.columns.length === 0) return;
   dataSheet.autoFilter = {
     from: { row: 1, column: 1 },
@@ -218,17 +189,8 @@ function writeDropdowns(
     });
 
   dropdownColumns.forEach((dropdownColumn, offset) => {
-    const lookupRange = writeLookupColumn(
-      lookupsSheet,
-      firstLookupColumn + offset,
-      dropdownColumn,
-    );
-    applyListValidation(
-      dataSheet,
-      dropdownColumn.columnNumber,
-      lookupRange,
-      lastValidatedRow,
-    );
+    const lookupRange = writeLookupColumn(lookupsSheet, firstLookupColumn + offset, dropdownColumn);
+    applyListValidation(dataSheet, dropdownColumn.columnNumber, lookupRange, lastValidatedRow);
   });
   return firstLookupColumn + dropdownColumns.length;
 }
@@ -268,10 +230,7 @@ function applyListValidation(
   }
 }
 
-function writeMetadataSheet(
-  workbook: Workbook,
-  metadata: NonNullable<WorkbookSpec["metadata"]>,
-): void {
+function writeMetadataSheet(workbook: Workbook, metadata: NonNullable<WorkbookSpec["metadata"]>): void {
   const sheet = workbook.addWorksheet(WORKBOOK_METADATA_SHEET_NAME, {
     state: "veryHidden",
   });

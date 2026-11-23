@@ -29,10 +29,7 @@ export function isRetryableSpiceDbWriteError(error: unknown): boolean {
   if (typeof error !== "object" || error === null || !("code" in error)) {
     return false;
   }
-  return (
-    typeof error.code === "number" &&
-    RETRYABLE_WRITE_STATUS_CODES.has(error.code)
-  );
+  return typeof error.code === "number" && RETRYABLE_WRITE_STATUS_CODES.has(error.code);
 }
 
 /** Back off 10, 20, 40 ms: long enough for the competing write to commit. */

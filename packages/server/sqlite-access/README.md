@@ -60,27 +60,15 @@ try {
   });
   const access = createAccessClient(authorization);
 
-  console.log(
-    await access.can(user("alice"), organization.task("task-1").view),
-  );
-  await withProtectedSqliteTransaction(
-    { executor, authorization },
-    async ({ authorization: scoped }) => {
-      const txAccess = createAccessClient(scoped);
-      await txAccess.add(user("alice"), organization("org-1").member);
-      await txAccess.add(
-        organization("org-1"),
-        organization.task("task-1").organization,
-      );
-    },
-  );
-  console.log(
-    await access.can(user("alice"), organization.task("task-1").view),
-  );
+  console.log(await access.can(user("alice"), organization.task("task-1").view));
+  await withProtectedSqliteTransaction({ executor, authorization }, async ({ authorization: scoped }) => {
+    const txAccess = createAccessClient(scoped);
+    await txAccess.add(user("alice"), organization("org-1").member);
+    await txAccess.add(organization("org-1"), organization.task("task-1").organization);
+  });
+  console.log(await access.can(user("alice"), organization.task("task-1").view));
   await access.remove(user("alice"), organization("org-1").member);
-  console.log(
-    await access.can(user("alice"), organization.task("task-1").view),
-  );
+  console.log(await access.can(user("alice"), organization.task("task-1").view));
 } finally {
   database.close();
 }

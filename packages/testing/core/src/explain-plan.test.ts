@@ -1,22 +1,11 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  explainPlan,
-  renderPlanExplanation,
-  type ExplainedTask,
-  type PlanExplanation,
-} from "./explain-plan.js";
+import { explainPlan, renderPlanExplanation, type ExplainedTask, type PlanExplanation } from "./explain-plan.js";
 import type { TestingPlanResult } from "./testing-api.js";
 import { readTestingManifest } from "./testing-manifest.js";
 
-const repositoryRoot = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-);
+const repositoryRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "..", "..");
 
 const soundnessManifest = readTestingManifest(
   repositoryRoot,
@@ -30,11 +19,7 @@ const enginePlan: TestingPlanResult = {
     kind: "base-to-working-tree",
     base: "a1b2c3d",
     head: "e4f5a6b",
-    changedPaths: [
-      "apps/web/src/load.ts",
-      "packages/core/src/leaf.ts",
-      "docs/notes.md",
-    ],
+    changedPaths: ["apps/web/src/load.ts", "packages/core/src/leaf.ts", "docs/notes.md"],
     fullFallback: false,
   },
   tasks: [
@@ -229,9 +214,7 @@ describe("explainPlan with engine causes", () => {
         scope: "unknown",
       },
     });
-    expect(explanation.summary.fullFallbackCauses).toEqual([
-      expect.objectContaining({ code: "unknown-issue-index" }),
-    ]);
+    expect(explanation.summary.fullFallbackCauses).toEqual([expect.objectContaining({ code: "unknown-issue-index" })]);
   });
 
   it("renders the engine explanation as stable anchored lines", () => {
@@ -263,9 +246,7 @@ describe("explainPlan without engine causes", () => {
 
     expect(explanation.detail).toBe("derived");
     expect(taskById(explanation, "core:typecheck").project).toBe("core");
-    expect(taskById(explanation, "core:typecheck").causes).toEqual([
-      { kind: "prerequisite-of", taskId: "core:test" },
-    ]);
+    expect(taskById(explanation, "core:typecheck").causes).toEqual([{ kind: "prerequisite-of", taskId: "core:test" }]);
     expect(taskById(explanation, "core:test").causes).toEqual([
       { kind: "changed-path", path: "packages/core/src/leaf.ts" },
     ]);
@@ -277,9 +258,7 @@ describe("explainPlan without engine causes", () => {
 
     const importer = taskById(explanation, "web:test");
     expect(importer.causes).toEqual([]);
-    expect(importer.reasonText).toBe(
-      "imports a changed symbol (symbol not reported by this dad-test build)",
-    );
+    expect(importer.reasonText).toBe("imports a changed symbol (symbol not reported by this dad-test build)");
   });
 
   it("reports no project and no ownership causes without a manifest", () => {
@@ -327,9 +306,7 @@ describe("explainPlan without engine causes", () => {
       scope: "workspace",
     };
     expect(explanation.summary.fullFallbackCauses).toEqual([forcedBy]);
-    expect(taskById(explanation, "core:test").causes).toEqual([
-      { kind: "issue", issue: forcedBy },
-    ]);
+    expect(taskById(explanation, "core:test").causes).toEqual([{ kind: "issue", issue: forcedBy }]);
     expect(renderPlanExplanation(explanation)).toContain(
       "full-fallback: yes\n  forced-by unknown-changed-path tools/generate.sh is not owned by any project\n",
     );
@@ -400,9 +377,7 @@ describe("explainPlan without engine causes", () => {
   });
 
   it("renders the derived explanation as stable anchored lines", () => {
-    expect(
-      renderPlanExplanation(explainPlan(legacyPlan, soundnessManifest)),
-    ).toBe(
+    expect(renderPlanExplanation(explainPlan(legacyPlan, soundnessManifest))).toBe(
       [
         "explain: 3 of 4 tasks selected, 1 skipped, 0 widened detail=derived",
         "scope: kind=base-to-head changed=1",

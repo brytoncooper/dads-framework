@@ -15,10 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  createVerificationReceiptStore,
-  publishSuccessfulVerificationReceipt,
-} from "./receipt-store.js";
+import { createVerificationReceiptStore, publishSuccessfulVerificationReceipt } from "./receipt-store.js";
 import { runCapturedVerification } from "./run-verification-task.js";
 import {
   captureVerificationSnapshot,
@@ -45,9 +42,9 @@ describe("verification receipt writes", () => {
     const lockDirectory = `${taskDirectoryOf(store.root, request)}.lock`;
     mkdirSync(lockDirectory, { recursive: true });
 
-    expect(() =>
-      publishSuccessfulVerificationReceipt(store, execution),
-    ).toThrow(/verification receipt task is already owned/i);
+    expect(() => publishSuccessfulVerificationReceipt(store, execution)).toThrow(
+      /verification receipt task is already owned/i,
+    );
     expect(existsSync(lockDirectory)).toBe(true);
     expect(receiptFileNames(taskDirectoryOf(store.root, request))).toEqual([]);
   });
@@ -61,13 +58,9 @@ describe("verification receipt writes", () => {
     const receipt = publishSuccessfulVerificationReceipt(store, execution);
 
     const taskDirectory = taskDirectoryOf(store.root, request);
-    expect(receiptFileNames(taskDirectory)).toEqual([
-      `${receipt.snapshotId}.json`,
-    ]);
+    expect(receiptFileNames(taskDirectory)).toEqual([`${receipt.snapshotId}.json`]);
     expect(existsSync(`${taskDirectory}.lock`)).toBe(false);
-    expect(
-      statSync(join(taskDirectory, `${receipt.snapshotId}.json`)).mode & 0o777,
-    ).toBe(0o600);
+    expect(statSync(join(taskDirectory, `${receipt.snapshotId}.json`)).mode & 0o777).toBe(0o600);
   });
 
   it("leaves no partial receipt behind when a republish is refused", () => {
@@ -90,16 +83,12 @@ describe("verification receipt writes", () => {
   });
 });
 
-function succeededExecution(
-  request: ControlledVerificationRequest,
-): ControlledVerificationExecution {
+function succeededExecution(request: ControlledVerificationRequest): ControlledVerificationExecution {
   const snapshot = captureVerificationSnapshot(request);
   try {
     const execution = runCapturedVerification(snapshot);
     if (execution.status !== "succeeded") {
-      throw new Error(
-        `Expected a successful fixture run: ${execution.status}.`,
-      );
+      throw new Error(`Expected a successful fixture run: ${execution.status}.`);
     }
     return execution;
   } finally {
@@ -107,10 +96,7 @@ function succeededExecution(
   }
 }
 
-function taskDirectoryOf(
-  receiptRoot: string,
-  request: ControlledVerificationRequest,
-): string {
+function taskDirectoryOf(receiptRoot: string, request: ControlledVerificationRequest): string {
   return join(receiptRoot, sha256(request.projectId), sha256(request.taskId));
 }
 

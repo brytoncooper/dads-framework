@@ -26,12 +26,8 @@ export class ReadStatesOnceFeatureFlagStore extends FeatureFlagStore {
     this.#inner = inner;
   }
 
-  override listStates(
-    slugs: readonly string[],
-  ): Promise<readonly FeatureFlagState[]> {
-    return this.#states.answer(JSON.stringify(slugs), () =>
-      this.#inner.listStates(slugs),
-    );
+  override listStates(slugs: readonly string[]): Promise<readonly FeatureFlagState[]> {
+    return this.#states.answer(JSON.stringify(slugs), () => this.#inner.listStates(slugs));
   }
 
   override listHistory(input: {
@@ -42,9 +38,7 @@ export class ReadStatesOnceFeatureFlagStore extends FeatureFlagStore {
     return this.#inner.listHistory(input);
   }
 
-  override async applyBatch(
-    input: FeatureFlagBatchWrite,
-  ): Promise<"applied" | "revision-conflict"> {
+  override async applyBatch(input: FeatureFlagBatchWrite): Promise<"applied" | "revision-conflict"> {
     this.#states.forget();
     try {
       return await this.#inner.applyBatch(input);

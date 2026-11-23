@@ -1,7 +1,4 @@
-import {
-  type AuditLogPosition,
-  parseAuditLogPosition,
-} from "../lib/database/audit-log-position.ids.js";
+import { type AuditLogPosition, parseAuditLogPosition } from "../lib/database/audit-log-position.ids.js";
 import type { AuditLogRecord } from "../lib/database/readers/audit-log-reader.interface.js";
 
 let auditLogRecordCounter = 0;
@@ -13,14 +10,10 @@ let auditLogRecordCounter = 0;
  * read shape: it carries the position and the keyset cursor the database
  * would have minted.
  */
-export function makeAuditLogRecord(
-  overrides: Partial<AuditLogRecord> = {},
-): AuditLogRecord {
+export function makeAuditLogRecord(overrides: Partial<AuditLogRecord> = {}): AuditLogRecord {
   auditLogRecordCounter += 1;
-  const positioned =
-    overrides.position ?? standInPosition(1_000_000 - auditLogRecordCounter);
-  const recordedAt =
-    overrides.recordedAt ?? new Date("2026-10-22T14:00:00.000Z");
+  const positioned = overrides.position ?? standInPosition(1_000_000 - auditLogRecordCounter);
+  const recordedAt = overrides.recordedAt ?? new Date("2026-10-22T14:00:00.000Z");
   return {
     position: positioned,
     scopeValues: null,

@@ -7,19 +7,10 @@
  * replaced everything typed in between.
  * @vitest-environment jsdom
  */
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  DATA_TABLE_SEARCH_SETTLE_MS,
-  DataTableSearchInput,
-} from "./data-table-search-input.js";
+import { DATA_TABLE_SEARCH_SETTLE_MS, DataTableSearchInput } from "./data-table-search-input.js";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -46,9 +37,7 @@ function settle(): void {
 describe("DataTableSearchInput", () => {
   it("writes once typing settles, not per key", () => {
     const onCommit = vi.fn();
-    render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("C");
     type("Cl");
@@ -64,9 +53,7 @@ describe("DataTableSearchInput", () => {
 
   it("keeps the typed text while the URL still holds the old term", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("Cl");
     settle();
@@ -75,22 +62,10 @@ describe("DataTableSearchInput", () => {
     expect(searchBox().value).toBe("Clear");
 
     // The router commits the first write late, after the reader typed on.
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="Cl"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="Cl" onCommit={onCommit} />);
     expect(searchBox().value).toBe("Clear");
 
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="Clear"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="Clear" onCommit={onCommit} />);
     expect(searchBox().value).toBe("Clear");
     expect(onCommit.mock.calls).toEqual([["Cl"], ["Clear"]]);
   });
@@ -99,43 +74,23 @@ describe("DataTableSearchInput", () => {
   // overtaken write never arrives as `value`; the tests below model that.
   it("follows Reset after the router dropped an overtaken write", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="pump"
-        onCommit={onCommit}
-      />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="pump" onCommit={onCommit} />);
 
     type("");
     type("valve");
     settle();
     expect(onCommit.mock.calls).toEqual([[""], ["valve"]]);
     // "" was overtaken and never lands; "valve" does.
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="valve"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="valve" onCommit={onCommit} />);
     expect(searchBox().value).toBe("valve");
 
-    rerender(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
     expect(searchBox().value).toBe("");
   });
 
   it("follows Reset after the same term was written, cleared, and written again", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="foo"
-        onCommit={onCommit}
-      />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="foo" onCommit={onCommit} />);
 
     type("ab");
     settle();
@@ -144,53 +99,29 @@ describe("DataTableSearchInput", () => {
     settle();
     expect(onCommit.mock.calls).toEqual([["ab"], [""], ["ab"]]);
     // Only the newest "ab" lands; the first "ab" and the "" were overtaken.
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="ab"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="ab" onCommit={onCommit} />);
     expect(searchBox().value).toBe("ab");
 
-    rerender(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
     expect(searchBox().value).toBe("");
   });
 
   it("follows Back to a term a newer write overtook", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("a");
     settle();
     type("ab");
     settle();
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="ab"
-        onCommit={onCommit}
-      />,
-    );
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="a"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="ab" onCommit={onCommit} />);
+    rerender(<DataTableSearchInput aria-label="Search" value="a" onCommit={onCommit} />);
     expect(searchBox().value).toBe("a");
   });
 
   it("resends on Enter a written term whose navigation was dropped", () => {
     const onCommit = vi.fn();
-    render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("acme");
     settle();
@@ -202,13 +133,7 @@ describe("DataTableSearchInput", () => {
 
   it("forgets a pending write once the box is typed back to the URL's term", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="x"
-        onCommit={onCommit}
-      />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="x" onCommit={onCommit} />);
 
     type("xy");
     settle();
@@ -217,91 +142,51 @@ describe("DataTableSearchInput", () => {
     expect(onCommit.mock.calls).toEqual([["xy"], ["x"]]);
 
     // Back to "xy" from outside, long after: not an echo of the dropped write.
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="xy"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="xy" onCommit={onCommit} />);
     expect(searchBox().value).toBe("xy");
   });
 
   it("keeps both writes across a blur when their echoes arrive in order", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("a");
     settle();
     type("ab");
     settle();
     fireEvent.blur(searchBox());
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="a"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="a" onCommit={onCommit} />);
     expect(searchBox().value).toBe("ab");
 
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="ab"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="ab" onCommit={onCommit} />);
     expect(searchBox().value).toBe("ab");
     expect(onCommit.mock.calls).toEqual([["a"], ["ab"]]);
   });
 
   it("follows an outside value after Enter, and Enter's own echo does not move the box", () => {
     const onCommit = vi.fn();
-    const { rerender } = render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("pump");
     fireEvent.keyDown(searchBox(), { key: "Enter" });
     type("pumps");
-    rerender(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="pump"
-        onCommit={onCommit}
-      />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="pump" onCommit={onCommit} />);
     expect(searchBox().value).toBe("pumps");
 
     fireEvent.blur(searchBox());
-    rerender(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    rerender(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
     expect(searchBox().value).toBe("");
   });
 
   it("follows the URL when the term changes from outside", () => {
-    const { rerender } = render(
-      <DataTableSearchInput
-        aria-label="Search"
-        value="pump"
-        onCommit={vi.fn()}
-      />,
-    );
-    rerender(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={vi.fn()} />,
-    );
+    const { rerender } = render(<DataTableSearchInput aria-label="Search" value="pump" onCommit={vi.fn()} />);
+    rerender(<DataTableSearchInput aria-label="Search" value="" onCommit={vi.fn()} />);
     expect(searchBox().value).toBe("");
   });
 
   it("clears at once, and a timer set before the clear cannot write the old term back", () => {
     const onCommit = vi.fn();
-    render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("pum");
     type("");
@@ -313,9 +198,7 @@ describe("DataTableSearchInput", () => {
 
   it("writes at once on Enter", () => {
     const onCommit = vi.fn();
-    render(
-      <DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />,
-    );
+    render(<DataTableSearchInput aria-label="Search" value="" onCommit={onCommit} />);
 
     type("pump");
     fireEvent.keyDown(searchBox(), { key: "Enter" });

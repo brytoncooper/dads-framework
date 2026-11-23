@@ -10,9 +10,7 @@ type EmailSenderFixture = {
 
 type EmailSenderConformanceCase = {
   readonly name: string;
-  readonly run: (
-    open: (accepted: boolean) => EmailSenderFixture,
-  ) => Promise<void>;
+  readonly run: (open: (accepted: boolean) => EmailSenderFixture) => Promise<void>;
 };
 
 const MESSAGE: EmailMessage = {

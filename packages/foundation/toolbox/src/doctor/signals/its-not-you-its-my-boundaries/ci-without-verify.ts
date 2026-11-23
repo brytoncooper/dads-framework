@@ -36,31 +36,20 @@ function declaresTheGate(context: DoctorContext): boolean {
 
 const SHARED_CI_SCRIPT = "ci/verify.sh";
 const END_OF_COMMAND = `(?=$|[\\s"';&|])`;
-const invokesVerify = new RegExp(
-  `\\b(?:${RUNNERS})\\s+(?:run\\s+)?${GATE_SCRIPT}${END_OF_COMMAND}`,
-);
-const invokesSharedScript = new RegExp(
-  `(?:\\bsh\\s+(?:\\./)?|\\./)ci/verify\\.sh${END_OF_COMMAND}`,
-);
+const invokesVerify = new RegExp(`\\b(?:${RUNNERS})\\s+(?:run\\s+)?${GATE_SCRIPT}${END_OF_COMMAND}`);
+const invokesSharedScript = new RegExp(`(?:\\bsh\\s+(?:\\./)?|\\./)ci/verify\\.sh${END_OF_COMMAND}`);
 
 function hasInvocation(text: string, invocation: RegExp): boolean {
-  return text
-    .split("\n")
-    .some((line) => !line.trimStart().startsWith("#") && invocation.test(line));
+  return text.split("\n").some((line) => !line.trimStart().startsWith("#") && invocation.test(line));
 }
 
-function findWorkflowRunningTheGate(
-  context: DoctorContext,
-  workflows: readonly string[],
-): string | undefined {
+function findWorkflowRunningTheGate(context: DoctorContext, workflows: readonly string[]): string | undefined {
   const sharedScriptRunsVerify =
-    context.exists(SHARED_CI_SCRIPT) &&
-    hasInvocation(context.read(SHARED_CI_SCRIPT), invokesVerify);
+    context.exists(SHARED_CI_SCRIPT) && hasInvocation(context.read(SHARED_CI_SCRIPT), invokesVerify);
   return workflows.find((path) => {
     const workflow = context.read(path);
     return (
-      hasInvocation(workflow, invokesVerify) ||
-      (sharedScriptRunsVerify && hasInvocation(workflow, invokesSharedScript))
+      hasInvocation(workflow, invokesVerify) || (sharedScriptRunsVerify && hasInvocation(workflow, invokesSharedScript))
     );
   });
 }
@@ -71,9 +60,7 @@ function countWorkflowsWithoutTheGate(context: DoctorContext): SignalReadings {
   const running = findWorkflowRunningTheGate(context, workflows);
   if (running === undefined) {
     context.notes?.push(
-      workflows.length === 0
-        ? "no recognized CI workflow"
-        : "no recognized CI workflow invokes the verify script",
+      workflows.length === 0 ? "no recognized CI workflow" : "no recognized CI workflow invokes the verify script",
     );
   }
   return new Map([

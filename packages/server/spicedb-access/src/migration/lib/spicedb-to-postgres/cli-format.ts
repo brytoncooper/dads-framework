@@ -2,10 +2,7 @@ import type { AccessIrDefinition } from "@dads-framework/access";
 
 import type { ImportSpiceDbCliOptions } from "./cli-args.js";
 import type { MigrateSpiceDbToPostgresResult } from "./migrate-spicedb-to-postgres.js";
-import type {
-  ParityMismatch,
-  ParityVerificationResult,
-} from "./verify-parity.js";
+import type { ParityMismatch, ParityVerificationResult } from "./verify-parity.js";
 
 export function formatDryRunOutput(input: {
   readonly options: ImportSpiceDbCliOptions;
@@ -51,9 +48,7 @@ export function formatLiveJsonOutput(
       definitions: migration.definitions.map((def) => def.wireName),
       exportedCount: migration.exportedCount,
       writtenCount: migration.writtenCount,
-      ...(migration.zedToken === undefined
-        ? {}
-        : { zedToken: migration.zedToken }),
+      ...(migration.zedToken === undefined ? {} : { zedToken: migration.zedToken }),
       ...(options.out === undefined ? {} : { outPath: options.out }),
       ...(parity === undefined ? {} : { parity }),
     },
@@ -74,16 +69,12 @@ export function formatLiveTextOutput(
     lines.push(`Wrote generated TypeScript access model to ${options.out}.`);
   }
   if (parity !== undefined && parity.mismatches.length === 0) {
-    lines.push(
-      `Parity verified: ${parity.matched}/${parity.total} queries matched (0 mismatches).`,
-    );
+    lines.push(`Parity verified: ${parity.matched}/${parity.total} queries matched (0 mismatches).`);
   }
   return `${lines.join("\n")}\n`;
 }
 
-export function formatParityFailureText(
-  parity: ParityVerificationResult,
-): string {
+export function formatParityFailureText(parity: ParityVerificationResult): string {
   const preview = parity.mismatches.slice(0, 5).map(describeMismatch);
   const lines = [
     `Parity check failed: ${parity.matched}/${parity.total} queries matched (${parity.mismatches.length} mismatches).`,
@@ -104,11 +95,7 @@ function describeMismatch(mismatch: ParityMismatch): string {
   return `  - lookup ${q.subject.type}:${q.subject.id} ${q.permission} ${q.resourceType} (SpiceDB=[${mismatch.spiceDb.join(",")}], Postgres=[${mismatch.postgres.join(",")}])`;
 }
 
-export function formatArgError(
-  message: string,
-  usage: string,
-  asJson: boolean,
-): string {
+export function formatArgError(message: string, usage: string, asJson: boolean): string {
   if (asJson) {
     return `${JSON.stringify({ ok: false, error: message })}\n`;
   }

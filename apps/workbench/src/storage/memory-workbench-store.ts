@@ -1,9 +1,5 @@
 import { SnapshotWorkbenchStore } from "./workbench-store.js";
-import {
-  emptyWorkbenchState,
-  workbenchState,
-  type WorkbenchState,
-} from "./workbench-state.js";
+import { emptyWorkbenchState, workbenchState, type WorkbenchState } from "./workbench-state.js";
 
 /** Deterministic substitute for SQLite, with the same detached-snapshot and atomic-write behavior. */
 export class MemoryWorkbenchStore extends SnapshotWorkbenchStore {
@@ -17,9 +13,7 @@ export class MemoryWorkbenchStore extends SnapshotWorkbenchStore {
     }
   }
 
-  transaction<Result>(
-    change: (state: WorkbenchState) => Result,
-  ): Promise<Result> {
+  transaction<Result>(change: (state: WorkbenchState) => Result): Promise<Result> {
     try {
       const next = workbenchState.parse(this.state);
       const result = change(next);
@@ -34,8 +28,6 @@ export class MemoryWorkbenchStore extends SnapshotWorkbenchStore {
 /** The memory store's failure wrapper; `sqlite-workbench-store.ts` has `rejectedSqliteStoreOperation`. */
 function rejectedMemoryStoreOperation<Result>(error: unknown): Promise<Result> {
   return Promise.reject(
-    error instanceof Error
-      ? error
-      : new Error("Workbench memory storage failed.", { cause: error }),
+    error instanceof Error ? error : new Error("Workbench memory storage failed.", { cause: error }),
   );
 }

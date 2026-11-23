@@ -11,7 +11,5 @@ export type ActiveTenant = {
  */
 export abstract class TenantDirectory {
   /** The active tenants among `ids`; an unknown or inactive id is left out. */
-  abstract findActiveTenants(
-    ids: readonly string[],
-  ): Promise<readonly ActiveTenant[]>;
+  abstract findActiveTenants(ids: readonly string[]): Promise<readonly ActiveTenant[]>;
 }

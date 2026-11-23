@@ -65,19 +65,13 @@ describe("DSL compile-time contracts", () => {
 
     expectTypeOf(user("u1")).toExtend<ActorRef<"user">>();
     expectTypeOf(organization.task.can.edit).toExtend<PermissionToken>();
-    expectTypeOf(
-      organization.task.photo.can.comment,
-    ).toExtend<PermissionToken>();
+    expectTypeOf(organization.task.photo.can.comment).toExtend<PermissionToken>();
     expectTypeOf(organization.billing.can.manage).toExtend<PermissionToken>();
     expectTypeOf(organization.billing.can.view).toExtend<PermissionToken>();
 
     // Fail-closed: billing only inherited "manage" and locally added "view" — NOT "edit".
-    expectTypeOf<"edit">().not.toExtend<
-      keyof typeof organization.billing.can
-    >();
-    expectTypeOf<"manage">().not.toExtend<
-      keyof typeof organization.order.can
-    >();
+    expectTypeOf<"edit">().not.toExtend<keyof typeof organization.billing.can>();
+    expectTypeOf<"manage">().not.toExtend<keyof typeof organization.order.can>();
 
     // @ts-expect-error -- billing did not inherit edit permission from organization
     void organization.billing.can.edit;

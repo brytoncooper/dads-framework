@@ -1,11 +1,6 @@
 import type { AccessModel } from "../core/access-model.js";
 import type { PermissionToken } from "../core/refs.js";
-import type {
-  Authorization,
-  PermissionQuery,
-  RelationshipWrite,
-  SubjectRef,
-} from "../runtime/authorization.js";
+import type { Authorization, PermissionQuery, RelationshipWrite, SubjectRef } from "../runtime/authorization.js";
 import type {
   AccessScenarioVerbs,
   MatrixDecision,
@@ -39,11 +34,7 @@ async function executeMatrixStep(
 
   for (const [actor, expectedRow] of spec.cases) {
     const actualRow: MatrixDecision[] = [];
-    for (
-      let columnIndex = 0;
-      columnIndex < spec.permissions.length;
-      columnIndex += 1
-    ) {
+    for (let columnIndex = 0; columnIndex < spec.permissions.length; columnIndex += 1) {
       const permission = spec.permissions[columnIndex];
       const expected = expectedRow[columnIndex] ?? "deny";
       if (permission === undefined) continue;
@@ -52,9 +43,7 @@ async function executeMatrixStep(
         resource: { type: resourceType, id: resourceId },
         permission: permission.permissionName,
       };
-      const actual: MatrixDecision = (await authorization.check(query))
-        ? "allow"
-        : "deny";
+      const actual: MatrixDecision = (await authorization.check(query)) ? "allow" : "deny";
       actualRow.push(actual);
       if (actual !== expected) {
         mismatches.push({
@@ -117,8 +106,7 @@ async function executeAssertVisible(
   ].sort();
   const sortedExpected = [...new Set(expectedIds)].sort();
   const matches =
-    actualIds.length === sortedExpected.length &&
-    actualIds.every((id, index) => id === sortedExpected[index]);
+    actualIds.length === sortedExpected.length && actualIds.every((id, index) => id === sortedExpected[index]);
   if (matches) return;
   throw new Error(
     buildVisibleFailureMessage({
@@ -143,9 +131,7 @@ async function executeGrantStep(
       ? step.write
       : {
           ...step.write,
-          expiresAt: new Date(
-            clock.nowMs() + parseTestDurationMs(step.expiresIn),
-          ),
+          expiresAt: new Date(clock.nowMs() + parseTestDurationMs(step.expiresIn)),
         };
   await authorization.writeRelationships([write]);
   if (authorization !== explainer) explainer.writeRelationshipsSync([write]);
@@ -190,31 +176,14 @@ async function executeStep(
     return;
   }
   if (step.kind === "assert-check") {
-    await executeAssertCheck(
-      authorization,
-      explainer,
-      step.query,
-      step.expected,
-    );
+    await executeAssertCheck(authorization, explainer, step.query, step.expected);
     return;
   }
   if (step.kind === "assert-visible") {
-    await executeAssertVisible(
-      authorization,
-      explainer,
-      step.actor,
-      step.permission,
-      step.expectedIds,
-    );
+    await executeAssertVisible(authorization, explainer, step.actor, step.permission, step.expectedIds);
     return;
   }
-  await executeMatrixStep(
-    authorization,
-    explainer,
-    step.resourceType,
-    step.resourceId,
-    step.spec,
-  );
+  await executeMatrixStep(authorization, explainer, step.resourceType, step.resourceId, step.spec);
 }
 
 /** Execute pre-recorded scenario steps against any `Authorization` backend. */
@@ -226,10 +195,7 @@ export async function executeRecordedSteps(
   const hasExternalClock = options.clock !== undefined;
   const clock =
     options.clock ??
-    new ControllableClock(
-      options.startTime ??
-        (options.authorization === undefined ? undefined : Date.now()),
-    );
+    new ControllableClock(options.startTime ?? (options.authorization === undefined ? undefined : Date.now()));
   const explainer = new InMemoryAuthorization(model, { clock });
   const authorization = options.authorization ?? explainer;
 

@@ -1,8 +1,4 @@
-import type {
-  Authorization,
-  RelationshipFilter,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import type { Authorization, RelationshipFilter, RelationshipWrite } from "@dads-framework/access/runtime";
 import type { EnqueueAccessChanges } from "./enqueue.js";
 import { outboxKeyForRelationship, type AccessChange } from "./enqueue.js";
 
@@ -106,9 +102,7 @@ export type CommittedSynchronousRevocationInput = {
  * exact DELETE facts using `committedFactCause`. This function never records
  * durability.
  */
-export async function deleteRelationshipsNow(
-  input: CommittedSynchronousRevocationInput,
-): Promise<void> {
+export async function deleteRelationshipsNow(input: CommittedSynchronousRevocationInput): Promise<void> {
   const filters = input.sweep ?? input.relationships.map(toFilter);
   for (const filter of filters) {
     try {
@@ -130,11 +124,7 @@ export async function deleteRelationshipsNow(
 
 export async function revokeAccess(input: RevokeThroughInput): Promise<void> {
   const entries: AccessChange[] = input.relationships.map((relationship) => ({
-    idempotencyKey: outboxKeyForRelationship(
-      "DELETE",
-      relationship,
-      input.cause,
-    ),
+    idempotencyKey: outboxKeyForRelationship("DELETE", relationship, input.cause),
     operation: "DELETE",
     relationship,
     ownerPartitionId: input.ownerPartitionId ?? null,

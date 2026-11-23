@@ -72,18 +72,12 @@ test("a conformant README passes", (t) => {
 });
 
 test("a missing refusal heading fails", (t) => {
-  const readme = conformantReadme.replace(
-    "## What it refuses to do",
-    "## What it will not do",
-  );
+  const readme = conformantReadme.replace("## What it refuses to do", "## What it will not do");
 
   const result = checkWorkspace(t, readme);
 
   assert.equal(result.exitCode, 1);
-  assert.equal(
-    result.output,
-    'packages/testing/core/README.md: no "## What it refuses to do" heading\n',
-  );
+  assert.equal(result.output, 'packages/testing/core/README.md: no "## What it refuses to do" heading\n');
 });
 
 test("a README that omits an option fails", (t) => {
@@ -92,23 +86,13 @@ test("a README that omits an option fails", (t) => {
   const result = checkWorkspace(t, readme);
 
   assert.equal(result.exitCode, 1);
-  assert.equal(
-    result.output,
-    "packages/testing/core/README.md: does not document --report (accepted by plan)\n",
-  );
+  assert.equal(result.output, "packages/testing/core/README.md: does not document --report (accepted by plan)\n");
 });
 
 test("a README missing the H1, the paragraph, and the example reports all three", (t) => {
   const result = checkWorkspace(
     t,
-    [
-      "Prose where the H1 should be.",
-      "",
-      "## What it refuses to do",
-      "",
-      "Nothing, apparently.",
-      "",
-    ].join("\n"),
+    ["Prose where the H1 should be.", "", "## What it refuses to do", "", "Nothing, apparently.", ""].join("\n"),
   );
 
   assert.equal(result.exitCode, 1);
@@ -133,10 +117,7 @@ test("a subpath is checked against the README in its owning package", (t) => {
     JSON.stringify({ packages: ["@dads-framework/testing/nx"] }),
   );
   const missingReadme = checkDocs({ root, commands });
-  assert.match(
-    missingReadme.output,
-    /packages\/testing\/core\/nx\/README.md: missing/u,
-  );
+  assert.match(missingReadme.output, /packages\/testing\/core\/nx\/README.md: missing/u);
 
   mkdirSync(join(packageDirectory, "nx"));
   writeFileSync(join(packageDirectory, "nx/README.md"), conformantReadme);

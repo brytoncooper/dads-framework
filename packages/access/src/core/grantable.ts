@@ -11,8 +11,7 @@ export type GrantableTargetKind = "NONE" | "RESOURCE";
 
 export type GrantableRisk = "STANDARD" | "DANGEROUS";
 
-export type GrantableDirectSubject =
-  EntityHandle | { readonly handle: EntityHandle };
+export type GrantableDirectSubject = EntityHandle | { readonly handle: EntityHandle };
 
 export type GrantableGroupSubject = RoleToken | UsersetHolder;
 
@@ -88,9 +87,7 @@ export function grantable(spec: {
   return {
     kind: "grantable",
     directSubject: toEntityHandle(spec.directSubject),
-    ...(spec.groupSubject === undefined
-      ? {}
-      : { groupSubject: toUsersetHolder(spec.groupSubject) }),
+    ...(spec.groupSubject === undefined ? {} : { groupSubject: toUsersetHolder(spec.groupSubject) }),
     id: spec.id,
     label: spec.label,
     description: spec.description,
@@ -107,10 +104,5 @@ export function grantable(spec: {
 }
 
 export function isGrantableRole(value: unknown): value is GrantableRole {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "grantable"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "grantable";
 }

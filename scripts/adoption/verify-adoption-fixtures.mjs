@@ -12,14 +12,8 @@
 
 import process from "node:process";
 
-import {
-  adoptionFixturesReceipt,
-  createAdoptionFixtureTasks,
-} from "./adoption-fixture-tasks.mjs";
-import {
-  loadAdoptionPackages,
-  packAdoptionPackages,
-} from "./adoption-packing.mjs";
+import { adoptionFixturesReceipt, createAdoptionFixtureTasks } from "./adoption-fixture-tasks.mjs";
+import { loadAdoptionPackages, packAdoptionPackages } from "./adoption-packing.mjs";
 import {
   createAdoptionWorkspace,
   createPhaseTimer,
@@ -28,10 +22,7 @@ import {
   writePhaseTable,
   writeReceipt,
 } from "./adoption-proof-run.mjs";
-import {
-  announceAdoptionJobs,
-  runAdoptionTasks,
-} from "./adoption-task-runner.mjs";
+import { announceAdoptionJobs, runAdoptionTasks } from "./adoption-task-runner.mjs";
 
 const LABEL = "adoption fixtures";
 
@@ -48,10 +39,7 @@ async function main() {
       timer,
     });
     const fixtures = createAdoptionFixtureTasks(context);
-    const concurrency = await announceAdoptionJobs(
-      LABEL,
-      Math.max(packages.size, fixtures.tasks.length),
-    );
+    const concurrency = await announceAdoptionJobs(LABEL, Math.max(packages.size, fixtures.tasks.length));
     await packAdoptionPackages({
       context,
       tarballRoot: workspace.tarballRoot,
@@ -63,9 +51,7 @@ async function main() {
       label: LABEL,
     });
     writePhaseTable(LABEL, timer);
-    writeReceipt(
-      adoptionFixturesReceipt(packages, fixtures, concurrency, timer.report()),
-    );
+    writeReceipt(adoptionFixturesReceipt(packages, fixtures, concurrency, timer.report()));
   } finally {
     workspace.dispose();
   }

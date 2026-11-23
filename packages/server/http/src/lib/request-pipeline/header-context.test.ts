@@ -6,21 +6,14 @@ import { z } from "zod";
 import { bodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";
 import { buildOpenApiDocument } from "../openapi/build-document.js";
-import {
-  fromHeader,
-  requireSession,
-  withAuthorizationContext,
-} from "../route/access.js";
+import { fromHeader, requireSession, withAuthorizationContext } from "../route/access.js";
 import { getRoute } from "../route/get-route.js";
 import { routeGroup } from "../route/route-group.js";
 import { type AccessPorts, enforceAccess } from "./enforce-access.js";
 import { registerRoutes } from "./register-routes.js";
 
 const identity = { type: "user", id: "real-user" };
-const access = withAuthorizationContext(
-  requireSession(),
-  fromHeader("X-Test-Context"),
-);
+const access = withAuthorizationContext(requireSession(), fromHeader("X-Test-Context"));
 const apps: Awaited<ReturnType<typeof createHttpApp>>[] = [];
 afterEach(async () => {
   await Promise.all(apps.map((app) => app.close()));
@@ -109,24 +102,15 @@ describe("header context", () => {
     { value: ["a"] },
     { value: ["a", "b"] },
     { value: "a, b" },
-  ])(
-    "denies absent or repeated header $value before resolving",
-    async ({ value }) => {
-      const { ports, resolved } = fixture();
-      await expect(
-        enforceAccess(
-          access,
-          { headers: { "x-test-context": value }, params: {} },
-          ports,
-        ),
-      ).resolves.toEqual({
-        outcome: "not-found",
-        subject: null,
-        authenticatedSubject: identity,
-      });
-      expect(resolved).toEqual([]);
-    },
-  );
+  ])("denies absent or repeated header $value before resolving", async ({ value }) => {
+    const { ports, resolved } = fixture();
+    await expect(enforceAccess(access, { headers: { "x-test-context": value }, params: {} }, ports)).resolves.toEqual({
+      outcome: "not-found",
+      subject: null,
+      authenticatedSubject: identity,
+    });
+    expect(resolved).toEqual([]);
+  });
 
   it("denies repeated raw occurrences even if a server exposes only one value", async () => {
     const { ports, resolved } = fixture();

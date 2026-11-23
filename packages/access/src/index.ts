@@ -5,10 +5,7 @@ export type {
   ResolvedAccessDefinition,
   ResolvedGranting,
 } from "./core/access-model.js";
-export {
-  accessIrDefinitionsDiff,
-  accessIrDiff,
-} from "./core/compare-access-ir.js";
+export { accessIrDefinitionsDiff, accessIrDiff } from "./core/compare-access-ir.js";
 export { compileAccessFromIr } from "./core/compile-ir.js";
 export { actor } from "./core/dsl-actor.js";
 export { compileAccess } from "./core/dsl-compile.js";
@@ -59,37 +56,14 @@ export type {
   SubjectMapFromRoles,
 } from "./core/dsl-types.js";
 export { emitAccessIr } from "./core/emit-ir.js";
-export {
-  emitTypeScript,
-  emitTypeScriptFromZed,
-} from "./core/emit-typescript.js";
+export { emitTypeScript, emitTypeScriptFromZed } from "./core/emit-typescript.js";
 export { emitZed, emitZedForDefinitions } from "./core/emit-zed.js";
 export type { EntityHandle } from "./core/entity-handle.js";
-export {
-  GENERATED_ZED_HEADER,
-  isGeneratedByAccessKit,
-} from "./core/generated-header.js";
-export type {
-  ExpirableHolder,
-  RoleValue,
-  SingleRoleValue,
-  UsersetHolder,
-  WildcardHolder,
-} from "./core/holders.js";
-export type {
-  AccessIrDefinition,
-  AccessIrPermission,
-  AccessIrRole,
-  AccessIrSubject,
-  AccessIrTerm,
-} from "./core/ir.js";
+export { GENERATED_ZED_HEADER, isGeneratedByAccessKit } from "./core/generated-header.js";
+export type { ExpirableHolder, RoleValue, SingleRoleValue, UsersetHolder, WildcardHolder } from "./core/holders.js";
+export type { AccessIrDefinition, AccessIrPermission, AccessIrRole, AccessIrSubject, AccessIrTerm } from "./core/ir.js";
 export { parseZed } from "./core/parse-zed.js";
-export {
-  isPermissionToken,
-  isRoleToken,
-  permissionToken,
-  roleToken,
-} from "./core/refs.js";
+export { isPermissionToken, isRoleToken, permissionToken, roleToken } from "./core/refs.js";
 export type {
   BothTerm,
   ExcludingTerm,

@@ -18,15 +18,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  declaredPackages,
-  pathInPackage,
-} from "../scanners/text-declared-packages.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { declaredPackages, pathInPackage } from "../scanners/text-declared-packages.js";
 
 const MANIFEST_FILE = "package.json";
 const README_FILE = "README.md";
@@ -47,8 +40,7 @@ function countPackagesWithoutReadme(context: DoctorContext): SignalReadings {
 export const readmeMissingSignal: DoctorSignal = {
   id: "readme-missing",
   issue: "avoidant-attachment",
-  question:
-    "Does any package lack a README, or carry one outside the template?",
+  question: "Does any package lack a README, or carry one outside the template?",
   reads: "text",
   unit: "count",
   direction: "ceiling",

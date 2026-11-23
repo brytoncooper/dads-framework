@@ -45,9 +45,7 @@ type DiffCollector = {
  * their access IR, and classify every change into safe additions/permission
  * edits vs breaking removals.
  */
-export async function diffAccessSources(
-  options: DiffZedSchemasOptions,
-): Promise<ZedSchemaDiffResult> {
+export async function diffAccessSources(options: DiffZedSchemasOptions): Promise<ZedSchemaDiffResult> {
   const before = await loadAccessSource(options.beforePath, options.cwd);
   const after = await loadAccessSource(options.afterPath, options.cwd);
   const diff = diffAccessIrDefinitions(before.definitions, after.definitions);
@@ -63,9 +61,7 @@ export async function diffAccessSources(
  * Read two `.zed` schema files, parse them into Dads access IR, and classify
  * every change into safe additions/permission edits vs breaking removals.
  */
-export function diffZedSchemas(
-  options: DiffZedSchemasOptions,
-): ZedSchemaDiffResult {
+export function diffZedSchemas(options: DiffZedSchemasOptions): ZedSchemaDiffResult {
   const baseDirectory = options.cwd ?? process.cwd();
   const beforePath = resolve(baseDirectory, options.beforePath);
   const afterPath = resolve(baseDirectory, options.afterPath);
@@ -93,12 +89,7 @@ export function diffAccessIrDefinitions(
   };
 
   for (const wireName of sortedUnionKeys(beforeMap, afterMap)) {
-    diffDefinition(
-      wireName,
-      beforeMap.get(wireName),
-      afterMap.get(wireName),
-      collector,
-    );
+    diffDefinition(wireName, beforeMap.get(wireName), afterMap.get(wireName), collector);
   }
 
   const requiresMigration = collector.breaking.length > 0;
@@ -133,10 +124,7 @@ function diffDefinition(
   diffPermissions(resource, before.permissions, after.permissions, collector);
 }
 
-function recordAddedDefinitionPermissions(
-  definition: AccessIrDefinition,
-  collector: DiffCollector,
-): void {
+function recordAddedDefinitionPermissions(definition: AccessIrDefinition, collector: DiffCollector): void {
   for (const permission of definition.permissions) {
     const expression = formatPermissionExpression(permission.terms);
     collector.permissionChanges.push({
@@ -174,13 +162,7 @@ function diffRoles(
       continue;
     }
     if (prev !== undefined && next !== undefined) {
-      diffRoleSubjects(
-        resource,
-        roleName,
-        prev.subjects,
-        next.subjects,
-        collector,
-      );
+      diffRoleSubjects(resource, roleName, prev.subjects, next.subjects, collector);
     }
   }
 }
@@ -196,14 +178,7 @@ function diffRoleSubjects(
   const afterMap = indexSubjects(afterSubjects);
 
   for (const subject of sortedUnionKeys(beforeMap, afterMap)) {
-    classifySubjectChange(
-      resource,
-      role,
-      subject,
-      beforeMap.get(subject),
-      afterMap.get(subject),
-      collector,
-    );
+    classifySubjectChange(resource, role, subject, beforeMap.get(subject), afterMap.get(subject), collector);
   }
 }
 
@@ -237,9 +212,7 @@ function classifySubjectChange(
   }
 }
 
-function indexSubjects(
-  subjects: readonly AccessIrSubject[],
-): Map<string, boolean> {
+function indexSubjects(subjects: readonly AccessIrSubject[]): Map<string, boolean> {
   const map = new Map<string, boolean>();
   for (const subject of subjects) {
     const key = formatBaseSubject(subject);
@@ -259,13 +232,7 @@ function diffPermissions(
   const afterMap = new Map(afterPermissions.map((p) => [p.name, p]));
 
   for (const permission of sortedUnionKeys(beforeMap, afterMap)) {
-    diffSinglePermission(
-      resource,
-      permission,
-      beforeMap.get(permission),
-      afterMap.get(permission),
-      collector,
-    );
+    diffSinglePermission(resource, permission, beforeMap.get(permission), afterMap.get(permission), collector);
   }
 }
 
@@ -341,9 +308,7 @@ function compareExistingPermission(
   next: AccessIrPermission,
   collector: DiffCollector,
 ): void {
-  if (
-    canonicalPermissionKey(prev.terms) === canonicalPermissionKey(next.terms)
-  ) {
+  if (canonicalPermissionKey(prev.terms) === canonicalPermissionKey(next.terms)) {
     return;
   }
   const before = formatPermissionExpression(prev.terms);
@@ -365,9 +330,6 @@ function compareExistingPermission(
   });
 }
 
-function sortedUnionKeys<T>(
-  left: ReadonlyMap<string, T>,
-  right: ReadonlyMap<string, T>,
-): readonly string[] {
+function sortedUnionKeys<T>(left: ReadonlyMap<string, T>, right: ReadonlyMap<string, T>): readonly string[] {
   return [...new Set([...left.keys(), ...right.keys()])].sort();
 }

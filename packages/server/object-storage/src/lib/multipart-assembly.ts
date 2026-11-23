@@ -1,7 +1,5 @@
 export function concatenate(chunks: readonly Uint8Array[]): Uint8Array {
-  const body = new Uint8Array(
-    chunks.reduce((total, chunk) => total + chunk.byteLength, 0),
-  );
+  const body = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0));
   let offset = 0;
   for (const chunk of chunks) {
     body.set(chunk, offset);

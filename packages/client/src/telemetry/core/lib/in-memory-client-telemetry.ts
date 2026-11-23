@@ -5,11 +5,7 @@
  * it (docs/testing/seeders.md).
  */
 
-import {
-  ClientTelemetry,
-  type TelemetryBreadcrumb,
-  type TelemetryContext,
-} from "./client-telemetry.js";
+import { ClientTelemetry, type TelemetryBreadcrumb, type TelemetryContext } from "./client-telemetry.js";
 
 export type ReportedFault = {
   readonly error: unknown;

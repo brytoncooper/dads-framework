@@ -10,11 +10,7 @@
 
 import process from "node:process";
 
-import {
-  chooseAdoptionJobs,
-  firstFailure,
-  runTaskPool,
-} from "./adoption-concurrency.mjs";
+import { chooseAdoptionJobs, firstFailure, runTaskPool } from "./adoption-concurrency.mjs";
 import { createTaskTranscript, formatFailure } from "./adoption-commands.mjs";
 
 export class AdoptionTaskError extends Error {
@@ -43,9 +39,7 @@ export async function runAdoptionTasks({ tasks, jobs, label }) {
   );
   const failure = firstFailure(results);
   if (failure) {
-    throw new AdoptionTaskError(
-      failureReport({ label, tasks, results, transcripts, failure }),
-    );
+    throw new AdoptionTaskError(failureReport({ label, tasks, results, transcripts, failure }));
   }
   return results;
 }
@@ -55,10 +49,7 @@ export async function runAdoptionTasks({ tasks, jobs, label }) {
  * slow run can be read back later without guessing what the machine allowed.
  */
 export async function announceAdoptionJobs(label, taskCount) {
-  const receipt = await chooseAdoptionJobs(
-    process.env.DADS_ADOPTION_JOBS,
-    taskCount,
-  );
+  const receipt = await chooseAdoptionJobs(process.env.DADS_ADOPTION_JOBS, taskCount);
   process.stderr.write(
     `${label}: ${taskCount} tasks, ${receipt.jobs} at a time (${receipt.mode}, ${receipt.limitingReasons.join("+") || "unbounded"}).\n`,
   );
@@ -79,16 +70,9 @@ function failureReport({ label, tasks, results, transcripts, failure }) {
       lines.push(formatFailure(name, result.error, transcripts[index]), "");
       continue;
     }
-    lines.push(
-      `FAILED ${name}`,
-      `  the same failure reported for ${original}`,
-      "",
-    );
+    lines.push(`FAILED ${name}`, `  the same failure reported for ${original}`, "");
   }
-  lines.push(
-    `Tasks: ${describeCounts(results)}.`,
-    `First failure in declared order: ${failure.name}.`,
-  );
+  lines.push(`Tasks: ${describeCounts(results)}.`, `First failure in declared order: ${failure.name}.`);
   return lines.join("\n");
 }
 
@@ -98,7 +82,6 @@ function describeCounts(results) {
     ["failed", 0],
     ["skipped", 0],
   ]);
-  for (const result of results)
-    counts.set(result.status, counts.get(result.status) + 1);
+  for (const result of results) counts.set(result.status, counts.get(result.status) + 1);
   return [...counts].map(([status, count]) => `${count} ${status}`).join(", ");
 }

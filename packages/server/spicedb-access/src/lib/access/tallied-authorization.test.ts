@@ -11,10 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { measureWork } from "@dads-framework/core/runtime/request-work";
 
-import {
-  Authorization,
-  type PermissionQuery,
-} from "@dads-framework/access/runtime";
+import { Authorization, type PermissionQuery } from "@dads-framework/access/runtime";
 import { TalliedAuthorization } from "./tallied-authorization.js";
 
 /** Records what it was asked and answers whatever the test told it to. */
@@ -62,10 +59,7 @@ const permissionQuery = {
 
 describe("TalliedAuthorization", () => {
   it("forwards a bulk check as one charged call and keeps ordered decisions", async () => {
-    const queries = [
-      permissionQuery,
-      { ...permissionQuery, permission: "write" },
-    ];
+    const queries = [permissionQuery, { ...permissionQuery, permission: "write" }];
     const batches: (readonly PermissionQuery[])[] = [];
     const inner = Object.assign(new RecordingAuthorization(), {
       checkMany: (requested: readonly PermissionQuery[]) => {
@@ -75,9 +69,7 @@ describe("TalliedAuthorization", () => {
     });
     const authorization = new TalliedAuthorization(inner);
 
-    const { result, tally } = await measureWork(() =>
-      authorization.checkMany(queries),
-    );
+    const { result, tally } = await measureWork(() => authorization.checkMany(queries));
 
     expect(result).toEqual([true, false]);
     expect(batches).toEqual([queries]);
@@ -89,9 +81,7 @@ describe("TalliedAuthorization", () => {
     const inner = new RecordingAuthorization();
     const authorization = new TalliedAuthorization(inner);
 
-    const { result, tally } = await measureWork(() =>
-      authorization.checkMany([permissionQuery, permissionQuery]),
-    );
+    const { result, tally } = await measureWork(() => authorization.checkMany([permissionQuery, permissionQuery]));
 
     expect(result).toEqual([true, true]);
     expect(inner.calls).toHaveLength(2);
@@ -106,9 +96,7 @@ describe("TalliedAuthorization", () => {
     const authorization = new TalliedAuthorization(inner);
 
     const { tally } = await measureWork(async () => {
-      await expect(authorization.checkMany([permissionQuery])).rejects.toBe(
-        failure,
-      );
+      await expect(authorization.checkMany([permissionQuery])).rejects.toBe(failure);
     });
 
     expect(tally.authzCheckCount).toBe(1);
@@ -130,9 +118,7 @@ describe("TalliedAuthorization", () => {
   it("counts a resource lookup as one call, not one per result", async () => {
     // `lookupResources` is the cure for per-row checking; counting it per row
     // would make the cheap shape look as expensive as the shape it replaces.
-    const authorization = new TalliedAuthorization(
-      new RecordingAuthorization(),
-    );
+    const authorization = new TalliedAuthorization(new RecordingAuthorization());
 
     const { result, tally } = await measureWork(async () =>
       authorization.lookupResources({
@@ -162,9 +148,7 @@ describe("TalliedAuthorization", () => {
     const authorization = new TalliedAuthorization(inner);
 
     const { tally } = await measureWork(async () => {
-      await expect(authorization.check(permissionQuery)).rejects.toBe(
-        inner.failWith,
-      );
+      await expect(authorization.check(permissionQuery)).rejects.toBe(inner.failWith);
     });
 
     expect(tally.authzCheckCount).toBe(1);
@@ -205,9 +189,7 @@ describe("TalliedAuthorization", () => {
   it("does not count writes", async () => {
     // A write happens once per mutation; counting it would blur the per-row
     // read signal these columns exist to show.
-    const authorization = new TalliedAuthorization(
-      new RecordingAuthorization(),
-    );
+    const authorization = new TalliedAuthorization(new RecordingAuthorization());
 
     const { tally } = await measureWork(async () => {
       await authorization.writeRelationships([]);
@@ -223,9 +205,7 @@ describe("TalliedAuthorization", () => {
   });
 
   it("is inert outside a request", async () => {
-    const authorization = new TalliedAuthorization(
-      new RecordingAuthorization(),
-    );
+    const authorization = new TalliedAuthorization(new RecordingAuthorization());
 
     await expect(authorization.check(permissionQuery)).resolves.toBe(true);
   });

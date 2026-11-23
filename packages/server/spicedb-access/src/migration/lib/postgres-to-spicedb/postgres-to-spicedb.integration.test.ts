@@ -1,11 +1,5 @@
 import { v1 } from "@authzed/authzed-node";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, resource, roleToken } from "@dads-framework/access";
 import { SpiceDbAuthorization } from "../../../index.js";
 import { startTestSpiceDb } from "../../../testing/index.js";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
@@ -18,10 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { SpiceDbExportedTuple } from "../spicedb-to-postgres/authzed-client-adapter.js";
 import { verifySpiceDbPostgresParity } from "../spicedb-to-postgres/verify-parity.js";
-import {
-  columnRelationOutboxTriggerSql,
-  migratePostgresToSpiceDb,
-} from "./index.js";
+import { columnRelationOutboxTriggerSql, migratePostgresToSpiceDb } from "./index.js";
 
 function buildExitRampModel() {
   const user = actor("user");
@@ -70,17 +61,13 @@ function buildExitRampModel() {
 
 describe("Live Docker Postgres (with columnRelations) -> SpiceDB migration & parity", () => {
   const disposers: (() => Promise<void>)[] = [];
-  let postgres:
-    Awaited<ReturnType<typeof startUnmigratedTestPostgres>> | undefined;
+  let postgres: Awaited<ReturnType<typeof startUnmigratedTestPostgres>> | undefined;
   let spice: Awaited<ReturnType<typeof startTestSpiceDb>> | undefined;
   let rawSpiceClient: v1.ZedClientInterface | undefined;
   let spiceAuth: SpiceDbAuthorization | undefined;
 
   beforeAll(async () => {
-    const [startedPg, startedSpice] = await Promise.all([
-      startUnmigratedTestPostgres(),
-      startTestSpiceDb(),
-    ]);
+    const [startedPg, startedSpice] = await Promise.all([startUnmigratedTestPostgres(), startTestSpiceDb()]);
     postgres = startedPg;
     spice = startedSpice;
     disposers.push(
@@ -142,12 +129,7 @@ describe("Live Docker Postgres (with columnRelations) -> SpiceDB migration & par
   }, 60_000);
 
   it("exports tuple table + columnRelations into live SpiceDB with 0 parity mismatches and installs working outbox triggers", async () => {
-    if (
-      postgres === undefined ||
-      spice === undefined ||
-      rawSpiceClient === undefined ||
-      spiceAuth === undefined
-    ) {
+    if (postgres === undefined || spice === undefined || rawSpiceClient === undefined || spiceAuth === undefined) {
       throw new Error("Docker containers were not started");
     }
     const pool = postgres.pool;
@@ -269,12 +251,8 @@ describe("Live Docker Postgres (with columnRelations) -> SpiceDB migration & par
       await pool.query(statement);
     }
 
-    await pool.query(
-      "INSERT INTO documents (id, org_id, owner_id) VALUES ('doc-live', 'org-1', 'dave')",
-    );
-    await pool.query(
-      "UPDATE documents SET owner_id = 'eve' WHERE id = 'doc-live'",
-    );
+    await pool.query("INSERT INTO documents (id, org_id, owner_id) VALUES ('doc-live', 'org-1', 'dave')");
+    await pool.query("UPDATE documents SET owner_id = 'eve' WHERE id = 'doc-live'");
     await pool.query("DELETE FROM documents WHERE id = 'doc-live'");
 
     const outboxRows = await pool.query<{
@@ -296,24 +274,12 @@ describe("Live Docker Postgres (with columnRelations) -> SpiceDB migration & par
       (row) =>
         `${row.operation}:${row.resource_type}:${row.resource_id}#${row.relation}@${row.subject_type}:${row.subject_id}:${row.status}`,
     );
-    expect(events).toContain(
-      "WRITE:exit/document:doc-live#org@exit/org:org-1:PENDING",
-    );
-    expect(events).toContain(
-      "WRITE:exit/document:doc-live#owner@user:dave:PENDING",
-    );
-    expect(events).toContain(
-      "DELETE:exit/document:doc-live#owner@user:dave:PENDING",
-    );
-    expect(events).toContain(
-      "WRITE:exit/document:doc-live#owner@user:eve:PENDING",
-    );
-    expect(events).toContain(
-      "DELETE:exit/document:doc-live#org@exit/org:org-1:PENDING",
-    );
-    expect(events).toContain(
-      "DELETE:exit/document:doc-live#owner@user:eve:PENDING",
-    );
+    expect(events).toContain("WRITE:exit/document:doc-live#org@exit/org:org-1:PENDING");
+    expect(events).toContain("WRITE:exit/document:doc-live#owner@user:dave:PENDING");
+    expect(events).toContain("DELETE:exit/document:doc-live#owner@user:dave:PENDING");
+    expect(events).toContain("WRITE:exit/document:doc-live#owner@user:eve:PENDING");
+    expect(events).toContain("DELETE:exit/document:doc-live#org@exit/org:org-1:PENDING");
+    expect(events).toContain("DELETE:exit/document:doc-live#owner@user:eve:PENDING");
 
     // Clean teardown via generated down DDL.
     for (const statement of triggers.down) {

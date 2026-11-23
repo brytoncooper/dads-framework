@@ -23,17 +23,9 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import { COMMIT_HOOK_BYPASS } from "../scanners/text-bypass-marks.js";
-import {
-  ciWorkflowFiles,
-  isShellScript,
-  matchingLines,
-} from "../scanners/text-ci-workflows.js";
+import { ciWorkflowFiles, isShellScript, matchingLines } from "../scanners/text-ci-workflows.js";
 
 const MANIFEST_SUFFIX = "package.json";
 
@@ -60,13 +52,11 @@ function countBypassesInCommands(context: DoctorContext): SignalReadings {
 export const noVerifyInScriptsSignal: DoctorSignal = {
   id: "no-verify-in-scripts",
   issue: "its-not-you-its-my-boundaries",
-  question:
-    "Does the commit-hook bypass appear in a script, a workflow, or a git hook?",
+  question: "Does the commit-hook bypass appear in a script, a workflow, or a git hook?",
   reads: "text",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "Dad changed the locks. The guard says no before the shell ever sees it.",
+  sentence: "Dad changed the locks. The guard says no before the shell ever sees it.",
   run: (context) => Promise.resolve(countBypassesInCommands(context)),
 };

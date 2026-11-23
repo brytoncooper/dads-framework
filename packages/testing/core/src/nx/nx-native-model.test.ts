@@ -16,10 +16,7 @@ function graph(targets: Record<string, unknown>) {
   };
 }
 
-function build(
-  targets: Record<string, unknown>,
-  targetNames?: readonly string[],
-) {
+function build(targets: Record<string, unknown>, targetNames?: readonly string[]) {
   return buildNativeNxManifest({
     graph: graph(targets),
     nxConfiguration: {},
@@ -52,9 +49,7 @@ describe("native Nx manifest inventory", () => {
       excluded: 3,
       always: 1,
     });
-    const task = result.manifest.tasks.find(
-      (task) => task.execution.args[3] === "--target=test",
-    );
+    const task = result.manifest.tasks.find((task) => task.execution.args[3] === "--target=test");
     expect(task?.execution).toEqual({
       executable: process.execPath,
       args: [nxCli, "run", "--project=harbor", "--target=test"],
@@ -62,35 +57,20 @@ describe("native Nx manifest inventory", () => {
     });
     expect(task?.dependsOn).toEqual([]);
     expect(task?.impact.mode).toBe("changed-files");
-    expect(
-      result.coverage.tasks.find(
-        (audit) => audit.target === "typecheck-lib-isolation",
-      )?.reason,
-    ).toContain("non-file or unresolved input");
-    expect(result.manifest.workspace.fullFallback.taskIds).toEqual(
-      result.manifest.tasks.map((task) => task.id).sort(),
+    expect(result.coverage.tasks.find((audit) => audit.target === "typecheck-lib-isolation")?.reason).toContain(
+      "non-file or unresolved input",
     );
-    expect(
-      result.coverage.tasks.find((task) => task.target === "publish")?.reason,
-    ).toContain("Outside requested");
+    expect(result.manifest.workspace.fullFallback.taskIds).toEqual(result.manifest.tasks.map((task) => task.id).sort());
+    expect(result.coverage.tasks.find((task) => task.target === "publish")?.reason).toContain("Outside requested");
   });
 
   it("discovers newly added targets on each build and honors exact scope overrides", () => {
     expect(build({ test: {} }).coverage.registered).toBe(1);
-    expect(
-      build({ test: {}, "test:integration": {} }).coverage.registered,
-    ).toBe(2);
-    const explicit = build(
-      { test: {}, audit: {}, watch: { continuous: true } },
-      ["audit", "watch"],
-    );
+    expect(build({ test: {}, "test:integration": {} }).coverage.registered).toBe(2);
+    const explicit = build({ test: {}, audit: {}, watch: { continuous: true } }, ["audit", "watch"]);
     expect(explicit.coverage.registered).toBe(1);
-    expect(explicit.manifest.tasks[0]?.execution.args[3]).toBe(
-      "--target=audit",
-    );
-    expect(
-      explicit.coverage.tasks.find((task) => task.target === "watch")?.reason,
-    ).toContain("Continuous");
+    expect(explicit.manifest.tasks[0]?.execution.args[3]).toBe("--target=audit");
+    expect(explicit.coverage.tasks.find((task) => task.target === "watch")?.reason).toContain("Continuous");
   });
 
   it("refuses a graph that registers no verification target at all", () => {
@@ -112,15 +92,8 @@ describe("native Nx manifest inventory", () => {
 
   it("uses reversible IDs for special names without flattening the Nx target identity", () => {
     const result = build({ "test:unit": {} });
-    expect(result.manifest.tasks[0]?.id).toBe(
-      "nx-68-61-72-62-6f-72:nx-74-65-73-74-3a-75-6e-69-74",
-    );
-    expect(result.manifest.tasks[0]?.execution.args).toEqual([
-      nxCli,
-      "run",
-      "--project=harbor",
-      "--target=test:unit",
-    ]);
+    expect(result.manifest.tasks[0]?.id).toBe("nx-68-61-72-62-6f-72:nx-74-65-73-74-3a-75-6e-69-74");
+    expect(result.manifest.tasks[0]?.execution.args).toEqual([nxCli, "run", "--project=harbor", "--target=test:unit"]);
   });
 
   it("rejects malformed graph structure and ambiguous project identities", () => {
@@ -147,22 +120,12 @@ describe("native Nx manifest inventory", () => {
         dependencies: { harbor: [] },
       },
     ]) {
-      expect(() =>
-        buildNativeNxManifest({ graph: invalid, nxConfiguration: {}, nxCli }),
-      ).toThrow();
+      expect(() => buildNativeNxManifest({ graph: invalid, nxConfiguration: {}, nxCli })).toThrow();
     }
-    for (const root of [
-      "../outside",
-      "/absolute",
-      "C:/absolute",
-      "apps/../outside",
-      "apps\\outside",
-    ]) {
+    for (const root of ["../outside", "/absolute", "C:/absolute", "apps/../outside", "apps\\outside"]) {
       const invalid = graph({ test: {} });
       invalid.nodes.harbor.data.root = root;
-      expect(() =>
-        buildNativeNxManifest({ graph: invalid, nxConfiguration: {}, nxCli }),
-      ).toThrow(/root/);
+      expect(() => buildNativeNxManifest({ graph: invalid, nxConfiguration: {}, nxCli })).toThrow(/root/);
     }
   });
 
@@ -230,9 +193,7 @@ describe("native Nx manifest inventory", () => {
     expect(result.manifest.projects).toHaveLength(1);
     expect(result.manifest.projects[0]?.fallbackDependencies).toEqual([]);
     expect(result.manifest.tasks[0]?.impact.mode).toBe("changed-files");
-    expect(result.manifest.tasks[0]?.impact.paths).toContain(
-      "package-lock.json",
-    );
+    expect(result.manifest.tasks[0]?.impact.paths).toContain("package-lock.json");
     expect(result.manifest.tasks[0]?.impact.paths).toContain("package.json");
     expect(() =>
       buildNativeNxManifest({

@@ -14,18 +14,12 @@ export type DrizzleExecuteLike = {
 
 /** Minimal structural Drizzle transaction options boundary. */
 export type DrizzleTransactionConfigLike = {
-  readonly isolationLevel?:
-    "read uncommitted" | "read committed" | "repeatable read" | "serializable";
+  readonly isolationLevel?: "read uncommitted" | "read committed" | "repeatable read" | "serializable";
 };
 
 /** Minimal structural Drizzle database boundary (`NodePgDatabase` satisfies this). */
-export type DrizzleDatabaseLike<
-  Tx extends DrizzleExecuteLike = DrizzleExecuteLike,
-> = {
-  transaction<Result>(
-    work: (tx: Tx) => Promise<Result>,
-    config?: DrizzleTransactionConfigLike,
-  ): Promise<Result>;
+export type DrizzleDatabaseLike<Tx extends DrizzleExecuteLike = DrizzleExecuteLike> = {
+  transaction<Result>(work: (tx: Tx) => Promise<Result>, config?: DrizzleTransactionConfigLike): Promise<Result>;
 };
 
 /**
@@ -36,16 +30,10 @@ export function isDrizzlePgTransaction(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
   let proto: object | null = Reflect.getPrototypeOf(value);
   while (proto !== null) {
-    const ctorDescriptor = Object.getOwnPropertyDescriptor(
-      proto,
-      "constructor",
-    );
+    const ctorDescriptor = Object.getOwnPropertyDescriptor(proto, "constructor");
     const ctor: unknown = ctorDescriptor?.value;
     if (typeof ctor === "function") {
-      const kindDescriptor = Object.getOwnPropertyDescriptor(
-        ctor,
-        DRIZZLE_ENTITY_KIND,
-      );
+      const kindDescriptor = Object.getOwnPropertyDescriptor(ctor, DRIZZLE_ENTITY_KIND);
       if (kindDescriptor?.value === "PgTransaction") return true;
     }
     proto = Reflect.getPrototypeOf(proto);

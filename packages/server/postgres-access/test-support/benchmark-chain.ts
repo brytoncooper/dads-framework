@@ -7,22 +7,14 @@ import {
   type AnyDslResource,
   type DslNode,
 } from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/spicedb-access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/spicedb-access";
 
-export function makeChain(
-  depth: number,
-  count: number,
-  membership: "direct" | "usersets" = "direct",
-) {
+export function makeChain(depth: number, count: number, membership: "direct" | "usersets" = "direct") {
   const user = actor("user");
   const groupMemberRef = roleToken("benchmark/group", "member", user.handle);
   const group = resource("benchmark/group", {
     roles: {
-      member:
-        membership === "direct" ? user : [user, user.anyone, groupMemberRef],
+      member: membership === "direct" ? user : [user, user.anyone, groupMemberRef],
     },
     can: ({ member }) => ({ view: member }),
   });
@@ -53,9 +45,7 @@ export function makeChain(
       }),
     });
     nodes.push(current);
-    facts.push(
-      ...links(wireName, previous.wireName, level === depth ? count : 1),
-    );
+    facts.push(...links(wireName, previous.wireName, level === depth ? count : 1));
     previous = current;
   }
 
@@ -67,11 +57,7 @@ export function makeChain(
   return { model: compileAccess(nodes), facts, check };
 }
 
-function links(
-  resourceType: string,
-  parentType: string,
-  count: number,
-): readonly RelationshipWrite[] {
+function links(resourceType: string, parentType: string, count: number): readonly RelationshipWrite[] {
   return Array.from({ length: count }, (_, index) => ({
     resource: {
       type: resourceType,

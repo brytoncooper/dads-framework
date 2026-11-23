@@ -42,13 +42,7 @@ test("compares normalized outcomes without volatile diagnostics", () => {
 
 test("rejects incomplete or invalid task observations", () => {
   const tasks = [{ id: "api:test" }, { id: "core:test" }];
-  assert.throws(() =>
-    assertObservedTasks(
-      tasks,
-      [{ id: "api:test", status: "passed" }],
-      "Mutation",
-    ),
-  );
+  assert.throws(() => assertObservedTasks(tasks, [{ id: "api:test", status: "passed" }], "Mutation"));
   assert.throws(() =>
     assertObservedTasks(
       tasks,
@@ -59,9 +53,7 @@ test("rejects incomplete or invalid task observations", () => {
       "Mutation",
     ),
   );
-  assert.throws(() =>
-    assertValidBaseline([{ id: "api:test", status: "failed", exitCode: 1 }]),
-  );
+  assert.throws(() => assertValidBaseline([{ id: "api:test", status: "failed", exitCode: 1 }]));
 });
 
 test("graph width counts the widest set of tasks that can be in flight", () => {
@@ -77,10 +69,7 @@ test("graph width counts the widest set of tasks that can be in flight", () => {
 });
 
 test("an unrunnable task graph is refused, not scheduled", () => {
-  assert.throws(
-    () => taskGraphWidth([{ id: "orphan", dependsOn: ["absent"] }]),
-    /unknown task absent/,
-  );
+  assert.throws(() => taskGraphWidth([{ id: "orphan", dependsOn: ["absent"] }]), /unknown task absent/);
   assert.throws(
     () =>
       taskGraphWidth([
@@ -109,10 +98,7 @@ test("independent tasks overlap while dependents wait for their prerequisites", 
       ["passed", "passed", "passed"],
     );
     const events = readEvents(directory);
-    assert.deepEqual(events.slice(0, 2).sort(), [
-      "start first",
-      "start second",
-    ]);
+    assert.deepEqual(events.slice(0, 2).sort(), ["start first", "start second"]);
     assert.ok(events.indexOf("end first") < events.indexOf("start last"));
     assert.equal(events.length, 6);
   } finally {
@@ -123,9 +109,7 @@ test("independent tasks overlap while dependents wait for their prerequisites", 
 test("one task job runs the same tasks strictly one at a time", async () => {
   const directory = mkdtempSync(join(tmpdir(), "soundness-serial-"));
   try {
-    const tasks = ["first", "second", "third"].map((id) =>
-      recordingTask(id, null),
-    );
+    const tasks = ["first", "second", "third"].map((id) => recordingTask(id, null));
     const outcomes = await executeTasksIndependently(tasks, directory, {}, 1);
     assert.deepEqual(
       outcomes.map((outcome) => outcome.status),
@@ -147,12 +131,7 @@ test("one task job runs the same tasks strictly one at a time", async () => {
 test("rejects an invalid task job limit", async () => {
   for (const taskJobs of [0, -1, 1.5, NaN, Infinity]) {
     await assert.rejects(
-      executeTasksIndependently(
-        [{ id: "only", dependsOn: [] }],
-        tmpdir(),
-        {},
-        taskJobs,
-      ),
+      executeTasksIndependently([{ id: "only", dependsOn: [] }], tmpdir(), {}, taskJobs),
       /positive safe integer/,
     );
   }

@@ -16,8 +16,7 @@ export type SortableRootContextValue = {
   flatCursor: boolean;
 };
 
-export const SortableRootContext =
-  React.createContext<SortableRootContextValue | null>(null);
+export const SortableRootContext = React.createContext<SortableRootContextValue | null>(null);
 
 export function useSortableContext(consumerName: string) {
   const context = React.useContext(SortableRootContext);

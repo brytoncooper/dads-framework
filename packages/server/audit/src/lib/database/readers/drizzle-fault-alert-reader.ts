@@ -1,14 +1,4 @@
-import {
-  and,
-  count,
-  eq,
-  gte,
-  isNotNull,
-  max,
-  ne,
-  notExists,
-  sql,
-} from "drizzle-orm";
+import { and, count, eq, gte, isNotNull, max, ne, notExists, sql } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
 
 import type { DrizzleHandle } from "@dads-framework/postgres";
@@ -17,11 +7,7 @@ import { clientDiagnosticEvents } from "../generated-tables/client-diagnostic-ev
 import { knownFaultFingerprints } from "../generated-tables/known-fault-fingerprints.tables.js";
 import { requestLog } from "../generated-tables/request-log.tables.js";
 import type { FaultAlertReader } from "./fault-alert-reader.interface.js";
-import {
-  type AlertedFault,
-  type FaultGroup,
-  type FaultOrigin,
-} from "./fault-alert-reader.interface.js";
+import { type AlertedFault, type FaultGroup, type FaultOrigin } from "./fault-alert-reader.interface.js";
 
 /**
  * Drizzle adapter for "what is newly broken".
@@ -41,9 +27,7 @@ import {
 export class DrizzleFaultAlertReader implements FaultAlertReader {
   constructor(private readonly db: DrizzleHandle) {}
 
-  async unalertedServerFaultsSince(
-    since: Date,
-  ): Promise<readonly FaultGroup[]> {
+  async unalertedServerFaultsSince(since: Date): Promise<readonly FaultGroup[]> {
     const rows = await this.db
       .select({
         fingerprint: requestLog.exceptionFingerprint,
@@ -63,9 +47,7 @@ export class DrizzleFaultAlertReader implements FaultAlertReader {
     return rows.map(toFaultGroup);
   }
 
-  async unalertedClientFaultsSince(
-    since: Date,
-  ): Promise<readonly FaultGroup[]> {
+  async unalertedClientFaultsSince(since: Date): Promise<readonly FaultGroup[]> {
     const rows = await this.db
       .select({
         fingerprint: clientDiagnosticEvents.fingerprint,
@@ -138,12 +120,7 @@ export class DrizzleFaultAlertReader implements FaultAlertReader {
       this.db
         .select({ remembered: sql`1` })
         .from(knownFaultFingerprints)
-        .where(
-          and(
-            eq(knownFaultFingerprints.origin, origin),
-            eq(knownFaultFingerprints.fingerprint, fingerprint),
-          ),
-        ),
+        .where(and(eq(knownFaultFingerprints.origin, origin), eq(knownFaultFingerprints.fingerprint, fingerprint))),
     );
   }
 }

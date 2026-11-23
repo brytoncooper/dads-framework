@@ -29,13 +29,11 @@ function countAnyKeywords(context: DoctorContext): SignalReadings {
 export const explicitAnySignal: DoctorSignal = {
   id: "explicit-any",
   issue: "daddy-issues",
-  question:
-    "Does any hand-written file annotate a value `any`, or write `as any`?",
+  question: "Does any hand-written file annotate a value `any`, or write `as any`?",
   reads: "typescript",
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "`any`? Not under this roof. Dad does not care if the other kids’ repos have it.",
+  sentence: "`any`? Not under this roof. Dad does not care if the other kids’ repos have it.",
   run: (context) => Promise.resolve(countAnyKeywords(context)),
 };

@@ -85,12 +85,8 @@
    -------------------------------------------------------------------------- */
 
 @theme {
-  --font-sans:
-    "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    sans-serif;
-  --font-mono:
-    "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono",
-    monospace;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
 
   /* Fixed rem steps, ratio ~1.125–1.2. text-sm (14px) is the workhorse: table
      cells, buttons, labels, field text. Tracking opens up as size drops so

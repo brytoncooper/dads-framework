@@ -79,23 +79,13 @@ export const ${camel(domain)}Plugin = definePlugin({
 
 export function requireDomain(plan: GenerationPlan, domain: string): void {
   if (plan.read(`domains/${domain}/server/plugin.ts`) === undefined) {
-    throw new Error(
-      `Domain "${domain}" has no server plugin. Run dad add domain ${domain} first.`,
-    );
+    throw new Error(`Domain "${domain}" has no server plugin. Run dad add domain ${domain} first.`);
   }
 }
 
-export function mountDomain(
-  plan: GenerationPlan,
-  api: string,
-  domain: string,
-): void {
+export function mountDomain(plan: GenerationPlan, api: string, domain: string): void {
   const file = `apps/${api}/app.ts`;
   const plugin = `${camel(domain)}Plugin`;
-  plan.appendLine(
-    file,
-    IMPORTS,
-    `import { ${plugin} } from "../../domains/${domain}/index.js";`,
-  );
+  plan.appendLine(file, IMPORTS, `import { ${plugin} } from "../../domains/${domain}/index.js";`);
   plan.appendLine(file, DOMAINS, `  ${plugin},`);
 }

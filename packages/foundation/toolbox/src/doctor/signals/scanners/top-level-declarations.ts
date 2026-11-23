@@ -63,17 +63,12 @@ export function readCodeSkeleton(text: string): readonly SkeletonLine[] {
   return lines;
 }
 
-function skeletonOfLine(
-  line: string,
-  state: ScanState,
-): { readonly text: string; readonly state: ScanState } {
+function skeletonOfLine(line: string, state: ScanState): { readonly text: string; readonly state: ScanState } {
   let current = state;
   let text = "";
   let index = 0;
   while (index < line.length) {
-    const step = current.block
-      ? leaveBlockComment(line, index, current)
-      : stepThroughCode(line, index, current);
+    const step = current.block ? leaveBlockComment(line, index, current) : stepThroughCode(line, index, current);
     text += step.text;
     current = step.state;
     if (step.index === index) break;
@@ -88,21 +83,13 @@ type ScanOutcome = {
   readonly state: ScanState;
 };
 
-function leaveBlockComment(
-  line: string,
-  index: number,
-  state: ScanState,
-): ScanOutcome {
+function leaveBlockComment(line: string, index: number, state: ScanState): ScanOutcome {
   const end = line.indexOf("*/", index);
   if (end === -1) return { text: "", index: line.length, state };
   return { text: "", index: end + 2, state: { ...state, block: false } };
 }
 
-function stepThroughCode(
-  line: string,
-  index: number,
-  state: ScanState,
-): ScanOutcome {
+function stepThroughCode(line: string, index: number, state: ScanState): ScanOutcome {
   if (state.terminator !== undefined) {
     return skipLiteral(line, index, state, state.terminator);
   }
@@ -146,11 +133,7 @@ function nextDepth(depth: number, character: string): number {
  * looks like an unterminated string, and reading either as code puts the rest
  * of the module at the wrong depth.
  */
-function skipRegularExpression(
-  line: string,
-  index: number,
-  state: ScanState,
-): ScanOutcome {
+function skipRegularExpression(line: string, index: number, state: ScanState): ScanOutcome {
   let position = index + 1;
   let insideClass = false;
   while (position < line.length) {
@@ -178,12 +161,7 @@ function skipRegularExpression(
  * declaration a renderer writes into a template literal is not read as a
  * declaration of this module.
  */
-function skipLiteral(
-  line: string,
-  index: number,
-  state: ScanState,
-  terminator: string,
-): ScanOutcome {
+function skipLiteral(line: string, index: number, state: ScanState, terminator: string): ScanOutcome {
   let position = index;
   while (position < line.length) {
     if (line[position] === "\\") {
@@ -235,10 +213,7 @@ export function topLevelStatements(text: string): readonly string[] {
     const trimmed = line.text.trim();
     if (trimmed.length === 0) continue;
     current = current.length === 0 ? trimmed : `${current} ${trimmed}`;
-    if (
-      line.endDepth === 0 &&
-      (trimmed.endsWith(";") || trimmed.endsWith("}"))
-    ) {
+    if (line.endDepth === 0 && (trimmed.endsWith(";") || trimmed.endsWith("}"))) {
       statements.push(current);
       current = "";
     }

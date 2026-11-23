@@ -16,8 +16,7 @@ function searchPages(query) {
 function relevance(page, terms) {
   const title = page.title.toLowerCase();
   const content = page.text.toLowerCase();
-  if (!terms.every((term) => title.includes(term) || content.includes(term)))
-    return 0;
+  if (!terms.every((term) => title.includes(term) || content.includes(term))) return 0;
   return 1 + terms.filter((term) => title.includes(term)).length;
 }
 
@@ -35,8 +34,7 @@ function displayResults() {
   results.replaceChildren(...items);
   if (query === "") status.textContent = "";
   else if (found.length === 0) status.textContent = "No results";
-  else
-    status.textContent = `${String(found.length)} ${found.length === 1 ? "result" : "results"}`;
+  else status.textContent = `${String(found.length)} ${found.length === 1 ? "result" : "results"}`;
 }
 
 search.addEventListener("input", displayResults);

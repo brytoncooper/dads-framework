@@ -34,11 +34,7 @@ export function noteAttachmentJobs({ files }: Files) {
           bytes: stored.body.byteLength,
           sha256: createHash("sha256").update(stored.body).digest("hex"),
         };
-        await files.put(
-          `${key}.facts`,
-          JSON.stringify(facts),
-          "application/json",
-        );
+        await files.put(`${key}.facts`, JSON.stringify(facts), "application/json");
       },
     }),
   ];
@@ -56,8 +52,7 @@ export function noteAttachmentRoutes(services: Files) {
       params: notePath,
       body: z.strictObject({ text: z.string().min(1).max(16_384) }),
       response: z.strictObject({ fileId: z.uuid() }),
-      handler: ({ body, params, subject }) =>
-        storeNoteAttachment(services, params, subject, body.text),
+      handler: ({ body, params, subject }) => storeNoteAttachment(services, params, subject, body.text),
     }),
     getRoute({
       route: {
@@ -86,23 +81,15 @@ async function storeNoteAttachment(
   const uploaded = { ...params, fileId };
   const key = objectKey(uploaded);
   try {
-    await writeWithPermission(
-      { subject, permission: notesPermission, resourceId: params.tenantId },
-      async (tx) => {
-        const [note] = await tx
-          .select({ id: noteTable.id })
-          .from(noteTable)
-          .where(
-            and(
-              eq(noteTable.id, params.noteId),
-              eq(noteTable.tenantId, params.tenantId),
-            ),
-          )
-          .limit(1);
-        if (!note) throw notFound("NOT_FOUND", "Note not found");
-        await files.put(key, text, "text/plain");
-      },
-    );
+    await writeWithPermission({ subject, permission: notesPermission, resourceId: params.tenantId }, async (tx) => {
+      const [note] = await tx
+        .select({ id: noteTable.id })
+        .from(noteTable)
+        .where(and(eq(noteTable.id, params.noteId), eq(noteTable.tenantId, params.tenantId)))
+        .limit(1);
+      if (!note) throw notFound("NOT_FOUND", "Note not found");
+      await files.put(key, text, "text/plain");
+    });
   } catch (error) {
     await files.delete(key).catch(() => undefined);
     throw error;
@@ -111,29 +98,17 @@ async function storeNoteAttachment(
   return { fileId };
 }
 
-async function readNoteAttachment(
-  { files }: Files,
-  params: z.infer<typeof filePath>,
-) {
+async function readNoteAttachment({ files }: Files, params: z.infer<typeof filePath>) {
   const key = objectKey(params);
-  const [stored, inspected] = await Promise.all([
-    files.get(key),
-    files.get(`${key}.facts`),
-  ]);
+  const [stored, inspected] = await Promise.all([files.get(key), files.get(`${key}.facts`)]);
   if (!stored) throw notFound("NOT_FOUND", "Attachment not found");
   const decode = new TextDecoder();
   return {
     text: decode.decode(stored.body),
-    inspection: inspected
-      ? digest.parse(JSON.parse(decode.decode(inspected.body)))
-      : null,
+    inspection: inspected ? digest.parse(JSON.parse(decode.decode(inspected.body))) : null,
   };
 }
 
-function objectKey({
-  tenantId,
-  noteId,
-  fileId,
-}: z.infer<typeof filePath>): string {
+function objectKey({ tenantId, noteId, fileId }: z.infer<typeof filePath>): string {
   return `notes/${tenantId}/${noteId}/${fileId}`;
 }

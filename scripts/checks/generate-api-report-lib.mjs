@@ -80,14 +80,11 @@ function selectDeclarationTarget(value) {
 export function resolveEntryPoints(manifest) {
   const field = manifest.exports;
   const isMap = field !== null && typeof field === "object";
-  const subpaths = isMap
-    ? Object.entries(field).filter(([key]) => key.startsWith("."))
-    : [];
+  const subpaths = isMap ? Object.entries(field).filter(([key]) => key.startsWith(".")) : [];
 
   let entries;
   if (typeof field === "string") entries = [[".", field]];
-  else if (subpaths.length > 0)
-    entries = subpaths.filter(([key]) => !key.includes("*"));
+  else if (subpaths.length > 0) entries = subpaths.filter(([key]) => !key.includes("*"));
   else if (isMap) entries = [[".", field]];
   else entries = [[".", manifest.types ?? manifest.typings ?? manifest.main]];
 
@@ -144,9 +141,7 @@ function collapseWhitespace(text) {
  * `|` inside a string literal, a template literal type, or an overload's body.
  */
 function sortedUnionText(union, sourceFile) {
-  const members = union.types.map((member) =>
-    canonicalNodeText(member, sourceFile),
-  );
+  const members = union.types.map((member) => canonicalNodeText(member, sourceFile));
   return [...members].sort(compareStrings).join(" | ");
 }
 
@@ -180,10 +175,7 @@ function declarationText(declaration) {
     return `(module ${basename(declaration.fileName)})`;
   }
   const statement = declaration.parent?.parent;
-  const node =
-    ts.isVariableDeclaration(declaration) && statement !== undefined
-      ? statement
-      : declaration;
+  const node = ts.isVariableDeclaration(declaration) && statement !== undefined ? statement : declaration;
   try {
     return canonicalNodeText(node, node.getSourceFile());
   } catch {
@@ -201,19 +193,14 @@ function resolveAlias(checker, symbol) {
 }
 
 function compareDeclarations(left, right) {
-  const byFile = compareStrings(
-    left.getSourceFile().fileName,
-    right.getSourceFile().fileName,
-  );
+  const byFile = compareStrings(left.getSourceFile().fileName, right.getSourceFile().fileName);
   return byFile === 0 ? left.pos - right.pos : byFile;
 }
 
 function describeExport(checker, symbol) {
   const name = symbol.getName();
   const resolved = resolveAlias(checker, symbol);
-  const declarations = [...(resolved.getDeclarations() ?? [])].sort(
-    compareDeclarations,
-  );
+  const declarations = [...(resolved.getDeclarations() ?? [])].sort(compareDeclarations);
   if (declarations.length === 0) {
     return { kind: "const", name, signature: "(no declaration)" };
   }
@@ -259,30 +246,14 @@ function fenceFor(body) {
  * markdown link check leave the emitted declarations exactly as they are.
  */
 export function renderReport({ name, published, sections }) {
-  const lines = [
-    `# API report: ${name}`,
-    "",
-    `Published: ${published ? "yes" : "no"}`,
-    "",
-    REGENERATE_HINT,
-    "",
-  ];
+  const lines = [`# API report: ${name}`, "", `Published: ${published ? "yes" : "no"}`, "", REGENERATE_HINT, ""];
   for (const section of sections) {
     const body =
       section.exports.length === 0
         ? ["(no exports)"]
-        : section.exports.map(
-            (entry) => `- ${entry.kind} ${entry.name}: ${entry.signature}`,
-          );
+        : section.exports.map((entry) => `- ${entry.kind} ${entry.name}: ${entry.signature}`);
     const fence = fenceFor(body);
-    lines.push(
-      `Entry point: ${section.specifier}`,
-      "",
-      fence,
-      ...body,
-      fence,
-      "",
-    );
+    lines.push(`Entry point: ${section.specifier}`, "", fence, ...body, fence, "");
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }
@@ -291,9 +262,7 @@ function findSourceFile(program, path) {
   const direct = program.getSourceFile(path);
   if (direct !== undefined) return direct;
   const wanted = path.split("\\").join("/");
-  return program
-    .getSourceFiles()
-    .find((file) => file.fileName.split("\\").join("/") === wanted);
+  return program.getSourceFiles().find((file) => file.fileName.split("\\").join("/") === wanted);
 }
 
 /** The report text for one package, read from its emitted declarations. */
@@ -302,17 +271,11 @@ export function buildReport(packageEntry, published) {
   if (entryPoints.length === 0) {
     throw new ReportError(`${packageEntry.name}: no entry point is declared.`);
   }
-  const rootFiles = entryPoints.map((entry) =>
-    join(packageEntry.directory, entry.target),
-  );
-  const missing = entryPoints.filter(
-    (entry, index) => !existsSync(rootFiles[index]),
-  );
+  const rootFiles = entryPoints.map((entry) => join(packageEntry.directory, entry.target));
+  const missing = entryPoints.filter((entry, index) => !existsSync(rootFiles[index]));
   if (missing.length > 0) {
     const names = missing.map((entry) => entry.target).join(", ");
-    throw new ReportError(
-      `${packageEntry.name}: ${names} is missing — ${MISSING_DIST_HINT}.`,
-    );
+    throw new ReportError(`${packageEntry.name}: ${names} is missing — ${MISSING_DIST_HINT}.`);
   }
 
   const program = ts.createProgram(rootFiles, COMPILER_OPTIONS);
@@ -320,10 +283,7 @@ export function buildReport(packageEntry, published) {
   const sections = entryPoints.map((entry, index) => {
     const sourceFile = findSourceFile(program, rootFiles[index]);
     if (sourceFile === undefined) {
-      throw new ReportError(
-        `${packageEntry.name}: ${entry.target} could not be read — ` +
-          `${MISSING_DIST_HINT}.`,
-      );
+      throw new ReportError(`${packageEntry.name}: ${entry.target} could not be read — ` + `${MISSING_DIST_HINT}.`);
     }
     return {
       specifier: entry.specifier,
@@ -347,10 +307,7 @@ function splitLines(text) {
 
 function diffOperations(before, after) {
   if (before.length * after.length > DIFF_CELL_LIMIT) {
-    return [
-      ...before.map((text) => ({ sign: "-", text })),
-      ...after.map((text) => ({ sign: "+", text })),
-    ];
+    return [...before.map((text) => ({ sign: "-", text })), ...after.map((text) => ({ sign: "+", text }))];
   }
   const columns = after.length + 1;
   const lengths = new Uint32Array((before.length + 1) * columns);
@@ -359,10 +316,7 @@ function diffOperations(before, after) {
       lengths[row * columns + column] =
         before[row] === after[column]
           ? lengths[(row + 1) * columns + column + 1] + 1
-          : Math.max(
-              lengths[(row + 1) * columns + column],
-              lengths[row * columns + column + 1],
-            );
+          : Math.max(lengths[(row + 1) * columns + column], lengths[row * columns + column + 1]);
     }
   }
 
@@ -374,10 +328,7 @@ function diffOperations(before, after) {
       operations.push({ sign: " ", text: before[row] });
       row += 1;
       column += 1;
-    } else if (
-      lengths[(row + 1) * columns + column] >=
-      lengths[row * columns + column + 1]
-    ) {
+    } else if (lengths[(row + 1) * columns + column] >= lengths[row * columns + column + 1]) {
       operations.push({ sign: "-", text: before[row] });
       row += 1;
     } else {
@@ -423,8 +374,5 @@ export function diffLines(before, after, limit = DIFF_LINE_LIMIT) {
   });
 
   if (lines.length <= limit) return lines;
-  return [
-    ...lines.slice(0, limit),
-    `... ${lines.length - limit} more diff lines`,
-  ];
+  return [...lines.slice(0, limit), `... ${lines.length - limit} more diff lines`];
 }

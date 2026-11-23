@@ -1,12 +1,6 @@
 import { Tabs, TabsList, TabsTrigger } from "@dads-framework/ui/display";
 import { Badge, Button } from "@dads-framework/ui/elements";
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  FileText,
-  Shield,
-} from "@dads-framework/ui/icons";
+import { Check, Copy, ExternalLink, FileText, Shield } from "@dads-framework/ui/icons";
 import { useEffect, useState } from "react";
 import type { Tenant } from "../../domains/tenants/web-client/index.js";
 import { useWorkbenchCopy } from "./copy/workbench-copy.js";
@@ -21,11 +15,7 @@ type WorkspaceHeaderProps = {
 
 type CopyState = "idle" | "copied" | "failed";
 
-export function WorkspaceHeader({
-  tenant,
-  view,
-  onViewChange,
-}: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ tenant, view, onViewChange }: WorkspaceHeaderProps) {
   const t = useWorkbenchCopy();
   const [copyState, setCopyState] = useState<CopyState>("idle");
 
@@ -67,12 +57,7 @@ export function WorkspaceHeader({
               {t("workbench.workspace.tenantId")}
             </Badge>
             <code className="tenant-id-code">{tenant.id}</code>
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={copyTenantId}
-            >
+            <Button type="button" variant="outline" size="xs" onClick={copyTenantId}>
               {copyState === "copied" ? (
                 <Check className="size-3" aria-hidden="true" />
               ) : (

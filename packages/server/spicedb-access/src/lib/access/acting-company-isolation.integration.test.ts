@@ -2,10 +2,7 @@
 // rights. Affiliation gates context entry separately from actor business grants.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
 import {
   type Authorization,
   relationshipWrite,
@@ -13,10 +10,7 @@ import {
   type SubjectRef,
 } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
-import {
-  ACTING_COMPANY_SCHEMA,
-  actingCompanyFixture,
-} from "./testing/acting-company-fixture.js";
+import { ACTING_COMPANY_SCHEMA, actingCompanyFixture } from "./testing/acting-company-fixture.js";
 
 describe("acting-company isolation through Authorization", () => {
   let spiceDb: TestSpiceDb;
@@ -56,13 +50,7 @@ describe("acting-company isolation through Authorization", () => {
       [f.shared, f.bOnly, f.independent],
       [f.shared.id, f.independent.id],
     );
-    await assertReachable(
-      authorization,
-      f.actorA,
-      "manage",
-      [f.shared, f.bOnly, f.independent],
-      [],
-    );
+    await assertReachable(authorization, f.actorA, "manage", [f.shared, f.bOnly, f.independent], []);
     await assertReachable(
       authorization,
       f.actorB,
@@ -86,13 +74,7 @@ describe("acting-company isolation through Authorization", () => {
 
     for (const subject of [f.user, stranger]) {
       for (const permission of ["view", "manage"]) {
-        await assertReachable(
-          authorization,
-          subject,
-          permission,
-          [f.shared, f.bOnly, f.independent],
-          [],
-        );
+        await assertReachable(authorization, subject, permission, [f.shared, f.bOnly, f.independent], []);
       }
     }
   });
@@ -105,27 +87,9 @@ describe("acting-company isolation through Authorization", () => {
       relationshipWrite(f.workspace, "attached_actor", f.actorB),
     ]);
 
-    await assertReachable(
-      authorization,
-      f.user,
-      "enter_company_workspace",
-      [f.companyA, f.companyB],
-      [f.companyB.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorB,
-      "operate",
-      [f.workspace],
-      [f.workspace.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorA,
-      "operate",
-      [f.workspace],
-      [],
-    );
+    await assertReachable(authorization, f.user, "enter_company_workspace", [f.companyA, f.companyB], [f.companyB.id]);
+    await assertReachable(authorization, f.actorB, "operate", [f.workspace], [f.workspace.id]);
+    await assertReachable(authorization, f.actorA, "operate", [f.workspace], []);
   });
 
   it("direct workspace affiliation permits owner-company entry without company business grants", async () => {
@@ -136,27 +100,9 @@ describe("acting-company isolation through Authorization", () => {
       relationshipWrite(f.workspace, "attached_actor", f.actorA),
     ]);
 
-    await assertReachable(
-      authorization,
-      f.user,
-      "enter_company_workspace",
-      [f.companyA, f.companyB],
-      [f.companyA.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorA,
-      "operate",
-      [f.workspace],
-      [f.workspace.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorA,
-      "manage",
-      [f.companyA, f.companyB],
-      [],
-    );
+    await assertReachable(authorization, f.user, "enter_company_workspace", [f.companyA, f.companyB], [f.companyA.id]);
+    await assertReachable(authorization, f.actorA, "operate", [f.workspace], [f.workspace.id]);
+    await assertReachable(authorization, f.actorA, "manage", [f.companyA, f.companyB], []);
     await expect(
       authorization.listDirectSubjects({
         resource: f.companyA,
@@ -183,13 +129,7 @@ describe("acting-company isolation through Authorization", () => {
       subject: f.user,
     });
 
-    await assertReachable(
-      authorization,
-      f.user,
-      "enter_company_workspace",
-      [f.companyA, f.companyB],
-      [f.companyB.id],
-    );
+    await assertReachable(authorization, f.user, "enter_company_workspace", [f.companyA, f.companyB], [f.companyB.id]);
     // The edge must recheck entry before accepting this actor. The actor ID
     // alone does not authenticate the person or establish current affiliation.
     await expect(
@@ -217,20 +157,8 @@ describe("acting-company isolation through Authorization", () => {
       [f.shared, f.bOnly, f.independent],
       [f.shared.id, f.independent.id],
     );
-    await assertReachable(
-      authorization,
-      f.actorB,
-      "view",
-      [f.shared, f.bOnly, f.independent],
-      [f.bOnly.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorB,
-      "manage",
-      [f.shared, f.bOnly, f.independent],
-      [],
-    );
+    await assertReachable(authorization, f.actorB, "view", [f.shared, f.bOnly, f.independent], [f.bOnly.id]);
+    await assertReachable(authorization, f.actorB, "manage", [f.shared, f.bOnly, f.independent], []);
   });
 
   it("removing a warmed sharing ceiling revokes derived access but preserves an independent grant", async () => {
@@ -257,27 +185,9 @@ describe("acting-company isolation through Authorization", () => {
       relation: "ceiling",
     });
 
-    await assertReachable(
-      authorization,
-      f.actorA,
-      "view",
-      [f.shared, f.bOnly, f.independent],
-      [f.independent.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorB,
-      "view",
-      [f.shared, f.bOnly, f.independent],
-      [f.bOnly.id],
-    );
-    await assertReachable(
-      authorization,
-      f.actorB,
-      "manage",
-      [f.shared, f.bOnly, f.independent],
-      [],
-    );
+    await assertReachable(authorization, f.actorA, "view", [f.shared, f.bOnly, f.independent], [f.independent.id]);
+    await assertReachable(authorization, f.actorB, "view", [f.shared, f.bOnly, f.independent], [f.bOnly.id]);
+    await assertReachable(authorization, f.actorB, "manage", [f.shared, f.bOnly, f.independent], []);
   });
 });
 
@@ -289,8 +199,7 @@ async function assertReachable(
   expectedIds: readonly string[],
 ): Promise<void> {
   const first = candidates[0];
-  if (first === undefined)
-    throw new Error("Graph assertion needs candidate resources");
+  if (first === undefined) throw new Error("Graph assertion needs candidate resources");
   const listed = await authorization.lookupResources({
     subject,
     permission,
@@ -298,8 +207,8 @@ async function assertReachable(
   });
   expect([...listed].sort()).toEqual([...expectedIds].sort());
   for (const resource of candidates) {
-    await expect(
-      authorization.check({ subject, permission, resource }),
-    ).resolves.toBe(expectedIds.includes(resource.id));
+    await expect(authorization.check({ subject, permission, resource })).resolves.toBe(
+      expectedIds.includes(resource.id),
+    );
   }
 }

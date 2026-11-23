@@ -1,9 +1,4 @@
-import {
-  createCopyHook,
-  defineCopy,
-  type CopyKey,
-  type CopyTranslator,
-} from "../../copy/index.js";
+import { createCopyHook, defineCopy, type CopyKey, type CopyTranslator } from "../../copy/index.js";
 
 export const elementsCopy = defineCopy({
   "elements.loading.label": { en: "Loading" },

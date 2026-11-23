@@ -24,16 +24,7 @@ import { byCodePoint } from "./by-code-point.js";
 /** The file holding the header and the schemas no single tag owns. */
 export const SHARED_OPENAPI_PART = "_shared.json";
 
-const HTTP_METHODS = new Set([
-  "get",
-  "put",
-  "post",
-  "delete",
-  "options",
-  "head",
-  "patch",
-  "trace",
-]);
+const HTTP_METHODS = new Set(["get", "put", "post", "delete", "options", "head", "patch", "trace"]);
 
 type Operations = Record<string, unknown>;
 type Paths = Record<string, Operations>;
@@ -78,9 +69,7 @@ export function openApiPartFileName(tag: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   if (slug.length === 0) {
-    throw new Error(
-      `OpenAPI tag "${tag}" has no letters or digits to name its file`,
-    );
+    throw new Error(`OpenAPI tag "${tag}" has no letters or digits to name its file`);
   }
   return `${slug}.json`;
 }
@@ -91,11 +80,8 @@ export function openApiPartFileName(tag: string): string {
  * path-level field beside the operations, a component kind other than
  * schemas, two tags naming one file.
  */
-export function splitOpenApiDocument(
-  document: unknown,
-): ReadonlyMap<string, Record<string, unknown>> {
-  const { paths, components, ...header } =
-    openApiDocumentSchema.parse(document);
+export function splitOpenApiDocument(document: unknown): ReadonlyMap<string, Record<string, unknown>> {
+  const { paths, components, ...header } = openApiDocumentSchema.parse(document);
   const { schemas, ...otherComponents } = components;
   refuseOtherComponents(Object.keys(otherComponents));
 
@@ -107,9 +93,7 @@ export function splitOpenApiDocument(
     ...header,
     components: { schemas: sortedByKey(sharedSchemas) },
   });
-  for (const part of [...tagParts.values()].sort((first, second) =>
-    byCodePoint(first.tag, second.tag),
-  )) {
+  for (const part of [...tagParts.values()].sort((first, second) => byCodePoint(first.tag, second.tag))) {
     parts.set(openApiPartFileName(part.tag), {
       tag: part.tag,
       paths: sortedByKey(part.paths),
@@ -124,12 +108,8 @@ export function splitOpenApiDocument(
  * part's operations and every schema. Throws when two parts define the same
  * operation or schema, which a split never produces.
  */
-export function bundleOpenApiParts(
-  parts: ReadonlyMap<string, unknown>,
-): Record<string, unknown> {
-  const { components, ...header } = sharedPartSchema.parse(
-    parts.get(SHARED_OPENAPI_PART),
-  );
+export function bundleOpenApiParts(parts: ReadonlyMap<string, unknown>): Record<string, unknown> {
+  const { components, ...header } = sharedPartSchema.parse(parts.get(SHARED_OPENAPI_PART));
   const paths: Paths = {};
   const schemas: Schemas = { ...components.schemas };
 
@@ -150,9 +130,7 @@ export function bundleOpenApiParts(
 
 function refuseOtherComponents(kinds: readonly string[]): void {
   if (kinds.length > 0) {
-    throw new Error(
-      `OpenAPI parts carry components.schemas only; found ${kinds.join(", ")}`,
-    );
+    throw new Error(`OpenAPI parts carry components.schemas only; found ${kinds.join(", ")}`);
   }
 }
 
@@ -173,26 +151,17 @@ function partsByTag(paths: Paths): Map<string, TagPart> {
 
 function refusePathLevelField(path: string, key: string): void {
   if (!HTTP_METHODS.has(key)) {
-    throw new Error(
-      `OpenAPI path ${path} has a path-level "${key}"; the parts carry operations only`,
-    );
+    throw new Error(`OpenAPI path ${path} has a path-level "${key}"; the parts carry operations only`);
   }
 }
 
-function tagPartFor(
-  tag: string,
-  tagParts: Map<string, TagPart>,
-  fileOwners: Map<string, string>,
-): TagPart {
+function tagPartFor(tag: string, tagParts: Map<string, TagPart>, fileOwners: Map<string, string>): TagPart {
   const existing = tagParts.get(tag);
   if (existing !== undefined) return existing;
   const fileName = openApiPartFileName(tag);
-  const owner =
-    fileName === SHARED_OPENAPI_PART ? "_shared" : fileOwners.get(fileName);
+  const owner = fileName === SHARED_OPENAPI_PART ? "_shared" : fileOwners.get(fileName);
   if (owner !== undefined) {
-    throw new Error(
-      `OpenAPI tags "${owner}" and "${tag}" would share ${fileName}`,
-    );
+    throw new Error(`OpenAPI tags "${owner}" and "${tag}" would share ${fileName}`);
   }
   fileOwners.set(fileName, tag);
   const created: TagPart = { tag, paths: {}, components: { schemas: {} } };
@@ -204,10 +173,7 @@ function tagPartFor(
  * Moves each schema reached from exactly one tag into that tag's part and
  * returns the rest, the shared ones.
  */
-function placeSchemas(
-  schemas: Schemas,
-  tagParts: Map<string, TagPart>,
-): Schemas {
+function placeSchemas(schemas: Schemas, tagParts: Map<string, TagPart>): Schemas {
   const tagsReaching = new Map<string, Set<string>>();
   for (const part of tagParts.values()) {
     for (const name of schemasReachedFrom(part.paths, schemas)) {
@@ -267,9 +233,7 @@ function refName(value: unknown): string | undefined {
 export function assertArtifactTagFile(fileName: string, tag: string): void {
   const expected = openApiPartFileName(tag);
   if (expected !== fileName) {
-    throw new Error(
-      `${fileName} holds tag "${tag}", whose file is ${expected}`,
-    );
+    throw new Error(`${fileName} holds tag "${tag}", whose file is ${expected}`);
   }
 }
 
@@ -278,9 +242,7 @@ function addOperations(paths: Paths, partPaths: Paths): void {
     const pathItem = paths[path] ?? {};
     for (const [method, operation] of Object.entries(operations)) {
       if (method in pathItem) {
-        throw new Error(
-          `${method.toUpperCase()} ${path} is in two OpenAPI parts`,
-        );
+        throw new Error(`${method.toUpperCase()} ${path} is in two OpenAPI parts`);
       }
       pathItem[method] = operation;
     }
@@ -297,12 +259,6 @@ function addSchemas(schemas: Schemas, partSchemas: Schemas): void {
   }
 }
 
-function sortedByKey<T>(
-  record: Readonly<Record<string, T>>,
-): Record<string, T> {
-  return Object.fromEntries(
-    Object.entries(record).sort(([first], [second]) =>
-      byCodePoint(first, second),
-    ),
-  );
+function sortedByKey<T>(record: Readonly<Record<string, T>>): Record<string, T> {
+  return Object.fromEntries(Object.entries(record).sort(([first], [second]) => byCodePoint(first, second)));
 }

@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, title } from "./names.js";
 
-export function addEndpoint(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function addEndpoint(plan: GenerationPlan, domain: string, name: string): void {
   const item = camel(name);
   const base = `domains/${domain}`;
   const path = `/${domain}/${name}`;
@@ -36,25 +32,13 @@ export function ${item}Endpoint() {
 }
 `,
   );
-  plan.create(
-    `${base}/server/${name}-endpoint.test.ts`,
-    endpointTest(domain, name),
-  );
+  plan.create(`${base}/server/${name}-endpoint.test.ts`, endpointTest(domain, name));
   registerRoutes(plan, domain, `${name}-endpoint`, `${item}Endpoint`);
 }
 
-export function registerRoutes(
-  plan: GenerationPlan,
-  domain: string,
-  file: string,
-  factory: string,
-): void {
+export function registerRoutes(plan: GenerationPlan, domain: string, file: string, factory: string): void {
   const registry = `domains/${domain}/server/routes.ts`;
-  plan.appendLine(
-    registry,
-    "// dad:add imports",
-    `import { ${factory} } from "./${file}.js";`,
-  );
+  plan.appendLine(registry, "// dad:add imports", `import { ${factory} } from "./${file}.js";`);
   plan.appendLine(registry, "// dad:add routes", `  ${factory},`);
 }
 

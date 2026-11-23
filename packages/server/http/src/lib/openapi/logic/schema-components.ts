@@ -1,9 +1,7 @@
 type SchemaObject = Record<string, unknown>;
 
 /** Lifts schema-local definitions into namespaced OpenAPI components. */
-export function schemaComponents(
-  schemas: ReadonlyMap<string, SchemaObject>,
-): Record<string, SchemaObject> {
+export function schemaComponents(schemas: ReadonlyMap<string, SchemaObject>): Record<string, SchemaObject> {
   const components: Record<string, SchemaObject> = {};
   for (const [name, schema] of schemas) {
     const { definitions, ...root } = schema;
@@ -11,10 +9,7 @@ export function schemaComponents(
     if (!isObject(definitions)) continue;
     for (const [definitionName, definition] of Object.entries(definitions)) {
       if (isObject(definition)) {
-        components[`${name}_${definitionName}`] = relocateObject(
-          definition,
-          name,
-        );
+        components[`${name}_${definitionName}`] = relocateObject(definition, name);
       }
     }
   }
@@ -40,8 +35,7 @@ function relocateObject(schema: SchemaObject, name: string): SchemaObject {
 }
 
 function relocateValue(value: unknown, name: string): unknown {
-  if (Array.isArray(value))
-    return value.map((item: unknown) => relocateValue(item, name));
+  if (Array.isArray(value)) return value.map((item: unknown) => relocateValue(item, name));
   return isObject(value) ? relocateObject(value, name) : value;
 }
 

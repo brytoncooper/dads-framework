@@ -2,11 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { serializeAuditActor } from "@dads-framework/core/audit-actor";
-import {
-  startTestPostgres,
-  truncateTables,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, truncateTables, type TestPostgres } from "@dads-framework/postgres/testing";
 
 import { attachAuditTrigger } from "./attach-audit-trigger.js";
 import { DrizzleAuditLogReader } from "./readers/drizzle-audit-log-reader.js";
@@ -34,11 +30,9 @@ describe("audit_record client columns", () => {
          label text
        )`,
     ];
-    attachAuditTrigger(
-      { sql: (statement: string) => statements.push(statement) },
-      CLIENT_TABLE,
-      { keyColumns: ["id"] },
-    );
+    attachAuditTrigger({ sql: (statement: string) => statements.push(statement) }, CLIENT_TABLE, {
+      keyColumns: ["id"],
+    });
     for (const statement of statements) {
       await postgres.pool.query(statement);
     }
@@ -56,9 +50,7 @@ describe("audit_record client columns", () => {
   async function insertAs(actorSetting: string): Promise<ClientColumns> {
     const client = await postgres.pool.connect();
     try {
-      await client.query(`SELECT set_config('dads.audit_actor', $1, false)`, [
-        actorSetting,
-      ]);
+      await client.query(`SELECT set_config('dads.audit_actor', $1, false)`, [actorSetting]);
       await client.query(`INSERT INTO ${CLIENT_TABLE} (label) VALUES ('row')`);
     } finally {
       client.release();
@@ -91,9 +83,7 @@ describe("audit_record client columns", () => {
   });
 
   it("leaves both columns null for a write with no client", async () => {
-    const columns = await insertAs(
-      serializeAuditActor({ kind: "user", id: "alice", requestId: "web" }),
-    );
+    const columns = await insertAs(serializeAuditActor({ kind: "user", id: "alice", requestId: "web" }));
 
     expect(columns).toEqual({ client_id: null, client_name: null });
   });
@@ -109,12 +99,8 @@ describe("audit_record client columns", () => {
       }),
     );
 
-    const rows = await new DrizzleAuditLogReader(
-      drizzle(postgres.pool),
-    ).listRows({ kind: "platform" }, {}, null, 10);
+    const rows = await new DrizzleAuditLogReader(drizzle(postgres.pool)).listRows({ kind: "platform" }, {}, null, 10);
 
-    expect(rows.map((row) => [row.clientId, row.clientName])).toEqual([
-      ["client-chatgpt", "ChatGPT"],
-    ]);
+    expect(rows.map((row) => [row.clientId, row.clientName])).toEqual([["client-chatgpt", "ChatGPT"]]);
   });
 });

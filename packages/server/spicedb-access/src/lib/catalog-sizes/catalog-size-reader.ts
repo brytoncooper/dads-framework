@@ -15,9 +15,7 @@ export abstract class CatalogSizeReader {
    * never analyzed (estimate `-1`) or does not have is left out: unknown is
    * not small, and the audit says which tables it could not size.
    */
-  abstract estimatedRows(
-    tableNames: readonly string[],
-  ): Promise<ReadonlyMap<string, number>>;
+  abstract estimatedRows(tableNames: readonly string[]): Promise<ReadonlyMap<string, number>>;
 }
 
 const estimateRow = z.object({
@@ -30,9 +28,7 @@ export class PostgresCatalogSizeReader extends CatalogSizeReader {
     super();
   }
 
-  override async estimatedRows(
-    tableNames: readonly string[],
-  ): Promise<ReadonlyMap<string, number>> {
+  override async estimatedRows(tableNames: readonly string[]): Promise<ReadonlyMap<string, number>> {
     if (tableNames.length === 0) return new Map();
     const result = await this.db.execute(sql`
       SELECT c.relname AS table_name, c.reltuples::bigint AS estimated_rows

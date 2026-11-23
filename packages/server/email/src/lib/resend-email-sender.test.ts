@@ -17,11 +17,7 @@ describe("EmailSender conformance against Resend", () => {
         sent = JSON.parse(body);
         return Promise.resolve(
           new Response(
-            JSON.stringify(
-              accepted
-                ? { id: acceptedId }
-                : { name: "validation_error", message: "Refused" },
-            ),
+            JSON.stringify(accepted ? { id: acceptedId } : { name: "validation_error", message: "Refused" }),
             {
               status: accepted ? 200 : 400,
               headers: { "content-type": "application/json" },

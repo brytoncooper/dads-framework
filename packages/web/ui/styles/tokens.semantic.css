@@ -97,21 +97,11 @@
      this ramp's job — a hairline border cannot carry a plane on its own, which
      is what a card outlined on a near-white page was trying to do. */
   --elevation-1: 0 1px 1px 0 var(--palette-grey-240-a07);
-  --elevation-2:
-    0 1px 1px -0.5px var(--palette-grey-240-a07),
-    0 1px 2px 0 var(--palette-grey-240-a11);
-  --elevation-3:
-    0 1px 2px -1px var(--palette-grey-240-a15),
-    0 3px 6px -2px var(--palette-grey-240-a12);
-  --elevation-4:
-    0 2px 4px -2px var(--palette-grey-240-a15),
-    0 8px 16px -6px var(--palette-grey-240-a16);
-  --elevation-5:
-    0 4px 8px -4px var(--palette-grey-240-a17),
-    0 16px 32px -12px var(--palette-grey-240-a20);
-  --elevation-6:
-    0 8px 16px -8px var(--palette-grey-240-a19),
-    0 32px 64px -20px var(--palette-grey-240-a26);
+  --elevation-2: 0 1px 1px -0.5px var(--palette-grey-240-a07), 0 1px 2px 0 var(--palette-grey-240-a11);
+  --elevation-3: 0 1px 2px -1px var(--palette-grey-240-a15), 0 3px 6px -2px var(--palette-grey-240-a12);
+  --elevation-4: 0 2px 4px -2px var(--palette-grey-240-a15), 0 8px 16px -6px var(--palette-grey-240-a16);
+  --elevation-5: 0 4px 8px -4px var(--palette-grey-240-a17), 0 16px 32px -12px var(--palette-grey-240-a20);
+  --elevation-6: 0 8px 16px -8px var(--palette-grey-240-a19), 0 32px 64px -20px var(--palette-grey-240-a26);
 
   /* Modest and industrial: 4px on chips, 6px on buttons and fields, 10px on
      cards. Nothing in the system is bubbly. */

@@ -37,9 +37,7 @@ export function bindingScopes(manifest, declared, world) {
 
 function hasExportAlias(exports, name) {
   return Object.entries(exports).some(
-    ([key, target]) =>
-      key !== `./${name}` &&
-      targetValues(target).some((file) => file.startsWith(`./dist/${name}/`)),
+    ([key, target]) => key !== `./${name}` && targetValues(target).some((file) => file.startsWith(`./dist/${name}/`)),
   );
 }
 
@@ -49,14 +47,7 @@ function targetValues(target) {
   return Object.values(target).flatMap(targetValues);
 }
 
-export function scopedImportProblem({
-  file,
-  specifier,
-  owner,
-  module,
-  bindings,
-  kind,
-}) {
+export function scopedImportProblem({ file, specifier, owner, module, bindings, kind }) {
   const scopes = bindings.get(owner) ?? [];
   const sourceScope = scopeAt(scopes, file);
   if (specifier.startsWith(".")) {
@@ -66,17 +57,13 @@ export function scopedImportProblem({
       ? `imports binding "${specifier}" outside its source scope`
       : undefined;
   }
-  if (
-    scopes.some((scope) => scope.dependencies.has(module)) &&
-    !sourceScope?.dependencies.has(module)
-  ) {
+  if (scopes.some((scope) => scope.dependencies.has(module)) && !sourceScope?.dependencies.has(module)) {
     return `imports optional binding dependency "${specifier}" outside its source scope`;
   }
   const targetScopes = bindings.get(module) ?? [];
   const targetName = specifier.slice(module.length + 1).split("/")[0];
   const targetScope = targetScopes.find((scope) => scope.name === targetName);
-  if (targetScope === undefined || sourceScope === targetScope)
-    return undefined;
+  if (targetScope === undefined || sourceScope === targetScope) return undefined;
   if (owner !== module && (kind === "profile" || kind === "composition")) {
     return undefined;
   }
@@ -84,7 +71,5 @@ export function scopedImportProblem({
 }
 
 function scopeAt(scopes, path) {
-  return scopes.find(
-    (scope) => path === scope.root || path.startsWith(`${scope.root}/`),
-  );
+  return scopes.find((scope) => path === scope.root || path.startsWith(`${scope.root}/`));
 }

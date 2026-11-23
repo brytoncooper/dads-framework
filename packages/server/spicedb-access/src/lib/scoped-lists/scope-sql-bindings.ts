@@ -7,11 +7,7 @@
  */
 import type { AnyColumn, SQL, Table } from "drizzle-orm";
 
-import type {
-  RoleBinding,
-  ScopeBindings,
-  ScopeRoleBindings,
-} from "@dads-framework/access/scopes";
+import type { RoleBinding, ScopeBindings, ScopeRoleBindings } from "@dads-framework/access/scopes";
 
 /** `scope-column`: the record's own column holding the scope id. */
 export type ScopeColumnSql = {
@@ -45,21 +41,14 @@ export type DerivedSql = {
 
 export type RoleSql = ScopeColumnSql | ScopeJoinSql | TagSql | DerivedSql;
 
-type RoleSqlFor<Binding extends RoleBinding> = Extract<
-  RoleSql,
-  { readonly kind: Binding["kind"] }
->;
+type RoleSqlFor<Binding extends RoleBinding> = Extract<RoleSql, { readonly kind: Binding["kind"] }>;
 
 /**
  * The SQL each declared role needs, by the kind it was declared with. A
  * `sparse-direct` role takes none: the plan matches it on the id column.
  */
 export type ScopeSqlRoles<Roles extends ScopeRoleBindings> = {
-  readonly [
-    Role in keyof Roles as Roles[Role]["kind"] extends "sparse-direct"
-      ? never
-      : Role
-  ]: RoleSqlFor<Roles[Role]>;
+  readonly [Role in keyof Roles as Roles[Role]["kind"] extends "sparse-direct" ? never : Role]: RoleSqlFor<Roles[Role]>;
 };
 
 /** One record's registered SQL bindings, read by `scopePredicate`. */
@@ -99,38 +88,27 @@ export function scopeSqlBindings<const Roles extends ScopeRoleBindings>(
   };
 }
 
-function mismatchedRoles(
-  declared: ScopeRoleBindings,
-  rendered: Readonly<Record<string, RoleSql>>,
-): readonly string[] {
+function mismatchedRoles(declared: ScopeRoleBindings, rendered: Readonly<Record<string, RoleSql>>): readonly string[] {
   const failures: string[] = [];
   for (const [roleName, binding] of Object.entries<RoleBinding>(declared)) {
     const roleSql = rendered[roleName];
     if (binding.kind === "sparse-direct") {
       if (roleSql !== undefined) {
-        failures.push(
-          `role ${roleName} is sparse-direct and takes no SQL; the plan matches it on the id column`,
-        );
+        failures.push(`role ${roleName} is sparse-direct and takes no SQL; the plan matches it on the id column`);
       }
       continue;
     }
     if (roleSql === undefined) {
-      failures.push(
-        `role ${roleName} is bound as ${binding.kind} but has no SQL`,
-      );
+      failures.push(`role ${roleName} is bound as ${binding.kind} but has no SQL`);
       continue;
     }
     if (roleSql.kind !== binding.kind) {
-      failures.push(
-        `role ${roleName} is bound as ${binding.kind} but its SQL is for ${roleSql.kind}`,
-      );
+      failures.push(`role ${roleName} is bound as ${binding.kind} but its SQL is for ${roleSql.kind}`);
     }
   }
   for (const roleName of Object.keys(rendered)) {
     if (declared[roleName] === undefined) {
-      failures.push(
-        `SQL names role ${roleName}, which the scope bindings do not bind`,
-      );
+      failures.push(`SQL names role ${roleName}, which the scope bindings do not bind`);
     }
   }
   return failures;

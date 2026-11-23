@@ -3,10 +3,7 @@
 // leftover tuples, writes it, and leaves every other relationship alone.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "../access/spice-db-authorization.js";
 import { applyDesiredAuthorizationSchema } from "@dads-framework/access/schema";

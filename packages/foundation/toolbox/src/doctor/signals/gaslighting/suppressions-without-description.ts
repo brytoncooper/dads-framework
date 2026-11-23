@@ -25,21 +25,9 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  ESLINT_DISABLE_MARK,
-  TS_EXPECT_ERROR_MARK,
-  TS_IGNORE_MARK,
-} from "../../hatch-names.js";
-import {
-  hasDescriptionAfter,
-  scanComments,
-  type SourceComment,
-} from "../scanners/text-comment-scan.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { ESLINT_DISABLE_MARK, TS_EXPECT_ERROR_MARK, TS_IGNORE_MARK } from "../../hatch-names.js";
+import { hasDescriptionAfter, scanComments, type SourceComment } from "../scanners/text-comment-scan.js";
 import { isTypeScriptSource } from "../scanners/source-classification.js";
 
 const LEAST_DESCRIPTION = 10;
@@ -48,22 +36,13 @@ const CHECKER_MARKS = [TS_EXPECT_ERROR_MARK, TS_IGNORE_MARK];
 
 /** True when the comment carries a suppression nobody explained. */
 export function isUndescribedSuppression(comment: string): boolean {
-  if (
-    comment.includes(ESLINT_DISABLE_MARK) &&
-    !hasDescriptionAfter(comment, DESCRIPTION_SEPARATOR, 1)
-  ) {
+  if (comment.includes(ESLINT_DISABLE_MARK) && !hasDescriptionAfter(comment, DESCRIPTION_SEPARATOR, 1)) {
     return true;
   }
-  return CHECKER_MARKS.some(
-    (mark) =>
-      comment.includes(mark) &&
-      !hasDescriptionAfter(comment, mark, LEAST_DESCRIPTION),
-  );
+  return CHECKER_MARKS.some((mark) => comment.includes(mark) && !hasDescriptionAfter(comment, mark, LEAST_DESCRIPTION));
 }
 
-function undescribedIn(
-  comments: readonly SourceComment[],
-): readonly SourceComment[] {
+function undescribedIn(comments: readonly SourceComment[]): readonly SourceComment[] {
   return comments.filter((comment) => isUndescribedSuppression(comment.text));
 }
 

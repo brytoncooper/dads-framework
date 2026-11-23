@@ -2,16 +2,10 @@ import React from "react";
 import type { ReactElement } from "react";
 import { z } from "zod";
 
-import {
-  EmailLayout,
-  type EmailLayoutProps,
-} from "./components/email-layout.js";
+import { EmailLayout, type EmailLayoutProps } from "./components/email-layout.js";
 import type { EmailBranding } from "./email-branding.js";
 import type { EmailTemplateDefinition } from "./email-template.js";
-import {
-  createReactEmailDocumentRenderer,
-  type EmailDocumentRenderer,
-} from "./email-document-renderer.js";
+import { createReactEmailDocumentRenderer, type EmailDocumentRenderer } from "./email-document-renderer.js";
 
 /**
  * One template plus one set of props becomes one message: the subject, the
@@ -33,9 +27,7 @@ export type RenderedEmail = {
 };
 
 /** Builds a template renderer using a provider that produces both body formats. */
-export function createEmailTemplateRenderer(
-  renderer: EmailDocumentRenderer,
-): EmailTemplateRenderer {
+export function createEmailTemplateRenderer(renderer: EmailDocumentRenderer): EmailTemplateRenderer {
   return async (template, props, branding) => {
     const parsed = parseProps(template, props);
     const subject = template.subject(parsed);
@@ -61,8 +53,9 @@ export type EmailTemplateRenderer = <TProps extends z.ZodObject>(
   branding?: EmailBranding,
 ) => Promise<RenderedEmail>;
 
-export const renderEmailTemplate: EmailTemplateRenderer =
-  createEmailTemplateRenderer(createReactEmailDocumentRenderer());
+export const renderEmailTemplate: EmailTemplateRenderer = createEmailTemplateRenderer(
+  createReactEmailDocumentRenderer(),
+);
 
 /**
  * Props are parsed, never trusted — but a failure here is a PROGRAMMING

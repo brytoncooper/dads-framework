@@ -2,13 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, every, resource } from "@dads-framework/access";
 import type { PermissionQuery } from "@dads-framework/access/runtime";
 import { describe, expect, it } from "vitest";
 
@@ -249,9 +243,7 @@ describe("SQLite column-backed relations", () => {
     });
     expect(autoFilter.sql).toContain("doc.org_id IN");
     const visibleDocs = db
-      .prepare(
-        `SELECT doc.id FROM documents doc WHERE ${autoFilter.sql} ORDER BY doc.id`,
-      )
+      .prepare(`SELECT doc.id FROM documents doc WHERE ${autoFilter.sql} ORDER BY doc.id`)
       .all(...autoFilter.values)
       .map((row) => String(row["id"]));
     expect(visibleDocs).toEqual(["doc-org"]);
@@ -319,9 +311,7 @@ describe("SQLite column-backed relations", () => {
     ).rejects.toThrow("column-backed by documents.org_id");
 
     const beforeIndexes = await authz.verifyColumnRelations();
-    expect(beforeIndexes.every((entry) => !entry.hasRecommendedIndex)).toBe(
-      true,
-    );
+    expect(beforeIndexes.every((entry) => !entry.hasRecommendedIndex)).toBe(true);
     for (const ddl of sqliteColumnRelationIndexSql(bindings)) {
       db.exec(ddl);
     }
@@ -341,9 +331,7 @@ describe("SQLite column-backed relations", () => {
         },
       ],
     });
-    await expect(badAuthz.verifyColumnRelations()).rejects.toThrow(
-      "documents.missing_column",
-    );
+    await expect(badAuthz.verifyColumnRelations()).rejects.toThrow("documents.missing_column");
     db.close();
   });
 
@@ -433,13 +421,7 @@ describe("SQLite column-backed relations", () => {
     ];
     await authz.writeRelationships(tupleFacts);
 
-    const materializedColumnTuples: readonly (readonly [
-      string,
-      string,
-      string,
-      string,
-      string,
-    ])[] = [
+    const materializedColumnTuples: readonly (readonly [string, string, string, string, string])[] = [
       ["folder", "folder-root", "org", "org", "org-1"],
       ["folder", "folder-mid", "parent", "folder", "folder-root"],
       ["folder", "folder-leaf", "parent", "folder", "folder-mid"],
@@ -461,28 +443,21 @@ describe("SQLite column-backed relations", () => {
         subjectIsWildcard: false,
         expiresAt: null,
       })),
-      ...materializedColumnTuples.map(
-        ([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
-          resourceKind,
-          resourceId,
-          relation,
-          subjectKind,
-          subjectId,
-          subjectRelation: "",
-          subjectIsWildcard: false,
-          expiresAt: null,
-        }),
-      ),
+      ...materializedColumnTuples.map(([resourceKind, resourceId, relation, subjectKind, subjectId]) => ({
+        resourceKind,
+        resourceId,
+        relation,
+        subjectKind,
+        subjectId,
+        subjectRelation: "",
+        subjectIsWildcard: false,
+        expiresAt: null,
+      })),
     ];
 
     const actors = ["alice", "bob", "carol", "dave", "eve", "nobody"];
     const docs = ["doc-both", "doc-nested", "doc-null", "doc-org", "doc-owned"];
-    const folders = [
-      "folder-leaf",
-      "folder-mid",
-      "folder-orphan",
-      "folder-root",
-    ];
+    const folders = ["folder-leaf", "folder-mid", "folder-orphan", "folder-root"];
     const checkQueries: PermissionQuery[] = [];
     for (const actorId of actors) {
       for (const docId of docs) {
@@ -582,9 +557,7 @@ describe("SQLite column-backed relations", () => {
       const lookupSpec = oraclePayload.lookups[index];
       if (lookupSpec === undefined) continue;
       const rawExpected = oracleLookups[index];
-      const expected = Array.isArray(rawExpected)
-        ? rawExpected.map(String)
-        : [];
+      const expected = Array.isArray(rawExpected) ? rawExpected.map(String) : [];
       const actualLookup = await authz.lookupResources({
         subject: { type: lookupSpec.subjectKind, id: lookupSpec.subjectId },
         permission: lookupSpec.permission,
@@ -600,9 +573,7 @@ describe("SQLite column-backed relations", () => {
           scopeColumns: "auto",
         });
         const filteredIds = db
-          .prepare(
-            `SELECT doc.id FROM documents doc WHERE ${filter.sql} ORDER BY doc.id`,
-          )
+          .prepare(`SELECT doc.id FROM documents doc WHERE ${filter.sql} ORDER BY doc.id`)
           .all(...filter.values)
           .map((row) => String(row["id"]));
         expect(filteredIds).toEqual(expected);

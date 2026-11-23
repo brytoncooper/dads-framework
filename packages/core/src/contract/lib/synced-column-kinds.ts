@@ -27,24 +27,17 @@ export function rememberSyncedColumnKind<TSchema extends z.core.$ZodType>(
 }
 
 /** The kind a column schema was declared with, looking through `.nullable()` and `.optional()`. */
-export function syncedColumnKindOf(
-  schema: z.core.$ZodType,
-): SyncedColumnKind | undefined {
+export function syncedColumnKindOf(schema: z.core.$ZodType): SyncedColumnKind | undefined {
   const kind = kindsByDefinition.get(schema._zod.def);
   if (kind !== undefined) return kind;
-  if (
-    schema instanceof z.core.$ZodNullable ||
-    schema instanceof z.core.$ZodOptional
-  ) {
+  if (schema instanceof z.core.$ZodNullable || schema instanceof z.core.$ZodOptional) {
     return syncedColumnKindOf(schema._zod.def.innerType);
   }
   return undefined;
 }
 
 /** A Postgres timestamp with time zone as the phone's SQLite stores it: text. */
-export function syncedTimestampSchema(
-  description = "Postgres timestamp with time zone as text",
-) {
+export function syncedTimestampSchema(description = "Postgres timestamp with time zone as text") {
   return rememberSyncedColumnKind(z.string().meta({ description }), {
     kind: "timestamp",
   });
@@ -52,16 +45,11 @@ export function syncedTimestampSchema(
 
 /** A Postgres boolean as the phone's SQLite stores it: 1 for true, 0 for false. */
 export function syncedBooleanSchema(description: string) {
-  return rememberSyncedColumnKind(
-    z.number().int().min(0).max(1).meta({ description }),
-    { kind: "boolean" },
-  );
+  return rememberSyncedColumnKind(z.number().int().min(0).max(1).meta({ description }), { kind: "boolean" });
 }
 
 /** A Postgres numeric as the phone's SQLite stores it: text, exactly as stored. */
-export function syncedDecimalSchema(
-  description = "Postgres numeric as text, exactly as stored",
-) {
+export function syncedDecimalSchema(description = "Postgres numeric as text, exactly as stored") {
   return rememberSyncedColumnKind(z.string().meta({ description }), {
     kind: "decimal",
   });

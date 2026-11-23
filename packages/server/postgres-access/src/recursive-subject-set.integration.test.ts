@@ -1,13 +1,5 @@
-import {
-  actor,
-  compileAccess,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { actor, compileAccess, resource, roleToken } from "@dads-framework/access";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/access/runtime";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
 
@@ -38,9 +30,7 @@ it.skipIf(process.env["POSTGRES_ACCESS_DEEP_SOAK"] !== "1").each([
     const postgres = await startUnmigratedTestPostgres();
     try {
       await postgres.pool.query(relationshipSchemaMigration.sql);
-      await postgres.pool.query(
-        "ALTER TABLE dad_authorization_relationship SET (autovacuum_enabled = false)",
-      );
+      await postgres.pool.query("ALTER TABLE dad_authorization_relationship SET (autovacuum_enabled = false)");
       const client = await postgres.pool.connect();
       try {
         await client.query("SET statement_timeout = '4900ms'");
@@ -52,8 +42,7 @@ it.skipIf(process.env["POSTGRES_ACCESS_DEEP_SOAK"] !== "1").each([
           });
           const started = performance.now();
           const midpoint = await seedChain(adapter, depth);
-          if (refreshStatistics)
-            await client.query("ANALYZE dad_authorization_relationship");
+          if (refreshStatistics) await client.query("ANALYZE dad_authorization_relationship");
           await proveChain(adapter, depth, midpoint);
           console.log(
             JSON.stringify({
@@ -97,11 +86,7 @@ async function seedChain(adapter: PostgresAuthorization, depth: number) {
   return midpoint;
 }
 
-async function proveChain(
-  adapter: PostgresAuthorization,
-  depth: number,
-  midpoint: RelationshipWrite,
-) {
+async function proveChain(adapter: PostgresAuthorization, depth: number, midpoint: RelationshipWrite) {
   const check: PermissionQuery = {
     resource: docResource,
     permission,
@@ -113,45 +98,31 @@ async function proveChain(
     permission,
     subject: subjectActor,
   };
-  await expect(
-    adapter.check(check),
-    `allow at depth ${String(depth)}`,
-  ).resolves.toBe(true);
-  await expect(
-    adapter.checkMany([denied, check, denied]),
-    `batch at depth ${String(depth)}`,
-  ).resolves.toEqual([false, true, false]);
-  await expect(
-    adapter.lookupResources(lookup),
-    `lookup at depth ${String(depth)}`,
-  ).resolves.toEqual([docResource.id]);
+  await expect(adapter.check(check), `allow at depth ${String(depth)}`).resolves.toBe(true);
+  await expect(adapter.checkMany([denied, check, denied]), `batch at depth ${String(depth)}`).resolves.toEqual([
+    false,
+    true,
+    false,
+  ]);
+  await expect(adapter.lookupResources(lookup), `lookup at depth ${String(depth)}`).resolves.toEqual([docResource.id]);
   await adapter.deleteRelationships({
     resourceType: midpoint.resource.type,
     resourceId: midpoint.resource.id,
     relation: midpoint.relation,
     subject: midpoint.subject,
   });
-  await expect(
-    adapter.check(check),
-    `revoke at depth ${String(depth)}`,
-  ).resolves.toBe(false);
-  await expect(
-    adapter.checkMany([denied, check, denied]),
-    `revoked batch at depth ${String(depth)}`,
-  ).resolves.toEqual([false, false, false]);
-  await expect(
-    adapter.lookupResources(lookup),
-    `revoked lookup at depth ${String(depth)}`,
-  ).resolves.toEqual([]);
+  await expect(adapter.check(check), `revoke at depth ${String(depth)}`).resolves.toBe(false);
+  await expect(adapter.checkMany([denied, check, denied]), `revoked batch at depth ${String(depth)}`).resolves.toEqual([
+    false,
+    false,
+    false,
+  ]);
+  await expect(adapter.lookupResources(lookup), `revoked lookup at depth ${String(depth)}`).resolves.toEqual([]);
   await adapter.writeRelationships([midpoint]);
-  await expect(
-    adapter.check(check),
-    `restore at depth ${String(depth)}`,
-  ).resolves.toBe(true);
-  await expect(
-    adapter.lookupResources(lookup),
-    `restored lookup at depth ${String(depth)}`,
-  ).resolves.toEqual([docResource.id]);
+  await expect(adapter.check(check), `restore at depth ${String(depth)}`).resolves.toBe(true);
+  await expect(adapter.lookupResources(lookup), `restored lookup at depth ${String(depth)}`).resolves.toEqual([
+    docResource.id,
+  ]);
 }
 
 function groupResource(index: number): RelationshipWrite["resource"] {

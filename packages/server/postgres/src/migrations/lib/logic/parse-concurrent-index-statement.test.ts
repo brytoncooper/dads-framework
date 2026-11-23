@@ -36,64 +36,43 @@ describe("parseConcurrentIndexStatement", () => {
   it("refuses an index name PostgreSQL would truncate, counting bytes not characters", () => {
     const longName = "a".repeat(64);
     expect(
-      parseConcurrentIndexStatement(
-        `CREATE INDEX CONCURRENTLY IF NOT EXISTS "${longName}" ON widgets (code)`,
-      ),
+      parseConcurrentIndexStatement(`CREATE INDEX CONCURRENTLY IF NOT EXISTS "${longName}" ON widgets (code)`),
     ).toMatchObject({ ok: false });
     const refused = parseConcurrentIndexStatement(
       `CREATE INDEX CONCURRENTLY IF NOT EXISTS "${longName}" ON widgets (code)`,
     );
-    expect(refused.ok ? "" : refused.reason).toMatch(
-      /longer than 63 bytes.*explicit.*name/,
-    );
+    expect(refused.ok ? "" : refused.reason).toMatch(/longer than 63 bytes.*explicit.*name/);
 
     const multiByteName = "é".repeat(32);
     expect(multiByteName.length).toBe(32);
     expect(
-      parseConcurrentIndexStatement(
-        `CREATE INDEX CONCURRENTLY IF NOT EXISTS "${multiByteName}" ON widgets (code)`,
-      ),
+      parseConcurrentIndexStatement(`CREATE INDEX CONCURRENTLY IF NOT EXISTS "${multiByteName}" ON widgets (code)`),
     ).toMatchObject({ ok: false });
 
     expect(
-      parseConcurrentIndexStatement(
-        `CREATE INDEX CONCURRENTLY IF NOT EXISTS "${"a".repeat(63)}" ON widgets (code)`,
-      ),
+      parseConcurrentIndexStatement(`CREATE INDEX CONCURRENTLY IF NOT EXISTS "${"a".repeat(63)}" ON widgets (code)`),
     ).toMatchObject({ ok: true });
   });
 
   it("accepts a concurrent drop", () => {
-    expect(
-      parseConcurrentIndexStatement(
-        'DROP INDEX CONCURRENTLY IF EXISTS "public"."widget_code";',
-      ),
-    ).toMatchObject({ ok: true, statement: { kind: "drop" } });
+    expect(parseConcurrentIndexStatement('DROP INDEX CONCURRENTLY IF EXISTS "public"."widget_code";')).toMatchObject({
+      ok: true,
+      statement: { kind: "drop" },
+    });
   });
 
   it.each([
-    [
-      "a plain create",
-      "CREATE INDEX IF NOT EXISTS widget_code ON widgets (code)",
-    ],
-    [
-      "a create without IF NOT EXISTS",
-      "CREATE INDEX CONCURRENTLY widget_code ON widgets (code)",
-    ],
+    ["a plain create", "CREATE INDEX IF NOT EXISTS widget_code ON widgets (code)"],
+    ["a create without IF NOT EXISTS", "CREATE INDEX CONCURRENTLY widget_code ON widgets (code)"],
     ["a drop without IF EXISTS", "DROP INDEX CONCURRENTLY widget_code"],
-    [
-      "a cascading drop",
-      "DROP INDEX CONCURRENTLY IF EXISTS widget_code CASCADE",
-    ],
+    ["a cascading drop", "DROP INDEX CONCURRENTLY IF EXISTS widget_code CASCADE"],
     ["other DDL", "ALTER TABLE widgets ADD COLUMN code text"],
     ["a data change", "UPDATE widgets SET code = 'x'"],
     [
       "a second statement after an index",
       "CREATE INDEX CONCURRENTLY IF NOT EXISTS widget_code ON widgets (code); DROP TABLE widgets",
     ],
-    [
-      "a comment",
-      "CREATE INDEX CONCURRENTLY IF NOT EXISTS widget_code ON widgets (code) -- note",
-    ],
+    ["a comment", "CREATE INDEX CONCURRENTLY IF NOT EXISTS widget_code ON widgets (code) -- note"],
   ])("refuses %s", (_label, sql) => {
     expect(parseConcurrentIndexStatement(sql)).toMatchObject({ ok: false });
   });

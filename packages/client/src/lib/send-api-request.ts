@@ -39,9 +39,7 @@ export type ApiRequestDispatch = {
  * becomes a typed `ApiError` instead of a raw `Response`, and a 401 announces
  * itself on the unauthorized-response channel on its way out.
  */
-export async function sendApiRequest(
-  dispatch: ApiRequestDispatch,
-): Promise<Response> {
+export async function sendApiRequest(dispatch: ApiRequestDispatch): Promise<Response> {
   const requestId = createRequestId();
   const response = await requestApi(dispatch, requestId);
 
@@ -51,19 +49,14 @@ export async function sendApiRequest(
   throw await toRejection(response, requestId);
 }
 
-async function requestApi(
-  dispatch: ApiRequestDispatch,
-  requestId: string,
-): Promise<Response> {
+async function requestApi(dispatch: ApiRequestDispatch, requestId: string): Promise<Response> {
   const startedAt = performance.now();
   try {
     const response = await fetch(buildRequestUrl(dispatch), {
       method: dispatch.method,
       credentials: "include",
       headers: buildHeaders(dispatch, requestId),
-      ...(dispatch.body === undefined
-        ? {}
-        : { body: JSON.stringify(dispatch.body) }),
+      ...(dispatch.body === undefined ? {} : { body: JSON.stringify(dispatch.body) }),
       ...(dispatch.signal === undefined ? {} : { signal: dispatch.signal }),
     });
     // Observers see both accepted and rejected HTTP responses. Feature state
@@ -71,10 +64,7 @@ async function requestApi(
     observeApiResponse(response, dispatch);
     announce(dispatch, requestId, startedAt, {
       status: response.status,
-      refusedForAccess: isAccessRefusal(
-        response.status,
-        response.headers.get(ACCESS_REFUSAL_HEADER),
-      ),
+      refusedForAccess: isAccessRefusal(response.status, response.headers.get(ACCESS_REFUSAL_HEADER)),
     });
     return response;
   } catch (error: unknown) {
@@ -116,31 +106,22 @@ function buildRequestUrl(dispatch: ApiRequestDispatch): string {
   return query.length > 0 ? `${dispatch.path}?${query}` : dispatch.path;
 }
 
-function buildHeaders(
-  dispatch: ApiRequestDispatch,
-  requestId: string,
-): Record<string, string> {
+function buildHeaders(dispatch: ApiRequestDispatch, requestId: string): Record<string, string> {
   const headers = new Headers(dispatch.headers);
   const metadata = requestMetadataFor(dispatch);
   if (metadata !== undefined) {
-    for (const [name, value] of Object.entries(metadata))
-      headers.set(name, value);
+    for (const [name, value] of Object.entries(metadata)) headers.set(name, value);
   }
   headers.set("Accept", dispatch.accept ?? "application/json");
   headers.set(REQUEST_ID_HEADER, requestId);
   headers.set(LOCALE_HEADER, currentRequestLocale());
   const clientContext = currentClientContextHeader();
-  if (clientContext !== undefined)
-    headers.set(CLIENT_CONTEXT_HEADER, clientContext);
-  if (dispatch.body !== undefined)
-    headers.set("Content-Type", "application/json");
+  if (clientContext !== undefined) headers.set(CLIENT_CONTEXT_HEADER, clientContext);
+  if (dispatch.body !== undefined) headers.set("Content-Type", "application/json");
   return Object.fromEntries(headers.entries());
 }
 
-async function toRejection(
-  response: Response,
-  requestId: string,
-): Promise<Error> {
+async function toRejection(response: Response, requestId: string): Promise<Error> {
   const body: unknown = await response.json().catch(() => undefined);
   const error = toApiError(response.status, body, requestId);
   if (response.status === 401) {

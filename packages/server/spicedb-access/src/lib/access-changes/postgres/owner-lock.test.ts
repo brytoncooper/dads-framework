@@ -3,11 +3,7 @@
  * preserve domain errors when the underlying connection is damaged.
  */
 import { describe, expect, it } from "vitest";
-import {
-  PostgresOwnerLock,
-  reserveLockConnection,
-  runHoldingLockConnection,
-} from "./owner-lock.js";
+import { PostgresOwnerLock, reserveLockConnection, runHoldingLockConnection } from "./owner-lock.js";
 
 type LockOutcome = "acquired" | "contended";
 type UnlockOutcome = "released" | "not-held" | "throws";
@@ -20,10 +16,7 @@ class LockClient {
     private readonly lockOutcome: LockOutcome = "acquired",
   ) {}
 
-  query(
-    statement: string,
-    values: readonly unknown[],
-  ): Promise<{ readonly rows: readonly Record<string, unknown>[] }> {
+  query(statement: string, values: readonly unknown[]): Promise<{ readonly rows: readonly Record<string, unknown>[] }> {
     void values;
     if (statement.includes("pg_try_advisory_lock")) {
       return Promise.resolve({
@@ -70,9 +63,7 @@ describe("PostgresOwnerLock", () => {
       log,
     });
 
-    await expect(
-      coordinator.run("organization:1", () => Promise.resolve("done")),
-    ).resolves.toBe("done");
+    await expect(coordinator.run("organization:1", () => Promise.resolve("done"))).resolves.toBe("done");
     expect(pool.client.releases).toEqual([true]);
     expect(log.warnings).toHaveLength(1);
   });
@@ -84,9 +75,7 @@ describe("PostgresOwnerLock", () => {
       log,
     });
 
-    await expect(
-      coordinator.run("organization:1", () => Promise.resolve("done")),
-    ).resolves.toBe("done");
+    await expect(coordinator.run("organization:1", () => Promise.resolve("done"))).resolves.toBe("done");
     expect(pool.client.releases).toEqual([true]);
     expect(log.warnings).toHaveLength(1);
   });
@@ -99,9 +88,7 @@ describe("PostgresOwnerLock", () => {
     });
 
     await expect(
-      coordinator.run("organization:1", () =>
-        Promise.reject(new Error("operation failed")),
-      ),
+      coordinator.run("organization:1", () => Promise.reject(new Error("operation failed"))),
     ).rejects.toThrow("operation failed");
     expect(pool.client.releases).toEqual([true]);
     expect(log.warnings).toHaveLength(1);
@@ -120,9 +107,9 @@ describe("PostgresOwnerLock", () => {
       },
     });
 
-    await expect(
-      coordinator.run("organization:1", () => Promise.resolve()),
-    ).rejects.toMatchObject({ code: "AUTHORIZATION_PARTITION_BUSY" });
+    await expect(coordinator.run("organization:1", () => Promise.resolve())).rejects.toMatchObject({
+      code: "AUTHORIZATION_PARTITION_BUSY",
+    });
     expect(pool.connectCalls).toBe(2);
     expect(pool.client.releases).toEqual([false, false]);
   });
@@ -162,11 +149,7 @@ describe("PostgresOwnerLock", () => {
     const pool = Object.assign(new LockPool(new LockClient("released")), {
       options: { max: 5 },
     });
-    const othersHolding = [
-      reserveLockConnection(pool),
-      reserveLockConnection(pool),
-      reserveLockConnection(pool),
-    ];
+    const othersHolding = [reserveLockConnection(pool), reserveLockConnection(pool), reserveLockConnection(pool)];
     const coordinator = new PostgresOwnerLock(pool, {
       maxConcurrentLockClients: 5,
       acquisitionTimeoutMs: 20,
@@ -178,15 +161,13 @@ describe("PostgresOwnerLock", () => {
       },
     });
 
-    await expect(
-      coordinator.run("organization:1", () => Promise.resolve()),
-    ).rejects.toMatchObject({ code: "AUTHORIZATION_PARTITION_BUSY" });
+    await expect(coordinator.run("organization:1", () => Promise.resolve())).rejects.toMatchObject({
+      code: "AUTHORIZATION_PARTITION_BUSY",
+    });
     expect(pool.connectCalls).toBe(0);
 
     for (const release of othersHolding) release?.();
-    await expect(
-      coordinator.run("organization:1", () => Promise.resolve("served")),
-    ).resolves.toBe("served");
+    await expect(coordinator.run("organization:1", () => Promise.resolve("served"))).resolves.toBe("served");
   });
 
   it("is served under any amount of plain load: only lock holders count", async () => {
@@ -198,9 +179,7 @@ describe("PostgresOwnerLock", () => {
     });
     const coordinator = new PostgresOwnerLock(pool);
 
-    await expect(
-      coordinator.run("organization:1", () => Promise.resolve("served")),
-    ).resolves.toBe("served");
+    await expect(coordinator.run("organization:1", () => Promise.resolve("served"))).resolves.toBe("served");
   });
 });
 
@@ -212,10 +191,7 @@ describe("reserveLockConnection", () => {
     expect(reserveLockConnection(pool)).toBeNull();
 
     const nested = await runHoldingLockConnection(() =>
-      Promise.resolve([
-        reserveLockConnection(pool),
-        reserveLockConnection(pool),
-      ]),
+      Promise.resolve([reserveLockConnection(pool), reserveLockConnection(pool)]),
     );
     expect(nested[0]).not.toBeNull();
     expect(nested[1]).toBeNull();

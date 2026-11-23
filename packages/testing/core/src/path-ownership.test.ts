@@ -21,12 +21,8 @@ describe("path ownership", () => {
   });
 
   it("gives a path to the deepest matching project", () => {
-    expect(owningProjectForPath(projects, "packages/core/src/a.ts")?.id).toBe(
-      "core",
-    );
-    expect(owningProjectForPath(projects, "packages/core/tools/a.ts")?.id).toBe(
-      "core-tools",
-    );
+    expect(owningProjectForPath(projects, "packages/core/src/a.ts")?.id).toBe("core");
+    expect(owningProjectForPath(projects, "packages/core/tools/a.ts")?.id).toBe("core-tools");
     expect(owningProjectForPath(projects, "README.md")?.id).toBe("workspace");
   });
 
@@ -44,11 +40,6 @@ describe("path ownership", () => {
   });
 
   it("answers nothing when no project owns the path", () => {
-    expect(
-      owningProjectForPath(
-        [{ id: "core", root: "packages/core" }],
-        "README.md",
-      ),
-    ).toBeUndefined();
+    expect(owningProjectForPath([{ id: "core", root: "packages/core" }], "README.md")).toBeUndefined();
   });
 });

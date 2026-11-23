@@ -3,15 +3,8 @@ import { vi } from "vitest";
 
 import type { AttachmentItem } from "../../../../elements/index.js";
 
-import {
-  AttachmentViewer,
-  type AttachmentDownloadOutcome,
-  type AttachmentViewerProps,
-} from "../attachment-viewer.js";
-import type {
-  AttachmentSource,
-  AttachmentSourceLoader,
-} from "../use-attachment-source.js";
+import { AttachmentViewer, type AttachmentDownloadOutcome, type AttachmentViewerProps } from "../attachment-viewer.js";
+import type { AttachmentSource, AttachmentSourceLoader } from "../use-attachment-source.js";
 
 export const pdfItem: AttachmentItem = {
   id: "file-pdf",
@@ -30,8 +23,7 @@ export const imageItem: AttachmentItem = {
 export const spreadsheetItem: AttachmentItem = {
   id: "file-sheet",
   fileName: "parts.xlsx",
-  contentType:
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   byteSize: 90_000,
 };
 
@@ -40,9 +32,7 @@ export function urlSource(url: string): AttachmentSource {
 }
 
 export function stubFetchOk(byteLength = 8) {
-  const fetchStub = vi.fn<typeof fetch>(() =>
-    Promise.resolve(new Response(new ArrayBuffer(byteLength))),
-  );
+  const fetchStub = vi.fn<typeof fetch>(() => Promise.resolve(new Response(new ArrayBuffer(byteLength))));
   vi.stubGlobal("fetch", fetchStub);
   return fetchStub;
 }
@@ -73,12 +63,8 @@ export function renderViewer(overrides: Partial<AttachmentViewerProps> = {}) {
   const props: AttachmentViewerProps = {
     item: pdfItem,
     onOpenChange: vi.fn(),
-    loadSource: vi.fn<AttachmentSourceLoader>(() =>
-      Promise.resolve(urlSource("https://files.test/signed")),
-    ),
-    onDownload: vi.fn<AttachmentViewerProps["onDownload"]>(() =>
-      Promise.resolve<AttachmentDownloadOutcome>("saved"),
-    ),
+    loadSource: vi.fn<AttachmentSourceLoader>(() => Promise.resolve(urlSource("https://files.test/signed"))),
+    onDownload: vi.fn<AttachmentViewerProps["onDownload"]>(() => Promise.resolve<AttachmentDownloadOutcome>("saved")),
     ...overrides,
   };
   const view = render(<AttachmentViewer {...props} />);

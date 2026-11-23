@@ -48,22 +48,14 @@ export function scanComments(source: string): readonly SourceComment[] {
 }
 
 /** True when a comment carries a description at least `least` characters long. */
-export function hasDescriptionAfter(
-  comment: string,
-  mark: string,
-  least: number,
-): boolean {
+export function hasDescriptionAfter(comment: string, mark: string, least: number): boolean {
   const at = comment.indexOf(mark);
   if (at === -1) return false;
   const described = comment.slice(at + mark.length).replace(/[*/\s]+$/, "");
   return described.trim().length >= least;
 }
 
-function stepThroughSource(
-  source: string,
-  index: number,
-  line: number,
-): ScanStep {
+function stepThroughSource(source: string, index: number, line: number): ScanStep {
   if (source.startsWith("//", index)) {
     return takeLineComment(source, index, line);
   }
@@ -81,11 +73,7 @@ function stepThroughSource(
   };
 }
 
-function takeLineComment(
-  source: string,
-  index: number,
-  line: number,
-): ScanStep {
+function takeLineComment(source: string, index: number, line: number): ScanStep {
   const newline = source.indexOf("\n", index);
   const stop = newline === -1 ? source.length : newline;
   return {
@@ -95,11 +83,7 @@ function takeLineComment(
   };
 }
 
-function takeBlockComment(
-  source: string,
-  index: number,
-  line: number,
-): ScanStep {
+function takeBlockComment(source: string, index: number, line: number): ScanStep {
   const closed = source.indexOf("*/", index + 2);
   const stop = closed === -1 ? source.length : closed;
   const body = source.slice(index + 2, stop).split("\n");
@@ -115,12 +99,7 @@ function takeBlockComment(
  * unterminated quote is a syntax error, so the scan resumes at the next line
  * rather than swallowing the rest of the file.
  */
-function skipStringLiteral(
-  source: string,
-  index: number,
-  line: number,
-  quote: string,
-): ScanStep {
+function skipStringLiteral(source: string, index: number, line: number, quote: string): ScanStep {
   let position = index + 1;
   let current = line;
   while (position < source.length) {
@@ -132,8 +111,7 @@ function skipStringLiteral(
     if (character === quote) break;
     if (character === "\n") {
       current += 1;
-      if (quote !== "`")
-        return { index: position + 1, line: current, comments: NONE };
+      if (quote !== "`") return { index: position + 1, line: current, comments: NONE };
     }
     position += 1;
   }

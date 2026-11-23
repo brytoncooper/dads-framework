@@ -6,11 +6,7 @@ import {
   type DropAnimation,
   type UniqueIdentifier,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  type SortableContextProps,
-  useSortable,
-} from "@dnd-kit/sortable";
+import { SortableContext, type SortableContextProps, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";
@@ -37,14 +33,7 @@ type SortableContentProps = React.ComponentProps<"div"> & {
 };
 
 function SortableContent(props: SortableContentProps) {
-  const {
-    strategy: strategyProp,
-    asChild,
-    withoutSlot,
-    children,
-    ref,
-    ...contentProps
-  } = props;
+  const { strategy: strategyProp, asChild, withoutSlot, children, ref, ...contentProps } = props;
 
   const context = useSortableContext(CONTENT_NAME);
 
@@ -53,18 +42,11 @@ function SortableContent(props: SortableContentProps) {
 
   return (
     <SortableContentContext.Provider value={true}>
-      <SortableContext
-        items={context.items}
-        {...(strategy ? { strategy } : {})}
-      >
+      <SortableContext items={context.items} {...(strategy ? { strategy } : {})}>
         {withoutSlot ? (
           children
         ) : (
-          <ContentPrimitive
-            data-slot="sortable-content"
-            {...contentProps}
-            ref={ref}
-          >
+          <ContentPrimitive data-slot="sortable-content" {...contentProps} ref={ref}>
             {children}
           </ContentPrimitive>
         )}
@@ -82,8 +64,7 @@ type SortableItemContextValue = {
   disabled?: boolean;
 };
 
-const SortableItemContext =
-  React.createContext<SortableItemContextValue | null>(null);
+const SortableItemContext = React.createContext<SortableItemContextValue | null>(null);
 
 function useSortableItemContext(consumerName: string) {
   const context = React.useContext(SortableItemContext);
@@ -101,30 +82,13 @@ type SortableItemProps = React.ComponentProps<"div"> & {
 };
 
 function SortableItem(props: SortableItemProps) {
-  const {
-    value,
-    style,
-    asHandle,
-    asChild,
-    disabled,
-    className,
-    ref,
-    ...itemProps
-  } = props;
+  const { value, style, asHandle, asChild, disabled, className, ref, ...itemProps } = props;
 
   useSortableItemPlacement(value);
 
   const context = useSortableContext(ITEM_NAME);
   const id = React.useId();
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: value,
     ...(disabled === undefined ? {} : { disabled }),
   });
@@ -170,13 +134,7 @@ function SortableItem(props: SortableItemProps) {
         {...(handleEnabled ? listeners : {})}
         ref={composedRef}
         style={composedStyle}
-        className={sortableItemClassName(
-          asHandle,
-          context.flatCursor,
-          isDragging,
-          disabled,
-          className,
-        )}
+        className={sortableItemClassName(asHandle, context.flatCursor, isDragging, disabled, className)}
       />
     </SortableItemContext.Provider>
   );
@@ -214,9 +172,7 @@ function SortableItemHandle(props: SortableItemHandleProps) {
       ref={composedRef}
       className={cn(
         "select-none disabled:pointer-events-none disabled:opacity-50",
-        context.flatCursor
-          ? "cursor-default"
-          : "cursor-grab data-dragging:cursor-grabbing",
+        context.flatCursor ? "cursor-default" : "cursor-grab data-dragging:cursor-grabbing",
         className,
       )}
       disabled={isDisabled}
@@ -236,14 +192,9 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-type SortableOverlayProps = Omit<
-  React.ComponentProps<typeof DragOverlay>,
-  "children"
-> & {
+type SortableOverlayProps = Omit<React.ComponentProps<typeof DragOverlay>, "children"> & {
   container?: Element | DocumentFragment | null;
-  children?:
-    | ((params: { value: UniqueIdentifier }) => React.ReactNode)
-    | React.ReactNode;
+  children?: ((params: { value: UniqueIdentifier }) => React.ReactNode) | React.ReactNode;
 };
 
 function SortableOverlay(props: SortableOverlayProps) {
@@ -257,8 +208,7 @@ function SortableOverlay(props: SortableOverlayProps) {
     setMounted(true);
   }, []);
 
-  const container =
-    containerProp ?? (mounted ? globalThis.document.body : null);
+  const container = containerProp ?? (mounted ? globalThis.document.body : null);
 
   if (!container) return null;
 
@@ -270,11 +220,7 @@ function SortableOverlay(props: SortableOverlayProps) {
       {...overlayProps}
     >
       <SortableOverlayContext.Provider value={true}>
-        {context.activeId
-          ? typeof children === "function"
-            ? children({ value: context.activeId })
-            : children
-          : null}
+        {context.activeId ? (typeof children === "function" ? children({ value: context.activeId }) : children) : null}
       </SortableOverlayContext.Provider>
     </DragOverlay>,
     container,
@@ -288,9 +234,7 @@ function useSortableItemPlacement(value: UniqueIdentifier): void {
   const inSortableOverlay = React.useContext(SortableOverlayContext);
 
   if (!inSortableContent && !inSortableOverlay) {
-    throw new Error(
-      `\`${ITEM_NAME}\` must be used within \`${CONTENT_NAME}\` or \`${OVERLAY_NAME}\``,
-    );
+    throw new Error(`\`${ITEM_NAME}\` must be used within \`${CONTENT_NAME}\` or \`${OVERLAY_NAME}\``);
   }
 
   if (value === "") {

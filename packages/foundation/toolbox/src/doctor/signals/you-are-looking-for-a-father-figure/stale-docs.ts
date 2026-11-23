@@ -21,12 +21,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalEvidence,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalEvidence, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   daysBefore,
   isAfter,
@@ -44,10 +39,7 @@ const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/|#)/i;
  * The repository-relative path a link in `document` points at, or `undefined`
  * when the link leaves the repository or climbs above its root.
  */
-function resolveCitedPath(
-  document: string,
-  target: string,
-): string | undefined {
+function resolveCitedPath(document: string, target: string): string | undefined {
   if (EXTERNAL.test(target)) return undefined;
   const resolved: string[] = document.split("/").slice(0, -1);
   for (const segment of target.split("#")[0]?.split("/") ?? []) {
@@ -62,10 +54,7 @@ function resolveCitedPath(
 }
 
 /** Every file this document cites that is code rather than another document. */
-function documentCitations(
-  context: DoctorContext,
-  document: string,
-): readonly string[] {
+function documentCitations(context: DoctorContext, document: string): readonly string[] {
   const cited = new Set<string>();
   for (const link of context.read(document).matchAll(MARKDOWN_LINK)) {
     const target = link[1];
@@ -115,7 +104,6 @@ export const staleDocsSignal: DoctorSignal = {
   unit: "days",
   direction: "ceiling",
   thresholds: { standard: 180, strict: 90 },
-  sentence:
-    "This is how a codebase ends up raised by wolves and a wiki last touched during the Obama administration.",
+  sentence: "This is how a codebase ends up raised by wolves and a wiki last touched during the Obama administration.",
   run: (context) => Promise.resolve(ageStaleDocuments(context)),
 };

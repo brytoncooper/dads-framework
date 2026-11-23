@@ -1,17 +1,8 @@
 import type { z } from "zod";
 import type { ScopeAnswer, SubjectRef } from "@dads-framework/access/runtime";
-import type {
-  GetOperationContract,
-  OperationPathParamsShape,
-} from "@dads-framework/core/contract";
+import type { GetOperationContract, OperationPathParamsShape } from "@dads-framework/core/contract";
 import { HttpWiringError } from "../http-errors.js";
-import type {
-  PermissionAccess,
-  PublicAccess,
-  RouteAccess,
-  ScopedAccess,
-  SessionAccess,
-} from "./access.js";
+import type { PermissionAccess, PublicAccess, RouteAccess, ScopedAccess, SessionAccess } from "./access.js";
 import {
   resolveGetOperationConfig,
   type ErasedOperationVerbConfig,
@@ -37,9 +28,7 @@ import {
  * error as the explanation.
  */
 type NonArrayResponse<S> =
-  S extends z.ZodArray<z.ZodType>
-    ? ["collections use listRoute — getRoute responses cannot be arrays"]
-    : unknown;
+  S extends z.ZodArray<z.ZodType> ? ["collections use listRoute — getRoute responses cannot be arrays"] : unknown;
 
 /**
  * GET — a single read. The config has NO `body` key (excess-property
@@ -62,16 +51,9 @@ export type GetRouteConfig<
   readonly meta?: MetaSchema;
   readonly query?: QuerySchema;
   handler(
-    ctx: RouteHandlerContext<
-      SchemaOutput<ParamsSchema>,
-      SchemaOutput<QuerySchema>,
-      SchemaOutput<BodySchema>,
-      Subject
-    > &
+    ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, SchemaOutput<QuerySchema>, SchemaOutput<BodySchema>, Subject> &
       Context,
-  ):
-    | Promise<HandlerResult<ResponseSchema, MetaSchema>>
-    | HandlerResult<ResponseSchema, MetaSchema>;
+  ): Promise<HandlerResult<ResponseSchema, MetaSchema>> | HandlerResult<ResponseSchema, MetaSchema>;
 } & VerbParams<Path, ParamsSchema>;
 
 type GetRouteContractSource<
@@ -101,8 +83,7 @@ type GetRouteContractSource<
     };
 
 /** Parsed inputs and subject available to a named GET handler module. */
-export type GetRouteHandlerContext<Params, Query, Subject> =
-  RouteHandlerContext<Params, Query, undefined, Subject>;
+export type GetRouteHandlerContext<Params, Query, Subject> = RouteHandlerContext<Params, Query, undefined, Subject>;
 
 /** Data shape a named GET handler returns before the kit envelopes it. */
 export type GetRouteHandlerResult<
@@ -116,18 +97,15 @@ export type GetRouteHandlerResult<
  * never is: one record is a `requires` check.
  */
 type GetRouteAccess<Path extends string> =
-  | SessionAccess
-  | PermissionAccess
-  | PublicAccess
-  | (Path extends `${string}:${string}` ? never : ScopedAccess);
+  SessionAccess | PermissionAccess | PublicAccess | (Path extends `${string}:${string}` ? never : ScopedAccess);
 
-type GetRouteSubject<Access extends GetRouteAccess<string>> =
-  Access extends PublicAccess ? SubjectRef | null : SubjectRef;
+type GetRouteSubject<Access extends GetRouteAccess<string>> = Access extends PublicAccess
+  ? SubjectRef | null
+  : SubjectRef;
 
-type GetRouteContext<Access extends GetRouteAccess<string>> =
-  Access extends ScopedAccess
-    ? { readonly scope: ScopeAnswer }
-    : Record<never, never>;
+type GetRouteContext<Access extends GetRouteAccess<string>> = Access extends ScopedAccess
+  ? { readonly scope: ScopeAnswer }
+  : Record<never, never>;
 
 /**
  * GET subject nullability follows the declared access: guarded handlers get a
@@ -142,13 +120,7 @@ export function getRoute<
   MetaSchema extends z.ZodType | undefined = undefined,
   BodySchema extends z.ZodType | undefined = undefined,
 >(
-  config: GetRouteContractSource<
-    Path,
-    ResponseSchema,
-    ParamsSchema,
-    QuerySchema,
-    MetaSchema
-  > &
+  config: GetRouteContractSource<Path, ResponseSchema, ParamsSchema, QuerySchema, MetaSchema> &
     OperationVerbCommon<Access> & {
       handler(
         ctx: RouteHandlerContext<
@@ -158,14 +130,10 @@ export function getRoute<
           GetRouteSubject<Access>
         > &
           GetRouteContext<Access>,
-      ):
-        | Promise<HandlerResult<ResponseSchema, MetaSchema>>
-        | HandlerResult<ResponseSchema, MetaSchema>;
+      ): Promise<HandlerResult<ResponseSchema, MetaSchema>> | HandlerResult<ResponseSchema, MetaSchema>;
     },
 ): RouteBlueprint;
-export function getRoute(
-  config: ErasedVerbConfig | ErasedOperationVerbConfig,
-): RouteBlueprint {
+export function getRoute(config: ErasedVerbConfig | ErasedOperationVerbConfig): RouteBlueprint {
   const normalized = resolveGetOperationConfig(config);
   const resolved = resolveVerbRoute(normalized, "GET");
   return buildDefinition({
@@ -175,9 +143,7 @@ export function getRoute(
       if (normalized.access.kind === "scoped" && ctx.scope === undefined) {
         // No answers means no scope to render: refuse rather than answer
         // unscoped. An empty answer is still an answer and reaches the SQL.
-        throw new HttpWiringError(
-          `scoped route ${resolved.path} ran without a scope answer`,
-        );
+        throw new HttpWiringError(`scoped route ${resolved.path} ran without a scope answer`);
       }
       return normalized.handler(ctx);
     },

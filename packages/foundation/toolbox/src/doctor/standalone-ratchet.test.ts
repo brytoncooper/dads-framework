@@ -1,20 +1,11 @@
 import { execFileSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { BASELINE_PATH, type GateMode } from "./doctor-gate-model.js";
-import {
-  initializeStandaloneRatchet,
-  runStandaloneRatchet,
-} from "./standalone-ratchet.js";
+import { initializeStandaloneRatchet, runStandaloneRatchet } from "./standalone-ratchet.js";
 import { RATCHET_POLICY_PATH } from "./standalone-ratchet-policy.js";
 
 const roots: string[] = [];
@@ -71,8 +62,7 @@ function gate(root: string, overrides: Partial<GateMode> = {}) {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0))
-    rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("standalone TypeScript ratchet", () => {
@@ -85,18 +75,12 @@ describe("standalone TypeScript ratchet", () => {
     expect(baseline).not.toContain("docsConformancePackages");
     expect(await gate(root)).toMatchObject({ exitCode: 0 });
 
-    writeFileSync(
-      join(root, "src/legacy.ts"),
-      "export const legacy: [any, any] = [1, 2];\n",
-    );
+    writeFileSync(join(root, "src/legacy.ts"), "export const legacy: [any, any] = [1, 2];\n");
     const failed = await gate(root);
     expect(failed).toMatchObject({ exitCode: 1 });
     expect(failed?.output).toContain("above its mark");
 
-    writeFileSync(
-      join(root, BASELINE_PATH),
-      baseline.replace('"mark": 1', '"mark": 2'),
-    );
+    writeFileSync(join(root, BASELINE_PATH), baseline.replace('"mark": 1', '"mark": 2'));
     await expect(gate(root)).rejects.toThrow("rose");
   });
 
@@ -107,10 +91,7 @@ describe("standalone TypeScript ratchet", () => {
     const baseline = readFileSync(path, "utf8");
     writeFileSync(path, baseline.replace('"src/legacy.ts"', '"src/other.ts"'));
     await expect(gate(root)).rejects.toThrow("new exception");
-    writeFileSync(
-      path,
-      baseline.replace('"**/dist/**"', '"**/dist/**", "src/**"'),
-    );
+    writeFileSync(path, baseline.replace('"**/dist/**"', '"**/dist/**", "src/**"'));
     await expect(gate(root)).rejects.toThrow("exempt paths changed");
     writeFileSync(path, baseline);
     git(root, "rm", "-q", "src/legacy.ts");
@@ -126,24 +107,14 @@ describe("standalone TypeScript ratchet", () => {
     const root = freshRepository();
     const path = join(root, RATCHET_POLICY_PATH);
     mkdirSync(join(root, ".agents"));
-    writeFileSync(
-      path,
-      '{"schemaVersion":1,"thresholds":{"explicit-any":1}}\n',
-    );
+    writeFileSync(path, '{"schemaVersion":1,"thresholds":{"explicit-any":1}}\n');
     await adopt(root);
-    expect(readFileSync(join(root, BASELINE_PATH), "utf8")).not.toContain(
-      "explicit-any",
-    );
+    expect(readFileSync(join(root, BASELINE_PATH), "utf8")).not.toContain("explicit-any");
     expect(await gate(root)).toMatchObject({ exitCode: 0 });
 
-    writeFileSync(
-      path,
-      '{"schemaVersion":1,"thresholds":{"explicit-any":2}}\n',
-    );
+    writeFileSync(path, '{"schemaVersion":1,"thresholds":{"explicit-any":2}}\n');
     await expect(gate(root)).rejects.toThrow("changed relative to");
-    await expect(gate(root, { base: "no-such-branch" })).rejects.toThrow(
-      "Cannot resolve base ref",
-    );
+    await expect(gate(root, { base: "no-such-branch" })).rejects.toThrow("Cannot resolve base ref");
     rmSync(path);
     await expect(gate(root)).rejects.toThrow("was removed");
   });
@@ -151,12 +122,8 @@ describe("standalone TypeScript ratchet", () => {
   it("keeps initialization read-only when no TypeScript project was measured", async () => {
     const root = freshRepository();
     git(root, "rm", "-q", "-f", "tsconfig.json");
-    await expect(
-      initializeStandaloneRatchet({ root, reason, today: "2026-11-19" }),
-    ).rejects.toThrow("no tsconfig");
+    await expect(initializeStandaloneRatchet({ root, reason, today: "2026-11-19" })).rejects.toThrow("no tsconfig");
     expect(() => readFileSync(join(root, BASELINE_PATH))).toThrow("ENOENT");
-    expect(() => readFileSync(join(root, RATCHET_POLICY_PATH))).toThrow(
-      "ENOENT",
-    );
+    expect(() => readFileSync(join(root, RATCHET_POLICY_PATH))).toThrow("ENOENT");
   });
 });

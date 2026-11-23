@@ -43,9 +43,7 @@ export type DiagnoseWorkspaceOptions = {
  * evidences, so narrowing to one issue still runs the signals another issue
  * calls its own.
  */
-export async function diagnoseWorkspace(
-  options: DiagnoseWorkspaceOptions,
-): Promise<DoctorReport> {
+export async function diagnoseWorkspace(options: DiagnoseWorkspaceOptions): Promise<DoctorReport> {
   const issues = selectIssues(options.issues);
   const context = createDoctorContext({
     root: options.root,
@@ -53,9 +51,7 @@ export async function diagnoseWorkspace(
     online: options.online ?? false,
   });
   const selected = issues.map((issue) => issue.id);
-  const signals = DOCTOR_SIGNALS.filter((signal) =>
-    selected.some((issue) => signalEvidences(signal, issue)),
-  );
+  const signals = DOCTOR_SIGNALS.filter((signal) => selected.some((issue) => signalEvidences(signal, issue)));
   const outcomes = await runDoctorSignals(context, signals);
   return buildDoctorReport({
     root: context.root,
@@ -71,9 +67,7 @@ export async function diagnoseWorkspace(
  * subset narrows the report, it does not reorder it. An id nothing carries is
  * a mistake in the call rather than a finding, so it is refused by name.
  */
-function selectIssues(
-  chosen: readonly string[] | undefined,
-): readonly DaddyIssue[] {
+function selectIssues(chosen: readonly string[] | undefined): readonly DaddyIssue[] {
   if (chosen === undefined || chosen.length === 0) return DADDY_ISSUES;
   for (const id of chosen) {
     if (findDaddyIssue(id) === undefined) {

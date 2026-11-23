@@ -50,8 +50,7 @@ const previewlessTemplate = defineEmailTemplate({
 
 describe("renderEmailTemplate", () => {
   it("renders with the native server TSX loader", () => {
-    const rendererUrl = new URL("./render-email-template.tsx", import.meta.url)
-      .href;
+    const rendererUrl = new URL("./render-email-template.tsx", import.meta.url).href;
     const templateUrl = new URL("./email-template.ts", import.meta.url).href;
     const source = `
       import React from "react";
@@ -72,14 +71,10 @@ describe("renderEmailTemplate", () => {
       if (!rendered.html.includes("runtime rendered")) process.exitCode = 1;
       else process.stdout.write("rendered");
     `;
-    const result = spawnSync(
-      process.execPath,
-      ["--import", "tsx", "--input-type=module", "-e", source],
-      {
-        encoding: "utf8",
-        env: { ...process.env, TSX_TSCONFIG_PATH: undefined },
-      },
-    );
+    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", source], {
+      encoding: "utf8",
+      env: { ...process.env, TSX_TSCONFIG_PATH: undefined },
+    });
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toBe("rendered");
@@ -133,8 +128,8 @@ describe("renderEmailTemplate", () => {
   });
 
   it("throws with the template named when the props do not match", async () => {
-    await expect(
-      renderEmailTemplate(noticeTemplate, { name: "Dana", link: "not-a-url" }),
-    ).rejects.toThrow(/email-templates\.render-test-notice/);
+    await expect(renderEmailTemplate(noticeTemplate, { name: "Dana", link: "not-a-url" })).rejects.toThrow(
+      /email-templates\.render-test-notice/,
+    );
   });
 });

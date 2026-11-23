@@ -5,14 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
-import {
-  acquireDevelopmentLease,
-  prepareDevelopmentDirectory,
-} from "./local-state.js";
-import {
-  startDevelopmentControl,
-  writeControlRecord,
-} from "./control-server.js";
+import { acquireDevelopmentLease, prepareDevelopmentDirectory } from "./local-state.js";
+import { startDevelopmentControl, writeControlRecord } from "./control-server.js";
 import { runWorkbenchDevelopment } from "./run-development.js";
 
 function scenario() {
@@ -45,12 +39,10 @@ describe("development stop cancellation", () => {
     const pending = current.run();
     current.controller.abort(current.reason);
     try {
-      expect(
-        await Promise.race([
-          pending,
-          setTimeout(250, { outcome: "still-waiting" }),
-        ]),
-      ).toEqual({ outcome: "rejected", error: current.reason });
+      expect(await Promise.race([pending, setTimeout(250, { outcome: "still-waiting" })])).toEqual({
+        outcome: "rejected",
+        error: current.reason,
+      });
     } finally {
       current.lease.close();
       await pending;
@@ -62,12 +54,10 @@ describe("development stop cancellation", () => {
     current.controller.abort(current.reason);
     const pending = current.run();
     try {
-      expect(
-        await Promise.race([
-          pending,
-          setTimeout(250, { outcome: "still-waiting" }),
-        ]),
-      ).toEqual({ outcome: "rejected", error: current.reason });
+      expect(await Promise.race([pending, setTimeout(250, { outcome: "still-waiting" })])).toEqual({
+        outcome: "rejected",
+        error: current.reason,
+      });
     } finally {
       current.lease.close();
       await pending;
@@ -84,20 +74,17 @@ describe("development stop cancellation", () => {
       target.listen(0, "127.0.0.1", resolve);
     });
     const address = target.address();
-    if (!address || typeof address === "string")
-      throw new Error("No test port.");
+    if (!address || typeof address === "string") throw new Error("No test port.");
     writeControlRecord(current.directory, {
       port: address.port,
       key: "a".repeat(64),
     });
     const pending = current.run();
     try {
-      expect(
-        await Promise.race([
-          pending,
-          setTimeout(250, { outcome: "still-waiting" }),
-        ]),
-      ).toEqual({ outcome: "rejected", error: current.reason });
+      expect(await Promise.race([pending, setTimeout(250, { outcome: "still-waiting" })])).toEqual({
+        outcome: "rejected",
+        error: current.reason,
+      });
     } finally {
       target.closeAllConnections();
       await new Promise<void>((resolve) => {
@@ -125,12 +112,9 @@ describe("development stop cancellation", () => {
     const pending = current.run();
     try {
       await stopReceived;
-      expect(
-        await Promise.race([
-          pending,
-          setTimeout(50, { outcome: "still-waiting" }),
-        ]),
-      ).toEqual({ outcome: "still-waiting" });
+      expect(await Promise.race([pending, setTimeout(50, { outcome: "still-waiting" })])).toEqual({
+        outcome: "still-waiting",
+      });
       current.lease.close();
       expect(await pending).toEqual({ outcome: "completed" });
     } finally {

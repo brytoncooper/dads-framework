@@ -1,7 +1,4 @@
-import type {
-  ZedRelation,
-  ZedSchemaSurface,
-} from "./parse-zed-schema-surface.js";
+import type { ZedRelation, ZedSchemaSurface } from "./parse-zed-schema-surface.js";
 
 export type SchemaContractionPlan = {
   removedTypes: readonly string[];
@@ -9,17 +6,12 @@ export type SchemaContractionPlan = {
 };
 
 /** Names definitions and relations present in live schema and absent from desired. */
-export function planSchemaContraction(
-  live: ZedSchemaSurface,
-  desired: ZedSchemaSurface,
-): SchemaContractionPlan {
+export function planSchemaContraction(live: ZedSchemaSurface, desired: ZedSchemaSurface): SchemaContractionPlan {
   const removedTypes = [...live.resourceTypes]
     .filter((resourceType) => !desired.resourceTypes.has(resourceType))
     .sort((left, right) => left.localeCompare(right));
 
-  const desiredRelations = new Set(
-    desired.relations.map((entry) => relationKey(entry)),
-  );
+  const desiredRelations = new Set(desired.relations.map((entry) => relationKey(entry)));
   const removedRelations = live.relations.filter((entry) => {
     if (!desired.resourceTypes.has(entry.resourceType)) {
       return false;

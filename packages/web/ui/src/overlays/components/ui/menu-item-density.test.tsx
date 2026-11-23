@@ -6,15 +6,7 @@
  * @vitest-environment jsdom
  */
 import { cleanup, render, screen } from "@testing-library/react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { Command, CommandItem, CommandList } from "./command.js";
 import {
   DropdownMenu,
@@ -76,12 +68,8 @@ describe("popover menu-item density", () => {
     );
 
     expectCoarsePointerChoice(screen.getByRole("menuitem", { name: "Open" }));
-    expectCoarsePointerChoice(
-      screen.getByRole("menuitemcheckbox", { name: "Visible" }),
-    );
-    expectCoarsePointerChoice(
-      screen.getByRole("menuitemradio", { name: "Name" }),
-    );
+    expectCoarsePointerChoice(screen.getByRole("menuitemcheckbox", { name: "Visible" }));
+    expectCoarsePointerChoice(screen.getByRole("menuitemradio", { name: "Name" }));
     expectCoarsePointerChoice(screen.getByRole("menuitem", { name: "More" }));
   });
 
@@ -94,8 +82,6 @@ describe("popover menu-item density", () => {
       </Command>,
     );
 
-    expectCoarsePointerChoice(
-      screen.getByRole("option", { name: "Open Product" }),
-    );
+    expectCoarsePointerChoice(screen.getByRole("option", { name: "Open Product" }));
   });
 });

@@ -17,10 +17,7 @@ export function validateGuideCode(page, token) {
     try {
       JSON.parse(token.text);
     } catch (error) {
-      throw new Error(
-        `${page.path}: invalid JSON code block: ${error.message}`,
-        { cause: error },
-      );
+      throw new Error(`${page.path}: invalid JSON code block: ${error.message}`, { cause: error });
     }
   }
 }
@@ -33,9 +30,7 @@ export function loadPageExamples(page, readFile) {
       typeof proof !== "string" ||
       !/\.(?:test|spec)\.tsx?$/u.test(proof)
     ) {
-      throw new Error(
-        `${page.path}: examples need a TypeScript source and a Vitest proof file.`,
-      );
+      throw new Error(`${page.path}: examples need a TypeScript source and a Vitest proof file.`);
     }
     readFile(source);
     readFile(proof);
@@ -51,12 +46,10 @@ export function checkExamples(root, pages) {
       tests.add(proof);
     }
   }
-  if (tests.size === 0)
-    throw new Error("The documentation has no executable examples.");
+  if (tests.size === 0) throw new Error("The documentation has no executable examples.");
   const sourcePaths = [...new Set([...sources, ...tests])];
   const tsc = "node_modules/typescript-native/bin/tsc";
-  if (!existsSync(join(root, tsc)))
-    throw new Error("Install the workspace before checking docs.");
+  if (!existsSync(join(root, tsc))) throw new Error("Install the workspace before checking docs.");
   const compileArguments = [
     tsc,
     "--ignoreConfig",
@@ -76,13 +69,9 @@ export function checkExamples(root, pages) {
     cwd: root,
     stdio: "inherit",
   });
-  execFileSync(
-    process.execPath,
-    ["node_modules/vitest/vitest.mjs", "run", "--reporter=dot", ...tests],
-    {
-      cwd: root,
-      stdio: "inherit",
-    },
-  );
+  execFileSync(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--reporter=dot", ...tests], {
+    cwd: root,
+    stdio: "inherit",
+  });
   return tests.size;
 }

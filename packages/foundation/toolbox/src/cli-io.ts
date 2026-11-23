@@ -30,22 +30,15 @@ export function installBrokenPipeHandler(
 }
 
 export function writeOutput(value: object, json: boolean): void {
-  process.stdout.write(
-    json ? `${JSON.stringify(value)}\n` : `${formatHumanOutput(value)}\n`,
-  );
+  process.stdout.write(json ? `${JSON.stringify(value)}\n` : `${formatHumanOutput(value)}\n`);
 }
 
 function formatHumanOutput(value: object): string {
   return JSON.stringify(value, null, 2);
 }
 
-export function readOption(
-  commandArguments: readonly string[],
-  optionName: string,
-): string | undefined {
-  const optionIndexes = commandArguments.flatMap((argument, index) =>
-    argument === optionName ? [index] : [],
-  );
+export function readOption(commandArguments: readonly string[], optionName: string): string | undefined {
+  const optionIndexes = commandArguments.flatMap((argument, index) => (argument === optionName ? [index] : []));
   if (optionIndexes.length > 1) {
     throw new Error(`${optionName} may only be provided once.`);
   }

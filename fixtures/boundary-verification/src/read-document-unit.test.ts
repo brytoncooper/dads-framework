@@ -7,11 +7,7 @@ describe("document read result", () => {
   it("returns the document only when the injected decision grants access", async () => {
     const request = { userId: "alice", documentId: "document-1" };
 
-    await expect(
-      readDocumentResult(request, () => Promise.resolve(false)),
-    ).resolves.toBeUndefined();
-    await expect(
-      readDocumentResult(request, () => Promise.resolve(true)),
-    ).resolves.toBe("document:document-1");
+    await expect(readDocumentResult(request, () => Promise.resolve(false))).resolves.toBeUndefined();
+    await expect(readDocumentResult(request, () => Promise.resolve(true))).resolves.toBe("document:document-1");
   });
 });

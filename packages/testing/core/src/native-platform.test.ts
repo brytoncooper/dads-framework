@@ -2,10 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  nativePackageNameForPlatform,
-  resolveNativeTestingBinary,
-} from "./native-platform.js";
+import { nativePackageNameForPlatform, resolveNativeTestingBinary } from "./native-platform.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -17,21 +14,13 @@ afterEach(() => {
 
 describe("Dads Testing native package selection", () => {
   it("maps every supported platform tuple to one optional package", () => {
-    expect(nativePackageNameForPlatform("darwin", "arm64")).toBe(
-      "@dads-framework/testing-native-darwin-arm64",
-    );
-    expect(nativePackageNameForPlatform("darwin", "x64")).toBe(
-      "@dads-framework/testing-native-darwin-x64",
-    );
+    expect(nativePackageNameForPlatform("darwin", "arm64")).toBe("@dads-framework/testing-native-darwin-arm64");
+    expect(nativePackageNameForPlatform("darwin", "x64")).toBe("@dads-framework/testing-native-darwin-x64");
     expect(nativePackageNameForPlatform("linux", "arm64", "glibc")).toBe(
       "@dads-framework/testing-native-linux-arm64-gnu",
     );
-    expect(nativePackageNameForPlatform("linux", "x64", "glibc")).toBe(
-      "@dads-framework/testing-native-linux-x64-gnu",
-    );
-    expect(nativePackageNameForPlatform("win32", "x64")).toBe(
-      "@dads-framework/testing-native-win32-x64",
-    );
+    expect(nativePackageNameForPlatform("linux", "x64", "glibc")).toBe("@dads-framework/testing-native-linux-x64-gnu");
+    expect(nativePackageNameForPlatform("win32", "x64")).toBe("@dads-framework/testing-native-win32-x64");
   });
 
   it("reports a missing optional package precisely", () => {
@@ -101,16 +90,14 @@ describe("Dads Testing development binary precedence", () => {
         packageResolver: refuseEveryPackage,
       }),
     ).toThrow(`The DADS_TEST_NATIVE_BINARY path does not exist: ${absent}.`);
-    expect(() =>
-      resolveNativeTestingBinary({ explicitBinary: absent }),
-    ).toThrow(`The nativeBinary path does not exist: ${absent}.`);
+    expect(() => resolveNativeTestingBinary({ explicitBinary: absent })).toThrow(
+      `The nativeBinary path does not exist: ${absent}.`,
+    );
   });
 });
 
 function temporaryDirectory(): string {
-  const directory = mkdtempSync(
-    join(tmpdir(), "dads-testing-native-platform-"),
-  );
+  const directory = mkdtempSync(join(tmpdir(), "dads-testing-native-platform-"));
   temporaryDirectories.push(directory);
   return directory;
 }

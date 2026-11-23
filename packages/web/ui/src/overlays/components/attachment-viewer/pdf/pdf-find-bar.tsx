@@ -1,22 +1,11 @@
-import {
-  CaseSensitiveIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  HighlighterIcon,
-  WholeWordIcon,
-  XIcon,
-} from "lucide-react";
+import { CaseSensitiveIcon, ChevronDownIcon, ChevronUpIcon, HighlighterIcon, WholeWordIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../../../../elements/index.js";
 
 import { useOverlaysCopy } from "../../../copy/overlays-copy.js";
 import type { FindCounter } from "../logic/pdf-find.js";
-import {
-  ToolbarDivider,
-  ToolbarIconButton,
-  ToolbarTooltips,
-} from "../viewer-toolbar.js";
+import { ToolbarDivider, ToolbarIconButton, ToolbarTooltips } from "../viewer-toolbar.js";
 import type { PdfEventBus } from "./pdf-types.js";
 import { usePdfFind } from "./use-pdf-find.js";
 
@@ -27,13 +16,7 @@ import { usePdfFind } from "./use-pdf-find.js";
  * Shift+Enter to the previous. Closing the bar clears its highlights.
  * Escape is routed here by the PDF view, ahead of the dialog's own Escape.
  */
-export function PdfFindBar({
-  eventBus,
-  onClose,
-}: {
-  eventBus: PdfEventBus;
-  onClose: () => void;
-}) {
+export function PdfFindBar({ eventBus, onClose }: { eventBus: PdfEventBus; onClose: () => void }) {
   const t = useOverlaysCopy();
   const find = usePdfFind(eventBus);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -80,16 +63,10 @@ export function PdfFindBar({
         >
           <FindCounterText counter={find.counter} />
         </span>
-        <ToolbarIconButton
-          label={t("overlays.attachmentViewer.pdf.find.previous")}
-          onClick={find.findPrevious}
-        >
+        <ToolbarIconButton label={t("overlays.attachmentViewer.pdf.find.previous")} onClick={find.findPrevious}>
           <ChevronUpIcon />
         </ToolbarIconButton>
-        <ToolbarIconButton
-          label={t("overlays.attachmentViewer.pdf.find.next")}
-          onClick={find.findNext}
-        >
+        <ToolbarIconButton label={t("overlays.attachmentViewer.pdf.find.next")} onClick={find.findNext}>
           <ChevronDownIcon />
         </ToolbarIconButton>
         <ToolbarDivider />
@@ -115,10 +92,7 @@ export function PdfFindBar({
           <WholeWordIcon />
         </ToolbarIconButton>
         <ToolbarDivider />
-        <ToolbarIconButton
-          label={t("overlays.attachmentViewer.pdf.find.close")}
-          onClick={onClose}
-        >
+        <ToolbarIconButton label={t("overlays.attachmentViewer.pdf.find.close")} onClick={onClose}>
           <XIcon />
         </ToolbarIconButton>
       </div>

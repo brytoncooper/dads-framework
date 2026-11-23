@@ -1,11 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -50,10 +44,7 @@ test("valid fixes are applied to the index and its matching working file", (t) =
 
   applyStagedFixes(root, scratch, snapshot, before, files);
 
-  assert.equal(
-    git(root, ["show", `:${path}`], { encoding: "utf8" }),
-    "fixed\n",
-  );
+  assert.equal(git(root, ["show", `:${path}`], { encoding: "utf8" }), "fixed\n");
   assert.equal(readFileSync(join(root, path), "utf8"), "fixed\n");
 });
 
@@ -62,15 +53,9 @@ test("autofix preserves both versions of a partially staged file", (t) => {
   writeFileSync(join(root, path), "unstaged\n");
   writeFileSync(join(snapshot, path), "fixed\n");
 
-  assert.throws(
-    () => applyStagedFixes(root, scratch, snapshot, before, files),
-    /Staged fixes could not be applied/,
-  );
+  assert.throws(() => applyStagedFixes(root, scratch, snapshot, before, files), /Staged fixes could not be applied/);
 
-  assert.equal(
-    git(root, ["show", `:${path}`], { encoding: "utf8" }),
-    "staged  \n",
-  );
+  assert.equal(git(root, ["show", `:${path}`], { encoding: "utf8" }), "staged  \n");
   assert.equal(readFileSync(join(root, path), "utf8"), "unstaged\n");
 });
 
@@ -83,13 +68,7 @@ test("an ignored local formatter config prevents worktree proof", (t) => {
 
 test("an assume-unchanged file prevents worktree proof", (t) => {
   const { root } = createStagedFixture(t);
-  git(root, [
-    "--literal-pathspecs",
-    "update-index",
-    "--assume-unchanged",
-    "--",
-    path,
-  ]);
+  git(root, ["--literal-pathspecs", "update-index", "--assume-unchanged", "--", path]);
   writeFileSync(join(root, path), "hidden unstaged edit\n");
   assert.equal(isCleanWorktree(root), false);
 });

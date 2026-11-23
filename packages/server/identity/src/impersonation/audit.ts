@@ -20,9 +20,7 @@ export function createImpersonationAudit(
   now: () => number,
   context: AuditContext,
 ) {
-  function eventFor(
-    outcome: ImpersonationAuditEvent["outcome"],
-  ): ImpersonationAuditEvent {
+  function eventFor(outcome: ImpersonationAuditEvent["outcome"]): ImpersonationAuditEvent {
     return { ...context, outcome, occurredAtMs: now() };
   }
 

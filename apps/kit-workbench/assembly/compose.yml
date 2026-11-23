@@ -60,8 +60,7 @@ services:
     image: node:24-bookworm-slim
     init: true
     working_dir: /app
-    command:
-      ["npm", "run", "dev:web", "--", "--host", "0.0.0.0", "--strictPort"]
+    command: ["npm", "run", "dev:web", "--", "--host", "0.0.0.0", "--strictPort"]
     environment:
       DADS_DEV_API_URL: http://api:3000
     volumes:

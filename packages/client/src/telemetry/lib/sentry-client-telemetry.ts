@@ -24,11 +24,7 @@
 
 import type * as SentryReact from "@sentry/react";
 
-import {
-  ClientTelemetry,
-  type TelemetryBreadcrumb,
-  type TelemetryContext,
-} from "../core/index.js";
+import { ClientTelemetry, type TelemetryBreadcrumb, type TelemetryContext } from "../core/index.js";
 import {
   sentryConfiguration,
   type SentryConfiguration,
@@ -58,9 +54,7 @@ export type VendorErrorReporter = {
 };
 
 /** Starts the SDK with the configuration it must not be able to loosen. */
-export type LoadVendorReporter = (
-  configuration: SentryConfiguration,
-) => Promise<VendorErrorReporter>;
+export type LoadVendorReporter = (configuration: SentryConfiguration) => Promise<VendorErrorReporter>;
 
 export type SentryClientTelemetryOptions = SentryConfigurationInput & {
   /**
@@ -175,9 +169,7 @@ function hintFor(context: TelemetryContext): VendorCaptureHint {
   return {
     tags: {
       kind: context.kind,
-      ...(context.requestId === undefined
-        ? {}
-        : { request_id: context.requestId }),
+      ...(context.requestId === undefined ? {} : { request_id: context.requestId }),
     },
     ...(context.severity === undefined ? {} : { level: context.severity }),
   };
@@ -194,16 +186,10 @@ function hintFor(context: TelemetryContext): VendorCaptureHint {
 export function loadSentryReactModule(
   load: () => Promise<typeof SentryReact> = () => import("@sentry/react"),
 ): Promise<typeof SentryReact> {
-  return loadOptionalPeer(
-    "@dads-framework/client/telemetry",
-    "@sentry/react",
-    load,
-  );
+  return loadOptionalPeer("@dads-framework/client/telemetry", "@sentry/react", load);
 }
 
-async function loadSentryReact(
-  configuration: SentryConfiguration,
-): Promise<VendorErrorReporter> {
+async function loadSentryReact(configuration: SentryConfiguration): Promise<VendorErrorReporter> {
   const sentry = await loadSentryReactModule();
   const { replayMasking } = configuration;
   sentry.init({

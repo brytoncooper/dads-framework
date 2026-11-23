@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, title } from "./names.js";
 
-export function addFlag(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function addFlag(plan: GenerationPlan, domain: string, name: string): void {
   const flag = `${camel(name)}Flag`;
   const directory = `domains/${domain}/server`;
   plan.create(
@@ -25,10 +21,6 @@ export const ${flag} = defineFeatureFlag({
 });
 `,
   );
-  plan.appendLine(
-    `${directory}/flags.ts`,
-    "// dad:add imports",
-    `import { ${flag} } from "./${name}-flag.js";`,
-  );
+  plan.appendLine(`${directory}/flags.ts`, "// dad:add imports", `import { ${flag} } from "./${name}-flag.js";`);
   plan.appendLine(`${directory}/flags.ts`, "// dad:add flags", `  ${flag},`);
 }

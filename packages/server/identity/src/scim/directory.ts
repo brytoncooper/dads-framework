@@ -31,8 +31,7 @@ export type ScimUser = ScimUserData & {
 
 export type ScimUserFilter =
   | {
-      readonly attribute:
-        "id" | "userName" | "externalId" | "displayName" | "emails.value";
+      readonly attribute: "id" | "userName" | "externalId" | "displayName" | "emails.value";
       readonly value: string;
     }
   | { readonly attribute: "active"; readonly value: boolean };
@@ -54,10 +53,7 @@ export type ScimDirectory = {
   }>;
   readonly get: (tenantId: string, id: string) => Promise<ScimUser | null>;
   /** Generate a permanent SCIM identifier and enforce userName uniqueness within the tenant. */
-  readonly create: (
-    tenantId: string,
-    user: ScimUserData,
-  ) => Promise<ScimUser | "conflict">;
+  readonly create: (tenantId: string, user: ScimUserData) => Promise<ScimUser | "conflict">;
   /** Apply the callback to the current user atomically. A thrown error must leave the user unchanged. */
   readonly update: (
     tenantId: string,
@@ -68,10 +64,7 @@ export type ScimDirectory = {
   readonly delete: (tenantId: string, id: string) => Promise<boolean>;
 };
 
-export function matchesScimUserFilter(
-  user: ScimUser,
-  filter: ScimUserFilter,
-): boolean {
+export function matchesScimUserFilter(user: ScimUser, filter: ScimUserFilter): boolean {
   switch (filter.attribute) {
     case "active":
     case "id":
@@ -79,14 +72,8 @@ export function matchesScimUserFilter(
       return user[filter.attribute] === filter.value;
     case "userName":
     case "displayName":
-      return (
-        user[filter.attribute]?.toLowerCase() === filter.value.toLowerCase()
-      );
+      return user[filter.attribute]?.toLowerCase() === filter.value.toLowerCase();
     case "emails.value":
-      return (
-        user.emails?.some(
-          (email) => email.value.toLowerCase() === filter.value.toLowerCase(),
-        ) ?? false
-      );
+      return user.emails?.some((email) => email.value.toLowerCase() === filter.value.toLowerCase()) ?? false;
   }
 }

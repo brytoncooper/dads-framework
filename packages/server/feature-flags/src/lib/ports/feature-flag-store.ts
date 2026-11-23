@@ -1,7 +1,4 @@
-import type {
-  FeatureFlagHistoryEntry,
-  FeatureFlagState,
-} from "../../contract/index.js";
+import type { FeatureFlagHistoryEntry, FeatureFlagState } from "../../contract/index.js";
 
 export type FeatureFlagBatchWrite = {
   readonly expectedRevisions: ReadonlyMap<string, number>;
@@ -21,9 +18,7 @@ export type FeatureFlagHistoryPage = {
  */
 export abstract class FeatureFlagStore {
   /** Stored states for these slugs; a slug with no row is simply absent. */
-  abstract listStates(
-    slugs: readonly string[],
-  ): Promise<readonly FeatureFlagState[]>;
+  abstract listStates(slugs: readonly string[]): Promise<readonly FeatureFlagState[]>;
 
   /** One page of a flag's history, highest revision first. */
   abstract listHistory(input: {
@@ -33,7 +28,5 @@ export abstract class FeatureFlagStore {
   }): Promise<FeatureFlagHistoryPage>;
 
   /** A stale expected revision rolls back every state and history row in the batch. */
-  abstract applyBatch(
-    input: FeatureFlagBatchWrite,
-  ): Promise<"applied" | "revision-conflict">;
+  abstract applyBatch(input: FeatureFlagBatchWrite): Promise<"applied" | "revision-conflict">;
 }

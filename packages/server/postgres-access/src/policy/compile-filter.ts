@@ -7,10 +7,7 @@ import type {
   NormalizedResourceLookup,
 } from "./policy-model.js";
 import { deriveAutoScopeColumns } from "./column-relations.js";
-import {
-  compileReverseExpressionQuery,
-  compileReversePermission,
-} from "./compile-reverse-policy.js";
+import { compileReverseExpressionQuery, compileReversePermission } from "./compile-reverse-policy.js";
 import {
   directSubjectReachability,
   modelHasUsersetTargets,
@@ -19,8 +16,7 @@ import {
   subjectReachability,
 } from "./policy-sql.js";
 
-const SQL_ID_COLUMN_PATTERN =
-  /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
+const SQL_ID_COLUMN_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
 
 export type PostgresAccessFilter = {
   readonly sql: string;
@@ -89,9 +85,7 @@ export function validatePostgresFilterQuery(
       : validatePgScopeColumns(query.scopeColumns);
   const paramOffset = query.paramOffset ?? 1;
   if (!Number.isSafeInteger(paramOffset) || paramOffset < 1) {
-    throw new Error(
-      "Postgres filter paramOffset must be a positive safe integer",
-    );
+    throw new Error("Postgres filter paramOffset must be a positive safe integer");
   }
   return { idColumn: query.idColumn, paramOffset, scopeColumns };
 }
@@ -133,37 +127,18 @@ export function compilePostgresFilter(
   const subjectIdSql = builder.value(request.subject.id);
   const usesUsersets = modelHasUsersetTargets(model);
   const reachCte = usesUsersets
-    ? subjectReachability(
-        namespaceSql,
-        subjectTypeSql,
-        subjectIdSql,
-        model.columnRelations,
-        builder,
-      )
-    : directSubjectReachability(
-        namespaceSql,
-        subjectTypeSql,
-        subjectIdSql,
-        model.columnRelations,
-        builder,
-      );
+    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder)
+    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder);
 
-  const wrapSemiJoin = (
-    column: string,
-    innerSql: string,
-    negated = false,
-  ): string => {
-    const withKeyword =
-      usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
+  const wrapSemiJoin = (column: string, innerSql: string, negated = false): string => {
+    const withKeyword = usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
     const op = negated ? "NOT IN" : "IN";
     return `(${column} ${op} (${withKeyword} ${reachCte} SELECT allowed_resource.resource_id FROM (${innerSql}) allowed_resource))`;
   };
 
   if (options.scopeColumns !== undefined) {
     const definition = model.permissions.find(
-      (candidate) =>
-        candidate.entity === request.resourceType &&
-        candidate.wireName === request.permission,
+      (candidate) => candidate.entity === request.resourceType && candidate.wireName === request.permission,
     );
     if (definition !== undefined) {
       const scopedSql = tryCompileScopedPostgresExpression(
@@ -206,11 +181,7 @@ type PostgresScopedContext = {
   readonly entity: string;
   readonly idColumn: string;
   readonly scopeColumns: Readonly<Record<string, string>>;
-  readonly wrapSemiJoin: (
-    column: string,
-    innerSql: string,
-    negated?: boolean,
-  ) => string;
+  readonly wrapSemiJoin: (column: string, innerSql: string, negated?: boolean) => string;
 };
 
 function tryCompileScopedPostgresExpression(
@@ -218,10 +189,7 @@ function tryCompileScopedPostgresExpression(
   expression: CompiledPermissionExpression,
 ): string | undefined {
   if (expression.kind === "exclude") {
-    const includeSql = tryCompileScopedPostgresExpression(
-      ctx,
-      expression.include,
-    );
+    const includeSql = tryCompileScopedPostgresExpression(ctx, expression.include);
     if (includeSql === undefined) return undefined;
     const excludeIds = compileReverseExpressionQuery(
       ctx.model,
@@ -272,9 +240,7 @@ function tryCompileScopedPostgresAnyOf(
   if (scopedParts.length === 0) return undefined;
   if (remainder.length > 0) {
     const restExpr: CompiledPermissionExpression =
-      remainder.length === 1 && remainder[0] !== undefined
-        ? remainder[0]
-        : { kind: "any-of", expressions: remainder };
+      remainder.length === 1 && remainder[0] !== undefined ? remainder[0] : { kind: "any-of", expressions: remainder };
     const restIds = compileReverseExpressionQuery(
       ctx.model,
       ctx.builder,

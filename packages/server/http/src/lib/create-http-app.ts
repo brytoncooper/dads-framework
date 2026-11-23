@@ -1,36 +1,20 @@
 import cors from "@fastify/cors";
-import Fastify, {
-  type FastifyInstance,
-  type FastifyRequest,
-  type FastifyServerOptions,
-} from "fastify";
+import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyServerOptions } from "fastify";
 import type { DestinationStream } from "pino";
 
 import type { DiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics";
 import { beginRequestWork } from "@dads-framework/core/runtime/request-work";
-import {
-  ACCESS_REFUSAL_HEADER,
-  REQUEST_ID_HEADER,
-} from "@dads-framework/core/contract";
+import { ACCESS_REFUSAL_HEADER, REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { AuthorizationWarningFaults } from "./request-log/authorization-warning-faults.js";
 import { captureRequestRecord } from "./request-log/capture-request-record.js";
 import type { RequestLogSink } from "./request-log/request-log-sink.js";
 import { enterAnonymousRequestActor } from "./request-pipeline/carry-audit-actor.js";
-import {
-  type ErrorHandlingOptions,
-  installErrorHandling,
-} from "./request-pipeline/error-handler.js";
+import { type ErrorHandlingOptions, installErrorHandling } from "./request-pipeline/error-handler.js";
 import { resolveRequestId } from "./request-pipeline/request-id.js";
 import { enterRequestOrigin } from "./request-pipeline/request-origin.js";
-import {
-  beginRequestTrace,
-  type RequestTrace,
-} from "./request-pipeline/request-trace.js";
-import {
-  acceptWebSocketUpgrades,
-  isWebSocketRoutePath,
-} from "./route/web-socket-route.js";
+import { beginRequestTrace, type RequestTrace } from "./request-pipeline/request-trace.js";
+import { acceptWebSocketUpgrades, isWebSocketRoutePath } from "./route/web-socket-route.js";
 
 /**
  * Platform defaults for every HTTP app. The runaway-resource bounds are
@@ -136,20 +120,13 @@ export type HttpAppOptions = {
  * would otherwise count against `createHttpApp`'s complexity budget, which is
  * what keeps the composition readable.
  */
-function acceptRawBodies(
-  app: FastifyInstance,
-  contentTypes: readonly string[] | undefined,
-): void {
+function acceptRawBodies(app: FastifyInstance, contentTypes: readonly string[] | undefined): void {
   for (const contentType of contentTypes ?? []) {
-    app.addContentTypeParser(
-      contentType,
-      { parseAs: "string" },
-      (_request, body, done) => {
-        // Handed through exactly as received. Whatever reads it owns the
-        // format; this kit owns only the fact that a body was allowed.
-        done(null, body);
-      },
-    );
+    app.addContentTypeParser(contentType, { parseAs: "string" }, (_request, body, done) => {
+      // Handed through exactly as received. Whatever reads it owns the
+      // format; this kit owns only the fact that a body was allowed.
+      done(null, body);
+    });
   }
 }
 
@@ -157,19 +134,12 @@ function acceptRawBodies(
  * Agree to receive body types as the bytes they arrived as. Its own function
  * for the same complexity reason as `acceptRawBodies`.
  */
-function acceptByteBodies(
-  app: FastifyInstance,
-  contentTypes: readonly string[] | undefined,
-): void {
+function acceptByteBodies(app: FastifyInstance, contentTypes: readonly string[] | undefined): void {
   for (const contentType of contentTypes ?? []) {
-    app.addContentTypeParser(
-      contentType,
-      { parseAs: "buffer" },
-      (_request, body, done) => {
-        // Handed through exactly as received; the route owns the bytes.
-        done(null, body);
-      },
-    );
+    app.addContentTypeParser(contentType, { parseAs: "buffer" }, (_request, body, done) => {
+      // Handed through exactly as received; the route owns the bytes.
+      done(null, body);
+    });
   }
 }
 
@@ -181,15 +151,9 @@ function acceptByteBodies(
  */
 function errorHandlingFrom(options: HttpAppOptions): ErrorHandlingOptions {
   return {
-    ...(options.diagnostics === undefined
-      ? {}
-      : { diagnostics: options.diagnostics }),
-    ...(options.apiRelease === undefined
-      ? {}
-      : { release: options.apiRelease }),
-    ...(options.instanceId === undefined
-      ? {}
-      : { instanceId: options.instanceId }),
+    ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
+    ...(options.apiRelease === undefined ? {} : { release: options.apiRelease }),
+    ...(options.instanceId === undefined ? {} : { instanceId: options.instanceId }),
   };
 }
 
@@ -201,20 +165,14 @@ const DEFAULT_IDLE_SOCKET_TIMEOUT_MS = 70_000;
 const DEFAULT_QUIET_PATHS = ["/api/health", "/api/ready"];
 
 /** Slow-loris bound: a client that never finishes its headers is dropped. */
-function applyHeadersTimeout(
-  app: FastifyInstance,
-  options: HttpAppOptions,
-): void {
-  app.server.headersTimeout =
-    options.headersTimeoutMs ?? DEFAULT_HEADERS_TIMEOUT_MS;
+function applyHeadersTimeout(app: FastifyInstance, options: HttpAppOptions): void {
+  app.server.headersTimeout = options.headersTimeoutMs ?? DEFAULT_HEADERS_TIMEOUT_MS;
 }
 
 /**
  * Pino options with credential redaction and an optional caller-supplied stream.
  */
-function loggerOptionsFrom(
-  options: HttpAppOptions,
-): Exclude<FastifyServerOptions["logger"], undefined> {
+function loggerOptionsFrom(options: HttpAppOptions): Exclude<FastifyServerOptions["logger"], undefined> {
   if (options.logger === false) return false;
 
   return {
@@ -228,11 +186,7 @@ function loggerOptionsFrom(
       }),
     },
     redact: {
-      paths: [
-        "req.headers.authorization",
-        "req.headers.cookie",
-        "res.headers['set-cookie']",
-      ],
+      paths: ["req.headers.authorization", "req.headers.cookie", "res.headers['set-cookie']"],
     },
     ...(options.logStream === undefined ? {} : { stream: options.logStream }),
   };
@@ -244,9 +198,7 @@ function loggerOptionsFrom(
  * honored, always echoed), the error envelope handler, CORS for the trusted
  * origins, and the non-disableable resource bounds above.
  */
-export async function createHttpApp(
-  options: HttpAppOptions,
-): Promise<FastifyInstance> {
+export async function createHttpApp(options: HttpAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: loggerOptionsFrom(options),
     // resolveRequestId is the same ingress the old middleware used: trust a
@@ -255,10 +207,8 @@ export async function createHttpApp(
     requestIdHeader: false,
     bodyLimit: options.bodyLimitBytes ?? DEFAULT_BODY_LIMIT_BYTES,
     requestTimeout: options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
-    connectionTimeout:
-      options.idleSocketTimeoutMs ?? DEFAULT_IDLE_SOCKET_TIMEOUT_MS,
-    keepAliveTimeout:
-      options.keepAliveTimeoutMs ?? DEFAULT_KEEP_ALIVE_TIMEOUT_MS,
+    connectionTimeout: options.idleSocketTimeoutMs ?? DEFAULT_IDLE_SOCKET_TIMEOUT_MS,
+    keepAliveTimeout: options.keepAliveTimeoutMs ?? DEFAULT_KEEP_ALIVE_TIMEOUT_MS,
     // close() destroys idle sockets instead of waiting on keep-alive — a
     // deploy drains in-flight work and exits, never hangs on idle clients.
     forceCloseConnections: "idle",
@@ -303,14 +253,10 @@ export async function createHttpApp(
       requestLog: options.requestLog,
       apiRelease: options.apiRelease,
       instanceId: options.instanceId,
-      ...(options.currentTraceId === undefined
-        ? {}
-        : { currentTraceId: options.currentTraceId }),
+      ...(options.currentTraceId === undefined ? {} : { currentTraceId: options.currentTraceId }),
       quietPaths: quiet,
       warningFaults,
-      ...(options.diagnostics === undefined
-        ? {}
-        : { diagnostics: options.diagnostics }),
+      ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
     });
     done();
   });
@@ -323,11 +269,7 @@ export async function createHttpApp(
   await app.register(cors, {
     origin: [...options.trustedOrigins],
     credentials: true,
-    exposedHeaders: [
-      REQUEST_ID_HEADER,
-      ACCESS_REFUSAL_HEADER,
-      ...(options.exposedHeaders ?? []),
-    ],
+    exposedHeaders: [REQUEST_ID_HEADER, ACCESS_REFUSAL_HEADER, ...(options.exposedHeaders ?? [])],
   });
 
   return app;

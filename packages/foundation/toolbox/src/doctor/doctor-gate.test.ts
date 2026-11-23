@@ -14,17 +14,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { serializeBaseline } from "./doctor-gate-baseline.js";
-import {
-  BASELINE_PATH,
-  type BaselineSections,
-  type GateMode,
-} from "./doctor-gate-model.js";
-import {
-  baselineSectionOf,
-  gatedSignals,
-  runDoctorGate,
-  type GateResult,
-} from "./doctor-gate.js";
+import { BASELINE_PATH, type BaselineSections, type GateMode } from "./doctor-gate-model.js";
+import { baselineSectionOf, gatedSignals, runDoctorGate, type GateResult } from "./doctor-gate.js";
 import { countedReading, type DoctorSignal } from "./doctor-signal.js";
 
 const TODAY = "2026-09-04";
@@ -34,10 +25,7 @@ const SEEDED = "seeded before the gate existed";
 // The world one run sees
 // ---------------------------------------------------------------------------
 
-type Entries = Record<
-  string,
-  { value: number; reason?: string; movedTo?: string }
->;
+type Entries = Record<string, { value: number; reason?: string; movedTo?: string }>;
 
 function sections(raw: Record<string, Entries>): BaselineSections {
   return new Map(
@@ -53,10 +41,7 @@ function sections(raw: Record<string, Entries>): BaselineSections {
   );
 }
 
-function baselineText(
-  ceilings: Record<string, Entries>,
-  floors: Record<string, Entries>,
-): string {
+function baselineText(ceilings: Record<string, Entries>, floors: Record<string, Entries>): string {
   return serializeBaseline({
     countedLines: "non-blank, non-comment",
     exempt: ["**/*.generated.ts", "**/dist/**"],
@@ -106,10 +91,7 @@ function ceiling(
 }
 
 /** A floor signal whose readings are given rather than measured. */
-function floor(
-  values: Record<string, number>,
-  options: { id?: string; measure?: string } = {},
-): DoctorSignal {
+function floor(values: Record<string, number>, options: { id?: string; measure?: string } = {}): DoctorSignal {
   return {
     id: options.id ?? "soundness-cases",
     issue: "commitment-issues",
@@ -125,9 +107,7 @@ function floor(
 }
 
 function readingsOf(values: Record<string, number>) {
-  return new Map(
-    Object.entries(values).map(([key, value]) => [key, countedReading(value)]),
-  );
+  return new Map(Object.entries(values).map(([key, value]) => [key, countedReading(value)]));
 }
 
 const FILE_LINES = { measure: "fileLines" };
@@ -192,9 +172,7 @@ describe("a ceiling key", () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.output).toMatch(
-      /401 lines over the 400 ceiling and not listed/,
-    );
+    expect(result.output).toMatch(/401 lines over the 400 ceiling and not listed/);
     expect(result.baseline.ceilings.get("fileLines")).toBeUndefined();
     expect(written.size).toBe(0);
   });
@@ -207,9 +185,7 @@ describe("a ceiling key", () => {
     });
 
     expect(result.exitCode).toBe(0);
-    expect(result.output).toMatch(
-      /712 lines at its mark \(ceiling 400, delta 0\)/,
-    );
+    expect(result.output).toMatch(/712 lines at its mark \(ceiling 400, delta 0\)/);
   });
 
   it("fails when it rises above its mark", async () => {
@@ -231,9 +207,7 @@ describe("a ceiling key", () => {
 
     const checked = await runGate({ mode: {}, ceilings: listed, signals });
     expect(checked.result.exitCode).toBe(1);
-    expect(checked.result.output).toMatch(
-      /mark can be lowered, run npm run budgets:update/,
-    );
+    expect(checked.result.output).toMatch(/mark can be lowered, run npm run budgets:update/);
     expect(checked.written.size).toBe(0);
 
     const updated = await runGate({
@@ -243,9 +217,10 @@ describe("a ceiling key", () => {
     });
     expect(updated.result.exitCode).toBe(0);
     expect(updated.result.output).toMatch(/mark lowered 712 -> 692 \(-20\)/);
-    expect(
-      updated.result.baseline.ceilings.get("fileLines")?.get("src/a.ts"),
-    ).toStrictEqual({ value: 692, reason: SEEDED });
+    expect(updated.result.baseline.ceilings.get("fileLines")?.get("src/a.ts")).toStrictEqual({
+      value: 692,
+      reason: SEEDED,
+    });
     expect(updated.written.get(BASELINE_PATH)).toMatch(/"mark": 692/);
   });
 
@@ -257,9 +232,7 @@ describe("a ceiling key", () => {
 
     const checked = await runGate({ mode: {}, ceilings: listed, signals });
     expect(checked.result.exitCode).toBe(1);
-    expect(checked.result.output).toMatch(
-      /entry can be deleted, run npm run budgets:update/,
-    );
+    expect(checked.result.output).toMatch(/entry can be deleted, run npm run budgets:update/);
 
     const updated = await runGate({
       mode: { update: true },
@@ -281,9 +254,7 @@ describe("a ceiling key", () => {
       signals: [ceiling({}, FILE_LINES)],
     });
     expect(checked.result.exitCode).toBe(1);
-    expect(checked.result.output).toMatch(
-      /stale entry: nothing is measured under this key/,
-    );
+    expect(checked.result.output).toMatch(/stale entry: nothing is measured under this key/);
 
     const updated = await runGate({
       mode: { update: true },
@@ -331,9 +302,7 @@ describe("a floor key", () => {
       signals: [floor({ cases: 24 })],
     });
     expect(checked.result.exitCode).toBe(1);
-    expect(checked.result.output).toMatch(
-      /floor can be raised, run npm run budgets:update/,
-    );
+    expect(checked.result.output).toMatch(/floor can be raised, run npm run budgets:update/);
 
     const updated = await runGate({
       mode: { update: true },
@@ -341,9 +310,7 @@ describe("a floor key", () => {
       signals: [floor({ cases: 24 })],
     });
     expect(updated.result.exitCode).toBe(0);
-    expect(
-      updated.result.baseline.floors.get("soundnessCases")?.get("cases")?.value,
-    ).toBe(24);
+    expect(updated.result.baseline.floors.get("soundnessCases")?.get("cases")?.value).toBe(24);
   });
 
   it("passes silently at its floor", async () => {
@@ -368,9 +335,10 @@ describe("a floor key", () => {
       signals,
     });
     expect(recorded.result.exitCode).toBe(0);
-    expect(
-      recorded.result.baseline.floors.get("soundnessCases")?.get("cases"),
-    ).toStrictEqual({ value: 21, reason: `recorded ${TODAY}` });
+    expect(recorded.result.baseline.floors.get("soundnessCases")?.get("cases")).toStrictEqual({
+      value: 21,
+      reason: `recorded ${TODAY}`,
+    });
   });
 
   it("fails when the floor records a key nothing measures", async () => {
@@ -381,9 +349,7 @@ describe("a floor key", () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.output).toMatch(
-      /recorded by the floor but nothing measures it now/,
-    );
+    expect(result.output).toMatch(/recorded by the floor but nothing measures it now/);
   });
 
   it("keeps the key its count moved to through a raise and a seed", async () => {
@@ -400,9 +366,11 @@ describe("a floor key", () => {
       floors: listed,
       signals,
     });
-    expect(
-      raised.result.baseline.floors.get("soundnessCases")?.get("cases"),
-    ).toStrictEqual({ value: 24, reason: SEEDED, movedTo: "other" });
+    expect(raised.result.baseline.floors.get("soundnessCases")?.get("cases")).toStrictEqual({
+      value: 24,
+      reason: SEEDED,
+      movedTo: "other",
+    });
     expect(raised.written.get(BASELINE_PATH)).toMatch(/"movedTo": "other"/);
 
     const seeded = await runGate({
@@ -410,9 +378,11 @@ describe("a floor key", () => {
       floors: listed,
       signals: [floor({ cases: 21, other: 5 })],
     });
-    expect(
-      seeded.result.baseline.floors.get("soundnessCases")?.get("cases"),
-    ).toStrictEqual({ value: 21, reason: SEEDED, movedTo: "other" });
+    expect(seeded.result.baseline.floors.get("soundnessCases")?.get("cases")).toStrictEqual({
+      value: 21,
+      reason: SEEDED,
+      movedTo: "other",
+    });
   });
 
   it("fails when the key its count moved to is not one this section records", async () => {
@@ -427,9 +397,7 @@ describe("a floor key", () => {
     });
 
     expect(result.exitCode).toBe(1);
-    expect(result.output).toMatch(
-      /movedTo names gone, which is not a key in this section/,
-    );
+    expect(result.output).toMatch(/movedTo names gone, which is not a key in this section/);
   });
 
   it("is skipped, not failed, when the floor has nothing to report", async () => {
@@ -449,10 +417,7 @@ describe("a floor key", () => {
 // ---------------------------------------------------------------------------
 
 const broken: DoctorSignal = {
-  ...ceiling(
-    {},
-    { id: "kind-inversions", measure: "kindMatrixViolations", threshold: 0 },
-  ),
+  ...ceiling({}, { id: "kind-inversions", measure: "kindMatrixViolations", threshold: 0 }),
   run: () => Promise.reject(new Error("kind undefined")),
 };
 
@@ -466,14 +431,12 @@ describe("a signal that cannot answer", () => {
       signals: [broken, ceiling({ "src/a.ts": 120 }, FILE_LINES)],
     });
 
-    expect(result.output).toMatch(
-      /warning: kindMatrixViolations: not measured: kind undefined/,
-    );
+    expect(result.output).toMatch(/warning: kindMatrixViolations: not measured: kind undefined/);
     expect(result.output).toMatch(/0 errors, 1 warnings/);
     expect(result.exitCode).toBe(0);
-    expect([
-      ...(result.baseline.ceilings.get("kindMatrixViolations") ?? []),
-    ]).toStrictEqual([["a -> b", { value: 3, reason: SEEDED }]]);
+    expect([...(result.baseline.ceilings.get("kindMatrixViolations") ?? [])]).toStrictEqual([
+      ["a -> b", { value: 3, reason: SEEDED }],
+    ]);
     expect(written.size).toBe(0);
   });
 });
@@ -498,18 +461,10 @@ describe("--file", () => {
     const { result } = await runGate({
       mode: { files: ["src/a.ts", "src/b.ts"] },
       tree: { "src/a.ts": "", "src/b.ts": "", "src/c.ts": "" },
-      signals: [
-        ceiling(
-          { "src/a.ts": 500, "src/b.ts": 600, "src/c.ts": 900 },
-          FILE_LINES,
-        ),
-      ],
+      signals: [ceiling({ "src/a.ts": 500, "src/b.ts": 600, "src/c.ts": 900 }, FILE_LINES)],
     });
 
-    expect(result.findings.map(({ key }) => key)).toStrictEqual([
-      "src/a.ts",
-      "src/b.ts",
-    ]);
+    expect(result.findings.map(({ key }) => key)).toStrictEqual(["src/a.ts", "src/b.ts"]);
   });
 
   it("catches a brand-new file git has not seen", async () => {
@@ -551,20 +506,11 @@ describe("--report and --json", () => {
     const { result } = await runGate({
       mode: { report: true },
       ceilings: { fileLines: { "src/a.ts": { value: 712, reason: SEEDED } } },
-      signals: [
-        ceiling(
-          { "src/a.ts": 712, "src/b.ts": 900, "src/c.ts": 10 },
-          FILE_LINES,
-        ),
-      ],
+      signals: [ceiling({ "src/a.ts": 712, "src/b.ts": 900, "src/c.ts": 10 }, FILE_LINES)],
     });
 
-    expect(result.output).toMatch(
-      /fileLines src\/b\.ts: 900 lines \(mark none, ceiling 400\)/,
-    );
-    expect(result.output).toMatch(
-      /fileLines src\/a\.ts: 712 lines \(mark 712, ceiling 400\)/,
-    );
+    expect(result.output).toMatch(/fileLines src\/b\.ts: 900 lines \(mark none, ceiling 400\)/);
+    expect(result.output).toMatch(/fileLines src\/a\.ts: 712 lines \(mark 712, ceiling 400\)/);
     expect(result.output).not.toMatch(/src\/c\.ts/);
   });
 
@@ -580,9 +526,7 @@ describe("--report and --json", () => {
       signals: [floor({ cases: 4, other: 27 })],
     });
 
-    expect(result.output).toMatch(
-      /soundnessCases cases: 4 count \(mark 4, floor current, moved to other\)/,
-    );
+    expect(result.output).toMatch(/soundnessCases cases: 4 count \(mark 4, floor current, moved to other\)/);
   });
 
   it("reports the same outcome as a machine object", async () => {
@@ -610,25 +554,15 @@ describe("--seed", () => {
   it("records every offender and every floor, and no compliant file", async () => {
     const { result, written } = await runGate({
       mode: { seed: true, today: TODAY },
-      signals: [
-        ceiling({ "src/a.ts": 712, "src/b.ts": 10 }, FILE_LINES),
-        floor({ cases: 21 }),
-      ],
+      signals: [ceiling({ "src/a.ts": 712, "src/b.ts": 10 }, FILE_LINES), floor({ cases: 21 })],
     });
 
     expect(result.exitCode).toBe(0);
     expect(written.get(BASELINE_PATH)).toBeDefined();
-    expect([
-      ...(result.baseline.ceilings.get("fileLines") ?? []),
-    ]).toStrictEqual([
-      [
-        "src/a.ts",
-        { value: 712, reason: `seeded ${TODAY} before the gate existed` },
-      ],
+    expect([...(result.baseline.ceilings.get("fileLines") ?? [])]).toStrictEqual([
+      ["src/a.ts", { value: 712, reason: `seeded ${TODAY} before the gate existed` }],
     ]);
-    expect(
-      result.baseline.floors.get("soundnessCases")?.get("cases")?.value,
-    ).toBe(21);
+    expect(result.baseline.floors.get("soundnessCases")?.get("cases")?.value).toBe(21);
   });
 
   it("adds to a baseline that already records entries, and touches none of them", async () => {
@@ -648,9 +582,7 @@ describe("--seed", () => {
       value: 900,
       reason: `the split lands next week (recorded ${TODAY})`,
     });
-    expect(result.output).toMatch(
-      /seeded 1 ceiling entries and 0 floor entries/,
-    );
+    expect(result.output).toMatch(/seeded 1 ceiling entries and 0 floor entries/);
   });
 
   it("records only the key --key names", async () => {
@@ -659,9 +591,7 @@ describe("--seed", () => {
       signals: [ceiling({ "src/a.ts": 800, "src/b.ts": 900 }, FILE_LINES)],
     });
 
-    expect([
-      ...(result.baseline.ceilings.get("fileLines") ?? []),
-    ]).toStrictEqual([
+    expect([...(result.baseline.ceilings.get("fileLines") ?? [])]).toStrictEqual([
       ["src/b.ts", { value: 900, reason: `fastify (recorded ${TODAY})` }],
     ]);
     expect(result.exitCode).toBe(1);
@@ -675,10 +605,7 @@ describe("--seed", () => {
 
 describe("the signals a gate judges", () => {
   it("leaves a signal this profile only reports ungated and unseeded", async () => {
-    const reportOnly = ceiling(
-      { "packages/one": 23 },
-      { id: "blast-radius", measure: undefined, threshold: null },
-    );
+    const reportOnly = ceiling({ "packages/one": 23 }, { id: "blast-radius", measure: undefined, threshold: null });
 
     const { result } = await runGate({
       mode: { seed: true, today: TODAY },
@@ -697,15 +624,11 @@ describe("the signals a gate judges", () => {
     };
 
     expect(gatedSignals([strictOnly], gateMode({}))).toStrictEqual([]);
-    expect(
-      gatedSignals([strictOnly], gateMode({ profile: "strict" })),
-    ).toStrictEqual([strictOnly]);
+    expect(gatedSignals([strictOnly], gateMode({ profile: "strict" }))).toStrictEqual([strictOnly]);
   });
 
   it("names the section a signal is recorded under", () => {
     expect(baselineSectionOf(ceiling({}, FILE_LINES))).toBe("fileLines");
-    expect(
-      baselineSectionOf(ceiling({}, { id: "god-classes", measure: undefined })),
-    ).toBe("god-classes");
+    expect(baselineSectionOf(ceiling({}, { id: "god-classes", measure: undefined }))).toBe("god-classes");
   });
 });

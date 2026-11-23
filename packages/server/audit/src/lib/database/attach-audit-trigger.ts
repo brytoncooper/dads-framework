@@ -52,17 +52,13 @@ export function attachAuditTrigger(
   const ownerColumn = options.ownerColumn ?? "";
 
   const scope = scopeTriggerArgument(pgm, table, options.scopeColumns);
-  const target =
-    options.scopeColumns === undefined ? `"${table}"` : `public."${table}"`;
+  const target = options.scopeColumns === undefined ? `"${table}"` : `public."${table}"`;
   pgm.sql(
     `CREATE TRIGGER audit_record AFTER INSERT OR UPDATE OR DELETE ON ${target} FOR EACH ROW EXECUTE FUNCTION audit_record('${keyColumns}', '${ownerColumn}'${scope})`,
   );
 }
 
-export function detachAuditTrigger(
-  pgm: AuditTriggerMigrationBuilder,
-  table: string,
-): void {
+export function detachAuditTrigger(pgm: AuditTriggerMigrationBuilder, table: string): void {
   requireAuditIdentifier(table, "table");
   pgm.sql(`DROP TRIGGER audit_record ON "${table}"`);
 }
@@ -87,8 +83,6 @@ function scopeTriggerArgument(
 
 export function requireAuditIdentifier(name: string, role: string): void {
   if (!SAFE_IDENTIFIER.test(name)) {
-    throw new Error(
-      `audit trigger ${role} "${name}" is not a plain lowercase identifier`,
-    );
+    throw new Error(`audit trigger ${role} "${name}" is not a plain lowercase identifier`);
   }
 }

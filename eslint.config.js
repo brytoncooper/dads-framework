@@ -14,11 +14,7 @@ const productionFiles = [
   "apps/*/src/**/*.{ts,tsx}",
   "fixtures/*/src/**/*.ts",
 ];
-const nonProductionFiles = [
-  "**/*.test.ts",
-  "**/*.test.tsx",
-  "**/*.generated.ts",
-];
+const nonProductionFiles = ["**/*.test.ts", "**/*.test.tsx", "**/*.generated.ts"];
 const testFiles = ["**/*.test.ts", "**/*.test.tsx"];
 const typeTestFiles = ["packages/*/*/type-tests/**/*.ts"];
 const scriptFiles = ["**/*.{js,mjs}"];
@@ -32,10 +28,7 @@ const scriptFiles = ["**/*.{js,mjs}"];
  * without the type system agreeing that it belongs there.
  */
 const houseRules = {
-  "@typescript-eslint/consistent-type-assertions": [
-    "error",
-    { assertionStyle: "never" },
-  ],
+  "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }],
   "@typescript-eslint/ban-ts-comment": [
     "error",
     {
@@ -78,10 +71,7 @@ const houseRules = {
       allowRegExp: false,
     },
   ],
-  "@typescript-eslint/return-await": [
-    "error",
-    "error-handling-correctness-only",
-  ],
+  "@typescript-eslint/return-await": ["error", "error-handling-correctness-only"],
   "@typescript-eslint/only-throw-error": "error",
 };
 
@@ -104,8 +94,7 @@ const focusedTestRules = {
   "no-restricted-syntax": [
     "error",
     {
-      selector:
-        "CallExpression[callee.object.name=/^(it|test|describe)$/][callee.property.name=/^(only|skip|todo)$/]",
+      selector: "CallExpression[callee.object.name=/^(it|test|describe)$/][callee.property.name=/^(only|skip|todo)$/]",
       message:
         "Focused and skipped tests narrow the suite silently. Use it.skipIf(condition) for an environment gate, or delete the test.",
     },

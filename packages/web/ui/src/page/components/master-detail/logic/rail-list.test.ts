@@ -38,21 +38,13 @@ describe("shouldLoadMoreRailRows", () => {
   };
 
   it("waits while more than two pages remain past the last visible row", () => {
-    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 20 })).toBe(
-      false,
-    );
-    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 49 })).toBe(
-      false,
-    );
+    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 20 })).toBe(false);
+    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 49 })).toBe(false);
   });
 
   it("asks once fewer than two pages remain past the last visible row", () => {
-    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 50 })).toBe(
-      true,
-    );
-    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 149 })).toBe(
-      true,
-    );
+    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 50 })).toBe(true);
+    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: 149 })).toBe(true);
   });
 
   it("fills two pages ahead straight after the first page loads", () => {
@@ -80,9 +72,7 @@ describe("shouldLoadMoreRailRows", () => {
         lastVisibleIndex: 149,
       }),
     ).toBe(false);
-    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: -1 })).toBe(
-      false,
-    );
+    expect(shouldLoadMoreRailRows({ ...base, lastVisibleIndex: -1 })).toBe(false);
   });
 
   it("honors a custom look-ahead", () => {
@@ -127,12 +117,8 @@ describe("rail sort", () => {
 
 describe("isRailStatusChange", () => {
   it("is true only when the status differs, since a status lists different records", () => {
-    expect(
-      isRailStatusChange({ status: "active" }, { status: "archived" }),
-    ).toBe(true);
-    expect(isRailStatusChange({ status: "archived" }, { status: "all" })).toBe(
-      true,
-    );
+    expect(isRailStatusChange({ status: "active" }, { status: "archived" })).toBe(true);
+    expect(isRailStatusChange({ status: "archived" }, { status: "all" })).toBe(true);
   });
 
   it("is false for search, sort, filter and page changes that keep the status", () => {

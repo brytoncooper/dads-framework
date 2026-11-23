@@ -25,9 +25,7 @@ const OUR_FRAMES = [
 
 describe("describeException", () => {
   it("reads the type, message and stack off an error", () => {
-    const described = describeException(
-      errorWith("DomainError", "Order company not found", OUR_FRAMES),
-    );
+    const described = describeException(errorWith("DomainError", "Order company not found", OUR_FRAMES));
 
     expect(described.type).toBe("DomainError");
     expect(described.message).toBe("Order company not found");
@@ -36,12 +34,8 @@ describe("describeException", () => {
 
   it("groups by type and origin, never by message", () => {
     // "order 12345 not found" and "order 67890 not found" are one bug.
-    const first = describeException(
-      errorWith("DomainError", "order 12345 not found", OUR_FRAMES),
-    );
-    const second = describeException(
-      errorWith("DomainError", "order 67890 not found", OUR_FRAMES),
-    );
+    const first = describeException(errorWith("DomainError", "order 12345 not found", OUR_FRAMES));
+    const second = describeException(errorWith("DomainError", "order 67890 not found", OUR_FRAMES));
 
     expect(first.fingerprint).toBe(second.fingerprint);
   });
@@ -63,20 +57,14 @@ describe("describeException", () => {
     // would have nothing to compare against there, so the rule is exclusion —
     // and this pins that a bundled frame is treated as ours.
     const bundled = describeException(
-      errorWith("TypeError", "x", [
-        "    at createOrder (/app/dist/apps/api/server/main.cjs:90210:15)",
-      ]),
+      errorWith("TypeError", "x", ["    at createOrder (/app/dist/apps/api/server/main.cjs:90210:15)"]),
     );
     const alsoBundled = describeException(
-      errorWith("TypeError", "x", [
-        "    at createOrder (/app/dist/apps/api/server/main.cjs:90210:41)",
-      ]),
+      errorWith("TypeError", "x", ["    at createOrder (/app/dist/apps/api/server/main.cjs:90210:41)"]),
     );
 
     expect(bundled.fingerprint).toBe(alsoBundled.fingerprint);
-    expect(bundled.fingerprint).not.toBe(
-      describeException(errorWith("TypeError", "x", OUR_FRAMES)).fingerprint,
-    );
+    expect(bundled.fingerprint).not.toBe(describeException(errorWith("TypeError", "x", OUR_FRAMES)).fingerprint);
   });
 
   it("ignores dependency and node frames when grouping", () => {
@@ -89,9 +77,7 @@ describe("describeException", () => {
         ...OUR_FRAMES,
       ]),
     );
-    const withoutNoise = describeException(
-      errorWith("TypeError", "x", OUR_FRAMES),
-    );
+    const withoutNoise = describeException(errorWith("TypeError", "x", OUR_FRAMES));
 
     expect(withNoise.fingerprint).toBe(withoutNoise.fingerprint);
   });

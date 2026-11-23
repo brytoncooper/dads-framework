@@ -11,11 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import {
-  composeFeatureFlags,
-  type FeatureFlags,
-  type FeatureFlagState,
-} from "../index.js";
+import { composeFeatureFlags, type FeatureFlags, type FeatureFlagState } from "../index.js";
 import {
   InMemoryFeatureFlagStore,
   FakeTenantDirectory,
@@ -23,11 +19,7 @@ import {
   FixedClock,
 } from "../testing/index.js";
 import { fromFixed, type PermissionAccess } from "@dads-framework/http";
-import {
-  buildTestApp,
-  TEST_SUBJECT_HEADER,
-  type TestApp,
-} from "@dads-framework/http/testing";
+import { buildTestApp, TEST_SUBJECT_HEADER, type TestApp } from "@dads-framework/http/testing";
 
 import { FeatureFlagRequestEvaluator } from "./feature-flag-request-evaluator.js";
 import { createFeatureFlagRoutes } from "./feature-flag-routes.js";
@@ -84,12 +76,8 @@ describe("feature flag routes", () => {
       authorization: authorization(),
       routes: createFeatureFlagRoutes({ featureFlags, manage: MANAGE }),
       featureState: {
-        evaluator: new FeatureFlagRequestEvaluator(
-          featureFlags.effective,
-          ({ context }) =>
-            context === undefined
-              ? null
-              : { kind: "tenant", tenantId: context },
+        evaluator: new FeatureFlagRequestEvaluator(featureFlags.effective, ({ context }) =>
+          context === undefined ? null : { kind: "tenant", tenantId: context },
         ),
         hashHeader: "x-test-state-hash",
         clientHashHeader: "x-test-client-state-hash",
@@ -165,9 +153,7 @@ describe("feature flag routes", () => {
         method: "POST" as const,
         url: "/feature-flags",
         payload: {
-          changes: [
-            { slug: definition.slug, expectedRevision: 0, mode: "EVERYONE" },
-          ],
+          changes: [{ slug: definition.slug, expectedRevision: 0, mode: "EVERYONE" }],
         },
       },
     ];
@@ -209,9 +195,7 @@ describe("feature flag routes", () => {
     expect(piloted.json()).toMatchObject({
       data: { features: [definition.slug] },
     });
-    expect(piloted.headers["x-test-state-hash"]).toBe(
-      piloted.json<{ data: { stateHash: string } }>().data.stateHash,
-    );
+    expect(piloted.headers["x-test-state-hash"]).toBe(piloted.json<{ data: { stateHash: string } }>().data.stateHash);
 
     const other = await app.inject({
       method: "GET",

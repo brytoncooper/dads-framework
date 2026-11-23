@@ -1,9 +1,4 @@
-import {
-  emitAccessIr,
-  type AccessIrDefinition,
-  type AccessModel,
-  type RoleToken,
-} from "@dads-framework/access";
+import { emitAccessIr, type AccessIrDefinition, type AccessModel, type RoleToken } from "@dads-framework/access";
 
 const SQL_COLUMN_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const SQL_TABLE_IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
@@ -44,15 +39,9 @@ export type ColumnRelationOutboxTriggerDdl = {
   readonly down: readonly string[];
 };
 
-function assertIdentifier(
-  value: string,
-  pattern: RegExp,
-  label: string,
-): string {
+function assertIdentifier(value: string, pattern: RegExp, label: string): string {
   if (!pattern.test(value)) {
-    throw new Error(
-      `Invalid ${label} "${value}": must be an unquoted SQL identifier`,
-    );
+    throw new Error(`Invalid ${label} "${value}": must be an unquoted SQL identifier`);
   }
   return value;
 }
@@ -74,9 +63,7 @@ export function resolveExportColumnRelations(
   const definitions = emitAccessIr(model);
   const byEntity = new Map(definitions.map((entry) => [entry.wireName, entry]));
   const seen = new Set<string>();
-  return Object.freeze(
-    bindings.map((binding) => resolveOneBinding(byEntity, binding, seen)),
-  );
+  return Object.freeze(bindings.map((binding) => resolveOneBinding(byEntity, binding, seen)));
 }
 
 function resolveOneBinding(
@@ -88,37 +75,22 @@ function resolveOneBinding(
   const relation = binding.role.roleName;
   const key = `${entity}\u0000${relation}`;
   if (seen.has(key)) {
-    throw new Error(
-      `Duplicate columnRelation binding for ${entity}#${relation}`,
-    );
+    throw new Error(`Duplicate columnRelation binding for ${entity}#${relation}`);
   }
   seen.add(key);
 
   const table = assertIdentifier(binding.table, SQL_TABLE_IDENT, "table");
-  const idColumn = assertIdentifier(
-    binding.idColumn,
-    SQL_COLUMN_IDENT,
-    "idColumn",
-  );
-  const targetIdColumn = assertIdentifier(
-    binding.targetIdColumn,
-    SQL_COLUMN_IDENT,
-    "targetIdColumn",
-  );
+  const idColumn = assertIdentifier(binding.idColumn, SQL_COLUMN_IDENT, "idColumn");
+  const targetIdColumn = assertIdentifier(binding.targetIdColumn, SQL_COLUMN_IDENT, "targetIdColumn");
 
   const def = byEntity.get(entity);
   const roleDef = def?.roles.find((candidate) => candidate.name === relation);
   if (roleDef === undefined) {
-    throw new Error(
-      `Column relation ${entity}#${relation} does not exist in the access model`,
-    );
+    throw new Error(`Column relation ${entity}#${relation} does not exist in the access model`);
   }
-  const onlySubject =
-    roleDef.subjects.length === 1 ? roleDef.subjects[0] : undefined;
+  const onlySubject = roleDef.subjects.length === 1 ? roleDef.subjects[0] : undefined;
   if (onlySubject === undefined || onlySubject.kind !== "type") {
-    throw new Error(
-      `Column relation ${entity}#${relation} must declare exactly one direct entity target`,
-    );
+    throw new Error(`Column relation ${entity}#${relation} must declare exactly one direct entity target`);
   }
   return Object.freeze({
     entity,
@@ -144,19 +116,13 @@ export function columnRelationOutboxTriggerSql(
   bindings: readonly PostgresColumnRelationExportBinding[],
   options?: ColumnRelationOutboxTriggerOptions,
 ): ColumnRelationOutboxTriggerDdl {
-  const outboxTable = assertIdentifier(
-    options?.outboxTable ?? DEFAULT_OUTBOX_TABLE,
-    SQL_TABLE_IDENT,
-    "outboxTable",
-  );
+  const outboxTable = assertIdentifier(options?.outboxTable ?? DEFAULT_OUTBOX_TABLE, SQL_TABLE_IDENT, "outboxTable");
   const resolved = resolveExportColumnRelations(model, bindings);
   const up: string[] = [];
   const down: string[] = [];
 
   for (const binding of resolved) {
-    const slug = sanitizeTriggerSlug(
-      `${binding.table}_${binding.targetIdColumn}_${binding.relation}`,
-    );
+    const slug = sanitizeTriggerSlug(`${binding.table}_${binding.targetIdColumn}_${binding.relation}`);
     const fnName = `dad_outbox_colrel_${slug}`;
     const trigName = `trg_dad_outbox_${slug}`;
     up.push(buildTriggerFunctionSql(fnName, outboxTable, binding));
@@ -173,11 +139,7 @@ CREATE TRIGGER ${trigName}
   return Object.freeze({ up: Object.freeze(up), down: Object.freeze(down) });
 }
 
-function buildTriggerFunctionSql(
-  fnName: string,
-  outboxTable: string,
-  binding: ResolvedExportColumnRelation,
-): string {
+function buildTriggerFunctionSql(fnName: string, outboxTable: string, binding: ResolvedExportColumnRelation): string {
   const entityLit = sqlLiteral(binding.entity);
   const relationLit = sqlLiteral(binding.relation);
   const targetLit = sqlLiteral(binding.targetEntity);

@@ -19,14 +19,12 @@ import { kindInversionsSignal } from "./kind-inversions.js";
 type Declared = readonly [string, string | undefined, (readonly string[])?];
 
 function contextOver(entries: readonly Declared[]): DoctorContext {
-  const packages: readonly DoctorPackage[] = entries.map(
-    ([name, kind, allowedDependencies]) => ({
-      name,
-      root: `packages/${name}`,
-      kind,
-      allowedDependencies: allowedDependencies ?? [],
-    }),
-  );
+  const packages: readonly DoctorPackage[] = entries.map(([name, kind, allowedDependencies]) => ({
+    name,
+    root: `packages/${name}`,
+    kind,
+    allowedDependencies: allowedDependencies ?? [],
+  }));
   return {
     root: "/repo",
     today: undefined,
@@ -46,9 +44,7 @@ function contextOver(entries: readonly Declared[]): DoctorContext {
   };
 }
 
-async function edges(
-  entries: readonly Declared[],
-): Promise<readonly (readonly [string, number])[]> {
+async function edges(entries: readonly Declared[]): Promise<readonly (readonly [string, number])[]> {
   const readings = await kindInversionsSignal.run(contextOver(entries));
   return [...readings].map(([edge, reading]) => [edge, reading.value]);
 }
@@ -136,12 +132,8 @@ describe("the kind matrix", () => {
   });
 
   it("stops on a package without a recognized kind", () => {
-    expect(() =>
-      kindInversionsSignal.run(contextOver([["core-one", undefined]])),
-    ).toThrow(/declares kind undefined/u);
-    expect(() =>
-      kindInversionsSignal.run(contextOver([["core-one", "library"]])),
-    ).toThrow(/declares kind "library"/u);
+    expect(() => kindInversionsSignal.run(contextOver([["core-one", undefined]]))).toThrow(/declares kind undefined/u);
+    expect(() => kindInversionsSignal.run(contextOver([["core-one", "library"]]))).toThrow(/declares kind "library"/u);
   });
 });
 
@@ -165,18 +157,12 @@ it("checks a public optional binding under its own kind", async () => {
   ]);
   const context: DoctorContext = {
     ...base,
-    exists: (file) =>
-      base.exists(file) ||
-      file === path ||
-      file === "packages/flags/src/postgres/index.ts",
+    exists: (file) => base.exists(file) || file === path || file === "packages/flags/src/postgres/index.ts",
     read: (file) => (file === path ? manifest : base.read(file)),
   };
 
   const readings = await kindInversionsSignal.run(context);
 
-  expect([...readings.keys()]).toEqual([
-    "flags -> contract",
-    "flags/postgres -> postgres",
-  ]);
+  expect([...readings.keys()]).toEqual(["flags -> contract", "flags/postgres -> postgres"]);
   expect(readings.get("flags/postgres -> postgres")?.value).toBe(0);
 });

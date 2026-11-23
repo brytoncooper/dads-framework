@@ -51,10 +51,7 @@ test("only recognizes the imported public route helper as explicit public access
       getRoute({ path: "/private", access: authorize() });`,
     "health.routes.ts",
   );
-  expect(routes.map(({ explicitlyPublic }) => explicitlyPublic)).toEqual([
-    true,
-    undefined,
-  ]);
+  expect(routes.map(({ explicitlyPublic }) => explicitlyPublic)).toEqual([true, undefined]);
 
   const [shadowed] = readRouteSource(
     `import { publicAccess } from "@dads-framework/http";

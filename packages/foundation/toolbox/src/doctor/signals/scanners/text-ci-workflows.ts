@@ -12,18 +12,8 @@
  * and the only thing that distinguishes the two is where it sits.
  */
 
-const WORKFLOW_DIRECTORIES = [
-  ".github/workflows/",
-  ".buildkite/",
-  ".circleci/",
-];
-const WORKFLOW_FILES = [
-  ".gitlab-ci.yml",
-  ".gitlab-ci.yaml",
-  ".travis.yml",
-  "azure-pipelines.yml",
-  "Jenkinsfile",
-];
+const WORKFLOW_DIRECTORIES = [".github/workflows/", ".buildkite/", ".circleci/"];
+const WORKFLOW_FILES = [".gitlab-ci.yml", ".gitlab-ci.yaml", ".travis.yml", "azure-pipelines.yml", "Jenkinsfile"];
 const WORKFLOW_EXTENSIONS = [".yml", ".yaml"];
 
 /** Every continuous-integration definition in the file list. */

@@ -43,14 +43,10 @@ export abstract class FaultAlertReader {
    * is also what makes the sweep idempotent: the window can be any length
    * without a fingerprint being reported twice.
    */
-  abstract unalertedServerFaultsSince(
-    since: Date,
-  ): Promise<readonly FaultGroup[]>;
+  abstract unalertedServerFaultsSince(since: Date): Promise<readonly FaultGroup[]>;
 
   /** Client faults since `since` that have never been alerted on. */
-  abstract unalertedClientFaultsSince(
-    since: Date,
-  ): Promise<readonly FaultGroup[]>;
+  abstract unalertedClientFaultsSince(since: Date): Promise<readonly FaultGroup[]>;
 
   /**
    * Whether anything has ever been remembered.
@@ -80,7 +76,5 @@ export abstract class FaultAlertReader {
    * remembered and then not sent is one nobody ever hears about, while the
    * reverse costs a duplicate email on a retry.
    */
-  abstract rememberAlertedFaults(
-    faults: readonly AlertedFault[],
-  ): Promise<void>;
+  abstract rememberAlertedFaults(faults: readonly AlertedFault[]): Promise<void>;
 }

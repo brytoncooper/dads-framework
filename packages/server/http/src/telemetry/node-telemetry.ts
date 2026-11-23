@@ -19,73 +19,57 @@ export type OpenTelemetryPeerLoaders = {
   readonly loadApi?: () => Promise<typeof OtelApi>;
   readonly loadExporter?: () => Promise<typeof OtelExporter>;
   readonly loadInstrumentation?: () => Promise<typeof OtelInstrumentation>;
-  readonly loadHttpInstrumentation?: () => Promise<
-    typeof OtelHttpInstrumentation
-  >;
+  readonly loadHttpInstrumentation?: () => Promise<typeof OtelHttpInstrumentation>;
   readonly loadPgInstrumentation?: () => Promise<typeof OtelPgInstrumentation>;
   readonly loadResources?: () => Promise<typeof OtelResources>;
   readonly loadSdkNode?: () => Promise<typeof OtelSdkNode>;
   readonly loadSdkTrace?: () => Promise<typeof OtelSdkTrace>;
 };
 
-export async function loadOpenTelemetryPeers(
-  loaders: OpenTelemetryPeerLoaders = {},
-) {
-  const [
-    api,
-    exporter,
-    instrumentation,
-    httpInstrumentation,
-    pgInstrumentation,
-    resources,
-    sdkNode,
-    sdkTrace,
-  ] = await Promise.all([
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/api",
-      loaders.loadApi ?? (() => import("@opentelemetry/api")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/exporter-trace-otlp-proto",
-      loaders.loadExporter ??
-        (() => import("@opentelemetry/exporter-trace-otlp-proto")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/instrumentation",
-      loaders.loadInstrumentation ??
-        (() => import("@opentelemetry/instrumentation")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/instrumentation-http",
-      loaders.loadHttpInstrumentation ??
-        (() => import("@opentelemetry/instrumentation-http")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/instrumentation-pg",
-      loaders.loadPgInstrumentation ??
-        (() => import("@opentelemetry/instrumentation-pg")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/resources",
-      loaders.loadResources ?? (() => import("@opentelemetry/resources")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/sdk-node",
-      loaders.loadSdkNode ?? (() => import("@opentelemetry/sdk-node")),
-    ),
-    loadOptionalPeer(
-      TELEMETRY_SUBPATH,
-      "@opentelemetry/sdk-trace",
-      loaders.loadSdkTrace ?? (() => import("@opentelemetry/sdk-trace")),
-    ),
-  ]);
+export async function loadOpenTelemetryPeers(loaders: OpenTelemetryPeerLoaders = {}) {
+  const [api, exporter, instrumentation, httpInstrumentation, pgInstrumentation, resources, sdkNode, sdkTrace] =
+    await Promise.all([
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/api",
+        loaders.loadApi ?? (() => import("@opentelemetry/api")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/exporter-trace-otlp-proto",
+        loaders.loadExporter ?? (() => import("@opentelemetry/exporter-trace-otlp-proto")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/instrumentation",
+        loaders.loadInstrumentation ?? (() => import("@opentelemetry/instrumentation")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/instrumentation-http",
+        loaders.loadHttpInstrumentation ?? (() => import("@opentelemetry/instrumentation-http")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/instrumentation-pg",
+        loaders.loadPgInstrumentation ?? (() => import("@opentelemetry/instrumentation-pg")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/resources",
+        loaders.loadResources ?? (() => import("@opentelemetry/resources")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/sdk-node",
+        loaders.loadSdkNode ?? (() => import("@opentelemetry/sdk-node")),
+      ),
+      loadOptionalPeer(
+        TELEMETRY_SUBPATH,
+        "@opentelemetry/sdk-trace",
+        loaders.loadSdkTrace ?? (() => import("@opentelemetry/sdk-trace")),
+      ),
+    ]);
 
   return {
     api,
@@ -99,15 +83,11 @@ export async function loadOpenTelemetryPeers(
   };
 }
 
-export async function openTelemetry(
-  options: TelemetryOptions,
-  endpoint: string,
-): Promise<TelemetryRuntime> {
+export async function openTelemetry(options: TelemetryOptions, endpoint: string): Promise<TelemetryRuntime> {
   const peers = await loadOpenTelemetryPeers();
   // The SDK catches CommonJS loads. The ESM hook also catches import of pg.
   register("@opentelemetry/instrumentation/hook.mjs", import.meta.url);
-  const { annotateRequest, currentTraceId } =
-    await import("./trace-request.js");
+  const { annotateRequest, currentTraceId } = await import("./trace-request.js");
   const sdk = new peers.sdkNode.NodeSDK({
     resource: peers.resources.resourceFromAttributes({
       "service.name": options.serviceName,
@@ -115,9 +95,7 @@ export async function openTelemetry(
     resourceDetectors: [peers.resources.envDetector],
     spanProcessors: [
       new peers.sdkTrace.BatchSpanProcessor({
-        exporter: privacyFilteredExporter(
-          new peers.exporter.OTLPTraceExporter({ url: endpoint }),
-        ),
+        exporter: privacyFilteredExporter(new peers.exporter.OTLPTraceExporter({ url: endpoint })),
       }),
     ],
     metricReaders: [],

@@ -1,11 +1,7 @@
 import type { AccessModel } from "../core/access-model.js";
 import type { DslPermissionTarget, DslRoleSlot } from "../core/dsl-types.js";
 import type { PermissionToken, RoleToken } from "../core/refs.js";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-  SubjectRef,
-} from "../runtime/authorization.js";
+import type { PermissionQuery, RelationshipWrite, SubjectRef } from "../runtime/authorization.js";
 import {
   type AccessScenarioVerbs,
   type GrantBuilder,
@@ -25,16 +21,9 @@ import {
   type MatrixMismatch,
   validateMatrixSpec,
 } from "./access-matrix.js";
-import {
-  type ControllableClock,
-  parseTestDurationMs,
-  type TestDuration,
-} from "./duration.js";
+import { type ControllableClock, parseTestDurationMs, type TestDuration } from "./duration.js";
 import { formatPermissionTarget, formatSubjectRef } from "./explain-format.js";
-import {
-  InMemoryAuthorization,
-  type InMemoryAuthorizationOptions,
-} from "./in-memory-authorization.js";
+import { InMemoryAuthorization, type InMemoryAuthorizationOptions } from "./in-memory-authorization.js";
 
 /** Fully synchronous fluent authorization harness for zero-`await` unit tests. */
 export type AccessHarness = AccessScenarioVerbs & {
@@ -43,23 +32,12 @@ export type AccessHarness = AccessScenarioVerbs & {
   readonly now: () => Date;
   readonly can: {
     (actor: SubjectRef, target: DslPermissionTarget): boolean;
-    (
-      actor: SubjectRef,
-      permission: PermissionToken,
-      resourceId: string,
-    ): boolean;
+    (actor: SubjectRef, permission: PermissionToken, resourceId: string): boolean;
   };
-  readonly visible: (
-    actor: SubjectRef,
-    permission: PermissionToken,
-  ) => readonly string[];
+  readonly visible: (actor: SubjectRef, permission: PermissionToken) => readonly string[];
   readonly explain: {
     (actor: SubjectRef, target: DslPermissionTarget): string;
-    (
-      actor: SubjectRef,
-      permission: PermissionToken,
-      resourceId: string,
-    ): string;
+    (actor: SubjectRef, permission: PermissionToken, resourceId: string): string;
   };
 };
 
@@ -80,17 +58,8 @@ function createGrantBuilder(
         new Date(authorization.now().getTime() + parseTestDurationMs(duration)),
       ),
     expiringAt: (nextExpiresAt: Date) =>
-      createGrantBuilder(
-        authorization,
-        entityWireName,
-        roleName,
-        resourceId,
-        nextExpiresAt,
-      ),
-    to: (
-      first: HarnessSubjectInput | HarnessEntityTarget,
-      secondId?: string,
-    ) => {
+      createGrantBuilder(authorization, entityWireName, roleName, resourceId, nextExpiresAt),
+    to: (first: HarnessSubjectInput | HarnessEntityTarget, secondId?: string) => {
       const subject = resolveSubjectInput(first, secondId);
       const write: RelationshipWrite =
         expiresAt === undefined
@@ -117,10 +86,7 @@ function createRevokeBuilder(
   resourceId: string,
 ): RevokeBuilder {
   return {
-    from: (
-      first: HarnessSubjectInput | HarnessEntityTarget,
-      secondId?: string,
-    ) => {
+    from: (first: HarnessSubjectInput | HarnessEntityTarget, secondId?: string) => {
       const subject = resolveSubjectInput(first, secondId);
       authorization.deleteRelationshipsSync({
         resourceType: entityWireName,
@@ -139,11 +105,7 @@ function createRevokeBuilder(
   };
 }
 
-function assertCheckSync(
-  authorization: InMemoryAuthorization,
-  query: PermissionQuery,
-  expected: boolean,
-): void {
+function assertCheckSync(authorization: InMemoryAuthorization, query: PermissionQuery, expected: boolean): void {
   const actual = authorization.checkSync(query);
   if (actual === expected) return;
   const expectation = expected ? "HAVE" : "NOT have";
@@ -172,8 +134,7 @@ function assertVisibleSync(
   ].sort();
   const sortedExpected = [...new Set(expectedIds)].sort();
   const matches =
-    actualIds.length === sortedExpected.length &&
-    actualIds.every((id, index) => id === sortedExpected[index]);
+    actualIds.length === sortedExpected.length && actualIds.every((id, index) => id === sortedExpected[index]);
   if (matches) return;
   throw new Error(
     buildVisibleFailureMessage({
@@ -199,11 +160,7 @@ function assertMatrixSync(
 
   for (const [actor, expectedRow] of spec.cases) {
     const actualRow: MatrixDecision[] = [];
-    for (
-      let columnIndex = 0;
-      columnIndex < spec.permissions.length;
-      columnIndex += 1
-    ) {
+    for (let columnIndex = 0; columnIndex < spec.permissions.length; columnIndex += 1) {
       const permission = spec.permissions[columnIndex];
       const expected = expectedRow[columnIndex] ?? "deny";
       if (permission === undefined) continue;
@@ -212,9 +169,7 @@ function assertMatrixSync(
         resource: { type: resourceType, id: resourceId },
         permission: permission.permissionName,
       };
-      const actual: MatrixDecision = authorization.checkSync(query)
-        ? "allow"
-        : "deny";
+      const actual: MatrixDecision = authorization.checkSync(query) ? "allow" : "deny";
       actualRow.push(actual);
       if (actual !== expected) {
         mismatches.push({
@@ -257,73 +212,36 @@ function buildPermissionQuery(
 
 function buildReadMethods(authorization: InMemoryAuthorization) {
   return {
-    can: (
-      actor: SubjectRef,
-      permissionOrTarget: PermissionToken | DslPermissionTarget,
-      resourceId?: string,
-    ) =>
-      authorization.checkSync(
-        buildPermissionQuery(actor, permissionOrTarget, resourceId),
-      ),
+    can: (actor: SubjectRef, permissionOrTarget: PermissionToken | DslPermissionTarget, resourceId?: string) =>
+      authorization.checkSync(buildPermissionQuery(actor, permissionOrTarget, resourceId)),
     visible: (actor: SubjectRef, permission: PermissionToken) =>
       authorization.lookupResourcesSync({
         subject: actor,
         resourceType: permission.entityWireName,
         permission: permission.permissionName,
       }),
-    explain: (
-      actor: SubjectRef,
-      permissionOrTarget: PermissionToken | DslPermissionTarget,
-      resourceId?: string,
-    ) =>
-      authorization.explainText(
-        buildPermissionQuery(actor, permissionOrTarget, resourceId),
-      ),
+    explain: (actor: SubjectRef, permissionOrTarget: PermissionToken | DslPermissionTarget, resourceId?: string) =>
+      authorization.explainText(buildPermissionQuery(actor, permissionOrTarget, resourceId)),
   };
 }
 
 function buildAssertMethods(authorization: InMemoryAuthorization) {
   return {
-    assertCan: (
-      actor: SubjectRef,
-      permissionOrTarget: PermissionToken | DslPermissionTarget,
-      resourceId?: string,
-    ) => {
-      assertCheckSync(
-        authorization,
-        buildPermissionQuery(actor, permissionOrTarget, resourceId),
-        true,
-      );
+    assertCan: (actor: SubjectRef, permissionOrTarget: PermissionToken | DslPermissionTarget, resourceId?: string) => {
+      assertCheckSync(authorization, buildPermissionQuery(actor, permissionOrTarget, resourceId), true);
     },
     assertCannot: (
       actor: SubjectRef,
       permissionOrTarget: PermissionToken | DslPermissionTarget,
       resourceId?: string,
     ) => {
-      assertCheckSync(
-        authorization,
-        buildPermissionQuery(actor, permissionOrTarget, resourceId),
-        false,
-      );
+      assertCheckSync(authorization, buildPermissionQuery(actor, permissionOrTarget, resourceId), false);
     },
-    assertVisible: (
-      actor: SubjectRef,
-      permission: PermissionToken,
-      expectedIds: readonly string[],
-    ) => {
+    assertVisible: (actor: SubjectRef, permission: PermissionToken, expectedIds: readonly string[]) => {
       assertVisibleSync(authorization, actor, permission, expectedIds);
     },
-    assertMatrix: (
-      target: HarnessEntityTarget,
-      resourceId: string,
-      spec: PermissionMatrixSpec,
-    ) => {
-      assertMatrixSync(
-        authorization,
-        resolveWireName(target),
-        resourceId,
-        spec,
-      );
+    assertMatrix: (target: HarnessEntityTarget, resourceId: string, spec: PermissionMatrixSpec) => {
+      assertMatrixSync(authorization, resolveWireName(target), resourceId, spec);
     },
   };
 }
@@ -332,10 +250,7 @@ function buildAssertMethods(authorization: InMemoryAuthorization) {
  * Create a synchronous in-memory authorization harness for fast, zero-`await`
  * unit tests that execute the real compiled `AccessModel` policy.
  */
-export function createAccessHarness(
-  model: AccessModel,
-  options?: InMemoryAuthorizationOptions,
-): AccessHarness {
+export function createAccessHarness(model: AccessModel, options?: InMemoryAuthorizationOptions): AccessHarness {
   const authorization = new InMemoryAuthorization(model, options);
 
   return {
@@ -351,21 +266,11 @@ export function createAccessHarness(
     everyone: (target) => ({ type: resolveWireName(target), id: "*" }),
     grant: (roleOrSlot: RoleToken | DslRoleSlot, resourceId?: string) => {
       const target = resolveRoleTarget(roleOrSlot, resourceId);
-      return createGrantBuilder(
-        authorization,
-        target.entityWireName,
-        target.roleName,
-        target.resourceId,
-      );
+      return createGrantBuilder(authorization, target.entityWireName, target.roleName, target.resourceId);
     },
     revoke: (roleOrSlot: RoleToken | DslRoleSlot, resourceId?: string) => {
       const target = resolveRoleTarget(roleOrSlot, resourceId);
-      return createRevokeBuilder(
-        authorization,
-        target.entityWireName,
-        target.roleName,
-        target.resourceId,
-      );
+      return createRevokeBuilder(authorization, target.entityWireName, target.roleName, target.resourceId);
     },
     advanceTime: (duration) => {
       authorization.advanceTime(duration);

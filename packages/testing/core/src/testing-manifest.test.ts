@@ -3,11 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  parseTestingManifest,
-  readTestingManifest,
-  serializeTestingManifest,
-} from "./testing-manifest.js";
+import { parseTestingManifest, readTestingManifest, serializeTestingManifest } from "./testing-manifest.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -17,13 +13,7 @@ afterEach(() => {
   }
 });
 
-const workspaceRoot = join(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-);
+const workspaceRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "..", "..");
 
 const minimalManifest = JSON.stringify({
   schemaVersion: 1,
@@ -43,16 +33,8 @@ const minimalManifest = JSON.stringify({
 describe("testing manifest", () => {
   for (const fixture of ["testing", "testing-soundness"]) {
     it(`round-trips the ${fixture} fixture manifest`, () => {
-      const path = join(
-        workspaceRoot,
-        "fixtures",
-        fixture,
-        "dads.testing.json",
-      );
-      const manifest = parseTestingManifest(
-        readFileSync(path, "utf8"),
-        "dads.testing.json",
-      );
+      const path = join(workspaceRoot, "fixtures", fixture, "dads.testing.json");
+      const manifest = parseTestingManifest(readFileSync(path, "utf8"), "dads.testing.json");
 
       const serialized = serializeTestingManifest(manifest);
 
@@ -107,9 +89,9 @@ describe("testing manifest", () => {
   });
 
   it("rejects an unsupported schema version and a wrong type", () => {
-    expect(() =>
-      parseTestingManifest(JSON.stringify({ schemaVersion: 2 }), "manifest"),
-    ).toThrow("manifest: schemaVersion must be 1");
+    expect(() => parseTestingManifest(JSON.stringify({ schemaVersion: 2 }), "manifest")).toThrow(
+      "manifest: schemaVersion must be 1",
+    );
     expect(() =>
       parseTestingManifest(
         JSON.stringify({
@@ -125,11 +107,7 @@ describe("testing manifest", () => {
 
   it("reads the default manifest from the workspace root", () => {
     const directory = makeTemporaryDirectory();
-    writeFileSync(
-      join(directory, "dads.testing.json"),
-      minimalManifest,
-      "utf8",
-    );
+    writeFileSync(join(directory, "dads.testing.json"), minimalManifest, "utf8");
 
     const manifest = readTestingManifest(directory);
 

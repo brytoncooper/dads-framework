@@ -4,11 +4,7 @@ import type {
   TestingManifestTask,
   TestingManifestTaskKind,
 } from "../testing-manifest.js";
-import type {
-  InitInference,
-  InitReportPackage,
-  InitReportTask,
-} from "./infer-testing-manifest.js";
+import type { InitInference, InitReportPackage, InitReportTask } from "./infer-testing-manifest.js";
 import type { WorkspacePackage } from "./package-inventory.js";
 import { assignProjectIds, type ProjectIdAssignment } from "./project-ids.js";
 
@@ -54,30 +50,20 @@ const recognizedScripts: readonly RecognizedScript[] = [
   { script: "build", kind: "build", impactMode: "project" },
 ];
 
-export function recognizedScriptsOf(
-  workspacePackage: WorkspacePackage,
-): readonly RecognizedScript[] {
-  return recognizedScripts.filter(
-    (recognized) => workspacePackage.scripts[recognized.script] !== undefined,
-  );
+export function recognizedScriptsOf(workspacePackage: WorkspacePackage): readonly RecognizedScript[] {
+  return recognizedScripts.filter((recognized) => workspacePackage.scripts[recognized.script] !== undefined);
 }
 
 /**
  * Only a package that declares a recognized script becomes a project, so an id
  * is assigned to exactly the packages that will carry tasks.
  */
-export function identifyProjects(
-  packages: readonly WorkspacePackage[],
-): IdentifiedProjects {
+export function identifyProjects(packages: readonly WorkspacePackage[]): IdentifiedProjects {
   const projectPackages = packages.filter(
-    (workspacePackage) =>
-      workspacePackage.packageJsonReadable &&
-      recognizedScriptsOf(workspacePackage).length > 0,
+    (workspacePackage) => workspacePackage.packageJsonReadable && recognizedScriptsOf(workspacePackage).length > 0,
   );
   const assignments = assignProjectIds(projectPackages);
-  const idByDirectory = new Map(
-    assignments.map((assignment) => [assignment.directory, assignment]),
-  );
+  const idByDirectory = new Map(assignments.map((assignment) => [assignment.directory, assignment]));
   const idByPackageName = new Map<string, string>();
   for (const workspacePackage of projectPackages) {
     const assignment = idByDirectory.get(workspacePackage.directory);
@@ -90,18 +76,12 @@ export function identifyProjects(
 }
 
 /** A package that was assigned no id declares no tasks; the report says which reason. */
-export function skippedReportPackage(
-  workspacePackage: WorkspacePackage,
-): InitReportPackage {
+export function skippedReportPackage(workspacePackage: WorkspacePackage): InitReportPackage {
   return {
     directory: workspacePackage.directory,
-    ...(workspacePackage.name === undefined
-      ? {}
-      : { name: workspacePackage.name }),
+    ...(workspacePackage.name === undefined ? {} : { name: workspacePackage.name }),
     tasks: [],
-    skipped: workspacePackage.packageJsonReadable
-      ? "no-recognized-scripts"
-      : "invalid-package-json",
+    skipped: workspacePackage.packageJsonReadable ? "no-recognized-scripts" : "invalid-package-json",
   };
 }
 
@@ -131,18 +111,12 @@ export function inferOnePackage(request: {
       directory: workspacePackage.directory,
       projectId,
       recognized,
-      dependsOnTypecheck:
-        recognized.script === "test" && scriptNames.has("typecheck"),
+      dependsOnTypecheck: recognized.script === "test" && scriptNames.has("typecheck"),
       inferences,
     }),
   );
 
-  const fallbackDependencies = fallbackDependenciesOf(
-    workspacePackage,
-    projectId,
-    request.identified,
-    inferences,
-  );
+  const fallbackDependencies = fallbackDependenciesOf(workspacePackage, projectId, request.identified, inferences);
   return {
     project: {
       id: projectId,
@@ -152,9 +126,7 @@ export function inferOnePackage(request: {
     tasks: inferred.map((entry) => entry.task),
     reportPackage: {
       directory: workspacePackage.directory,
-      ...(workspacePackage.name === undefined
-        ? {}
-        : { name: workspacePackage.name }),
+      ...(workspacePackage.name === undefined ? {} : { name: workspacePackage.name }),
       projectId,
       projectIdSource: assignment.source,
       tasks: inferred.map((entry) => entry.reportTask),
@@ -173,9 +145,7 @@ function inferOneTask(request: {
 }): InferredTask {
   const { projectId, recognized, directory, inferences } = request;
   const taskId = `${projectId}:${recognized.script}`;
-  const dependsOn = request.dependsOnTypecheck
-    ? [`${projectId}:typecheck`]
-    : [];
+  const dependsOn = request.dependsOnTypecheck ? [`${projectId}:typecheck`] : [];
   const task: TestingManifestTask = {
     id: taskId,
     project: projectId,
@@ -262,10 +232,7 @@ function addProjectReferenceReasons(
     const dependencyId = identified.idByDirectory.get(directory)?.projectId;
     if (dependencyId === undefined || dependencyId === projectId) continue;
     if (reasons.has(dependencyId)) continue;
-    reasons.set(
-      dependencyId,
-      `references the TypeScript project in ${directory}`,
-    );
+    reasons.set(dependencyId, `references the TypeScript project in ${directory}`);
   }
 }
 

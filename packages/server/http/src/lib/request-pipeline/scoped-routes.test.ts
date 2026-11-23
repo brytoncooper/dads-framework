@@ -8,12 +8,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  actor,
-  compileAccess,
-  resource,
-  type PermissionToken,
-} from "@dads-framework/access";
+import { actor, compileAccess, resource, type PermissionToken } from "@dads-framework/access";
 import { scopeBindings } from "@dads-framework/access/scopes";
 import { requiresScoped } from "../route/route-guards.test-support.js";
 import type { ResourceLookup } from "@dads-framework/access/runtime";
@@ -67,11 +62,7 @@ const model = compileAccess([User, team, note, memo], {
 const subjects: SubjectResolver = {
   resolve: (request) => {
     const id = request.headers["x-test-user"];
-    return Promise.resolve(
-      typeof id === "string" && id.length > 0
-        ? { type: User.wireName, id }
-        : null,
-    );
+    return Promise.resolve(typeof id === "string" && id.length > 0 ? { type: User.wireName, id } : null);
   },
 };
 
@@ -100,10 +91,7 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function appWith(
-  routes: ReturnType<typeof routeGroup>,
-  lookups: (query: ResourceLookup) => readonly string[],
-) {
+async function appWith(routes: ReturnType<typeof routeGroup>, lookups: (query: ResourceLookup) => readonly string[]) {
   const app = await createHttpApp({
     nodeEnv: "test",
     trustedOrigins: [],
@@ -126,15 +114,10 @@ async function appWith(
 describe("requiresScoped list routes", () => {
   it("hands the handler each scope question's answer, asked once, empty answers included", async () => {
     const asked: string[] = [];
-    const app = await appWith(
-      routeGroup("Notes", [scopedNotesRoute(note.permissions.view)]),
-      (query) => {
-        asked.push(
-          `${query.subject.id} ${query.resourceType}#${query.permission}`,
-        );
-        return [];
-      },
-    );
+    const app = await appWith(routeGroup("Notes", [scopedNotesRoute(note.permissions.view)]), (query) => {
+      asked.push(`${query.subject.id} ${query.resourceType}#${query.permission}`);
+      return [];
+    });
 
     const response = await app.inject({
       method: "GET",
@@ -143,21 +126,18 @@ describe("requiresScoped list routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(listBodyOf(response, z.array(itemSchema), z.unknown()).data).toEqual(
-      [{ question: "scopedhttp/team#view", ids: [] }],
-    );
+    expect(listBodyOf(response, z.array(itemSchema), z.unknown()).data).toEqual([
+      { question: "scopedhttp/team#view", ids: [] },
+    ]);
     expect(asked).toEqual(["u1 scopedhttp/team#view"]);
   });
 
   it("refuses an unauthenticated caller before asking anything", async () => {
     const asked: string[] = [];
-    const app = await appWith(
-      routeGroup("Notes", [scopedNotesRoute(note.permissions.view)]),
-      (query) => {
-        asked.push(query.permission);
-        return [];
-      },
-    );
+    const app = await appWith(routeGroup("Notes", [scopedNotesRoute(note.permissions.view)]), (query) => {
+      asked.push(query.permission);
+      return [];
+    });
 
     const response = await app.inject({ method: "GET", url: "/scoped" });
 
@@ -166,12 +146,7 @@ describe("requiresScoped list routes", () => {
   });
 
   it("refuses to register a list on a record whose bindings cannot carry the rule", async () => {
-    await expect(
-      appWith(
-        routeGroup("Memos", [scopedNotesRoute(memo.permissions.view)]),
-        () => [],
-      ),
-    ).rejects.toThrow(
+    await expect(appWith(routeGroup("Memos", [scopedNotesRoute(memo.permissions.view)]), () => [])).rejects.toThrow(
       new HttpWiringError(
         "list route GET /scoped cannot be scoped: cannot compile a scope plan for scopedhttp/memo.view:\n  scopedhttp/memo.view: scopedhttp/memo is not a record with scope bindings",
       ),

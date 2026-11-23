@@ -6,19 +6,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  SYNCED_VALUE_UNKNOWN,
-  type SyncedRowChange,
-  type SyncedRowWriter,
-} from "@dads-framework/postgres";
+import { SYNCED_VALUE_UNKNOWN, type SyncedRowChange, type SyncedRowWriter } from "@dads-framework/postgres";
 
 import { FakeEnqueueAccessChanges } from "../../testing/fake-enqueue.js";
 import { InMemoryOwnerLock } from "../../testing/in-memory-owner-lock.js";
 import type { RelationshipWrite } from "@dads-framework/access/runtime";
-import {
-  type SyncedRowRelationships,
-  syncedRowWriterWithRelationships,
-} from "./synced-row-relationships.js";
+import { type SyncedRowRelationships, syncedRowWriterWithRelationships } from "./synced-row-relationships.js";
 
 type Upsert = Extract<SyncedRowChange<"rows">, { op: "upsert" }>;
 
@@ -58,11 +51,7 @@ function fixture() {
       )
         return Promise.resolve(SYNCED_VALUE_UNKNOWN);
       const current = stored.get(change.id);
-      if (
-        current?.relation === next.relation &&
-        current.userId === next.userId &&
-        current.label === next.label
-      )
+      if (current?.relation === next.relation && current.userId === next.userId && current.label === next.label)
         return Promise.resolve(false);
       stored.set(change.id, {
         relation: next.relation,
@@ -86,8 +75,7 @@ function fixture() {
     id: string,
   ): Promise<SyncedRowRelationships | readonly SyncedRowRelationships[]> => {
     const row = stored.get(id);
-    if (row === undefined)
-      return Promise.resolve({ relationships: [], ownerPartitionId: "plant" });
+    if (row === undefined) return Promise.resolve({ relationships: [], ownerPartitionId: "plant" });
     // A row in the `elsewhere` slice also carries a fact in another slice.
     if (row.label === "elsewhere")
       return Promise.resolve([
@@ -111,15 +99,9 @@ function fixture() {
   const withRelationships = syncedRowWriterWithRelationships(
     writer,
     {
-      enqueue: (entries) =>
-        Promise.all([outbox.enqueue(entries), waiting.enqueue(entries)]).then(
-          () => undefined,
-        ),
+      enqueue: (entries) => Promise.all([outbox.enqueue(entries), waiting.enqueue(entries)]).then(() => undefined),
       enqueueReplacingOpposite: (entries, _tx, lease) =>
-        Promise.all([
-          outbox.enqueue(entries),
-          waiting.replaceOpposite(entries, lease),
-        ]).then(() => undefined),
+        Promise.all([outbox.enqueue(entries), waiting.replaceOpposite(entries, lease)]).then(() => undefined),
     },
     new InMemoryOwnerLock(),
     relationshipsOf,
@@ -131,12 +113,7 @@ function fixture() {
   return { outbox, waiting, writer: withRelationships };
 }
 
-function upsert(
-  id: string,
-  relation: string,
-  userId: string,
-  label = "Dock",
-): Upsert {
+function upsert(id: string, relation: string, userId: string, label = "Dock"): Upsert {
   return {
     table: "rows",
     op: "upsert",
@@ -216,9 +193,7 @@ describe("syncedRowWriterWithRelationships", () => {
   it("records nothing for data the owner cannot read", async () => {
     const { writer, outbox } = fixture();
 
-    expect(
-      await writer.upsert(TX, { ...upsert("a", "member", "dana"), data: 7 }),
-    ).toBe(SYNCED_VALUE_UNKNOWN);
+    expect(await writer.upsert(TX, { ...upsert("a", "member", "dana"), data: 7 })).toBe(SYNCED_VALUE_UNKNOWN);
 
     expect(outbox.enqueued).toEqual([]);
   });

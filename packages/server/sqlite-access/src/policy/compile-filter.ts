@@ -3,10 +3,7 @@ import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type { SqliteValue } from "../sqlite-types.js";
 import { deriveAutoSqliteScopeColumns } from "./column-relations.js";
-import {
-  compileSqliteExpressionSubquery,
-  compileSqliteLookupSubquery,
-} from "./compile-lookup-resources.js";
+import { compileSqliteExpressionSubquery, compileSqliteLookupSubquery } from "./compile-lookup-resources.js";
 import {
   permissionKey,
   type SqliteAuthorizationModel,
@@ -15,8 +12,7 @@ import {
 } from "./policy-model.js";
 import { joinChunks } from "./policy-sql.js";
 
-const SQL_ID_COLUMN_PATTERN =
-  /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
+const SQL_ID_COLUMN_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
 
 export type SqliteAccessFilter = {
   readonly sql: string;
@@ -81,11 +77,7 @@ export function validateSqliteFilterQuery(
     query.scopeColumns === "auto"
       ? model === undefined
         ? undefined
-        : deriveAutoSqliteScopeColumns(
-            model,
-            query.resourceType,
-            query.idColumn,
-          )
+        : deriveAutoSqliteScopeColumns(model, query.resourceType, query.idColumn)
       : validateScopeColumns(query.scopeColumns);
   if (query.now !== undefined) {
     const nowMs = query.now.getTime();
@@ -126,9 +118,7 @@ export function compileSqliteFilter(
   scopeColumns?: Readonly<Record<string, string>>,
 ): SqliteAccessFilter {
   if (scopeColumns !== undefined) {
-    const def = model.permissionByKey.get(
-      permissionKey(request.resourceType, request.permission),
-    );
+    const def = model.permissionByKey.get(permissionKey(request.resourceType, request.permission));
     if (def !== undefined) {
       const scoped = tryCompileScopedSqliteExpression(
         { model, namespace, nowMs, request, idColumn, scopeColumns },
@@ -137,13 +127,7 @@ export function compileSqliteFilter(
       if (scoped !== undefined) return scoped;
     }
   }
-  const subquery = compileSqliteLookupSubquery(
-    model,
-    namespace,
-    nowMs,
-    request,
-    { deduplicate: false },
-  );
+  const subquery = compileSqliteLookupSubquery(model, namespace, nowMs, request, { deduplicate: false });
   return Object.freeze({
     sql: `(${idColumn} IN (${subquery.sql}))`,
     values: subquery.params,
@@ -182,8 +166,7 @@ function tryCompileScopedSqliteExpression(
   }
   if (expression.kind === "through") {
     const column = ctx.scopeColumns[expression.relation];
-    const target =
-      expression.targets.length === 1 ? expression.targets[0] : undefined;
+    const target = expression.targets.length === 1 ? expression.targets[0] : undefined;
     if (column === undefined || target === undefined) return undefined;
     const sub = compileSqliteLookupSubquery(
       ctx.model,
@@ -225,9 +208,7 @@ function tryCompileScopedSqliteAnyOf(
   if (scopedChunks.length === 0) return undefined;
   if (remainder.length > 0) {
     const restExpr: SqlitePermissionExpression =
-      remainder.length === 1 && remainder[0] !== undefined
-        ? remainder[0]
-        : { kind: "any-of", expressions: remainder };
+      remainder.length === 1 && remainder[0] !== undefined ? remainder[0] : { kind: "any-of", expressions: remainder };
     const sub = compileSqliteExpressionSubquery(
       ctx.model,
       ctx.namespace,

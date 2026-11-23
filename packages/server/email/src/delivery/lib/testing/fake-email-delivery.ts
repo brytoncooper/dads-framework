@@ -8,10 +8,7 @@ import {
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { EmailTemplate } from "../email-template-port.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
-import type {
-  EmailFailurePolicy,
-  QueuedEmailAttachment,
-} from "../queued-email-attachment.js";
+import type { EmailFailurePolicy, QueuedEmailAttachment } from "../queued-email-attachment.js";
 import { outboundEmailId } from "./outbound-email.factory.js";
 
 /** One `enqueue`, exactly as the caller asked for it. */

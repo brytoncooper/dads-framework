@@ -14,11 +14,7 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
 import {
   evidenceAt,
   isProductionModule,
@@ -35,10 +31,7 @@ function methodCount(node: ts.ClassDeclaration): number {
   return node.members.filter((member) => ts.isMethodDeclaration(member)).length;
 }
 
-function measureClasses(
-  module: DoctorModule,
-  readings: Map<string, SignalReading>,
-): void {
+function measureClasses(module: DoctorModule, readings: Map<string, SignalReading>): void {
   visitNodes(module.source, (node) => {
     if (!ts.isClassDeclaration(node)) return;
     const methods = methodCount(node);
@@ -68,7 +61,6 @@ export const godClassesSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: null, strict: CEILING },
-  sentence:
-    "Ask the file what it does and it says “stuff.” Ask the function and it says “everything.”",
+  sentence: "Ask the file what it does and it says “stuff.” Ask the function and it says “everything.”",
   run: (context) => Promise.resolve(countGodClasses(context)),
 };

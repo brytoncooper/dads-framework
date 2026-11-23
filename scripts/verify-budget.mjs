@@ -111,14 +111,8 @@ function usableReading(reading) {
  * gibibyte is held back for the machine itself before the division.
  */
 export function budgetFromResources(sample) {
-  const cpuBudget = Math.max(
-    1,
-    Math.floor(sample.cpuCapacity * sample.cpuIdleFraction - 1),
-  );
-  const memoryBudget = Math.max(
-    1,
-    Math.floor(Math.max(0, sample.availableMemoryBytes - GIBIBYTE) / GIBIBYTE),
-  );
+  const cpuBudget = Math.max(1, Math.floor(sample.cpuCapacity * sample.cpuIdleFraction - 1));
+  const memoryBudget = Math.max(1, Math.floor(Math.max(0, sample.availableMemoryBytes - GIBIBYTE) / GIBIBYTE));
   const jobs = Math.min(cpuBudget, memoryBudget);
   return {
     jobs,
@@ -145,9 +139,7 @@ function limitingReasons(jobs, cpuBudget, memoryBudget) {
 /** A budget the caller asked for: `--jobs`, `DADS_VERIFY_JOBS`, `--serial`. */
 export function requestedBudget(jobs, origin) {
   if (!Number.isSafeInteger(jobs) || jobs < 1) {
-    throw new Error(
-      `${origin} must be a positive whole number, not "${jobs}".`,
-    );
+    throw new Error(`${origin} must be a positive whole number, not "${jobs}".`);
   }
   return {
     jobs,

@@ -13,10 +13,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  type OutboundEmailId,
-  outboundEmailIdSchema,
-} from "@dads-framework/email/delivery";
+import { type OutboundEmailId, outboundEmailIdSchema } from "@dads-framework/email/delivery";
 
 import type {
   AlertedFault,
@@ -27,9 +24,7 @@ import type {
 import { createAlertNewFaultsJob } from "./alert-new-faults.job.js";
 import { MAX_FAULTS_PER_ALERT } from "./logic/summarize-new-faults.js";
 
-const ENQUEUED_ID = outboundEmailIdSchema.parse(
-  "0192f2a0-0000-7000-8000-0000000000e1",
-);
+const ENQUEUED_ID = outboundEmailIdSchema.parse("0192f2a0-0000-7000-8000-0000000000e1");
 
 const NOW = new Date("2026-09-14T12:00:00.000Z");
 const INSIDE_WINDOW = new Date("2026-09-14T11:30:00.000Z");
@@ -90,12 +85,7 @@ class FakeFaultAlertReader implements FaultAlertReader {
 
   private unalerted(origin: FaultOrigin, since: Date): FaultGroup[] {
     return this.recorded
-      .filter(
-        (fault) =>
-          fault.origin === origin &&
-          fault.at >= since &&
-          !this.remembered.has(keyOf(fault)),
-      )
+      .filter((fault) => fault.origin === origin && fault.at >= since && !this.remembered.has(keyOf(fault)))
       .map((fault) => ({
         fingerprint: fault.fingerprint,
         type: fault.type ?? "TypeError",
@@ -234,9 +224,7 @@ describe("the new-fault sweep", () => {
 
     expect(enqueue).not.toHaveBeenCalled();
     expect(reader.remembered.has("server:olderthanwindow")).toBe(true);
-    expect(entries).toContainEqual(
-      expect.objectContaining({ event: "fault-alerts.learned" }),
-    );
+    expect(entries).toContainEqual(expect.objectContaining({ event: "fault-alerts.learned" }));
   });
 
   it("still alerts on the first fault a quiet system ever has", async () => {
@@ -260,16 +248,13 @@ describe("the new-fault sweep", () => {
   });
 
   it("carries a trimmed tail into the next sweep instead of losing it", async () => {
-    const recorded = Array.from(
-      { length: MAX_FAULTS_PER_ALERT + 3 },
-      (_unused, index): RecordedFault => ({
-        origin: "server",
-        fingerprint: `fault${String(index).padStart(2, "0")}`,
-        // Descending, so the trimmed tail is the three quietest.
-        occurrences: 100 - index,
-        at: INSIDE_WINDOW,
-      }),
-    );
+    const recorded = Array.from({ length: MAX_FAULTS_PER_ALERT + 3 }, (_unused, index): RecordedFault => ({
+      origin: "server",
+      fingerprint: `fault${String(index).padStart(2, "0")}`,
+      // Descending, so the trimmed tail is the three quietest.
+      occurrences: 100 - index,
+      at: INSIDE_WINDOW,
+    }));
     const { job, enqueue, reader } = jobWith({ recorded });
 
     await job.run({});

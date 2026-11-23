@@ -1,7 +1,4 @@
-import {
-  AuthorizationChangeError,
-  orderAuthorizationChanges,
-} from "../../definition-changes.mjs";
+import { AuthorizationChangeError, orderAuthorizationChanges } from "../../definition-changes.mjs";
 import { prepareAuthorizationChanges } from "../run-authorization-changes.js";
 import {
   type AuthorizationJournalMarkerReader,
@@ -12,13 +9,9 @@ import {
   authorizationLegacyJournalChecksum,
   loadAuthorizationChangeFiles,
 } from "./authorization-change-files.js";
-import {
-  listShippedAuthorizationMigrationIds,
-  loadJournal,
-} from "./load-journal.js";
+import { listShippedAuthorizationMigrationIds, loadJournal } from "./load-journal.js";
 
-const FINISHED =
-  /^authz_applied_(\d{14}_[a-f0-9]{8}_[a-z0-9]+(?:_[a-z0-9]+)*)_([a-f0-9]{64})$/;
+const FINISHED = /^authz_applied_(\d{14}_[a-f0-9]{8}_[a-z0-9]+(?:_[a-z0-9]+)*)_([a-f0-9]{64})$/;
 
 export async function readAuthorizationMigrationStatus(input: {
   readonly journalFolder: string;
@@ -34,14 +27,8 @@ export async function readAuthorizationMigrationStatus(input: {
   ]);
   const changes = await changesForStatus(input.changesFolder);
   const latest = legacyIds.at(-1);
-  const ordered =
-    changes.length === 0
-      ? []
-      : orderAuthorizationChanges(changes, latest ?? "");
-  const markers = logicalAuthorizationMarkers(
-    rawMarkers,
-    new Set(ordered.map((change) => change.id)),
-  );
+  const ordered = changes.length === 0 ? [] : orderAuthorizationChanges(changes, latest ?? "");
+  const markers = logicalAuthorizationMarkers(rawMarkers, new Set(ordered.map((change) => change.id)));
   await validateKnownAuthorizationStatus(
     input.journalFolder,
     legacyIds,
@@ -62,11 +49,7 @@ function logicalAuthorizationMarkers(
   const logicalApplied: string[] = [];
   let unknownAppliedChange = false;
   for (const marker of rawMarkers) {
-    if (
-      marker.startsWith("authz_graph_v1_") ||
-      marker.startsWith("authz_started_")
-    )
-      continue;
+    if (marker.startsWith("authz_graph_v1_") || marker.startsWith("authz_started_")) continue;
     const id = FINISHED.exec(marker)?.[1];
     if (id !== undefined) {
       logicalApplied.push(id);
@@ -88,11 +71,7 @@ async function validateKnownAuthorizationStatus(
   rawMarkers: readonly string[],
   unknownAppliedChange: boolean,
 ): Promise<void> {
-  if (
-    unknownAppliedChange ||
-    (changes.length === 0 &&
-      !rawMarkers.some((marker) => marker.startsWith("authz_")))
-  )
+  if (unknownAppliedChange || (changes.length === 0 && !rawMarkers.some((marker) => marker.startsWith("authz_"))))
     return;
   if (changes.length === 0)
     throw new AuthorizationChangeError(
@@ -103,12 +82,7 @@ async function validateKnownAuthorizationStatus(
     legacyIds.map((id) => ({ id })),
     journalFolder,
   );
-  prepareAuthorizationChanges(
-    journal,
-    changes,
-    rawMarkers,
-    await authorizationLegacyJournalChecksum(journalFolder),
-  );
+  prepareAuthorizationChanges(journal, changes, rawMarkers, await authorizationLegacyJournalChecksum(journalFolder));
 }
 
 async function changesForStatus(folder: string) {

@@ -12,33 +12,24 @@ const npmVersion = "11.21.2";
 const issuer = "https://token.actions.githubusercontent.com";
 
 async function main() {
-  const [command, directory, npmInstall, expectedCommit] =
-    process.argv.slice(2);
+  const [command, directory, npmInstall, expectedCommit] = process.argv.slice(2);
   if (!directory || !npmInstall || !["sign", "verify"].includes(command)) {
-    throw new Error(
-      "Usage: sign-release.mjs sign|verify <release-dir> <npm-install-dir> [expected-commit-for-verify]",
-    );
+    throw new Error("Usage: sign-release.mjs sign|verify <release-dir> <npm-install-dir> [expected-commit-for-verify]");
   }
   const npmRoot = resolve(npmInstall);
-  const npmManifest = JSON.parse(
-    readFileSync(join(npmRoot, "package.json"), "utf8"),
-  );
+  const npmManifest = JSON.parse(readFileSync(join(npmRoot, "package.json"), "utf8"));
   if (npmManifest.name !== "npm" || npmManifest.version !== npmVersion) {
     throw new Error(`Use the pinned official npm@${npmVersion} distribution.`);
   }
   const loadNpm = createRequire(join(npmRoot, "package.json"));
-  const { generateProvenance, verifyProvenance } = loadNpm(
-    "libnpmpublish/lib/provenance.js",
-  );
+  const { generateProvenance, verifyProvenance } = loadNpm("libnpmpublish/lib/provenance.js");
   const npa = loadNpm("npm-package-arg");
   const sigstore = loadNpm("sigstore");
   const repository = repositorySlug(root);
   const workflow = ".github/workflows/release-artifacts.yml";
   const manifestPath = join(directory, "release.json");
   const manifest =
-    command === "sign"
-      ? githubBuild(repository, workflow)
-      : JSON.parse(readFileSync(manifestPath, "utf8"));
+    command === "sign" ? githubBuild(repository, workflow) : JSON.parse(readFileSync(manifestPath, "utf8"));
   const commit =
     expectedCommit ||
     execFileSync("git", ["rev-parse", "HEAD"], {
@@ -54,27 +45,17 @@ async function main() {
     !/^\d+$/.test(manifest.runId) ||
     !/^\d+$/.test(manifest.runAttempt)
   )
-    throw new Error(
-      "Release build identity does not match the expected source.",
-    );
+    throw new Error("Release build identity does not match the expected source.");
   const packages = releaseSubjects(root, directory);
-  if (
-    command === "verify" &&
-    JSON.stringify(manifest.packages) !== JSON.stringify(packages)
-  ) {
-    throw new Error(
-      "Release inventory or tarball integrity differs from the manifest.",
-    );
+  if (command === "verify" && JSON.stringify(manifest.packages) !== JSON.stringify(packages)) {
+    throw new Error("Release inventory or tarball integrity differs from the manifest.");
   }
 
   for (const entry of packages) {
     const subject = {
       name: npa.toPurl(npa.resolve(entry.name, entry.version)),
       digest: {
-        sha512: Buffer.from(
-          entry.integrity.slice("sha512-".length),
-          "base64",
-        ).toString("hex"),
+        sha512: Buffer.from(entry.integrity.slice("sha512-".length), "base64").toString("hex"),
       },
     };
     const bundlePath = join(directory, entry.provenance);
@@ -90,15 +71,9 @@ async function main() {
     verifySource(bundle, manifest);
   }
   if (command === "sign") {
-    writeFileSync(
-      manifestPath,
-      JSON.stringify({ ...manifest, packages }, null, 2) + "\n",
-      { flag: "wx" },
-    );
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, packages }, null, 2) + "\n", { flag: "wx" });
   }
-  process.stdout.write(
-    `Verified ${packages.length} release tarballs and provenance bundles at ${commit}.\n`,
-  );
+  process.stdout.write(`Verified ${packages.length} release tarballs and provenance bundles at ${commit}.\n`);
 }
 
 function githubBuild(repository, workflow) {
@@ -112,9 +87,7 @@ function githubBuild(repository, workflow) {
     !env.ACTIONS_ID_TOKEN_REQUEST_URL ||
     !env.ACTIONS_ID_TOKEN_REQUEST_TOKEN
   )
-    throw new Error(
-      "Signing requires the canonical GitHub-hosted workflow and OIDC access.",
-    );
+    throw new Error("Signing requires the canonical GitHub-hosted workflow and OIDC access.");
   return {
     repository,
     workflow,
@@ -126,9 +99,7 @@ function githubBuild(repository, workflow) {
 }
 
 function verifySource(bundle, manifest) {
-  const statement = JSON.parse(
-    Buffer.from(bundle.dsseEnvelope.payload, "base64").toString("utf8"),
-  );
+  const statement = JSON.parse(Buffer.from(bundle.dsseEnvelope.payload, "base64").toString("utf8"));
   const { buildDefinition, runDetails } = statement.predicate;
   const source = `https://github.com/${manifest.repository}`;
   const invocation = `${source}/actions/runs/${manifest.runId}/attempts/${manifest.runAttempt}`;
@@ -140,8 +111,7 @@ function verifySource(bundle, manifest) {
     workflow.ref !== manifest.ref ||
     !buildDefinition.resolvedDependencies.some(
       (dependency) =>
-        dependency.uri === `git+${source}@${manifest.ref}` &&
-        dependency.digest.gitCommit === manifest.commit,
+        dependency.uri === `git+${source}@${manifest.ref}` && dependency.digest.gitCommit === manifest.commit,
     ) ||
     runDetails.metadata.invocationId !== invocation
   )

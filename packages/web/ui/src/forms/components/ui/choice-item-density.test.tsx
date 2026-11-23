@@ -6,29 +6,9 @@
  * @vitest-environment jsdom
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "./combobox.js";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./select.js";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { Combobox, ComboboxContent, ComboboxInput, ComboboxItem, ComboboxList } from "./combobox.js";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select.js";
 
 beforeAll(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
@@ -58,9 +38,7 @@ describe("choice-item density", () => {
       </Select>,
     );
 
-    expectCoarsePointerChoice(
-      await screen.findByRole("option", { name: "Active" }),
-    );
+    expectCoarsePointerChoice(await screen.findByRole("option", { name: "Active" }));
   });
 
   it("expands Combobox choices for a coarse pointer", async () => {
@@ -77,8 +55,6 @@ describe("choice-item density", () => {
 
     fireEvent.keyDown(screen.getByLabelText("Standing"), { key: "ArrowDown" });
 
-    expectCoarsePointerChoice(
-      await screen.findByRole("option", { name: "Active" }),
-    );
+    expectCoarsePointerChoice(await screen.findByRole("option", { name: "Active" }));
   });
 });

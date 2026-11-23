@@ -42,11 +42,7 @@ export function rememberRequestActor(request: object, actor: AuditActor): void {
 }
 
 /** Freeze what access settled, before the handler turns it into a status. */
-export function rememberAccessOutcome(
-  request: object,
-  access: RouteAccess,
-  decision: AccessDecision,
-): void {
+export function rememberAccessOutcome(request: object, access: RouteAccess, decision: AccessDecision): void {
   amend(request, { access: describeAccess(access, decision) });
 }
 
@@ -86,10 +82,7 @@ function amend(request: object, note: RequestOutcome): void {
  * are facts about the code, not about the caller, and they are what turns "a
  * 404" into "that caller lacked orders.read on organizations/order".
  */
-function describeAccess(
-  access: RouteAccess,
-  decision: AccessDecision,
-): RequestAccessFacts {
+function describeAccess(access: RouteAccess, decision: AccessDecision): RequestAccessFacts {
   if (decision.outcome !== "allow") {
     return {
       outcome: decision.outcome,
@@ -100,18 +93,14 @@ function describeAccess(
   return {
     outcome: "allow",
     accessKind: decision.accessKind,
-    ...(decision.permission === undefined
-      ? {}
-      : { permission: decision.permission }),
+    ...(decision.permission === undefined ? {} : { permission: decision.permission }),
     ...(decision.resource === undefined
       ? {}
       : {
           resourceType: decision.resource.type,
           resourceId: decision.resource.id,
         }),
-    ...(decision.authMethod === undefined
-      ? {}
-      : { authMethod: decision.authMethod }),
+    ...(decision.authMethod === undefined ? {} : { authMethod: decision.authMethod }),
   };
 }
 
@@ -120,11 +109,7 @@ function declared(access: RouteAccess): {
   permission?: string;
   resourceType?: string;
 } {
-  if (
-    access.kind === "permission" ||
-    access.kind === "visibility" ||
-    access.kind === "scoped"
-  ) {
+  if (access.kind === "permission" || access.kind === "visibility" || access.kind === "scoped") {
     return { permission: access.permission, resourceType: access.resourceType };
   }
   return {};

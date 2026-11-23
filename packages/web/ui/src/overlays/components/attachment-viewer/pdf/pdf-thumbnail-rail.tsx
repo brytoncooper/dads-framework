@@ -75,16 +75,8 @@ function PdfThumbnail({
   const t = useOverlaysCopy();
   const buttonRef = React.useRef<HTMLButtonElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
-  const image = useThumbnailRender(
-    pdfDocument,
-    pageNumber,
-    rotation,
-    buttonRef,
-    canvasRef,
-    railRef,
-  );
-  const slotClassName =
-    "mx-auto block max-w-full rounded-sm bg-card shadow-sm ring-1 ring-border";
+  const image = useThumbnailRender(pdfDocument, pageNumber, rotation, buttonRef, canvasRef, railRef);
+  const slotClassName = "mx-auto block max-w-full rounded-sm bg-card shadow-sm ring-1 ring-border";
 
   return (
     <button
@@ -121,12 +113,7 @@ function PdfThumbnail({
           style={{ width: image.cssWidth, height: image.cssHeight }}
         />
       )}
-      <span
-        className={cn(
-          "text-xs text-muted-foreground tabular-nums",
-          isCurrent && "font-medium text-foreground",
-        )}
-      >
+      <span className={cn("text-xs text-muted-foreground tabular-nums", isCurrent && "font-medium text-foreground")}>
         {pageNumber}
       </span>
     </button>

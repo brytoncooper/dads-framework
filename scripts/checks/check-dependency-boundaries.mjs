@@ -4,10 +4,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
-import {
-  bindingScopes,
-  scopedImportProblem,
-} from "./binding-dependency-scopes.mjs";
+import { bindingScopes, scopedImportProblem } from "./binding-dependency-scopes.mjs";
 
 /**
  * Package boundaries, in three gates over one declaration.
@@ -50,9 +47,7 @@ export function checkDependencyBoundaries(world) {
   const project = JSON.parse(world.read(PROJECT_FILE));
   const packages = project.packages ?? [];
   const manifests = readManifests(packages, world);
-  const workspaceNames = new Set(
-    [...manifests.values()].map((entry) => entry.manifest.name),
-  );
+  const workspaceNames = new Set([...manifests.values()].map((entry) => entry.manifest.name));
 
   const bindings = new Map(
     packages.flatMap((declared) => {
@@ -69,9 +64,7 @@ export function checkDependencyBoundaries(world) {
 
     const entry = manifests.get(declared.name);
     if (entry === undefined) continue;
-    violations.push(
-      ...checkDeclaredDependencies(declared, allowed, entry, workspaceNames),
-    );
+    violations.push(...checkDeclaredDependencies(declared, allowed, entry, workspaceNames));
 
     if (entry.manifest.publishConfig === undefined) continue;
     const surface = checkPublicSurface(declared, allowed, entry, world);
@@ -97,16 +90,12 @@ function checkImports(declared, allowed, world, bindings) {
         kind: declared.kind,
       });
       if (scopedProblem !== undefined) {
-        violations.push(
-          violation(GATES.imports, declared, file, name, scopedProblem),
-        );
+        violations.push(violation(GATES.imports, declared, file, name, scopedProblem));
         continue;
       }
       if (isLocalSpecifier(dependency)) continue;
       if (allowed.has(name)) continue;
-      violations.push(
-        violation(GATES.imports, declared, file, name, `imports "${name}"`),
-      );
+      violations.push(violation(GATES.imports, declared, file, name, `imports "${name}"`));
     }
   }
   return violations;
@@ -116,22 +105,12 @@ function checkImports(declared, allowed, world, bindings) {
 function checkDeclaredDependencies(declared, allowed, entry, workspaceNames) {
   const violations = [];
   const installed = new Set();
-  for (const field of [
-    "dependencies",
-    "optionalDependencies",
-    "peerDependencies",
-  ]) {
+  for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
     for (const name of Object.keys(entry.manifest[field] ?? {})) {
       installed.add(name);
       if (allowed.has(name)) continue;
       violations.push(
-        violation(
-          GATES.declared,
-          declared,
-          entry.path,
-          name,
-          `declares "${name}" in ${field} but does not allow it`,
-        ),
+        violation(GATES.declared, declared, entry.path, name, `declares "${name}" in ${field} but does not allow it`),
       );
     }
   }
@@ -218,13 +197,7 @@ function surfaceFiles(root, manifest) {
  * dynamic imports, and `import("…")` types in emitted declarations.
  */
 function readModuleSpecifiers(source, path) {
-  const parsed = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS,
-  );
+  const parsed = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const specifiers = new Set();
   const visit = (node) => {
     if (
@@ -234,11 +207,7 @@ function readModuleSpecifiers(source, path) {
     ) {
       specifiers.add(node.moduleSpecifier.text);
     }
-    if (
-      ts.isImportTypeNode(node) &&
-      ts.isLiteralTypeNode(node.argument) &&
-      ts.isStringLiteral(node.argument.literal)
-    ) {
+    if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument) && ts.isStringLiteral(node.argument.literal)) {
       specifiers.add(node.argument.literal.text);
     }
     if (
@@ -263,9 +232,7 @@ function isLocalSpecifier(specifier) {
 /** `@scope/name/deep` and `name/deep` both name the package `…/name`. */
 function packageOf(specifier) {
   const segments = specifier.split("/");
-  return specifier.startsWith("@")
-    ? segments.slice(0, 2).join("/")
-    : segments[0];
+  return specifier.startsWith("@") ? segments.slice(0, 2).join("/") : segments[0];
 }
 
 function violation(gate, declared, file, dependency, detail) {
@@ -295,9 +262,7 @@ export function render(result, asJson) {
     return `${JSON.stringify(payload)}\n`;
   }
 
-  const lines = result.violations.map(
-    (finding) => `${finding.gate}: ${finding.message}`,
-  );
+  const lines = result.violations.map((finding) => `${finding.gate}: ${finding.message}`);
   if (result.skippedSurfaces.length > 0) {
     const skipped = result.skippedSurfaces.join(", ");
     lines.push(`${GATES.surface}: skipped (no dist) — ${skipped}`);
@@ -348,9 +313,7 @@ function listFilesUnder(root, directory) {
 
 function resolveRoot(argv) {
   const index = argv.indexOf("--root");
-  return index === -1 || argv[index + 1] === undefined
-    ? process.cwd()
-    : resolve(argv[index + 1]);
+  return index === -1 || argv[index + 1] === undefined ? process.cwd() : resolve(argv[index + 1]);
 }
 
 export function main(argv) {
@@ -361,9 +324,7 @@ export function main(argv) {
   };
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const result = main(process.argv.slice(2));

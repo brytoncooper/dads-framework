@@ -7,11 +7,10 @@ if (!vitestBin) {
   process.exit(2);
 }
 
-const completed = spawnSync(
-  process.execPath,
-  [vitestBin, "run", "src/read-document-unit.test.ts", "--root", "."],
-  { encoding: "utf8", stdio: "pipe" },
-);
+const completed = spawnSync(process.execPath, [vitestBin, "run", "src/read-document-unit.test.ts", "--root", "."], {
+  encoding: "utf8",
+  stdio: "pipe",
+});
 if (completed.status !== 0 || completed.error) {
   process.stderr.write(`${completed.stderr ?? ""}${completed.stdout ?? ""}`);
   process.exit(completed.status ?? 2);

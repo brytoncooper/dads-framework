@@ -10,19 +10,12 @@ import {
   type AccessModel,
   compileAccessFromIr,
 } from "@dads-framework/access";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import type { PermissionQuery, RelationshipWrite } from "@dads-framework/access/runtime";
 import { InMemoryAuthorization } from "@dads-framework/access/testing";
 import { expect, it } from "vitest";
 
 import { compileAccessPolicy } from "./policy/compile-access-policy.js";
-import {
-  createNodeSqliteExecutor,
-  SqliteAuthorization,
-  sqliteRelationshipSchemaMigration,
-} from "./index.js";
+import { createNodeSqliteExecutor, SqliteAuthorization, sqliteRelationshipSchemaMigration } from "./index.js";
 
 const ORACLE_BIN = path.resolve(
   import.meta.dirname,
@@ -50,15 +43,9 @@ const typeSub = (wireName: string): AccessIrSubject => ({
   kind: "type",
   wireName,
 });
-const roleDef = (
-  name: string,
-  subjects: readonly AccessIrSubject[],
-): AccessIrRole => ({ name, subjects });
+const roleDef = (name: string, subjects: readonly AccessIrSubject[]): AccessIrRole => ({ name, subjects });
 const roleTerm = (name: string): AccessIrTerm => ({ kind: "role", name });
-const arrowTerm = (
-  roleName: string,
-  targetPermission: string,
-): AccessIrTerm => ({
+const arrowTerm = (roleName: string, targetPermission: string): AccessIrTerm => ({
   kind: "through",
   roleName,
   targetPermission,
@@ -72,11 +59,7 @@ function makeRng(seed: number) {
   };
 }
 
-function pickOne<Item>(
-  pick: (bound: number) => number,
-  items: readonly Item[],
-  fallback: Item,
-): Item {
+function pickOne<Item>(pick: (bound: number) => number, items: readonly Item[], fallback: Item): Item {
   return items[pick(items.length)] ?? fallback;
 }
 
@@ -102,9 +85,7 @@ function callLeanOracle(payload: unknown): {
   }
   return {
     checks: parsed.checks.map((entry) => Boolean(entry)),
-    lookups: parsed.lookups.map((list) =>
-      Array.isArray(list) ? list.map(String) : [],
-    ),
+    lookups: parsed.lookups.map((list) => (Array.isArray(list) ? list.map(String) : [])),
   };
 }
 
@@ -138,10 +119,7 @@ function generateRandomSchema(seed: number): {
     ? [
         {
           wireName: "fuzz/node_a",
-          roles: [
-            roleDef("link", [typeSub("fuzz/org"), typeSub("fuzz/node_b")]),
-            roleDef("viewer", [USER_EXP]),
-          ],
+          roles: [roleDef("link", [typeSub("fuzz/org"), typeSub("fuzz/node_b")]), roleDef("viewer", [USER_EXP])],
           permissions: [
             {
               name: "view",
@@ -156,10 +134,7 @@ function generateRandomSchema(seed: number): {
         },
         {
           wireName: "fuzz/node_b",
-          roles: [
-            roleDef("link", [typeSub("fuzz/team"), typeSub("fuzz/node_a")]),
-            roleDef("viewer", [USER_EXP]),
-          ],
+          roles: [roleDef("link", [typeSub("fuzz/team"), typeSub("fuzz/node_a")]), roleDef("viewer", [USER_EXP])],
           permissions: [
             {
               name: "view",
@@ -177,11 +152,7 @@ function generateRandomSchema(seed: number): {
         {
           wireName: "fuzz/folder",
           roles: [
-            roleDef("parent", [
-              typeSub("fuzz/org"),
-              typeSub("fuzz/team"),
-              typeSub("fuzz/folder"),
-            ]),
+            roleDef("parent", [typeSub("fuzz/org"), typeSub("fuzz/team"), typeSub("fuzz/folder")]),
             roleDef("viewer", [USER_EXP, GROUP_EXP]),
           ],
           permissions: [
@@ -208,11 +179,7 @@ function generateRandomSchema(seed: number): {
   ];
   const scopedBase: AccessIrTerm = {
     kind: "or",
-    terms: [
-      arrowTerm("scope_org", "view"),
-      arrowTerm("scope_team", "view"),
-      roleTerm("viewer"),
-    ],
+    terms: [arrowTerm("scope_org", "view"), arrowTerm("scope_team", "view"), roleTerm("viewer")],
   };
   const definitions: AccessIrDefinition[] = [
     { wireName: "user", roles: [], permissions: [] },
@@ -234,12 +201,7 @@ function generateRandomSchema(seed: number): {
           terms: [
             {
               kind: "excluding",
-              term: randomExpr(
-                pick,
-                [roleTerm("owner"), roleTerm("member")],
-                2,
-                false,
-              ),
+              term: randomExpr(pick, [roleTerm("owner"), roleTerm("member")], 2, false),
               banned: roleTerm("banned"),
             },
           ],
@@ -248,23 +210,14 @@ function generateRandomSchema(seed: number): {
     },
     {
       wireName: "fuzz/team",
-      roles: [
-        roleDef("org", [typeSub("fuzz/org")]),
-        roleDef("lead", [USER_EXP]),
-        roleDef("banned", [USER_EXP]),
-      ],
+      roles: [roleDef("org", [typeSub("fuzz/org")]), roleDef("lead", [USER_EXP]), roleDef("banned", [USER_EXP])],
       permissions: [
         {
           name: "view",
           terms: [
             {
               kind: "excluding",
-              term: randomExpr(
-                pick,
-                [roleTerm("lead"), arrowTerm("org", "view")],
-                2,
-                false,
-              ),
+              term: randomExpr(pick, [roleTerm("lead"), arrowTerm("org", "view")], 2, false),
               banned: roleTerm("banned"),
             },
           ],
@@ -312,11 +265,7 @@ function generateRandomSchema(seed: number): {
   return { model: compileAccessFromIr(definitions), mutualRecursion };
 }
 
-function generateWorldWrites(
-  seed: number,
-  nowMs: number,
-  mutualRecursion: boolean,
-) {
+function generateWorldWrites(seed: number, nowMs: number, mutualRecursion: boolean) {
   const pick = makeRng(seed * 31_337 + 5);
   const users = ["u0", "u1", "u2"];
   const groups = ["g0", "g1"];
@@ -456,9 +405,7 @@ function generateWorldWrites(
       writes.push({
         resource: { type: "fuzz/item", id: itemId },
         relation: "parent",
-        subject: mutualRecursion
-          ? { type: "fuzz/node_a", id: "a0" }
-          : { type: "fuzz/folder", id: "f1" },
+        subject: mutualRecursion ? { type: "fuzz/node_a", id: "a0" } : { type: "fuzz/folder", id: "f1" },
       });
     if (pick(2) === 0)
       writes.push({
@@ -490,22 +437,13 @@ it.runIf(existsSync(ORACLE_BIN))(
     for (let seed = 1; seed <= DEFAULT_SCHEMAS; seed += 1) {
       const { model, mutualRecursion } = generateRandomSchema(seed);
       const lowered = compileAccessPolicy(model).model;
-      const { users, items, rows, writes } = generateWorldWrites(
-        seed,
-        nowMs,
-        mutualRecursion,
-      );
+      const { users, items, rows, writes } = generateWorldWrites(seed, nowMs, mutualRecursion);
 
       const db = new DatabaseSync(":memory:");
       try {
-        for (const stmt of sqliteRelationshipSchemaMigration.statements)
-          db.exec(stmt);
-        db.exec(
-          "CREATE TABLE fuzz_items (id TEXT PRIMARY KEY, org_id TEXT NOT NULL, team_id TEXT NOT NULL);",
-        );
-        const insertItem = db.prepare(
-          "INSERT INTO fuzz_items (id, org_id, team_id) VALUES (?, ?, ?)",
-        );
+        for (const stmt of sqliteRelationshipSchemaMigration.statements) db.exec(stmt);
+        db.exec("CREATE TABLE fuzz_items (id TEXT PRIMARY KEY, org_id TEXT NOT NULL, team_id TEXT NOT NULL);");
+        const insertItem = db.prepare("INSERT INTO fuzz_items (id, org_id, team_id) VALUES (?, ?, ?)");
         for (const row of rows) insertItem.run(row.id, row.orgId, row.teamId);
 
         const sqliteAuth = new SqliteAuthorization({
@@ -556,10 +494,7 @@ it.runIf(existsSync(ORACLE_BIN))(
             subjectId: String(row["subject_id"] ?? ""),
             subjectRelation: String(row["subject_relation"] ?? ""),
             subjectIsWildcard: Number(row["subject_is_wildcard"] ?? 0) === 1,
-            expiresAt:
-              row["expires_at"] === null || row["expires_at"] === undefined
-                ? null
-                : Number(row["expires_at"]),
+            expiresAt: row["expires_at"] === null || row["expires_at"] === undefined ? null : Number(row["expires_at"]),
           })),
           now: nowMs,
           checks: checkQueries.map((query) => ({
@@ -589,13 +524,9 @@ it.runIf(existsSync(ORACLE_BIN))(
             },
           });
           const filtered = db
-            .prepare(
-              `SELECT item.id FROM fuzz_items item WHERE ${scoped.sql} ORDER BY item.id`,
-            )
+            .prepare(`SELECT item.id FROM fuzz_items item WHERE ${scoped.sql} ORDER BY item.id`)
             .all(...scoped.values);
-          expect(filtered.map((entry) => String(entry["id"] ?? ""))).toEqual(
-            [...(oracle.lookups[index] ?? [])].sort(),
-          );
+          expect(filtered.map((entry) => String(entry["id"] ?? ""))).toEqual([...(oracle.lookups[index] ?? [])].sort());
         }
       } finally {
         db.close();

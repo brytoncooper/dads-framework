@@ -6,15 +6,7 @@
  * @vitest-environment jsdom
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { SplitButton, type SplitButtonItem } from "./split-button.js";
 
 class ResizeObserverStub {
@@ -119,11 +111,7 @@ describe("split button", () => {
       </SplitButton>,
     );
     openMenu();
-    expect(
-      screen
-        .getByRole("menuitem", { name: "Delete" })
-        .getAttribute("data-variant"),
-    ).toBe("destructive");
+    expect(screen.getByRole("menuitem", { name: "Delete" }).getAttribute("data-variant")).toBe("destructive");
     const disabled = screen.getByRole("menuitem", { name: "Record" });
     expect(disabled.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(disabled);
@@ -139,11 +127,7 @@ describe("split button", () => {
       </SplitButton>,
     );
     openMenu();
-    expect(
-      screen
-        .getByRole("menuitem", { name: "Record" })
-        .getAttribute("aria-describedby"),
-    ).toBe("why");
+    expect(screen.getByRole("menuitem", { name: "Record" }).getAttribute("aria-describedby")).toBe("why");
   });
 
   it("disables the primary action and the caret together", () => {
@@ -152,24 +136,13 @@ describe("split button", () => {
         Edit
       </SplitButton>,
     );
-    expect(screen.getByRole("button", { name: "Edit" })).toHaveProperty(
-      "disabled",
-      true,
-    );
-    expect(screen.getByRole("button", { name: "More actions" })).toHaveProperty(
-      "disabled",
-      true,
-    );
+    expect(screen.getByRole("button", { name: "Edit" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "More actions" })).toHaveProperty("disabled", true);
   });
 
   it("passes Button variant and size through to both halves", () => {
     render(
-      <SplitButton
-        onClick={vi.fn()}
-        items={items()}
-        variant="outlineDestructive"
-        size="sm"
-      >
+      <SplitButton onClick={vi.fn()} items={items()} variant="outlineDestructive" size="sm">
         Edit
       </SplitButton>,
     );

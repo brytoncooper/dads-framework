@@ -4,15 +4,7 @@
  * Why: callers should share one operation contract between server and client
  * without hand-wiring verbs, routes, or envelope parsing at every call site.
  */
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -208,17 +200,13 @@ describe("callApi", () => {
       data: { id: "n1", title: "Hello" },
       meta: { revision: 4 },
     });
-    expectTypeOf(result).toEqualTypeOf<
-      ApiDataWithMeta<{ id: string; title: string }, { revision: number }>
-    >();
+    expectTypeOf(result).toEqualTypeOf<ApiDataWithMeta<{ id: string; title: string }, { revision: number }>>();
 
     respondWith(200, {
       data: { id: "n1", title: "Hello" },
       meta: { revision: "bad" },
     });
-    await expect(
-      callApi(getNoteWithMetaOp, { params: { id: "n1" } }),
-    ).rejects.toThrow();
+    await expect(callApi(getNoteWithMetaOp, { params: { id: "n1" } })).rejects.toThrow();
   });
 
   it("calls listOperation with default pagination and with custom meta", async () => {
@@ -246,14 +234,9 @@ describe("callApi", () => {
       items: [{ id: "n2", title: "Pinned" }],
       meta: { total: 3, page: 2, perPage: 10, pinned: 1 },
     });
-    expect(lastCall().url).toBe(
-      "/api/tenants/org%2F1/notes?page=2&perPage=10&status=open",
-    );
+    expect(lastCall().url).toBe("/api/tenants/org%2F1/notes?page=2&perPage=10&status=open");
     expectTypeOf(filtered).toEqualTypeOf<
-      ApiPageWithMeta<
-        { id: string; title: string },
-        { total: number; page: number; perPage: number; pinned: number }
-      >
+      ApiPageWithMeta<{ id: string; title: string }, { total: number; page: number; perPage: number; pinned: number }>
     >();
   });
 
@@ -285,12 +268,8 @@ describe("callApi", () => {
       meta: { queuedAt: "2026-11-23T00:00:00Z" },
     });
     expect(lastCall().url).toBe("/api/notes/n3/export?format=csv");
-    expect(lastCall().init.body).toBe(
-      JSON.stringify({ includeDeleted: false }),
-    );
-    expectTypeOf(exported).toEqualTypeOf<
-      ApiDataWithMeta<{ jobId: string }, { queuedAt: string }>
-    >();
+    expect(lastCall().init.body).toBe(JSON.stringify({ includeDeleted: false }));
+    expectTypeOf(exported).toEqualTypeOf<ApiDataWithMeta<{ jobId: string }, { queuedAt: string }>>();
   });
 
   it("calls patchOperation and putOperation", async () => {
@@ -346,12 +325,8 @@ describe("callApi", () => {
     respondWith(200, { data: { id: "n1", title: "Never reached" } });
 
     await expect(callApi(getNoteOp, { params: { id: "" } })).rejects.toThrow();
-    await expect(
-      callApi(listNotesOp, { query: { page: 0 } }),
-    ).rejects.toThrow();
-    await expect(
-      callApi(createNoteOp, { body: { title: "" } }),
-    ).rejects.toThrow();
+    await expect(callApi(listNotesOp, { query: { page: 0 } })).rejects.toThrow();
+    await expect(callApi(createNoteOp, { body: { title: "" } })).rejects.toThrow();
     expect(calls).toHaveLength(0);
   });
 });

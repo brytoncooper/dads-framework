@@ -1,11 +1,4 @@
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -22,11 +15,7 @@ import { writeOutputsAtomically } from "./atomic-output.js";
 const workspaces: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    workspaces
-      .splice(0)
-      .map((root) => rm(root, { recursive: true, force: true })),
-  );
+  await Promise.all(workspaces.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 describe("writeOutputsAtomically", () => {
@@ -38,13 +27,8 @@ describe("writeOutputsAtomically", () => {
       { path: path.join(root, "report.json"), contents: "report\n" },
     ]);
 
-    expect((await readdir(root)).sort()).toEqual([
-      "dads.testing.json",
-      "report.json",
-    ]);
-    expect(await readFile(path.join(root, "report.json"), "utf8")).toBe(
-      "report\n",
-    );
+    expect((await readdir(root)).sort()).toEqual(["dads.testing.json", "report.json"]);
+    expect(await readFile(path.join(root, "report.json"), "utf8")).toBe("report\n");
   });
 
   it("renames nothing and removes every temporary file when one write fails", async () => {
@@ -66,10 +50,7 @@ describe("writeOutputsAtomically", () => {
 
     expect(await readFile(manifestPath, "utf8")).toBe("previous manifest\n");
     expect(await readFile(reportPath, "utf8")).toBe("previous report\n");
-    expect((await readdir(root)).sort()).toEqual([
-      "dads.testing.json",
-      "report.json",
-    ]);
+    expect((await readdir(root)).sort()).toEqual(["dads.testing.json", "report.json"]);
   });
 
   it("replaces the outputs before a failed rename and nothing after it", async () => {
@@ -90,13 +71,8 @@ describe("writeOutputsAtomically", () => {
     ).rejects.toThrow();
 
     expect(await readFile(manifestPath, "utf8")).toBe("new manifest\n");
-    expect(await readFile(path.join(reportPath, "occupied"), "utf8")).toBe(
-      "previous report\n",
-    );
-    expect((await readdir(root)).sort()).toEqual([
-      "dads.testing.json",
-      "report.json",
-    ]);
+    expect(await readFile(path.join(reportPath, "occupied"), "utf8")).toBe("previous report\n");
+    expect((await readdir(root)).sort()).toEqual(["dads.testing.json", "report.json"]);
   });
 });
 

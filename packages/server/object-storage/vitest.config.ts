@@ -10,14 +10,8 @@ export default defineConfig({
     // `node` is the default; a file that needs a DOM opts in with a
     // `// @vitest-environment jsdom` docblock.
     environment: "node",
-    include: INTEGRATION_TIER
-      ? TIER_FILES
-      : ["src/**/*.test.ts", "src/**/*.test.tsx"],
-    exclude: [
-      ...configDefaults.exclude,
-      "**/dist/**",
-      ...(INTEGRATION_TIER ? [] : TIER_FILES),
-    ],
+    include: INTEGRATION_TIER ? TIER_FILES : ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    exclude: [...configDefaults.exclude, "**/dist/**", ...(INTEGRATION_TIER ? [] : TIER_FILES)],
     testTimeout: 60_000,
     hookTimeout: 120_000,
   },

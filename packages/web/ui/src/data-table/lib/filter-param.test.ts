@@ -8,23 +8,17 @@ describe("encodeFilterParam", () => {
   });
 
   it("writes a filter on its column's default operator as column and value", () => {
-    expect(encodeFilterParam([{ id: "status", value: "ACTIVE" }])).toBe(
-      "status.ACTIVE",
-    );
+    expect(encodeFilterParam([{ id: "status", value: "ACTIVE" }])).toBe("status.ACTIVE");
   });
 
   it("spells the operator out when it is not the default", () => {
-    expect(
-      encodeFilterParam([
-        { id: "createdAt", operator: "gte", value: "2026-01-01" },
-      ]),
-    ).toBe("createdAt.gte.2026-01-01");
+    expect(encodeFilterParam([{ id: "createdAt", operator: "gte", value: "2026-01-01" }])).toBe(
+      "createdAt.gte.2026-01-01",
+    );
   });
 
   it("joins several accepted values with commas", () => {
-    expect(
-      encodeFilterParam([{ id: "status", value: ["ACTIVE", "ARCHIVED"] }]),
-    ).toBe("status.ACTIVE,ARCHIVED");
+    expect(encodeFilterParam([{ id: "status", value: ["ACTIVE", "ARCHIVED"] }])).toBe("status.ACTIVE,ARCHIVED");
   });
 
   it("separates several filters with a star", () => {
@@ -37,23 +31,17 @@ describe("encodeFilterParam", () => {
   });
 
   it("keeps the value slot for an operator that takes no value", () => {
-    expect(
-      encodeFilterParam([{ id: "note", operator: "isEmpty", value: "" }]),
-    ).toBe("note.isEmpty.");
+    expect(encodeFilterParam([{ id: "note", operator: "isEmpty", value: "" }])).toBe("note.isEmpty.");
   });
 
   it("leaves dots inside a value alone — they need no escape", () => {
-    expect(encodeFilterParam([{ id: "name", value: "test.org" }])).toBe(
-      "name.test.org",
-    );
+    expect(encodeFilterParam([{ id: "name", value: "test.org" }])).toBe("name.test.org");
   });
 });
 
 describe("decodeFilterParam", () => {
   it("reads a column and value as the column's default operator", () => {
-    expect(decodeFilterParam("status.ACTIVE")).toEqual([
-      { id: "status", value: "ACTIVE" },
-    ]);
+    expect(decodeFilterParam("status.ACTIVE")).toEqual([{ id: "status", value: "ACTIVE" }]);
   });
 
   it("reads a spelled-out operator", () => {
@@ -63,9 +51,7 @@ describe("decodeFilterParam", () => {
   });
 
   it("reads a comma list as several accepted values", () => {
-    expect(decodeFilterParam("status.ACTIVE,ARCHIVED")).toEqual([
-      { id: "status", value: ["ACTIVE", "ARCHIVED"] },
-    ]);
+    expect(decodeFilterParam("status.ACTIVE,ARCHIVED")).toEqual([{ id: "status", value: ["ACTIVE", "ARCHIVED"] }]);
   });
 
   it("reads several filters", () => {
@@ -76,32 +62,23 @@ describe("decodeFilterParam", () => {
   });
 
   it("keeps a value that contains dots whole", () => {
-    expect(decodeFilterParam("name.test.org")).toEqual([
-      { id: "name", value: "test.org" },
-    ]);
+    expect(decodeFilterParam("name.test.org")).toEqual([{ id: "name", value: "test.org" }]);
   });
 
   it("drops tokens that name no value", () => {
     expect(decodeFilterParam("")).toEqual([]);
     expect(decodeFilterParam("status")).toEqual([]);
     expect(decodeFilterParam("**")).toEqual([]);
-    expect(decodeFilterParam("status.ACTIVE**")).toEqual([
-      { id: "status", value: "ACTIVE" },
-    ]);
+    expect(decodeFilterParam("status.ACTIVE**")).toEqual([{ id: "status", value: "ACTIVE" }]);
   });
 
   it("reads a middle word that names no operator as part of the value", () => {
-    expect(decodeFilterParam("name.notAnOperator.x")).toEqual([
-      { id: "name", value: "notAnOperator.x" },
-    ]);
+    expect(decodeFilterParam("name.notAnOperator.x")).toEqual([{ id: "name", value: "notAnOperator.x" }]);
   });
 });
 
 describe("filter param escaping", () => {
-  const roundTrips = (
-    filters: Parameters<typeof encodeFilterParam>[0],
-    expected: string,
-  ) => {
+  const roundTrips = (filters: Parameters<typeof encodeFilterParam>[0], expected: string) => {
     const encoded = encodeFilterParam(filters);
     expect(encoded).toBe(expected);
     expect(decodeFilterParam(encoded ?? "")).toEqual(filters);

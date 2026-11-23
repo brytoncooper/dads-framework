@@ -11,18 +11,11 @@
 import { v1 } from "@authzed/authzed-node";
 import { describe, expect, it } from "vitest";
 
-import {
-  type PermissionQuery,
-  relationshipWrite,
-} from "@dads-framework/access/runtime";
+import { type PermissionQuery, relationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
-type SpiceDbClient = NonNullable<
-  ConstructorParameters<typeof SpiceDbAuthorization>[1]
->;
-type WriteResponse = Awaited<
-  ReturnType<SpiceDbClient["promises"]["writeRelationships"]>
->;
+type SpiceDbClient = NonNullable<ConstructorParameters<typeof SpiceDbAuthorization>[1]>;
+type WriteResponse = Awaited<ReturnType<SpiceDbClient["promises"]["writeRelationships"]>>;
 
 const SUBJECT = { type: "user", id: "reader" };
 const RESOURCE = { type: "test/document", id: "document" };
@@ -43,9 +36,7 @@ type Pending = {
 };
 
 /** A client whose writes finish only when the test says so, in any order. */
-function controlledClient(
-  consistency: "minimize-latency" | "fully-consistent" = "minimize-latency",
-) {
+function controlledClient(consistency: "minimize-latency" | "fully-consistent" = "minimize-latency") {
   const reads: unknown[] = [];
   const pending: Pending[] = [];
   const write = (): Promise<WriteResponse> =>
@@ -121,9 +112,7 @@ function controlledClient(
       resource: RESOURCE,
       permission: "view",
     });
-    await authorization.checkMany([
-      { subject: SUBJECT, resource: RESOURCE, permission: "view" },
-    ]);
+    await authorization.checkMany([{ subject: SUBJECT, resource: RESOURCE, permission: "view" }]);
     await authorization.lookupResources({
       subject: SUBJECT,
       resourceType: RESOURCE.type,
@@ -154,10 +143,7 @@ describe("SpiceDB enforcement reads after the adapter's own writes", () => {
       consistency: "fully-consistent",
     };
     await authorization.check(query);
-    await authorization.checkMany([
-      { subject: SUBJECT, resource: RESOURCE, permission: "view" },
-      query,
-    ]);
+    await authorization.checkMany([{ subject: SUBJECT, resource: RESOURCE, permission: "view" }, query]);
     await authorization.check({
       subject: SUBJECT,
       resource: RESOURCE,
@@ -172,9 +158,7 @@ describe("SpiceDB enforcement reads after the adapter's own writes", () => {
     const grant = authorization.writeRelationships([GRANT]);
     await finish(0, "after-grant");
     await expect(grant).resolves.toBe("after-grant");
-    expect(await enforce()).toEqual(
-      Array(3).fill(atLeastAsFresh("after-grant")),
-    );
+    expect(await enforce()).toEqual(Array(3).fill(atLeastAsFresh("after-grant")));
 
     const revoke = authorization.deleteRelationships({
       resourceType: RESOURCE.type,
@@ -182,58 +166,40 @@ describe("SpiceDB enforcement reads after the adapter's own writes", () => {
     });
     await finish(1, "after-revoke");
     await revoke;
-    expect(await enforce()).toEqual(
-      Array(3).fill(atLeastAsFresh("after-revoke")),
-    );
+    expect(await enforce()).toEqual(Array(3).fill(atLeastAsFresh("after-revoke")));
   });
 
   it("runs concurrent writes one at a time, in order, and holds the last one's token", async () => {
-    const { authorization, pending, settle, finish, enforce } =
-      controlledClient();
+    const { authorization, pending, settle, finish, enforce } = controlledClient();
     const finished: string[] = [];
     const writes = ["first", "second", "third", "fourth"].map((name, index) =>
-      (index % 2 === 0
-        ? authorization.writeRelationships([GRANT])
-        : authorization.deleteExactRelationship(GRANT)
-      ).then((token) => {
-        finished.push(name);
-        return token;
-      }),
+      (index % 2 === 0 ? authorization.writeRelationships([GRANT]) : authorization.deleteExactRelationship(GRANT)).then(
+        (token) => {
+          finished.push(name);
+          return token;
+        },
+      ),
     );
-    for (const [index, name] of [
-      "first",
-      "second",
-      "third",
-      "fourth",
-    ].entries()) {
+    for (const [index, name] of ["first", "second", "third", "fourth"].entries()) {
       // The next write has not been sent until the one before it settled.
       await settle();
       expect(pending).toHaveLength(index + 1);
       await finish(index, name);
     }
-    await expect(Promise.all(writes)).resolves.toEqual([
-      "first",
-      "second",
-      "third",
-      "fourth",
-    ]);
+    await expect(Promise.all(writes)).resolves.toEqual(["first", "second", "third", "fourth"]);
     expect(finished).toEqual(["first", "second", "third", "fourth"]);
     expect(await enforce()).toEqual(Array(3).fill(atLeastAsFresh("fourth")));
   });
 
   it("queues a write behind a failed one and trusts it once it succeeds", async () => {
     const { authorization, fail, finish, enforce } = controlledClient();
-    const failed = expect(
-      authorization.writeRelationships([GRANT]),
-    ).rejects.toThrow("deadline exceeded");
+    const failed = expect(authorization.writeRelationships([GRANT])).rejects.toThrow("deadline exceeded");
     const next = authorization.writeRelationships([GRANT]);
     await fail(0, new Error("deadline exceeded"));
     await failed;
     await finish(1, "after-failure");
     await expect(next).resolves.toBe("after-failure");
-    expect(await enforce()).toEqual(
-      Array(3).fill(atLeastAsFresh("after-failure")),
-    );
+    expect(await enforce()).toEqual(Array(3).fill(atLeastAsFresh("after-failure")));
   });
 
   it("reads fully consistent after a failed write, which may still have committed", async () => {
@@ -241,9 +207,7 @@ describe("SpiceDB enforcement reads after the adapter's own writes", () => {
     const grant = authorization.writeRelationships([GRANT]);
     await finish(0, "after-grant");
     await grant;
-    const failed = expect(
-      authorization.writeRelationships([GRANT]),
-    ).rejects.toThrow("deadline exceeded");
+    const failed = expect(authorization.writeRelationships([GRANT])).rejects.toThrow("deadline exceeded");
     await fail(1, new Error("deadline exceeded"));
     await failed;
     expect(await enforce()).toEqual([CURRENT, CURRENT, CURRENT]);
@@ -259,8 +223,7 @@ describe("SpiceDB enforcement reads after the adapter's own writes", () => {
   });
 
   it("forces full consistency under SPICEDB_CONSISTENCY=fully-consistent", async () => {
-    const { authorization, finish, enforce } =
-      controlledClient("fully-consistent");
+    const { authorization, finish, enforce } = controlledClient("fully-consistent");
     const grant = authorization.writeRelationships([GRANT]);
     await finish(0, "after-grant");
     await grant;

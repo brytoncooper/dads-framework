@@ -12,16 +12,9 @@ import { z } from "zod";
 import { resource } from "@dads-framework/access";
 
 import type { CatalogOverSizeMarkError } from "./audit-catalog-sizes.job.js";
-import {
-  auditCatalogSizes,
-  createAuditCatalogSizesJob,
-} from "./audit-catalog-sizes.job.js";
+import { auditCatalogSizes, createAuditCatalogSizesJob } from "./audit-catalog-sizes.job.js";
 import { CatalogSizeReader } from "./catalog-size-reader.js";
-import {
-  catalogTable,
-  catalogTableFailures,
-  catalogWithoutTable,
-} from "./catalog-tables.js";
+import { catalogTable, catalogTableFailures, catalogWithoutTable } from "./catalog-tables.js";
 
 const idSchema = z.string();
 const Machine = resource("test/machine", { id: idSchema });
@@ -108,27 +101,19 @@ describe("auditCatalogSizes", () => {
 
 describe("catalog table declarations", () => {
   it("refuses a catalogWithoutTable with an empty reason and flags stray declarations", () => {
-    expect(() => catalogWithoutTable(Ticket, "   ")).toThrow(
-      "test/ticket has no table but gives no reason",
-    );
+    expect(() => catalogWithoutTable(Ticket, "   ")).toThrow("test/ticket has no table but gives no reason");
     expect(
-      catalogTableFailures(
-        ["test/machine"],
-        [catalogTable(Machine, machines), catalogTable(Ticket, machines)],
-      ),
+      catalogTableFailures(["test/machine"], [catalogTable(Machine, machines), catalogTable(Ticket, machines)]),
     ).toEqual([
       {
         path: "test/ticket",
-        message:
-          "has a catalog table declaration but is not a registered catalog",
+        message: "has a catalog table declaration but is not a registered catalog",
       },
     ]);
   });
 
   it("names every catalog without a declaration and every stray declaration", () => {
-    expect(
-      catalogTableFailures(["test/machine", "test/scale"], declarations),
-    ).toEqual([
+    expect(catalogTableFailures(["test/machine", "test/scale"], declarations)).toEqual([
       {
         path: "test/scale",
         message:
@@ -136,13 +121,11 @@ describe("catalog table declarations", () => {
       },
       {
         path: "test/recipe",
-        message:
-          "has a catalog table declaration but is not a registered catalog",
+        message: "has a catalog table declaration but is not a registered catalog",
       },
       {
         path: "test/library",
-        message:
-          "has a catalog table declaration but is not a registered catalog",
+        message: "has a catalog table declaration but is not a registered catalog",
       },
     ]);
   });

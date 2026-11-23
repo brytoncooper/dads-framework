@@ -2,19 +2,13 @@ export const PROJECT_IDS = ["p0", "p1", "p2"];
 export const TASK_KINDS = ["lint", "typecheck", "test"];
 
 export function assertSeed(seed) {
-  if (
-    typeof seed !== "number" ||
-    !Number.isInteger(seed) ||
-    seed < 0 ||
-    seed > 0xffffffff
-  )
+  if (typeof seed !== "number" || !Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
     throw new Error("--seed must be an unsigned 32-bit decimal integer.");
   return seed;
 }
 
 export function assertDecimalSeed(value) {
-  if (!/^(?:0|[1-9][0-9]*)$/.test(value))
-    throw new Error("--seed must be an unsigned 32-bit decimal integer.");
+  if (!/^(?:0|[1-9][0-9]*)$/.test(value)) throw new Error("--seed must be an unsigned 32-bit decimal integer.");
   const seed = Number(value);
   return assertSeed(seed);
 }
@@ -41,20 +35,12 @@ export function createPrng(seed) {
 export function makeModel(seed) {
   assertSeed(seed);
   const next = createPrng(seed);
-  const unusedValues = new Map(
-    PROJECT_IDS.map((project) => [project, 100 + (next() % 900)]),
-  );
-  const ownIncrements = new Map(
-    PROJECT_IDS.map((project) => [project, 1 + (next() % 90)]),
-  );
+  const unusedValues = new Map(PROJECT_IDS.map((project) => [project, 100 + (next() % 900)]));
+  const ownIncrements = new Map(PROJECT_IDS.map((project) => [project, 1 + (next() % 90)]));
   const values = new Map();
   for (const project of PROJECT_IDS) {
     const upstream = dependenciesForProject(seed, project)[0];
-    values.set(
-      project,
-      (upstream === undefined ? 0 : values.get(upstream)) +
-        ownIncrements.get(project),
-    );
+    values.set(project, (upstream === undefined ? 0 : values.get(upstream)) + ownIncrements.get(project));
   }
   return {
     seed,
@@ -71,9 +57,7 @@ export function makeModel(seed) {
 }
 
 export function taskIds(projects, kinds = TASK_KINDS) {
-  return projects
-    .flatMap((project) => kinds.map((kind) => `${project}:${kind}`))
-    .sort();
+  return projects.flatMap((project) => kinds.map((kind) => `${project}:${kind}`)).sort();
 }
 
 export function downstreamProjects(model, owner) {

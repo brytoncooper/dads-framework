@@ -20,9 +20,7 @@ export type EmailMessageDescription = {
  * verification tokens and recipients are personal data, so the default driver
  * records only that a send happened and how big it was.
  */
-export function describeEmailMessage(
-  message: EmailMessage,
-): EmailMessageDescription {
+export function describeEmailMessage(message: EmailMessage): EmailMessageDescription {
   return {
     recipientCount: message.to.length,
     ccCount: message.cc?.length ?? 0,

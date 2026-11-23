@@ -13,10 +13,7 @@ import {
   discardVerificationSnapshot,
   verificationEnvironment,
 } from "./verification-inputs.js";
-import {
-  createVerificationReceiptStore,
-  publishSuccessfulVerificationReceipt,
-} from "./receipt-store.js";
+import { createVerificationReceiptStore, publishSuccessfulVerificationReceipt } from "./receipt-store.js";
 import { errorMessage } from "./verification-failure.js";
 import { sanitizedGitEnvironment } from "./workspace-git-context.js";
 import type {
@@ -72,9 +69,7 @@ export function runVerificationTask(
   };
 }
 
-export function runCapturedVerification(
-  snapshot: CapturedVerificationSnapshot,
-): ControlledVerificationExecution {
+export function runCapturedVerification(snapshot: CapturedVerificationSnapshot): ControlledVerificationExecution {
   try {
     assertSnapshotMatchesIdentity(snapshot.snapshotRoot, snapshot.identity);
     assertAllowedControlledImports(snapshot);
@@ -87,29 +82,20 @@ export function runCapturedVerification(
     [
       permissionModelOption(),
       ...snapshot.identity.files.map(
-        (file) =>
-          `--allow-fs-read=${resolveSnapshotPath(snapshot.snapshotRoot, file.path)}`,
+        (file) => `--allow-fs-read=${resolveSnapshotPath(snapshot.snapshotRoot, file.path)}`,
       ),
       `--allow-fs-write=${snapshot.outputRoot}`,
       ...moduleDefaultTypeOptions(),
       "--input-type=module",
       "--eval",
       controlledBootstrap(),
-      pathToFileURL(
-        resolveSnapshotPath(
-          snapshot.snapshotRoot,
-          snapshot.identity.command.entrypoint,
-        ),
-      ).href,
+      pathToFileURL(resolveSnapshotPath(snapshot.snapshotRoot, snapshot.identity.command.entrypoint)).href,
     ],
     {
       cwd:
         snapshot.identity.command.workingDirectory === "."
           ? snapshot.snapshotRoot
-          : resolveSnapshotPath(
-              snapshot.snapshotRoot,
-              snapshot.identity.command.workingDirectory,
-            ),
+          : resolveSnapshotPath(snapshot.snapshotRoot, snapshot.identity.command.workingDirectory),
       encoding: "utf8",
       env: verificationEnvironment(snapshot),
       stdio: "pipe",
@@ -124,11 +110,7 @@ export function runCapturedVerification(
     return failedCapturedExecution(snapshot, completed, errorMessage(error));
   }
   if (completed.error || completed.status !== 0 || completed.signal) {
-    return failedCapturedExecution(
-      snapshot,
-      completed,
-      readCapturedFailure(completed),
-    );
+    return failedCapturedExecution(snapshot, completed, readCapturedFailure(completed));
   }
   try {
     const outputs = fingerprintVerificationOutputs(snapshot);
@@ -152,16 +134,12 @@ function permissionModelOption(): string {
   if (nodeSupportsOption("--experimental-permission")) {
     return "--experimental-permission";
   }
-  throw new Error(
-    "Controlled verification requires a Node.js runtime with the permission model.",
-  );
+  throw new Error("Controlled verification requires a Node.js runtime with the permission model.");
 }
 
 /** Newer Node detects module syntax itself and rejects the default-type flag; pass it only where it still exists. */
 function moduleDefaultTypeOptions(): readonly string[] {
-  return nodeSupportsOption("--experimental-default-type=module")
-    ? ["--experimental-default-type=module"]
-    : [];
+  return nodeSupportsOption("--experimental-default-type=module") ? ["--experimental-default-type=module"] : [];
 }
 
 const supportedNodeOptions = new Map<string, boolean>();
@@ -200,31 +178,17 @@ function controlledBootstrap(): string {
   ].join("\n");
 }
 
-const allowedControlledBuiltins = new Set([
-  "node:assert",
-  "node:assert/strict",
-  "node:fs",
-  "node:path",
-]);
+const allowedControlledBuiltins = new Set(["node:assert", "node:assert/strict", "node:fs", "node:path"]);
 
-function assertAllowedControlledImports(
-  snapshot: CapturedVerificationSnapshot,
-): void {
+function assertAllowedControlledImports(snapshot: CapturedVerificationSnapshot): void {
   for (const file of snapshot.identity.files) {
     if (!/\.[cm]?js$/.test(file.path)) continue;
-    assertAllowedModuleSource(
-      readFileSync(
-        resolveSnapshotPath(snapshot.snapshotRoot, file.path),
-        "utf8",
-      ),
-    );
+    assertAllowedModuleSource(readFileSync(resolveSnapshotPath(snapshot.snapshotRoot, file.path), "utf8"));
   }
 }
 
 function assertAllowedModuleSource(source: string): void {
-  for (const match of source.matchAll(
-    /(?:from\s+|import\s*\()(["'])([^"']+)\1/g,
-  )) {
+  for (const match of source.matchAll(/(?:from\s+|import\s*\()(["'])([^"']+)\1/g)) {
     const specifier = match[2];
     if (specifier) assertAllowedImportSpecifier(specifier);
   }
@@ -236,24 +200,14 @@ function assertAllowedModuleSource(source: string): void {
 function assertAllowedImportSpecifier(specifier: string): void {
   if (specifier.startsWith("node:")) {
     if (allowedControlledBuiltins.has(specifier)) return;
-    throw new Error(
-      `Controlled verification import is not allowlisted: ${specifier}.`,
-    );
+    throw new Error(`Controlled verification import is not allowlisted: ${specifier}.`);
   }
-  if (
-    !specifier.startsWith(".") &&
-    !specifier.startsWith("/") &&
-    !specifier.startsWith("file:")
-  ) {
-    throw new Error(
-      `Controlled verification package import is not allowlisted: ${specifier}.`,
-    );
+  if (!specifier.startsWith(".") && !specifier.startsWith("/") && !specifier.startsWith("file:")) {
+    throw new Error(`Controlled verification package import is not allowlisted: ${specifier}.`);
   }
 }
 
-export function runReusableVerificationTask(
-  request: ControlledVerificationRequest,
-): ReusableVerificationExecution {
+export function runReusableVerificationTask(request: ControlledVerificationRequest): ReusableVerificationExecution {
   const snapshot = captureVerificationSnapshot(request);
   try {
     const execution = runCapturedVerification(snapshot);
@@ -263,23 +217,15 @@ export function runReusableVerificationTask(
     } catch (error: unknown) {
       return {
         status: "failed",
-        execution: failedCapturedExecution(
-          snapshot,
-          undefined,
-          errorMessage(error),
-        ),
+        execution: failedCapturedExecution(snapshot, undefined, errorMessage(error)),
       };
     }
-    const projectMatchedBeforePublication =
-      capturedSnapshotMatchesProject(snapshot);
+    const projectMatchedBeforePublication = capturedSnapshotMatchesProject(snapshot);
     const receipt = publishSuccessfulVerificationReceipt(
       createVerificationReceiptStore(request.projectRoot),
       execution,
     );
-    if (
-      !projectMatchedBeforePublication ||
-      !capturedSnapshotMatchesProject(snapshot)
-    ) {
+    if (!projectMatchedBeforePublication || !capturedSnapshotMatchesProject(snapshot)) {
       return { status: "stale", execution, receipt };
     }
     return { status: "succeeded", execution, receipt };
@@ -288,9 +234,7 @@ export function runReusableVerificationTask(
   }
 }
 
-function readCommandFailure(
-  completed: ReturnType<typeof spawnSync>,
-): string | undefined {
+function readCommandFailure(completed: ReturnType<typeof spawnSync>): string | undefined {
   if (completed.error) return completed.error.message;
   if (completed.status === 0) return undefined;
   const output = [completed.stderr, completed.stdout]
@@ -306,13 +250,8 @@ function fingerprintVerificationOutputs(
   snapshot: CapturedVerificationSnapshot,
 ): readonly VerificationOutputFingerprint[] {
   const actualOutputPaths = listOutputFiles(snapshot.outputRoot).sort();
-  if (
-    JSON.stringify(actualOutputPaths) !==
-    JSON.stringify(snapshot.identity.outputFiles)
-  ) {
-    throw new Error(
-      "Controlled verification produced an unexpected output set.",
-    );
+  if (JSON.stringify(actualOutputPaths) !== JSON.stringify(snapshot.identity.outputFiles)) {
+    throw new Error("Controlled verification produced an unexpected output set.");
   }
   return actualOutputPaths.map((outputPath) => {
     const absolutePath = resolveSnapshotPath(snapshot.outputRoot, outputPath);
@@ -334,18 +273,14 @@ function listOutputFiles(root: string, directory = root): string[] {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const absolutePath = join(directory, entry.name);
     if (entry.isSymbolicLink()) {
-      throw new Error(
-        "Controlled verification outputs cannot contain symlinks.",
-      );
+      throw new Error("Controlled verification outputs cannot contain symlinks.");
     }
     if (entry.isDirectory()) {
       outputPaths.push(...listOutputFiles(root, absolutePath));
     } else if (entry.isFile()) {
       outputPaths.push(relative(root, absolutePath).split(sep).join("/"));
     } else {
-      throw new Error(
-        "Controlled verification produced an unsupported output.",
-      );
+      throw new Error("Controlled verification produced an unsupported output.");
     }
   }
   return outputPaths;
@@ -355,9 +290,7 @@ function resolveSnapshotPath(root: string, relativePath: string): string {
   const absolutePath = resolve(root, relativePath);
   const pathFromRoot = relative(root, absolutePath);
   if (pathFromRoot === ".." || pathFromRoot.startsWith(`..${sep}`)) {
-    throw new Error(
-      `Verification path escapes its captured root: ${relativePath}.`,
-    );
+    throw new Error(`Verification path escapes its captured root: ${relativePath}.`);
   }
   return absolutePath;
 }
@@ -385,7 +318,6 @@ function readCapturedFailure(completed: ReturnType<typeof spawnSync>): string {
     .join("\n")
     .trim();
   if (output.length > 0) return output;
-  if (completed.signal)
-    return `Controlled verification ended by ${completed.signal}.`;
+  if (completed.signal) return `Controlled verification ended by ${completed.signal}.`;
   return `Controlled verification exited with status ${String(completed.status ?? "unknown")}.`;
 }

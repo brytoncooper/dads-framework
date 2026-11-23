@@ -3,11 +3,7 @@ import { mkdir, open, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { TEMP_MARKER } from "./disk-files.js";
-import {
-  NODE_SWEEP_FILE_SYSTEM,
-  removeStaleTempFiles,
-  type SweepFileSystem,
-} from "./stale-temp-files.js";
+import { NODE_SWEEP_FILE_SYSTEM, removeStaleTempFiles, type SweepFileSystem } from "./stale-temp-files.js";
 
 /** A temp file older than this cannot belong to a write still running. */
 const STALE_TEMP_FILE_AGE_MS = 10 * 60_000;
@@ -42,10 +38,7 @@ export class DiskReadinessProbe {
       this.staleTempFilesSwept = true;
       await this.sweepStaleTempFiles();
     }
-    const probe = join(
-      this.options.rootDirectory,
-      `readiness-probe${TEMP_MARKER}${randomBytes(6).toString("hex")}`,
-    );
+    const probe = join(this.options.rootDirectory, `readiness-probe${TEMP_MARKER}${randomBytes(6).toString("hex")}`);
     const handle = await open(probe, "wx");
     try {
       await handle.writeFile("ok");

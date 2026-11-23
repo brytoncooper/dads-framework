@@ -1,20 +1,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { URL } from "node:url";
+import { fileURLToPath, URL } from "node:url";
 import process from "node:process";
-import { format } from "prettier";
+import { format, resolveConfig } from "prettier";
 import ts from "typescript";
 
 const routes = new URL("../../apps/workbench/src/routes.ts", import.meta.url);
-const output = new URL(
-  "../../apps/workbench/src/client.generated.ts",
-  import.meta.url,
-);
-const source = ts.createSourceFile(
-  "workbench.ts",
-  readFileSync(routes, "utf8"),
-  ts.ScriptTarget.Latest,
-  true,
-);
+const output = new URL("../../apps/workbench/src/client.generated.ts", import.meta.url);
+const source = ts.createSourceFile("workbench.ts", readFileSync(routes, "utf8"), ts.ScriptTarget.Latest, true);
 
 const verbs = {
   listRoute: "GET",
@@ -25,39 +17,22 @@ const verbs = {
 };
 
 function declaration(node) {
-  if (
-    !ts.isCallExpression(node) ||
-    !ts.isPropertyAccessExpression(node.expression)
-  )
-    return;
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return;
   const name = node.expression.name.text;
   const method = verbs[name];
   const config = node.arguments[0];
-  if (
-    method === undefined ||
-    config === undefined ||
-    !ts.isObjectLiteralExpression(config)
-  )
-    return;
+  if (method === undefined || config === undefined || !ts.isObjectLiteralExpression(config)) return;
   const operation = /@operation ([a-zA-Z0-9]+)/u.exec(
     source.text.slice(node.getFullStart(), node.getStart(source)),
   )?.[1];
   const properties = new Map(
     config.properties.flatMap((prop) =>
-      ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)
-        ? [[prop.name.text, prop.initializer]]
-        : [],
+      ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) ? [[prop.name.text, prop.initializer]] : [],
     ),
   );
   const path = properties.get("path");
-  if (
-    operation === undefined ||
-    path === undefined ||
-    !ts.isStringLiteral(path)
-  ) {
-    throw new Error(
-      "Every Workbench card needs an @operation comment and literal path.",
-    );
+  if (operation === undefined || path === undefined || !ts.isStringLiteral(path)) {
+    throw new Error("Every Workbench card needs an @operation comment and literal path.");
   }
   const response = properties.get("item") ?? properties.get("response");
   return {
@@ -77,15 +52,9 @@ function operationSource(card) {
     (match) => `readonly ${match[1]}: string;`,
   );
   const fields = [
-    ...(card.hasParams
-      ? [`readonly params: { ${parameters.join(" ")} };`]
-      : []),
-    ...(card.list
-      ? ["readonly query: NonNullable<WorkbenchRequest['query']>;"]
-      : []),
-    ...(card.hasBody
-      ? [`readonly body: z.input<typeof contract.${card.body}>;`]
-      : []),
+    ...(card.hasParams ? [`readonly params: { ${parameters.join(" ")} };`] : []),
+    ...(card.list ? ["readonly query: NonNullable<WorkbenchRequest['query']>;"] : []),
+    ...(card.hasBody ? [`readonly body: z.input<typeof contract.${card.body}>;`] : []),
   ];
   const call = `request(${JSON.stringify(card.method)}, ${JSON.stringify(card.path)}, input)`;
   const decode =
@@ -102,12 +71,10 @@ function visit(node) {
   ts.forEachChild(node, visit);
 }
 visit(source);
-if (
-  cards.length === 0 ||
-  new Set(cards.map(({ operation }) => operation)).size !== cards.length
-) {
+if (cards.length === 0 || new Set(cards.map(({ operation }) => operation)).size !== cards.length) {
   throw new Error("Workbench operation names must be present and unique.");
 }
+const prettierOptions = (await resolveConfig(fileURLToPath(output))) ?? {};
 const generated = await format(
   `// Generated from routes.ts. Run npm run workbench:generate; do not edit.
 import { z } from "zod";
@@ -120,13 +87,11 @@ export function createClient(options: WorkbenchClientOptions) {
   };
 }
 `,
-  { parser: "typescript" },
+  { ...prettierOptions, parser: "typescript" },
 );
 if (process.argv.includes("--check")) {
   if (readFileSync(output, "utf8") !== generated)
-    throw new Error(
-      "Workbench client drifted. Run npm run workbench:generate.",
-    );
+    throw new Error("Workbench client drifted. Run npm run workbench:generate.");
 } else {
   writeFileSync(output, generated);
 }

@@ -2,10 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  compileWorkspaceGlob,
-  expandWorkspaceGlobs,
-} from "./workspace-glob.js";
+import { compileWorkspaceGlob, expandWorkspaceGlobs } from "./workspace-glob.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -39,21 +36,12 @@ describe("workspace globbing", () => {
     {
       name: "matches one segment with *",
       patterns: ["packages/*"],
-      expected: [
-        "packages/alpha",
-        "packages/beta",
-        "packages/testing-native-darwin",
-      ],
+      expected: ["packages/alpha", "packages/beta", "packages/testing-native-darwin"],
     },
     {
       name: "matches any depth with **",
       patterns: ["packages/**"],
-      expected: [
-        "packages/alpha",
-        "packages/beta",
-        "packages/beta/nested",
-        "packages/testing-native-darwin",
-      ],
+      expected: ["packages/alpha", "packages/beta", "packages/beta/nested", "packages/testing-native-darwin"],
     },
     {
       name: "matches a literal segment after a wildcard",
@@ -78,11 +66,7 @@ describe("workspace globbing", () => {
     {
       name: "ignores a leading ./ and a trailing /",
       patterns: ["./packages/*/"],
-      expected: [
-        "packages/alpha",
-        "packages/beta",
-        "packages/testing-native-darwin",
-      ],
+      expected: ["packages/alpha", "packages/beta", "packages/testing-native-darwin"],
     },
     {
       name: "skips node_modules and dot directories",
@@ -103,18 +87,14 @@ describe("workspace globbing", () => {
     it(expansion.name, () => {
       const workspaceRoot = makeWorkspace();
 
-      expect(expandWorkspaceGlobs(workspaceRoot, expansion.patterns)).toEqual(
-        expansion.expected,
-      );
+      expect(expandWorkspaceGlobs(workspaceRoot, expansion.patterns)).toEqual(expansion.expected);
     });
   }
 
   it("excludes directories without a package.json", () => {
     const workspaceRoot = makeWorkspace();
 
-    expect(expandWorkspaceGlobs(workspaceRoot, ["packages/*"])).not.toContain(
-      "packages/no-package",
-    );
+    expect(expandWorkspaceGlobs(workspaceRoot, ["packages/*"])).not.toContain("packages/no-package");
   });
 
   it("names the pattern it cannot compile", () => {

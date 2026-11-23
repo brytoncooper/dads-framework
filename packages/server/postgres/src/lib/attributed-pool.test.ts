@@ -70,10 +70,7 @@ describe("stampAuditActor", () => {
     expect(client.statements).toEqual([
       {
         text: AUDIT_ACTOR_STAMP_SQL,
-        values: [
-          AUDIT_ACTOR_SETTING,
-          JSON.stringify({ kind: "user", id: "user-1", requestId: REQUEST_ID }),
-        ],
+        values: [AUDIT_ACTOR_SETTING, JSON.stringify({ kind: "user", id: "user-1", requestId: REQUEST_ID })],
       },
     ]);
   });
@@ -83,17 +80,13 @@ describe("stampAuditActor", () => {
 
     await stampAuditActor(client, sourceOf(undefined));
 
-    expect(client.statements).toEqual([
-      { text: AUDIT_ACTOR_STAMP_SQL, values: [AUDIT_ACTOR_SETTING, ""] },
-    ]);
+    expect(client.statements).toEqual([{ text: AUDIT_ACTOR_STAMP_SQL, values: [AUDIT_ACTOR_SETTING, ""] }]);
   });
 
   it("reads the source at stamp time, so a checkout gets the actor of the task that asked for it", async () => {
     const client = new RecordingClient();
 
-    await runWithAuditActor(USER_ACTOR, () =>
-      stampAuditActor(client, currentAuditActor),
-    );
+    await runWithAuditActor(USER_ACTOR, () => stampAuditActor(client, currentAuditActor));
     await stampAuditActor(client, currentAuditActor);
 
     expect(client.statements.map((statement) => statement.values[1])).toEqual([
@@ -107,27 +100,16 @@ describe("checkOutStampedClient", () => {
   it("stamps before the caller's first statement", async () => {
     const client = new RecordingClient();
 
-    const checkedOut = await checkOutStampedClient(
-      () => Promise.resolve(client),
-      sourceOf(USER_ACTOR),
-    );
-    await checkedOut.query("insert into organizations (name) values ($1)", [
-      "Acme",
-    ]);
+    const checkedOut = await checkOutStampedClient(() => Promise.resolve(client), sourceOf(USER_ACTOR));
+    await checkedOut.query("insert into organizations (name) values ($1)", ["Acme"]);
 
-    expect(client.texts).toEqual([
-      AUDIT_ACTOR_STAMP_SQL,
-      "insert into organizations (name) values ($1)",
-    ]);
+    expect(client.texts).toEqual([AUDIT_ACTOR_STAMP_SQL, "insert into organizations (name) values ($1)"]);
   });
 
   it("costs exactly one statement per checkout", async () => {
     const client = new RecordingClient();
 
-    await checkOutStampedClient(
-      () => Promise.resolve(client),
-      sourceOf(systemActor("test", "test")),
-    );
+    await checkOutStampedClient(() => Promise.resolve(client), sourceOf(systemActor("test", "test")));
 
     expect(client.statements).toHaveLength(1);
   });
@@ -156,21 +138,14 @@ describe("checkOutStampedClient", () => {
     const refusal = new Error("connection lost mid-stamp");
     const client = new RecordingClient(refusal);
 
-    await expect(
-      checkOutStampedClient(
-        () => Promise.resolve(client),
-        sourceOf(USER_ACTOR),
-      ),
-    ).rejects.toThrow(refusal);
+    await expect(checkOutStampedClient(() => Promise.resolve(client), sourceOf(USER_ACTOR))).rejects.toThrow(refusal);
     expect(client.releasedWith).toEqual([refusal]);
   });
 
   it("does not release a client it never got", async () => {
     const refusal = new Error("pool exhausted");
 
-    await expect(
-      checkOutStampedClient(() => Promise.reject(refusal), sourceOf(undefined)),
-    ).rejects.toThrow(refusal);
+    await expect(checkOutStampedClient(() => Promise.reject(refusal), sourceOf(undefined))).rejects.toThrow(refusal);
   });
 });
 
@@ -195,10 +170,7 @@ describe("AttributedPool", () => {
         throw new Error("Expected a pool subclass prototype");
       }
       expect(Object.getPrototypeOf(prototype)).toBe(Pool.prototype);
-      expect(Object.getOwnPropertyNames(prototype).sort()).toEqual([
-        "connect",
-        "constructor",
-      ]);
+      expect(Object.getOwnPropertyNames(prototype).sort()).toEqual(["connect", "constructor"]);
     } finally {
       await pool.end();
     }

@@ -20,9 +20,7 @@ export function formatBaseSubject(subject: AccessIrSubject): string {
   return `${subject.wireName}#${subject.relation}`;
 }
 
-export function formatPermissionExpression(
-  terms: readonly AccessIrTerm[],
-): string {
+export function formatPermissionExpression(terms: readonly AccessIrTerm[]): string {
   return terms.map(formatTerm).join(" + ");
 }
 
@@ -30,18 +28,13 @@ export function canonicalPermissionKey(terms: readonly AccessIrTerm[]): string {
   return terms.map(canonicalTermKey).sort().join(" | ");
 }
 
-export function formatAccessDiffSummary(
-  counts: AccessDiffSummaryCounts,
-  requiresMigration: boolean,
-): string {
+export function formatAccessDiffSummary(counts: AccessDiffSummaryCounts, requiresMigration: boolean): string {
   if (counts.safe.length === 0 && counts.breaking.length === 0) {
     return "No access schema changes.";
   }
   const parts: string[] = [];
   if (counts.breaking.length > 0) {
-    parts.push(
-      `${counts.breaking.length} breaking change(s): ${counts.breaking.map(formatBreakingChange).join(", ")}`,
-    );
+    parts.push(`${counts.breaking.length} breaking change(s): ${counts.breaking.map(formatBreakingChange).join(", ")}`);
   }
   if (counts.safe.length > 0) {
     parts.push(`${counts.safe.length} safe change(s)`);
@@ -86,10 +79,7 @@ export function formatSafeChange(change: AccessDiffSafeChange): string {
 }
 
 export function formatAccessDiffReport(diff: AccessSchemaDiff): string {
-  const lines: string[] = [
-    diff.summary,
-    `requiresMigration: ${diff.requiresMigration ? "true" : "false"}`,
-  ];
+  const lines: string[] = [diff.summary, `requiresMigration: ${diff.requiresMigration ? "true" : "false"}`];
   if (diff.breaking.length > 0) {
     lines.push("Breaking changes:");
     for (const entry of diff.breaking) {

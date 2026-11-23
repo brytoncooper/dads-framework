@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, pascal } from "./names.js";
 
-export function resourceStore(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function resourceStore(plan: GenerationPlan, domain: string, name: string): void {
   const base = `domains/${domain}/server`;
   plan.create(`${base}/${name}-store.ts`, ports(name));
   plan.create(`${base}/${name}-reader.ts`, reader(name));

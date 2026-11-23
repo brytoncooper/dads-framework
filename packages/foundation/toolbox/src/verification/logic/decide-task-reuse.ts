@@ -1,8 +1,5 @@
 import type { VerificationReceiptLookup } from "../receipt-store.js";
-import type {
-  VerificationTaskDefinition,
-  VerificationTaskRecommendation,
-} from "../verification-contract.js";
+import type { VerificationTaskDefinition, VerificationTaskRecommendation } from "../verification-contract.js";
 
 export type TaskReuseDecision = {
   readonly decision: "execute" | "reuse";
@@ -37,10 +34,7 @@ export function decideTaskReuse(input: {
       reason: "This task is configured to execute every time.",
     };
   }
-  if (
-    input.recommendation.state !== "pending-provider" &&
-    input.recommendation.state !== "reuse-candidate"
-  ) {
+  if (input.recommendation.state !== "pending-provider" && input.recommendation.state !== "reuse-candidate") {
     return {
       decision: "execute",
       reason: "The task's own verification inputs changed or scope is unknown.",

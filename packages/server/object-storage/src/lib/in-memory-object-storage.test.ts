@@ -29,10 +29,7 @@ describe("InMemoryObjectStorage", () => {
     await objectStorage.put("builds/a.json", "{}", "application/json");
     await objectStorage.put("releases/a.json", "{}", "application/json");
 
-    await expect(objectStorage.list("builds/")).resolves.toEqual([
-      "builds/a.json",
-      "builds/b.json",
-    ]);
+    await expect(objectStorage.list("builds/")).resolves.toEqual(["builds/a.json", "builds/b.json"]);
     await expect(objectStorage.list("nothing/")).resolves.toEqual([]);
   });
 

@@ -8,12 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  bundleOpenApiParts,
-  openApiPartFileName,
-  SHARED_OPENAPI_PART,
-  splitOpenApiDocument,
-} from "./openapi-parts.js";
+import { bundleOpenApiParts, openApiPartFileName, SHARED_OPENAPI_PART, splitOpenApiDocument } from "./openapi-parts.js";
 
 function operation(tag: string, schemaName: string) {
   return {
@@ -57,45 +52,26 @@ const baseSchemas = {
 };
 const baseDocument = documentWith(basePaths, baseSchemas);
 
-function partsAsJson(
-  parts: ReadonlyMap<string, Record<string, unknown>>,
-): Map<string, string> {
-  return new Map(
-    [...parts].map(([fileName, part]) => [fileName, JSON.stringify(part)]),
-  );
+function partsAsJson(parts: ReadonlyMap<string, Record<string, unknown>>): Map<string, string> {
+  return new Map([...parts].map(([fileName, part]) => [fileName, JSON.stringify(part)]));
 }
 
 describe("OpenAPI parts", () => {
   it("names a tag's file by its words", () => {
-    expect(openApiPartFileName("Products recipes")).toBe(
-      "products-recipes.json",
-    );
+    expect(openApiPartFileName("Products recipes")).toBe("products-recipes.json");
     expect(openApiPartFileName("PLCs tags")).toBe("plcs-tags.json");
   });
 
   it("bundles back to the document it was split from", () => {
-    expect(bundleOpenApiParts(splitOpenApiDocument(baseDocument))).toEqual(
-      baseDocument,
-    );
+    expect(bundleOpenApiParts(splitOpenApiDocument(baseDocument))).toEqual(baseDocument);
   });
 
   it("puts each tag's operations, and the schemas only it reaches, in its own file", () => {
     const parts = splitOpenApiDocument(baseDocument);
 
-    expect([...parts.keys()]).toEqual([
-      SHARED_OPENAPI_PART,
-      "health.json",
-      "products-recipes.json",
-    ]);
-    expect(parts.get("products-recipes.json")).toHaveProperty([
-      "components",
-      "schemas",
-      "Recipe",
-    ]);
-    expect(parts.get("health.json")).not.toHaveProperty([
-      "paths",
-      "/api/recipes",
-    ]);
+    expect([...parts.keys()]).toEqual([SHARED_OPENAPI_PART, "health.json", "products-recipes.json"]);
+    expect(parts.get("products-recipes.json")).toHaveProperty(["components", "schemas", "Recipe"]);
+    expect(parts.get("health.json")).not.toHaveProperty(["paths", "/api/recipes"]);
   });
 
   it("puts a schema two tags reach in the shared file", () => {
@@ -109,11 +85,7 @@ describe("OpenAPI parts", () => {
       ),
     );
 
-    expect(parts.get(SHARED_OPENAPI_PART)).toHaveProperty([
-      "components",
-      "schemas",
-      "Shared",
-    ]);
+    expect(parts.get(SHARED_OPENAPI_PART)).toHaveProperty(["components", "schemas", "Shared"]);
   });
 
   it("changes only the added operation's part when an operation is added under one tag", () => {
@@ -135,9 +107,7 @@ describe("OpenAPI parts", () => {
       ),
     );
 
-    const changed = [...after.keys()].filter(
-      (fileName) => before.get(fileName) !== after.get(fileName),
-    );
+    const changed = [...after.keys()].filter((fileName) => before.get(fileName) !== after.get(fileName));
     expect(changed).toEqual(["products-recipes.json"]);
   });
 

@@ -6,17 +6,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import {
-  FakeClaimAccessChanges,
-  testAccessChangeId,
-} from "../../testing/fake-claim.js";
+import { FakeClaimAccessChanges, testAccessChangeId } from "../../testing/fake-claim.js";
 import { InMemoryOwnerLock } from "../../testing/in-memory-owner-lock.js";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { ApplyAccessChanges } from "./apply.js";
-import {
-  createApplyAccessChangesAfterCommit,
-  type HeldClaimWait,
-} from "./apply-after-commit.js";
+import { createApplyAccessChangesAfterCommit, type HeldClaimWait } from "./apply-after-commit.js";
 import { accessChangesToWrite } from "./enqueue.js";
 
 const ORG_TYPE = "organizations/organization";
@@ -36,9 +30,7 @@ const FACTS = accessChangesToWrite(
   ORG_ID,
 );
 
-const FACT_ID = testAccessChangeId(
-  `seeded-0-${FACTS[0]?.idempotencyKey ?? ""}`,
-);
+const FACT_ID = testAccessChangeId(`seeded-0-${FACTS[0]?.idempotencyKey ?? ""}`);
 const FACT = FACTS[0]?.relationship;
 
 function setup(
@@ -48,22 +40,16 @@ function setup(
   const store = new FakeClaimAccessChanges();
   store.seedEntries(...FACTS);
   const log = { warn: vi.fn() };
-  const projector = new ApplyAccessChanges(
-    store,
-    authorization,
-    () => NOW,
-    new InMemoryOwnerLock(),
-  );
+  const projector = new ApplyAccessChanges(store, authorization, () => NOW, new InMemoryOwnerLock());
   return {
     store,
     log,
     authorization,
-    dispatch: createApplyAccessChangesAfterCommit(
-      projector,
-      log,
-      "inline-dispatch",
-      { checks: 40, intervalMs: 50, delay },
-    ),
+    dispatch: createApplyAccessChangesAfterCommit(projector, log, "inline-dispatch", {
+      checks: 40,
+      intervalMs: 50,
+      delay,
+    }),
   };
 }
 
@@ -96,9 +82,7 @@ describe("createApplyAccessChangesAfterCommit", () => {
     await dispatch.dispatch(FACTS);
 
     const key = FACTS[0]?.idempotencyKey ?? "";
-    expect(store.statusOf(testAccessChangeId(`seeded-0-${key}`))).toBe(
-      "PROJECTED",
-    );
+    expect(store.statusOf(testAccessChangeId(`seeded-0-${key}`))).toBe("PROJECTED");
   });
 
   it("leaves an unrelated pending fact alone — the claim is scoped", async () => {
@@ -117,28 +101,19 @@ describe("createApplyAccessChangesAfterCommit", () => {
 
     await dispatch.dispatch(FACTS);
 
-    expect(
-      store.statusOf(
-        testAccessChangeId(`seeded-0-${other[0]?.idempotencyKey ?? ""}`),
-      ),
-    ).toBe("PENDING");
+    expect(store.statusOf(testAccessChangeId(`seeded-0-${other[0]?.idempotencyKey ?? ""}`))).toBe("PENDING");
   });
 
   it("does NOT throw when the graph is unreachable — the row is committed", async () => {
     const unreachable = new FakeAuthorization(PERMISSIONS);
-    unreachable.writeRelationships = () =>
-      Promise.reject(new Error("spicedb unreachable"));
+    unreachable.writeRelationships = () => Promise.reject(new Error("spicedb unreachable"));
     const { dispatch, log, store } = setup(unreachable);
 
     await expect(dispatch.dispatch(FACTS)).resolves.toBeUndefined();
 
     // Reported, and left for the projector to retry.
     expect(log.warn).toHaveBeenCalledTimes(1);
-    expect(
-      store.statusOf(
-        testAccessChangeId(`seeded-0-${FACTS[0]?.idempotencyKey ?? ""}`),
-      ),
-    ).toBe("PENDING");
+    expect(store.statusOf(testAccessChangeId(`seeded-0-${FACTS[0]?.idempotencyKey ?? ""}`))).toBe("PENDING");
   });
 
   it("does NOT throw when the claim itself fails", async () => {
@@ -280,8 +255,7 @@ describe("a dispatch whose own facts another worker holds", () => {
 
   it("does not wait on a fact its own claim failed to project", async () => {
     const unreachable = new FakeAuthorization(PERMISSIONS);
-    unreachable.writeRelationships = () =>
-      Promise.reject(new Error("spicedb unreachable"));
+    unreachable.writeRelationships = () => Promise.reject(new Error("spicedb unreachable"));
     const delay = vi.fn(() => Promise.resolve());
     const { dispatch, store } = setup(unreachable, delay);
     const heldByLiveClaim = vi.spyOn(store, "heldByLiveClaim");

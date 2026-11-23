@@ -1,9 +1,4 @@
-import {
-  componentSchemasOf,
-  isJsonObject,
-  mapRecord,
-  type JsonRecord,
-} from "./document-record.js";
+import { componentSchemasOf, isJsonObject, mapRecord, type JsonRecord } from "./document-record.js";
 
 const COMPONENT_REF_PREFIX = "#/components/schemas/";
 
@@ -29,19 +24,14 @@ export function openResponseObjects(document: JsonRecord): JsonRecord {
   const responseSchemas = responseSchemasOf(document["paths"]);
   const reached = componentsReachedFrom(responseSchemas, components);
 
-  const existingComponents = isJsonObject(document["components"])
-    ? document["components"]
-    : {};
+  const existingComponents = isJsonObject(document["components"]) ? document["components"] : {};
   return {
     ...document,
     paths: mapResponseSchemas(document["paths"], openObjects),
     components: {
       ...existingComponents,
       schemas: Object.fromEntries(
-        Object.entries(components).map(([name, schema]) => [
-          name,
-          reached.has(name) ? openObjects(schema) : schema,
-        ]),
+        Object.entries(components).map(([name, schema]) => [name, reached.has(name) ? openObjects(schema) : schema]),
       ),
     },
   };
@@ -51,16 +41,11 @@ function openObjects(schema: unknown): unknown {
   if (!isJsonObject(schema)) return schema;
   const opened = mapSubschemas(schema, openObjects);
   return Object.fromEntries(
-    Object.entries(opened).filter(
-      ([key, value]) => !(key === "additionalProperties" && value === false),
-    ),
+    Object.entries(opened).filter(([key, value]) => !(key === "additionalProperties" && value === false)),
   );
 }
 
-function componentsReachedFrom(
-  schemas: readonly unknown[],
-  components: JsonRecord,
-): Set<string> {
+function componentsReachedFrom(schemas: readonly unknown[], components: JsonRecord): Set<string> {
   const reached = new Set<string>();
   const pending = schemas.flatMap(componentRefsIn);
   for (let name = pending.pop(); name !== undefined; name = pending.pop()) {
@@ -75,9 +60,7 @@ function componentRefsIn(schema: unknown): string[] {
   if (!isJsonObject(schema)) return [];
   const ref = schema["$ref"];
   const own =
-    typeof ref === "string" && ref.startsWith(COMPONENT_REF_PREFIX)
-      ? [ref.slice(COMPONENT_REF_PREFIX.length)]
-      : [];
+    typeof ref === "string" && ref.startsWith(COMPONENT_REF_PREFIX) ? [ref.slice(COMPONENT_REF_PREFIX.length)] : [];
   return [...own, ...subschemasOf(schema).flatMap(componentRefsIn)];
 }
 
@@ -94,14 +77,10 @@ function subschemasOf(schema: JsonRecord): unknown[] {
   ];
 }
 
-function mapSubschemas(
-  schema: JsonRecord,
-  map: (schema: unknown) => unknown,
-): JsonRecord {
+function mapSubschemas(schema: JsonRecord, map: (schema: unknown) => unknown): JsonRecord {
   const mapped: JsonRecord = { ...schema };
   const properties = schema["properties"];
-  if (isJsonObject(properties))
-    mapped["properties"] = mapRecord(properties, map);
+  if (isJsonObject(properties)) mapped["properties"] = mapRecord(properties, map);
   for (const keyword of SCHEMA_KEYWORDS) {
     const subschema = schema[keyword];
     if (isJsonObject(subschema)) mapped[keyword] = map(subschema);
@@ -120,12 +99,8 @@ function listOf(value: unknown): unknown[] {
 function responseSchemasOf(paths: unknown): unknown[] {
   return valuesOf(paths)
     .flatMap(valuesOf)
-    .flatMap((operation) =>
-      isJsonObject(operation) ? valuesOf(operation["responses"]) : [],
-    )
-    .flatMap((response) =>
-      isJsonObject(response) ? valuesOf(response["content"]) : [],
-    )
+    .flatMap((operation) => (isJsonObject(operation) ? valuesOf(operation["responses"]) : []))
+    .flatMap((response) => (isJsonObject(response) ? valuesOf(response["content"]) : []))
     .flatMap((media) => (isJsonObject(media) ? [media["schema"]] : []));
 }
 
@@ -134,37 +109,24 @@ function valuesOf(value: unknown): unknown[] {
 }
 
 /** Maps the schema of every response body of every operation. */
-function mapResponseSchemas(
-  paths: unknown,
-  map: (schema: unknown) => unknown,
-): unknown {
+function mapResponseSchemas(paths: unknown, map: (schema: unknown) => unknown): unknown {
   if (!isJsonObject(paths)) return paths;
   return mapRecord(paths, (pathItem) =>
-    isJsonObject(pathItem)
-      ? mapRecord(pathItem, (operation) => mapResponses(operation, map))
-      : pathItem,
+    isJsonObject(pathItem) ? mapRecord(pathItem, (operation) => mapResponses(operation, map)) : pathItem,
   );
 }
 
-function mapResponses(
-  operation: unknown,
-  map: (schema: unknown) => unknown,
-): unknown {
+function mapResponses(operation: unknown, map: (schema: unknown) => unknown): unknown {
   if (!isJsonObject(operation) || !isJsonObject(operation["responses"])) {
     return operation;
   }
   return {
     ...operation,
-    responses: mapRecord(operation["responses"], (response) =>
-      mapContentSchemas(response, map),
-    ),
+    responses: mapRecord(operation["responses"], (response) => mapContentSchemas(response, map)),
   };
 }
 
-function mapContentSchemas(
-  holder: unknown,
-  map: (schema: unknown) => unknown,
-): unknown {
+function mapContentSchemas(holder: unknown, map: (schema: unknown) => unknown): unknown {
   if (!isJsonObject(holder) || !isJsonObject(holder["content"])) return holder;
   return {
     ...holder,

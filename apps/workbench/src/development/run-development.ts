@@ -4,32 +4,18 @@ import { setTimeout } from "node:timers/promises";
 import { randomUUID } from "node:crypto";
 import { emitZed } from "@dads-framework/access";
 import { SpiceDbAuthorization } from "@dads-framework/spicedb-access";
-import {
-  createPostgresConnection,
-  type PostgresConnection,
-} from "@dads-framework/postgres";
+import { createPostgresConnection, type PostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
   preparePostgresChecks,
   relationshipSchemaMigration,
 } from "@dads-framework/postgres-access";
-import {
-  workbenchAccessModel,
-  workbenchUser,
-  workbenchWorkspace,
-} from "../access.js";
+import { workbenchAccessModel, workbenchUser, workbenchWorkspace } from "../access.js";
 import { createPostgresWorkbench } from "../create-workbench.js";
-import {
-  startComposedWorkbenchServer,
-  startWorkbenchServer,
-} from "../server.js";
+import { startComposedWorkbenchServer, startWorkbenchServer } from "../server.js";
 import { SqliteWorkbenchStore } from "../storage/sqlite-workbench-store.js";
 import { initializePostgresWorkbenchSchema } from "../storage/postgres-workbench-schema.js";
-import {
-  readControlRecord,
-  startDevelopmentControl,
-  writeControlRecord,
-} from "./control-server.js";
+import { readControlRecord, startDevelopmentControl, writeControlRecord } from "./control-server.js";
 import { WorkbenchDevelopmentError } from "./development-error.js";
 import { WorkbenchInfrastructure } from "./docker-infrastructure.js";
 import { requestDevelopmentStop } from "./request-stop.js";
@@ -61,19 +47,12 @@ type RunningDevelopment = {
   server?: Awaited<ReturnType<typeof startWorkbenchServer>>;
 };
 
-type WorkbenchConnection = Awaited<
-  ReturnType<WorkbenchInfrastructure["start"]>
->;
+type WorkbenchConnection = Awaited<ReturnType<WorkbenchInfrastructure["start"]>>;
 
 /** Owns one workbench instance from setup through graceful shutdown, never UI or domain policy. */
-export async function runWorkbenchDevelopment(
-  options: DevelopmentOptions,
-): Promise<void> {
+export async function runWorkbenchDevelopment(options: DevelopmentOptions): Promise<void> {
   options.signal.throwIfAborted();
-  const directory = prepareDevelopmentDirectory(
-    options.root,
-    options.arguments.instance,
-  );
+  const directory = prepareDevelopmentDirectory(options.root, options.arguments.instance);
   if (options.arguments.action === "stop") {
     await stopDevelopment(options, directory);
     return;
@@ -98,18 +77,13 @@ async function startDevelopment(
   directory: string,
   running: RunningDevelopment,
 ): Promise<void> {
-  const state = readOrCreateDevelopmentState(
-    directory,
-    options.arguments.adapter ?? "postgres",
-  );
+  const state = readOrCreateDevelopmentState(directory, options.arguments.adapter ?? "postgres");
   const adapter = resolveDevelopmentAdapter(state, options.arguments.adapter);
   const infrastructure = infrastructureFor(options.root, directory, state);
   running.infrastructure = infrastructure;
   running.control = await startDevelopmentControl(options.requestStop);
   writeControlRecord(directory, running.control);
-  options.report(
-    "Starting isolated workbench services; missing project images may be downloaded.",
-  );
+  options.report("Starting isolated workbench services; missing project images may be downloaded.");
   const connection = await infrastructure.start(options.signal);
   running.server =
     adapter === "postgres"
@@ -126,9 +100,7 @@ async function startPostgresApi(
   running: RunningDevelopment,
 ) {
   if (connection.adapter !== "postgres")
-    throw new Error(
-      "Workbench Postgres infrastructure returned the wrong backend.",
-    );
+    throw new Error("Workbench Postgres infrastructure returned the wrong backend.");
   const database = createPostgresConnection(
     { schema: {}, connectionString: connection.connectionString },
     {
@@ -167,10 +139,7 @@ async function startSpiceDbApi(
   state: DevelopmentState,
   directory: string,
 ) {
-  if (connection.adapter !== "spicedb")
-    throw new Error(
-      "Workbench SpiceDB infrastructure returned the wrong backend.",
-    );
+  if (connection.adapter !== "spicedb") throw new Error("Workbench SpiceDB infrastructure returned the wrong backend.");
   const databasePath = prepareWorkbenchDatabase(directory, state.initialized);
   const authorization = new SpiceDbAuthorization({
     endpoint: connection.endpoint,
@@ -192,9 +161,7 @@ async function startSpiceDbApi(
 function reportReady(options: DevelopmentOptions, url: string): void {
   options.report(`Workbench API ready: ${url}`);
   options.report(`OpenAPI: ${url}/api/openapi.json`);
-  options.report(
-    `Local instance: ${options.arguments.instance}. Ctrl+C stops services; data is retained.`,
-  );
+  options.report(`Local instance: ${options.arguments.instance}. Ctrl+C stops services; data is retained.`);
   options.report("Browser UI and source watching are not available yet.");
 }
 
@@ -221,42 +188,27 @@ async function releaseDevelopment(
 }
 
 /** Reports a clean stop, or raises exactly what failed during startup or shutdown. */
-function finishDevelopment(
-  options: DevelopmentOptions,
-  failures: unknown[],
-): void {
+function finishDevelopment(options: DevelopmentOptions, failures: unknown[]): void {
   if (failures.length === 1) throw failures[0];
   if (failures.length > 1)
     throw new AggregateError(
       failures,
       "Workbench startup or shutdown failed. Data was preserved; retry workbench:stop.",
     );
-  options.report(
-    "Workbench stopped. Local data and authorization volume were preserved.",
-  );
+  options.report("Workbench stopped. Local data and authorization volume were preserved.");
 }
 
-async function stopDevelopment(
-  options: DevelopmentOptions,
-  directory: string,
-): Promise<void> {
+async function stopDevelopment(options: DevelopmentOptions, directory: string): Promise<void> {
   let lease: ReturnType<typeof acquireDevelopmentLease>;
   try {
     lease = acquireDevelopmentLease(directory);
   } catch (error) {
-    if (
-      !(error instanceof WorkbenchDevelopmentError) ||
-      error.code !== "ALREADY_RUNNING"
-    )
-      throw error;
+    if (!(error instanceof WorkbenchDevelopmentError) || error.code !== "ALREADY_RUNNING") throw error;
     lease = await requestRunningStop(directory, options.signal);
   }
   try {
-    if (existsSync(join(directory, "state.json")))
-      await infrastructureFor(options.root, directory).stop();
-    options.report(
-      "Workbench stopped. Owned services stopped; local data retained.",
-    );
+    if (existsSync(join(directory, "state.json"))) await infrastructureFor(options.root, directory).stop();
+    options.report("Workbench stopped. Owned services stopped; local data retained.");
   } finally {
     lease.close();
   }
@@ -277,10 +229,7 @@ function infrastructureFor(
   });
 }
 
-async function waitForAuthorization(
-  authorization: SpiceDbAuthorization,
-  signal: AbortSignal,
-) {
+async function waitForAuthorization(authorization: SpiceDbAuthorization, signal: AbortSignal) {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
     signal.throwIfAborted();
@@ -300,19 +249,11 @@ async function waitForAuthorization(
         throw new Error("Readiness subject unexpectedly has access.");
       return;
     } catch (error) {
-      if (
-        typeof error !== "object" ||
-        error === null ||
-        !("code" in error) ||
-        error.code !== 14
-      )
-        throw error;
+      if (typeof error !== "object" || error === null || !("code" in error) || error.code !== 14) throw error;
       await setTimeout(250, undefined, { signal });
     }
   }
-  throw new Error(
-    "Workbench authorization did not become ready within 60 seconds.",
-  );
+  throw new Error("Workbench authorization did not become ready within 60 seconds.");
 }
 
 async function requestRunningStop(directory: string, signal: AbortSignal) {
@@ -323,8 +264,7 @@ async function requestRunningStop(directory: string, signal: AbortSignal) {
     // The live lease, not a PID or stale control file, is authoritative.
     const lease = tryAcquireLease(directory);
     if (lease) return lease;
-    if (!requested && existsSync(join(directory, "control.json")))
-      requested = await sendStopRequest(directory, signal);
+    if (!requested && existsSync(join(directory, "control.json"))) requested = await sendStopRequest(directory, signal);
     // Once acknowledged, wait for owned cleanup even if the stop caller cancels.
     await waitBetweenStopAttempts(requested, signal);
   }
@@ -338,20 +278,13 @@ function tryAcquireLease(directory: string) {
   try {
     return acquireDevelopmentLease(directory);
   } catch (error) {
-    if (
-      !(error instanceof WorkbenchDevelopmentError) ||
-      error.code !== "ALREADY_RUNNING"
-    )
-      throw error;
+    if (!(error instanceof WorkbenchDevelopmentError) || error.code !== "ALREADY_RUNNING") throw error;
     return undefined;
   }
 }
 
 /** True once the running instance acknowledged the shutdown over its control channel. */
-async function sendStopRequest(
-  directory: string,
-  signal: AbortSignal,
-): Promise<boolean> {
+async function sendStopRequest(directory: string, signal: AbortSignal): Promise<boolean> {
   const control = readControlRecord(directory);
   try {
     await requestDevelopmentStop(control, signal);
@@ -364,10 +297,7 @@ async function sendStopRequest(
 }
 
 /** Polls once. Before a stop is acknowledged the caller may still cancel the wait. */
-async function waitBetweenStopAttempts(
-  requested: boolean,
-  signal: AbortSignal,
-): Promise<void> {
+async function waitBetweenStopAttempts(requested: boolean, signal: AbortSignal): Promise<void> {
   try {
     await setTimeout(200, undefined, requested ? undefined : { signal });
   } catch (error) {
@@ -378,8 +308,7 @@ async function waitBetweenStopAttempts(
 
 function removeControlRecord(directory: string, key: string): void {
   const path = join(directory, "control.json");
-  if (existsSync(path) && readControlRecord(directory).key === key)
-    unlinkSync(path);
+  if (existsSync(path) && readControlRecord(directory).key === key) unlinkSync(path);
 }
 
 function untilAborted(signal: AbortSignal) {
@@ -396,10 +325,7 @@ function untilAborted(signal: AbortSignal) {
   });
 }
 
-async function cleanup(
-  action: () => void | Promise<void>,
-  failures: unknown[],
-) {
+async function cleanup(action: () => void | Promise<void>, failures: unknown[]) {
   try {
     await action();
   } catch (error) {

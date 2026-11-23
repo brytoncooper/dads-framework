@@ -16,29 +16,22 @@ const SHARD_PATTERN = /^([1-9][0-9]*)\/([1-9][0-9]*)$/;
 export function parseShardOption(value) {
   if (value === undefined) return null;
   const match = SHARD_PATTERN.exec(value);
-  if (match === null)
-    throw new Error(
-      `Shard must be <index>/<count> with positive integers: ${value}`,
-    );
+  if (match === null) throw new Error(`Shard must be <index>/<count> with positive integers: ${value}`);
   const index = Number(match[1]);
   const count = Number(match[2]);
   if (!Number.isSafeInteger(index) || !Number.isSafeInteger(count))
     throw new Error(`Shard ${value} is not a pair of safe integers.`);
-  if (index > count)
-    throw new Error(`Shard index ${index} is outside 1..${count}.`);
+  if (index > count) throw new Error(`Shard index ${index} is outside 1..${count}.`);
   return { index, count };
 }
 
 /** The cases this shard owns, sorted by id; every case when shard is null. */
 export function shardCases(cases, shard) {
-  const ordered = [...cases].sort((left, right) =>
-    left.id.localeCompare(right.id),
-  );
+  const ordered = [...cases].sort((left, right) => left.id.localeCompare(right.id));
   if (shard === null) return ordered;
   const owned = [];
   for (let position = 0; position < ordered.length; position += 1) {
-    if (position % shard.count === shard.index - 1)
-      owned.push(ordered[position]);
+    if (position % shard.count === shard.index - 1) owned.push(ordered[position]);
   }
   return owned;
 }

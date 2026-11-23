@@ -15,11 +15,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  operationEvidence,
-  operationKey,
-  readRouteModel,
-} from "../scanners/route-model.js";
+import { operationEvidence, operationKey, readRouteModel } from "../scanners/route-model.js";
 
 function countRoutesWithoutAccess(context: DoctorContext) {
   const readings = new Map<string, SignalReading>();

@@ -13,15 +13,11 @@ export type OrderablePlugin = AnyDependency & {
  * the app listed them. Refuses duplicate names, a dependency no plugin in
  * the list offers, a service two plugins implement, and a cycle.
  */
-export function orderPlugins<Entry extends OrderablePlugin>(
-  plugins: readonly Entry[],
-): readonly Entry[] {
+export function orderPlugins<Entry extends OrderablePlugin>(plugins: readonly Entry[]): readonly Entry[] {
   refuseDuplicateNames(plugins);
   const providers = providerIndex(plugins);
   const prerequisites = plugins.map((plugin) =>
-    plugin.requires.map((dependency) =>
-      providerOf(plugin, dependency, providers),
-    ),
+    plugin.requires.map((dependency) => providerOf(plugin, dependency, providers)),
   );
   return topologicalOrder(plugins, prerequisites);
 }
@@ -30,18 +26,14 @@ function refuseDuplicateNames(plugins: readonly OrderablePlugin[]): void {
   const seen = new Set<string>();
   for (const plugin of plugins) {
     if (seen.has(plugin.name)) {
-      throw new PluginCompositionError(
-        `plugin ${plugin.name} is listed more than once`,
-      );
+      throw new PluginCompositionError(`plugin ${plugin.name} is listed more than once`);
     }
     seen.add(plugin.name);
   }
 }
 
 /** Each offered dependency value, mapped to the index of the plugin offering it. */
-function providerIndex(
-  plugins: readonly OrderablePlugin[],
-): ReadonlyMap<object, number> {
+function providerIndex(plugins: readonly OrderablePlugin[]): ReadonlyMap<object, number> {
   const providers = new Map<object, number>();
   plugins.forEach((plugin, index) => {
     providers.set(plugin, index);
@@ -81,9 +73,7 @@ function topologicalOrder<Entry extends OrderablePlugin>(
   const ordered: Entry[] = [];
   while (ordered.length < plugins.length) {
     const next = plugins.findIndex(
-      (_plugin, index) =>
-        !placed.has(index) &&
-        (prerequisites[index] ?? []).every((required) => placed.has(required)),
+      (_plugin, index) => !placed.has(index) && (prerequisites[index] ?? []).every((required) => placed.has(required)),
     );
     const plugin = plugins[next];
     if (plugin === undefined) throw cycleError(plugins, placed);
@@ -93,14 +83,7 @@ function topologicalOrder<Entry extends OrderablePlugin>(
   return ordered;
 }
 
-function cycleError(
-  plugins: readonly OrderablePlugin[],
-  placed: ReadonlySet<number>,
-): PluginCompositionError {
-  const stuck = plugins
-    .filter((_plugin, index) => !placed.has(index))
-    .map((plugin) => plugin.name);
-  return new PluginCompositionError(
-    `plugins ${stuck.join(", ")} require each other in a cycle; no setup order exists`,
-  );
+function cycleError(plugins: readonly OrderablePlugin[], placed: ReadonlySet<number>): PluginCompositionError {
+  const stuck = plugins.filter((_plugin, index) => !placed.has(index)).map((plugin) => plugin.name);
+  return new PluginCompositionError(`plugins ${stuck.join(", ")} require each other in a cycle; no setup order exists`);
 }

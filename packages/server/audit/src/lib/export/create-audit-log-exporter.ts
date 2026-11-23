@@ -1,11 +1,7 @@
 import { z } from "zod";
 
 import { parseAuditLogPosition } from "../database/audit-log-position.ids.js";
-import type {
-  AuditLogCursor,
-  AuditLogReader,
-  AuditLogRecord,
-} from "../database/readers/audit-log-reader.interface.js";
+import type { AuditLogCursor, AuditLogReader, AuditLogRecord } from "../database/readers/audit-log-reader.interface.js";
 
 const exportRequest = z.strictObject({
   tenantId: z.string().min(1).max(255),

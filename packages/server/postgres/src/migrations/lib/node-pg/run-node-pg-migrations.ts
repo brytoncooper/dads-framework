@@ -1,10 +1,6 @@
 import type { MigrationWorkspace } from "./migration-workspace.js";
 import { PG_MIGRATE_LOCK_ID, runner } from "node-pg-migrate";
-import {
-  connectPostgresClient,
-  stampClientWithActor,
-  type PostgresClient as Client,
-} from "../../../index.js";
+import { connectPostgresClient, stampClientWithActor, type PostgresClient as Client } from "../../../index.js";
 
 import { systemActor } from "@dads-framework/core/audit-actor";
 
@@ -21,10 +17,7 @@ import {
   NODE_PG_JOURNAL_SCHEMA,
   relationExists,
 } from "./node-pg-journal.js";
-import {
-  legacyFingerprint,
-  readValidatedMigrationPlan,
-} from "./read-validated-migration-plan.js";
+import { legacyFingerprint, readValidatedMigrationPlan } from "./read-validated-migration-plan.js";
 
 export {
   NODE_PG_APPLIED_TABLE,
@@ -40,9 +33,7 @@ export type NodePgMigrationRunnerInput = {
 
 export { NodePgMigrationJournalError } from "./migration-journal-error.js";
 
-export async function stampNodePgJournalAsApplied(
-  input: NodePgMigrationRunnerInput,
-): Promise<void> {
+export async function stampNodePgJournalAsApplied(input: NodePgMigrationRunnerInput): Promise<void> {
   const discovered = await discoverDomainMigrations({
     workspace: input.workspace,
   });
@@ -88,9 +79,7 @@ export async function stampNodePgJournalAsApplied(
   }
 }
 
-export async function runNodePgMigrations(
-  input: NodePgMigrationRunnerInput,
-): Promise<void> {
+export async function runNodePgMigrations(input: NodePgMigrationRunnerInput): Promise<void> {
   const discovered = await discoverDomainMigrations({
     workspace: input.workspace,
   });
@@ -98,19 +87,14 @@ export async function runNodePgMigrations(
   try {
     await lockMigrations(client);
     await stampMigrationActor(client);
-    const { pending, protocolApplied } = await readValidatedMigrationPlan(
-      client,
-      discovered,
-    );
+    const { pending, protocolApplied } = await readValidatedMigrationPlan(client, discovered);
     if (pending.length === 0) {
       return;
     }
 
     await ensureChecksumJournal(client);
     await stagePendingChecksums(client, pending);
-    const legacy = discovered.filter(
-      (migration) => migration.dependsOn === undefined,
-    );
+    const legacy = discovered.filter((migration) => migration.dependsOn === undefined);
     if (pending.some((migration) => migration.dependsOn === undefined))
       await runner({
         dbClient: client,
@@ -125,9 +109,7 @@ export async function runNodePgMigrations(
         noLock: true,
         logger: silentLogger,
       });
-    const graph = pending.filter(
-      (migration) => migration.dependsOn !== undefined,
-    );
+    const graph = pending.filter((migration) => migration.dependsOn !== undefined);
     if (graph.length > 0) {
       await client.query(
         `INSERT INTO "${NODE_PG_JOURNAL_SCHEMA}"."${NODE_PG_CHECKSUM_STAGING_TABLE}" (name, sha256) VALUES ($1, $2)`,
@@ -153,10 +135,9 @@ async function stampMigrationActor(client: Client): Promise<void> {
 }
 
 async function lockMigrations(client: Client): Promise<void> {
-  const result = await client.query<{ locked: boolean }>(
-    "SELECT pg_try_advisory_lock($1) AS locked",
-    [PG_MIGRATE_LOCK_ID],
-  );
+  const result = await client.query<{ locked: boolean }>("SELECT pg_try_advisory_lock($1) AS locked", [
+    PG_MIGRATE_LOCK_ID,
+  ]);
   if (result.rows[0]?.locked !== true) {
     throw new NodePgMigrationJournalError(
       "NODE_PG_MIGRATION_LOCKED",
@@ -200,13 +181,8 @@ async function ensureChecksumJournal(client: Client): Promise<void> {
   );
 }
 
-async function stagePendingChecksums(
-  client: Client,
-  pending: readonly DiscoveredDomainMigration[],
-): Promise<void> {
-  await client.query(
-    `TRUNCATE "${NODE_PG_JOURNAL_SCHEMA}"."${NODE_PG_CHECKSUM_STAGING_TABLE}"`,
-  );
+async function stagePendingChecksums(client: Client, pending: readonly DiscoveredDomainMigration[]): Promise<void> {
+  await client.query(`TRUNCATE "${NODE_PG_JOURNAL_SCHEMA}"."${NODE_PG_CHECKSUM_STAGING_TABLE}"`);
   for (const migration of pending) {
     await client.query(
       `INSERT INTO "${NODE_PG_JOURNAL_SCHEMA}"."${NODE_PG_CHECKSUM_STAGING_TABLE}" (name, sha256)
@@ -220,13 +196,7 @@ async function stagePendingChecksums(
 }
 
 async function ensureAppliedJournal(client: Client): Promise<void> {
-  if (
-    !(await relationExists(
-      client,
-      NODE_PG_JOURNAL_SCHEMA,
-      NODE_PG_APPLIED_TABLE,
-    ))
-  ) {
+  if (!(await relationExists(client, NODE_PG_JOURNAL_SCHEMA, NODE_PG_APPLIED_TABLE))) {
     await client.query(
       `CREATE TABLE "${NODE_PG_JOURNAL_SCHEMA}"."${NODE_PG_APPLIED_TABLE}" (
         id SERIAL PRIMARY KEY,

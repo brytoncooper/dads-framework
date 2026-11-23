@@ -2,22 +2,11 @@
 // back in line: only the branch's own entry moves, refusals fire before any
 // write, the migration.ts body survives under the new id, and a changed
 // additive/destructive verdict stops for review.
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  planRenumber,
-  renumberMigration,
-  rewriteMigrationId,
-} from "./renumber-migration.js";
+import { planRenumber, renumberMigration, rewriteMigrationId } from "./renumber-migration.js";
 
 const JOURNAL_DEFINITIONS =
   "definition authz/migration_journal { relation applied: authz/migration_version }\n" +
@@ -56,18 +45,10 @@ export const migration: AuthorizationMigration = {
 };
 `;
 
-function writeEntry(
-  folder: string,
-  id: string,
-  schema: string,
-  migration?: string,
-): void {
+function writeEntry(folder: string, id: string, schema: string, migration?: string): void {
   mkdirSync(join(folder, id));
   writeFileSync(join(folder, id, "schema.zed"), schema);
-  writeFileSync(
-    join(folder, id, "migration.ts"),
-    migration ?? `export const migration = { id: "${id}" };\n`,
-  );
+  writeFileSync(join(folder, id, "migration.ts"), migration ?? `export const migration = { id: "${id}" };\n`);
 }
 
 /** A journal rebased on main (0001, 0002_add_folders) carrying the branch's colliding 0002_add_tags. */
@@ -138,11 +119,7 @@ describe("rewriteMigrationId", () => {
 
   it("refuses a body that does not declare the id exactly once", () => {
     expect(() =>
-      rewriteMigrationId(
-        `export const migration = { id: ID };\n`,
-        "0002_add_tags",
-        "0003_add_tags",
-      ),
+      rewriteMigrationId(`export const migration = { id: ID };\n`, "0002_add_tags", "0003_add_tags"),
     ).toThrow(/exactly once, found 0/);
   });
 });
@@ -166,12 +143,10 @@ describe("renumberMigration", () => {
       classificationChanged: false,
     });
     expect(existsSync(join(folder, "0002_add_tags"))).toBe(false);
-    expect(
-      readFileSync(join(folder, "0003_add_tags", "schema.zed"), "utf8"),
-    ).toBe(COMPOSED_FOLDERS_AND_TAGS);
-    expect(
-      readFileSync(join(folder, "0003_add_tags", "migration.ts"), "utf8"),
-    ).toBe(BRANCH_MIGRATION.replace("0002_add_tags", "0003_add_tags"));
+    expect(readFileSync(join(folder, "0003_add_tags", "schema.zed"), "utf8")).toBe(COMPOSED_FOLDERS_AND_TAGS);
+    expect(readFileSync(join(folder, "0003_add_tags", "migration.ts"), "utf8")).toBe(
+      BRANCH_MIGRATION.replace("0002_add_tags", "0003_add_tags"),
+    );
     expect(readFileSync(join(folder, "index.ts"), "utf8")).toContain(
       "[m0001_baseline, m0002_add_folders, m0003_add_tags]",
     );
@@ -179,10 +154,7 @@ describe("renumberMigration", () => {
 
   it("leaves main's entries byte-for-byte untouched", async () => {
     const folder = collidingJournal();
-    const before = readFileSync(
-      join(folder, "0002_add_folders", "migration.ts"),
-      "utf8",
-    );
+    const before = readFileSync(join(folder, "0002_add_folders", "migration.ts"), "utf8");
 
     await renumberMigration({
       journalFolder: folder,
@@ -191,12 +163,8 @@ describe("renumberMigration", () => {
       acceptClassificationChange: false,
     });
 
-    expect(
-      readFileSync(join(folder, "0002_add_folders", "migration.ts"), "utf8"),
-    ).toBe(before);
-    expect(
-      readFileSync(join(folder, "0002_add_folders", "schema.zed"), "utf8"),
-    ).toBe(MAIN_FOLDERS);
+    expect(readFileSync(join(folder, "0002_add_folders", "migration.ts"), "utf8")).toBe(before);
+    expect(readFileSync(join(folder, "0002_add_folders", "schema.zed"), "utf8")).toBe(MAIN_FOLDERS);
   });
 
   it("stops without writing when the entry turns destructive against main", async () => {
@@ -215,11 +183,7 @@ describe("renumberMigration", () => {
       before: { kind: "additive" },
       after: { kind: "destructive", removals: ["definition test/folder"] },
     });
-    expect(readdirSync(folder).sort()).toEqual([
-      "0001_baseline",
-      "0002_add_folders",
-      "0002_add_tags",
-    ]);
+    expect(readdirSync(folder).sort()).toEqual(["0001_baseline", "0002_add_folders", "0002_add_tags"]);
   });
 
   it("proceeds past a changed classification only when told to", async () => {

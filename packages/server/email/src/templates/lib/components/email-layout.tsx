@@ -1,12 +1,4 @@
-import {
-  Body,
-  Container,
-  Head,
-  Html,
-  Img,
-  Preview,
-  Section,
-} from "@react-email/components";
+import { Body, Container, Head, Html, Img, Preview, Section } from "@react-email/components";
 import React from "react";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 
@@ -63,12 +55,7 @@ export type EmailLayoutProps = {
   readonly children: ReactNode;
 };
 
-export function EmailLayout({
-  subject,
-  preview,
-  branding,
-  children,
-}: EmailLayoutProps): ReactElement {
+export function EmailLayout({ subject, preview, branding, children }: EmailLayoutProps): ReactElement {
   const headerLogo = branding?.headerLogo;
   const footerLogo = branding?.footerLogo;
   return (
@@ -79,9 +66,7 @@ export function EmailLayout({
       {preview === undefined ? null : <Preview>{preview}</Preview>}
       <Body style={bodyStyle}>
         <Container style={cardStyle}>
-          {headerLogo === undefined ? null : (
-            <Img {...headerLogo} style={headerLogoStyle} />
-          )}
+          {headerLogo === undefined ? null : <Img {...headerLogo} style={headerLogoStyle} />}
           {children}
           {footerLogo === undefined ? null : (
             <Section style={footerStyle}>

@@ -19,9 +19,7 @@ try {
     process.stdout.write(
       "Workbench: up [--instance name] [--port 0..65535] [--adapter postgres|spicedb], or stop [--instance name].\n",
     );
-    process.stdout.write(
-      "New instances use Postgres by default; existing instances retain their recorded backend.\n",
-    );
+    process.stdout.write("New instances use Postgres by default; existing instances retain their recorded backend.\n");
   } else {
     await runWorkbenchDevelopment({
       root: fileURLToPath(new URL("../../../../", import.meta.url)),

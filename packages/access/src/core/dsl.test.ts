@@ -150,26 +150,14 @@ describe("ergonomic access DSL", () => {
     );
 
     // Fail-closed proof: billing has ONLY manage and view, never edit.
-    const billingDef = model.definitions.find(
-      (def) => def.entity.wireName === "billing",
-    );
-    expect(Object.keys(billingDef?.expressions ?? {})).toEqual([
-      "manage",
-      "view",
-    ]);
+    const billingDef = model.definitions.find((def) => def.entity.wireName === "billing");
+    expect(Object.keys(billingDef?.expressions ?? {})).toEqual(["manage", "view"]);
 
     // Round-trip through parseZed, compileAccessFromIr, and emitTypeScript.
     const parsedIr = parseZed(zed);
     expect(accessIrDefinitionsDiff(emitAccessIr(model), parsedIr)).toEqual([]);
-    expect(
-      accessIrDefinitionsDiff(
-        emitAccessIr(model),
-        emitAccessIr(compileAccessFromIr(parsedIr)),
-      ),
-    ).toEqual([]);
-    expect(emitTypeScript(emitAccessIr(model))).toContain(
-      "export const access = compileAccess(",
-    );
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), emitAccessIr(compileAccessFromIr(parsedIr)))).toEqual([]);
+    expect(emitTypeScript(emitAccessIr(model))).toContain("export const access = compileAccess(");
   });
 
   it("supports splitting child resources across separate variables via .child()", () => {
@@ -203,17 +191,13 @@ describe("ergonomic access DSL", () => {
     const model = compileAccess([organization]);
     const zed = emitZed(model);
 
-    expect(zed).toContain(
-      "permission manage = (organization->manage + lead) - (blocked)",
-    );
+    expect(zed).toContain("permission manage = (organization->manage + lead) - (blocked)");
     expect(zed).toContain("definition milestone {");
     expect(zed).toContain("relation project: project");
     expect(zed).toContain("permission view = project->view");
     expect(zed).toContain("permission close = owner");
     expect(milestone.can.view.entityWireName).toBe("milestone");
-    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual(
-      [],
-    );
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual([]);
   });
 
   it("wires recursive: true self-inheritance for top-level and child folders", () => {
@@ -253,9 +237,7 @@ describe("ergonomic access DSL", () => {
     expect(zed).toContain("permission edit = contributor + parent->edit");
     expect(nestedFolder("nf1").parent.roleName).toBe("parent");
     expect(nestedFolder("nf1").workspace.roleName).toBe("workspace");
-    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual(
-      [],
-    );
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual([]);
   });
 
   it("compiles multi-parent DAG resources with parents: [organization, folder]", () => {
@@ -297,9 +279,7 @@ describe("ergonomic access DSL", () => {
     expect(zed).toContain("relation parent: organization | folder");
     expect(zed).toContain("permission edit = author + parent->edit");
     expect(zed).toContain("permission view = author + parent->view");
-    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual(
-      [],
-    );
+    expect(accessIrDefinitionsDiff(emitAccessIr(model), parseZed(zed))).toEqual([]);
   });
 
   it("compiles every(), expiring actors/wildcards/usersets, combinators, and role-target arrows", () => {
@@ -330,17 +310,7 @@ describe("ergonomic access DSL", () => {
         active: user.anyone,
         banned: user,
       },
-      can: ({
-        owner,
-        guest,
-        public_link,
-        temp_link,
-        team_viewer,
-        temp_team,
-        review_group,
-        active,
-        banned,
-      }) => ({
+      can: ({ owner, guest, public_link, temp_link, team_viewer, temp_team, review_group, active, banned }) => ({
         view: anyOf(
           owner,
           guest,
@@ -368,9 +338,7 @@ describe("ergonomic access DSL", () => {
     expect(dslZed).toContain("review_group.all(view)");
     expect(dslZed).toContain("review_group->reviewer");
     expect(dslZed).toContain("review_group.all(approve)");
-    expect(
-      accessIrDefinitionsDiff(emitAccessIr(dslModel), parseZed(dslZed)),
-    ).toEqual([]);
+    expect(accessIrDefinitionsDiff(emitAccessIr(dslModel), parseZed(dslZed))).toEqual([]);
   });
 
   it("resolves cyclic lazy thunk role references without TDZ or infinite recursion", () => {
@@ -445,9 +413,7 @@ describe("ergonomic access DSL", () => {
     });
 
     const model = compileAccess([workspace]);
-    const def = model.definitions.find(
-      (entry) => entry.entity.wireName === "workspace",
-    );
+    const def = model.definitions.find((entry) => entry.entity.wireName === "workspace");
     expect(def?.granting).toEqual({
       requires: [
         {

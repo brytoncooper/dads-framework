@@ -3,20 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connectPostgresClient } from "../../index.js";
 
-import {
-  discoverDomainMigrations,
-  type MigrationWorkspace,
-  runNodePgMigrations,
-} from "../index.js";
+import { discoverDomainMigrations, type MigrationWorkspace, runNodePgMigrations } from "../index.js";
 
 import { planMigrationCompatibility } from "./plan-migration-compatibility.js";
 import { readMigrationCompatibilityState } from "./read-migration-compatibility-state.js";
 import { RehearsalSources } from "./rehearsal-sources.js";
 import type { RehearsalPostgres } from "../../testing/index.js";
 
-type CompatibilityState = Awaited<
-  ReturnType<typeof readMigrationCompatibilityState>
->;
+type CompatibilityState = Awaited<ReturnType<typeof readMigrationCompatibilityState>>;
 
 export type MigrationCompatibilityResult = {
   orders: number;
@@ -53,12 +47,7 @@ export async function rehearseMigrationCompatibility(input: {
   const scratch = await mkdtemp(join(tmpdir(), "dads-migration-rehearsal-"));
   try {
     const started = performance.now();
-    const baseline = await applyBaseline(
-      input,
-      sources,
-      plan.baseline,
-      scratch,
-    );
+    const baseline = await applyBaseline(input, sources, plan.baseline, scratch);
     const baselineMs = performance.now() - started;
     const replayStarted = performance.now();
     await replayEveryOrder(input, sources, plan, baseline, scratch);
@@ -68,10 +57,7 @@ export async function rehearseMigrationCompatibility(input: {
       baselineMs,
       replayMs: performance.now() - replayStarted,
       baselineRowsByRelation: Object.fromEntries(
-        Object.entries(baseline.state.data).map(([name, result]) => [
-          name,
-          result.rows,
-        ]),
+        Object.entries(baseline.state.data).map(([name, result]) => [name, result.rows]),
       ),
     };
   } finally {
@@ -136,10 +122,7 @@ async function replayEveryOrder(
         "pending migrations change cluster roles/settings; use a dedicated fresh-cluster rehearsal before deployment",
       );
     const state = await readState(database.url);
-    if (
-      reference !== undefined &&
-      JSON.stringify(reference) !== JSON.stringify(state)
-    )
+    if (reference !== undefined && JSON.stringify(reference) !== JSON.stringify(state))
       throw new Error(
         `migration compatibility differs for arrival order ${order.join(" -> ")}; declare the actual prerequisite and verify retained data`,
       );

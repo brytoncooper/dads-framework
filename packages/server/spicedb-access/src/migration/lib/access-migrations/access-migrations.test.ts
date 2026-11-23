@@ -1,10 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 
 import { actor, compileAccess, resource } from "@dads-framework/access";
-import {
-  relationshipWrite,
-  type RelationshipWrite,
-} from "@dads-framework/access/runtime";
+import { relationshipWrite, type RelationshipWrite } from "@dads-framework/access/runtime";
 import {
   createNodeSqliteExecutor,
   SqliteAuthorization,
@@ -15,20 +12,11 @@ import { z } from "zod";
 
 import type { AuthorizationMigrationStore } from "../journal/journal-entry.js";
 import { assertAccessMigrationsUpToDate } from "./assert-access-migrations-up-to-date.js";
-import {
-  copyParent,
-  copyRole,
-  defineAccessMigration,
-  dropParent,
-  dropRole,
-} from "./define-access-migration.js";
+import { copyParent, copyRole, defineAccessMigration, dropParent, dropRole } from "./define-access-migration.js";
 import { runPostgresAccessMigrations } from "./run-postgres-access-migrations.js";
 import { runSpiceDbAccessMigrations } from "./run-spicedb-access-migrations.js";
 import { runSqliteAccessMigrations } from "./run-sqlite-access-migrations.js";
-import type {
-  PgMigrationExecutor,
-  PgMigrationRow,
-} from "./sql-migration-types.js";
+import type { PgMigrationExecutor, PgMigrationRow } from "./sql-migration-types.js";
 
 const idSchema = z.string().min(1);
 const user = actor("user", { id: idSchema });
@@ -250,10 +238,7 @@ describe("defineAccessMigration & runSqliteAccessMigrations (node:sqlite)", () =
     const migration = defineAccessMigration("0002_reparent_doc", {
       from: compileAccess([user, folderDef, docBefore]),
       to: compileAccess([user, folderDef, docAfter]),
-      steps: [
-        copyParent(docBefore.roles.folder, docAfter.roles.parent),
-        dropParent(docBefore.roles.folder),
-      ],
+      steps: [copyParent(docBefore.roles.folder, docAfter.roles.parent), dropParent(docBefore.roles.folder)],
     });
 
     const db = new DatabaseSync(":memory:");
@@ -304,16 +289,12 @@ describe("defineAccessMigration & runSqliteAccessMigrations (node:sqlite)", () =
 
 describe("runPostgresAccessMigrations & assertAccessMigrationsUpToDate", () => {
   it("runs pending migrations inside BEGIN/COMMIT, skips applied IDs, and rolls back on error", async () => {
-    const queries: { readonly text: string; readonly values?: unknown[] }[] =
-      [];
+    const queries: { readonly text: string; readonly values?: unknown[] }[] = [];
     const appliedIds = new Set<string>();
     let released = 0;
     let shouldFailDelete = false;
 
-    const handleQuery = (
-      text: string,
-      values?: unknown[],
-    ): Promise<{ readonly rows: readonly PgMigrationRow[] }> => {
+    const handleQuery = (text: string, values?: unknown[]): Promise<{ readonly rows: readonly PgMigrationRow[] }> => {
       queries.push({ text: text.trim(), ...(values ? { values } : {}) });
       if (text.includes("SELECT id FROM dads_access_migrations")) {
         return Promise.resolve({
@@ -344,10 +325,7 @@ describe("runPostgresAccessMigrations & assertAccessMigrationsUpToDate", () => {
     const migration = defineAccessMigration("0001_member_to_editor", {
       from: modelV1,
       to: modelV2,
-      steps: [
-        copyRole(workspaceV1.roles.member, workspaceV2.roles.editor),
-        dropRole(workspaceV1.roles.member),
-      ],
+      steps: [copyRole(workspaceV1.roles.member, workspaceV2.roles.editor), dropRole(workspaceV1.roles.member)],
     });
 
     await expect(
@@ -453,10 +431,7 @@ describe("runSpiceDbAccessMigrations", () => {
     const migration = defineAccessMigration("0001_member_to_editor", {
       from: modelV1,
       to: modelV2,
-      steps: [
-        copyRole(workspaceV1.roles.member, workspaceV2.roles.editor),
-        dropRole(workspaceV1.roles.member),
-      ],
+      steps: [copyRole(workspaceV1.roles.member, workspaceV2.roles.editor), dropRole(workspaceV1.roles.member)],
     });
 
     const result = await runSpiceDbAccessMigrations({

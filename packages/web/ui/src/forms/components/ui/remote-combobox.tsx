@@ -43,8 +43,7 @@ type RemoteComboboxMultipleProps<Item> = RemoteComboboxShared<Item> & {
   readonly onValueChange: (next: Item[]) => void;
 };
 
-type RemoteComboboxProps<Item> =
-  RemoteComboboxSingleProps<Item> | RemoteComboboxMultipleProps<Item>;
+type RemoteComboboxProps<Item> = RemoteComboboxSingleProps<Item> | RemoteComboboxMultipleProps<Item>;
 
 /**
  * A combobox whose options come from the server as the person types and
@@ -55,9 +54,7 @@ type RemoteComboboxProps<Item> =
  * lists stay on `Combobox`. Multi-select keeps the typed term so the next
  * pick is still against that search.
  */
-function RemoteCombobox<Item>(
-  props: RemoteComboboxProps<Item>,
-): React.JSX.Element {
+function RemoteCombobox<Item>(props: RemoteComboboxProps<Item>): React.JSX.Element {
   const itemKey = props.itemKey ?? itemValueKey;
   const remote = useRemoteComboboxList({
     loadPage: props.loadPage,

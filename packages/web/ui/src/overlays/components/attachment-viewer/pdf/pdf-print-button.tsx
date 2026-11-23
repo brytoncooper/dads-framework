@@ -27,11 +27,7 @@ export function PdfPrintButton({ print }: { print: PdfPrintController }) {
         tone={hasFailed ? "error" : "default"}
         onClick={isPreparing ? print.cancel : print.print}
       >
-        {isPreparing ? (
-          <LoaderCircleIcon className="animate-spin motion-reduce:animate-none" />
-        ) : (
-          <PrinterIcon />
-        )}
+        {isPreparing ? <LoaderCircleIcon className="animate-spin motion-reduce:animate-none" /> : <PrinterIcon />}
       </ToolbarIconButton>
       {isPreparing && (
         <ToolbarReadout live>

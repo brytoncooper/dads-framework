@@ -25,9 +25,7 @@ describe("DetailCard", () => {
     const card = screen.getByLabelText("Schedule Card");
 
     expect(card.getAttribute("data-slot")).toBe("detail-card");
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Schedule" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Schedule" })).toBeTruthy();
     expect(screen.getByText("Every 30 days")).toBeTruthy();
   });
 
@@ -48,9 +46,7 @@ describe("DetailCard", () => {
     expect(screen.getByText("Work to do at each stop.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add Task" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit Route" })).toBeTruthy();
-    expect(container.querySelector('[data-slot="detail-card-icon"]')).not.toBe(
-      null,
-    );
+    expect(container.querySelector('[data-slot="detail-card-icon"]')).not.toBe(null);
     expect(
       container
         .querySelector('[data-slot="detail-card-footer"]')
@@ -65,15 +61,9 @@ describe("DetailCard", () => {
       </DetailCard>,
     );
 
-    expect(container.querySelector('[data-slot="detail-card-icon"]')).toBe(
-      null,
-    );
-    expect(container.querySelector('[data-slot="detail-card-actions"]')).toBe(
-      null,
-    );
-    expect(container.querySelector('[data-slot="detail-card-footer"]')).toBe(
-      null,
-    );
+    expect(container.querySelector('[data-slot="detail-card-icon"]')).toBe(null);
+    expect(container.querySelector('[data-slot="detail-card-actions"]')).toBe(null);
+    expect(container.querySelector('[data-slot="detail-card-footer"]')).toBe(null);
     expect(container.querySelector("p.text-muted-foreground")).toBe(null);
   });
 

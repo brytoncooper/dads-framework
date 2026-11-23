@@ -17,11 +17,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  readPackageGraph,
-  vendorImports,
-  type PackageImport,
-} from "../scanners/package-graph.js";
+import { readPackageGraph, vendorImports, type PackageImport } from "../scanners/package-graph.js";
 
 /** The clients a package opens a database with. */
 const DATABASE_CLIENTS = new Set([
@@ -41,9 +37,7 @@ const DATABASE_CLIENTS = new Set([
 ]);
 
 /** Every package that opens a database client, and the clients it opens. */
-function clientsByPackage(
-  context: DoctorContext,
-): ReadonlyMap<string, readonly PackageImport[]> {
+function clientsByPackage(context: DoctorContext): ReadonlyMap<string, readonly PackageImport[]> {
   const graph = readPackageGraph(context);
   const opened = new Map<string, readonly PackageImport[]>();
   if (!graph.declared) return opened;
@@ -51,9 +45,7 @@ function clientsByPackage(
     if (declared.kind === "composition") continue;
     opened.set(
       declared.name,
-      vendorImports(graph, declared).filter((entry) =>
-        DATABASE_CLIENTS.has(entry.module ?? ""),
-      ),
+      vendorImports(graph, declared).filter((entry) => DATABASE_CLIENTS.has(entry.module ?? "")),
     );
   }
   return opened;
@@ -80,9 +72,7 @@ function countSharedClients(context: DoctorContext) {
   const owners = ownersByClient(opened);
   const readings = new Map<string, SignalReading>();
   for (const [name, entries] of opened) {
-    const shared = entries.filter(
-      (entry) => (owners.get(entry.module ?? "")?.size ?? 0) > 1,
-    );
+    const shared = entries.filter((entry) => (owners.get(entry.module ?? "")?.size ?? 0) > 1);
     readings.set(name, {
       value: new Set(shared.map((entry) => entry.module)).size,
       evidence: shared.map((entry) => ({
@@ -103,7 +93,6 @@ export const sharedDatabaseSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You got your own place (microservice) and you still do laundry at mom’s (the shared database).",
+  sentence: "You got your own place (microservice) and you still do laundry at mom’s (the shared database).",
   run: (context) => Promise.resolve(countSharedClients(context)),
 };

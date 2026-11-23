@@ -52,10 +52,7 @@ describe("DrizzleFaultAlertReader", () => {
 
   afterEach(async () => {
     await truncateRequestLog(postgres.pool);
-    await truncateTables(postgres.pool, [
-      "client_diagnostic_events",
-      "known_fault_fingerprints",
-    ]);
+    await truncateTables(postgres.pool, ["client_diagnostic_events", "known_fault_fingerprints"]);
   });
 
   it("groups a fault inside the window and counts only its own occurrences", async () => {
@@ -94,9 +91,7 @@ describe("DrizzleFaultAlertReader", () => {
   it("drops a fault the memory already holds, and keeps one it does not", async () => {
     await recordServerFault("remembered", INSIDE_WINDOW, 4);
     await recordServerFault("stranger01", INSIDE_WINDOW, 4);
-    await reader.rememberAlertedFaults([
-      { origin: "server", fingerprint: "remembered" },
-    ]);
+    await reader.rememberAlertedFaults([{ origin: "server", fingerprint: "remembered" }]);
 
     const faults = await reader.unalertedServerFaultsSince(WINDOW_START);
 
@@ -109,16 +104,12 @@ describe("DrizzleFaultAlertReader", () => {
     // the other.
     await recordServerFault("collision", INSIDE_WINDOW, 1);
     await recordClientFault("collision", INSIDE_WINDOW);
-    await reader.rememberAlertedFaults([
-      { origin: "server", fingerprint: "collision" },
-    ]);
+    await reader.rememberAlertedFaults([{ origin: "server", fingerprint: "collision" }]);
 
     expect(await reader.unalertedServerFaultsSince(WINDOW_START)).toEqual([]);
-    expect(
-      (await reader.unalertedClientFaultsSince(WINDOW_START)).map(
-        (fault) => fault.fingerprint,
-      ),
-    ).toEqual(["collision"]);
+    expect((await reader.unalertedClientFaultsSince(WINDOW_START)).map((fault) => fault.fingerprint)).toEqual([
+      "collision",
+    ]);
   });
 
   it("never alerts on an info row, which is a measurement and not a fault", async () => {
@@ -131,12 +122,8 @@ describe("DrizzleFaultAlertReader", () => {
   });
 
   it("remembers a fault once, however often it is alerted", async () => {
-    await reader.rememberAlertedFaults([
-      { origin: "server", fingerprint: "twice0001" },
-    ]);
-    await reader.rememberAlertedFaults([
-      { origin: "server", fingerprint: "twice0001" },
-    ]);
+    await reader.rememberAlertedFaults([{ origin: "server", fingerprint: "twice0001" }]);
+    await reader.rememberAlertedFaults([{ origin: "server", fingerprint: "twice0001" }]);
 
     expect(await db.select().from(knownFaultFingerprints)).toHaveLength(1);
   });
@@ -144,9 +131,7 @@ describe("DrizzleFaultAlertReader", () => {
   it("reports nothing to remember before anything has been", async () => {
     expect(await reader.hasRememberedAnyFault()).toBe(false);
 
-    await reader.rememberAlertedFaults([
-      { origin: "client", fingerprint: "anything" },
-    ]);
+    await reader.rememberAlertedFaults([{ origin: "client", fingerprint: "anything" }]);
 
     expect(await reader.hasRememberedAnyFault()).toBe(true);
   });
@@ -159,32 +144,25 @@ describe("DrizzleFaultAlertReader", () => {
     expect(await reader.rememberFaultsSeenBefore(WINDOW_START)).toBe(2);
 
     const remembered = await db.select().from(knownFaultFingerprints);
-    expect(
-      remembered.map((row) => `${row.origin}:${row.fingerprint}`).toSorted(),
-    ).toEqual(["client:oldclient1", "server:oldserver1"]);
+    expect(remembered.map((row) => `${row.origin}:${row.fingerprint}`).toSorted()).toEqual([
+      "client:oldclient1",
+      "server:oldserver1",
+    ]);
     // The one that only started inside the window is still news.
-    expect(
-      (await reader.unalertedServerFaultsSince(WINDOW_START)).map(
-        (fault) => fault.fingerprint,
-      ),
-    ).toEqual(["newserver1"]);
+    expect((await reader.unalertedServerFaultsSince(WINDOW_START)).map((fault) => fault.fingerprint)).toEqual([
+      "newserver1",
+    ]);
   });
 
   it("seeds nothing twice when it runs against a memory that already holds one", async () => {
     await recordServerFault("oldserver1", BEFORE_WINDOW, 1);
-    await reader.rememberAlertedFaults([
-      { origin: "server", fingerprint: "oldserver1" },
-    ]);
+    await reader.rememberAlertedFaults([{ origin: "server", fingerprint: "oldserver1" }]);
 
     expect(await reader.rememberFaultsSeenBefore(WINDOW_START)).toBe(0);
     expect(await db.select().from(knownFaultFingerprints)).toHaveLength(1);
   });
 
-  async function recordServerFault(
-    fingerprint: string,
-    recordedAt: Date,
-    occurrences: number,
-  ): Promise<void> {
+  async function recordServerFault(fingerprint: string, recordedAt: Date, occurrences: number): Promise<void> {
     await db.insert(requestLog).values(
       Array.from({ length: occurrences }, () =>
         makeRequestLog({

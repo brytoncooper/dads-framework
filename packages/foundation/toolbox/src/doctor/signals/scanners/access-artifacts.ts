@@ -24,10 +24,7 @@ export function isSchemaPath(path: string): boolean {
 }
 
 /** The package root that owns a path, by the rule this module describes. */
-export function owningRoot(
-  path: string,
-  declaredRoots: readonly string[],
-): string {
+export function owningRoot(path: string, declaredRoots: readonly string[]): string {
   const declared = declaredRoots
     .filter((root) => root.length > 0 && path.startsWith(`${root}/`))
     .sort((left, right) => right.length - left.length)[0];
@@ -47,10 +44,5 @@ export function declaredRootsOf(context: DoctorContext): readonly string[] {
 export function accessArtifacts(context: DoctorContext): readonly string[] {
   return context
     .files()
-    .filter(
-      (path) =>
-        isSchemaPath(path) &&
-        context.exists(path) &&
-        isAccessKitArtifact(context.read(path)),
-    );
+    .filter((path) => isSchemaPath(path) && context.exists(path) && isAccessKitArtifact(context.read(path)));
 }

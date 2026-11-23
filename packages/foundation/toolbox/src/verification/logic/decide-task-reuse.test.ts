@@ -2,10 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { VerificationReceiptLookup } from "../receipt-store.js";
-import type {
-  VerificationTaskDefinition,
-  VerificationTaskRecommendation,
-} from "../verification-contract.js";
+import type { VerificationTaskDefinition, VerificationTaskRecommendation } from "../verification-contract.js";
 import type { VerificationInputIdentity } from "../verification-inputs.js";
 import { decideTaskReuse } from "./decide-task-reuse.js";
 

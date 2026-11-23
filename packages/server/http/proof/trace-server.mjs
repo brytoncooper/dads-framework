@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import process from "node:process";
 import { URL } from "node:url";
-import {
-  createHttpApp,
-  getRoute,
-  registerRoutes,
-  requireSession,
-  routeGroup,
-} from "../dist/index.js";
+import { createHttpApp, getRoute, registerRoutes, requireSession, routeGroup } from "../dist/index.js";
 import pg from "pg";
 import { z } from "zod";
 
@@ -52,20 +46,16 @@ export async function runRequest(telemetry) {
     }),
   });
 
-  const requestId =
-    process.env.DADS_TELEMETRY_TEST_REQUEST_ID ?? "request-proof-1";
+  const requestId = process.env.DADS_TELEMETRY_TEST_REQUEST_ID ?? "request-proof-1";
   try {
     const url = await app.listen({ host: "127.0.0.1", port: 0 });
-    const response = await globalThis.fetch(
-      new URL("/ready?hidden=sensitive-query-param", url),
-      {
-        headers: {
-          authorization: "Bearer sensitive-token",
-          cookie: "secret=sensitive-cookie",
-          "x-request-id": requestId,
-        },
+    const response = await globalThis.fetch(new URL("/ready?hidden=sensitive-query-param", url), {
+      headers: {
+        authorization: "Bearer sensitive-token",
+        cookie: "secret=sensitive-cookie",
+        "x-request-id": requestId,
       },
-    );
+    });
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("x-request-id"), requestId);
     assert.deepEqual(await response.json(), { data: { ok: true } });

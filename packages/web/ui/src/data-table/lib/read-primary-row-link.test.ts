@@ -6,10 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  readPrimaryRowLink,
-  samePrimaryRowLink,
-} from "./read-primary-row-link.js";
+import { readPrimaryRowLink, samePrimaryRowLink } from "./read-primary-row-link.js";
 
 function rowWithLinks(markup: string): HTMLTableRowElement {
   const table = document.createElement("table");
@@ -50,18 +47,12 @@ describe("readPrimaryRowLink", () => {
   });
 
   it("treats matching href and cell as the same link", () => {
-    expect(
-      samePrimaryRowLink(
-        { href: "/mills/north", cellIndex: 0 },
-        { href: "/mills/north", cellIndex: 0 },
-      ),
-    ).toBe(true);
-    expect(
-      samePrimaryRowLink(
-        { href: "/mills/north", cellIndex: 0 },
-        { href: "/mills/south", cellIndex: 0 },
-      ),
-    ).toBe(false);
+    expect(samePrimaryRowLink({ href: "/mills/north", cellIndex: 0 }, { href: "/mills/north", cellIndex: 0 })).toBe(
+      true,
+    );
+    expect(samePrimaryRowLink({ href: "/mills/north", cellIndex: 0 }, { href: "/mills/south", cellIndex: 0 })).toBe(
+      false,
+    );
   });
 
   it("returns nothing when the row has no link", () => {

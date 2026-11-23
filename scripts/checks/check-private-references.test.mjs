@@ -1,32 +1,18 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { URL, fileURLToPath } from "node:url";
 
-import {
-  loadPrivatePatterns,
-  main,
-  patterns,
-  scanFiles,
-} from "./check-private-references.mjs";
+import { loadPrivatePatterns, main, patterns, scanFiles } from "./check-private-references.mjs";
 
 const demoHome = ["/", "Users", "/", "someone"].join("");
 
-const scriptPath = fileURLToPath(
-  new URL("./check-private-references.mjs", import.meta.url),
-);
+const scriptPath = fileURLToPath(new URL("./check-private-references.mjs", import.meta.url));
 
 function withTempDir(run) {
   const dir = mkdtempSync(join(tmpdir(), "private-references-"));
@@ -44,9 +30,7 @@ function writeFixture(dir, relPath, content) {
   return { absPath, relPath };
 }
 
-const gitFixtureEnv = Object.fromEntries(
-  Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
-);
+const gitFixtureEnv = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")));
 
 function createTempGitRepo() {
   const dir = mkdtempSync(join(tmpdir(), "private-references-git-"));
@@ -83,9 +67,7 @@ test("a file containing a GitHub token fails with pattern id secret-github-token
       // real token shape.
       `const token = 'ghp_${"x".repeat(24)}';\n`,
     );
-    const githubToken = patterns.find(
-      (pattern) => pattern.id === "secret-github-token",
-    );
+    const githubToken = patterns.find((pattern) => pattern.id === "secret-github-token");
 
     const result = scanFiles([file], []);
 
@@ -98,11 +80,7 @@ test("a file containing a GitHub token fails with pattern id secret-github-token
 
 test("an allowlisted (path, pattern) is reported as allowed and does not fail", () => {
   withTempDir((dir) => {
-    const file = writeFixture(
-      dir,
-      "src/example.ts",
-      `// see ${demoHome}/project for context\n`,
-    );
+    const file = writeFixture(dir, "src/example.ts", `// see ${demoHome}/project for context\n`);
     const allowlist = [
       {
         path: "src/example.ts",
@@ -131,20 +109,13 @@ test("--paths on a plain directory finds a planted local-machine-path hit", () =
     const result = main(["--paths", dir, "--root", dir]);
 
     assert.equal(result.exitCode, 1);
-    assert.match(
-      result.output,
-      /^notes\.txt:1: local-machine-path: see \/Users\/someone\/project for details$/m,
-    );
+    assert.match(result.output, /^notes\.txt:1: local-machine-path: see \/Users\/someone\/project for details$/m);
   });
 });
 
 test("a binary file (contains NUL) is skipped", () => {
   withTempDir((dir) => {
-    const file = writeFixture(
-      dir,
-      "binary.dat",
-      Buffer.from([0x00, 0x01, 0x02, 0x03, 0xff, 0xfe, 0xfd]),
-    );
+    const file = writeFixture(dir, "binary.dat", Buffer.from([0x00, 0x01, 0x02, 0x03, 0xff, 0xfe, 0xfd]));
 
     const result = scanFiles([file], []);
 
@@ -191,10 +162,7 @@ test("--paths honors the exported tree's own allowlist, not the --root one", () 
       const result = main(["--paths", exported, "--root", unrelatedRoot]);
 
       assert.equal(result.exitCode, 0);
-      assert.match(
-        result.output,
-        /^allowed: notes\.txt: local-machine-path \(reviewed example\)$/m,
-      );
+      assert.match(result.output, /^allowed: notes\.txt: local-machine-path \(reviewed example\)$/m);
     });
   });
 });
@@ -226,16 +194,9 @@ test("local policy matches only the configured files and redacts the content", (
 
 test("a malformed local pattern file throws a clear error", () => {
   withTempDir((dir) => {
-    writeFixture(
-      dir,
-      "scripts/checks/private-references.local.json",
-      JSON.stringify({ not: "an array" }),
-    );
+    writeFixture(dir, "scripts/checks/private-references.local.json", JSON.stringify({ not: "an array" }));
 
-    assert.throws(
-      () => loadPrivatePatterns(dir),
-      /private-references\.local\.json must contain a JSON array/,
-    );
+    assert.throws(() => loadPrivatePatterns(dir), /private-references\.local\.json must contain a JSON array/);
   });
 });
 
@@ -290,11 +251,7 @@ test("private patterns flag synthetic product identifiers and leave generic word
         "// https://service.mock-finch.example/sample.png",
       ].join("\n"),
     );
-    const { hits } = scanFiles(
-      [file],
-      [],
-      loadPrivatePatterns(dir, policy.absPath),
-    );
+    const { hits } = scanFiles([file], [], loadPrivatePatterns(dir, policy.absPath));
     assert.deepEqual(
       hits.map(({ line, id }) => [line, id]),
       [
@@ -313,11 +270,7 @@ test("an exact legacy exception cannot mask another reference in the same file",
   withTempDir((dir) => {
     const relPath = "packages/example/src/index.ts";
     const legacy = '// Recognize "@mock-finch/old-output".';
-    const file = writeFixture(
-      dir,
-      relPath,
-      legacy + '\nimport "@mock-finch/other";\n',
-    );
+    const file = writeFixture(dir, relPath, legacy + '\nimport "@mock-finch/other";\n');
     const { hits, allowed } = scanFiles(
       [file],
       [
@@ -353,17 +306,14 @@ test("private filenames are rejected before decoding and their values are redact
       ]),
     );
     const file = writeFixture(dir, "images/mock-finch.png", Buffer.from([0]));
-    assert.deepEqual(
-      scanFiles([file], [], loadPrivatePatterns(dir, policy.absPath)).hits,
-      [
-        {
-          path: "[redacted path]",
-          line: 1,
-          id: "private-filename",
-          text: "[redacted]",
-        },
-      ],
-    );
+    assert.deepEqual(scanFiles([file], [], loadPrivatePatterns(dir, policy.absPath)).hits, [
+      {
+        path: "[redacted path]",
+        line: 1,
+        id: "private-filename",
+        text: "[redacted]",
+      },
+    ]);
   });
 });
 
@@ -391,9 +341,7 @@ test("malformed regex errors do not expose private syntax", () => {
     );
     assert.throws(
       () => loadPrivatePatterns(dir, policy.absPath),
-      (error) =>
-        error.message.includes('invalid "regex"') &&
-        !error.message.includes("Mock Finch"),
+      (error) => error.message.includes('invalid "regex"') && !error.message.includes("Mock Finch"),
     );
   });
 });
@@ -401,11 +349,7 @@ test("malformed regex errors do not expose private syntax", () => {
 test("an exported tree is checked against a private file stored outside it", () => {
   withTempDir((dir) => {
     const exported = join(dir, "exported");
-    writeFixture(
-      exported,
-      "package.js",
-      "// Uses the sample codename Mock Finch.",
-    );
+    writeFixture(exported, "package.js", "// Uses the sample codename Mock Finch.");
     const patternsPath = writeFixture(
       dir,
       "outside.json",
@@ -418,21 +362,12 @@ test("an exported tree is checked against a private file stored outside it", () 
       ]),
     ).absPath;
 
-    const args = [
-      "--root",
-      exported,
-      "--paths",
-      exported,
-      "--private-patterns",
-    ];
+    const args = ["--root", exported, "--paths", exported, "--private-patterns"];
     const result = main([...args, patternsPath]);
     assert.equal(result.exitCode, 1);
     assert.match(result.output, /^package\.js:1: codename: \[redacted\]$/m);
     assert.doesNotMatch(result.output, /Mock Finch/);
-    assert.throws(
-      () => main([...args, join(dir, "missing.json")]),
-      /requested private pattern file does not exist/,
-    );
+    assert.throws(() => main([...args, join(dir, "missing.json")]), /requested private pattern file does not exist/);
   });
 });
 
@@ -448,9 +383,6 @@ test("a symlink's stored target is scanned without reading the target file", () 
 test("an explicitly requested empty private policy fails closed", () => {
   withTempDir((root) => {
     const policy = writeFixture(root, "policy.json", "[]");
-    assert.throws(
-      () => loadPrivatePatterns(root, policy.absPath),
-      /must contain at least one pattern/,
-    );
+    assert.throws(() => loadPrivatePatterns(root, policy.absPath), /must contain at least one pattern/);
   });
 });

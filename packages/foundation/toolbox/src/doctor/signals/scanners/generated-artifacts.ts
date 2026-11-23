@@ -60,11 +60,7 @@ type TypeAnnotation = {
 /** Every `.$type<…>()` in a source, with the type argument it names. */
 function typeAnnotations(source: string): readonly TypeAnnotation[] {
   const found: TypeAnnotation[] = [];
-  for (
-    let start = source.indexOf(TYPE_MARK);
-    start !== -1;
-    start = source.indexOf(TYPE_MARK, start + 1)
-  ) {
+  for (let start = source.indexOf(TYPE_MARK); start !== -1; start = source.indexOf(TYPE_MARK, start + 1)) {
     const open = start + TYPE_MARK.length;
     const close = closingAngle(source, open);
     const end = source.startsWith("()", close + 1) ? close + 3 : close + 1;
@@ -109,9 +105,7 @@ function splitImports(source: string): SplitSource {
 }
 
 /** Each imported name, keyed with the module it comes from. */
-function importedBrandNames(
-  imports: readonly string[],
-): ReadonlyMap<string, string> {
+function importedBrandNames(imports: readonly string[]): ReadonlyMap<string, string> {
   const names = new Map<string, string>();
   for (const statement of imports) {
     const from = IMPORT_SOURCE.exec(statement)?.[1] ?? "";

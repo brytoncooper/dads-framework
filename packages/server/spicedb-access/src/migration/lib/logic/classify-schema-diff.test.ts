@@ -26,10 +26,7 @@ definition test/folder {
   });
 
   it("permission-only changes are additive — permissions store nothing", () => {
-    const next = BASE.replace(
-      "permission view = owner + editor",
-      "permission view = owner",
-    );
+    const next = BASE.replace("permission view = owner + editor", "permission view = owner");
     expect(classifySchemaDiff(BASE, next)).toEqual({ kind: "additive" });
   });
 
@@ -50,10 +47,7 @@ definition test/folder {
   });
 
   it("a removed allowed subject type on a surviving relation is destructive", () => {
-    const next = BASE.replace(
-      "relation editor: user | test/team#member",
-      "relation editor: user",
-    );
+    const next = BASE.replace("relation editor: user | test/team#member", "relation editor: user");
     expect(classifySchemaDiff(BASE, next)).toEqual({
       kind: "destructive",
       removals: ["allowed type test/team#member on test/document#editor"],
@@ -77,9 +71,7 @@ definition test/document {
     expect(classifySchemaDiff(previous, canonical)).toEqual({
       kind: "additive",
     });
-    expect(
-      classifySchemaDiff(previous, canonical.replace("user : * | ", "")),
-    ).toEqual({
+    expect(classifySchemaDiff(previous, canonical.replace("user : * | ", ""))).toEqual({
       kind: "destructive",
       removals: ["allowed type user:* on test/document#reader"],
     });

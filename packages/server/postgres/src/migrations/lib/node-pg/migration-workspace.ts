@@ -45,8 +45,7 @@ export function defaultMigrationWorkspace(root: string): MigrationWorkspace {
     sources: [
       {
         root: "packages/server",
-        files:
-          /^packages\/server\/([^/]+)\/src\/(?:[^/]+\/)?lib\/(?:.+\/)?migrations\/[^/]+\.migration\.ts$/,
+        files: /^packages\/server\/([^/]+)\/src\/(?:[^/]+\/)?lib\/(?:.+\/)?migrations\/[^/]+\.migration\.ts$/,
         required: true,
       },
       {

@@ -21,10 +21,7 @@ import {
   countClearableColumnFilters,
   hasClearableColumnFilters,
 } from "../../lib/clearable-column-filters.js";
-import {
-  countAppliedFilterValues,
-  type FilterGroup,
-} from "../../lib/filter-groups.js";
+import { countAppliedFilterValues, type FilterGroup } from "../../lib/filter-groups.js";
 import { AppliedFilterChips } from "./applied-filter-chips.js";
 import { DataTableColumnsMenu } from "./data-table-columns-menu.js";
 import { FilterGroupToggles } from "./filter-group-toggles.js";
@@ -133,10 +130,7 @@ export function DataTableToolbar<TData>({
   ...props
 }: DataTableToolbarProps<TData>) {
   const isPhoneWidth = useIsPhoneWidth();
-  const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
-    [table],
-  );
+  const columns = React.useMemo(() => table.getAllColumns().filter((column) => column.getCanFilter()), [table]);
   const chips = (
     <AppliedFilterChips
       groups={[...filterGroups, ...chipGroups]}
@@ -149,11 +143,7 @@ export function DataTableToolbar<TData>({
       <div
         role="toolbar"
         aria-orientation="horizontal"
-        className={cn(
-          "flex w-full min-w-0 flex-col gap-2 p-1",
-          CONTROL_SIZING,
-          className,
-        )}
+        className={cn("flex w-full min-w-0 flex-col gap-2 p-1", CONTROL_SIZING, className)}
         {...props}
       >
         <DataTablePhoneToolbarControls
@@ -176,30 +166,17 @@ export function DataTableToolbar<TData>({
     );
   }
 
-  const hasActions =
-    isRendered(search) ||
-    filterGroups.length > 0 ||
-    React.Children.count(children) > 0;
+  const hasActions = isRendered(search) || filterGroups.length > 0 || React.Children.count(children) > 0;
   return (
     <div
       role="toolbar"
       aria-orientation="horizontal"
-      className={cn(
-        "flex w-full min-w-0 flex-col gap-2 p-1",
-        CONTROL_SIZING,
-        className,
-      )}
+      className={cn("flex w-full min-w-0 flex-col gap-2 p-1", CONTROL_SIZING, className)}
       {...props}
     >
-      <div
-        data-slot="data-table-toolbar-row"
-        className="flex w-full min-w-0 flex-wrap items-center gap-2"
-      >
+      <div data-slot="data-table-toolbar-row" className="flex w-full min-w-0 flex-wrap items-center gap-2">
         {hasActions ? (
-          <div
-            data-slot="data-table-toolbar-actions"
-            className="flex min-w-0 flex-wrap items-center gap-2"
-          >
+          <div data-slot="data-table-toolbar-actions" className="flex min-w-0 flex-wrap items-center gap-2">
             {search}
             {filterGroups.map(({ id, ...group }) => (
               <FilterPill key={id} {...group} />
@@ -207,17 +184,11 @@ export function DataTableToolbar<TData>({
             {children}
           </div>
         ) : null}
-        <div
-          data-slot="data-table-toolbar-filters"
-          className="flex min-w-0 flex-wrap items-center gap-2 empty:hidden"
-        >
+        <div data-slot="data-table-toolbar-filters" className="flex min-w-0 flex-wrap items-center gap-2 empty:hidden">
           {leading}
           <DataTableToolbarFilters table={table} columns={columns} />
         </div>
-        <div
-          data-slot="data-table-toolbar-columns"
-          className="ml-auto flex items-center gap-2 self-start empty:hidden"
-        >
+        <div data-slot="data-table-toolbar-columns" className="ml-auto flex items-center gap-2 self-start empty:hidden">
           {trailing}
           <DataTableColumnsMenu table={table} />
         </div>
@@ -234,11 +205,7 @@ const NO_FILTER_GROUPS: readonly FilterGroup[] = [];
  * line and takes a line of its own when two do not fit, so every tab stays in
  * view; a group wider than the screen scrolls by itself.
  */
-function DataTablePrimaryStrip({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
+function DataTablePrimaryStrip({ children }: { readonly children: React.ReactNode }) {
   return (
     <div
       data-slot="data-table-toolbar-primary"
@@ -283,11 +250,7 @@ function DataTableFiltersSheet<TData>({
           variant="outline"
           size="sm"
           className="shrink-0"
-          aria-label={
-            activeFilterCount > 0
-              ? t("dataTable.action.filtersApplied", {}, activeFilterCount)
-              : undefined
-          }
+          aria-label={activeFilterCount > 0 ? t("dataTable.action.filtersApplied", {}, activeFilterCount) : undefined}
         >
           <ListFilter aria-hidden="true" />
           {t("dataTable.action.filters")}
@@ -301,11 +264,7 @@ function DataTableFiltersSheet<TData>({
           ) : null}
         </Button>
       </SheetTrigger>
-      <SheetContent
-        side="bottom"
-        aria-describedby={undefined}
-        className="max-h-[85dvh] gap-0"
-      >
+      <SheetContent side="bottom" aria-describedby={undefined} className="max-h-[85dvh] gap-0">
         <SheetHeader>
           <SheetTitle>{t("dataTable.filter.heading.active")}</SheetTitle>
         </SheetHeader>
@@ -320,11 +279,7 @@ function DataTableFiltersSheet<TData>({
           <div className="flex w-full flex-wrap items-center gap-2 empty:hidden">
             <DataTableToolbarFilters table={table} columns={columns} />
           </div>
-          {hasActions ? (
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
-              {children}
-            </div>
-          ) : null}
+          {hasActions ? <div className="flex w-full min-w-0 flex-wrap items-center gap-2">{children}</div> : null}
         </div>
         <SheetFooter>
           <SheetClose asChild>
@@ -415,10 +370,7 @@ function DataTablePhoneToolbarControls<TData>({
       ) : null}
       <div className="flex min-w-0 items-center gap-2 empty:hidden">
         {isRendered(search) ? (
-          <div
-            data-slot="data-table-toolbar-search"
-            className="flex min-w-0 flex-1 items-center"
-          >
+          <div data-slot="data-table-toolbar-search" className="flex min-w-0 flex-1 items-center">
             {search}
           </div>
         ) : null}
@@ -430,8 +382,7 @@ function DataTablePhoneToolbarControls<TData>({
           resultCount={resultCount}
           activeFilterCount={
             activeFilterCount ??
-            countClearableColumnFilters(table) +
-              countAppliedFilterValues([...filterGroups, ...chipGroups])
+            countClearableColumnFilters(table) + countAppliedFilterValues([...filterGroups, ...chipGroups])
           }
         >
           {children}

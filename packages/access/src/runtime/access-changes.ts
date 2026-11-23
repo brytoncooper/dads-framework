@@ -48,11 +48,7 @@ export abstract class EnqueueAccessChanges<Tx> {
    * stays null. Every entry must name a non-null owner partition; other domains
    * and ordinary facts must use enqueue.
    */
-  abstract enqueueReplacingOpposite(
-    entries: readonly AccessChange[],
-    tx: Tx,
-    lease: OwnerLockLease,
-  ): Promise<void>;
+  abstract enqueueReplacingOpposite(entries: readonly AccessChange[], tx: Tx, lease: OwnerLockLease): Promise<void>;
 
   /**
    * Append entries that have NO row of their own, supplying the handle

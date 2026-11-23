@@ -8,9 +8,7 @@ export const featureFlagsPostgresSchema = definePlugin({
   contributes: {
     migrations: [
       {
-        directory: fileURLToPath(
-          new URL("../../src/postgres/migrations/", import.meta.url),
-        ),
+        directory: fileURLToPath(new URL("../../src/postgres/migrations/", import.meta.url)),
       },
     ],
   },

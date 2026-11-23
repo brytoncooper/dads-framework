@@ -1,7 +1,4 @@
-const MISSING_MODULE_CODES = new Set([
-  "ERR_MODULE_NOT_FOUND",
-  "MODULE_NOT_FOUND",
-]);
+const MISSING_MODULE_CODES = new Set(["ERR_MODULE_NOT_FOUND", "MODULE_NOT_FOUND"]);
 
 function errorCode(error: unknown): string | undefined {
   if (typeof error !== "object" || error === null || !("code" in error)) {
@@ -21,10 +18,7 @@ export function isMissingModuleError(error: unknown): boolean {
     return true;
   }
   if (!(error instanceof Error)) return false;
-  return (
-    error.message.includes("Cannot find package") ||
-    error.message.includes("Cannot find module")
-  );
+  return error.message.includes("Cannot find package") || error.message.includes("Cannot find module");
 }
 
 /**

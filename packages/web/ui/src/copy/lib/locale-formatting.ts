@@ -6,27 +6,18 @@
  * reader's collation rules; stable product codes deliberately do not.
  */
 
-export type ExplicitDateTimeFormatOptions = Omit<
-  Intl.DateTimeFormatOptions,
-  "timeZone"
-> & {
+export type ExplicitDateTimeFormatOptions = Omit<Intl.DateTimeFormatOptions, "timeZone"> & {
   readonly timeZone: string;
 };
 
-export type ExplicitCurrencyFormatOptions = Omit<
-  Intl.NumberFormatOptions,
-  "currency" | "style"
->;
+export type ExplicitCurrencyFormatOptions = Omit<Intl.NumberFormatOptions, "currency" | "style">;
 
 export type ListFormatOptions = Intl.ListFormatOptions;
 
 const CALENDAR_DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 
 /** Return the YYYY-MM-DD calendar date an instant belongs to in one named zone. */
-export function formatCalendarDateKey(
-  value: Date | number | string,
-  timeZone: string,
-): string {
+export function formatCalendarDateKey(value: Date | number | string, timeZone: string): string {
   const parts = calendarDateFormatter(timeZone).formatToParts(new Date(value));
   const year = parts.find((part) => part.type === "year")?.value ?? "";
   const month = parts.find((part) => part.type === "month")?.value ?? "";
@@ -48,11 +39,7 @@ export function formatDateTime(
  * Time" for America/Los_Angeles. `null` when the zone is unknown here or has
  * no name beyond its UTC offset, so the caller can fall back to the zone id.
  */
-export function formatTimeZoneName(
-  timeZone: string,
-  locale: string,
-  at: Date | number | string,
-): string | null {
+export function formatTimeZoneName(timeZone: string, locale: string, at: Date | number | string): string | null {
   let name: string | undefined;
   try {
     name = new Intl.DateTimeFormat(locale, {
@@ -69,11 +56,7 @@ export function formatTimeZoneName(
 }
 
 /** Format a presentation number without an implicit locale. */
-export function formatNumber(
-  value: number | bigint,
-  locale: string,
-  options: Intl.NumberFormatOptions = {},
-): string {
+export function formatNumber(value: number | bigint, locale: string, options: Intl.NumberFormatOptions = {}): string {
   return new Intl.NumberFormat(locale, options).format(value);
 }
 
@@ -106,15 +89,8 @@ export type RelativeTimeFormatUnit = Intl.RelativeTimeFormatUnit;
  * Word a distance from now in the reader's locale: "2 minutes ago", "in 12
  * minutes", "yesterday". The caller decides the unit and count.
  */
-export function formatRelativeTime(
-  value: number,
-  unit: RelativeTimeFormatUnit,
-  locale: string,
-): string {
-  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
-    value,
-    unit,
-  );
+export function formatRelativeTime(value: number, unit: RelativeTimeFormatUnit, locale: string): string {
+  return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(value, unit);
 }
 
 /**
@@ -122,19 +98,12 @@ export function formatRelativeTime(
  * "one" for 1st/21st, "two" for 2nd, "few" for 3rd, "other" for 4th. The
  * caller's catalog words each form.
  */
-export function selectOrdinalCategory(
-  value: number,
-  locale: string,
-): Intl.LDMLPluralRule {
+export function selectOrdinalCategory(value: number, locale: string): Intl.LDMLPluralRule {
   return new Intl.PluralRules(locale, { type: "ordinal" }).select(value);
 }
 
 /** Join human-authored items with the reader locale's grammar and punctuation. */
-export function formatList(
-  values: readonly string[],
-  locale: string,
-  options: ListFormatOptions = {},
-): string {
+export function formatList(values: readonly string[], locale: string, options: ListFormatOptions = {}): string {
   return new Intl.ListFormat(locale, options).format([...values]);
 }
 
@@ -162,16 +131,11 @@ export function formatExactDecimal(value: string, locale: string): string {
   });
   const magnitude = BigInt(whole);
   const localizedWhole =
-    sign === "-"
-      ? integerFormatter.format(magnitude === 0n ? -0 : -magnitude)
-      : integerFormatter.format(magnitude);
+    sign === "-" ? integerFormatter.format(magnitude === 0n ? -0 : -magnitude) : integerFormatter.format(magnitude);
 
   if (fraction === undefined) return localizedWhole;
 
-  return `${localizedWhole}${decimalSeparator(locale)}${localizeDigits(
-    fraction,
-    locale,
-  )}`;
+  return `${localizedWhole}${decimalSeparator(locale)}${localizeDigits(fraction, locale)}`;
 }
 
 function decimalSeparator(locale: string): string {
@@ -200,11 +164,7 @@ function localizeDigits(value: string, locale: string): string {
 }
 
 /** Compare human-authored labels with the reader's collation rules. */
-export function compareHumanLabels(
-  left: string,
-  right: string,
-  locale: string,
-): number {
+export function compareHumanLabels(left: string, right: string, locale: string): number {
   return new Intl.Collator(locale, {
     numeric: true,
     sensitivity: "base",
@@ -213,15 +173,9 @@ export function compareHumanLabels(
 }
 
 /** Match human-authored text after locale-aware Unicode case folding. */
-export function humanTextIncludes(
-  value: string,
-  query: string,
-  locale: string,
-): boolean {
+export function humanTextIncludes(value: string, query: string, locale: string): boolean {
   const foldedQuery = foldHumanText(query.trim(), locale);
-  return (
-    foldedQuery === "" || foldHumanText(value, locale).includes(foldedQuery)
-  );
+  return foldedQuery === "" || foldHumanText(value, locale).includes(foldedQuery);
 }
 
 function foldHumanText(value: string, locale: string): string {

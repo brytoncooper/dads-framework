@@ -257,11 +257,7 @@ export const FULL_STEPS = Object.freeze(
     {
       id: "release-evidence",
       command: NODE,
-      args: [
-        "scripts/testing/verify-testing-release.mjs",
-        "--soundness",
-        "target/soundness.json",
-      ],
+      args: ["scripts/testing/verify-testing-release.mjs", "--soundness", "target/soundness.json"],
       needs: ["corpus"],
       weight: 1,
     },
@@ -316,9 +312,7 @@ function indexById(steps) {
 function requireStep(byId, id, dependentId) {
   const step = byId.get(id);
   if (step === undefined) {
-    throw new Error(
-      `Verify step "${dependentId}" needs "${id}", which is not a declared step.`,
-    );
+    throw new Error(`Verify step "${dependentId}" needs "${id}", which is not a declared step.`);
   }
   return step;
 }

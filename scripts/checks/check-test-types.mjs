@@ -49,12 +49,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import {
-  cacheKey,
-  hasPassed,
-  openStepCache,
-  writeRecord,
-} from "../verify-cache.mjs";
+import { cacheKey, hasPassed, openStepCache, writeRecord } from "../verify-cache.mjs";
 
 const TSC = "node_modules/typescript-native/bin/tsc";
 const TESTS_PROJECT = "tsconfig.tests.json";
@@ -134,16 +129,10 @@ export function planTestProjects({ root, packageDirectories }) {
 function describePairingProblems({ missing, stale }) {
   const lines = [];
   for (const packageDirectory of missing) {
-    lines.push(
-      `${packageDirectory}: owns test files but has no ${TESTS_PROJECT}; ` +
-        `no gate compiles them`,
-    );
+    lines.push(`${packageDirectory}: owns test files but has no ${TESTS_PROJECT}; ` + `no gate compiles them`);
   }
   for (const packageDirectory of stale) {
-    lines.push(
-      `${packageDirectory}: has a ${TESTS_PROJECT} but owns no test files; ` +
-        `delete it`,
-    );
+    lines.push(`${packageDirectory}: has a ${TESTS_PROJECT} but owns no test files; ` + `delete it`);
   }
   return lines;
 }
@@ -171,8 +160,7 @@ function compileArguments(project) {
  * under CI, every project compiles.
  */
 function compileOrReuse({ root, project, cache }) {
-  if (cache === null)
-    return { ...compileProject({ root, project }), cached: false };
+  if (cache === null) return { ...compileProject({ root, project }), cached: false };
   const directory = dirname(project);
   const command = [process.execPath, ...compileArguments(project)];
   const key = cacheKey(cache, { kind: "package", directory }, command);
@@ -180,8 +168,7 @@ function compileOrReuse({ root, project, cache }) {
     return { project, ok: true, output: "", cached: true };
   }
   const result = compileProject({ root, project });
-  if (result.ok && key !== null)
-    writeRecord(cache, "test-types", directory, { key });
+  if (result.ok && key !== null) writeRecord(cache, "test-types", directory, { key });
   return { ...result, cached: false };
 }
 
@@ -206,16 +193,12 @@ export function checkTestTypes({ root, cache = null }) {
     };
   }
 
-  const results = plan.projects.map((project) =>
-    compileOrReuse({ root, project, cache }),
-  );
+  const results = plan.projects.map((project) => compileOrReuse({ root, project, cache }));
   const failures = results.filter((result) => !result.ok);
   const note = cacheSentence(cache, results);
 
   if (failures.length > 0) {
-    const reports = failures.map(
-      (failure) => `--- ${failure.project}\n${failure.output}`,
-    );
+    const reports = failures.map((failure) => `--- ${failure.project}\n${failure.output}`);
     return {
       exitCode: 1,
       output: `${["test files that do not typecheck:", ...reports].join("\n")}\n${note}`,
@@ -228,9 +211,7 @@ export function checkTestTypes({ root, cache = null }) {
   };
 }
 
-const isMainModule =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMainModule) {
   const root = repositoryRoot();

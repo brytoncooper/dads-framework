@@ -17,17 +17,11 @@ export type ImpersonationStoredGrant = ImpersonationGrant & {
 
 export type ImpersonationStore = {
   /** Insert a new immutable grant and its audit event atomically. */
-  readonly insert: (
-    grant: ImpersonationStoredGrant,
-    event: ImpersonationAuditEvent,
-  ) => Promise<void>;
+  readonly insert: (grant: ImpersonationStoredGrant, event: ImpersonationAuditEvent) => Promise<void>;
   /** Read from storage that immediately reflects successful removal. */
   readonly read: (id: string) => Promise<ImpersonationStoredGrant | null>;
   /** Remove the grant and write its audit event atomically. Return false if absent. */
-  readonly remove: (
-    id: string,
-    event: ImpersonationAuditEvent,
-  ) => Promise<boolean>;
+  readonly remove: (id: string, event: ImpersonationAuditEvent) => Promise<boolean>;
 };
 
 export type ImpersonationAction = "start" | "use" | "stop" | "revoke";
@@ -60,10 +54,7 @@ export type ImpersonationOptions = {
 };
 
 export type Impersonation = {
-  readonly start: (
-    headers: Headers,
-    scope: ImpersonationScope,
-  ) => Promise<ImpersonationGrant | null>;
+  readonly start: (headers: Headers, scope: ImpersonationScope) => Promise<ImpersonationGrant | null>;
   readonly use: (
     headers: Headers,
     input: { readonly grantId: string; readonly tenantId: string },

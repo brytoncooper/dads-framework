@@ -4,22 +4,16 @@ import { describe, expect, it } from "vitest";
 import { channelEnvelopeSchema } from "./channel.schema.js";
 
 function fixture(name: string): unknown {
-  return JSON.parse(
-    readFileSync(join(import.meta.dirname, "__fixtures__", name), "utf8"),
-  );
+  return JSON.parse(readFileSync(join(import.meta.dirname, "__fixtures__", name), "utf8"));
 }
 
 describe("channel envelope contract", () => {
   it("parses the committed fixture", () => {
-    expect(() =>
-      channelEnvelopeSchema.parse(fixture("channel-envelope.json")),
-    ).not.toThrow();
+    expect(() => channelEnvelopeSchema.parse(fixture("channel-envelope.json"))).not.toThrow();
   });
 
   it("survives serialization round-trips", () => {
-    const envelope = channelEnvelopeSchema.parse(
-      fixture("channel-envelope.json"),
-    );
+    const envelope = channelEnvelopeSchema.parse(fixture("channel-envelope.json"));
     const roundTripped: unknown = JSON.parse(JSON.stringify(envelope));
     expect(() => channelEnvelopeSchema.parse(roundTripped)).not.toThrow();
   });
@@ -33,9 +27,7 @@ describe("channel envelope contract", () => {
       payload,
     };
     expect(channelEnvelopeSchema.parse(envelope).payload).toEqual(payload);
-    expect(
-      channelEnvelopeSchema.safeParse({ ...envelope, source: "plc" }).success,
-    ).toBe(false);
+    expect(channelEnvelopeSchema.safeParse({ ...envelope, source: "plc" }).success).toBe(false);
   });
 
   it("rejects unnamespaced channel names (domains own their prefix)", () => {

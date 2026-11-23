@@ -1,7 +1,4 @@
-import {
-  useWorkbenchCopy,
-  type WorkbenchCopyKey,
-} from "./copy/workbench-copy.js";
+import { useWorkbenchCopy, type WorkbenchCopyKey } from "./copy/workbench-copy.js";
 import { onUnauthorizedResponse } from "@dads-framework/client";
 import { Button } from "@dads-framework/ui/elements";
 import { StrictMode, useEffect, useState } from "react";
@@ -78,14 +75,8 @@ function App() {
       </header>
       <main className="shell">
         <div className="hero">
-          <p className="eyebrow">
-            {account ? account.email : t("workbench.starter")}
-          </p>
-          <h1>
-            {account
-              ? t("workbench.title.signedIn")
-              : t("workbench.title.signedOut")}
-          </h1>
+          <p className="eyebrow">{account ? account.email : t("workbench.starter")}</p>
+          <h1>{account ? t("workbench.title.signedIn") : t("workbench.title.signedOut")}</h1>
           <p>{t("workbench.summary")}</p>
         </div>
         {signOutAction.error && (
@@ -108,15 +99,8 @@ function App() {
             </Button>
           </p>
         )}
-        {account === undefined && failure === undefined && (
-          <p role="status">{t("workbench.session.loading")}</p>
-        )}
-        {account === null && (
-          <AccountForm
-            onSignIn={setAccount}
-            hasInvitation={invitation !== null}
-          />
-        )}
+        {account === undefined && failure === undefined && <p role="status">{t("workbench.session.loading")}</p>}
+        {account === null && <AccountForm onSignIn={setAccount} hasInvitation={invitation !== null} />}
         {account && (
           <Workbench
             key={account.id}
@@ -133,8 +117,7 @@ function App() {
 }
 
 const mount = document.getElementById("root");
-if (mount === null)
-  throw new Error("The browser entrypoint is missing its root element.");
+if (mount === null) throw new Error("The browser entrypoint is missing its root element.");
 createRoot(mount).render(
   <StrictMode>
     <App />

@@ -1,13 +1,7 @@
 import { Slot } from "radix-ui";
 import * as React from "react";
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Tabs,
-  TabsList,
-} from "../../display/index.js";
+import { Alert, AlertDescription, AlertTitle, Tabs, TabsList } from "../../display/index.js";
 import { cn, Skeleton } from "../../elements/index.js";
 import { ArrowLeft, CircleAlert } from "../../icons/index.js";
 
@@ -36,10 +30,7 @@ type DetailTabsProps = Omit<React.ComponentProps<typeof Tabs>, "children"> & {
   children: React.ReactNode;
 };
 
-type DetailStateBaseProps = Omit<
-  React.ComponentProps<"div">,
-  "children" | "role" | "title"
->;
+type DetailStateBaseProps = Omit<React.ComponentProps<"div">, "children" | "role" | "title">;
 
 type DetailLoadingStateProps = DetailStateBaseProps & {
   variant: "loading";
@@ -57,26 +48,12 @@ type DetailErrorStateProps = DetailStateBaseProps & {
 type DetailStateProps = DetailLoadingStateProps | DetailErrorStateProps;
 
 /** The fixed outer rhythm shared by stacked and tabbed detail pages. */
-export function DetailPage({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      {...props}
-      data-slot="detail-page"
-      className={cn("flex min-w-0 flex-1 flex-col gap-6", className)}
-    />
-  );
+export function DetailPage({ className, ...props }: React.ComponentProps<"div">) {
+  return <div {...props} data-slot="detail-page" className={cn("flex min-w-0 flex-1 flex-col gap-6", className)} />;
 }
 
 /** Router-neutral back navigation with one icon and link treatment. */
-export function DetailBackLink({
-  asChild = false,
-  className,
-  children,
-  ...props
-}: DetailBackLinkProps) {
+export function DetailBackLink({ asChild = false, className, children, ...props }: DetailBackLinkProps) {
   const Comp = asChild ? Slot.Root : "a";
 
   return (
@@ -88,49 +65,27 @@ export function DetailBackLink({
         className,
       )}
     >
-      <ArrowLeft
-        data-slot="detail-back-icon"
-        aria-hidden="true"
-        className="size-4 shrink-0"
-      />
+      <ArrowLeft data-slot="detail-back-icon" aria-hidden="true" className="size-4 shrink-0" />
       {asChild ? <Slot.Slottable>{children}</Slot.Slottable> : children}
     </Comp>
   );
 }
 
 /** One title/subtitle/status/action grammar for every detail resource. */
-export function DetailHeader({
-  title,
-  subtitle,
-  status,
-  actions,
-  children,
-  className,
-  ...props
-}: DetailHeaderProps) {
+export function DetailHeader({ title, subtitle, status, actions, children, className, ...props }: DetailHeaderProps) {
   const hasSubtitle = React.Children.toArray(subtitle).length > 0;
   const hasStatus = React.Children.toArray(status).length > 0;
   const hasActions = React.Children.toArray(actions).length > 0;
 
   return (
-    <header
-      {...props}
-      data-slot="detail-header"
-      className={cn("flex min-w-0 flex-col gap-4", className)}
-    >
+    <header {...props} data-slot="detail-header" className={cn("flex min-w-0 flex-col gap-4", className)}>
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-balance">
-              {title}
-            </h1>
+            <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-balance">{title}</h1>
             {hasStatus ? status : null}
           </div>
-          {hasSubtitle ? (
-            <p className="mt-1 max-w-prose text-foreground text-sm">
-              {subtitle}
-            </p>
-          ) : null}
+          {hasSubtitle ? <p className="mt-1 max-w-prose text-foreground text-sm">{subtitle}</p> : null}
         </div>
         {hasActions ? (
           <div
@@ -147,46 +102,19 @@ export function DetailHeader({
 }
 
 /** A major detail section with fixed internal rhythm and semantic heading. */
-export function DetailSection({
-  title,
-  description,
-  actions,
-  children,
-  className,
-  ...props
-}: DetailSectionProps) {
+export function DetailSection({ title, description, actions, children, className, ...props }: DetailSectionProps) {
   return (
-    <section
-      {...props}
-      data-slot="detail-section"
-      className={cn("flex min-w-0 flex-col gap-4", className)}
-    >
-      <SectionHeader
-        title={title}
-        description={description}
-        actions={actions}
-      />
+    <section {...props} data-slot="detail-section" className={cn("flex min-w-0 flex-col gap-4", className)}>
+      <SectionHeader title={title} description={description} actions={actions} />
       {children}
     </section>
   );
 }
 
 /** Outlined tabs with one accessible label and a fixed 24px content offset. */
-export function DetailTabs({
-  label,
-  triggers,
-  children,
-  className,
-  ...props
-}: DetailTabsProps) {
+export function DetailTabs({ label, triggers, children, className, ...props }: DetailTabsProps) {
   return (
-    <Tabs
-      {...props}
-      className={cn(
-        "min-w-0 gap-0 [&_[data-slot=tabs-content]]:mt-6",
-        className,
-      )}
-    >
+    <Tabs {...props} className={cn("min-w-0 gap-0 [&_[data-slot=tabs-content]]:mt-6", className)}>
       <TabsList aria-label={label}>{triggers}</TabsList>
       {children}
     </Tabs>
@@ -201,12 +129,7 @@ export function DetailState(props: DetailStateProps) {
   return <DetailErrorState {...props} />;
 }
 
-function DetailLoadingState({
-  layout,
-  label,
-  className,
-  ...props
-}: DetailLoadingStateProps) {
+function DetailLoadingState({ layout, label, className, ...props }: DetailLoadingStateProps) {
   return (
     <div
       {...props}
@@ -236,34 +159,19 @@ function DetailLoadingState({
   );
 }
 
-function DetailErrorState({
-  title,
-  description,
-  children,
-  className,
-  ...props
-}: DetailErrorStateProps) {
+function DetailErrorState({ title, description, children, className, ...props }: DetailErrorStateProps) {
   const hasDescription = React.Children.toArray(description).length > 0;
   const hasActions = React.Children.toArray(children).length > 0;
 
   return (
-    <Alert
-      {...props}
-      data-slot="detail-state"
-      data-state="error"
-      variant="destructive"
-      className={className}
-    >
+    <Alert {...props} data-slot="detail-state" data-state="error" variant="destructive" className={className}>
       <CircleAlert aria-hidden="true" />
       <AlertTitle>{title}</AlertTitle>
       {(hasDescription || hasActions) && (
         <AlertDescription>
           {hasDescription ? description : null}
           {hasActions ? (
-            <div
-              data-slot="detail-state-actions"
-              className="mt-2 flex flex-wrap items-center gap-2"
-            >
+            <div data-slot="detail-state-actions" className="mt-2 flex flex-wrap items-center gap-2">
               {children}
             </div>
           ) : null}

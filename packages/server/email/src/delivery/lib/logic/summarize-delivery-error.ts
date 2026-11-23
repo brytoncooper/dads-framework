@@ -10,10 +10,7 @@ export const MAX_DELIVERY_ERROR_SUMMARY_LENGTH = 500;
  * nobody threw deliberately has no message worth reading anyway.
  */
 export function summarizeDeliveryError(error: unknown): string {
-  return `${deliveryErrorName(error)}: ${deliveryErrorDetail(error)}`.slice(
-    0,
-    MAX_DELIVERY_ERROR_SUMMARY_LENGTH,
-  );
+  return `${deliveryErrorName(error)}: ${deliveryErrorDetail(error)}`.slice(0, MAX_DELIVERY_ERROR_SUMMARY_LENGTH);
 }
 
 /**

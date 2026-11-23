@@ -1,9 +1,6 @@
 /** Release graph inspection must paginate real vendor cursors without losing usersets, and exact retirement must preserve sibling userset facts. */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  startTestSpiceDb,
-  type TestSpiceDb,
-} from "../../testing/start-test-spice-db.js";
+import { startTestSpiceDb, type TestSpiceDb } from "../../testing/start-test-spice-db.js";
 import { type RelationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
@@ -38,21 +35,18 @@ describe("SpiceDB relationship-page maintenance port", () => {
   afterAll(async () => vendor.stop());
 
   it("returns all 1001 unique usersets in bounded pages then an empty terminal page", async () => {
-    const facts: RelationshipWrite[] = Array.from(
-      { length: 1001 },
-      (_, index) => ({
-        resource: {
-          type: "test/document",
-          id: `page-${String(index).padStart(4, "0")}`,
-        },
-        relation: "viewer",
-        subject: {
-          type: "test/group",
-          id: `group-${index}`,
-          relation: "member",
-        },
-      }),
-    );
+    const facts: RelationshipWrite[] = Array.from({ length: 1001 }, (_, index) => ({
+      resource: {
+        type: "test/document",
+        id: `page-${String(index).padStart(4, "0")}`,
+      },
+      relation: "viewer",
+      subject: {
+        type: "test/group",
+        id: `group-${index}`,
+        relation: "member",
+      },
+    }));
     await adapter.writeRelationships(facts.slice(0, 1000));
     await adapter.writeRelationships(facts.slice(1000));
     await adapter.writeRelationships([
@@ -66,15 +60,13 @@ describe("SpiceDB relationship-page maintenance port", () => {
       resourceType: "test/document",
     });
     expect(first.relationships).toHaveLength(1000);
-    if (first.nextCursor === null)
-      throw new Error("Expected first resume cursor");
+    if (first.nextCursor === null) throw new Error("Expected first resume cursor");
     const second = await adapter.readRelationshipPage({
       resourceType: "test/document",
       cursor: first.nextCursor,
     });
     expect(second.relationships).toHaveLength(1);
-    if (second.nextCursor === null)
-      throw new Error("Expected final fact cursor");
+    if (second.nextCursor === null) throw new Error("Expected final fact cursor");
     expect(second.nextCursor).not.toBe(first.nextCursor);
     const terminal = await adapter.readRelationshipPage({
       resourceType: "test/document",
@@ -82,12 +74,8 @@ describe("SpiceDB relationship-page maintenance port", () => {
     });
     expect(terminal).toEqual({ relationships: [], nextCursor: null });
     const observed = [...first.relationships, ...second.relationships];
-    expect(new Set(observed.map((entry) => JSON.stringify(entry))).size).toBe(
-      1001,
-    );
-    expect(observed.every((entry) => entry.subject.relation === "member")).toBe(
-      true,
-    );
+    expect(new Set(observed.map((entry) => JSON.stringify(entry))).size).toBe(1001);
+    expect(observed.every((entry) => entry.subject.relation === "member")).toBe(true);
     expect(observed.map((entry) => JSON.stringify(entry)).sort()).toEqual(
       facts.map((entry) => JSON.stringify(entry)).sort(),
     );

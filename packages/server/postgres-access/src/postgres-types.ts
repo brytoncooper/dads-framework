@@ -12,8 +12,7 @@ export type PostgresQuery = {
 /** Gives mutable driver configuration to clients without exposing plan mutation upstream. */
 export function copyPostgresQuery(query: PostgresQuery): PostgresQuery {
   const values = query.values ? [...query.values] : undefined;
-  if (query.query_timeout === undefined)
-    return values ? { text: query.text, values } : { text: query.text };
+  if (query.query_timeout === undefined) return values ? { text: query.text, values } : { text: query.text };
   return values
     ? { text: query.text, values, query_timeout: query.query_timeout }
     : { text: query.text, query_timeout: query.query_timeout };
@@ -28,19 +27,13 @@ export type PostgresQueryResult<Row extends PostgresRow = PostgresRow> = {
 
 /** Minimal structural node-postgres client boundary (`pg.PoolClient` satisfies this). */
 export type PgClientLike = {
-  query(
-    query: string | PostgresQuery,
-    values?: PostgresValue[],
-  ): PromiseLike<PostgresQueryResult>;
+  query(query: string | PostgresQuery, values?: PostgresValue[]): PromiseLike<PostgresQueryResult>;
   release(destroy?: Error | boolean): void;
   getTransactionStatus?(): string | null;
 };
 
 /** Minimal structural node-postgres pool boundary (`pg.Pool` satisfies this). */
 export type PgPoolLike<Client extends PgClientLike = PgClientLike> = {
-  query(
-    query: string | PostgresQuery,
-    values?: PostgresValue[],
-  ): PromiseLike<PostgresQueryResult>;
+  query(query: string | PostgresQuery, values?: PostgresValue[]): PromiseLike<PostgresQueryResult>;
   connect(): PromiseLike<Client>;
 };

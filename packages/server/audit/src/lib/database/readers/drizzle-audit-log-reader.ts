@@ -1,15 +1,4 @@
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  gte,
-  inArray,
-  lt,
-  ne,
-  notInArray,
-  sql,
-} from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { alias, type PgColumn } from "drizzle-orm/pg-core";
 
@@ -90,16 +79,7 @@ export class DrizzleAuditLogReader implements AuditLogReader {
       .from(auditLog)
       .where(
         scope.kind === "application" && shownTables.length > 0
-          ? inArray(
-              auditLog.position,
-              this.newestPerShownTable(
-                scope,
-                filter,
-                shownTables,
-                olderThan,
-                limit,
-              ),
-            )
+          ? inArray(auditLog.position, this.newestPerShownTable(scope, filter, shownTables, olderThan, limit))
           : and(
               ...scopeConditions(scope, auditLog),
               ...filterConditions(filter, auditLog),
@@ -145,10 +125,7 @@ export class DrizzleAuditLogReader implements AuditLogReader {
       .select({ position: newestOfOneTable.position })
       .from(sql`unnest(ARRAY[${tables}]::text[]) AS shown(table_name)`)
       .crossJoinLateral(newestOfOneTable)
-      .orderBy(
-        desc(newestOfOneTable.recordedAt),
-        desc(newestOfOneTable.position),
-      )
+      .orderBy(desc(newestOfOneTable.recordedAt), desc(newestOfOneTable.position))
       .limit(limit);
   }
 
@@ -182,11 +159,7 @@ export class DrizzleAuditLogReader implements AuditLogReader {
   }
 
   async rowAt(position: AuditLogPosition): Promise<AuditLogRecord | null> {
-    const [row] = await this.db
-      .select(ROW_COLUMNS)
-      .from(auditLog)
-      .where(eq(auditLog.position, position))
-      .limit(1);
+    const [row] = await this.db.select(ROW_COLUMNS).from(auditLog).where(eq(auditLog.position, position)).limit(1);
     return row === undefined ? null : toAuditLogRecord(row);
   }
 }
@@ -219,10 +192,7 @@ function scopeConditions(scope: AuditLogScope, table: AuditLogTable): SQL[] {
     : [sql`${table.scopeValues} @> ${JSON.stringify(scope.values)}::jsonb`];
 }
 
-function filterConditions(
-  filter: AuditLogRowFilter,
-  table: AuditLogTable,
-): SQL[] {
+function filterConditions(filter: AuditLogRowFilter, table: AuditLogTable): SQL[] {
   return [
     ...whoAndWhenConditions(filter, table),
     ...whatConditions(filter, table),
@@ -231,17 +201,12 @@ function filterConditions(
 }
 
 /** The date range and the person. */
-function whoAndWhenConditions(
-  filter: AuditLogRowFilter,
-  table: AuditLogTable,
-): SQL[] {
+function whoAndWhenConditions(filter: AuditLogRowFilter, table: AuditLogTable): SQL[] {
   return [
     ...(filter.from === undefined ? [] : [gte(table.recordedAt, filter.from)]),
     ...(filter.to === undefined ? [] : [lt(table.recordedAt, filter.to)]),
     ...(filter.userId === undefined ? [] : [eq(table.userId, filter.userId)]),
-    ...(filter.excludeRequestId === undefined
-      ? []
-      : [ne(table.requestId, filter.excludeRequestId)]),
+    ...(filter.excludeRequestId === undefined ? [] : [ne(table.requestId, filter.excludeRequestId)]),
   ];
 }
 
@@ -250,10 +215,7 @@ function whoAndWhenConditions(
  * out. The map travels as one jsonb parameter, so the condition is the same
  * size whatever the number of tables.
  */
-function shownUpdateCondition(
-  filter: Pick<AuditLogRowFilter, "shownUpdateColumns">,
-  table: AuditLogTable,
-): SQL[] {
+function shownUpdateCondition(filter: Pick<AuditLogRowFilter, "shownUpdateColumns">, table: AuditLogTable): SQL[] {
   const shown = filter.shownUpdateColumns;
   if (shown === undefined || Object.keys(shown).length === 0) return [];
   const columnsOfTable = sql`(${JSON.stringify(shown)}::jsonb -> ${table.tableName})`;
@@ -270,23 +232,14 @@ function shownUpdateCondition(
 }
 
 /** The kind of actor, the tables and the one record. */
-function whatConditions(
-  filter: AuditLogRowFilter,
-  table: AuditLogTable,
-): SQL[] {
+function whatConditions(filter: AuditLogRowFilter, table: AuditLogTable): SQL[] {
   const actorKinds = filter.actorKinds ?? [];
   const tableNames = filter.tableNames ?? [];
   const excluded = filter.excludeTableNames ?? [];
   return [
-    ...(actorKinds.length === 0
-      ? []
-      : [inArray(table.actorKind, [...actorKinds])]),
-    ...(tableNames.length === 0
-      ? []
-      : [inArray(table.tableName, [...tableNames])]),
-    ...(excluded.length === 0
-      ? []
-      : [notInArray(table.tableName, [...excluded])]),
+    ...(actorKinds.length === 0 ? [] : [inArray(table.actorKind, [...actorKinds])]),
+    ...(tableNames.length === 0 ? [] : [inArray(table.tableName, [...tableNames])]),
+    ...(excluded.length === 0 ? [] : [notInArray(table.tableName, [...excluded])]),
     ...(filter.record === undefined
       ? []
       : [
@@ -297,10 +250,7 @@ function whatConditions(
 }
 
 /** Strictly after the cursor in `(recorded_at DESC, position DESC)` order. */
-function olderThanAuditCursor(
-  olderThan: AuditLogCursor | null,
-  table: AuditLogTable,
-): SQL | undefined {
+function olderThanAuditCursor(olderThan: AuditLogCursor | null, table: AuditLogTable): SQL | undefined {
   if (olderThan === null) return undefined;
   return sql`(${table.recordedAt}, ${table.position}) < (${olderThan.recordedAt}::timestamptz, ${olderThan.position})`;
 }

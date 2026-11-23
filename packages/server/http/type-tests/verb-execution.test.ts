@@ -5,16 +5,8 @@ import { permissionToken } from "@dads-framework/access";
 import type { ScopeAnswer } from "@dads-framework/access/runtime";
 import { paginationQuerySchema } from "@dads-framework/core/contract";
 
-import {
-  requires,
-  requiresScoped,
-  requiresVisible,
-} from "../src/lib/route/route-guards.test-support.js";
-import {
-  HttpWiringError,
-  RequestValidationError,
-  ResponseDriftError,
-} from "../src/lib/http-errors.js";
+import { requires, requiresScoped, requiresVisible } from "../src/lib/route/route-guards.test-support.js";
+import { HttpWiringError, RequestValidationError, ResponseDriftError } from "../src/lib/http-errors.js";
 import { fromParam, requireSession } from "../src/lib/route/access.js";
 import { getRoute } from "../src/lib/route/get-route.js";
 import { listRoute } from "../src/lib/route/list-route.js";
@@ -37,9 +29,7 @@ describe("listRoute — the collection verb", () => {
   });
 
   it("assembles { data, meta } from { items, total } — no page echo in handlers", async () => {
-    const result = await things.execute(
-      rawInput({ query: { page: "2", perPage: "10" } }),
-    );
+    const result = await things.execute(rawInput({ query: { page: "2", perPage: "10" } }));
     expect(result).toEqual({
       data: [{ id: "1", name: "n" }],
       meta: { total: 1, page: 2, perPage: 10 },
@@ -61,9 +51,9 @@ describe("listRoute — the collection verb", () => {
       // @ts-expect-error — list handlers return { items, total }
       handler: () => [{ id: "1", name: "n" }],
     });
-    await expect(
-      broken.execute(rawInput({ query: { page: "1", perPage: "10" } })),
-    ).rejects.toThrow(/must return \{ items, total \}/);
+    await expect(broken.execute(rawInput({ query: { page: "1", perPage: "10" } }))).rejects.toThrow(
+      /must return \{ items, total \}/,
+    );
   });
 
   it("meta drift is a loud failure (total must be a count)", async () => {
@@ -75,9 +65,9 @@ describe("listRoute — the collection verb", () => {
       item: thingSchema,
       handler: () => ({ items: [], total: -1 }),
     });
-    await expect(
-      drifting.execute(rawInput({ query: { page: "1", perPage: "10" } })),
-    ).rejects.toThrow(ResponseDriftError);
+    await expect(drifting.execute(rawInput({ query: { page: "1", perPage: "10" } }))).rejects.toThrow(
+      ResponseDriftError,
+    );
   });
 
   it("requireVisibility types visibleIds into the handler and short-circuits empty sets", async () => {
@@ -97,9 +87,7 @@ describe("listRoute — the collection verb", () => {
     });
 
     // Empty set: the kit answers with the empty page; the handler NEVER runs.
-    const empty = await visible.execute(
-      rawInput({ query: { page: "3", perPage: "10" }, visibleIds: [] }),
-    );
+    const empty = await visible.execute(rawInput({ query: { page: "3", perPage: "10" }, visibleIds: [] }));
     expect(empty).toEqual({
       data: [],
       meta: { total: 0, page: 3, perPage: 10 },
@@ -107,9 +95,7 @@ describe("listRoute — the collection verb", () => {
     expect(handlerCalls).toEqual([]);
 
     // Non-empty set flows through to the handler.
-    const some = await visible.execute(
-      rawInput({ query: { page: "1", perPage: "10" }, visibleIds: ["a"] }),
-    );
+    const some = await visible.execute(rawInput({ query: { page: "1", perPage: "10" }, visibleIds: ["a"] }));
     expect(some.meta).toEqual({ total: 1, page: 1, perPage: 10 });
     expect(handlerCalls).toEqual([["a"]]);
   });
@@ -158,15 +144,11 @@ describe("listRoute — the collection verb", () => {
     };
 
     // Empty answers still reach the handler: the SQL decides.
-    const page = await scoped.execute(
-      rawInput({ query: { page: "1", perPage: "10" }, scope: emptyAnswer }),
-    );
+    const page = await scoped.execute(rawInput({ query: { page: "1", perPage: "10" }, scope: emptyAnswer }));
     expect(page.data).toEqual([{ id: "1", name: "things/thing" }]);
 
     // No answer at all is a wiring fault, never an unscoped list.
-    await expect(
-      scoped.execute(rawInput({ query: { page: "1", perPage: "10" } })),
-    ).rejects.toThrow(HttpWiringError);
+    await expect(scoped.execute(rawInput({ query: { page: "1", perPage: "10" } }))).rejects.toThrow(HttpWiringError);
 
     const wrongGet = getRoute({
       route: { method: "GET", template: "/things/:id" },
@@ -199,12 +181,11 @@ describe("listRoute — the collection verb", () => {
       idsByQuestion: new Map(),
     };
 
-    expect(
-      (await counted.execute(rawInput({ scope: emptyAnswer }))).data,
-    ).toEqual({ id: "counts", name: "things/thing" });
-    await expect(counted.execute(rawInput({}))).rejects.toThrow(
-      HttpWiringError,
-    );
+    expect((await counted.execute(rawInput({ scope: emptyAnswer }))).data).toEqual({
+      id: "counts",
+      name: "things/thing",
+    });
+    await expect(counted.execute(rawInput({}))).rejects.toThrow(HttpWiringError);
   });
 });
 
@@ -220,19 +201,17 @@ describe("verb route runtime behavior of execute", () => {
   });
 
   it("parses inputs and returns schema-parsed data", async () => {
-    const result = await route.execute(
-      rawInput({ params: { id: "t1" }, body: { name: "renamed" } }),
-    );
+    const result = await route.execute(rawInput({ params: { id: "t1" }, body: { name: "renamed" } }));
     expect(result).toEqual({ data: { id: "t1", name: "renamed" } });
   });
 
   it("throws RequestValidationError with the failing part on bad input", async () => {
-    await expect(
-      route.execute(rawInput({ params: { id: "t1" }, body: { name: "" } })),
-    ).rejects.toThrow(RequestValidationError);
-    await expect(
-      route.execute(rawInput({ params: {}, body: { name: "x" } })),
-    ).rejects.toMatchObject({ part: "params" });
+    await expect(route.execute(rawInput({ params: { id: "t1" }, body: { name: "" } }))).rejects.toThrow(
+      RequestValidationError,
+    );
+    await expect(route.execute(rawInput({ params: {}, body: { name: "x" } }))).rejects.toMatchObject({
+      part: "params",
+    });
   });
 
   it("throws ResponseDriftError when the handler output drifts", async () => {
@@ -245,17 +224,13 @@ describe("verb route runtime behavior of execute", () => {
       response: z.object({ id: z.string().min(5) }),
       handler: () => ({ id: "1" }),
     });
-    await expect(drifting.execute(rawInput({}))).rejects.toThrow(
-      ResponseDriftError,
-    );
+    await expect(drifting.execute(rawInput({}))).rejects.toThrow(ResponseDriftError);
   });
 
   it("refuses to run a guarded route without a subject (kit invariant)", async () => {
-    await expect(
-      route.execute(
-        rawInput({ params: { id: "t1" }, body: { name: "x" }, subject: null }),
-      ),
-    ).rejects.toThrow(HttpWiringError);
+    await expect(route.execute(rawInput({ params: { id: "t1" }, body: { name: "x" }, subject: null }))).rejects.toThrow(
+      HttpWiringError,
+    );
   });
 
   it("defaults status to 201 for POST and 200 otherwise, overridable", () => {

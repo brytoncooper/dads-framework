@@ -41,11 +41,7 @@ export function scopeQuestionKey(question: ScopeQuestion): string {
  * naming every rule path that cannot be compiled, so a list on a model whose
  * bindings cannot carry its rules refuses to register.
  */
-export function planScopedList(
-  model: AccessModel,
-  resourceType: string,
-  permission: string,
-): ScopePlan {
+export function planScopedList(model: AccessModel, resourceType: string, permission: string): ScopePlan {
   return compileScopePlan(model, resourceType, permission);
 }
 
@@ -54,20 +50,13 @@ export function planScopedList(
  * scope lookup, plus each sparse direct grant asked on the record it sits on
  * (inside a `via`, that is the walked-to record).
  */
-export function scopeQuestions(
-  plan: ScopePlan,
-  resourceType: string,
-): readonly ScopeQuestion[] {
+export function scopeQuestions(plan: ScopePlan, resourceType: string): readonly ScopeQuestion[] {
   const byKey = new Map<string, ScopeQuestion>();
   collectQuestions(plan, resourceType, byKey);
   return [...byKey.values()];
 }
 
-function collectQuestions(
-  plan: ScopePlan,
-  resourceType: string,
-  byKey: Map<string, ScopeQuestion>,
-): void {
+function collectQuestions(plan: ScopePlan, resourceType: string, byKey: Map<string, ScopeQuestion>): void {
   switch (plan.kind) {
     case "lookup":
       remember(byKey, {
@@ -95,10 +84,7 @@ function collectQuestions(
   }
 }
 
-function remember(
-  byKey: Map<string, ScopeQuestion>,
-  question: ScopeQuestion,
-): void {
+function remember(byKey: Map<string, ScopeQuestion>, question: ScopeQuestion): void {
   const key = scopeQuestionKey(question);
   if (!byKey.has(key)) {
     byKey.set(key, question);
@@ -118,16 +104,14 @@ export async function answerScope(input: {
 }): Promise<ScopeAnswer> {
   const questions = scopeQuestions(input.plan, input.resourceType);
   const answers = await Promise.all(
-    questions.map(
-      async (question): Promise<readonly [string, readonly string[]]> => {
-        const ids = await input.lookups.lookupResources({
-          subject: input.subject,
-          permission: question.permission,
-          resourceType: question.resourceType,
-        });
-        return [scopeQuestionKey(question), ids];
-      },
-    ),
+    questions.map(async (question): Promise<readonly [string, readonly string[]]> => {
+      const ids = await input.lookups.lookupResources({
+        subject: input.subject,
+        permission: question.permission,
+        resourceType: question.resourceType,
+      });
+      return [scopeQuestionKey(question), ids];
+    }),
   );
   return {
     resourceType: input.resourceType,

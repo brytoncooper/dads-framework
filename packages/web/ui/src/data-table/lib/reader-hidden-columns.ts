@@ -3,17 +3,13 @@ import type { Column, Table } from "@tanstack/react-table";
 import { showEveryHideableColumn } from "./column-roles.js";
 
 /** The columns a reader may hide or show from the Columns menu, in table order. */
-export function readReaderHideableColumns<TData>(
-  table: Table<TData>,
-): Column<TData>[] {
+export function readReaderHideableColumns<TData>(table: Table<TData>): Column<TData>[] {
   return table.getAllLeafColumns().filter((column) => column.getCanHide());
 }
 
 /** How many columns the reader could show again right now. */
 export function countReaderHiddenColumns<TData>(table: Table<TData>): number {
-  return readReaderHideableColumns(table).filter(
-    (column) => !column.getIsVisible(),
-  ).length;
+  return readReaderHideableColumns(table).filter((column) => !column.getIsVisible()).length;
 }
 
 /**

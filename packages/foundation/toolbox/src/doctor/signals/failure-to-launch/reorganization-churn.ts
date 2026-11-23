@@ -35,9 +35,7 @@ const MOVED = ["R", "C"];
 
 /** True when every path the commit touched arrived there by being moved. */
 function isMoveOnly(commit: GitCommit): boolean {
-  return commit.changes.every((change) =>
-    MOVED.some((status) => change.status.startsWith(status)),
-  );
+  return commit.changes.every((change) => MOVED.some((status) => change.status.startsWith(status)));
 }
 
 function measureReorganizationChurn(context: DoctorContext): SignalReadings {
@@ -66,13 +64,11 @@ function measureReorganizationChurn(context: DoctorContext): SignalReadings {
 export const reorganizationChurnSignal: DoctorSignal = {
   id: "reorganization-churn",
   issue: "failure-to-launch",
-  question:
-    "Is the share of rename-only commits in the last 90 days above the profile's threshold?",
+  question: "Is the share of rename-only commits in the last 90 days above the profile's threshold?",
   reads: "git",
   unit: "percent",
   direction: "ceiling",
   thresholds: { standard: null, strict: 20 },
-  sentence:
-    "2:14 a.m. Reparenting `src/`. Again. You said last time was last time.",
+  sentence: "2:14 a.m. Reparenting `src/`. Again. You said last time was last time.",
   run: (context) => Promise.resolve(measureReorganizationChurn(context)),
 };

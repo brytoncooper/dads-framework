@@ -40,9 +40,7 @@ describe("column visibility storage", () => {
     const storage = memoryStorage();
     writeStoredColumnVisibility(storage, "orders", { carrier: false });
 
-    expect(storage.items.has("dads.data-table.orders.column-visibility")).toBe(
-      true,
-    );
+    expect(storage.items.has("dads.data-table.orders.column-visibility")).toBe(true);
     expect(readStoredColumnVisibility(storage, "orders")).toEqual({
       carrier: false,
     });
@@ -61,10 +59,7 @@ describe("column visibility storage", () => {
     storage.setItem(columnVisibilityStorageKey("orders"), "not json");
     expect(readStoredColumnVisibility(storage, "orders")).toEqual({});
 
-    storage.setItem(
-      columnVisibilityStorageKey("orders"),
-      JSON.stringify({ carrier: false, status: "no" }),
-    );
+    storage.setItem(columnVisibilityStorageKey("orders"), JSON.stringify({ carrier: false, status: "no" }));
     expect(readStoredColumnVisibility(storage, "orders")).toEqual({
       carrier: false,
     });

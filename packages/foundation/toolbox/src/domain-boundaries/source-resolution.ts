@@ -17,10 +17,7 @@ export function createSourceResolution(project: string) {
   function configuration(directory: string): ts.ParsedCommandLine {
     const existing = resolvedConfigurations.get(directory);
     if (existing) return existing;
-    const path = ts.findConfigFile(
-      directory,
-      (file) => contains(project, file) && ts.sys.fileExists(file),
-    );
+    const path = ts.findConfigFile(directory, (file) => contains(project, file) && ts.sys.fileExists(file));
     const result = path ? loadConfiguration(path, configurations) : defaults;
     resolvedConfigurations.set(directory, result);
     return result;
@@ -28,13 +25,9 @@ export function createSourceResolution(project: string) {
   return {
     files(owners: readonly Owner[]): readonly string[] {
       const scoped = owners.flatMap((owner) => scanSources(owner.root));
-      const configured = configuration(project).fileNames.filter((file) =>
-        insideSource(project, file),
-      );
+      const configured = configuration(project).fileNames.filter((file) => insideSource(project, file));
       const src = join(project, "src");
-      const standard = lstatSync(src, { throwIfNoEntry: false })?.isDirectory()
-        ? scanSources(src)
-        : [];
+      const standard = lstatSync(src, { throwIfNoEntry: false })?.isDirectory() ? scanSources(src) : [];
       return [...new Set([...scoped, ...configured, ...standard])].sort();
     },
     read(path: string) {
@@ -44,49 +37,25 @@ export function createSourceResolution(project: string) {
         readFileSync(path, "utf8"),
         {
           languageVersion: ts.ScriptTarget.Latest,
-          impliedNodeFormat: ts.getImpliedNodeFormatForFile(
-            path,
-            undefined,
-            ts.sys,
-            options,
-          ),
+          impliedNodeFormat: ts.getImpliedNodeFormatForFile(path, undefined, ts.sys, options),
         },
         true,
       );
     },
-    resolve(
-      source: ts.SourceFile,
-      literal: ts.StringLiteralLike,
-      require: boolean,
-    ) {
+    resolve(source: ts.SourceFile, literal: ts.StringLiteralLike, require: boolean) {
       const path = source.fileName;
       const { options } = configuration(dirname(path));
-      const cache =
-        caches.get(options) ??
-        ts.createModuleResolutionCache(project, (file) => file, options);
+      const cache = caches.get(options) ?? ts.createModuleResolutionCache(project, (file) => file, options);
       caches.set(options, cache);
-      const mode = require
-        ? ts.ModuleKind.CommonJS
-        : ts.getModeForUsageLocation(source, literal, options);
-      const result = ts.resolveModuleName(
-        literal.text,
-        path,
-        options,
-        ts.sys,
-        cache,
-        undefined,
-        mode,
-      ).resolvedModule;
+      const mode = require ? ts.ModuleKind.CommonJS : ts.getModeForUsageLocation(source, literal, options);
+      const result = ts.resolveModuleName(literal.text, path, options, ts.sys, cache, undefined, mode).resolvedModule;
       const file = result?.resolvedFileName;
       return file && ts.sys.fileExists(file) ? realpathSync(file) : undefined;
     },
   };
 }
 
-function loadConfiguration(
-  path: string,
-  cache: Map<string, ts.ParsedCommandLine>,
-) {
+function loadConfiguration(path: string, cache: Map<string, ts.ParsedCommandLine>) {
   const saved = cache.get(path);
   if (saved) return saved;
   const config = ts.getParsedCommandLineOfConfigFile(
@@ -95,16 +64,13 @@ function loadConfiguration(
     {
       ...ts.sys,
       onUnRecoverableConfigFileDiagnostic(diagnostic) {
-        throw new Error(
-          ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-        );
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
       },
     },
   );
   if (!config) throw new Error(`Cannot read TypeScript configuration ${path}.`);
   const problem = config.errors.find((error) => error.code !== 18003);
-  if (problem)
-    throw new Error(ts.flattenDiagnosticMessageText(problem.messageText, "\n"));
+  if (problem) throw new Error(ts.flattenDiagnosticMessageText(problem.messageText, "\n"));
   cache.set(path, config);
   return config;
 }

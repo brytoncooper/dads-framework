@@ -31,25 +31,14 @@ const BUILT_COMMAND = join(TOOLBOX, "dist", "cli.js");
 const BUILD_COMMAND = "npm run build";
 
 /** The flags and options that already mean a mode; anything else adds --gate. */
-const MODE_ARGUMENTS = new Set([
-  "--gate",
-  "--update",
-  "--seed",
-  "--report",
-  "--file",
-  "--base",
-]);
+const MODE_ARGUMENTS = new Set(["--gate", "--update", "--seed", "--report", "--file", "--base"]);
 
 /** The arguments `dad doctor` is handed, and whether this is the guard's mode. */
 export function planDoctorArguments(argv) {
   const asksForAMode = argv.some((argument) => MODE_ARGUMENTS.has(argument));
   return {
     file: argv.includes("--file"),
-    commandArguments: [
-      "doctor",
-      ROOT,
-      ...(asksForAMode ? argv : ["--gate", ...argv]),
-    ],
+    commandArguments: ["doctor", ROOT, ...(asksForAMode ? argv : ["--gate", ...argv])],
   };
 }
 
@@ -74,11 +63,7 @@ function main(argv) {
     process.stdout.write(refusal.output);
     return refusal.exitCode;
   }
-  const finished = spawnSync(
-    process.execPath,
-    [EXECUTABLE, ...plan.commandArguments],
-    { cwd: ROOT, stdio: "inherit" },
-  );
+  const finished = spawnSync(process.execPath, [EXECUTABLE, ...plan.commandArguments], { cwd: ROOT, stdio: "inherit" });
   return finished.status ?? 1;
 }
 
@@ -89,8 +74,7 @@ function main(argv) {
  * `import.meta.url` the file it points at, and a wrapper that printed nothing
  * there would be a guard that silently passed everything.
  */
-const invokedPath =
-  process.argv[1] === undefined ? undefined : realpathSync(process.argv[1]);
+const invokedPath = process.argv[1] === undefined ? undefined : realpathSync(process.argv[1]);
 const isMainModule = invokedPath === fileURLToPath(import.meta.url);
 
 if (isMainModule) {

@@ -1,18 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { request } from "node:http";
 import type { Duplex } from "node:stream";
-import {
-  controlProtocol,
-  matchesProof,
-  serverProof,
-  stopProof,
-} from "./control-proof.js";
+import { controlProtocol, matchesProof, serverProof, stopProof } from "./control-proof.js";
 
 /** Verify the server, then send one authenticated frame on that exact connection. Never reconnect. */
-export function requestDevelopmentStop(
-  control: { port: number; key: string },
-  signal?: AbortSignal,
-): Promise<void> {
+export function requestDevelopmentStop(control: { port: number; key: string }, signal?: AbortSignal): Promise<void> {
   const nonce = randomBytes(32).toString("hex");
   return new Promise((resolve, reject) => {
     signal?.throwIfAborted();
@@ -49,9 +41,7 @@ export function requestDevelopmentStop(
         reject(
           reason instanceof Error
             ? reason
-            : new Error(
-                "Workbench control identity or shutdown acknowledgement could not be verified.",
-              ),
+            : new Error("Workbench control identity or shutdown acknowledgement could not be verified."),
         );
     }
     outgoing.once("error", () => {
@@ -67,10 +57,7 @@ export function requestDevelopmentStop(
         response.statusCode !== 101 ||
         response.headers.upgrade !== controlProtocol ||
         head.length !== 0 ||
-        !matchesProof(
-          response.headers["x-dads-proof"],
-          serverProof(control.key, nonce),
-        )
+        !matchesProof(response.headers["x-dads-proof"], serverProof(control.key, nonce))
       ) {
         finish(false);
         return;

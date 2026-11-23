@@ -20,50 +20,19 @@ export function inspectMemberPermissions(
   const actor = accountSubject(options, actorId);
   const member = accountSubject(options, accountId);
   return tenantTransaction(options, async (tx) => {
-    if (
-      !(await checkTenantPermission(
-        options,
-        tx,
-        actor,
-        tenantId,
-        "manage_members",
-      ))
-    ) {
+    if (!(await checkTenantPermission(options, tx, actor, tenantId, "manage_members"))) {
       throw new TenantUnavailableError();
     }
 
     const [membership] = await tx
       .select({ role: tenantMembership.role })
       .from(tenantMembership)
-      .where(
-        and(
-          eq(tenantMembership.tenantId, tenantId),
-          eq(tenantMembership.accountId, member.id),
-        ),
-      );
+      .where(and(eq(tenantMembership.tenantId, tenantId), eq(tenantMembership.accountId, member.id)));
     if (membership === undefined) throw new TenantUnavailableError();
 
-    const view = await checkTenantPermission(
-      options,
-      tx,
-      member,
-      tenantId,
-      "view",
-    );
-    const manageMembers = await checkTenantPermission(
-      options,
-      tx,
-      member,
-      tenantId,
-      "manage_members",
-    );
-    const manageTenant = await checkTenantPermission(
-      options,
-      tx,
-      member,
-      tenantId,
-      "manage_tenant",
-    );
+    const view = await checkTenantPermission(options, tx, member, tenantId, "view");
+    const manageMembers = await checkTenantPermission(options, tx, member, tenantId, "manage_members");
+    const manageTenant = await checkTenantPermission(options, tx, member, tenantId, "manage_tenant");
     return { role: membership.role, view, manageMembers, manageTenant };
   });
 }

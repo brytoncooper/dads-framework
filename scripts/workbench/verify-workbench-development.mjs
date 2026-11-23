@@ -52,42 +52,26 @@ try {
     params: { workspaceId: workspace.id },
     body: { userId: "bob" },
   });
-  assert.equal(
-    (await bob.getTask({ params: { taskId: task.id } })).id,
-    task.id,
-  );
+  assert.equal((await bob.getTask({ params: { taskId: task.id } })).id, task.id);
   const duplicate = launch("up", ["--port", "0"]);
   assert.equal((await duplicate.done).code, 1);
   assert.match(duplicate.output(), /instance is running/);
-  assert.equal(
-    (await alice.getTask({ params: { taskId: task.id } })).id,
-    task.id,
-  );
+  assert.equal((await alice.getTask({ params: { taskId: task.id } })).id, task.id);
 
   report("graceful-stop-and-restart");
   await stop();
   assert.equal((await running.process.done).code, 0);
   await assertStopped();
   assert.equal(
-    await docker([
-      "volume",
-      "inspect",
-      "--format",
-      "{{.Name}}",
-      `${project}-postgres-data`,
-    ]),
+    await docker(["volume", "inspect", "--format", "{{.Name}}", `${project}-postgres-data`]),
     `${project}-postgres-data`,
   );
   running = await start();
   alice = client(running.url, "alice");
   bob = client(running.url, "bob");
-  assert.equal(
-    (await bob.getTask({ params: { taskId: task.id } })).title,
-    "Persistent API journey",
-  );
+  assert.equal((await bob.getTask({ params: { taskId: task.id } })).title, "Persistent API journey");
   await assert.rejects(
-    () =>
-      client(running.url, "outsider").getTask({ params: { taskId: task.id } }),
+    () => client(running.url, "outsider").getTask({ params: { taskId: task.id } }),
     (error) => error instanceof WorkbenchClientError && error.status === 404,
   );
   await alice.revokeMember({
@@ -123,9 +107,7 @@ try {
 
   report("cancel-during-startup");
   const starting = launch("up", ["--port", "0"]);
-  await waitUntil(() =>
-    starting.output().includes("Starting isolated workbench services"),
-  );
+  await waitUntil(() => starting.output().includes("Starting isolated workbench services"));
   starting.child.kill("SIGINT");
   await starting.done;
   await waitUntil(async () => {
@@ -151,9 +133,7 @@ try {
     })}\n`,
   );
 } catch (error) {
-  process.stderr.write(
-    `${error instanceof Error ? error.message : "Development proof failed."}\n`,
-  );
+  process.stderr.write(`${error instanceof Error ? error.message : "Development proof failed."}\n`);
   process.exitCode = 1;
 } finally {
   try {
@@ -171,22 +151,9 @@ try {
       const currentProject = current.project ?? `dads-workbench-${state.id}`;
       await assertStopped(currentProject);
       const volume = `${currentProject}-postgres-data`;
-      const existing = await docker([
-        "volume",
-        "ls",
-        "--filter",
-        `name=^${volume}$`,
-        "--format",
-        "{{.Name}}",
-      ]);
+      const existing = await docker(["volume", "ls", "--filter", `name=^${volume}$`, "--format", "{{.Name}}"]);
       if (existing) {
-        const owner = await docker([
-          "volume",
-          "inspect",
-          "--format",
-          '{{index .Labels "dev.dads.workbench"}}',
-          volume,
-        ]);
+        const owner = await docker(["volume", "inspect", "--format", '{{index .Labels "dev.dads.workbench"}}', volume]);
         assert.equal(existing, volume);
         assert.equal(owner, currentProject);
         await docker(["volume", "rm", volume]);
@@ -196,24 +163,18 @@ try {
     }
     process.stdout.write(`${JSON.stringify({ instance, cleanedUp: true })}\n`);
   } catch {
-    process.stderr.write(
-      `Proof cleanup incomplete for ${instance}; no unverified resource was removed.\n`,
-    );
+    process.stderr.write(`Proof cleanup incomplete for ${instance}; no unverified resource was removed.\n`);
     process.exitCode = 1;
   }
-  for (const running of processes)
-    if (!running.terminal()) running.child.kill("SIGTERM");
+  for (const running of processes) if (!running.terminal()) running.child.kill("SIGTERM");
 }
 
 async function start(selectedInstance = instance, extra = []) {
   const running = launch("up", ["--port", "0", ...extra], selectedInstance);
   let url;
   await waitUntil(() => {
-    url = /Workbench API ready: (http:\/\/127\.0\.0\.1:\d+)/.exec(
-      running.output(),
-    )?.[1];
-    if (!url && running.terminal())
-      throw new Error("Launcher exited before readiness.");
+    url = /Workbench API ready: (http:\/\/127\.0\.0\.1:\d+)/.exec(running.output())?.[1];
+    if (!url && running.terminal()) throw new Error("Launcher exited before readiness.");
     return Boolean(url);
   });
   assert.ok(url);
@@ -228,13 +189,7 @@ async function stop(selectedInstance = instance) {
 function launch(action, extra = [], selectedInstance = instance) {
   const child = spawn(
     process.execPath,
-    [
-      "scripts/workbench/workbench-dev.mjs",
-      action,
-      "--instance",
-      selectedInstance,
-      ...extra,
-    ],
+    ["scripts/workbench/workbench-dev.mjs", action, "--instance", selectedInstance, ...extra],
     {
       cwd: root,
       stdio: ["ignore", "pipe", "pipe"],
@@ -290,14 +245,7 @@ async function assertStopped(projectName = project) {
     "",
   );
   assert.equal(
-    await docker([
-      "network",
-      "ls",
-      "--filter",
-      `label=dev.dads.workbench=${projectName}`,
-      "--format",
-      "{{.ID}}",
-    ]),
+    await docker(["network", "ls", "--filter", `label=dev.dads.workbench=${projectName}`, "--format", "{{.ID}}"]),
     "",
   );
 }

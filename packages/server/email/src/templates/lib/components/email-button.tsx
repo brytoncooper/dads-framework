@@ -35,10 +35,7 @@ export type EmailButtonProps = {
   readonly children: string;
 };
 
-export function EmailButton({
-  href,
-  children,
-}: EmailButtonProps): ReactElement {
+export function EmailButton({ href, children }: EmailButtonProps): ReactElement {
   return (
     <Section style={sectionStyle}>
       <Button href={href} style={buttonStyle}>

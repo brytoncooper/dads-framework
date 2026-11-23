@@ -37,9 +37,7 @@ type PartialMigrateArguments = {
   dryRun: boolean;
 };
 
-export function parseAccessImportArguments(
-  commandArguments: readonly string[],
-): ParsedAccessImportArguments {
+export function parseAccessImportArguments(commandArguments: readonly string[]): ParsedAccessImportArguments {
   const parsed: PartialImportArguments = {
     inputPath: undefined,
     outPath: undefined,
@@ -68,9 +66,7 @@ export function parseAccessImportArguments(
   };
 }
 
-export function parseAccessTreeArguments(
-  commandArguments: readonly string[],
-): ParsedAccessTreeArguments {
+export function parseAccessTreeArguments(commandArguments: readonly string[]): ParsedAccessTreeArguments {
   let inputPath: string | undefined;
   const seenOptions = new Set<string>();
 
@@ -87,16 +83,12 @@ export function parseAccessTreeArguments(
   }
 
   if (inputPath === undefined) {
-    throw new Error(
-      "access tree requires a path to a .ts or .zed access file.",
-    );
+    throw new Error("access tree requires a path to a .ts or .zed access file.");
   }
   return { inputPath };
 }
 
-export function parseAccessDiffArguments(
-  commandArguments: readonly string[],
-): ParsedAccessDiffArguments {
+export function parseAccessDiffArguments(commandArguments: readonly string[]): ParsedAccessDiffArguments {
   const positionals: string[] = [];
   const seenOptions = new Set<string>();
 
@@ -117,16 +109,12 @@ export function parseAccessDiffArguments(
 
   const [beforePath, afterPath] = positionals;
   if (beforePath === undefined || afterPath === undefined) {
-    throw new Error(
-      "access diff requires <before> and <after> schema file paths (.ts or .zed).",
-    );
+    throw new Error("access diff requires <before> and <after> schema file paths (.ts or .zed).");
   }
   return { beforePath, afterPath };
 }
 
-export function parseAccessMigrateArguments(
-  commandArguments: readonly string[],
-): ParsedAccessMigrateArguments {
+export function parseAccessMigrateArguments(commandArguments: readonly string[]): ParsedAccessMigrateArguments {
   const parsed: PartialMigrateArguments = {
     slug: undefined,
     fromPath: undefined,
@@ -150,10 +138,7 @@ export function parseAccessMigrateArguments(
   return finalizeMigrateArguments(parsed);
 }
 
-function assignSinglePositional(
-  current: string | undefined,
-  argument: string,
-): string {
+function assignSinglePositional(current: string | undefined, argument: string): string {
   if (current !== undefined) {
     throw new Error(`Unexpected positional argument ${argument}.`);
   }
@@ -167,11 +152,7 @@ function recordUniqueOption(seenOptions: Set<string>, option: string): void {
   seenOptions.add(option);
 }
 
-function readAccessOptionValue(
-  commandArguments: readonly string[],
-  optionIndex: number,
-  option: string,
-): string {
+function readAccessOptionValue(commandArguments: readonly string[], optionIndex: number, option: string): string {
   const value = commandArguments[optionIndex + 1];
   if (!value || value.startsWith("-")) {
     throw new Error(`${option} requires a value.`);
@@ -193,11 +174,7 @@ function applyImportOption(
     return 0;
   }
   if (option === "--out") {
-    parsed.outPath = readAccessOptionValue(
-      commandArguments,
-      optionIndex,
-      option,
-    );
+    parsed.outPath = readAccessOptionValue(commandArguments, optionIndex, option);
     return 1;
   }
   throw new Error(`Unknown option ${option}.`);
@@ -217,35 +194,21 @@ function applyMigrateOption(
     return 0;
   }
   if (option === "--from") {
-    parsed.fromPath = readAccessOptionValue(
-      commandArguments,
-      optionIndex,
-      option,
-    );
+    parsed.fromPath = readAccessOptionValue(commandArguments, optionIndex, option);
     return 1;
   }
   if (option === "--to") {
-    parsed.toPath = readAccessOptionValue(
-      commandArguments,
-      optionIndex,
-      option,
-    );
+    parsed.toPath = readAccessOptionValue(commandArguments, optionIndex, option);
     return 1;
   }
   if (option === "--out") {
-    parsed.outDir = readAccessOptionValue(
-      commandArguments,
-      optionIndex,
-      option,
-    );
+    parsed.outDir = readAccessOptionValue(commandArguments, optionIndex, option);
     return 1;
   }
   throw new Error(`Unknown option ${option}.`);
 }
 
-function finalizeMigrateArguments(
-  parsed: PartialMigrateArguments,
-): ParsedAccessMigrateArguments {
+function finalizeMigrateArguments(parsed: PartialMigrateArguments): ParsedAccessMigrateArguments {
   if (parsed.slug === undefined) {
     throw new Error("access migrate requires a migration slug.");
   }

@@ -39,17 +39,14 @@ describe("useListEmptiness", () => {
   });
 
   it("checks on a first look at a narrowed zero", () => {
-    const { result } = renderHook(() =>
-      useListEmptiness(NARROWED_TO_NOTHING, SCOPE),
-    );
+    const { result } = renderHook(() => useListEmptiness(NARROWED_TO_NOTHING, SCOPE));
     expect(result.current).toBe("CHECKING");
   });
 
   it("keeps the table once it has shown rows", () => {
-    const { result, rerender } = renderHook(
-      (counts: Counts) => useListEmptiness(counts, SCOPE),
-      { initialProps: ROWS },
-    );
+    const { result, rerender } = renderHook((counts: Counts) => useListEmptiness(counts, SCOPE), {
+      initialProps: ROWS,
+    });
     expect(result.current).toBe("HAS_ROWS");
 
     rerender(NARROWED_TO_NOTHING);
@@ -57,10 +54,9 @@ describe("useListEmptiness", () => {
   });
 
   it("checks again after the page has shown its empty state", () => {
-    const { result, rerender } = renderHook(
-      (counts: Counts) => useListEmptiness(counts, SCOPE),
-      { initialProps: ROWS },
-    );
+    const { result, rerender } = renderHook((counts: Counts) => useListEmptiness(counts, SCOPE), {
+      initialProps: ROWS,
+    });
     rerender(NOTHING_AT_ALL);
     expect(result.current).toBe("ZERO");
 
@@ -69,8 +65,7 @@ describe("useListEmptiness", () => {
   });
   it("checks again after the page moves to another scope", () => {
     const { result, rerender } = renderHook(
-      ({ counts, scope }: { counts: Counts; scope: readonly string[] }) =>
-        useListEmptiness(counts, scope),
+      ({ counts, scope }: { counts: Counts; scope: readonly string[] }) => useListEmptiness(counts, scope),
       { initialProps: { counts: ROWS, scope: ["org-1"] } },
     );
     expect(result.current).toBe("HAS_ROWS");
@@ -81,8 +76,7 @@ describe("useListEmptiness", () => {
 
   it("keeps the table when the same scope arrives as a new value", () => {
     const { result, rerender } = renderHook(
-      ({ counts, scope }: { counts: Counts; scope: readonly string[] }) =>
-        useListEmptiness(counts, scope),
+      ({ counts, scope }: { counts: Counts; scope: readonly string[] }) => useListEmptiness(counts, scope),
       { initialProps: { counts: ROWS, scope: ["org-1"] } },
     );
     rerender({ counts: NARROWED_TO_NOTHING, scope: ["org-1"] });

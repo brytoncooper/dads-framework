@@ -9,11 +9,7 @@ function readMember(value: unknown): ScimGroupMember {
   const id = userString(fields["value"]);
   const type = userString(fields["type"]);
   if (!id?.trim() || (type !== undefined && type.toLowerCase() !== "user")) {
-    throw new ScimError(
-      400,
-      "Group members must reference users.",
-      "invalidValue",
-    );
+    throw new ScimError(400, "Group members must reference users.", "invalidValue");
   }
   return { value: id };
 }
@@ -37,8 +33,7 @@ export function parseScimGroup(value: unknown): ScimGroupData {
   const fields = attributes(value);
   const displayName = userString(fields["displayname"]);
   const externalId = userString(fields["externalid"]);
-  if (!displayName?.trim())
-    throw new ScimError(400, "Group displayName is required.", "invalidValue");
+  if (!displayName?.trim()) throw new ScimError(400, "Group displayName is required.", "invalidValue");
   return {
     displayName,
     ...(externalId === undefined ? {} : { externalId }),

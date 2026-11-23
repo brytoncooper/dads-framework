@@ -1,11 +1,4 @@
-import {
-  actor,
-  anyOf,
-  compileAccess,
-  every,
-  resource,
-  roleToken,
-} from "@dads-framework/access";
+import { actor, anyOf, compileAccess, every, resource, roleToken } from "@dads-framework/access";
 import { describe, expect, it } from "vitest";
 
 import { PostgresAuthorization, type PostgresAccessExecutor } from "./index.js";
@@ -125,9 +118,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "documents.id",
       paramOffset: 3,
     });
-    expect(docFilter.sql.startsWith("(documents.id IN (WITH RECURSIVE ")).toBe(
-      true,
-    );
+    expect(docFilter.sql.startsWith("(documents.id IN (WITH RECURSIVE ")).toBe(true);
     expect(docFilter.sql).not.toMatch(/\$[12](?!\d)/);
     expect(docFilter.sql).toContain("$3");
     expect(docFilter.sql).toContain("rec_allowed_");
@@ -178,13 +169,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       ).toThrow(/Invalid Postgres filter idColumn/);
     }
 
-    for (const badOffset of [
-      0,
-      -1,
-      1.5,
-      Number.NaN,
-      Number.POSITIVE_INFINITY,
-    ]) {
+    for (const badOffset of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(() =>
         auth.compileFilter({
           subject: { type: "user", id: "alice" },
@@ -313,9 +298,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "d.id",
       scopeColumns: { ws: "d.workspace_id" },
     });
-    expect(scopedWithBan.sql).toBe(
-      "((d.workspace_id = ANY($1::text[])) AND (NOT (d.id = ANY($2::text[]))))",
-    );
+    expect(scopedWithBan.sql).toBe("((d.workspace_id = ANY($1::text[])) AND (NOT (d.id = ANY($2::text[]))))");
     expect(scopedWithBan.values).toEqual([["ws_1"], ["doc_banned"]]);
   });
 });

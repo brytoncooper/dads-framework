@@ -1,32 +1,19 @@
 import { both, excluding, through, throughAll } from "./combinators.js";
-import type {
-  DslEveryProxy,
-  DslPermissionExpr,
-  DslRoleRef,
-  DslTerm,
-  DslTermInput,
-} from "./dsl-types.js";
+import type { DslEveryProxy, DslPermissionExpr, DslRoleRef, DslTerm, DslTermInput } from "./dsl-types.js";
 import { permissionToken } from "./refs.js";
 import type { PermissionTerm, RoleToken } from "./refs.js";
 
 const roleRefTargetResolvers = new WeakMap<object, () => string>();
 
 export function isDslTerm(value: unknown): value is DslTerm {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "dsl-term"
-  );
+  return typeof value === "object" && value !== null && "kind" in value && value.kind === "dsl-term";
 }
 
 function isDslTermList(value: DslTermInput): value is readonly DslTermInput[] {
   return Array.isArray(value);
 }
 
-function flattenOrTerms(
-  inputs: readonly DslTermInput[],
-): readonly PermissionTerm[] {
+function flattenOrTerms(inputs: readonly DslTermInput[]): readonly PermissionTerm[] {
   const result: PermissionTerm[] = [];
   for (const input of inputs) {
     if (isDslTermList(input)) {
@@ -98,15 +85,11 @@ export function allOf(...terms: readonly DslTermInput[]): DslTerm {
   return dslTerm(combined);
 }
 
-function isDslRoleRefValue<TargetPerms extends string>(
-  value: unknown,
-): value is DslRoleRef<TargetPerms> {
+function isDslRoleRefValue<TargetPerms extends string>(value: unknown): value is DslRoleRef<TargetPerms> {
   return typeof value === "object" && value !== null;
 }
 
-function isDslEveryProxyValue<TargetPerms extends string>(
-  value: unknown,
-): value is DslEveryProxy<TargetPerms> {
+function isDslEveryProxyValue<TargetPerms extends string>(value: unknown): value is DslEveryProxy<TargetPerms> {
   return typeof value === "object" && value !== null;
 }
 
@@ -133,9 +116,7 @@ export function createRoleRef<TargetPerms extends string>(
       if (propertyName === "then" || propertyName === "toJSON") {
         return undefined;
       }
-      return dslTerm(
-        through(token, permissionToken(resolveTargetWireName(), propertyName)),
-      );
+      return dslTerm(through(token, permissionToken(resolveTargetWireName(), propertyName)));
     },
   });
   if (!isDslRoleRefValue<TargetPerms>(proxy)) {
@@ -149,26 +130,17 @@ export function createRoleRef<TargetPerms extends string>(
  * Universal intersection arrow (`role.all(permission)`): requires the subject
  * to hold the chosen permission on every resource linked through `link`.
  */
-export function every<TargetPerms extends string>(
-  link: DslRoleRef<TargetPerms>,
-): DslEveryProxy<TargetPerms> {
+export function every<TargetPerms extends string>(link: DslRoleRef<TargetPerms>): DslEveryProxy<TargetPerms> {
   const token = link.$roleToken;
-  const resolveTarget =
-    roleRefTargetResolvers.get(link) ?? (() => token.entityWireName);
+  const resolveTarget = roleRefTargetResolvers.get(link) ?? (() => token.entityWireName);
   const proxy = new Proxy(
     {},
     {
       get(_target, propertyName): unknown {
-        if (
-          typeof propertyName !== "string" ||
-          propertyName === "then" ||
-          propertyName === "toJSON"
-        ) {
+        if (typeof propertyName !== "string" || propertyName === "then" || propertyName === "toJSON") {
           return undefined;
         }
-        return dslTerm(
-          throughAll(token, permissionToken(resolveTarget(), propertyName)),
-        );
+        return dslTerm(throughAll(token, permissionToken(resolveTarget(), propertyName)));
       },
     },
   );
@@ -178,9 +150,7 @@ export function every<TargetPerms extends string>(
   return proxy;
 }
 
-export function normalizePermissionExpr(
-  expr: DslPermissionExpr,
-): readonly PermissionTerm[] {
+export function normalizePermissionExpr(expr: DslPermissionExpr): readonly PermissionTerm[] {
   const unwrapped = unwrapDslTerm(expr);
   if (unwrapped.kind === "or") {
     return unwrapped.terms;
@@ -193,9 +163,7 @@ function targetNameOf(term: {
     | { readonly kind: "permission"; readonly permissionName: string }
     | { readonly kind: "role"; readonly roleName: string };
 }): string {
-  return term.target.kind === "permission"
-    ? term.target.permissionName
-    : term.target.roleName;
+  return term.target.kind === "permission" ? term.target.permissionName : term.target.roleName;
 }
 
 function childTermsOf(term: PermissionTerm): readonly PermissionTerm[] {
@@ -206,19 +174,11 @@ function childTermsOf(term: PermissionTerm): readonly PermissionTerm[] {
   return [];
 }
 
-function singleTermReferencesThrough(
-  term: PermissionTerm,
-  roleName: string,
-  targetPermission: string,
-): boolean {
+function singleTermReferencesThrough(term: PermissionTerm, roleName: string, targetPermission: string): boolean {
   if (term.kind === "through" || term.kind === "through-all") {
-    return (
-      term.role.roleName === roleName && targetNameOf(term) === targetPermission
-    );
+    return term.role.roleName === roleName && targetNameOf(term) === targetPermission;
   }
-  return childTermsOf(term).some((entry) =>
-    singleTermReferencesThrough(entry, roleName, targetPermission),
-  );
+  return childTermsOf(term).some((entry) => singleTermReferencesThrough(entry, roleName, targetPermission));
 }
 
 export function termsReferenceThrough(
@@ -226,7 +186,5 @@ export function termsReferenceThrough(
   roleName: string,
   targetPermission: string,
 ): boolean {
-  return terms.some((term) =>
-    singleTermReferencesThrough(term, roleName, targetPermission),
-  );
+  return terms.some((term) => singleTermReferencesThrough(term, roleName, targetPermission));
 }

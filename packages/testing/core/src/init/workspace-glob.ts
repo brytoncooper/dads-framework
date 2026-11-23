@@ -33,12 +33,7 @@ export function compileWorkspaceGlob(pattern: string): CompiledWorkspaceGlob {
     pattern,
     negated,
     matches: (relativeDirectory: string): boolean =>
-      matchSegments(
-        patternSegments,
-        0,
-        normalizePath(relativeDirectory).split("/"),
-        0,
-      ),
+      matchSegments(patternSegments, 0, normalizePath(relativeDirectory).split("/"), 0),
   };
 }
 
@@ -47,10 +42,7 @@ export function compileWorkspaceGlob(pattern: string): CompiledWorkspaceGlob {
  * selected by the patterns, sorted. Patterns are applied in order, so a later
  * negation removes what an earlier pattern selected.
  */
-export function expandWorkspaceGlobs(
-  workspaceRoot: string,
-  patterns: readonly string[],
-): readonly string[] {
+export function expandWorkspaceGlobs(workspaceRoot: string, patterns: readonly string[]): readonly string[] {
   const globs = patterns.map((pattern) => compileWorkspaceGlob(pattern));
   const depth = searchDepthForPatterns(patterns);
   if (depth === 0) return [];
@@ -73,30 +65,18 @@ function searchDepthForPatterns(patterns: readonly string[]): number {
   return depth;
 }
 
-function collectPackageDirectories(
-  workspaceRoot: string,
-  relativeDirectory: string,
-  remainingDepth: number,
-): string[] {
+function collectPackageDirectories(workspaceRoot: string, relativeDirectory: string, remainingDepth: number): string[] {
   if (remainingDepth <= 0) return [];
-  const absoluteDirectory =
-    relativeDirectory === ""
-      ? workspaceRoot
-      : join(workspaceRoot, relativeDirectory);
+  const absoluteDirectory = relativeDirectory === "" ? workspaceRoot : join(workspaceRoot, relativeDirectory);
   const found: string[] = [];
   for (const entry of readDirectoryEntries(absoluteDirectory)) {
     if (!entry.isDirectory()) continue;
     if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
-    const child =
-      relativeDirectory === ""
-        ? entry.name
-        : `${relativeDirectory}/${entry.name}`;
+    const child = relativeDirectory === "" ? entry.name : `${relativeDirectory}/${entry.name}`;
     if (existsSync(join(workspaceRoot, child, "package.json"))) {
       found.push(child);
     }
-    found.push(
-      ...collectPackageDirectories(workspaceRoot, child, remainingDepth - 1),
-    );
+    found.push(...collectPackageDirectories(workspaceRoot, child, remainingDepth - 1));
   }
   return found;
 }
@@ -110,10 +90,7 @@ function readDirectoryEntries(directory: string): readonly Dirent[] {
   }
 }
 
-function isSelected(
-  globs: readonly CompiledWorkspaceGlob[],
-  directory: string,
-): boolean {
+function isSelected(globs: readonly CompiledWorkspaceGlob[], directory: string): boolean {
   let selected = false;
   for (const glob of globs) {
     if (!glob.matches(directory)) continue;
@@ -135,9 +112,7 @@ function matchSegments(
   if (patternSegment === undefined) return false;
   if (patternSegment === "**") {
     for (let skip = pathIndex; skip <= pathSegments.length; skip += 1) {
-      if (
-        matchSegments(patternSegments, patternIndex + 1, pathSegments, skip)
-      ) {
+      if (matchSegments(patternSegments, patternIndex + 1, pathSegments, skip)) {
         return true;
       }
     }
@@ -146,12 +121,7 @@ function matchSegments(
   const pathSegment = pathSegments[pathIndex];
   if (pathSegment === undefined) return false;
   if (!matchOneSegment(patternSegment, pathSegment)) return false;
-  return matchSegments(
-    patternSegments,
-    patternIndex + 1,
-    pathSegments,
-    pathIndex + 1,
-  );
+  return matchSegments(patternSegments, patternIndex + 1, pathSegments, pathIndex + 1);
 }
 
 /**
@@ -165,31 +135,17 @@ function matchOneSegment(patternSegment: string, value: string): boolean {
   const first = parts[0] ?? "";
   const last = parts[parts.length - 1] ?? "";
   if (!matchesAnchoredEnds(value, first, last)) return false;
-  return containsInOrder(
-    value,
-    parts.slice(1, -1),
-    first.length,
-    value.length - last.length,
-  );
+  return containsInOrder(value, parts.slice(1, -1), first.length, value.length - last.length);
 }
 
 /** The text before the first `*` and after the last must sit at the ends without overlapping. */
-function matchesAnchoredEnds(
-  value: string,
-  first: string,
-  last: string,
-): boolean {
+function matchesAnchoredEnds(value: string, first: string, last: string): boolean {
   if (value.length < first.length + last.length) return false;
   return value.startsWith(first) && value.endsWith(last);
 }
 
 /** Each literal must be found after the previous one and before the anchored tail. */
-function containsInOrder(
-  value: string,
-  literals: readonly string[],
-  from: number,
-  end: number,
-): boolean {
+function containsInOrder(value: string, literals: readonly string[], from: number, end: number): boolean {
   let cursor = from;
   for (const literal of literals) {
     if (literal.length === 0) continue;

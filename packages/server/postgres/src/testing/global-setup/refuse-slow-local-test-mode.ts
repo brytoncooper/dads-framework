@@ -9,9 +9,7 @@ export const SLOW_LOCAL_TEST_MODE_MESSAGE =
   "  npm run test:integration    # container tier only, shared Postgres\n" +
   "To run the slow path on purpose: ALLOW_SLOW_TEST_MODE=1";
 
-export function refuseSlowLocalTestMode(
-  env: Readonly<Record<string, string | undefined>>,
-): void {
+export function refuseSlowLocalTestMode(env: Readonly<Record<string, string | undefined>>): void {
   if (env["CI"] !== undefined) return;
   if (env[ALLOW_SLOW_TEST_MODE] === "1") return;
   if (env[CONTAINER_PER_FILE] !== "1" && env[VITEST_ISOLATE] !== "1") {

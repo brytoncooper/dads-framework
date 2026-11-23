@@ -24,9 +24,7 @@ function isSwitchedOffTest(node: ts.Node): boolean {
   const callee = node.expression;
   if (!ts.isPropertyAccessExpression(callee)) return false;
   if (!SWITCHED_OFF.has(callee.name.text)) return false;
-  return (
-    ts.isIdentifier(callee.expression) && RUNNERS.has(callee.expression.text)
-  );
+  return ts.isIdentifier(callee.expression) && RUNNERS.has(callee.expression.text);
 }
 
 function countSkippedTests(context: DoctorContext): SignalReadings {
@@ -46,7 +44,6 @@ export const skippedTestsSignal: DoctorSignal = {
   unit: "count",
   direction: "ceiling",
   thresholds: { standard: 0, strict: 0 },
-  sentence:
-    "You went no-contact with tests, then checked their status every five minutes in CI.",
+  sentence: "You went no-contact with tests, then checked their status every five minutes in CI.",
   run: (context) => Promise.resolve(countSkippedTests(context)),
 };

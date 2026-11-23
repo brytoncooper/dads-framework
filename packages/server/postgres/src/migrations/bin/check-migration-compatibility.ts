@@ -25,9 +25,7 @@ const approvedEditSchema = z.object({
   deletions: z.array(z.object({ file: z.string() })).default([]),
 });
 
-async function readApprovedUndeployedChanges(
-  workspaceRoot: string,
-): Promise<z.infer<typeof approvedEditSchema>> {
+async function readApprovedUndeployedChanges(workspaceRoot: string): Promise<z.infer<typeof approvedEditSchema>> {
   const file = resolve(workspaceRoot, APPROVED_UNDEPLOYED_EDITS);
   if (!existsSync(file)) return { edits: [], deletions: [] };
   return approvedEditSchema.parse(JSON.parse(await readFile(file, "utf8")));
@@ -38,13 +36,8 @@ async function readApprovedUndeployedChanges(
  * no deployed environment (`migrations/approved-undeployed-edits.json`).
  * The rehearsal baseline then simply lacks it, as every deployed database does.
  */
-async function isApprovedUndeployedDeletion(
-  workspaceRoot: string,
-  file: string,
-): Promise<boolean> {
-  return (await readApprovedUndeployedChanges(workspaceRoot)).deletions.some(
-    (deletion) => deletion.file === file,
-  );
+async function isApprovedUndeployedDeletion(workspaceRoot: string, file: string): Promise<boolean> {
+  return (await readApprovedUndeployedChanges(workspaceRoot)).deletions.some((deletion) => deletion.file === file);
 }
 
 /**
@@ -53,13 +46,8 @@ async function isApprovedUndeployedDeletion(
  * (`migrations/approved-undeployed-edits.json`). Shared with the
  * migration immutability rule.
  */
-async function isApprovedUndeployedEdit(
-  workspaceRoot: string,
-  file: string,
-): Promise<boolean> {
-  const approved = (
-    await readApprovedUndeployedChanges(workspaceRoot)
-  ).edits.find((edit) => edit.file === file);
+async function isApprovedUndeployedEdit(workspaceRoot: string, file: string): Promise<boolean> {
+  const approved = (await readApprovedUndeployedChanges(workspaceRoot)).edits.find((edit) => edit.file === file);
   if (approved === undefined) return false;
   const content = await readFile(resolve(workspaceRoot, file));
   return createHash("sha256").update(content).digest("hex") === approved.sha256;
@@ -86,36 +74,19 @@ export async function readMigrationCompatibilityDiff(
   const git = gitIn(workspace.root);
   const sources = workspace.sources.map((source) => source.root);
   const baseSha = git(["rev-parse", "--verify", `${base}^{commit}`]);
-  if (!/^[a-f0-9]{40,64}$/.test(baseSha))
-    throw new Error("migration comparison requires a pinned Git commit");
-  const pinnedFiles = git([
-    "ls-tree",
-    "-r",
-    "--name-only",
-    baseSha,
-    "--",
-    ...sources,
-  ])
+  if (!/^[a-f0-9]{40,64}$/.test(baseSha)) throw new Error("migration comparison requires a pinned Git commit");
+  const pinnedFiles = git(["ls-tree", "-r", "--name-only", baseSha, "--", ...sources])
     .split("\n")
     .filter((file) => isMigrationFile(workspace, file));
   const { additions, approvedDeletions } = await classifyCommittedChanges(
     workspace,
     git(["diff", "--name-status", "--no-renames", baseSha, "--", ...sources]),
   );
-  const baselineFiles = pinnedFiles.filter(
-    (file) => !approvedDeletions.has(file),
-  );
-  for (const file of git([
-    "ls-files",
-    "--others",
-    "--exclude-standard",
-    "--",
-    ...sources,
-  ]).split("\n")) {
+  const baselineFiles = pinnedFiles.filter((file) => !approvedDeletions.has(file));
+  for (const file of git(["ls-files", "--others", "--exclude-standard", "--", ...sources]).split("\n")) {
     if (isMigrationFile(workspace, file)) additions.add(file);
   }
-  if (additions.size > 0)
-    await refuseChangedBaselineSupport(workspace, git, baseSha, baselineFiles);
+  if (additions.size > 0) await refuseChangedBaselineSupport(workspace, git, baseSha, baselineFiles);
   return { base: baseSha, baselineFiles, addedFiles: [...additions].sort() };
 }
 
@@ -151,13 +122,8 @@ async function classifyChange(
   file: string,
 ): Promise<"added" | "approved-edit" | "approved-deletion"> {
   if (status === "A") return "added";
-  if (status === "M" && (await isApprovedUndeployedEdit(workspaceRoot, file)))
-    return "approved-edit";
-  if (
-    status === "D" &&
-    (await isApprovedUndeployedDeletion(workspaceRoot, file))
-  )
-    return "approved-deletion";
+  if (status === "M" && (await isApprovedUndeployedEdit(workspaceRoot, file))) return "approved-edit";
+  if (status === "D" && (await isApprovedUndeployedDeletion(workspaceRoot, file))) return "approved-deletion";
   throw new Error(`immutable baseline migration differs: ${file}`);
 }
 
@@ -167,15 +133,10 @@ async function refuseChangedBaselineSupport(
   baseSha: string,
   baselineFiles: readonly string[],
 ): Promise<void> {
-  const { migrationSupportFiles } =
-    await import("../compatibility/migration-support-files.js");
+  const { migrationSupportFiles } = await import("../compatibility/migration-support-files.js");
   const support = await migrationSupportFiles(workspace, baselineFiles);
   if (support.length === 0) return;
-  const pinnedSupport = new Set(
-    git(["ls-tree", "-r", "--name-only", baseSha, "--", ...support]).split(
-      "\n",
-    ),
-  );
+  const pinnedSupport = new Set(git(["ls-tree", "-r", "--name-only", baseSha, "--", ...support]).split("\n"));
   if (support.some((file) => !pinnedSupport.has(file)))
     throw new Error(
       "baseline migration support is absent from the pinned commit; remove untracked shadow modules before rehearsal",
@@ -188,22 +149,16 @@ async function refuseChangedBaselineSupport(
 
 async function checkMigrationCompatibility(): Promise<void> {
   const workspace = defaultMigrationWorkspace(process.cwd());
-  const diff = await readMigrationCompatibilityDiff(
-    workspace,
-    parseBaseArgument(process.argv.slice(2)),
-  );
+  const diff = await readMigrationCompatibilityDiff(workspace, parseBaseArgument(process.argv.slice(2)));
   if (diff.addedFiles.length === 0) {
-    process.stdout.write(
-      "migration compatibility: no pending SQL additions; no database started\n",
-    );
+    process.stdout.write("migration compatibility: no pending SQL additions; no database started\n");
     return;
   }
   const baselineNames = await baselineJournalNames(workspace, diff);
-  const [{ RehearsalPostgres }, { rehearseMigrationCompatibility }] =
-    await Promise.all([
-      import("../../testing/index.js"),
-      import("../compatibility/rehearse-migration-compatibility.js"),
-    ]);
+  const [{ RehearsalPostgres }, { rehearseMigrationCompatibility }] = await Promise.all([
+    import("../../testing/index.js"),
+    import("../compatibility/rehearse-migration-compatibility.js"),
+  ]);
   const { postgres, stop } = await RehearsalPostgres.start();
   try {
     const result = await rehearseMigrationCompatibility({
@@ -219,11 +174,7 @@ async function checkMigrationCompatibility(): Promise<void> {
 
 function parseBaseArgument(args: readonly string[]): string {
   const [argument] = args;
-  if (
-    args.length !== 1 ||
-    argument === undefined ||
-    !argument.startsWith("--base=")
-  )
+  if (args.length !== 1 || argument === undefined || !argument.startsWith("--base="))
     throw new Error("usage: dads-migration-check --base=<comparison-ref>");
   return z.string().min(1).parse(argument.slice("--base=".length));
 }
@@ -233,28 +184,20 @@ async function baselineJournalNames(
   workspace: MigrationWorkspace,
   diff: MigrationCompatibilityDiff,
 ): Promise<string[]> {
-  const { planMigrationCompatibility } =
-    await import("../compatibility/plan-migration-compatibility.js");
+  const { planMigrationCompatibility } = await import("../compatibility/plan-migration-compatibility.js");
   const migrations = await discoverDomainMigrations({ workspace });
   const baselinePaths = new Set(diff.baselineFiles);
   const baselineNames = planMigrationOrder(
-    migrations.filter((migration) =>
-      baselinePaths.has(relative(workspace.root, migration.filePath)),
-    ),
+    migrations.filter((migration) => baselinePaths.has(relative(workspace.root, migration.filePath))),
   ).map((migration) => migration.journalName);
   if (planMigrationCompatibility(migrations, baselineNames).orders.length === 0)
     throw new Error("SQL additions did not produce a compatibility schedule");
   return baselineNames;
 }
 
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
-) {
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   checkMigrationCompatibility().catch((error: unknown) => {
-    process.stderr.write(
-      `${error instanceof Error ? error.message : "migration compatibility failed"}\n`,
-    );
+    process.stderr.write(`${error instanceof Error ? error.message : "migration compatibility failed"}\n`);
     process.exitCode = 1;
   });
 }

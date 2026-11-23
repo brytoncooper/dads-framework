@@ -5,13 +5,7 @@
  * covering the destination a user just selected.
  * @vitest-environment jsdom
  */
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   Sidebar,
@@ -44,9 +38,7 @@ describe("sidebar layout", () => {
     const trigger = screen.getByRole("button", { name: "Toggle Sidebar" });
 
     await waitFor(() => {
-      expect(
-        trigger.querySelector('[data-sidebar-trigger-icon="menu"]'),
-      ).not.toBeNull();
+      expect(trigger.querySelector('[data-sidebar-trigger-icon="menu"]')).not.toBeNull();
     });
 
     fireEvent.click(trigger);
@@ -88,17 +80,11 @@ describe("sidebar layout", () => {
     const trigger = screen.getByRole("button", { name: "Toggle Sidebar" });
 
     await waitFor(() => {
-      expect(
-        trigger.querySelector('[data-sidebar-trigger-icon="panel"]'),
-      ).not.toBeNull();
+      expect(trigger.querySelector('[data-sidebar-trigger-icon="panel"]')).not.toBeNull();
     });
 
     fireEvent.click(trigger);
-    expect(
-      document
-        .querySelector('[data-slot="sidebar"]')
-        ?.getAttribute("data-state"),
-    ).toBe("collapsed");
+    expect(document.querySelector('[data-slot="sidebar"]')?.getAttribute("data-state")).toBe("collapsed");
   });
 
   it("clips sideways overflow so expanding the rail cannot flash a scrollbar", () => {
@@ -114,9 +100,7 @@ describe("sidebar layout", () => {
     const content = document.querySelector('[data-slot="sidebar-content"]');
     expect(content?.className).toContain("overflow-x-hidden");
     expect(content?.className).toContain("overflow-y-auto");
-    expect(content?.className).not.toContain(
-      "group-data-[collapsible=icon]:overflow-hidden",
-    );
+    expect(content?.className).not.toContain("group-data-[collapsible=icon]:overflow-hidden");
     expect(content?.className).toContain("gap-4");
     expect(content?.className).toContain("group-data-[collapsible=icon]:gap-2");
   });
@@ -166,11 +150,7 @@ describe("sidebar layout", () => {
   });
 });
 
-function MobileSidebarFixture({
-  navigationKey,
-}: {
-  readonly navigationKey: string;
-}) {
+function MobileSidebarFixture({ navigationKey }: { readonly navigationKey: string }) {
   return (
     <SidebarProvider mobileNavigationKey={navigationKey}>
       <SidebarTrigger />

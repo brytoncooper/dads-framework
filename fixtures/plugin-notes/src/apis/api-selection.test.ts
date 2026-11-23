@@ -2,16 +2,9 @@ import { join } from "node:path";
 
 import { compileAccess, emitAccessIr } from "@dads-framework/access";
 import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
-import {
-  buildTestApp,
-  TEST_SUBJECT_HEADER,
-} from "@dads-framework/http/testing";
+import { buildTestApp, TEST_SUBJECT_HEADER } from "@dads-framework/http/testing";
 import { discoverDomainMigrations } from "@dads-framework/postgres/migrations";
-import {
-  composeApi,
-  definePlugin,
-  providePlugin,
-} from "@dads-framework/core/plugin";
+import { composeApi, definePlugin, providePlugin } from "@dads-framework/core/plugin";
 import { expect, expectTypeOf, it, vi } from "vitest";
 
 import { clockService } from "../clock-service.js";
@@ -70,12 +63,7 @@ it("keeps staff routes and jobs out of the customer API, even for a staff identi
     expect(customer.jobs).toEqual([]);
     expect(staff.jobs.map((job) => job.name)).toEqual(["notes.count"]);
   } finally {
-    await Promise.all([
-      customerHttp.close(),
-      staffHttp.close(),
-      customer.stop(),
-      staff.stop(),
-    ]);
+    await Promise.all([customerHttp.close(), staffHttp.close(), customer.stop(), staff.stop()]);
   }
 });
 
@@ -97,16 +85,13 @@ it("reads only selected access and migrations before any service starts", async 
     },
   });
   expect(migrations.map(({ owner }) => owner)).toEqual(["notes-data"]);
-  expect(
-    emitAccessIr(compileAccess(offlineApi.access)).map(
-      ({ wireName }) => wireName,
-    ),
-  ).toEqual(["notes_user", "notes/note"]);
-  expect(
-    emitAccessIr(compileAccess(staffApi.access)).map(
-      ({ wireName }) => wireName,
-    ),
-  ).toContain(staffDashboard.wireName);
+  expect(emitAccessIr(compileAccess(offlineApi.access)).map(({ wireName }) => wireName)).toEqual([
+    "notes_user",
+    "notes/note",
+  ]);
+  expect(emitAccessIr(compileAccess(staffApi.access)).map(({ wireName }) => wireName)).toContain(
+    staffDashboard.wireName,
+  );
   expect(setup).not.toHaveBeenCalled();
 
   const servicesOnly = await composeApi("worker", {

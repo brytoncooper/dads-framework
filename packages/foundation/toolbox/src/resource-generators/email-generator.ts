@@ -1,11 +1,7 @@
 import type { GenerationPlan } from "./generation-plan.js";
 import { camel, title } from "./names.js";
 
-export function addEmail(
-  plan: GenerationPlan,
-  domain: string,
-  name: string,
-): void {
+export function addEmail(plan: GenerationPlan, domain: string, name: string): void {
   const template = `${camel(name)}EmailTemplate`;
   const directory = `domains/${domain}/server/email`;
   plan.create(

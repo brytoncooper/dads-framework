@@ -22,9 +22,7 @@ function resolvingClient(result: unknown = { rows: [] }): TestClient {
   return { query: () => Promise.resolve(result) };
 }
 
-function isCallback(
-  value: unknown,
-): value is (...args: readonly unknown[]) => void {
+function isCallback(value: unknown): value is (...args: readonly unknown[]) => void {
   return typeof value === "function";
 }
 

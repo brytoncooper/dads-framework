@@ -124,13 +124,11 @@ describe("feature preview request pipeline", () => {
   it("does not carry a preview into work that runs after the request completes", async () => {
     const background = await runWithFeatureStatePreview(viewOnly, () => {
       expect(currentFeatureStatePreview()).toEqual(viewOnly);
-      const evaluateAfterRequest = new Promise<FeatureStatePreview | undefined>(
-        (resolve) => {
-          setImmediate(() => {
-            resolve(currentFeatureStatePreview());
-          });
-        },
-      );
+      const evaluateAfterRequest = new Promise<FeatureStatePreview | undefined>((resolve) => {
+        setImmediate(() => {
+          resolve(currentFeatureStatePreview());
+        });
+      });
       return Promise.resolve({ evaluateAfterRequest });
     });
     await expect(background.evaluateAfterRequest).resolves.toBeUndefined();

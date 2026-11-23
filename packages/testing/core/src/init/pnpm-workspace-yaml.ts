@@ -31,10 +31,7 @@ const topLevelKeyPattern = /^([A-Za-z0-9_.-]+):(.*)$/;
 const listItemPattern = /^-(?:\s+(.*))?$/;
 const aliasOrAnchorPattern = /^[*&]/;
 
-export function parsePnpmWorkspaceFile(
-  text: string,
-  filePath: string,
-): ParsedPnpmWorkspaceFile {
+export function parsePnpmWorkspaceFile(text: string, filePath: string): ParsedPnpmWorkspaceFile {
   const lines = text.split(/\r?\n/);
   const reader: WorkspaceFileReader = {
     packages: [],
@@ -45,11 +42,7 @@ export function parsePnpmWorkspaceFile(
   };
 
   for (const [index, line] of lines.entries()) {
-    readOneLine(
-      reader,
-      line,
-      () => new Error(unsupportedMessage(filePath, index + 1)),
-    );
+    readOneLine(reader, line, () => new Error(unsupportedMessage(filePath, index + 1)));
   }
 
   if (!reader.packagesSeen) {
@@ -63,11 +56,7 @@ function unsupportedMessage(filePath: string, line: number): string {
 }
 
 /** A tab, a blank, a comment, or the document marker; anything else carries content. */
-function readOneLine(
-  reader: WorkspaceFileReader,
-  line: string,
-  unsupported: UnsupportedYaml,
-): void {
+function readOneLine(reader: WorkspaceFileReader, line: string, unsupported: UnsupportedYaml): void {
   if (line.includes("\t")) throw unsupported();
   const trimmed = line.trim();
   if (trimmed.length === 0 || trimmed.startsWith("#")) return;
@@ -101,11 +90,7 @@ function readContentLine(
 }
 
 /** A list item belongs to `packages:`; under any other key it is skipped. */
-function readListItem(
-  reader: WorkspaceFileReader,
-  rawValue: string,
-  unsupported: UnsupportedYaml,
-): void {
+function readListItem(reader: WorkspaceFileReader, rawValue: string, unsupported: UnsupportedYaml): void {
   if (reader.mode === "ignored") return;
   if (reader.mode !== "packages") throw unsupported();
   reader.packages.push(readScalar(rawValue, unsupported));
@@ -115,11 +100,7 @@ function readListItem(
  * `packages:` either opens a block list or carries a flow list on the same
  * line, and may appear once. Every other key is recorded and its block skipped.
  */
-function readTopLevelKey(
-  reader: WorkspaceFileReader,
-  line: string,
-  unsupported: UnsupportedYaml,
-): void {
+function readTopLevelKey(reader: WorkspaceFileReader, line: string, unsupported: UnsupportedYaml): void {
   const keyed = topLevelKeyPattern.exec(line);
   if (keyed === null) throw unsupported();
   if (keyed[1] !== "packages") {
@@ -153,11 +134,7 @@ function readScalar(rawValue: string, unsupported: UnsupportedYaml): string {
 }
 
 /** A quoted scalar must close with its own quote and carry none of it inside. */
-function readQuotedScalar(
-  value: string,
-  quote: "'" | '"',
-  unsupported: UnsupportedYaml,
-): string {
+function readQuotedScalar(value: string, quote: "'" | '"', unsupported: UnsupportedYaml): string {
   if (value.length < 2 || !value.endsWith(quote)) throw unsupported();
   const inner = value.slice(1, -1);
   if (inner.includes(quote)) throw unsupported();
@@ -181,10 +158,7 @@ function readBareScalar(value: string, unsupported: UnsupportedYaml): string {
   return value;
 }
 
-function readFlowList(
-  rest: string,
-  unsupported: UnsupportedYaml,
-): readonly string[] {
+function readFlowList(rest: string, unsupported: UnsupportedYaml): readonly string[] {
   const body = stripFlowComment(rest);
   if (!body.startsWith("[") || !body.endsWith("]")) throw unsupported();
   const inner = body.slice(1, -1).trim();

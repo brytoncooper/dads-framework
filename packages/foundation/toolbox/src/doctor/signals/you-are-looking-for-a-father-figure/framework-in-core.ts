@@ -19,11 +19,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  readPackageGraph,
-  vendorImports,
-  type PackageImport,
-} from "../scanners/package-graph.js";
+import { readPackageGraph, vendorImports, type PackageImport } from "../scanners/package-graph.js";
 
 import { readSourceBindings } from "../scanners/source-bindings.js";
 
@@ -52,9 +48,7 @@ export function frameworkNamed(module: string): string | undefined {
   return FRAMEWORKS.get(module) ?? (scope ? FRAMEWORKS.get(scope) : undefined);
 }
 
-function frameworkImports(
-  imports: readonly PackageImport[],
-): ReadonlyMap<string, readonly PackageImport[]> {
+function frameworkImports(imports: readonly PackageImport[]): ReadonlyMap<string, readonly PackageImport[]> {
   const found = new Map<string, PackageImport[]>();
   for (const entry of imports) {
     const framework = frameworkNamed(entry.module ?? "");

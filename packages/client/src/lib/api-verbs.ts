@@ -34,9 +34,7 @@ export type ApiArgument<TSchema extends z.ZodType> = {
  * Narrower than {@link ApiArgument} because a query string can only be built
  * from a record of named values.
  */
-export type ApiQueryArgument<
-  TQuery extends z.ZodType<Record<string, unknown>>,
-> = {
+export type ApiQueryArgument<TQuery extends z.ZodType<Record<string, unknown>>> = {
   readonly schema: TQuery;
   readonly value: z.input<TQuery>;
 };
@@ -53,10 +51,7 @@ export type ApiPageWithMeta<TItem, TMeta extends PaginationMeta> = {
   readonly meta: TMeta;
 };
 
-export type BinaryRequest<
-  TBody extends z.ZodType,
-  TQuery extends z.ZodType<Record<string, unknown>>,
-> = {
+export type BinaryRequest<TBody extends z.ZodType, TQuery extends z.ZodType<Record<string, unknown>>> = {
   readonly route: BoundRoute;
   readonly body?: ApiArgument<TBody>;
   readonly query?: ApiQueryArgument<TQuery>;
@@ -65,10 +60,7 @@ export type BinaryRequest<
   readonly accept?: string;
 };
 
-type GetRequest<
-  TQuery extends z.ZodType<Record<string, unknown>>,
-  TData extends z.ZodType,
-> = {
+type GetRequest<TQuery extends z.ZodType<Record<string, unknown>>, TData extends z.ZodType> = {
   readonly route: BoundRoute<"GET">;
   readonly returns: TData;
   readonly query?: ApiQueryArgument<TQuery>;
@@ -108,10 +100,9 @@ type ResolvedRequestLocation = {
 /**
  * Read one resource: `GET path` unwrapped from its `{ data }` envelope.
  */
-export async function getFromApi<
-  TQuery extends z.ZodType<Record<string, unknown>>,
-  TData extends z.ZodType,
->(request: GetRequest<TQuery, TData>): Promise<z.output<TData>> {
+export async function getFromApi<TQuery extends z.ZodType<Record<string, unknown>>, TData extends z.ZodType>(
+  request: GetRequest<TQuery, TData>,
+): Promise<z.output<TData>> {
   const location = getRequestLocation(request);
   const response = await sendApiRequest({
     path: location.path,
@@ -131,10 +122,9 @@ export async function getFromApi<
  * part of the answer, not decoration — a caller that dropped it could not
  * render the next page.
  */
-export async function getPageFromApi<
-  TQuery extends z.ZodType<Record<string, unknown>>,
-  TItem extends z.ZodType,
->(request: GetRequest<TQuery, TItem>): Promise<ApiPage<z.output<TItem>>> {
+export async function getPageFromApi<TQuery extends z.ZodType<Record<string, unknown>>, TItem extends z.ZodType>(
+  request: GetRequest<TQuery, TItem>,
+): Promise<ApiPage<z.output<TItem>>> {
   const location = getRequestLocation(request);
   const response = await sendApiRequest({
     path: location.path,
@@ -173,9 +163,7 @@ export async function getPageWithMetaFromApi<
     signal: request.signal,
     headers: request.headers,
   });
-  const envelope = z
-    .object({ data: z.array(z.unknown()), meta: z.unknown() })
-    .parse(await response.json());
+  const envelope = z.object({ data: z.array(z.unknown()), meta: z.unknown() }).parse(await response.json());
   return {
     items: envelope.data.map((item) => request.returns.parse(item)),
     meta: request.meta.parse(envelope.meta),
@@ -194,9 +182,7 @@ export async function getPageWithMetaFromApi<
 export async function sendToApi<
   TBody extends z.ZodType,
   TData extends z.ZodType,
-  TQuery extends z.ZodType<Record<string, unknown>> = z.ZodType<
-    Record<string, unknown>
-  >,
+  TQuery extends z.ZodType<Record<string, unknown>> = z.ZodType<Record<string, unknown>>,
 >(request: SendRequest<TBody, TData, TQuery>): Promise<z.output<TData>> {
   const location = mutationRequestLocation(request);
   const response = await sendApiRequest({
@@ -235,10 +221,9 @@ export async function sendToApiWithoutResponse<TBody extends z.ZodType>(
 }
 
 /** Binary endpoints keep the transport's credentials, metadata, and error mapping. */
-export async function requestBinary<
-  TBody extends z.ZodType,
-  TQuery extends z.ZodType<Record<string, unknown>>,
->(request: BinaryRequest<TBody, TQuery>): Promise<Uint8Array> {
+export async function requestBinary<TBody extends z.ZodType, TQuery extends z.ZodType<Record<string, unknown>>>(
+  request: BinaryRequest<TBody, TQuery>,
+): Promise<Uint8Array> {
   const response = await sendApiRequest({
     path: apiPath(request.route.path),
     method: request.route.method,
@@ -251,15 +236,11 @@ export async function requestBinary<
   return new Uint8Array(await response.arrayBuffer());
 }
 
-function getRequestLocation(request: {
-  readonly route: BoundRoute<"GET">;
-}): ResolvedRequestLocation {
+function getRequestLocation(request: { readonly route: BoundRoute<"GET"> }): ResolvedRequestLocation {
   return { path: apiPath(request.route.path), method: request.route.method };
 }
 
-function mutationRequestLocation(request: {
-  readonly route: BoundRoute<MutationMethod>;
-}): ResolvedRequestLocation {
+function mutationRequestLocation(request: { readonly route: BoundRoute<MutationMethod> }): ResolvedRequestLocation {
   return { path: apiPath(request.route.path), method: request.route.method };
 }
 
@@ -278,10 +259,7 @@ const paginatedEnvelopeSchema = z.object({
   meta: paginationMetaSchema,
 });
 
-function unwrapData<TData extends z.ZodType>(
-  payload: unknown,
-  returns: TData,
-): z.output<TData> {
+function unwrapData<TData extends z.ZodType>(payload: unknown, returns: TData): z.output<TData> {
   return returns.parse(successEnvelopeSchema.parse(payload).data);
 }
 

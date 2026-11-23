@@ -1,9 +1,4 @@
-import type {
-  FastifyPluginCallback,
-  FastifyReply,
-  FastifyRequest,
-  HTTPMethods,
-} from "fastify";
+import type { FastifyPluginCallback, FastifyReply, FastifyRequest, HTTPMethods } from "fastify";
 
 import type { FetchHandler } from "@dads-framework/core/contract";
 
@@ -71,19 +66,11 @@ function pathOf(url: string): string {
 }
 
 /** Spends the caller's budget on a limited path: seconds to wait, or null when allowed. */
-function rateLimitedFor(
-  limits: readonly MountedRateLimit[],
-  request: FastifyRequest,
-): number | null {
+function rateLimitedFor(limits: readonly MountedRateLimit[], request: FastifyRequest): number | null {
   const path = pathOf(request.url);
-  const matched = limits.find(
-    ({ limit }) => limit.method === request.method && limit.path === path,
-  );
+  const matched = limits.find(({ limit }) => limit.method === request.method && limit.path === path);
   if (matched === undefined) return null;
-  const verdict = matched.limiter.consume(
-    `${matched.limit.method} ${matched.limit.path}`,
-    request.ip,
-  );
+  const verdict = matched.limiter.consume(`${matched.limit.method} ${matched.limit.path}`, request.ip);
   return verdict.allowed ? null : verdict.retryAfterSeconds;
 }
 
@@ -101,18 +88,10 @@ async function sendWebResponse(
   await reply.send(payload.length > 0 ? payload : undefined);
 }
 
-function appendSetCookies(
-  reply: FastifyReply,
-  extraSetCookies: readonly string[],
-): void {
+function appendSetCookies(reply: FastifyReply, extraSetCookies: readonly string[]): void {
   if (extraSetCookies.length === 0) return;
   const existing = reply.getHeader("set-cookie");
-  const current =
-    existing === undefined
-      ? []
-      : Array.isArray(existing)
-        ? existing.map(String)
-        : [String(existing)];
+  const current = existing === undefined ? [] : Array.isArray(existing) ? existing.map(String) : [String(existing)];
   void reply.header("set-cookie", [...current, ...extraSetCookies]);
 }
 
@@ -130,23 +109,14 @@ export function mountFetchHandler(
 ): FastifyPluginCallback {
   return (scope, _opts, done) => {
     scope.removeAllContentTypeParsers();
-    scope.addContentTypeParser(
-      "*",
-      { parseAs: "buffer" },
-      (_request, body, parserDone) => {
-        parserDone(null, body);
-      },
-    );
-    const rateLimits: MountedRateLimit[] = (options.rateLimits ?? []).map(
-      (limit) => ({
-        limit,
-        limiter: createRateLimiter({ perMinute: limit.perMinute }, Date.now),
-      }),
-    );
-    const handler = async (
-      request: FastifyRequest,
-      reply: FastifyReply,
-    ): Promise<void> => {
+    scope.addContentTypeParser("*", { parseAs: "buffer" }, (_request, body, parserDone) => {
+      parserDone(null, body);
+    });
+    const rateLimits: MountedRateLimit[] = (options.rateLimits ?? []).map((limit) => ({
+      limit,
+      limiter: createRateLimiter({ perMinute: limit.perMinute }, Date.now),
+    }));
+    const handler = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
       const retryAfterSeconds = rateLimitedFor(rateLimits, request);
       if (retryAfterSeconds !== null) {
         await reply
@@ -183,14 +153,10 @@ export function mountFetchHandler(
         }) ?? [];
       await sendWebResponse(reply, response, extraSetCookies);
     };
-    const bodyLimit =
-      options.bodyLimitBytes === undefined
-        ? {}
-        : { bodyLimit: options.bodyLimitBytes };
+    const bodyLimit = options.bodyLimitBytes === undefined ? {} : { bodyLimit: options.bodyLimitBytes };
     const urls = options.servePrefixRoot === true ? ["/", "/*"] : ["/*"];
     const method = [...(options.methods ?? ["GET", "POST"])];
-    const explicitHead =
-      options.methods === undefined ? {} : { exposeHeadRoute: false };
+    const explicitHead = options.methods === undefined ? {} : { exposeHeadRoute: false };
     for (const url of urls) {
       scope.route({ method, url, ...bodyLimit, ...explicitHead, handler });
     }

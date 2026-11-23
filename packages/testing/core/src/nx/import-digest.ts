@@ -33,9 +33,7 @@ export function sha256(value: string | Uint8Array): string {
 }
 
 /** Digests the workspace-level files that exist. */
-export async function digestInputs(
-  workspaceRoot: string,
-): Promise<readonly DigestedInput[]> {
+export async function digestInputs(workspaceRoot: string): Promise<readonly DigestedInput[]> {
   const entries: DigestedInput[] = [];
   for (const name of workspaceInputNames) {
     const digested = await digestOptionalFile(workspaceRoot, name);
@@ -62,16 +60,11 @@ export async function digestProjectInputs(
       if (digested) entries.set(relative, digested);
     }
   }
-  return [...entries.values()].sort((left, right) =>
-    left.path.localeCompare(right.path),
-  );
+  return [...entries.values()].sort((left, right) => left.path.localeCompare(right.path));
 }
 
 /** Digests one workspace-relative file, or `undefined` when it is absent. */
-async function digestOptionalFile(
-  workspaceRoot: string,
-  relativePath: string,
-): Promise<DigestedInput | undefined> {
+async function digestOptionalFile(workspaceRoot: string, relativePath: string): Promise<DigestedInput | undefined> {
   try {
     const contents = await fs.readFile(path.join(workspaceRoot, relativePath));
     return { path: relativePath, sha256: sha256(contents) };

@@ -9,11 +9,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  AnswerOnceAuthorization,
-  Authorization,
-  type SubjectRef,
-} from "@dads-framework/access/runtime";
+import { AnswerOnceAuthorization, Authorization, type SubjectRef } from "@dads-framework/access/runtime";
 import { FakeAuthorization } from "@dads-framework/access/testing";
 
 import { createHttpApp } from "../create-http-app.js";

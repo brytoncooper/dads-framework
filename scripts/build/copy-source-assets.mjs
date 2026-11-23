@@ -24,8 +24,7 @@ function copyAssets(sourceRoot, outputRoot, directory) {
   }
 }
 
-const packageDirectories =
-  process.argv.length > 2 ? process.argv.slice(2) : ["."];
+const packageDirectories = process.argv.length > 2 ? process.argv.slice(2) : ["."];
 for (const directory of packageDirectories) {
   const packageRoot = resolve(directory);
   const sourceRoot = join(packageRoot, "src");

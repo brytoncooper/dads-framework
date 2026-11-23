@@ -3,18 +3,8 @@ import { randomUUID } from "node:crypto";
 import type { ResolveMcpBearer } from "../../../index.js";
 import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
-import {
-  classifyMessage,
-  JSON_RPC_ERROR,
-  type JsonRpcAnswer,
-  jsonRpcError,
-  type JsonRpcRequest,
-} from "./json-rpc.js";
-import {
-  createMcpMethods,
-  type McpMethodsOptions,
-  SUPPORTED_PROTOCOL_VERSIONS,
-} from "./mcp-methods.js";
+import { classifyMessage, JSON_RPC_ERROR, type JsonRpcAnswer, jsonRpcError, type JsonRpcRequest } from "./json-rpc.js";
+import { createMcpMethods, type McpMethodsOptions, SUPPORTED_PROTOCOL_VERSIONS } from "./mcp-methods.js";
 
 /**
  * A remote MCP server as one fetch handler: the Streamable HTTP transport,
@@ -53,9 +43,7 @@ const ASSUMED_PROTOCOL_VERSION = "2025-03-26";
 export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
   const methods = createMcpMethods(options);
   const allowedOrigins = new Set(options.allowedOrigins.map(normalizeOrigin));
-  const scopes = [
-    ...new Set(options.toolSets.map((toolSet) => toolSet.scope)),
-  ].join(" ");
+  const scopes = [...new Set(options.toolSets.map((toolSet) => toolSet.scope))].join(" ");
   const challenge = (parameters: Readonly<Record<string, string>>): string =>
     bearerChallenge({
       resource_metadata: options.resourceMetadataUrl,
@@ -63,19 +51,14 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
       ...parameters,
     });
   const requestIdOf =
-    options.requestIdOf ??
-    ((request: Request) =>
-      request.headers.get(REQUEST_ID_HEADER) ?? randomUUID());
+    options.requestIdOf ?? ((request: Request) => request.headers.get(REQUEST_ID_HEADER) ?? randomUUID());
 
   async function handle(request: Request): Promise<Response> {
     const transportRefusal = refuseTransport(request, allowedOrigins);
     if (transportRefusal !== null) return transportRefusal;
 
     const authorization = request.headers.get("authorization") ?? undefined;
-    const grant =
-      authorization === undefined
-        ? null
-        : await options.resolveBearer(authorization);
+    const grant = authorization === undefined ? null : await options.resolveBearer(authorization);
     if (grant === null) return unauthorized(authorization);
 
     const headerRefusal = refuseHeaders(request);
@@ -89,9 +72,7 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
         subject: { type: "user", id: grant.userId },
         requestId: requestIdOf(request),
         ...(grant.clientId === undefined ? {} : { clientId: grant.clientId }),
-        ...(grant.clientName === undefined
-          ? {}
-          : { clientName: grant.clientName }),
+        ...(grant.clientName === undefined ? {} : { clientName: grant.clientName }),
       },
       scopes: grant.scopes,
     });
@@ -117,8 +98,7 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
             ? challenge({})
             : challenge({
                 error: "invalid_token",
-                error_description:
-                  "The access token is missing, expired, revoked, or its user can no longer sign in",
+                error_description: "The access token is missing, expired, revoked, or its user can no longer sign in",
               }),
       },
     });
@@ -133,20 +113,13 @@ export function createMcpEndpoint(options: McpEndpointOptions): McpEndpoint {
         requestId: requestIdOf(request),
         error,
       });
-      return failure(
-        500,
-        JSON_RPC_ERROR.internalError,
-        "The MCP endpoint failed unexpectedly",
-      );
+      return failure(500, JSON_RPC_ERROR.internalError, "The MCP endpoint failed unexpectedly");
     }
   };
 }
 
 /** The walls before the bearer: origin (the DNS-rebinding guard), then method. */
-function refuseTransport(
-  request: Request,
-  allowedOrigins: ReadonlySet<string>,
-): Response | null {
+function refuseTransport(request: Request, allowedOrigins: ReadonlySet<string>): Response | null {
   const origin = request.headers.get("origin");
   if (origin !== null && !allowedOrigins.has(normalizeOrigin(origin))) {
     return failure(403, JSON_RPC_ERROR.invalidRequest, "Origin not allowed");
@@ -161,8 +134,7 @@ function refuseTransport(
 
 /** The walls after the bearer and before the body: protocol version, content type. */
 function refuseHeaders(request: Request): Response | null {
-  const protocolVersion =
-    request.headers.get("mcp-protocol-version") ?? ASSUMED_PROTOCOL_VERSION;
+  const protocolVersion = request.headers.get("mcp-protocol-version") ?? ASSUMED_PROTOCOL_VERSION;
   if (!SUPPORTED_PROTOCOL_VERSIONS.includes(protocolVersion)) {
     return failure(
       400,
@@ -171,24 +143,16 @@ function refuseHeaders(request: Request): Response | null {
     );
   }
   if (!isJson(request.headers.get("content-type"))) {
-    return failure(
-      415,
-      JSON_RPC_ERROR.invalidRequest,
-      "Send the JSON-RPC message as application/json",
-    );
+    return failure(415, JSON_RPC_ERROR.invalidRequest, "Send the JSON-RPC message as application/json");
   }
   return null;
 }
 
 type ReadOutcome =
-  | Readonly<{ kind: "request"; request: JsonRpcRequest }>
-  | Readonly<{ kind: "respond"; response: Response }>;
+  Readonly<{ kind: "request"; request: JsonRpcRequest }> | Readonly<{ kind: "respond"; response: Response }>;
 
 /** The body wall: size, JSON, one message, a JSON-RPC request owed an answer. */
-async function readJsonRpcRequest(
-  request: Request,
-  maxRequestBytes: number,
-): Promise<ReadOutcome> {
+async function readJsonRpcRequest(request: Request, maxRequestBytes: number): Promise<ReadOutcome> {
   const respond = (response: Response): ReadOutcome => ({
     kind: "respond",
     response,
@@ -196,37 +160,23 @@ async function readJsonRpcRequest(
   const body = await request.text();
   if (Buffer.byteLength(body, "utf8") > maxRequestBytes) {
     return respond(
-      failure(
-        413,
-        JSON_RPC_ERROR.invalidRequest,
-        `The message is over this server's ${maxRequestBytes}-byte limit`,
-      ),
+      failure(413, JSON_RPC_ERROR.invalidRequest, `The message is over this server's ${maxRequestBytes}-byte limit`),
     );
   }
   const message = parseJson(body);
   if (message === PARSE_FAILED) {
-    return respond(
-      failure(400, JSON_RPC_ERROR.parseError, "The body is not JSON"),
-    );
+    return respond(failure(400, JSON_RPC_ERROR.parseError, "The body is not JSON"));
   }
   if (Array.isArray(message)) {
     return respond(
-      failure(
-        400,
-        JSON_RPC_ERROR.invalidRequest,
-        "JSON-RPC batches are not supported; send one message per request",
-      ),
+      failure(400, JSON_RPC_ERROR.invalidRequest, "JSON-RPC batches are not supported; send one message per request"),
     );
   }
 
   const inbound = classifyMessage(message);
   if (inbound.kind === "invalid") {
     return respond(
-      failure(
-        400,
-        JSON_RPC_ERROR.invalidRequest,
-        "The body is not a JSON-RPC 2.0 request, notification, or response",
-      ),
+      failure(400, JSON_RPC_ERROR.invalidRequest, "The body is not a JSON-RPC 2.0 request, notification, or response"),
     );
   }
   if (inbound.kind !== "request") {
@@ -263,9 +213,7 @@ function normalizeOrigin(origin: string): string {
 
 /** `Bearer key="value", …` — RFC 6750 §3, values quoted with `"` and `\` escaped. */
 function bearerChallenge(parameters: Readonly<Record<string, string>>): string {
-  const pairs = Object.entries(parameters).map(
-    ([key, value]) => `${key}="${value.replace(/["\\]/g, "\\$&")}"`,
-  );
+  const pairs = Object.entries(parameters).map(([key, value]) => `${key}="${value.replace(/["\\]/g, "\\$&")}"`);
   return `Bearer ${pairs.join(", ")}`;
 }
 
@@ -273,11 +221,7 @@ function failure(status: number, code: number, message: string): Response {
   return json(status, jsonRpcError(null, code, message));
 }
 
-function json(
-  status: number,
-  answer: JsonRpcAnswer,
-  headers: Readonly<Record<string, string>> = {},
-): Response {
+function json(status: number, answer: JsonRpcAnswer, headers: Readonly<Record<string, string>> = {}): Response {
   return new Response(JSON.stringify(answer), {
     status,
     headers: {

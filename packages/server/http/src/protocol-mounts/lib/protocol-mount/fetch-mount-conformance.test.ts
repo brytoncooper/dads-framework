@@ -13,9 +13,7 @@ it("satisfies the Fetch mount contract over a Fastify socket", async () => {
       return {
         exchange: (request) => {
           const url = new URL(request.url);
-          return fetch(
-            new Request(origin + url.pathname + url.search, request),
-          );
+          return fetch(new Request(origin + url.pathname + url.search, request));
         },
         close: () => app.close(),
       };

@@ -3,23 +3,9 @@
  * filtering a page it already holds.
  * @vitest-environment jsdom
  */
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ComboboxContent,
   ComboboxEmpty,
@@ -53,22 +39,14 @@ describe("RemoteCombobox", () => {
   it("loads page 1 for the typed query", async () => {
     const loadPage = vi.fn(({ query, page }: { query: string; page: number }) =>
       Promise.resolve({
-        items:
-          query === "soy"
-            ? [{ value: "SOY", label: "Soybeans" }]
-            : [{ value: "CORN", label: "Corn" }],
+        items: query === "soy" ? [{ value: "SOY", label: "Soybeans" }] : [{ value: "CORN", label: "Corn" }],
         hasMore: false,
         page,
       }),
     );
 
     render(
-      <RemoteCombobox
-        loadPage={loadPage}
-        value={null}
-        onValueChange={() => undefined}
-        debounceMs={10}
-      >
+      <RemoteCombobox loadPage={loadPage} value={null} onValueChange={() => undefined} debounceMs={10}>
         <ComboboxTrigger aria-label="Ingredient" size="default">
           <ComboboxValue placeholder="Choose" />
         </ComboboxTrigger>
@@ -89,9 +67,7 @@ describe("RemoteCombobox", () => {
     await waitFor(() => {
       expect(loadPage).toHaveBeenCalled();
     });
-    expect(loadPage).toHaveBeenCalledWith(
-      expect.objectContaining({ query: "", page: 1 }),
-    );
+    expect(loadPage).toHaveBeenCalledWith(expect.objectContaining({ query: "", page: 1 }));
 
     fireEvent.click(screen.getByRole("combobox", { name: "Ingredient" }));
     fireEvent.change(await screen.findByPlaceholderText("Search Ingredients"), {
@@ -99,13 +75,9 @@ describe("RemoteCombobox", () => {
     });
 
     await waitFor(() => {
-      expect(loadPage).toHaveBeenCalledWith(
-        expect.objectContaining({ query: "soy", page: 1 }),
-      );
+      expect(loadPage).toHaveBeenCalledWith(expect.objectContaining({ query: "soy", page: 1 }));
     });
-    expect(
-      await screen.findByRole("option", { name: "Soybeans" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("option", { name: "Soybeans" })).toBeDefined();
   });
 
   it("keeps the typed query after a multi-select pick so the next page stays on that term", async () => {
@@ -161,9 +133,7 @@ describe("RemoteCombobox", () => {
       target: { value: "soy" },
     });
     await waitFor(() => {
-      expect(loadPage).toHaveBeenCalledWith(
-        expect.objectContaining({ query: "soy", page: 1 }),
-      );
+      expect(loadPage).toHaveBeenCalledWith(expect.objectContaining({ query: "soy", page: 1 }));
     });
 
     fireEvent.click(await screen.findByRole("option", { name: "Soybeans" }));

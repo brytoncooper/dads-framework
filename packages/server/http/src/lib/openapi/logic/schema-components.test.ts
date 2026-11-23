@@ -16,22 +16,14 @@ describe("schemaComponents", () => {
       ]),
     );
     expect(components["Body"]).not.toHaveProperty("definitions");
-    expect(components["Body"]).toHaveProperty(
-      "properties.value.$ref",
-      "#/components/schemas/Body___schema0",
-    );
-    expect(components["Other"]).toHaveProperty(
-      "properties.value.$ref",
-      "#/components/schemas/Other___schema0",
-    );
+    expect(components["Body"]).toHaveProperty("properties.value.$ref", "#/components/schemas/Body___schema0");
+    expect(components["Other"]).toHaveProperty("properties.value.$ref", "#/components/schemas/Other___schema0");
     expect(JSON.stringify(components)).not.toContain("#/definitions/");
     expect(components["Body___schema0"]).toHaveProperty("anyOf");
   });
 
   it("keeps recursive references to the schema root inside its component", () => {
-    const components = schemaComponents(
-      new Map([["Json", { anyOf: [{ type: "array", items: { $ref: "#" } }] }]]),
-    );
+    const components = schemaComponents(new Map([["Json", { anyOf: [{ type: "array", items: { $ref: "#" } }] }]]));
     expect(components["Json"]).toEqual({
       anyOf: [{ type: "array", items: { $ref: "#/components/schemas/Json" } }],
     });

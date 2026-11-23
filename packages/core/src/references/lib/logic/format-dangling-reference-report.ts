@@ -3,10 +3,7 @@
  * where a reconciliation report either becomes actionable or becomes noise, so
  * it is testable without a database.
  */
-import type {
-  CrossDomainReference,
-  DanglingReferenceFinding,
-} from "../cross-domain-reference.js";
+import type { CrossDomainReference, DanglingReferenceFinding } from "../cross-domain-reference.js";
 
 /** The clean-run line, so "it ran and found nothing" is never silence. */
 export function formatCleanReport(checkedReferences: number): string {

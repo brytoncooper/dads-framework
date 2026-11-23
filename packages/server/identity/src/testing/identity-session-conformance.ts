@@ -11,17 +11,8 @@ export type IdentitySessionConformance = {
 };
 
 /** Apply the same session laws to a stand-in and a database-backed provider. */
-export async function verifyIdentitySessionConformance(
-  input: IdentitySessionConformance,
-): Promise<void> {
-  const {
-    identity,
-    origin,
-    activeCookie,
-    otherCookie,
-    expiredCookie,
-    account,
-  } = input;
+export async function verifyIdentitySessionConformance(input: IdentitySessionConformance): Promise<void> {
+  const { identity, origin, activeCookie, otherCookie, expiredCookie, account } = input;
   const active = new Headers({ cookie: activeCookie });
   const other = new Headers({ cookie: otherCookie });
   const expired = new Headers({ cookie: expiredCookie });
@@ -34,9 +25,7 @@ export async function verifyIdentitySessionConformance(
   assert.ok(current.expiresAt instanceof Date);
   assert.ok(await identity.readSession(other));
 
-  const projection = await identity.handle(
-    new Request(`${origin}/api/auth/get-session`, { headers: active }),
-  );
+  const projection = await identity.handle(new Request(`${origin}/api/auth/get-session`, { headers: active }));
   assert.equal(projection.status, 200);
   const body: unknown = await projection.json();
   assert.deepEqual(body, {

@@ -11,25 +11,13 @@ import { findWorkspace, paginate } from "./operation-coordinator.js";
 import { WorkbenchError } from "./workbench-error.js";
 
 /** The one membership row for a user in a workspace, if it exists. */
-function findMembership(
-  members: readonly Member[],
-  workspaceId: string,
-  userId: string,
-): Member | undefined {
-  return members.find(
-    (member) => member.workspaceId === workspaceId && member.userId === userId,
-  );
+function findMembership(members: readonly Member[], workspaceId: string, userId: string): Member | undefined {
+  return members.find((member) => member.workspaceId === workspaceId && member.userId === userId);
 }
 
 /** Every membership row except the revoked one. */
-function membershipsExcept(
-  members: readonly Member[],
-  workspaceId: string,
-  userId: string,
-): Member[] {
-  return members.filter(
-    (member) => member.workspaceId !== workspaceId || member.userId !== userId,
-  );
+function membershipsExcept(members: readonly Member[], workspaceId: string, userId: string): Member[] {
+  return members.filter((member) => member.workspaceId !== workspaceId || member.userId !== userId);
 }
 
 export function memberOperations(coordinator: OperationCoordinator) {
@@ -50,11 +38,7 @@ export function memberOperations(coordinator: OperationCoordinator) {
         if (visible.length === 0) return paginate([], query);
         return paginate(await store.listMembers(workspaceId, visible), query);
       }),
-    grantMember: (
-      subject: WorkbenchRequestSubject,
-      workspaceId: string,
-      userId: string,
-    ) =>
+    grantMember: (subject: WorkbenchRequestSubject, workspaceId: string, userId: string) =>
       coordinator.run(async () => {
         return coordinator.authorizedChange(
           subject,
@@ -76,51 +60,28 @@ export function memberOperations(coordinator: OperationCoordinator) {
                 id: userId,
               }),
             ]);
-            coordinator.activity(
-              state,
-              subject,
-              workspaceId,
-              userId,
-              "member.granted",
-            );
+            coordinator.activity(state, subject, workspaceId, userId, "member.granted");
             return member;
           },
         );
       }),
-    revokeMember: (
-      subject: WorkbenchRequestSubject,
-      workspaceId: string,
-      userId: string,
-    ) =>
+    revokeMember: (subject: WorkbenchRequestSubject, workspaceId: string, userId: string) =>
       coordinator.run(async () => {
         return coordinator.authorizedChange(
           subject,
           workbenchTarget(workbenchWorkspace.permissions.manage, workspaceId),
           (state) => {
             const workspace = findWorkspace(state, workspaceId);
-            if (workspace.ownerId === userId)
-              throw new WorkbenchError("CONFLICT");
-            const existing =
-              findMembership(state.members, workspaceId, userId) !== undefined;
-            state.members = membershipsExcept(
-              state.members,
-              workspaceId,
-              userId,
-            );
+            if (workspace.ownerId === userId) throw new WorkbenchError("CONFLICT");
+            const existing = findMembership(state.members, workspaceId, userId) !== undefined;
+            state.members = membershipsExcept(state.members, workspaceId, userId);
             coordinator.enqueue(state, "delete", [
               workbenchFact(workbenchWorkspace.roles.member, workspaceId, {
                 type: workbenchUser.wireName,
                 id: userId,
               }),
             ]);
-            if (existing)
-              coordinator.activity(
-                state,
-                subject,
-                workspaceId,
-                userId,
-                "member.revoked",
-              );
+            if (existing) coordinator.activity(state, subject, workspaceId, userId, "member.revoked");
             return undefined;
           },
         );

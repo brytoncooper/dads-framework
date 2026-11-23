@@ -84,13 +84,7 @@ describe("PdfPageCanvasContent", () => {
       destroy: mocks.destroy,
     }));
     const onError = vi.fn();
-    render(
-      <PdfPageCanvasContent
-        bytes={new Uint8Array([0])}
-        scale={1}
-        onError={onError}
-      />,
-    );
+    render(<PdfPageCanvasContent bytes={new Uint8Array([0])} scale={1} onError={onError} />);
     await waitFor(() => {
       expect(onError).toHaveBeenCalledOnce();
     });

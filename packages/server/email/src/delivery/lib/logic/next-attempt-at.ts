@@ -18,18 +18,11 @@ const MAX_BACKOFF_MS = 600_000;
  * `attempt` is the 1-based number of the attempt that just failed — the value
  * the claim already incremented on the row.
  */
-export function nextAttemptAt(
-  attempt: number,
-  now: Date,
-  maxAttempts: number = MAX_DELIVERY_ATTEMPTS,
-): Date | null {
+export function nextAttemptAt(attempt: number, now: Date, maxAttempts: number = MAX_DELIVERY_ATTEMPTS): Date | null {
   if (!Number.isInteger(attempt) || attempt < 1) {
     throw new Error(`attempt must be a positive integer, got ${attempt}`);
   }
   if (attempt >= maxAttempts) return null;
-  const waitMs = Math.min(
-    FIRST_BACKOFF_MS * 2 ** (attempt - 1),
-    MAX_BACKOFF_MS,
-  );
+  const waitMs = Math.min(FIRST_BACKOFF_MS * 2 ** (attempt - 1), MAX_BACKOFF_MS);
   return new Date(now.getTime() + waitMs);
 }

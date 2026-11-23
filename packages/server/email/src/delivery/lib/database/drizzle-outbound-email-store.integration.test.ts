@@ -13,19 +13,12 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 
 import type { EmailEnvelope } from "../email-envelope.js";
 import type { OutboundEmailId } from "../outbound-email-status.js";
 import { seedQueuedEmailWithDocuments } from "../testing/queued-email.seeder.js";
-import {
-  DrizzleOutboundEmailStore,
-  STALE_CLAIM_ERROR,
-} from "./drizzle-outbound-email-store.js";
+import { DrizzleOutboundEmailStore, STALE_CLAIM_ERROR } from "./drizzle-outbound-email-store.js";
 import { outboundEmailDocument } from "./generated-tables/outbound-email-documents.tables.js";
 import { outboundEmail } from "./generated-tables/outbound-emails.tables.js";
 
@@ -55,9 +48,7 @@ describe("DrizzleOutboundEmailStore (integration)", () => {
     await truncateTables(postgres.pool, ["outbound_emails"]);
   });
 
-  async function enqueueDue(
-    overrides: { sendAt?: Date; dedupeKey?: string } = {},
-  ): Promise<OutboundEmailId> {
+  async function enqueueDue(overrides: { sendAt?: Date; dedupeKey?: string } = {}): Promise<OutboundEmailId> {
     const { id } = await store.insert({
       templateName: "email-templates.component-showcase",
       props: { recipientName: "Dana Reyes" },
@@ -69,10 +60,7 @@ describe("DrizzleOutboundEmailStore (integration)", () => {
   }
 
   async function readRow(id: OutboundEmailId) {
-    const rows = await db
-      .select()
-      .from(outboundEmail)
-      .where(eq(outboundEmail.id, id));
+    const rows = await db.select().from(outboundEmail).where(eq(outboundEmail.id, id));
     return rows[0];
   }
 
@@ -112,10 +100,9 @@ describe("DrizzleOutboundEmailStore (integration)", () => {
     });
     expect(await readRow(queued.id)).toMatchObject({ attachmentCount: 1 });
     await expect(
-      postgres.pool.query(
-        "UPDATE outbound_email_documents SET attachments = '[]' WHERE outbound_email_id = $1",
-        [queued.id],
-      ),
+      postgres.pool.query("UPDATE outbound_email_documents SET attachments = '[]' WHERE outbound_email_id = $1", [
+        queued.id,
+      ]),
     ).rejects.toMatchObject({ code: "42501" });
   });
 
@@ -132,9 +119,7 @@ describe("DrizzleOutboundEmailStore (integration)", () => {
       document: { attachments: [attachment] },
     });
 
-    expect(
-      await store.claimForSending(seeded.document.outboundEmailId, NOW),
-    ).toMatchObject({
+    expect(await store.claimForSending(seeded.document.outboundEmailId, NOW)).toMatchObject({
       attachments: [attachment],
       failurePolicy: "manual-review",
     });
@@ -247,9 +232,7 @@ describe("DrizzleOutboundEmailStore (integration)", () => {
     await store.claimForSending(stale, NOW);
     await store.claimForSending(fresh, LATER);
 
-    const failed = await store.failStaleClaims(
-      new Date("2026-09-11T12:15:00.000Z"),
-    );
+    const failed = await store.failStaleClaims(new Date("2026-09-11T12:15:00.000Z"));
 
     expect(failed).toEqual([stale]);
     expect(await readRow(stale)).toMatchObject({

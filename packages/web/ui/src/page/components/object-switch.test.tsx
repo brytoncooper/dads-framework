@@ -50,20 +50,14 @@ describe("ObjectSwitch", () => {
     expect(orders.className).toContain("text-link");
 
     fireEvent.click(screen.getByRole("button", { name: "Releases" }));
-    expect(
-      screen.getByRole("button", { name: "Releases", pressed: true }),
-    ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Orders", pressed: false }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Releases", pressed: true })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Orders", pressed: false })).toBeDefined();
   });
 
   it("offers the choice from a title dropdown on phones", () => {
     const { container } = render(<OrdersHeader />);
 
-    const title = container.querySelector<HTMLElement>(
-      '[data-slot="object-switch-title"]',
-    );
+    const title = container.querySelector<HTMLElement>('[data-slot="object-switch-title"]');
     expect(title?.className).toContain("md:hidden");
     expect(title?.getAttribute("aria-haspopup")).toBe("menu");
     expect(title?.textContent).toBe("Orders");
@@ -84,8 +78,6 @@ describe("ObjectSwitch", () => {
   it("leaves a header without a switch as a plain visible heading", () => {
     render(<ListPageHeader title="Tickets" />);
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Tickets" }).className,
-    ).not.toContain("sr-only");
+    expect(screen.getByRole("heading", { level: 1, name: "Tickets" }).className).not.toContain("sr-only");
   });
 });

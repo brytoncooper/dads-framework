@@ -7,8 +7,7 @@ export type EnglishChromeCaseViolation = {
   readonly phrase: string;
 };
 
-const BUTTON_OR_TITLE =
-  /(^|\.)(action|affordance|button)(\.|$)|(?:^|\.)title$/i;
+const BUTTON_OR_TITLE = /(^|\.)(action|affordance|button)(\.|$)|(?:^|\.)title$/i;
 const SENTENCE_CASE_KEY = /error|failure|refusal|refused|tooMany/i;
 const PLACEHOLDER = /\{\w+\}/g;
 const WORD = /[\p{L}\p{N}][\p{L}\p{N}'’/-]*/gu;
@@ -113,9 +112,7 @@ function followsEnglishTitleCase(phrase: string): boolean {
  * labels, columns, headings, generic `.label` keys, errors, refusals, and
  * explanatory prose stay outside the rule.
  */
-export function checkEnglishChromeCase(
-  merged: MergedCopy,
-): EnglishChromeCaseViolation[] {
+export function checkEnglishChromeCase(merged: MergedCopy): EnglishChromeCaseViolation[] {
   const violations: EnglishChromeCaseViolation[] = [];
 
   for (const [key, entry] of merged) {

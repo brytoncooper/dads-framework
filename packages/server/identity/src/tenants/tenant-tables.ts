@@ -1,11 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import {
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import type { TenantId, TenantRole } from "./tenant-access.js";
 
@@ -43,8 +37,5 @@ export const tenantInvitation = pgTable("tenant_invitation", {
 });
 
 export function tenantMembershipKey(tenantId: TenantId, accountId: string) {
-  return and(
-    eq(tenantMembership.tenantId, tenantId),
-    eq(tenantMembership.accountId, accountId),
-  );
+  return and(eq(tenantMembership.tenantId, tenantId), eq(tenantMembership.accountId, accountId));
 }

@@ -42,9 +42,7 @@ it("projects only explicitly selected runtime surfaces and still disposes setup"
     expect(http.routes).toEqual([{ path: "/notices" }]);
     expectTypeOf(http.jobs).toEqualTypeOf<readonly never[]>();
     expect(http.jobs).toEqual([]);
-    expectTypeOf(worker.jobs).toEqualTypeOf<
-      readonly { name: string; priority: number }[]
-    >();
+    expectTypeOf(worker.jobs).toEqualTypeOf<readonly { name: string; priority: number }[]>();
     expect(worker.routes).toEqual([]);
     expect(worker.jobs).toEqual([{ name: "cleanup", priority: 1 }]);
   } finally {
@@ -63,7 +61,5 @@ it("names the API when two selected plugins implement the same service", () => {
       routes: [],
       jobs: [],
     }),
-  ).toThrow(
-    "API customer: service clock is implemented by both first and second",
-  );
+  ).toThrow("API customer: service clock is implemented by both first and second");
 });

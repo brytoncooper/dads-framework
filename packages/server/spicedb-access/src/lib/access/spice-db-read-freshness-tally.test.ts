@@ -10,10 +10,7 @@
 import { v1 } from "@authzed/authzed-node";
 import { describe, expect, it } from "vitest";
 
-import {
-  answeringEachQuestionOnce,
-  countAuthorizationReadFreshness,
-} from "@dads-framework/core/runtime/request-work";
+import { answeringEachQuestionOnce, countAuthorizationReadFreshness } from "@dads-framework/core/runtime/request-work";
 import { measureRequestWork } from "@dads-framework/core/runtime/request-work/testing";
 
 import { AnswerOnceAuthorization } from "@dads-framework/access/runtime";
@@ -21,18 +18,14 @@ import { relationshipWrite } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 import { TalliedAuthorization } from "./tallied-authorization.js";
 
-type SpiceDbClient = NonNullable<
-  ConstructorParameters<typeof SpiceDbAuthorization>[1]
->;
+type SpiceDbClient = NonNullable<ConstructorParameters<typeof SpiceDbAuthorization>[1]>;
 
 const SUBJECT = { type: "user", id: "reader" };
 const RESOURCE = { type: "test/document", id: "document" };
 const QUESTION = { subject: SUBJECT, resource: RESOURCE, permission: "view" };
 const OTHER = { ...QUESTION, permission: "edit" };
 
-function productionChain(
-  consistency: "minimize-latency" | "fully-consistent" = "minimize-latency",
-) {
+function productionChain(consistency: "minimize-latency" | "fully-consistent" = "minimize-latency") {
   const unavailable = (): never => {
     throw new Error("Unexpected call in read freshness proof");
   };
@@ -72,9 +65,7 @@ function productionChain(
 }
 
 /** One request: a check, a repeat, a bulk check with a repeat, a lookup. */
-async function askEverything(
-  authorization: AnswerOnceAuthorization,
-): Promise<void> {
+async function askEverything(authorization: AnswerOnceAuthorization): Promise<void> {
   await answeringEachQuestionOnce(async () => {
     await authorization.check(QUESTION);
     await authorization.check(QUESTION);
@@ -89,9 +80,7 @@ async function askEverything(
 
 describe("cached versus fully consistent read tally", () => {
   it("tallies every read fully consistent before the adapter has written", async () => {
-    const tally = await measureRequestWork(() =>
-      askEverything(productionChain()),
-    );
+    const tally = await measureRequestWork(() => askEverything(productionChain()));
     // check, the bulk batch holding only OTHER, and the lookup.
     expect(tally).toMatchObject({
       authzCheckCount: 3,
@@ -102,9 +91,7 @@ describe("cached versus fully consistent read tally", () => {
 
   it("tallies every read cached once the adapter holds a trusted token", async () => {
     const authorization = productionChain();
-    await authorization.writeRelationships([
-      relationshipWrite(RESOURCE, "viewer", SUBJECT),
-    ]);
+    await authorization.writeRelationships([relationshipWrite(RESOURCE, "viewer", SUBJECT)]);
     const tally = await measureRequestWork(() => askEverything(authorization));
     expect(tally).toMatchObject({
       authzCheckCount: 3,
@@ -115,9 +102,7 @@ describe("cached versus fully consistent read tally", () => {
 
   it("tallies every read fully consistent under SPICEDB_CONSISTENCY=fully-consistent", async () => {
     const authorization = productionChain("fully-consistent");
-    await authorization.writeRelationships([
-      relationshipWrite(RESOURCE, "viewer", SUBJECT),
-    ]);
+    await authorization.writeRelationships([relationshipWrite(RESOURCE, "viewer", SUBJECT)]);
     const tally = await measureRequestWork(() => askEverything(authorization));
     expect(tally).toMatchObject({
       authzCheckCount: 3,

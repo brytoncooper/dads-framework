@@ -15,12 +15,7 @@ export async function withDnsTxtRecord<Result>(
   const answer = encodeAnswer(value);
   const socket = createSocket("udp4");
   socket.on("message", (query, remote) => {
-    if (
-      !query
-        .subarray(headerBytes, headerBytes + question.length)
-        .equals(question)
-    )
-      return;
+    if (!query.subarray(headerBytes, headerBytes + question.length).equals(question)) return;
     const header = Buffer.alloc(headerBytes);
     query.copy(header, 0, 0, 2); // Transaction ID.
     header.writeUInt16BE(0x8180, 2); // Successful response to a recursive query.
@@ -58,9 +53,7 @@ function listen(socket: Socket): Promise<void> {
 function encodeQuestion(name: string): Buffer {
   const labels = name.split(".").map((label) => Buffer.from(label, "ascii"));
   return Buffer.concat([
-    ...labels.map((label) =>
-      Buffer.concat([Buffer.from([label.length]), label]),
-    ),
+    ...labels.map((label) => Buffer.concat([Buffer.from([label.length]), label])),
     Buffer.from([0]),
     txtIn,
   ]);
@@ -68,8 +61,7 @@ function encodeQuestion(name: string): Buffer {
 
 function encodeAnswer(text: string): Buffer {
   const value = Buffer.from(text, "utf8");
-  if (value.length > 255)
-    throw new Error("The fixture TXT record is too long.");
+  if (value.length > 255) throw new Error("The fixture TXT record is too long.");
   const data = Buffer.concat([Buffer.from([value.length]), value]);
   const length = Buffer.alloc(2);
   length.writeUInt16BE(data.length);

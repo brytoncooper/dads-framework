@@ -8,10 +8,7 @@ import { readLinearPath } from "./compile-linear-check.js";
 import { compileLinearBatchBranch } from "./compile-linear-batch.js";
 import { compileSharedPointCheck } from "./compile-shared-point-check.js";
 import { compileReversePermission } from "./compile-reverse-policy.js";
-import {
-  analyzePermissionCycles,
-  type PermissionCyclePlan,
-} from "./permission-cycles.js";
+import { analyzePermissionCycles, type PermissionCyclePlan } from "./permission-cycles.js";
 import {
   compileForwardPermission,
   countRecursiveClauses,
@@ -19,20 +16,10 @@ import {
   type ForwardContext,
   type SqlReference,
 } from "./compile-forward-policy.js";
-import {
-  permissionIdentity,
-  QueryBuilder,
-  splitIdentity,
-  subjectReachability,
-} from "./policy-sql.js";
+import { permissionIdentity, QueryBuilder, splitIdentity, subjectReachability } from "./policy-sql.js";
 
 export type CompiledAuthorizationQuery = PostgresQuery & {
-  readonly kind:
-    | "check"
-    | "check-many"
-    | "lookup"
-    | "subject-lookup"
-    | "candidate-predicate";
+  readonly kind: "check" | "check-many" | "lookup" | "subject-lookup" | "candidate-predicate";
 };
 
 export type PostgresAuthorizationCandidateBinding = {
@@ -41,11 +28,10 @@ export type PostgresAuthorizationCandidateBinding = {
 };
 
 /** Fixed outer binding used only by named integration adapters. */
-export const POSTGRES_AUTHORIZATION_CANDIDATE_BINDING: PostgresAuthorizationCandidateBinding =
-  Object.freeze({
-    tableAlias: "dad_authorization_candidate",
-    resourceIdColumn: "resource_id",
-  });
+export const POSTGRES_AUTHORIZATION_CANDIDATE_BINDING: PostgresAuthorizationCandidateBinding = Object.freeze({
+  tableAlias: "dad_authorization_candidate",
+  resourceIdColumn: "resource_id",
+});
 
 /** Compiles one permission decision into a parameterized Postgres Boolean query. */
 export function compilePostgresCheck(
@@ -64,15 +50,8 @@ export function compilePostgresCheck(
     id: builder.value(request.resource.id),
     entity: request.resource.type,
   };
-  const expression = compileForwardPermission(
-    context,
-    resource,
-    request.permission,
-  );
-  if (
-    Buffer.byteLength(expression) > 16 * 1024 ||
-    countRecursiveClauses(expression) > 6
-  )
+  const expression = compileForwardPermission(context, resource, request.permission);
+  if (Buffer.byteLength(expression) > 16 * 1024 || countRecursiveClauses(expression) > 6)
     return compileSharedPointCheck(model, namespace, request);
   return Object.freeze({
     kind: "check",
@@ -105,22 +84,10 @@ export function compilePostgresCheckMany(
   const shared: string[] = [];
   const joins: string[] = [];
   const identities = [
-    ...new Set(
-      requests.map((request) =>
-        permissionIdentity(request.resource.type, request.permission),
-      ),
-    ),
+    ...new Set(requests.map((request) => permissionIdentity(request.resource.type, request.permission))),
   ];
   const branches = identities.map((identity) =>
-    compileBatchBranch(
-      model,
-      cycles,
-      builder,
-      namespaceSql,
-      identity,
-      shared,
-      joins,
-    ),
+    compileBatchBranch(model, cycles, builder, namespaceSql, identity, shared, joins),
   );
   const joinSql = joins.length === 0 ? "" : ` ${joins.join(" ")}`;
   const text = `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (${inputRows})${shared.map((query) => `, ${query}`).join("")} SELECT i.ordinal AS ordinal, CASE ${branches.join(" ")} ELSE false END AS allowed FROM input i${joinSql} ORDER BY i.ordinal`;
@@ -160,10 +127,7 @@ function shouldUseSharedBatchBranch(
     { type: "i.resource_kind", id: "i.resource_id", entity: resourceType },
     permission,
   );
-  return (
-    Buffer.byteLength(probeSql) > 16 * 1024 ||
-    countRecursiveClauses(probeSql) > 6
-  );
+  return Buffer.byteLength(probeSql) > 16 * 1024 || countRecursiveClauses(probeSql) > 6;
 }
 
 function compileBatchBranch(
@@ -176,15 +140,7 @@ function compileBatchBranch(
   joins: string[],
 ): string {
   const [resourceType, permission] = splitIdentity(identity);
-  if (
-    shouldUseSharedBatchBranch(
-      model,
-      cycles,
-      namespaceSql,
-      resourceType,
-      permission,
-    )
-  ) {
+  if (shouldUseSharedBatchBranch(model, cycles, namespaceSql, resourceType, permission)) {
     const branch = compileLinearBatchBranch(model, builder, {
       namespace: namespaceSql,
       resourceType,

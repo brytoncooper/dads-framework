@@ -19,12 +19,7 @@ export type ResolvedAccessDefinition = {
 };
 
 export type AccessMigrationKind =
-  | "rename-relation"
-  | "rename-permission"
-  | "rename-type"
-  | "backfill"
-  | "drop-relation"
-  | "custom";
+  "rename-relation" | "rename-permission" | "rename-type" | "backfill" | "drop-relation" | "custom";
 
 export type AccessMigrationMeta = {
   readonly id: string;
@@ -47,16 +42,11 @@ export type AccessModel = {
 
 export type FinalizeAccessModelOptions = {
   readonly bindings?: readonly ScopeBindings[];
-  readonly allowLookupResourcesOn?: readonly (
-    { readonly wireName: string } | string
-  )[];
+  readonly allowLookupResourcesOn?: readonly ({ readonly wireName: string } | string)[];
   readonly migrations?: readonly AccessMigrationMeta[];
 };
 
-function validateBindings(
-  bindings: readonly ScopeBindings[],
-  wireNames: ReadonlySet<string>,
-): void {
+function validateBindings(bindings: readonly ScopeBindings[], wireNames: ReadonlySet<string>): void {
   const seen = new Set<string>();
   for (const binding of bindings) {
     const name = binding.entity.wireName;
@@ -79,9 +69,7 @@ function normalizeLookupAllowlist(
   for (const entry of entries) {
     const name = typeof entry === "string" ? entry : entry.wireName;
     if (!wireNames.has(name)) {
-      throw new Error(
-        `allowLookupResourcesOn names missing access definition ${name}`,
-      );
+      throw new Error(`allowLookupResourcesOn names missing access definition ${name}`);
     }
     if (!seen.has(name)) {
       seen.add(name);
@@ -112,8 +100,6 @@ export function finalizeAccessModel(
     definitions,
     bindings: [...bindings],
     ...(allowlist === undefined ? {} : { lookupResourceAllowlist: allowlist }),
-    ...(options?.migrations === undefined
-      ? {}
-      : { migrations: [...options.migrations] }),
+    ...(options?.migrations === undefined ? {} : { migrations: [...options.migrations] }),
   };
 }

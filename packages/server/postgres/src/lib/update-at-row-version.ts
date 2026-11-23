@@ -1,15 +1,9 @@
 import { and, eq, sql, type SQL } from "drizzle-orm";
-import type {
-  AnyPgColumn,
-  PgTable,
-  PgUpdateSetSource,
-} from "drizzle-orm/pg-core";
+import type { AnyPgColumn, PgTable, PgUpdateSetSource } from "drizzle-orm/pg-core";
 
 import type { DrizzleHandle } from "../drizzle.js";
 
-type RowVersionTransaction = Parameters<
-  Parameters<DrizzleHandle["transaction"]>[0]
->[0];
+type RowVersionTransaction = Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
 type RowVersionColumn = {
   readonly rowVersion: AnyPgColumn<{
     data: number;

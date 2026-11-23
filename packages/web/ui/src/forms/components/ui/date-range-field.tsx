@@ -47,10 +47,7 @@ function DateRangeField({
     "min-w-0 flex-1 bg-transparent text-base text-foreground outline-none disabled:cursor-not-allowed md:text-sm [&::-webkit-calendar-picker-indicator]:ml-1";
 
   return (
-    <div
-      data-slot="date-range-field"
-      className={cn("flex min-w-0 flex-col gap-2", className)}
-    >
+    <div data-slot="date-range-field" className={cn("flex min-w-0 flex-col gap-2", className)}>
       <Label id={labelId} htmlFor={startId}>
         {label}
       </Label>
@@ -79,10 +76,7 @@ function DateRangeField({
           onChange={(event) => {
             onChange({ ...value, start: event.target.value });
           }}
-          className={cn(
-            day,
-            "max-sm:[&::-webkit-calendar-picker-indicator]:hidden",
-          )}
+          className={cn(day, "max-sm:[&::-webkit-calendar-picker-indicator]:hidden")}
         />
         <span aria-hidden="true" className="shrink-0 text-sm text-foreground">
           {separator}

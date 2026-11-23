@@ -12,11 +12,7 @@ export const notesPlugin = definePlugin({
   setup: ({ use }) => {
     const services = use(starterServices);
     return {
-      routes: [
-        ...notesRoutes(services),
-        ...noteAttachmentRoutes(services),
-        ...noteExportRoutes(services),
-      ],
+      routes: [...notesRoutes(services), ...noteAttachmentRoutes(services), ...noteExportRoutes(services)],
     };
   },
 });

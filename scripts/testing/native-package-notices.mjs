@@ -5,32 +5,20 @@ import { join } from "node:path";
 
 const cargoNotice = "third-party/dad-test/THIRD_PARTY_NOTICES.txt";
 const rustNotice = "RUST_STANDARD_LIBRARY_NOTICES.html";
-export const nativeNoticeFiles = [
-  "LICENSE.md",
-  "THIRD_PARTY_NOTICES.txt",
-  rustNotice,
-];
+export const nativeNoticeFiles = ["LICENSE.md", "THIRD_PARTY_NOTICES.txt", rustNotice];
 
 export function assertNativeNoticeLock(root) {
-  const expected = readFileSync(
-    join(root, "third-party/dad-test/Cargo.lock.sha256"),
-    "utf8",
-  ).trim();
+  const expected = readFileSync(join(root, "third-party/dad-test/Cargo.lock.sha256"), "utf8").trim();
   const actual = createHash("sha256")
-    .update(
-      readFileSync(join(root, "Cargo.lock"), "utf8").replace(/\r\n/g, "\n"),
-    )
+    .update(readFileSync(join(root, "Cargo.lock"), "utf8").replace(/\r\n/g, "\n"))
     .digest("hex");
   if (actual !== expected) {
-    throw new Error(
-      "Review and update the dad-test crate notices for the current Cargo.lock.",
-    );
+    throw new Error("Review and update the dad-test crate notices for the current Cargo.lock.");
   }
 }
 
 export function stageNativePackageNotices(root, packageRoot) {
-  for (const [name, source] of nativeNoticeSources(root))
-    copyFileSync(source, join(packageRoot, name));
+  for (const [name, source] of nativeNoticeSources(root)) copyFileSync(source, join(packageRoot, name));
 }
 
 export function verifyNativePackageNotices(root, packageRoot) {
@@ -45,20 +33,13 @@ function nativeNoticeSources(root) {
     cwd: root,
     encoding: "utf8",
   }).trim();
-  const rustSource = join(
-    rustSysroot,
-    "share",
-    "doc",
-    "rust",
-    "COPYRIGHT-library.html",
-  );
+  const rustSource = join(rustSysroot, "share", "doc", "rust", "COPYRIGHT-library.html");
   try {
     readFileSync(rustSource);
   } catch (error) {
-    throw new Error(
-      "Install the rust-docs component of the pinned toolchain before preparing a native package.",
-      { cause: error },
-    );
+    throw new Error("Install the rust-docs component of the pinned toolchain before preparing a native package.", {
+      cause: error,
+    });
   }
   return [
     ["LICENSE.md", join(root, "LICENSE.md")],

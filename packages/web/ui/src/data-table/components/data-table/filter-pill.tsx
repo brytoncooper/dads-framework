@@ -3,18 +3,8 @@ import * as React from "react";
 
 import { useLocaleFormatting } from "../../../copy/index.js";
 import { cn } from "../../../elements/index.js";
-import {
-  Checkbox,
-  Input,
-  Label,
-  RadioGroup,
-  RadioGroupItem,
-} from "../../../forms/index.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../overlays/index.js";
+import { Checkbox, Input, Label, RadioGroup, RadioGroupItem } from "../../../forms/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import {
@@ -49,9 +39,7 @@ export function FilterPill({
   const t = useDataTableCopy();
   const [term, setTerm] = React.useState("");
   const { formatList, humanTextIncludes } = useLocaleFormatting();
-  const shown = searchable
-    ? optionsMatchingSearch({ options, selected }, term, humanTextIncludes)
-    : options;
+  const shown = searchable ? optionsMatchingSearch({ options, selected }, term, humanTextIncludes) : options;
   const labels = selectedFilterLabels({ options, selected });
   const isSet = labels.length > 0;
   const group = { options, selected, multiple };
@@ -90,14 +78,7 @@ export function FilterPill({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-1">
-        {searchable && (
-          <FilterPillSearch
-            label={label}
-            term={term}
-            setTerm={setTerm}
-            hasOptions={shown.length > 0}
-          />
-        )}
+        {searchable && <FilterPillSearch label={label} term={term} setTerm={setTerm} hasOptions={shown.length > 0} />}
         {multiple ? (
           <FilterPillCheckboxList
             label={label}
@@ -131,11 +112,7 @@ function FilterPillCheckboxList({
 }) {
   const idPrefix = React.useId();
   return (
-    <div
-      role="group"
-      aria-label={label}
-      className="flex max-h-72 flex-col overflow-y-auto"
-    >
+    <div role="group" aria-label={label} className="flex max-h-72 flex-col overflow-y-auto">
       {options.map((option) => {
         const id = `${idPrefix}-${option.value}`;
         return (
@@ -165,10 +142,7 @@ function FilterPillRadioList({
   selected,
   defaultValue,
   onSelectedChange,
-}: Pick<
-  FilterGroup,
-  "label" | "options" | "selected" | "defaultValue" | "onSelectedChange"
->) {
+}: Pick<FilterGroup, "label" | "options" | "selected" | "defaultValue" | "onSelectedChange">) {
   const idPrefix = React.useId();
   return (
     <RadioGroup
@@ -222,11 +196,7 @@ function FilterPillSearch({
         aria-label={searchLabel}
         className="mb-1 h-8"
       />
-      {!hasOptions && (
-        <p className="px-2 py-1.5 text-muted-foreground text-sm">
-          {t("dataTable.state.noOptions")}
-        </p>
-      )}
+      {!hasOptions && <p className="px-2 py-1.5 text-muted-foreground text-sm">{t("dataTable.state.noOptions")}</p>}
     </>
   );
 }

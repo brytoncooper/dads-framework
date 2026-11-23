@@ -30,9 +30,7 @@ describe("breadcrumb visual hierarchy", () => {
     const ancestor = screen.getByRole("link", { name: "Products" });
     const currentPage = screen.getByText("Premium Mix");
 
-    expect(
-      screen.getByRole("navigation", { name: "Breadcrumb" }),
-    ).toBeDefined();
+    expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toBeDefined();
     expect(currentPage.getAttribute("aria-current")).toBe("page");
     expect(currentPage.getAttribute("role")).toBeNull();
     expect(ancestor.className).toContain("text-link");

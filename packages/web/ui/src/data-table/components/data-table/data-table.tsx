@@ -5,10 +5,7 @@ import { Button, cn } from "../../../elements/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { useIsPhoneWidth } from "../../hooks/use-is-phone-width.js";
-import {
-  clearClearableColumnFilters,
-  hasClearableColumnFilters,
-} from "../../lib/clearable-column-filters.js";
+import { clearClearableColumnFilters, hasClearableColumnFilters } from "../../lib/clearable-column-filters.js";
 import { type DataTableRowGroupOf } from "../../lib/row-groups.js";
 import { DataTableCardList } from "./data-table-card-list.js";
 import { DataTableHiddenColumnsNote } from "./data-table-hidden-columns-note.js";
@@ -75,19 +72,9 @@ export function DataTable<TData>({
   const isPhoneWidth = useIsPhoneWidth();
   const hasRows = table.getRowModel().rows.length > 0;
   const visibleRowGrouping = rowGroupOf ? { rowGroupOf } : {};
-  const emptyState = (
-    <DataTableEmptyState
-      table={table}
-      emptyMessage={emptyMessage}
-      onClearFilters={onClearFilters}
-    />
-  );
+  const emptyState = <DataTableEmptyState table={table} emptyMessage={emptyMessage} onClearFilters={onClearFilters} />;
   return (
-    <div
-      {...props}
-      data-slot="data-table"
-      className={cn("relative flex min-w-0 w-full flex-col gap-2.5", className)}
-    >
+    <div {...props} data-slot="data-table" className={cn("relative flex min-w-0 w-full flex-col gap-2.5", className)}>
       {isUpdating && <DataTableUpdateStatus />}
       {children}
       {isPhoneWidth ? null : <DataTableHiddenColumnsNote table={table} />}
@@ -96,9 +83,7 @@ export function DataTable<TData>({
           {hasRows ? (
             <DataTableCardList table={table} {...visibleRowGrouping} />
           ) : (
-            <div className="flex h-24 items-center justify-center rounded-md border bg-card p-3">
-              {emptyState}
-            </div>
+            <div className="flex h-24 items-center justify-center rounded-md border bg-card p-3">{emptyState}</div>
           )}
         </div>
       ) : (
@@ -112,10 +97,7 @@ export function DataTable<TData>({
         />
       )}
       <div className="flex flex-col gap-2.5">
-        <DataTablePagination
-          table={table}
-          withSelectionStatus={withSelectionStatus}
-        />
+        <DataTablePagination table={table} withSelectionStatus={withSelectionStatus} />
         {renderSelectionActionBar(table, actionBar)}
       </div>
     </div>
@@ -131,10 +113,7 @@ function DataTableUpdateStatus() {
       aria-live="polite"
       className="pointer-events-none absolute inset-x-0 top-0 z-40 h-0.5 overflow-hidden rounded-full bg-primary/15"
     >
-      <div
-        aria-hidden="true"
-        className="h-full w-full animate-pulse bg-primary motion-reduce:animate-none"
-      />
+      <div aria-hidden="true" className="h-full w-full animate-pulse bg-primary motion-reduce:animate-none" />
       <span className="sr-only">{t("dataTable.state.updating")}</span>
     </div>
   );
@@ -150,17 +129,11 @@ function DataTableEmptyState<TData>({
   readonly onClearFilters: (() => void) | undefined;
 }) {
   const t = useDataTableCopy();
-  const offersClearFilters =
-    onClearFilters !== undefined || hasClearableColumnFilters(table);
+  const offersClearFilters = onClearFilters !== undefined || hasClearableColumnFilters(table);
   return (
     <div className="flex items-center justify-center gap-1.5">
       <span className="text-muted-foreground">
-        {emptyMessage ??
-          t(
-            offersClearFilters
-              ? "dataTable.state.noResults"
-              : "dataTable.state.emptyView",
-          )}
+        {emptyMessage ?? t(offersClearFilters ? "dataTable.state.noResults" : "dataTable.state.emptyView")}
       </span>
       {offersClearFilters && (
         <Button
@@ -179,13 +152,6 @@ function DataTableEmptyState<TData>({
   );
 }
 
-function renderSelectionActionBar<TData>(
-  table: TanstackTable<TData>,
-  actionBar: React.ReactNode,
-): React.ReactNode {
-  return (
-    actionBar &&
-    table.getFilteredSelectedRowModel().rows.length > 0 &&
-    actionBar
-  );
+function renderSelectionActionBar<TData>(table: TanstackTable<TData>, actionBar: React.ReactNode): React.ReactNode {
+  return actionBar && table.getFilteredSelectedRowModel().rows.length > 0 && actionBar;
 }

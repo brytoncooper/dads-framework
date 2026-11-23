@@ -34,8 +34,7 @@ export type EffectiveFeatureState = z.infer<typeof effectiveFeatureStateSchema>;
 export const publicFeatureStateSchema = z
   .strictObject({
     features: z.array(featureFlagSlugSchema).meta({
-      description:
-        "Public-list flags that are on for everyone; an omitted slug is off or not public",
+      description: "Public-list flags that are on for everyone; an omitted slug is off or not public",
     }),
   })
   .readonly();

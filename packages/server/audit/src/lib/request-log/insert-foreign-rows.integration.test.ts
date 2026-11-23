@@ -21,16 +21,11 @@ import {
 import { clientDiagnosticEventIdSchema } from "../client-diagnostics/client-diagnostic-event.ids.js";
 import { clientDiagnosticEvents } from "../database/generated-tables/client-diagnostic-events.tables.js";
 import { requestLog } from "../database/generated-tables/request-log.tables.js";
-import {
-  insertForeignClientFaults,
-  insertForeignRequestRows,
-} from "./insert-foreign-rows.js";
+import { insertForeignClientFaults, insertForeignRequestRows } from "./insert-foreign-rows.js";
 
 const REQUEST_ID = requestIdSchema.parse("site-request-1");
 
-function requestRow(
-  overrides: Partial<typeof requestLog.$inferInsert> = {},
-): typeof requestLog.$inferInsert {
+function requestRow(overrides: Partial<typeof requestLog.$inferInsert> = {}): typeof requestLog.$inferInsert {
   return {
     requestId: REQUEST_ID,
     recordedAt: new Date("2026-09-11T00:00:00.000Z"),
@@ -117,10 +112,7 @@ describe("insertForeignRequestRows / insertForeignClientFaults", () => {
   it("stores a site request row with its source and import marker", async () => {
     const inserted = await insertForeignRequestRows(db, [requestRow()]);
 
-    const stored = await db
-      .select()
-      .from(requestLog)
-      .where(eq(requestLog.requestId, REQUEST_ID));
+    const stored = await db.select().from(requestLog).where(eq(requestLog.requestId, REQUEST_ID));
     expect(inserted).toBe(1);
     expect(stored.map((row) => row.instanceId)).toEqual(["remote:site-1"]);
     expect(stored.map((row) => row.imported)).toEqual([true]);
@@ -140,10 +132,7 @@ describe("insertForeignRequestRows / insertForeignClientFaults", () => {
 
     const inserted = await insertForeignClientFaults(db, [row]);
 
-    const stored = await db
-      .select()
-      .from(clientDiagnosticEvents)
-      .where(eq(clientDiagnosticEvents.id, row.id));
+    const stored = await db.select().from(clientDiagnosticEvents).where(eq(clientDiagnosticEvents.id, row.id));
     expect(inserted).toBe(1);
     expect(stored.map((fault) => fault.client)).toEqual(["remote:site-1:web"]);
   });

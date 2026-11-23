@@ -1,8 +1,4 @@
-import {
-  grantable,
-  type GrantableDirectSubject,
-  type GrantableRole,
-} from "../../catalog.js";
+import { grantable, type GrantableDirectSubject, type GrantableRole } from "../../catalog.js";
 import { actor, resource } from "../../index.js";
 
 const user = actor("user");
@@ -40,9 +36,7 @@ const DEFAULT_GRANTABLE: Parameters<typeof grantable>[0] = {
 };
 
 /** Minimal grantable for kit unit tests that are not about catalog metadata. */
-export function testGrantable(
-  overrides: TestGrantableOverrides = {},
-): GrantableRole {
+export function testGrantable(overrides: TestGrantableOverrides = {}): GrantableRole {
   return grantable({
     ...DEFAULT_GRANTABLE,
     ...overrides,

@@ -1,9 +1,7 @@
 /** Resolve the configured OTLP HTTP trace URL without the SDK's implicit default. */
 export function otlpTraceEndpoint(env: NodeJS.ProcessEnv): string | undefined {
-  if (env["OTEL_SDK_DISABLED"]?.trim().toLowerCase() === "true")
-    return undefined;
-  if (env["OTEL_TRACES_EXPORTER"]?.trim().toLowerCase() === "none")
-    return undefined;
+  if (env["OTEL_SDK_DISABLED"]?.trim().toLowerCase() === "true") return undefined;
+  if (env["OTEL_TRACES_EXPORTER"]?.trim().toLowerCase() === "none") return undefined;
 
   const traces = env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]?.trim();
   const base = env["OTEL_EXPORTER_OTLP_ENDPOINT"]?.trim();

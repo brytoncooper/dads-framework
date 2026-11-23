@@ -1,11 +1,7 @@
 import type { z } from "zod";
 
 import type { ScopeAnswer, SubjectRef } from "@dads-framework/access/runtime";
-import type {
-  HttpMethod,
-  Locale,
-  RouteContract,
-} from "@dads-framework/core/contract";
+import type { HttpMethod, Locale, RouteContract } from "@dads-framework/core/contract";
 
 import { HttpWiringError } from "../http-errors.js";
 import type { FeatureStateSnapshot } from "../request-pipeline/feature-state.js";
@@ -18,18 +14,14 @@ export type { HttpMethod } from "@dads-framework/core/contract";
  * `:param` names extracted from a path template at the type level, so a
  * `params` schema that doesn't match the path fails to compile.
  */
-export type PathParamNames<Path extends string> =
-  Path extends `${string}:${infer Param}/${infer Rest}`
-    ? Param | PathParamNames<`/${Rest}`>
-    : Path extends `${string}:${infer Param}`
-      ? Param
-      : never;
+export type PathParamNames<Path extends string> = Path extends `${string}:${infer Param}/${infer Rest}`
+  ? Param | PathParamNames<`/${Rest}`>
+  : Path extends `${string}:${infer Param}`
+    ? Param
+    : never;
 
 /** The object shape a `params` schema must produce for a given path. */
-export type PathParamsShape<Path extends string> = Record<
-  PathParamNames<Path>,
-  string
->;
+export type PathParamsShape<Path extends string> = Record<PathParamNames<Path>, string>;
 
 /**
  * Minimal structural logger (pino-compatible). Handlers never see Fastify —
@@ -93,10 +85,7 @@ export type RouteHandlerContext<Params, Query, Body, Subject> = {
 export type NamedRouteHandler<Context, Result> = (context: Context) => Result;
 
 /** A named route handler whose implementation completes asynchronously. */
-export type AsyncNamedRouteHandler<Context, Result> = NamedRouteHandler<
-  Context,
-  Promise<Result>
->;
+export type AsyncNamedRouteHandler<Context, Result> = NamedRouteHandler<Context, Promise<Result>>;
 
 export type SchemaOutput<S> = S extends z.ZodType ? z.output<S> : undefined;
 
@@ -212,9 +201,7 @@ export type ErasedVerbConfig = {
   readonly params?: z.ZodType;
   readonly query?: z.ZodType;
   readonly body?: z.ZodType;
-  handler(
-    ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>,
-  ): unknown;
+  handler(ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>): unknown;
 };
 
 /** Erased no-content verb input — same rationale as ErasedVerbConfig. */
@@ -228,9 +215,7 @@ export type ErasedNoContentVerbConfig = {
   readonly access: RouteAccess;
   readonly params?: z.ZodType;
   readonly body?: z.ZodType;
-  handler(
-    ctx: RouteHandlerContext<unknown, undefined, unknown, SubjectRef>,
-  ): Promise<void> | void;
+  handler(ctx: RouteHandlerContext<unknown, undefined, unknown, SubjectRef>): Promise<void> | void;
 };
 
 /** A route card path is literal and mount-relative, never a computed URL string. */
@@ -252,11 +237,10 @@ export type VerbRouteSource<Method extends HttpMethod, Path extends string> =
     };
 
 /** Shared fields every verb declares. */
-export type VerbCommon<
-  Method extends HttpMethod,
-  Path extends string,
-  Access extends RouteAccess,
-> = VerbRouteSource<Method, Path> & {
+export type VerbCommon<Method extends HttpMethod, Path extends string, Access extends RouteAccess> = VerbRouteSource<
+  Method,
+  Path
+> & {
   /** OpenAPI operation summary. */
   readonly summary: string;
   /** Maximum request body bytes for this route; omitted retains the application limit. */
@@ -278,9 +262,7 @@ export function resolveVerbRoute(
   const hasRoute = config.route !== undefined;
   const hasPath = config.path !== undefined;
   if (hasRoute === hasPath) {
-    throw new HttpWiringError(
-      `${expectedMethod} helper requires exactly one of route or path`,
-    );
+    throw new HttpWiringError(`${expectedMethod} helper requires exactly one of route or path`);
   }
 
   if (config.route !== undefined) {
@@ -297,14 +279,10 @@ export function resolveVerbRoute(
   }
 
   if (config.path === undefined) {
-    throw new HttpWiringError(
-      `${expectedMethod} helper requires a literal path when no route is provided`,
-    );
+    throw new HttpWiringError(`${expectedMethod} helper requires a literal path when no route is provided`);
   }
   if (!config.path.startsWith("/") || config.path.startsWith("//")) {
-    throw new HttpWiringError(
-      `${expectedMethod} helper received a path that is not mount-relative`,
-    );
+    throw new HttpWiringError(`${expectedMethod} helper received a path that is not mount-relative`);
   }
 
   return {
@@ -315,9 +293,8 @@ export function resolveVerbRoute(
 }
 
 /** Path params are required exactly when the path template has `:params`. */
-export type VerbParams<
-  Path extends string,
-  ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined,
-> = [PathParamNames<Path>] extends [never]
+export type VerbParams<Path extends string, ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined> = [
+  PathParamNames<Path>,
+] extends [never]
   ? { readonly params?: undefined }
   : { readonly params: ParamsSchema };

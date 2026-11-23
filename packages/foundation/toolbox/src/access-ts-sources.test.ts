@@ -1,13 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,14 +11,7 @@ import { renderAccessTree } from "./access-tree.js";
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const dadExecutable = join(testDirectory, "..", "bin", "dad.js");
-const repoNodeModules = resolve(
-  testDirectory,
-  "..",
-  "..",
-  "..",
-  "..",
-  "node_modules",
-);
+const repoNodeModules = resolve(testDirectory, "..", "..", "..", "..", "node_modules");
 
 const COMPILED_BEFORE_TS = `import { actor, compileAccess, resource } from "@dads-framework/access";
 
@@ -152,11 +137,7 @@ describe("TypeScript access source loading and dad access tree", () => {
     const workspace = createWorkspace();
     writeFileSync(join(workspace, "compiled.ts"), COMPILED_BEFORE_TS, "utf8");
     writeFileSync(join(workspace, "uncompiled.ts"), UNCOMPILED_DSL_TS, "utf8");
-    writeFileSync(
-      join(workspace, "default.mts"),
-      DEFAULT_EXPORT_MODEL_TS,
-      "utf8",
-    );
+    writeFileSync(join(workspace, "default.mts"), DEFAULT_EXPORT_MODEL_TS, "utf8");
 
     const compiled = await renderAccessTree({
       inputPath: "compiled.ts",
@@ -179,10 +160,7 @@ describe("TypeScript access source loading and dad access tree", () => {
 
     const defaultLoaded = await loadAccessSource("default.mts", workspace);
     expect(defaultLoaded.kind).toBe("module");
-    expect(defaultLoaded.definitions.map((def) => def.wireName)).toEqual([
-      "user",
-      "workspace",
-    ]);
+    expect(defaultLoaded.definitions.map((def) => def.wireName)).toEqual(["user", "workspace"]);
   });
 
   it("renders a TypeScript access file via dad access tree CLI (plain and JSON)", () => {
@@ -197,12 +175,7 @@ describe("TypeScript access source loading and dad access tree", () => {
     expect(plain.stdout).toContain("organization");
     expect(plain.stdout).toContain("document");
 
-    const jsonRun = runDad(workspace, [
-      "access",
-      "tree",
-      "access.ts",
-      "--json",
-    ]);
+    const jsonRun = runDad(workspace, ["access", "tree", "access.ts", "--json"]);
     expect(jsonRun.status).toBe(0);
     expect(jsonRun.stderr).toBe("");
     const parsed = parseJsonRecord(jsonRun.stdout);
@@ -219,16 +192,12 @@ describe("TypeScript access source loading and dad access tree", () => {
 
     writeFileSync(filePath, COMPILED_BEFORE_TS, "utf8");
     const first = await loadAccessSource("evolving.ts", workspace);
-    const firstDoc = first.definitions.find(
-      (def) => def.wireName === "document",
-    );
+    const firstDoc = first.definitions.find((def) => def.wireName === "document");
     expect(firstDoc?.roles.map((role) => role.name)).toContain("editor");
 
     writeFileSync(filePath, COMPILED_AFTER_TS, "utf8");
     const second = await loadAccessSource("evolving.ts", workspace);
-    const secondDoc = second.definitions.find(
-      (def) => def.wireName === "document",
-    );
+    const secondDoc = second.definitions.find((def) => def.wireName === "document");
     expect(secondDoc?.roles.map((role) => role.name)).toContain("writer");
     expect(secondDoc?.roles.map((role) => role.name)).not.toContain("editor");
   });
@@ -263,13 +232,7 @@ describe("dad access diff and migrate on TypeScript files", () => {
       role: "writer",
     });
 
-    const cliJson = runDad(workspace, [
-      "access",
-      "diff",
-      "before.ts",
-      "after.ts",
-      "--json",
-    ]);
+    const cliJson = runDad(workspace, ["access", "diff", "before.ts", "after.ts", "--json"]);
     expect(cliJson.status).toBe(0);
     expect(cliJson.stderr).toBe("");
     const parsed = parseJsonRecord(cliJson.stdout);
@@ -282,13 +245,7 @@ describe("dad access diff and migrate on TypeScript files", () => {
     const workspace = createWorkspace();
     writeFileSync(join(workspace, "schema.zed"), ROUNDTRIP_ZED, "utf8");
 
-    const imported = runDad(workspace, [
-      "access",
-      "import",
-      "schema.zed",
-      "--out",
-      "imported.ts",
-    ]);
+    const imported = runDad(workspace, ["access", "import", "schema.zed", "--out", "imported.ts"]);
     expect(imported.status).toBe(0);
     expect(imported.stderr).toBe("");
 
@@ -297,13 +254,7 @@ describe("dad access diff and migrate on TypeScript files", () => {
     expect(tree.stdout).toContain("workspace");
     expect(tree.stdout).toContain("document");
 
-    const diff = runDad(workspace, [
-      "access",
-      "diff",
-      "schema.zed",
-      "imported.ts",
-      "--json",
-    ]);
+    const diff = runDad(workspace, ["access", "diff", "schema.zed", "imported.ts", "--json"]);
     expect(diff.status).toBe(0);
     expect(diff.stderr).toBe("");
     const payload = parseJsonRecord(diff.stdout);
@@ -329,9 +280,7 @@ describe("dad access diff and migrate on TypeScript files", () => {
     expect(preview.id).toBe("0001_rename_editor_ts");
     expect(preview.requiresMigration).toBe(true);
     expect(preview.written).toBe(false);
-    expect(preview.code).toContain(
-      'ops.dropRole({ resource: "document", role: "editor" })',
-    );
+    expect(preview.code).toContain('ops.dropRole({ resource: "document", role: "editor" })');
 
     const cliRun = runDad(workspace, [
       "access",
@@ -346,25 +295,17 @@ describe("dad access diff and migrate on TypeScript files", () => {
     ]);
     expect(cliRun.status).toBe(0);
     expect(cliRun.stderr).toBe("");
-    expect(cliRun.stdout).toContain(
-      "Scaffolded migration 0001_rename_editor_ts",
-    );
+    expect(cliRun.stdout).toContain("Scaffolded migration 0001_rename_editor_ts");
     expect(cliRun.stdout).toContain("requiresMigration: true");
 
-    const generatedPath = join(
-      workspace,
-      "migrations",
-      "0001_rename_editor_ts.ts",
-    );
+    const generatedPath = join(workspace, "migrations", "0001_rename_editor_ts.ts");
     expect(existsSync(generatedPath)).toBe(true);
     const content = readFileSync(generatedPath, "utf8");
     expect(content).toContain("defineAccessMigration(");
     expect(content).toContain(
       '// ops.copyRole({ resource: "document", role: "editor" }, { resource: "document", role: "viewer" })',
     );
-    expect(content).toContain(
-      'ops.dropRole({ resource: "document", role: "editor" })',
-    );
+    expect(content).toContain('ops.dropRole({ resource: "document", role: "editor" })');
   });
 
   it("reports actionable errors for missing .ts files, bad extensions, and empty modules", () => {
@@ -382,9 +323,7 @@ describe("dad access diff and migrate on TypeScript files", () => {
 
     const emptyExports = runDad(workspace, ["access", "tree", "empty.ts"]);
     expect(emptyExports.status).toBe(1);
-    expect(emptyExports.stderr).toContain(
-      "No access model or DSL definitions found",
-    );
+    expect(emptyExports.stderr).toContain("No access model or DSL definitions found");
   });
 });
 
@@ -395,11 +334,7 @@ type DadRun = {
 };
 
 function runDad(cwd: string, commandArguments: readonly string[]): DadRun {
-  const completed = spawnSync(
-    process.execPath,
-    [dadExecutable, ...commandArguments],
-    { cwd, encoding: "utf8" },
-  );
+  const completed = spawnSync(process.execPath, [dadExecutable, ...commandArguments], { cwd, encoding: "utf8" });
   if (completed.error) throw completed.error;
   return {
     status: completed.status,
@@ -409,9 +344,7 @@ function runDad(cwd: string, commandArguments: readonly string[]): DadRun {
 }
 
 function createWorkspace(): string {
-  const workspace = realpathSync(
-    mkdtempSync(join(tmpdir(), "dads-access-ts-")),
-  );
+  const workspace = realpathSync(mkdtempSync(join(tmpdir(), "dads-access-ts-")));
   symlinkSync(repoNodeModules, join(workspace, "node_modules"), "dir");
   temporaryDirs.push(workspace);
   return workspace;

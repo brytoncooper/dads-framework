@@ -7,16 +7,9 @@ import type { ReactNode } from "react";
 import { Button, type buttonVariants, cn } from "../../../elements/index.js";
 
 import { useOverlaysCopy } from "../../copy/overlays-copy.js";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./dropdown-menu.js";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu.js";
 
-type ButtonVariant = NonNullable<
-  VariantProps<typeof buttonVariants>["variant"]
->;
+type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
 
 /** Text-bearing Button sizes; the caret takes the matching square icon size. */
 type SplitButtonSize = "default" | "xs" | "sm" | "lg";
@@ -29,11 +22,7 @@ const CARET_SIZE = {
 } as const satisfies Record<SplitButtonSize, string>;
 
 /** Filled variants have no border of their own, so the seam needs a divider. */
-const FILLED_VARIANTS: readonly ButtonVariant[] = [
-  "default",
-  "destructive",
-  "secondary",
-];
+const FILLED_VARIANTS: readonly ButtonVariant[] = ["default", "destructive", "secondary"];
 
 export type SplitButtonItem = {
   /** Stable React key for the row. */
@@ -77,10 +66,7 @@ export function SplitButton({
   const t = useOverlaysCopy();
   const filled = FILLED_VARIANTS.includes(variant);
   return (
-    <div
-      data-slot="split-button"
-      className={cn("inline-flex items-stretch", className)}
-    >
+    <div data-slot="split-button" className={cn("inline-flex items-stretch", className)}>
       <Button
         type="button"
         variant={variant}
@@ -99,10 +85,7 @@ export function SplitButton({
             size={CARET_SIZE[size]}
             disabled={disabled}
             aria-label={menuLabel ?? t("overlays.splitButton.moreActions")}
-            className={cn(
-              "rounded-l-none",
-              filled ? "border-l border-l-background/40" : "-ml-px",
-            )}
+            className={cn("rounded-l-none", filled ? "border-l border-l-background/40" : "-ml-px")}
           >
             <ChevronDown aria-hidden="true" />
           </Button>

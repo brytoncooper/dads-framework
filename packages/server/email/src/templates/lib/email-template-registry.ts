@@ -6,10 +6,7 @@ import {
   type AnyEmailTemplateDefinition,
   type EmailTemplateDefinition,
 } from "./email-template.js";
-import {
-  renderEmailTemplate,
-  type RenderedEmail,
-} from "./render-email-template.js";
+import { renderEmailTemplate, type RenderedEmail } from "./render-email-template.js";
 
 /**
  * The collection of declared email templates. The composition root builds it at
@@ -81,9 +78,7 @@ export class EmailTemplateRegistry {
 
   /** Every registered template, sorted by name for a stable gallery. */
   list(): readonly RegisteredEmailTemplate[] {
-    return [...this.templates.values()].sort((first, second) =>
-      first.name.localeCompare(second.name),
-    );
+    return [...this.templates.values()].sort((first, second) => first.name.localeCompare(second.name));
   }
 }
 
@@ -97,9 +92,7 @@ export function createEmailTemplateRegistry(
   return registry;
 }
 
-function assertUsableName(
-  definition: EmailTemplateDefinition<z.ZodType>,
-): void {
+function assertUsableName(definition: EmailTemplateDefinition<z.ZodType>): void {
   if (!EMAIL_TEMPLATE_NAME_PATTERN.test(definition.name)) {
     throw new Error(
       `Email template name "${definition.name}" is not <domain>.<kebab-name> — e.g. "identity.account-invitation"`,
@@ -107,9 +100,7 @@ function assertUsableName(
   }
 }
 
-function assertUsableDescription(
-  definition: EmailTemplateDefinition<z.ZodType>,
-): void {
+function assertUsableDescription(definition: EmailTemplateDefinition<z.ZodType>): void {
   const length = definition.description.trim().length;
   if (length < EMAIL_TEMPLATE_DESCRIPTION_MIN_LENGTH) {
     throw new Error(
@@ -138,9 +129,7 @@ function assertObjectProps(
  * Every sample is parsed here, so "the props changed and the sample did not"
  * is a boot failure with the field named, not a broken preview page.
  */
-function assertSamplesParse(
-  definition: EmailTemplateDefinition<z.ZodType>,
-): void {
+function assertSamplesParse(definition: EmailTemplateDefinition<z.ZodType>): void {
   const sampleNames = Object.keys(definition.samples);
   if (sampleNames.length === 0) {
     throw new Error(

@@ -25,19 +25,9 @@ type SectionNavItemProps = React.ComponentProps<"button"> & {
  * never in doubt. The strip fades at its trailing edge while more sections
  * lie beyond it, and brings the current section to its middle.
  */
-export function SectionNav({
-  label,
-  className,
-  children,
-  ...props
-}: SectionNavProps) {
+export function SectionNav({ label, className, children, ...props }: SectionNavProps) {
   return (
-    <nav
-      {...props}
-      aria-label={label}
-      data-slot="section-nav"
-      className={cn("min-w-0", className)}
-    >
+    <nav {...props} aria-label={label} data-slot="section-nav" className={cn("min-w-0", className)}>
       <ul
         className={cn(
           "flex overflow-x-auto border-b border-border [scrollbar-width:none] max-md:[mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] max-md:pr-10",
@@ -51,12 +41,7 @@ export function SectionNav({
 }
 
 /** One section. A button by default; `asChild` for a feature-owned link. */
-export function SectionNavItem({
-  asChild = false,
-  current,
-  className,
-  ...props
-}: SectionNavItemProps) {
+export function SectionNavItem({ asChild = false, current, className, ...props }: SectionNavItemProps) {
   const Comp = asChild ? Slot.Root : "button";
 
   return (
@@ -70,8 +55,7 @@ export function SectionNavItem({
           "-mb-px flex min-h-11 items-center justify-between gap-3 border-b-2 border-transparent px-3 text-left text-sm whitespace-nowrap text-foreground outline-none transition-colors motion-reduce:transition-none",
           "hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
           "md:mb-0 md:-ml-px md:min-h-9 md:w-full md:rounded-r-md md:border-b-0 md:border-l-2 md:py-2",
-          current &&
-            "border-primary font-semibold text-foreground md:bg-primary/10 md:hover:bg-primary/10",
+          current && "border-primary font-semibold text-foreground md:bg-primary/10 md:hover:bg-primary/10",
           className,
         )}
       />
@@ -80,18 +64,12 @@ export function SectionNavItem({
 }
 
 /** How many things a section holds, set quietly after its name. */
-export function SectionNavCount({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
+export function SectionNavCount({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       {...props}
       data-slot="section-nav-count"
-      className={cn(
-        "text-xs font-normal text-foreground tabular-nums",
-        className,
-      )}
+      className={cn("text-xs font-normal text-foreground tabular-nums", className)}
     />
   );
 }
@@ -104,8 +82,5 @@ export function SectionNavCount({
 function centreInStrip(item: HTMLLIElement | null): void {
   const strip = item?.parentElement;
   if (!item || !strip) return;
-  strip.scrollLeft =
-    item.offsetLeft -
-    strip.offsetLeft -
-    (strip.clientWidth - item.clientWidth) / 2;
+  strip.scrollLeft = item.offsetLeft - strip.offsetLeft - (strip.clientWidth - item.clientWidth) / 2;
 }

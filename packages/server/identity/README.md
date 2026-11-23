@@ -22,10 +22,7 @@ Save as `read-session.mts` and run `npx tsx read-session.mts`.
 
 ```ts
 import type { Identity } from "@dads-framework/identity";
-import {
-  inMemoryIdentity,
-  inMemoryIdentityCookie,
-} from "@dads-framework/identity/testing";
+import { inMemoryIdentity, inMemoryIdentityCookie } from "@dads-framework/identity/testing";
 
 async function currentAccount(identity: Identity, headers: Headers) {
   const session = await identity.readSession(headers);
@@ -92,15 +89,9 @@ its Fetch handler at the configured SCIM URL. This example assumes the
 application supplies a `ScimDirectory` and a bearer credential lookup.
 
 ```ts
-import {
-  createScimHandler,
-  type ScimDirectory,
-} from "@dads-framework/identity/scim";
+import { createScimHandler, type ScimDirectory } from "@dads-framework/identity/scim";
 
-export function provisioning(
-  directory: ScimDirectory,
-  tenantForCredential: (token: string) => Promise<string | null>,
-) {
+export function provisioning(directory: ScimDirectory, tenantForCredential: (token: string) => Promise<string | null>) {
   return createScimHandler({
     baseUrl: "https://example.com/scim/v2",
     authenticate: tenantForCredential,

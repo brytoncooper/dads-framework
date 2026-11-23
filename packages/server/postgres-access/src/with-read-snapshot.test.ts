@@ -1,12 +1,7 @@
 import { actor, compileAccess, resource } from "@dads-framework/access";
 import { describe, expect, it } from "vitest";
 import { PostgresAuthorization } from "./postgres-authorization.js";
-import type {
-  PgClientLike,
-  PgPoolLike,
-  PostgresQuery,
-  PostgresQueryResult,
-} from "./postgres-types.js";
+import type { PgClientLike, PgPoolLike, PostgresQuery, PostgresQueryResult } from "./postgres-types.js";
 import { withReadSnapshot } from "./with-read-snapshot.js";
 
 const user = actor("user");
@@ -89,31 +84,22 @@ describe("withReadSnapshot and typed permission handles", () => {
     });
 
     let escaped: PostgresAuthorization | undefined;
-    const allowed = await withReadSnapshot(
-      { pool: fake.pool, authorization },
-      async ({ authorization: scoped }) => {
-        escaped = scoped;
-        return scoped.can(
-          user("alice"),
-          workspace.document.permissions.edit,
-          "doc-1",
-        );
-      },
-    );
+    const allowed = await withReadSnapshot({ pool: fake.pool, authorization }, async ({ authorization: scoped }) => {
+      escaped = scoped;
+      return scoped.can(user("alice"), workspace.document.permissions.edit, "doc-1");
+    });
 
     expect(allowed).toBe(true);
-    expect(fake.queries[0]?.text).toBe(
-      "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
-    );
+    expect(fake.queries[0]?.text).toBe("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
     expect(fake.queries.at(-1)?.text).toBe("COMMIT");
     expect(fake.released).toEqual([undefined]);
 
     if (escaped === undefined) {
       throw new Error("Expected scoped authorization handle to be captured.");
     }
-    await expect(
-      escaped.can(user("alice"), workspace.document("doc-1").edit),
-    ).rejects.toThrow("Protected Postgres authorization scope has ended");
+    await expect(escaped.can(user("alice"), workspace.document("doc-1").edit)).rejects.toThrow(
+      "Protected Postgres authorization scope has ended",
+    );
   });
 
   it("rolls back and releases when work throws", async () => {
@@ -125,9 +111,7 @@ describe("withReadSnapshot and typed permission handles", () => {
     });
 
     await expect(
-      withReadSnapshot({ pool: fake.pool, authorization }, () =>
-        Promise.reject(new Error("boom")),
-      ),
+      withReadSnapshot({ pool: fake.pool, authorization }, () => Promise.reject(new Error("boom"))),
     ).rejects.toThrow("boom");
 
     expect(fake.queries.map((entry) => entry.text)).toEqual([
@@ -172,15 +156,8 @@ describe("withReadSnapshot and typed permission handles", () => {
       },
     });
 
-    const byTarget = await authorization.can(
-      user("alice"),
-      workspace.document("doc-42").edit,
-    );
-    const byToken = await authorization.can(
-      user("alice"),
-      workspace.document.permissions.edit,
-      "doc-42",
-    );
+    const byTarget = await authorization.can(user("alice"), workspace.document("doc-42").edit);
+    const byToken = await authorization.can(user("alice"), workspace.document.permissions.edit, "doc-42");
 
     expect(byTarget).toBe(true);
     expect(byToken).toBe(true);

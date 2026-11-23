@@ -13,9 +13,7 @@ import {
 
 describe("deliveryErrorName", () => {
   it("gives a log the error class and never its message", () => {
-    expect(deliveryErrorName(new TypeError("dana@example.test bounced"))).toBe(
-      "TypeError",
-    );
+    expect(deliveryErrorName(new TypeError("dana@example.test bounced"))).toBe("TypeError");
   });
 
   it("names a thrown non-Error without inspecting it", () => {
@@ -25,9 +23,7 @@ describe("deliveryErrorName", () => {
 
 describe("summarizeDeliveryError", () => {
   it("names the error class and its message", () => {
-    expect(summarizeDeliveryError(new TypeError("fetch failed"))).toBe(
-      "TypeError: fetch failed",
-    );
+    expect(summarizeDeliveryError(new TypeError("fetch failed"))).toBe("TypeError: fetch failed");
   });
 
   it("truncates a vendor error page", () => {
@@ -47,8 +43,6 @@ describe("summarizeDeliveryError", () => {
   });
 
   it("names a thrown string without quoting it", () => {
-    expect(summarizeDeliveryError("dana@example.test bounced")).toBe(
-      "UnknownError: string",
-    );
+    expect(summarizeDeliveryError("dana@example.test bounced")).toBe("UnknownError: string");
   });
 });

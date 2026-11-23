@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  TESTCONTAINERS_RYUK_DISABLED,
-  refuseDisabledContainerCleanup,
-} from "./refuse-disabled-container-cleanup.js";
+import { TESTCONTAINERS_RYUK_DISABLED, refuseDisabledContainerCleanup } from "./refuse-disabled-container-cleanup.js";
 
 /**
  * The reaper wall is the only cleanup that survives a `kill -9`, so the switch

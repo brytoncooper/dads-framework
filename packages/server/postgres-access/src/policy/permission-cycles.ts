@@ -38,15 +38,10 @@ type Decomposed = {
   readonly edges: readonly RecursiveEdge[];
 };
 
-const planCache = new WeakMap<
-  AuthorizationModelDefinition,
-  PermissionCyclePlan
->();
+const planCache = new WeakMap<AuthorizationModelDefinition, PermissionCyclePlan>();
 
 /** Computes and validates strongly connected components of permission arrows. */
-export function analyzePermissionCycles(
-  model: AuthorizationModelDefinition,
-): PermissionCyclePlan {
+export function analyzePermissionCycles(model: AuthorizationModelDefinition): PermissionCyclePlan {
   const cached = planCache.get(model);
   if (cached !== undefined) return cached;
   const plan = buildCyclePlan(model);
@@ -54,15 +49,10 @@ export function analyzePermissionCycles(
   return plan;
 }
 
-function buildCyclePlan(
-  model: AuthorizationModelDefinition,
-): PermissionCyclePlan {
+function buildCyclePlan(model: AuthorizationModelDefinition): PermissionCyclePlan {
   const byId = new Map<string, CompiledAuthorizationPermission>();
   for (const permission of model.permissions) {
-    byId.set(
-      permissionIdentity(permission.entity, permission.wireName),
-      permission,
-    );
+    byId.set(permissionIdentity(permission.entity, permission.wireName), permission);
   }
   const adjacency = buildAdjacency(model, byId);
   const sccs = findStronglyConnectedComponents(adjacency);
@@ -77,8 +67,7 @@ function buildCyclePlan(
     }
   }
   return {
-    sccFor: (entity, permission) =>
-      byIdentity.get(permissionIdentity(entity, permission)),
+    sccFor: (entity, permission) => byIdentity.get(permissionIdentity(entity, permission)),
   };
 }
 
@@ -89,12 +78,7 @@ function buildAdjacency(
   const adjacency = new Map<string, readonly string[]>();
   for (const [id, permission] of byId) {
     const neighbors = new Set<string>();
-    collectArrowNeighbors(
-      model,
-      permission.entity,
-      permission.expression,
-      neighbors,
-    );
+    collectArrowNeighbors(model, permission.entity, permission.expression, neighbors);
     adjacency.set(
       id,
       [...neighbors].filter((neighbor) => byId.has(neighbor)),
@@ -126,10 +110,7 @@ function collectArrowNeighbors(
   }
 }
 
-function isCyclicScc(
-  members: readonly string[],
-  adjacency: ReadonlyMap<string, readonly string[]>,
-): boolean {
+function isCyclicScc(members: readonly string[], adjacency: ReadonlyMap<string, readonly string[]>): boolean {
   if (members.length > 1) return true;
   const [only] = members;
   if (only === undefined) return false;
@@ -149,13 +130,7 @@ function buildSccPlan(
   for (const member of members) {
     const permission = byId.get(member);
     if (permission === undefined) continue;
-    const decomposed = decomposeNode(
-      model,
-      permission,
-      permission.expression,
-      memberSet,
-      label,
-    );
+    const decomposed = decomposeNode(model, permission, permission.expression, memberSet, label);
     nodes.push({
       identity: member,
       entity: permission.entity,
@@ -165,9 +140,7 @@ function buildSccPlan(
     edges.push(...decomposed.edges);
   }
   if (nodes.every((node) => node.base === undefined)) {
-    throw new Error(
-      `Unproductive permission cycle with no base case: ${label}`,
-    );
+    throw new Error(`Unproductive permission cycle with no base case: ${label}`);
   }
   return { id: `scc_${String(sccIndex)}`, members: memberSet, nodes, edges };
 }
@@ -183,35 +156,19 @@ function decomposeNode(
     return { base: [expression], edges: [] };
   }
   if (expression.kind === "exclude") {
-    throw new Error(
-      `Non-monotonic permission cycle through excluding is not supported: ${label}`,
-    );
+    throw new Error(`Non-monotonic permission cycle through excluding is not supported: ${label}`);
   }
   if (expression.kind === "through-all") {
-    throw new Error(
-      `Non-monotonic permission cycle through through-all is not supported: ${label}`,
-    );
+    throw new Error(`Non-monotonic permission cycle through through-all is not supported: ${label}`);
   }
   if (expression.kind === "through") {
     return decomposeThrough(model, permission, expression, memberSet);
   }
   if (expression.kind === "any-of") {
-    return decomposeAnyOf(
-      model,
-      permission,
-      expression.expressions,
-      memberSet,
-      label,
-    );
+    return decomposeAnyOf(model, permission, expression.expressions, memberSet, label);
   }
   if (expression.kind === "all-of") {
-    return decomposeAllOf(
-      model,
-      permission,
-      expression.expressions,
-      memberSet,
-      label,
-    );
+    return decomposeAllOf(model, permission, expression.expressions, memberSet, label);
   }
   return { base: [expression], edges: [] };
 }
@@ -223,15 +180,9 @@ function decomposeThrough(
   memberSet: ReadonlySet<string>,
 ): Decomposed {
   const targets = resolveArrowTargets(model, permission.entity, expression);
-  const inside = targets.filter((target) =>
-    memberSet.has(permissionIdentity(target.entity, target.permission)),
-  );
-  const outside = targets.filter(
-    (target) =>
-      !memberSet.has(permissionIdentity(target.entity, target.permission)),
-  );
-  const base: CompiledPermissionExpression[] =
-    outside.length > 0 ? [{ ...expression, targets: outside }] : [];
+  const inside = targets.filter((target) => memberSet.has(permissionIdentity(target.entity, target.permission)));
+  const outside = targets.filter((target) => !memberSet.has(permissionIdentity(target.entity, target.permission)));
+  const base: CompiledPermissionExpression[] = outside.length > 0 ? [{ ...expression, targets: outside }] : [];
   const edges: RecursiveEdge[] = inside.map((target) => ({
     fromEntity: permission.entity,
     fromPermission: permission.wireName,
@@ -267,23 +218,13 @@ function decomposeAllOf(
   memberSet: ReadonlySet<string>,
   label: string,
 ): Decomposed {
-  const recursive = expressions.filter((child) =>
-    referencesScc(model, permission.entity, child, memberSet),
-  );
-  const guards = expressions.filter(
-    (child) => !referencesScc(model, permission.entity, child, memberSet),
-  );
+  const recursive = expressions.filter((child) => referencesScc(model, permission.entity, child, memberSet));
+  const guards = expressions.filter((child) => !referencesScc(model, permission.entity, child, memberSet));
   const [onlyRecursive] = recursive;
   if (recursive.length > 1 || onlyRecursive === undefined) {
     throw new Error(`Unsupported non-linear permission cycle: ${label}`);
   }
-  const part = decomposeNode(
-    model,
-    permission,
-    onlyRecursive,
-    memberSet,
-    label,
-  );
+  const part = decomposeNode(model, permission, onlyRecursive, memberSet, label);
   return {
     base: part.base.map((entry) => ({
       kind: "all-of",
@@ -314,19 +255,13 @@ function referencesScc(
       referencesScc(model, entity, expression.exclude, memberSet)
     );
   }
-  return expression.expressions.some((child) =>
-    referencesScc(model, entity, child, memberSet),
-  );
+  return expression.expressions.some((child) => referencesScc(model, entity, child, memberSet));
 }
 
-function combineAnyOf(
-  expressions: readonly CompiledPermissionExpression[],
-): CompiledPermissionExpression | undefined {
+function combineAnyOf(expressions: readonly CompiledPermissionExpression[]): CompiledPermissionExpression | undefined {
   if (expressions.length === 0) return undefined;
   const [only] = expressions;
-  return expressions.length === 1 && only !== undefined
-    ? only
-    : { kind: "any-of", expressions };
+  return expressions.length === 1 && only !== undefined ? only : { kind: "any-of", expressions };
 }
 
 function formatMembers(members: readonly string[]): string {

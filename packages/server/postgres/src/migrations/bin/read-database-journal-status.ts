@@ -6,9 +6,7 @@ import { migrationStatusFailure } from "./read-database-journal-status-result.js
 /** `dads-migrate-status`: prints `current`, a pending state, or a refusal. */
 async function printJournalStatus(): Promise<void> {
   try {
-    const status = await inspectNodePgMigrations(
-      migrationInputFromEnvironment(process.env),
-    );
+    const status = await inspectNodePgMigrations(migrationInputFromEnvironment(process.env));
     process.stdout.write(`${status}\n`);
   } catch (error: unknown) {
     const status = migrationStatusFailure(error);

@@ -21,9 +21,7 @@ export type ClientDiagnosticsRequest = {
 export class ClientDiagnosticsRouteHandlers {
   constructor(private readonly recorder: RecordClientDiagnostics) {}
 
-  async reportClientDiagnostics(
-    request: ClientDiagnosticsRequest,
-  ): Promise<{ readonly accepted: number }> {
+  async reportClientDiagnostics(request: ClientDiagnosticsRequest): Promise<{ readonly accepted: number }> {
     const actor = currentAuditActor();
     return this.recorder.execute({
       events: request.body.events,

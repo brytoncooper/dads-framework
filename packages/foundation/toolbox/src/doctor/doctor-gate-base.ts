@@ -72,9 +72,7 @@ export type BaseComparisonInput = {
 export function compareToBase(input: BaseComparisonInput): BaseComparison {
   const shown = input.readAtRef(input.base, BASELINE_PATH);
   const missing = shown.status !== 0;
-  const base = missing
-    ? { ceilings: emptySections(), floors: emptySections() }
-    : parseGateBaseline(shown.stdout);
+  const base = missing ? { ceilings: emptySections(), floors: emptySections() } : parseGateBaseline(shown.stdout);
 
   const ceilings = compareSection({
     current: input.baseline.ceilings,
@@ -102,23 +100,15 @@ export function compareToBase(input: BaseComparisonInput): BaseComparison {
   if (missing) notes.push(`${BASELINE_PATH} does not exist at ${input.base}`);
   const additions = [...ceilings.additions, ...floors.additions];
   if (additions.length > 0) {
-    notes.push(
-      `new exceptions since ${input.base}:`,
-      ...additions.map((line) => `  ${line}`),
-    );
+    notes.push(`new exceptions since ${input.base}:`, ...additions.map((line) => `  ${line}`));
   }
   if (floors.transfers.length > 0) {
-    notes.push(
-      `floors moved since ${input.base}:`,
-      ...floors.transfers.map((line) => `  ${line}`),
-    );
+    notes.push(`floors moved since ${input.base}:`, ...floors.transfers.map((line) => `  ${line}`));
   }
   return {
     findings: [
       ...ceilings.findings,
-      ...floors.findings.filter(
-        (finding) => !retired.keys.get(finding.measure)?.has(finding.key),
-      ),
+      ...floors.findings.filter((finding) => !retired.keys.get(finding.measure)?.has(finding.key)),
       ...compareSuppressions(input.readAtRef, input.base),
     ],
     notes,
@@ -129,10 +119,7 @@ function emptySections(): BaselineSections {
   return new Map();
 }
 
-function withoutMeasures(
-  sections: BaselineSections,
-  measures: ReadonlySet<string>,
-): BaselineSections {
+function withoutMeasures(sections: BaselineSections, measures: ReadonlySet<string>): BaselineSections {
   return new Map([...sections].filter(([measure]) => !measures.has(measure)));
 }
 
@@ -199,15 +186,12 @@ function compareOneKey(compared: KeyComparison, tally: SectionTally): void {
   const previous = comparison.base.get(section)?.get(key);
   if (previous === undefined) {
     const why = hasReason(entry) ? ` (${entry.reason ?? ""})` : "";
-    tally.additions.push(
-      `${section} ${key}: ${comparison.field} ${entry.value}${why}`,
-    );
+    tally.additions.push(`${section} ${key}: ${comparison.field} ${entry.value}${why}`);
     return;
   }
   if (!comparison.loosened(entry.value, previous.value)) return;
   const verdict = judgeFall(compared, entry, previous.value);
-  if (verdict.allowed)
-    tally.transfers.push(`${section} ${key}: ${verdict.message}`);
+  if (verdict.allowed) tally.transfers.push(`${section} ${key}: ${verdict.message}`);
   else tally.findings.push(baseError(section, key, verdict.message));
 }
 
@@ -225,11 +209,7 @@ type FallVerdict = {
  * is the loosening a fall has always been, including a receipt the destination
  * did not earn, and a ceiling never transfers at all.
  */
-function judgeFall(
-  compared: KeyComparison,
-  entry: BaselineEntry,
-  before: number,
-): FallVerdict {
+function judgeFall(compared: KeyComparison, entry: BaselineEntry, before: number): FallVerdict {
   const { comparison, section, entries, key } = compared;
   const fell = `${comparison.field} ${comparison.verb} ${before} -> ${entry.value}`;
   if (!comparison.transfers) return { allowed: false, message: fell };
@@ -254,9 +234,7 @@ function judgeFall(
     };
   }
   const fall = before - entry.value;
-  const rise =
-    destination.value -
-    (comparison.base.get(section)?.get(movedTo)?.value ?? 0);
+  const rise = destination.value - (comparison.base.get(section)?.get(movedTo)?.value ?? 0);
   if (rise < fall) {
     return {
       allowed: false,
@@ -274,13 +252,7 @@ function removedEntries(comparison: SectionComparison): readonly GateFinding[] {
   for (const [section, entries] of comparison.base) {
     for (const key of sortedKeys(entries.keys())) {
       if (comparison.current.get(section)?.get(key) !== undefined) continue;
-      findings.push(
-        baseError(
-          section,
-          key,
-          `${comparison.field} entry removed (was ${entries.get(key)?.value ?? 0})`,
-        ),
-      );
+      findings.push(baseError(section, key, `${comparison.field} entry removed (was ${entries.get(key)?.value ?? 0})`));
     }
   }
   return findings;
@@ -301,21 +273,14 @@ type SuppressionCounts = {
  * shrink and it may not grow. Neither side existing means there is nothing to
  * compare, not that it grew.
  */
-function compareSuppressions(
-  readAtRef: ReadAtRef,
-  base: string,
-): readonly GateFinding[] {
+function compareSuppressions(readAtRef: ReadAtRef, base: string): readonly GateFinding[] {
   const head = readAtRef("HEAD", SUPPRESSIONS_PATH);
   const previous = readAtRef(base, SUPPRESSIONS_PATH);
   if (head.status !== 0 || previous.status !== 0) return [];
 
   const now = suppressionCounts(head.stdout);
   const before = suppressionCounts(previous.stdout);
-  const fields: readonly (keyof SuppressionCounts)[] = [
-    "files",
-    "rules",
-    "suppressions",
-  ];
+  const fields: readonly (keyof SuppressionCounts)[] = ["files", "rules", "suppressions"];
   return fields
     .filter((field) => now[field] > before[field])
     .map((field) => suppressionGrew(field, before[field], now[field]));
@@ -325,11 +290,7 @@ function compareSuppressions(
  * The message names the file, so the finding's subject stays empty and the
  * rendered line does not say the file's name twice.
  */
-function suppressionGrew(
-  field: string,
-  before: number,
-  now: number,
-): GateFinding {
+function suppressionGrew(field: string, before: number, now: number): GateFinding {
   return {
     level: "error",
     measure: "",

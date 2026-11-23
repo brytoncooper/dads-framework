@@ -16,17 +16,13 @@ export type SkillSynchronizationInspection = {
   readonly status: "missing" | "correct";
 };
 
-export function inspectAgentSkillSynchronization(
-  projectRoot: string,
-): readonly SkillSynchronizationInspection[] {
+export function inspectAgentSkillSynchronization(projectRoot: string): readonly SkillSynchronizationInspection[] {
   return HARNESS_DIRECTORIES.map((harness) => {
     const skillsPath = join(projectRoot, harness, "skills");
     try {
       const current = lstatSync(skillsPath);
       if (!current.isSymbolicLink()) {
-        throw new Error(
-          `${skillsPath} is a real path; refusing to overwrite agent instructions.`,
-        );
+        throw new Error(`${skillsPath} is a real path; refusing to overwrite agent instructions.`);
       }
       if (readlinkSync(skillsPath) !== EXPECTED_LINK_TARGET) {
         throw new Error(`${skillsPath} points to an unexpected skill source.`);
@@ -39,9 +35,7 @@ export function inspectAgentSkillSynchronization(
   });
 }
 
-export function synchronizeAgentSkills(
-  projectRoot: string,
-): readonly SkillSynchronization[] {
+export function synchronizeAgentSkills(projectRoot: string): readonly SkillSynchronization[] {
   return inspectAgentSkillSynchronization(projectRoot).map((inspection) => {
     if (inspection.status === "correct") {
       return { harness: inspection.harness, status: "correct" };

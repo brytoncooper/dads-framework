@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  LOCALE_HEADER,
-  SUPPORTED_LOCALES,
-  localizedTextSchema,
-  type Locale,
-  type LocalizedText,
-} from "./locale.js";
+import { LOCALE_HEADER, SUPPORTED_LOCALES, localizedTextSchema, type Locale, type LocalizedText } from "./locale.js";
 
 /**
  * What: `SUPPORTED_LOCALES` and `localizedTextSchema` describe the same set of
@@ -40,10 +34,7 @@ describe("locale primitives", () => {
   });
 
   it("refuses a locale nobody supports rather than ignoring it", () => {
-    expect(
-      localizedTextSchema.safeParse({ en: "Facilities", es: "Plantas" })
-        .success,
-    ).toBe(false);
+    expect(localizedTextSchema.safeParse({ en: "Facilities", es: "Plantas" }).success).toBe(false);
   });
 
   it("refuses an unwritten translation rather than shipping a blank label", () => {

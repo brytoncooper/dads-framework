@@ -1,7 +1,4 @@
-import type {
-  ApiRequestHeaders,
-  ApiRequestDispatch,
-} from "./send-api-request.js";
+import type { ApiRequestHeaders, ApiRequestDispatch } from "./send-api-request.js";
 
 /**
  * A composition seam for metadata which belongs to a particular request context.

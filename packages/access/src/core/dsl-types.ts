@@ -1,17 +1,14 @@
 import type { z } from "zod";
 
 import type { EntityHandle } from "./entity-handle.js";
-import type {
-  SingleRoleValue,
-  UsersetHolder,
-  WildcardHolder,
-} from "./holders.js";
+import type { SingleRoleValue, UsersetHolder, WildcardHolder } from "./holders.js";
 import type { LifecycleTrigger } from "./lifecycle.js";
 import type { PermissionTerm, PermissionToken, RoleToken } from "./refs.js";
 
 /** Extracts the final path segment for an auto-generated parent relation name. */
-export type ParentRoleName<WireName extends string> =
-  WireName extends `${string}/${infer Leaf}` ? ParentRoleName<Leaf> : WireName;
+export type ParentRoleName<WireName extends string> = WireName extends `${string}/${infer Leaf}`
+  ? ParentRoleName<Leaf>
+  : WireName;
 
 export type ActorRef<WireName extends string = string> = {
   readonly kind: "actor-ref";
@@ -38,10 +35,7 @@ export type DslExpirableActorHolder<WireName extends string = string> = {
   readonly actorWireName: WireName;
 };
 
-export type DslExpirableUsersetHolder<
-  WireName extends string = string,
-  RoleName extends string = string,
-> = {
+export type DslExpirableUsersetHolder<WireName extends string = string, RoleName extends string = string> = {
   readonly kind: "expirable";
   readonly holder: UsersetHolder;
   readonly entityWireName: WireName;
@@ -52,9 +46,7 @@ export type DslActorOptions = {
   readonly id?: z.ZodType<string>;
 };
 
-export type DslActor<WireName extends string = string> = ((
-  id: string,
-) => ActorRef<WireName>) & {
+export type DslActor<WireName extends string = string> = ((id: string) => ActorRef<WireName>) & {
   readonly kind: "dsl-actor";
   readonly wireName: WireName;
   readonly idSchema: z.ZodType<string>;
@@ -72,18 +64,14 @@ export type ResourceSubjectRef<WireName extends string = string> = {
   };
 };
 
-export type DslUsersetSubject<
-  WireName extends string = string,
-  RoleName extends string = string,
-> = {
+export type DslUsersetSubject<WireName extends string = string, RoleName extends string = string> = {
   readonly kind: "dsl-role-slot";
   readonly entityWireName: WireName;
   readonly roleName: RoleName;
   readonly resource: { readonly type: WireName; readonly id: string };
 };
 
-export type DslSubjectInput =
-  ActorRef | DslWildcardActorHolder | ResourceSubjectRef | DslUsersetSubject;
+export type DslSubjectInput = ActorRef | DslWildcardActorHolder | ResourceSubjectRef | DslUsersetSubject;
 
 export type AnyDslRoleSlot = {
   readonly kind: "dsl-role-slot";
@@ -104,10 +92,7 @@ export type DslRoleSlot<
   readonly __allowedSubject?: AllowedSubject;
 };
 
-export type DslPermissionTarget<
-  EntityWire extends string = string,
-  PermName extends string = string,
-> = {
+export type DslPermissionTarget<EntityWire extends string = string, PermName extends string = string> = {
   readonly kind: "dsl-permission-target";
   readonly entityWireName: EntityWire;
   readonly permissionName: PermName;
@@ -125,10 +110,7 @@ export type DslRoleToken<
   readonly __allowedSubject?: AllowedSubject;
 };
 
-export type DslPermissionToken<
-  WireName extends string = string,
-  PermName extends string = string,
-> = PermissionToken & {
+export type DslPermissionToken<WireName extends string = string, PermName extends string = string> = PermissionToken & {
   readonly entityWireName: WireName;
   readonly permissionName: PermName;
 };
@@ -185,8 +167,7 @@ export type DslSingleRoleHolder =
   | DslLazyResource
   | SingleRoleValue;
 
-export type DslRoleHolder =
-  DslSingleRoleHolder | readonly DslSingleRoleHolder[];
+export type DslRoleHolder = DslSingleRoleHolder | readonly DslSingleRoleHolder[];
 
 export type DslRolesSpec = Readonly<Record<string, DslRoleHolder>>;
 
@@ -215,14 +196,13 @@ export type TargetPermsOfSingleHolder<H> = H extends () => infer Target
   ? ResourcePermsOf<Target> | ResourceRolesOf<Target>
   : ResourcePermsOf<H> | ResourceRolesOf<H>;
 
-export type IntersectHolderPerms<List extends readonly unknown[]> =
-  List extends readonly []
-    ? never
-    : List extends readonly [infer Head, ...infer Tail]
-      ? Tail extends readonly []
-        ? TargetPermsOfSingleHolder<Head>
-        : TargetPermsOfSingleHolder<Head> & IntersectHolderPerms<Tail>
-      : never;
+export type IntersectHolderPerms<List extends readonly unknown[]> = List extends readonly []
+  ? never
+  : List extends readonly [infer Head, ...infer Tail]
+    ? Tail extends readonly []
+      ? TargetPermsOfSingleHolder<Head>
+      : TargetPermsOfSingleHolder<Head> & IntersectHolderPerms<Tail>
+    : never;
 
 export type TargetPermsOfHolder<H> = H extends readonly unknown[]
   ? IntersectHolderPerms<H>
@@ -261,15 +241,11 @@ export type AllowedSubjectForHolder<H> = H extends readonly (infer Item)[]
   : AllowedSubjectForSingleHolder<H>;
 
 export type SubjectMapFromRoles<RolesSpec extends DslRolesSpec> = {
-  readonly [K in keyof RolesSpec & string]: AllowedSubjectForHolder<
-    RolesSpec[K]
-  >;
+  readonly [K in keyof RolesSpec & string]: AllowedSubjectForHolder<RolesSpec[K]>;
 };
 
-export type SharedParentPermissions<Parents extends readonly AnyDslResource[]> =
-  IntersectHolderPerms<Parents>;
+export type SharedParentPermissions<Parents extends readonly AnyDslResource[]> = IntersectHolderPerms<Parents>;
 
-export type ParentsSubjectUnion<Parents extends readonly AnyDslResource[]> =
-  Parents extends readonly []
-    ? never
-    : ResourceSubjectRef<ResourceWireNameOf<Parents[number]>>;
+export type ParentsSubjectUnion<Parents extends readonly AnyDslResource[]> = Parents extends readonly []
+  ? never
+  : ResourceSubjectRef<ResourceWireNameOf<Parents[number]>>;

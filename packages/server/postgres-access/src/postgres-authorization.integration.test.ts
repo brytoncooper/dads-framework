@@ -15,27 +15,13 @@ import { createPostgresConnection } from "@dads-framework/postgres";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  PostgresAuthorization,
-  relationshipSchemaMigration,
-  TransactionalAccessChanges,
-} from "./index.js";
+import { PostgresAuthorization, relationshipSchemaMigration, TransactionalAccessChanges } from "./index.js";
 import { model, noteWorld } from "../test-support/parity-world.js";
 
 function parseWorldLine(text: string): RelationshipWrite {
-  const match = /^([^:]+):([^#]+)#([^@]+)@([^:]+):([^#]+)(?:#(.+))?$/.exec(
-    text,
-  );
+  const match = /^([^:]+):([^#]+)#([^@]+)@([^:]+):([^#]+)(?:#(.+))?$/.exec(text);
   if (match === null) throw new Error(`Malformed world line ${text}`);
-  const [
-    ,
-    resourceType,
-    resourceId,
-    relation,
-    subjectType,
-    subjectId,
-    subjectRelation,
-  ] = match;
+  const [, resourceType, resourceId, relation, subjectType, subjectId, subjectRelation] = match;
   if (!resourceType || !resourceId || !relation || !subjectType || !subjectId)
     throw new Error("World line is incomplete");
   return {
@@ -124,11 +110,7 @@ describe("Postgres access model parity", () => {
   });
 
   it("preserves the record lookup guard when composed with the Postgres adapter", async () => {
-    const guarded = new GuardedAuthorization(
-      adapter,
-      DEFAULT_AUTHORIZATION_GUARD_MARKS,
-      authorizationKinds(model),
-    );
+    const guarded = new GuardedAuthorization(adapter, DEFAULT_AUTHORIZATION_GUARD_MARKS, authorizationKinds(model));
     const query = decisions[0]?.query;
     if (query === undefined) throw new Error("World is empty");
     await expect(guarded.check(query)).resolves.toBe(true);
@@ -194,13 +176,9 @@ describe("Postgres access model parity", () => {
       expect(() => changes.enqueue(writes, connection.drizzle)).toThrow(
         "Postgres access changes require the caller's Drizzle transaction",
       );
-      await connection.drizzle.execute(
-        sql`CREATE TABLE parity_enqueued_note(id text PRIMARY KEY)`,
-      );
+      await connection.drizzle.execute(sql`CREATE TABLE parity_enqueued_note(id text PRIMARY KEY)`);
       await connection.drizzle.transaction(async (tx) => {
-        await tx.execute(
-          sql`INSERT INTO parity_enqueued_note (id) VALUES (${resource.id})`,
-        );
+        await tx.execute(sql`INSERT INTO parity_enqueued_note (id) VALUES (${resource.id})`);
         await changes.enqueue(writes, tx);
         await expect(adapter.relationshipExists(lookup)).resolves.toBe(false);
       });
@@ -208,9 +186,7 @@ describe("Postgres access model parity", () => {
 
       await expect(
         connection.drizzle.transaction(async (tx) => {
-          await tx.execute(
-            sql`DELETE FROM parity_enqueued_note WHERE id = ${resource.id}`,
-          );
+          await tx.execute(sql`DELETE FROM parity_enqueued_note WHERE id = ${resource.id}`);
           await changes.enqueue(
             writes.map((entry) => ({ ...entry, operation: "DELETE" })),
             tx,
@@ -219,9 +195,7 @@ describe("Postgres access model parity", () => {
         }),
       ).rejects.toThrow("abort transaction");
       await expect(adapter.relationshipExists(lookup)).resolves.toBe(true);
-      const stored = await connection.drizzle.execute(
-        sql`SELECT id FROM parity_enqueued_note`,
-      );
+      const stored = await connection.drizzle.execute(sql`SELECT id FROM parity_enqueued_note`);
       expect(stored.rows).toEqual([{ id: resource.id }]);
     } finally {
       await connection.close();
@@ -252,8 +226,6 @@ describe("Postgres access model parity", () => {
       resource: { type: "parity/team", id: "team1" },
       relation: "member",
     };
-    await expect(adapter.listDirectSubjects(lookup)).resolves.toEqual([
-      { type: "user", id: "bob" },
-    ]);
+    await expect(adapter.listDirectSubjects(lookup)).resolves.toEqual([{ type: "user", id: "bob" }]);
   });
 });

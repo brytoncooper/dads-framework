@@ -54,15 +54,12 @@ const DENY_RULES = [
 ];
 
 /** A push whose refspec names main, whatever else is on the line. */
-const PUSHES_MAIN = new RegExp(
-  `\\bgit\\s+push\\b[^;&|]*(?:\\s|:)${MAIN_TARGET}`,
-);
+const PUSHES_MAIN = new RegExp(`\\bgit\\s+push\\b[^;&|]*(?:\\s|:)${MAIN_TARGET}`);
 
 const ASK_RULES = [
   {
     name: "gh-api-protection",
-    pattern:
-      /\bgh\s+api\b[^;&|]*(?:rulesets|branch[_-]?protection|branches\/[^\s;&|]+\/protection)/i,
+    pattern: /\bgh\s+api\b[^;&|]*(?:rulesets|branch[_-]?protection|branches\/[^\s;&|]+\/protection)/i,
     reason: `This changes rulesets or branch protection — the enforcement the repository runs on (${HOUSE_RULES}). Confirm it with the user first.`,
   },
 ];
@@ -108,10 +105,7 @@ export function decideForCommand(command, { currentBranch }) {
 
 /** Claude Code and Cursor want the same answer in two different envelopes. */
 export function renderResponse(event, decision, reason) {
-  const isClaude =
-    event !== null &&
-    typeof event === "object" &&
-    typeof event.hook_event_name === "string";
+  const isClaude = event !== null && typeof event === "object" && typeof event.hook_event_name === "string";
   if (isClaude) {
     // An allow would bypass the user's own permission settings, so the quiet
     // answer is no answer: only `ask` and `deny` are opinions worth stating.
@@ -138,71 +132,26 @@ export function renderResponse(event, decision, reason) {
 // ---------------------------------------------------------------------------
 
 const SELF_TEST_CASES = [
-  [
-    "git commit --no-verify -m 'wip'",
-    "chore/house-rules",
-    "deny",
-    "no-verify on commit",
-  ],
-  [
-    "git push --no-verify origin chore/house-rules",
-    "chore/house-rules",
-    "deny",
-    "no-verify on push",
-  ],
+  ["git commit --no-verify -m 'wip'", "chore/house-rules", "deny", "no-verify on commit"],
+  ["git push --no-verify origin chore/house-rules", "chore/house-rules", "deny", "no-verify on push"],
   ["git push --force origin main", "main", "deny", "force-push main"],
-  [
-    "git push origin main --force-with-lease",
-    "main",
-    "deny",
-    "force-with-lease after the refspec",
-  ],
+  ["git push origin main --force-with-lease", "main", "deny", "force-with-lease after the refspec"],
   ["git push -f origin master", "master", "deny", "short force flag"],
   ["git branch -D main", "chore/house-rules", "deny", "delete main locally"],
   ["git push origin :main", "chore/house-rules", "deny", "delete by refspec"],
-  [
-    "git push --delete origin main",
-    "chore/house-rules",
-    "deny",
-    "delete by flag",
-  ],
-  [
-    "git push origin HEAD:main",
-    "chore/house-rules",
-    "deny",
-    "push main from a feature branch",
-  ],
+  ["git push --delete origin main", "chore/house-rules", "deny", "delete by flag"],
+  ["git push origin HEAD:main", "chore/house-rules", "deny", "push main from a feature branch"],
   ["git push origin main", "main", "allow", "push main while on main"],
-  [
-    "git push origin main",
-    null,
-    "ask",
-    "push main with an unknown branch asks",
-  ],
-  [
-    "gh api repos/o/r/rulesets --method POST",
-    "chore/house-rules",
-    "ask",
-    "ruleset mutation asks",
-  ],
-  [
-    "gh api repos/o/r/branches/main/protection",
-    "chore/house-rules",
-    "ask",
-    "branch protection asks",
-  ],
+  ["git push origin main", null, "ask", "push main with an unknown branch asks"],
+  ["gh api repos/o/r/rulesets --method POST", "chore/house-rules", "ask", "ruleset mutation asks"],
+  ["gh api repos/o/r/branches/main/protection", "chore/house-rules", "ask", "branch protection asks"],
   [
     "git push --force-with-lease origin chore/house-rules",
     "chore/house-rules",
     "allow",
     "force-with-lease on a feature branch is fine",
   ],
-  [
-    "git push origin mainline",
-    "chore/house-rules",
-    "allow",
-    "a branch that starts with main is not main",
-  ],
+  ["git push origin mainline", "chore/house-rules", "allow", "a branch that starts with main is not main"],
   ["npm run verify", "chore/house-rules", "allow", "ordinary commands"],
 ];
 
@@ -223,8 +172,7 @@ function selfTest() {
   process.stdout.write(
     failures.length === 0
       ? `guard-shell-commands self-test OK (${String(total)} cases)\n`
-      : lines.join("") +
-          `guard-shell-commands self-test: ${String(failures.length)} of ${String(total)} failed\n`,
+      : lines.join("") + `guard-shell-commands self-test: ${String(failures.length)} of ${String(total)} failed\n`,
   );
   process.exitCode = failures.length === 0 ? 0 : 1;
 }
@@ -255,11 +203,7 @@ function readCurrentBranch() {
 
 function commandOf(event) {
   if (event === null || typeof event !== "object") return null;
-  const candidates = [
-    event.command,
-    event.tool_input?.command,
-    event.toolInput?.command,
-  ];
+  const candidates = [event.command, event.tool_input?.command, event.toolInput?.command];
   return candidates.find((value) => typeof value === "string") ?? null;
 }
 

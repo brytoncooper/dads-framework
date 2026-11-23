@@ -23,10 +23,7 @@
  */
 
 import { isRecord, isString, isUnknownArray } from "../../../parse-guards.js";
-import {
-  NOT_MEASURED_OFFLINE,
-  type DoctorContext,
-} from "../../doctor-context.js";
+import { NOT_MEASURED_OFFLINE, type DoctorContext } from "../../doctor-context.js";
 
 const OK = 200;
 const GIT = "git";
@@ -98,9 +95,7 @@ function parseRemotePath(path: string): GitHubRepository | undefined {
  * which is how a fixture hands a signal a remote without a checkout to clone,
  * and with the one argument list that only reads a configured value.
  */
-export function requireOriginRepository(
-  context: DoctorContext,
-): GitHubRepository {
+export function requireOriginRepository(context: DoctorContext): GitHubRepository {
   const read = context.exec(GIT, ORIGIN_URL);
   const url = read.status === 0 ? read.stdout.trim() : "";
   if (url.length === 0) throw new Error(NO_ORIGIN_REMOTE);
@@ -123,10 +118,7 @@ export function repositoryUrl(named: GitHubRepository): string {
  * that is not one are failures naming what came back, so the signal reports
  * that it could not measure rather than a number it did not measure.
  */
-export async function readJsonObject(
-  context: DoctorContext,
-  url: string,
-): Promise<Record<string, unknown>> {
+export async function readJsonObject(context: DoctorContext, url: string): Promise<Record<string, unknown>> {
   const answered = await context.fetch(url);
   if (answered.status !== OK) {
     throw new Error(`${url} answered ${answered.status}`);
@@ -148,20 +140,14 @@ function parseJsonBody(body: string): unknown {
 }
 
 /** The objects in a named field, and nothing else that field may hold. */
-export function readObjectArray(
-  document: Record<string, unknown>,
-  field: string,
-): readonly Record<string, unknown>[] {
+export function readObjectArray(document: Record<string, unknown>, field: string): readonly Record<string, unknown>[] {
   const value: unknown = document[field];
   if (!isUnknownArray(value)) return [];
   return value.filter((entry) => isRecord(entry));
 }
 
 /** A named string field, or `undefined` when the body carries none. */
-export function readStringField(
-  document: Record<string, unknown>,
-  field: string,
-): string | undefined {
+export function readStringField(document: Record<string, unknown>, field: string): string | undefined {
   const value: unknown = document[field];
   return isString(value) ? value : undefined;
 }

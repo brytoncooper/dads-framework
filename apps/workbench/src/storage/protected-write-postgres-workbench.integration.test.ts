@@ -1,10 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
-import {
-  PostgresAuthorization,
-  relationshipSchemaMigration,
-} from "@dads-framework/postgres-access";
+import { PostgresAuthorization, relationshipSchemaMigration } from "@dads-framework/postgres-access";
 import { expect, it } from "vitest";
 import { workbenchAccessModel, workbenchUser } from "../access.js";
 import { createWorkbench } from "../create-workbench.js";
@@ -94,11 +91,7 @@ it.runIf(process.env["WORKBENCH_POSTGRES_INTEGRATION"] === "1")(
             },
             body: "{}",
           });
-        const revoke = revoker.operations.revokeMember(
-          alice,
-          workspace.id,
-          bob.id,
-        );
+        const revoke = revoker.operations.revokeMember(alice, workspace.id, bob.id);
         let inFlightClaim: Promise<Response> | undefined;
         try {
           await Promise.race([locked.reached, revoke]);
@@ -133,12 +126,8 @@ it.runIf(process.env["WORKBENCH_POSTGRES_INTEGRATION"] === "1")(
           });
           const state = await store.read();
           expect(state.tasks).toEqual([task]);
-          expect(state.members.some((member) => member.userId === bob.id)).toBe(
-            false,
-          );
-          expect(
-            state.activity.some((event) => event.action === "task.claimed"),
-          ).toBe(false);
+          expect(state.members.some((member) => member.userId === bob.id)).toBe(false);
+          expect(state.activity.some((event) => event.action === "task.claimed")).toBe(false);
         } finally {
           release.signal();
           await Promise.allSettled([revoke, inFlightClaim]);

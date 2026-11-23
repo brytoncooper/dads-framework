@@ -2,10 +2,7 @@ import { v1 } from "@authzed/authzed-node";
 
 import type { AuthorizationReadFreshness } from "@dads-framework/core/runtime/request-work";
 
-import type {
-  RelationshipPage,
-  RelationshipPageRequest,
-} from "@dads-framework/access/runtime";
+import type { RelationshipPage, RelationshipPageRequest } from "@dads-framework/access/runtime";
 import type {
   Authorization,
   DirectSubjectLookup,
@@ -31,12 +28,7 @@ import {
 import { NewestWrittenToken } from "./newest-written-token.js";
 import { OneWriteAtATime } from "./one-write-at-a-time.js";
 import { connectSpiceDb } from "./spice-db-clients.js";
-import {
-  askedConsistency,
-  enforcementRead,
-  FULLY_CONSISTENT,
-  toSpiceDbConsistency,
-} from "./spice-db-consistency.js";
+import { askedConsistency, enforcementRead, FULLY_CONSISTENT, toSpiceDbConsistency } from "./spice-db-consistency.js";
 import {
   checkSpiceDbPermission,
   checkSpiceDbPermissions,
@@ -117,18 +109,12 @@ export class SpiceDbAuthorization implements Authorization {
   private readonly writeDeadlineMs: number;
 
   constructor(options: SpiceDbAdapterOptions, client?: SpiceDbClient) {
-    this.writeDeadlineMs =
-      options.relationshipWriteDeadlineMs ?? RELATIONSHIP_WRITE_DEADLINE_MS;
+    this.writeDeadlineMs = options.relationshipWriteDeadlineMs ?? RELATIONSHIP_WRITE_DEADLINE_MS;
     const connected =
-      client === undefined
-        ? connectSpiceDb(options, this.writeDeadlineMs)
-        : { reads: client, writes: client };
+      client === undefined ? connectSpiceDb(options, this.writeDeadlineMs) : { reads: client, writes: client };
     this.client = connected.reads;
     this.writeClient = connected.writes;
-    this.adapterConsistency =
-      options.consistency === "fully-consistent"
-        ? "fully-consistent"
-        : "minimize-latency";
+    this.adapterConsistency = options.consistency === "fully-consistent" ? "fully-consistent" : "minimize-latency";
     this.onEnforcementRead = options.onEnforcementRead;
     this.onCheckItemError = options.onCheckItemError;
   }
@@ -142,16 +128,12 @@ export class SpiceDbAuthorization implements Authorization {
   }
 
   /** An item error denies that item, and is logged and noted on the request. */
-  async checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     return denyingFailedItems(queries, await this.checkEach(queries));
   }
 
   /** An item error is that item's `failed` outcome, and is logged. */
-  async checkEach(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  async checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     if (queries.length === 0) return [];
     return checkSpiceDbPermissions(
       this.client.promises,
@@ -171,16 +153,11 @@ export class SpiceDbAuthorization implements Authorization {
       }),
     );
     return responses
-      .filter(
-        (item) =>
-          item.permissionship === v1.LookupPermissionship.HAS_PERMISSION,
-      )
+      .filter((item) => item.permissionship === v1.LookupPermissionship.HAS_PERMISSION)
       .map((item) => item.resourceObjectId);
   }
 
-  async writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  async writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     const request = v1.WriteRelationshipsRequest.create({
       updates: writes.map((write) =>
         v1.RelationshipUpdate.create({
@@ -197,10 +174,7 @@ export class SpiceDbAuthorization implements Authorization {
       ),
     });
     const response = await this.trackedWrite(
-      () =>
-        this.sendWrite(() =>
-          this.writeClient.promises.writeRelationships(request),
-        ),
+      () => this.sendWrite(() => this.writeClient.promises.writeRelationships(request)),
       (written) => written.writtenAt?.token ?? "",
     );
     const token = response.writtenAt?.token ?? "";
@@ -208,9 +182,7 @@ export class SpiceDbAuthorization implements Authorization {
     return token;
   }
 
-  async deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  async deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     const request = v1.DeleteRelationshipsRequest.create({
       relationshipFilter: v1.RelationshipFilter.create({
         resourceType: filter.resourceType,
@@ -220,9 +192,7 @@ export class SpiceDbAuthorization implements Authorization {
           ? {
               optionalSubjectFilter: v1.SubjectFilter.create({
                 subjectType: filter.subject.type,
-                ...(filter.subject.id.length > 0
-                  ? { optionalSubjectId: filter.subject.id }
-                  : {}),
+                ...(filter.subject.id.length > 0 ? { optionalSubjectId: filter.subject.id } : {}),
                 ...(filter.subject.relation
                   ? {
                       optionalRelation: v1.SubjectFilter_RelationFilter.create({
@@ -236,10 +206,7 @@ export class SpiceDbAuthorization implements Authorization {
       }),
     });
     const response = await this.trackedWrite(
-      () =>
-        this.sendWrite(() =>
-          this.writeClient.promises.deleteRelationships(request),
-        ),
+      () => this.sendWrite(() => this.writeClient.promises.deleteRelationships(request)),
       (deleted) => deleted.deletedAt?.token ?? "",
     );
     const token = response.deletedAt?.token ?? "";
@@ -247,11 +214,7 @@ export class SpiceDbAuthorization implements Authorization {
     return token;
   }
 
-  async relationshipExists(filter: {
-    resourceType: string;
-    resourceId: string;
-    relation: string;
-  }): Promise<boolean> {
+  async relationshipExists(filter: { resourceType: string; resourceId: string; relation: string }): Promise<boolean> {
     const responses = await this.client.promises.readRelationships(
       v1.ReadRelationshipsRequest.create({
         relationshipFilter: v1.RelationshipFilter.create({
@@ -265,9 +228,7 @@ export class SpiceDbAuthorization implements Authorization {
     return responses.length > 0;
   }
 
-  async listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  async listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     const responses = await this.client.promises.readRelationships(
       v1.ReadRelationshipsRequest.create({
         relationshipFilter: v1.RelationshipFilter.create({
@@ -275,9 +236,7 @@ export class SpiceDbAuthorization implements Authorization {
           optionalResourceId: query.resource.id,
           optionalRelation: query.relation,
         }),
-        ...consistencyField(
-          this.readConsistency(query.consistencyToken, query.consistency),
-        ),
+        ...consistencyField(this.readConsistency(query.consistencyToken, query.consistency)),
       }),
     );
     const subjects: SubjectRef[] = [];
@@ -295,9 +254,7 @@ export class SpiceDbAuthorization implements Authorization {
   }
 
   /** Maintenance-only exact retirement, including direct versus userset subject identity. */
-  async deleteExactRelationship(
-    fact: RelationshipWrite,
-  ): Promise<SpiceDbConsistencyToken> {
+  async deleteExactRelationship(fact: RelationshipWrite): Promise<SpiceDbConsistencyToken> {
     const request = v1.DeleteRelationshipsRequest.create({
       relationshipFilter: v1.RelationshipFilter.create({
         resourceType: fact.resource.type,
@@ -314,10 +271,7 @@ export class SpiceDbAuthorization implements Authorization {
       }),
     });
     const response = await this.trackedWrite(
-      () =>
-        this.sendWrite(() =>
-          this.writeClient.promises.deleteRelationships(request),
-        ),
+      () => this.sendWrite(() => this.writeClient.promises.deleteRelationships(request)),
       (deleted) => deleted.deletedAt?.token ?? "",
     );
     const token = response.deletedAt?.token ?? "";
@@ -326,25 +280,19 @@ export class SpiceDbAuthorization implements Authorization {
   }
 
   /** Bounded maintenance inspection; deliberately not part of the business Authorization port. */
-  async readRelationshipPage(
-    query: RelationshipPageRequest,
-  ): Promise<RelationshipPage> {
+  async readRelationshipPage(query: RelationshipPageRequest): Promise<RelationshipPage> {
     const responses = await this.client.promises.readRelationships(
       v1.ReadRelationshipsRequest.create({
         relationshipFilter: v1.RelationshipFilter.create({
           resourceType: query.resourceType,
         }),
         optionalLimit: 1000,
-        ...(query.cursor === undefined
-          ? {}
-          : { optionalCursor: v1.Cursor.create({ token: query.cursor }) }),
+        ...(query.cursor === undefined ? {} : { optionalCursor: v1.Cursor.create({ token: query.cursor }) }),
         consistency: FULLY_CONSISTENT,
       }),
     );
     if (responses.some((item) => !item.afterResultCursor?.token)) {
-      throw new Error(
-        "Incomplete relationship in authorization migration read",
-      );
+      throw new Error("Incomplete relationship in authorization migration read");
     }
     return {
       relationships: responses.map(relationshipFromSpiceDb),
@@ -359,10 +307,7 @@ export class SpiceDbAuthorization implements Authorization {
    * writes) means fully consistent, exactly as before.
    */
   private enforcementConsistency(): v1.Consistency {
-    const read = enforcementRead(
-      this.adapterConsistency,
-      this.newestWrite.current(),
-    );
+    const read = enforcementRead(this.adapterConsistency, this.newestWrite.current());
     this.onEnforcementRead?.(read.freshness);
     return read.consistency;
   }
@@ -384,9 +329,7 @@ export class SpiceDbAuthorization implements Authorization {
   /** Reads the live schema text. Empty when SpiceDB has never received a schema. */
   async readSchema(): Promise<string> {
     try {
-      const response = await this.client.promises.readSchema(
-        v1.ReadSchemaRequest.create({}),
-      );
+      const response = await this.client.promises.readSchema(v1.ReadSchemaRequest.create({}));
       return response.schemaText;
     } catch (error: unknown) {
       if (isEmptySchemaError(error)) {
@@ -401,10 +344,7 @@ export class SpiceDbAuthorization implements Authorization {
     await this.writes.run(async () => {
       try {
         await withinWriteDeadline(
-          () =>
-            this.client.promises.writeSchema(
-              v1.WriteSchemaRequest.create({ schema }),
-            ),
+          () => this.client.promises.writeSchema(v1.WriteSchemaRequest.create({ schema })),
           SCHEMA_WRITE_DEADLINE_MS,
         );
       } finally {
@@ -416,16 +356,11 @@ export class SpiceDbAuthorization implements Authorization {
 
   /** One write attempt policy: retried when it lost a race, abandoned past its deadline. */
   private sendWrite<T>(send: () => Promise<T>): Promise<T> {
-    return sendWriteRetryingLostRaces(() =>
-      withinWriteDeadline(send, this.writeDeadlineMs),
-    );
+    return sendWriteRetryingLostRaces(() => withinWriteDeadline(send, this.writeDeadlineMs));
   }
 
   /** One relationship write, queued behind the others, keeping its token. */
-  private trackedWrite<T>(
-    write: () => Promise<T>,
-    tokenOf: (response: T) => SpiceDbConsistencyToken,
-  ): Promise<T> {
+  private trackedWrite<T>(write: () => Promise<T>, tokenOf: (response: T) => SpiceDbConsistencyToken): Promise<T> {
     return this.writes.run(() => this.newestWrite.track(write, tokenOf));
   }
 }
@@ -434,22 +369,15 @@ export class SpiceDbAuthorization implements Authorization {
  * Send one idempotent write, again if it lost a race inside SpiceDB — see
  * `logic/spice-db-write-retry.ts` for which failures count and why.
  */
-async function sendWriteRetryingLostRaces<T>(
-  send: () => Promise<T>,
-): Promise<T> {
+async function sendWriteRetryingLostRaces<T>(send: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await send();
     } catch (error) {
-      if (
-        attempt >= SPICE_DB_WRITE_ATTEMPTS ||
-        !isRetryableSpiceDbWriteError(error)
-      ) {
+      if (attempt >= SPICE_DB_WRITE_ATTEMPTS || !isRetryableSpiceDbWriteError(error)) {
         throw error;
       }
-      await new Promise((resolve) =>
-        setTimeout(resolve, spiceDbWriteRetryDelayMs(attempt)),
-      );
+      await new Promise((resolve) => setTimeout(resolve, spiceDbWriteRetryDelayMs(attempt)));
     }
   }
 }
@@ -459,9 +387,7 @@ async function sendWriteRetryingLostRaces<T>(
  * form of AuthzModule.forRoot. Domains receive the seam and never see the
  * vendor; route-level enforcement lives in the HTTP kit.
  */
-export function createSpiceDbAuthorization(
-  options: SpiceDbAdapterOptions,
-): Authorization {
+export function createSpiceDbAuthorization(options: SpiceDbAdapterOptions): Authorization {
   return new SpiceDbAuthorization(options);
 }
 

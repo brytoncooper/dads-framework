@@ -19,10 +19,7 @@ import type { Pool, PoolClient } from "pg";
  * Attached on `acquire`, detached on `release`, so an idle client's error is
  * reported once — by the pool's own `error` listener — not twice.
  */
-export function listenForCheckedOutClientErrors(
-  pool: Pool,
-  onError: (error: Error) => void,
-): void {
+export function listenForCheckedOutClientErrors(pool: Pool, onError: (error: Error) => void): void {
   pool.on("acquire", (client: PoolClient) => {
     client.on("error", onError);
   });

@@ -6,14 +6,8 @@ import {
   type OutboundEmailTx,
 } from "../database/outbound-email-store.js";
 import type { EmailEnvelope } from "../email-envelope.js";
-import {
-  type OutboundEmailId,
-  type OutboundEmailStatus,
-} from "../outbound-email-status.js";
-import type {
-  EmailFailurePolicy,
-  QueuedEmailAttachment,
-} from "../queued-email-attachment.js";
+import { type OutboundEmailId, type OutboundEmailStatus } from "../outbound-email-status.js";
+import type { EmailFailurePolicy, QueuedEmailAttachment } from "../queued-email-attachment.js";
 import { outboundEmailId } from "./outbound-email.factory.js";
 
 /** One stored row, as the fake keeps it — the columns a unit test reads. */
@@ -47,16 +41,10 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
   readonly rows: FakeOutboundEmailRow[] = [];
   private sequence = 0;
 
-  insert(
-    record: NewOutboundEmail,
-    tx?: OutboundEmailTx,
-  ): Promise<{ id: OutboundEmailId; deduplicated: boolean }> {
+  insert(record: NewOutboundEmail, tx?: OutboundEmailTx): Promise<{ id: OutboundEmailId; deduplicated: boolean }> {
     void tx;
     const dedupeKey = record.dedupeKey ?? null;
-    const existing =
-      dedupeKey === null
-        ? undefined
-        : this.rows.find((row) => row.dedupeKey === dedupeKey);
+    const existing = dedupeKey === null ? undefined : this.rows.find((row) => row.dedupeKey === dedupeKey);
     if (existing) {
       return Promise.resolve({ id: existing.id, deduplicated: true });
     }
@@ -74,10 +62,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     return Promise.resolve({ id: row.id, deduplicated: false });
   }
 
-  claimForSending(
-    id: OutboundEmailId,
-    now: Date,
-  ): Promise<ClaimedOutboundEmail | null> {
+  claimForSending(id: OutboundEmailId, now: Date): Promise<ClaimedOutboundEmail | null> {
     const row = this.rows.find((candidate) => candidate.id === id);
     if (!row || !isDue(row, now)) return Promise.resolve(null);
     row.status = "sending";
@@ -94,10 +79,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     });
   }
 
-  markSent(
-    id: OutboundEmailId,
-    result: { providerMessageId: string | null; sentAt: Date },
-  ): Promise<void> {
+  markSent(id: OutboundEmailId, result: { providerMessageId: string | null; sentAt: Date }): Promise<void> {
     this.settle(id, (row) => {
       row.status = "sent";
       row.providerMessageId = result.providerMessageId;
@@ -108,10 +90,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     return Promise.resolve();
   }
 
-  markRetryLater(
-    id: OutboundEmailId,
-    retry: { nextAttemptAt: Date; lastError: string },
-  ): Promise<void> {
+  markRetryLater(id: OutboundEmailId, retry: { nextAttemptAt: Date; lastError: string }): Promise<void> {
     this.settle(id, (row) => {
       row.status = "queued";
       row.nextAttemptAt = retry.nextAttemptAt;
@@ -121,10 +100,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     return Promise.resolve();
   }
 
-  markFailed(
-    id: OutboundEmailId,
-    failure: { lastError: string },
-  ): Promise<void> {
+  markFailed(id: OutboundEmailId, failure: { lastError: string }): Promise<void> {
     this.settle(id, (row) => {
       row.status = "failed";
       row.lastError = failure.lastError;
@@ -146,10 +122,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
 
   failStaleClaims(olderThan: Date): Promise<readonly OutboundEmailId[]> {
     const stale = this.rows.filter(
-      (row) =>
-        row.status === "sending" &&
-        row.claimedAt !== null &&
-        row.claimedAt.getTime() < olderThan.getTime(),
+      (row) => row.status === "sending" && row.claimedAt !== null && row.claimedAt.getTime() < olderThan.getTime(),
     );
     for (const row of stale) {
       row.status = "failed";
@@ -159,13 +132,8 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     return Promise.resolve(stale.map((row) => row.id));
   }
 
-  requeueFailed(
-    ids?: readonly OutboundEmailId[],
-  ): Promise<readonly OutboundEmailId[]> {
-    const requeued = this.rows.filter(
-      (row) =>
-        row.status === "failed" && (ids === undefined || ids.includes(row.id)),
-    );
+  requeueFailed(ids?: readonly OutboundEmailId[]): Promise<readonly OutboundEmailId[]> {
+    const requeued = this.rows.filter((row) => row.status === "failed" && (ids === undefined || ids.includes(row.id)));
     for (const row of requeued) {
       row.status = "queued";
       row.attempts = 0;
@@ -176,9 +144,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     return Promise.resolve(requeued.map((row) => row.id));
   }
 
-  recordImmediate(
-    record: ImmediateOutboundEmail,
-  ): Promise<{ id: OutboundEmailId }> {
+  recordImmediate(record: ImmediateOutboundEmail): Promise<{ id: OutboundEmailId }> {
     const row = this.newRow({
       templateName: record.templateName,
       props: record.props,
@@ -200,10 +166,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
   }
 
   private newRow(
-    fields: Pick<
-      FakeOutboundEmailRow,
-      "templateName" | "props" | "envelope" | "sendAt" | "status"
-    > &
+    fields: Pick<FakeOutboundEmailRow, "templateName" | "props" | "envelope" | "sendAt" | "status"> &
       Partial<FakeOutboundEmailRow>,
   ): FakeOutboundEmailRow {
     this.sequence += 1;
@@ -225,10 +188,7 @@ export class FakeOutboundEmailStore implements OutboundEmailStore {
     return row;
   }
 
-  private settle(
-    id: OutboundEmailId,
-    change: (row: FakeOutboundEmailRow) => void,
-  ): void {
+  private settle(id: OutboundEmailId, change: (row: FakeOutboundEmailRow) => void): void {
     const row = this.rows.find((candidate) => candidate.id === id);
     if (row) change(row);
   }

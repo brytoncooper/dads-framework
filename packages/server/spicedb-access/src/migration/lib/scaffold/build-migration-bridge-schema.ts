@@ -5,10 +5,7 @@ import { parseZedDefinitions } from "../logic/classify-schema-diff.js";
  * Only storage shapes are expanded; all permission expressions come from nextSchema.
  * Removed definitions and relation/permission collisions require an explicitly authored bridge.
  */
-export function buildMigrationBridgeSchema(
-  previousSchema: string,
-  nextSchema: string,
-): string {
+export function buildMigrationBridgeSchema(previousSchema: string, nextSchema: string): string {
   const previous = parseZedDefinitions(previousSchema);
   const next = parseZedDefinitions(nextSchema);
   requireRetainedDefinitions(previous, next);
@@ -25,13 +22,9 @@ type DefinitionStorage = {
   readonly permissions: Set<string>;
 };
 
-function requireRetainedDefinitions(
-  previous: Definitions,
-  next: Definitions,
-): void {
+function requireRetainedDefinitions(previous: Definitions, next: Definitions): void {
   for (const name of previous.keys()) {
-    if (!next.has(name))
-      throw new Error(`Cannot automatically bridge removed definition ${name}`);
+    if (!next.has(name)) throw new Error(`Cannot automatically bridge removed definition ${name}`);
   }
 }
 
@@ -80,18 +73,13 @@ class MigrationBridgeWriter {
 
   private closeDefinition(line: string, inline: boolean): void {
     const definition = this.definition;
-    const missing = [...(definition?.oldRelations ?? [])].filter(
-      ([role]) => !definition?.seenRelations.has(role),
-    );
+    const missing = [...(definition?.oldRelations ?? [])].filter(([role]) => !definition?.seenRelations.has(role));
     const expandInline = inline && missing.length > 0;
     // `missing` is empty without a definition, so expanding implies one.
-    if (expandInline && definition !== undefined)
-      this.output.push(`definition ${definition.name} {`);
+    if (expandInline && definition !== undefined) this.output.push(`definition ${definition.name} {`);
     for (const [role, types] of missing) {
       if (definition?.permissions.has(role))
-        throw new Error(
-          `Cannot bridge relation/permission collision ${definition.name}#${role}`,
-        );
+        throw new Error(`Cannot bridge relation/permission collision ${definition.name}#${role}`);
       this.output.push(`  relation ${role}: ${types.join(" | ")}`);
     }
     this.output.push(expandInline ? "}" : line);

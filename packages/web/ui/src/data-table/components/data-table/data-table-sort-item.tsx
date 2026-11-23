@@ -3,14 +3,7 @@ import { ChevronsUpDown, GripVertical, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "../../../elements/index.js";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../forms/index.js";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../../forms/index.js";
 import {
   Command,
   CommandEmpty,
@@ -52,15 +45,11 @@ export function DataTableSortItem({
   const directionListboxId = `${sortItemId}-direction-listbox`;
 
   const [showFieldSelector, setShowFieldSelector] = React.useState(false);
-  const [showDirectionSelector, setShowDirectionSelector] =
-    React.useState(false);
+  const [showDirectionSelector, setShowDirectionSelector] = React.useState(false);
 
   const onItemKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 
@@ -78,13 +67,7 @@ export function DataTableSortItem({
 
   return (
     <SortableItem value={sort.id} asChild>
-      <div
-        role="listitem"
-        id={sortItemId}
-        tabIndex={-1}
-        className="flex items-center gap-2"
-        onKeyDown={onItemKeyDown}
-      >
+      <div role="listitem" id={sortItemId} tabIndex={-1} className="flex items-center gap-2" onKeyDown={onItemKeyDown}>
         <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
           <PopoverTrigger asChild>
             <Button
@@ -97,10 +80,7 @@ export function DataTableSortItem({
               <ChevronsUpDown className="opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            id={fieldListboxId}
-            className="w-(--radix-popover-trigger-width) p-0"
-          >
+          <PopoverContent id={fieldListboxId} className="w-(--radix-popover-trigger-width) p-0">
             <Command>
               <CommandInput placeholder={t("dataTable.filter.searchFields")} />
               <CommandList>
@@ -130,17 +110,10 @@ export function DataTableSortItem({
             onSortUpdate(sort.id, { desc: value === "desc" });
           }}
         >
-          <SelectTrigger
-            size="sm"
-            aria-controls={directionListboxId}
-            className="w-24 rounded"
-          >
+          <SelectTrigger size="sm" aria-controls={directionListboxId} className="w-24 rounded">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent
-            id={directionListboxId}
-            className="min-w-(--radix-select-trigger-width)"
-          >
+          <SelectContent id={directionListboxId} className="min-w-(--radix-select-trigger-width)">
             <SelectGroup>
               {dataTableConfig.sortOrders.map((order) => (
                 <SelectItem key={order.value} value={order.value}>
@@ -163,11 +136,7 @@ export function DataTableSortItem({
           <Trash2 />
         </Button>
         <SortableItemHandle asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded"
-          >
+          <Button variant="outline" size="icon" className="size-8 shrink-0 rounded">
             <GripVertical />
           </Button>
         </SortableItemHandle>

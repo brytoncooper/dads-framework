@@ -11,7 +11,5 @@
  * variable is the only filter that stays correct as Git adds more of them.
  */
 export function environmentWithoutGitVariables(): NodeJS.ProcessEnv {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
-  );
+  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")));
 }

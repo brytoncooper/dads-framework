@@ -6,8 +6,7 @@ import { nativeArchiveRustTarget } from "./native-executable.mjs";
 import { releaseVersion } from "./release-version.mjs";
 
 const [inputs, output] = process.argv.slice(2);
-if (!inputs || !output)
-  throw new Error("Expected native input and release output directories.");
+if (!inputs || !output) throw new Error("Expected native input and release output directories.");
 
 const version = releaseVersion(process.cwd());
 const entries = readdirSync(inputs, { withFileTypes: true });
@@ -31,16 +30,11 @@ for (const entry of entries) {
     const target = nativeArchiveRustTarget(name, version);
     return target !== undefined && target === build.target;
   });
-  if (native.length !== 1)
-    throw new Error(`Missing native archive in ${entry.name}.`);
+  if (native.length !== 1) throw new Error(`Missing native archive in ${entry.name}.`);
   const [{ name, sha256 }] = native;
-  if (basename(name) !== name)
-    throw new Error("Invalid native archive filename.");
+  if (basename(name) !== name) throw new Error("Invalid native archive filename.");
   const archive = join(directory, name);
-  const digest = createHash("sha256")
-    .update(readFileSync(archive))
-    .digest("hex");
-  if (digest !== sha256)
-    throw new Error(`Native archive checksum differs in ${entry.name}.`);
+  const digest = createHash("sha256").update(readFileSync(archive)).digest("hex");
+  if (digest !== sha256) throw new Error(`Native archive checksum differs in ${entry.name}.`);
   copyFileSync(archive, join(output, name), constants.COPYFILE_EXCL);
 }

@@ -3,15 +3,9 @@ import { describe, expect, it } from "vitest";
 import { ok } from "@dads-framework/core/errors";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import {
-  FakeClaimAccessChanges,
-  testAccessChangeId,
-} from "../../testing/fake-claim.js";
+import { FakeClaimAccessChanges, testAccessChangeId } from "../../testing/fake-claim.js";
 import { InMemoryOwnerLock } from "../../testing/in-memory-owner-lock.js";
-import type {
-  RelationshipWrite,
-  SpiceDbConsistencyToken,
-} from "@dads-framework/access/runtime";
+import type { RelationshipWrite, SpiceDbConsistencyToken } from "@dads-framework/access/runtime";
 import type { AccessChangeId } from "./access-change.ids.js";
 import { ApplyAccessChanges } from "./apply.js";
 import { DEFAULT_LEASE_MS } from "./logic/claim-rules.js";
@@ -40,9 +34,7 @@ class RefusingAuthorization extends FakeAuthorization {
     super(PERMISSIONS);
   }
 
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     if (writes.some((write) => write.resource.id === this.refuseResourceId)) {
       return Promise.reject(new Error(this.reason));
     }
@@ -64,9 +56,7 @@ class GatedAuthorization extends FakeAuthorization {
     super(PERMISSIONS);
   }
 
-  override async writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override async writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     this.startGate();
     await this.released;
     return super.writeRelationships(writes);
@@ -98,12 +88,7 @@ function setup(authz: FakeAuthorization = new FakeAuthorization(PERMISSIONS)) {
   return {
     store,
     authz,
-    projector: new ApplyAccessChanges(
-      store,
-      authz,
-      () => NOW,
-      new InMemoryOwnerLock(),
-    ),
+    projector: new ApplyAccessChanges(store, authz, () => NOW, new InMemoryOwnerLock()),
   };
 }
 
@@ -177,9 +162,7 @@ describe("ApplyAccessChanges", () => {
   });
 
   it("returns a failed row to PENDING with its error recorded", async () => {
-    const { store, projector } = setup(
-      new RefusingAuthorization(ORG, "spicedb unavailable"),
-    );
+    const { store, projector } = setup(new RefusingAuthorization(ORG, "spicedb unavailable"));
     store.seed(grantRow(ROW_1));
 
     const result = await projector.execute({ workerId: "w1" });
@@ -194,9 +177,7 @@ describe("ApplyAccessChanges", () => {
   });
 
   it("gives up at the attempt limit and leaves the row FAILED for a human", async () => {
-    const { store, projector } = setup(
-      new RefusingAuthorization(ORG, "still unavailable"),
-    );
+    const { store, projector } = setup(new RefusingAuthorization(ORG, "still unavailable"));
     store.seed({ ...grantRow(ROW_1), attempts: 4 });
 
     await projector.execute({ workerId: "w1" });
@@ -244,9 +225,7 @@ describe("ApplyAccessChanges", () => {
     if (!result.ok) return;
     expect(result.value).toEqual({ claimed: 0, projected: 0, failed: 0 });
     expect(store.statusOf(ROW_1)).toBe("PENDING");
-    expect(store.lastClaimCutoff()).toEqual(
-      new Date(NOW.getTime() - DEFAULT_LEASE_MS),
-    );
+    expect(store.lastClaimCutoff()).toEqual(new Date(NOW.getTime() - DEFAULT_LEASE_MS));
   });
 
   it("does not report PROJECTED when its claim is stolen during graph I/O", async () => {
@@ -254,19 +233,9 @@ describe("ApplyAccessChanges", () => {
     store.seed(grantRow(ROW_1));
     const authorization = new GatedAuthorization();
     const coordinator = new InMemoryOwnerLock();
-    const first = new ApplyAccessChanges(
-      store,
-      authorization,
-      () => NOW,
-      coordinator,
-    );
+    const first = new ApplyAccessChanges(store, authorization, () => NOW, coordinator);
     const afterLeaseExpiry = new Date(NOW.getTime() + DEFAULT_LEASE_MS + 1);
-    const second = new ApplyAccessChanges(
-      store,
-      authorization,
-      () => afterLeaseExpiry,
-      coordinator,
-    );
+    const second = new ApplyAccessChanges(store, authorization, () => afterLeaseExpiry, coordinator);
 
     const firstRun = first.execute({ workerId: "first-worker" });
     await authorization.started;
@@ -296,9 +265,7 @@ describe("ApplyAccessChanges", () => {
       resource: { type: "organizations/organization", id: ORG },
       relation: "admin",
     });
-    expect(subjects).toEqual([
-      { type: "organizations/organization", id: ORG, relation: "member" },
-    ]);
+    expect(subjects).toEqual([{ type: "organizations/organization", id: ORG, relation: "member" }]);
   });
 
   it("an empty queue is a successful, silent run", async () => {

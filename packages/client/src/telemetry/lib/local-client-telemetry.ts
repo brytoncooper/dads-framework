@@ -28,11 +28,7 @@ import {
   type ClientDiagnosticEvent,
 } from "@dads-framework/core/contract";
 
-import {
-  ClientTelemetry,
-  type TelemetryBreadcrumb,
-  type TelemetryContext,
-} from "../core/index.js";
+import { ClientTelemetry, type TelemetryBreadcrumb, type TelemetryContext } from "../core/index.js";
 import { describeClientError } from "./logic/describe-client-error.js";
 
 /** Breadcrumbs older than this say nothing about the fault that just happened. */
@@ -136,9 +132,7 @@ export class LocalClientTelemetry extends ClientTelemetry {
       frames: [...described.frames],
       breadcrumbs: [...this.#breadcrumbs],
       release: this.#options.release,
-      ...(context.requestId === undefined
-        ? {}
-        : { requestId: context.requestId }),
+      ...(context.requestId === undefined ? {} : { requestId: context.requestId }),
       ...(clientContext === undefined ? {} : { context: clientContext }),
     };
   }

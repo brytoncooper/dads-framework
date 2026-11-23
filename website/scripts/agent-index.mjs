@@ -10,9 +10,7 @@ const ENTITY_TEXT = new Map([
 
 function markdownLabel(html) {
   return html
-    .replace(/&(amp|apos|#39|quot|lt|gt);/gu, (_, entity) =>
-      ENTITY_TEXT.get(entity),
-    )
+    .replace(/&(amp|apos|#39|quot|lt|gt);/gu, (_, entity) => ENTITY_TEXT.get(entity))
     .trim()
     .replace(/[\s]+/gu, " ")
     .replace(/[\\[\]]/gu, "\\$&");
@@ -21,15 +19,11 @@ function markdownLabel(html) {
 function packageGroup(pages, indexed) {
   const index = pages.get("packages.html");
   if (!index) return [];
-  const lookup = index.match(
-    /<article class="package-index">([\s\S]*?)<\/article>/u,
-  )?.[1];
+  const lookup = index.match(/<article class="package-index">([\s\S]*?)<\/article>/u)?.[1];
   if (!lookup) throw new Error("Missing documentation package lookup.");
 
   const entries = [];
-  for (const [, filename, label] of lookup.matchAll(
-    /<a href="(package-[a-z0-9-]+\.html)#try-it">([^<]+)<\/a>/gu,
-  )) {
+  for (const [, filename, label] of lookup.matchAll(/<a href="(package-[a-z0-9-]+\.html)#try-it">([^<]+)<\/a>/gu)) {
     const html = pages.get(filename);
     if (!html?.includes('id="try-it"') || indexed.has(filename))
       throw new Error(`Invalid documentation package example: ${filename}.`);
@@ -46,23 +40,15 @@ function packageGroup(pages, indexed) {
 function documentationGroups(renderedPages) {
   const pages = new Map(renderedPages);
   const index = pages.get("index.html");
-  const navigation = index?.match(
-    /<nav aria-label="Documentation">([\s\S]*?)<\/nav>/u,
-  )?.[1];
-  if (!navigation)
-    throw new Error("The docs index must contain documentation navigation.");
-  if (pages.size !== renderedPages.length)
-    throw new Error("Duplicate rendered documentation page.");
+  const navigation = index?.match(/<nav aria-label="Documentation">([\s\S]*?)<\/nav>/u)?.[1];
+  if (!navigation) throw new Error("The docs index must contain documentation navigation.");
+  if (pages.size !== renderedPages.length) throw new Error("Duplicate rendered documentation page.");
 
   const groups = [];
   const indexed = new Set();
-  for (const [, title, links] of navigation.matchAll(
-    /<h2>([^<]+)<\/h2>\s*<ul>([\s\S]*?)<\/ul>/gu,
-  )) {
+  for (const [, title, links] of navigation.matchAll(/<h2>([^<]+)<\/h2>\s*<ul>([\s\S]*?)<\/ul>/gu)) {
     const group = [];
-    for (const [, filename, label] of links.matchAll(
-      /<a href="([a-z0-9-]+\.html)"(?: [^>]*)?>([^<]+)<\/a>/gu,
-    )) {
+    for (const [, filename, label] of links.matchAll(/<a href="([a-z0-9-]+\.html)"(?: [^>]*)?>([^<]+)<\/a>/gu)) {
       const html = pages.get(filename);
       if (html === undefined || indexed.has(filename))
         throw new Error(`Invalid documentation navigation entry: ${filename}.`);
@@ -74,28 +60,19 @@ function documentationGroups(renderedPages) {
       };
       if (slug.startsWith("api-")) {
         const source = `source/docs/site/reference/${slug}.md`;
-        if (
-          !html.includes(`href="${source}"`) &&
-          !html.includes(`href="/docs/${source}"`)
-        ) {
+        if (!html.includes(`href="${source}"`) && !html.includes(`href="/docs/${source}"`)) {
           throw new Error(`Missing raw API reference link for ${filename}.`);
         }
         page.declarationsPath = `/docs/${source}`;
       }
       group.push(page);
     }
-    if (!group.length)
-      throw new Error(`Empty documentation navigation group: ${title}.`);
+    if (!group.length) throw new Error(`Empty documentation navigation group: ${title}.`);
     groups.push([markdownLabel(title), group]);
   }
   groups.push(...packageGroup(pages, indexed));
-  const missing = [...pages.keys()].filter(
-    (filename) => !indexed.has(filename),
-  );
-  if (missing.length)
-    throw new Error(
-      `Rendered documentation missing from navigation: ${missing.join(", ")}.`,
-    );
+  const missing = [...pages.keys()].filter((filename) => !indexed.has(filename));
+  if (missing.length) throw new Error(`Rendered documentation missing from navigation: ${missing.join(", ")}.`);
   return groups;
 }
 
@@ -104,19 +81,14 @@ function indexText({ title, description, origin, groups }) {
   for (const [group, pages] of groups) {
     lines.push("", `## ${group}`, "");
     for (const { label, markdownPath, declarationsPath } of pages) {
-      const raw = declarationsPath
-        ? ` — [Raw API declarations](${new URL(declarationsPath, origin).href})`
-        : "";
+      const raw = declarationsPath ? ` — [Raw API declarations](${new URL(declarationsPath, origin).href})` : "";
       lines.push(`- [${label}](${new URL(markdownPath, origin).href})${raw}`);
     }
   }
   return `${lines.join("\n")}\n`;
 }
 
-export function createAgentIndexes({
-  origin = "https://dadsframework.dev",
-  renderedPages,
-}) {
+export function createAgentIndexes({ origin = "https://dadsframework.dev", renderedPages }) {
   const docs = documentationGroups(renderedPages);
   const site = [
     "Site",

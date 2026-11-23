@@ -42,15 +42,7 @@ export function planFor(path) {
       {
         name: "eslint",
         command: "npx",
-        args: [
-          "--no-install",
-          "eslint",
-          "--fix",
-          "--no-warn-ignored",
-          "--format",
-          "compact",
-          path,
-        ],
+        args: ["--no-install", "eslint", "--fix", "--no-warn-ignored", "--format", "compact", path],
         binary: "node_modules/.bin/eslint",
         stream: "stdout",
       },
@@ -99,9 +91,7 @@ export function renderReason(path, failures) {
     const lines = failure.output.trim().split("\n");
     const shown = lines.slice(0, MAX_REPORTED_LINES).join("\n");
     const elided =
-      lines.length > MAX_REPORTED_LINES
-        ? `\n… ${String(lines.length - MAX_REPORTED_LINES)} more lines`
-        : "";
+      lines.length > MAX_REPORTED_LINES ? `\n… ${String(lines.length - MAX_REPORTED_LINES)} more lines` : "";
     return `${failure.name}:\n${shown}${elided}`;
   });
   return `${path} still fails after the automatic fixes — fix this before moving on:\n${blocks.join("\n\n")}`;
@@ -109,10 +99,7 @@ export function renderReason(path, failures) {
 
 /** Claude Code and Cursor want the same correction in two different shapes. */
 export function renderResponse(event, reason) {
-  const isClaude =
-    event !== null &&
-    typeof event === "object" &&
-    typeof event.hook_event_name === "string";
+  const isClaude = event !== null && typeof event === "object" && typeof event.hook_event_name === "string";
   if (isClaude) return JSON.stringify({ decision: "block", reason });
   return JSON.stringify({ agentMessage: reason, agent_message: reason });
 }
@@ -121,13 +108,7 @@ export function renderResponse(event, reason) {
 export function pathOf(event) {
   if (event === null || typeof event !== "object") return null;
   const toolInput = event.tool_input ?? event.toolInput ?? {};
-  const candidates = [
-    event.file_path,
-    event.filePath,
-    toolInput.file_path,
-    toolInput.filePath,
-    toolInput.path,
-  ];
+  const candidates = [event.file_path, event.filePath, toolInput.file_path, toolInput.filePath, toolInput.path];
   return candidates.find((value) => typeof value === "string") ?? null;
 }
 
@@ -137,10 +118,7 @@ export function pathOf(event) {
 
 const SELF_TEST_CASES = [
   ["packages/server/http/src/index.ts", ["eslint", "check-source-budgets"]],
-  [
-    "scripts/agent-guards/check-after-edit.mjs",
-    ["eslint", "check-source-budgets"],
-  ],
+  ["scripts/agent-guards/check-after-edit.mjs", ["eslint", "check-source-budgets"]],
   ["vitest.config.js", ["eslint", "check-source-budgets"]],
   ["apps/workbench/src/app.tsx", ["eslint", "check-source-budgets"]],
   ["crates/dads-testing-core/src/lib.rs", ["rustfmt", "check-source-budgets"]],
@@ -155,30 +133,21 @@ function selfTest() {
   for (const [path, expected] of SELF_TEST_CASES) {
     const actual = planFor(path).map((step) => step.name);
     if (actual.join(",") !== expected.join(",")) {
-      failures.push(
-        `${path} -> [${actual.join(",")}], want [${expected.join(",")}]`,
-      );
+      failures.push(`${path} -> [${actual.join(",")}], want [${expected.join(",")}]`);
     }
   }
-  const long = Array.from(
-    { length: 30 },
-    (_, index) => `line ${String(index)}`,
-  );
-  const reason = renderReason("a.ts", [
-    { name: "eslint", output: long.join("\n") },
-  ]);
+  const long = Array.from({ length: 30 }, (_, index) => `line ${String(index)}`);
+  const reason = renderReason("a.ts", [{ name: "eslint", output: long.join("\n") }]);
   if (!reason.includes("… 10 more lines") || reason.includes("line 20")) {
     failures.push("output must be capped at 20 lines");
   }
-  if (pathOf(null) !== null)
-    failures.push("malformed input must yield no path");
+  if (pathOf(null) !== null) failures.push("malformed input must yield no path");
   const total = SELF_TEST_CASES.length + 2;
   const lines = failures.map((failure) => `self-test FAIL ${failure}\n`);
   process.stdout.write(
     failures.length === 0
       ? `check-after-edit self-test OK (${String(total)} cases)\n`
-      : lines.join("") +
-          `check-after-edit self-test: ${String(failures.length)} of ${String(total)} failed\n`,
+      : lines.join("") + `check-after-edit self-test: ${String(failures.length)} of ${String(total)} failed\n`,
   );
   process.exitCode = failures.length === 0 ? 0 : 1;
 }
@@ -243,10 +212,6 @@ if (process.argv.includes("--self-test")) {
         if (failure !== null) failures.push(failure);
       }
     }
-    process.stdout.write(
-      failures.length === 0
-        ? "{}"
-        : renderResponse(event, renderReason(path, failures)),
-    );
+    process.stdout.write(failures.length === 0 ? "{}" : renderResponse(event, renderReason(path, failures)));
   }
 }

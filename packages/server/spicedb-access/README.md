@@ -29,10 +29,7 @@ In another terminal, save this as `check-access.mts` and run
 <!-- dads:check-example -->
 
 ```ts
-import {
-  SpiceDbAuthorization,
-  relationshipWrite,
-} from "@dads-framework/spicedb-access";
+import { SpiceDbAuthorization, relationshipWrite } from "@dads-framework/spicedb-access";
 
 const authorization = new SpiceDbAuthorization({
   endpoint: "127.0.0.1:50051",
@@ -54,9 +51,7 @@ const subject = { type: "user", id: "alice" };
 const query = { resource, subject, permission: "view" };
 
 console.log(await authorization.check(query));
-await authorization.writeRelationships([
-  relationshipWrite(resource, "viewer", subject),
-]);
+await authorization.writeRelationships([relationshipWrite(resource, "viewer", subject)]);
 console.log(await authorization.check(query));
 ```
 

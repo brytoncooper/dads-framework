@@ -22,8 +22,5 @@ export type AliasFileSystem = {
    * The absolute path a package specifier resolves to when it is required
    * from `fromFile`, or `undefined` when nothing there answers to that name.
    */
-  readonly resolvePackage: (
-    specifier: string,
-    fromFile: string,
-  ) => string | undefined;
+  readonly resolvePackage: (specifier: string, fromFile: string) => string | undefined;
 };

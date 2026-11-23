@@ -15,8 +15,7 @@ it("replays the same creation key after failed authorization and SQLite restart"
   const path = join(directory, "workbench.sqlite");
   const authorization = new WorkbenchMemoryAuthorization();
   const unavailable = createAuthorizationDouble(authorization, {
-    writeRelationships: () =>
-      Promise.reject(testAuthorizationFault("UNAVAILABLE", "Unavailable")),
+    writeRelationships: () => Promise.reject(testAuthorizationFault("UNAVAILABLE", "Unavailable")),
   });
   let sequence = 0;
   const dependencies = {
@@ -38,9 +37,9 @@ it("replays the same creation key after failed authorization and SQLite restart"
         store: firstStore,
         authorization: unavailable,
       });
-      await expect(
-        first.operations.createWorkspace(subject, body),
-      ).rejects.toMatchObject({ code: "RELATIONSHIPS_PENDING" });
+      await expect(first.operations.createWorkspace(subject, body)).rejects.toMatchObject({
+        code: "RELATIONSHIPS_PENDING",
+      });
       originalId = (await firstStore.read()).workspaces[0]?.id;
     } finally {
       firstStore.close();
@@ -102,20 +101,9 @@ it("retains task and artifact request keys across SQLite restart", async () => {
     const original = await (async () => {
       try {
         const first = createWorkbench({ ...dependencies, store: firstStore });
-        const workspace = await first.operations.createWorkspace(
-          subject,
-          workspaceBody,
-        );
-        const task = await first.operations.createTask(
-          subject,
-          workspace.id,
-          taskBody,
-        );
-        const artifact = await first.operations.createArtifact(
-          subject,
-          task.id,
-          artifactBody,
-        );
+        const workspace = await first.operations.createWorkspace(subject, workspaceBody);
+        const task = await first.operations.createTask(subject, workspace.id, taskBody);
+        const artifact = await first.operations.createArtifact(subject, task.id, artifactBody);
         return { workspace, task, artifact };
       } finally {
         firstStore.close();
@@ -124,20 +112,10 @@ it("retains task and artifact request keys across SQLite restart", async () => {
     const reopened = new SqliteWorkbenchStore(path);
     try {
       const second = createWorkbench({ ...dependencies, store: reopened });
-      expect(
-        await second.operations.createTask(
-          subject,
-          original.workspace.id,
-          taskBody,
-        ),
-      ).toEqual(original.task);
-      expect(
-        await second.operations.createArtifact(
-          subject,
-          original.task.id,
-          artifactBody,
-        ),
-      ).toEqual(original.artifact);
+      expect(await second.operations.createTask(subject, original.workspace.id, taskBody)).toEqual(original.task);
+      expect(await second.operations.createArtifact(subject, original.task.id, artifactBody)).toEqual(
+        original.artifact,
+      );
       expect((await reopened.read()).tasks).toHaveLength(1);
       expect((await reopened.read()).artifacts).toHaveLength(1);
       expect((await reopened.read()).activity).toHaveLength(3);

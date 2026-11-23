@@ -4,9 +4,7 @@ import { describe, expect, it } from "vitest";
 import { runWithAuthorizationConsistency } from "@dads-framework/access/runtime";
 import { SpiceDbAuthorization } from "./spice-db-authorization.js";
 
-type SpiceDbClient = NonNullable<
-  ConstructorParameters<typeof SpiceDbAuthorization>[1]
->;
+type SpiceDbClient = NonNullable<ConstructorParameters<typeof SpiceDbAuthorization>[1]>;
 const SUBJECT = { type: "user", id: "reader" };
 const RESOURCE = { type: "test/document", id: "document" };
 const CURRENT = {
@@ -68,32 +66,28 @@ describe("SpiceDB enforcement consistency", () => {
       queryToken: "old-query",
       requestToken: "old-cookie",
     },
-  ])(
-    "always requests current check and lookup $name",
-    async ({ queryToken, requestToken }) => {
-      const { authorization, reads } = recordingClient();
-      const consistency =
-        queryToken === undefined ? {} : { consistencyToken: queryToken };
-      await runWithAuthorizationConsistency(requestToken, async () => {
-        await authorization.check({
-          subject: SUBJECT,
-          resource: RESOURCE,
-          permission: "view",
-          ...consistency,
-        });
-        await authorization.lookupResources({
-          subject: SUBJECT,
-          resourceType: RESOURCE.type,
-          permission: "view",
-          ...consistency,
-        });
+  ])("always requests current check and lookup $name", async ({ queryToken, requestToken }) => {
+    const { authorization, reads } = recordingClient();
+    const consistency = queryToken === undefined ? {} : { consistencyToken: queryToken };
+    await runWithAuthorizationConsistency(requestToken, async () => {
+      await authorization.check({
+        subject: SUBJECT,
+        resource: RESOURCE,
+        permission: "view",
+        ...consistency,
       });
-      expect(reads).toEqual([
-        { operation: "check", consistency: CURRENT },
-        { operation: "lookup", consistency: CURRENT },
-      ]);
-    },
-  );
+      await authorization.lookupResources({
+        subject: SUBJECT,
+        resourceType: RESOURCE.type,
+        permission: "view",
+        ...consistency,
+      });
+    });
+    expect(reads).toEqual([
+      { operation: "check", consistency: CURRENT },
+      { operation: "lookup", consistency: CURRENT },
+    ]);
+  });
 
   it("keeps direct-subject display reads configurable and guard reads current", async () => {
     const { authorization, reads } = recordingClient();

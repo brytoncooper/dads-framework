@@ -1,15 +1,7 @@
 import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import type {
-  DeleteOperationContract,
-  OperationPathParamsShape,
-} from "@dads-framework/core/contract";
-import type {
-  PermissionAccess,
-  PublicAccess,
-  RouteAccess,
-  SessionAccess,
-} from "./access.js";
+import type { DeleteOperationContract, OperationPathParamsShape } from "@dads-framework/core/contract";
+import type { PermissionAccess, PublicAccess, RouteAccess, SessionAccess } from "./access.js";
 import {
   resolveNoContentOperationConfig,
   type ErasedOperationNoContentConfig,
@@ -44,12 +36,7 @@ export type DeleteRouteConfig<
 > = VerbCommon<"DELETE", Path, Access> & {
   readonly body?: BodySchema;
   handler(
-    ctx: RouteHandlerContext<
-      SchemaOutput<ParamsSchema>,
-      undefined,
-      SchemaOutput<BodySchema>,
-      Subject
-    >,
+    ctx: RouteHandlerContext<SchemaOutput<ParamsSchema>, undefined, SchemaOutput<BodySchema>, Subject>,
   ): Promise<void> | void;
 } & VerbParams<Path, ParamsSchema>;
 
@@ -73,13 +60,13 @@ type DeleteRouteContractSource<
     };
 
 /** Parsed inputs and subject available to a named DELETE handler module. */
-export type DeleteRouteHandlerContext<Params, Body, Subject> =
-  RouteHandlerContext<Params, undefined, Body, Subject>;
+export type DeleteRouteHandlerContext<Params, Body, Subject> = RouteHandlerContext<Params, undefined, Body, Subject>;
 
 type DeleteRouteAccess = SessionAccess | PermissionAccess | PublicAccess;
 
-type DeleteRouteSubject<Access extends DeleteRouteAccess> =
-  Access extends PublicAccess ? SubjectRef | null : SubjectRef;
+type DeleteRouteSubject<Access extends DeleteRouteAccess> = Access extends PublicAccess
+  ? SubjectRef | null
+  : SubjectRef;
 
 /** DELETE handler subject nullability follows the declared access. */
 export function deleteRoute<
@@ -100,9 +87,7 @@ export function deleteRoute<
       ): Promise<void> | void;
     },
 ): RouteBlueprint;
-export function deleteRoute(
-  config: ErasedNoContentVerbConfig | ErasedOperationNoContentConfig,
-): RouteBlueprint {
+export function deleteRoute(config: ErasedNoContentVerbConfig | ErasedOperationNoContentConfig): RouteBlueprint {
   const normalized = resolveNoContentOperationConfig(config, "delete");
   return buildNoContentDefinition({
     ...normalized,

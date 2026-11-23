@@ -8,10 +8,7 @@ import { describe, expect, it, type Mock, vi } from "vitest";
 
 import { describeJobs, type JobLog } from "@dads-framework/job-queue";
 
-import {
-  createPruneRequestLogJob,
-  PRUNE_REQUEST_LOG_JOB,
-} from "./prune-request-log.job.js";
+import { createPruneRequestLogJob, PRUNE_REQUEST_LOG_JOB } from "./prune-request-log.job.js";
 
 function fakeClock(now: Date) {
   return { now: () => now };
@@ -46,9 +43,7 @@ describe("createPruneRequestLogJob", () => {
     await job.run({});
 
     const expectedCutoff = new Date("2026-01-10T03:00:00.000Z");
-    expect(deleteRecordedBefore).toHaveBeenCalledExactlyOnceWith(
-      expectedCutoff,
-    );
+    expect(deleteRecordedBefore).toHaveBeenCalledExactlyOnceWith(expectedCutoff);
     expect(log.info).toHaveBeenCalledExactlyOnceWith(
       { event: "request-log.pruned", deleted: 7, cutoff: expectedCutoff },
       "request_log rows pruned",
@@ -69,14 +64,8 @@ describe("createPruneRequestLogJob", () => {
     current = new Date("2026-01-02T00:00:00.000Z");
     await job.run({});
 
-    expect(deleteRecordedBefore).toHaveBeenNthCalledWith(
-      1,
-      new Date("2025-12-31T00:00:00.000Z"),
-    );
-    expect(deleteRecordedBefore).toHaveBeenNthCalledWith(
-      2,
-      new Date("2026-01-01T00:00:00.000Z"),
-    );
+    expect(deleteRecordedBefore).toHaveBeenNthCalledWith(1, new Date("2025-12-31T00:00:00.000Z"));
+    expect(deleteRecordedBefore).toHaveBeenNthCalledWith(2, new Date("2026-01-01T00:00:00.000Z"));
   });
 
   it("declares its daily cron schedule and retry policy", () => {
@@ -121,11 +110,7 @@ describe("createPruneRequestLogJob", () => {
       log: silentLog(),
     };
 
-    expect(() =>
-      createPruneRequestLogJob({ ...base, retentionDays: -5 }),
-    ).toThrow(/positive integer/);
-    expect(() =>
-      createPruneRequestLogJob({ ...base, retentionDays: 1.5 }),
-    ).toThrow(/positive integer/);
+    expect(() => createPruneRequestLogJob({ ...base, retentionDays: -5 })).toThrow(/positive integer/);
+    expect(() => createPruneRequestLogJob({ ...base, retentionDays: 1.5 })).toThrow(/positive integer/);
   });
 });

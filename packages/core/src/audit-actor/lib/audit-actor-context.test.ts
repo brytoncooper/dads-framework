@@ -49,10 +49,7 @@ describe("runWithAuditActor", () => {
         return { before, after: currentAuditActor() };
       });
 
-    const [firstSaw, secondSaw] = await Promise.all([
-      actorAcrossAwait(first),
-      actorAcrossAwait(second),
-    ]);
+    const [firstSaw, secondSaw] = await Promise.all([actorAcrossAwait(first), actorAcrossAwait(second)]);
 
     expect(firstSaw).toEqual({ before: first, after: first });
     expect(secondSaw).toEqual({ before: second, after: second });
@@ -63,9 +60,7 @@ describe("runWithAuditActor", () => {
     const inner = userActor("user-2", OTHER_REQUEST_ID);
 
     const seen = await runWithAuditActor(outer, async () => {
-      const innerSaw = await runWithAuditActor(inner, () =>
-        currentAuditActor(),
-      );
+      const innerSaw = await runWithAuditActor(inner, () => currentAuditActor());
       return { innerSaw, afterInner: currentAuditActor() };
     });
 
@@ -96,9 +91,7 @@ describe("withReason", () => {
   });
 
   it("runs the work unchanged outside any context", async () => {
-    const seen = await withReason("no actor to annotate", () =>
-      currentAuditActor(),
-    );
+    const seen = await withReason("no actor to annotate", () => currentAuditActor());
 
     expect(seen).toBeUndefined();
   });
@@ -114,15 +107,11 @@ describe("systemActor", () => {
   });
 
   it("mints a different request id per run, so one run's rows group together", () => {
-    expect(systemActor("seed").requestId).not.toBe(
-      systemActor("seed").requestId,
-    );
+    expect(systemActor("seed").requestId).not.toBe(systemActor("seed").requestId);
   });
 
   it("keeps a supplied request id", () => {
-    expect(systemActor("job:prune-request-log", REQUEST_ID).requestId).toBe(
-      REQUEST_ID,
-    );
+    expect(systemActor("job:prune-request-log", REQUEST_ID).requestId).toBe(REQUEST_ID);
   });
 });
 
@@ -131,9 +120,7 @@ describe("withSystemActor", () => {
     const user = userActor("user-1", REQUEST_ID);
 
     const seen = await runWithAuditActor(user, async () => {
-      const systemSaw = await withSystemActor("job:rebuild-index", () =>
-        currentAuditActor(),
-      );
+      const systemSaw = await withSystemActor("job:rebuild-index", () => currentAuditActor());
       return { systemSaw, afterJob: currentAuditActor() };
     });
 

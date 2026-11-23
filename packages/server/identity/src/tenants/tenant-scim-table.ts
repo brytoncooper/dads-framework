@@ -1,13 +1,5 @@
 import type { ScimEmail, ScimName } from "../scim/index.js";
-import {
-  boolean,
-  jsonb,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import type { TenantId } from "./tenant-access.js";
 import { tenantTable } from "./tenant-tables.js";

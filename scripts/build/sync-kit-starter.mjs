@@ -3,21 +3,17 @@ import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import process from "node:process";
 
-const source = fileURLToPath(
-  new URL("../../apps/kit-workbench/", import.meta.url),
-);
+const source = fileURLToPath(new URL("../../apps/kit-workbench/", import.meta.url));
 const output = new URL(
   "../../packages/foundation/toolbox/src/starter-project/kit-starter.generated.ts",
   import.meta.url,
 );
 
 function sourceFiles(directory) {
-  return readdirSync(join(source, directory), { withFileTypes: true }).flatMap(
-    (entry) => {
-      const name = directory === "" ? entry.name : `${directory}/${entry.name}`;
-      return entry.isDirectory() ? sourceFiles(name) : [name];
-    },
-  );
+  return readdirSync(join(source, directory), { withFileTypes: true }).flatMap((entry) => {
+    const name = directory === "" ? entry.name : `${directory}/${entry.name}`;
+    return entry.isDirectory() ? sourceFiles(name) : [name];
+  });
 }
 
 const claudeImport = readFileSync(join(source, "CLAUDE.md"), "utf8");
@@ -38,15 +34,7 @@ const paths = [
   "index.html",
   "examples.html",
   "vite.config.ts",
-  ...[
-    "apps",
-    "assembly",
-    "domains",
-    "examples",
-    "libraries",
-    "migrations",
-    "tests",
-  ].flatMap(sourceFiles),
+  ...["apps", "assembly", "domains", "examples", "libraries", "migrations", "tests"].flatMap(sourceFiles),
 ].sort();
 
 const generated = [
@@ -63,9 +51,7 @@ const generated = [
 
 if (process.argv.includes("--check")) {
   if (readFileSync(output, "utf8") !== generated) {
-    throw new Error(
-      "The kit starter changed. Run node scripts/build/sync-kit-starter.mjs.",
-    );
+    throw new Error("The kit starter changed. Run node scripts/build/sync-kit-starter.mjs.");
   }
 } else {
   writeFileSync(output, generated);

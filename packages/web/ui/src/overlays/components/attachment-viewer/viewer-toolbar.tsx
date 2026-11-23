@@ -2,12 +2,7 @@ import * as React from "react";
 
 import { Button, cn } from "../../../elements/index.js";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip.js";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.js";
 
 /** Lets the buttons inside share one tooltip delay; every group of toolbar buttons sits in one. */
 export function ToolbarTooltips({ children }: { children: React.ReactNode }) {
@@ -19,13 +14,7 @@ export function ToolbarTooltips({ children }: { children: React.ReactNode }) {
  * shared by PDFs and images. The sidebar tokens are light-on-dark
  * chrome in both themes, so the pill reads the same on a light or dark stage.
  */
-export function ViewerToolbar({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+export function ViewerToolbar({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <ToolbarTooltips>
       <div
@@ -82,9 +71,7 @@ export function ToolbarIconButton({
 }
 
 export function ToolbarDivider() {
-  return (
-    <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-sidebar-border" />
-  );
+  return <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-sidebar-border" />;
 }
 
 /** A short status readout such as the zoom percentage. */

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import {
-  RESERVED_SLUGS,
-  isReservedSlug,
-  isSlugShape,
-  slugSchema,
-} from "./slug.js";
+import { RESERVED_SLUGS, isReservedSlug, isSlugShape, slugSchema } from "./slug.js";
 
 const longhandSchema = z
   .string()
@@ -32,9 +27,7 @@ describe("slugSchema", () => {
   });
 
   it("names the format in its message", () => {
-    expect(slug.safeParse("Acme").error?.issues[0]?.message).toBe(
-      "Slug must be lowercase kebab-case",
-    );
+    expect(slug.safeParse("Acme").error?.issues[0]?.message).toBe("Slug must be lowercase kebab-case");
   });
 });
 

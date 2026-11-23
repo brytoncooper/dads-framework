@@ -28,10 +28,7 @@ const auditActorContext = new AsyncLocalStorage<AuditActor>();
  * including writes made by anything it awaits. Contexts nest: the inner actor
  * wins for the duration and the outer one is restored on the way out.
  */
-export async function runWithAuditActor<T>(
-  actor: AuditActor,
-  work: () => Promise<T> | T,
-): Promise<T> {
+export async function runWithAuditActor<T>(actor: AuditActor, work: () => Promise<T> | T): Promise<T> {
   return auditActorContext.run(actor, async () => work());
 }
 
@@ -70,10 +67,7 @@ export function currentAuditActor(): AuditActor | undefined {
  * Outside any context there is nothing to annotate, so `work` runs unchanged
  * and its writes are refused by the trigger exactly as they would have been.
  */
-export async function withReason<T>(
-  reason: string,
-  work: () => Promise<T> | T,
-): Promise<T> {
+export async function withReason<T>(reason: string, work: () => Promise<T> | T): Promise<T> {
   const actor = currentAuditActor();
   if (actor === undefined) return work();
   return runWithAuditActor({ ...actor, reason }, work);
@@ -89,11 +83,7 @@ export function systemActor(name: string, requestId?: string): AuditActor {
 }
 
 /** Runs `work` attributed to the named system actor. */
-export async function withSystemActor<T>(
-  name: string,
-  work: () => Promise<T> | T,
-  requestId?: string,
-): Promise<T> {
+export async function withSystemActor<T>(name: string, work: () => Promise<T> | T, requestId?: string): Promise<T> {
   return runWithAuditActor(systemActor(name, requestId), work);
 }
 

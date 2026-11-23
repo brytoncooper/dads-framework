@@ -6,9 +6,7 @@ import { parseZed } from "./parse-zed.js";
  * Compile access IR definitions into strict, zero-`any` Dads TypeScript using
  * `actor`, `resource`, and `compileAccess`.
  */
-export function emitTypeScript(
-  definitions: readonly AccessIrDefinition[],
-): string {
+export function emitTypeScript(definitions: readonly AccessIrDefinition[]): string {
   return emitErgonomicTypeScript(definitions);
 }
 

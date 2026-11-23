@@ -1,11 +1,7 @@
 import type { RowData } from "@tanstack/react-table";
 import type * as React from "react";
 
-import type {
-  DataTableFilterState,
-  FilterVariant,
-  Option,
-} from "./data-table-types.js";
+import type { DataTableFilterState, FilterVariant, Option } from "./data-table-types.js";
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {

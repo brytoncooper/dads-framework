@@ -1,9 +1,4 @@
-import {
-  isDslActor,
-  isDslLazyResource,
-  isDslResource,
-  parentRoleNameOf,
-} from "./dsl-actor.js";
+import { isDslActor, isDslLazyResource, isDslResource, parentRoleNameOf } from "./dsl-actor.js";
 import type {
   AnyDslResource,
   DslExpirableUsersetHolder,
@@ -20,15 +15,11 @@ import type { SingleRoleValue } from "./holders.js";
 import { isRoleToken, permissionToken } from "./refs.js";
 import type { PermissionToken, RoleHolder } from "./refs.js";
 
-function isHolderArray(
-  holder: DslRoleHolder,
-): holder is readonly DslSingleRoleHolder[] {
+function isHolderArray(holder: DslRoleHolder): holder is readonly DslSingleRoleHolder[] {
   return Array.isArray(holder);
 }
 
-export function resolveSingleRoleValue(
-  entry: DslSingleRoleHolder,
-): SingleRoleValue {
+export function resolveSingleRoleValue(entry: DslSingleRoleHolder): SingleRoleValue {
   if (isDslLazyResource(entry)) {
     return entry().handle;
   }
@@ -48,11 +39,7 @@ export function resolveRoleHolder(holder: DslRoleHolder): RoleHolder {
   return resolveSingleRoleValue(holder);
 }
 
-function createLazyRoleToken(
-  entityWireName: string,
-  roleName: string,
-  getHolder: () => RoleHolder,
-): DslRoleToken {
+function createLazyRoleToken(entityWireName: string, roleName: string, getHolder: () => RoleHolder): DslRoleToken {
   const expiring: DslExpirableUsersetHolder = {
     kind: "expirable",
     holder: { kind: "userset", entityWireName, roleName },
@@ -70,18 +57,12 @@ function createLazyRoleToken(
   };
 }
 
-export function createPermissionBag(
-  entityWireName: string,
-): Readonly<Record<string, PermissionToken>> {
+export function createPermissionBag(entityWireName: string): Readonly<Record<string, PermissionToken>> {
   const cache = new Map<string, PermissionToken>();
   const target: Record<string, PermissionToken> = {};
   return new Proxy(target, {
     get(_obj, propertyName): PermissionToken | undefined {
-      if (
-        typeof propertyName !== "string" ||
-        propertyName === "then" ||
-        propertyName === "toJSON"
-      ) {
+      if (typeof propertyName !== "string" || propertyName === "then" || propertyName === "toJSON") {
         return undefined;
       }
       const existing = cache.get(propertyName);
@@ -103,10 +84,7 @@ function buildAutoParentRoles(
   recursive: boolean,
 ): Record<string, DslRoleToken> {
   const roles: Record<string, DslRoleToken> = {};
-  const parentRoleName =
-    parentResource === undefined
-      ? undefined
-      : parentRoleNameOf(parentResource.wireName);
+  const parentRoleName = parentResource === undefined ? undefined : parentRoleNameOf(parentResource.wireName);
 
   if (parentResource !== undefined && parentRoleName !== undefined) {
     const useSelfToo = recursive && parentRoleName === "parent";
@@ -133,26 +111,14 @@ export function buildRoleTokens(
   parents: readonly AnyDslResource[],
   recursive: boolean,
 ): Record<string, DslRoleToken> {
-  const roles = buildAutoParentRoles(
-    wireName,
-    handle,
-    parentResource,
-    parents,
-    recursive,
-  );
+  const roles = buildAutoParentRoles(wireName, handle, parentResource, parents, recursive);
   for (const [roleName, holder] of Object.entries(declaredRoles)) {
-    roles[roleName] = createLazyRoleToken(wireName, roleName, () =>
-      resolveRoleHolder(holder),
-    );
+    roles[roleName] = createLazyRoleToken(wireName, roleName, () => resolveRoleHolder(holder));
   }
   return roles;
 }
 
-export function createInstanceProxy(
-  wireName: string,
-  id: string,
-  roleNames: ReadonlySet<string>,
-): unknown {
+export function createInstanceProxy(wireName: string, id: string, roleNames: ReadonlySet<string>): unknown {
   const resourceRef = { type: wireName, id };
   const base = {
     $resource: { kind: "resource-ref", type: wireName, id },

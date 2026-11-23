@@ -16,19 +16,13 @@ export function libraryPackageManifest(
 } {
   const workspaces = manifest["workspaces"];
   const entries = isRecord(workspaces) ? workspaces["packages"] : workspaces;
-  if (
-    entries !== undefined &&
-    (!isUnknownArray(entries) || !entries.every(isString))
-  ) {
+  if (entries !== undefined && (!isUnknownArray(entries) || !entries.every(isString))) {
     throw new Error("package.json workspaces must contain an array of paths.");
   }
   const paths = entries ?? [];
   const registered = paths.includes(library.root);
   const packages = registered ? paths : [...paths, library.root];
-  const verification = registerRootVerification(
-    manifest["scripts"],
-    library.command,
-  );
+  const verification = registerRootVerification(manifest["scripts"], library.command);
   return {
     registered,
     verificationRegistered: verification.registered,
@@ -65,12 +59,8 @@ export function assertLibraryRegistration(
   },
   rootVerificationRegistered: boolean,
 ): void {
-  const owner = project.packages.find(
-    ({ root }) => root === library.owner.root,
-  );
-  const capability = project.capabilities.find(
-    ({ name }) => name === library.capability.name,
-  );
+  const owner = project.packages.find(({ root }) => root === library.owner.root);
+  const capability = project.capabilities.find(({ name }) => name === library.capability.name);
   const taskId = libraryTaskId(library.owner.name);
   if (
     owner?.name !== library.owner.name ||
@@ -97,21 +87,13 @@ function capabilityOwnsLibraryFiles(
   );
 }
 
-function libraryVerificationIsRegistered(
-  project: DadsProject,
-  packageName: string,
-  taskId: string,
-): boolean {
+function libraryVerificationIsRegistered(project: DadsProject, packageName: string, taskId: string): boolean {
   if (project.schemaVersion === 1) {
-    return project.verificationPolicy.tasks.some(
-      (task) => task.packageName === packageName,
-    );
+    return project.verificationPolicy.tasks.some((task) => task.packageName === packageName);
   }
   return (
     project.verificationPolicy.fullFallbackTaskIds.includes(taskId) &&
-    project.verificationPolicy.tasks.some(
-      (task) => task.id === taskId && task.packageName === packageName,
-    )
+    project.verificationPolicy.tasks.some((task) => task.id === taskId && task.packageName === packageName)
   );
 }
 
@@ -135,18 +117,13 @@ export function libraryProjectManifest(
       sourceInputs: [owner.root],
       nonSourceInputs: ["package.json", "package-lock.json"],
       reusePolicy: "never",
-      ...(manifest["schemaVersion"] === 3
-        ? { execution: { kind: "shell" } }
-        : {}),
+      ...(manifest["schemaVersion"] === 3 ? { execution: { kind: "shell" } } : {}),
     };
     Object.assign(project, {
       verification: {
         ...verification,
         tasks: [...readArray(verification, "tasks"), task],
-        fullFallbackTaskIds: [
-          ...readArray(verification, "fullFallbackTaskIds"),
-          task.id,
-        ],
+        fullFallbackTaskIds: [...readArray(verification, "fullFallbackTaskIds"), task.id],
       },
     });
   }

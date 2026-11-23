@@ -32,9 +32,7 @@ describe("keepPermitted", () => {
       VIEW,
       rows,
     );
-    expect(kept.map((row) => row.position)).toEqual(
-      rows.filter((row) => allowedId(row.id)).map((row) => row.position),
-    );
+    expect(kept.map((row) => row.position)).toEqual(rows.filter((row) => allowedId(row.id)).map((row) => row.position));
     expect(asked).toHaveLength(300);
     expect(asked[0]).toEqual({
       subject: SUBJECT,
@@ -54,9 +52,7 @@ describe("keepPermitted", () => {
         },
         checkMany: (queries) => {
           batches.push(queries);
-          return Promise.resolve(
-            queries.map((query) => allowedId(query.resource.id)),
-          );
+          return Promise.resolve(queries.map((query) => allowedId(query.resource.id)));
         },
       },
       SUBJECT,

@@ -15,10 +15,7 @@ export function createAccountInvitations(
   const { pool } = options.database;
   return {
     async issue(session: IdentitySession, email: string): Promise<boolean> {
-      if (
-        !session.account.emailVerified ||
-        !(await options.canInvite(session.account))
-      ) {
+      if (!session.account.emailVerified || !(await options.canInvite(session.account))) {
         return false;
       }
       const token = randomBytes(32).toString("base64url");
@@ -35,11 +32,7 @@ export function createAccountInvitations(
       return true;
     },
     async accept(session: IdentitySession, token: unknown): Promise<boolean> {
-      if (
-        !session.account.emailVerified ||
-        typeof token !== "string" ||
-        !TOKEN.test(token)
-      ) {
+      if (!session.account.emailVerified || typeof token !== "string" || !TOKEN.test(token)) {
         return false;
       }
       const deleted = await runInvitationQuery(

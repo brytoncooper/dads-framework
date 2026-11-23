@@ -29,9 +29,7 @@ import {
 } from "./alias-resolver-conformance-cases.js";
 
 /** Builds a file system serving exactly the given absolute paths. */
-export type AliasFileSystemFactory = (
-  files: Readonly<Record<string, string>>,
-) => AliasFileSystem;
+export type AliasFileSystemFactory = (files: Readonly<Record<string, string>>) => AliasFileSystem;
 
 /** What the suite is run against. */
 export type AliasResolverConformanceSubject = {
@@ -62,9 +60,7 @@ export function aliasResolverConformanceLaws(): readonly string[] {
   return [
     ...new Set([
       buildsAResolver,
-      ...aliasResolutionCases().flatMap((declared) =>
-        declared.resolutions.map((one) => one.law),
-      ),
+      ...aliasResolutionCases().flatMap((declared) => declared.resolutions.map((one) => one.law)),
       ...aliasRefusalCases.map((declared) => declared.law),
       refusesBlankTsconfig,
     ]),
@@ -76,9 +72,7 @@ export function runAliasResolverConformance(
   subject: AliasResolverConformanceSubject,
 ): readonly AliasResolverConformanceFinding[] {
   return [
-    ...aliasResolutionCases().flatMap((declared) =>
-      checkResolutions(subject, declared),
-    ),
+    ...aliasResolutionCases().flatMap((declared) => checkResolutions(subject, declared)),
     ...aliasRefusalCases.flatMap((declared) => checkRefusal(subject, declared)),
     ...checkBlankTsconfig(subject),
   ];
@@ -101,9 +95,7 @@ function checkResolutions(
     return [finding(declared.name, buildsAResolver, reason(error))];
   }
   const resolver = built;
-  return declared.resolutions.flatMap((one) =>
-    checkOneResolution(resolver, at, declared.name, one),
-  );
+  return declared.resolutions.flatMap((one) => checkOneResolution(resolver, at, declared.name, one));
 }
 
 function checkOneResolution(
@@ -112,27 +104,16 @@ function checkOneResolution(
   name: string,
   declared: Resolution,
 ): readonly AliasResolverConformanceFinding[] {
-  const specifier =
-    declared.asAbsolutePath === true
-      ? at(declared.specifier)
-      : declared.specifier;
+  const specifier = declared.asAbsolutePath === true ? at(declared.specifier) : declared.specifier;
   const expected = declared.to === null ? null : at(declared.to);
   let answer: string | null;
   try {
     answer = resolver(specifier);
   } catch (error: unknown) {
-    return [
-      finding(name, declared.law, `${specifier} threw: ${reason(error)}`),
-    ];
+    return [finding(name, declared.law, `${specifier} threw: ${reason(error)}`)];
   }
   if (answer === expected) return [];
-  return [
-    finding(
-      name,
-      declared.law,
-      `${specifier} answered ${describe(answer)}, expected ${describe(expected)}`,
-    ),
-  ];
+  return [finding(name, declared.law, `${specifier} answered ${describe(answer)}, expected ${describe(expected)}`)];
 }
 
 // --- Configurations that are refused --------------------------------------
@@ -151,19 +132,11 @@ function checkRefusal(
   } catch (error: unknown) {
     return refusalFindings(declared.name, declared.law, expected, error);
   }
-  return [
-    finding(
-      declared.name,
-      declared.law,
-      `built a resolver instead of refusing with "${expected}"`,
-    ),
-  ];
+  return [finding(declared.name, declared.law, `built a resolver instead of refusing with "${expected}"`)];
 }
 
 /** A blank option is refused before any file system is asked anything. */
-function checkBlankTsconfig(
-  subject: AliasResolverConformanceSubject,
-): readonly AliasResolverConformanceFinding[] {
+function checkBlankTsconfig(subject: AliasResolverConformanceSubject): readonly AliasResolverConformanceFinding[] {
   const expected = "Dads path aliases requires a non-empty tsconfig path.";
   const name = "a-blank-tsconfig-option";
   return ["", "   "].flatMap((tsconfig) => {
@@ -172,13 +145,7 @@ function checkBlankTsconfig(
     } catch (error: unknown) {
       return refusalFindings(name, refusesBlankTsconfig, expected, error);
     }
-    return [
-      finding(
-        name,
-        refusesBlankTsconfig,
-        `built a resolver from "${tsconfig}"`,
-      ),
-    ];
+    return [finding(name, refusesBlankTsconfig, `built a resolver from "${tsconfig}"`)];
   });
 }
 
@@ -195,27 +162,15 @@ function refusalFindings(
 
 // --- Shared --------------------------------------------------------------
 
-function fixturePath(
-  subject: AliasResolverConformanceSubject,
-  name: string,
-): FixturePath {
+function fixturePath(subject: AliasResolverConformanceSubject, name: string): FixturePath {
   return (relative: string): string => resolve(subject.root, name, relative);
 }
 
-function absoluteFiles(
-  at: FixturePath,
-  files: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> {
-  return Object.fromEntries(
-    Object.entries(files).map(([path, text]) => [at(path), text]),
-  );
+function absoluteFiles(at: FixturePath, files: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+  return Object.fromEntries(Object.entries(files).map(([path, text]) => [at(path), text]));
 }
 
-function finding(
-  name: string,
-  law: string,
-  detail: string,
-): AliasResolverConformanceFinding {
+function finding(name: string, law: string, detail: string): AliasResolverConformanceFinding {
   return { case: name, law, detail };
 }
 
@@ -224,7 +179,5 @@ function describe(path: string | null): string {
 }
 
 function reason(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "a value that was not an Error";
+  return error instanceof Error ? error.message : "a value that was not an Error";
 }

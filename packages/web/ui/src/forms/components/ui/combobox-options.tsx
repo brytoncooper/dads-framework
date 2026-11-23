@@ -18,10 +18,7 @@ export function ComboboxContent({
   container,
   ...props
 }: ComboboxPrimitive.Popup.Props &
-  Pick<
-    ComboboxPrimitive.Positioner.Props,
-    "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
-  > & {
+  Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor"> & {
     /**
      * Where the list is mounted; the document body when omitted. Inside a
      * modal sheet or dialog, pass that overlay's content element: a list
@@ -54,10 +51,7 @@ export function ComboboxContent({
   );
 }
 
-export function ComboboxList({
-  className,
-  ...props
-}: ComboboxPrimitive.List.Props) {
+export function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   const remote = React.useContext(RemoteComboboxContext);
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -79,20 +73,13 @@ export function ComboboxList({
     <ComboboxPrimitive.List
       ref={listRef}
       data-slot="combobox-list"
-      className={cn(
-        "min-h-0 flex-1 scroll-py-1 overflow-y-auto p-1 data-empty:p-0",
-        className,
-      )}
+      className={cn("min-h-0 flex-1 scroll-py-1 overflow-y-auto p-1 data-empty:p-0", className)}
       {...props}
     />
   );
 }
 
-export function ComboboxItem({
-  className,
-  children,
-  ...props
-}: ComboboxPrimitive.Item.Props) {
+export function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
   return (
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
@@ -105,9 +92,7 @@ export function ComboboxItem({
       {children}
       <ComboboxPrimitive.ItemIndicator
         data-slot="combobox-item-indicator"
-        render={
-          <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
-        }
+        render={<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />}
       >
         <CheckIcon className="pointer-events-none size-4 pointer-coarse:size-5" />
       </ComboboxPrimitive.ItemIndicator>
@@ -115,23 +100,11 @@ export function ComboboxItem({
   );
 }
 
-export function ComboboxGroup({
-  className,
-  ...props
-}: ComboboxPrimitive.Group.Props) {
-  return (
-    <ComboboxPrimitive.Group
-      data-slot="combobox-group"
-      className={cn(className)}
-      {...props}
-    />
-  );
+export function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
+  return <ComboboxPrimitive.Group data-slot="combobox-group" className={cn(className)} {...props} />;
 }
 
-export function ComboboxLabel({
-  className,
-  ...props
-}: ComboboxPrimitive.GroupLabel.Props) {
+export function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Props) {
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
@@ -144,18 +117,11 @@ export function ComboboxLabel({
   );
 }
 
-export function ComboboxCollection({
-  ...props
-}: ComboboxPrimitive.Collection.Props) {
-  return (
-    <ComboboxPrimitive.Collection data-slot="combobox-collection" {...props} />
-  );
+export function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
+  return <ComboboxPrimitive.Collection data-slot="combobox-collection" {...props} />;
 }
 
-export function ComboboxEmpty({
-  className,
-  ...props
-}: ComboboxPrimitive.Empty.Props) {
+export function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   return (
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
@@ -168,10 +134,7 @@ export function ComboboxEmpty({
   );
 }
 
-export function ComboboxSeparator({
-  className,
-  ...props
-}: ComboboxPrimitive.Separator.Props) {
+export function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.Props) {
   return (
     <ComboboxPrimitive.Separator
       data-slot="combobox-separator"

@@ -28,15 +28,7 @@ export const folder = resource("test/folder", {
     reader: member,
     unbound_site: site,
   },
-  can: ({
-    home_site,
-    shared_site,
-    draft_site,
-    archived,
-    assignee,
-    reader,
-    unbound_site,
-  }) => ({
+  can: ({ home_site, shared_site, draft_site, archived, assignee, reader, unbound_site }) => ({
     view_on_site: [home_site.view_records, shared_site.view_records],
     view: anyOf(
       permissionToken("test/folder", "view_on_site"),
@@ -57,9 +49,6 @@ export const sheet = resource("test/sheet", {
   roles: { folder, site },
   can: ({ folder: sheetFolder, site: sheetSite }) => ({
     view: allOf(sheetFolder.view_on_site, sheetSite.view_records),
-    view_or_manage_folder: [
-      sheetFolder.view_on_site,
-      sheetFolder.manage_on_home_site,
-    ],
+    view_or_manage_folder: [sheetFolder.view_on_site, sheetFolder.manage_on_home_site],
   }),
 });

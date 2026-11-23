@@ -100,10 +100,7 @@ describe("PdfmakePdfRenderer", () => {
       const renderer = new PdfmakePdfRenderer();
       await expect(renderer.textMetrics()).rejects.toBe(failure);
       expect(destroyed).toBe(true);
-      expect((await renderer.textMetrics()).width("Hello", 12)).toBeCloseTo(
-        27.336,
-        3,
-      );
+      expect((await renderer.textMetrics()).width("Hello", 12)).toBeCloseTo(27.336, 3);
       expect(attempts).toBe(2);
     } finally {
       pdfmake.createPdf = createPdf;
@@ -133,35 +130,23 @@ describe("PdfmakePdfRenderer", () => {
 
     // Regular width unchanged; Helvetica Bold's i, k, and l are wider.
     expect(metrics.width("Ticket 123", 12, true)).toBeCloseTo(57.792, 3);
-    expect(metrics.width("Ticket 123", 12, true)).toBeGreaterThan(
-      metrics.width("Ticket 123", 12, false),
-    );
-    expect(metrics.width("Weight", 12, true)).toBeGreaterThan(
-      metrics.width("Weight", 12),
-    );
+    expect(metrics.width("Ticket 123", 12, true)).toBeGreaterThan(metrics.width("Ticket 123", 12, false));
+    expect(metrics.width("Weight", 12, true)).toBeGreaterThan(metrics.width("Weight", 12));
     expect(metrics.width("", 12, true)).toBe(0);
-    expect(metrics.width("Ticket 123", 24, true)).toBeCloseTo(
-      metrics.width("Ticket 123", 12, true) * 2,
-      5,
-    );
+    expect(metrics.width("Ticket 123", 24, true)).toBeCloseTo(metrics.width("Ticket 123", 12, true) * 2, 5);
     expect(metrics.lineHeight(12)).toBeCloseTo(11.1, 3);
   });
 
   it("treats an omitted bold flag as regular", async () => {
     const metrics = await new PdfmakePdfRenderer().textMetrics();
 
-    expect(metrics.width("Ticket 123", 12)).toBe(
-      metrics.width("Ticket 123", 12, false),
-    );
+    expect(metrics.width("Ticket 123", 12)).toBe(metrics.width("Ticket 123", 12, false));
     expect(metrics.width("Ticket 123", 12, false)).toBeCloseTo(54.876, 3);
   });
 
   it("renders a definition to real PDF bytes", async () => {
     const bytes = await new PdfmakePdfRenderer().render({
-      content: [
-        { text: "Batch Ticket FIN-14", style: "header" },
-        { text: "12.5 tons — Prairie Feed Co" },
-      ],
+      content: [{ text: "Batch Ticket FIN-14", style: "header" }, { text: "12.5 tons — Prairie Feed Co" }],
       styles: { header: { fontSize: 16, bold: true } },
     });
     expect(bytes.length).toBeGreaterThan(500);

@@ -75,9 +75,7 @@ function ceilingState(
   if (entry === undefined) return unlistedCeiling(measure, value, record);
 
   if (value <= measure.threshold) {
-    const fate = mode.update
-      ? "deleted"
-      : `can be deleted, run ${UPDATE_COMMAND}`;
+    const fate = mode.update ? "deleted" : `can be deleted, run ${UPDATE_COMMAND}`;
     return {
       action: "delete",
       level: mode.update ? "fixed" : "error",
@@ -112,11 +110,7 @@ function ceilingState(
  * A key nobody recorded. Under the threshold it is simply fine; over it, it is
  * either the exception a seed was asked to record or the split nobody has made.
  */
-function unlistedCeiling(
-  measure: GateMeasure,
-  value: number,
-  record: boolean,
-): KeyState | undefined {
+function unlistedCeiling(measure: GateMeasure, value: number, record: boolean): KeyState | undefined {
   if (value <= measure.threshold) return undefined;
   if (record) {
     return {
@@ -146,25 +140,14 @@ export function evaluateCeiling(
     const entry = entries.get(key);
     if (entry !== undefined && !hasReason(entry)) {
       const problem = "listed without a reason";
-      findings.push(
-        gateFinding("error", measure, key, value, entry.value, problem),
-      );
+      findings.push(gateFinding("error", measure, key, value, entry.value, problem));
     }
 
     const record = seeding(mode, key);
     const state = ceilingState(measure, entry, value, mode, record);
     if (state === undefined) continue;
     applyCeilingAction({ state, next, key, value, entry, mode });
-    findings.push(
-      gateFinding(
-        state.level,
-        measure,
-        key,
-        value,
-        entry?.value,
-        state.message,
-      ),
-    );
+    findings.push(gateFinding(state.level, measure, key, value, entry?.value, state.message));
   }
 
   // A file-scoped run cannot conclude that unmeasured paths are stale.
@@ -264,11 +247,7 @@ function floorState(
   };
 }
 
-function newFloorState(
-  value: number,
-  mode: GateMode,
-  record: boolean,
-): KeyState | undefined {
+function newFloorState(value: number, mode: GateMode, record: boolean): KeyState | undefined {
   if (record) {
     return {
       action: "record",
@@ -301,9 +280,7 @@ export function evaluateFloor(
   const next = new Map(entries);
 
   for (const key of sortedKeys(values.keys())) {
-    findings.push(
-      ...judgeFloorKey({ measure, entries, values, mode, next, key }),
-    );
+    findings.push(...judgeFloorKey({ measure, entries, values, mode, next, key }));
   }
 
   findings.push(...unmeasuredFloors(measure, entries, values));
@@ -324,19 +301,14 @@ type FloorJudgement = {
  * an exception that never said why, and a receipt whose arithmetic nobody can
  * check because it names its own key or a key this section does not record.
  */
-function floorEntryProblems(
-  judged: FloorJudgement,
-  value: number,
-): readonly GateFinding[] {
+function floorEntryProblems(judged: FloorJudgement, value: number): readonly GateFinding[] {
   const { measure, entries, key } = judged;
   const entry = entries.get(key);
   if (entry === undefined) return [];
   const problems = hasReason(entry) ? [] : ["listed without a reason"];
   const receipt = movedToProblem(key, entry, entries);
   if (receipt !== undefined) problems.push(receipt);
-  return problems.map((problem) =>
-    gateFinding("error", measure, key, value, entry.value, problem),
-  );
+  return problems.map((problem) => gateFinding("error", measure, key, value, entry.value, problem));
 }
 
 function judgeFloorKey(judged: FloorJudgement): readonly GateFinding[] {
@@ -354,9 +326,7 @@ function judgeFloorKey(judged: FloorJudgement): readonly GateFinding[] {
   if (state.action === "raise" && mode.update) {
     next.set(key, entryAt(entry, value));
   }
-  findings.push(
-    gateFinding(state.level, measure, key, value, entry?.value, state.message),
-  );
+  findings.push(gateFinding(state.level, measure, key, value, entry?.value, state.message));
   return findings;
 }
 

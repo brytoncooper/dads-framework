@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  realpathSync,
-  symlinkSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, realpathSync, symlinkSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 
 function workspacePath(root, link) {
@@ -42,10 +36,7 @@ function installLinks(root, snapshot, from, to, scopes) {
       installLinks(root, snapshot, origin, destination, false);
       continue;
     }
-    const workspace =
-      entry.isSymbolicLink() && existsSync(origin)
-        ? workspacePath(root, origin)
-        : undefined;
+    const workspace = entry.isSymbolicLink() && existsSync(origin) ? workspacePath(root, origin) : undefined;
     if (workspace === undefined) symlinkSync(origin, destination);
     else linkWorkspace(root, snapshot, workspace, destination);
   }

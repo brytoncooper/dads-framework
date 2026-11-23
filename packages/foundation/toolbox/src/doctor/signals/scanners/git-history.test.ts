@@ -42,22 +42,14 @@ describe("the git the doctor is allowed to run", () => {
   it("refuses every subcommand that could change a repository", () => {
     for (const subcommand of WRITING) {
       expect(isReadOnlyGitSubcommand(subcommand, [])).toBe(false);
-      expect(() => runGit(tmpdir(), subcommand, [])).toThrow(
-        `git ${subcommand} is refused`,
-      );
+      expect(() => runGit(tmpdir(), subcommand, [])).toThrow(`git ${subcommand} is refused`);
     }
   });
 
   it("allows config only to read a value, never to set one", () => {
-    expect(isReadOnlyGitSubcommand("config", ["--get", "core.hooksPath"])).toBe(
-      true,
-    );
-    expect(
-      isReadOnlyGitSubcommand("config", ["core.hooksPath", ".githooks"]),
-    ).toBe(false);
-    expect(() =>
-      runGit(tmpdir(), "config", ["core.hooksPath", ".githooks"]),
-    ).toThrow("git config is refused");
+    expect(isReadOnlyGitSubcommand("config", ["--get", "core.hooksPath"])).toBe(true);
+    expect(isReadOnlyGitSubcommand("config", ["core.hooksPath", ".githooks"])).toBe(false);
+    expect(() => runGit(tmpdir(), "config", ["core.hooksPath", ".githooks"])).toThrow("git config is refused");
   });
 
   it("allows the subcommands the signals read history with", () => {
@@ -143,20 +135,14 @@ it("judges the merge against its first parent and excludes side-branch marks", a
       "raise main floor",
       "initial floor",
     ]);
-    expect(log[0]?.changes).toStrictEqual([
-      { status: "M", path: BASELINE_PATH },
-    ]);
+    expect(log[0]?.changes).toStrictEqual([{ status: "M", path: BASELINE_PATH }]);
 
     const merge = runGit(root, "rev-parse", ["HEAD"]).stdout.trim();
     const key = "floors/docsConformancePackages/packages";
-    const readings = await marksRaisedInHistorySignal.run(
-      createDoctorContext({ root }),
-    );
+    const readings = await marksRaisedInHistorySignal.run(createDoctorContext({ root }));
     expect(readings.get(key)).toStrictEqual({
       value: 1,
-      evidence: [
-        { path: BASELINE_PATH, name: `${shortSha(merge)} ${key} 24 -> 23` },
-      ],
+      evidence: [{ path: BASELINE_PATH, name: `${shortSha(merge)} ${key} 24 -> 23` }],
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

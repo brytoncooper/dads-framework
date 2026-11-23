@@ -1,15 +1,6 @@
-import {
-  copy,
-  type CopyDescriptor,
-  type CopyVars,
-  isCopyDescriptor,
-} from "./copy-descriptor.js";
+import { copy, type CopyDescriptor, type CopyVars, isCopyDescriptor } from "./copy-descriptor.js";
 import { formatInteger, formatNumber } from "./locale-formatting.js";
-import {
-  type CopyCatalog,
-  type Locale,
-  resolveLocalizedText,
-} from "./localized-text.js";
+import { type CopyCatalog, type Locale, resolveLocalizedText } from "./localized-text.js";
 import { inspectPlaceholderSyntax } from "./placeholder-syntax.js";
 
 /**
@@ -40,28 +31,19 @@ export type PluralCategory = "zero" | "one" | "two" | "few" | "many" | "other";
  * The base key behind a plural pair — `orders.holders` from
  * `orders.holders_one` / `orders.holders_other`.
  */
-export type PluralBaseKey<Key extends string> =
-  Key extends `${infer Base}_${PluralCategory}` ? Base : never;
+export type PluralBaseKey<Key extends string> = Key extends `${infer Base}_${PluralCategory}` ? Base : never;
 
 /**
  * Every key a caller may name: the ones the catalog declares, plus the base of
  * each plural pair. A base key exists only because its suffixed forms do, so
  * the typed-key guarantee survives the plural idiom.
  */
-export type CopyKey<Catalog extends CopyCatalog> =
-  (keyof Catalog & string) | PluralBaseKey<keyof Catalog & string>;
+export type CopyKey<Catalog extends CopyCatalog> = (keyof Catalog & string) | PluralBaseKey<keyof Catalog & string>;
 
-function selectPluralKey(
-  catalog: CopyCatalog,
-  locale: Locale,
-  key: string,
-  count: number,
-): string {
+function selectPluralKey(catalog: CopyCatalog, locale: Locale, key: string, count: number): string {
   const category = new Intl.PluralRules(locale).select(count);
   const candidates = [`${key}_${category}`, `${key}_other`, key];
-  const declared = candidates.find(
-    (candidate) => catalog[candidate] !== undefined,
-  );
+  const declared = candidates.find((candidate) => catalog[candidate] !== undefined);
   if (declared === undefined) {
     throw new Error(
       `copy key "${key}" pluralizes but the catalog declares neither "${key}_${category}" nor "${key}_other"`,
@@ -70,20 +52,14 @@ function selectPluralKey(
   return declared;
 }
 
-function phraseFor(
-  catalog: CopyCatalog,
-  locale: Locale,
-  descriptor: CopyDescriptor,
-): string {
+function phraseFor(catalog: CopyCatalog, locale: Locale, descriptor: CopyDescriptor): string {
   const key =
     descriptor.count === undefined
       ? descriptor.key
       : selectPluralKey(catalog, locale, descriptor.key, descriptor.count);
   const text = catalog[key];
   if (text === undefined) {
-    throw new Error(
-      `copy key "${key}" is not declared in this catalog — a key is never rendered as itself`,
-    );
+    throw new Error(`copy key "${key}" is not declared in this catalog — a key is never rendered as itself`);
   }
   return resolveLocalizedText(text, locale);
 }
@@ -109,11 +85,7 @@ function resolveVars(
   return resolved;
 }
 
-function interpolate(
-  phrase: string,
-  vars: Readonly<Record<string, string>>,
-  key: string,
-): string {
+function interpolate(phrase: string, vars: Readonly<Record<string, string>>, key: string): string {
   const [malformed] = inspectPlaceholderSyntax(phrase).malformed;
   if (malformed !== undefined) {
     throw new Error(
@@ -128,9 +100,7 @@ function interpolate(
     if (name === undefined) continue;
     const replacement = vars[name];
     if (replacement === undefined) {
-      throw new Error(
-        `copy key "${key}" interpolates {${name}} and nothing was given for it`,
-      );
+      throw new Error(`copy key "${key}" interpolates {${name}} and nothing was given for it`);
     }
     filled += phrase.slice(cursor, match.index) + replacement;
     cursor = match.index + match[0].length;
@@ -138,17 +108,9 @@ function interpolate(
   return filled + phrase.slice(cursor);
 }
 
-function render(
-  catalog: CopyCatalog,
-  locale: Locale,
-  descriptor: CopyDescriptor,
-): string {
+function render(catalog: CopyCatalog, locale: Locale, descriptor: CopyDescriptor): string {
   const phrase = phraseFor(catalog, locale, descriptor);
-  return interpolate(
-    phrase,
-    resolveVars(catalog, locale, descriptor),
-    descriptor.key,
-  );
+  return interpolate(phrase, resolveVars(catalog, locale, descriptor), descriptor.key);
 }
 
 /** Resolve a key or a descriptor against one catalog, in one language. */
@@ -159,8 +121,6 @@ export function translate(
   vars?: CopyVars,
   count?: number,
 ): string {
-  const descriptor = isCopyDescriptor(keyOrDescriptor)
-    ? keyOrDescriptor
-    : copy(keyOrDescriptor, vars, count);
+  const descriptor = isCopyDescriptor(keyOrDescriptor) ? keyOrDescriptor : copy(keyOrDescriptor, vars, count);
   return render(catalog, locale, descriptor);
 }

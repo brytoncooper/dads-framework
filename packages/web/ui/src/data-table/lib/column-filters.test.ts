@@ -22,14 +22,8 @@ describe("toColumnFilters", () => {
   });
 
   it("falls back to the column's default operator when the URL omits one", () => {
-    const [text] = toColumnFilters<Organization>(
-      [{ id: "name", value: "feeds" }],
-      columnVariants,
-    );
-    const [select] = toColumnFilters<Organization>(
-      [{ id: "status", value: "ACTIVE" }],
-      columnVariants,
-    );
+    const [text] = toColumnFilters<Organization>([{ id: "name", value: "feeds" }], columnVariants);
+    const [select] = toColumnFilters<Organization>([{ id: "status", value: "ACTIVE" }], columnVariants);
 
     expect(text?.operator).toBe("iLike");
     expect(select?.operator).toBe("eq");
@@ -45,19 +39,13 @@ describe("toColumnFilters", () => {
   });
 
   it("gives a chooser column its value as a list", () => {
-    const [filter] = toColumnFilters<Organization>(
-      [{ id: "status", value: "ACTIVE" }],
-      columnVariants,
-    );
+    const [filter] = toColumnFilters<Organization>([{ id: "status", value: "ACTIVE" }], columnVariants);
 
     expect(filter?.value).toEqual(["ACTIVE"]);
   });
 
   it("gives a typed-into column its value as text", () => {
-    const [filter] = toColumnFilters<Organization>(
-      [{ id: "name", value: ["feeds"] }],
-      columnVariants,
-    );
+    const [filter] = toColumnFilters<Organization>([{ id: "name", value: ["feeds"] }], columnVariants);
 
     expect(filter?.value).toBe("feeds");
   });
@@ -83,9 +71,7 @@ describe("toColumnFilters", () => {
     const first = toColumnFilters<Organization>(filters, columnVariants);
     const second = toColumnFilters<Organization>(filters, columnVariants);
 
-    expect(first.map((filter) => filter.filterId)).toEqual(
-      second.map((filter) => filter.filterId),
-    );
+    expect(first.map((filter) => filter.filterId)).toEqual(second.map((filter) => filter.filterId));
     expect(new Set(first.map((filter) => filter.filterId)).size).toBe(2);
   });
 });

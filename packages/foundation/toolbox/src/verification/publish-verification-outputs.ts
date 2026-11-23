@@ -22,10 +22,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type { DadsProject } from "../project-orientation.js";
-import type {
-  ControlledVerificationTask,
-  VerificationPublishedOutput,
-} from "./verification-contract.js";
+import type { ControlledVerificationTask, VerificationPublishedOutput } from "./verification-contract.js";
 import type { CapturedVerificationSnapshot } from "./verification-inputs.js";
 import type { VerificationOutputFingerprint } from "./verification-receipt.js";
 
@@ -39,49 +36,27 @@ export function assertConsumedArtifactsMatchProviders(
   snapshot: CapturedVerificationSnapshot,
   outputsByTask: ReadonlyMap<string, readonly VerificationOutputFingerprint[]>,
 ): void {
-  const tasks = new Map(
-    project.verificationPolicy.tasks.map((task) => [task.id, task]),
-  );
+  const tasks = new Map(project.verificationPolicy.tasks.map((task) => [task.id, task]));
   for (const prerequisiteId of consumer.execution.prerequisiteOutputTaskIds) {
     const provider = tasks.get(prerequisiteId);
     const produced = outputsByTask.get(prerequisiteId);
-    if (
-      !provider ||
-      provider.execution.kind !== "controlled-node" ||
-      !produced
-    ) {
-      throw new Error(
-        `Missing artifact producer evidence for ${prerequisiteId}.`,
-      );
+    if (!provider || provider.execution.kind !== "controlled-node" || !produced) {
+      throw new Error(`Missing artifact producer evidence for ${prerequisiteId}.`);
     }
     for (const published of provider.execution.publishOutputs) {
-      const output = produced.find(
-        (fingerprint) => fingerprint.path === published.outputPath,
-      );
+      const output = produced.find((fingerprint) => fingerprint.path === published.outputPath);
       const consumed = snapshot.identity.files.find(
-        (fingerprint) =>
-          fingerprint.role === "artifact" &&
-          fingerprint.path === published.projectPath,
+        (fingerprint) => fingerprint.role === "artifact" && fingerprint.path === published.projectPath,
       );
-      if (
-        !output ||
-        !consumed ||
-        output.sha256 !== consumed.sha256 ||
-        output.bytes !== consumed.bytes
-      ) {
-        throw new Error(
-          `Consumed artifact ${published.projectPath} does not match producer ${prerequisiteId}.`,
-        );
+      if (!output || !consumed || output.sha256 !== consumed.sha256 || output.bytes !== consumed.bytes) {
+        throw new Error(`Consumed artifact ${published.projectPath} does not match producer ${prerequisiteId}.`);
       }
     }
   }
 }
 
 /** The single string that stands for everything a prerequisite task produced. */
-export function outputIdentity(
-  taskId: string,
-  outputs: readonly VerificationOutputFingerprint[] | undefined,
-): string {
+export function outputIdentity(taskId: string, outputs: readonly VerificationOutputFingerprint[] | undefined): string {
   if (!outputs) {
     throw new Error(`Missing output identity for prerequisite ${taskId}.`);
   }
@@ -102,11 +77,7 @@ export function publishTaskOutputs(
 }
 
 /** Copies every published output of a verified graph back onto the live checkout. */
-export function publishGraphOutputs(
-  liveRoot: string,
-  graphRoot: string,
-  project: DadsProject,
-): void {
+export function publishGraphOutputs(liveRoot: string, graphRoot: string, project: DadsProject): void {
   for (const task of project.verificationPolicy.tasks) {
     if (task.execution.kind !== "controlled-node") continue;
     for (const published of task.execution.publishOutputs) {
@@ -120,16 +91,11 @@ function publishTaskOutput(
   snapshot: CapturedVerificationSnapshot,
   publishedOutput: VerificationPublishedOutput,
 ): void {
-  const source = resolveOutputInside(
-    snapshot.outputRoot,
-    publishedOutput.outputPath,
-  );
+  const source = resolveOutputInside(snapshot.outputRoot, publishedOutput.outputPath);
   const target = resolveOutputInside(projectRoot, publishedOutput.projectPath);
   const sourceStatus = lstatSync(source);
   if (sourceStatus.isSymbolicLink() || !sourceStatus.isFile()) {
-    throw new Error(
-      `Controlled output is not a regular file: ${publishedOutput.outputPath}.`,
-    );
+    throw new Error(`Controlled output is not a regular file: ${publishedOutput.outputPath}.`);
   }
   const targetDirectory = dirname(target);
   mkdirSync(targetDirectory, { recursive: true });
@@ -138,11 +104,7 @@ function publishTaskOutput(
   replaceFile(target, readFileSync(source));
 }
 
-function publishGraphOutput(
-  liveRoot: string,
-  graphRoot: string,
-  published: VerificationPublishedOutput,
-): void {
+function publishGraphOutput(liveRoot: string, graphRoot: string, published: VerificationPublishedOutput): void {
   const source = resolveOutputInside(graphRoot, published.projectPath);
   if (!existsSync(source)) return;
   const target = resolveOutputInside(liveRoot, published.projectPath);
@@ -169,10 +131,7 @@ function replaceFile(target: string, contents: Buffer): void {
   }
 }
 
-function compareOutputs(
-  first: VerificationOutputFingerprint,
-  second: VerificationOutputFingerprint,
-): number {
+function compareOutputs(first: VerificationOutputFingerprint, second: VerificationOutputFingerprint): number {
   return first.path.localeCompare(second.path);
 }
 

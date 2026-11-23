@@ -61,9 +61,7 @@ type BodyField<BodySchema> = [BodySchema] extends [z.ZodType]
   : Record<never, never>;
 
 /** Strictly inferred input object for calling an operation contract. */
-export type OperationCallInput<Op extends AnyOperationContract> = ParamsField<
-  ParamsOf<Op>
-> &
+export type OperationCallInput<Op extends AnyOperationContract> = ParamsField<ParamsOf<Op>> &
   QueryField<QueryOf<Op>> &
   BodyField<BodyOf<Op>> &
   CallApiOptions;
@@ -146,10 +144,7 @@ function queryArgOf(
   return { query: { schema, value: value ?? {} } };
 }
 
-function bodyArgOf(
-  schema: z.ZodType | undefined,
-  value: unknown,
-): { readonly body?: ApiArgument<z.ZodType> } {
+function bodyArgOf(schema: z.ZodType | undefined, value: unknown): { readonly body?: ApiArgument<z.ZodType> } {
   if (schema === undefined) return {};
   return { body: { schema, value } };
 }
@@ -164,9 +159,7 @@ async function sendWithMeta(request: {
   readonly headers?: ApiRequestHeaders;
 }): Promise<ApiDataWithMeta<unknown, unknown>> {
   const search =
-    request.query === undefined
-      ? undefined
-      : toSearchParams(request.query.schema.parse(request.query.value));
+    request.query === undefined ? undefined : toSearchParams(request.query.schema.parse(request.query.value));
   const response = await sendApiRequest({
     path: apiPath(request.route.path),
     method: request.route.method,
@@ -182,10 +175,7 @@ async function sendWithMeta(request: {
   };
 }
 
-function callGet(
-  op: GetOperationContract,
-  input: RawCallInput | undefined,
-): Promise<unknown> {
+function callGet(op: GetOperationContract, input: RawCallInput | undefined): Promise<unknown> {
   const route = op.params === undefined ? op.bind() : op.bind(input?.params);
   const query = queryArgOf(op.query, input?.query);
   const options = requestOptionsOf(input);
@@ -206,10 +196,7 @@ function callGet(
   });
 }
 
-function callList(
-  op: ListOperationContract,
-  input: RawCallInput | undefined,
-): Promise<unknown> {
+function callList(op: ListOperationContract, input: RawCallInput | undefined): Promise<unknown> {
   const route = op.params === undefined ? op.bind() : op.bind(input?.params);
   const query = queryArgOf(op.query, input?.query);
   const options = requestOptionsOf(input);
@@ -230,10 +217,7 @@ function callList(
   });
 }
 
-function callPost(
-  op: PostOperationContract,
-  input: RawCallInput | undefined,
-): Promise<unknown> {
+function callPost(op: PostOperationContract, input: RawCallInput | undefined): Promise<unknown> {
   const route = op.params === undefined ? op.bind() : op.bind(input?.params);
   const query = queryArgOf(op.query, input?.query);
   const body = bodyArgOf(op.body, input?.body);
@@ -282,10 +266,7 @@ function callNoContent(
   });
 }
 
-async function executeOperation(
-  operation: AnyOperationContract,
-  input: RawCallInput | undefined,
-): Promise<unknown> {
+async function executeOperation(operation: AnyOperationContract, input: RawCallInput | undefined): Promise<unknown> {
   switch (operation.kind) {
     case "get":
       return await callGet(operation, input);
@@ -311,10 +292,7 @@ export function callApi<Op extends AnyOperationContract>(
   operation: Op,
   ...args: OperationCallArgs<Op>
 ): OperationCallPromise<Op>;
-export function callApi(
-  operation: AnyOperationContract,
-  input?: RawCallInput,
-): Promise<unknown> {
+export function callApi(operation: AnyOperationContract, input?: RawCallInput): Promise<unknown> {
   return executeOperation(operation, input);
 }
 
@@ -322,9 +300,7 @@ export function callApi(
  * Compose a frozen, strictly typed API client from any subset of standalone
  * operation contracts.
  */
-export function createApiClient<const Ops extends OperationRecord>(
-  operations: Ops,
-): ApiClient<Ops>;
+export function createApiClient<const Ops extends OperationRecord>(operations: Ops): ApiClient<Ops>;
 export function createApiClient(
   operations: OperationRecord,
 ): Readonly<Record<string, (input?: RawCallInput) => Promise<unknown>>> {

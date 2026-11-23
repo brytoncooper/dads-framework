@@ -7,8 +7,7 @@
 :root {
   color-scheme: light;
   --workbench-shell: 76rem;
-  --workbench-mono:
-    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --workbench-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {

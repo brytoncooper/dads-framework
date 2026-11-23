@@ -11,10 +11,7 @@ type DataTableRangeFilterProps<TData> = React.ComponentProps<"div"> & {
   filter: ExtendedColumnFilter<TData>;
   column: Column<TData>;
   inputId: string;
-  onFilterUpdate: (
-    filterId: string,
-    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
-  ) => void;
+  onFilterUpdate: (filterId: string, updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>) => void;
 };
 
 export function DataTableRangeFilter<TData>({
@@ -38,13 +35,10 @@ export function DataTableRangeFilter<TData>({
     return [values[0], values[1]];
   }, [column]);
 
-  const readInputValue = React.useCallback(
-    (value: string | number | undefined) => {
-      if (value === undefined || value === "") return "";
-      return typeof value === "number" ? value.toString() : value;
-    },
-    [],
-  );
+  const readInputValue = React.useCallback((value: string | number | undefined) => {
+    if (value === undefined || value === "") return "";
+    return typeof value === "number" ? value.toString() : value;
+  }, []);
 
   const value = React.useMemo(() => {
     if (Array.isArray(filter.value)) return filter.value.map(readInputValue);
@@ -53,12 +47,8 @@ export function DataTableRangeFilter<TData>({
 
   const onRangeValueChange = React.useCallback(
     (value: string, isMin?: boolean) => {
-      const currentValues = Array.isArray(filter.value)
-        ? filter.value
-        : ["", ""];
-      const otherValue = isMin
-        ? (currentValues[1] ?? "")
-        : (currentValues[0] ?? "");
+      const currentValues = Array.isArray(filter.value) ? filter.value : ["", ""];
+      const otherValue = isMin ? (currentValues[1] ?? "") : (currentValues[0] ?? "");
 
       if (isRangeEndInBounds(value, otherValue, { min, max }, isMin === true)) {
         onFilterUpdate(filter.filterId, {
@@ -70,11 +60,7 @@ export function DataTableRangeFilter<TData>({
   );
 
   return (
-    <div
-      data-slot="range"
-      className={cn("flex w-full items-center gap-2", className)}
-      {...props}
-    >
+    <div data-slot="range" className={cn("flex w-full items-center gap-2", className)} {...props}>
       <Input
         size="sm"
         id={`${inputId}-min`}
@@ -95,9 +81,7 @@ export function DataTableRangeFilter<TData>({
           onRangeValueChange(event.target.value, true);
         }}
       />
-      <span className="sr-only shrink-0 text-muted-foreground">
-        {t("dataTable.range.to")}
-      </span>
+      <span className="sr-only shrink-0 text-muted-foreground">{t("dataTable.range.to")}</span>
       <Input
         size="sm"
         id={`${inputId}-max`}

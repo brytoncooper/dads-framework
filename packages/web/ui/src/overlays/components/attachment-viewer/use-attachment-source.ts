@@ -1,28 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  attachmentKindOf,
-  type AttachmentItem,
-} from "../../../elements/index.js";
+import { attachmentKindOf, type AttachmentItem } from "../../../elements/index.js";
 
 /** Where the bytes of a stored file can be read from, as the caller knows it. */
 export type AttachmentSource =
-  | { readonly kind: "url"; readonly url: string }
-  | { readonly kind: "blob"; readonly blob: Blob };
+  { readonly kind: "url"; readonly url: string } | { readonly kind: "blob"; readonly blob: Blob };
 
 /**
  * Asks the caller for a readable source of a file. It runs once per open, so a
  * caller that signs short-lived links can sign a fresh one each time.
  */
-export type AttachmentSourceLoader = (
-  item: AttachmentItem,
-  signal: AbortSignal,
-) => Promise<AttachmentSource>;
+export type AttachmentSourceLoader = (item: AttachmentItem, signal: AbortSignal) => Promise<AttachmentSource>;
 
 /** A source turned into what the matching preview needs to draw it. */
 export type PreparedAttachment =
-  | { readonly kind: "pdf"; readonly data: ArrayBuffer }
-  | { readonly kind: "image"; readonly src: string };
+  { readonly kind: "pdf"; readonly data: ArrayBuffer } | { readonly kind: "image"; readonly src: string };
 
 /**
  * Files larger than this are offered for download instead of previewed. A
@@ -41,10 +33,7 @@ export type AttachmentPreviewState =
 
 const IDLE_STATE: AttachmentPreviewState = { status: "idle" };
 
-async function readBytes(
-  source: AttachmentSource,
-  signal: AbortSignal,
-): Promise<ArrayBuffer> {
+async function readBytes(source: AttachmentSource, signal: AbortSignal): Promise<ArrayBuffer> {
   if (source.kind === "blob") return source.blob.arrayBuffer();
 
   // `credentials: "omit"`: the link is already signed, and the bucket answers
@@ -67,9 +56,7 @@ function describeState(
   if (item === null) return IDLE_STATE;
   if (entry.itemId === item.id) return entry.state;
   if (attachmentKindOf(item) === "other") return { status: "unsupported" };
-  return item.byteSize > maxPreviewBytes
-    ? { status: "tooLarge" }
-    : { status: "loading" };
+  return item.byteSize > maxPreviewBytes ? { status: "tooLarge" } : { status: "loading" };
 }
 
 /**
@@ -136,9 +123,7 @@ export function useAttachmentSource(
     let objectUrl: string | null = null;
     setEntry({ itemId, state: { status: "loading" } });
 
-    async function prepare(
-      target: AttachmentItem,
-    ): Promise<PreparedAttachment> {
+    async function prepare(target: AttachmentItem): Promise<PreparedAttachment> {
       const source = await loadSourceRef.current(target, controller.signal);
       if (kind === "pdf") {
         return {
@@ -174,9 +159,7 @@ export function useAttachmentSource(
 
   const markFailed = useCallback(() => {
     setEntry((current) =>
-      current.state.status === "ready"
-        ? { itemId: current.itemId, state: { status: "failed" } }
-        : current,
+      current.state.status === "ready" ? { itemId: current.itemId, state: { status: "failed" } } : current,
     );
   }, []);
 

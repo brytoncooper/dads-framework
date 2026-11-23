@@ -1,11 +1,7 @@
 import { z } from "zod";
 
 import { byCodePoint } from "../openapi/logic/by-code-point.js";
-import {
-  assertArtifactTagFile,
-  openApiPartFileName,
-  SHARED_OPENAPI_PART,
-} from "../openapi/logic/openapi-parts.js";
+import { assertArtifactTagFile, openApiPartFileName, SHARED_OPENAPI_PART } from "../openapi/logic/openapi-parts.js";
 
 /**
  * A route catalog (a product's inventory of its route table: `routes`, each
@@ -27,9 +23,7 @@ export function compareCatalogRoutes(
   first: { readonly path: string; readonly method: string },
   second: { readonly path: string; readonly method: string },
 ): number {
-  return `${first.path} ${first.method}`.localeCompare(
-    `${second.path} ${second.method}`,
-  );
+  return `${first.path} ${first.method}`.localeCompare(`${second.path} ${second.method}`);
 }
 
 // foreign-spec: a catalog route keeps every key its product serializes.
@@ -55,9 +49,7 @@ const catalogTagPartSchema = z.strictObject({
 });
 
 /** Splits a catalog into its parts, keyed by file name. */
-export function splitRouteCatalog(
-  catalog: unknown,
-): ReadonlyMap<string, Record<string, unknown>> {
+export function splitRouteCatalog(catalog: unknown): ReadonlyMap<string, Record<string, unknown>> {
   const { routes, ...shared } = routeCatalogSchema.parse(catalog);
   const byTag = new Map<string, CatalogRoute[]>();
   for (const route of routes) {
@@ -83,9 +75,7 @@ export function splitRouteCatalog(
 }
 
 /** Puts a catalog's parts back into the catalog, byte for byte. */
-export function bundleRouteCatalogParts(
-  parts: ReadonlyMap<string, unknown>,
-): Record<string, unknown> {
+export function bundleRouteCatalogParts(parts: ReadonlyMap<string, unknown>): Record<string, unknown> {
   const shared = sharedCatalogPartSchema.parse(parts.get(SHARED_OPENAPI_PART));
   const routes: CatalogRoute[] = [];
   for (const [fileName, value] of parts) {
@@ -100,17 +90,12 @@ export function bundleRouteCatalogParts(
   };
 }
 
-function parseCatalogTagPart(
-  fileName: string,
-  value: unknown,
-): z.infer<typeof catalogTagPartSchema> {
+function parseCatalogTagPart(fileName: string, value: unknown): z.infer<typeof catalogTagPartSchema> {
   const part = catalogTagPartSchema.parse(value);
   assertArtifactTagFile(fileName, part.tag);
   const stray = part.routes.find((route) => route.tag !== part.tag);
   if (stray !== undefined) {
-    throw new Error(
-      `${fileName} holds ${stray.method} ${stray.path}, tagged "${stray.tag}"`,
-    );
+    throw new Error(`${fileName} holds ${stray.method} ${stray.path}, tagged "${stray.tag}"`);
   }
   return part;
 }

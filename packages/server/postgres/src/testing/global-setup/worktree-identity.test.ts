@@ -3,11 +3,7 @@
  * worktrees on one machine must not share a migrated template Postgres.
  */
 import { describe, expect, it } from "vitest";
-import {
-  currentWorktreeIdentity,
-  currentWorktreePath,
-  worktreeIdentity,
-} from "./worktree-identity.js";
+import { currentWorktreeIdentity, currentWorktreePath, worktreeIdentity } from "./worktree-identity.js";
 
 describe("worktreeIdentity", () => {
   it("is 24 hex characters", () => {
@@ -15,9 +11,7 @@ describe("worktreeIdentity", () => {
   });
 
   it("is stable for the same path", () => {
-    expect(worktreeIdentity("/checkouts/command")).toBe(
-      worktreeIdentity("/checkouts/command"),
-    );
+    expect(worktreeIdentity("/checkouts/command")).toBe(worktreeIdentity("/checkouts/command"));
   });
 
   it("differs for a different path, which is the whole point", () => {
@@ -29,8 +23,6 @@ describe("worktreeIdentity", () => {
 
 describe("currentWorktreeIdentity", () => {
   it("is the identity of the workspace root this process runs in", () => {
-    expect(currentWorktreeIdentity()).toBe(
-      worktreeIdentity(currentWorktreePath()),
-    );
+    expect(currentWorktreeIdentity()).toBe(worktreeIdentity(currentWorktreePath()));
   });
 });

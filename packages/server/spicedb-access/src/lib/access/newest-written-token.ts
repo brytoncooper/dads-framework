@@ -36,10 +36,7 @@ export class NewestWrittenToken {
   }
 
   /** Runs one relationship write and keeps its token only when it is provably the newest. */
-  async track<T>(
-    write: () => Promise<T>,
-    tokenOf: (response: T) => SpiceDbConsistencyToken,
-  ): Promise<T> {
+  async track<T>(write: () => Promise<T>, tokenOf: (response: T) => SpiceDbConsistencyToken): Promise<T> {
     const finishedBeforeStart = this.#finishedWrites;
     let written: SpiceDbConsistencyToken | undefined;
     try {
@@ -48,8 +45,7 @@ export class NewestWrittenToken {
       written = token.length > 0 ? token : undefined;
       return response;
     } finally {
-      const overlappedAnotherWrite =
-        this.#finishedWrites !== finishedBeforeStart;
+      const overlappedAnotherWrite = this.#finishedWrites !== finishedBeforeStart;
       this.#finishedWrites += 1;
       this.#token = overlappedAnotherWrite ? undefined : written;
     }

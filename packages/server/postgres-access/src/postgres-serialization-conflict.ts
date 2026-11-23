@@ -15,9 +15,7 @@ export class PostgresSerializationConflict extends Error {
 }
 
 /** Also applies at an outer transaction boundary that owns the final COMMIT. */
-export function readPostgresSerializationConflict(
-  error: unknown,
-): PostgresSerializationConflict | undefined {
+export function readPostgresSerializationConflict(error: unknown): PostgresSerializationConflict | undefined {
   if (error instanceof PostgresSerializationConflict) return error;
   const seen = new Set<Error>();
   let current = error;

@@ -11,11 +11,7 @@ export type BoxSize = {
  * stage is never enlarged past its own size, and an unmeasured photo or stage
  * shows at actual size.
  */
-export function fitImageScale(
-  natural: BoxSize,
-  stage: BoxSize,
-  rotation: ViewRotation,
-): number {
+export function fitImageScale(natural: BoxSize, stage: BoxSize, rotation: ViewRotation): number {
   const turned = rotatedBox(natural, 1, rotation);
   if (turned.width <= 0 || turned.height <= 0) return 1;
   if (stage.width <= 0 || stage.height <= 0) return 1;
@@ -23,14 +19,8 @@ export function fitImageScale(
 }
 
 /** The box a photo takes up on screen at a scale and rotation. */
-export function rotatedBox(
-  natural: BoxSize,
-  scale: number,
-  rotation: ViewRotation,
-): BoxSize {
+export function rotatedBox(natural: BoxSize, scale: number, rotation: ViewRotation): BoxSize {
   const width = natural.width * scale;
   const height = natural.height * scale;
-  return isSideways(rotation)
-    ? { width: height, height: width }
-    : { width, height };
+  return isSideways(rotation) ? { width: height, height: width } : { width, height };
 }

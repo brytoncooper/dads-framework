@@ -9,18 +9,10 @@ const suites = {
 export default defineConfig({
   test: {
     root: import.meta.dirname,
-    include:
-      tier === "integration" || tier === "benchmark"
-        ? suites[tier]
-        : ["src/**/*.test.ts"],
+    include: tier === "integration" || tier === "benchmark" ? suites[tier] : ["src/**/*.test.ts"],
     exclude:
       tier === "integration" || tier === "benchmark"
         ? [...configDefaults.exclude, "**/dist/**"]
-        : [
-            ...configDefaults.exclude,
-            "**/dist/**",
-            ...suites.integration,
-            ...suites.benchmark,
-          ],
+        : [...configDefaults.exclude, "**/dist/**", ...suites.integration, ...suites.benchmark],
   },
 });

@@ -35,12 +35,7 @@
       ],
       "fullFallbackPolicy": "forbidden",
       "classification": "breaking",
-      "expectedChangedTaskIds": [
-        "api:test",
-        "core:lint",
-        "core:test",
-        "web:test"
-      ]
+      "expectedChangedTaskIds": ["api:test", "core:lint", "core:test", "web:test"]
     },
     {
       "id": "direct-named-importer",
@@ -52,22 +47,8 @@
           "contents": "import { leaf } from \"../../../packages/core/src/leaf.js\";\nexport const direct = `${leaf}-changed`;\n"
         }
       ],
-      "requiredTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
-      "expectedSelectionTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
+      "requiredTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
+      "expectedSelectionTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
       "fullFallbackPolicy": "forbidden",
       "classification": "breaking",
       "expectedChangedTaskIds": ["api:test"]
@@ -169,12 +150,7 @@
       ],
       "fullFallbackPolicy": "forbidden",
       "classification": "breaking",
-      "expectedChangedTaskIds": [
-        "api:test",
-        "api:typecheck",
-        "web:test",
-        "web:typecheck"
-      ]
+      "expectedChangedTaskIds": ["api:test", "api:typecheck", "web:test", "web:typecheck"]
     },
     {
       "id": "export-star",
@@ -260,22 +236,8 @@
           "contents": "const part = \"server\"; export const load = () => import(`./${part}.js`);\n"
         }
       ],
-      "requiredTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
-      "expectedSelectionTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
+      "requiredTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
+      "expectedSelectionTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
       "fullFallbackPolicy": "forbidden",
       "classification": "control",
       "expectedChangedTaskIds": []
@@ -290,14 +252,7 @@
           "contents": "module.exports = require(\"./reexport.js\");\n"
         }
       ],
-      "requiredTaskIds": [
-        "core:lint",
-        "core:test",
-        "core:typecheck",
-        "web:lint",
-        "web:test",
-        "web:typecheck"
-      ],
+      "requiredTaskIds": ["core:lint", "core:test", "core:typecheck", "web:lint", "web:test", "web:typecheck"],
       "expectedSelectionTaskIds": [
         "api:lint",
         "api:typecheck",
@@ -322,22 +277,8 @@
           "contents": "const target = \"runtime.cjs\"; module.exports = require(`./${target}`);\n"
         }
       ],
-      "requiredTaskIds": [
-        "core:lint",
-        "core:test",
-        "core:typecheck",
-        "web:lint",
-        "web:test",
-        "web:typecheck"
-      ],
-      "expectedSelectionTaskIds": [
-        "core:lint",
-        "core:test",
-        "core:typecheck",
-        "web:lint",
-        "web:test",
-        "web:typecheck"
-      ],
+      "requiredTaskIds": ["core:lint", "core:test", "core:typecheck", "web:lint", "web:test", "web:typecheck"],
+      "expectedSelectionTaskIds": ["core:lint", "core:test", "core:typecheck", "web:lint", "web:test", "web:typecheck"],
       "fullFallbackPolicy": "forbidden",
       "classification": "breaking",
       "expectedChangedTaskIds": ["web:test"]
@@ -352,22 +293,8 @@
           "contents": "import { leaf } from \"@fixture/core\"; export const alias = leaf;\n"
         }
       ],
-      "requiredTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
-      "expectedSelectionTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
+      "requiredTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
+      "expectedSelectionTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
       "fullFallbackPolicy": "forbidden",
       "classification": "breaking",
       "expectedChangedTaskIds": ["api:typecheck"]
@@ -382,22 +309,8 @@
           "contents": "import { missing } from \"./missing.js\"; export const unresolved = missing;\n"
         }
       ],
-      "requiredTaskIds": [
-        "core:lint",
-        "core:test",
-        "core:typecheck",
-        "web:lint",
-        "web:test",
-        "web:typecheck"
-      ],
-      "expectedSelectionTaskIds": [
-        "core:lint",
-        "core:test",
-        "core:typecheck",
-        "web:lint",
-        "web:test",
-        "web:typecheck"
-      ],
+      "requiredTaskIds": ["core:lint", "core:test", "core:typecheck", "web:lint", "web:test", "web:typecheck"],
+      "expectedSelectionTaskIds": ["core:lint", "core:test", "core:typecheck", "web:lint", "web:test", "web:typecheck"],
       "fullFallbackPolicy": "forbidden",
       "classification": "breaking",
       "expectedChangedTaskIds": ["web:typecheck"]
@@ -462,22 +375,8 @@
           "contents": "select 1;\n"
         }
       ],
-      "requiredTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
-      "expectedSelectionTaskIds": [
-        "api:lint",
-        "api:test",
-        "api:typecheck",
-        "core:lint",
-        "core:test",
-        "core:typecheck"
-      ],
+      "requiredTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
+      "expectedSelectionTaskIds": ["api:lint", "api:test", "api:typecheck", "core:lint", "core:test", "core:typecheck"],
       "fullFallbackPolicy": "forbidden",
       "classification": "control",
       "expectedChangedTaskIds": []

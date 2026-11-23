@@ -34,17 +34,13 @@ describe("React Email rendering contract", () => {
     expect(rendered.subject).toBe(title);
     expect(rendered.preview).toBe("Open the review details");
     expect(rendered.html).toContain("A&amp;B &lt;review&gt;");
-    expect(rendered.html).toContain(
-      'href="https://example.test/confirm?item=123&amp;mode=read"',
-    );
+    expect(rendered.html).toContain('href="https://example.test/confirm?item=123&amp;mode=read"');
     expect(rendered.text).toContain(title);
     expect(rendered.text).toContain(destination);
     expect(rendered.text).not.toContain("Open the review details");
   });
 
   it("rejects malformed stored props before rendering a body", async () => {
-    await expect(
-      renderEmailTemplate(template, { title, destination: "invalid" }),
-    ).rejects.toThrow(template.name);
+    await expect(renderEmailTemplate(template, { title, destination: "invalid" })).rejects.toThrow(template.name);
   });
 });

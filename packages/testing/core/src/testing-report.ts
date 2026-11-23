@@ -1,9 +1,5 @@
 import { owningProjectForPath } from "./path-ownership.js";
-import {
-  formatIssueLocation,
-  issueScope,
-  issueSeverity,
-} from "./plan-issues.js";
+import { formatIssueLocation, issueScope, issueSeverity } from "./plan-issues.js";
 import type {
   TestingPlanIssue,
   TestingPlanResult,
@@ -49,9 +45,7 @@ export type TestingReport = {
     readonly full: boolean;
     readonly forcedBy: readonly ReportIssue[];
     readonly issuesByCode: Readonly<Record<string, number>>;
-    readonly issuesBySeverity: Readonly<
-      Record<"info" | "uncertainty" | "error", number>
-    >;
+    readonly issuesBySeverity: Readonly<Record<"info" | "uncertainty" | "error", number>>;
     readonly widening: readonly ReportIssue[];
   };
   readonly projectClosure: {
@@ -94,9 +88,7 @@ export function buildTestingReport(input: {
 }): TestingReport {
   const { plan, manifest, run } = input;
 
-  const nonInfoIssues = plan.issues.filter(
-    (issue) => issueSeverity(issue) !== "info",
-  );
+  const nonInfoIssues = plan.issues.filter((issue) => issueSeverity(issue) !== "info");
 
   return {
     schemaVersion: 1,
@@ -106,9 +98,7 @@ export function buildTestingReport(input: {
     fallback: {
       full: plan.scope.fullFallback,
       forcedBy: plan.scope.fullFallback
-        ? nonInfoIssues
-            .filter((issue) => issueScope(issue) === "workspace")
-            .map(toReportIssue)
+        ? nonInfoIssues.filter((issue) => issueScope(issue) === "workspace").map(toReportIssue)
         : [],
       issuesByCode: countBy(plan.issues, (issue) => issue.code),
       issuesBySeverity: buildSeverityCounts(plan.issues),
@@ -124,9 +114,7 @@ function buildTotals(plan: TestingPlanResult): TestingReport["totals"] {
   return {
     tasks: plan.tasks.length,
     selected: plan.tasks.filter((task) => task.decision === "run").length,
-    skipped: plan.tasks.filter(
-      (task) => task.decision === "skip-proven-unaffected",
-    ).length,
+    skipped: plan.tasks.filter((task) => task.decision === "skip-proven-unaffected").length,
     widened: plan.tasks.filter((task) => task.widened).length,
     byReason: countBy(plan.tasks, (task) => task.reason),
     byConfidence: countBy(plan.tasks, (task) => task.confidence),
@@ -140,10 +128,7 @@ function buildTotals(plan: TestingPlanResult): TestingReport["totals"] {
  * fallback with no changed paths to attribute), makes the closure every
  * project in the manifest — there is no narrower answer to give.
  */
-function buildProjectClosure(
-  plan: TestingPlanResult,
-  manifest: TestingManifest,
-): TestingReport["projectClosure"] {
+function buildProjectClosure(plan: TestingPlanResult, manifest: TestingManifest): TestingReport["projectClosure"] {
   const ownedProjectIds: string[] = [];
   const unownedChangedPaths: string[] = [];
   for (const path of plan.scope.changedPaths) {
@@ -157,16 +142,10 @@ function buildProjectClosure(
   const changedProjects = [...new Set(ownedProjectIds)].sort();
 
   const needsEveryProject =
-    unownedChangedPaths.length > 0 ||
-    (plan.scope.fullFallback && plan.scope.changedPaths.length === 0);
+    unownedChangedPaths.length > 0 || (plan.scope.fullFallback && plan.scope.changedPaths.length === 0);
   const closureProjects = needsEveryProject
     ? manifest.projects.map((project) => project.id).sort()
-    : [
-        ...closureFromChangedProjects(
-          changedProjects,
-          reverseFallbackDependents(manifest),
-        ),
-      ].sort();
+    : [...closureFromChangedProjects(changedProjects, reverseFallbackDependents(manifest))].sort();
 
   const closureProjectSet = new Set(closureProjects);
   const closureTaskIds = manifest.tasks
@@ -174,9 +153,7 @@ function buildProjectClosure(
     .map((task) => task.id)
     .sort();
 
-  const selectedTaskCount = plan.tasks.filter(
-    (task) => task.decision === "run",
-  ).length;
+  const selectedTaskCount = plan.tasks.filter((task) => task.decision === "run").length;
   const closureTaskCount = closureTaskIds.length;
 
   return {
@@ -186,15 +163,12 @@ function buildProjectClosure(
     closureTaskIds,
     closureTaskCount,
     selectedTaskCount,
-    reductionRatio:
-      closureTaskCount === 0 ? null : selectedTaskCount / closureTaskCount,
+    reductionRatio: closureTaskCount === 0 ? null : selectedTaskCount / closureTaskCount,
   };
 }
 
 /** Maps a project id to every project that declares it as a fallback dependency. */
-function reverseFallbackDependents(
-  manifest: TestingManifest,
-): ReadonlyMap<string, readonly string[]> {
+function reverseFallbackDependents(manifest: TestingManifest): ReadonlyMap<string, readonly string[]> {
   const reverse = new Map<string, string[]>();
   for (const project of manifest.projects) {
     for (const dependency of project.fallbackDependencies) {
@@ -224,9 +198,7 @@ function closureFromChangedProjects(
   return closure;
 }
 
-function buildExecution(
-  run: TestingRunResult | undefined,
-): TestingReport["execution"] {
+function buildExecution(run: TestingRunResult | undefined): TestingReport["execution"] {
   if (run === undefined) return null;
   const tasks = run.tasks.map((task) => ({
     id: task.id,
@@ -234,10 +206,7 @@ function buildExecution(
     ...(task.exitCode === undefined ? {} : { exitCode: task.exitCode }),
     ...(task.durationMs === undefined ? {} : { durationMs: task.durationMs }),
   }));
-  const totalTaskDurationMs = run.tasks.reduce(
-    (sum, task) => sum + (task.durationMs ?? 0),
-    0,
-  );
+  const totalTaskDurationMs = run.tasks.reduce((sum, task) => sum + (task.durationMs ?? 0), 0);
   return {
     tasks,
     counts: run.counts,
@@ -248,32 +217,19 @@ function buildExecution(
 }
 
 /** One receipt per plan task, in plan order, merging the matching run task when there is one. */
-function buildReceipts(
-  plan: TestingPlanResult,
-  run: TestingRunResult | undefined,
-): TestingReport["receipts"] {
-  const runTasksById = new Map(
-    (run?.tasks ?? []).map((task) => [task.id, task] as const),
-  );
+function buildReceipts(plan: TestingPlanResult, run: TestingRunResult | undefined): TestingReport["receipts"] {
+  const runTasksById = new Map((run?.tasks ?? []).map((task) => [task.id, task] as const));
   return plan.tasks.map((task) => {
     const runTask = runTasksById.get(task.id);
     const status: TestingTaskRunResult["status"] | "planned" | "skipped" =
-      runTask !== undefined
-        ? runTask.status
-        : task.decision === "run"
-          ? "planned"
-          : "skipped";
+      runTask !== undefined ? runTask.status : task.decision === "run" ? "planned" : "skipped";
     return {
       taskId: task.id,
       decision: task.decision,
       reason: task.reason,
       status,
-      ...(runTask?.exitCode === undefined
-        ? {}
-        : { exitCode: runTask.exitCode }),
-      ...(runTask?.durationMs === undefined
-        ? {}
-        : { durationMs: runTask.durationMs }),
+      ...(runTask?.exitCode === undefined ? {} : { exitCode: runTask.exitCode }),
+      ...(runTask?.durationMs === undefined ? {} : { durationMs: runTask.durationMs }),
     };
   });
 }
@@ -292,10 +248,7 @@ function toReportIssue(issue: TestingPlanIssue): ReportIssue {
   };
 }
 
-function countBy<T>(
-  items: readonly T[],
-  key: (item: T) => string,
-): Record<string, number> {
+function countBy<T>(items: readonly T[], key: (item: T) => string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const item of items) {
     const itemKey = key(item);
@@ -304,9 +257,7 @@ function countBy<T>(
   return counts;
 }
 
-function buildSeverityCounts(
-  issues: readonly TestingPlanIssue[],
-): Record<"info" | "uncertainty" | "error", number> {
+function buildSeverityCounts(issues: readonly TestingPlanIssue[]): Record<"info" | "uncertainty" | "error", number> {
   const counts: Record<"info" | "uncertainty" | "error", number> = {
     info: 0,
     uncertainty: 0,

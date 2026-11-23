@@ -3,10 +3,7 @@
  * rest of `pdf/` and `pdf-document-view.tsx`, this is reached only through the
  * lazy document view, so pdf.js never joins the main bundle.
  */
-import type {
-  PDFDocumentLoadingTask,
-  PDFDocumentProxy,
-} from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { PDFDocumentLoadingTask, PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as React from "react";
 
 import { clampPageNumber } from "../logic/pdf-page-input.js";
@@ -18,19 +15,10 @@ import {
   type ViewRotation,
 } from "../logic/view-rotation.js";
 import { nextZoomScale, type ZoomDirection } from "../logic/view-zoom.js";
-import {
-  guardStructTree,
-  isStructTreeSource,
-} from "./pdf-struct-tree-guard.js";
+import { guardStructTree, isStructTreeSource } from "./pdf-struct-tree-guard.js";
 import type { PdfEventBus, PdfPageSource } from "./pdf-types.js";
 import { openPdfDocument } from "./pdfjs-document.js";
-import {
-  EventBus,
-  LinkTarget,
-  PDFFindController,
-  PDFLinkService,
-  PDFViewer,
-} from "./pdfjs-viewer.js";
+import { EventBus, LinkTarget, PDFFindController, PDFLinkService, PDFViewer } from "./pdfjs-viewer.js";
 
 /**
  * pdf.js's own scale for "fit the page width, but no larger than 125%": a
@@ -100,22 +88,17 @@ export type PdfViewerController = {
  * all down: listeners, observer, document, worker task. The viewer lays every
  * page out in one continuous scroll and reports the page in view.
  */
-export function usePdfViewer(
-  data: ArrayBuffer,
-  onFailed: () => void,
-): PdfViewerController {
+export function usePdfViewer(data: ArrayBuffer, onFailed: () => void): PdfViewerController {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const viewerElementRef = React.useRef<HTMLDivElement | null>(null);
   const viewerRef = React.useRef<PDFViewer | null>(null);
   const [status, setStatus] = React.useState<"loading" | "ready">("loading");
-  const [loadedDocument, setLoadedDocument] =
-    React.useState<PDFDocumentProxy | null>(null);
+  const [loadedDocument, setLoadedDocument] = React.useState<PDFDocumentProxy | null>(null);
   const [eventBus, setEventBus] = React.useState<EventBus | null>(null);
   const [pageNumber, setPageNumber] = React.useState(1);
   const [pageCount, setPageCount] = React.useState(0);
   const [scale, setScale] = React.useState(1);
-  const [rotation, setRotation] =
-    React.useState<ViewRotation>(INITIAL_ROTATION);
+  const [rotation, setRotation] = React.useState<ViewRotation>(INITIAL_ROTATION);
 
   // Read inside the load promise, so a new callback never restarts the load.
   const onFailedRef = React.useRef(onFailed);
@@ -208,10 +191,7 @@ export function usePdfViewer(
   };
 }
 
-function createViewer(
-  container: HTMLDivElement,
-  viewerElement: HTMLDivElement,
-) {
+function createViewer(container: HTMLDivElement, viewerElement: HTMLDivElement) {
   const bus = new EventBus();
   // `LinkTarget.BLANK` opens links in a new tab, and pdf.js marks them
   // `rel="noopener noreferrer nofollow"` by default.
@@ -272,10 +252,7 @@ function subscribeViewer(
   // pdf.js re-lays out every page on a rotate and leaves the scroll offset
   // where it was, which is now somewhere else in the document. Put the
   // reader back on the page they were reading.
-  const onRotationChanging = (event: {
-    pagesRotation: number;
-    pageNumber: number;
-  }) => {
+  const onRotationChanging = (event: { pagesRotation: number; pageNumber: number }) => {
     setRotation(normalizeRotation(event.pagesRotation));
     viewer.currentPageNumber = event.pageNumber;
   };
@@ -292,10 +269,7 @@ function subscribeViewer(
   };
 }
 
-function keepNamedScaleOnResize(
-  container: HTMLDivElement,
-  viewer: PDFViewer,
-): () => void {
+function keepNamedScaleOnResize(container: HTMLDivElement, viewer: PDFViewer): () => void {
   // pdf.js resolves a named scale such as "page-width" once, when it is set.
   // Without this, resizing the window (or opening the thumbnail rail)
   // leaves the page at its old width.

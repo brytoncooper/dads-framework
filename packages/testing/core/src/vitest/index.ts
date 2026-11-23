@@ -1,4 +1,1 @@
-export {
-  dadsTsconfigPaths,
-  type DadsTsconfigPathsOptions,
-} from "./dads-tsconfig-paths.js";
+export { dadsTsconfigPaths, type DadsTsconfigPathsOptions } from "./dads-tsconfig-paths.js";

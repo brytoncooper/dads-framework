@@ -13,31 +13,15 @@
  */
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  startTestPostgres,
-  type TestPostgres,
-  truncateTables,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres, truncateTables } from "@dads-framework/postgres/testing";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import { InMemoryOwnerLock } from "../../../testing/in-memory-owner-lock.js";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { ApplyAccessChanges } from "../apply.js";
-import {
-  createApplyAccessChangesAfterCommit,
-  type HeldClaimWait,
-} from "../apply-after-commit.js";
+import { createApplyAccessChangesAfterCommit, type HeldClaimWait } from "../apply-after-commit.js";
 import { accessChangesToWrite } from "../enqueue.js";
 import { leaseCutoff } from "../logic/claim-rules.js";
 import { authorizationOutbox } from "./access-changes.tables.js";
@@ -97,12 +81,7 @@ describe("a save's dispatch while another connection holds its facts (integratio
     const store = new PostgresClaimAccessChanges(db);
     const log = { warn: vi.fn() };
     const dispatch = createApplyAccessChangesAfterCommit(
-      new ApplyAccessChanges(
-        store,
-        authorization,
-        () => new Date(),
-        new InMemoryOwnerLock(),
-      ),
+      new ApplyAccessChanges(store, authorization, () => new Date(), new InMemoryOwnerLock()),
       log,
       "inline-dispatch",
       { checks: 40, intervalMs: 50, delay },
@@ -143,12 +122,7 @@ describe("a save's dispatch while another connection holds its facts (integratio
         lockedBy: authorizationOutbox.lockedBy,
       })
       .from(authorizationOutbox)
-      .where(
-        eq(
-          authorizationOutbox.idempotencyKey,
-          SAVED_FACTS[0]?.idempotencyKey ?? "",
-        ),
-      );
+      .where(eq(authorizationOutbox.idempotencyKey, SAVED_FACTS[0]?.idempotencyKey ?? ""));
     return row;
   }
 
@@ -159,9 +133,7 @@ describe("a save's dispatch while another connection holds its facts (integratio
       if (pauses !== 2) return;
       // The holder finishes: the fact reaches the graph, then settles.
       for (const row of claimed) {
-        const fact = SAVED_FACTS.find(
-          (entry) => entry.idempotencyKey === row.idempotencyKey,
-        );
+        const fact = SAVED_FACTS.find((entry) => entry.idempotencyKey === row.idempotencyKey);
         if (fact !== undefined) {
           await saving.authorization.writeRelationships([fact.relationship]);
         }
@@ -220,9 +192,7 @@ describe("a save's dispatch while another connection holds its facts (integratio
   });
 
   it("does not read again or pause when nothing holds the save's facts", async () => {
-    const delay = vi.fn(() =>
-      Promise.reject(new Error("a save with no contention never pauses")),
-    );
+    const delay = vi.fn(() => Promise.reject(new Error("a save with no contention never pauses")));
     const saving = save(delay);
     const heldByLiveClaim = vi.spyOn(saving.store, "heldByLiveClaim");
     await saving.commit();

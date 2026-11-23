@@ -56,15 +56,11 @@ describe("CLIENT_CONTEXT_HEADER", () => {
 
 describe("encodeClientContext / decodeClientContext", () => {
   it("round-trips a web context", () => {
-    expect(decodeClientContext(encodeClientContext(webContext))).toEqual(
-      webContext,
-    );
+    expect(decodeClientContext(encodeClientContext(webContext))).toEqual(webContext);
   });
 
   it("round-trips a kiosk context, kiosk-only fields included", () => {
-    expect(decodeClientContext(encodeClientContext(kioskContext))).toEqual(
-      kioskContext,
-    );
+    expect(decodeClientContext(encodeClientContext(kioskContext))).toEqual(kioskContext);
   });
 
   it("returns null for an undefined header", () => {
@@ -77,9 +73,7 @@ describe("encodeClientContext / decodeClientContext", () => {
   });
 
   it("returns null for a value that is not valid base64url", () => {
-    expect(
-      decodeClientContext("not base64url! (has spaces + punctuation)"),
-    ).toBeNull();
+    expect(decodeClientContext("not base64url! (has spaces + punctuation)")).toBeNull();
   });
 
   it("returns null for valid base64url that is not JSON", () => {
@@ -101,9 +95,7 @@ describe("encodeClientContext / decodeClientContext", () => {
 
   it("accepts routeId as the matched route template", () => {
     const decoded = decodeClientContext(encodeClientContext(webContext));
-    expect(decoded?.routeId).toBe(
-      "/orgs/:organizationSlug/facilities/:facilitySlug/operate",
-    );
+    expect(decoded?.routeId).toBe("/orgs/:organizationSlug/facilities/:facilitySlug/operate");
   });
 
   it("treats routeId as a plain bounded string, not a validated path shape", () => {
@@ -125,8 +117,5 @@ function encodeToBase64UrlForTest(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }

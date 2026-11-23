@@ -20,28 +20,14 @@ it("binds an existing member only for an owner of an enabled tenant", async () =
   const bindScimUser = vi
     .fn<Parameters<typeof scimBindingRoutes>[0]["bindScimUser"]>()
     .mockImplementation((_actor, _tenant, _scimUser, account) =>
-      account === member.id
-        ? Promise.resolve()
-        : Promise.reject(new TenantUnavailableError()),
+      account === member.id ? Promise.resolve() : Promise.reject(new TenantUnavailableError()),
     );
   const auth = new FakeAuthorization({
     [permission.entityWireName]: { [permission.permissionName]: ["owner"] },
   });
   for (const tenantId of [alpha, beta]) {
-    auth.seed(
-      relationshipWrite(
-        { type: permission.entityWireName, id: tenantId },
-        "owner",
-        owner,
-      ),
-    );
-    auth.seed(
-      relationshipWrite(
-        { type: permission.entityWireName, id: tenantId },
-        "member",
-        member,
-      ),
-    );
+    auth.seed(relationshipWrite({ type: permission.entityWireName, id: tenantId }, "owner", owner));
+    auth.seed(relationshipWrite({ type: permission.entityWireName, id: tenantId }, "member", member));
   }
 
   const readSession = vi.fn((headers: Headers) => {
@@ -54,9 +40,7 @@ it("binds an existing member only for an owner of an enabled tenant", async () =
     });
   });
   const readTenantSession = vi.fn((headers: Headers, tenantId: string) =>
-    tenantId === alpha && headers.get("cookie") === "password-owner"
-      ? Promise.resolve(null)
-      : readSession(headers),
+    tenantId === alpha && headers.get("cookie") === "password-owner" ? Promise.resolve(null) : readSession(headers),
   );
   const app = await buildTestApp({
     routes: scimBindingRoutes({ bindScimUser }, origin, [alpha]),
@@ -67,12 +51,7 @@ it("binds an existing member only for an owner of an enabled tenant", async () =
     authorization: auth,
   });
 
-  const bind = (
-    tenant: string,
-    cookie?: string,
-    requestOrigin = origin,
-    accountId = member.id,
-  ) =>
+  const bind = (tenant: string, cookie?: string, requestOrigin = origin, accountId = member.id) =>
     app.inject({
       method: "POST",
       url: `/tenants/${tenant}/scim/users/${scimId}/bind`,
@@ -89,20 +68,11 @@ it("binds an existing member only for an owner of an enabled tenant", async () =
     expect((await bind(alpha, "password-owner")).statusCode).toBe(401);
     expect(readTenantSession).toHaveBeenCalledWith(expect.any(Headers), alpha);
     expect((await bind(beta, "owner")).statusCode).toBe(404);
-    expect(
-      (await bind(alpha, "owner", "https://elsewhere.example.test")).statusCode,
-    ).toBe(403);
+    expect((await bind(alpha, "owner", "https://elsewhere.example.test")).statusCode).toBe(403);
     expect(bindScimUser).not.toHaveBeenCalled();
-    expect((await bind(alpha, "owner", origin, "unavailable")).statusCode).toBe(
-      404,
-    );
+    expect((await bind(alpha, "owner", origin, "unavailable")).statusCode).toBe(404);
     expect((await bind(alpha, "owner")).statusCode).toBe(204);
-    expect(bindScimUser).toHaveBeenLastCalledWith(
-      owner.id,
-      alpha,
-      scimId,
-      member.id,
-    );
+    expect(bindScimUser).toHaveBeenLastCalledWith(owner.id, alpha, scimId, member.id);
   } finally {
     await app.close();
   }

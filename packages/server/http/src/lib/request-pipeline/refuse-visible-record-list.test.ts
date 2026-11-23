@@ -7,12 +7,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import {
-  actor,
-  compileAccess,
-  resource,
-  type PermissionToken,
-} from "@dads-framework/access";
+import { actor, compileAccess, resource, type PermissionToken } from "@dads-framework/access";
 import { scopeBindings } from "@dads-framework/access/scopes";
 import { requiresVisible } from "../route/route-guards.test-support.js";
 import { paginationQuerySchema } from "@dads-framework/core/contract";
@@ -73,10 +68,7 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function register(
-  token: PermissionToken,
-  modelForRoute = model,
-): Promise<void> {
+async function register(token: PermissionToken, modelForRoute = model): Promise<void> {
   const app = await createHttpApp({
     nodeEnv: "test",
     trustedOrigins: [],
@@ -100,9 +92,7 @@ describe("requiresVisible fail-closed registration", () => {
         'GET /visible lists visiblehttp/ticket with requiresVisible, which is refused unless visiblehttp/ticket is in allowLookupResourcesOn (and not bound in scopeBindings); a record list must use requiresScoped and declare scope bindings (docs/architecture/authorization.md, "To move a record list onto a scope plan")',
       ),
     );
-    await expect(register(unlisted.permissions.view)).rejects.toThrow(
-      HttpWiringError,
-    );
+    await expect(register(unlisted.permissions.view)).rejects.toThrow(HttpWiringError);
   });
 
   it("registers resources explicitly listed in allowLookupResourcesOn", async () => {
@@ -115,19 +105,12 @@ describe("requiresVisible fail-closed registration", () => {
       bindings: [ticketScope],
       allowLookupResourcesOn: [team, ticket],
     });
-    await expect(
-      register(ticket.permissions.view, boundAndAllowed),
-    ).rejects.toThrow(HttpWiringError);
+    await expect(register(ticket.permissions.view, boundAndAllowed)).rejects.toThrow(HttpWiringError);
   });
 
   it("refuses a route whose resource definition is missing from its model", async () => {
     await expect(
-      register(
-        ticket.permissions.view,
-        compileAccess([User, team], { allowLookupResourcesOn: [team] }),
-      ),
-    ).rejects.toThrow(
-      "uses requiresVisible for visiblehttp/ticket, which is missing from the access model",
-    );
+      register(ticket.permissions.view, compileAccess([User, team], { allowLookupResourcesOn: [team] })),
+    ).rejects.toThrow("uses requiresVisible for visiblehttp/ticket, which is missing from the access model");
   });
 });

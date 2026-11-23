@@ -28,14 +28,10 @@ export type BaselineEntry = {
 };
 
 /** Every recorded entry in the baseline, and none when there is no baseline. */
-export function baselineEntries(
-  context: DoctorContext,
-): readonly BaselineEntry[] {
+export function baselineEntries(context: DoctorContext): readonly BaselineEntry[] {
   const baseline = readBaseline(context);
   if (baseline === undefined) return [];
-  return SECTIONS.flatMap((section) =>
-    entriesInSection(section, baseline[section]),
-  );
+  return SECTIONS.flatMap((section) => entriesInSection(section, baseline[section]));
 }
 
 /** Every glob the baseline exempts from measurement. */
@@ -45,18 +41,13 @@ export function baselineExemptions(context: DoctorContext): readonly string[] {
   return isUnknownArray(exempt) ? exempt.filter(isString) : [];
 }
 
-function readBaseline(
-  context: DoctorContext,
-): Record<string, unknown> | undefined {
+function readBaseline(context: DoctorContext): Record<string, unknown> | undefined {
   if (!context.exists(BASELINE_FILE)) return undefined;
   const parsed: unknown = JSON.parse(context.read(BASELINE_FILE));
   return isRecord(parsed) ? parsed : undefined;
 }
 
-function entriesInSection(
-  section: string,
-  measures: unknown,
-): readonly BaselineEntry[] {
+function entriesInSection(section: string, measures: unknown): readonly BaselineEntry[] {
   if (!isRecord(measures)) return [];
   return Object.entries(measures).flatMap(([measure, keys]) =>
     isRecord(keys)

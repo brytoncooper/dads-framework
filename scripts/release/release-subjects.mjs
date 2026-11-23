@@ -13,11 +13,8 @@ function readJson(file) {
 
 export function repositorySlug(root) {
   const { repository } = readJson(join(root, "package.json"));
-  const match = /^git\+https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\.git$/.exec(
-    repository?.url,
-  );
-  if (!match)
-    throw new Error("Expected a canonical GitHub repository in package.json.");
+  const match = /^git\+https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\.git$/.exec(repository?.url);
+  if (!match) throw new Error("Expected a canonical GitHub repository in package.json.");
   return match[1];
 }
 
@@ -26,30 +23,22 @@ export function releaseSubjects(root, directory) {
   const workspaces = releaseWorkspaces(root);
   const facade = readJson(join(root, "packages/testing/core/package.json"));
   const native = Object.keys(facade.optionalDependencies ?? {});
-  const expectedNames = new Set([
-    ...workspaces.map(({ name }) => name),
-    ...native,
-  ]);
+  const expectedNames = new Set([...workspaces.map(({ name }) => name), ...native]);
   if (native.length !== 5 || expectedNames.size !== releasePackageCount) {
-    throw new Error(
-      `Expected exactly ${releasePackageCount} release names, including five native packages.`,
-    );
+    throw new Error(`Expected exactly ${releasePackageCount} release names, including five native packages.`);
   }
   const archives = readdirSync(directory)
     .filter((name) => name.endsWith(".tgz"))
     .sort();
   if (archives.length !== releasePackageCount) {
-    throw new Error(
-      `Expected exactly ${releasePackageCount} release tarballs.`,
-    );
+    throw new Error(`Expected exactly ${releasePackageCount} release tarballs.`);
   }
 
   const repository = `git+https://github.com/${repositorySlug(root)}.git`;
   const remainingNames = new Set(expectedNames);
   const packages = archives.map((filename) => {
     const archive = join(directory, filename);
-    if (!lstatSync(archive).isFile())
-      throw new Error(`Expected a release file: ${filename}`);
+    if (!lstatSync(archive).isFile()) throw new Error(`Expected a release file: ${filename}`);
     const manifest = JSON.parse(
       execFileSync("tar", ["-xOzf", archive, "package/package.json"], {
         encoding: "utf8",
@@ -64,10 +53,7 @@ export function releaseSubjects(root, directory) {
     )
       throw new Error(`Unexpected package manifest in ${filename}.`);
     const dependencies = [
-      ...new Set([
-        ...Object.keys(manifest.dependencies ?? {}),
-        ...Object.keys(manifest.optionalDependencies ?? {}),
-      ]),
+      ...new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.optionalDependencies ?? {})]),
     ]
       .filter((name) => expectedNames.has(name))
       .sort();
@@ -89,11 +75,8 @@ function orderByDependencyWave(packages) {
   const ordered = [];
   let wave = 1;
   while (waiting.length > 0) {
-    const ready = waiting.filter((entry) =>
-      entry.dependencies.every((dependency) => approved.has(dependency)),
-    );
-    if (ready.length === 0)
-      throw new Error("Release package dependencies contain a cycle.");
+    const ready = waiting.filter((entry) => entry.dependencies.every((dependency) => approved.has(dependency)));
+    if (ready.length === 0) throw new Error("Release package dependencies contain a cycle.");
     for (const entry of ready) {
       approved.add(entry.name);
       ordered.push({ ...entry, wave });

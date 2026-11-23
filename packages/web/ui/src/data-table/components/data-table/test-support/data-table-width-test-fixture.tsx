@@ -63,9 +63,7 @@ export const COLUMNS: ColumnDef<Load>[] = [
     accessorKey: "ticket",
     header: fixtureCopy.ticket,
     meta: { label: fixtureCopy.ticket },
-    cell: ({ row }) => (
-      <a href={`/loads/${row.original.id}`}>{row.original.ticket}</a>
-    ),
+    cell: ({ row }) => <a href={`/loads/${row.original.id}`}>{row.original.ticket}</a>,
   },
   {
     id: "status",
@@ -161,12 +159,8 @@ export function UnlinkedLoadsTable() {
 }
 
 export function detailLabels(container: HTMLElement): (string | null)[] {
-  const details = container.querySelector(
-    '[data-slot="data-table-card-details"]',
-  );
-  return [...(details?.querySelectorAll("dt") ?? [])].map(
-    (dt) => dt.textContent,
-  );
+  const details = container.querySelector('[data-slot="data-table-card-details"]');
+  return [...(details?.querySelectorAll("dt") ?? [])].map((dt) => dt.textContent);
 }
 
 export function openColumnsMenu(): void {
@@ -176,9 +170,7 @@ export function openColumnsMenu(): void {
 }
 
 export function headerNames(): string[] {
-  return screen
-    .getAllByRole("columnheader", { hidden: true })
-    .map((header) => header.textContent);
+  return screen.getAllByRole("columnheader", { hidden: true }).map((header) => header.textContent);
 }
 
 export function setUpWidthTests(): void {

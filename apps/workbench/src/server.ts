@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
-import {
-  workbenchAccessModel,
-  workbenchUser,
-  type WorkbenchAuthorization,
-} from "./access.js";
+import { workbenchAccessModel, workbenchUser, type WorkbenchAuthorization } from "./access.js";
 import { createWorkbench } from "./create-workbench.js";
 import { workbenchAuthorizationReadError } from "./operations/workbench-authorization.js";
 import { routeOutcome } from "./route-outcome.js";
@@ -43,9 +39,7 @@ export type ComposedWorkbenchServerOptions = {
   readonly port?: number;
 };
 
-export async function startComposedWorkbenchServer(
-  options: ComposedWorkbenchServerOptions,
-) {
+export async function startComposedWorkbenchServer(options: ComposedWorkbenchServerOptions) {
   const { workbench } = options;
   await workbench.operations.synchronize();
   const http = await createHttpApp({
@@ -69,33 +63,23 @@ export async function startComposedWorkbenchServer(
         check: (query) =>
           routeOutcome(async () => {
             await workbench.operations.synchronize();
-            return authenticatedRead(() =>
-              workbench.authorization.check(query),
-            );
+            return authenticatedRead(() => workbench.authorization.check(query));
           }),
       },
       lookups: {
         lookupResources: (query) =>
           routeOutcome(async () => {
             await workbench.operations.synchronize();
-            return authenticatedRead(() =>
-              workbench.authorization.lookupResources(query),
-            );
+            return authenticatedRead(() => workbench.authorization.lookupResources(query));
           }),
       },
       subjects: {
         resolve: ({ headers }) => {
-          if (origin === undefined || headers["host"] !== origin.host)
-            return Promise.resolve(null);
-          if (
-            headers["origin"] !== undefined &&
-            headers["origin"] !== origin.origin
-          )
-            return Promise.resolve(null);
+          if (origin === undefined || headers["host"] !== origin.host) return Promise.resolve(null);
+          if (headers["origin"] !== undefined && headers["origin"] !== origin.origin) return Promise.resolve(null);
           const id = headers["x-workbench-user"];
           return Promise.resolve(
-            typeof id === "string" &&
-              demoIdentities.some((identity) => identity.id === id)
+            typeof id === "string" && demoIdentities.some((identity) => identity.id === id)
               ? { type: workbenchUser.wireName, id }
               : null,
           );
@@ -114,9 +98,7 @@ export async function startComposedWorkbenchServer(
   }
 }
 
-async function authenticatedRead<Result>(
-  read: () => Promise<Result>,
-): Promise<Result> {
+async function authenticatedRead<Result>(read: () => Promise<Result>): Promise<Result> {
   try {
     return await read();
   } catch (cause) {

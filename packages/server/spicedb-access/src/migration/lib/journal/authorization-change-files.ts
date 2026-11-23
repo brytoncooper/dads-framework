@@ -28,14 +28,10 @@ export type AuthorizationChangeFile = AuthorizationSchemaChange & {
   readonly checksum: string;
 };
 
-export async function loadAuthorizationChangeFiles(
-  folder: string,
-): Promise<readonly AuthorizationChangeFile[]> {
+export async function loadAuthorizationChangeFiles(folder: string): Promise<readonly AuthorizationChangeFile[]> {
   const entries = await readdir(folder, { withFileTypes: true });
   const changes: AuthorizationChangeFile[] = [];
-  for (const entry of entries.toSorted((left, right) =>
-    left.name.localeCompare(right.name),
-  )) {
+  for (const entry of entries.toSorted((left, right) => left.name.localeCompare(right.name))) {
     if (entry.isSymbolicLink())
       throw new AuthorizationChangeError(
         "AUTHZ_CHANGE_INVALID",
@@ -89,9 +85,7 @@ async function authorizationChangeChecksum(folder: string): Promise<string> {
   return hash.digest("hex");
 }
 
-export async function authorizationLegacyJournalChecksum(
-  folder: string,
-): Promise<string> {
+export async function authorizationLegacyJournalChecksum(folder: string): Promise<string> {
   const hash = createHash("sha256");
   const entries = (await readdir(folder, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory() && /^\d{4}_/.test(entry.name))
@@ -104,23 +98,17 @@ export async function authorizationLegacyJournalChecksum(
   return hash.digest("hex");
 }
 
-async function entryFiles(
-  folder: string,
-  prefix = "",
-): Promise<readonly string[]> {
+async function entryFiles(folder: string, prefix = ""): Promise<readonly string[]> {
   const entries = await readdir(join(folder, prefix), { withFileTypes: true });
   const files: string[] = [];
-  for (const entry of entries.toSorted((left, right) =>
-    left.name.localeCompare(right.name),
-  )) {
+  for (const entry of entries.toSorted((left, right) => left.name.localeCompare(right.name))) {
     const relative = join(prefix, entry.name);
     if (entry.isSymbolicLink())
       throw new AuthorizationChangeError(
         "AUTHZ_CHANGE_INVALID",
         `authorization change supporting files cannot be symlinks: ${relative}`,
       );
-    if (entry.isDirectory())
-      files.push(...(await entryFiles(folder, relative)));
+    if (entry.isDirectory()) files.push(...(await entryFiles(folder, relative)));
     else if (entry.isFile()) files.push(relative);
     else
       throw new AuthorizationChangeError(

@@ -5,12 +5,7 @@ import type {
 } from "./policy-model.js";
 import type { CompiledAuthorizationQuery } from "./compile-postgres-policy.js";
 import { findColumnRelation } from "./column-relations.js";
-import {
-  notExpired,
-  permissionIdentity,
-  resolveArrowTargets,
-  TUPLES,
-} from "./policy-sql.js";
+import { notExpired, permissionIdentity, resolveArrowTargets, TUPLES } from "./policy-sql.js";
 
 const MIN_FUSED_ARROWS = 4;
 const MAX_FUSED_ARROWS = 32;
@@ -27,14 +22,7 @@ export function compileLinearCheck(
   return {
     kind: "check",
     text: SQL,
-    values: [
-      namespace,
-      check.subject.type,
-      check.subject.id,
-      check.resource.type,
-      check.resource.id,
-      path,
-    ],
+    values: [namespace, check.subject.type, check.subject.id, check.resource.type, check.resource.id, path],
   };
 }
 
@@ -88,9 +76,7 @@ export function readLinearPath(
     const step = readLinearStep(model, entity, name);
     if (step === undefined) return undefined;
     if (step.kind === "leaf") {
-      return arrows.length >= MIN_FUSED_ARROWS
-        ? [...arrows, step.relation]
-        : undefined;
+      return arrows.length >= MIN_FUSED_ARROWS ? [...arrows, step.relation] : undefined;
     }
     arrows.push(step.relation);
     entity = step.nextEntity;
@@ -108,19 +94,11 @@ type LinearStep =
       readonly nextPermission: string;
     };
 
-function isColumnBacked(
-  model: AuthorizationModelDefinition,
-  entity: string,
-  relation: string,
-): boolean {
+function isColumnBacked(model: AuthorizationModelDefinition, entity: string, relation: string): boolean {
   return findColumnRelation(model, entity, relation) !== undefined;
 }
 
-function readLinearStep(
-  model: AuthorizationModelDefinition,
-  entity: string,
-  name: string,
-): LinearStep | undefined {
+function readLinearStep(model: AuthorizationModelDefinition, entity: string, name: string): LinearStep | undefined {
   const expression = model.permissions.find(
     (candidate) => candidate.entity === entity && candidate.wireName === name,
   )?.expression;
@@ -136,10 +114,7 @@ function readLinearStep(
 function readLinearArrowStep(
   model: AuthorizationModelDefinition,
   entity: string,
-  expression: Extract<
-    CompiledPermissionExpression,
-    { readonly kind: "through" }
-  >,
+  expression: Extract<CompiledPermissionExpression, { readonly kind: "through" }>,
 ): LinearStep | undefined {
   if (
     isColumnBacked(model, entity, expression.relation) ||
@@ -158,16 +133,10 @@ function readLinearArrowStep(
   };
 }
 
-function hasSingleEntityTarget(
-  model: AuthorizationModelDefinition,
-  entity: string,
-  relation: string,
-): boolean {
+function hasSingleEntityTarget(model: AuthorizationModelDefinition, entity: string, relation: string): boolean {
   const definition = model.relations.find(
-    (candidate) =>
-      candidate.entity === entity && candidate.wireName === relation,
+    (candidate) => candidate.entity === entity && candidate.wireName === relation,
   );
-  const entityTargets =
-    definition?.targets.filter((target) => target.kind === "entity") ?? [];
+  const entityTargets = definition?.targets.filter((target) => target.kind === "entity") ?? [];
   return entityTargets.length === 1;
 }

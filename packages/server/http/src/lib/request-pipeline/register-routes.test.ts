@@ -3,10 +3,7 @@ import { z } from "zod";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import { conflict } from "@dads-framework/core/errors";
-import {
-  ACCESS_REFUSAL_HEADER,
-  REQUEST_ID_HEADER,
-} from "@dads-framework/core/contract";
+import { ACCESS_REFUSAL_HEADER, REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { bodyOf, errorBodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";
@@ -28,8 +25,7 @@ import { registerRoutes } from "./register-routes.js";
 const subject: SubjectRef = { type: "user", id: "u1" };
 
 const subjects: SubjectResolver = {
-  resolve: (request) =>
-    Promise.resolve(request.headers["x-anon"] === "1" ? null : subject),
+  resolve: (request) => Promise.resolve(request.headers["x-anon"] === "1" ? null : subject),
 };
 
 const neverChecks: PermissionChecker = {
@@ -208,14 +204,10 @@ describe("registerRoutes", () => {
       },
     });
     expect(bodyOf(res)).toEqual({ data: { id: "en", name: "language" } });
-    const varyFields = (res.headers.vary ?? "")
-      .split(",")
-      .map((field) => field.trim().toLowerCase());
+    const varyFields = (res.headers.vary ?? "").split(",").map((field) => field.trim().toLowerCase());
     expect(varyFields).toContain("origin");
     expect(varyFields).toContain("accept-language");
-    expect(
-      varyFields.filter((field) => field === "accept-language"),
-    ).toHaveLength(1);
+    expect(varyFields.filter((field) => field === "accept-language")).toHaveLength(1);
     expect(res.headers["content-language"]).toBeUndefined();
   });
 

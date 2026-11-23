@@ -5,11 +5,7 @@ import { tarballFor } from "./adoption-packing.mjs";
  * once so npm can share it across requests from different parents. Roots are
  * supplied as tarballs directly by the caller.
  */
-export function buildInternalDependencyOverrides(
-  requestedPackages,
-  workspacePackages,
-  tarballs,
-) {
+export function buildInternalDependencyOverrides(requestedPackages, workspacePackages, tarballs) {
   const visited = new Set(requestedPackages);
   const pending = [...requestedPackages];
   const overrides = {};
@@ -23,12 +19,10 @@ export function buildInternalDependencyOverrides(
       ...Object.keys(workspacePackage.manifest.optionalDependencies ?? {}),
     ];
     for (const dependencyName of dependencyNames) {
-      if (visited.has(dependencyName) || !workspacePackages.has(dependencyName))
-        continue;
+      if (visited.has(dependencyName) || !workspacePackages.has(dependencyName)) continue;
       visited.add(dependencyName);
       pending.push(dependencyName);
-      overrides[dependencyName] =
-        `file:${tarballFor(tarballs, dependencyName)}`;
+      overrides[dependencyName] = `file:${tarballFor(tarballs, dependencyName)}`;
     }
   }
   return overrides;

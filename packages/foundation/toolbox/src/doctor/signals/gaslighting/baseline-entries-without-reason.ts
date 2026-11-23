@@ -16,15 +16,8 @@
  */
 
 import type { DoctorContext } from "../../doctor-context.js";
-import type {
-  DoctorSignal,
-  SignalReading,
-  SignalReadings,
-} from "../../doctor-signal.js";
-import {
-  BASELINE_FILE,
-  baselineEntries,
-} from "../scanners/text-ratchet-baseline.js";
+import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-signal.js";
+import { BASELINE_FILE, baselineEntries } from "../scanners/text-ratchet-baseline.js";
 
 const PLACEHOLDERS = new Set([
   "todo",
@@ -68,8 +61,7 @@ function countUnexplainedEntries(context: DoctorContext): SignalReadings {
 export const baselineEntriesWithoutReasonSignal: DoctorSignal = {
   id: "baseline-entries-without-reason",
   issue: "gaslighting",
-  question:
-    "Does any ratchet baseline entry have an empty or boilerplate reason?",
+  question: "Does any ratchet baseline entry have an empty or boilerplate reason?",
   reads: "text",
   unit: "count",
   direction: "ceiling",

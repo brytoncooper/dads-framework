@@ -1,8 +1,5 @@
 export * from "./copy/overlays-copy.js";
-export {
-  PdfPageCanvas,
-  type PdfPageCanvasProps,
-} from "./components/attachment-viewer/pdf-page-canvas.js";
+export { PdfPageCanvas, type PdfPageCanvasProps } from "./components/attachment-viewer/pdf-page-canvas.js";
 export {
   AttachmentViewer,
   DEFAULT_MAX_PREVIEW_BYTES,

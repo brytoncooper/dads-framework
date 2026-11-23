@@ -36,16 +36,8 @@ import { PdfPageField, type PdfPageFieldHandle } from "./pdf/pdf-page-field.js";
 import { PdfPrintButton } from "./pdf/pdf-print-button.js";
 import { PdfThumbnailRail } from "./pdf/pdf-thumbnail-rail.js";
 import { usePdfPrint } from "./pdf/use-pdf-print.js";
-import {
-  type PdfViewerController,
-  usePdfViewer,
-} from "./pdf/use-pdf-viewer.js";
-import {
-  ToolbarDivider,
-  ToolbarIconButton,
-  ToolbarReadout,
-  ViewerToolbar,
-} from "./viewer-toolbar.js";
+import { type PdfViewerController, usePdfViewer } from "./pdf/use-pdf-viewer.js";
+import { ToolbarDivider, ToolbarIconButton, ToolbarReadout, ViewerToolbar } from "./viewer-toolbar.js";
 
 export type PdfDocumentViewProps = {
   readonly data: ArrayBuffer;
@@ -62,9 +54,7 @@ export function PdfDocumentView({ data, onFailed }: PdfDocumentViewProps) {
   // Open beside the page on a desktop-width window, closed on a phone so the
   // page keeps the room. The viewer fills the window, so the window's width
   // is the stage's width.
-  const [isRailOpen, setIsRailOpen] = React.useState(() =>
-    railDefaultOpen(window.innerWidth),
-  );
+  const [isRailOpen, setIsRailOpen] = React.useState(() => railDefaultOpen(window.innerWidth));
   const [isFindOpen, setIsFindOpen] = React.useState(false);
   const pageFieldRef = React.useRef<PdfPageFieldHandle | null>(null);
   useWindowShortcuts({
@@ -170,9 +160,7 @@ function useWindowShortcuts({
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const isFindShortcut =
-        (event.metaKey || event.ctrlKey) &&
-        (event.key === "f" || event.key === "F");
+      const isFindShortcut = (event.metaKey || event.ctrlKey) && (event.key === "f" || event.key === "F");
       if (isFindShortcut) {
         event.preventDefault();
         latest.current.openFind();
@@ -234,11 +222,7 @@ function PdfToolbar({
       >
         <PanelLeftIcon />
       </ToolbarIconButton>
-      <ToolbarIconButton
-        label={t("overlays.attachmentViewer.pdf.find")}
-        pressed={isFindOpen}
-        onClick={onToggleFind}
-      >
+      <ToolbarIconButton label={t("overlays.attachmentViewer.pdf.find")} pressed={isFindOpen} onClick={onToggleFind}>
         <SearchIcon />
       </ToolbarIconButton>
       {printButton}
@@ -263,12 +247,7 @@ function PdfToolbar({
       >
         <ChevronLeftIcon />
       </ToolbarIconButton>
-      <PdfPageField
-        ref={pageFieldRef}
-        pageNumber={pdf.pageNumber}
-        pageCount={pdf.pageCount}
-        onCommit={pdf.goToPage}
-      />
+      <PdfPageField ref={pageFieldRef} pageNumber={pdf.pageNumber} pageCount={pdf.pageCount} onCommit={pdf.goToPage} />
       <ToolbarIconButton
         label={t("overlays.attachmentViewer.pdf.nextPage")}
         disabled={isOnLastPage}
@@ -314,10 +293,7 @@ function PdfToolbar({
       >
         <ZoomInIcon />
       </ToolbarIconButton>
-      <ToolbarIconButton
-        label={t("overlays.attachmentViewer.pdf.fitWidth")}
-        onClick={pdf.fitWidth}
-      >
+      <ToolbarIconButton label={t("overlays.attachmentViewer.pdf.fitWidth")} onClick={pdf.fitWidth}>
         <ArrowLeftRightIcon />
       </ToolbarIconButton>
       <FullScreenButton />

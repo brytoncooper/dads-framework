@@ -38,15 +38,10 @@ export type SendTestEmailDependencies = {
 export class SendTestEmail {
   constructor(private readonly dependencies: SendTestEmailDependencies) {}
 
-  async execute(
-    input: SendTestEmailInput,
-  ): Promise<Result<SendTestEmailReport>> {
+  async execute(input: SendTestEmailInput): Promise<Result<SendTestEmailReport>> {
     const template = this.dependencies.catalog.find(input.templateName);
     if (!template) {
-      return notFoundResult(
-        "EMAIL_TEMPLATE_NOT_FOUND",
-        `No email template is named ${input.templateName}`,
-      );
+      return notFoundResult("EMAIL_TEMPLATE_NOT_FOUND", `No email template is named ${input.templateName}`);
     }
 
     const sample = template.samples[input.sampleName];
@@ -63,11 +58,7 @@ export class SendTestEmail {
     };
 
     if (input.delivery === "immediate") {
-      const sent = await this.dependencies.emailDelivery.sendNow(
-        template,
-        sample,
-        envelope,
-      );
+      const sent = await this.dependencies.emailDelivery.sendNow(template, sample, envelope);
       return ok({
         outboundEmailId: sent.id,
         providerMessageId: sent.providerMessageId,
@@ -75,11 +66,7 @@ export class SendTestEmail {
       });
     }
 
-    const queued = await this.dependencies.emailDelivery.enqueue(
-      template,
-      sample,
-      envelope,
-    );
+    const queued = await this.dependencies.emailDelivery.enqueue(template, sample, envelope);
     // A queued send has no vendor id yet — the delivery job writes it onto
     // the row, which is where an operator reads it.
     return ok({
@@ -90,9 +77,6 @@ export class SendTestEmail {
   }
 }
 
-function notFoundResult(
-  code: string,
-  message: string,
-): Result<SendTestEmailReport> {
+function notFoundResult(code: string, message: string): Result<SendTestEmailReport> {
   return err(notFound(code, message));
 }

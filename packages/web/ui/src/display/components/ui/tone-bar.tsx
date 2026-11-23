@@ -18,30 +18,18 @@ function clampPercent(percent: number): number {
 }
 
 /** A single-value progress bar whose fill color carries a semantic tone. */
-export function ToneBar({
-  percent,
-  tone,
-  label,
-  className,
-  ...props
-}: ToneBarProps) {
+export function ToneBar({ percent, tone, label, className, ...props }: ToneBarProps) {
   return (
     <div
       {...props}
       role="img"
       aria-label={label}
       data-slot="tone-bar"
-      className={cn(
-        "h-2 w-full overflow-hidden rounded-full bg-muted",
-        className,
-      )}
+      className={cn("h-2 w-full overflow-hidden rounded-full bg-muted", className)}
     >
       <div
         data-slot="tone-bar-fill"
-        className={cn(
-          "h-full rounded-full transition-[width] motion-reduce:transition-none",
-          STATUS_LAMP_CLASS[tone],
-        )}
+        className={cn("h-full rounded-full transition-[width] motion-reduce:transition-none", STATUS_LAMP_CLASS[tone])}
         style={{ width: `${clampPercent(percent)}%` }}
       />
     </div>

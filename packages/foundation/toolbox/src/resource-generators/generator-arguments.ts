@@ -10,9 +10,7 @@ const commands = {
 };
 type GeneratorKind = keyof typeof commands;
 
-export function isGeneratorCommand(
-  command: string | undefined,
-): command is GeneratorKind {
+export function isGeneratorCommand(command: string | undefined): command is GeneratorKind {
   return command !== undefined && Object.hasOwn(commands, command);
 }
 
@@ -27,12 +25,9 @@ export type GeneratorArguments = {
   readonly dryRun: boolean;
 };
 
-export function parseGeneratorArguments(
-  args: readonly string[],
-): GeneratorArguments {
+export function parseGeneratorArguments(args: readonly string[]): GeneratorArguments {
   const [command, itemName, ...flags] = args;
-  if (!isGeneratorCommand(command) || itemName === undefined)
-    throw new Error(GENERATOR_USAGE);
+  if (!isGeneratorCommand(command) || itemName === undefined) throw new Error(GENERATOR_USAGE);
 
   const kind = command;
   const options = readFlags(flags);
@@ -46,14 +41,9 @@ export function parseGeneratorArguments(
   };
 }
 
-function resolveDomain(
-  kind: GeneratorKind,
-  name: string,
-  option: boolean | string | undefined,
-): string {
+function resolveDomain(kind: GeneratorKind, name: string, option: boolean | string | undefined): string {
   if (kind === "domain") {
-    if (option !== undefined)
-      throw new Error("Use the domain name as the command argument.");
+    if (option !== undefined) throw new Error("Use the domain name as the command argument.");
     return name;
   }
   if (typeof option === "string") return readGeneratorName("domain", option);
@@ -61,17 +51,12 @@ function resolveDomain(
   throw new Error("--domain is required.");
 }
 
-function resolveApi(
-  kind: GeneratorKind,
-  option: boolean | string | undefined,
-): string | undefined {
+function resolveApi(kind: GeneratorKind, option: boolean | string | undefined): string | undefined {
   if (typeof option !== "string") {
-    if (kind === "resource")
-      throw new Error("--api is required to expose a resource.");
+    if (kind === "resource") throw new Error("--api is required to expose a resource.");
     return undefined;
   }
-  if (!supportsApi(kind))
-    throw new Error("--api is allowed for domain, endpoint, and resource.");
+  if (!supportsApi(kind)) throw new Error("--api is allowed for domain, endpoint, and resource.");
   return readGeneratorName("API", option);
 }
 
@@ -80,13 +65,8 @@ function supportsApi(kind: GeneratorKind): boolean {
 }
 
 function readGeneratorName(kind: string, value: string): string {
-  if (
-    !/^[a-z][a-z0-9]{0,23}(?:-[a-z][a-z0-9]*)*$/.test(value) ||
-    value.length > 28
-  ) {
-    throw new Error(
-      `Use a lowercase kebab-case ${kind} of up to 28 characters.`,
-    );
+  if (!/^[a-z][a-z0-9]{0,23}(?:-[a-z][a-z0-9]*)*$/.test(value) || value.length > 28) {
+    throw new Error(`Use a lowercase kebab-case ${kind} of up to 28 characters.`);
   }
   return value;
 }
@@ -101,11 +81,9 @@ function readFlags(args: readonly string[]) {
       options.set(flag, true);
       continue;
     }
-    if (flag !== "--api" && flag !== "--domain")
-      throw new Error(GENERATOR_USAGE);
+    if (flag !== "--api" && flag !== "--domain") throw new Error(GENERATOR_USAGE);
     const value = args[++index];
-    if (value === undefined || value.startsWith("--"))
-      throw new Error(`${flag} needs a value.`);
+    if (value === undefined || value.startsWith("--")) throw new Error(`${flag} needs a value.`);
     options.set(flag, value);
   }
   return options;

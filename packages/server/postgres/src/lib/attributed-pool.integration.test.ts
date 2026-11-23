@@ -2,20 +2,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { pgTable, text, uuid } from "drizzle-orm/pg-core";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  currentAuditActor,
-  runWithAuditActor,
-  type AuditActor,
-} from "@dads-framework/core/audit-actor";
-import {
-  startTestPostgres,
-  startUnattributedTestPostgres,
-  type TestPostgres,
-} from "../testing/start-test-postgres.js";
-import {
-  truncateAuditLog,
-  truncateTables,
-} from "../testing/truncate-tables.js";
+import { currentAuditActor, runWithAuditActor, type AuditActor } from "@dads-framework/core/audit-actor";
+import { startTestPostgres, startUnattributedTestPostgres, type TestPostgres } from "../testing/start-test-postgres.js";
+import { truncateAuditLog, truncateTables } from "../testing/truncate-tables.js";
 import { createAttributedPool } from "./attributed-pool.js";
 
 /**
@@ -131,9 +120,7 @@ describe("attributed pool (integration)", () => {
   it("attributes a transaction, which Drizzle runs on one checked-out client", async () => {
     await runWithAuditActor(USER_ACTOR, () =>
       db.transaction(async (tx) => {
-        await tx
-          .insert(attributionFixtureParties)
-          .values({ name: "Bulk Grain", slug: "bulk-grain" });
+        await tx.insert(attributionFixtureParties).values({ name: "Bulk Grain", slug: "bulk-grain" });
       }),
     );
 
@@ -151,14 +138,10 @@ describe("attributed pool (integration)", () => {
     const unstamped = drizzle(unattributed.pool);
 
     await expect(
-      unstamped
-        .insert(attributionFixtureParties)
-        .values({ name: "Nobody", slug: "nobody" }),
+      unstamped.insert(attributionFixtureParties).values({ name: "Nobody", slug: "nobody" }),
     ).rejects.toMatchObject({ cause: { code: "42501" } });
 
-    expect(await unstamped.select().from(attributionFixtureParties)).toEqual(
-      [],
-    );
+    expect(await unstamped.select().from(attributionFixtureParties)).toEqual([]);
     expect(await fixtureAuditRows(unattributed)).toEqual([]);
   });
 
@@ -166,9 +149,7 @@ describe("attributed pool (integration)", () => {
     const unstamped = drizzle(unattributed.pool);
 
     await expect(
-      unstamped
-        .select({ id: attributionFixtureParties.id })
-        .from(attributionFixtureParties),
+      unstamped.select({ id: attributionFixtureParties.id }).from(attributionFixtureParties),
     ).resolves.toEqual([]);
   });
 
@@ -185,28 +166,18 @@ describe("attributed pool (integration)", () => {
     const single = drizzle(singleConnection);
     try {
       const firstBackend = await runWithAuditActor(USER_ACTOR, async () => {
-        await single
-          .insert(attributionFixtureParties)
-          .values({ name: "First", slug: "first" });
+        await single.insert(attributionFixtureParties).values({ name: "First", slug: "first" });
         return backendPid(singleConnection);
       });
-      const secondBackend = await runWithAuditActor(
-        OTHER_USER_ACTOR,
-        async () => {
-          await single
-            .insert(attributionFixtureParties)
-            .values({ name: "Second", slug: "second" });
-          return backendPid(singleConnection);
-        },
-      );
+      const secondBackend = await runWithAuditActor(OTHER_USER_ACTOR, async () => {
+        await single.insert(attributionFixtureParties).values({ name: "Second", slug: "second" });
+        return backendPid(singleConnection);
+      });
 
       expect(secondBackend).toBe(firstBackend);
       const audited = await fixtureAuditRows(postgres);
       expect(audited.map((row) => row.actor_id)).toEqual(["user-1", "user-2"]);
-      expect(audited.map((row) => row.request_id)).toEqual([
-        USER_ACTOR.requestId,
-        OTHER_USER_ACTOR.requestId,
-      ]);
+      expect(audited.map((row) => row.request_id)).toEqual([USER_ACTOR.requestId, OTHER_USER_ACTOR.requestId]);
     } finally {
       await singleConnection.end();
     }
@@ -215,9 +186,7 @@ describe("attributed pool (integration)", () => {
   // What keeps 33 seeders and every pre-existing integration test green: they
   // insert raw, outside any context, and the test pool answers for them.
   it("falls back to the system test actor outside any context", async () => {
-    await db
-      .insert(attributionFixtureParties)
-      .values({ name: "Seeded", slug: "seeded" });
+    await db.insert(attributionFixtureParties).values({ name: "Seeded", slug: "seeded" });
 
     expect(await fixtureAuditRows(postgres)).toEqual([
       expect.objectContaining({
@@ -241,8 +210,6 @@ async function fixtureAuditRows(postgres: TestPostgres): Promise<AuditRow[]> {
 }
 
 async function backendPid(pool: Pool): Promise<number> {
-  const answered = await pool.query<{ pid: number }>(
-    "SELECT pg_backend_pid() AS pid",
-  );
+  const answered = await pool.query<{ pid: number }>("SELECT pg_backend_pid() AS pid");
   return answered.rows[0]?.pid ?? -1;
 }

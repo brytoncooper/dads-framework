@@ -1,9 +1,6 @@
 import { isRecord, isString, isUnknownArray } from "../parse-guards.js";
 import { sha256 } from "./canonical-bytes.js";
-import type {
-  VerificationInputIdentity,
-  VerificationInputRole,
-} from "./verification-inputs.js";
+import type { VerificationInputIdentity, VerificationInputRole } from "./verification-inputs.js";
 import { assertVerificationInputIdentity } from "./verification-inputs.js";
 
 export type VerificationOutputFingerprint = {
@@ -63,9 +60,7 @@ type VerificationReceiptScope = {
   readonly receiptId: string;
 };
 
-export function parseSuccessfulVerificationReceipt(
-  input: unknown,
-): SuccessfulVerificationReceipt {
+export function parseSuccessfulVerificationReceipt(input: unknown): SuccessfulVerificationReceipt {
   if (!isRecord(input) || input["formatVersion"] !== 1) {
     throw new Error("Invalid verification receipt format.");
   }
@@ -81,15 +76,11 @@ export function parseSuccessfulVerificationReceipt(
     completedAt: scope.completedAt,
   };
   if (sha256(JSON.stringify(parsedWithoutId)) !== scope.receiptId) {
-    throw new Error(
-      "Verification receipt checksum does not match its contents.",
-    );
+    throw new Error("Verification receipt checksum does not match its contents.");
   }
   const parsed = { ...parsedWithoutId, receiptId: scope.receiptId };
   if (JSON.stringify(parsed) !== serialized) {
-    throw new Error(
-      "Verification receipt contains unsupported fields or ordering.",
-    );
+    throw new Error("Verification receipt contains unsupported fields or ordering.");
   }
   assertReceiptScopeMatchesIdentity(parsed);
   assertReceiptOutputs(parsed.identity, parsed.outputs);
@@ -97,9 +88,7 @@ export function parseSuccessfulVerificationReceipt(
   return parsed;
 }
 
-function readReceiptScope(
-  input: Record<string, unknown>,
-): VerificationReceiptScope {
+function readReceiptScope(input: Record<string, unknown>): VerificationReceiptScope {
   return {
     projectId: readReceiptString(input, "projectId"),
     taskId: readReceiptString(input, "taskId"),
@@ -109,9 +98,7 @@ function readReceiptScope(
   };
 }
 
-function assertReceiptScopeMatchesIdentity(
-  receipt: SuccessfulVerificationReceipt,
-): void {
+function assertReceiptScopeMatchesIdentity(receipt: SuccessfulVerificationReceipt): void {
   if (
     receipt.identity.projectId !== receipt.projectId ||
     receipt.identity.taskId !== receipt.taskId ||
@@ -165,10 +152,7 @@ function parseIdentity(input: unknown): VerificationInputIdentity {
     outputFiles: readReceiptStringArray(input, "outputFiles"),
     environmentNames: readReceiptStringArray(input, "environmentNames"),
     environmentSha256: readHash(input, "environmentSha256"),
-    prerequisiteIdentities: readReceiptStringArray(
-      input,
-      "prerequisiteIdentities",
-    ),
+    prerequisiteIdentities: readReceiptStringArray(input, "prerequisiteIdentities"),
     platform: readReceiptString(input, "platform"),
     architecture: readReceiptString(input, "architecture"),
     nodeVersion: readReceiptString(input, "nodeVersion"),
@@ -180,9 +164,7 @@ function parseIdentity(input: unknown): VerificationInputIdentity {
   return identity;
 }
 
-function parseOutputs(
-  input: unknown,
-): readonly VerificationOutputFingerprint[] {
+function parseOutputs(input: unknown): readonly VerificationOutputFingerprint[] {
   if (!Array.isArray(input)) throw new Error("Invalid verification outputs.");
   return input.map((output) => {
     if (!isRecord(output)) throw new Error("Invalid verification output.");
@@ -199,10 +181,7 @@ function parseOutputs(
  * string could answer, so emptiness is a parse failure here — unlike
  * `readString` in `verification-policy-parsing.ts`, which permits it.
  */
-function readReceiptString(
-  input: Record<string, unknown>,
-  field: string,
-): string {
+function readReceiptString(input: Record<string, unknown>, field: string): string {
   const fieldValue = input[field];
   if (typeof fieldValue !== "string" || fieldValue.length === 0) {
     throw new Error(`Verification receipt ${field} must be a string.`);
@@ -220,21 +199,14 @@ function readHash(input: Record<string, unknown>, field: string): string {
 
 function readNumber(input: Record<string, unknown>, field: string): number {
   const fieldValue = input[field];
-  if (
-    typeof fieldValue !== "number" ||
-    !Number.isSafeInteger(fieldValue) ||
-    fieldValue < 0
-  ) {
+  if (typeof fieldValue !== "number" || !Number.isSafeInteger(fieldValue) || fieldValue < 0) {
     throw new Error(`Verification receipt ${field} must be a safe number.`);
   }
   return fieldValue;
 }
 
 /** A receipt field read as an array of non-empty strings. */
-function readReceiptStringArray(
-  input: Record<string, unknown>,
-  field: string,
-): readonly string[] {
+function readReceiptStringArray(input: Record<string, unknown>, field: string): readonly string[] {
   const fieldValue = input[field];
   if (!isUnknownArray(fieldValue)) {
     throw new Error(`Verification receipt ${field} must be a string array.`);
@@ -247,23 +219,17 @@ function readReceiptStringArray(
   });
 }
 
-function assertSuccessfulExecution(
-  execution: ControlledVerificationExecution,
-): void {
+function assertSuccessfulExecution(execution: ControlledVerificationExecution): void {
   if (
     execution.status !== "succeeded" ||
     execution.exitCode !== 0 ||
     execution.signal !== null ||
     execution.failure !== undefined
   ) {
-    throw new Error(
-      "Failed verification cannot create a receipt; a successful execution requires exit code zero.",
-    );
+    throw new Error("Failed verification cannot create a receipt; a successful execution requires exit code zero.");
   }
   if (execution.snapshotId !== execution.identity.snapshotId) {
-    throw new Error(
-      "Successful execution does not match its snapshot identity.",
-    );
+    throw new Error("Successful execution does not match its snapshot identity.");
   }
   assertVerificationInputIdentity(execution.identity);
   assertReceiptOutputs(execution.identity, execution.outputs);
@@ -275,9 +241,7 @@ function assertReceiptOutputs(
 ): void {
   const outputPaths = outputs.map((output) => output.path);
   if (JSON.stringify(outputPaths) !== JSON.stringify(identity.outputFiles)) {
-    throw new Error(
-      "Verification receipt does not contain every required output.",
-    );
+    throw new Error("Verification receipt does not contain every required output.");
   }
   for (const output of outputs) {
     if (!/^[a-f0-9]{64}$/.test(output.sha256)) {
@@ -291,22 +255,11 @@ function assertReceiptOutputs(
 
 function assertCompletedAt(completedAt: string): void {
   const parsedTime = Date.parse(completedAt);
-  if (
-    !Number.isFinite(parsedTime) ||
-    new Date(parsedTime).toISOString() !== completedAt
-  ) {
-    throw new Error(
-      "Verification receipt completedAt must be an ISO timestamp.",
-    );
+  if (!Number.isFinite(parsedTime) || new Date(parsedTime).toISOString() !== completedAt) {
+    throw new Error("Verification receipt completedAt must be an ISO timestamp.");
   }
 }
 
 function isInputRole(value: string): value is VerificationInputRole {
-  return [
-    "source",
-    "test",
-    "configuration",
-    "resolved-dependency",
-    "artifact",
-  ].includes(value);
+  return ["source", "test", "configuration", "resolved-dependency", "artifact"].includes(value);
 }

@@ -2,12 +2,7 @@ import { testAuthorizationFault } from "./testing/authorization-double.js";
 import { WorkbenchMemoryAuthorization } from "./testing/workbench-memory-authorization.js";
 /** Large deletions must respect atomic adapter batch limits and resume a partially applied durable cleanup. */
 import { describe, expect, it } from "vitest";
-import {
-  workbenchTask,
-  workbenchUser,
-  workbenchWorkspace,
-  type WorkbenchRelationship,
-} from "./access.js";
+import { workbenchTask, workbenchUser, workbenchWorkspace, type WorkbenchRelationship } from "./access.js";
 import { createWorkbench } from "./create-workbench.js";
 import { MemoryWorkbenchStore } from "./storage/memory-workbench-store.js";
 import { createAuthorizationDouble } from "./testing/authorization-double.js";
@@ -23,12 +18,7 @@ describe("bounded relationship cleanup", () => {
       deleteRelationships: (filter) => {
         attemptedBatchSizes.push(1);
         if (unavailable && attemptedBatchSizes.length > 500) {
-          return Promise.reject(
-            testAuthorizationFault(
-              "UNAVAILABLE",
-              "Cleanup backend temporarily unavailable",
-            ),
-          );
+          return Promise.reject(testAuthorizationFault("UNAVAILABLE", "Cleanup backend temporarily unavailable"));
         }
         return backing.deleteRelationships(filter);
       },
@@ -71,20 +61,16 @@ describe("bounded relationship cleanup", () => {
     });
     await backing.writeRelationships(taskRelationships);
 
-    await expect(
-      app.operations.deleteWorkspace(subject, workspace.id),
-    ).rejects.toMatchObject({ code: "RELATIONSHIPS_PENDING" });
+    await expect(app.operations.deleteWorkspace(subject, workspace.id)).rejects.toMatchObject({
+      code: "RELATIONSHIPS_PENDING",
+    });
     expect(attemptedBatchSizes).toHaveLength(501);
     expect((await store.read()).workspaces).toEqual([]);
     expect((await store.read()).tasks).toEqual([]);
-    expect(
-      (await store.read()).pendingAuthorizationChanges.map(
-        (entry) => entry.deletes.length,
-      ),
-    ).toEqual([1002]);
-    await expect(
-      app.operations.getWorkspace(subject, workspace.id),
-    ).rejects.toMatchObject({ code: "RELATIONSHIPS_PENDING" });
+    expect((await store.read()).pendingAuthorizationChanges.map((entry) => entry.deletes.length)).toEqual([1002]);
+    await expect(app.operations.getWorkspace(subject, workspace.id)).rejects.toMatchObject({
+      code: "RELATIONSHIPS_PENDING",
+    });
 
     unavailable = false;
     await app.operations.synchronize();
@@ -97,7 +83,6 @@ describe("bounded relationship cleanup", () => {
         resourceType: workbenchTask.wireName,
       }),
     ).toEqual([]);
-    for (const relationship of taskRelationships)
-      expect(await backing.hasTuple(relationship)).toBe(false);
+    for (const relationship of taskRelationships) expect(await backing.hasTuple(relationship)).toBe(false);
   });
 });

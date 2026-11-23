@@ -14,9 +14,7 @@ function testDirectory(): ScimDirectory {
 
   return {
     list(tenantId, { filter, startIndex, count }) {
-      const matches = [...tenant(tenantId).values()].filter(
-        (user) => !filter || matchesScimUserFilter(user, filter),
-      );
+      const matches = [...tenant(tenantId).values()].filter((user) => !filter || matchesScimUserFilter(user, filter));
       return Promise.resolve({
         totalResults: matches.length,
         users: matches.slice(startIndex - 1, startIndex - 1 + count),
@@ -25,11 +23,7 @@ function testDirectory(): ScimDirectory {
     get: (tenantId, id) => Promise.resolve(tenant(tenantId).get(id) ?? null),
     create(tenantId, data) {
       const users = tenant(tenantId);
-      if (
-        [...users.values()].some(
-          (user) => user.userName.toLowerCase() === data.userName.toLowerCase(),
-        )
-      ) {
+      if ([...users.values()].some((user) => user.userName.toLowerCase() === data.userName.toLowerCase())) {
         return Promise.resolve("conflict");
       }
       const time = new Date().toISOString();
@@ -49,9 +43,7 @@ function testDirectory(): ScimDirectory {
       const data = change(current);
       if (
         [...users.values()].some(
-          (user) =>
-            user.id !== id &&
-            user.userName.toLowerCase() === data.userName.toLowerCase(),
+          (user) => user.id !== id && user.userName.toLowerCase() === data.userName.toLowerCase(),
         )
       ) {
         return Promise.resolve("conflict");
@@ -81,16 +73,10 @@ const createUser = (userName: string) => ({
 function setup() {
   const handler = createScimHandler({
     baseUrl,
-    authenticate: (token) =>
-      Promise.resolve(token === "alpha" || token === "beta" ? token : null),
+    authenticate: (token) => Promise.resolve(token === "alpha" || token === "beta" ? token : null),
     directory: testDirectory(),
   });
-  return (
-    path: string,
-    method = "GET",
-    body?: unknown,
-    authorization = "Bearer alpha",
-  ) =>
+  return (path: string, method = "GET", body?: unknown, authorization = "Bearer alpha") =>
     handler(
       new Request(`${baseUrl}/${path}`, {
         method,
@@ -106,8 +92,7 @@ function setup() {
 
 function createdPath(response: Response): string {
   const location = response.headers.get("Location");
-  if (!location?.startsWith(`${baseUrl}/Users/`))
-    throw new Error("Missing canonical User location.");
+  if (!location?.startsWith(`${baseUrl}/Users/`)) throw new Error("Missing canonical User location.");
   return location.slice(baseUrl.length + 1);
 }
 
@@ -241,9 +226,7 @@ describe("tenant-bound SCIM HTTP", () => {
       itemsPerPage: 0,
       Resources: [],
     });
-    const filtered = await send(
-      `Users?filter=${filter}&attributes=userName,name.givenName`,
-    );
+    const filtered = await send(`Users?filter=${filter}&attributes=userName,name.givenName`);
     await expect(filtered.json()).resolves.toMatchObject({
       totalResults: 1,
       Resources: [{ userName: "sam", name: { givenName: "Sam" } }],
@@ -273,9 +256,7 @@ describe("tenant-bound SCIM HTTP", () => {
   });
   it("rejects unsupported filters instead of listing all users", async () => {
     const send = setup();
-    const response = await send(
-      `Users?filter=${encodeURIComponent('userName co "sam"')}`,
-    );
+    const response = await send(`Users?filter=${encodeURIComponent('userName co "sam"')}`);
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
       scimType: "invalidFilter",
@@ -299,11 +280,7 @@ describe("tenant-bound SCIM HTTP", () => {
   });
   it("rejects a body over the SCIM request size limit", async () => {
     const send = setup();
-    const response = await send(
-      "Users",
-      "POST",
-      createUser("x".repeat(64 * 1024)),
-    );
+    const response = await send("Users", "POST", createUser("x".repeat(64 * 1024)));
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toMatchObject({ status: "413" });
   });

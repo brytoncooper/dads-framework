@@ -13,8 +13,6 @@ const migrationEnvironmentSchema = z
 export type MigrationEnvironment = z.infer<typeof migrationEnvironmentSchema>;
 
 /** Parses the complete environment contract needed by the migration process. */
-export function parseMigrationEnvironment(
-  input: unknown,
-): MigrationEnvironment {
+export function parseMigrationEnvironment(input: unknown): MigrationEnvironment {
   return migrationEnvironmentSchema.parse(input);
 }

@@ -23,9 +23,7 @@ import { sseRoute, type SseStream } from "./sse-route.js";
 const subjects: SubjectResolver = {
   resolve: (request) => {
     const id = request.headers["x-test-user"];
-    return Promise.resolve(
-      typeof id === "string" && id.length > 0 ? { type: "user", id } : null,
-    );
+    return Promise.resolve(typeof id === "string" && id.length > 0 ? { type: "user", id } : null);
   },
 };
 
@@ -85,9 +83,7 @@ async function boot(heartbeatMs?: number): Promise<{
   return { app, streams, cleanups: () => cleanupCount };
 }
 
-async function listen(
-  app: Awaited<ReturnType<typeof createHttpApp>>,
-): Promise<number> {
+async function listen(app: Awaited<ReturnType<typeof createHttpApp>>): Promise<number> {
   await app.listen({ port: 0, host: "127.0.0.1" });
   const address = app.server.address();
   if (address === null || typeof address === "string") {
@@ -96,31 +92,22 @@ async function listen(
   return address.port;
 }
 
-function openStream(
-  port: number,
-  user: string | null,
-): { chunks: string[]; responseHeaders: CapturedResponseHeaders } {
+function openStream(port: number, user: string | null): { chunks: string[]; responseHeaders: CapturedResponseHeaders } {
   const headers: Record<string, string> = {};
   if (user !== null) headers["x-test-user"] = user;
   const chunks: string[] = [];
   const responseHeaders: CapturedResponseHeaders = {};
-  const request = http.get(
-    { host: "127.0.0.1", port, path: "/sse", headers },
-    (response) => {
-      const vary = response.headers.vary;
-      if (vary !== undefined) responseHeaders.vary = vary;
-      response.setEncoding("utf8");
-      response.on("data", (chunk: string) => chunks.push(chunk));
-    },
-  );
+  const request = http.get({ host: "127.0.0.1", port, path: "/sse", headers }, (response) => {
+    const vary = response.headers.vary;
+    if (vary !== undefined) responseHeaders.vary = vary;
+    response.setEncoding("utf8");
+    response.on("data", (chunk: string) => chunks.push(chunk));
+  });
   openRequests.push(request);
   return { chunks, responseHeaders };
 }
 
-async function waitFor(
-  predicate: () => boolean,
-  timeoutMs = 2000,
-): Promise<void> {
+async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
   const start = Date.now();
   while (!predicate()) {
     if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
@@ -141,9 +128,7 @@ describe("sseRoute", () => {
     const body = stream.chunks.join("");
     expect(body).toContain(":ready\n\n");
     expect(body).toContain('data: {"n":1}\n\n');
-    expect(stream.responseHeaders.vary?.toLowerCase()).toContain(
-      "accept-language",
-    );
+    expect(stream.responseHeaders.vary?.toLowerCase()).toContain("accept-language");
   });
 
   it("emits a bare `:` heartbeat comment while the stream is open", async () => {

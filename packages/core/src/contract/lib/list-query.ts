@@ -5,16 +5,12 @@ import { paginationQuerySchema } from "./pagination.schema.js";
  * Sort keys: `field` ascending, `-field` descending
  * (api-conventions.md#filtering-and-sorting).
  */
-export function sortKeys<const TFields extends readonly [string, ...string[]]>(
-  fields: TFields,
-) {
+export function sortKeys<const TFields extends readonly [string, ...string[]]>(fields: TFields) {
   const keys: (TFields[number] | `-${TFields[number]}`)[] = [];
   for (const field of fields) {
     keys.push(field, `-${field}`);
   }
-  return z
-    .enum(keys)
-    .meta({ description: "Sort key; -field sorts descending" });
+  return z.enum(keys).meta({ description: "Sort key; -field sorts descending" });
 }
 
 /**

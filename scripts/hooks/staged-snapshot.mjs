@@ -1,13 +1,6 @@
 import { Buffer } from "node:buffer";
 import { execFileSync } from "node:child_process";
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  readSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { closeSync, mkdirSync, openSync, readSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { TextDecoder } from "node:util";
 
@@ -27,18 +20,7 @@ function nulRecords(bytes) {
 }
 
 export function changedIndexPaths(root) {
-  return new Set(
-    nulRecords(
-      git(root, [
-        "diff",
-        "--cached",
-        "--name-only",
-        "--no-renames",
-        "--diff-filter=AMT",
-        "-z",
-      ]),
-    ),
-  );
+  return new Set(nulRecords(git(root, ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=AMT", "-z"])));
 }
 
 export function treeEntries(root, tree) {
@@ -65,16 +47,9 @@ function indexedBlobOffsets(root, spool, entries) {
   for (const oid of requested) {
     const read = readSync(spool, header, 0, header.length, cursor);
     const end = header.subarray(0, read).indexOf(10);
-    const [actualOid, type, length] = header
-      .toString("ascii", 0, end)
-      .split(" ");
+    const [actualOid, type, length] = header.toString("ascii", 0, end).split(" ");
     const size = Number(length);
-    if (
-      end < 0 ||
-      actualOid !== oid ||
-      type !== "blob" ||
-      !Number.isSafeInteger(size)
-    ) {
+    if (end < 0 || actualOid !== oid || type !== "blob" || !Number.isSafeInteger(size)) {
       throw new Error(`Cannot read staged blob ${oid}.`);
     }
     const position = cursor + end + 1;
@@ -116,19 +91,9 @@ function writeSnapshotEntries(root, entries, spool, destination, changedPaths) {
 
 export function writeSnapshot(root, tree, destination, changedPaths) {
   const entries = treeEntries(root, tree).filter(({ kind }) => kind === "blob");
-  const spool = openSync(
-    join(dirname(destination), "index-blobs"),
-    "w+",
-    0o600,
-  );
+  const spool = openSync(join(dirname(destination), "index-blobs"), "w+", 0o600);
   try {
-    return writeSnapshotEntries(
-      root,
-      entries,
-      spool,
-      destination,
-      changedPaths,
-    );
+    return writeSnapshotEntries(root, entries, spool, destination, changedPaths);
   } finally {
     closeSync(spool);
   }

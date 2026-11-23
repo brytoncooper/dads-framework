@@ -27,23 +27,12 @@ afterEach(cleanup);
 function StatusTabs({ initial = "OPEN" }: { readonly initial?: Status }) {
   const [value, setValue] = React.useState<Status>(initial);
   return (
-    <ListViewTabs
-      label="Order Status"
-      views={VIEWS}
-      value={value}
-      onValueChange={setValue}
-      controls="orders-list"
-    />
+    <ListViewTabs label="Order Status" views={VIEWS} value={value} onValueChange={setValue} controls="orders-list" />
   );
 }
 
 function selectedName(): string | null {
-  return (
-    screen
-      .getAllByRole("tab")
-      .find((tab) => tab.getAttribute("aria-selected") === "true")
-      ?.textContent ?? null
-  );
+  return screen.getAllByRole("tab").find((tab) => tab.getAttribute("aria-selected") === "true")?.textContent ?? null;
 }
 
 describe("ListViewTabs", () => {
@@ -66,9 +55,7 @@ describe("ListViewTabs", () => {
   it("shows a count only where the caller supplies one", () => {
     const { container } = render(<StatusTabs />);
 
-    const counts = [
-      ...container.querySelectorAll('[data-slot="list-view-count"]'),
-    ];
+    const counts = [...container.querySelectorAll('[data-slot="list-view-count"]')];
     expect(counts.map((count) => count.textContent)).toEqual(["12", "1,400"]);
     expect(counts[0]?.className).toContain("text-link");
     expect(counts[1]?.className).not.toContain("text-link");
@@ -88,9 +75,7 @@ describe("ListViewTabs", () => {
       />,
     );
 
-    const counts = [
-      ...container.querySelectorAll('[data-slot="list-view-count"]'),
-    ];
+    const counts = [...container.querySelectorAll('[data-slot="list-view-count"]')];
     expect(counts[0]?.className).toContain("text-destructive");
     expect(counts[1]?.className).not.toContain("text-destructive");
   });
@@ -105,9 +90,7 @@ describe("ListViewTabs", () => {
   it("keeps one tab stop and moves with arrows, Home, and End, wrapping at the ends", () => {
     render(<StatusTabs />);
 
-    expect(
-      screen.getAllByRole("tab").map((tab) => tab.getAttribute("tabindex")),
-    ).toEqual(["0", "-1", "-1", "-1"]);
+    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("tabindex"))).toEqual(["0", "-1", "-1", "-1"]);
 
     fireEvent.keyDown(screen.getByRole("tab", { name: "Open 12" }), {
       key: "ArrowRight",
@@ -134,9 +117,7 @@ describe("ListViewTabs", () => {
       key: "Home",
     });
     expect(selectedName()).toBe("Open 12");
-    expect(
-      screen.getAllByRole("tab").map((tab) => tab.getAttribute("tabindex")),
-    ).toEqual(["0", "-1", "-1", "-1"]);
+    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("tabindex"))).toEqual(["0", "-1", "-1", "-1"]);
   });
 
   it("keeps the row on one line that scrolls sideways on a phone", () => {

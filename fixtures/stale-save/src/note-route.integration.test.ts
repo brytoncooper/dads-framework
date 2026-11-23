@@ -1,13 +1,7 @@
 import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
-import {
-  apiErrorSchema,
-  ROW_VERSION_CONFLICT,
-} from "@dads-framework/core/contract";
+import { apiErrorSchema, ROW_VERSION_CONFLICT } from "@dads-framework/core/contract";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
-import {
-  startTestPostgres,
-  type TestPostgres,
-} from "@dads-framework/postgres/testing";
+import { startTestPostgres, type TestPostgres } from "@dads-framework/postgres/testing";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
@@ -53,11 +47,7 @@ beforeAll(async () => {
     authorization,
     subjects: {
       resolve: (request) =>
-        Promise.resolve(
-          request.headers["x-fixture-editor"] === "1"
-            ? editorSubject
-            : outsiderSubject,
-        ),
+        Promise.resolve(request.headers["x-fixture-editor"] === "1" ? editorSubject : outsiderSubject),
     },
   });
   await app.ready();
@@ -93,30 +83,19 @@ it("rejects missing version and denies an editor without a relationship", async 
 
   const denied = await edit("Unauthorized", 1, false);
   expect(denied.statusCode).toBe(404);
-  expect(apiErrorSchema.parse(denied.json()).error.code).not.toBe(
-    ROW_VERSION_CONFLICT,
-  );
+  expect(apiErrorSchema.parse(denied.json()).error.code).not.toBe(ROW_VERSION_CONFLICT);
   const staleDenied = await edit("Unauthorized", 0, false);
   expect(staleDenied.statusCode).toBe(404);
 });
 
 it("accepts one of two concurrent drafts and leaves the winner intact", async () => {
-  const results = await Promise.all([
-    edit("First draft", 1),
-    edit("Second draft", 1),
-  ]);
-  expect(results.map(({ statusCode }) => statusCode).sort()).toEqual([
-    200, 409,
-  ]);
+  const results = await Promise.all([edit("First draft", 1), edit("Second draft", 1)]);
+  expect(results.map(({ statusCode }) => statusCode).sort()).toEqual([200, 409]);
   const winner = results.find(({ statusCode }) => statusCode === 200);
   const refusal = results.find(({ statusCode }) => statusCode === 409);
-  expect(apiErrorSchema.parse(refusal?.json()).error.code).toBe(
-    ROW_VERSION_CONFLICT,
-  );
+  expect(apiErrorSchema.parse(refusal?.json()).error.code).toBe(ROW_VERSION_CONFLICT);
 
-  const stored = await database?.pool.query(
-    "SELECT title, row_version FROM stale_save_notes",
-  );
+  const stored = await database?.pool.query("SELECT title, row_version FROM stale_save_notes");
   expect(stored?.rows).toEqual([
     {
       title: results[0].statusCode === 200 ? "First draft" : "Second draft",

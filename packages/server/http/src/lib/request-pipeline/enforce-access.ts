@@ -11,10 +11,7 @@ import {
 import { HttpWiringError } from "../http-errors.js";
 import type { ResourceIdSource, RouteAccess } from "../route/access.js";
 import { enforceScope } from "./enforce-scope.js";
-import {
-  isTechnicalContextAbsent,
-  resolveResourceId,
-} from "./logic/read-request-source.js";
+import { isTechnicalContextAbsent, resolveResourceId } from "./logic/read-request-source.js";
 
 /**
  * The two ports access enforcement needs — structurally satisfied by the
@@ -42,20 +39,12 @@ export type SubjectResolver = {
 };
 
 export type PermissionChecker = {
-  check(query: {
-    subject: SubjectRef;
-    permission: string;
-    resource: { type: string; id: string };
-  }): Promise<boolean>;
+  check(query: { subject: SubjectRef; permission: string; resource: { type: string; id: string } }): Promise<boolean>;
 };
 
 /** The set-question port `requireVisibility` and `requiresScoped` need (Authorization has it). */
 export type VisibleResourceLookup = {
-  lookupResources(query: {
-    subject: SubjectRef;
-    permission: string;
-    resourceType: string;
-  }): Promise<readonly string[]>;
+  lookupResources(query: { subject: SubjectRef; permission: string; resourceType: string }): Promise<readonly string[]>;
 };
 
 /** Domain-owned context policy; the HTTP kit never constructs a business actor. */
@@ -147,10 +136,7 @@ function allow(decision: Omit<AllowDecision, "outcome">): AllowDecision {
 }
 
 /** One construction site for refusals, so no path can drop who was refused. */
-function notFound(
-  subject: SubjectRef | null,
-  authenticatedSubject: SubjectRef | null,
-): NotFoundDecision {
+function notFound(subject: SubjectRef | null, authenticatedSubject: SubjectRef | null): NotFoundDecision {
   return {
     outcome: "not-found",
     subject,
@@ -163,13 +149,9 @@ function notFound(
  * present only when the resolver stated it; an absent fact is left out, never
  * written as `undefined`.
  */
-function callerFacts(
-  caller: AuthenticatedCaller,
-): Pick<AllowDecision, "authMethod" | "sessionReauthenticatedAt"> {
+function callerFacts(caller: AuthenticatedCaller): Pick<AllowDecision, "authMethod" | "sessionReauthenticatedAt"> {
   return {
-    ...(caller.authMethod === undefined
-      ? {}
-      : { authMethod: caller.authMethod }),
+    ...(caller.authMethod === undefined ? {} : { authMethod: caller.authMethod }),
     ...(caller.sessionReauthenticatedAt === undefined
       ? {}
       : { sessionReauthenticatedAt: caller.sessionReauthenticatedAt }),
@@ -259,13 +241,7 @@ async function resolveRequestSubjects(
       ...callerFacts(caller),
     });
   }
-  return resolveBusinessActor(
-    access.authorizationContext,
-    request,
-    caller,
-    ports,
-    accessKind,
-  );
+  return resolveBusinessActor(access.authorizationContext, request, caller, ports, accessKind);
 }
 
 /**
@@ -281,18 +257,13 @@ async function resolveBusinessActor(
 ): Promise<AccessDecision> {
   const { subject: authenticatedSubject } = caller;
   if (ports.authorizationContexts === undefined) {
-    throw new HttpWiringError(
-      "authorization-context route registered without a resolver",
-    );
+    throw new HttpWiringError("authorization-context route registered without a resolver");
   }
   const requestedContext = resolveResourceId(source, request);
   if (requestedContext === undefined) {
     return notFound(null, authenticatedSubject);
   }
-  const authorizationContext = await ports.authorizationContexts.execute(
-    authenticatedSubject,
-    requestedContext,
-  );
+  const authorizationContext = await ports.authorizationContexts.execute(authenticatedSubject, requestedContext);
   if (authorizationContext === null) {
     return notFound(null, authenticatedSubject);
   }
@@ -311,12 +282,8 @@ function retainAuthenticatedSubject(
   request: EnforceableRequest,
   caller: AuthenticatedCaller,
 ): AccessDecision {
-  const inputSource =
-    access.kind === "session" ? access.authorizationContextInput : undefined;
-  const input =
-    inputSource === undefined
-      ? undefined
-      : resolveResourceId(inputSource, request);
+  const inputSource = access.kind === "session" ? access.authorizationContextInput : undefined;
+  const input = inputSource === undefined ? undefined : resolveResourceId(inputSource, request);
   if (
     inputSource?.kind === "header" &&
     input === undefined &&
@@ -349,10 +316,7 @@ function buildVerdictInput(
           }
         : undefined,
     subject,
-    resourceId:
-      access.kind === "permission"
-        ? resolveResourceId(access.resourceId, request)
-        : undefined,
+    resourceId: access.kind === "permission" ? resolveResourceId(access.resourceId, request) : undefined,
   };
 }
 
@@ -424,9 +388,7 @@ export async function enforceAccess(
         resourceType: resource.type,
         resourceId: resource.id,
         url: request.url,
-        ...(subjects.authMethod === undefined
-          ? {}
-          : { authMethod: subjects.authMethod }),
+        ...(subjects.authMethod === undefined ? {} : { authMethod: subjects.authMethod }),
       });
     }
     if (verdict.outcome === "allow") {
@@ -453,9 +415,7 @@ async function enforceVisibility(
   }
   if (!ports.lookups) {
     // Wired wrong (a visibility route without a lookup port) — loud 500.
-    throw new HttpWiringError(
-      "requireVisibility route registered without a lookups port",
-    );
+    throw new HttpWiringError("requireVisibility route registered without a lookups port");
   }
   const visibleIds = await ports.lookups.lookupResources({
     subject,

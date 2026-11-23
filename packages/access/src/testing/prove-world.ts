@@ -1,16 +1,8 @@
 import type { AccessModel } from "../core/access-model.js";
 import { permissionToken } from "../core/refs.js";
 import type { AccessWorld } from "../core/world.js";
-import type {
-  PermissionQuery,
-  RelationshipWrite,
-  SubjectRef,
-} from "../runtime/authorization.js";
-import type {
-  AccessScenarioVerbs,
-  ProveAccessOptions,
-  ScenarioStep,
-} from "./access-harness-types.js";
+import type { PermissionQuery, RelationshipWrite, SubjectRef } from "../runtime/authorization.js";
+import type { AccessScenarioVerbs, ProveAccessOptions, ScenarioStep } from "./access-harness-types.js";
 import { createAccessHarness } from "./access-harness.js";
 import { ControllableClock, parseTestDurationMs } from "./duration.js";
 import { formatPermissionTarget, formatSubjectRef } from "./explain-format.js";
@@ -29,10 +21,8 @@ export type ComposableScenarioVerbs = AccessScenarioVerbs & {
 
 function parseSubjectString(rawSubject: string): SubjectRef {
   const hashIndex = rawSubject.indexOf("#");
-  const objectPart =
-    hashIndex === -1 ? rawSubject : rawSubject.slice(0, hashIndex);
-  const relation =
-    hashIndex === -1 ? undefined : rawSubject.slice(hashIndex + 1);
+  const objectPart = hashIndex === -1 ? rawSubject : rawSubject.slice(0, hashIndex);
+  const relation = hashIndex === -1 ? undefined : rawSubject.slice(hashIndex + 1);
   const colonIndex = objectPart.indexOf(":");
   if (colonIndex === -1) {
     throw new Error(`Invalid subject tuple segment "${rawSubject}"`);
@@ -79,16 +69,14 @@ function worldToWritesAndChecks(scenarioWorld: AccessWorld): {
     readonly expected: boolean;
   }[];
 } {
-  const writes: RelationshipWrite[] = scenarioWorld.relationships.map(
-    (rawTuple) => {
-      const parsed = parseTupleString(rawTuple);
-      return {
-        resource: { type: parsed.resourceType, id: parsed.resourceId },
-        relation: parsed.name,
-        subject: parsed.subject,
-      };
-    },
-  );
+  const writes: RelationshipWrite[] = scenarioWorld.relationships.map((rawTuple) => {
+    const parsed = parseTupleString(rawTuple);
+    return {
+      resource: { type: parsed.resourceType, id: parsed.resourceId },
+      relation: parsed.name,
+      subject: parsed.subject,
+    };
+  });
   const checks: {
     readonly query: PermissionQuery;
     readonly expected: boolean;
@@ -140,10 +128,7 @@ function throwWorldCheckFailure(
  * Synchronously execute an `AccessWorld` authored with `world()` against the
  * real compiled `AccessModel` in memory (zero `await`s).
  */
-export function proveWorldSync(
-  model: AccessModel,
-  scenarioWorld: AccessWorld,
-): void {
+export function proveWorldSync(model: AccessModel, scenarioWorld: AccessWorld): void {
   const { writes, checks } = worldToWritesAndChecks(scenarioWorld);
   const authorization = new InMemoryAuthorization(model);
   authorization.writeRelationshipsSync(writes);
@@ -151,13 +136,7 @@ export function proveWorldSync(
   for (const checkItem of checks) {
     const actual = authorization.checkSync(checkItem.query);
     if (actual !== checkItem.expected) {
-      throwWorldCheckFailure(
-        scenarioWorld.title,
-        authorization,
-        checkItem.query,
-        checkItem.expected,
-        actual,
-      );
+      throwWorldCheckFailure(scenarioWorld.title, authorization, checkItem.query, checkItem.expected, actual);
     }
   }
 }
@@ -184,13 +163,7 @@ export async function proveWorld(
   for (const checkItem of checks) {
     const actual = await authorization.check(checkItem.query);
     if (actual !== checkItem.expected) {
-      throwWorldCheckFailure(
-        scenarioWorld.title,
-        explainer,
-        checkItem.query,
-        checkItem.expected,
-        actual,
-      );
+      throwWorldCheckFailure(scenarioWorld.title, explainer, checkItem.query, checkItem.expected, actual);
     }
   }
 }
@@ -224,9 +197,7 @@ function runSyncGrantStep(
       ? step.write
       : {
           ...step.write,
-          expiresAt: new Date(
-            harness.clock.nowMs() + parseTestDurationMs(step.expiresIn),
-          ),
+          expiresAt: new Date(harness.clock.nowMs() + parseTestDurationMs(step.expiresIn)),
         };
   harness.authorization.writeRelationshipsSync([write]);
 }
@@ -235,10 +206,7 @@ function runSyncCheckStep(
   harness: ReturnType<typeof createAccessHarness>,
   step: Extract<ScenarioStep, { readonly kind: "assert-check" }>,
 ): void {
-  const permission = permissionToken(
-    step.query.resource.type,
-    step.query.permission,
-  );
+  const permission = permissionToken(step.query.resource.type, step.query.permission);
   if (step.expected) {
     harness.assertCan(step.query.subject, permission, step.query.resource.id);
     return;
@@ -246,10 +214,7 @@ function runSyncCheckStep(
   harness.assertCannot(step.query.subject, permission, step.query.resource.id);
 }
 
-function runScenarioStepSync(
-  harness: ReturnType<typeof createAccessHarness>,
-  step: ScenarioStep,
-): void {
+function runScenarioStepSync(harness: ReturnType<typeof createAccessHarness>, step: ScenarioStep): void {
   if (step.kind === "grant") {
     runSyncGrantStep(harness, step);
     return;
@@ -274,11 +239,7 @@ function runScenarioStepSync(
     harness.assertVisible(step.actor, step.permission, step.expectedIds);
     return;
   }
-  harness.assertMatrix(
-    { wireName: step.resourceType },
-    step.resourceId,
-    step.spec,
-  );
+  harness.assertMatrix({ wireName: step.resourceType }, step.resourceId, step.spec);
 }
 
 /** Synchronously execute a reusable `AccessScenario` in memory (zero `await`s). */

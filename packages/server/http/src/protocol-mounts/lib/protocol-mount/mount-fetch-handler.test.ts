@@ -37,9 +37,7 @@ async function appWith(
 describe("mountFetchHandler options", () => {
   it("does not answer the bare prefix unless asked to", async () => {
     const { app } = await appWith({});
-    expect((await app.inject({ method: "POST", url: "/mcp" })).statusCode).toBe(
-      404,
-    );
+    expect((await app.inject({ method: "POST", url: "/mcp" })).statusCode).toBe(404);
   });
 
   it("answers the bare prefix and paths under it with servePrefixRoot", async () => {
@@ -47,11 +45,7 @@ describe("mountFetchHandler options", () => {
     for (const url of ["/mcp", "/mcp/", "/mcp/deeper"]) {
       expect((await app.inject({ method: "POST", url })).statusCode).toBe(200);
     }
-    expect(seen.map((entry) => entry.url)).toEqual([
-      "/mcp",
-      "/mcp/",
-      "/mcp/deeper",
-    ]);
+    expect(seen.map((entry) => entry.url)).toEqual(["/mcp", "/mcp/", "/mcp/deeper"]);
   });
 
   it("forwards explicitly selected methods without adding HEAD", async () => {
@@ -59,21 +53,11 @@ describe("mountFetchHandler options", () => {
       methods: ["GET", "PUT", "PATCH", "DELETE"],
     });
     for (const method of ["PUT", "PATCH", "DELETE"] as const) {
-      expect((await app.inject({ method, url: "/mcp/users" })).statusCode).toBe(
-        200,
-      );
+      expect((await app.inject({ method, url: "/mcp/users" })).statusCode).toBe(200);
     }
-    expect(
-      (await app.inject({ method: "HEAD", url: "/mcp/users" })).statusCode,
-    ).toBe(404);
-    expect(
-      (await app.inject({ method: "POST", url: "/mcp/users" })).statusCode,
-    ).toBe(404);
-    expect(seen.map(({ method }) => method)).toEqual([
-      "PUT",
-      "PATCH",
-      "DELETE",
-    ]);
+    expect((await app.inject({ method: "HEAD", url: "/mcp/users" })).statusCode).toBe(404);
+    expect((await app.inject({ method: "POST", url: "/mcp/users" })).statusCode).toBe(404);
+    expect(seen.map(({ method }) => method)).toEqual(["PUT", "PATCH", "DELETE"]);
   });
 
   it("stamps Fastify's request id onto the fetch request, clones included", async () => {
@@ -103,8 +87,7 @@ describe("mountFetchHandler options", () => {
     const { app, seen } = await appWith({
       rateLimits: [{ method: "POST", path: "/mcp/register", perMinute: 2 }],
     });
-    const register = () =>
-      app.inject({ method: "POST", url: "/mcp/register?x=1" });
+    const register = () => app.inject({ method: "POST", url: "/mcp/register?x=1" });
 
     expect((await register()).statusCode).toBe(200);
     expect((await register()).statusCode).toBe(200);
@@ -119,11 +102,7 @@ describe("mountFetchHandler options", () => {
       },
     });
     expect(seen).toHaveLength(2);
-    expect(
-      (await app.inject({ method: "POST", url: "/mcp/token" })).statusCode,
-    ).toBe(200);
-    expect(
-      (await app.inject({ method: "GET", url: "/mcp/register" })).statusCode,
-    ).toBe(200);
+    expect((await app.inject({ method: "POST", url: "/mcp/token" })).statusCode).toBe(200);
+    expect((await app.inject({ method: "GET", url: "/mcp/register" })).statusCode).toBe(200);
   });
 });

@@ -19,12 +19,7 @@
 
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
-import {
-  operationEvidence,
-  operationKey,
-  readRouteModel,
-  type RouteOperation,
-} from "../scanners/route-model.js";
+import { operationEvidence, operationKey, readRouteModel, type RouteOperation } from "../scanners/route-model.js";
 
 const BODY_METHODS = new Set(["POST", "PATCH", "PUT"]);
 

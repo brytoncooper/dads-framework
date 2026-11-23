@@ -2,25 +2,13 @@ import type { Column } from "@tanstack/react-table";
 import { CalendarIcon, XCircle } from "lucide-react";
 import * as React from "react";
 
-import {
-  resolveReaderTimeZone,
-  useLocaleFormatting,
-} from "../../../copy/index.js";
+import { resolveReaderTimeZone, useLocaleFormatting } from "../../../copy/index.js";
 import { Button, Separator } from "../../../elements/index.js";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../overlays/index.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";
 import { formatDate, toTimestampText } from "../../lib/format.js";
-import {
-  DatePicker,
-  type DateRange,
-  DateRangePicker,
-  dateRange,
-} from "../ui/date-picker.js";
+import { DatePicker, type DateRange, DateRangePicker, dateRange } from "../ui/date-picker.js";
 
 const DATE_FILTER_TIME_ZONE = resolveReaderTimeZone();
 
@@ -37,8 +25,7 @@ function getHasEitherEnd(range: DateRange): boolean {
 
 function parseAsDate(timestamp: number | string | undefined): Date | undefined {
   if (!timestamp) return undefined;
-  const numericTimestamp =
-    typeof timestamp === "string" ? Number(timestamp) : timestamp;
+  const numericTimestamp = typeof timestamp === "string" ? Number(timestamp) : timestamp;
   const date = new Date(numericTimestamp);
   return !Number.isNaN(date.getTime()) ? date : undefined;
 }
@@ -70,11 +57,7 @@ type DataTableDateFilterProps<TData> = {
   multiple?: boolean;
 };
 
-export function DataTableDateFilter<TData>({
-  column,
-  title,
-  multiple,
-}: DataTableDateFilterProps<TData>) {
+export function DataTableDateFilter<TData>({ column, title, multiple }: DataTableDateFilterProps<TData>) {
   const t = useDataTableCopy();
   const formatting = useLocaleFormatting();
   const columnFilterValue = column.getFilterValue();
@@ -111,10 +94,7 @@ export function DataTableDateFilter<TData>({
         return;
       }
 
-      column.setFilterValue([
-        toTimestampText(range.from),
-        toTimestampText(range.to),
-      ]);
+      column.setFilterValue([toTimestampText(range.from), toTimestampText(range.to)]);
     },
     [column],
   );
@@ -157,19 +137,14 @@ export function DataTableDateFilter<TData>({
       if (!getIsDateRange(selectedDates)) return null;
 
       const hasSelectedDates = getHasEitherEnd(selectedDates);
-      const dateText = hasSelectedDates
-        ? formatDateRange(selectedDates)
-        : t("dataTable.filter.selectDateRange");
+      const dateText = hasSelectedDates ? formatDateRange(selectedDates) : t("dataTable.filter.selectDateRange");
 
       return (
         <span className="flex items-center gap-2">
           <span>{title}</span>
           {hasSelectedDates && (
             <>
-              <Separator
-                orientation="vertical"
-                className="mx-0.5 data-[orientation=vertical]:h-4"
-              />
+              <Separator orientation="vertical" className="mx-0.5 data-[orientation=vertical]:h-4" />
               <span>{dateText}</span>
             </>
           )}
@@ -191,10 +166,7 @@ export function DataTableDateFilter<TData>({
         <span>{title}</span>
         {hasSelectedDate && (
           <>
-            <Separator
-              orientation="vertical"
-              className="mx-0.5 data-[orientation=vertical]:h-4"
-            />
+            <Separator orientation="vertical" className="mx-0.5 data-[orientation=vertical]:h-4" />
             <span>{dateText}</span>
           </>
         )}
@@ -202,23 +174,14 @@ export function DataTableDateFilter<TData>({
     );
   }, [selectedDates, multiple, formatDateRange, formatting, title, t]);
 
-  const selectedRange = getIsDateRange(selectedDates)
-    ? selectedDates
-    : undefined;
-  const selectedDate = Array.isArray(selectedDates)
-    ? selectedDates[0]
-    : undefined;
+  const selectedRange = getIsDateRange(selectedDates) ? selectedDates : undefined;
+  const selectedDate = Array.isArray(selectedDates) ? selectedDates[0] : undefined;
 
   return (
     <div className="flex items-center gap-1">
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="border-input border-dashed font-normal"
-          >
+          <Button type="button" variant="outline" size="sm" className="border-input border-dashed font-normal">
             <CalendarIcon />
             {label}
           </Button>

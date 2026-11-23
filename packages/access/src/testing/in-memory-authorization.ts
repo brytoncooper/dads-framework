@@ -13,16 +13,8 @@ import {
   type SubjectRef,
 } from "../runtime/authorization.js";
 import { ControllableClock, type TestDuration } from "./duration.js";
-import {
-  formatPermissionExplanation,
-  type PermissionExplanation,
-} from "./explain-format.js";
-import {
-  computeActorValuation,
-  evaluateLookupResources,
-  isTupleActive,
-  valuationKey,
-} from "./in-memory-evaluator.js";
+import { formatPermissionExplanation, type PermissionExplanation } from "./explain-format.js";
+import { computeActorValuation, evaluateLookupResources, isTupleActive, valuationKey } from "./in-memory-evaluator.js";
 import { explainPermissionQuery } from "./in-memory-explainer.js";
 import {
   indexAccessModel,
@@ -38,8 +30,7 @@ export type InMemoryAuthorizationOptions = {
 };
 
 function toStoredTuple(write: RelationshipWrite): StoredAccessTuple {
-  const isWildcard =
-    write.subject.id === "*" && write.subject.relation === undefined;
+  const isWildcard = write.subject.id === "*" && write.subject.relation === undefined;
   return {
     resourceType: write.resource.type,
     resourceId: write.resource.id,
@@ -48,46 +39,30 @@ function toStoredTuple(write: RelationshipWrite): StoredAccessTuple {
     subjectId: isWildcard ? "*" : write.subject.id,
     subjectRelation: write.subject.relation ?? "",
     subjectIsWildcard: isWildcard,
-    expiresAtMs:
-      write.expiresAt === undefined ? null : write.expiresAt.getTime(),
+    expiresAtMs: write.expiresAt === undefined ? null : write.expiresAt.getTime(),
   };
 }
 
-function matchesSubjectFilter(
-  tuple: StoredAccessTuple,
-  filterSubject: SubjectRef,
-): boolean {
+function matchesSubjectFilter(tuple: StoredAccessTuple, filterSubject: SubjectRef): boolean {
   if (tuple.subjectType !== filterSubject.type) return false;
   if (filterSubject.id !== "" && tuple.subjectId !== filterSubject.id) {
     return false;
   }
-  if (
-    filterSubject.relation !== undefined &&
-    tuple.subjectRelation !== filterSubject.relation
-  ) {
+  if (filterSubject.relation !== undefined && tuple.subjectRelation !== filterSubject.relation) {
     return false;
   }
   return true;
 }
 
-function matchesDeleteFilter(
-  tuple: StoredAccessTuple,
-  filter: RelationshipFilter,
-): boolean {
+function matchesDeleteFilter(tuple: StoredAccessTuple, filter: RelationshipFilter): boolean {
   if (tuple.resourceType !== filter.resourceType) return false;
-  if (
-    filter.resourceId !== undefined &&
-    tuple.resourceId !== filter.resourceId
-  ) {
+  if (filter.resourceId !== undefined && tuple.resourceId !== filter.resourceId) {
     return false;
   }
   if (filter.relation !== undefined && tuple.relation !== filter.relation) {
     return false;
   }
-  if (
-    filter.subject !== undefined &&
-    !matchesSubjectFilter(tuple, filter.subject)
-  ) {
+  if (filter.subject !== undefined && !matchesSubjectFilter(tuple, filter.subject)) {
     return false;
   }
   return true;
@@ -136,9 +111,7 @@ export class InMemoryAuthorization extends Authorization {
     return [...this.tuples.values()];
   }
 
-  writeRelationshipsSync(
-    writes: readonly RelationshipWrite[],
-  ): SpiceDbConsistencyToken {
+  writeRelationshipsSync(writes: readonly RelationshipWrite[]): SpiceDbConsistencyToken {
     for (const write of writes) {
       const stored = toStoredTuple(write);
       this.tuples.set(tupleStorageKey(stored), stored);
@@ -158,11 +131,7 @@ export class InMemoryAuthorization extends Authorization {
   }
 
   checkSync(query: PermissionQuery): boolean {
-    if (
-      this.index.permissionsByEntity
-        .get(query.resource.type)
-        ?.has(query.permission) !== true
-    ) {
+    if (this.index.permissionsByEntity.get(query.resource.type)?.has(query.permission) !== true) {
       return false;
     }
     const { valuation } = computeActorValuation(
@@ -172,11 +141,7 @@ export class InMemoryAuthorization extends Authorization {
       this.readNow().getTime(),
       query.resource,
     );
-    return (
-      valuation.get(
-        valuationKey(query.resource.type, query.resource.id, query.permission),
-      ) === true
-    );
+    return valuation.get(valuationKey(query.resource.type, query.resource.id, query.permission)) === true;
   }
 
   checkManySync(queries: readonly PermissionQuery[]): readonly boolean[] {
@@ -186,33 +151,16 @@ export class InMemoryAuthorization extends Authorization {
     const valuationCache = new Map<string, ReadonlyMap<string, boolean>>();
 
     return queries.map((query) => {
-      if (
-        this.index.permissionsByEntity
-          .get(query.resource.type)
-          ?.has(query.permission) !== true
-      ) {
+      if (this.index.permissionsByEntity.get(query.resource.type)?.has(query.permission) !== true) {
         return false;
       }
       const cacheKey = actorCacheKey(query.subject);
       let valuation = valuationCache.get(cacheKey);
       if (valuation === undefined) {
-        valuation = computeActorValuation(
-          this.index,
-          tupleList,
-          query.subject,
-          nowMs,
-        ).valuation;
+        valuation = computeActorValuation(this.index, tupleList, query.subject, nowMs).valuation;
         valuationCache.set(cacheKey, valuation);
       }
-      return (
-        valuation.get(
-          valuationKey(
-            query.resource.type,
-            query.resource.id,
-            query.permission,
-          ),
-        ) === true
-      );
+      return valuation.get(valuationKey(query.resource.type, query.resource.id, query.permission)) === true;
     });
   }
 
@@ -255,12 +203,7 @@ export class InMemoryAuthorization extends Authorization {
   }
 
   explain(query: PermissionQuery): PermissionExplanation {
-    return explainPermissionQuery(
-      this.index,
-      [...this.tuples.values()],
-      query,
-      this.readNow().getTime(),
-    );
+    return explainPermissionQuery(this.index, [...this.tuples.values()], query, this.readNow().getTime());
   }
 
   explainText(query: PermissionQuery): string {
@@ -271,15 +214,11 @@ export class InMemoryAuthorization extends Authorization {
     return Promise.resolve(this.checkSync(query));
   }
 
-  override checkMany(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly boolean[]> {
+  override checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     return Promise.resolve(this.checkManySync(queries));
   }
 
-  override checkEach(
-    queries: readonly PermissionQuery[],
-  ): Promise<readonly PermissionCheckOutcome[]> {
+  override checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     return Promise.resolve(
       this.checkManySync(queries).map((allowed) => ({
         kind: "answered",
@@ -296,15 +235,11 @@ export class InMemoryAuthorization extends Authorization {
     return Promise.resolve(this.lookupSubjectsSync(query));
   }
 
-  override writeRelationships(
-    writes: readonly RelationshipWrite[],
-  ): Promise<SpiceDbConsistencyToken> {
+  override writeRelationships(writes: readonly RelationshipWrite[]): Promise<SpiceDbConsistencyToken> {
     return Promise.resolve(this.writeRelationshipsSync(writes));
   }
 
-  override deleteRelationships(
-    filter: RelationshipFilter,
-  ): Promise<SpiceDbConsistencyToken> {
+  override deleteRelationships(filter: RelationshipFilter): Promise<SpiceDbConsistencyToken> {
     return Promise.resolve(this.deleteRelationshipsSync(filter));
   }
 
@@ -327,9 +262,7 @@ export class InMemoryAuthorization extends Authorization {
     return Promise.resolve(false);
   }
 
-  override listDirectSubjects(
-    query: DirectSubjectLookup,
-  ): Promise<readonly SubjectRef[]> {
+  override listDirectSubjects(query: DirectSubjectLookup): Promise<readonly SubjectRef[]> {
     const nowMs = this.readNow().getTime();
     const subjects: SubjectRef[] = [];
     for (const tuple of this.tuples.values()) {
@@ -344,9 +277,7 @@ export class InMemoryAuthorization extends Authorization {
       subjects.push({
         type: tuple.subjectType,
         id: tuple.subjectIsWildcard ? "*" : tuple.subjectId,
-        ...(tuple.subjectRelation === ""
-          ? {}
-          : { relation: tuple.subjectRelation }),
+        ...(tuple.subjectRelation === "" ? {} : { relation: tuple.subjectRelation }),
       });
     }
     return Promise.resolve(subjects);

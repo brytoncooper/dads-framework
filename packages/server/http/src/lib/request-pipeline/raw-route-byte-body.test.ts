@@ -47,9 +47,7 @@ async function appWith(options: {
     nodeEnv: "test",
     trustedOrigins: [],
     logger: false,
-    ...(options.byteBodyContentTypes === undefined
-      ? {}
-      : { byteBodyContentTypes: options.byteBodyContentTypes }),
+    ...(options.byteBodyContentTypes === undefined ? {} : { byteBodyContentTypes: options.byteBodyContentTypes }),
   });
   registerRoutes(app, {
     subjects: { resolve: () => Promise.resolve(null) },
@@ -141,10 +139,7 @@ async function appWithByteBodyRoute() {
   registerRoutes(app, {
     subjects: { resolve: () => Promise.resolve(null) },
     authorization: { check: () => Promise.resolve(false) },
-    routes: routeGroup("Bodies", [
-      route("/as-bytes", true),
-      route("/as-sent", false),
-    ]),
+    routes: routeGroup("Bodies", [route("/as-bytes", true), route("/as-sent", false)]),
   });
   return app;
 }
@@ -155,28 +150,25 @@ describe("a raw route that reads its body as bytes whatever the type", () => {
     ["text/plain", "plain text"],
     ["image/jpeg", "jpeg bytes"],
     ["text/csv", "a,b"],
-  ])(
-    "hands a %s body over as the exact bytes and keeps the sent type",
-    async (type, text) => {
-      const app = await appWithByteBodyRoute();
-      try {
-        const response = await app.inject({
-          method: "PUT",
-          url: "/as-bytes",
-          headers: { "content-type": type },
-          payload: text,
-        });
-        expect(response.statusCode).toBe(200);
-        expect(response.json()).toEqual({
-          isBuffer: true,
-          text,
-          sentType: type,
-        });
-      } finally {
-        await app.close();
-      }
-    },
-  );
+  ])("hands a %s body over as the exact bytes and keeps the sent type", async (type, text) => {
+    const app = await appWithByteBodyRoute();
+    try {
+      const response = await app.inject({
+        method: "PUT",
+        url: "/as-bytes",
+        headers: { "content-type": type },
+        payload: text,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        isBuffer: true,
+        text,
+        sentType: type,
+      });
+    } finally {
+      await app.close();
+    }
+  });
 
   it("hands over a body with no type as bytes, with no sent type", async () => {
     const app = await appWithByteBodyRoute();

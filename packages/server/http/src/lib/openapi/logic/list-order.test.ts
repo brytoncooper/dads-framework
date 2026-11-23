@@ -55,10 +55,7 @@ describe("withListsInNameOrder", () => {
       paths: {
         "/feed": {
           get: {
-            anyOf: [
-              { properties: { kind: { const: "b" } } },
-              { properties: { kind: { const: "a" } } },
-            ],
+            anyOf: [{ properties: { kind: { const: "b" } } }, { properties: { kind: { const: "a" } } }],
           },
         },
       },
@@ -68,10 +65,7 @@ describe("withListsInNameOrder", () => {
       paths: {
         "/feed": {
           get: {
-            anyOf: [
-              { properties: { kind: { const: "a" } } },
-              { properties: { kind: { const: "b" } } },
-            ],
+            anyOf: [{ properties: { kind: { const: "a" } } }, { properties: { kind: { const: "b" } } }],
           },
         },
       },
@@ -95,9 +89,7 @@ describe("withListsInNameOrder", () => {
   });
 
   it("puts two members appended at the same declared spot apart when their tags sort apart", () => {
-    const existing = ["batch", "customer", "order", "ticket"].map((type) =>
-      member(type),
-    );
+    const existing = ["batch", "customer", "order", "ticket"].map((type) => member(type));
     const fromFirstPr = withListsInNameOrder({
       oneOf: [...existing, member("audit_entry")],
     });

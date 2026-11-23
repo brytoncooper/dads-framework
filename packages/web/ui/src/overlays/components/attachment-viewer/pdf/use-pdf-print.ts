@@ -97,10 +97,7 @@ function loadPrintImage(
 }
 
 /** Draws one page into the run's scratch canvas and appends it to the print container as an image. */
-async function appendPrintedPage(
-  page: PDFPageProxy,
-  run: PrintRun,
-): Promise<void> {
+async function appendPrintedPage(page: PDFPageProxy, run: PrintRun): Promise<void> {
   const canvas = run.scratchCanvas;
   if (canvas === null) return;
 
@@ -136,12 +133,7 @@ async function appendPrintedPage(
   // Laid out at true paper size; the browser scales the larger bitmap down.
   image.style.width = `${String(printPageSize(base.width, base.height).widthIn)}in`;
   run.container.appendChild(image);
-  await loadPrintImage(
-    image,
-    objectUrl ?? canvas.toDataURL("image/png"),
-    objectUrl,
-    run,
-  );
+  await loadPrintImage(image, objectUrl ?? canvas.toDataURL("image/png"), objectUrl, run);
 }
 
 /**
@@ -156,9 +148,7 @@ async function appendPrintedPage(
  * listener, the margin style and the body class are all removed on cancel,
  * after the print dialog closes, and when the viewer closes mid-run.
  */
-export function usePdfPrint(
-  pdfDocument: PdfPageSource | null,
-): PdfPrintController {
+export function usePdfPrint(pdfDocument: PdfPageSource | null): PdfPrintController {
   const [status, setStatus] = React.useState<PdfPrintStatus>("idle");
   const [completed, setCompleted] = React.useState(0);
   const [total, setTotal] = React.useState(0);
@@ -235,10 +225,7 @@ export function usePdfPrint(
     setTotal(pdfDocument.numPages);
 
     const drawEveryPage = async () => {
-      for (const batch of chunkPages(
-        pdfDocument.numPages,
-        PRINT_RENDER_BATCH_SIZE,
-      )) {
+      for (const batch of chunkPages(pdfDocument.numPages, PRINT_RENDER_BATCH_SIZE)) {
         for (const pageNumber of batch) {
           const page = await pdfDocument.getPage(pageNumber);
           if (wasCancelled(run)) return;

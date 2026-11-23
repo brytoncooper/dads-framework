@@ -150,9 +150,7 @@ export function countAuthorizationCheck(elapsedMs: number): void {
  * vendor adapter reports it at the moment it sends the read, so the async
  * context is the caller's and the read lands on the request that asked.
  */
-export function countAuthorizationReadFreshness(
-  freshness: AuthorizationReadFreshness,
-): void {
+export function countAuthorizationReadFreshness(freshness: AuthorizationReadFreshness): void {
   const tally = requestWork.getStore();
   if (tally === undefined) return;
   if (freshness === "cached") tally.authzCachedReadCount += 1;
@@ -166,10 +164,7 @@ export function countAuthorizationReadFreshness(
 export function countAuthorizationLookupSize(idCount: number): void {
   const tally = requestWork.getStore();
   if (tally === undefined) return;
-  tally.authzLargestLookupCount = Math.max(
-    tally.authzLargestLookupCount,
-    idCount,
-  );
+  tally.authzLargestLookupCount = Math.max(tally.authzLargestLookupCount, idCount);
 }
 
 /**

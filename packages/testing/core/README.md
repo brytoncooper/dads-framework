@@ -110,6 +110,7 @@ full-fallback: yes|no
   forced-by <issue>
 RUN|SKIP <id> project=<p> reason=<code> confidence=<c> widened=yes|no
   because <plain words>
+  file <selected test path>
   changed <path>
   export <symbol> <path>
   import <path>:line:col from <path> [symbols]
@@ -136,8 +137,10 @@ yarn, or pnpm — from the lockfile. Workspace patterns come from
 `pnpm-workspace.yaml`'s `packages` list of strings; other top-level keys in
 that file are ignored and reported, and anything else refuses with a
 `file:line` pointing at the problem. Absent that file, patterns come from
-`package.json`'s `workspaces` field; absent that, the workspace is one
-package. Recognized `test` scripts become `reachability` tasks; `typecheck`,
+`package.json`'s `workspaces` field; absent that, a single-package Dads
+application with `dads.project.json` and Vitest gets per-domain projects plus
+file-level Vitest narrowing, and any other single-package repository is treated
+as one project. Recognized `test` scripts become `reachability` tasks; `typecheck`,
 `lint`, and `build` scripts become `project` tasks; `test` depends on
 `typecheck`; and `fallbackDependencies` come from workspace dependencies and
 `tsconfig` references. `init` refuses to overwrite an existing manifest
@@ -172,7 +175,11 @@ All fields are strict. Paths must stay within the workspace. Project and task
 ids are unique, all references must resolve, task cycles are rejected, and
 `workspace.fullFallback.taskIds` must list every task exactly once. Ordinary
 tasks are an executable plus arguments; an explicit `shell: true` runs
-`executable` and `args` through the platform shell for shell recipes.
+`executable` and `args` through the platform shell for shell recipes. A
+`reachability` test task may also declare `execution.fileNarrowing`
+(`suffixes`, optional `excludeSuffixes`, and optional `setupFiles`) so that an
+un-widened run appends only the reached test files to `execution.args` and
+skips the task when zero matching test files are reached.
 
 ## How selection works
 
@@ -219,7 +226,8 @@ tasks are an executable plus arguments; an explicit `shell: true` runs
 
 The plan JSON carries `scope`, `tasks`, and `issues`. A task has `id`,
 `decision`, `reason`, `confidence`, and `widened`, plus an optional `project`
-that owns it and an optional `causes` list naming every reason it was
+that owns it, optional `reachedFiles` and `selectedFiles` lists for narrowed
+test selection, and an optional `causes` list naming every reason it was
 selected: a direct task input, a prerequisite of another selected task, a
 changed path, a changed export, a reached import (with its location, the
 module it was imported from, and the symbols), a plan issue, or a fallback

@@ -86,6 +86,21 @@ pub(crate) struct TaskExecution {
     pub(crate) cwd: Option<String>,
     #[serde(default)]
     pub(crate) shell: bool,
+    #[serde(default)]
+    pub(crate) file_narrowing: Option<FileNarrowing>,
+}
+
+/// Optional file-level test narrowing for an un-widened `reachability` task (for example Vitest).
+/// When a task is proven un-widened and no declared `setup_files` were touched, only reached files
+/// matching `suffixes` (and not `exclude_suffixes`) are appended to the task's command arguments.
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct FileNarrowing {
+    pub(crate) suffixes: Vec<String>,
+    #[serde(default)]
+    pub(crate) exclude_suffixes: Vec<String>,
+    #[serde(default)]
+    pub(crate) setup_files: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -173,6 +188,9 @@ pub(crate) fn validate_manifest(
         if let Some(cwd) = &task.execution.cwd {
             validate_relative_path(cwd, "execution.cwd")?;
         }
+        if let Some(narrowing) = &task.execution.file_narrowing {
+            validate_file_narrowing(&task.id, narrowing)?;
+        }
         for path in &task.impact.paths {
             validate_relative_path(path, "impact.paths")?;
         }
@@ -211,6 +229,18 @@ pub(crate) fn validate_manifest(
     }
     if manifest.tasks.is_empty() {
         return Err(message("Manifest must declare at least one task."));
+    }
+    Ok(())
+}
+
+fn validate_file_narrowing(task_id: &str, narrowing: &FileNarrowing) -> Result<(), TestingError> {
+    if narrowing.suffixes.is_empty() {
+        return Err(message(format!(
+            "Task {task_id} uses execution.fileNarrowing without suffixes."
+        )));
+    }
+    for setup_file in &narrowing.setup_files {
+        validate_relative_path(setup_file, "execution.fileNarrowing.setupFiles")?;
     }
     Ok(())
 }

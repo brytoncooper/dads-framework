@@ -15,15 +15,28 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn analyze_workspace(workspace_root: &Path) -> JsWorkspaceFacts {
+    analyze_workspace_roots(workspace_root, None)
+}
+
+pub(crate) fn analyze_workspace_roots(
+    workspace_root: &Path,
+    project_roots: Option<&[String]>,
+) -> JsWorkspaceFacts {
     let mut files = Vec::new();
     let mut uncertainties = Vec::new();
-    collect_javascript_files(
-        workspace_root,
-        workspace_root,
-        &mut files,
-        &mut uncertainties,
-    );
+    let scan_roots = resolve_scan_roots(workspace_root, project_roots);
+    let scoped = scan_roots.len() > 1
+        || scan_roots
+            .first()
+            .is_some_and(|root| root != workspace_root);
+    for scan_root in scan_roots {
+        collect_javascript_files(workspace_root, &scan_root, &mut files, &mut uncertainties);
+    }
+    if scoped {
+        collect_root_javascript_files(workspace_root, &mut files);
+    }
     files.sort();
+    files.dedup();
 
     let resolver = javascript_resolver();
     let mut modules = Vec::new();
@@ -41,6 +54,46 @@ pub fn analyze_workspace(workspace_root: &Path) -> JsWorkspaceFacts {
     JsWorkspaceFacts {
         modules,
         uncertainties,
+    }
+}
+
+/// Uses manifest project roots when none declares the workspace root `"."`, avoiding spurious
+/// uncertainties from unrelated repo scripts or fixtures outside declared projects.
+fn resolve_scan_roots(workspace_root: &Path, project_roots: Option<&[String]>) -> Vec<PathBuf> {
+    let Some(roots) = project_roots else {
+        return vec![workspace_root.to_path_buf()];
+    };
+    if roots.is_empty()
+        || roots.iter().any(|root| {
+            let trimmed = root.trim().trim_end_matches('/');
+            trimmed.is_empty() || trimmed == "."
+        })
+    {
+        return vec![workspace_root.to_path_buf()];
+    }
+    let mut resolved = roots
+        .iter()
+        .map(|root| workspace_root.join(root))
+        .filter(|path| path.is_dir())
+        .collect::<Vec<_>>();
+    resolved.sort();
+    resolved.dedup();
+    if resolved.is_empty() {
+        vec![workspace_root.to_path_buf()]
+    } else {
+        resolved
+    }
+}
+
+fn collect_root_javascript_files(workspace_root: &Path, files: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(workspace_root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if entry.file_type().is_ok_and(|kind| kind.is_file()) && is_javascript_path(&path) {
+            files.push(path);
+        }
     }
 }
 
@@ -93,7 +146,8 @@ pub fn analyze_request(request: &NativeRequest) -> Option<DependencyGraph> {
             return None;
         }
     }
-    let facts = analyze_workspace(workspace_root);
+    let project_roots = dads_testing_core::manifest_project_roots(request);
+    let facts = analyze_workspace_roots(workspace_root, project_roots.as_deref());
     let changes = changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)?;
     Some(copy_to_core_graph(facts).with_changed_module_evidence(changes))
 }
@@ -104,7 +158,7 @@ pub struct JavaScriptFrontend;
 
 impl GraphFrontend for JavaScriptFrontend {
     fn frontend_version(&self) -> u32 {
-        5
+        7
     }
 
     fn initial_index(&mut self, request: &NativeRequest) -> Result<DependencyGraph, String> {
@@ -155,6 +209,11 @@ pub(crate) fn incremental_request(
         uncertainties: Vec::new(),
     };
     for path in changed_paths {
+        if !previous.contains_path(path) {
+            // A newly created source file can shadow or redirect resolution for unchanged
+            // importers (for example `foo/index.ts` or `foo.ts`), so rebuild the full graph.
+            return Err("A newly added file invalidates retained resolution edges.".to_owned());
+        }
         let absolute_path = workspace_root.join(path);
         if !absolute_path.is_file() {
             return Err("A delete or rename invalidates retained resolution edges.".to_owned());
@@ -167,15 +226,26 @@ pub(crate) fn incremental_request(
             Err(uncertainty) => facts.uncertainties.push(uncertainty),
         }
     }
-    let changes = changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)
-        .ok_or_else(|| "Cannot attribute changed module exports.".to_owned())?;
+    let fresh_changes =
+        changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)
+            .ok_or_else(|| "Cannot attribute changed module exports.".to_owned())?;
+    let patched_set = changed_paths
+        .iter()
+        .map(String::as_str)
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut merged_changes = previous
+        .changed_module_evidences()
+        .into_iter()
+        .filter(|entry| !patched_set.contains(entry.path.as_str()))
+        .collect::<Vec<_>>();
+    merged_changes.extend(fresh_changes);
     let patched = copy_to_core_graph(facts);
     let modules = patched.materialize_modules();
     // Fresh adapter uncertainties are deliberately not persisted as a usable snapshot.
     if patched.has_uncertainty() {
         return Err("Changed files have uncertain graph facts.".to_owned());
     }
-    Ok(previous.patch_modules(modules, changes, Vec::new()))
+    Ok(previous.patch_modules(modules, merged_changes, Vec::new()))
 }
 
 fn collect_javascript_files(
@@ -215,7 +285,16 @@ fn collect_javascript_files(
         if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
             if matches!(
                 file_name.to_str(),
-                Some(".git" | "node_modules" | "target" | "dist" | "coverage" | ".next")
+                Some(
+                    ".git"
+                        | "node_modules"
+                        | "target"
+                        | "dist"
+                        | "coverage"
+                        | ".next"
+                        | ".lake"
+                        | "_apalache-out"
+                )
             ) {
                 continue;
             }

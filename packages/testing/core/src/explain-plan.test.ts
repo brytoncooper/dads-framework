@@ -419,6 +419,32 @@ describe("informational issues", () => {
   });
 });
 
+describe("file-level narrowing explanation", () => {
+  it("surfaces selectedFiles in JSON and renders file lines", () => {
+    const narrowedPlan: TestingPlanResult = {
+      ...enginePlan,
+      tasks: [
+        {
+          id: "api:test",
+          project: "api",
+          decision: "run",
+          reason: "graph-symbol-importer",
+          confidence: "proven",
+          widened: false,
+          reachedFiles: ["apps/api/src/server.ts", "apps/api/src/server.test.ts"],
+          selectedFiles: ["apps/api/src/server.test.ts"],
+          causes: [],
+        },
+      ],
+    };
+
+    const explanation = explainPlan(narrowedPlan);
+
+    expect(taskById(explanation, "api:test").selectedFiles).toEqual(["apps/api/src/server.test.ts"]);
+    expect(renderPlanExplanation(explanation)).toContain("  file apps/api/src/server.test.ts\n");
+  });
+});
+
 function taskById(explanation: PlanExplanation, id: string): ExplainedTask {
   const task = explanation.tasks.find((candidate) => candidate.id === id);
   if (task === undefined) throw new Error(`No explained task ${id}.`);

@@ -11,6 +11,7 @@ use crate::facts::{
 use crate::import_declarations::{
     ImportFactContext, ImportFactInput, import_fact, requested_binding_facts,
 };
+use crate::intra_file_deps::attach_intra_file_export_deps;
 use crate::spans::{copied_span, line_and_column, static_string_at_span};
 use crate::workspace::uncertainty;
 use oxc_allocator::Allocator;
@@ -64,6 +65,13 @@ pub(crate) fn analyze_file(
         source: &source,
     };
     let mut imports = collect_imports(&scan, module_record, &semantic.semantic, &mut uncertainties);
+    attach_intra_file_export_deps(
+        &parsed.program,
+        module_record,
+        &semantic.semantic,
+        !uncertainties.is_empty(),
+        &mut imports,
+    );
     locate_positions(&source, &mut imports, &mut uncertainties);
 
     Ok((
@@ -191,7 +199,7 @@ fn collect_imports(
     semantic: &Semantic<'_>,
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<JsImportFact> {
-    let mut imports = requested_module_imports(scan, module_record, uncertainties);
+    let mut imports = requested_module_imports(scan, module_record, semantic, uncertainties);
     if let Some(ambiguous_reexport) =
         ambiguous_reexport_uncertainty(module_record, semantic, scan.path)
     {
@@ -217,6 +225,7 @@ fn collect_imports(
 fn requested_module_imports(
     scan: &ImportScan<'_>,
     module_record: &ModuleRecord<'_>,
+    semantic: &Semantic<'_>,
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<JsImportFact> {
     let mut imports = Vec::new();
@@ -230,6 +239,7 @@ fn requested_module_imports(
             };
             let binding = requested_binding_facts(
                 module_record,
+                semantic,
                 &specifier,
                 request.statement_span,
                 request.is_type,
@@ -263,10 +273,12 @@ fn ambiguous_reexport_uncertainty(
     semantic: &Semantic<'_>,
     path: &str,
 ) -> Option<JsUncertainty> {
-    let ambiguous_reexport = module_record
-        .indirect_export_entries
-        .iter()
-        .find(|entry| entry.is_type || !is_explicit_import_reexport(semantic, entry.span))?;
+    use oxc_syntax::module_record::ExportImportName;
+    let ambiguous_reexport = module_record.indirect_export_entries.iter().find(|entry| {
+        !entry.is_type
+            && !matches!(entry.import_name, ExportImportName::Name(_))
+            && !is_explicit_import_reexport(semantic, entry.span)
+    })?;
     Some(JsUncertainty {
         path: path.to_owned(),
         code: "ambiguous-re-export".to_owned(),
@@ -366,4 +378,52 @@ pub(crate) fn runtime_export_declarations_from_source(
         return None;
     }
     Some(declarations)
+}
+
+/// Returns `(comment_spans, erased_non_runtime_spans)` for a syntactically valid JS/TS file,
+/// where `erased_non_runtime_spans` includes comments plus TypeScript-only top-level declarations
+/// (`type`, `interface`, `export type`, `import type`) that emit zero runtime JavaScript.
+pub(crate) fn comment_and_type_only_spans_from_source(
+    source: &str,
+    path: &Path,
+) -> Option<(Vec<crate::facts::JsSpan>, Vec<crate::facts::JsSpan>)> {
+    let source_type = SourceType::from_path(path).ok()?;
+    let allocator = Allocator::default();
+    let parsed = Parser::new(&allocator, source, source_type).parse();
+    if parsed.panicked || !parsed.diagnostics.is_empty() {
+        return None;
+    }
+    let comments = parsed
+        .program
+        .comments
+        .iter()
+        .map(|comment| copied_span(comment.span))
+        .collect::<Vec<_>>();
+    let mut erased = comments.clone();
+    if source_type.is_typescript() {
+        for stmt in &parsed.program.body {
+            use oxc_ast::ast::{Declaration, Statement};
+            let span = match stmt {
+                Statement::TSTypeAliasDeclaration(d) => Some(d.span),
+                Statement::TSInterfaceDeclaration(d) => Some(d.span),
+                Statement::ExportDeclaration(e)
+                    if matches!(
+                        e.declaration,
+                        Declaration::TSTypeAliasDeclaration(_)
+                            | Declaration::TSInterfaceDeclaration(_)
+                    ) =>
+                {
+                    Some(e.span)
+                }
+                Statement::ExportNamedDeclaration(e) if e.export_kind.is_type() => Some(e.span),
+                Statement::ExportFromDeclaration(e) if e.export_kind.is_type() => Some(e.span),
+                Statement::ImportDeclaration(i) if i.import_kind.is_type() => Some(i.span),
+                _ => None,
+            };
+            if let Some(span) = span {
+                erased.push(copied_span(span));
+            }
+        }
+    }
+    Some((comments, erased))
 }

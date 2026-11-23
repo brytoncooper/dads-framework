@@ -5,7 +5,7 @@ mod widening;
 
 use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
-use crate::manifest::{DeclaredTask, ImpactMode, TestingManifest};
+use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
 use crate::scope::path_is_inside;
 use decisions::explain_decisions;
@@ -19,7 +19,11 @@ struct PlanEvidence<'a> {
     fallback_impacted_projects: BTreeSet<&'a str>,
     reachability_impacted_projects: BTreeSet<&'a str>,
     uncertainty_impacted_projects: BTreeSet<&'a str>,
+    typecheck_reachability_impacted_projects: BTreeSet<&'a str>,
+    typecheck_uncertainty_impacted_projects: BTreeSet<&'a str>,
     changed_paths_by_project: BTreeMap<&'a str, Vec<String>>,
+    reached_paths: BTreeSet<String>,
+    reached_paths_by_project: BTreeMap<&'a str, BTreeSet<String>>,
     issue_indexes_by_project: BTreeMap<&'a str, Vec<usize>>,
     full_fallback_issue_indexes: Vec<usize>,
     reached_edges: Vec<ReachedEdge>,
@@ -34,7 +38,11 @@ impl<'a> PlanEvidence<'a> {
             fallback_impacted_projects: BTreeSet::new(),
             reachability_impacted_projects: BTreeSet::new(),
             uncertainty_impacted_projects: BTreeSet::new(),
+            typecheck_reachability_impacted_projects: BTreeSet::new(),
+            typecheck_uncertainty_impacted_projects: BTreeSet::new(),
             changed_paths_by_project: BTreeMap::new(),
+            reached_paths: BTreeSet::new(),
+            reached_paths_by_project: BTreeMap::new(),
             issue_indexes_by_project: BTreeMap::new(),
             full_fallback_issue_indexes: Vec::new(),
             reached_edges: Vec::new(),
@@ -43,12 +51,83 @@ impl<'a> PlanEvidence<'a> {
         }
     }
 
+    fn is_widened_for_task(&self, task: &DeclaredTask) -> bool {
+        if matches!(task.kind, TaskKind::Test) {
+            self.uncertainty_impacted_projects
+                .contains(task.project.as_str())
+        } else {
+            self.typecheck_uncertainty_impacted_projects
+                .contains(task.project.as_str())
+        }
+    }
+
+    fn is_reachability_impacted_for_task(&self, task: &DeclaredTask) -> bool {
+        if matches!(task.kind, TaskKind::Test) {
+            self.reachability_impacted_projects
+                .contains(task.project.as_str())
+        } else {
+            self.typecheck_reachability_impacted_projects
+                .contains(task.project.as_str())
+        }
+    }
+
+    fn setup_file_touched(&self, narrowing: &FileNarrowing, scope: &ResolvedScope) -> bool {
+        narrowing.setup_files.iter().any(|setup| {
+            scope
+                .changed_paths
+                .iter()
+                .any(|changed| changed == setup || path_is_inside(changed, setup))
+                || self
+                    .reached_paths
+                    .iter()
+                    .any(|reached| reached == setup || path_is_inside(reached, setup))
+        })
+    }
+
+    fn reached_files_for_project(&self, project: &str) -> Vec<String> {
+        self.reached_paths_by_project
+            .get(project)
+            .map(|paths| paths.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    fn narrowed_files_for_task(
+        &self,
+        task: &DeclaredTask,
+        scope: &ResolvedScope,
+    ) -> Option<Vec<String>> {
+        if self.full_fallback || scope.full_fallback || self.is_widened_for_task(task) {
+            return None;
+        }
+        let narrowing = task.execution.file_narrowing.as_ref()?;
+        if self.setup_file_touched(narrowing, scope) {
+            return None;
+        }
+        let selected = self
+            .reached_files_for_project(&task.project)
+            .into_iter()
+            .filter(|path| matches_file_narrowing(path, narrowing))
+            .collect::<Vec<_>>();
+        Some(selected)
+    }
+
     fn should_run(&self, task: &DeclaredTask, scope: &ResolvedScope) -> bool {
         match &task.impact.mode {
             ImpactMode::Always => true,
-            ImpactMode::Reachability => self
-                .reachability_impacted_projects
-                .contains(task.project.as_str()),
+            ImpactMode::Reachability => {
+                if let Some(narrowing) = &task.execution.file_narrowing
+                    && self.setup_file_touched(narrowing, scope)
+                {
+                    return true;
+                }
+                if !self.is_reachability_impacted_for_task(task) {
+                    return false;
+                }
+                if let Some(selected_files) = self.narrowed_files_for_task(task, scope) {
+                    return !selected_files.is_empty();
+                }
+                true
+            }
             ImpactMode::Project => self
                 .fallback_impacted_projects
                 .contains(task.project.as_str()),
@@ -60,6 +139,17 @@ impl<'a> PlanEvidence<'a> {
             }),
         }
     }
+}
+
+fn matches_file_narrowing(path: &str, narrowing: &FileNarrowing) -> bool {
+    narrowing
+        .suffixes
+        .iter()
+        .any(|suffix| path.ends_with(suffix))
+        && !narrowing
+            .exclude_suffixes
+            .iter()
+            .any(|excluded| path.ends_with(excluded))
 }
 
 /// The selected task set together with the widening that produced it: which originally impacted
@@ -144,12 +234,30 @@ fn select_tasks<'a>(
             propagate_fallback_dependents(manifest, &mut evidence.fallback_impacted_projects);
         uncertainty_origins =
             propagate_fallback_dependents(manifest, &mut evidence.uncertainty_impacted_projects);
+        let typecheck_uncertainty_origins = propagate_fallback_dependents(
+            manifest,
+            &mut evidence.typecheck_uncertainty_impacted_projects,
+        );
+        for (project, origins) in typecheck_uncertainty_origins {
+            uncertainty_origins
+                .entry(project)
+                .or_default()
+                .extend(origins);
+        }
         let widened = evidence
             .uncertainty_impacted_projects
             .iter()
             .copied()
             .collect::<Vec<_>>();
         evidence.reachability_impacted_projects.extend(widened);
+        let typecheck_widened = evidence
+            .typecheck_uncertainty_impacted_projects
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
+        evidence
+            .typecheck_reachability_impacted_projects
+            .extend(typecheck_widened);
         for task in &manifest.tasks {
             if evidence.should_run(task, scope) {
                 selected.insert(task.id.as_str());

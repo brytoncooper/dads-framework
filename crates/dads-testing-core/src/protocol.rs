@@ -102,6 +102,10 @@ pub struct TaskDecision {
     pub widened: bool,
     pub project: String,
     pub causes: Vec<TaskCause>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reached_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_files: Vec<String>,
 }
 
 /// The located evidence behind one task decision. Every widening reason names either the issue

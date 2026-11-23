@@ -1,7 +1,7 @@
 //! The plain facts this adapter copies out of Oxc. Every field is owned data: no arena
 //! references, no Oxc IDs, and no resolver values survive past the analysis that produced them.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsWorkspaceFacts {
@@ -41,6 +41,7 @@ pub struct JsImportFact {
     pub reexport_all: bool,
     pub resolved_path: Option<String>,
     pub position: Option<JsPosition>,
+    pub export_deps: Option<BTreeMap<String, BTreeSet<String>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

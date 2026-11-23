@@ -89,6 +89,15 @@ function addExecutionProblems(messages: string[], task: TestingManifestTask): vo
   if (cwd !== undefined) {
     addRelativePathProblem(messages, cwd, "execution.cwd");
   }
+  const narrowing = task.execution.fileNarrowing;
+  if (narrowing !== undefined) {
+    if (narrowing.suffixes.length === 0) {
+      messages.push(`Task ${task.id} uses execution.fileNarrowing without suffixes.`);
+    }
+    for (const setupFile of narrowing.setupFiles ?? []) {
+      addRelativePathProblem(messages, setupFile, "execution.fileNarrowing.setupFiles");
+    }
+  }
 }
 
 /** `changed-files` is scoped by its paths alone, so an empty list selects nothing. */

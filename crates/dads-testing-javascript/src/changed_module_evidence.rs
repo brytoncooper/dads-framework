@@ -1,8 +1,11 @@
 use crate::diff_hunks::{
-    attributed_exports_for_changed_bytes, changed_content_byte_ranges, changed_hunks,
+    ByteRange, attributed_exports_for_changed_bytes, changed_content_byte_ranges, changed_hunks,
+    is_comment_only_range,
 };
 use crate::facts::JsModuleFacts;
-use crate::module_analysis::runtime_export_declarations_from_source;
+use crate::module_analysis::{
+    comment_and_type_only_spans_from_source, runtime_export_declarations_from_source,
+};
 use crate::workspace::git_output;
 use dads_testing_core::graph::ChangedModuleEvidence;
 use std::collections::BTreeSet;
@@ -54,6 +57,8 @@ pub(crate) fn changed_module_evidence(
                 path: module.path.clone(),
                 changed_exports: BTreeSet::new(),
                 every_hunk_is_attributed: false,
+                semantic_change: true,
+                type_only_change: false,
             });
             continue;
         }
@@ -100,9 +105,11 @@ fn tracked_module_evidence(
         return Some(None);
     }
     let baseline_source = if hunks.iter().any(|hunk| hunk.old.count > 0) {
-        let baseline_spec = format!("{comparison}:{}", module.path);
-        let baseline = git_output(workspace_root, &["show", &baseline_spec])?;
-        Some(String::from_utf8(baseline).ok()?)
+        Some(load_baseline_source(
+            workspace_root,
+            comparison,
+            &module.path,
+        )?)
     } else {
         None
     };
@@ -114,29 +121,107 @@ fn tracked_module_evidence(
         )?,
         None => Vec::new(),
     };
+    let baseline_erased = baseline_source.as_deref().and_then(|baseline| {
+        comment_and_type_only_spans_from_source(baseline, Path::new(&module.path))
+    });
+    let current_erased = comment_and_type_only_spans_from_source(source, Path::new(&module.path));
     let mut changed_exports = BTreeSet::new();
     let mut every_hunk_is_attributed = true;
+    let can_check_erased =
+        current_erased.is_some() && (baseline_source.is_none() || baseline_erased.is_some());
+    let mut all_hunks_comment_only = can_check_erased;
+    let mut all_hunks_type_or_comment = can_check_erased;
     for hunk in hunks {
         let baseline = baseline_source.as_deref().unwrap_or("");
         let (old_changed_bytes, new_changed_bytes) =
             changed_content_byte_ranges(hunk, baseline, source)?;
-        for (changed_bytes, declarations, side_source) in [
-            (
+        if all_hunks_comment_only
+            && !hunk_covered_by_spans(
                 old_changed_bytes,
-                baseline_declarations.as_slice(),
+                new_changed_bytes,
                 baseline,
-            ),
-            (new_changed_bytes, module.declarations.as_slice(), source),
-        ] {
-            match attributed_exports_for_changed_bytes(changed_bytes, declarations, side_source) {
-                Some(exports) => changed_exports.extend(exports),
-                None => every_hunk_is_attributed = false,
+                source,
+                baseline_erased.as_ref().map(|(s, _)| s.as_slice()),
+                current_erased.as_ref().map(|(s, _)| s.as_slice()),
+            )
+        {
+            all_hunks_comment_only = false;
+        }
+        let hunk_is_erased = can_check_erased
+            && hunk_covered_by_spans(
+                old_changed_bytes,
+                new_changed_bytes,
+                baseline,
+                source,
+                baseline_erased.as_ref().map(|(_, s)| s.as_slice()),
+                current_erased.as_ref().map(|(_, s)| s.as_slice()),
+            );
+        if !hunk_is_erased {
+            all_hunks_type_or_comment = false;
+            for (changed_bytes, declarations, side_source) in [
+                (
+                    old_changed_bytes,
+                    baseline_declarations.as_slice(),
+                    baseline,
+                ),
+                (new_changed_bytes, module.declarations.as_slice(), source),
+            ] {
+                match attributed_exports_for_changed_bytes(changed_bytes, declarations, side_source)
+                {
+                    Some(exports) => changed_exports.extend(exports),
+                    None => every_hunk_is_attributed = false,
+                }
             }
         }
     }
+    if all_hunks_comment_only {
+        return Some(Some(plain_evidence(&module.path, false, false)));
+    }
+    if all_hunks_type_or_comment {
+        return Some(Some(plain_evidence(&module.path, true, true)));
+    }
+    let zero_export_module = module.declarations.is_empty() && baseline_declarations.is_empty();
     Some(Some(ChangedModuleEvidence {
         path: module.path.clone(),
         changed_exports,
-        every_hunk_is_attributed,
+        every_hunk_is_attributed: every_hunk_is_attributed || zero_export_module,
+        semantic_change: true,
+        type_only_change: false,
     }))
+}
+
+fn load_baseline_source(workspace_root: &Path, comparison: &str, path: &str) -> Option<String> {
+    let baseline_spec = format!("{comparison}:{path}");
+    let baseline = git_output(workspace_root, &["show", &baseline_spec])?;
+    String::from_utf8(baseline).ok()
+}
+
+fn plain_evidence(
+    path: &str,
+    semantic_change: bool,
+    type_only_change: bool,
+) -> ChangedModuleEvidence {
+    ChangedModuleEvidence {
+        path: path.to_owned(),
+        changed_exports: BTreeSet::new(),
+        every_hunk_is_attributed: true,
+        semantic_change,
+        type_only_change,
+    }
+}
+
+fn hunk_covered_by_spans(
+    old_changed_bytes: ByteRange,
+    new_changed_bytes: ByteRange,
+    baseline: &str,
+    source: &str,
+    baseline_spans: Option<&[crate::facts::JsSpan]>,
+    current_spans: Option<&[crate::facts::JsSpan]>,
+) -> bool {
+    let old_ok = baseline_spans.map_or(old_changed_bytes.is_empty(), |spans| {
+        is_comment_only_range(old_changed_bytes, spans, baseline)
+    });
+    let new_ok =
+        current_spans.is_some_and(|spans| is_comment_only_range(new_changed_bytes, spans, source));
+    old_ok && new_ok
 }

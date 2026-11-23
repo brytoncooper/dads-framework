@@ -1,6 +1,6 @@
 //! The public facts a language frontend hands the core, and the reachability answer it gets back.
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceSpan {
@@ -37,6 +37,11 @@ pub struct ImportFact {
     pub resolved_path: Option<String>,
     #[serde(default)]
     pub position: Option<LineColumn>,
+    /// Optional intra-file def-use map from imported symbol name to the subset of the importer's
+    /// own export names that transitively depend on it. `None` falls back conservatively to all
+    /// own exports of the importer.
+    #[serde(default)]
+    pub export_deps: Option<BTreeMap<String, BTreeSet<String>>>,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImportKind {
@@ -74,6 +79,14 @@ pub struct ChangedModuleEvidence {
     pub path: String,
     pub changed_exports: BTreeSet<String>,
     pub every_hunk_is_attributed: bool,
+    #[serde(default = "default_semantic_change")]
+    pub semantic_change: bool,
+    #[serde(default)]
+    pub type_only_change: bool,
+}
+
+fn default_semantic_change() -> bool {
+    true
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Reachability {

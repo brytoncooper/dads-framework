@@ -61,6 +61,19 @@ pub fn graph_analysis_can_change_the_plan(request: &NativeRequest) -> bool {
         .unwrap_or(true)
 }
 
+/// Returns the declared project roots from the workspace's manifest so a language frontend can
+/// scope workspace indexing to declared projects rather than scanning unrelated scripts or fixtures.
+pub fn manifest_project_roots(request: &NativeRequest) -> Option<Vec<String>> {
+    let (_, manifest) = load_declared_manifest(request).ok()?;
+    Some(
+        manifest
+            .projects
+            .into_iter()
+            .map(|project| project.root)
+            .collect(),
+    )
+}
+
 fn execute(
     request: NativeRequest,
     graph: Option<&DependencyGraph>,

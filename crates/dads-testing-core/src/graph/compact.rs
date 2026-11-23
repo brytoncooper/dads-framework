@@ -31,6 +31,8 @@ pub(super) struct CImport {
     pub(super) target: Option<u32>,
     #[serde(default)]
     pub(super) position: Option<LineColumn>,
+    #[serde(default)]
+    pub(super) export_deps: Option<Vec<(u32, Vec<u32>)>>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CUncertainty {
@@ -47,6 +49,14 @@ pub(super) struct CChange {
     pub(super) path: u32,
     pub(super) exports: Vec<u32>,
     pub(super) complete: bool,
+    #[serde(default = "default_semantic_change")]
+    pub(super) semantic_change: bool,
+    #[serde(default)]
+    pub(super) type_only_change: bool,
+}
+
+fn default_semantic_change() -> bool {
+    true
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DependencyGraph {
@@ -72,6 +82,30 @@ impl DependencyGraph {
     }
     pub fn has_uncertainty(&self) -> bool {
         !self.uncertainties.is_empty()
+    }
+    pub fn whole_workspace_uncertainties(&self) -> Vec<GraphUncertainty> {
+        self.uncertainties()
+            .into_iter()
+            .filter(|u| u.scope == GraphUncertaintyScope::WholeWorkspace)
+            .collect()
+    }
+    pub fn changed_module_evidences(&self) -> Vec<ChangedModuleEvidence> {
+        self.changes
+            .iter()
+            .filter_map(|c| {
+                Some(ChangedModuleEvidence {
+                    path: self.str(c.path)?.to_owned(),
+                    changed_exports: c
+                        .exports
+                        .iter()
+                        .filter_map(|n| self.str(*n).map(str::to_owned))
+                        .collect(),
+                    every_hunk_is_attributed: c.complete,
+                    semantic_change: c.semantic_change,
+                    type_only_change: c.type_only_change,
+                })
+            })
+            .collect()
     }
     pub fn materialize_modules(&self) -> Vec<ModuleNode> {
         (0..self.modules.len())
@@ -114,6 +148,8 @@ impl DependencyGraph {
                         .map(|s| self.id(s))
                         .collect::<Option<Vec<_>>>()?,
                     complete: c.every_hunk_is_attributed,
+                    semantic_change: c.semantic_change,
+                    type_only_change: c.type_only_change,
                 })
             })
             .collect()
@@ -174,6 +210,8 @@ impl DependencyGraph {
                     .filter_map(|n| self.str(*n).map(str::to_owned))
                     .collect(),
                 complete: x.complete,
+                semantic_change: x.semantic_change,
+                type_only_change: x.type_only_change,
             })
     }
     pub(super) fn uncertainties(&self) -> Vec<GraphUncertainty> {
@@ -233,6 +271,18 @@ impl DependencyGraph {
             reexport_all: x.reexport_all,
             resolved_path: x.target.and_then(|t| self.path(t).map(str::to_owned)),
             position: x.position,
+            export_deps: x.export_deps.as_ref().map(|deps| {
+                deps.iter()
+                    .filter_map(|(k, vs)| {
+                        let key = self.str(*k)?.to_owned();
+                        let vals = vs
+                            .iter()
+                            .filter_map(|v| self.str(*v).map(str::to_owned))
+                            .collect();
+                        Some((key, vals))
+                    })
+                    .collect()
+            }),
         })
     }
 }
@@ -240,4 +290,6 @@ impl DependencyGraph {
 pub(super) struct CChangeView {
     pub(super) exports: BTreeSet<String>,
     pub(super) complete: bool,
+    pub(super) semantic_change: bool,
+    pub(super) type_only_change: bool,
 }

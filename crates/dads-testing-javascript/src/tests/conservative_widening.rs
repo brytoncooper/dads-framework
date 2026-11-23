@@ -52,7 +52,7 @@ fn bounds_an_unresolved_bare_alias_to_its_declared_project_dependents() {
     commit_fixture(&root);
     write(
         root.join("src/importer.ts"),
-        "import { value } from '@workspace/missing'; export { value }; // changed\n",
+        "import { value } from '@workspace/missing'; export { value }; export const changed = 1;\n",
     )
     .expect("fixture importer change must be written");
 
@@ -351,4 +351,124 @@ fn symbol_evidence_selects_only_the_task_for_the_matching_importer() {
     assert_eq!(a_task.reason, "graph-symbol-importer");
     assert_eq!(b_task.decision, "skip-proven-unaffected");
     remove_dir_all(root).expect("fixture source directory must be removed");
+}
+
+#[test]
+fn tight_precision_erases_import_type_tracks_namespace_and_skips_comment_only_edits() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-tight-precision");
+    let _ = remove_dir_all(&root);
+    for directory in ["lib", "app"] {
+        create_dir_all(root.join(directory)).expect("fixture directory must be created");
+    }
+    write(
+        root.join("lib/value.ts"),
+        "export type Val = number;\nexport function active() { return 1; }\nexport function unused() { return 2; }\n",
+    )
+    .expect("lib source must be written");
+    write(
+        root.join("app/type-only.test.ts"),
+        "import type { Val } from '../lib/value';\nexport type Checked = Val;\n",
+    )
+    .expect("type-only consumer must be written");
+    write(
+        root.join("app/ns-active.test.ts"),
+        "import * as lib from '../lib/value';\nif (lib.active() !== 1) throw new Error('fail');\n",
+    )
+    .expect("tracked namespace consumer must be written");
+    write(
+        root.join("app/ns-unused.test.ts"),
+        "import * as lib from '../lib/value';\nif (lib.unused() !== 2) throw new Error('fail');\n",
+    )
+    .expect("unused namespace consumer must be written");
+    write(
+        root.join("dads.testing.json"),
+        r#"{
+  "schemaVersion": 1,
+  "workspace": { "fullFallback": { "taskIds": ["lib:test", "app:test", "app:typecheck"] } },
+  "projects": [
+    { "id": "lib", "root": "lib", "fallbackDependencies": [] },
+    { "id": "app", "root": "app", "fallbackDependencies": ["lib"] }
+  ],
+  "tasks": [
+    { "id": "lib:test", "project": "lib", "kind": "test", "execution": { "executable": "true", "fileNarrowing": { "suffixes": [".test.ts"] } }, "dependsOn": [], "impact": { "mode": "reachability" } },
+    { "id": "app:test", "project": "app", "kind": "test", "execution": { "executable": "true", "fileNarrowing": { "suffixes": [".test.ts"] } }, "dependsOn": [], "impact": { "mode": "reachability" } },
+    { "id": "app:typecheck", "project": "app", "kind": "typecheck", "execution": { "executable": "true" }, "dependsOn": [], "impact": { "mode": "reachability" } }
+  ]
+}"#,
+    )
+    .expect("testing manifest must be written");
+    commit_fixture(&root);
+
+    // 1. Comment-only edit runs ZERO tasks!
+    write(
+        root.join("lib/value.ts"),
+        "export type Val = number;\nexport function active() { return 1; }\nexport function unused() { return 2; }\n// pure comment\n",
+    )
+    .expect("comment edit must be written");
+    let comment_graph = analyze_request(&request(&root)).expect("comment graph must be available");
+    let comment_plan = execute_request_with_graph(request(&root), Some(comment_graph))
+        .result
+        .expect("comment plan must succeed")
+        .plan;
+    assert_eq!(comment_plan.counts.run, 0);
+
+    // 2. Real edit to `active()` narrows app:test to ONLY `app/ns-active.test.ts` (zero widening!),
+    //    skips `lib:test` (no test files in lib), and skips `app/type-only.test.ts` & `app/ns-unused.test.ts`.
+    write(
+        root.join("lib/value.ts"),
+        "export type Val = number;\nexport function active() { return 99; }\nexport function unused() { return 2; }\n",
+    )
+    .expect("real edit must be written");
+    let graph = analyze_request(&request(&root)).expect("edit graph must be available");
+    let plan = execute_request_with_graph(request(&root), Some(graph))
+        .result
+        .expect("edit plan must succeed")
+        .plan;
+    assert!(!plan.scope.full_fallback);
+    let app_test = plan
+        .tasks
+        .iter()
+        .find(|task| task.id == "app:test")
+        .expect("app:test must be planned");
+    assert_eq!(app_test.decision, "run");
+    assert!(!app_test.widened);
+    assert_eq!(
+        app_test.selected_files,
+        vec!["app/ns-active.test.ts".to_owned()]
+    );
+    let lib_test = plan
+        .tasks
+        .iter()
+        .find(|task| task.id == "lib:test")
+        .expect("lib:test must be planned");
+    assert_eq!(lib_test.decision, "skip-proven-unaffected");
+
+    // 3. Editing a single zero-export test file narrows to ONLY that one test file (no widening!).
+    write(
+        root.join("lib/value.ts"),
+        "export type Val = number;\nexport function active() { return 1; }\nexport function unused() { return 2; }\n",
+    )
+    .expect("lib restore must be written");
+    write(
+        root.join("app/ns-unused.test.ts"),
+        "import * as lib from '../lib/value';\nif (lib.unused() !== 3) throw new Error('fail');\n",
+    )
+    .expect("test file edit must be written");
+    let test_graph = analyze_request(&request(&root)).expect("test graph must be available");
+    let test_plan = execute_request_with_graph(request(&root), Some(test_graph))
+        .result
+        .expect("test plan must succeed")
+        .plan;
+    let app_test_only = test_plan
+        .tasks
+        .iter()
+        .find(|task| task.id == "app:test")
+        .expect("app:test must be planned");
+    assert_eq!(app_test_only.decision, "run");
+    assert!(!app_test_only.widened);
+    assert_eq!(
+        app_test_only.selected_files,
+        vec!["app/ns-unused.test.ts".to_owned()]
+    );
+    remove_dir_all(root).expect("fixture directory must be removed");
 }

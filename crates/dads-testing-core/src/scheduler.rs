@@ -113,10 +113,18 @@ fn prepare_tasks(
             let task = declared
                 .get(decision.id.as_str())
                 .ok_or_else(|| message(format!("Unknown task {}.", decision.id)))?;
+            let mut execution = task.execution.clone();
+            if !decision.selected_files.is_empty() {
+                for file in &decision.selected_files {
+                    execution
+                        .args
+                        .push(rebase_file_for_cwd(file, execution.cwd.as_deref()));
+                }
+            }
             Ok(PreparedTask {
                 id: task.id.clone(),
                 dependencies: task.depends_on.clone(),
-                execution: task.execution.clone(),
+                execution,
             })
         })
         .collect::<Result<Vec<_>, TestingError>>()
@@ -309,4 +317,18 @@ fn dependency_state(
     } else {
         DependencyState::Ready
     }
+}
+
+/// Converts a workspace-relative selected test file path to be relative to `execution.cwd` when
+/// the task runs from a subdirectory (for example a package root).
+fn rebase_file_for_cwd(file: &str, cwd: Option<&str>) -> String {
+    let Some(cwd) = cwd else {
+        return file.to_owned();
+    };
+    let trimmed = cwd.trim_end_matches('/');
+    if trimmed.is_empty() || trimmed == "." {
+        return file.to_owned();
+    }
+    let prefix = format!("{trimmed}/");
+    file.strip_prefix(&prefix).unwrap_or(file).to_owned()
 }

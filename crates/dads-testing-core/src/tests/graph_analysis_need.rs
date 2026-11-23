@@ -177,6 +177,7 @@ fn reaching_graph() -> DependencyGraph {
                     reexport_all: false,
                     resolved_path: Some("src/initial.ts".to_owned()),
                     position: None,
+                    export_deps: None,
                 }],
             },
         ],

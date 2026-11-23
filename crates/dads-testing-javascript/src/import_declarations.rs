@@ -3,8 +3,11 @@
 
 use crate::facts::{JsImportFact, JsImportKind, JsSpan, JsUncertainty};
 use crate::specifier_resolution::resolve_static_specifier;
+use oxc_ast::AstKind;
+use oxc_ast::ast::Expression;
 use oxc_resolver::Resolver;
-use oxc_span::Span;
+use oxc_semantic::Semantic;
+use oxc_span::{GetSpan, Span};
 use oxc_syntax::module_record::{ExportImportName, ImportImportName, ModuleRecord};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -18,6 +21,7 @@ pub(crate) struct RequestedBindingFacts {
 
 pub(crate) fn requested_binding_facts(
     module_record: &ModuleRecord<'_>,
+    semantic: &Semantic<'_>,
     specifier: &str,
     statement_span: Span,
     request_is_type_only: bool,
@@ -30,12 +34,22 @@ pub(crate) fn requested_binding_facts(
     };
     let mut has_type_only_binding = request_is_type_only;
     let mut has_runtime_binding = false;
+    let mut type_requested_symbols = BTreeSet::new();
     for entry in &module_record.import_entries {
         if entry.module_request.name != specifier || entry.statement_span != statement_span {
             continue;
         }
         if entry.is_type {
             has_type_only_binding = true;
+            match &entry.import_name {
+                ImportImportName::Name(name) => {
+                    type_requested_symbols.insert(name.name.to_string());
+                }
+                ImportImportName::Default(_) => {
+                    type_requested_symbols.insert("default".to_owned());
+                }
+                ImportImportName::NamespaceObject => {}
+            }
             continue;
         }
         has_runtime_binding = true;
@@ -46,7 +60,17 @@ pub(crate) fn requested_binding_facts(
             ImportImportName::Default(_) => {
                 facts.requested_symbols.insert("default".to_owned());
             }
-            ImportImportName::NamespaceObject => facts.namespace_import = true,
+            ImportImportName::NamespaceObject => {
+                if let Some(members) = tracked_namespace_members(
+                    semantic,
+                    entry.local_name.name.as_str(),
+                    entry.local_name.span,
+                ) {
+                    facts.requested_symbols.extend(members);
+                } else {
+                    facts.namespace_import = true;
+                }
+            }
         }
     }
     for entry in &module_record.star_export_entries {
@@ -58,6 +82,9 @@ pub(crate) fn requested_binding_facts(
         }
         if entry.is_type {
             has_type_only_binding = true;
+            if let ExportImportName::Name(name) = &entry.import_name {
+                type_requested_symbols.insert(name.name.to_string());
+            }
             continue;
         }
         has_runtime_binding = true;
@@ -74,6 +101,9 @@ pub(crate) fn requested_binding_facts(
         }
         if entry.is_type {
             has_type_only_binding = true;
+            if let ExportImportName::Name(name) = &entry.import_name {
+                type_requested_symbols.insert(name.name.to_string());
+            }
             continue;
         }
         has_runtime_binding = true;
@@ -88,7 +118,46 @@ pub(crate) fn requested_binding_facts(
         }
     }
     facts.type_only = has_type_only_binding && !has_runtime_binding;
+    if facts.type_only {
+        facts.requested_symbols = type_requested_symbols;
+    }
     facts
+}
+
+/// If every runtime reference to `import * as ns` is a direct static property read (`ns.foo`),
+/// returns the exact set of accessed member names so the import stays symbol-precise. Any escape
+/// (passing `ns` as a value, spreading `{ ...ns }`, computed index `ns[k]`, or zero references)
+/// returns `None` to keep the conservative namespace uncertainty.
+fn tracked_namespace_members(
+    semantic: &Semantic<'_>,
+    local_name: &str,
+    binding_span: Span,
+) -> Option<BTreeSet<String>> {
+    let scoping = semantic.scoping();
+    let symbol_id = scoping.symbol_ids().find(|symbol_id| {
+        scoping.symbol_name(*symbol_id) == local_name
+            && scoping.symbol_span(*symbol_id) == binding_span
+    })?;
+    let nodes = semantic.nodes();
+    let mut members = BTreeSet::new();
+    let mut saw_reference = false;
+    for reference in scoping.get_resolved_references(symbol_id) {
+        if !reference.is_read() || reference.is_write() {
+            return None;
+        }
+        saw_reference = true;
+        let ref_node_id = reference.node_id();
+        let ref_span = nodes.get_node(ref_node_id).span();
+        let parent = nodes.parent_node(ref_node_id);
+        match parent.kind() {
+            AstKind::StaticMemberExpression(member) if matches!(&member.object, Expression::Identifier(ident) if ident.span == ref_span) =>
+            {
+                members.insert(member.property.name.to_string());
+            }
+            _ => return None,
+        }
+    }
+    saw_reference.then_some(members)
 }
 
 pub(crate) struct ImportFactContext<'a> {
@@ -132,5 +201,6 @@ pub(crate) fn import_fact(
         reexport_all: input.reexport_all,
         resolved_path,
         position: None,
+        export_deps: None,
     }
 }

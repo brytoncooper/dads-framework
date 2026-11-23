@@ -52,6 +52,7 @@ export type ExplainedTask = {
   readonly reasonText: string;
   readonly confidence: string;
   readonly widened: boolean;
+  readonly selectedFiles?: readonly string[];
   readonly causes: readonly ExplanationCause[];
 };
 
@@ -129,6 +130,7 @@ export function renderPlanExplanation(explanation: PlanExplanation): string {
   }
   for (const task of explanation.tasks) {
     lines.push(renderTaskHeadline(task), `  because ${task.reasonText}`);
+    for (const file of task.selectedFiles ?? []) lines.push(`  file ${file}`);
     for (const cause of task.causes) lines.push(`  ${renderCause(cause)}`);
   }
   for (const issue of explanation.informational) {
@@ -156,11 +158,7 @@ function explainCause(cause: TestingTaskCause, issues: readonly TestingPlanIssue
     case "changed-path":
       return { kind: "changed-path", path: cause.path };
     case "changed-export":
-      return {
-        kind: "changed-export",
-        path: cause.path,
-        symbol: cause.symbol,
-      };
+      return { kind: "changed-export", path: cause.path, symbol: cause.symbol };
     case "reached-import": {
       // The location is carried only when it says more than the path already does.
       const location =
@@ -300,6 +298,7 @@ function taskHeadFields(
   task: TestingTaskDecision,
   project: string | undefined,
 ): Omit<ExplainedTask, "reasonText" | "causes"> {
+  const files = task.selectedFiles;
   return {
     id: task.id,
     ...(project === undefined ? {} : { project }),
@@ -307,6 +306,7 @@ function taskHeadFields(
     reason: task.reason,
     confidence: task.confidence,
     widened: task.widened,
+    ...(files === undefined || files.length === 0 ? {} : { selectedFiles: files }),
   };
 }
 

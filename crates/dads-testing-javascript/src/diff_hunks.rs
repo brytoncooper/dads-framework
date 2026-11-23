@@ -22,6 +22,12 @@ pub(crate) struct ByteRange {
     end: usize,
 }
 
+impl ByteRange {
+    pub(crate) fn is_empty(self) -> bool {
+        self.start >= self.end
+    }
+}
+
 pub(crate) fn changed_hunks(diff: &str) -> Option<Vec<ChangedHunk>> {
     diff.lines()
         .filter(|line| line.starts_with("@@"))
@@ -147,4 +153,72 @@ pub(crate) fn attributed_exports_for_changed_bytes(
         );
     }
     Some(exports)
+}
+
+/// Returns true only when `changed_bytes` is empty OR consists solely of comment bytes and
+/// whitespace on comment-only lines (never accepting bare whitespace/newline edits between code
+/// tokens, which can change JavaScript ASI semantics such as `return\n 1;` vs `return 1;`).
+pub(crate) fn is_comment_only_range(
+    changed_bytes: ByteRange,
+    comment_spans: &[crate::facts::JsSpan],
+    source: &str,
+) -> bool {
+    if changed_bytes.is_empty() {
+        return true;
+    }
+    let Some(slice) = source
+        .as_bytes()
+        .get(changed_bytes.start..changed_bytes.end)
+    else {
+        return false;
+    };
+    let mut saw_comment_byte = false;
+    for (relative_offset, byte) in slice.iter().enumerate() {
+        let offset = changed_bytes.start + relative_offset;
+        let in_comment = comment_spans
+            .iter()
+            .any(|span| (span.start as usize) <= offset && offset < span.end as usize);
+        if in_comment {
+            saw_comment_byte = true;
+            continue;
+        }
+        if matches!(byte, b' ' | b'\t') {
+            continue;
+        }
+        if matches!(byte, b'\n' | b'\r')
+            && line_is_whitespace_or_comment(source, offset, comment_spans)
+        {
+            continue;
+        }
+        return false;
+    }
+    saw_comment_byte
+}
+
+fn line_is_whitespace_or_comment(
+    source: &str,
+    offset: usize,
+    comment_spans: &[crate::facts::JsSpan],
+) -> bool {
+    let bytes = source.as_bytes();
+    let line_start = bytes[..offset]
+        .iter()
+        .rposition(|byte| *byte == b'\n')
+        .map_or(0, |index| index + 1);
+    let line_end = bytes[offset..]
+        .iter()
+        .position(|byte| *byte == b'\n')
+        .map_or(bytes.len(), |relative| offset + relative);
+    for (pos, byte) in bytes.iter().enumerate().take(line_end).skip(line_start) {
+        if matches!(byte, b' ' | b'\t' | b'\r') {
+            continue;
+        }
+        let in_comment = comment_spans
+            .iter()
+            .any(|span| (span.start as usize) <= pos && pos < span.end as usize);
+        if !in_comment {
+            return false;
+        }
+    }
+    true
 }

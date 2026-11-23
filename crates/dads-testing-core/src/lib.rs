@@ -15,6 +15,7 @@ mod task_causes;
 
 pub use execute::{
     execute_request, execute_request_with_graph, graph_analysis_can_change_the_plan,
+    manifest_project_roots,
 };
 pub use protocol::{
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,

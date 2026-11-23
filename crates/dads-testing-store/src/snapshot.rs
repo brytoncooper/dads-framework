@@ -92,8 +92,22 @@ pub(crate) fn patchable_paths(
     previous: &[ChangedFingerprint],
     current: &[ChangedFingerprint],
 ) -> Option<Vec<String>> {
-    let mut paths = previous.iter().map(|x| x.path.clone()).collect::<Vec<_>>();
-    paths.extend(current.iter().map(|x| x.path.clone()));
+    use std::collections::BTreeMap;
+    let prev_map = previous
+        .iter()
+        .map(|entry| (entry.path.as_str(), entry.digest.as_str()))
+        .collect::<BTreeMap<_, _>>();
+    let curr_map = current
+        .iter()
+        .map(|entry| (entry.path.as_str(), entry.digest.as_str()))
+        .collect::<BTreeMap<_, _>>();
+    let mut paths = prev_map
+        .keys()
+        .chain(curr_map.keys())
+        .copied()
+        .filter(|path| prev_map.get(path) != curr_map.get(path))
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
     paths.sort();
     paths.dedup();
     Some(paths)

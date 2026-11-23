@@ -94,6 +94,7 @@ fn static_importers_select_their_reachability_tasks_across_projects() {
                         line: 1,
                         column: 21,
                     }),
+                    export_deps: None,
                 }],
             },
         ],
@@ -103,6 +104,8 @@ fn static_importers_select_their_reachability_tasks_across_projects() {
         path: "lib/value.ts".into(),
         changed_exports: BTreeSet::from(["value".to_owned()]),
         every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
     }]);
     let proven_response = execute_request_with_graph(request(&repository, Vec::new()), Some(graph));
     assert!(proven_response.ok, "{proven_response:?}");
@@ -209,6 +212,7 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
                     reexport_all: false,
                     resolved_path: Some("lib/value.ts".into()),
                     position: None,
+                    export_deps: None,
                 }],
             },
         ],
@@ -224,6 +228,8 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
         path: "lib/value.ts".into(),
         changed_exports: BTreeSet::from(["value".to_owned()]),
         every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
     }]);
 
     let response =
@@ -276,6 +282,8 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
         path: "lib/value.ts".into(),
         changed_exports: BTreeSet::from(["value".to_owned()]),
         every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
     }]);
     let dependency_response =
         execute_request_with_graph(request(&repository, Vec::new()), Some(dependency_graph));
@@ -326,6 +334,7 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
             reexport_all: false,
             resolved_path: Some("lib/value.ts".into()),
             position: None,
+            export_deps: None,
         }],
     });
     let unowned_graph = DependencyGraph::new(nodes_with_unowned_importer, vec![])
@@ -333,6 +342,8 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
             path: "lib/value.ts".into(),
             changed_exports: BTreeSet::from(["value".to_owned()]),
             every_hunk_is_attributed: true,
+            semantic_change: true,
+            type_only_change: false,
         }]);
     let full_fallback_response =
         execute_request_with_graph(request(&repository, Vec::new()), Some(unowned_graph));
@@ -427,6 +438,8 @@ fn unreached_unbounded_import_uncertainty_widens_its_owner_project() {
         path: "lib/value.ts".into(),
         changed_exports: BTreeSet::from(["value".to_owned()]),
         every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
     }]);
 
     let response = execute_request_with_graph(request(&repository, Vec::new()), Some(graph));
@@ -454,5 +467,74 @@ fn unreached_unbounded_import_uncertainty_widens_its_owner_project() {
     assert_eq!(issue.column, Some(12));
     assert_eq!(issue.scope, IssueScope::Workspace);
     assert_eq!(issue.severity, IssueSeverity::Uncertainty);
+    remove_dir_all(repository).expect("temporary repository must be removable");
+}
+
+#[test]
+fn uncovered_changed_path_still_widens_whole_workspace_uncertainty() {
+    let repository = testing_repository();
+    for directory in ["lib", "dynamic-loader"] {
+        create_dir_all(repository.join(directory))
+            .expect("fixture project directory must be created");
+    }
+    write(repository.join("lib/schema.sql"), "select 1;\n")
+        .expect("uncovered asset must be written");
+    write(
+        repository.join("dynamic-loader/loader.ts"),
+        "export async function load() {}\n",
+    )
+    .expect("dynamic loader source must be written");
+    git(&repository, &["add", "."]);
+    git(
+        &repository,
+        &[
+            "commit",
+            "-m",
+            "add uncovered asset with workspace uncertainty",
+        ],
+    );
+    write_manifest(
+        &repository,
+        r#"{
+  "schemaVersion": 1,
+  "workspace": { "root": ".", "fullFallback": { "taskIds": ["lib:test", "dynamic-loader:test"] } },
+  "projects": [
+    { "id": "lib", "root": "lib", "fallbackDependencies": [] },
+    { "id": "dynamic-loader", "root": "dynamic-loader", "fallbackDependencies": [] }
+  ],
+  "tasks": [
+    { "id": "lib:test", "project": "lib", "kind": "test", "execution": { "executable": "true" }, "dependsOn": [], "impact": { "mode": "reachability" } },
+    { "id": "dynamic-loader:test", "project": "dynamic-loader", "kind": "test", "execution": { "executable": "true" }, "dependsOn": [], "impact": { "mode": "reachability" } }
+  ]
+}"#
+        .to_owned(),
+    );
+    write(repository.join("lib/schema.sql"), "select 2;\n")
+        .expect("uncovered asset change must be written");
+    let graph = DependencyGraph::new(
+        vec![ModuleNode {
+            path: "dynamic-loader/loader.ts".into(),
+            language: "typescript".into(),
+            declarations: vec![],
+            references: vec![],
+            imports: vec![],
+        }],
+        vec![GraphUncertainty {
+            path: "dynamic-loader/loader.ts".into(),
+            code: "nonliteral-dynamic-import".into(),
+            message: "A dynamic import does not have a static module specifier.".into(),
+            scope: GraphUncertaintyScope::WholeWorkspace,
+            location: None,
+        }],
+    );
+
+    let response = execute_request_with_graph(request(&repository, Vec::new()), Some(graph));
+    assert!(response.ok, "{response:?}");
+    let plan = &response
+        .result
+        .expect("successful response must include a plan")
+        .plan;
+    assert_decision(plan, "lib:test", "run");
+    assert_decision(plan, "dynamic-loader:test", "run");
     remove_dir_all(repository).expect("temporary repository must be removable");
 }

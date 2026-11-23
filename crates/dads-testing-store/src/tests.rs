@@ -170,6 +170,44 @@ fn unchanged_head_and_scope_incrementally_patch_changed_working_file() {
 }
 
 #[test]
+fn unchanged_policy_files_are_excluded_from_incremental_patch_paths() {
+    let root = testing_repository("policy-file-patch");
+    write(root.join("tsconfig.json"), "{ \"compilerOptions\": {} }\n")
+        .expect("tsconfig must be written");
+    write(root.join("package.json"), "{ \"name\": \"fixture\" }\n")
+        .expect("package.json must be written");
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "-m", "add policy files"]);
+
+    let request = request(&root, None);
+    let mut frontend = RecordingFrontend::default();
+    let first = load_or_update(&request, &mut frontend);
+    assert_eq!(first.action, SnapshotAction::InitialIndex);
+
+    write(root.join("src/file.ts"), "export const value = 2;\n")
+        .expect("fixture file must be written");
+    let second = load_or_update(&request, &mut frontend);
+    assert_eq!(second.action, SnapshotAction::IncrementalUpdate);
+    assert_eq!(
+        frontend.incremental_paths,
+        vec![vec!["src/file.ts".to_owned()]]
+    );
+
+    write(
+        root.join("tsconfig.json"),
+        "{ \"compilerOptions\": { \"strict\": true } }\n",
+    )
+    .expect("tsconfig update must be written");
+    let third = load_or_update(&request, &mut frontend);
+    assert_eq!(third.action, SnapshotAction::IncrementalUpdate);
+    assert_eq!(
+        frontend.incremental_paths.last(),
+        Some(&vec!["tsconfig.json".to_owned()])
+    );
+    remove_dir_all(root).expect("temporary repository must be removable");
+}
+
+#[test]
 fn stale_frontend_version_snapshot_is_rebuilt() {
     let root = testing_repository("stale-frontend-version");
     let request = request(&root, None);

@@ -8,6 +8,7 @@ import { writeFilesAtomically, type FileOutput } from "../write-files-atomically
 import { checkTestingManifest } from "./check-testing-manifest.js";
 import { describeError } from "./describe-error.js";
 import { detectWorkspace } from "./detect-workspace.js";
+import { inferDadsAppManifest } from "./infer-dads-app.js";
 import { inferTestingManifest, type InitReport, type InitValidation } from "./infer-testing-manifest.js";
 import { readWorkspacePackages } from "./package-inventory.js";
 import { workspaceRelative } from "./workspace-relative-path.js";
@@ -69,7 +70,8 @@ export async function initTestingManifest(options: InitTestingManifestOptions): 
 
   const workspace = detectWorkspace(paths.workspaceRoot);
   const packages = readWorkspacePackages(paths.workspaceRoot, workspace.packageDirectories);
-  const inferred = inferTestingManifest(workspace, packages);
+  const inferred =
+    inferDadsAppManifest(paths.workspaceRoot, workspace, packages) ?? inferTestingManifest(workspace, packages);
   const buildReport = reportBuilder(inferred.report, paths.reportFile);
 
   requireStandaloneWorkspace(paths.workspaceRoot, paths.reportFile, inferred.report);

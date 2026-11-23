@@ -16,6 +16,7 @@ export {
   readTestingManifest,
   serializeTestingManifest,
   type TestingManifest,
+  type TestingManifestFileNarrowing,
   type TestingManifestProject,
   type TestingManifestTask,
 } from "./testing-manifest.js";

@@ -12,6 +12,8 @@ mod facts;
 mod frontend;
 mod graph_export;
 mod import_declarations;
+mod intra_file_deps;
+mod intra_file_purity;
 mod module_analysis;
 mod removed_paths;
 mod spans;

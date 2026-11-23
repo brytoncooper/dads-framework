@@ -200,6 +200,7 @@ pub(crate) fn explicit_import_reexport_declarations(
     module_record: &ModuleRecord<'_>,
     semantic: &Semantic<'_>,
 ) -> Vec<JsSymbolFact> {
+    use oxc_syntax::module_record::ExportImportName;
     module_record
         .exported_bindings
         .iter()
@@ -210,7 +211,8 @@ pub(crate) fn explicit_import_reexport_declarations(
                 .filter(|entry| {
                     !entry.is_type
                         && entry.export_name.span() == Some(*export_span)
-                        && is_explicit_import_reexport(semantic, entry.span)
+                        && (matches!(entry.import_name, ExportImportName::Name(_))
+                            || is_explicit_import_reexport(semantic, entry.span))
                 })
                 .collect::<Vec<_>>();
             let [entry] = entries.as_slice() else {

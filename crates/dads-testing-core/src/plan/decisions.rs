@@ -37,6 +37,23 @@ pub(super) fn explain_decisions<'a>(
         let run = selection.selected.contains(id.as_str());
         let (reason, confidence, widened) =
             decision_reason(manifest, scope, evidence, selection, &causes, task);
+        let reached_files = if run
+            && task.impact.mode == ImpactMode::Reachability
+            && !widened
+            && !scope.full_fallback
+            && !evidence.full_fallback
+        {
+            evidence.reached_files_for_project(&task.project)
+        } else {
+            Vec::new()
+        };
+        let selected_files = if run && task.impact.mode == ImpactMode::Reachability {
+            evidence
+                .narrowed_files_for_task(task, scope)
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
         decisions.push(TaskDecision {
             decision: if run {
                 "run".into()
@@ -48,6 +65,8 @@ pub(super) fn explain_decisions<'a>(
             widened,
             project: task.project.clone(),
             causes: causes.for_task(task, reason),
+            reached_files,
+            selected_files,
             id,
         });
     }
@@ -79,12 +98,7 @@ fn decision_reason(
     if run && task.impact.mode == ImpactMode::ChangedFiles && causes.has_changed_file_input(task) {
         return ("changed-file-input", "explicit", false);
     }
-    if run
-        && task.impact.mode == ImpactMode::Reachability
-        && evidence
-            .uncertainty_impacted_projects
-            .contains(task.project.as_str())
-    {
+    if run && task.impact.mode == ImpactMode::Reachability && evidence.is_widened_for_task(task) {
         return ("graph-uncertainty-project-fallback", "conservative", true);
     }
     if manifest.tasks.iter().any(|candidate| {
@@ -96,9 +110,7 @@ fn decision_reason(
     }) && !evidence
         .fallback_impacted_projects
         .contains(task.project.as_str())
-        && !evidence
-            .reachability_impacted_projects
-            .contains(task.project.as_str())
+        && !evidence.is_reachability_impacted_for_task(task)
     {
         return ("selected-prerequisite", "dependency", false);
     }

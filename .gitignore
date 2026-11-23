@@ -5,6 +5,7 @@ coverage/
 *.tsbuildinfo
 .dads/
 .lake/
+_apalache-out/
 target/
 packages/testing/native/*/bin/
 testing-evidence/

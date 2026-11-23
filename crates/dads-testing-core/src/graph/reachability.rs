@@ -3,16 +3,19 @@ use super::compact::{CImport, DependencyGraph};
 use super::types::{
     GraphUncertainty, GraphUncertaintyScope, ImportKind, Reachability, ReachedEdge, SourceLocation,
 };
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// The state one symbol-level walk carries: what it has reached, what it could not prove, the
-/// edges it followed, and the reached modules whose own exports still have to be propagated.
+/// edges it followed, which `(module, symbol)` pairs have already been queued, and which modules
+/// have already propagated their own exports.
 #[derive(Default)]
 struct SymbolWalk {
     paths: BTreeSet<String>,
     uncertainties: Vec<GraphUncertainty>,
     edges: Vec<ReachedEdge>,
     queue: VecDeque<(String, BTreeSet<String>)>,
+    seen_exports: BTreeMap<String, BTreeSet<String>>,
+    own_exports_propagated: BTreeSet<String>,
 }
 
 impl DependencyGraph {
@@ -49,8 +52,25 @@ impl DependencyGraph {
         &self,
         changed: impl IntoIterator<Item = String>,
     ) -> Reachability {
-        let mut walk = self.seed_changed_exports(changed);
-        self.walk_importers(&mut walk);
+        self.symbol_reachability_with_options(changed, false)
+    }
+
+    /// Runtime symbol reachability for runtime test tasks: `import type` / `export type` edges are
+    /// erased at runtime and therefore neither propagate runtime impact nor widen runtime tests.
+    pub fn symbol_reachability_runtime(
+        &self,
+        changed: impl IntoIterator<Item = String>,
+    ) -> Reachability {
+        self.symbol_reachability_with_options(changed, true)
+    }
+
+    fn symbol_reachability_with_options(
+        &self,
+        changed: impl IntoIterator<Item = String>,
+        erase_type_only: bool,
+    ) -> Reachability {
+        let mut walk = self.seed_changed_exports(changed, erase_type_only);
+        self.walk_importers(&mut walk, erase_type_only);
         self.collect_uncertainties(&mut walk);
         Reachability {
             paths: walk.paths,
@@ -59,17 +79,38 @@ impl DependencyGraph {
         }
     }
 
-    /// A changed module enters the walk with its proven changed exports. A change whose hunks
-    /// could not all be attributed has no export identity to follow, so it stays uncertain.
-    fn seed_changed_exports(&self, changed: impl IntoIterator<Item = String>) -> SymbolWalk {
+    /// A changed module enters the walk with its proven changed exports:
+    /// - A comment-only edit (`complete && !semantic_change`) seeds neither path nor uncertainty.
+    /// - A type-only declaration edit (`complete && type_only_change`) seeds nothing on the
+    ///   runtime channel (`erase_type_only`), while still triggering typecheck.
+    /// - A terminal leaf with no importers (e.g. a `*.test.ts` file) seeds only itself without
+    ///   widening when `complete && exports.is_empty()`.
+    /// - Any incomplete hunk or unattributed non-leaf change emits `unattributed-module-change`.
+    fn seed_changed_exports(
+        &self,
+        changed: impl IntoIterator<Item = String>,
+        erase_type_only: bool,
+    ) -> SymbolWalk {
         let mut walk = SymbolWalk::default();
         for p in changed {
-            walk.paths.insert(p.clone());
             match self.change(&p) {
+                Some(c) if c.complete && !c.semantic_change => {}
+                Some(c) if c.complete && c.type_only_change && erase_type_only => {}
                 Some(c) if c.complete && !c.exports.is_empty() => {
-                    walk.queue.push_back((p, c.exports));
+                    walk.paths.insert(p.clone());
+                    enqueue_exports(&mut walk, p, c.exports);
+                }
+                Some(c)
+                    if c.complete
+                        && c.exports.is_empty()
+                        && self
+                            .module_index(&p)
+                            .is_some_and(|module| self.reverse(module).is_empty()) =>
+                {
+                    walk.paths.insert(p);
                 }
                 _ => {
+                    walk.paths.insert(p.clone());
                     walk.uncertainties.push(GraphUncertainty {
                         path: p,
                         code: "unattributed-module-change".into(),
@@ -83,7 +124,7 @@ impl DependencyGraph {
         walk
     }
 
-    fn walk_importers(&self, walk: &mut SymbolWalk) {
+    fn walk_importers(&self, walk: &mut SymbolWalk, erase_type_only: bool) {
         while let Some((p, exports)) = walk.queue.pop_front() {
             let Some(t) = self.module_index(&p) else {
                 continue;
@@ -95,7 +136,7 @@ impl DependencyGraph {
                 let Some(source) = self.path(e.source).map(str::to_owned) else {
                     continue;
                 };
-                self.follow_edge(walk, e, source, &p, &exports);
+                self.follow_edge(walk, e, source, &p, &exports, erase_type_only);
             }
         }
     }
@@ -107,9 +148,12 @@ impl DependencyGraph {
         source: String,
         target: &str,
         exports: &BTreeSet<String>,
+        erase_type_only: bool,
     ) {
         if e.type_only {
-            walk.uncertainties.push(ambiguous_import(source, e));
+            if !erase_type_only {
+                walk.uncertainties.push(ambiguous_import(source, e));
+            }
             return;
         }
         if e.kind == ImportKind::ReExport && e.reexport_all {
@@ -133,10 +177,27 @@ impl DependencyGraph {
             walk.edges.push(ReachedEdge {
                 importer: source.clone(),
                 target: target.to_owned(),
-                symbols: matched_exports,
+                symbols: matched_exports.clone(),
                 position: e.position,
             });
-            if walk.paths.insert(source.clone()) {
+            walk.paths.insert(source.clone());
+            if let Some(deps) = &e.export_deps {
+                let mut affected = BTreeSet::new();
+                for sym in &matched_exports {
+                    if let Some(sym_id) = super::pack::string_id(&self.strings, sym)
+                        && let Some((_, targets)) = deps.iter().find(|(k, _)| *k == sym_id)
+                    {
+                        for target_id in targets {
+                            if let Some(name) = self.str(*target_id) {
+                                affected.insert(name.to_owned());
+                            }
+                        }
+                    }
+                }
+                if !affected.is_empty() {
+                    enqueue_exports(walk, source, affected);
+                }
+            } else if walk.own_exports_propagated.insert(source.clone()) {
                 self.propagate_own_exports(walk, e.source, source);
             }
         }
@@ -157,13 +218,16 @@ impl DependencyGraph {
                 });
             }
         } else {
-            walk.queue.push_back((source, next));
+            enqueue_exports(walk, source, next);
         }
     }
 
-    /// Frontend-declared uncertainties join the walk's own: workspace-wide ones always, module
-    /// ones only where the walk actually reached. The result is sorted so it is stable to compare.
+    /// Frontend-declared uncertainties join the walk's own: workspace-wide ones whenever any
+    /// semantic change entered the walk, and module ones where the walk actually reached.
     fn collect_uncertainties(&self, walk: &mut SymbolWalk) {
+        if walk.paths.is_empty() && walk.uncertainties.is_empty() {
+            return;
+        }
         let declared = self
             .uncertainties()
             .into_iter()
@@ -205,8 +269,20 @@ fn follow_reexport_all(
         symbols: reexported.clone(),
         position: e.position,
     });
-    if walk.paths.insert(source.clone()) {
-        walk.queue.push_back((source, reexported));
+    walk.paths.insert(source.clone());
+    enqueue_exports(walk, source, reexported);
+}
+
+/// Enqueues only `(module, symbol)` pairs not yet seen so diamond `export *` barrels and mixed
+/// own-export + `export *` modules propagate every changed symbol without looping.
+fn enqueue_exports(walk: &mut SymbolWalk, module: String, exports: BTreeSet<String>) {
+    let seen = walk.seen_exports.entry(module.clone()).or_default();
+    let fresh = exports
+        .into_iter()
+        .filter(|symbol| seen.insert(symbol.clone()))
+        .collect::<BTreeSet<_>>();
+    if !fresh.is_empty() {
+        walk.queue.push_back((module, fresh));
     }
 }
 

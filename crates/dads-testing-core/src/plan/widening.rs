@@ -2,7 +2,7 @@
 //! a located issue and widens, so a plan is never quietly narrower than the evidence supports.
 use super::PlanEvidence;
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
-use crate::manifest::TestingManifest;
+use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
 use crate::scope::deepest_project_for_path;
 use std::collections::BTreeSet;
@@ -23,9 +23,6 @@ pub(super) fn own_changed_paths<'a>(
                 evidence.changed_projects.insert(project.id.as_str());
                 evidence
                     .fallback_impacted_projects
-                    .insert(project.id.as_str());
-                evidence
-                    .reachability_impacted_projects
                     .insert(project.id.as_str());
                 evidence
                     .changed_paths_by_project
@@ -76,13 +73,27 @@ pub(super) fn widen_through_graph<'a>(
         .filter(|path| !graph.contains_path(path))
         .cloned()
         .collect::<Vec<_>>();
+    let has_non_test_reachability = manifest
+        .tasks
+        .iter()
+        .any(|t| t.impact.mode == ImpactMode::Reachability && !matches!(t.kind, TaskKind::Test));
     if uncovered_paths.is_empty() {
-        let reachable = graph.symbol_reachability_from(changed_paths);
-        record_reachable_paths(manifest, &reachable.paths, evidence);
-        record_reachable_uncertainties(manifest, reachable.uncertainties, evidence);
-        evidence.reached_edges = reachable.edges;
+        let runtime_reachable = graph.symbol_reachability_runtime(changed_paths.clone());
+        record_reachable_paths(manifest, &runtime_reachable.paths, evidence, true);
+        record_reachable_uncertainties(manifest, runtime_reachable.uncertainties, evidence, true);
+        evidence.reached_edges = runtime_reachable.edges;
+        if has_non_test_reachability {
+            let full_reachable = graph.symbol_reachability_from(changed_paths);
+            record_reachable_paths(manifest, &full_reachable.paths, evidence, false);
+            record_reachable_uncertainties(manifest, full_reachable.uncertainties, evidence, false);
+        }
     } else {
         record_uncovered_paths(manifest, &uncovered_paths, evidence);
+        let workspace_uncertainties = graph.whole_workspace_uncertainties();
+        record_reachable_uncertainties(manifest, workspace_uncertainties.clone(), evidence, true);
+        if has_non_test_reachability {
+            record_reachable_uncertainties(manifest, workspace_uncertainties, evidence, false);
+        }
     }
 }
 
@@ -93,7 +104,14 @@ fn record_missing_frontend(evidence: &mut PlanEvidence<'_>) {
         .iter()
         .copied()
         .collect::<Vec<_>>();
+    evidence.reachability_impacted_projects.extend(&changed);
+    evidence
+        .typecheck_reachability_impacted_projects
+        .extend(&changed);
     evidence.uncertainty_impacted_projects.extend(&changed);
+    evidence
+        .typecheck_uncertainty_impacted_projects
+        .extend(&changed);
     for project in changed {
         let index = evidence.issues.len();
         evidence
@@ -121,7 +139,14 @@ fn record_uncovered_paths<'a>(
         .iter()
         .copied()
         .collect::<Vec<_>>();
-    evidence.uncertainty_impacted_projects.extend(changed);
+    evidence.reachability_impacted_projects.extend(&changed);
+    evidence
+        .typecheck_reachability_impacted_projects
+        .extend(&changed);
+    evidence.uncertainty_impacted_projects.extend(&changed);
+    evidence
+        .typecheck_uncertainty_impacted_projects
+        .extend(changed);
     for uncovered_path in uncovered_paths {
         let owning_project = deepest_project_for_path(&manifest.projects, uncovered_path);
         if let Some(project) = owning_project {
@@ -153,12 +178,27 @@ fn record_reachable_paths<'a>(
     manifest: &'a TestingManifest,
     paths: &BTreeSet<String>,
     evidence: &mut PlanEvidence<'a>,
+    for_runtime_tests: bool,
 ) {
     for path in paths {
+        if for_runtime_tests {
+            evidence.reached_paths.insert(path.clone());
+        }
         if let Some(project) = deepest_project_for_path(&manifest.projects, path) {
-            evidence
-                .reachability_impacted_projects
-                .insert(project.id.as_str());
+            if for_runtime_tests {
+                evidence
+                    .reachability_impacted_projects
+                    .insert(project.id.as_str());
+                evidence
+                    .reached_paths_by_project
+                    .entry(project.id.as_str())
+                    .or_default()
+                    .insert(path.clone());
+            } else {
+                evidence
+                    .typecheck_reachability_impacted_projects
+                    .insert(project.id.as_str());
+            }
         } else {
             evidence.full_fallback = true;
             evidence
@@ -185,6 +225,7 @@ fn record_reachable_uncertainties<'a>(
     manifest: &'a TestingManifest,
     uncertainties: Vec<GraphUncertainty>,
     evidence: &mut PlanEvidence<'a>,
+    for_runtime_tests: bool,
 ) {
     for uncertainty in uncertainties {
         let owning_project = deepest_project_for_path(&manifest.projects, &uncertainty.path);
@@ -198,9 +239,15 @@ fn record_reachable_uncertainties<'a>(
         };
         match owning_project {
             Some(project) => {
-                evidence
-                    .uncertainty_impacted_projects
-                    .insert(project.id.as_str());
+                if for_runtime_tests {
+                    evidence
+                        .uncertainty_impacted_projects
+                        .insert(project.id.as_str());
+                } else {
+                    evidence
+                        .typecheck_uncertainty_impacted_projects
+                        .insert(project.id.as_str());
+                }
                 let index = evidence.issues.len();
                 evidence
                     .issue_indexes_by_project

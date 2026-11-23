@@ -17,6 +17,8 @@ fn compact_graph_round_trips_patch_and_propagates_three_hops() {
             path: "a".into(),
             changed_exports: ["a".to_owned()].into_iter().collect(),
             every_hunk_is_attributed: true,
+            semantic_change: true,
+            type_only_change: false,
         },
     ]);
     let r = g.symbol_reachability_from(["a".into()]);
@@ -38,12 +40,15 @@ fn literal_runtime_import_reaches_its_importer_without_named_symbols() {
         reexport_all: false,
         resolved_path: Some("leaf".into()),
         position: None,
+        export_deps: None,
     });
     let graph = DependencyGraph::new(vec![node("leaf", "value", None), importer], vec![])
         .with_changed_module_evidence(vec![ChangedModuleEvidence {
             path: "leaf".into(),
             changed_exports: ["value".to_owned()].into_iter().collect(),
             every_hunk_is_attributed: true,
+            semantic_change: true,
+            type_only_change: false,
         }]);
     assert!(
         graph
@@ -86,6 +91,7 @@ fn export_star_preserves_the_changed_symbol_for_downstream_importers() {
             reexport_all: true,
             resolved_path: Some("leaf".into()),
             position: None,
+            export_deps: None,
         }],
     };
     let changed_consumer = node("changed-consumer", "result", Some(("barrel", "changed")));
@@ -102,6 +108,8 @@ fn export_star_preserves_the_changed_symbol_for_downstream_importers() {
         path: "leaf".into(),
         changed_exports: ["changed".to_owned()].into_iter().collect(),
         every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
     }]);
 
     let reachable = graph.symbol_reachability_from(["leaf".into()]);
@@ -109,6 +117,135 @@ fn export_star_preserves_the_changed_symbol_for_downstream_importers() {
     assert!(reachable.paths.contains("barrel"));
     assert!(reachable.paths.contains("changed-consumer"));
     assert!(!reachable.paths.contains("unchanged-consumer"));
+    assert!(reachable.uncertainties.is_empty());
+}
+
+#[test]
+fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
+    let a = node("a", "foo", None);
+    let b = node("b", "bar", None);
+    let barrel = ModuleNode {
+        path: "barrel".into(),
+        language: "fixture".into(),
+        declarations: vec![],
+        references: vec![],
+        imports: vec![
+            ImportFact {
+                specifier: "a".into(),
+                span: SourceSpan { start: 0, end: 1 },
+                kind: ImportKind::ReExport,
+                type_only: false,
+                requested_symbols: BTreeSet::new(),
+                namespace_import: false,
+                reexport_all: true,
+                resolved_path: Some("a".into()),
+                position: None,
+                export_deps: None,
+            },
+            ImportFact {
+                specifier: "b".into(),
+                span: SourceSpan { start: 2, end: 3 },
+                kind: ImportKind::ReExport,
+                type_only: false,
+                requested_symbols: BTreeSet::new(),
+                namespace_import: false,
+                reexport_all: true,
+                resolved_path: Some("b".into()),
+                position: None,
+                export_deps: None,
+            },
+        ],
+    };
+    let bar_test = node("bar.test", "result", Some(("barrel", "bar")));
+    let unrelated_test = node("unrelated.test", "result", Some(("barrel", "baz")));
+    let graph = DependencyGraph::new(vec![a, b, barrel, bar_test, unrelated_test], vec![])
+        .with_changed_module_evidence(vec![
+            ChangedModuleEvidence {
+                path: "a".into(),
+                changed_exports: ["foo".to_owned()].into_iter().collect(),
+                every_hunk_is_attributed: true,
+                semantic_change: true,
+                type_only_change: false,
+            },
+            ChangedModuleEvidence {
+                path: "b".into(),
+                changed_exports: ["bar".to_owned()].into_iter().collect(),
+                every_hunk_is_attributed: true,
+                semantic_change: true,
+                type_only_change: false,
+            },
+        ]);
+
+    let reachable = graph.symbol_reachability_from(["a".into(), "b".into()]);
+
+    assert!(reachable.paths.contains("barrel"));
+    assert!(reachable.paths.contains("bar.test"));
+    assert!(!reachable.paths.contains("unrelated.test"));
+    assert!(reachable.uncertainties.is_empty());
+}
+
+#[test]
+fn mixed_export_star_and_named_import_still_propagates_own_exports() {
+    let a = node("a", "foo", None);
+    let b = node("b", "bar", None);
+    let hybrid = ModuleNode {
+        path: "hybrid".into(),
+        language: "fixture".into(),
+        declarations: vec![SymbolFact {
+            name: "own".into(),
+            span: SourceSpan { start: 0, end: 1 },
+        }],
+        references: vec![],
+        imports: vec![
+            ImportFact {
+                specifier: "a".into(),
+                span: SourceSpan { start: 0, end: 1 },
+                kind: ImportKind::ReExport,
+                type_only: false,
+                requested_symbols: BTreeSet::new(),
+                namespace_import: false,
+                reexport_all: true,
+                resolved_path: Some("a".into()),
+                position: None,
+                export_deps: None,
+            },
+            ImportFact {
+                specifier: "b".into(),
+                span: SourceSpan { start: 2, end: 3 },
+                kind: ImportKind::Static,
+                type_only: false,
+                requested_symbols: ["bar".to_owned()].into_iter().collect(),
+                namespace_import: false,
+                reexport_all: false,
+                resolved_path: Some("b".into()),
+                position: None,
+                export_deps: None,
+            },
+        ],
+    };
+    let own_test = node("own.test", "result", Some(("hybrid", "own")));
+    let graph = DependencyGraph::new(vec![a, b, hybrid, own_test], vec![])
+        .with_changed_module_evidence(vec![
+            ChangedModuleEvidence {
+                path: "a".into(),
+                changed_exports: ["foo".to_owned()].into_iter().collect(),
+                every_hunk_is_attributed: true,
+                semantic_change: true,
+                type_only_change: false,
+            },
+            ChangedModuleEvidence {
+                path: "b".into(),
+                changed_exports: ["bar".to_owned()].into_iter().collect(),
+                every_hunk_is_attributed: true,
+                semantic_change: true,
+                type_only_change: false,
+            },
+        ]);
+
+    let reachable = graph.symbol_reachability_from(["a".into(), "b".into()]);
+
+    assert!(reachable.paths.contains("hybrid"));
+    assert!(reachable.paths.contains("own.test"));
     assert!(reachable.uncertainties.is_empty());
 }
 
@@ -131,12 +268,15 @@ fn terminal_importer_without_exports_does_not_make_reachability_uncertain() {
         reexport_all: false,
         resolved_path: Some("leaf".into()),
         position: None,
+        export_deps: None,
     });
     let graph = DependencyGraph::new(vec![node("leaf", "value", None), terminal_test], vec![])
         .with_changed_module_evidence(vec![ChangedModuleEvidence {
             path: "leaf".into(),
             changed_exports: ["value".to_owned()].into_iter().collect(),
             every_hunk_is_attributed: true,
+            semantic_change: true,
+            type_only_change: false,
         }]);
 
     let reachable = graph.symbol_reachability_from(["leaf".into()]);
@@ -168,6 +308,8 @@ fn symbol_reachability_records_followed_edges() {
                 path: "leaf".into(),
                 changed_exports: ["changed".to_owned()].into_iter().collect(),
                 every_hunk_is_attributed: true,
+                semantic_change: true,
+                type_only_change: false,
             },
         ]);
 
@@ -219,6 +361,8 @@ fn type_only_edge_uncertainty_carries_the_import_location() {
                 path: "leaf".into(),
                 changed_exports: ["changed".to_owned()].into_iter().collect(),
                 every_hunk_is_attributed: true,
+                semantic_change: true,
+                type_only_change: false,
             },
         ]);
 
@@ -285,6 +429,7 @@ fn node(path: &str, export: &str, dep: Option<(&str, &str)>) -> ModuleNode {
                     reexport_all: false,
                     resolved_path: Some(p.into()),
                     position: None,
+                    export_deps: None,
                 }]
             })
             .unwrap_or_default(),

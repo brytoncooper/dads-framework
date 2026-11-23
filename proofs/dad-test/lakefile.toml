@@ -1,0 +1,10 @@
+name = "dad_test_proofs"
+version = "0.1.0"
+defaultTargets = ["DadTest", "dad-test-oracle"]
+
+[[lean_lib]]
+name = "DadTest"
+
+[[lean_exe]]
+name = "dad-test-oracle"
+root = "DadTest.Main"

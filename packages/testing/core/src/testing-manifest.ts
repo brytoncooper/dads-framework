@@ -26,6 +26,12 @@ export type TestingManifestProject = {
   readonly fallbackDependencies: readonly string[];
 };
 
+export type TestingManifestFileNarrowing = {
+  readonly suffixes: readonly string[];
+  readonly excludeSuffixes?: readonly string[];
+  readonly setupFiles?: readonly string[];
+};
+
 export type TestingManifestTask = {
   readonly id: string;
   readonly project: string;
@@ -35,6 +41,7 @@ export type TestingManifestTask = {
     readonly args: readonly string[];
     readonly cwd?: string;
     readonly shell?: boolean;
+    readonly fileNarrowing?: TestingManifestFileNarrowing;
   };
   readonly dependsOn: readonly string[];
   readonly impact: {
@@ -128,6 +135,9 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
         args: [...task.execution.args],
         ...(task.execution.cwd === undefined ? {} : { cwd: task.execution.cwd }),
         ...(task.execution.shell === true ? { shell: true } : {}),
+        ...(task.execution.fileNarrowing === undefined
+          ? {}
+          : { fileNarrowing: serializeFileNarrowing(task.execution.fileNarrowing) }),
       },
       dependsOn: [...task.dependsOn],
       impact: { mode: task.impact.mode, paths: [...task.impact.paths] },
@@ -179,9 +189,10 @@ function readTask(value: unknown, where: string, subject: string): TestingManife
 
 function readExecution(value: unknown, where: string, subject: string): TestingManifestTask["execution"] {
   const execution = readRecord(value, where, subject);
-  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell"], where, subject);
+  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell", "fileNarrowing"], where, subject);
   const cwd = execution["cwd"];
   const shell = execution["shell"];
+  const fileNarrowing = execution["fileNarrowing"];
   if (shell !== undefined && typeof shell !== "boolean") {
     throw new Error(`${subject}: ${where}.shell must be a boolean`);
   }
@@ -190,6 +201,33 @@ function readExecution(value: unknown, where: string, subject: string): TestingM
     args: readOptionalStringArray(execution["args"], `${where}.args`, subject),
     ...(cwd === undefined ? {} : { cwd: readString(cwd, `${where}.cwd`, subject) }),
     shell: shell ?? false,
+    ...(fileNarrowing === undefined
+      ? {}
+      : { fileNarrowing: readFileNarrowing(fileNarrowing, `${where}.fileNarrowing`, subject) }),
+  };
+}
+
+function readFileNarrowing(value: unknown, where: string, subject: string): TestingManifestFileNarrowing {
+  const narrowing = readRecord(value, where, subject);
+  rejectUnknownKeys(narrowing, ["suffixes", "excludeSuffixes", "setupFiles"], where, subject);
+  const excludeSuffixes = readOptionalStringArray(narrowing["excludeSuffixes"], `${where}.excludeSuffixes`, subject);
+  const setupFiles = readOptionalStringArray(narrowing["setupFiles"], `${where}.setupFiles`, subject);
+  return {
+    suffixes: readStringArray(narrowing["suffixes"], `${where}.suffixes`, subject),
+    ...(excludeSuffixes.length === 0 ? {} : { excludeSuffixes }),
+    ...(setupFiles.length === 0 ? {} : { setupFiles }),
+  };
+}
+
+function serializeFileNarrowing(narrowing: TestingManifestFileNarrowing): TestingManifestFileNarrowing {
+  return {
+    suffixes: [...narrowing.suffixes],
+    ...(narrowing.excludeSuffixes === undefined || narrowing.excludeSuffixes.length === 0
+      ? {}
+      : { excludeSuffixes: [...narrowing.excludeSuffixes] }),
+    ...(narrowing.setupFiles === undefined || narrowing.setupFiles.length === 0
+      ? {}
+      : { setupFiles: [...narrowing.setupFiles] }),
   };
 }
 

@@ -121,6 +121,39 @@ describe("testing manifest", () => {
       "The manifest path must stay inside the workspace: ../escaped.json",
     );
   });
+
+  it("round-trips execution.fileNarrowing cleanly", () => {
+    const text = JSON.stringify({
+      schemaVersion: 1,
+      workspace: { fullFallback: { taskIds: ["api:unit"] } },
+      projects: [{ id: "api", root: "apps/api" }],
+      tasks: [
+        {
+          id: "api:unit",
+          project: "api",
+          kind: "test",
+          execution: {
+            executable: "npx",
+            args: ["vitest", "run"],
+            fileNarrowing: {
+              suffixes: [".test.ts"],
+              excludeSuffixes: [".integration.test.ts"],
+              setupFiles: ["vitest.config.ts"],
+            },
+          },
+          impact: { mode: "reachability" },
+        },
+      ],
+    });
+    const manifest = parseTestingManifest(text, "dads.testing.json");
+
+    expect(manifest.tasks[0]?.execution.fileNarrowing).toEqual({
+      suffixes: [".test.ts"],
+      excludeSuffixes: [".integration.test.ts"],
+      setupFiles: ["vitest.config.ts"],
+    });
+    expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
+  });
 });
 
 function makeTemporaryDirectory(): string {

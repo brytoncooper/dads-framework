@@ -26,6 +26,10 @@ export type TestingTaskDecision = {
   readonly project?: string;
   /** Every reason this task was selected, when the engine reports them. */
   readonly causes?: readonly TestingTaskCause[];
+  /** Workspace-relative paths reached inside this project when un-widened. */
+  readonly reachedFiles?: readonly string[];
+  /** Narrowed test files passed to the runner when `execution.fileNarrowing` applies. */
+  readonly selectedFiles?: readonly string[];
 };
 
 /**

@@ -53,6 +53,14 @@ fn intern_symbols(
             if let Some(p) = &i.resolved_path {
                 table.insert(p.clone());
             }
+            if let Some(deps) = &i.export_deps {
+                for (k, vs) in deps {
+                    table.insert(k.clone());
+                    for v in vs {
+                        table.insert(v.clone());
+                    }
+                }
+            }
         }
     }
     for u in uncertainties {
@@ -143,6 +151,18 @@ fn pack_imports(
             .as_deref()
             .and_then(|p| string_id(strings, p))
             .and_then(|p| paths.get(&p).copied());
+        let export_deps = x.export_deps.as_ref().map(|deps| {
+            deps.iter()
+                .filter_map(|(k, vs)| {
+                    let key = string_id(strings, k)?;
+                    let vals = vs
+                        .iter()
+                        .filter_map(|v| string_id(strings, v))
+                        .collect::<Vec<_>>();
+                    Some((key, vals))
+                })
+                .collect::<Vec<_>>()
+        });
         out.push(CImport {
             source,
             specifier,
@@ -154,6 +174,7 @@ fn pack_imports(
             reexport_all: x.reexport_all,
             target,
             position: x.position,
+            export_deps,
         });
     }
 }

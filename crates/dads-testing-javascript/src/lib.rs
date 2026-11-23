@@ -16,6 +16,7 @@ mod import_declarations;
 mod intra_file_deps;
 mod intra_file_purity;
 mod module_analysis;
+mod private_helper_attribution;
 mod removed_paths;
 mod spans;
 mod specifier_resolution;

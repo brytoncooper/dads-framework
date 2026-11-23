@@ -18,8 +18,8 @@ pub(crate) struct ChangedHunk {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ByteRange {
-    start: usize,
-    end: usize,
+    pub(crate) start: usize,
+    pub(crate) end: usize,
 }
 
 impl ByteRange {

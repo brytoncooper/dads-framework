@@ -61,9 +61,6 @@ pub(crate) fn record_pure_declaration(
 ) -> Option<()> {
     match decl {
         Declaration::FunctionDeclaration(func) => {
-            if func.body.is_none() {
-                return Some(());
-            }
             let id = func.id.as_ref()?;
             let sym = find_root_symbol(semantic, id.name.as_str(), id.span)?;
             out.push((func.span, DeclNode::Symbol(sym)));

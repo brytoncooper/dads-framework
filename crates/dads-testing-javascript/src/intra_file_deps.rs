@@ -92,7 +92,7 @@ fn attach_indirect_reexport_deps(module_record: &ModuleRecord<'_>, imports: &mut
     }
 }
 
-fn collect_pure_top_level_decls(
+pub(crate) fn collect_pure_top_level_decls(
     program: &Program<'_>,
     semantic: &Semantic<'_>,
 ) -> Option<Vec<(Span, DeclNode)>> {
@@ -118,7 +118,7 @@ fn collect_pure_top_level_decls(
     Some(decls)
 }
 
-fn collect_bare_export_spans(program: &Program<'_>) -> Vec<Span> {
+pub(crate) fn collect_bare_export_spans(program: &Program<'_>) -> Vec<Span> {
     program
         .body
         .iter()
@@ -129,7 +129,7 @@ fn collect_bare_export_spans(program: &Program<'_>) -> Vec<Span> {
         .collect()
 }
 
-fn build_intra_file_graph(
+pub(crate) fn build_intra_file_graph(
     semantic: &Semantic<'_>,
     decl_spans: &[(Span, DeclNode)],
     export_specifier_spans: &[Span],
@@ -164,7 +164,7 @@ fn build_intra_file_graph(
     Some(graph)
 }
 
-fn map_nodes_to_export_names(
+pub(crate) fn map_nodes_to_export_names(
     module_record: &ModuleRecord<'_>,
     semantic: &Semantic<'_>,
 ) -> BTreeMap<DeclNode, BTreeSet<String>> {
@@ -228,7 +228,7 @@ fn matching_import_symbols(
     seeds
 }
 
-fn bfs_affected_exports(
+pub(crate) fn bfs_affected_exports(
     graph: &BTreeMap<DeclNode, BTreeSet<DeclNode>>,
     exports_by_node: &BTreeMap<DeclNode, BTreeSet<String>>,
     seeds: &[DeclNode],

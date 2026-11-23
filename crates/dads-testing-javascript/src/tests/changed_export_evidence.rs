@@ -86,6 +86,17 @@ fn follows_only_importers_of_a_proven_changed_export() {
     .expect("fixture internal change must be written");
     let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
     let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
+    assert!(reachable.paths.contains("src/a.ts"));
+    assert!(!reachable.paths.contains("src/b.ts"));
+    assert!(reachable.uncertainties.is_empty());
+
+    write(
+        root.join("src/leaf.ts"),
+        "console.log(2);\nexport const a = 2;\nexport const b = 1;\n",
+    )
+    .expect("fixture impure top-level change must be written");
+    let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
+    let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
     assert!(
         reachable
             .uncertainties
@@ -309,19 +320,46 @@ fn attributes_an_exported_const_initializer_hunk_to_that_const() {
 }
 
 #[test]
-fn keeps_a_non_exported_helper_body_hunk_conservative() {
+fn attributes_pure_private_helper_to_calling_exports_without_widening() {
     let root = symbol_fixture("dads-testing-javascript-helper-body");
     write(
         root.join("src/leaf.ts"),
-        "function helper() {\n  return 1;\n}\n\nexport function a() {\n  return helper();\n}\n",
+        "function inner() {\n  return 1;\n}\n\nconst helper = () => inner();\n\nexport function a() {\n  return helper();\n}\n\nexport function b() {\n  return 0;\n}\n",
     )
     .expect("fixture leaf must be written");
     commit_fixture(&root);
     write(
         root.join("src/leaf.ts"),
-        "function helper() {\n  return 2;\n}\n\nexport function a() {\n  return helper();\n}\n",
+        "function inner() {\n  return 2;\n}\n\nconst helper = () => inner();\n\nexport function a() {\n  return helper();\n}\n\nexport function b() {\n  return 0;\n}\n",
     )
     .expect("fixture helper body change must be written");
+
+    let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
+    let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
+    assert!(reachable.paths.contains("src/a.ts"));
+    assert!(!reachable.paths.contains("src/b.ts"));
+    assert!(
+        reachable.uncertainties.is_empty(),
+        "pure multi-hop private helper must narrow cleanly: {:?}",
+        reachable.uncertainties
+    );
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}
+
+#[test]
+fn keeps_impure_module_private_helper_edit_conservative() {
+    let root = symbol_fixture("dads-testing-javascript-impure-helper-body");
+    write(
+        root.join("src/leaf.ts"),
+        "function helper() {\n  return 1;\n}\nconsole.log(helper());\nexport function a() {\n  return helper();\n}\nexport function b() {\n  return 0;\n}\n",
+    )
+    .expect("fixture impure leaf must be written");
+    commit_fixture(&root);
+    write(
+        root.join("src/leaf.ts"),
+        "function helper() {\n  return 2;\n}\nconsole.log(helper());\nexport function a() {\n  return helper();\n}\nexport function b() {\n  return 0;\n}\n",
+    )
+    .expect("fixture impure helper change must be written");
 
     let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
     let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);

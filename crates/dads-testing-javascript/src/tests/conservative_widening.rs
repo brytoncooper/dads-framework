@@ -135,15 +135,17 @@ fn keeps_an_unexported_same_line_change_conservative() {
         .find(|task| task.id == "app-b:test")
         .expect("app B task must exist");
 
+    let app_a_task = plan
+        .tasks
+        .iter()
+        .find(|task| task.id == "app-a:test")
+        .expect("app A task must exist");
+
     assert_eq!(app_b_task.decision, "run");
-    assert_eq!(app_b_task.reason, "graph-uncertainty-project-fallback");
-    assert!(app_b_task.widened);
-    assert!(
-        reachable
-            .uncertainties
-            .iter()
-            .any(|uncertainty| uncertainty.code == "unattributed-module-change")
-    );
+    assert_eq!(app_b_task.reason, "graph-symbol-importer");
+    assert!(!app_b_task.widened);
+    assert_eq!(app_a_task.decision, "skip-proven-unaffected");
+    assert!(reachable.uncertainties.is_empty());
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
 
@@ -258,27 +260,28 @@ fn keeps_a_replacement_with_an_unexported_old_side_conservative() {
     let graph = analyze_request(&request(&root)).expect("replacement graph must be available");
     let reachable = graph.symbol_reachability_from(["lib/leaf.ts".to_owned()]);
 
+    assert!(reachable.paths.contains("app-a/index.ts"));
     assert!(!reachable.paths.contains("app-b/index.ts"));
-    assert!(
-        reachable
-            .uncertainties
-            .iter()
-            .any(|uncertainty| { uncertainty.code == "unattributed-module-change" })
-    );
+    assert!(reachable.uncertainties.is_empty());
     let response = execute_request_with_graph(request(&root), Some(graph));
     assert!(response.ok, "{response:?}");
     let plan = &response
         .result
         .expect("successful response must include a plan")
         .plan;
+    let app_a_task = plan
+        .tasks
+        .iter()
+        .find(|task| task.id == "app-a:test")
+        .expect("app A task must exist");
     let app_b_task = plan
         .tasks
         .iter()
         .find(|task| task.id == "app-b:test")
         .expect("app B task must exist");
-    assert_eq!(app_b_task.decision, "run");
-    assert_eq!(app_b_task.reason, "graph-uncertainty-project-fallback");
-    assert!(app_b_task.widened);
+    assert_eq!(app_a_task.decision, "run");
+    assert!(!app_a_task.widened);
+    assert_eq!(app_b_task.decision, "skip-proven-unaffected");
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
 

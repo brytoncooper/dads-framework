@@ -1,24 +1,24 @@
 {
   "name": "@dads-fixture/plugin-notes",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@dads-framework/access": "0.5.2",
-    "@dads-framework/core": "0.5.2",
-    "@dads-framework/http": "0.5.2",
-    "@dads-framework/job-queue": "0.5.2",
+    "@dads-framework/access": "0.6.0",
+    "@dads-framework/core": "0.6.0",
+    "@dads-framework/http": "0.6.0",
+    "@dads-framework/job-queue": "0.6.0",
     "node-pg-migrate": "^9.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@dads-framework/audit": "0.5.2",
-    "@dads-framework/feature-flags": "0.5.2",
-    "@dads-framework/postgres": "0.5.2",
-    "@dads-framework/spicedb-access": "0.5.2",
+    "@dads-framework/audit": "0.6.0",
+    "@dads-framework/feature-flags": "0.6.0",
+    "@dads-framework/postgres": "0.6.0",
+    "@dads-framework/spicedb-access": "0.6.0",
     "drizzle-orm": "^0.45.2",
     "vitest": "~4.1.0"
   },

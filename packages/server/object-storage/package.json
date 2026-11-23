@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/object-storage",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "type": "module",
   "engines": {
     "node": ">=22"

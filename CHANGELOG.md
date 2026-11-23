@@ -4,6 +4,23 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-23
+
+### Added
+
+- Added `dad-test diagnose` (and `diagnoseTesting` / `renderDiagnosis` in `@dads-framework/testing`), a read-only coupling and precision X-ray that scans a clean workspace without a Git diff and reports effective-today vs. potential leaf-edit skip rates, widening culprits with exact `file:line:col` blast radius, exact runtime vs. `import type` coupling hotspots, fallback traps, and safety-tiered remediations (`safe`, `verify-before-changing`, `keep-widened-unless-verified`) with explicit soundness cautions.
+- Added formally proved precision narrowing in `@dads-framework/testing` backed by 36 machine-checked Lean 4 theorems (`proofs/dad-test/`, zero `sorry`) and Quint/TLA+ state-machine specs (`specs/dad-test/`):
+  - Private-helper hunk attribution via reverse intra-file def-use in pure top-level modules (`PrivateHelper.lean`).
+  - Fail-closed SQL and migration table-level impact analysis (`workspace.sql`, per-task `sqlImpact`, bidirectional FK closure, `.sql`, `node-pg-migrate` builders and `.sql()` calls, and table-named schema snapshots; `SqlMigration.lean`).
+  - `export * as ns` tracked member-read narrowing, bound import-line edit attribution, and newly-added pure module attribution (`NamespaceAndImports.lean`).
+- Added first-class `execution.env`, runtime environment fingerprinting (`DADS_TESTING_RUNTIME_FINGERPRINT`), opt-in `workspace.nonCodeSuffixes`, and fail-closed L2 remote receipt stores (`--remote-cache <url>` / `DADS_TESTING_REMOTE_CACHE_URL`, supporting `file://`, `http://`, and `https://`) verified against multi-worker Quint traces (`remote_receipts_and_env.qnt`).
+- Added `dad migrate 0.6` support in `@dads-framework/toolbox`.
+
+### Changed
+
+- Parallelized Oxc workspace indexing in `dads-testing-javascript` (`frontend_version = 11`) using `std::thread::scope` with zero new Cargo dependencies and deterministic index-sorted output (~2.5x faster cold indexing on 20,000-file monorepos).
+- Scoped uncovered-path widening in `dads-testing-core` to owners of uncovered paths rather than widening every changed project.
+
 ## [0.5.2] - 2026-11-23
 
 ### Added

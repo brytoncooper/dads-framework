@@ -12,6 +12,8 @@ const SUPPORTED_TARGETS: Readonly<Record<string, MigrateTargetVersion>> = {
   "0.5.0": "0.5.0",
   "0.5.1": "0.5.1",
   "0.5.2": "0.5.2",
+  "0.6": "0.6.0",
+  "0.6.0": "0.6.0",
 };
 
 export function migrateCommand(args: readonly string[], json: boolean): void {
@@ -62,7 +64,9 @@ function parseMigrateArgs(args: readonly string[]): {
   const targetVersion =
     target !== undefined && Object.hasOwn(SUPPORTED_TARGETS, target) ? SUPPORTED_TARGETS[target] : undefined;
   if (targetVersion === undefined) {
-    throw new Error(`Unsupported migration target ${JSON.stringify(target ?? "")}. Supported targets: 0.3, 0.4, 0.5`);
+    throw new Error(
+      `Unsupported migration target ${JSON.stringify(target ?? "")}. Supported targets: 0.3, 0.4, 0.5, 0.6`,
+    );
   }
 
   return { targetVersion, directory, dryRun, includeMigrations };

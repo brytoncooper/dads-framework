@@ -80,3 +80,14 @@ export {
   renderDoctorReport,
   type DoctorReport,
 } from "./doctor/doctor-report.js";
+export {
+  migrateWorkspaceToV03,
+  type MigrateToV03Options,
+  type MigrateToV03Result,
+} from "./migrate-v03.js";
+export {
+  PEERS_FOR_RETIRED_PACKAGE,
+  RETIRED_PACKAGE_TO_TARGET,
+  rewriteV03ImportSpecifier,
+  V03_TARGET_VERSION,
+} from "./migrate-v03-map.js";

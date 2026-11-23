@@ -29,6 +29,7 @@ export const usage = [
   "  test plan|run|explain|init [--manifest path] [--base ref] [--head ref] [--all] [--task id] [--jobs n] [--report [path]] [--force] --json",
   "  test:recommend --changed [--base <ref>] [--json]",
   "  verify --changed [--base <ref>] [--full] [--no-cache] [--json]",
+  "  migrate 0.3 [path] [--dry-run] [--json]",
   "  skills:sync [--json]",
   "",
   "Examples",

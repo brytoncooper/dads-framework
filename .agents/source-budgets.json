@@ -2,7 +2,70 @@
   "schemaVersion": 1,
   "countedLines": "non-blank, non-comment",
   "exempt": ["**/*.generated.ts", "**/dist/**"],
-  "ceilings": {},
+  "ceilings": {
+    "migrations-edited": {
+      "apps/kit-workbench/migrations/20261120080000_starter.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "apps/kit-workbench/migrations/20261120080100_email_delivery.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "apps/kit-workbench/migrations/20261120080300_enterprise_identity.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "apps/kit-workbench/migrations/20261120080400_staff_impersonation.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "fixtures/default-services/migrations/20261120000000_default_services.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/authorization/src/lib/access-changes/postgres/migrations/20260828163001_authorization_outbox.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/email-delivery/src/lib/database/migrations/20260911220133_outbound_emails.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/email-delivery/src/lib/database/migrations/20261018010000_queued_email_documents.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/identity-better-auth/src/lib/migrations/20261120070500_identity.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/identity-better-auth/src/lib/migrations/20261120070530_identity_jwks.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/identity-better-auth/src/lib/migrations/20261120070600_enterprise_sso.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/identity-better-auth/src/lib/migrations/20261120070700_staff_impersonation.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/tenants/src/migrations/20261120040000_tenants.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/tenants/src/migrations/20261120080000_tenant_scim.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "packages/server/tenants/src/migrations/20261120080100_tenant_scim_groups.migration.ts": {
+        "mark": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      }
+    }
+  },
   "floors": {
     "docsConformancePackages": {
       "packages": {
@@ -14,6 +77,14 @@
       "@dads-app/workbench": {
         "floor": 0,
         "reason": "recorded 2026-09-06"
+      },
+      "@dads-fixture/feature-flag-migration-history": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
+      "@dads-fixture/kit-workbench": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
       },
       "@dads-framework/access": {
         "floor": 0,
@@ -31,13 +102,25 @@
         "floor": 1,
         "reason": "preserves runtime diagnostics and request-work invariants under consolidated @dads-framework/core (recorded 2026-11-22)"
       },
+      "@dads-framework/documents": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
       "@dads-framework/email": {
         "floor": 1,
         "reason": "preserves email-delivery invariants under consolidated @dads-framework/email (recorded 2026-11-22)"
       },
+      "@dads-framework/feature-flags": {
+        "floor": 1,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
       "@dads-framework/http": {
         "floor": 1,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+      },
+      "@dads-framework/identity": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
       },
       "@dads-framework/job-queue": {
         "floor": 0,
@@ -51,9 +134,17 @@
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
+      "@dads-framework/postgres-access": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
+      },
       "@dads-framework/spicedb-access": {
         "floor": 1,
         "reason": "preserves authorization invariants under consolidated @dads-framework/spicedb-access (recorded 2026-11-22)"
+      },
+      "@dads-framework/sqlite-access": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
       },
       "@dads-framework/testing": {
         "floor": 1,
@@ -82,6 +173,10 @@
       "@dads-framework/toolbox": {
         "floor": 1,
         "reason": "recorded 2026-09-06"
+      },
+      "@dads-framework/ui": {
+        "floor": 0,
+        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
       },
       "create-dads": {
         "floor": 1,

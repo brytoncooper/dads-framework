@@ -31,10 +31,15 @@ Entry point: @dads-framework/toolbox
 - type InitializeDadsProjectOptions: export type InitializeDadsProjectOptions = { readonly targetDirectory: string; readonly mode: "existing" | "new"; readonly projectName: string; readonly template?: DadsProjectTemplate; readonly dryRun?: boolean; };
 - type LoadedAccessSource: export type LoadedAccessSource = { readonly path: string; readonly kind: AccessSourceKind; readonly model: AccessModel; readonly definitions: readonly AccessIrDefinition[]; };
 - type LoadedDadsProject: export type LoadedDadsProject = { readonly root: string; readonly project: DadsProject; };
+- type MigrateToV03Options: export type MigrateToV03Options = { readonly root: string; readonly dryRun?: boolean; };
+- type MigrateToV03Result: export type MigrateToV03Result = { readonly root: string; readonly targetVersion: typeof V03_TARGET_VERSION; readonly dryRun: boolean; readonly filesChanged: readonly string[]; readonly packageManifestsUpdated: number; readonly importReplacements: number; readonly addedPeers: readonly string[]; };
+- const PEERS_FOR_RETIRED_PACKAGE: export declare const PEERS_FOR_RETIRED_PACKAGE: Readonly<Record<string, Readonly<Record<string, string>>>>;
 - type ProjectOrientation: export type ProjectOrientation = { readonly packageName: string; readonly packageRoot: string; readonly responsibility: string; readonly allowedDependencies: readonly string[]; readonly verification: readonly string[]; readonly skills: readonly string[]; };
+- const RETIRED_PACKAGE_TO_TARGET: export declare const RETIRED_PACKAGE_TO_TARGET: Readonly<Record<string, string>>;
 - type RenderAccessTreeOptions: export type RenderAccessTreeOptions = { readonly inputPath: string; readonly cwd?: string; };
 - type ScaffoldAccessMigrationOptions: export type ScaffoldAccessMigrationOptions = { readonly slug: string; readonly fromPath: string; readonly toPath: string; readonly outDir?: string; readonly dryRun?: boolean; readonly cwd?: string; };
 - type SkillSynchronization: export type SkillSynchronization = { readonly harness: string; readonly status: "correct" | "created"; };
+- const V03_TARGET_VERSION: export declare const V03_TARGET_VERSION = "0.3.0";
 - type VerificationRecommendation: export type VerificationRecommendation = { readonly packageName: string; readonly reason: string; readonly commands: readonly string[]; };
 - type ZedSchemaDiffResult: export type ZedSchemaDiffResult = { readonly beforePath: string; readonly afterPath: string; readonly diff: AccessSchemaDiff; };
 - type ZedSchemaImportResult: export type ZedSchemaImportResult = { readonly inputPath: string; readonly outPath: null | string; readonly definitionCount: number; readonly definitions: readonly string[]; readonly dryRun: boolean; readonly written: boolean; readonly code: string; };
@@ -49,6 +54,7 @@ Entry point: @dads-framework/toolbox
 - function initializeDadsProject: export declare function initializeDadsProject(options: InitializeDadsProjectOptions): DadsProjectInitialization;
 - function loadAccessSource: export declare function loadAccessSource(inputPath: string, cwd?: string): Promise<LoadedAccessSource>;
 - function loadDadsProject: export declare function loadDadsProject(startPath: string): LoadedDadsProject;
+- function migrateWorkspaceToV03: export declare function migrateWorkspaceToV03(options: MigrateToV03Options): MigrateToV03Result;
 - function orientProjectPath: export declare function orientProjectPath(project: DadsProject, requestedPath: string): ProjectOrientation | undefined;
 - function parseDadsInitializationArguments: export declare function parseDadsInitializationArguments(argumentsAfterCommand: readonly string[]): DadsInitializationArguments;
 - function parseDadsProject: export declare function parseDadsProject(input: unknown): DadsProject;
@@ -58,6 +64,7 @@ Entry point: @dads-framework/toolbox
 - function renderDoctorJson: export declare function renderDoctorJson(report: DoctorReport): string;
 - function renderDoctorReport: export declare function renderDoctorReport(report: DoctorReport): string;
 - function renderZedAccessTree: export declare function renderZedAccessTree(options: RenderAccessTreeOptions): AccessTreeResult;
+- function rewriteV03ImportSpecifier: export declare function rewriteV03ImportSpecifier(specifier: string): string;
 - function scaffoldAccessMigration: export declare function scaffoldAccessMigration(options: ScaffoldAccessMigrationOptions): AccessMigrationScaffoldResult;
 - function scaffoldAccessMigrationFromSources: export declare function scaffoldAccessMigrationFromSources(options: ScaffoldAccessMigrationOptions): Promise<AccessMigrationScaffoldResult>;
 - function synchronizeAgentSkills: export declare function synchronizeAgentSkills(projectRoot: string): readonly SkillSynchronization[];

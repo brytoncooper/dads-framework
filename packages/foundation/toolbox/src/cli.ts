@@ -61,6 +61,9 @@ try {
   } else if (command === "check" && subject === "boundaries") {
     const { checkBoundaries } = await import("./cli-boundary-commands.js");
     checkBoundaries(args.slice(2), wantsJson);
+  } else if (command === "migrate") {
+    const { migrateCommand } = await import("./cli-migrate-commands.js");
+    migrateCommand(args.slice(1), wantsJson);
   } else {
     throw new Error(usage);
   }

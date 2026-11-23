@@ -76,7 +76,7 @@ Set `DADS_ENTERPRISE_SSO_PROVIDERS` to a JSON array. Each entry includes an
 
 Validate domain control by publishing the TXT record returned by
 `enterpriseSsoDomainChallenge(secret, tenantId, domain)` from
-`@dads-framework/identity-better-auth`. Pass the identity secret already
+`@dads-framework/identity/better-auth`. Pass the identity secret already
 loaded by the operator's process. Publish only the returned `name` and
 `value`. Use the same provider policy on every customer and staff deployment
 serving those tenants.

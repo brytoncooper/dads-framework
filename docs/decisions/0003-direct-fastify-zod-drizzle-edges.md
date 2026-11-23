@@ -19,9 +19,9 @@ At the same time, Dads must still prevent transport plumbing from leaking into d
 Adopt Fastify, Zod, and Drizzle at transport, contract, and PostgreSQL storage edges rather than wrapping them behind framework-specific DSLs.
 
 1. **Fastify at the HTTP edge (`@dads-framework/http`):** `createHttpApp`, `registerRoutes`, `mountFetchHandler`, and `buildTestApp` run on Fastify 5. Tests call Fastify's in-process `app.inject()` without opening a port, and streams use `defineRawRoute` when handlers need raw `request`/`reply` access. Domain route handlers stay free of `fastify` imports because typed verb builders (`getRoute`, `listRoute`, `postRoute`, `patchRoute`, `putRoute`, `deleteRoute`) pass `RouteHandlerContext` containing parsed inputs, `subject`, `requestId`, `locale`, and a structural `RouteLogger`.
-2. **Zod across wire contracts (`@dads-framework/contract`, `@dads-framework/http`, `@dads-framework/access`):** Applications declare entity IDs, pagination queries, route `params`/`query`/`body`/`response` schemas, and entity handles with Zod (`z.object`, `z.strictObject`, `z.uuid`, `z.input`, `z.output`). One Zod definition drives server request parsing, server response drift checks, OpenAPI generation (`buildOpenApiDocument`), and browser response parsing (`@dads-framework/client-request-transport`).
+2. **Zod across wire contracts (`@dads-framework/core/contract`, `@dads-framework/http`, `@dads-framework/access`):** Applications declare entity IDs, pagination queries, route `params`/`query`/`body`/`response` schemas, and entity handles with Zod (`z.object`, `z.strictObject`, `z.uuid`, `z.input`, `z.output`). One Zod definition drives server request parsing, server response drift checks, OpenAPI generation (`buildOpenApiDocument`), and browser response parsing (`@dads-framework/client`).
 3. **Drizzle and `pg` at the Postgres edge (`@dads-framework/postgres`):** `createPostgresConnection` exposes the native `pg` pool alongside the schema-generic Drizzle instance (`@dads-framework/postgres/drizzle`). Domain persistence modules write standard Drizzle queries (`eq`, `count`, `tx.insert`, `updateAtRowVersion`) and pass Drizzle transactions to `withProtectedPostgresTransaction` and `PostgresAuthorization.inDrizzleTransaction(tx)`.
-4. **Quarantine real swap seams:** Capabilities that change across environments or customers stay behind application-owned ports (`@dads-framework/object-storage`, `@dads-framework/email-sender`, `@dads-framework/job-queue`, `@dads-framework/access/runtime`, and `@dads-framework/identity`).
+4. **Quarantine real swap seams:** Capabilities that change across environments or customers stay behind application-owned ports (`@dads-framework/object-storage`, `@dads-framework/email`, `@dads-framework/job-queue`, `@dads-framework/access/runtime`, and `@dads-framework/identity`).
 
 ## Alternatives considered
 
@@ -50,6 +50,6 @@ Adopt Fastify, Zod, and Drizzle at transport, contract, and PostgreSQL storage e
 - [Validation at the contract boundary](../validation.md)
 - [HTTP hosting](../http-hosting.md)
 - [`@dads-framework/http` README](../../packages/server/http/README.md)
-- [`@dads-framework/contract` README](../../packages/contract/README.md)
+- [`@dads-framework/core/contract` README](../../packages/core/README.md)
 - [`@dads-framework/postgres` README](../../packages/server/postgres/README.md)
 - [Starter Notes routes](../../apps/kit-workbench/domains/notes/server/routes.ts)

@@ -1,0 +1,97 @@
+{
+  "name": "@dads-framework/core",
+  "version": "0.3.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./contract": {
+      "types": "./dist/contract/index.d.ts",
+      "default": "./dist/contract/index.js"
+    },
+    "./contract/testing": {
+      "types": "./dist/contract/testing/index.d.ts",
+      "default": "./dist/contract/testing/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "default": "./dist/errors/index.js"
+    },
+    "./errors/map-error-to-http-response": {
+      "types": "./dist/errors/map-error-to-http-response.d.ts",
+      "default": "./dist/errors/map-error-to-http-response.js"
+    },
+    "./runtime/clock": {
+      "types": "./dist/runtime/clock/index.d.ts",
+      "default": "./dist/runtime/clock/index.js"
+    },
+    "./runtime/request-work": {
+      "types": "./dist/runtime/request-work/index.d.ts",
+      "default": "./dist/runtime/request-work/index.js"
+    },
+    "./runtime/request-work/testing": {
+      "types": "./dist/runtime/request-work/testing.d.ts",
+      "default": "./dist/runtime/request-work/testing.js"
+    },
+    "./runtime/diagnostics": {
+      "types": "./dist/runtime/diagnostics/index.d.ts",
+      "default": "./dist/runtime/diagnostics/index.js"
+    },
+    "./runtime/diagnostics/testing": {
+      "types": "./dist/runtime/diagnostics/testing.d.ts",
+      "default": "./dist/runtime/diagnostics/testing.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin/index.d.ts",
+      "default": "./dist/plugin/index.js"
+    },
+    "./plugin/testing": {
+      "types": "./dist/plugin/testing.d.ts",
+      "default": "./dist/plugin/testing.js"
+    },
+    "./plugin/web": {
+      "types": "./dist/plugin/web.d.ts",
+      "default": "./dist/plugin/web.js"
+    },
+    "./event-bus": {
+      "types": "./dist/event-bus/index.d.ts",
+      "default": "./dist/event-bus/index.js"
+    },
+    "./audit-actor": {
+      "types": "./dist/audit-actor/index.d.ts",
+      "default": "./dist/audit-actor/index.js"
+    },
+    "./references": {
+      "types": "./dist/references/index.d.ts",
+      "default": "./dist/references/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "INVARIANTS.md",
+    "contract/README.md",
+    "errors/README.md",
+    "plugin/README.md"
+  ],
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/core"
+  }
+}

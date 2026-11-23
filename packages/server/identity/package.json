@@ -21,10 +21,23 @@
     "./impersonation": {
       "types": "./dist/impersonation/index.d.ts",
       "default": "./dist/impersonation/index.js"
+    },
+    "./better-auth": {
+      "types": "./dist/better-auth/index.d.ts",
+      "default": "./dist/better-auth/index.js"
+    },
+    "./better-auth/impersonation-store": {
+      "types": "./dist/better-auth/impersonation-store/index.d.ts",
+      "default": "./dist/better-auth/impersonation-store/index.js"
+    },
+    "./tenants": {
+      "types": "./dist/tenants/index.d.ts",
+      "default": "./dist/tenants/index.js"
     }
   },
   "files": [
     "dist",
+    "src/tenants/migrations",
     "README.md",
     "src/impersonation/README.md"
   ],
@@ -35,7 +48,19 @@
     "typecheck": "tsc -b --pretty false"
   },
   "devDependencies": {
-    "vitest": "~4.1.0"
+    "vitest": "~4.1.0",
+    "@better-auth/core": "1.7.26",
+    "@better-auth/sso": "1.7.26",
+    "@dads-framework/access": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@dads-framework/postgres-access": "0.3.0",
+    "@types/pg": "^8.20.0",
+    "better-auth": "1.7.26",
+    "drizzle-orm": "^0.45.2",
+    "kysely": "0.28.17",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.20.0",
+    "zod": "^4.4.3"
   },
   "license": "MIT",
   "author": "Bryton Cooper",
@@ -43,5 +68,45 @@
     "type": "git",
     "url": "git+https://github.com/brytoncooper/dads-framework.git",
     "directory": "packages/server/identity"
+  },
+  "peerDependencies": {
+    "@better-auth/core": "1.7.26",
+    "@better-auth/sso": "1.7.26",
+    "@dads-framework/access": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "better-auth": "1.7.26",
+    "drizzle-orm": "^0.45.2",
+    "kysely": "0.28.17",
+    "node-pg-migrate": "^9.0.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependenciesMeta": {
+    "@better-auth/core": {
+      "optional": true
+    },
+    "@better-auth/sso": {
+      "optional": true
+    },
+    "@dads-framework/access": {
+      "optional": true
+    },
+    "@dads-framework/postgres": {
+      "optional": true
+    },
+    "better-auth": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    },
+    "kysely": {
+      "optional": true
+    },
+    "node-pg-migrate": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
   }
 }

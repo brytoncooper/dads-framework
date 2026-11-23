@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { FormattedInteger } from "@dads-framework/copy";
+import { FormattedInteger } from "../../copy/index.js";
 import { cn } from "../../elements/index.js";
 
 /**

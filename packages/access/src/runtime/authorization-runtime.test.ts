@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answeringEachQuestionOnce } from "@dads-framework/runtime/request-work";
+import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-work";
 
 import { AnswerOnceAuthorization } from "./answer-once-authorization.js";
 import {

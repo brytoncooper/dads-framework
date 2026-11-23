@@ -10,13 +10,13 @@
  * (docs/architecture/observability.md).
  */
 
-import type { AuditActor } from "@dads-framework/audit-actor";
-import type { RequestWorkTally } from "@dads-framework/runtime/request-work";
+import type { AuditActor } from "@dads-framework/core/audit-actor";
+import type { RequestWorkTally } from "@dads-framework/core/runtime/request-work";
 import {
   CLIENT_CONTEXT_HEADER,
   decodeClientContext,
   type ClientContext,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 /**
  * How the request ended, in the vocabulary `request_log.decision` stores.

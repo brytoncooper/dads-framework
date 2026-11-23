@@ -1,4 +1,4 @@
-import type { Clock } from "@dads-framework/runtime/clock";
+import type { Clock } from "@dads-framework/core/runtime/clock";
 
 import type {
   FeatureFlagDefinition,

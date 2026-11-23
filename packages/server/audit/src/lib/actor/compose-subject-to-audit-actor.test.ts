@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { AuditActor } from "@dads-framework/audit-actor";
-import type { SubjectRef } from "@dads-framework/authorization";
+import type { AuditActor } from "@dads-framework/core/audit-actor";
+import type { SubjectRef } from "@dads-framework/spicedb-access";
 
 import {
   composeSubjectToAuditActor,

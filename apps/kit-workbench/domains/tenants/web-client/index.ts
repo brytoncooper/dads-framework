@@ -1,8 +1,8 @@
+import { getPageFromApi, sendToApi } from "@dads-framework/client";
 import {
-  getPageFromApi,
-  sendToApi,
-} from "@dads-framework/client-request-transport";
-import { defineRoute, paginationQuerySchema } from "@dads-framework/contract";
+  defineRoute,
+  paginationQuerySchema,
+} from "@dads-framework/core/contract";
 import type { z } from "zod";
 import {
   tenantInput,

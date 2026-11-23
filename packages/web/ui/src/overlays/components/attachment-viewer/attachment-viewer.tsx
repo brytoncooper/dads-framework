@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
-import { useLocaleFormatting } from "@dads-framework/copy";
+import { useLocaleFormatting } from "../../../copy/index.js";
 import {
   Button,
   Spinner,

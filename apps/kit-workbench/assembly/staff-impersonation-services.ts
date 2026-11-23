@@ -3,10 +3,10 @@ import {
   createImpersonation,
   type ImpersonationOptions,
 } from "@dads-framework/identity/impersonation";
-import type { EnterpriseBetterAuthIdentity } from "@dads-framework/identity-better-auth";
-import { createPostgresImpersonationStore } from "@dads-framework/identity-better-auth/impersonation-store";
+import type { EnterpriseBetterAuthIdentity } from "@dads-framework/identity/better-auth";
+import { createPostgresImpersonationStore } from "@dads-framework/identity/better-auth/impersonation-store";
 import type { createPostgresConnection } from "@dads-framework/postgres";
-import type { Tenants } from "@dads-framework/tenants";
+import type { Tenants } from "@dads-framework/identity/tenants";
 
 import {
   configureStaffImpersonation,

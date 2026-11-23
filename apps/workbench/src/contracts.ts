@@ -1,7 +1,7 @@
 import {
   paginationMetaSchema,
   paginationQuerySchema,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 import { z } from "zod";
 
 export const resourceId = z

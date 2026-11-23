@@ -1,4 +1,4 @@
-import type { AuditScopeContribution } from "@dads-framework/plugin";
+import type { AuditScopeContribution } from "@dads-framework/core/plugin";
 
 import type { AuditTriggerMigrationBuilder } from "./attach-audit-trigger.js";
 import {

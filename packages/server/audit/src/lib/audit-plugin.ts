@@ -4,7 +4,7 @@ import {
   definePlugin,
   defineService,
   type AuditSettings,
-} from "@dads-framework/plugin";
+} from "@dads-framework/core/plugin";
 
 import {
   composeAudit,

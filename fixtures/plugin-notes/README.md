@@ -1,6 +1,6 @@
 # `@dads-fixture/plugin-notes`
 
-An example plugin built on `@dads-framework/plugin`: one route, one migration,
+An example plugin built on `@dads-framework/core/plugin`: one route, one migration,
 one access definition, one job, and one timer, composed with a host-provided
 clock service.
 

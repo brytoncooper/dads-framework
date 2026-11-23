@@ -12,7 +12,7 @@ import {
   type Authorization,
   type PermissionQuery,
   type RelationshipWrite,
-} from "@dads-framework/authorization";
+} from "@dads-framework/spicedb-access";
 
 import { resourceId } from "./contracts.js";
 

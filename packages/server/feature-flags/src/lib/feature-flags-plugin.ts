@@ -1,4 +1,4 @@
-import { definePlugin, defineService } from "@dads-framework/plugin";
+import { definePlugin, defineService } from "@dads-framework/core/plugin";
 
 import type { FeatureFlagDefinition } from "../contract/index.js";
 

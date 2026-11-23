@@ -1,4 +1,4 @@
-import type { PermissionQuery } from "@dads-framework/authorization";
+import type { PermissionQuery } from "@dads-framework/spicedb-access";
 import { expect, it } from "vitest";
 import {
   workbenchFact,

@@ -10,7 +10,7 @@ export function addEmail(
   const directory = `domains/${domain}/server/email`;
   plan.create(
     `${directory}/${name}.ts`,
-    `import { defineEmailTemplate, EmailText } from "@dads-framework/email-templates";
+    `import { defineEmailTemplate, EmailText } from "@dads-framework/email/templates";
 import { createElement } from "react";
 import { z } from "zod";
 
@@ -26,7 +26,7 @@ export const ${template} = defineEmailTemplate({
   );
   plan.create(
     `${directory}/${name}.test.ts`,
-    `import { renderEmailTemplate } from "@dads-framework/email-templates";
+    `import { renderEmailTemplate } from "@dads-framework/email/templates";
 import { expect, it } from "vitest";
 
 import { ${template} } from "./${name}.js";

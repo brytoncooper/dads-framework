@@ -4,20 +4,13 @@
     "rootDir": "src",
     "outDir": "dist",
     "tsBuildInfoFile": "dist/feature-flags.tsbuildinfo",
-    "types": ["node"]
+    "types": ["node"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx"
   },
   "references": [
     {
-      "path": "../../contract"
-    },
-    {
-      "path": "../errors"
-    },
-    {
-      "path": "../runtime"
-    },
-    {
-      "path": "../../foundation/plugin"
+      "path": "../../core"
     },
     {
       "path": "../../access"
@@ -29,6 +22,6 @@
       "path": "../postgres"
     }
   ],
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

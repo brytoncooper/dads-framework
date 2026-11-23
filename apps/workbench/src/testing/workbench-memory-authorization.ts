@@ -2,8 +2,8 @@ import type {
   PermissionQuery,
   RelationshipFilter,
   ResourceLookup,
-} from "@dads-framework/authorization";
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
+} from "@dads-framework/spicedb-access";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
 import {
   workbenchTask,
   workbenchWorkspace,

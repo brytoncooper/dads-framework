@@ -1,6 +1,6 @@
 import cronParser from "cron-parser";
 
-import { runWithAuditActor } from "@dads-framework/audit-actor";
+import { runWithAuditActor } from "@dads-framework/core/audit-actor";
 
 import { jobRunActor } from "./job-actor.js";
 import {

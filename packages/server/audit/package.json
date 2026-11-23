@@ -25,16 +25,14 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/audit-actor": "0.3.0",
-    "@dads-framework/authorization": "0.3.0",
-    "@dads-framework/contract": "0.3.0",
-    "@dads-framework/email-delivery": "0.3.0",
-    "@dads-framework/email-templates": "0.3.0",
+    "@dads-framework/core": "0.3.0",
+    "@dads-framework/email": "0.3.0",
     "@dads-framework/http": "0.3.0",
     "@dads-framework/job-queue": "0.3.0",
-    "@dads-framework/plugin": "0.3.0",
     "@dads-framework/postgres": "0.3.0",
-    "@dads-framework/runtime": "0.3.0",
+    "@dads-framework/spicedb-access": "0.3.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
     "drizzle-orm": "^0.45.2",
     "node-pg-migrate": "^9.0.0",
     "zod": "^4.4.3"

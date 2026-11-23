@@ -10,7 +10,7 @@ import {
 import type {
   PermissionQuery,
   RelationshipWrite,
-} from "@dads-framework/authorization";
+} from "@dads-framework/spicedb-access";
 
 export function makeChain(
   depth: number,

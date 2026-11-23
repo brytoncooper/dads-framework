@@ -1,4 +1,4 @@
-import type { Clock } from "@dads-framework/runtime/clock";
+import type { Clock } from "@dads-framework/core/runtime/clock";
 import type { HttpRoute } from "@dads-framework/http";
 import type { JobDefinition, JobLog } from "@dads-framework/job-queue";
 import type { DrizzleHandle } from "@dads-framework/postgres";

@@ -2,7 +2,7 @@ import type { Column } from "@tanstack/react-table";
 import { Check, PlusCircle, XCircle } from "lucide-react";
 import * as React from "react";
 
-import { FormattedInteger } from "@dads-framework/copy";
+import { FormattedInteger } from "../../../copy/index.js";
 import { StatusBadge } from "../../../display/index.js";
 import { Badge, Button, cn, Separator } from "../../../elements/index.js";
 import {

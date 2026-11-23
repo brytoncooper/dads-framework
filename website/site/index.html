@@ -461,7 +461,7 @@
             >
               <pre
                 tabindex="0"
-              ><code class="language-ts"><span class="tok-kw">import</span> { entityIdSchema } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/contract"</span>;
+              ><code class="language-ts"><span class="tok-kw">import</span> { entityIdSchema } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/core/contract"</span>;
 <span class="tok-kw">import</span> { workspaceId } <span class="tok-kw">from</span> <span class="tok-str">"../../../libraries/app-runtime/index.js"</span>;
 <span class="tok-kw">import</span> { z } <span class="tok-kw">from</span> <span class="tok-str">"zod"</span>;
 
@@ -490,8 +490,8 @@
             >
               <pre
                 tabindex="0"
-              ><code class="language-ts"><span class="tok-kw">import</span> { sendToApi } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/client-request-transport"</span>;
-<span class="tok-kw">import</span> { defineRoute } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/contract"</span>;
+              ><code class="language-ts"><span class="tok-kw">import</span> { sendToApi } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/client"</span>;
+<span class="tok-kw">import</span> { defineRoute } <span class="tok-kw">from</span> <span class="tok-str">"@dads-framework/core/contract"</span>;
 <span class="tok-kw">import</span> { taskResponse, updateTaskBody } <span class="tok-kw">from</span> <span class="tok-str">"../contract/wire.js"</span>;
 
 <span class="tok-kw">const</span> updateTaskRoute = <span class="tok-fn">defineRoute</span>(

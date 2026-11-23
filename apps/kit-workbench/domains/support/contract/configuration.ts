@@ -1,4 +1,4 @@
-import { tenantIdSchema } from "@dads-framework/tenants";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 const accountId = z

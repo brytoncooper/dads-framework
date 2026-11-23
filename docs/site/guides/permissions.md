@@ -100,5 +100,5 @@ Want the measured numbers, exact hardware, `EXPLAIN ANALYZE` plans, and formal p
 - [`@dads-framework/access`](../../../packages/access/README.md)
 - [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md) & [Full Benchmark Log](../../../packages/server/postgres-access/BENCHMARK.md)
 - [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)
-- [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md)
+- [`@dads-framework/spicedb-access/migration`](../../../packages/server/spicedb-access/README.md)
 - [Formal Verification (`formal/access-proofs`)](../../../formal/access-proofs/README.md)

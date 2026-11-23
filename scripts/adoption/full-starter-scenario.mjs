@@ -180,10 +180,10 @@ async function revokeMembership(container, tenantId, ownerId, guestId) {
     "--input-type=module",
     "-e",
     `import {compileAccess} from "@dads-framework/access";
-     import {currentAuditActor, withSystemActor} from "@dads-framework/audit-actor";
+     import {currentAuditActor, withSystemActor} from "@dads-framework/core/audit-actor";
      import {createPostgresConnection} from "@dads-framework/postgres";
      import {PostgresAuthorization, TransactionalAccessChanges} from "@dads-framework/postgres-access";
-     import {Tenants} from "@dads-framework/tenants";
+     import {Tenants} from "@dads-framework/identity/tenants";
      import {accountAccess, tenantAccess} from "./libraries/app-runtime/index.ts";
      const requestId = "starter-acceptance-revoke";
      const [tenantId, ownerId, guestId] = process.argv.slice(1);

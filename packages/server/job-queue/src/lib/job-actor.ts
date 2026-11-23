@@ -1,4 +1,4 @@
-import { systemActor, type AuditActor } from "@dads-framework/audit-actor";
+import { systemActor, type AuditActor } from "@dads-framework/core/audit-actor";
 
 /**
  * Who a job run writes as.

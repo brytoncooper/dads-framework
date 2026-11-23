@@ -8,8 +8,8 @@ import {
   accessChangesToWrite,
   type PermissionQuery,
   type RelationshipWrite,
-} from "@dads-framework/authorization";
-import { startTestSpiceDb } from "@dads-framework/authorization/testing";
+} from "@dads-framework/spicedb-access";
+import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { sql } from "drizzle-orm";

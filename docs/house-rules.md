@@ -314,14 +314,14 @@ it reaches its threshold.
 The [contract kit](./validation.md) owns shared Zod contracts. HTTP route
 cards declare their own request and response shapes.
 
-`@dads-framework/testing-vitest` was listed until 2026-09-07, when the resolver
-it wrapped `tsconfig-paths` for moved into `@dads-framework/path-aliases` and
+`@dads-framework/testing/vitest` was listed until 2026-09-07, when the resolver
+it wrapped `tsconfig-paths` for moved into `@dads-framework/testing/path-aliases` and
 the vendor was dropped. That core owns the alias rules, a file system port, and
 the conformance suite both of its providers run — `nodeFileSystem` and
 `inMemoryFileSystem` — so the plugin is an adapter over a boundary that holds
 rather than a wrapper over a vendor.
 
-The [request transport](../packages/client/request-transport/README.md)
+The [request transport](../packages/client/README.md)
 couples requests and responses to contract schemas. The [HTTP kit](./http-hosting.md)
 uses the same route pipeline for socket and injection tests.
 

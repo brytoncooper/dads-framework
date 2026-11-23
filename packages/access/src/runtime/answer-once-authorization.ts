@@ -25,7 +25,7 @@
 import {
   AnswersOncePerScope,
   OneValuePerScope,
-} from "@dads-framework/runtime/request-work";
+} from "@dads-framework/core/runtime/request-work";
 
 import {
   Authorization,

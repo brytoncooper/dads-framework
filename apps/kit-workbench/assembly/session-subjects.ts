@@ -1,7 +1,7 @@
 import type { SubjectResolver } from "@dads-framework/http";
 import type { Identity } from "@dads-framework/identity";
-import type { EnterpriseBetterAuthIdentity } from "@dads-framework/identity-better-auth";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import type { EnterpriseBetterAuthIdentity } from "@dads-framework/identity/better-auth";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 
 import { account } from "../libraries/app-runtime/index.js";
 

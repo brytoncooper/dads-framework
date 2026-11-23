@@ -1,4 +1,4 @@
-import { composeApi } from "@dads-framework/plugin";
+import { composeApi } from "@dads-framework/core/plugin";
 
 import { starterAccess } from "../../assembly/model.js";
 import type { ServiceProvider } from "../../assembly/services.js";

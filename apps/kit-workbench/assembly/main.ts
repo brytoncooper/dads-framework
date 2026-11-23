@@ -1,4 +1,4 @@
-import { startTelemetry } from "@dads-framework/telemetry";
+import { startTelemetry } from "@dads-framework/http/telemetry";
 import { readEnvironment } from "./config.js";
 import { developmentMail } from "./dev-mail.js";
 import { readEnterpriseConfiguration } from "./enterprise-config.js";

@@ -37,7 +37,7 @@ import {
   AUDIT_ACTOR_SETTING,
   serializeAuditActor,
   type AuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 
 import { countStatementsOn } from "./counting-client.js";
 

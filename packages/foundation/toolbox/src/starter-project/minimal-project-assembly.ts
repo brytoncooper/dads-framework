@@ -13,7 +13,7 @@ export function renderMinimalAssemblyFiles(): readonly StarterProjectFile[] {
 function mainAssemblyFile(): StarterProjectFile {
   return {
     path: "assembly/main.ts",
-    content: `import { startTelemetry } from "@dads-framework/telemetry";
+    content: `import { startTelemetry } from "@dads-framework/http/telemetry";
 import { readEnvironment } from "./config.js";
 import { developmentMail } from "./dev-mail.js";
 
@@ -76,22 +76,22 @@ function servicesAssemblyFile(): StarterProjectFile {
   return {
     path: "assembly/services.ts",
     content: `import type { AccessModel } from "@dads-framework/access";
-import { currentAuditActor } from "@dads-framework/audit-actor";
+import { currentAuditActor } from "@dads-framework/core/audit-actor";
 import {
   GetEffectiveFeatureState,
   type FeatureFlagDefinition,
 } from "@dads-framework/feature-flags";
 import { readFeatureFlagPreview } from "@dads-framework/feature-flags/http";
 import { DrizzleFeatureFlagStore } from "@dads-framework/feature-flags/postgres";
-import { createBetterAuthIdentity } from "@dads-framework/identity-better-auth";
-import { providePlugin, type PluginScope } from "@dads-framework/plugin";
+import { createBetterAuthIdentity } from "@dads-framework/identity/better-auth";
+import { providePlugin, type PluginScope } from "@dads-framework/core/plugin";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
   preparePostgresChecks,
   TransactionalAccessChanges,
 } from "@dads-framework/postgres-access";
-import { Tenants, type TenantsOptions } from "@dads-framework/tenants";
+import { Tenants, type TenantsOptions } from "@dads-framework/identity/tenants";
 
 import {
   starterServices,
@@ -231,7 +231,7 @@ function sessionSubjectsFile(): StarterProjectFile {
     path: "assembly/session-subjects.ts",
     content: `import type { SubjectResolver } from "@dads-framework/http";
 import type { Identity } from "@dads-framework/identity";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 
 import { account } from "../libraries/app-runtime/index.js";
 
@@ -267,13 +267,13 @@ function startAppAssemblyFile(): StarterProjectFile {
   return {
     path: "assembly/start-app.ts",
     content: `import { compileAccess } from "@dads-framework/access";
-import { anonymousActor } from "@dads-framework/audit-actor";
+import { anonymousActor } from "@dads-framework/core/audit-actor";
 import { sql } from "drizzle-orm";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { createHealthRoutes } from "@dads-framework/http/health";
 import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
-import { IDENTITY_PATH } from "@dads-framework/identity-better-auth";
-import type { TelemetryRuntime } from "@dads-framework/telemetry";
+import { IDENTITY_PATH } from "@dads-framework/identity/better-auth";
+import type { TelemetryRuntime } from "@dads-framework/http/telemetry";
 
 import { tenantAccess } from "../libraries/app-runtime/index.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";

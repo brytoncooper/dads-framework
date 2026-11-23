@@ -6,7 +6,7 @@ import {
   currentAuditActor,
   systemActor,
   type AuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import {
   AUDIT_ACTOR_STAMP_SQL,
   checkOutStampedClient,

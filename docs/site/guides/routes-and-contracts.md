@@ -30,7 +30,7 @@ Keep route handlers thin by placing Drizzle queries in a sibling `server/<featur
 
 ## 4. Call routes with a typed client
 
-Bind route templates once with `defineRoute` from `@dads-framework/contract` and send validated requests with [`@dads-framework/client-request-transport`](../../../packages/client/request-transport/README.md) (`domains/notes/web-client/index.ts`):
+Bind route templates once with `defineRoute` from `@dads-framework/core/contract` and send validated requests with [`@dads-framework/client`](../../../packages/client/README.md) (`domains/notes/web-client/index.ts`):
 
 <!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/web-client/index.ts","language":"ts","from":"const collectionPath = \"/tenants/:tenantId/notes\";","through":"export function createNote(tenantId: string, text: string) {\n  return sendToApi({\n    route: create.bind(tenantId),\n    body: { schema: noteInput, value: { text } },\n    returns: note,\n  });\n}"} -->
 

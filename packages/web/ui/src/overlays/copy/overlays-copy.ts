@@ -3,7 +3,7 @@ import {
   defineCopy,
   type CopyKey,
   type CopyTranslator,
-} from "@dads-framework/copy";
+} from "../../copy/index.js";
 
 export const overlaysCopy = defineCopy({
   "overlays.action.close": { en: "Close" },

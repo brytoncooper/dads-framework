@@ -25,7 +25,7 @@ export function resourcePages(
 
 function renderClient(name: string): string {
   const id = camel(name);
-  return `import { getFromApi, getPageFromApi, saveWithRefresh, sendToApi } from "@dads-framework/client-request-transport";
+  return `import { getFromApi, getPageFromApi, saveWithRefresh, sendToApi } from "@dads-framework/client";
 
 import { ${id}ListRoute, ${id}Query, ${id}ReadRoute, ${id}Record, ${id}SaveRoute, ${id}Update, type ${pascal(name)}Update } from "../contract/${name}-resource.js";
 

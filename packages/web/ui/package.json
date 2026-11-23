@@ -49,6 +49,43 @@
     "./elements/css-custom-properties": {
       "types": "./dist/elements/css-custom-properties.d.ts",
       "default": "./dist/elements/css-custom-properties.js"
+    },
+    "./copy": {
+      "types": "./dist/copy/index.d.ts",
+      "default": "./dist/copy/index.js"
+    },
+    "./tokens/default.tokens.json": "./tokens/default.tokens.json",
+    "./styles/index.css": {
+      "style": "./styles/index.css",
+      "default": "./styles/index.css"
+    },
+    "./styles/base.css": {
+      "style": "./styles/base.css",
+      "default": "./styles/base.css"
+    },
+    "./styles/fonts.css": {
+      "style": "./styles/fonts.css",
+      "default": "./styles/fonts.css"
+    },
+    "./styles/theme.css": {
+      "style": "./styles/theme.css",
+      "default": "./styles/theme.css"
+    },
+    "./styles/tokens.dark.css": {
+      "style": "./styles/tokens.dark.css",
+      "default": "./styles/tokens.dark.css"
+    },
+    "./styles/tokens.palette.css": {
+      "style": "./styles/tokens.palette.css",
+      "default": "./styles/tokens.palette.css"
+    },
+    "./styles/tokens.semantic.css": {
+      "style": "./styles/tokens.semantic.css",
+      "default": "./styles/tokens.semantic.css"
+    },
+    "./styles/utilities.css": {
+      "style": "./styles/utilities.css",
+      "default": "./styles/utilities.css"
     }
   },
   "files": [
@@ -56,11 +93,12 @@
     "!dist/**/*.tsbuildinfo",
     "README.md",
     "THIRD_PARTY_NOTICES.md",
-    "third-party-licenses"
+    "third-party-licenses",
+    "styles/*.css",
+    "tokens/default.tokens.json"
   ],
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@dads-framework/copy": "0.3.0",
     "@daypicker/react": "^10.0.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
@@ -76,7 +114,11 @@
     "radix-ui": "^1.6.7",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@fontsource/ibm-plex-mono": "^5.2.8",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "tailwindcss": "^4.2.2",
+    "tw-animate-css": "^1.4.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

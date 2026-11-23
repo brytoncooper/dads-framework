@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/email.tsbuildinfo",
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "references": [
+    {
+      "path": "../../core"
+    },
+    {
+      "path": "../job-queue"
+    },
+    {
+      "path": "../postgres"
+    }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

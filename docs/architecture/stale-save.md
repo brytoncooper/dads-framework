@@ -6,7 +6,7 @@ two drafts were based on the same revision, at most one can update the row.
 ## Contract and route
 
 Expose `rowVersion: rowVersionSchema` in reads and successful updates. Spread
-`expectedRowVersionFields` from `@dads-framework/contract` into the strict
+`expectedRowVersionFields` from `@dads-framework/core/contract` into the strict
 update body. The client sends the version from the record it started editing.
 The HTTP kit rejects missing or invalid versions with a validation response.
 
@@ -33,7 +33,7 @@ return { id, title: input.title, rowVersion: saved.rowVersion };
 
 A zero-row result can also mean the authorized row disappeared. If the app
 distinguishes deletion, resolve that outcome inside the authorized scope.
-`staleSave()` from `@dads-framework/errors` produces the standard HTTP 409
+`staleSave()` from `@dads-framework/core/errors` produces the standard HTTP 409
 error with code `ROW_VERSION_CONFLICT`. The refusal carries no current
 record or revision. Clients read current state through the authorized read
 route.
@@ -41,7 +41,7 @@ route.
 ## Client recovery
 
 Keep the original revision and draft together. Use `saveWithRefresh` from
-`@dads-framework/client-request-transport` to make one write attempt and read
+`@dads-framework/client` to make one write attempt and read
 the latest record after a stale refusal.
 
 ```ts

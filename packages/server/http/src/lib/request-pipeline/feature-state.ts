@@ -1,5 +1,5 @@
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { conflict } from "@dads-framework/errors";
+import { conflict } from "@dads-framework/core/errors";
 
 import type { FeatureStatePreviewProtocol } from "./feature-state-preview.js";
 

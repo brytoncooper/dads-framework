@@ -12,7 +12,7 @@ import {
 import type {
   PermissionQuery,
   RelationshipWrite,
-} from "@dads-framework/authorization";
+} from "@dads-framework/spicedb-access";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
 

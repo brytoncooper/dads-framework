@@ -8,8 +8,11 @@
   },
   "include": ["migrations/**/*.ts"],
   "references": [
-    { "path": "../../packages/server/identity-better-auth" },
-    { "path": "../../packages/server/postgres-access" },
-    { "path": "../../packages/server/tenants" }
+    {
+      "path": "../../packages/server/identity"
+    },
+    {
+      "path": "../../packages/server/postgres-access"
+    }
   ]
 }

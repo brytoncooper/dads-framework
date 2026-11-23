@@ -1,4 +1,4 @@
-@import "@dads-framework/styles/index.css";
+@import "@dads-framework/ui/styles/index.css";
 
 /* Tailwind compiles the utility classes already present in the shipped UI. */
 @source "../../node_modules/@dads-framework/ui/dist";

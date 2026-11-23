@@ -5,7 +5,7 @@ import { z } from "zod";
 import { permissionToken } from "@dads-framework/access";
 import { requires } from "../route/route-guards.test-support.js";
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import { apiResponseSchema } from "@dads-framework/contract";
+import { apiResponseSchema } from "@dads-framework/core/contract";
 
 import { errorBodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";

@@ -1,4 +1,4 @@
-import { definePlugin } from "@dads-framework/plugin";
+import { definePlugin } from "@dads-framework/core/plugin";
 import { starterServices } from "../../../libraries/app-runtime/index.js";
 import { noteAttachmentJobs, noteAttachmentRoutes } from "./attachments.js";
 import { noteExportRoutes } from "./exports.js";

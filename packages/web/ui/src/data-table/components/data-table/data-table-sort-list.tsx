@@ -2,7 +2,7 @@ import type { ColumnSort, Table } from "@tanstack/react-table";
 import { ArrowDownUp } from "lucide-react";
 import * as React from "react";
 
-import { FormattedInteger } from "@dads-framework/copy";
+import { FormattedInteger } from "../../../copy/index.js";
 import { Badge, Button, cn } from "../../../elements/index.js";
 import {
   Popover,

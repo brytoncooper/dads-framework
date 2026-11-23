@@ -112,7 +112,7 @@ function registerMigrations(
   const file = `domains/${domain}/server/migration-source.ts`;
   plan.create(
     file,
-    `import type { MigrationSource } from "@dads-framework/migrations";
+    `import type { MigrationSource } from "@dads-framework/postgres/migrations";
 
 export const ${name}: MigrationSource = {
   owner: "${domain}",

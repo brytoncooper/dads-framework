@@ -22,7 +22,7 @@ import {
   truncateRequestLog,
   truncateTables,
 } from "@dads-framework/postgres/testing";
-import { mintEntityId } from "@dads-framework/contract";
+import { mintEntityId } from "@dads-framework/core/contract";
 
 import { makeRequestLog } from "../../../testing/request-log.factory.js";
 import { clientDiagnosticEventIdSchema } from "../../client-diagnostics/client-diagnostic-event.ids.js";

@@ -12,7 +12,7 @@ import { FakeAuthorization } from "@dads-framework/access/testing";
 import {
   paginationMetaSchema,
   paginationQuerySchema,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { bodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";

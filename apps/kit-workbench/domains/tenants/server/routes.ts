@@ -1,6 +1,6 @@
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 import { listRoute, postRoute, routeGroup } from "@dads-framework/http";
-import type { Tenants } from "@dads-framework/tenants";
+import type { Tenants } from "@dads-framework/identity/tenants";
 import { tenantInput, tenantRecord } from "../contract/index.js";
 
 export function tenantRoutes(tenants: Tenants) {

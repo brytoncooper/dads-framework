@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { compileAccess } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
-import { withSystemActor } from "@dads-framework/audit-actor";
+import { withSystemActor } from "@dads-framework/core/audit-actor";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { sql } from "drizzle-orm";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";

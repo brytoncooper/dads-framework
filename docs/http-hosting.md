@@ -9,7 +9,7 @@ parses the request and enforces access before the handler starts.
 
 Create one application with `createHttpApp` and register each surface's
 routes with its subject resolver and authorization ports. Applications that
-mount multiple APIs can use [`composeApi`](../packages/foundation/plugin/README.md)
+mount multiple APIs can use [`composeApi`](../packages/core/README.md)
 to check collisions before mounting. Use the same cards to build OpenAPI
 with `buildOpenApiDocument`.
 

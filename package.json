@@ -10,7 +10,9 @@
   "workspaces": [
     "packages/*/*",
     "packages/access",
-    "packages/contract",
+    "packages/core",
+    "packages/documents",
+    "packages/client",
     "!packages/testing/native/*",
     "fixtures/*",
     "apps/*"

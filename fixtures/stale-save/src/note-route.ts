@@ -2,8 +2,8 @@ import { actor, resource } from "@dads-framework/access";
 import {
   expectedRowVersionFields,
   rowVersionSchema,
-} from "@dads-framework/contract";
-import { staleSave } from "@dads-framework/errors";
+} from "@dads-framework/core/contract";
+import { staleSave } from "@dads-framework/core/errors";
 import { fromParam, patchRoute, routeGroup } from "@dads-framework/http";
 import {
   updateAtRowVersion,

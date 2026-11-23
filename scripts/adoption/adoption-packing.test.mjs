@@ -31,17 +31,17 @@ test("packs published libraries and native binaries while leaving private migrat
 test("reads the tarball name npm reported", () => {
   assert.equal(
     packedFilename(
-      "@dads-framework/contract",
-      '[{"id":"@dads-framework/contract@0.1.0","filename":"dads-framework-schema-0.1.0.tgz"}]\n',
+      "@dads-framework/core",
+      '[{"id":"@dads-framework/core@0.1.0","filename":"dads-framework-core-0.1.0.tgz"}]\n',
     ),
-    "dads-framework-schema-0.1.0.tgz",
+    "dads-framework-core-0.1.0.tgz",
   );
 });
 
 test("fails loudly when npm pack did not answer in JSON", () => {
   assert.throws(
-    () => packedFilename("@dads-framework/contract", "npm warn something\n"),
-    /did not return JSON for @dads-framework\/contract/,
+    () => packedFilename("@dads-framework/core", "npm warn something\n"),
+    /did not return JSON for @dads-framework\/core/,
   );
 });
 

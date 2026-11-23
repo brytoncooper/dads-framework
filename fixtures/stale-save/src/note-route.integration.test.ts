@@ -1,5 +1,8 @@
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
-import { apiErrorSchema, ROW_VERSION_CONFLICT } from "@dads-framework/contract";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
+import {
+  apiErrorSchema,
+  ROW_VERSION_CONFLICT,
+} from "@dads-framework/core/contract";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import {
   startTestPostgres,

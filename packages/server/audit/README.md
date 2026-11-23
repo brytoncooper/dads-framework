@@ -17,7 +17,7 @@ table, and attach the trigger as shown under [Use it](#use-it). The
 application must authorize access before invoking the audit reader.
 
 ```sh
-npm install @dads-framework/audit @dads-framework/audit-actor @dads-framework/postgres
+npm install @dads-framework/audit @dads-framework/core/audit-actor @dads-framework/postgres
 npm install -D tsx
 ```
 
@@ -31,7 +31,7 @@ import { DrizzleAuditLogReader } from "@dads-framework/audit";
 import {
   currentAuditActor,
   withSystemActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import { createPostgresConnection } from "@dads-framework/postgres";
 
 const connectionString = process.env.DATABASE_URL;

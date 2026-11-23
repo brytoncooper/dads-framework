@@ -6,12 +6,17 @@
     "node": ">=22"
   },
   "bin": {
-    "dad": "./bin/dad.js"
+    "dad": "./bin/dad.js",
+    "dad-dev": "./bin/dad-dev.js"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev/index.d.ts",
+      "default": "./dist/dev/index.js"
     }
   },
   "files": [
@@ -22,7 +27,8 @@
   "dependencies": {
     "@dads-framework/access": "0.3.0",
     "@dads-framework/testing": "0.3.0",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "zod": "^4.4.3"
   },
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { permissionToken } from "@dads-framework/access";
 import type { ScopeAnswer } from "@dads-framework/access/runtime";
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 
 import {
   requires,

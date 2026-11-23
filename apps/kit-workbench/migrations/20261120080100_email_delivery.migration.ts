@@ -1,4 +1,4 @@
-import { installEmailDeliverySchemaV1 } from "@dads-framework/email-delivery";
+import { installEmailDeliverySchemaV1 } from "@dads-framework/email/delivery";
 import type { MigrationBuilder } from "node-pg-migrate";
 
 export function up(pgm: MigrationBuilder): void {

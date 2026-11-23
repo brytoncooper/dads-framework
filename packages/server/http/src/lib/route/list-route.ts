@@ -5,7 +5,7 @@ import {
   type PaginationMeta,
   paginationMetaSchema,
   type RouteContract,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { HttpWiringError } from "../http-errors.js";
 import type {

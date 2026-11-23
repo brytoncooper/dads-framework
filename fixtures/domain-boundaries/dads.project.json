@@ -29,7 +29,11 @@
       "name": "api-composition",
       "root": "src/composition",
       "responsibility": "Binds providers and selects each API's routes.",
-      "allowedDependencies": ["orders", "inventory", "@dads-framework/plugin"],
+      "allowedDependencies": [
+        "orders",
+        "inventory",
+        "@dads-framework/core/plugin"
+      ],
       "verification": [],
       "skills": []
     }

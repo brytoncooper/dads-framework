@@ -25,6 +25,10 @@
     "./postgres": {
       "types": "./dist/postgres/index.d.ts",
       "default": "./dist/postgres/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
     }
   },
   "files": [
@@ -33,10 +37,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/contract": "0.3.0",
-    "@dads-framework/errors": "0.3.0",
-    "@dads-framework/plugin": "0.3.0",
-    "@dads-framework/runtime": "0.3.0",
+    "@dads-framework/core": "0.3.0",
     "zod": "^4.4.3"
   },
   "dadsBindings": {
@@ -48,6 +49,9 @@
       "@dads-framework/postgres",
       "drizzle-orm",
       "node-pg-migrate"
+    ],
+    "react": [
+      "react"
     ]
   },
   "peerDependencies": {
@@ -55,7 +59,8 @@
     "@dads-framework/http": "0.3.0",
     "@dads-framework/postgres": "0.3.0",
     "drizzle-orm": "^0.45.2",
-    "node-pg-migrate": "^9.0.0"
+    "node-pg-migrate": "^9.0.0",
+    "react": "^19.0.0"
   },
   "peerDependenciesMeta": {
     "@dads-framework/access": {
@@ -72,6 +77,9 @@
     },
     "node-pg-migrate": {
       "optional": true
+    },
+    "react": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -79,9 +87,14 @@
     "@dads-framework/http": "0.3.0",
     "@dads-framework/postgres": "0.3.0",
     "@testcontainers/postgresql": "^12.0.4",
+    "@testing-library/react": "^16.3.2",
     "@types/pg": "^8.20.0",
+    "@types/react": "^19.0.0",
     "drizzle-orm": "^0.45.2",
+    "jsdom": "~22.1.0",
     "node-pg-migrate": "^9.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "testcontainers": "^12.0.4",
     "vitest": "~4.1.0"
   },

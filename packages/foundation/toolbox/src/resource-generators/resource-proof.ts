@@ -12,7 +12,7 @@ export function resourceProof(
     `domains/${domain}/server/${name}-resource.test.ts`,
     `import { compileAccess } from "@dads-framework/access";
 import { createAccessHarness } from "@dads-framework/access/testing";
-import { apiErrorSchema, ROW_VERSION_CONFLICT } from "@dads-framework/contract";
+import { apiErrorSchema, ROW_VERSION_CONFLICT } from "@dads-framework/core/contract";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { expect, it } from "vitest";
 

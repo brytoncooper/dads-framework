@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { randomUUID } from "node:crypto";
 import { emitZed } from "@dads-framework/access";
-import { SpiceDbAuthorization } from "@dads-framework/authorization";
+import { SpiceDbAuthorization } from "@dads-framework/spicedb-access";
 import {
   createPostgresConnection,
   type PostgresConnection,

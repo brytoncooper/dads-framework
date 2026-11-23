@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import type { ClientContext } from "@dads-framework/contract";
+import type { ClientContext } from "@dads-framework/core/contract";
 import { requestIdSchema } from "@dads-framework/http";
 import {
   startTestPostgres,

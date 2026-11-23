@@ -5,14 +5,14 @@ import type {
   HttpMethod,
   Locale,
   RouteContract,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { HttpWiringError } from "../http-errors.js";
 import type { FeatureStateSnapshot } from "../request-pipeline/feature-state.js";
 import type { RouteAccess } from "./access.js";
 import type { RouteCapabilities } from "./capabilities.js";
 
-export type { HttpMethod } from "@dads-framework/contract";
+export type { HttpMethod } from "@dads-framework/core/contract";
 
 /**
  * `:param` names extracted from a path template at the type level, so a

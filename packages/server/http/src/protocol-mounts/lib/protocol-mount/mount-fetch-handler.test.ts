@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { REQUEST_ID_HEADER } from "@dads-framework/contract";
+import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { type FetchHandler, mountFetchHandler } from "./mount-fetch-handler.js";
 

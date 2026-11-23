@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { answeringEachQuestionOnce } from "@dads-framework/runtime/request-work";
+import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-work";
 
 import type { FeatureFlagState } from "../../contract/index.js";
 import { InMemoryFeatureFlagStore } from "../../testing/in-memory-feature-flag-store.js";

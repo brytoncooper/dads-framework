@@ -5,11 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  assertCatalogParity,
-  mergeCopy,
-  translate,
-} from "@dads-framework/copy";
+import { assertCatalogParity, mergeCopy, translate } from "../../copy/index.js";
 
 import { elementsCopy } from "./elements-copy.js";
 

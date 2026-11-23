@@ -5,7 +5,7 @@ import {
   createTenantScimGroupDirectory,
   tenantIdSchema,
   type TenantsOptions,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 
 import type { ScimConfiguration } from "./enterprise-config.js";
 

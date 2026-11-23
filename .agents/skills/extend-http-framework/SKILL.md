@@ -7,7 +7,7 @@ description: Change Dads HTTP behavior while preserving transport, application, 
 
 1. Name the transport behavior changing and which routes depend on it.
 2. Keep shared wire schemas and route descriptors in
-   `@dads-framework/contract`. Put HTTP parsing, enforcement, request lifecycle,
+   `@dads-framework/core/contract`. Put HTTP parsing, enforcement, request lifecycle,
    and transport translation in `@dads-framework/http`.
 3. Pass parsed values and typed access facts into handlers. Keep engine
    requests and replies inside the HTTP kit.

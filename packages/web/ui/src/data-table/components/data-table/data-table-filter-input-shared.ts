@@ -1,6 +1,6 @@
 import type { Column } from "@tanstack/react-table";
 
-import type { LocaleFormatting } from "@dads-framework/copy";
+import type { LocaleFormatting } from "../../../copy/index.js";
 
 import type { DataTableCopyTranslator } from "../../copy/data-table-copy.js";
 import type {

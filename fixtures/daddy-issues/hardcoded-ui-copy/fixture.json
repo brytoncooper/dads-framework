@@ -4,7 +4,7 @@
   "why": "A package that depends on the copy kit still writes its empty state's words straight into the markup.",
   "files": {
     "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
-    "packages/web/panel/package.json": "{\n  \"name\": \"@fixture/panel\",\n  \"dependencies\": {\n    \"@dads-framework/copy\": \"0.1.0\",\n    \"react\": \"19.0.0\"\n  }\n}\n",
+    "packages/web/panel/package.json": "{\n  \"name\": \"@fixture/panel\",\n  \"dependencies\": {\n    \"@dads-framework/ui\": \"0.1.0\",\n    \"react\": \"19.0.0\"\n  }\n}\n",
     "packages/web/panel/src/empty-state.tsx": "/** What the orders panel shows before there are any. */\nexport function EmptyState() {\n  return <p title=\"Nothing yet\">No orders</p>;\n}\n"
   },
   "expected": {

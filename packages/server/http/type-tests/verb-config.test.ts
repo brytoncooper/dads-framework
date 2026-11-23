@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { permissionToken } from "@dads-framework/access";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { defineRoute } from "@dads-framework/contract";
+import { defineRoute } from "@dads-framework/core/contract";
 
 import {
   type DeleteRouteHandlerContext,

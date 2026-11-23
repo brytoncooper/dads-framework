@@ -1,7 +1,7 @@
 import type { ConnectionOptions, Queue, Worker } from "bullmq";
 
-import { runWithAuditActor } from "@dads-framework/audit-actor";
-import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
+import { runWithAuditActor } from "@dads-framework/core/audit-actor";
+import type { DiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics";
 
 import { bullMqJobOptions } from "./bullmq-job-options.js";
 import { jobRunActor } from "./job-actor.js";

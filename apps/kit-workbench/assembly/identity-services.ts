@@ -2,11 +2,11 @@ import {
   createBetterAuthIdentity,
   createEnterpriseBetterAuthIdentity,
   type BetterAuthIdentityOptions,
-} from "@dads-framework/identity-better-auth";
+} from "@dads-framework/identity/better-auth";
 import {
   createTenantDirectory,
   type TenantsOptions,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 
 import type { EnterpriseConfiguration } from "./enterprise-config.js";
 import { configureScim } from "./scim.js";

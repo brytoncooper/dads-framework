@@ -20,7 +20,7 @@ Two common offline-sync approaches fail under B2B multi-tenant constraints:
 Dads Framework already provides the primitives required to build a permission-aware sync engine without duplicating models:
 
 - **Shared ReBAC model and revision tracking:** `@dads-framework/access` declares the typed relationship graph, `lookupResources` computes visible entity IDs for any subject, and `@dads-framework/postgres-access` tracks namespace revisions through `lookupRevisionSchemaMigration` ([ADR-0001](./0001-transactional-postgres-rebac.md)).
-- **Client-mintable identifiers:** `@dads-framework/contract` exports `entityIdSchema` and `mintEntityId`, generating time-ordered UUIDv7 primary keys so offline devices create parent and child records without coordinating sequences with the cloud.
+- **Client-mintable identifiers:** `@dads-framework/core/contract` exports `entityIdSchema` and `mintEntityId`, generating time-ordered UUIDv7 primary keys so offline devices create parent and child records without coordinating sequences with the cloud.
 - **Route serving modes:** `@dads-framework/http` declares `SiteServing` (`"served"`, `"write_door"`, and `"cloud_only"`) in [`capabilities.ts`](../../packages/server/http/src/lib/route/capabilities.ts) to specify whether a site server answers a route locally, accepts a local write for upstream relay, or refuses it offline.
 - **Transactional write guards:** `@dads-framework/postgres-access` provides serializable `withProtectedPostgresTransaction`, and SQLite provides `BEGIN IMMEDIATE` write locks so every node rechecks authorization atomically with state changes.
 
@@ -102,6 +102,6 @@ Binary attachments (photos, videos, and PDFs) travel on a separate resumable tra
 - [`@dads-framework/postgres-access` README](../../packages/server/postgres-access/README.md)
 - [`@dads-framework/http` README](../../packages/server/http/README.md)
 - [Route capabilities (`SiteServing`)](../../packages/server/http/src/lib/route/capabilities.ts)
-- [Entity ID schemas (`entityIdSchema`)](../../packages/contract/src/lib/entity-id.ts)
+- [Entity ID schemas (`entityIdSchema`)](../../packages/core/src/contract/lib/entity-id.ts)
 - [`@dads-framework/audit` README](../../packages/server/audit/README.md)
 - [`@dads-framework/object-storage` README](../../packages/server/object-storage/README.md)

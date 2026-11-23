@@ -1,10 +1,10 @@
-import type { RenderEmailTemplate } from "@dads-framework/email-delivery";
+import type { RenderEmailTemplate } from "@dads-framework/email/delivery";
 import {
   createEmailTemplateRegistry,
   defineEmailTemplate,
   EmailButton,
   renderEmailTemplate,
-} from "@dads-framework/email-templates";
+} from "@dads-framework/email/templates";
 import { createElement } from "react";
 import { z } from "zod";
 import {

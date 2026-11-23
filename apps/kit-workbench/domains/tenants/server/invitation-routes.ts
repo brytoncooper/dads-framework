@@ -1,10 +1,10 @@
-import { apiResponseSchema } from "@dads-framework/contract";
+import { apiResponseSchema } from "@dads-framework/core/contract";
 import {
   forbidden,
   notFound,
   unauthorized,
   validation,
-} from "@dads-framework/errors";
+} from "@dads-framework/core/errors";
 import {
   defineRawRoute,
   fromParam,
@@ -17,7 +17,7 @@ import {
   TenantInvitationUnavailableError,
   TenantUnavailableError,
   type TenantId,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 
 import {
   tenantAccess,

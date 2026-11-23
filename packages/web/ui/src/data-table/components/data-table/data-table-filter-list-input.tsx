@@ -1,7 +1,7 @@
 import type { Option } from "../../lib/data-table-types.js";
 import * as React from "react";
 
-import { FormattedInteger } from "@dads-framework/copy";
+import { FormattedInteger } from "../../../copy/index.js";
 import { Button } from "../../../elements/index.js";
 import {
   Input,

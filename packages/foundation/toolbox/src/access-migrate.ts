@@ -206,7 +206,7 @@ function renderMigrationModule(input: {
     "import {",
     "  defineAccessMigration,",
     "  type DefinedAccessMigration,",
-    '} from "@dads-framework/authorization-migration";',
+    '} from "@dads-framework/spicedb-access/migration";',
     "",
     ...snapshotLines,
     "",

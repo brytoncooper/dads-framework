@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   apiResponseSchema,
   openExtensibleEnums,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { isObjectValue } from "../object-value.js";
 import type { RawRouteDefinition } from "../route/define-raw-route.js";

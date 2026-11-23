@@ -14,7 +14,7 @@ description: Secure a Dad HTTP operation with typed relationship checks, authori
    denial response. Prove a granted caller can read the intended resource.
 4. Bind Postgres relationship writes to the data transaction through
    `@dads-framework/postgres-access`. With a separate graph backend, use the
-   access-change journal in `@dads-framework/authorization`.
+   access-change journal in `@dads-framework/spicedb-access`.
 5. Declare reusable allow and deny cases with `world()` and run them against
    the application's authorization backend. Test published list scope as well.
 6. Run the focused commands from `npx dad test:recommend --changed --json`.

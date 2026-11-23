@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { currentAuditActor } from "@dads-framework/audit-actor";
+import { currentAuditActor } from "@dads-framework/core/audit-actor";
 import {
   defineMcpTool,
   type McpCaller,
   type ResolveMcpBearer,
 } from "../../../index.js";
-import { REQUEST_ID_HEADER } from "@dads-framework/contract";
+import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { toWebRequest } from "../protocol-mount/to-web-request.js";
 import { createMcpEndpoint, type McpEndpointOptions } from "./mcp-endpoint.js";

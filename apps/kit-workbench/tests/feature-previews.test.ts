@@ -15,7 +15,7 @@ import {
 import { readFeatureFlagPreview } from "@dads-framework/feature-flags/http";
 import { getRoute, requireSession, routeGroup } from "@dads-framework/http";
 import { buildTestApp } from "@dads-framework/http/testing";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 import {

@@ -1,11 +1,11 @@
 import {
   installIdentityEnterpriseSsoSchema,
   installIdentitySigningKeyMetadataSchema,
-} from "@dads-framework/identity-better-auth";
+} from "@dads-framework/identity/better-auth";
 import {
   installTenantScimGroupSchemaV1,
   installTenantScimSchemaV1,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 import type { MigrationBuilder } from "node-pg-migrate";
 
 export function up(pgm: MigrationBuilder): void {

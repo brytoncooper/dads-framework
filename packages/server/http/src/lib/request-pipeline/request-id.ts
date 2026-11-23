@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 
-import { opaqueIdSchema, REQUEST_ID_HEADER } from "@dads-framework/contract";
+import {
+  opaqueIdSchema,
+  REQUEST_ID_HEADER,
+} from "@dads-framework/core/contract";
 
 /**
  * Correlation ingress (docs/architecture/observability.md): trust a sane

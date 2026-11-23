@@ -1,4 +1,4 @@
-import { defineCopy } from "@dads-framework/copy";
+import { defineCopy } from "@dads-framework/ui/copy";
 
 export const auditExportCopy = defineCopy({
   "tenants.auditExport.tag": { en: "Tenant audit export" },

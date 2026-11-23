@@ -19,18 +19,18 @@ Plain-English definitions of Dads terms, packages, and SDK options for developer
 
 ## Which package to use
 
-| What you need                                                                      | Package                                                                                                 |
-| :--------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
-| Define actors, resources, inheritance, `createAccessClient`, and `.zed` conversion | [`@dads-framework/access`](../../../packages/access/README.md)                                          |
-| Run permission checks and writes in PostgreSQL (plain `pg.Pool` or Drizzle)        | [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md)                 |
-| Run permission checks and writes in local SQLite (Node built-in `node:sqlite`)     | [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)                     |
-| Run the same permission model against SpiceDB                                      | [`@dads-framework/authorization`](../../../packages/server/authorization/README.md)                     |
-| Diff models, run `(from, to)` access migrations, and migrate SpiceDB to PostgreSQL | [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md) |
-| In-memory fakes for unit tests (`FakeAuthorization`)                               | `@dads-framework/access/testing`                                                                        |
-| Typed HTTP routes that require an access rule and emit OpenAPI 3.1                 | [`@dads-framework/http`](../../../packages/server/http/README.md)                                       |
-| Shared Zod request/response schemas and route paths (browser + server safe)        | [`@dads-framework/contract`](../../../packages/contract/README.md)                                      |
-| Typed fetch client (`getFromApi`, `getPageFromApi`, `sendToApi`)                   | [`@dads-framework/client-request-transport`](../../../packages/client/request-transport/README.md)      |
-| CLI for `dad access`, scaffolding, boundary checks, and Doctor                     | [`@dads-framework/toolbox`](../../../packages/foundation/toolbox/README.md)                             |
+| What you need                                                                      | Package                                                                                         |
+| :--------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| Define actors, resources, inheritance, `createAccessClient`, and `.zed` conversion | [`@dads-framework/access`](../../../packages/access/README.md)                                  |
+| Run permission checks and writes in PostgreSQL (plain `pg.Pool` or Drizzle)        | [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md)         |
+| Run permission checks and writes in local SQLite (Node built-in `node:sqlite`)     | [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)             |
+| Run the same permission model against SpiceDB                                      | [`@dads-framework/spicedb-access`](../../../packages/server/spicedb-access/README.md)           |
+| Diff models, run `(from, to)` access migrations, and migrate SpiceDB to PostgreSQL | [`@dads-framework/spicedb-access/migration`](../../../packages/server/spicedb-access/README.md) |
+| In-memory fakes for unit tests (`FakeAuthorization`)                               | `@dads-framework/access/testing`                                                                |
+| Typed HTTP routes that require an access rule and emit OpenAPI 3.1                 | [`@dads-framework/http`](../../../packages/server/http/README.md)                               |
+| Shared Zod request/response schemas and route paths (browser + server safe)        | [`@dads-framework/core/contract`](../../../packages/core/README.md)                             |
+| Typed fetch client (`getFromApi`, `getPageFromApi`, `sendToApi`)                   | [`@dads-framework/client`](../../../packages/client/README.md)                                  |
+| CLI for `dad access`, scaffolding, boundary checks, and Doctor                     | [`@dads-framework/toolbox`](../../../packages/foundation/toolbox/README.md)                     |
 
 ## Access modeling (`@dads-framework/access`)
 
@@ -151,7 +151,7 @@ Drizzle is optional. Use the root entry point with plain `pg.Pool`, or import Dr
 | `authorization.compileFilter(query)`            | `{ subject, permission, resourceType, idColumn, scopeColumns?: Record<string, string> \| "auto", now? }`. Compiles a single-query SQLite `WHERE` filter (`{ sql, values }`).       |
 | `withProtectedSqliteTransaction(options, work)` | `{ executor, authorization, now? }`. Runs checks and writes inside `BEGIN IMMEDIATE` with one pinned clock timestamp.                                                              |
 
-### Migrations & SpiceDB cutover (`@dads-framework/authorization-migration`)
+### Migrations & SpiceDB cutover (`@dads-framework/spicedb-access/migration`)
 
 | Export                                            | Options & usage                                                                                                                                                               |
 | :------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -201,7 +201,7 @@ Use `getRoute`, `listRoute`, `postRoute`, `postNoContentRoute`, `patchRoute`, `p
 | `publicAccess`                         | Explicitly open endpoint (for login or health checks).                                             |
 | `fromParam(name)`                      | Reads the resource ID from a path param. Also: `fromQuery`, `fromBody`, `fromHeader`, `fromFixed`. |
 
-### Contracts & clients (`@dads-framework/contract`, `@dads-framework/client-request-transport`)
+### Contracts & clients (`@dads-framework/core/contract`, `@dads-framework/client`)
 
 | Export                                      | What it does                                                             |
 | :------------------------------------------ | :----------------------------------------------------------------------- |
@@ -210,7 +210,7 @@ Use `getRoute`, `listRoute`, `postRoute`, `postNoContentRoute`, `patchRoute`, `p
 | `buildOpenApiDocument(routes, meta)`        | Generates OpenAPI 3.1 directly from your routes and Zod schemas.         |
 | `getFromApi`, `getPageFromApi`, `sendToApi` | Fetch helpers that validate request bodies and parse responses with Zod. |
 
-## CLI commands (`@dads-framework/toolbox` & `@dads-framework/authorization-migration`)
+## CLI commands (`@dads-framework/toolbox` & `@dads-framework/spicedb-access/migration`)
 
 | Command                                                      | What it does                                                                  |
 | :----------------------------------------------------------- | :---------------------------------------------------------------------------- |

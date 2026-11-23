@@ -1,4 +1,4 @@
-import { definePlugin } from "@dads-framework/plugin";
+import { definePlugin } from "@dads-framework/core/plugin";
 
 import { notesData } from "../notes-data.js";
 import { notesRoutes } from "../notes-routes.js";

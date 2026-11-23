@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Clock } from "@dads-framework/runtime/clock";
+import type { Clock } from "@dads-framework/core/runtime/clock";
 import {
   cronSchedule,
   defineJob,

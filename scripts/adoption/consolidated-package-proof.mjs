@@ -1,41 +1,75 @@
 // Run these imports against the installed tarball so a workspace's hoisted
 // providers cannot hide an eager import or an accidental required dependency.
 const entries = new Map([
-  ["@dads-framework/client-telemetry", { subpaths: ["core"] }],
   [
-    "@dads-framework/email-sender",
-    { subpaths: ["core", "testing", "core/testing"] },
+    "@dads-framework/core",
+    {
+      subpaths: [
+        "contract",
+        "contract/testing",
+        "errors",
+        "errors/map-error-to-http-response",
+        "runtime/clock",
+        "runtime/diagnostics",
+        "runtime/diagnostics/testing",
+        "runtime/request-work",
+        "runtime/request-work/testing",
+        "plugin",
+        "plugin/testing",
+        "plugin/web",
+        "event-bus",
+        "audit-actor",
+        "references",
+      ],
+      hasRoot: false,
+    },
   ],
+  [
+    "@dads-framework/client",
+    { subpaths: ["telemetry/core", "telemetry/testing"] },
+  ],
+  ["@dads-framework/documents", { subpaths: ["csv"], hasRoot: false }],
+  ["@dads-framework/email", { subpaths: ["core", "testing", "core/testing"] }],
   ["@dads-framework/feature-flags", { subpaths: ["contract", "testing"] }],
-  ["@dads-framework/http", { subpaths: ["health"] }],
+  [
+    "@dads-framework/http",
+    { subpaths: ["health", "telemetry/core", "telemetry/testing"] },
+  ],
+  [
+    "@dads-framework/identity",
+    { subpaths: ["scim", "testing", "impersonation"] },
+  ],
   [
     "@dads-framework/job-queue",
     { subpaths: ["core", "testing", "core/testing", "core/provider"] },
   ],
   ["@dads-framework/object-storage", { subpaths: ["core", "testing"] }],
-  [
-    "@dads-framework/runtime",
-    {
-      subpaths: [
-        "clock",
-        "diagnostics",
-        "diagnostics/testing",
-        "request-work",
-        "request-work/testing",
-      ],
-      hasRoot: false,
-    },
-  ],
-  ["@dads-framework/telemetry", { subpaths: ["core", "testing"] }],
-  ["@dads-framework/testing", { subpaths: ["nx"] }],
+  ["@dads-framework/testing", { subpaths: ["nx", "path-aliases"] }],
 ]);
 
 const absentProviders = new Map([
-  ["@dads-framework/client-telemetry", ["@sentry/react"]],
-  ["@dads-framework/email-sender", ["resend"]],
+  ["@dads-framework/client", ["@sentry/react"]],
+  [
+    "@dads-framework/documents",
+    ["pdfmake", "pdfjs-dist", "@napi-rs/canvas", "exceljs"],
+  ],
+  [
+    "@dads-framework/email",
+    [
+      "resend",
+      "@react-email/render",
+      "@dads-framework/postgres",
+      "@dads-framework/job-queue",
+    ],
+  ],
   [
     "@dads-framework/feature-flags",
-    ["@dads-framework/http", "@dads-framework/postgres"],
+    ["@dads-framework/http", "@dads-framework/postgres", "react"],
+  ],
+  ["@dads-framework/http", ["@opentelemetry/sdk-node"]],
+  [
+    "@dads-framework/identity",
+    ["better-auth", "@dads-framework/postgres", "drizzle-orm"],
   ],
   ["@dads-framework/job-queue", ["bullmq"]],
   [
@@ -46,8 +80,7 @@ const absentProviders = new Map([
       "@aws-sdk/s3-request-presigner",
     ],
   ],
-  ["@dads-framework/telemetry", ["@opentelemetry/sdk-node"]],
-  ["@dads-framework/testing", ["nx"]],
+  ["@dads-framework/testing", ["nx", "vite"]],
 ]);
 
 export function consolidatedPackageProof(packageName) {

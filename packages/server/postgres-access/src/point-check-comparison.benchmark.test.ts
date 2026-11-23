@@ -3,8 +3,8 @@ import {
   SpiceDbAuthorization,
   type Authorization,
   type PermissionQuery,
-} from "@dads-framework/authorization";
-import { startTestSpiceDb } from "@dads-framework/authorization/testing";
+} from "@dads-framework/spicedb-access";
+import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { it } from "vitest";

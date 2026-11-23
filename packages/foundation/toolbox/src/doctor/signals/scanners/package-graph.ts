@@ -67,6 +67,7 @@ export type PackageManifestFacts = {
   readonly name: string | undefined;
   readonly dependencies: readonly string[];
   readonly peerDependencies: readonly string[];
+  readonly requiredPeerDependencies: readonly string[];
   readonly runtimePeers: readonly string[];
 };
 
@@ -207,6 +208,13 @@ function parseManifest(
   if (!isRecord(parsed)) return undefined;
   const name: unknown = parsed["name"];
   const peers = readDependencyNames(parsed["peerDependencies"]);
+  const peerMeta = isRecord(parsed["peerDependenciesMeta"])
+    ? parsed["peerDependenciesMeta"]
+    : undefined;
+  const requiredPeers = peers.filter((peer) => {
+    const entry = peerMeta?.[peer];
+    return !(isRecord(entry) && entry["optional"] === true);
+  });
   return {
     path,
     name: isString(name) ? name : undefined,
@@ -214,6 +222,7 @@ function parseManifest(
       readDependencyNames(parsed["optionalDependencies"]),
     ),
     peerDependencies: peers,
+    requiredPeerDependencies: requiredPeers,
     runtimePeers: peers.filter((peer) => RUNTIME_PEERS.includes(peer)),
   };
 }

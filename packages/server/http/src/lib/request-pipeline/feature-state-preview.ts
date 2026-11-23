@@ -13,7 +13,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { forbidden } from "@dads-framework/errors";
+import { forbidden } from "@dads-framework/core/errors";
 
 import { isWriteMethod } from "./logic/is-write-method.js";
 

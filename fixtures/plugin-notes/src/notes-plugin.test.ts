@@ -8,15 +8,15 @@
 import { join } from "node:path";
 
 import { compileAccess, emitAccessIr } from "@dads-framework/access";
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
 import {
   buildTestApp,
   TEST_SUBJECT_HEADER,
 } from "@dads-framework/http/testing";
 import { createJobQueue } from "@dads-framework/job-queue";
-import { discoverDomainMigrations } from "@dads-framework/migrations";
-import { composeApp, providePlugin } from "@dads-framework/plugin";
-import { startForTest } from "@dads-framework/plugin/testing";
+import { discoverDomainMigrations } from "@dads-framework/postgres/migrations";
+import { composeApp, providePlugin } from "@dads-framework/core/plugin";
+import { startForTest } from "@dads-framework/core/plugin/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { clockService, type NotesClock } from "./clock-service.js";

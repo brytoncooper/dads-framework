@@ -3,15 +3,15 @@ import {
   DrizzleAuditLogReader,
   type AuditLogCursor,
 } from "@dads-framework/audit";
-import { notFound, validation } from "@dads-framework/errors";
+import { notFound, validation } from "@dads-framework/core/errors";
 import {
   defineRawRoute,
   fromParam,
   requires,
   routeGroup,
 } from "@dads-framework/http";
-import { definePlugin } from "@dads-framework/plugin";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import { definePlugin } from "@dads-framework/core/plugin";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 import {

@@ -10,15 +10,15 @@ const project = parseDadsProject(rawProject);
 
 it("selects the registered stylesheet compiler for a changed package asset", () => {
   const plan = collectCandidateTasks(project, [
-    "packages/web/styles/utilities.css",
+    "packages/web/ui/styles/utilities.css",
   ]);
 
   expect(plan.usedFullFallback).toBe(false);
   expect(plan.unknownPaths).toEqual([]);
   expect(plan.tasks).toContainEqual(
     expect.objectContaining({
-      packageName: "@dads-framework/styles",
-      command: "npm test -w @dads-framework/styles",
+      packageName: "@dads-framework/ui",
+      command: "npm test -w @dads-framework/ui",
       state: "run",
     }),
   );

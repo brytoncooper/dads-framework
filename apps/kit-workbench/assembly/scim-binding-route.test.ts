@@ -1,7 +1,7 @@
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { FakeAuthorization } from "@dads-framework/access/testing";
 import { buildTestApp } from "@dads-framework/http/testing";
-import { TenantUnavailableError } from "@dads-framework/tenants";
+import { TenantUnavailableError } from "@dads-framework/identity/tenants";
 import { expect, it, vi } from "vitest";
 
 import { sessionSubjects } from "./session-subjects.js";

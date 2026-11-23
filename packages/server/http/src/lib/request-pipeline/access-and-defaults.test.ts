@@ -17,7 +17,7 @@ import {
   ACCESS_REFUSAL_VALUE,
   paginationQuerySchema,
   REQUEST_ID_HEADER,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { bodyOf, errorBodyOf } from "../../testing/index.js";
 import { createHttpApp, type HttpAppOptions } from "../create-http-app.js";

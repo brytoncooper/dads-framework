@@ -2,7 +2,7 @@ import type { Column } from "@tanstack/react-table";
 import { PlusCircle, XCircle } from "lucide-react";
 import * as React from "react";
 
-import { useLocaleFormatting } from "@dads-framework/copy";
+import { useLocaleFormatting } from "../../../copy/index.js";
 import { Button, cn, Separator } from "../../../elements/index.js";
 import { Input, Label, Slider } from "../../../forms/index.js";
 import {

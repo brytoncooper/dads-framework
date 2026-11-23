@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import type { Clock } from "@dads-framework/runtime/clock";
-import type { EmailDelivery } from "@dads-framework/email-delivery";
+import type { Clock } from "@dads-framework/core/runtime/clock";
+import type { EmailDelivery } from "@dads-framework/email/delivery";
 import {
   cronSchedule,
   defineJob,

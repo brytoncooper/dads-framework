@@ -6,7 +6,7 @@ import {
   ChevronsRight,
 } from "lucide-react";
 
-import { FormattedInteger } from "@dads-framework/copy";
+import { FormattedInteger } from "../../../copy/index.js";
 import { Button, cn } from "../../../elements/index.js";
 import {
   Select,

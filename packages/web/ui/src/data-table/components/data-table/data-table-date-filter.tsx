@@ -5,7 +5,7 @@ import * as React from "react";
 import {
   resolveReaderTimeZone,
   useLocaleFormatting,
-} from "@dads-framework/copy";
+} from "../../../copy/index.js";
 import { Button, Separator } from "../../../elements/index.js";
 import {
   Popover,

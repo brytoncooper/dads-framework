@@ -10,7 +10,7 @@ import { z } from "zod";
 import {
   type AuditActor,
   currentAuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 
 import { BullMqJobQueue } from "./bullmq-job-queue.js";
 import { cronSchedule, defineJob, intervalSchedule } from "../core/index.js";

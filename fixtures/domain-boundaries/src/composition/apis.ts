@@ -1,4 +1,4 @@
-import { composeApi, definePlugin } from "@dads-framework/plugin";
+import { composeApi, definePlugin } from "@dads-framework/core/plugin";
 import { createInventory } from "../../domains/inventory/index.js";
 import { createOrders } from "../../domains/orders/index.js";
 

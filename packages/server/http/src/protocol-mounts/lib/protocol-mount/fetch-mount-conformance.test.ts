@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import { it } from "vitest";
-import { proveFetchMount } from "@dads-framework/contract/testing";
+import { proveFetchMount } from "@dads-framework/core/contract/testing";
 
 import { mountFetchHandler } from "./mount-fetch-handler.js";
 

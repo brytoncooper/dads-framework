@@ -3,8 +3,9 @@
   "compilerOptions": {
     "composite": false,
     "noEmit": true,
+    "rootDir": ".",
     "types": ["node", "vite/client"]
   },
-  "include": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "type-tests/**/*.ts"],
   "exclude": []
 }

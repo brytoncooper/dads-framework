@@ -18,6 +18,14 @@
     "./nx": {
       "types": "./dist/nx/index.d.ts",
       "default": "./dist/nx/index.js"
+    },
+    "./path-aliases": {
+      "types": "./dist/path-aliases/index.d.ts",
+      "default": "./dist/path-aliases/index.js"
+    },
+    "./vitest": {
+      "types": "./dist/vitest/index.d.ts",
+      "default": "./dist/vitest/index.js"
     }
   },
   "files": [
@@ -48,5 +56,17 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "vite": "^8.0.0",
+    "vitest": "~4.1.0"
   }
 }

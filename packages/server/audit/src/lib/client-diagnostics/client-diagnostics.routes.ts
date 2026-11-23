@@ -22,7 +22,7 @@ import {
 import {
   reportClientDiagnosticsBodySchema,
   reportedClientDiagnosticsSchema,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import type { ClientDiagnosticsRouteHandlers } from "./client-diagnostics.route-handlers.js";
 

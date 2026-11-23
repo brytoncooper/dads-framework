@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   type AuditActor,
   runWithAuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import type { AuditActorForSubject } from "../../../index.js";
 import type {
   IsMcpToolSetOn,

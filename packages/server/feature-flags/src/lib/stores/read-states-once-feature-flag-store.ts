@@ -1,4 +1,4 @@
-import { AnswersOncePerScope } from "@dads-framework/runtime/request-work";
+import { AnswersOncePerScope } from "@dads-framework/core/runtime/request-work";
 
 import type { FeatureFlagState } from "../../contract/index.js";
 import {

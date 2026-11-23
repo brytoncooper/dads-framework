@@ -9,7 +9,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import type { ClientContext } from "@dads-framework/contract";
+import type { ClientContext } from "@dads-framework/core/contract";
 import type { RequestId } from "@dads-framework/http";
 import { inet } from "@dads-framework/postgres";
 

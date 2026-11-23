@@ -1,4 +1,4 @@
-import type { Authorization } from "@dads-framework/authorization";
+import type { Authorization } from "@dads-framework/spicedb-access";
 import type { WorkbenchAuthorization } from "../access.js";
 
 type AuthorizationOverrides = Partial<

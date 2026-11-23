@@ -9,7 +9,7 @@ const apiTarget = process.env["DADS_DEV_API_URL"] ?? "http://127.0.0.1:3000";
 
 async function installedNotices() {
   const require = createRequire(import.meta.url);
-  const styles = require.resolve("@dads-framework/styles/fonts.css");
+  const styles = require.resolve("@dads-framework/ui/styles/fonts.css");
   const resolveFromStyles = createRequire(styles);
   const fonts = ["ibm-plex-sans", "ibm-plex-mono"].map((font) => ({
     fileName: `licenses/${font}.txt`,

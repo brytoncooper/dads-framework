@@ -14,13 +14,10 @@
       "path": "../../packages/access"
     },
     {
-      "path": "../../packages/contract"
+      "path": "../../packages/core"
     },
     {
-      "path": "../../packages/server/authorization"
-    },
-    {
-      "path": "../../packages/server/errors"
+      "path": "../../packages/server/spicedb-access"
     },
     {
       "path": "../../packages/server/http"

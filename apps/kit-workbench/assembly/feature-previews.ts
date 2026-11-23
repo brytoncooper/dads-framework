@@ -15,7 +15,7 @@ import {
   FeatureFlagRequestEvaluator,
 } from "@dads-framework/feature-flags/http";
 import type { FeatureStateProtocol } from "@dads-framework/http";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 import { account, tenantAccess } from "../libraries/app-runtime/index.js";

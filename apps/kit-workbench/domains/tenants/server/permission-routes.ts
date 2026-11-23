@@ -1,5 +1,5 @@
-import { paginationQuerySchema } from "@dads-framework/contract";
-import { notFound } from "@dads-framework/errors";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
+import { notFound } from "@dads-framework/core/errors";
 import {
   fromParam,
   getRoute,
@@ -11,7 +11,7 @@ import {
   TenantUnavailableError,
   tenantIdSchema,
   type Tenants,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 import { z } from "zod";
 import { tenantAccess } from "../../../libraries/app-runtime/index.js";
 import {

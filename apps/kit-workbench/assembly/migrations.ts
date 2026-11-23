@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import {
   runNodePgMigrations,
   type MigrationSource,
-} from "@dads-framework/migrations";
+} from "@dads-framework/postgres/migrations";
 // dad:add imports
 
 const sources: readonly MigrationSource[] = [

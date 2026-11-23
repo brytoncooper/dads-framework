@@ -1,5 +1,5 @@
 import { defineJob, intervalSchedule } from "@dads-framework/job-queue";
-import { definePlugin } from "@dads-framework/plugin";
+import { definePlugin } from "@dads-framework/core/plugin";
 import { z } from "zod";
 
 import { clockService } from "./clock-service.js";

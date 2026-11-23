@@ -28,7 +28,7 @@ beforeEach(() => {
   setup(
     "package.json",
     JSON.stringify({
-      dependencies: { "@dads-framework/plugin": "0.1.0" },
+      dependencies: { "@dads-framework/core": "0.1.0" },
     }),
   );
   setup("apps/customer/app.ts", api);
@@ -134,7 +134,9 @@ it("chains resource pieces, preserves migration identity, and selects only the r
   expect(generatedProof).toContain("@dads-framework/access/testing");
   expect(generatedProof).toContain("account.wireName");
   expect(generatedProof).not.toContain("accountEntity");
-  expect(generatedProof).not.toContain("@dads-framework/authorization/testing");
+  expect(generatedProof).not.toContain(
+    "@dads-framework/spicedb-access/testing",
+  );
 
   expect(read("assembly/migrations.ts")).toContain("inventoryMigrations,");
   const web = read("domains/inventory/web-client/index.ts");

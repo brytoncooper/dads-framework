@@ -293,8 +293,8 @@ function adminUrl(url: string): string {
   return withDatabase(url, "postgres");
 }
 
-/** `@dads-framework/migrations`' runner, run from source so no build is needed. */
-const MIGRATE_BIN = "packages/server/migrations/src/bin/migrate.ts";
+/** `@dads-framework/postgres/migrations`' runner, run from source so no build is needed. */
+const MIGRATE_BIN = "packages/server/postgres/src/migrations/bin/migrate.ts";
 
 export async function applyCheckedInSchema(databaseUrl: string): Promise<void> {
   const workspaceRoot = findWorkspaceRoot();

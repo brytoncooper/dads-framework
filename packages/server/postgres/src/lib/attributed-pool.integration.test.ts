@@ -6,7 +6,7 @@ import {
   currentAuditActor,
   runWithAuditActor,
   type AuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import {
   startTestPostgres,
   startUnattributedTestPostgres,

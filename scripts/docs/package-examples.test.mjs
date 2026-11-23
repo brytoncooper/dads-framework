@@ -29,7 +29,7 @@ test("accepts command, CSS, and configuration examples", () => {
   for (const [language, code] of [
     ["sh", "dad-test --help"],
     ["powershell", "dad-test --help"],
-    ["css", '@import "@dads-framework/styles/index.css";'],
+    ["css", '@import "@dads-framework/ui/styles/index.css";'],
     ["json", '{"scripts":{"dev":"dad dev"}}'],
   ]) {
     assert.deepEqual(readReadmeExamples(tryIt(fence(language, code))), {

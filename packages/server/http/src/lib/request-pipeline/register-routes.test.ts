@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { conflict } from "@dads-framework/errors";
+import { conflict } from "@dads-framework/core/errors";
 import {
   ACCESS_REFUSAL_HEADER,
   REQUEST_ID_HEADER,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { bodyOf, errorBodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";

@@ -23,69 +23,17 @@
         "floor": 1,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
-      "@dads-framework/audit-actor": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/authorization": {
+      "@dads-framework/client": {
         "floor": 1,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+        "reason": "preserves client-telemetry invariants under consolidated @dads-framework/client (recorded 2026-11-22)"
       },
-      "@dads-framework/authorization-migration": {
-        "floor": 0,
-        "reason": "recorded 2026-11-19"
-      },
-      "@dads-framework/client-request-transport": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/client-telemetry": {
+      "@dads-framework/core": {
         "floor": 1,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+        "reason": "preserves runtime diagnostics and request-work invariants under consolidated @dads-framework/core (recorded 2026-11-22)"
       },
-      "@dads-framework/client-xlsx": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/contract": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/copy": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/cross-domain-references": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/csv": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/design-tokens": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/email-delivery": {
+      "@dads-framework/email": {
         "floor": 1,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/email-sender": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/email-templates": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/errors": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/event-bus": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+        "reason": "preserves email-delivery invariants under consolidated @dads-framework/email (recorded 2026-11-22)"
       },
       "@dads-framework/http": {
         "floor": 1,
@@ -95,19 +43,7 @@
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
-      "@dads-framework/migrations": {
-        "floor": 0,
-        "reason": "imported from the origin product's migration runner on 2026-11-19 under the kit-import approval; a migration runner opens its own connection and binds node-pg-migrate with no core conformance suite, so whether these two rules apply to it is a question for Bryton (recorded 2026-11-19)"
-      },
       "@dads-framework/object-storage": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
-      },
-      "@dads-framework/path-aliases": {
-        "floor": 1,
-        "reason": "recorded 2026-09-07"
-      },
-      "@dads-framework/pdf": {
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
@@ -115,13 +51,9 @@
         "floor": 0,
         "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
       },
-      "@dads-framework/runtime": {
+      "@dads-framework/spicedb-access": {
         "floor": 1,
-        "reason": "preserves diagnostics and request-work invariants under the consolidated runtime package (recorded 2026-11-20)"
-      },
-      "@dads-framework/styles": {
-        "floor": 0,
-        "reason": "imported from the origin product's kits on 2026-11-19; Bryton approved recording it; burned down in task 4 of the release plan (recorded 2026-11-19)"
+        "reason": "preserves authorization invariants under consolidated @dads-framework/spicedb-access (recorded 2026-11-22)"
       },
       "@dads-framework/testing": {
         "floor": 1,
@@ -145,10 +77,6 @@
       },
       "@dads-framework/testing-native-win32-x64": {
         "floor": 0,
-        "reason": "recorded 2026-09-06"
-      },
-      "@dads-framework/testing-vitest": {
-        "floor": 1,
         "reason": "recorded 2026-09-06"
       },
       "@dads-framework/toolbox": {
@@ -1929,21 +1857,21 @@
         "floor": 24,
         "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
       },
-      "packages/contract": {
-        "floor": 6,
-        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
-      },
-      "packages/server/authorization": {
-        "floor": 2,
-        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+      "packages/core": {
+        "floor": 7,
+        "reason": "preserves contract and core negative type assertions under consolidated packages/core (recorded 2026-11-22)"
       },
       "packages/server/http": {
         "floor": 18,
         "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
       },
-      "packages/web/copy": {
+      "packages/server/spicedb-access": {
+        "floor": 2,
+        "reason": "preserves authorization negative type assertions under consolidated packages/server/spicedb-access (recorded 2026-11-22)"
+      },
+      "packages/web/ui": {
         "floor": 4,
-        "reason": "Compiled negative assertions in the current package contract (recorded 2026-11-20)"
+        "reason": "preserves copy negative type assertions under consolidated packages/web/ui (recorded 2026-11-22)"
       }
     }
   }

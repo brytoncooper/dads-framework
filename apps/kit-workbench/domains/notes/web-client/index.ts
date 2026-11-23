@@ -1,9 +1,8 @@
+import { getFromApi, getPageFromApi, sendToApi } from "@dads-framework/client";
 import {
-  getFromApi,
-  getPageFromApi,
-  sendToApi,
-} from "@dads-framework/client-request-transport";
-import { defineRoute, paginationQuerySchema } from "@dads-framework/contract";
+  defineRoute,
+  paginationQuerySchema,
+} from "@dads-framework/core/contract";
 import { z } from "zod";
 import { note, noteInput, noteFeatures } from "../contract/wire.js";
 

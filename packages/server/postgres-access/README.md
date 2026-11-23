@@ -185,8 +185,8 @@ application locks that coordinate work beyond projecting authorization facts.
 
 To evolve stored relationships between model revisions or migrate a live
 SpiceDB deployment into PostgreSQL, use
-[`@dads-framework/authorization-migration`](../authorization-migration/README.md).
-The [SpiceDB adapter](../authorization/README.md) remains available when you
+[`@dads-framework/spicedb-access/migration`](../spicedb-access/README.md).
+The [SpiceDB adapter](../spicedb-access/README.md) remains available when you
 need a separate graph store with a Postgres outbox.
 
 ## What it refuses to do

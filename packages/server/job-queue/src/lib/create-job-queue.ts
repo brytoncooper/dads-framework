@@ -1,4 +1,4 @@
-import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
+import type { DiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics";
 import { BullMqJobQueue } from "./bullmq-job-queue.js";
 import { InProcessJobQueue } from "./in-process-job-queue.js";
 import type { JobLog, JobQueue } from "../core/index.js";

@@ -16,10 +16,10 @@ export function ensureGeneratorDependencies(
     throw new Error("Expected an application package.json.");
   const dependencies = dependenciesOf(value["dependencies"]);
   const devDependencies = dependenciesOf(value["devDependencies"]);
-  const frameworkVersion = dependencies["@dads-framework/plugin"];
+  const frameworkVersion = dependencies["@dads-framework/core"];
   if (typeof frameworkVersion !== "string")
     throw new Error(
-      "Expected a Dads starter with @dads-framework/plugin installed.",
+      "Expected a Dads starter with @dads-framework/core installed.",
     );
   const required = runtimeDependencies(artifact, frameworkVersion);
   const requiredDev = { "@types/react": REACT };
@@ -48,12 +48,12 @@ function runtimeDependencies(
   version: string,
 ): Record<string, string> {
   if (artifact === "email")
-    return { react: REACT, "@dads-framework/email-templates": version };
+    return { react: REACT, "@dads-framework/email": version };
   return {
     react: REACT,
     "@dads-framework/access": version,
-    "@dads-framework/client-request-transport": version,
-    "@dads-framework/errors": version,
+    "@dads-framework/client": version,
+    "@dads-framework/core": version,
   };
 }
 

@@ -6,7 +6,7 @@ Dads separates **which routes exist on an HTTP process** from **where domain cod
 
 ## 1. Compose separate API entrypoints
 
-Each file under `apps/<api>/app.ts` is a short manifest calling `composeApi` from [`@dads-framework/plugin`](../../../packages/foundation/plugin/README.md). It selects the domain plugins and background jobs that entrypoint exposes (`apps/customer/app.ts`):
+Each file under `apps/<api>/app.ts` is a short manifest calling `composeApi` from [`@dads-framework/core/plugin`](../../../packages/core/README.md). It selects the domain plugins and background jobs that entrypoint exposes (`apps/customer/app.ts`):
 
 <!-- dads:excerpt {"path":"apps/kit-workbench/apps/customer/app.ts","language":"ts","from":"export function customerApp(provider: ServiceProvider) {","through":"}"} -->
 
@@ -84,5 +84,5 @@ A healthy process responds with HTTP `200` and `{ "data": { "status": "ok" } }`.
 ## Related references
 
 - [`@dads-framework/toolbox`](../../../packages/foundation/toolbox/README.md) for all CLI commands and JSON output schemas
-- [`@dads-framework/plugin`](../../../packages/foundation/plugin/README.md) for `composeApi`, `defineService`, and `providePlugin`
+- [`@dads-framework/core/plugin`](../../../packages/core/README.md) for `composeApi`, `defineService`, and `providePlugin`
 - [Architecture decisions](../../decisions/README.md)

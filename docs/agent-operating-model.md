@@ -1,7 +1,7 @@
 # Dads agent operating model
 
 The CLI can explain ownership, generate application code, and select and
-run verification. [`dad-dev`](../packages/foundation/dev/README.md) can isolate
+run verification. [`dad-dev`](../packages/foundation/toolbox/README.md) can isolate
 local services for Git worktrees. Task claims and overlap detection remain
 product direction.
 

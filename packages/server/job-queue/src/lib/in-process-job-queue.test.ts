@@ -8,7 +8,7 @@ import { z } from "zod";
 import {
   type AuditActor,
   currentAuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 
 import { InProcessJobQueue } from "./in-process-job-queue.js";
 import { cronSchedule, defineJob, intervalSchedule } from "../core/index.js";

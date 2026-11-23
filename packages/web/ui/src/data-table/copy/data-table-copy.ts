@@ -3,7 +3,7 @@ import {
   defineCopy,
   type CopyKey,
   type CopyTranslator,
-} from "@dads-framework/copy";
+} from "../../copy/index.js";
 
 /** Whole visible and accessible phrases owned by the shared DataTable kit. */
 export const dataTableCopy = defineCopy({

@@ -62,3 +62,10 @@ Entry point: @dads-framework/toolbox
 - function scaffoldAccessMigrationFromSources: export declare function scaffoldAccessMigrationFromSources(options: ScaffoldAccessMigrationOptions): Promise<AccessMigrationScaffoldResult>;
 - function synchronizeAgentSkills: export declare function synchronizeAgentSkills(projectRoot: string): readonly SkillSynchronization[];
 ```
+
+Entry point: @dads-framework/toolbox/dev
+
+```
+- type WorktreeRemovalFacts: export type WorktreeRemovalFacts = { readonly primary: boolean; readonly locked: boolean; readonly dirty: boolean; readonly running: boolean; readonly pushed: boolean; readonly mergedPatch: boolean; readonly empty: boolean; readonly idleMinutes: number; };
+- function decideWorktreeRemoval: export declare function decideWorktreeRemoval(facts: WorktreeRemovalFacts): { readonly remove: false; readonly reason: KeepReason; } | { readonly remove: true; readonly reason: RemovalReason; };
+```

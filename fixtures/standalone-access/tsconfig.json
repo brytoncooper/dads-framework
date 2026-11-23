@@ -7,8 +7,12 @@
     "types": ["node"]
   },
   "references": [
-    { "path": "../../packages/access" },
-    { "path": "../../packages/server/postgres-access" }
+    {
+      "path": "../../packages/access"
+    },
+    {
+      "path": "../../packages/server/postgres-access"
+    }
   ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]

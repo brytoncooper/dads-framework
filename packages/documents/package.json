@@ -1,0 +1,92 @@
+{
+  "name": "@dads-framework/documents",
+  "version": "0.3.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./csv": {
+      "types": "./dist/csv/index.d.ts",
+      "default": "./dist/csv/index.js"
+    },
+    "./pdf": {
+      "types": "./dist/pdf/index.d.ts",
+      "default": "./dist/pdf/index.js"
+    },
+    "./pdf/pdfmake": {
+      "types": "./dist/pdf/pdfmake.d.ts",
+      "default": "./dist/pdf/pdfmake.js"
+    },
+    "./xlsx": {
+      "types": "./dist/xlsx/index.d.ts",
+      "default": "./dist/xlsx/index.js"
+    }
+  },
+  "dadsConformance": {
+    "capability": "Read portable XLSX table cells, cached numbers and sparse rows",
+    "suite": "test-support-xlsx/workbook-table-reader-laws.ts",
+    "law": "runWorkbookTableReaderLaws",
+    "runs": [
+      {
+        "test": "src/xlsx/lib/workbook-table-conformance.test.ts",
+        "provider": {
+          "module": "../../../test-support-xlsx/exceljs-workbook-reader.js",
+          "name": "openExcelJsWorkbookReader"
+        }
+      },
+      {
+        "test": "src/xlsx/lib/workbook-table-conformance.test.ts",
+        "provider": {
+          "module": "../../../test-support-xlsx/spreadsheetml-reader.js",
+          "name": "openSpreadsheetMlReader"
+        }
+      }
+    ]
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@napi-rs/canvas": "0.1.100",
+    "exceljs": "^4.4.0",
+    "pdfjs-dist": "5.4.530",
+    "pdfmake": "^0.3.11"
+  },
+  "peerDependenciesMeta": {
+    "@napi-rs/canvas": {
+      "optional": true
+    },
+    "exceljs": {
+      "optional": true
+    },
+    "pdfjs-dist": {
+      "optional": true
+    },
+    "pdfmake": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "0.1.100",
+    "@types/pdfmake": "^0.3.3",
+    "exceljs": "^4.4.0",
+    "pdfjs-dist": "5.4.530",
+    "pdfmake": "^0.3.11",
+    "vitest": "~4.1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/documents"
+  }
+}

@@ -3,11 +3,11 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   describeException,
   type DiagnosticsReporter,
-} from "@dads-framework/runtime/diagnostics";
+} from "@dads-framework/core/runtime/diagnostics";
 import {
   type HttpErrorResponse,
   mapErrorToHttpResponse,
-} from "@dads-framework/errors/map-error-to-http-response";
+} from "@dads-framework/core/errors/map-error-to-http-response";
 
 import {
   HandlerTimeoutError,

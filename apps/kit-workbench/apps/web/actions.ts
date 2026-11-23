@@ -1,4 +1,4 @@
-import { readClientFailure } from "@dads-framework/client-request-transport";
+import { readClientFailure } from "@dads-framework/client";
 import { useState, type SubmitEvent } from "react";
 import type { WorkbenchCopyKey } from "./copy/workbench-copy.js";
 

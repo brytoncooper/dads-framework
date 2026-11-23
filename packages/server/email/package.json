@@ -1,0 +1,124 @@
+{
+  "name": "@dads-framework/email",
+  "version": "0.3.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./core/testing": {
+      "types": "./dist/core/testing.d.ts",
+      "default": "./dist/core/testing.js"
+    },
+    "./templates": {
+      "types": "./dist/templates/index.d.ts",
+      "default": "./dist/templates/index.js"
+    },
+    "./delivery": {
+      "types": "./dist/delivery/index.d.ts",
+      "default": "./dist/delivery/index.js"
+    },
+    "./delivery/schema": {
+      "types": "./dist/delivery/schema.d.ts",
+      "default": "./dist/delivery/schema.js"
+    },
+    "./delivery/testing": {
+      "types": "./dist/delivery/testing.d.ts",
+      "default": "./dist/delivery/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@dads-framework/core": "0.3.0",
+    "@dads-framework/job-queue": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
+    "drizzle-orm": "^0.45.2",
+    "node-pg-migrate": "^9.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "resend": "^6.17.2",
+    "zod": "^4.4.3"
+  },
+  "peerDependenciesMeta": {
+    "@dads-framework/core": {
+      "optional": true
+    },
+    "@dads-framework/job-queue": {
+      "optional": true
+    },
+    "@dads-framework/postgres": {
+      "optional": true
+    },
+    "@react-email/components": {
+      "optional": true
+    },
+    "@react-email/render": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    },
+    "node-pg-migrate": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "resend": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@dads-framework/core": "0.3.0",
+    "@dads-framework/job-queue": "0.3.0",
+    "@dads-framework/postgres": "0.3.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "drizzle-orm": "^0.45.2",
+    "node-pg-migrate": "^9.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "resend": "^6.17.2",
+    "vitest": "~4.1.0",
+    "zod": "^4.4.3"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:integration": "VITEST_TIER=integration vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "license": "MIT",
+  "author": "Bryton Cooper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brytoncooper/dads-framework.git",
+    "directory": "packages/server/email"
+  }
+}

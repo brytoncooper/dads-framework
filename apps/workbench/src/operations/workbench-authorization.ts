@@ -2,7 +2,7 @@ import {
   checkAll,
   type PermissionQuery,
   type ResourceLookup,
-} from "@dads-framework/authorization";
+} from "@dads-framework/spicedb-access";
 import type { WorkbenchAuthorization } from "../access.js";
 import type { PendingAuthorizationChange } from "../storage/workbench-state.js";
 import { WorkbenchError } from "./workbench-error.js";

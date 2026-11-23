@@ -1,4 +1,4 @@
-import { composeApi } from "@dads-framework/plugin";
+import { composeApi } from "@dads-framework/core/plugin";
 
 import { notesData } from "../notes-data.js";
 import { staffNotesJobs } from "../surfaces/staff-notes-jobs.js";

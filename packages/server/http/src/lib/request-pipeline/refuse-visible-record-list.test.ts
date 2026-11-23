@@ -15,7 +15,7 @@ import {
 } from "@dads-framework/access";
 import { scopeBindings } from "@dads-framework/access/scopes";
 import { requiresVisible } from "../route/route-guards.test-support.js";
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 
 import { createHttpApp } from "../create-http-app.js";
 import { HttpWiringError } from "../http-errors.js";

@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   entityIdSchema,
   paginationQuerySchema,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import {
   featureFlagAudienceModeSchema,

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { entityIdSchema } from "@dads-framework/contract";
+import { entityIdSchema } from "@dads-framework/core/contract";
 
 /** The kit mints this on report (never client-supplied — see `clientDiagnosticRow`). */
 export const clientDiagnosticEventIdSchema = entityIdSchema(

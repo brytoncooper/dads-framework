@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import {
   encodeClientContext,
   CLIENT_CONTEXT_HEADER,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import {
   buildRequestRecord,

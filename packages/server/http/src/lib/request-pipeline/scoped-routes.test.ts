@@ -17,7 +17,7 @@ import {
 import { scopeBindings } from "@dads-framework/access/scopes";
 import { requiresScoped } from "../route/route-guards.test-support.js";
 import type { ResourceLookup } from "@dads-framework/access/runtime";
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 
 import { listBodyOf } from "../../testing/index.js";
 import { createHttpApp } from "../create-http-app.js";

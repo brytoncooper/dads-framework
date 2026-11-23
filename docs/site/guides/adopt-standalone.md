@@ -32,10 +32,10 @@ npm install @dads-framework/access @dads-framework/sqlite-access zod
 
 ## 3. Migrate between SpiceDB and PostgreSQL (both directions)
 
-If your team already operates SpiceDB and wants to move permission storage into your existing PostgreSQL database without downtime — or starts in PostgreSQL and later wants to move out to SpiceDB — install `@dads-framework/authorization-migration` alongside `@dads-framework/postgres-access`:
+If your team already operates SpiceDB and wants to move permission storage into your existing PostgreSQL database without downtime — or starts in PostgreSQL and later wants to move out to SpiceDB — install `@dads-framework/spicedb-access/migration` alongside `@dads-framework/postgres-access`:
 
 ```sh
-npm install @dads-framework/access @dads-framework/postgres-access @dads-framework/authorization-migration pg zod
+npm install @dads-framework/access @dads-framework/postgres-access @dads-framework/spicedb-access/migration pg zod
 ```
 
 **SpiceDB → PostgreSQL (zero downtime):**
@@ -60,10 +60,10 @@ Author your model in TypeScript, emit `.zed` with `emitZed(model)`, and diff you
 
 ## 4. Add fail-closed HTTP routes and OpenAPI 3.1
 
-Install [`@dads-framework/http`](../../../packages/server/http/README.md) and [`@dads-framework/contract`](../../../packages/contract/README.md) to declare Fastify routes where every verb requires an explicit `access` rule, rejects unauthorized requests before input validation, and generates OpenAPI 3.1 directly from Zod schemas:
+Install [`@dads-framework/http`](../../../packages/server/http/README.md) and [`@dads-framework/core/contract`](../../../packages/core/README.md) to declare Fastify routes where every verb requires an explicit `access` rule, rejects unauthorized requests before input validation, and generates OpenAPI 3.1 directly from Zod schemas:
 
 ```sh
-npm install @dads-framework/http @dads-framework/contract zod
+npm install @dads-framework/http @dads-framework/core/contract zod
 ```
 
 Read [Routes, Contracts & Clients](routes-and-contracts.md) to wire your first route group.
@@ -86,13 +86,13 @@ This writes the starter inside a `dads/` subdirectory and leaves your existing f
 
 ## Standalone package catalog
 
-| Capability                                                                                        | Packages                                                                                                                                           |
-| :------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Relationship permission model, `createAccessClient`, `ShadowAuthorization`, and `.zed` conversion | [`@dads-framework/access`](../../../packages/access/README.md)                                                                                     |
-| Transactional PostgreSQL ReBAC engine (plain `pg.Pool` or Drizzle)                                | [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md)                                                            |
-| Transactional SQLite ReBAC engine (Node built-in `node:sqlite`)                                   | [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)                                                                |
-| Connected `(from, to)` access migrations and SpiceDB to PostgreSQL cutover                        | [`@dads-framework/authorization-migration`](../../../packages/server/authorization-migration/README.md)                                            |
-| SpiceDB runtime client and outbox                                                                 | [`@dads-framework/authorization`](../../../packages/server/authorization/README.md)                                                                |
-| Typed HTTP routes, guards, and OpenAPI 3.1                                                        | [`@dads-framework/http`](../../../packages/server/http/README.md), [`@dads-framework/contract`](../../../packages/contract/README.md)              |
-| Auth, sessions, workspaces, SSO, and SCIM                                                         | [`@dads-framework/identity`](../../../packages/server/identity/README.md), [`@dads-framework/tenants`](../../../packages/server/tenants/README.md) |
-| Audit trail, feature flags, jobs, storage, PDF, CSV                                               | [Browse all packages](https://dadsframework.dev/docs/packages)                                                                                     |
+| Capability                                                                                        | Packages                                                                                                                                                     |
+| :------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relationship permission model, `createAccessClient`, `ShadowAuthorization`, and `.zed` conversion | [`@dads-framework/access`](../../../packages/access/README.md)                                                                                               |
+| Transactional PostgreSQL ReBAC engine (plain `pg.Pool` or Drizzle)                                | [`@dads-framework/postgres-access`](../../../packages/server/postgres-access/README.md)                                                                      |
+| Transactional SQLite ReBAC engine (Node built-in `node:sqlite`)                                   | [`@dads-framework/sqlite-access`](../../../packages/server/sqlite-access/README.md)                                                                          |
+| Connected `(from, to)` access migrations and SpiceDB to PostgreSQL cutover                        | [`@dads-framework/spicedb-access/migration`](../../../packages/server/spicedb-access/README.md)                                                              |
+| SpiceDB runtime client and outbox                                                                 | [`@dads-framework/spicedb-access`](../../../packages/server/spicedb-access/README.md)                                                                        |
+| Typed HTTP routes, guards, and OpenAPI 3.1                                                        | [`@dads-framework/http`](../../../packages/server/http/README.md), [`@dads-framework/core/contract`](../../../packages/core/README.md)                       |
+| Auth, sessions, workspaces, SSO, and SCIM                                                         | [`@dads-framework/identity`](../../../packages/server/identity/README.md), [`@dads-framework/identity/tenants`](../../../packages/server/identity/README.md) |
+| Audit trail, feature flags, jobs, storage, PDF, CSV                                               | [Browse all packages](https://dadsframework.dev/docs/packages)                                                                                               |

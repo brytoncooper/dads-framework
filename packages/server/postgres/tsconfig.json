@@ -8,10 +8,7 @@
   },
   "references": [
     {
-      "path": "../audit-actor"
-    },
-    {
-      "path": "../runtime"
+      "path": "../../core"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

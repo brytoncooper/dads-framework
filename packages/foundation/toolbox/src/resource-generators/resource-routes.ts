@@ -12,7 +12,7 @@ export function resourceRoutes(
   const file = `${name}-resource`;
   plan.create(
     `domains/${domain}/server/${file}.ts`,
-    `import { notFound, staleSave } from "@dads-framework/errors";
+    `import { notFound, staleSave } from "@dads-framework/core/errors";
 import { getRoute, listRoute, patchRoute, routeGroup } from "@dads-framework/http";
 
 import type { StarterServices } from "../../../libraries/app-runtime/index.js";

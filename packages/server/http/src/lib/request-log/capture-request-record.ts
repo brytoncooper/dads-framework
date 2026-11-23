@@ -14,9 +14,9 @@
 
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { currentAuditActor } from "@dads-framework/audit-actor";
-import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
-import { requestWorkOf } from "@dads-framework/runtime/request-work";
+import { currentAuditActor } from "@dads-framework/core/audit-actor";
+import type { DiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics";
+import { requestWorkOf } from "@dads-framework/core/runtime/request-work";
 
 import { requestIdOf } from "../request-pipeline/request-id.js";
 import type {

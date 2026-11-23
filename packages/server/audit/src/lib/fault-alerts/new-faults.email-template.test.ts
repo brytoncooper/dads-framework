@@ -15,7 +15,7 @@ describe("newFaultsEmailTemplate", () => {
       import.meta.url,
     ).href;
     const source = `
-      import { renderEmailTemplate } from "@dads-framework/email-templates";
+      import { renderEmailTemplate } from "@dads-framework/email/templates";
       import { newFaultsEmailTemplate as template } from ${JSON.stringify(templateUrl)};
       for (const props of Object.values(template.samples))
         await renderEmailTemplate(template, props);

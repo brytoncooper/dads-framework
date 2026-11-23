@@ -14,9 +14,9 @@ test("plans test types for direct and grouped package workspaces", (context) => 
   context.after(() => rmSync(root, { recursive: true, force: true }));
 
   for (const file of [
-    "packages/contract/package.json",
-    "packages/contract/src/id.test.ts",
-    "packages/contract/tsconfig.tests.json",
+    "packages/core/package.json",
+    "packages/core/src/contract/id.test.ts",
+    "packages/core/tsconfig.tests.json",
     "packages/access/package.json",
     "packages/access/src/access.test.tsx",
     "packages/server/http/package.json",
@@ -35,7 +35,7 @@ test("plans test types for direct and grouped package workspaces", (context) => 
 
   assert.deepEqual(plan, {
     projects: [
-      "packages/contract/tsconfig.tests.json",
+      "packages/core/tsconfig.tests.json",
       "packages/server/http/tsconfig.tests.json",
     ],
     missing: ["packages/access"],

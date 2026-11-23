@@ -1,4 +1,4 @@
-import { notFound } from "@dads-framework/errors";
+import { notFound } from "@dads-framework/core/errors";
 
 import type {
   FeatureFlagDefinition,

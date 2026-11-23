@@ -6,12 +6,12 @@ import Fastify, {
 } from "fastify";
 import type { DestinationStream } from "pino";
 
-import type { DiagnosticsReporter } from "@dads-framework/runtime/diagnostics";
-import { beginRequestWork } from "@dads-framework/runtime/request-work";
+import type { DiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics";
+import { beginRequestWork } from "@dads-framework/core/runtime/request-work";
 import {
   ACCESS_REFUSAL_HEADER,
   REQUEST_ID_HEADER,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { AuthorizationWarningFaults } from "./request-log/authorization-warning-faults.js";
 import { captureRequestRecord } from "./request-log/capture-request-record.js";

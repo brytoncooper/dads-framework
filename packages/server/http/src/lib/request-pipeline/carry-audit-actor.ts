@@ -28,7 +28,7 @@ import {
   type AuditActor,
   enterAuditActor,
   runWithAuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import { rememberRequestActor } from "../request-log/request-outcome.js";

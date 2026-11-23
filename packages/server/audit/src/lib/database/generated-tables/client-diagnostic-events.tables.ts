@@ -15,7 +15,7 @@ import type {
   ClientContext,
   ClientDiagnosticBreadcrumb,
   ClientDiagnosticFrame,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 import type { ClientDiagnosticEventId } from "../../client-diagnostics/client-diagnostic-event.ids.js";
 
 /**

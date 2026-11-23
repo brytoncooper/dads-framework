@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { ResolveMcpBearer } from "../../../index.js";
-import { REQUEST_ID_HEADER } from "@dads-framework/contract";
+import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import {
   classifyMessage,

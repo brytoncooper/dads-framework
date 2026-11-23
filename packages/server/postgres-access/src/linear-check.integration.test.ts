@@ -4,8 +4,8 @@ import {
   type Authorization,
   type PermissionQuery,
   type RelationshipWrite,
-} from "@dads-framework/authorization";
-import { startTestSpiceDb } from "@dads-framework/authorization/testing";
+} from "@dads-framework/spicedb-access";
+import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { expect, it } from "vitest";
 import { makeChain } from "../test-support/benchmark-chain.js";

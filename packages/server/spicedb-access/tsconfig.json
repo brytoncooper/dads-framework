@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/spicedb-access.tsbuildinfo",
+    "types": ["node"]
+  },
+  "references": [
+    {
+      "path": "../../access"
+    },
+    {
+      "path": "../../core"
+    },
+    {
+      "path": "../job-queue"
+    },
+    {
+      "path": "../postgres"
+    }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.mts"],
+  "exclude": ["src/**/*.test.ts"]
+}

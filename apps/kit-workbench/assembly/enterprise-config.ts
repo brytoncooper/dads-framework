@@ -1,5 +1,5 @@
-import type { EnterpriseSsoProvider } from "@dads-framework/identity-better-auth";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import type { EnterpriseSsoProvider } from "@dads-framework/identity/better-auth";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 import {

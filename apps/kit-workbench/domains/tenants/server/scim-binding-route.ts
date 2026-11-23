@@ -1,11 +1,14 @@
-import { forbidden, notFound, validation } from "@dads-framework/errors";
+import { forbidden, notFound, validation } from "@dads-framework/core/errors";
 import {
   defineRawRoute,
   fromParam,
   requires,
   routeGroup,
 } from "@dads-framework/http";
-import { TenantUnavailableError, type Tenants } from "@dads-framework/tenants";
+import {
+  TenantUnavailableError,
+  type Tenants,
+} from "@dads-framework/identity/tenants";
 
 import { tenantAccess } from "../../../libraries/app-runtime/index.js";
 import {

@@ -54,7 +54,7 @@ export const VERIFY_STEPS = Object.freeze(
     {
       id: "styles",
       command: NODE,
-      args: ["--test", "packages/web/styles/verify-styles.test.mjs"],
+      args: ["--test", "packages/web/ui/styles/verify-styles.test.mjs"],
       needs: [],
       weight: 1,
     },

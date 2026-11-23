@@ -6,7 +6,7 @@ import {
   EmailBadge,
   EmailHeading,
   EmailText,
-} from "@dads-framework/email-templates";
+} from "@dads-framework/email/templates";
 
 /**
  * The email that says something is newly broken.

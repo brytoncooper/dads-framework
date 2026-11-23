@@ -2,7 +2,7 @@ import {
   LOCALE_HEADER,
   SUPPORTED_LOCALES,
   type Locale,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 /**
  * Which language this request is answered in.

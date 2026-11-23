@@ -75,7 +75,7 @@ Explore the framework guides and references:
 - [Generator guide](./docs/generators.md): All nine `dad add` scaffolding commands.
 - [Domain boundaries](./docs/domain-boundaries.md): Public entrypoints, import checks, and composition rules.
 - [Toolbox command reference](./packages/foundation/toolbox/README.md): CLI flags and JSON output schemas.
-- [Plugin composition](./packages/foundation/plugin/README.md): Selective customer and staff API entrypoints.
+- [Plugin composition](./packages/core/README.md): Selective customer and staff API entrypoints.
 - [Doctor and enforcement](./docs/doctor.md): Static health checks and repair guides.
 - [CI workflow templates](./ci/README.md): Portable verification scripts for CI providers.
 - [Architecture decisions](./docs/decisions/README.md): Trade-offs behind PostgreSQL ReBAC, fail-closed denials, direct edges, and boundary ratchets.

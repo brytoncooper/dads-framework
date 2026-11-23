@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import { afterAll, beforeAll, it } from "vitest";
 
-import { systemActor } from "@dads-framework/audit-actor";
+import { systemActor } from "@dads-framework/core/audit-actor";
 
 import {
   startTestPostgres,

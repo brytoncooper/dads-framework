@@ -1,4 +1,4 @@
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
 import { buildTestApp } from "@dads-framework/http/testing";
 /**
  * What: recording a fault never becomes a second fault.
@@ -10,7 +10,7 @@ import { buildTestApp } from "@dads-framework/http/testing";
 
 import { describe, expect, it } from "vitest";
 
-import type { ClientDiagnosticEvent } from "@dads-framework/contract";
+import type { ClientDiagnosticEvent } from "@dads-framework/core/contract";
 
 import {
   type ClientDiagnosticRow,

@@ -108,8 +108,7 @@ describe("initialize Dads project", () => {
       "utf8",
     );
     expect(manifest).toContain("@dads-framework/http");
-    expect(manifest).toContain("@dads-framework/identity-better-auth");
-    expect(manifest).toContain("@dads-framework/tenants");
+    expect(manifest).toContain("@dads-framework/identity");
     expect(manifest).toContain("@dads-framework/postgres-access");
     expect(manifest).not.toMatch(/legacy-(?:http|authorization)/);
     expect(

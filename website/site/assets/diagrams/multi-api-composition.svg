@@ -33,7 +33,7 @@
 
   <!-- Header -->
   <text x="24" y="38" class="title">Multi-API Composition</text>
-  <text x="816" y="38" text-anchor="end" class="subtitle">@dads-framework/plugin · build-time surface isolation</text>
+  <text x="816" y="38" text-anchor="end" class="subtitle">@dads-framework/core/plugin · build-time surface isolation</text>
 
   <!-- TOP LEFT: Shared domains/ -->
   <rect x="20" y="56" width="444" height="136" rx="12" fill="#12171b" stroke="#333c42" stroke-width="1" />

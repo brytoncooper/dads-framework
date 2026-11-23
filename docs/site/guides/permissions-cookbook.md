@@ -1,6 +1,6 @@
 # Permissions Cookbook & Patterns
 
-Source-backed, tested recipes and production best practices for `@dads-framework/access`, `@dads-framework/postgres-access`, `@dads-framework/sqlite-access`, and `@dads-framework/authorization-migration`.
+Source-backed, tested recipes and production best practices for `@dads-framework/access`, `@dads-framework/postgres-access`, `@dads-framework/sqlite-access`, and `@dads-framework/spicedb-access/migration`.
 
 New here? Start with the [5-Minute Access Quickstart](permissions.md) first.
 
@@ -125,9 +125,9 @@ npx dads-import-spicedb \
 
 ### Migrating FROM PostgreSQL (even with `columnRelations`) → SpiceDB
 
-If you ever outgrow a single Postgres cluster and want a dedicated multi-region SpiceDB deployment, you are **not locked in** — even if you used `columnRelations` everywhere (`packages/server/authorization-migration/src/lib/postgres-to-spicedb/postgres-to-spicedb.integration.test.ts`):
+If you ever outgrow a single Postgres cluster and want a dedicated multi-region SpiceDB deployment, you are **not locked in** — even if you used `columnRelations` everywhere (`packages/server/spicedb-access/src/migration/lib/postgres-to-spicedb/postgres-to-spicedb.integration.test.ts`):
 
-<!-- dads:excerpt {"path":"packages/server/authorization-migration/src/lib/postgres-to-spicedb/postgres-to-spicedb.integration.test.ts","language":"ts","from":"    const exportedTuples: SpiceDbExportedTuple[] = [];","through":"    for (const statement of triggers.up) {\n      await pool.query(statement);\n    }"} -->
+<!-- dads:excerpt {"path":"packages/server/spicedb-access/src/migration/lib/postgres-to-spicedb/postgres-to-spicedb.integration.test.ts","language":"ts","from":"    const exportedTuples: SpiceDbExportedTuple[] = [];","through":"    for (const statement of triggers.up) {\n      await pool.query(statement);\n    }"} -->
 
 1. `columnRelationOutboxTriggerSql(model, bindings)` creates Postgres triggers so future `INSERT`/`UPDATE`/`DELETE` writes to column-backed tables automatically feed `authorization_outbox` — **zero app-code rewrites**.
 2. `migratePostgresToSpiceDb` emits & writes `.zed`, streams active rows from `dad_authorization_relationship`, and materializes every non-`NULL` `columnRelations` row via keyset pagination into idempotent SpiceDB `TOUCH` writes.

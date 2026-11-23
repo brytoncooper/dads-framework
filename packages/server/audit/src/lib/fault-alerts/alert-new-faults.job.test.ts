@@ -16,7 +16,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type OutboundEmailId,
   outboundEmailIdSchema,
-} from "@dads-framework/email-delivery";
+} from "@dads-framework/email/delivery";
 
 import type {
   AlertedFault,

@@ -1,6 +1,6 @@
 import { resource, type DslNode } from "@dads-framework/access";
 import { fromFixed, getRoute, routeGroup } from "@dads-framework/http";
-import { definePlugin } from "@dads-framework/plugin";
+import { definePlugin } from "@dads-framework/core/plugin";
 import { z } from "zod";
 
 import { userAccess } from "../notes-access.js";

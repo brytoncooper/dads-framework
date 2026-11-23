@@ -8,8 +8,8 @@
  * exactly the kind this exists to hear about.
  */
 
-import { currentAuditActor } from "@dads-framework/audit-actor";
-import type { ReportClientDiagnosticsBody } from "@dads-framework/contract";
+import { currentAuditActor } from "@dads-framework/core/audit-actor";
+import type { ReportClientDiagnosticsBody } from "@dads-framework/core/contract";
 
 import type { RecordClientDiagnostics } from "./record-client-diagnostics.js";
 

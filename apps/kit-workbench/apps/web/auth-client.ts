@@ -1,4 +1,4 @@
-import { ApiError } from "@dads-framework/client-request-transport";
+import { ApiError } from "@dads-framework/client";
 import { z } from "zod";
 
 const account = z.object({

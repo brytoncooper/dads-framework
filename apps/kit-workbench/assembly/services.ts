@@ -1,19 +1,19 @@
 import type { AccessModel } from "@dads-framework/access";
-import { currentAuditActor } from "@dads-framework/audit-actor";
+import { currentAuditActor } from "@dads-framework/core/audit-actor";
 import {
   GetEffectiveFeatureState,
   type FeatureFlagDefinition,
 } from "@dads-framework/feature-flags";
 import { readFeatureFlagPreview } from "@dads-framework/feature-flags/http";
 import { DrizzleFeatureFlagStore } from "@dads-framework/feature-flags/postgres";
-import { providePlugin, type PluginScope } from "@dads-framework/plugin";
+import { providePlugin, type PluginScope } from "@dads-framework/core/plugin";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
   preparePostgresChecks,
   TransactionalAccessChanges,
 } from "@dads-framework/postgres-access";
-import { Tenants, type TenantsOptions } from "@dads-framework/tenants";
+import { Tenants, type TenantsOptions } from "@dads-framework/identity/tenants";
 
 import {
   starterServices,

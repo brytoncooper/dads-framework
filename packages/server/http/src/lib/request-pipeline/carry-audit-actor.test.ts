@@ -4,9 +4,9 @@ import { z } from "zod";
 import {
   type AuditActor,
   currentAuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { REQUEST_ID_HEADER } from "@dads-framework/contract";
+import { REQUEST_ID_HEADER } from "@dads-framework/core/contract";
 
 import { createHttpApp } from "../create-http-app.js";
 import { publicAccess, requireSession } from "../route/access.js";

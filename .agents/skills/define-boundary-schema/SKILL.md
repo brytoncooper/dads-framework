@@ -10,7 +10,7 @@ description: Add or change a Dads boundary schema without coupling independently
 2. Declare the shape in Zod. Use `z.strictObject` for untrusted request objects
    that must reject unknown fields. Choose response fields and patch behavior
    explicitly.
-3. Use the `@dads-framework/contract` schemas for shared wire concepts such as
+3. Use the `@dads-framework/core/contract` schemas for shared wire concepts such as
    entity IDs, request metadata, and pagination.
 4. Keep request, response, persistence, and event shapes independently owned.
    Map foreign SDK values at their integration boundary.

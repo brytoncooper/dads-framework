@@ -6,7 +6,11 @@
     "tsBuildInfoFile": "dist/testing-fixture.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../../packages/testing/core" }],
+  "references": [
+    {
+      "path": "../../packages/testing/core"
+    }
+  ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

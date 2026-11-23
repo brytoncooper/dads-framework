@@ -9,22 +9,13 @@
   },
   "references": [
     {
-      "path": "../audit-actor"
+      "path": "../../core"
     },
     {
-      "path": "../authorization"
+      "path": "../spicedb-access"
     },
     {
-      "path": "../runtime"
-    },
-    {
-      "path": "../../contract"
-    },
-    {
-      "path": "../email-delivery"
-    },
-    {
-      "path": "../email-templates"
+      "path": "../email"
     },
     {
       "path": "../http"
@@ -34,9 +25,6 @@
     },
     {
       "path": "../postgres"
-    },
-    {
-      "path": "../../foundation/plugin"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

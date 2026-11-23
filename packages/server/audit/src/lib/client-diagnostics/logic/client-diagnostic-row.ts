@@ -15,7 +15,7 @@
  *   overwrite another's row, or collide on purpose.
  */
 
-import type { ClientDiagnosticEvent } from "@dads-framework/contract";
+import type { ClientDiagnosticEvent } from "@dads-framework/core/contract";
 
 import type { ClientDiagnosticRow } from "../../database/writers/client-diagnostic-writer.interface.js";
 import type { ClientDiagnosticEventId } from "../client-diagnostic-event.ids.js";

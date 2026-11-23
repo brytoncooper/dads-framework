@@ -20,12 +20,7 @@ export function assertGeneratedArtifacts(projectRoot) {
   }
   const manifest = readJson(join(projectRoot, "package.json"));
   const packages = manifest.dependencies ?? {};
-  for (const name of [
-    "http",
-    "postgres-access",
-    "identity-better-auth",
-    "tenants",
-  ]) {
+  for (const name of ["http", "postgres-access", "identity"]) {
     if (packages[`@dads-framework/${name}`] === undefined)
       throw new Error(`Missing kit dependency ${name}.`);
   }

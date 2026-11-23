@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { ClientDiagnosticEvent } from "@dads-framework/contract";
+import type { ClientDiagnosticEvent } from "@dads-framework/core/contract";
 
 import { clientDiagnosticEventIdSchema } from "../client-diagnostic-event.ids.js";
 import { clientDiagnosticRow } from "./client-diagnostic-row.js";

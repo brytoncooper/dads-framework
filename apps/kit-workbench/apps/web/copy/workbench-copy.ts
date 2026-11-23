@@ -1,4 +1,8 @@
-import { createCopyHook, defineCopy, type CopyKey } from "@dads-framework/copy";
+import {
+  createCopyHook,
+  defineCopy,
+  type CopyKey,
+} from "@dads-framework/ui/copy";
 
 export const workbenchCopy = defineCopy({
   "workbench.brand": { en: "Dads Workbench" },

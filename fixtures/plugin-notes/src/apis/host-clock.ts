@@ -1,4 +1,4 @@
-import { providePlugin } from "@dads-framework/plugin";
+import { providePlugin } from "@dads-framework/core/plugin";
 
 import { clockService } from "../clock-service.js";
 

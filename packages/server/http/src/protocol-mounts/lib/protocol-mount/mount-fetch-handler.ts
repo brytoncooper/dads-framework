@@ -5,13 +5,13 @@ import type {
   HTTPMethods,
 } from "fastify";
 
-import type { FetchHandler } from "@dads-framework/contract";
+import type { FetchHandler } from "@dads-framework/core/contract";
 
 import { createRateLimiter, type RateLimiter } from "../../../index.js";
 
 import { toWebRequest } from "./to-web-request.js";
 
-export type { FetchHandler } from "@dads-framework/contract";
+export type { FetchHandler } from "@dads-framework/core/contract";
 
 /** One answered request, as the mount hands it to a caller's hook. */
 export type ProtocolExchange = Readonly<{

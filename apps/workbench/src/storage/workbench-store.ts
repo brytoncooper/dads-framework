@@ -1,4 +1,4 @@
-import type { PermissionQuery } from "@dads-framework/authorization";
+import type { PermissionQuery } from "@dads-framework/spicedb-access";
 import type {
   WorkbenchSubject,
   WorkbenchTaskIds,

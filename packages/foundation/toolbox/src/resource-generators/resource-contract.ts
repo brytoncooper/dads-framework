@@ -16,8 +16,8 @@ export function resourceContract(
   expectedRowVersionFields,
   paginationQuerySchema,
   rowVersionSchema,
-} from "@dads-framework/contract";
-import { tenantIdSchema } from "@dads-framework/tenants";
+} from "@dads-framework/core/contract";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 const collectionPath = "/tenants/:tenantId/${domain}/${name}";

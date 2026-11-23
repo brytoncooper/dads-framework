@@ -7,10 +7,18 @@
     "types": ["node"]
   },
   "references": [
-    { "path": "../../packages/foundation/plugin" },
-    { "path": "../../packages/access" },
-    { "path": "../../packages/server/http" },
-    { "path": "../../packages/server/job-queue" }
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/access"
+    },
+    {
+      "path": "../../packages/server/http"
+    },
+    {
+      "path": "../../packages/server/job-queue"
+    }
   ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]

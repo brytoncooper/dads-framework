@@ -33,7 +33,7 @@ import {
   InMemoryFeatureFlagStore,
   FakeTenantDirectory,
 } from "@dads-framework/feature-flags/testing";
-import { SystemClock } from "@dads-framework/runtime/clock";
+import { SystemClock } from "@dads-framework/core/runtime/clock";
 
 const bulkExport = defineFeatureFlag({
   slug: "billing.invoices.bulk-export",
@@ -113,7 +113,7 @@ The generated starter defines the note-export flag in
 - `@dads-framework/feature-flags/contract` holds the Zod schemas, route paths
   and header names, with no server code, for a client to import.
 - `@dads-framework/feature-flags/http` serves the routes and the per-request
-  evaluator; `@dads-framework/client-feature-flags` reads the state in a
+  evaluator; `@dads-framework/feature-flags/react` reads the state in a
   browser.
 
 ## What it refuses to do

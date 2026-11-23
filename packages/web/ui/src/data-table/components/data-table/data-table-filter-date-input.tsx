@@ -1,5 +1,5 @@
 import { CalendarIcon } from "lucide-react";
-import { resolveReaderTimeZone } from "@dads-framework/copy";
+import { resolveReaderTimeZone } from "../../../copy/index.js";
 import { Button, cn } from "../../../elements/index.js";
 import {
   Popover,

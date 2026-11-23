@@ -121,25 +121,20 @@ function packageImportTasks(context, executableOnlyPackages) {
 
 function packageEntryProof(root, packageName) {
   switch (packageName) {
-    case "@dads-framework/design-tokens":
+    case "@dads-framework/ui":
       return `
-        import assert from "node:assert/strict";
-        import tokens from "@dads-framework/design-tokens/default.tokens.json" with { type: "json" };
+        import tokens from "@dads-framework/ui/tokens/default.tokens.json" with { type: "json" };
+        import { Button } from "@dads-framework/ui/elements";
+        import { defineCopy } from "@dads-framework/ui/copy";
+        ${readFileSync(
+          join(root, "packages/web/ui/styles/verify-styles.test.mjs"),
+          "utf8",
+        )}
         assert.equal(tokens.palette.$type, "color");
         assert.ok(tokens.light);
         assert.ok(tokens.dark);
-      `;
-    case "@dads-framework/styles":
-      // Run the same CSS compilation proof from the installed-package fixture.
-      return readFileSync(
-        join(root, "packages/web/styles/verify-styles.test.mjs"),
-        "utf8",
-      );
-    case "@dads-framework/ui":
-      return `
-        import assert from "node:assert/strict";
-        import { Button } from "@dads-framework/ui/elements";
         assert.equal(typeof Button, "function");
+        assert.equal(typeof defineCopy, "function");
       `;
     default:
       return (

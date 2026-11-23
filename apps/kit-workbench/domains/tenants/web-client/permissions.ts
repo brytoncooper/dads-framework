@@ -1,8 +1,5 @@
-import {
-  getFromApi,
-  getPageFromApi,
-} from "@dads-framework/client-request-transport";
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { getFromApi, getPageFromApi } from "@dads-framework/client";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 import type { z } from "zod";
 import {
   memberPermissions,

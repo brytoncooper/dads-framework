@@ -2,7 +2,7 @@ import type { Option } from "../../lib/data-table-types.js";
 import type { Column } from "@tanstack/react-table";
 import { BadgeCheck, Text } from "lucide-react";
 
-import { FormattedInteger } from "@dads-framework/copy";
+import { FormattedInteger } from "../../../copy/index.js";
 import { CommandGroup, CommandItem } from "../../../overlays/index.js";
 
 import { useDataTableCopy } from "../../copy/data-table-copy.js";

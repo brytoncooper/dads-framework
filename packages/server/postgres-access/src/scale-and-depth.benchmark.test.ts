@@ -4,13 +4,13 @@ import {
   emitZed,
   resource,
 } from "@dads-framework/access";
-import type { RelationshipWrite } from "@dads-framework/authorization";
+import type { RelationshipWrite } from "@dads-framework/spicedb-access";
 import {
   createTunedSpiceDbClient,
   startTunedSpiceDb,
   type TunedSpiceDbClient,
   type TunedSpiceDbConsistency,
-} from "@dads-framework/authorization/testing";
+} from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, expect, it } from "vitest";

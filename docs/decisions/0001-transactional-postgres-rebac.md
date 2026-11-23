@@ -16,7 +16,7 @@ Operating a second datastore, an outbox table, and a background projector also a
 
 ## Decision
 
-Compile the TypeScript relationship model declared with `@dads-framework/access` into SQL queries in `@dads-framework/postgres-access` (`PostgresAuthorization`) over the `public.dad_authorization_relationship` table, while keeping SpiceDB (`@dads-framework/authorization`, `SpiceDbAuthorization`) behind the same `@dads-framework/access/runtime` port.
+Compile the TypeScript relationship model declared with `@dads-framework/access` into SQL queries in `@dads-framework/postgres-access` (`PostgresAuthorization`) over the `public.dad_authorization_relationship` table, while keeping SpiceDB (`@dads-framework/spicedb-access`, `SpiceDbAuthorization`) behind the same `@dads-framework/access/runtime` port.
 
 1. **Shared runtime port:** Domain routes, HTTP enforcement (`@dads-framework/http`), and list scoping target `@dads-framework/access/runtime` (`Authorization`, `AccessChanges`, `evaluateRouteAccess`) and test against `FakeAuthorization` in `@dads-framework/access/testing`. The composition root selects either `PostgresAuthorization` or `SpiceDbAuthorization` (`apps/kit-workbench/assembly/services.ts`) without changing domain code.
 2. **Single-transaction writes and revocations:** In PostgreSQL mode, applications bind `TransactionalAccessChanges` as the enqueue port and `AlreadyAppliedAccessChanges` as the after-commit no-op dispatcher. Membership writes, SCIM user deactivations, and tuple deletes commit or roll back inside one PostgreSQL transaction.
@@ -28,7 +28,7 @@ Compile the TypeScript relationship model declared with `@dads-framework/access`
 
 ### Require SpiceDB with a PostgreSQL outbox for all applications
 
-- **Pros:** Supports arbitrary graph topologies, isolates authorization read load from the primary OLTP database, and supports SpiceDB-native operational features. Dads keeps this path available in `@dads-framework/authorization`.
+- **Pros:** Supports arbitrary graph topologies, isolates authorization read load from the primary OLTP database, and supports SpiceDB-native operational features. Dads keeps this path available in `@dads-framework/spicedb-access`.
 - **Cons:** Forces every starter and single-database app to operate a second datastore, a migration runner for Zed schemas, an outbox table, and a projector worker, while introducing a delivery window after revocations.
 - **Rejected as the sole backend:** Single-database applications need transactional revocation without running a second distributed store.
 
@@ -52,14 +52,14 @@ Compile the TypeScript relationship model declared with `@dads-framework/access`
 - The SQL compiler rejects cross-entity permission cycles, empty expressions, and multi-target arrows, and `@dads-framework/access` omits SpiceDB caveats.
 - Serializable protected writes can raise `PostgresSerializationConflict`, so callers must retry whole transactions (the starter maps this to HTTP `409` in [`assembly/protected-write.ts`](../../apps/kit-workbench/assembly/protected-write.ts)).
 - Enabling optional `lookupRevisionSchemaMigration` caching shares one revision row per namespace, which can slow concurrent writes within the same namespace.
-- Teams that outgrow PostgreSQL evaluation can switch to `@dads-framework/authorization` at composition time without rewriting routes or domain handlers.
+- Teams that outgrow PostgreSQL evaluation can switch to `@dads-framework/spicedb-access` at composition time without rewriting routes or domain handlers.
 
 ## References
 
 - [Who let Gary back in?](../go-ask-your-other-database.md)
 - [`@dads-framework/postgres-access` README](../../packages/server/postgres-access/README.md)
 - [`@dads-framework/postgres-access` benchmark notes](../../packages/server/postgres-access/BENCHMARK.md)
-- [`@dads-framework/authorization` README](../../packages/server/authorization/README.md)
+- [`@dads-framework/spicedb-access` README](../../packages/server/spicedb-access/README.md)
 - [`@dads-framework/access` README](../../packages/access/README.md)
 - [Starter service wiring](../../apps/kit-workbench/assembly/services.ts)
 - [Starter protected write helper](../../apps/kit-workbench/assembly/protected-write.ts)

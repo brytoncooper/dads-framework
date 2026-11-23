@@ -6,7 +6,11 @@
     "tsBuildInfoFile": "dist/create-dads.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../toolbox" }],
+  "references": [
+    {
+      "path": "../toolbox"
+    }
+  ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

@@ -18,8 +18,8 @@ export function createAdoptionFixtures() {
   return [
     {
       name: "contract",
-      packages: ["@dads-framework/contract"],
-      source: `import { entityIdSchema, mintEntityId } from "@dads-framework/contract";
+      packages: ["@dads-framework/core"],
+      source: `import { entityIdSchema, mintEntityId } from "@dads-framework/core/contract";
 import { z } from "zod";
 const documentId = entityIdSchema("DocumentId", "Document identifier.");
 const title = z.string().trim().min(1).max(20);
@@ -67,15 +67,15 @@ try {
       vendorTypePackages: ["@types/pg"],
       packages: [
         "@dads-framework/access",
-        "@dads-framework/authorization",
-        "@dads-framework/contract",
+        "@dads-framework/spicedb-access",
+        "@dads-framework/core",
         "@dads-framework/http",
       ],
       source:
         `import { fromParam, getRoute, requires, routeGroup } from "@dads-framework/http";
 import { buildTestApp, TEST_SUBJECT_HEADER } from "@dads-framework/http/testing";
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
-import { ACCESS_REFUSAL_HEADER, ACCESS_REFUSAL_VALUE } from "@dads-framework/contract";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
+import { ACCESS_REFUSAL_HEADER, ACCESS_REFUSAL_VALUE } from "@dads-framework/core/contract";
 ` +
         documentModel +
         `if (!emitZed(model).includes("permission view = reader")) throw new Error("Access model projection lost");
@@ -143,9 +143,9 @@ if (typeof createFeatureFlagRoutes !== "function" || typeof DrizzleFeatureFlagSt
     },
     {
       name: "generated-client",
-      packages: ["@dads-framework/client-request-transport"],
-      source: `import { defineGeneratedRoute, opaqueIdSchema } from "@dads-framework/contract";
-import { getFromApi } from "@dads-framework/client-request-transport";
+      packages: ["@dads-framework/client"],
+      source: `import { defineGeneratedRoute, opaqueIdSchema } from "@dads-framework/core/contract";
+import { getFromApi } from "@dads-framework/client";
 import { z } from "zod";
 const documentId = opaqueIdSchema("DocumentId", "Document identifier.");
 const getDocument = defineGeneratedRoute("GET", "/documents/:id", "getDocument", (id: z.output<typeof documentId>) => "/documents/" + encodeURIComponent(id));

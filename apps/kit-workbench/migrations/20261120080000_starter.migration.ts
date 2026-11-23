@@ -3,12 +3,12 @@ import {
   installAuditSchemaV1,
 } from "@dads-framework/audit";
 import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";
-import { installIdentitySchemaV1 } from "@dads-framework/identity-better-auth";
+import { installIdentitySchemaV1 } from "@dads-framework/identity/better-auth";
 import { relationshipSchemaMigration } from "@dads-framework/postgres-access";
 import {
   installTenantSchemaV1,
   tenantAuditConfiguration,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 import type { MigrationBuilder } from "node-pg-migrate";
 
 export function up(pgm: MigrationBuilder): void {

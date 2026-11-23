@@ -1,9 +1,9 @@
 {
   "packages/authorization/core": {
-    "package": "@dads-framework/authorization",
+    "package": "@dads-framework/spicedb-access",
     "formerFloor": 32,
-    "replacementRoots": ["packages/access", "packages/server/authorization"],
-    "reason": "The legacy model, catalog and durable-intent authoring DSL were retired. Hold the current entity, role, permission, scope and SQL binding contracts in Access and Authorization."
+    "replacementRoots": ["packages/access", "packages/server/spicedb-access"],
+    "reason": "The legacy model, catalog and durable-intent authoring DSL were retired. Hold the current entity, role, permission, scope and SQL binding contracts in Access and SpiceDB Access."
   },
   "packages/http/core": {
     "package": "@dads-framework/http",

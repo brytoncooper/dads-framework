@@ -2,7 +2,7 @@ import type { Column } from "@tanstack/react-table";
 import { X } from "lucide-react";
 import * as React from "react";
 
-import { useLocaleFormatting } from "@dads-framework/copy";
+import { useLocaleFormatting } from "../../../copy/index.js";
 import { Button } from "../../../elements/index.js";
 import {
   Select,

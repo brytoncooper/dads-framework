@@ -1,5 +1,5 @@
 import { featureFlagsService } from "../index.js";
-import { definePlugin } from "@dads-framework/plugin";
+import { definePlugin } from "@dads-framework/core/plugin";
 
 import {
   createFeatureFlagRoutes,

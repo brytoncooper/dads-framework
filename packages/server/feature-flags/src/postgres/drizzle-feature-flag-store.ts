@@ -1,6 +1,6 @@
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 
-import { mintUuidV7 } from "@dads-framework/contract";
+import { mintUuidV7 } from "@dads-framework/core/contract";
 import {
   type FeatureFlagBatchWrite,
   type FeatureFlagHistoryEntry,

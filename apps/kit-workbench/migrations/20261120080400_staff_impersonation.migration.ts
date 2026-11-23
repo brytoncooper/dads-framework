@@ -1,4 +1,4 @@
-import { installStaffImpersonationSchemaV1 } from "@dads-framework/identity-better-auth/impersonation-store";
+import { installStaffImpersonationSchemaV1 } from "@dads-framework/identity/better-auth/impersonation-store";
 import type { MigrationBuilder } from "node-pg-migrate";
 
 export function up(pgm: MigrationBuilder): void {

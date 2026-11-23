@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { notFound } from "@dads-framework/errors";
+import { notFound } from "@dads-framework/core/errors";
 import { getRoute, routeGroup, postRoute } from "@dads-framework/http";
 import { defineJob } from "@dads-framework/job-queue/core";
 import { and, eq } from "drizzle-orm";

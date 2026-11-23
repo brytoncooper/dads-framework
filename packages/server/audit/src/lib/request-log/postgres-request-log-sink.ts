@@ -14,7 +14,7 @@
  *   lose the last second of traffic.
  */
 
-import { withSystemActor } from "@dads-framework/audit-actor";
+import { withSystemActor } from "@dads-framework/core/audit-actor";
 import {
   RequestLogSink,
   requestIdSchema,

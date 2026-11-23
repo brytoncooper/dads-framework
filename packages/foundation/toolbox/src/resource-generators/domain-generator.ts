@@ -59,7 +59,7 @@ export function domainRoutes(services: StarterServices): HttpRoute[] {
 }
 
 function domainPlugin(domain: string): string {
-  return `import { definePlugin } from "@dads-framework/plugin";
+  return `import { definePlugin } from "@dads-framework/core/plugin";
 
 import { starterServices } from "../../../libraries/app-runtime/index.js";
 import { accessDefinitions } from "../access/index.js";

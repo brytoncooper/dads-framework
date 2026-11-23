@@ -1,7 +1,7 @@
 import { actor, compileAccess } from "@dads-framework/access";
-import { createBetterAuthIdentity } from "@dads-framework/identity-better-auth";
-import { runNodePgMigrations } from "@dads-framework/migrations";
-import { readAppliedNodePgJournal } from "@dads-framework/migrations/journal-status";
+import { createBetterAuthIdentity } from "@dads-framework/identity/better-auth";
+import { runNodePgMigrations } from "@dads-framework/postgres/migrations";
+import { readAppliedNodePgJournal } from "@dads-framework/postgres/migrations/journal-status";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import {
@@ -12,7 +12,7 @@ import {
   createTenantAccess,
   TenantUnavailableError,
   Tenants,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 import { z } from "zod";

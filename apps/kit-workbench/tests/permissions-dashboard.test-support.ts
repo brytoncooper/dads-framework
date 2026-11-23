@@ -1,7 +1,7 @@
 import {
   ACCESS_REFUSAL_HEADER,
   ACCESS_REFUSAL_VALUE,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 import { expect } from "vitest";
 import { z } from "zod";
 

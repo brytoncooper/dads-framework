@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { connectPostgresClient } from "@dads-framework/postgres";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
-import { tenantIdSchema } from "@dads-framework/tenants";
+import { tenantIdSchema } from "@dads-framework/identity/tenants";
 import { expect, it } from "vitest";
 import { z } from "zod";
 

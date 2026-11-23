@@ -1,4 +1,4 @@
-import { conflict, notFound, validation } from "@dads-framework/errors";
+import { conflict, notFound, validation } from "@dads-framework/core/errors";
 
 import type {
   FeatureFlagBatchId,

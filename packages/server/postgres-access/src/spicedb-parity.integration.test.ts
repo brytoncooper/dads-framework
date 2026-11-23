@@ -9,8 +9,8 @@ import {
   roleToken,
 } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
-import { SpiceDbAuthorization } from "@dads-framework/authorization";
-import { startTestSpiceDb } from "@dads-framework/authorization/testing";
+import { SpiceDbAuthorization } from "@dads-framework/spicedb-access";
+import { startTestSpiceDb } from "@dads-framework/spicedb-access/testing";
 import { startUnmigratedTestPostgres } from "@dads-framework/postgres/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

@@ -21,7 +21,7 @@ import {
 import { isProductionModule, type DoctorModule } from "./typescript-program.js";
 
 const REACT = "react";
-const COPY_KIT = "@dads-framework/copy";
+const COPY_KIT = "@dads-framework/ui";
 const RENDERED_EXTENSION = ".tsx";
 const NOT_RENDERED = ["/copy/", "/fixtures/", "/__fixtures__/", "/testing/"];
 const GENERATED = [".gen.ts", ".gen.tsx"];
@@ -40,7 +40,7 @@ function dependsOn(
   if (manifest === undefined) return false;
   return (
     manifest.dependencies.includes(name) ||
-    manifest.peerDependencies.includes(name)
+    manifest.requiredPeerDependencies.includes(name)
   );
 }
 

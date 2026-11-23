@@ -6,7 +6,11 @@
     "tsBuildInfoFile": "dist/access.tsbuildinfo",
     "types": ["node"]
   },
-  "references": [{ "path": "../server/runtime" }],
+  "references": [
+    {
+      "path": "../core"
+    }
+  ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/test-support/**"]
 }

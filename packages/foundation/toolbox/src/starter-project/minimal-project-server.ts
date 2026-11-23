@@ -16,7 +16,7 @@ export function renderMinimalServerFiles(): readonly StarterProjectFile[] {
 function customerEntrypointFile(): StarterProjectFile {
   return {
     path: "apps/customer/app.ts",
-    content: `import { composeApi } from "@dads-framework/plugin";
+    content: `import { composeApi } from "@dads-framework/core/plugin";
 
 import { starterAccess } from "../../assembly/model.js";
 import type { ServiceProvider } from "../../assembly/services.js";
@@ -40,7 +40,7 @@ export function customerApp(provider: ServiceProvider) {
 function staffEntrypointFile(): StarterProjectFile {
   return {
     path: "apps/staff/app.ts",
-    content: `import { composeApi } from "@dads-framework/plugin";
+    content: `import { composeApi } from "@dads-framework/core/plugin";
 
 import { starterAccess } from "../../assembly/model.js";
 import type { ServiceProvider } from "../../assembly/services.js";
@@ -72,7 +72,7 @@ function tenantsIndexFile(): StarterProjectFile {
 function tenantsPluginFile(): StarterProjectFile {
   return {
     path: "domains/tenants/server/plugin.ts",
-    content: `import { definePlugin } from "@dads-framework/plugin";
+    content: `import { definePlugin } from "@dads-framework/core/plugin";
 import { starterServices } from "../../../libraries/app-runtime/index.js";
 import { tenantInvitationRoutes } from "./invitation-routes.js";
 import { tenantRoutes } from "./routes.js";
@@ -102,12 +102,12 @@ function starterMigrationFile(): StarterProjectFile {
   installAuditSchemaV1,
 } from "@dads-framework/audit";
 import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";
-import { installIdentitySchemaV1 } from "@dads-framework/identity-better-auth";
+import { installIdentitySchemaV1 } from "@dads-framework/identity/better-auth";
 import { relationshipSchemaMigration } from "@dads-framework/postgres-access";
 import {
   installTenantSchemaV1,
   tenantAuditConfiguration,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 import type { MigrationBuilder } from "node-pg-migrate";
 
 export function up(pgm: MigrationBuilder): void {

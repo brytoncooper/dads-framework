@@ -9,8 +9,8 @@
  * zero accepted.
  */
 
-import { mintEntityId } from "@dads-framework/contract";
-import type { ClientDiagnosticEvent } from "@dads-framework/contract";
+import { mintEntityId } from "@dads-framework/core/contract";
+import type { ClientDiagnosticEvent } from "@dads-framework/core/contract";
 
 import type { ClientDiagnosticWriter } from "../database/writers/client-diagnostic-writer.interface.js";
 import { clientDiagnosticEventIdSchema } from "./client-diagnostic-event.ids.js";

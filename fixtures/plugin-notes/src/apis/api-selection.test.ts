@@ -1,17 +1,17 @@
 import { join } from "node:path";
 
 import { compileAccess, emitAccessIr } from "@dads-framework/access";
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
 import {
   buildTestApp,
   TEST_SUBJECT_HEADER,
 } from "@dads-framework/http/testing";
-import { discoverDomainMigrations } from "@dads-framework/migrations";
+import { discoverDomainMigrations } from "@dads-framework/postgres/migrations";
 import {
   composeApi,
   definePlugin,
   providePlugin,
-} from "@dads-framework/plugin";
+} from "@dads-framework/core/plugin";
 import { expect, expectTypeOf, it, vi } from "vitest";
 
 import { clockService } from "../clock-service.js";

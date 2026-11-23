@@ -12,16 +12,7 @@
       "path": "../../access"
     },
     {
-      "path": "../audit-actor"
-    },
-    {
-      "path": "../../contract"
-    },
-    {
-      "path": "../runtime"
-    },
-    {
-      "path": "../errors"
+      "path": "../../core"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

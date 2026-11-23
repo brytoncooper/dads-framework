@@ -3,7 +3,7 @@ import {
   definePlugin,
   defineService,
   providePlugin,
-} from "@dads-framework/plugin";
+} from "@dads-framework/core/plugin";
 import type { PostgresAuthorization } from "@dads-framework/postgres-access";
 import type { Pool } from "pg";
 

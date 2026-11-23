@@ -12,12 +12,12 @@ test("redirects http's schema edge to its packed tarball", () => {
     [
       "@dads-framework/http",
       packageRecord("@dads-framework/http", {
-        "@dads-framework/contract": "0.1.0",
+        "@dads-framework/core": "0.1.0",
       }),
     ],
-    ["@dads-framework/contract", packageRecord("@dads-framework/contract")],
+    ["@dads-framework/core", packageRecord("@dads-framework/core")],
   ]);
-  const tarballs = new Map([["@dads-framework/contract", "/tmp/schema.tgz"]]);
+  const tarballs = new Map([["@dads-framework/core", "/tmp/schema.tgz"]]);
 
   assert.deepEqual(
     buildInternalDependencyOverrides(
@@ -26,7 +26,7 @@ test("redirects http's schema edge to its packed tarball", () => {
       tarballs,
     ),
     {
-      "@dads-framework/contract": "file:/tmp/schema.tgz",
+      "@dads-framework/core": "file:/tmp/schema.tgz",
     },
   );
 });
@@ -80,15 +80,15 @@ test("does not override registry dependencies or direct roots", () => {
     [
       "@dads-framework/http",
       packageRecord("@dads-framework/http", {
-        "@dads-framework/contract": "0.1.0",
+        "@dads-framework/core": "0.1.0",
         zod: "^4",
       }),
     ],
-    ["@dads-framework/contract", packageRecord("@dads-framework/contract")],
+    ["@dads-framework/core", packageRecord("@dads-framework/core")],
   ]);
-  const tarballs = new Map([["@dads-framework/contract", "/tmp/schema.tgz"]]);
+  const tarballs = new Map([["@dads-framework/core", "/tmp/schema.tgz"]]);
   const overrides = buildInternalDependencyOverrides(
-    ["@dads-framework/http", "@dads-framework/contract"],
+    ["@dads-framework/http", "@dads-framework/core"],
     packages,
     tarballs,
   );

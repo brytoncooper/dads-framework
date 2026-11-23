@@ -1,4 +1,4 @@
-import type { AuditActor } from "@dads-framework/audit-actor";
+import type { AuditActor } from "@dads-framework/core/audit-actor";
 
 import { requestIdOf } from "./request-id.js";
 

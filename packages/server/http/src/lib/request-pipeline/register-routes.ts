@@ -6,11 +6,11 @@ import type {
   RouteOptions,
 } from "fastify";
 
-import { answeringEachQuestionOnce } from "@dads-framework/runtime/request-work";
+import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-work";
 import {
   ACCESS_REFUSAL_HEADER,
   ACCESS_REFUSAL_VALUE,
-} from "@dads-framework/contract";
+} from "@dads-framework/core/contract";
 
 import { rememberAccessOutcome } from "../request-log/request-outcome.js";
 import type { RouteCapabilities } from "../route/capabilities.js";

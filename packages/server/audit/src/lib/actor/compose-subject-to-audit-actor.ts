@@ -9,8 +9,8 @@
  * from handlers keyed by those names instead of this kit importing them.
  */
 
-import type { AuditActor } from "@dads-framework/audit-actor";
-import type { SubjectRef } from "@dads-framework/authorization";
+import type { AuditActor } from "@dads-framework/core/audit-actor";
+import type { SubjectRef } from "@dads-framework/spicedb-access";
 import type { AuditActorForSubject } from "@dads-framework/http";
 
 /** The `SubjectRef.type` of an ordinary human account. */

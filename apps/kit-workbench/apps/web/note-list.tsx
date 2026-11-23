@@ -1,4 +1,4 @@
-import type { ApiPage } from "@dads-framework/client-request-transport";
+import type { ApiPage } from "@dads-framework/client";
 import {
   Empty,
   EmptyContent,

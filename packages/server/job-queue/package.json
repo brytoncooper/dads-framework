@@ -53,15 +53,14 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/audit-actor": "0.3.0",
-    "@dads-framework/runtime": "0.3.0",
+    "@dads-framework/core": "0.3.0",
     "cron-parser": "4.9.0"
   },
   "devDependencies": {
     "@testcontainers/redis": "^12.0.4",
+    "bullmq": "^5.79.3",
     "vitest": "~4.1.0",
-    "zod": "^4.4.3",
-    "bullmq": "^5.79.3"
+    "zod": "^4.4.3"
   },
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",

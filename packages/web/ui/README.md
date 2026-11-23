@@ -8,7 +8,7 @@ Install the components and default theme in a React 19 TypeScript app with
 Tailwind CSS 4 configured.
 
 ```sh
-npm install @dads-framework/ui @dads-framework/styles react@^19 react-dom@^19
+npm install @dads-framework/ui @dads-framework/ui react@^19 react-dom@^19
 ```
 
 Set your Tailwind CSS entry point to the following. This example assumes the
@@ -16,7 +16,7 @@ stylesheet lives in `src/`. Resolve the source path from your stylesheet to
 the location of the installed UI package.
 
 ```css
-@import "@dads-framework/styles/index.css";
+@import "@dads-framework/ui/styles/index.css";
 @source "../node_modules/@dads-framework/ui/dist";
 ```
 

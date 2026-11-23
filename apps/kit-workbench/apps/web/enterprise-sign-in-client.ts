@@ -1,4 +1,4 @@
-import { getFromApi } from "@dads-framework/client-request-transport";
+import { getFromApi } from "@dads-framework/client";
 import { z } from "zod";
 import {
   signInOptions,

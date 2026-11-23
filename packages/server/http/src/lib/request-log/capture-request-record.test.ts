@@ -15,10 +15,13 @@ import { z } from "zod";
 
 import { permissionToken } from "@dads-framework/access";
 import { requires } from "../route/route-guards.test-support.js";
-import { anonymousActor, type AuditActor } from "@dads-framework/audit-actor";
+import {
+  anonymousActor,
+  type AuditActor,
+} from "@dads-framework/core/audit-actor";
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import { FakeDiagnosticsReporter } from "@dads-framework/runtime/diagnostics/testing";
-import { noteAuthorizationWarning } from "@dads-framework/runtime/request-work";
+import { FakeDiagnosticsReporter } from "@dads-framework/core/runtime/diagnostics/testing";
+import { noteAuthorizationWarning } from "@dads-framework/core/runtime/request-work";
 
 import { createHttpApp } from "../create-http-app.js";
 import type {

@@ -58,13 +58,7 @@ const DROPPED_PACKAGES = new Set<string>([
 ]);
 
 const DROPPED_DEPENDENCIES = new Set<string>([
-  "@dads-framework/client-feature-flags",
-  "@dads-framework/client-telemetry",
-  "@dads-framework/client-xlsx",
-  "@dads-framework/cross-domain-references",
-  "@dads-framework/csv",
-  "@dads-framework/event-bus",
-  "@dads-framework/pdf",
+  "@dads-framework/documents",
   "marked",
 ]);
 

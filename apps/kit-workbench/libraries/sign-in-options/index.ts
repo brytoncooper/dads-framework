@@ -1,4 +1,4 @@
-import { defineRoute } from "@dads-framework/contract";
+import { defineRoute } from "@dads-framework/core/contract";
 import { z } from "zod";
 
 export const signInOptionsRoute = defineRoute(

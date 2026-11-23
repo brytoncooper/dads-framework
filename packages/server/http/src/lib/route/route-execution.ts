@@ -1,7 +1,7 @@
 import type { z } from "zod";
 
 import type { SubjectRef } from "@dads-framework/access/runtime";
-import type { HttpMethod, RouteContract } from "@dads-framework/contract";
+import type { HttpMethod, RouteContract } from "@dads-framework/core/contract";
 
 import {
   HttpWiringError,

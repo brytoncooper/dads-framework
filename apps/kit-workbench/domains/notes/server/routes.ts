@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 import {
   getRoute,
   listRoute,

@@ -623,7 +623,7 @@ app supplies an in-memory authorization fake for request-level checks.
 transport. [HTTP hosting](./http-hosting.md) runs the same route pipeline in
 application tests and on a listening server.
 
-The [path aliases package](../packages/testing/path-aliases/README.md) has a
+The [path aliases package](../packages/testing/core/README.md) has a
 file system port with Node and in-memory providers. Both run the resolver
 conformance suite, and the Vitest adapter uses the same resolver.
 

@@ -2,7 +2,7 @@ import {
   useWorkbenchCopy,
   type WorkbenchCopyKey,
 } from "./copy/workbench-copy.js";
-import { onUnauthorizedResponse } from "@dads-framework/client-request-transport";
+import { onUnauthorizedResponse } from "@dads-framework/client";
 import { Button } from "@dads-framework/ui/elements";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";

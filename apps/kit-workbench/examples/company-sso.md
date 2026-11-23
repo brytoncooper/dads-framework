@@ -81,7 +81,7 @@ DNS TXT record in the controlled domain.
 export DADS_ENTERPRISE_SSO_PROVIDERS=$(cat sso-providers.local.json)
 node --input-type=module <<'JS'
 import { readFileSync } from "node:fs";
-import { enterpriseSsoDomainChallenge } from "@dads-framework/identity-better-auth";
+import { enterpriseSsoDomainChallenge } from "@dads-framework/identity/better-auth";
 
 const { identitySecret } = JSON.parse(readFileSync("../local-dev.json", "utf8"));
 const provider = JSON.parse(process.env.DADS_ENTERPRISE_SSO_PROVIDERS)

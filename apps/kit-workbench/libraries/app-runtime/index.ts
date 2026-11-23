@@ -8,13 +8,13 @@ import type {
 } from "@dads-framework/identity";
 import type { JobQueue } from "@dads-framework/job-queue/core";
 import type { ObjectStorage } from "@dads-framework/object-storage/core";
-import { defineService } from "@dads-framework/plugin";
+import { defineService } from "@dads-framework/core/plugin";
 import type { DrizzleHandle } from "@dads-framework/postgres";
 import {
   createTenantAccess,
   type TenantId,
   type Tenants,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 
 export const account = actor("account");
 export const accountAccess = account;

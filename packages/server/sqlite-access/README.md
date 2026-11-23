@@ -98,7 +98,7 @@ Check permissions again inside the callback (using `createAccessClient(authoriza
 
 Apply `sqliteRelationshipSchemaMigration.sql` (or iterate `sqliteRelationshipSchemaMigration.statements`) during application startup or migrations. The schema creates `dad_authorization_relationship` along with its reverse subject lookup index and partial expiration index. Wrap `SqliteAuthorization` with `createAccessClient(authorization)` from `@dads-framework/access/runtime` for typed `add`, `remove`, `can`, `list`, `whoCan`, and `listDirect` calls.
 
-To evolve stored relationships across model revisions, use `runSqliteAccessMigrations` and `assertAccessMigrationsUpToDate` from [`@dads-framework/authorization-migration`](../authorization-migration/README.md).
+To evolve stored relationships across model revisions, use `runSqliteAccessMigrations` and `assertAccessMigrationsUpToDate` from [`@dads-framework/spicedb-access/migration`](../spicedb-access/README.md).
 
 `SqliteAuthorization` compiles `@dads-framework/access` models into parameterized SQLite queries covering:
 

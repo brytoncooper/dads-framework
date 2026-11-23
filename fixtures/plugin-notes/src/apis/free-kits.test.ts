@@ -6,7 +6,7 @@ import {
   createAuditPlugin,
 } from "@dads-framework/audit";
 import { configurePluginAuditTriggers } from "@dads-framework/audit/schema";
-import { FakeAuthorization } from "@dads-framework/authorization/testing";
+import { FakeAuthorization } from "@dads-framework/spicedb-access/testing";
 import {
   createFeatureFlagsPlugin,
   featureFlagDepsService,
@@ -21,12 +21,12 @@ import {
 import { createFeatureFlagRoutesPlugin } from "@dads-framework/feature-flags/http";
 import { featureFlagsPostgresSchema } from "@dads-framework/feature-flags/postgres";
 import { buildTestApp } from "@dads-framework/http/testing";
-import { discoverDomainMigrations } from "@dads-framework/migrations";
+import { discoverDomainMigrations } from "@dads-framework/postgres/migrations";
 import {
   defaultMigrationWorkspace,
   listShippedDatabaseMigrations,
-} from "@dads-framework/migrations/journal-status";
-import { composeApi, providePlugin } from "@dads-framework/plugin";
+} from "@dads-framework/postgres/migrations/journal-status";
+import { composeApi, providePlugin } from "@dads-framework/core/plugin";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { expect, it, vi } from "vitest";
 

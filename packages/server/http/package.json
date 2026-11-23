@@ -21,6 +21,18 @@
     "./health": {
       "types": "./dist/health/index.d.ts",
       "default": "./dist/health/index.js"
+    },
+    "./telemetry": {
+      "types": "./dist/telemetry/index.d.ts",
+      "default": "./dist/telemetry/index.js"
+    },
+    "./telemetry/core": {
+      "types": "./dist/telemetry/core/index.d.ts",
+      "default": "./dist/telemetry/core/index.js"
+    },
+    "./telemetry/testing": {
+      "types": "./dist/telemetry/core/testing/index.d.ts",
+      "default": "./dist/telemetry/core/testing/index.js"
     }
   },
   "files": [
@@ -29,10 +41,7 @@
   ],
   "dependencies": {
     "@dads-framework/access": "0.3.0",
-    "@dads-framework/audit-actor": "0.3.0",
-    "@dads-framework/contract": "0.3.0",
-    "@dads-framework/errors": "0.3.0",
-    "@dads-framework/runtime": "0.3.0",
+    "@dads-framework/core": "0.3.0",
     "@fastify/cors": "^11.3.0",
     "fastify": "5.10.0",
     "pino": "^10.3.1",
@@ -40,6 +49,14 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.222.0",
+    "@opentelemetry/instrumentation": "^0.222.0",
+    "@opentelemetry/instrumentation-http": "^0.222.0",
+    "@opentelemetry/instrumentation-pg": "^0.74.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/sdk-trace": "^2.11.0",
     "@types/ws": "^8.18.1",
     "vitest": "~4.1.0"
   },
@@ -56,5 +73,41 @@
     "type": "git",
     "url": "git+https://github.com/brytoncooper/dads-framework.git",
     "directory": "packages/server/http"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.222.0",
+    "@opentelemetry/instrumentation": "^0.222.0",
+    "@opentelemetry/instrumentation-http": "^0.222.0",
+    "@opentelemetry/instrumentation-pg": "^0.74.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "@opentelemetry/sdk-trace": "^2.11.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    },
+    "@opentelemetry/exporter-trace-otlp-proto": {
+      "optional": true
+    },
+    "@opentelemetry/instrumentation": {
+      "optional": true
+    },
+    "@opentelemetry/instrumentation-http": {
+      "optional": true
+    },
+    "@opentelemetry/instrumentation-pg": {
+      "optional": true
+    },
+    "@opentelemetry/resources": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-node": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-trace": {
+      "optional": true
+    }
   }
 }

@@ -1,5 +1,8 @@
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import { tenantIdSchema, type TenantId } from "@dads-framework/tenants";
+import {
+  tenantIdSchema,
+  type TenantId,
+} from "@dads-framework/identity/tenants";
 import { count, eq } from "drizzle-orm";
 import { noteTable } from "./tables.js";
 

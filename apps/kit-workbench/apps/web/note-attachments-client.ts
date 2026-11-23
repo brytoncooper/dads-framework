@@ -1,8 +1,5 @@
-import {
-  getFromApi,
-  sendToApi,
-} from "@dads-framework/client-request-transport";
-import { defineRoute } from "@dads-framework/contract";
+import { getFromApi, sendToApi } from "@dads-framework/client";
+import { defineRoute } from "@dads-framework/core/contract";
 import { z } from "zod";
 
 const attachmentUploadBody = z.strictObject({

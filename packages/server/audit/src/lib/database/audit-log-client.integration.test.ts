@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { serializeAuditActor } from "@dads-framework/audit-actor";
+import { serializeAuditActor } from "@dads-framework/core/audit-actor";
 import {
   startTestPostgres,
   truncateTables,

@@ -2,10 +2,19 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/foundation/toolbox"
+      "path": "./packages/core"
     },
     {
-      "path": "./packages/foundation/dev"
+      "path": "./packages/access"
+    },
+    {
+      "path": "./packages/documents"
+    },
+    {
+      "path": "./packages/client"
+    },
+    {
+      "path": "./packages/foundation/toolbox"
     },
     {
       "path": "./packages/foundation/create-dads"
@@ -14,13 +23,40 @@
       "path": "./packages/testing/core"
     },
     {
-      "path": "./packages/testing/path-aliases"
+      "path": "./packages/server/http"
     },
     {
-      "path": "./packages/testing/vitest"
+      "path": "./packages/server/postgres"
     },
     {
-      "path": "./packages/foundation/plugin"
+      "path": "./packages/server/postgres-access"
+    },
+    {
+      "path": "./packages/server/sqlite-access"
+    },
+    {
+      "path": "./packages/server/spicedb-access"
+    },
+    {
+      "path": "./packages/server/job-queue"
+    },
+    {
+      "path": "./packages/server/object-storage"
+    },
+    {
+      "path": "./packages/server/email"
+    },
+    {
+      "path": "./packages/server/audit"
+    },
+    {
+      "path": "./packages/server/identity"
+    },
+    {
+      "path": "./packages/server/feature-flags"
+    },
+    {
+      "path": "./packages/web/ui"
     },
     {
       "path": "./fixtures/boundary-verification"
@@ -38,106 +74,10 @@
       "path": "./fixtures/testing"
     },
     {
+      "path": "./fixtures/standalone-access"
+    },
+    {
       "path": "./apps/workbench"
-    },
-    {
-      "path": "./packages/server/errors"
-    },
-    {
-      "path": "./packages/server/runtime"
-    },
-    {
-      "path": "./packages/server/http"
-    },
-    {
-      "path": "./packages/server/postgres"
-    },
-    {
-      "path": "./packages/server/postgres-access"
-    },
-    {
-      "path": "./packages/server/sqlite-access"
-    },
-    {
-      "path": "./packages/server/authorization"
-    },
-    {
-      "path": "./packages/server/migrations"
-    },
-    {
-      "path": "./packages/server/authorization-migration"
-    },
-    {
-      "path": "./packages/server/audit-actor"
-    },
-    {
-      "path": "./packages/server/telemetry"
-    },
-    {
-      "path": "./packages/server/event-bus"
-    },
-    {
-      "path": "./packages/server/job-queue"
-    },
-    {
-      "path": "./packages/server/csv"
-    },
-    {
-      "path": "./packages/server/pdf"
-    },
-    {
-      "path": "./packages/server/object-storage"
-    },
-    {
-      "path": "./packages/server/email-sender"
-    },
-    {
-      "path": "./packages/server/email-templates"
-    },
-    {
-      "path": "./packages/server/email-delivery"
-    },
-    {
-      "path": "./packages/server/cross-domain-references"
-    },
-    {
-      "path": "./packages/server/audit"
-    },
-    {
-      "path": "./packages/server/tenants"
-    },
-    {
-      "path": "./packages/server/identity"
-    },
-    {
-      "path": "./packages/server/identity-better-auth"
-    },
-    {
-      "path": "./packages/server/feature-flags"
-    },
-    {
-      "path": "./packages/client/feature-flags"
-    },
-    {
-      "path": "./packages/contract"
-    },
-    {
-      "path": "./packages/access"
-    },
-    {
-      "path": "./packages/client/request-transport"
-    },
-    {
-      "path": "./packages/client/telemetry"
-    },
-    {
-      "path": "./packages/client/xlsx"
-    },
-    {
-      "path": "./packages/web/ui"
-    },
-    {
-      "path": "./packages/web/copy"
     }
   ]
 }

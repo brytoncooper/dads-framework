@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { enterpriseSsoDomainChallenge } from "@dads-framework/identity-better-auth";
+import { enterpriseSsoDomainChallenge } from "@dads-framework/identity/better-auth";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { connectPostgresClient } from "@dads-framework/postgres";
 import { expect, it, vi } from "vitest";

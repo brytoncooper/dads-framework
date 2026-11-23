@@ -2,7 +2,7 @@ import {
   defineCopy,
   resolveLocalizedText,
   type LocalizedText,
-} from "@dads-framework/copy";
+} from "@dads-framework/ui/copy";
 
 const accountMailTitles: Readonly<Record<string, LocalizedText>> = defineCopy({
   "verify-email": { en: "Verify your email address" },

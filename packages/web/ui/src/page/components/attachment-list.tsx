@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-import { useLocaleFormatting } from "@dads-framework/copy";
+import { useLocaleFormatting } from "../../copy/index.js";
 import {
   Button,
   Skeleton,

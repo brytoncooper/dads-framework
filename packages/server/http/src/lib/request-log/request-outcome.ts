@@ -13,7 +13,7 @@
  * own, so a request that ends without a note is collected exactly as before.
  */
 
-import type { AuditActor } from "@dads-framework/audit-actor";
+import type { AuditActor } from "@dads-framework/core/audit-actor";
 import type { AccessDecision } from "../request-pipeline/enforce-access.js";
 import { annotateRequestActor } from "../request-pipeline/request-trace.js";
 import type { RouteAccess } from "../route/access.js";

@@ -1,4 +1,4 @@
-import { definePlugin } from "@dads-framework/plugin";
+import { definePlugin } from "@dads-framework/core/plugin";
 import { accountAccess, tenantAccess } from "../libraries/app-runtime/index.js";
 
 export const starterAccess = definePlugin({

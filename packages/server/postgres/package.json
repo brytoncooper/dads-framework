@@ -21,6 +21,14 @@
     "./testing/deterministic-uuid": {
       "types": "./dist/testing/deterministic-uuid.d.ts",
       "default": "./dist/testing/deterministic-uuid.js"
+    },
+    "./migrations": {
+      "types": "./dist/migrations/index.d.ts",
+      "default": "./dist/migrations/index.js"
+    },
+    "./migrations/journal-status": {
+      "types": "./dist/migrations/journal-status.d.ts",
+      "default": "./dist/migrations/journal-status.js"
     }
   },
   "dadsConformance": {
@@ -46,13 +54,17 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "migrations/README.md"
   ],
   "dependencies": {
-    "@dads-framework/audit-actor": "0.3.0",
-    "@dads-framework/runtime": "0.3.0",
+    "@dads-framework/core": "0.3.0",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.21.0"
+    "jiti": "2.4.2",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.20.0",
+    "typescript": "6.0.3",
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@testcontainers/postgresql": "^12.0.4",
@@ -86,5 +98,12 @@
     "type": "git",
     "url": "git+https://github.com/brytoncooper/dads-framework.git",
     "directory": "packages/server/postgres"
+  },
+  "bin": {
+    "dads-migrate": "./dist/migrations/bin/migrate.js",
+    "dads-migrate-adopt": "./dist/migrations/bin/adopt-existing-schema.js",
+    "dads-migrate-status": "./dist/migrations/bin/read-database-journal-status.js",
+    "dads-migration-new": "./dist/migrations/bin/new-migration.js",
+    "dads-migration-check": "./dist/migrations/bin/check-migration-compatibility.js"
   }
 }

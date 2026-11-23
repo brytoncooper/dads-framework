@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 
 import { FakeAuthorization } from "@dads-framework/access/testing";
-import { notFound } from "@dads-framework/errors";
+import { notFound } from "@dads-framework/core/errors";
 
 import { createHttpApp } from "../create-http-app.js";
 import { requireSession } from "../route/access.js";

@@ -3,7 +3,7 @@ import {
   defineCopy,
   type CopyKey,
   type CopyTranslator,
-} from "@dads-framework/copy";
+} from "../../copy/index.js";
 
 export const shellCopy = defineCopy({
   "shell.breadcrumb.label": { en: "Breadcrumb" },

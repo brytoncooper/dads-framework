@@ -2,7 +2,7 @@ import {
   TenantUnavailableError,
   type TenantId,
   type Tenants,
-} from "@dads-framework/tenants";
+} from "@dads-framework/identity/tenants";
 import { z } from "zod";
 
 import type { Impersonation } from "@dads-framework/identity/impersonation";

@@ -3,7 +3,7 @@ import {
   currentAuditActor,
   systemActor,
   type AuditActor,
-} from "@dads-framework/audit-actor";
+} from "@dads-framework/core/audit-actor";
 import { createAttributedPool } from "../lib/attributed-pool.js";
 import { listenForCheckedOutClientErrors } from "../lib/checked-out-client-errors.js";
 

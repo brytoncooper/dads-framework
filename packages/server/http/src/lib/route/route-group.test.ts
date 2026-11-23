@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
 
-import { paginationQuerySchema } from "@dads-framework/contract";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
 
 import { createRateLimiter } from "../request-pipeline/rate-limit.js";
 import { publicAccess, requireSession } from "./access.js";

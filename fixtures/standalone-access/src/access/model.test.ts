@@ -2,8 +2,7 @@ import { createAccessHarness } from "@dads-framework/access/testing";
 import { describe, expect, it } from "vitest";
 
 import { accessModel, document, organization, user } from "./model.js";
-import { createAuthorization, recommendedIndexSql } from "./postgres.js";
-import { listVisibleDocuments, renameDocument } from "../routes/documents.js";
+import { recommendedIndexSql } from "./postgres.js";
 
 describe("standalone document permissions", () => {
   it("enforces org inheritance, direct ownership, bans, and revocations without Docker", () => {
@@ -36,10 +35,9 @@ describe("standalone document permissions", () => {
     access.assertCan(bob, document.permissions.edit, "doc-1");
   });
 
-  it("exports typed setup and route helpers", () => {
-    expect(recommendedIndexSql.length).toBe(2);
-    expect(typeof createAuthorization).toBe("function");
-    expect(typeof listVisibleDocuments).toBe("function");
-    expect(typeof renameDocument).toBe("function");
+  it("emits recommended composite indexes for column-backed foreign keys", () => {
+    expect(recommendedIndexSql).toHaveLength(2);
+    expect(recommendedIndexSql.join("\n")).toContain("org_id");
+    expect(recommendedIndexSql.join("\n")).toContain("owner_id");
   });
 });

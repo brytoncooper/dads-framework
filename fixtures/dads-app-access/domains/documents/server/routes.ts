@@ -1,3 +1,4 @@
+import { notFound } from "@dads-framework/core/errors";
 import {
   getRoute,
   patchRoute,
@@ -10,10 +11,12 @@ import { canEditDocument, canViewDocument } from "../access/index.js";
 
 export type DocumentsRepository = {
   findById(documentId: string): Promise<{ id: string; title: string } | null>;
-  rename(
+  /** Re-checks edit permission inside withProtectedPgTransaction before updating. */
+  renameInProtectedTx(
+    actorId: string,
     documentId: string,
     title: string,
-  ): Promise<{ id: string; title: string }>;
+  ): Promise<{ id: string; title: string } | null>;
 };
 
 const documentParams = z.object({ documentId: z.string().min(1) });
@@ -31,7 +34,8 @@ export function documentsRoutes(repository: DocumentsRepository): HttpRoute[] {
       response: documentResponse,
       handler: async ({ params }) => {
         const record = await repository.findById(params.documentId);
-        return record ?? { id: params.documentId, title: "" };
+        if (record === null) throw notFound("Document", params.documentId);
+        return record;
       },
     }),
     patchRoute({
@@ -41,8 +45,15 @@ export function documentsRoutes(repository: DocumentsRepository): HttpRoute[] {
       params: documentParams,
       body: renameBody,
       response: documentResponse,
-      handler: ({ params, body }) =>
-        repository.rename(params.documentId, body.title),
+      handler: async ({ params, body, subject }) => {
+        const updated = await repository.renameInProtectedTx(
+          subject.id,
+          params.documentId,
+          body.title,
+        );
+        if (updated === null) throw notFound("Document", params.documentId);
+        return updated;
+      },
     }),
   ]);
 }

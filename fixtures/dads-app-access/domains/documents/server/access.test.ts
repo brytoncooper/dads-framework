@@ -49,7 +49,8 @@ describe("documents domain access boundaries", () => {
     const routes = documentsRoutes({
       findById: (documentId) =>
         Promise.resolve({ id: documentId, title: "Spec" }),
-      rename: (documentId, title) => Promise.resolve({ id: documentId, title }),
+      renameInProtectedTx: (_actorId, documentId, title) =>
+        Promise.resolve({ id: documentId, title }),
     });
     expect(routes).toHaveLength(2);
     expect(routes.every((route) => route.access.kind === "permission")).toBe(

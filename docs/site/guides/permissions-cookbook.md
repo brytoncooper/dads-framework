@@ -33,7 +33,7 @@ At startup, verify live columns and index status with `verifyColumnRelations()`,
 - **`NULL` = absent:** Setting `documents.owner_id = NULL` revokes ownership immediately in the same SQL `UPDATE`.
 - **Single-row moves & revokes:** Moving a folder with 100k child docs updates **1 row** (`folders.parent_id`), and revoking an org admin deletes **1 row** (`org#admin`) — zero 100k-row fan-out updates.
 - **Protecting permission-bearing columns:** Because `columnRelations` reads your table columns directly, exclude `org_id`, `owner_id`, and `parent_id` from general `PATCH` DTOs, put an immutability `BEFORE UPDATE` trigger on tenant columns like `org_id` that should never change after `INSERT`, and chunk intentional bulk transfers (1,000–5,000 rows per transaction).
-- **10M-row measured win:** On a live 10,000,000-row PostgreSQL database, enabling `columnRelations` shrank `dad_authorization_relationship` from **2.73 GB → 30 MB (91× smaller)**, sustained **2,492 checks/sec on 1 vCPU** (and **8,274 checks/sec on 3 vCPUs**), and jumped mixed reads + live `UPDATE` permission flips from **4,603 → 6,802 ops/sec (+48%)** with **0 errors**. See [Benchmarks & Proof](benchmarks-and-proof.md).
+- **10M-row measured win:** On a live 10,000,000-row logged PostgreSQL database (Run B), enabling `columnRelations` shrank `dad_authorization_relationship` from **2.73 GB → 30 MB (91× smaller)**, sustained **2,479 checks/sec (8 workers) / 2,492 checks/sec (16 workers) on 1 vCPU** (and **8,274 checks/sec on 3 vCPUs**), and jumped mixed reads + live `UPDATE` permission flips from **4,603 → 6,802 ops/sec (+48%)** with **0 errors**. See [Benchmarks & Proof](benchmarks-and-proof.md).
 
 ---
 
@@ -85,7 +85,7 @@ Always re-check permissions inside the same database transaction that performs t
 
 ### Layer 1: Zero-`await` policy unit tests (`@dads-framework/access/testing`)
 
-`createAccessHarness(model)` runs our full, Lean-4-verified `InMemoryAuthorization` engine synchronously — no Docker, no `async`/`await`, deterministic clock (`advanceTime`), cycle safety, and decision explanation trees on failure (`packages/access/src/testing/access-harness.test.ts`):
+`createAccessHarness(model)` runs our `InMemoryAuthorization` engine synchronously — differentially tested against the Lean 4 oracle with zero mismatches, no Docker, no `async`/`await`, deterministic clock (`advanceTime`), cycle safety, and decision explanation trees on failure (`packages/access/src/testing/access-harness.test.ts`):
 
 <!-- dads:excerpt {"path":"packages/access/src/testing/access-harness.test.ts","language":"ts","from":"    const access = createAccessHarness(model);\n    const alice = access.actor(user, \"alice\");\n    const bob = user(\"bob\");","through":"    // Revoking the ban restores Alice's inherited access\n    access.revoke(document.roles.banned, \"doc-1\").from(alice);\n    access.assertCan(alice, document.permissions.view, \"doc-1\");"} -->
 

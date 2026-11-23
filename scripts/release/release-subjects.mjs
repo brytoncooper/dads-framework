@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { releaseVersion } from "./release-version.mjs";
 import { releaseWorkspaces } from "./release-workspaces.mjs";
 
-const releasePackageCount = 46;
+const releasePackageCount = 24;
 
 function readJson(file) {
   return JSON.parse(readFileSync(file, "utf8"));

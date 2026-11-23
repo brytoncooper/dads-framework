@@ -11,29 +11,42 @@ export type DocumentRow = {
   readonly title: string;
 };
 
-/** Paginated list: compiles permissions directly into your SQL WHERE clause. */
+function toDocumentRow(row: Readonly<Record<string, unknown>>): DocumentRow {
+  const { id, title } = row;
+  if (typeof id !== "string" || typeof title !== "string") {
+    throw new Error("Unexpected documents row shape.");
+  }
+  return { id, title };
+}
+
+/** Paginated list: resolves permissions and reads rows in one transaction snapshot. */
 export async function listVisibleDocuments(
   pool: Pool,
   authorization: PostgresAuthorization,
   userId: string,
-): Promise<DocumentRow[]> {
-  const filter = await authorization.resolveFilter({
-    subject: user(userId),
-    resourceType: document.wireName,
-    permission: document.permissions.view.permissionName,
-    idColumn: "doc.id",
-    scopeColumns: "auto",
-  });
+): Promise<readonly DocumentRow[]> {
+  return withProtectedPgTransaction(
+    { pool, authorization, retries: 2 },
+    async ({ client, authorization: scopedAuthorization }) => {
+      const filter = await scopedAuthorization.resolveFilter({
+        subject: user(userId),
+        resourceType: document.wireName,
+        permission: document.permissions.view.permissionName,
+        idColumn: "doc.id",
+        scopeColumns: "auto",
+      });
 
-  const result = await pool.query<DocumentRow>(
-    `SELECT doc.id, doc.title
-       FROM documents doc
-      WHERE ${filter.sql}
-      ORDER BY doc.updated_at DESC, doc.id DESC
-      LIMIT 50`,
-    [...filter.values],
+      const result = await client.query(
+        `SELECT doc.id, doc.title
+           FROM documents doc
+          WHERE ${filter.sql}
+          ORDER BY doc.updated_at DESC, doc.id DESC
+          LIMIT 50`,
+        [...filter.values],
+      );
+      return result.rows.map(toDocumentRow);
+    },
   );
-  return result.rows;
 }
 
 /** Protected write: re-checks permission and updates the row in one transaction. */

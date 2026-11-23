@@ -1,5 +1,5 @@
 import type { GenerationPlan } from "./generation-plan.js";
-import { camel } from "./names.js";
+import { camel, pascal, singular, title } from "./names.js";
 
 const IMPORTS = "// dad:add imports";
 const DOMAINS = "// dad:add domains";
@@ -10,14 +10,17 @@ export function ensureDomain(plan: GenerationPlan, domain: string): void {
     requireDomain(plan, domain);
     return;
   }
+  const item = singular(domain);
   plan.create(
     `${directory}/index.ts`,
     `export { ${camel(domain)}Plugin } from "./server/plugin.js";\n// dad:add exports\n`,
   );
   plan.create(
     `${directory}/README.md`,
-    `# ${domain}\n\nDomain-owned contracts, access rules, server adapters, and web clients. An API must explicitly select this domain in its app entry point.\n`,
+    `# ${domain}\n\nDomain-owned pure logic, contracts, access rules, server adapters, and web clients. An API must explicitly select this domain in its app entry point.\n`,
   );
+  plan.create(`${directory}/pure/${item}.ts`, pureCore(item));
+  plan.create(`${directory}/pure/${item}.test.ts`, pureCoreTest(item));
   plan.create(`${directory}/contract/index.ts`, "export {};\n");
   plan.create(`${directory}/web-client/index.ts`, "export {};\n");
   plan.create(`${directory}/access/index.ts`, accessRegistry());
@@ -27,6 +30,48 @@ export function ensureDomain(plan: GenerationPlan, domain: string): void {
   );
   plan.create(`${directory}/server/routes.ts`, routeRegistry());
   plan.create(`${directory}/server/plugin.ts`, domainPlugin(domain));
+}
+
+function pureCore(item: string): string {
+  const typeName = pascal(item);
+  const label = title(item);
+  return `export type ${typeName}Draft = {
+  readonly title: string;
+};
+
+export type Normalized${typeName} = {
+  readonly title: string;
+};
+
+export function normalize${typeName}(input: ${typeName}Draft): Normalized${typeName} {
+  const normalizedTitle = input.title.trim().replace(/\\s+/g, " ");
+  if (normalizedTitle.length === 0) {
+    throw new Error("${label} title cannot be empty.");
+  }
+  return { title: normalizedTitle };
+}
+`;
+}
+
+function pureCoreTest(item: string): string {
+  const typeName = pascal(item);
+  const label = title(item);
+  return `import { describe, expect, it } from "vitest";
+
+import { normalize${typeName} } from "./${item}.js";
+
+describe("normalize${typeName}", () => {
+  it("trims and collapses whitespace in the title", () => {
+    expect(normalize${typeName}({ title: "  Sample   ${label}  " })).toEqual({
+      title: "Sample ${label}",
+    });
+  });
+
+  it("rejects an empty title", () => {
+    expect(() => normalize${typeName}({ title: "   " })).toThrow("${label} title cannot be empty.");
+  });
+});
+`;
 }
 
 function accessRegistry(): string {

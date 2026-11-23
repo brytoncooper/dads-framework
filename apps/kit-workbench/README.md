@@ -104,11 +104,7 @@ delivery in deployed apps.
 
 ## Add a domain
 
-Each entrypoint selects its surfaces in `apps/<api>/app.ts`. Keep contracts,
-access rules, and server code together under `domains/<name>/`. Register the
-domain's migration source in `assembly/migrations.ts`. Test the selected route
-with a member and a nonmember. Run `npm run verify` before installing a CI
-provider from `ci/`.
+Each entrypoint selects its surfaces in `apps/<api>/app.ts`. Place domain contracts (`*Operation` and Zod wire schemas), access rules, pure deterministic logic (`pure/`), and thin server wiring under `domains/<name>/{contract,access,pure,server}`. Put multi-domain orchestration in `workflows/`, vendor adapters in `integrations/`, shared primitives and narrow service tokens in `libraries/`, append-only migrations in `migrations/`, and process startup (`startHttpHost`) in `assembly/`. Register each domain's migration source in `assembly/migrations.ts`, test every guarded route with a member and a nonmember, and run `npm run verify` before installing a CI provider from `ci/`.
 
 The push hook reuses a passing receipt for the same commit and comparison base.
 When proof is missing, it installs dependencies and verifies in a detached checkout.

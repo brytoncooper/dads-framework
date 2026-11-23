@@ -18,3 +18,4 @@ export {
   type JobQueueInspection,
   type RunningJobSchedule,
 } from "./lib/job-queue.js";
+export { jobQueueService } from "./lib/job-queue-service.js";

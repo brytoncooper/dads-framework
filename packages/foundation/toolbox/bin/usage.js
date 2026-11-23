@@ -1,5 +1,6 @@
 const addCommands = [
   "  add library <name> [--dry-run] [--json]",
+  "  add workflow|integration <name> [--dry-run] [--json]",
   "  add domain|endpoint|table|access|flag|email|page|resource <name> [--domain <name>] [--api <name>] [--dry-run] [--json]",
 ];
 

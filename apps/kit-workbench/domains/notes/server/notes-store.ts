@@ -1,16 +1,12 @@
 import type { DrizzleHandle } from "@dads-framework/postgres";
-import { tenantIdSchema, type TenantId } from "@dads-framework/identity/tenants";
 import { count, eq } from "drizzle-orm";
+import type { NoteRecord } from "../pure/note-rules.js";
 import { noteTable } from "./tables.js";
 
-export type NoteRecord = {
-  readonly id: string;
-  readonly text: string;
-  readonly tenantId: TenantId;
-};
+export type { NoteRecord } from "../pure/note-rules.js";
 
 export type ListTenantNotesInput = {
-  readonly tenantId: TenantId;
+  readonly tenantId: string;
   readonly page: number;
   readonly perPage: number;
 };
@@ -46,7 +42,7 @@ export async function listTenantNotes(
     items: rows.map((row) => ({
       id: row.id,
       text: row.text,
-      tenantId: tenantIdSchema.parse(row.tenantId),
+      tenantId: row.tenantId,
     })),
     total: totals[0]?.total ?? 0,
   };

@@ -3,7 +3,7 @@ import { currentAuditActor } from "@dads-framework/core/audit-actor";
 import { GetEffectiveFeatureState, type FeatureFlagDefinition } from "@dads-framework/feature-flags";
 import { readFeatureFlagPreview } from "@dads-framework/feature-flags/http";
 import { DrizzleFeatureFlagStore } from "@dads-framework/feature-flags/postgres";
-import { providePlugin, type PluginScope } from "@dads-framework/core/plugin";
+import { definePlugin, providePlugin, type PluginScope, type Service } from "@dads-framework/core/plugin";
 import { createPostgresConnection } from "@dads-framework/postgres";
 import {
   PostgresAuthorization,
@@ -13,6 +13,11 @@ import {
 import { Tenants, type TenantsOptions } from "@dads-framework/identity/tenants";
 
 import {
+  databaseService,
+  featureFlagsService,
+  jobQueueService,
+  objectStorageService,
+  protectedWriteService,
   starterServices,
   tenantAccess,
   type StarterServices,
@@ -26,7 +31,7 @@ import type { FeaturePreviewConfiguration } from "./feature-previews.js";
 import type { EnterpriseConfiguration } from "./enterprise-config.js";
 import { openStaffImpersonationServices, type StaffImpersonationServices } from "./staff-impersonation-services.js";
 
-type HostServices = StarterServices &
+export type HostServices = StarterServices &
   Awaited<ReturnType<typeof openIdentityServices>> &
   StaffImpersonationServices & {
     readonly authorization: PostgresAuthorization;
@@ -37,6 +42,31 @@ type HostServices = StarterServices &
 export function provideServices(create: (scope: PluginScope) => Promise<HostServices>) {
   return providePlugin("host-services", starterServices, create);
 }
+
+function projectCapability<const Name extends string, ServiceName extends string, Value>(
+  name: Name,
+  service: Service<ServiceName, Value>,
+  select: (services: StarterServices) => Value,
+) {
+  return definePlugin<Name, readonly [typeof starterServices], Value, never, never, never, ServiceName>({
+    name,
+    requires: [starterServices],
+    implements: service,
+    setup: ({ use }) => ({ provides: select(use(starterServices)) }),
+  });
+}
+
+export const capabilityServices = [
+  projectCapability("database-capability", databaseService, ({ db }) => db),
+  projectCapability("feature-flags-capability", featureFlagsService, ({ flags }) => flags),
+  projectCapability("object-storage-capability", objectStorageService, ({ files }) => files),
+  projectCapability("job-queue-capability", jobQueueService, ({ jobs }) => jobs),
+  projectCapability(
+    "protected-write-capability",
+    protectedWriteService,
+    ({ writeWithPermission }) => writeWithPermission,
+  ),
+];
 
 export type ServiceProvider = ReturnType<typeof provideServices>;
 

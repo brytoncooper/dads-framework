@@ -15,6 +15,14 @@
       "navigationGroup": "Get started"
     },
     {
+      "slug": "where-code-goes",
+      "title": "Where Does Code Go?",
+      "owner": "@dads-framework/toolbox",
+      "section": "Architecture",
+      "path": "docs/site/guides/where-code-goes.md",
+      "navigationGroup": "Architecture"
+    },
+    {
       "slug": "adopt-standalone",
       "title": "Adopt One Package at a Time",
       "owner": "@dads-framework/toolbox",

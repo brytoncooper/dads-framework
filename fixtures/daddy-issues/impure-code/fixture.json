@@ -1,0 +1,12 @@
+{
+  "signal": "impure-code",
+  "issue": "daddy-issues",
+  "why": "A production file under pure/ calls Date.now() instead of accepting time as an input.",
+  "files": {
+    "tsconfig.json": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"noImplicitOverride\": true,\n    \"noImplicitReturns\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"noPropertyAccessFromIndexSignature\": true,\n    \"useUnknownInCatchVariables\": true,\n    \"verbatimModuleSyntax\": true\n  }\n}\n",
+    "packages/group/name/src/pure/clock.ts": "function readTimestamp(): number {\n  return Date.now();\n}\nvoid readTimestamp;\n"
+  },
+  "expected": {
+    "packages/group/name/src/pure/clock.ts": 1
+  }
+}

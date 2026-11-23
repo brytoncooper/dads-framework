@@ -36,35 +36,7 @@ export function composeApi<
 ): ComposedApp<Route, Job, Flag, Access> & { readonly name: ApiName } {
   try {
     if (unmet.length > 0) throw new PluginCompositionError(unmet.join(", "));
-    const entries = [...selection.services, ...selection.routes, ...selection.jobs];
-    const plan = new Map<string, StartablePlugin<Route, Job>>();
-    for (const plugin of selection.services) {
-      plan.set(
-        plugin.name,
-        expose(plugin, () => ({ routes: [], jobs: [] })),
-      );
-    }
-    for (const plugin of selection.routes) {
-      plan.set(
-        plugin.name,
-        expose(plugin, ({ routes }) => ({ routes, jobs: [] })),
-      );
-    }
-    for (const plugin of selection.jobs) {
-      plan.set(
-        plugin.name,
-        expose(plugin, ({ jobs }) => ({ routes: [], jobs })),
-      );
-    }
-    const composed = assembleApp<Route, Job, Flag, Access, (typeof entries)[number]>(entries, (ordered) =>
-      startPlugins(
-        ordered.map(({ name: pluginName }) => {
-          const startable = plan.get(pluginName);
-          if (startable === undefined) throw new Error(`No start plan for ${pluginName}`);
-          return startable;
-        }),
-      ),
-    );
+    const composed = assembleApiSelection(selection);
     return { name, ...composed };
   } catch (error) {
     if (error instanceof PluginCompositionError) {
@@ -72,6 +44,48 @@ export function composeApi<
     }
     throw error;
   }
+}
+
+/** Assemble a service/route/job selection without requiring compile-time dependency proofs. */
+export function assembleApiSelection<
+  Route,
+  Job extends NamedJob,
+  Flag extends SluggedFlag,
+  Access extends AccessContribution,
+>(selection: {
+  readonly services: readonly Plugin<string, string, unknown, unknown, NamedJob, Flag, string, Access>[];
+  readonly routes: readonly Plugin<string, string, unknown, Route, NamedJob, Flag, string, Access>[];
+  readonly jobs: readonly Plugin<string, string, unknown, unknown, Job, Flag, string, Access>[];
+}): ComposedApp<Route, Job, Flag, Access> {
+  const entries = [...selection.services, ...selection.routes, ...selection.jobs];
+  const plan = new Map<string, StartablePlugin<Route, Job>>();
+  for (const plugin of selection.services) {
+    plan.set(
+      plugin.name,
+      expose(plugin, () => ({ routes: [], jobs: [] })),
+    );
+  }
+  for (const plugin of selection.routes) {
+    plan.set(
+      plugin.name,
+      expose(plugin, ({ routes }) => ({ routes, jobs: [] })),
+    );
+  }
+  for (const plugin of selection.jobs) {
+    plan.set(
+      plugin.name,
+      expose(plugin, ({ jobs }) => ({ routes: [], jobs })),
+    );
+  }
+  return assembleApp<Route, Job, Flag, Access, (typeof entries)[number]>(entries, (ordered) =>
+    startPlugins(
+      ordered.map(({ name: pluginName }) => {
+        const startable = plan.get(pluginName);
+        if (startable === undefined) throw new Error(`No start plan for ${pluginName}`);
+        return startable;
+      }),
+    ),
+  );
 }
 
 /** Project one setup's result without replacing its dependency token. */

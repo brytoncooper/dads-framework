@@ -1,6 +1,7 @@
 # Dads guiding principles
 
 This is the design reference for choosing where a change belongs. For the
+one-page placement map, see [Where Does Code Go?](site/guides/where-code-goes.md). For the
 rules you can run in an application today, see [domain boundaries](domain-boundaries.md)
 and the [Doctor command reference](doctor.md).
 

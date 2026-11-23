@@ -59,4 +59,71 @@ describe("agent workflows", () => {
     expect(recommendation.tasks.map((entry) => entry.state)).toEqual(["unknown-scope", "unknown-scope"]);
     expect(recommendation.complete).toBe(true);
   });
+
+  it("recommends focused verification for pure domain, workflow, and integration edits without unrelated owners", () => {
+    const layeredProject = parseDadsProject({
+      schemaVersion: 1,
+      packages: [
+        {
+          name: "domains-orders",
+          root: "domains/orders",
+          responsibility: "Owns orders.",
+          allowedDependencies: [],
+          verification: ["npm test -- domains/orders"],
+          skills: [],
+        },
+        {
+          name: "domains-billing",
+          root: "domains/billing",
+          responsibility: "Owns billing.",
+          allowedDependencies: [],
+          verification: ["npm test -- domains/billing"],
+          skills: [],
+        },
+        {
+          name: "integrations-payments",
+          root: "integrations/payments",
+          responsibility: "Owns payment gateway adapter.",
+          allowedDependencies: [],
+          verification: ["npm test -- integrations/payments"],
+          skills: [],
+        },
+        {
+          name: "workflows",
+          root: "workflows",
+          responsibility: "Coordinates order fulfillment.",
+          allowedDependencies: ["domains-orders", "integrations-payments"],
+          verification: ["npm test -- workflows"],
+          skills: [],
+        },
+      ],
+    });
+
+    const pureEdit = recommendChangedVerification(layeredProject, ["domains/orders/pure/order.ts"]);
+    expect(pureEdit.usedFullFallback).toBe(false);
+    expect(pureEdit.unownedPaths).toEqual([]);
+    expect(pureEdit.packages.map((entry) => entry.packageName)).toEqual([
+      "domains-orders",
+      "integrations-payments",
+      "workflows",
+    ]);
+
+    const workflowEdit = recommendChangedVerification(layeredProject, ["workflows/fulfill-order.ts"]);
+    expect(workflowEdit.usedFullFallback).toBe(false);
+    expect(workflowEdit.unownedPaths).toEqual([]);
+    expect(workflowEdit.packages.map((entry) => entry.packageName)).toEqual([
+      "domains-orders",
+      "integrations-payments",
+      "workflows",
+    ]);
+
+    const integrationEdit = recommendChangedVerification(layeredProject, ["integrations/payments/index.ts"]);
+    expect(integrationEdit.usedFullFallback).toBe(false);
+    expect(integrationEdit.unownedPaths).toEqual([]);
+    expect(integrationEdit.packages.map((entry) => entry.packageName)).toEqual([
+      "domains-orders",
+      "integrations-payments",
+      "workflows",
+    ]);
+  });
 });

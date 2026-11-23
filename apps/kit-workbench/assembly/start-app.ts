@@ -1,43 +1,27 @@
 import { compileAccess } from "@dads-framework/access";
 import { anonymousActor } from "@dads-framework/core/audit-actor";
-import { sql } from "drizzle-orm";
-import { createHttpApp, registerRoutes } from "@dads-framework/http";
-import { createHealthRoutes } from "@dads-framework/http/health";
-import { mountFetchHandler } from "@dads-framework/http/protocol-mounts";
-import { IDENTITY_PATH } from "@dads-framework/identity/better-auth";
+import { startHttpHost, type HttpProtocolMount } from "@dads-framework/http";
 import type { TelemetryRuntime } from "@dads-framework/http/telemetry";
+import { IDENTITY_PATH } from "@dads-framework/identity/better-auth";
+import { sql } from "drizzle-orm";
 
 import { scimBindingRoutes } from "../domains/tenants/index.js";
 import { tenantAccess } from "../libraries/app-runtime/index.js";
-import { configureFeaturePreviews } from "./feature-previews.js";
 import { apiEntrypoints, type ApiName } from "./api-entrypoints.js";
+import { configureFeaturePreviews } from "./feature-previews.js";
+import { openServices, provideServices, type HostServices, type ServiceConfiguration } from "./services.js";
 import { sessionSubjects } from "./session-subjects.js";
 import { createSignInOptionsRoutes } from "./sign-in-options-route.js";
-import { openServices, provideServices, type ServiceConfiguration } from "./services.js";
 
 export async function startApp(name: ApiName, config: ServiceConfiguration, telemetry?: TelemetryRuntime) {
-  const provider = provideServices((scope) => {
-    return openServices(scope, config, model, composed.flags, name === "staff");
-  });
+  const provider = provideServices((scope) => openServices(scope, config, model, composed.flags, name === "staff"));
   const composed = apiEntrypoints[name](provider);
-  const model = compileAccess(composed.access, {
-    allowLookupResourcesOn: [tenantAccess.tenant],
-  });
+  const model = compileAccess(composed.access, { allowLookupResourcesOn: [tenantAccess.tenant] });
   const running = await composed.start();
   try {
-    const {
-      authorization,
-      identity,
-      enterpriseIdentity,
-      scimHandler,
-      staffImpersonation,
-      tenants,
-      invitationOrigin,
-      db,
-      flags,
-      local,
-      mailJobs,
-    } = running.read(provider);
+    const services = running.read(provider);
+    const { authorization, identity, enterpriseIdentity, scimHandler, tenants, invitationOrigin, db, flags, local } =
+      services;
     const featureState =
       name === "customer" && config.featurePreview !== undefined
         ? configureFeaturePreviews({
@@ -48,99 +32,59 @@ export async function startApp(name: ApiName, config: ServiceConfiguration, tele
           })
         : undefined;
     await local.prepareFiles();
-    local.queue.register([...mailJobs, ...running.jobs]);
+    local.queue.register([...services.mailJobs, ...running.jobs]);
     await local.queue.start();
-    const infrastructure = createHealthRoutes({
-      pingDatabase: async () => {
-        await db.execute(sql`select 1`);
-      },
-      pingCriticalServices: async () => {
-        await Promise.all([local.queue.inspect(), local.checkFiles()]);
-      },
-    });
-    const http = await openHttp(config.baseUrl, local, telemetry);
-    http.addHook("onClose", () => running.stop());
-    try {
-      void http.register(mountFetchHandler({ handler: identity.handle }), {
-        prefix: IDENTITY_PATH,
-      });
-      if (name === "customer" && scimHandler !== undefined) {
-        void http.register(
-          mountFetchHandler(
-            { handler: scimHandler },
-            {
-              methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-            },
-          ),
-          { prefix: "/scim/v2" },
-        );
-      }
-      if (name === "staff" && staffImpersonation !== undefined) {
-        void http.register(
-          mountFetchHandler(
-            { handler: staffImpersonation },
-            {
-              methods: ["POST"],
-              servePrefixRoot: true,
-              bodyLimitBytes: 1024,
-            },
-          ),
-          { prefix: "/api/staff/impersonation" },
-        );
-      }
-      void http.register(
-        (api, _options, done) => {
-          registerRoutes(api, {
-            routes: [
-              ...running.routes,
-              ...infrastructure,
-              ...(name === "customer" && scimHandler !== undefined
-                ? scimBindingRoutes(
-                    tenants,
-                    invitationOrigin,
-                    config.enterprise?.scim?.map(({ tenantId }) => tenantId) ?? [],
-                  )
-                : []),
-              ...createSignInOptionsRoutes(enterpriseIdentity !== undefined),
-            ],
-            accessModel: model,
-            subjects: sessionSubjects(identity, enterpriseIdentity),
-            authorization,
-            ...(featureState === undefined ? {} : { featureState }),
-            auditActorForSubject: ({ subject, requestId }) =>
-              subject === null ? anonymousActor(requestId) : { kind: "account", id: subject.id, requestId },
-          });
-          done();
+    const scimRoutes =
+      name === "customer" && scimHandler !== undefined
+        ? scimBindingRoutes(tenants, invitationOrigin, config.enterprise?.scim?.map(({ tenantId }) => tenantId) ?? [])
+        : [];
+    return await startHttpHost({
+      baseUrl: config.baseUrl,
+      diagnostics: local.diagnostics,
+      requestLog: () => local.requestLog,
+      ...(telemetry === undefined ? {} : { telemetry }),
+      mounts: buildProtocolMounts(name, services),
+      health: {
+        pingDatabase: async () => {
+          await db.execute(sql`select 1`);
         },
-        { prefix: "/api" },
-      );
-      await http.ready();
-      return http;
-    } catch (fault) {
-      await http.close();
-      throw fault;
-    }
+        pingCriticalServices: async () => {
+          await Promise.all([local.queue.inspect(), local.checkFiles()]);
+        },
+      },
+      routes: [...running.routes, ...scimRoutes, ...createSignInOptionsRoutes(enterpriseIdentity !== undefined)],
+      accessModel: model,
+      subjects: sessionSubjects(identity, enterpriseIdentity),
+      authorization,
+      ...(featureState === undefined ? {} : { featureState }),
+      auditActorForSubject: ({ subject, requestId }) =>
+        subject === null ? anonymousActor(requestId) : { kind: "account", id: subject.id, requestId },
+      onClose: () => running.stop(),
+    });
   } catch (fault) {
     await running.stop();
     throw fault;
   }
 }
 
-function openHttp(
-  baseUrl: string,
-  local: Awaited<ReturnType<typeof openServices>>["local"],
-  telemetry?: TelemetryRuntime,
-) {
-  return createHttpApp({
-    nodeEnv: process.env["NODE_ENV"] ?? "development",
-    trustedOrigins: [baseUrl],
-    diagnostics: local.diagnostics,
-    requestLog: () => local.requestLog,
-    ...(telemetry === undefined
-      ? {}
-      : {
-          currentTraceId: telemetry.currentTraceId,
-          requestTrace: telemetry.annotateRequest,
-        }),
-  });
+function buildProtocolMounts(
+  name: ApiName,
+  services: Pick<HostServices, "identity" | "scimHandler" | "staffImpersonation">,
+): readonly HttpProtocolMount[] {
+  const mounts: HttpProtocolMount[] = [{ prefix: IDENTITY_PATH, handler: services.identity.handle }];
+  if (name === "customer" && services.scimHandler !== undefined) {
+    mounts.push({
+      prefix: "/scim/v2",
+      handler: services.scimHandler,
+      options: { methods: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+    });
+  }
+  if (name === "staff" && services.staffImpersonation !== undefined) {
+    mounts.push({
+      prefix: "/api/staff/impersonation",
+      handler: services.staffImpersonation,
+      options: { methods: ["POST"], servePrefixRoot: true, bodyLimitBytes: 1024 },
+    });
+  }
+  return mounts;
 }

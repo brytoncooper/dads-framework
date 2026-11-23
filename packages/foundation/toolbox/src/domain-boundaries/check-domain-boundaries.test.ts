@@ -120,6 +120,176 @@ test("new starters include the boundary gate and support src/domains", () => {
   expect(checkDomainBoundaries(project).violations).toHaveLength(1);
 });
 
+test("enforces workflows and integrations boundary rules with explicit glob arrays", () => {
+  const project = copyExample();
+  const manifest: unknown = JSON.parse(readFileSync(join(project, "dads.project.json"), "utf8"));
+  if (!isRecord(manifest)) throw new Error("Expected object manifest.");
+  writeFileSync(
+    join(project, "dads.project.json"),
+    `${JSON.stringify({
+      ...manifest,
+      domainBoundaries: {
+        domains: ["domains/*"],
+        libraries: ["libraries/*"],
+        workflows: ["workflows/*"],
+        integrations: ["integrations/*"],
+        composition: ["src/composition", "apps/*", "assembly"],
+      },
+    })}\n`,
+  );
+
+  source(
+    project,
+    "integrations/payments/index.ts",
+    'import type { ProductId } from "../../libraries/product-id/src/index.js";\nexport const charge = (id: ProductId) => id;\n',
+  );
+  source(
+    project,
+    "workflows/checkout/index.ts",
+    [
+      'import { createInventory } from "../../domains/inventory/index.js";',
+      'import { createOrders } from "../../domains/orders/index.js";',
+      'import { charge } from "../../integrations/payments/index.js";',
+      'import type { ProductId } from "../../libraries/product-id/src/index.js";',
+      "export const run = (id: ProductId) => ({ createInventory, createOrders, charged: charge(id) });",
+      "",
+    ].join("\n"),
+  );
+  expect(checkDomainBoundaries(project)).toEqual({ ok: true, violations: [] });
+
+  source(
+    project,
+    "workflows/checkout/deep.ts",
+    'export { createInventory } from "../../domains/inventory/stock.js";\n',
+  );
+  source(project, "domains/orders/calls-workflow.ts", 'export { run } from "../../workflows/checkout/index.js";\n');
+  source(
+    project,
+    "libraries/product-id/src/calls-workflow.ts",
+    'export { run } from "../../../workflows/checkout/index.js";\n',
+  );
+  source(
+    project,
+    "integrations/payments/bad-imports.ts",
+    [
+      'import { createInventory } from "../../domains/inventory/index.js";',
+      'import { run } from "../../workflows/checkout/index.js";',
+      "export const leaked = { createInventory, run };",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkDomainBoundaries(project);
+  expect(result.ok).toBe(false);
+  expect(result.violations.map((item) => `${item.source}:${item.line}`)).toEqual([
+    "domains/orders/calls-workflow.ts:1",
+    "integrations/payments/bad-imports.ts:1",
+    "integrations/payments/bad-imports.ts:2",
+    "libraries/product-id/src/calls-workflow.ts:1",
+    "workflows/checkout/deep.ts:1",
+  ]);
+});
+
+test("supports flat workflow files under workflows/ with default boundaries", () => {
+  const project = copyExample();
+  source(project, "workflows/fulfill-order.ts", 'export { createInventory } from "../domains/inventory/index.js";\n');
+  expect(checkDomainBoundaries(project)).toEqual({ ok: true, violations: [] });
+
+  source(
+    project,
+    "domains/orders/uses-flat-workflow.ts",
+    'export { createInventory } from "../../workflows/fulfill-order.js";\n',
+  );
+  const result = checkDomainBoundaries(project);
+  expect(result.ok).toBe(false);
+  expect(result.violations).toHaveLength(1);
+  expect(result.violations[0]?.message).toContain("cannot import workflows");
+});
+
+test("enforces intra-domain layering for pure/, contract/, and access/ modules", () => {
+  const project = copyExample();
+  source(project, "domains/orders/contract/types.ts", "export type OrderTotal = number;\n");
+  source(
+    project,
+    "domains/orders/pure/pricing.ts",
+    'import type { OrderTotal } from "../contract/types.js";\nexport const tax = (total: OrderTotal) => total * 0.1;\n',
+  );
+  source(
+    project,
+    "domains/orders/server/repo.ts",
+    'import { tax } from "../pure/pricing.js";\nexport type RepoRow = { readonly id: string };\nexport const compute = () => tax(10);\n',
+  );
+  source(project, "domains/orders/access/rules.ts", "export const rules = [];\n");
+  expect(checkDomainBoundaries(project)).toEqual({ ok: true, violations: [] });
+
+  source(
+    project,
+    "domains/orders/pure/bad-server-import.ts",
+    [
+      'import type { RepoRow } from "../server/repo.js";',
+      'import { compute } from "../server/repo.js";',
+      "export const leaked = (row: RepoRow) => ({ row, total: compute() });",
+      "",
+    ].join("\n"),
+  );
+  source(
+    project,
+    "domains/orders/contract/bad-contract.ts",
+    [
+      'import { compute } from "../server/repo.js";',
+      'import { tax } from "../pure/pricing.js";',
+      "export const bad = () => compute() + tax(1);",
+      "",
+    ].join("\n"),
+  );
+  source(project, "domains/orders/access/bad-access.ts", 'export { compute } from "../server/repo.js";\n');
+  source(project, "domains/orders/access.ts", 'export { compute } from "./server/repo.js";\n');
+
+  const result = checkDomainBoundaries(project);
+  expect(result.ok).toBe(false);
+  expect(result.violations.map((item) => `${item.source}:${item.line}`)).toEqual([
+    "domains/orders/access.ts:1",
+    "domains/orders/access/bad-access.ts:1",
+    "domains/orders/contract/bad-contract.ts:1",
+    "domains/orders/contract/bad-contract.ts:2",
+    "domains/orders/pure/bad-server-import.ts:1",
+    "domains/orders/pure/bad-server-import.ts:2",
+  ]);
+});
+
+test("rejects domain root index.ts barrels that mix server/ with web-client/ or ui/", () => {
+  const project = copyExample();
+  source(project, "domains/orders/server/plugin.ts", "export const ordersPlugin = {};\n");
+  source(project, "domains/orders/web-client/index.ts", "export const ordersClient = {};\n");
+  source(project, "domains/orders/ui/card.ts", "export const OrderCard = () => null;\n");
+  source(project, "domains/orders/index.ts", 'export { ordersPlugin } from "./server/plugin.js";\n');
+  expect(checkDomainBoundaries(project)).toEqual({ ok: true, violations: [] });
+
+  source(
+    project,
+    "domains/orders/index.ts",
+    [
+      'export { ordersPlugin } from "./server/plugin.js";',
+      'export { ordersClient } from "./web-client/index.js";',
+      "",
+    ].join("\n"),
+  );
+  const mixedWebClient = checkDomainBoundaries(project);
+  expect(mixedWebClient.ok).toBe(false);
+  expect(mixedWebClient.violations).toHaveLength(1);
+  expect(mixedWebClient.violations[0]?.message).toContain("affected graphs");
+
+  source(
+    project,
+    "domains/orders/index.ts",
+    ['export { ordersPlugin } from "./server/plugin.js";', 'export { OrderCard } from "./ui/card.js";', ""].join("\n"),
+  );
+  const mixedUi = checkDomainBoundaries(project);
+  expect(mixedUi.ok).toBe(false);
+  expect(mixedUi.violations).toHaveLength(1);
+  expect(mixedUi.violations[0]?.message).toContain("affected graphs");
+});
+
 function copyExample(): string {
   const root = temporaryRoot();
   cpSync(example, root, {

@@ -7,6 +7,8 @@ const commands = {
   email: true,
   page: true,
   resource: true,
+  workflow: true,
+  integration: true,
 };
 type GeneratorKind = keyof typeof commands;
 
@@ -15,12 +17,12 @@ export function isGeneratorCommand(command: string | undefined): command is Gene
 }
 
 export const GENERATOR_USAGE =
-  "dad add domain|endpoint|table|access|flag|email|page|resource <name> [--domain <name>] [--api <name>] [--dry-run] [--json]";
+  "dad add domain|endpoint|table|access|flag|email|page|resource|workflow|integration <name> [--domain <name>] [--api <name>] [--dry-run] [--json]";
 
 export type GeneratorArguments = {
   readonly kind: GeneratorKind;
   readonly name: string;
-  readonly domain: string;
+  readonly domain: string | undefined;
   readonly api: string | undefined;
   readonly dryRun: boolean;
 };
@@ -41,7 +43,11 @@ export function parseGeneratorArguments(args: readonly string[]): GeneratorArgum
   };
 }
 
-function resolveDomain(kind: GeneratorKind, name: string, option: boolean | string | undefined): string {
+function resolveDomain(kind: GeneratorKind, name: string, option: boolean | string | undefined): string | undefined {
+  if (kind === "workflow" || kind === "integration") {
+    if (option !== undefined) throw new Error(`--domain is not used for ${kind}.`);
+    return undefined;
+  }
   if (kind === "domain") {
     if (option !== undefined) throw new Error("Use the domain name as the command argument.");
     return name;

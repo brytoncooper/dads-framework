@@ -18,6 +18,7 @@ import { undocumentedExportsSignal } from "../avoidant-attachment/undocumented-e
 import { singleImplementerAbstractionsSignal } from "../commitment-issues/single-implementer-abstractions.js";
 import { skippedTestsSignal } from "../commitment-issues/skipped-tests.js";
 import { explicitAnySignal } from "../daddy-issues/explicit-any.js";
+import { impureCodeSignal } from "../daddy-issues/impure-code.js";
 import { nonNullAssertionsSignal } from "../daddy-issues/non-null-assertions.js";
 import { typeAssertionsSignal } from "../daddy-issues/type-assertions.js";
 import { assertionsInTestsSignal } from "../disorganized-attachment/assertions-in-tests.js";
@@ -41,11 +42,12 @@ import { perFeatureAuthorizationSignal } from "../you-repeat-the-cycle/per-featu
 import { roleIfLaddersSignal } from "../you-repeat-the-cycle/role-if-ladders.js";
 import { tenantColumnAuthorizationSignal } from "../you-repeat-the-cycle/tenant-column-authorization.js";
 
-/** The twenty-eight signals that read the parsed workspace. */
+/** The twenty-nine signals that read the parsed workspace. */
 export const TYPESCRIPT_SIGNALS: readonly DoctorSignal[] = [
   explicitAnySignal,
   typeAssertionsSignal,
   nonNullAssertionsSignal,
+  impureCodeSignal,
   vendorTypesInSurfaceSignal,
   copiedTypesSignal,
   undocumentedExportsSignal,

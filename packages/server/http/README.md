@@ -248,10 +248,15 @@ authorization denies everything until you pass a seeded `FakeAuthorization`.
 Parse bodies with `dataBodyOf`/`listBodyOf`/`errorBodyOf` (or `bodyOf` for
 an arbitrary schema) — `res.json()` is `any` and defeats the type walls.
 
+## Composing an HTTP host
+
+`startHttpHost(options)` replaces manual Fastify wiring in API entrypoints. Pass `baseUrl`, `routes`, `subjects`, and `authorization` along with optional `mounts` (`HttpProtocolMount`), `health` (`HttpHostHealthOptions`), `telemetry` (`HttpHostTelemetry`), `apiPrefix` (default `"/api"`), and `onClose`. It builds the app via `createHttpApp`, registers protocol mounts and grouped routes (including `/health` and `/ready` when `health` is set), awaits `ready()`, and closes the Fastify instance (invoking `onClose`) before rethrowing if startup fails.
+
 ## Folder story
 
 - `lib/route/` — authoring: one file per verb, `route-group`, `access`, `capabilities`, `define-raw-route`, `sse-route`, and `route-definition` (parse → handler → parse).
 - `lib/create-http-app.ts` — builds the Fastify instance (logger, CORS, timeouts, request-id, trustedProxyHops).
+- `lib/host/` — `startHttpHost` composes `createHttpApp`, protocol mounts, typed routes, optional health probes under `apiPrefix` (default `"/api"`), `onClose` cleanup, and startup rollback on failure.
 - `lib/request-pipeline/` — `register-routes` (enforce → run under deadline → envelope), `enforce-access`, `with-deadline`, `error-handler`, `envelope`, `rate-limit`, `request-id`.
 - `lib/openapi/` — the generated document. The kit knows how to convert a route table, never which domains exist: nothing here imports a domain contract lib (`@dads-framework/core/contract` is the kit's own vocabulary). The parity golden test that pins the generated document against the committed artifact needs real domain schemas, so it lives with the composition root that already knows them.
 - `lib/request-log/` — the captured row: `request-record` (pure builder plus the header allowlist), `request-outcome` (what the pipeline learned and the response no longer shows), `capture-request-record` (the `onResponse` hook), `request-log-sink` (the seam `@dads-framework/audit` implements).

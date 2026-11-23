@@ -32,11 +32,13 @@ Customer routes are not hidden behind a feature flag on the staff server; they a
 
 The import rules enforced by `npx dad check boundaries`:
 
-- **`domains/*`** can import framework packages and `libraries/*`. A domain can never import another domain's tables, routes, or internals.
-- **`libraries/*`** hold shared runtime tokens and base entity handles (such as `libraries/app-runtime/index.ts`) and import framework packages only.
-- **`apps/*` and `assembly/`** sit in the composition tier and wire domains together with real infrastructure (PostgreSQL, auth, mail, object storage).
+- **`domains/*`** can import framework packages and `libraries/*`. Inside each domain, keep deterministic rules in `pure/` (zero I/O or ambient clocks, enforced by `dad doctor`'s `impure-code` signal), wire contracts in `contract/`, access declarations in `access/`, and thin HTTP/persistence wiring in `server/`. A domain can never import another domain's tables, routes, or internals.
+- **`workflows/*`** orchestrate two or more domains through their public exports or `@dads-framework/core/event-bus` without reaching into any domain's `server/` internals.
+- **`integrations/*`** quarantine external vendor SDKs and webhooks behind app-owned capability ports.
+- **`libraries/*`** hold pure, domain-free shared primitives and base entity handles and import framework packages only.
+- **`apps/*` and `assembly/`** sit in the composition tier and bind concrete infrastructure (PostgreSQL, auth, mail, object storage) to narrow `defineService` capability tokens rather than a fat app-wide service bag.
 
-When one domain needs data from another domain, define a narrow TypeScript port and wire the implementation in `assembly/services.ts` instead of importing across domains.
+When one domain needs data from another domain, declare a narrow capability token or consumer-owned TypeScript port and wire the implementation in `assembly/` instead of importing across domains. For the full placement decision table and dependency graph, see [Where Does Code Go?](where-code-goes.md).
 
 ```sh
 npx dad check boundaries
@@ -83,6 +85,7 @@ A healthy process responds with HTTP `200` and `{ "data": { "status": "ok" } }`.
 
 ## Related references
 
+- [Where Does Code Go?](where-code-goes.md) for the canonical placement table, dependency DAG, and `pure/` vs. `server/` example
 - [`@dads-framework/toolbox`](../../../packages/foundation/toolbox/README.md) for all CLI commands and JSON output schemas
 - [`@dads-framework/core/plugin`](../../../packages/core/README.md) for `composeApi`, `defineService`, and `providePlugin`
 - [Architecture decisions](../../decisions/README.md)

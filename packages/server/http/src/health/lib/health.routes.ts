@@ -1,4 +1,7 @@
-import { getRoute, publicAccess, routeGroup, type HttpRoute, type RouteBlueprint } from "../../index.js";
+import { publicAccess } from "../../lib/route/access.js";
+import { getRoute } from "../../lib/route/get-route.js";
+import type { RouteBlueprint } from "../../lib/route/route-definition.js";
+import { routeGroup, type HttpRoute } from "../../lib/route/route-group.js";
 import { createHealthRouteHandlers, type HealthRouteHandlers, type ReadinessChecks } from "./health.route-handlers.js";
 import { healthStatusSchema, readyStatusSchema } from "./health.schemas.js";
 

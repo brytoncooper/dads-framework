@@ -34,6 +34,10 @@ export const ATTACHMENT_ISSUES: readonly DaddyIssue[] = [
         signals: [ESLINT_DISABLES_SIGNAL],
         text: `Does any TypeScript file carry an \`${ESLINT_DISABLE_MARK}\` comment?`,
       },
+      {
+        signals: ["impure-code"],
+        text: "Does any production file inside a `pure/` directory import I/O or frameworks, or read ambient nondeterminism?",
+      },
     ],
     cure: "Each hatch is a lint error rather than a preference, and the count of each is a ratchet ceiling locked at zero.",
   },

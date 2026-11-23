@@ -80,6 +80,54 @@ describe("project orientation", () => {
     expect(orientProjectPath(nested, "docs/README.md")).toBeUndefined();
   });
 
+  it("orients pure domain files, workflows, and integrations to their declared owners", () => {
+    const appProject = parseDadsProject({
+      schemaVersion: 1,
+      packages: [
+        {
+          name: "domains-orders",
+          root: "domains/orders",
+          responsibility: "Owns orders pure logic, contracts, and server adapters.",
+          allowedDependencies: [],
+          verification: ["npm test -- domains/orders"],
+          skills: ["add-http-operation"],
+        },
+        {
+          name: "workflows",
+          root: "workflows",
+          responsibility: "Coordinates cross-domain workflows.",
+          allowedDependencies: ["domains-orders", "integrations-payments"],
+          verification: ["npm test -- workflows"],
+          skills: ["dads-orient"],
+        },
+        {
+          name: "integrations-payments",
+          root: "integrations/payments",
+          responsibility: "Wraps the payment gateway adapter.",
+          allowedDependencies: [],
+          verification: ["npm test -- integrations/payments"],
+          skills: ["dads-orient"],
+        },
+      ],
+    });
+
+    expect(orientProjectPath(appProject, "domains/orders/pure/order.ts")).toMatchObject({
+      packageName: "domains-orders",
+      packageRoot: "domains/orders",
+      verification: ["npm test -- domains/orders"],
+    });
+    expect(orientProjectPath(appProject, "workflows/fulfill-order.ts")).toMatchObject({
+      packageName: "workflows",
+      packageRoot: "workflows",
+      verification: ["npm test -- workflows"],
+    });
+    expect(orientProjectPath(appProject, "integrations/payments/index.ts")).toMatchObject({
+      packageName: "integrations-payments",
+      packageRoot: "integrations/payments",
+      verification: ["npm test -- integrations/payments"],
+    });
+  });
+
   it("rejects an ambiguous package root", () => {
     expect(() =>
       parseDadsProject({

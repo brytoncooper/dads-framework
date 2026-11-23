@@ -9,3 +9,12 @@ export {
   type PluginTestHarness,
   type StartForTestOptions,
 } from "./testing/start-for-test.js";
+export {
+  createTestHost,
+  overrideService,
+  startTestHost,
+  type CreateTestHostPluginsOptions,
+  type CreateTestHostSelectionOptions,
+  type TestHost,
+  type TestServiceOverride,
+} from "./lib/create-test-host.js";

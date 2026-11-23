@@ -1,5 +1,12 @@
 export { createHttpApp, type HttpAppOptions } from "./lib/create-http-app.js";
 export {
+  startHttpHost,
+  type HttpHostHealthOptions,
+  type HttpHostOptions,
+  type HttpHostTelemetry,
+  type HttpProtocolMount,
+} from "./lib/host/start-http-host.js";
+export {
   HandlerTimeoutError,
   HttpWiringError,
   RequestValidationError,

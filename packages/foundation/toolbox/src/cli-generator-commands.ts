@@ -8,8 +8,10 @@ import { addResource } from "./resource-generators/generate-resource.js";
 import { GenerationPlan } from "./resource-generators/generation-plan.js";
 import { parseGeneratorArguments, type GeneratorArguments } from "./resource-generators/generator-arguments.js";
 import { ensureGeneratorDependencies } from "./resource-generators/generator-dependencies.js";
+import { addIntegration } from "./resource-generators/integration-generator.js";
 import { addPage } from "./resource-generators/page-generator.js";
 import { addTable } from "./resource-generators/table-generator.js";
+import { addWorkflow } from "./resource-generators/workflow-generator.js";
 
 export function addProjectArtifact(args: readonly string[], json: boolean): void {
   writeOutput(
@@ -24,21 +26,45 @@ export function addProjectArtifact(args: readonly string[], json: boolean): void
 export function generateProjectArtifact(root: string, options: GeneratorArguments) {
   const plan = new GenerationPlan(root);
   if (plan.read("dads.project.json") === undefined) throw new Error("Run this generator from a Dads application root.");
-  if (options.kind === "domain" || options.kind === "resource") ensureDomain(plan, options.domain);
-  else requireDomain(plan, options.domain);
-
+  prepareDomain(plan, options);
   writeArtifacts(plan, root, options);
-  if (options.api !== undefined) mountDomain(plan, options.api, options.domain);
+  if (options.api !== undefined && options.domain !== undefined) mountDomain(plan, options.api, options.domain);
   if (!options.dryRun) plan.write();
   return {
     kind: options.kind,
-    domain: options.domain,
+    ...(options.domain !== undefined ? { domain: options.domain } : {}),
     files: plan.paths(),
     dryRun: options.dryRun,
   };
 }
 
+function prepareDomain(plan: GenerationPlan, options: GeneratorArguments): void {
+  if (options.kind === "workflow" || options.kind === "integration") return;
+  if (options.domain === undefined) throw new Error("--domain is required.");
+  if (options.kind === "domain" || options.kind === "resource") ensureDomain(plan, options.domain);
+  else requireDomain(plan, options.domain);
+}
+
 function writeArtifacts(plan: GenerationPlan, root: string, { kind, domain, name }: GeneratorArguments): void {
+  if (kind === "workflow") {
+    addWorkflow(plan, name);
+    return;
+  }
+  if (kind === "integration") {
+    addIntegration(plan, name);
+    return;
+  }
+  if (domain === undefined) throw new Error("--domain is required.");
+  writeDomainArtifacts(plan, root, kind, domain, name);
+}
+
+function writeDomainArtifacts(
+  plan: GenerationPlan,
+  root: string,
+  kind: Exclude<GeneratorArguments["kind"], "workflow" | "integration">,
+  domain: string,
+  name: string,
+): void {
   switch (kind) {
     case "domain":
       return;

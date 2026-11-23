@@ -19,6 +19,13 @@ export {
   type PostgresConnection,
   type PostgresPoolErrorLog,
 } from "./lib/create-postgres-connection.js";
+export {
+  databaseService,
+  postgresPoolService,
+  providePostgresDatabase,
+  type PgPool,
+  type ProvidePostgresDatabaseOptions,
+} from "./lib/database-service.js";
 export type { DrizzleHandle } from "./drizzle.js";
 export { eventActorColumns, type EventActorColumns, type PersistedEventActor } from "./lib/event-actor-columns.js";
 export { loadPageAndTotal, sqlOffsetForPage } from "./lib/load-page-and-total.js";

@@ -7,6 +7,7 @@ Dads is a TypeScript backend framework built around three rules: every HTTP rout
 | If you want to...                                                                                                   | Start with                                              |
 | :------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------ |
 | **Start a new TypeScript backend** with auth, workspaces, Postgres permissions, OpenAPI 3.1, and CI checks wired in | Follow the walkthrough below (`npm create dads@latest`) |
+| **Decide where a new schema, rule, workflow, integration, or migration belongs**                                    | [Where Does Code Go?](where-code-goes.md)               |
 | **Add relationship permissions to an existing Postgres or SQLite app** without a separate auth database             | [Access & Permissions](permissions.md)                  |
 | **Look up SDK definitions, options, combinators, and CLI commands**                                                 | [SDK Glossary & Options](sdk-reference.md)              |
 | **Migrate SpiceDB into PostgreSQL** or replace hand-written `.zed` files with typed TypeScript                      | [Adopt One Package at a Time](adopt-standalone.md)      |
@@ -70,6 +71,8 @@ Every Dads app splits code into four areas. `npx dad check boundaries` enforces 
 
 > **Why is `assembly/` separate from `apps/`?** `apps/customer/app.ts` and `apps/staff/app.ts` are short manifests that choose which routes exist on each server. `assembly/` is the shared host that boots either entrypoint using the same PostgreSQL pool, auth setup, health checks, and migrations.
 
+For the full one-page placement decision table (including `pure/`, `workflows/`, `integrations/`, and `migrations/`), see [Where Does Code Go?](where-code-goes.md).
+
 ## 4. Add your first feature
 
 Generate a relationship-guarded domain and mount it on the `customer` API:
@@ -101,6 +104,7 @@ You can also run `npx dad doctor --gate` to check repo-wide rules such as zero `
 
 ## Next steps
 
+- **See the full placement map (`pure/`, `workflows/`, `integrations/`, `assembly/`):** [Where Does Code Go?](where-code-goes.md)
 - **Model and enforce permissions:** [Access & Permissions](permissions.md)
 - **Look up SDK definitions and options:** [SDK Glossary & Options](sdk-reference.md)
 - **Define endpoints, Zod schemas, and clients:** [Routes, Contracts & Clients](routes-and-contracts.md)

@@ -84,6 +84,14 @@ schema-generic query type. The query type follows the native factory result
 and preserves the original default schema. The root still exports
 `DrizzleHandle` for compatibility.
 
+## Plugin service tokens
+
+Import `databaseService` (`DrizzleHandle`) or `postgresPoolService` (`PgPool`)
+in plugins that require PostgreSQL without binding to host startup code.
+`providePostgresDatabase(options)` opens a managed connection with
+`createPostgresConnection`, provides `databaseService`, and registers
+`connection.close` on the plugin scope so the pool ends on shutdown.
+
 ## Connection contract
 
 Plain and attributed pools provide the same checkout, release, and teardown

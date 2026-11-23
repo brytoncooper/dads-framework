@@ -2,11 +2,13 @@ import type { Authorization, SubjectRef } from "@dads-framework/access/runtime";
 import { actor, type PermissionToken } from "@dads-framework/access";
 import type { GetEffectiveFeatureState } from "@dads-framework/feature-flags";
 import type { Identity, IdentityEmail, IdentitySession } from "@dads-framework/identity";
-import type { JobQueue } from "@dads-framework/job-queue/core";
+import { jobQueueService, type JobQueue } from "@dads-framework/job-queue/core";
 import type { ObjectStorage } from "@dads-framework/object-storage/core";
 import { defineService } from "@dads-framework/core/plugin";
-import type { DrizzleHandle } from "@dads-framework/postgres";
+import { databaseService, type DrizzleHandle } from "@dads-framework/postgres";
 import { createTenantAccess, type TenantId, type Tenants } from "@dads-framework/identity/tenants";
+
+export { databaseService, jobQueueService };
 
 export const account = actor("account");
 export const accountAccess = account;
@@ -41,6 +43,9 @@ export type StarterServices = {
 };
 
 export const starterServices = defineService("starter-services").ofType<StarterServices>();
+export const featureFlagsService = defineService("feature-flags").ofType<GetEffectiveFeatureState>();
+export const objectStorageService = defineService("object-storage").ofType<ObjectStorage>();
+export const protectedWriteService = defineService("protected-write").ofType<WriteWithPermission>();
 
 export type StarterEmail =
   | IdentityEmail

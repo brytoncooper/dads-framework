@@ -25,6 +25,7 @@ describe("Dad CLI package", () => {
     for (const example of [
       "init <path>",
       "add library <name>",
+      "add workflow|integration <name>",
       "add domain|endpoint|table|access|flag|email|page|resource <name>",
       "orient|explain <path>",
       "check boundaries",
@@ -44,6 +45,7 @@ describe("Dad CLI package", () => {
     });
     expect(help).toContain("Usage: dad add <generator>");
     expect(help).toContain("add library <name>");
+    expect(help).toContain("add workflow|integration <name>");
     expect(help).toContain("add domain|endpoint|table|access|flag|email|page|resource <name>");
   });
 });

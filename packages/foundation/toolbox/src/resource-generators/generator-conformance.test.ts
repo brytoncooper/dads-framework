@@ -50,6 +50,12 @@ it("generates all individual artifacts with no implicit API registration", () =>
   add("domain", "inventory");
   expect(read("apps/customer/app.ts")).toBe(api);
   expect(read("apps/staff/app.ts")).toBe(api);
+  expect(read("domains/inventory/pure/inventory.ts")).toContain("export function normalizeInventory(");
+  expect(read("domains/inventory/pure/inventory.test.ts")).toContain("normalizeInventory");
+
+  add("domain", "orders");
+  expect(read("domains/orders/pure/order.ts")).toContain("export function normalizeOrder(");
+  expect(read("domains/orders/pure/order.test.ts")).toContain("normalizeOrder");
 
   const commands = [
     ["endpoint", "status", "server/status-endpoint.ts"],
@@ -127,4 +133,48 @@ it("preflights invalid selections and collisions before writing and supports dry
   expect(() => add("resource", "catalog", "--api", "customer")).toThrow("File already exists");
   expect(read("domains/catalog/server/catalog-table.ts")).toBe("locally authored");
   expect(existsSync(join(root, "domains/catalog/index.ts"))).toBe(false);
+});
+
+it("scaffolds workflow and integration modules and refuses invalid names or collisions", () => {
+  const workflowPreview = add("workflow", "fulfill-order", "--dry-run");
+  expect(workflowPreview.files).toEqual(["workflows/fulfill-order.test.ts", "workflows/fulfill-order.ts"]);
+  expect(existsSync(join(root, "workflows/fulfill-order.ts"))).toBe(false);
+
+  const workflowResult = add("workflow", "fulfill-order");
+  expect(workflowResult.files).toEqual(["workflows/fulfill-order.test.ts", "workflows/fulfill-order.ts"]);
+  expect(read("workflows/fulfill-order.ts")).toContain("export async function runFulfillOrder(");
+  expect(read("workflows/fulfill-order.test.ts")).toContain("runFulfillOrder");
+  expect(add("workflow", "fulfill-order").files).toEqual([]);
+
+  const integrationPreview = add("integration", "payment-gateway", "--dry-run");
+  expect(integrationPreview.files).toEqual([
+    "integrations/payment-gateway/index.ts",
+    "integrations/payment-gateway/payment-gateway.test.ts",
+  ]);
+  expect(existsSync(join(root, "integrations/payment-gateway/index.ts"))).toBe(false);
+
+  const integrationResult = add("integration", "payment-gateway");
+  expect(integrationResult.files).toEqual([
+    "integrations/payment-gateway/index.ts",
+    "integrations/payment-gateway/payment-gateway.test.ts",
+  ]);
+  expect(read("integrations/payment-gateway/index.ts")).toContain("export function createPaymentGatewayAdapter(");
+  expect(read("integrations/payment-gateway/payment-gateway.test.ts")).toContain("createPaymentGatewayAdapter");
+  expect(add("integration", "payment-gateway").files).toEqual([]);
+
+  expect(() => add("workflow", "BadName")).toThrow("lowercase kebab-case");
+  expect(() => add("integration", "bad_name")).toThrow("lowercase kebab-case");
+  expect(() => add("workflow", "checkout", "--domain", "orders")).toThrow("--domain is not used for workflow.");
+  expect(() => add("integration", "stripe", "--domain", "orders")).toThrow("--domain is not used for integration.");
+  expect(() => add("workflow", "checkout", "--api", "customer")).toThrow(
+    "--api is allowed for domain, endpoint, and resource.",
+  );
+
+  setup("workflows/existing-flow.ts", "locally authored");
+  expect(() => add("workflow", "existing-flow")).toThrow("File already exists");
+  expect(existsSync(join(root, "workflows/existing-flow.test.ts"))).toBe(false);
+
+  setup("integrations/existing-vendor/index.ts", "locally authored");
+  expect(() => add("integration", "existing-vendor")).toThrow("File already exists");
+  expect(existsSync(join(root, "integrations/existing-vendor/existing-vendor.test.ts"))).toBe(false);
 });

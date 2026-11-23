@@ -1,5 +1,15 @@
+export { clockService, provideClock } from "./lib/clock-service.js";
 export { composeApi, type ApiSelection } from "./lib/compose-api.js";
 export { composeApp, type ComposedApp, type DependencyCheck } from "./lib/compose-app.js";
+export {
+  createTestHost,
+  overrideService,
+  startTestHost,
+  type CreateTestHostPluginsOptions,
+  type CreateTestHostSelectionOptions,
+  type TestHost,
+  type TestServiceOverride,
+} from "./lib/create-test-host.js";
 export {
   definePlugin,
   type AnyPlugin,

@@ -2,7 +2,7 @@ import type { FastifyPluginCallback, FastifyReply, FastifyRequest, HTTPMethods }
 
 import type { FetchHandler } from "@dads-framework/core/contract";
 
-import { createRateLimiter, type RateLimiter } from "../../../index.js";
+import { createRateLimiter, type RateLimiter } from "../../../lib/request-pipeline/rate-limit.js";
 
 import { toWebRequest } from "./to-web-request.js";
 

@@ -163,6 +163,8 @@
   "domainBoundaries": {
     "domains": ["src/domains/*", "domains/*"],
     "libraries": ["libraries/*"],
+    "workflows": ["workflows/*"],
+    "integrations": ["integrations/*"],
     "composition": ["src/composition", "apps/*", "assembly"]
   }
 }

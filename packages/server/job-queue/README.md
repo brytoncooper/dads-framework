@@ -57,9 +57,9 @@ The starter creates the in-process queue and closes it when the service scope is
 
 ## Use it
 
-Import `defineJob` and `JobQueue` from `@dads-framework/job-queue/core` in
-features that declare jobs or accept a queue. The main entry point also
-exports these contracts and provides `createJobQueue` for application wiring.
+Import `defineJob`, `JobQueue`, and `jobQueueService` from `@dads-framework/job-queue/core` in
+features that declare jobs or require a queue service token. The main entry point also
+exports `defineJob` and `JobQueue` and provides `createJobQueue` for application wiring.
 
 Install `bullmq@^5.79.3`, choose the `bullmq` driver, and supply `redisUrl`
 when jobs must survive a process restart. The driver loads BullMQ on its

@@ -19,7 +19,7 @@ const digest = z.strictObject({
   sha256: z.string().length(64),
 });
 
-export function noteAttachmentJobs({ files }: Files) {
+export function noteAttachmentJobs({ files }: Pick<StarterServices, "files">) {
   return [
     defineJob({
       name: attachmentJobName,

@@ -8,6 +8,15 @@
 - **Not boundaries (one owner, keep together):** a route, its handler, and its access declaration; row/insert types and their table; a feature page and its loader. One test seam is kept on purpose: a domain's reader/writer store contract for pure unit tests with in-memory fakes (never re-implementing Postgres rules).
 - **Precedence:** IEP outranks structural conventions when a convention demands an unearned seam, but never overrides safety walls, domain boundaries, or `Authorization`.
 
+## Where code goes
+
+- `domains/<name>/{contract,access,pure,server}` — wire schemas & `*Operation` contracts (`contract/`), resource permissions (`access/`), deterministic rules with zero I/O (`pure/`), and thin routes/store/plugin (`server/`).
+- `workflows/` — multi-domain orchestration using public domain exports and integration ports.
+- `integrations/` — external vendor SDK adapters behind app-owned capability ports.
+- `libraries/` — domain-free shared primitives and narrow capability tokens.
+- `migrations/` — append-only SQL migrations (`*.migration.ts`).
+- `assembly/` — composition root wiring infrastructure into `startHttpHost`.
+
 ## Working in this repo
 
 - Ask `dad orient <path> --json` which package owns the work.

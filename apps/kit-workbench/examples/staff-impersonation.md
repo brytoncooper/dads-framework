@@ -10,7 +10,7 @@ workspace. [domains/support/server/impersonation.ts](../domains/support/server/i
 handles the commands; [assembly/start-app.ts](../assembly/start-app.ts)
 mounts them on the staff API when enabled.
 
-<!-- dads:excerpt {"path":"assembly/staff-impersonation-services.ts","language":"ts","from":"  const staff = new Set(staffAccountIds);","through":"    );"} -->
+<!-- dads:excerpt {"path":"assembly/staff-impersonation-services.ts","language":"ts","from":"  const staff = new Set(staffAccountIds);","through":"    return (await readTenantAsTarget(tenants, scope.effectiveAccountId, tenantId)) !== null;"} -->
 
 ## Try it
 

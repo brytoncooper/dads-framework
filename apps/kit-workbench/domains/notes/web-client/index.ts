@@ -1,64 +1,49 @@
-import { getFromApi, getPageFromApi, sendToApi } from "@dads-framework/client";
-import { defineRoute, paginationQuerySchema } from "@dads-framework/core/contract";
-import { z } from "zod";
-import { note, noteInput, noteFeatures } from "../contract/wire.js";
+import { createApiClient } from "@dads-framework/client";
+import type { z } from "zod";
+import {
+  createNoteOp,
+  exportNoteOp,
+  listNotesOp,
+  readNoteFeaturesOp,
+  type note,
+  type noteExportFormat,
+} from "../contract/wire.js";
 
 export type Note = z.output<typeof note>;
+export type NoteExportFormat = z.output<typeof noteExportFormat>;
+export { notesExport } from "../contract/wire.js";
 
-const collectionPath = "/tenants/:tenantId/notes";
-function tenantNotes(tenantId: string) {
-  return `/tenants/${encodeURIComponent(tenantId)}/notes`;
-}
-const list = defineRoute("GET", collectionPath, tenantNotes);
-const create = defineRoute("POST", collectionPath, tenantNotes);
-const features = defineRoute(
-  "GET",
-  "/tenants/:tenantId/notes/features",
-  (tenantId: string) => `${tenantNotes(tenantId)}/features`,
-);
+export const notesClient = createApiClient({
+  list: listNotesOp,
+  readFeatures: readNoteFeaturesOp,
+  create: createNoteOp,
+  exportFile: exportNoteOp,
+});
 
 export function listNotes(tenantId: string, page: number, signal: AbortSignal) {
-  return getPageFromApi({
-    route: list.bind(tenantId),
-    returns: note,
-    query: { schema: paginationQuerySchema, value: { page, perPage: 12 } },
+  return notesClient.list({
+    params: { tenantId },
+    query: { page, perPage: 12 },
     signal,
   });
 }
 
 export function readFeatures(tenantId: string, signal: AbortSignal) {
-  return getFromApi({
-    route: features.bind(tenantId),
-    returns: noteFeatures,
+  return notesClient.readFeatures({
+    params: { tenantId },
     signal,
   });
 }
 
 export function createNote(tenantId: string, text: string) {
-  return sendToApi({
-    route: create.bind(tenantId),
-    body: { schema: noteInput, value: { text } },
-    returns: note,
+  return notesClient.create({
+    params: { tenantId },
+    body: { text },
   });
 }
 
-export { notesExport } from "../contract/wire.js";
-
-export type NoteExportFormat = "csv" | "pdf";
-
-const exportRoute = defineRoute(
-  "GET",
-  "/tenants/:tenantId/notes/:noteId/exports/:format",
-  (tenantId: string, noteId: string, format: NoteExportFormat) =>
-    `${tenantNotes(tenantId)}/${encodeURIComponent(noteId)}/exports/${format}`,
-);
-
 export function exportNote(tenantId: string, noteId: string, format: NoteExportFormat) {
-  return getFromApi({
-    route: exportRoute.bind(tenantId, noteId, format),
-    returns: z.object({
-      contentType: z.enum(["application/pdf", "text/csv"]),
-      base64: z.base64(),
-    }),
+  return notesClient.exportFile({
+    params: { tenantId, noteId, format },
   });
 }

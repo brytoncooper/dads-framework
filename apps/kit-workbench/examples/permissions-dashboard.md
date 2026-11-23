@@ -10,9 +10,9 @@ Its `access` guard requires `manage_members` on the workspace in the URL.
 The handler passes the authenticated caller, workspace, and selected account
 to the tenant service.
 
-<!-- dads:excerpt {"path":"domains/tenants/server/permission-routes.ts","language":"ts","from":"const access = requires(","through":");"} -->
+<!-- dads:excerpt {"path":"domains/tenants/server/permission-routes.ts","language":"ts","from":"const access = requires(tenantAccess.tenant.permissions.manage_members, fromParam(\"tenantId\"));","through":"const access = requires(tenantAccess.tenant.permissions.manage_members, fromParam(\"tenantId\"));"} -->
 
-<!-- dads:excerpt {"path":"domains/tenants/server/permission-routes.ts","language":"ts","from":"      route: memberPermissionsRoute,","through":"        ),"} -->
+<!-- dads:excerpt {"path":"domains/tenants/server/permission-routes.ts","language":"ts","from":"      route: memberPermissionsRoute,","through":"        tenantRead(() => tenants.memberships.permissions(subject.id, params.tenantId, params.accountId)),"} -->
 
 ## Try it
 

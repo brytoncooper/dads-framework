@@ -16,3 +16,10 @@ export function pascal(name: string): string {
 export function databaseName(domain: string, name: string): string {
   return `${domain}__${name}`.replaceAll("-", "_");
 }
+
+export function singular(name: string): string {
+  if (name.endsWith("ies") && name.length > 3) return `${name.slice(0, -3)}y`;
+  if (/(?:ses|xes|ches|shes)$/.test(name) && name.length > 3) return name.slice(0, -2);
+  if (name.endsWith("s") && !name.endsWith("ss") && name.length > 1) return name.slice(0, -1);
+  return name;
+}

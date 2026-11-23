@@ -109,6 +109,10 @@ definitions compile through `emitAccessIr(compileAccess(app.access))`.
 | `definePlugin(spec)`                                 | declare a plugin: `name`, `requires`, `implements`, `contributes`, `setup`                        |
 | `defineService(name).ofType<Value>()`                | a capability a plugin requires without naming which plugin offers it                              |
 | `providePlugin(name, service, create)`               | a plugin implementing one service with a value the host builds (a pool, a clock)                  |
+| `clockService` / `provideClock(clock, name?)`        | built-in narrow capability token and provider plugin for `Clock`                                  |
+| `overrideService(service, value, name?)`             | typed service provider plugin for substituting fakes in tests                                     |
+| `createTestHost({ plugins, overrides? })`            | compose, override services, and start plugins with idempotent `stop()` cleanup                    |
+| `startTestHost(composed)`                            | start an existing `ComposedApp` as an async-disposable test host                                  |
 | `composeApi(name, { services, routes, jobs })`       | select the contributions for one named API                                                        |
 | `composeApp(plugins)`                                | order and check a plugin list; returns the declared contributions and `start()`                   |
 | `running.read(dependency)`                           | what a plugin or service offers in this run                                                       |

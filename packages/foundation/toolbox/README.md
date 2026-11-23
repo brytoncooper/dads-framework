@@ -288,17 +288,18 @@ unrelated commands with the same names.
 ### Domain boundaries
 
 `dad check boundaries [--json]` resolves project imports and checks domain,
-neutral library, and composition ownership. The checker exits unsuccessfully
-on violations and identifies the source, target, and fix. Starters include it
-in local and CI verification. See the
-[domain boundaries guide](../../../docs/domain-boundaries.md) for default
+neutral library, workflow, integration, and composition ownership, plus
+intra-domain layering (`pure/`, `contract/`, `access/`) and mixed server/client
+root barrels. The checker exits unsuccessfully on violations and identifies the
+source, target, and fix. Starters include it in local and CI verification. See
+the [domain boundaries guide](../../../docs/domain-boundaries.md) for default
 paths, custom roots, and a two-API example.
 
 ### Generators
 
-`dad add --help` lists the nine commands for domains, endpoints, tables,
-access, flags, email, pages, resources, and dependency libraries. In the
-starter, preview a domain on the staff API with
+`dad add --help` lists the eleven commands for domains, endpoints, tables,
+access, flags, email, pages, resources, workflows, integrations, and dependency
+libraries. In the starter, preview a domain on the staff API with
 `npx dad add domain inventory --api staff --dry-run --json`. The preview
 lists the planned files and registration without editing the project.
 [Generator guide](../../../docs/generators.md)
@@ -454,7 +455,7 @@ what it proved.
 
 ## Generate application code
 
-Use `dad add domain|endpoint|table|access|flag|email|page|resource` in a kit
-starter. Choose an API explicitly when exposing a domain. The generator
+Use `dad add domain|endpoint|table|access|flag|email|page|resource|workflow|integration`
+in a kit starter. Choose an API explicitly when exposing a domain. The generator
 reference lists output files, dependencies, and dry-run behavior. See
 [Generate application code](../../../docs/generators.md).

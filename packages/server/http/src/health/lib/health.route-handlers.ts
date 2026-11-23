@@ -1,4 +1,4 @@
-import { ServiceUnavailableError } from "../../index.js";
+import { ServiceUnavailableError } from "../../lib/http-errors.js";
 
 import type { HealthStatus, ReadyStatus } from "./health.schemas.js";
 

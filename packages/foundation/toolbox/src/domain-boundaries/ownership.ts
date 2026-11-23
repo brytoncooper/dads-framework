@@ -2,14 +2,20 @@ import { lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { isRecord, isString, isUnknownArray } from "../parse-guards.js";
 
+const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
+
 export const defaultDomainBoundaries = {
   domains: ["src/domains/*", "domains/*"],
   libraries: ["libraries/*"],
+  workflows: ["workflows"],
+  integrations: ["integrations/*"],
   composition: ["src/composition", "apps/*", "assembly"],
 };
 
-type OwnerKind = keyof typeof defaultDomainBoundaries;
+export type OwnerKind = keyof typeof defaultDomainBoundaries;
 export type Owner = { readonly kind: OwnerKind; readonly root: string };
+
+const OPTIONAL_OWNER_KINDS = new Set<OwnerKind>(["workflows", "integrations"]);
 
 export function readOwners(root: string): readonly Owner[] {
   const manifest: unknown = JSON.parse(readFileSync(join(root, "dads.project.json"), "utf8"));
@@ -20,6 +26,8 @@ export function readOwners(root: string): readonly Owner[] {
   const owners = [
     ...readOwnerKind(root, policy, "domains"),
     ...readOwnerKind(root, policy, "libraries"),
+    ...readOwnerKind(root, policy, "workflows"),
+    ...readOwnerKind(root, policy, "integrations"),
     ...readOwnerKind(root, policy, "composition"),
   ];
   requireDistinctOwners(owners);
@@ -27,14 +35,16 @@ export function readOwners(root: string): readonly Owner[] {
 }
 
 function readOwnerKind(project: string, policy: Record<string, unknown>, kind: OwnerKind): readonly Owner[] {
-  const directories = policy[kind];
+  const configured = policy[kind];
+  const directories =
+    configured === undefined && OPTIONAL_OWNER_KINDS.has(kind) ? defaultDomainBoundaries[kind] : configured;
   if (!isUnknownArray(directories) || !directories.every(isString)) {
     throw new Error(`domainBoundaries.${kind} must be an array of directories.`);
   }
-  return directories.flatMap((entry) => expandOwnerRoot(project, entry).map((root) => ({ kind, root })));
+  return directories.flatMap((entry) => expandOwnerRoot(project, entry, kind).map((root) => ({ kind, root })));
 }
 
-function expandOwnerRoot(project: string, entry: string): readonly string[] {
+function expandOwnerRoot(project: string, entry: string, kind: OwnerKind): readonly string[] {
   const expand = entry.endsWith("/*");
   const directory = expand ? entry.slice(0, -2) : entry;
   if (
@@ -51,7 +61,11 @@ function expandOwnerRoot(project: string, entry: string): readonly string[] {
     throw new Error(`Domain boundary directory ${directory} must be a real directory inside the project.`);
   }
   if (!expand) return [path];
-  return readdirSync(path, { withFileTypes: true })
+  const children = readdirSync(path, { withFileTypes: true });
+  if (kind === "workflows" && children.some((child) => child.isFile() && SOURCE_FILE.test(child.name))) {
+    return [path];
+  }
+  return children
     .filter((child) => child.isDirectory() && !ignoredDirectory(child.name))
     .map((child) => join(path, child.name));
 }
@@ -80,8 +94,12 @@ export function boundaryOwnerOf(owners: readonly Owner[], file: string): Owner |
   return owners.find((owner) => contains(owner.root, file));
 }
 
+export function ownerSubpath(owner: Owner, file: string): string {
+  return relative(owner.root, file).split(sep).join("/");
+}
+
 export function isPublicEntry(owner: Owner, file: string): boolean {
-  const subpath = relative(owner.root, file).split(sep).join("/");
+  const subpath = ownerSubpath(owner, file);
   if (owner.kind === "domains" && subpath === "web-client/index.ts") return true;
   return /^(?:(?:src|dist)\/)?index\.(?:d\.)?(?:[cm]?[jt]s|tsx|jsx)$/.test(subpath);
 }

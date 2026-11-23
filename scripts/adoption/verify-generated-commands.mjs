@@ -12,6 +12,8 @@ const generators = [
   ["page", "overview", "--domain", "inventory"],
   ["resource", "catalog", "--api", "customer"],
   ["library", "catalog-records"],
+  ["workflow", "fulfill-order"],
+  ["integration", "payment-gateway"],
 ];
 
 export const generatedCommands = generators.map(([command]) => command);

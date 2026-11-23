@@ -235,6 +235,18 @@ describe("plan/run --report", () => {
 
     expect(await runDadTestCli(["run", "--all", "--cache", "--no-cache", "--json"], harness.io)).toBe(0);
     expect(fixture.readRequest()).not.toHaveProperty("cache");
+
+    expect(
+      await runDadTestCli(
+        ["run", "--all", "--cache", "--remote-cache", "http://127.0.0.1:9000/cache", "--json"],
+        harness.io,
+      ),
+    ).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({
+      operation: "run",
+      cache: true,
+      remoteCacheUrl: "http://127.0.0.1:9000/cache",
+    });
   });
 });
 

@@ -54,6 +54,7 @@ pub(super) fn request(repository: &Path, task_ids: Vec<String>) -> NativeRequest
         task_ids,
         jobs: None,
         cache: false,
+        remote_cache_url: None,
     }
 }
 
@@ -69,6 +70,7 @@ pub(super) fn run_request(repository: &Path, jobs: Option<u32>) -> NativeRequest
         task_ids: Vec::new(),
         jobs,
         cache: false,
+        remote_cache_url: None,
     }
 }
 

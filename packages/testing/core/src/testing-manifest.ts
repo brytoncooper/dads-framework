@@ -41,6 +41,7 @@ export type TestingManifestTask = {
     readonly args: readonly string[];
     readonly cwd?: string;
     readonly shell?: boolean;
+    readonly env?: Readonly<Record<string, string>>;
     readonly fileNarrowing?: TestingManifestFileNarrowing;
   };
   readonly dependsOn: readonly string[];
@@ -135,6 +136,9 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
         args: [...task.execution.args],
         ...(task.execution.cwd === undefined ? {} : { cwd: task.execution.cwd }),
         ...(task.execution.shell === true ? { shell: true } : {}),
+        ...(task.execution.env === undefined || Object.keys(task.execution.env).length === 0
+          ? {}
+          : { env: serializeEnv(task.execution.env) }),
         ...(task.execution.fileNarrowing === undefined
           ? {}
           : { fileNarrowing: serializeFileNarrowing(task.execution.fileNarrowing) }),
@@ -189,22 +193,50 @@ function readTask(value: unknown, where: string, subject: string): TestingManife
 
 function readExecution(value: unknown, where: string, subject: string): TestingManifestTask["execution"] {
   const execution = readRecord(value, where, subject);
-  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell", "fileNarrowing"], where, subject);
+  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell", "env", "fileNarrowing"], where, subject);
   const cwd = execution["cwd"];
   const shell = execution["shell"];
+  const env = execution["env"];
   const fileNarrowing = execution["fileNarrowing"];
   if (shell !== undefined && typeof shell !== "boolean") {
     throw new Error(`${subject}: ${where}.shell must be a boolean`);
   }
+  const parsedEnv = env === undefined ? undefined : readEnv(env, `${where}.env`, subject);
   return {
     executable: readString(execution["executable"], `${where}.executable`, subject),
     args: readOptionalStringArray(execution["args"], `${where}.args`, subject),
     ...(cwd === undefined ? {} : { cwd: readString(cwd, `${where}.cwd`, subject) }),
     shell: shell ?? false,
+    ...(parsedEnv === undefined || Object.keys(parsedEnv).length === 0 ? {} : { env: parsedEnv }),
     ...(fileNarrowing === undefined
       ? {}
       : { fileNarrowing: readFileNarrowing(fileNarrowing, `${where}.fileNarrowing`, subject) }),
   };
+}
+
+function readEnv(value: unknown, where: string, subject: string): Readonly<Record<string, string>> {
+  const record = readRecord(value, where, subject);
+  const result: Record<string, string> = {};
+  for (const key of Object.keys(record).sort()) {
+    if (key.length === 0 || key.includes("=") || key.includes("\0")) {
+      throw new Error(`${subject}: ${where} has invalid key "${key}"`);
+    }
+    const entry = readString(record[key], `${where}.${key}`, subject);
+    if (entry.includes("\0")) {
+      throw new Error(`${subject}: ${where}.${key} must not contain null bytes`);
+    }
+    result[key] = entry;
+  }
+  return result;
+}
+
+function serializeEnv(env: Readonly<Record<string, string>>): Readonly<Record<string, string>> {
+  const sorted: Record<string, string> = {};
+  for (const key of Object.keys(env).sort()) {
+    const value = env[key];
+    if (value !== undefined) sorted[key] = value;
+  }
+  return sorted;
 }
 
 function readFileNarrowing(value: unknown, where: string, subject: string): TestingManifestFileNarrowing {

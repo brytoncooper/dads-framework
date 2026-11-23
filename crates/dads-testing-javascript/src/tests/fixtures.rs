@@ -31,6 +31,7 @@ pub(super) fn request(root: &std::path::Path) -> NativeRequest {
         task_ids: Vec::new(),
         jobs: None,
         cache: false,
+        remote_cache_url: None,
     }
 }
 

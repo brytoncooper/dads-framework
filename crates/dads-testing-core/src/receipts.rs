@@ -5,6 +5,7 @@
 //! SHA-256 atomic file store under Git metadata.
 
 use crate::protocol::TaskOutput;
+use std::collections::BTreeMap;
 use std::path::Path;
 
 pub struct TaskReceiptRequest<'a> {
@@ -14,6 +15,7 @@ pub struct TaskReceiptRequest<'a> {
     pub args: &'a [String],
     pub cwd: Option<&'a str>,
     pub shell: bool,
+    pub env: &'a BTreeMap<String, String>,
     pub setup_files: &'a [String],
     pub selected_files: &'a [String],
     pub project_roots: &'a [String],

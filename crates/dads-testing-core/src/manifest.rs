@@ -87,6 +87,8 @@ pub(crate) struct TaskExecution {
     #[serde(default)]
     pub(crate) shell: bool,
     #[serde(default)]
+    pub(crate) env: BTreeMap<String, String>,
+    #[serde(default)]
     pub(crate) file_narrowing: Option<FileNarrowing>,
 }
 
@@ -188,6 +190,7 @@ pub(crate) fn validate_manifest(
         if let Some(cwd) = &task.execution.cwd {
             validate_relative_path(cwd, "execution.cwd")?;
         }
+        validate_task_env(&task.id, &task.execution.env)?;
         if let Some(narrowing) = &task.execution.file_narrowing {
             validate_file_narrowing(&task.id, narrowing)?;
         }
@@ -229,6 +232,22 @@ pub(crate) fn validate_manifest(
     }
     if manifest.tasks.is_empty() {
         return Err(message("Manifest must declare at least one task."));
+    }
+    Ok(())
+}
+
+fn validate_task_env(task_id: &str, env: &BTreeMap<String, String>) -> Result<(), TestingError> {
+    for (key, value) in env {
+        if key.is_empty() || key.contains('=') || key.contains('\0') {
+            return Err(message(format!(
+                "Task {task_id} has invalid execution.env key '{key}'."
+            )));
+        }
+        if value.contains('\0') {
+            return Err(message(format!(
+                "Task {task_id} has invalid execution.env value for '{key}'."
+            )));
+        }
     }
     Ok(())
 }

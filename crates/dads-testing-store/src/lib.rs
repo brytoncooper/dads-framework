@@ -25,6 +25,9 @@ mod persist;
 mod receipts;
 #[cfg(test)]
 mod receipts_tests;
+mod remote_receipts;
+#[cfg(test)]
+mod remote_receipts_tests;
 mod snapshot;
 #[cfg(test)]
 mod tests;

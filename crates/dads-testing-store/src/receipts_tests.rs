@@ -64,6 +64,7 @@ fn run_with_cache(
         task_ids: Vec::new(),
         jobs: Some(1),
         cache,
+        remote_cache_url: None,
     };
     let resp = execute_request_with_graph_and_receipts(req, None, Some(store));
     assert!(resp.ok, "{resp:?}");

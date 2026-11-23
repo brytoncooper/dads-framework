@@ -24,6 +24,8 @@ pub struct NativeRequest {
     pub jobs: Option<u32>,
     #[serde(default)]
     pub cache: bool,
+    #[serde(default)]
+    pub remote_cache_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

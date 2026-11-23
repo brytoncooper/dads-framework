@@ -412,6 +412,7 @@ fn request(root: &Path, base: Option<&str>) -> NativeRequest {
         task_ids: Vec::new(),
         jobs: None,
         cache: false,
+        remote_cache_url: None,
     }
 }
 

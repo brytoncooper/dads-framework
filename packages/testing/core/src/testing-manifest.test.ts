@@ -154,6 +154,36 @@ describe("testing manifest", () => {
     });
     expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
   });
+
+  it("parses, validates, and deterministically serializes execution.env", () => {
+    const text = JSON.stringify({
+      schemaVersion: 1,
+      workspace: { fullFallback: { taskIds: ["api:test"] } },
+      projects: [{ id: "api", root: "apps/api" }],
+      tasks: [
+        {
+          id: "api:test",
+          project: "api",
+          kind: "test",
+          execution: {
+            executable: "npx",
+            args: ["vitest", "run"],
+            env: { Z_VAR: "2", VITEST_TIER: "unit" },
+          },
+          impact: { mode: "reachability" },
+        },
+      ],
+    });
+    const manifest = parseTestingManifest(text, "dads.testing.json");
+
+    expect(manifest.tasks[0]?.execution.env).toEqual({ VITEST_TIER: "unit", Z_VAR: "2" });
+    expect(Object.keys(manifest.tasks[0]?.execution.env ?? {})).toEqual(["VITEST_TIER", "Z_VAR"]);
+    expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
+
+    expect(() => parseTestingManifest(text.replace('"Z_VAR":"2"', '"BAD=KEY":"1"'), "dads.testing.json")).toThrow(
+      /invalid key/,
+    );
+  });
 });
 
 function makeTemporaryDirectory(): string {

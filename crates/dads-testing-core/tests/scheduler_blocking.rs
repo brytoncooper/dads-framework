@@ -27,6 +27,7 @@ fn assert_transitive_blocking(jobs: u32) -> Result<(), Box<dyn Error>> {
         task_ids: Vec::new(),
         jobs: Some(jobs),
         cache: false,
+        remote_cache_url: None,
     });
     assert!(response.ok, "jobs={jobs}: {response:?}");
     let run = response

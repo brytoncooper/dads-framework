@@ -33,6 +33,9 @@ pub(super) fn execute_task(
         None => workspace_root,
     };
     let mut command = command_for(&execution);
+    if !execution.env.is_empty() {
+        command.envs(&execution.env);
+    }
     let mut child = match command
         .current_dir(task_directory)
         .stdin(Stdio::null())

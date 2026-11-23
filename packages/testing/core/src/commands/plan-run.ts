@@ -25,6 +25,7 @@ const runOptions: readonly OptionSpecification[] = [
   ...operationOptions,
   { name: "--cache", kind: "flag" },
   { name: "--no-cache", kind: "flag" },
+  { name: "--remote-cache", kind: "value" },
 ];
 
 export const planCommand: DadTestCommand = {
@@ -104,6 +105,7 @@ export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo)
   const head = parsed.values.get("--head");
   const jobs = parsed.values.get("--jobs");
   const cacheEnabled = parsed.flags.has("--cache") && !parsed.flags.has("--no-cache");
+  const remoteCacheUrl = parsed.values.get("--remote-cache");
   return {
     workspaceRoot: io.cwd,
     ...(manifestPath === undefined ? {} : { manifestPath }),
@@ -113,6 +115,7 @@ export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo)
     taskIds: parsed.repeated.get("--task") ?? [],
     ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
     ...(cacheEnabled ? { cache: true } : {}),
+    ...(remoteCacheUrl === undefined ? {} : { remoteCacheUrl }),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
   };
 }

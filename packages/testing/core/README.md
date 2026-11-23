@@ -101,8 +101,12 @@ different positive limit. Independent tasks keep going after another task
 fails; dependents of a failed or blocked prerequisite are blocked. By default
 every selected task executes fresh. Passing `--cache` opts into content-hashed
 passing receipts persisted under Git metadata (invalidated by any source,
-policy-file, manifest, command, or selected-file change; failing runs never
-write receipts); `--no-cache` forces fresh execution.
+policy-file, manifest, command, `execution.env`, runtime fingerprint, or
+selected-file change; failing runs never write receipts); `--no-cache` forces
+fresh execution. Passing `--remote-cache <url>` (or setting
+`DADS_TESTING_REMOTE_CACHE_URL`, with optional
+`DADS_TESTING_REMOTE_CACHE_TOKEN`) adds a fail-closed L2 remote receipt store
+(`file://`, `http://`, or `https://`) shared across workers.
 
 `dad-test explain` prints the same selection in readable lines, taking
 `--manifest`, `--base`, `--head`, `--all`, `--task`, and `--json`:
@@ -177,9 +181,9 @@ above. Toolbox's own `dad init` (scaffolds an application) and `dad explain
 
 All fields are strict. Paths must stay within the workspace. Project and task
 ids are unique, all references must resolve, task cycles are rejected, and
-`workspace.fullFallback.taskIds` must list every task exactly once. Ordinary
-tasks are an executable plus arguments; an explicit `shell: true` runs
-`executable` and `args` through the platform shell for shell recipes. A
+`workspace.fullFallback.taskIds` must list every task exactly once. Ordinary tasks are an executable plus arguments (with optional `env` key-value
+pairs passed to the process and hashed into receipts); an explicit `shell: true`
+runs `executable` and `args` through the platform shell for shell recipes. A
 `reachability` test task may also declare `execution.fileNarrowing`
 (`suffixes`, optional `excludeSuffixes`, and optional `setupFiles`) so that an
 un-widened run appends only the reached test files to `execution.args` and

@@ -147,6 +147,7 @@ impl TemporaryWorkspace {
             task_ids: Vec::new(),
             jobs: None,
             cache: false,
+            remote_cache_url: None,
         });
         assert!(response.ok, "{response:?}");
         Ok(response.result.ok_or("missing plan result")?.plan)

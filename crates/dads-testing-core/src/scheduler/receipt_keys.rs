@@ -27,6 +27,7 @@ pub(super) fn compute_task_receipt_key(
         args: &execution.args,
         cwd: execution.cwd.as_deref(),
         shell: execution.shell,
+        env: &execution.env,
         setup_files,
         selected_files,
         project_roots: &project_roots,

@@ -14,6 +14,8 @@ export type TestingOperationRequest = {
   readonly jobs?: number;
   /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */
   readonly cache?: boolean;
+  /** Optional L2 remote receipt store URL (`file://`, `http://`, or `https://`). */
+  readonly remoteCacheUrl?: string;
   /** An explicit native binary is intended for local development and test harnesses. */
   readonly nativeBinary?: string;
 };
@@ -144,6 +146,7 @@ type NativeRequest = {
   readonly taskIds: readonly string[];
   readonly jobs?: number;
   readonly cache?: boolean;
+  readonly remoteCacheUrl?: string;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -188,6 +191,7 @@ function toNativeRequest(operation: "plan" | "run", request: TestingOperationReq
     taskIds: request.taskIds ?? [],
     ...(request.jobs === undefined ? {} : { jobs: request.jobs }),
     ...(request.cache === true ? { cache: true } : {}),
+    ...(request.remoteCacheUrl === undefined ? {} : { remoteCacheUrl: request.remoteCacheUrl }),
   };
 }
 

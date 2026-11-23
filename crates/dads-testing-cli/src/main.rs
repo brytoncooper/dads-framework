@@ -37,7 +37,20 @@ struct GraphAnalysis {
 fn answer(request: NativeRequest) -> NativeResponse {
     let analysis = analyze_workspace(&request);
     let receipt_store = if request.cache {
-        FileReceiptStore::for_workspace(Path::new(&request.workspace_root))
+        let remote_url = request.remote_cache_url.clone().or_else(|| {
+            std::env::var("DADS_TESTING_REMOTE_CACHE_URL")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        });
+        let remote_token = std::env::var("DADS_TESTING_REMOTE_CACHE_TOKEN")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
+        FileReceiptStore::for_workspace(Path::new(&request.workspace_root)).map(|store| {
+            match remote_url {
+                Some(url) => store.with_remote_url(&url, remote_token),
+                None => store,
+            }
+        })
     } else {
         None
     };

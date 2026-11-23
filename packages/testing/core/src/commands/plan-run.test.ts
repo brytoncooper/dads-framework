@@ -220,6 +220,22 @@ describe("plan/run --report", () => {
     expect(envelope).toMatchObject({ schemaVersion: 1, ok: false });
     expect(harness.stderr()).toContain("dads.testing.json");
   });
+
+  it("forwards --cache and lets --no-cache disable receipt reuse", async () => {
+    const directory = makeManifestDirectory();
+    const fixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: { operation: "run", plan: planResult, run: runResult },
+    });
+    const harness = createHarness(directory, fixture.binary);
+
+    expect(await runDadTestCli(["run", "--all", "--cache", "--json"], harness.io)).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({ operation: "run", cache: true });
+
+    expect(await runDadTestCli(["run", "--all", "--cache", "--no-cache", "--json"], harness.io)).toBe(0);
+    expect(fixture.readRequest()).not.toHaveProperty("cache");
+  });
 });
 
 function makeTemporaryDirectory(): string {

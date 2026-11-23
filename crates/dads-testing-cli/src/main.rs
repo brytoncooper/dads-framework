@@ -1,11 +1,12 @@
 use dads_testing_core::graph::DependencyGraph;
 use dads_testing_core::{
-    IssueScope, IssueSeverity, NativeRequest, NativeResponse, PlanIssue,
-    execute_request_with_graph, graph_analysis_can_change_the_plan,
+    IssueScope, IssueSeverity, NativeRequest, NativeResponse, PlanIssue, TaskReceiptStore,
+    execute_request_with_graph_and_receipts, graph_analysis_can_change_the_plan,
 };
 use dads_testing_javascript::JavaScriptFrontend;
-use dads_testing_store::{StoreIssue, StoreIssueSeverity, load_or_update};
+use dads_testing_store::{FileReceiptStore, StoreIssue, StoreIssueSeverity, load_or_update};
 use std::io::{self, Read};
+use std::path::Path;
 
 fn main() {
     let mut input = String::new();
@@ -35,7 +36,15 @@ struct GraphAnalysis {
 
 fn answer(request: NativeRequest) -> NativeResponse {
     let analysis = analyze_workspace(&request);
-    let mut response = execute_request_with_graph(request, analysis.graph);
+    let receipt_store = if request.cache {
+        FileReceiptStore::for_workspace(Path::new(&request.workspace_root))
+    } else {
+        None
+    };
+    let receipts: Option<&dyn TaskReceiptStore> = receipt_store
+        .as_ref()
+        .map(|store| store as &dyn TaskReceiptStore);
+    let mut response = execute_request_with_graph_and_receipts(request, analysis.graph, receipts);
     if let Some(result) = &mut response.result {
         // Analysis issues are appended after the core's own issues. A decision cites an issue by
         // its position in this emitted list, so this order is part of the plan contract: core

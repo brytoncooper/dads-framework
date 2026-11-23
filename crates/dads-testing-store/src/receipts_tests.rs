@@ -1,0 +1,161 @@
+use crate::receipts::FileReceiptStore;
+use dads_testing_core::{
+    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, RunResult, TaskReceiptStore,
+    execute_request_with_graph_and_receipts,
+};
+use std::error::Error;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+fn git(dir: &Path, args: &[&str]) -> Result<(), Box<dyn Error>> {
+    let status = Command::new("git").args(args).current_dir(dir).status()?;
+    assert!(status.success(), "git {args:?} failed");
+    Ok(())
+}
+
+fn temp_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let dir = std::env::temp_dir().join(format!(
+        "dads-testing-receipts-{name}-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("src"))?;
+    git(&dir, &["init", "-q"])?;
+    fs::write(dir.join("tsconfig.json"), "{}\n")?;
+    fs::write(dir.join("src/a.ts"), "export const v = 1;\n")?;
+    Ok(dir)
+}
+
+fn write_manifest(dir: &Path, command: &str) -> Result<(), Box<dyn Error>> {
+    let manifest = serde_json::json!({
+        "schemaVersion": 1,
+        "workspace": { "root": ".", "fullFallback": { "taskIds": ["app:test"] } },
+        "projects": [{ "id": "app", "root": "src", "fallbackDependencies": [] }],
+        "tasks": [{
+            "id": "app:test",
+            "project": "app",
+            "kind": "test",
+            "execution": { "executable": "sh", "args": ["-c", command] },
+            "dependsOn": [],
+            "impact": { "mode": "always", "paths": [] }
+        }]
+    });
+    fs::write(
+        dir.join("dads.testing.json"),
+        serde_json::to_string_pretty(&manifest)?,
+    )?;
+    Ok(())
+}
+
+fn run_with_cache(
+    dir: &Path,
+    cache: bool,
+    store: &FileReceiptStore,
+) -> Result<RunResult, Box<dyn Error>> {
+    let req = NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::Run,
+        workspace_root: dir.display().to_string(),
+        manifest_path: None,
+        base: None,
+        head: None,
+        all: true,
+        task_ids: Vec::new(),
+        jobs: Some(1),
+        cache,
+    };
+    let resp = execute_request_with_graph_and_receipts(req, None, Some(store));
+    assert!(resp.ok, "{resp:?}");
+    let run = resp
+        .result
+        .and_then(|result| result.run)
+        .ok_or("missing run result")?;
+    Ok(run)
+}
+
+#[test]
+fn receipts_hit_when_unchanged_and_invalidate_on_source_policy_command_or_corruption()
+-> Result<(), Box<dyn Error>> {
+    let dir = temp_repo("full-lifecycle")?;
+    let counter = dir.join(".git/counter.txt");
+    let cmd = format!(
+        "printf x >> '{}' && printf 'hello-receipt'",
+        counter.display()
+    );
+    write_manifest(&dir, &cmd)?;
+    git(&dir, &["add", "."])?;
+    git(
+        &dir,
+        &[
+            "-c",
+            "user.name=T",
+            "-c",
+            "user.email=t@e.invalid",
+            "commit",
+            "-qm",
+            "base",
+        ],
+    )?;
+
+    let store = FileReceiptStore::for_workspace(&dir).ok_or("missing git receipt store")?;
+
+    // 1. First cached run executes once and records receipt
+    let r1 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(r1.exit_code, 0);
+    assert_eq!(r1.counts.cached, 0);
+    assert!(!r1.tasks[0].cached);
+    assert_eq!(fs::read_to_string(&counter)?.len(), 1);
+
+    // 2. Second cached run hits receipt without spawning child process
+    let r2 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(r2.exit_code, 0);
+    assert_eq!(r2.counts.cached, 1);
+    assert!(r2.tasks[0].cached);
+    assert_eq!(
+        r2.tasks[0].stdout.as_ref().map(|o| o.text.as_str()),
+        Some("hello-receipt")
+    );
+    assert_eq!(fs::read_to_string(&counter)?.len(), 1);
+
+    // 3. `--no-cache` (`cache: false`) always re-executes even with valid receipt on disk
+    let r3 = run_with_cache(&dir, false, &store)?;
+    assert_eq!(r3.counts.cached, 0);
+    assert!(!r3.tasks[0].cached);
+    assert_eq!(fs::read_to_string(&counter)?.len(), 2);
+
+    // 4. Editing a source file invalidates receipt
+    fs::write(dir.join("src/a.ts"), "export const v = 2;\n")?;
+    let r4 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(r4.counts.cached, 0);
+    assert_eq!(fs::read_to_string(&counter)?.len(), 3);
+
+    // 5. Editing a policy file (`tsconfig.json`) invalidates receipt
+    fs::write(dir.join("tsconfig.json"), "{\"strict\":true}\n")?;
+    let r5 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(r5.counts.cached, 0);
+    assert_eq!(fs::read_to_string(&counter)?.len(), 4);
+
+    // 6. Corrupting persisted receipts fails closed (misses and re-executes)
+    for entry in fs::read_dir(store.receipts_dir())? {
+        fs::write(entry?.path(), "{corrupt")?;
+    }
+    let r6 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(r6.counts.cached, 0);
+    assert_eq!(fs::read_to_string(&counter)?.len(), 5);
+
+    // 7. Failing runs NEVER write receipts
+    write_manifest(&dir, "exit 1")?;
+    let fail1 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(fail1.exit_code, 1);
+    assert_eq!(fail1.counts.cached, 0);
+    let fail2 = run_with_cache(&dir, true, &store)?;
+    assert_eq!(fail2.exit_code, 1);
+    assert_eq!(fail2.counts.cached, 0);
+
+    let custom = FileReceiptStore::in_directory(dir.join(".git/custom-receipts"));
+    assert!(custom.lookup("00").is_none());
+
+    let _ = fs::remove_dir_all(&dir);
+    Ok(())
+}

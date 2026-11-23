@@ -13,6 +13,24 @@ pub(super) fn not_applicable_result(id: &str) -> TaskRunResult {
         stdout: None,
         stderr: None,
         error: None,
+        cached: false,
+    }
+}
+
+pub(super) fn cached_task_result(
+    id: &str,
+    stdout: Option<TaskOutput>,
+    stderr: Option<TaskOutput>,
+) -> TaskRunResult {
+    TaskRunResult {
+        id: id.into(),
+        status: "executed".into(),
+        exit_code: Some(0),
+        duration_ms: Some(0),
+        stdout,
+        stderr,
+        error: None,
+        cached: true,
     }
 }
 
@@ -47,6 +65,7 @@ pub(super) fn blocked_result(
             },
             failed_dependencies.join(", ")
         )),
+        cached: false,
     }
 }
 
@@ -59,6 +78,7 @@ pub(super) fn worker_panic_result(id: &str) -> TaskRunResult {
         stdout: None,
         stderr: None,
         error: Some("Task worker panicked before reporting a result.".into()),
+        cached: false,
     }
 }
 
@@ -78,6 +98,7 @@ pub(super) fn completed_task_result(
             stdout,
             stderr,
             error: None,
+            cached: false,
         },
         Some(exit_code) => TaskRunResult {
             id,
@@ -87,6 +108,7 @@ pub(super) fn completed_task_result(
             stdout,
             stderr,
             error: None,
+            cached: false,
         },
         None => TaskRunResult {
             id,
@@ -96,6 +118,7 @@ pub(super) fn completed_task_result(
             stdout,
             stderr,
             error: Some("Task ended without an exit code.".into()),
+            cached: false,
         },
     }
 }
@@ -114,5 +137,6 @@ pub(super) fn task_error_result(
         stdout: None,
         stderr: None,
         error: Some(error),
+        cached: false,
     }
 }

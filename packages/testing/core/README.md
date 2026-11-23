@@ -98,7 +98,11 @@ described under [Contract](#contract).
 `dad-test run` selects the same way and then executes the selected tasks as a
 dependency-aware DAG, four workers at a time by default; `--jobs` sets a
 different positive limit. Independent tasks keep going after another task
-fails; dependents of a failed or blocked prerequisite are blocked.
+fails; dependents of a failed or blocked prerequisite are blocked. By default
+every selected task executes fresh. Passing `--cache` opts into content-hashed
+passing receipts persisted under Git metadata (invalidated by any source,
+policy-file, manifest, command, or selected-file change; failing runs never
+write receipts); `--no-cache` forces fresh execution.
 
 `dad-test explain` prints the same selection in readable lines, taking
 `--manifest`, `--base`, `--head`, `--all`, `--task`, and `--json`:
@@ -212,8 +216,10 @@ skips the task when zero matching test files are reached.
 
 - The core API and `dad-test` run without Nx. The Nx adapter uses the target
   workspace’s local Nx installation.
-- No test-result cache and no result reuse: every `run` executes its selected
-  tasks again.
+- No implicit test-result cache: every `run` executes its selected tasks fresh
+  unless the caller explicitly passes `--cache` (which only reuses a verified
+  passing receipt when the entire content-hashed input closure matches, and
+  `--no-cache` always overrides it).
 - No daemon, no network service, no telemetry.
 - No skip it cannot prove.
 - `DADS_TEST_NATIVE_BINARY` is for local development only. When it is set it

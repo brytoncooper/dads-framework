@@ -22,11 +22,15 @@ mod deleted_path_tests;
 mod git_state;
 mod issues;
 mod persist;
+mod receipts;
+#[cfg(test)]
+mod receipts_tests;
 mod snapshot;
 #[cfg(test)]
 mod tests;
 
 pub use crate::issues::{StoreIssue, StoreIssueSeverity};
+pub use crate::receipts::FileReceiptStore;
 
 pub const SNAPSHOT_SCHEMA_VERSION: u32 = 1;
 

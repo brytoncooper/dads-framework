@@ -6,6 +6,7 @@ use crate::plan::build_plan;
 use crate::protocol::{
     NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION,
 };
+use crate::receipts::TaskReceiptStore;
 use crate::scheduler;
 use crate::scope::{absolute_existing_directory, resolve_existing_inside, resolve_scope};
 use std::path::{Path, PathBuf};
@@ -39,7 +40,17 @@ pub fn execute_request_with_graph(
     request: NativeRequest,
     graph: Option<DependencyGraph>,
 ) -> NativeResponse {
-    match execute(request, graph.as_ref()) {
+    execute_request_with_graph_and_receipts(request, graph, None)
+}
+
+/// Executes a protocol-v1 request with optional graph evidence and an optional opt-in content-
+/// hashed task receipt store (used only when `request.cache` is `true`).
+pub fn execute_request_with_graph_and_receipts(
+    request: NativeRequest,
+    graph: Option<DependencyGraph>,
+    receipts: Option<&dyn TaskReceiptStore>,
+) -> NativeResponse {
+    match execute(request, graph.as_ref(), receipts) {
         Ok(result) => NativeResponse::success(result),
         Err(error) => NativeResponse::failure(error.to_string()),
     }
@@ -57,14 +68,14 @@ pub fn execute_request_with_graph(
 /// an unreadable manifest quietly decide that no analysis was needed.
 pub fn graph_analysis_can_change_the_plan(request: &NativeRequest) -> bool {
     load_declared_manifest(request)
-        .map(|(_, manifest)| manifest.declares_graph_reader())
+        .map(|(_, _, manifest)| manifest.declares_graph_reader())
         .unwrap_or(true)
 }
 
 /// Returns the declared project roots from the workspace's manifest so a language frontend can
 /// scope workspace indexing to declared projects rather than scanning unrelated scripts or fixtures.
 pub fn manifest_project_roots(request: &NativeRequest) -> Option<Vec<String>> {
-    let (_, manifest) = load_declared_manifest(request).ok()?;
+    let (_, _, manifest) = load_declared_manifest(request).ok()?;
     Some(
         manifest
             .projects
@@ -77,6 +88,7 @@ pub fn manifest_project_roots(request: &NativeRequest) -> Option<Vec<String>> {
 fn execute(
     request: NativeRequest,
     graph: Option<&DependencyGraph>,
+    receipts: Option<&dyn TaskReceiptStore>,
 ) -> Result<OperationResult, TestingError> {
     if request.schema_version != PROTOCOL_SCHEMA_VERSION {
         return Err(message(format!(
@@ -90,7 +102,7 @@ fn execute(
     if request.all && (request.base.is_some() || request.head.is_some()) {
         return Err(message("--all cannot be combined with --base or --head."));
     }
-    let (workspace_root, manifest) = load_declared_manifest(&request)?;
+    let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
     let scope = resolve_scope(&request, &workspace_root)?;
     let plan = build_plan(&manifest, &scope, &request.task_ids, request.jobs, graph)?;
@@ -101,7 +113,15 @@ fn execute(
             run: None,
         }),
         Operation::Run => {
-            let run = scheduler::run_plan(&manifest, &workspace_root, &plan, request.jobs)?;
+            let active_receipts = if request.cache { receipts } else { None };
+            let run = scheduler::run_plan(
+                &manifest,
+                &workspace_root,
+                &manifest_file,
+                &plan,
+                request.jobs,
+                active_receipts,
+            )?;
             Ok(OperationResult {
                 operation: "run".into(),
                 plan,
@@ -111,10 +131,10 @@ fn execute(
     }
 }
 
-/// The workspace root a request names and the manifest it declares, before any validation.
+/// The workspace root a request names, the manifest file path, and the manifest it declares.
 fn load_declared_manifest(
     request: &NativeRequest,
-) -> Result<(PathBuf, TestingManifest), TestingError> {
+) -> Result<(PathBuf, PathBuf, TestingManifest), TestingError> {
     let workspace_root = absolute_existing_directory(&request.workspace_root, "workspaceRoot")?;
     let manifest_path = request
         .manifest_path
@@ -123,5 +143,5 @@ fn load_declared_manifest(
     let manifest_file =
         resolve_existing_inside(&workspace_root, Path::new(manifest_path), "manifestPath")?;
     let manifest = load_manifest(&manifest_file)?;
-    Ok((workspace_root, manifest))
+    Ok((workspace_root, manifest_file, manifest))
 }

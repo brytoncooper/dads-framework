@@ -97,11 +97,16 @@ fn the_scheduler_refuses_a_zero_job_limit() {
     let manifest = crate::manifest::load_manifest(&repository.join("dads.testing.json"))
         .expect("the fixture manifest must load");
 
-    let refusal = crate::scheduler::run_plan(&manifest, &repository, &plan, Some(0))
-        .expect_err("a zero job limit must be refused");
+    let manifest_file = repository.join("dads.testing.json");
+    let refusal =
+        crate::scheduler::run_plan(&manifest, &repository, &manifest_file, &plan, Some(0), None)
+            .expect_err("a zero job limit must be refused");
 
     assert_eq!(refusal.to_string(), "jobs must be greater than zero.");
-    assert!(crate::scheduler::run_plan(&manifest, &repository, &plan, Some(1)).is_ok());
+    assert!(
+        crate::scheduler::run_plan(&manifest, &repository, &manifest_file, &plan, Some(1), None)
+            .is_ok()
+    );
     remove_dir_all(repository).expect("temporary repository must be removable");
 }
 

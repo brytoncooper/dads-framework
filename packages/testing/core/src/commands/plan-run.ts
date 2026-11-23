@@ -21,6 +21,12 @@ const operationOptions: readonly OptionSpecification[] = [
   { name: "--report", kind: "optional-value" },
 ];
 
+const runOptions: readonly OptionSpecification[] = [
+  ...operationOptions,
+  { name: "--cache", kind: "flag" },
+  { name: "--no-cache", kind: "flag" },
+];
+
 export const planCommand: DadTestCommand = {
   options: operationOptions,
   execute: async (parsed, io, json) => {
@@ -33,7 +39,7 @@ export const planCommand: DadTestCommand = {
 };
 
 export const runCommand: DadTestCommand = {
-  options: operationOptions,
+  options: runOptions,
   execute: async (parsed, io, json) => {
     const result = await runTesting(buildOperationRequest(parsed, io));
     const report = buildReportIfRequested(parsed, io, result.plan, result.run);
@@ -97,6 +103,7 @@ export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo)
   const base = parsed.values.get("--base");
   const head = parsed.values.get("--head");
   const jobs = parsed.values.get("--jobs");
+  const cacheEnabled = parsed.flags.has("--cache") && !parsed.flags.has("--no-cache");
   return {
     workspaceRoot: io.cwd,
     ...(manifestPath === undefined ? {} : { manifestPath }),
@@ -105,6 +112,7 @@ export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo)
     all: parsed.flags.has("--all"),
     taskIds: parsed.repeated.get("--task") ?? [],
     ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
+    ...(cacheEnabled ? { cache: true } : {}),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
   };
 }

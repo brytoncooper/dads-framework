@@ -1,13 +1,16 @@
 //! Running the selected task DAG. The default is deliberately fixed at four workers so the
 //! protocol's default behavior is predictable across machines; callers can provide `jobs` to
 //! select a different positive bound.
+mod receipt_keys;
 mod results;
 mod worker;
 
 use crate::execute::{TestingError, message};
 use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
 use crate::protocol::{PlanResult, RunCounts, RunResult, TaskRunResult};
-use results::{blocked_result, not_applicable_result, worker_panic_result};
+use crate::receipts::{TaskReceiptEntry, TaskReceiptStore};
+use receipt_keys::compute_task_receipt_key;
+use results::{blocked_result, cached_task_result, not_applicable_result, worker_panic_result};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::mpsc;
@@ -30,6 +33,7 @@ struct PreparedTask {
     id: String,
     dependencies: Vec<String>,
     execution: TaskExecution,
+    receipt_key: Option<String>,
 }
 
 struct TaskCompletion {
@@ -48,22 +52,26 @@ struct RunProgress {
 pub(crate) fn run_plan(
     manifest: &TestingManifest,
     workspace_root: &Path,
+    manifest_file: &Path,
     plan: &PlanResult,
     jobs: Option<u32>,
+    receipts: Option<&dyn TaskReceiptStore>,
 ) -> Result<RunResult, TestingError> {
     let job_limit = job_limit(jobs)?;
-    let prepared = prepare_tasks(manifest, plan)?;
+    let prepared = prepare_tasks(manifest, workspace_root, manifest_file, plan, receipts)?;
     let (sender, receiver) = mpsc::channel::<TaskCompletion>();
     let mut progress = RunProgress::start(&prepared, plan);
     let mut workers = BTreeMap::new();
 
     while progress.results.iter().any(Option::is_none) {
-        let (mut ready, blocked) = partition_pending(&prepared, &progress);
+        let (ready, blocked) = partition_pending(&prepared, &progress);
         progress.block(&prepared, &blocked);
-        ready.truncate(job_limit.saturating_sub(workers.len()));
+        let (mut to_spawn, hit_cache) =
+            serve_cached_receipts(&prepared, &ready, receipts, &mut progress);
+        to_spawn.truncate(job_limit.saturating_sub(workers.len()));
         dispatch_ready(
             &prepared,
-            &ready,
+            &to_spawn,
             workspace_root,
             &sender,
             &mut workers,
@@ -72,7 +80,7 @@ pub(crate) fn run_plan(
 
         if workers.is_empty() {
             let unresolved = progress.unresolved(&prepared);
-            if unresolved.is_empty() || !blocked.is_empty() {
+            if unresolved.is_empty() || !blocked.is_empty() || hit_cache {
                 continue;
             }
             return Err(message(format!(
@@ -81,7 +89,7 @@ pub(crate) fn run_plan(
             )));
         }
 
-        collect_finished(&receiver, &mut workers, &prepared, &mut progress)?;
+        collect_finished(&receiver, &mut workers, &prepared, receipts, &mut progress)?;
     }
 
     count_outcomes(progress)
@@ -100,7 +108,10 @@ fn job_limit(jobs: Option<u32>) -> Result<usize, TestingError> {
 /// address a task by index instead of looking it up again.
 fn prepare_tasks(
     manifest: &TestingManifest,
+    workspace_root: &Path,
+    manifest_file: &Path,
     plan: &PlanResult,
+    receipts: Option<&dyn TaskReceiptStore>,
 ) -> Result<Vec<PreparedTask>, TestingError> {
     let declared: BTreeMap<&str, &DeclaredTask> = manifest
         .tasks
@@ -121,13 +132,58 @@ fn prepare_tasks(
                         .push(rebase_file_for_cwd(file, execution.cwd.as_deref()));
                 }
             }
+            let receipt_key = if decision.decision == "run" {
+                compute_task_receipt_key(
+                    receipts,
+                    manifest,
+                    task,
+                    &execution,
+                    &decision.selected_files,
+                    manifest_file,
+                    workspace_root,
+                )
+            } else {
+                None
+            };
             Ok(PreparedTask {
                 id: task.id.clone(),
                 dependencies: task.depends_on.clone(),
                 execution,
+                receipt_key,
             })
         })
         .collect::<Result<Vec<_>, TestingError>>()
+}
+
+fn serve_cached_receipts(
+    prepared: &[PreparedTask],
+    ready: &[usize],
+    receipts: Option<&dyn TaskReceiptStore>,
+    progress: &mut RunProgress,
+) -> (Vec<usize>, bool) {
+    let Some(store) = receipts else {
+        return (ready.to_vec(), false);
+    };
+    let mut to_spawn = Vec::new();
+    let mut hit_cache = false;
+    for &index in ready {
+        let task = &prepared[index];
+        if let Some(key) = task.receipt_key.as_deref()
+            && let Some(entry) = store.lookup(key)
+        {
+            progress.results[index] =
+                Some(cached_task_result(&task.id, entry.stdout, entry.stderr));
+            progress
+                .statuses
+                .insert(task.id.clone(), TaskStatus::Executed);
+            progress.counts.executed += 1;
+            progress.counts.cached += 1;
+            hit_cache = true;
+            continue;
+        }
+        to_spawn.push(index);
+    }
+    (to_spawn, hit_cache)
 }
 
 impl RunProgress {
@@ -142,6 +198,7 @@ impl RunProgress {
             failed: 0,
             blocked: 0,
             not_applicable: 0,
+            cached: 0,
         };
         for (index, decision) in plan.tasks.iter().enumerate() {
             if decision.decision != "run" {
@@ -239,6 +296,7 @@ fn collect_finished(
     receiver: &mpsc::Receiver<TaskCompletion>,
     workers: &mut BTreeMap<usize, thread::JoinHandle<()>>,
     prepared: &[PreparedTask],
+    receipts: Option<&dyn TaskReceiptStore>,
     progress: &mut RunProgress,
 ) -> Result<(), TestingError> {
     let completion = receiver
@@ -261,6 +319,19 @@ fn collect_finished(
     } else {
         TaskStatus::Failed
     };
+    if status == TaskStatus::Executed
+        && completion.result.exit_code == Some(0)
+        && let Some(store) = receipts
+        && let Some(key) = prepared[completion.index].receipt_key.as_deref()
+    {
+        store.record_pass(
+            key,
+            &TaskReceiptEntry {
+                stdout: completion.result.stdout.clone(),
+                stderr: completion.result.stderr.clone(),
+            },
+        );
+    }
     progress.counts.executed += 1;
     if status == TaskStatus::Failed {
         progress.counts.failed += 1;

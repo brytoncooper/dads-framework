@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
 import { join } from "node:path";
+import { normalizeRoot } from "../nx/nx-workspace-reader.js";
 import { isRecord, isUnknownArray } from "../parse-guards.js";
 import type { TestingManifestProject } from "../testing-manifest.js";
 import { compareText } from "./infer-one-package.js";
@@ -124,16 +125,11 @@ function parseDeclaredPackage(
   const name = entry["name"];
   const rawRoot = entry["root"];
   if (typeof name !== "string" || typeof rawRoot !== "string") return undefined;
-  const root = normalizeRoot(rawRoot);
+  const root = normalizeRoot(rawRoot.replaceAll("\\", "/").replace(/\/+$/, ""));
   if (root === "." || seenRoots.has(root) || !existsSync(join(workspaceRoot, root))) return undefined;
   seenRoots.add(root);
   const kind = typeof entry["kind"] === "string" ? entry["kind"] : "core";
   return { name, root, kind };
-}
-
-function normalizeRoot(raw: string): string {
-  const cleaned = raw.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/+$/, "");
-  return cleaned.length === 0 ? "." : cleaned;
 }
 
 function classifyProjectBuckets(

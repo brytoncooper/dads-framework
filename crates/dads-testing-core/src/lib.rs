@@ -9,19 +9,21 @@ pub mod graph;
 mod manifest;
 mod plan;
 mod protocol;
+pub mod receipts;
 mod scheduler;
 mod scope;
 mod task_causes;
 
 pub use execute::{
-    execute_request, execute_request_with_graph, graph_analysis_can_change_the_plan,
-    manifest_project_roots,
+    execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,
+    graph_analysis_can_change_the_plan, manifest_project_roots,
 };
 pub use protocol::{
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
     PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope, RunCounts,
     RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult,
 };
+pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 
 #[cfg(test)]
 mod tests;

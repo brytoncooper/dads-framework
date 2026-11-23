@@ -22,6 +22,8 @@ pub struct NativeRequest {
     pub task_ids: Vec<String>,
     #[serde(default)]
     pub jobs: Option<u32>,
+    #[serde(default)]
+    pub cache: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -229,9 +231,11 @@ pub struct TaskRunResult {
     pub stderr: Option<TaskOutput>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub cached: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskOutput {
     pub text: String,
@@ -245,4 +249,14 @@ pub struct RunCounts {
     pub failed: usize,
     pub blocked: usize,
     pub not_applicable: usize,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub cached: usize,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }

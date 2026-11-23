@@ -52,6 +52,7 @@ fn live_plan_response() -> Value {
         all: true,
         task_ids: Vec::new(),
         jobs: None,
+        cache: false,
     });
     serde_json::to_value(&response).expect("the response must serialize")
 }

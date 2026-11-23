@@ -12,6 +12,8 @@ export type TestingOperationRequest = {
   readonly all?: boolean;
   readonly taskIds?: readonly string[];
   readonly jobs?: number;
+  /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */
+  readonly cache?: boolean;
   /** An explicit native binary is intended for local development and test harnesses. */
   readonly nativeBinary?: string;
 };
@@ -99,6 +101,8 @@ export type TestingTaskRunResult = {
   readonly stdout?: TestingTaskOutput;
   readonly stderr?: TestingTaskOutput;
   readonly error?: string;
+  /** True when the passing outcome was replayed from a verified content-hashed receipt. */
+  readonly cached?: boolean;
 };
 
 export type TestingTaskOutput = {
@@ -113,6 +117,7 @@ export type TestingRunResult = {
     readonly failed: number;
     readonly blocked: number;
     readonly notApplicable: number;
+    readonly cached?: number;
   };
   readonly exitCode: number;
 };
@@ -138,6 +143,7 @@ type NativeRequest = {
   readonly all: boolean;
   readonly taskIds: readonly string[];
   readonly jobs?: number;
+  readonly cache?: boolean;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -181,6 +187,7 @@ function toNativeRequest(operation: "plan" | "run", request: TestingOperationReq
     all: request.all ?? false,
     taskIds: request.taskIds ?? [],
     ...(request.jobs === undefined ? {} : { jobs: request.jobs }),
+    ...(request.cache === true ? { cache: true } : {}),
   };
 }
 

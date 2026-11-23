@@ -1,5 +1,12 @@
 import { fromParam, requires } from "@dads-framework/http";
 import { tenantAccess } from "../../../libraries/app-runtime/index.js";
+import { noteIdSchema } from "../contract/wire.js";
+
+/** Notes inherit visibility from their parent tenant and require a branded NoteId. */
+export const note = tenantAccess.tenant.child("note", {
+  id: noteIdSchema,
+  inherit: ["view"],
+});
 
 export const notesPermission = tenantAccess.tenant.permissions.view;
 

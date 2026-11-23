@@ -22,6 +22,14 @@
       "types": "./dist/health/index.d.ts",
       "default": "./dist/health/index.js"
     },
+    "./channels": {
+      "types": "./dist/channels/index.d.ts",
+      "default": "./dist/channels/index.js"
+    },
+    "./live-actions": {
+      "types": "./dist/live-actions/index.d.ts",
+      "default": "./dist/live-actions/index.js"
+    },
     "./telemetry": {
       "types": "./dist/telemetry/index.d.ts",
       "default": "./dist/telemetry/index.js"

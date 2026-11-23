@@ -8,7 +8,7 @@ Every HTTP route in Dads is declared in one place: path, access rule, optional r
 
 Keep API schemas separate from database tables and permission rules. Declare standalone `*Operation` contracts (`getOperation`, `listOperation`, `postOperation`, `patchOperation`, `putOperation`, `deleteOperation`) from [`@dads-framework/core/contract`](../../../packages/core/contract/README.md) alongside your Zod shapes so paths, params, queries, bodies, and responses live in one place (`domains/notes/contract/wire.ts`):
 
-<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/contract/wire.ts","language":"ts","from":"import { getOperation, listOperation, paginationQuerySchema, postOperation } from \"@dads-framework/core/contract\";","through":"export const createNoteOp = postOperation({\n  path: \"/tenants/:tenantId/notes\",\n  params: tenantPathParams,\n  body: noteInput,\n  response: note,\n});"} -->
+<!-- dads:excerpt {"path":"apps/kit-workbench/domains/notes/contract/wire.ts","language":"ts","from":"import {\n  entityIdSchema,","through":"export const createNoteOp = postOperation({\n  path: \"/tenants/:tenantId/notes\",\n  params: tenantPathParams,\n  body: noteInput,\n  response: note,\n});"} -->
 
 `domains/<feature>/contract/` contains zero server or database imports, so browser code, mobile SDK generators, and Node.js clients can import it safely.
 

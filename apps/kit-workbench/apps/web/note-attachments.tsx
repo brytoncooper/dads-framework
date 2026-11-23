@@ -3,6 +3,7 @@ import { Badge, Button } from "@dads-framework/ui/elements";
 import { Label, Textarea } from "@dads-framework/ui/forms";
 import { Paperclip, RefreshCw } from "@dads-framework/ui/icons";
 import { useState, type SubmitEvent } from "react";
+import type { NoteId } from "../../domains/notes/web-client/index.js";
 import { field, useAction } from "./actions.js";
 import { useWorkbenchCopy } from "./copy/workbench-copy.js";
 import { readNoteAttachment, uploadNoteAttachment, type NoteAttachmentRecord } from "./note-attachments-client.js";
@@ -15,7 +16,7 @@ type AttachmentItem = {
 
 type NoteAttachmentsProps = {
   readonly tenantId: string;
-  readonly noteId: string;
+  readonly noteId: NoteId;
 };
 
 export function NoteAttachments({ tenantId, noteId }: NoteAttachmentsProps) {
@@ -99,7 +100,7 @@ export function NoteAttachments({ tenantId, noteId }: NoteAttachmentsProps) {
 
 type AttachmentRowProps = {
   readonly tenantId: string;
-  readonly noteId: string;
+  readonly noteId: NoteId;
   readonly item: AttachmentItem;
   readonly onUpdate: (updater: (item: AttachmentItem) => AttachmentItem) => void;
 };

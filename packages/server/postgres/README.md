@@ -84,6 +84,37 @@ schema-generic query type. The query type follows the native factory result
 and preserves the original default schema. The root still exports
 `DrizzleHandle` for compatibility.
 
+## Schema generation (`@dads-framework/postgres/schema-generate`)
+
+Introspect a migrated PostgreSQL database (`introspectPostgresCatalog`) and
+emit deterministic Drizzle table modules (`generateDatabaseTableFiles`,
+`introspectAndGenerateTables`). Each generated file opens with a header and a
+16-hex SHA-256 table fingerprint covering every column, constraint, index, and
+trigger—including retired columns omitted from the rendered Drizzle table.
+
+- `inferDefaultTableMetadata(table, outputDir)` derives a `camelCase` export
+  symbol and `<outputDir>/<kebab-table>.tables.ts` path without requiring
+  sidecar metadata files.
+- Pass explicit `TableMetadata` entries (validated by `tableMetadataSchema`)
+  when adding branded IDs (`brandType`/`brandImport`), typed JSONB payloads
+  (`jsonType`/`jsonImport`), enum overrides, `onUpdateNow`, `relations`, or
+  `retiredColumns`.
+- `writeGeneratedTableFiles(files, outputRoot)` writes generated modules to
+  disk and refuses paths that escape `outputRoot`.
+- `checkGeneratedTableFiles(files, outputRoot)` compares generated output
+  against disk and returns `{ ok, drifted, missing }` for CI drift checks.
+
+## Live action run store (`@dads-framework/postgres/live-actions`)
+
+Persist operational action runs in PostgreSQL:
+
+- `liveActionRunsMigration` and `applyLiveActionRunsMigration(client)` create
+  the `live_action_runs` table and lookup indexes idempotently.
+- `liveActionRunsTable` exports the matching Drizzle `pgTable` definition.
+- `createPostgresLiveActionRunStore(pool)` implements `LiveActionRunStore`
+  (`recordStart`, `recordFinish`, `getById`, `listRecent`) with Zod validation
+  at both input and database-row boundaries.
+
 ## Plugin service tokens
 
 Import `databaseService` (`DrizzleHandle`) or `postgresPoolService` (`PgPool`)

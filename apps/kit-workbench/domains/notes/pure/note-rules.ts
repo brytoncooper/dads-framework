@@ -1,7 +1,9 @@
+import type { NoteId } from "../contract/wire.js";
+
 export type NoteExportFormat = "csv" | "pdf";
 
 export type NoteRecord = {
-  readonly id: string;
+  readonly id: NoteId;
   readonly tenantId: string;
   readonly text: string;
 };
@@ -13,7 +15,7 @@ export function normalizeNoteText(text: string): string {
 
 /** Build a normalized note record from explicit inputs without ambient ID or clock access. */
 export function createNoteRecord(input: {
-  readonly id: string;
+  readonly id: NoteId;
   readonly tenantId: string;
   readonly text: string;
 }): NoteRecord {

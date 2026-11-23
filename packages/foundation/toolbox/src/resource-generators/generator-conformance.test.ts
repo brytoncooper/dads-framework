@@ -54,8 +54,22 @@ it("generates all individual artifacts with no implicit API registration", () =>
   expect(read("domains/inventory/pure/inventory.test.ts")).toContain("normalizeInventory");
 
   add("domain", "orders");
-  expect(read("domains/orders/pure/order.ts")).toContain("export function normalizeOrder(");
-  expect(read("domains/orders/pure/order.test.ts")).toContain("normalizeOrder");
+  const ordersContract = read("domains/orders/contract/index.ts");
+  expect(ordersContract).toContain('import { entityIdSchema } from "@dads-framework/core/contract";');
+  expect(ordersContract).toContain('export const orderIdSchema = entityIdSchema("OrderId", "Order identifier.");');
+  expect(ordersContract).toContain("export type OrderId = z.infer<typeof orderIdSchema>;");
+  expect(ordersContract).toContain("id: orderIdSchema,");
+
+  const ordersAccess = read("domains/orders/access/index.ts");
+  expect(ordersAccess).toContain('import { orderIdSchema } from "../contract/index.js";');
+  expect(ordersAccess).toContain('resource("order", {');
+  expect(ordersAccess).toContain("id: orderIdSchema,");
+
+  const ordersPure = read("domains/orders/pure/order.ts");
+  expect(ordersPure).toContain('import type { OrderId } from "../contract/index.js";');
+  expect(ordersPure).toContain("readonly id: OrderId;");
+  expect(ordersPure).toContain("export function normalizeOrder(");
+  expect(read("domains/orders/pure/order.test.ts")).toContain("mintEntityId(orderIdSchema)");
 
   const commands = [
     ["endpoint", "status", "server/status-endpoint.ts"],

@@ -56,19 +56,23 @@ export type DslActor<WireName extends string = string> = ((id: string) => ActorR
   readonly anyone: DslWildcardActorHolder<WireName>;
 };
 
-export type ResourceSubjectRef<WireName extends string = string> = {
+export type ResourceSubjectRef<WireName extends string = string, Id extends string = string> = {
   readonly $resource: {
     readonly kind: "resource-ref";
     readonly type: WireName;
-    readonly id: string;
+    readonly id: Id;
   };
 };
 
-export type DslUsersetSubject<WireName extends string = string, RoleName extends string = string> = {
+export type DslUsersetSubject<
+  WireName extends string = string,
+  RoleName extends string = string,
+  Id extends string = string,
+> = {
   readonly kind: "dsl-role-slot";
   readonly entityWireName: WireName;
   readonly roleName: RoleName;
-  readonly resource: { readonly type: WireName; readonly id: string };
+  readonly resource: { readonly type: WireName; readonly id: Id };
 };
 
 export type DslSubjectInput = ActorRef | DslWildcardActorHolder | ResourceSubjectRef | DslUsersetSubject;
@@ -84,19 +88,24 @@ export type DslRoleSlot<
   EntityWire extends string = string,
   RoleName extends string = string,
   AllowedSubject extends DslSubjectInput = DslSubjectInput,
+  Id extends string = string,
 > = {
   readonly kind: "dsl-role-slot";
   readonly entityWireName: EntityWire;
   readonly roleName: RoleName;
-  readonly resource: { readonly type: EntityWire; readonly id: string };
+  readonly resource: { readonly type: EntityWire; readonly id: Id };
   readonly __allowedSubject?: AllowedSubject;
 };
 
-export type DslPermissionTarget<EntityWire extends string = string, PermName extends string = string> = {
+export type DslPermissionTarget<
+  EntityWire extends string = string,
+  PermName extends string = string,
+  Id extends string = string,
+> = {
   readonly kind: "dsl-permission-target";
   readonly entityWireName: EntityWire;
   readonly permissionName: PermName;
-  readonly resource: { readonly type: EntityWire; readonly id: string };
+  readonly resource: { readonly type: EntityWire; readonly id: Id };
 };
 
 export type DslRoleToken<
@@ -178,6 +187,13 @@ export type ResourceWireNameOf<R> = R extends {
   ? W
   : never;
 
+export type ResourceIdOf<R> = R extends {
+  readonly kind: "dsl-resource";
+  readonly idSchema: infer IdSchema extends z.ZodType<string>;
+}
+  ? z.output<IdSchema> & string
+  : string;
+
 export type ResourcePermsOf<R> = R extends {
   readonly kind: "dsl-resource";
   readonly can: infer C;
@@ -229,11 +245,11 @@ export type AllowedSubjectForSingleHolder<H> =
                     readonly kind: "dsl-resource";
                     readonly wireName: infer W extends string;
                   }
-                ? ResourceSubjectRef<W>
+                ? ResourceSubjectRef<W, ResourceIdOf<H>>
                 : H extends () => infer Target
                   ? AllowedSubjectForSingleHolder<Target>
-                  : H extends EntityHandle<infer W>
-                    ? ActorRef<W> | ResourceSubjectRef<W>
+                  : H extends EntityHandle<infer W, infer Id>
+                    ? ActorRef<W> | ResourceSubjectRef<W, Id>
                     : DslSubjectInput;
 
 export type AllowedSubjectForHolder<H> = H extends readonly (infer Item)[]
@@ -248,4 +264,8 @@ export type SharedParentPermissions<Parents extends readonly AnyDslResource[]> =
 
 export type ParentsSubjectUnion<Parents extends readonly AnyDslResource[]> = Parents extends readonly []
   ? never
-  : ResourceSubjectRef<ResourceWireNameOf<Parents[number]>>;
+  : Parents[number] extends infer P
+    ? P extends AnyDslResource
+      ? ResourceSubjectRef<ResourceWireNameOf<P>, ResourceIdOf<P>>
+      : never
+    : never;

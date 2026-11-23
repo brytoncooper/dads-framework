@@ -24,7 +24,9 @@ export {
   type RunDatabaseMigrationsInput,
 } from "./lib/run-database-migrations.js";
 export {
+  applicationMigrationWorkspace,
   defaultMigrationWorkspace,
+  type ApplicationMigrationWorkspaceOptions,
   type MigrationSource,
   type MigrationWorkspace,
 } from "./lib/node-pg/migration-workspace.js";

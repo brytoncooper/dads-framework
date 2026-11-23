@@ -34,6 +34,13 @@ export type MigrationWorkspace = {
   readonly moduleAliases: Readonly<Record<string, string>>;
 };
 
+export type ApplicationMigrationWorkspaceOptions = {
+  /** Extra migration sources (for example, framework package migrations). */
+  readonly extraSources?: readonly MigrationSource[];
+  /** Module aliases a migration file may import, each mapped relative to `root`. */
+  readonly moduleAliases?: Readonly<Record<string, string>>;
+};
+
 /**
  * This repository's layout: every server part's
  * `src/lib/**\/migrations/` folder, owned by the part, plus an optional
@@ -56,5 +63,35 @@ export function defaultMigrationWorkspace(root: string): MigrationWorkspace {
       },
     ],
     moduleAliases: {},
+  };
+}
+
+/**
+ * An application workspace layout: an optional top-level `migrations/` folder
+ * owned by `"app"`, optional per-domain migrations under
+ * `domains/*\/server/migrations/` or `domains/*\/server/src/lib/database/migrations/`
+ * owned by the domain directory name, plus any caller-supplied extra sources.
+ */
+export function applicationMigrationWorkspace(
+  root: string,
+  options?: ApplicationMigrationWorkspaceOptions,
+): MigrationWorkspace {
+  return {
+    root,
+    sources: [
+      {
+        root: "migrations",
+        files: /^migrations\/[^/]+\.migration\.ts$/,
+        owner: "app",
+        required: false,
+      },
+      {
+        root: "domains",
+        files: /^domains\/([^/]+)\/server\/(?:src\/lib\/database\/)?migrations\/[^/]+\.migration\.ts$/,
+        required: false,
+      },
+      ...(options?.extraSources ?? []),
+    ],
+    moduleAliases: options?.moduleAliases ?? {},
   };
 }

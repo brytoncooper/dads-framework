@@ -1,4 +1,6 @@
+import { mintEntityId } from "@dads-framework/core/contract";
 import { describe, expect, it } from "vitest";
+import { noteIdSchema } from "../contract/wire.js";
 import { buildNoteExportFilename, createNoteRecord, escapeCsvFormulaCell, normalizeNoteText } from "./note-rules.js";
 
 describe("note-rules", () => {
@@ -8,16 +10,29 @@ describe("note-rules", () => {
   });
 
   it("creates a normalized note record from explicit inputs", () => {
+    const id = noteIdSchema.parse("0194f4a0-1234-7000-8000-000000000001");
     const record = createNoteRecord({
-      id: "0194f4a0-1234-7000-8000-000000000001",
+      id,
       tenantId: "0194f4a0-1234-7000-8000-000000000002",
       text: "  Hello\r\nworld  ",
     });
     expect(record).toEqual({
-      id: "0194f4a0-1234-7000-8000-000000000001",
+      id,
       tenantId: "0194f4a0-1234-7000-8000-000000000002",
       text: "Hello\nworld",
     });
+  });
+
+  it("accepts freshly minted UUIDv7 note ids", () => {
+    const id = mintEntityId(noteIdSchema);
+    const record = createNoteRecord({
+      id,
+      tenantId: "0194f4a0-1234-7000-8000-000000000002",
+      text: "  Fresh note  ",
+    });
+    expect(record.id).toBe(id);
+    expect(noteIdSchema.safeParse(record.id).success).toBe(true);
+    expect(record.text).toBe("Fresh note");
   });
 
   it("escapes CSV formula prefixes and preserves ordinary text", () => {

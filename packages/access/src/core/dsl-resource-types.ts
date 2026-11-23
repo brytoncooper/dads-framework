@@ -24,6 +24,8 @@ import type {
 import type { EntityHandle } from "./entity-handle.js";
 import type { ScopeBindings } from "./scope-bindings.js";
 
+export type DslResourceIdOf<IdSchema extends z.ZodType<string>> = z.output<IdSchema> & string;
+
 export type DslInheritOption<ParentPerms extends string> = "all" | "none" | readonly ParentPerms[];
 
 export type ResolvedInheritedPerms<ParentPerms extends string, Inherit> = Inherit extends "all"
@@ -68,22 +70,24 @@ export type EffectiveRoleSubjects<
   ParentWire extends string = never,
   Parents extends readonly AnyDslResource[] = readonly [],
   Recursive extends boolean = false,
+  SelfId extends string = string,
+  ParentId extends string = string,
 > = SubjectMapFromRoles<RolesSpec> &
   ([ParentWire] extends [never]
     ? unknown
     : {
-        readonly [K in ParentRoleName<ParentWire>]: ResourceSubjectRef<ParentWire>;
+        readonly [K in ParentRoleName<ParentWire>]: ResourceSubjectRef<ParentWire, ParentId>;
       }) &
   (Parents extends readonly []
     ? unknown
     : {
         readonly parent: Recursive extends true
-          ? ParentsSubjectUnion<Parents> | ResourceSubjectRef<WireName>
+          ? ParentsSubjectUnion<Parents> | ResourceSubjectRef<WireName, SelfId>
           : ParentsSubjectUnion<Parents>;
       }) &
   (Recursive extends true
     ? Parents extends readonly []
-      ? { readonly parent: ResourceSubjectRef<WireName> }
+      ? { readonly parent: ResourceSubjectRef<WireName, SelfId> }
       : unknown
     : unknown);
 
@@ -91,18 +95,19 @@ export type DslResourceInstance<
   WireName extends string,
   RoleSubjects extends Record<string, DslSubjectInput>,
   Perms extends string,
-> = ResourceSubjectRef<WireName> &
+  Id extends string = string,
+> = ResourceSubjectRef<WireName, Id> &
   Omit<
     {
       readonly kind: "resource-ref";
       readonly type: WireName;
-      readonly id: string;
+      readonly id: Id;
     },
     (keyof RoleSubjects & string) | Perms
   > & {
-    readonly [R in keyof RoleSubjects & string]: DslRoleSlot<WireName, R, RoleSubjects[R]>;
+    readonly [R in keyof RoleSubjects & string]: DslRoleSlot<WireName, R, RoleSubjects[R], Id>;
   } & {
-    readonly [P in Exclude<Perms, keyof RoleSubjects & string>]: DslPermissionTarget<WireName, P>;
+    readonly [P in Exclude<Perms, keyof RoleSubjects & string>]: DslPermissionTarget<WireName, P, Id>;
   };
 
 export type InlineChildPermissionExpr = DslPermissionExpr | undefined | readonly (DslPermissionExpr | undefined)[];
@@ -142,8 +147,9 @@ export type DslChildSpec<
   CanResult extends Record<string, DslPermissionExpr>,
   Recursive extends boolean,
   Children extends Readonly<Record<string, AnyDslChildSpec>>,
+  IdSchema extends z.ZodType<string> = z.ZodType<string>,
 > = {
-  readonly id?: z.ZodType<string>;
+  readonly id?: IdSchema;
   readonly inherit: Inherit;
   readonly recursive?: Recursive;
   readonly roles?: RolesSpec;
@@ -162,6 +168,12 @@ export type DslChildSpec<
       >
     >;
 };
+
+type ExtractIdFromSpec<Spec> = Spec extends {
+  readonly id: infer IdSchema extends z.ZodType<string>;
+}
+  ? DslResourceIdOf<IdSchema>
+  : string;
 
 type ExtractRolesFromSpec<Spec> = Spec extends {
   readonly roles: infer R extends DslRolesSpec;
@@ -216,27 +228,42 @@ export type MaterializeChildResource<
   ParentPerms extends string,
   ChildWire extends string,
   Spec,
+  ParentId extends string = string,
 > = DslResource<
   ChildWire,
-  EffectiveRoleSubjects<ChildWire, ExtractRolesFromSpec<Spec>, ParentWire, readonly [], ExtractRecursiveFromSpec<Spec>>,
+  EffectiveRoleSubjects<
+    ChildWire,
+    ExtractRolesFromSpec<Spec>,
+    ParentWire,
+    readonly [],
+    ExtractRecursiveFromSpec<Spec>,
+    ExtractIdFromSpec<Spec>,
+    ParentId
+  >,
   ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Spec>> | ExtractCanKeysFromSpec<Spec>,
   MaterializeChildrenMap<
     ChildWire,
     ResolvedInheritedPerms<ParentPerms, ExtractInheritFromSpec<Spec>> | ExtractCanKeysFromSpec<Spec>,
-    ExtractChildrenFromSpec<Spec>
-  >
+    ExtractChildrenFromSpec<Spec>,
+    ExtractIdFromSpec<Spec>
+  >,
+  ExtractIdFromSpec<Spec>
 >;
 
-export type MaterializeChildrenMap<ParentWire extends string, ParentPerms extends string, Children> = [
-  keyof Children & string,
-] extends [never]
+export type MaterializeChildrenMap<
+  ParentWire extends string,
+  ParentPerms extends string,
+  Children,
+  ParentId extends string = string,
+> = [keyof Children & string] extends [never]
   ? Record<never, never>
   : {
       readonly [ChildWire in keyof Children & string]: MaterializeChildResource<
         ParentWire,
         ParentPerms,
         ChildWire,
-        Children[ChildWire]
+        Children[ChildWire],
+        ParentId
       >;
     };
 
@@ -245,8 +272,9 @@ export type ValidatedResourceResult<
   RoleSubjects extends Record<string, DslSubjectInput>,
   Perms extends string,
   Children,
+  Id extends string = string,
 > = [InvalidInlineChildrenError<Perms, Children>] extends [never]
-  ? DslResource<WireName, RoleSubjects, Perms, MaterializeChildrenMap<WireName, Perms, Children>>
+  ? DslResource<WireName, RoleSubjects, Perms, MaterializeChildrenMap<WireName, Perms, Children, Id>, Id>
   : {
       readonly __dslInvalidInheritPermission: InvalidInlineChildrenError<Perms, Children>;
     };
@@ -256,11 +284,12 @@ export type DslResource<
   RoleSubjects extends Record<string, DslSubjectInput>,
   Perms extends string,
   ChildrenMap extends Record<string, AnyDslResource> = Record<never, never>,
-> = ((id: string) => DslResourceInstance<WireName, RoleSubjects, Perms>) & {
+  Id extends string = string,
+> = ((id: Id) => DslResourceInstance<WireName, RoleSubjects, Perms, Id>) & {
   readonly kind: "dsl-resource";
   readonly wireName: WireName;
-  readonly idSchema: z.ZodType<string>;
-  readonly handle: EntityHandle<WireName>;
+  readonly idSchema: z.ZodType<Id>;
+  readonly handle: EntityHandle<WireName, Id>;
   readonly entity: EntityHandle;
   readonly roles: {
     readonly [R in keyof RoleSubjects & string]: DslRoleToken<WireName, R, RoleSubjects[R]>;
@@ -278,14 +307,26 @@ export type DslResource<
     const CanResult extends Record<string, DslPermissionExpr> = Record<never, never>,
     const Recursive extends boolean = false,
     const GrandChildren extends Readonly<Record<string, AnyDslChildSpec>> = Record<never, never>,
+    IdSchema extends z.ZodType<string> = z.ZodType<string>,
   >(
     childWireName: ChildWire,
-    childSpec: DslChildSpec<WireName, Perms, ChildWire, Inherit, RolesSpec, CanResult, Recursive, GrandChildren>,
+    childSpec: DslChildSpec<
+      WireName,
+      Perms,
+      ChildWire,
+      Inherit,
+      RolesSpec,
+      CanResult,
+      Recursive,
+      GrandChildren,
+      IdSchema
+    >,
   ) => ValidatedResourceResult<
     ChildWire,
-    EffectiveRoleSubjects<ChildWire, RolesSpec, WireName, readonly [], Recursive>,
+    EffectiveRoleSubjects<ChildWire, RolesSpec, WireName, readonly [], Recursive, DslResourceIdOf<IdSchema>, Id>,
     ResolvedInheritedPerms<Perms, Inherit> | (keyof CanResult & string),
-    GrandChildren
+    GrandChildren,
+    DslResourceIdOf<IdSchema>
   >;
 } & ChildrenMap;
 

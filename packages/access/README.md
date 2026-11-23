@@ -68,6 +68,10 @@ empty list, according to the operation.
 ## Use it
 
 Declare actors with `actor(name)` and resources with `resource(name, spec)`.
+Pass a branded Zod schema via `id` (such as `entityIdSchema("ProjectId", "...")`)
+on `resource()`, inline `children`, or `.child()` so `project(id)` accepts only
+that resource's branded ID and rejects raw strings or IDs from other resources;
+omit `id` to accept plain `string`.
 Nest child resources inline under `children` or split them into separate files
 with `parent.child(name, spec)`. Every child declares `inherit` explicitly
 (`"all"`, `"none"`, or a list of parent permission names such as `["manage"]`).
@@ -86,8 +90,9 @@ model for PostgreSQL, SQLite, SpiceDB `.zed` generation, and route guards.
 Optional subpaths keep advanced features out of the core API:
 
 - **`@dads-framework/access/catalog`:** Exports `grantable`, `lifecycleTrigger`,
-  `catalogOnly`, `checkAccessConformance`, and `missingGrantingAdvisories` for
-  customer-assignable role editors and lifecycle governance.
+  `catalogOnly`, `buildGrantableCatalog`, `checkAccessConformance`, and
+  `missingGrantingAdvisories` for customer-assignable role editors, validated
+  capability catalogs, and lifecycle governance.
 - **`@dads-framework/access/scopes`:** Exports `scopeBindings`, `compileScopePlan`,
   `checkScopeBindings`, `isSparseDirectGrant`, and `isLookupResourcesAllowed` for
   fail-closed SpiceDB scoped list planning (`allowLookupResourcesOn` and `bindings`
@@ -98,6 +103,9 @@ Optional subpaths keep advanced features out of the core API:
 Compilation rejects duplicate entity names, missing inherited parent permission
 names, cyclic parent inheritance, and scope bindings for an omitted definition.
 A scope plan with an unbound role or cyclic traversal fails to compile.
+`buildGrantableCatalog` rejects empty localized labels, invalid group placement,
+empty scopes, and conflicting metadata across duplicate catalog IDs, domains, or
+groups.
 
 ## Contract
 
@@ -107,7 +115,12 @@ deterministic ASCII tree with `[inherited]`, `[inherited+local]`, and `[local]`
 tags, `emitAccessIr(model)` returns plain IR data, and `emitZed(model)` produces
 SpiceDB schema text. `emitTypeScript(definitions)` and `emitTypeScriptFromZed(zed)`
 compile access IR or SpiceDB `.zed` text into ergonomic Dads TypeScript
-declarations. `checkAccessConformance(model.definitions)` checks grant metadata
+declarations. `buildGrantableCatalog(model)` walks a compiled `AccessModel` (or
+`readonly ResolvedAccessDefinition[]`), merges matching multi-scope `grantable()`
+and `catalogOnly()` definitions, validates labels and group placement, and
+returns `GrantableCatalogEntry[]` sorted by `domainId`, `placement.groupOrder`
+(unset and `null` last), `placement.groupId`, and `id`.
+`checkAccessConformance(model.definitions)` checks grant metadata
 and requirements. `checkScopeBindings(model)` checks the default `view`
 permission of each bound resource.
 

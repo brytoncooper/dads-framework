@@ -7,10 +7,12 @@ import {
   readNoteFeaturesOp,
   type note,
   type noteExportFormat,
+  type NoteId,
 } from "../contract/wire.js";
 
 export type Note = z.output<typeof note>;
 export type NoteExportFormat = z.output<typeof noteExportFormat>;
+export type { NoteId } from "../contract/wire.js";
 export { notesExport } from "../contract/wire.js";
 
 export const notesClient = createApiClient({
@@ -42,7 +44,7 @@ export function createNote(tenantId: string, text: string) {
   });
 }
 
-export function exportNote(tenantId: string, noteId: string, format: NoteExportFormat) {
+export function exportNote(tenantId: string, noteId: NoteId, format: NoteExportFormat) {
   return notesClient.exportFile({
     params: { tenantId, noteId, format },
   });

@@ -9,6 +9,7 @@ import type {
   DslCanContext,
   DslChildSpec,
   DslInheritOption,
+  DslResourceIdOf,
   EffectiveRoleSubjects,
   InlineChildPermissionExpr,
   ResolvedInheritedPerms,
@@ -90,10 +91,11 @@ function isValidatedResource<
   RoleSubjects extends Record<string, DslSubjectInput>,
   Perms extends string,
   Children,
+  Id extends string = string,
 >(
   value: AnyDslResource,
   wireName: WireName,
-): value is ValidatedResourceResult<WireName, RoleSubjects, Perms, Children> & AnyDslResource {
+): value is ValidatedResourceResult<WireName, RoleSubjects, Perms, Children, Id> & AnyDslResource {
   return value.wireName === wireName;
 }
 
@@ -227,10 +229,11 @@ export function resource<
   const CanResult extends Record<string, DslPermissionExpr> = Record<never, never>,
   const Recursive extends boolean = false,
   const Children extends Readonly<Record<string, AnyDslChildSpec>> = Record<never, never>,
+  IdSchema extends z.ZodType<string> = z.ZodType<string>,
 >(
   wireName: WireName,
   spec: {
-    readonly id?: z.ZodType<string>;
+    readonly id?: IdSchema;
     readonly roles?: RolesSpec;
     readonly parents?: Parents;
     readonly recursive?: Recursive;
@@ -242,9 +245,10 @@ export function resource<
   },
 ): ValidatedResourceResult<
   WireName,
-  EffectiveRoleSubjects<WireName, RolesSpec, never, Parents, Recursive>,
+  EffectiveRoleSubjects<WireName, RolesSpec, never, Parents, Recursive, DslResourceIdOf<IdSchema>>,
   keyof CanResult & string,
-  Children
+  Children,
+  DslResourceIdOf<IdSchema>
 > {
   const created = createInternalResource({
     wireName,
@@ -263,9 +267,10 @@ export function resource<
   if (
     !isValidatedResource<
       WireName,
-      EffectiveRoleSubjects<WireName, RolesSpec, never, Parents, Recursive>,
+      EffectiveRoleSubjects<WireName, RolesSpec, never, Parents, Recursive, DslResourceIdOf<IdSchema>>,
       keyof CanResult & string,
-      Children
+      Children,
+      DslResourceIdOf<IdSchema>
     >(created, wireName)
   ) {
     throw new Error(`failed to construct resource ${wireName}`);

@@ -27,6 +27,7 @@ import { suppressedViolationsSignal } from "../the-silent-treatment/suppressed-v
 import { unusedSuppressionsSignal } from "../the-silent-treatment/unused-suppressions.js";
 import { packagesWithoutSurfaceSignal } from "../failure-to-launch/packages-without-surface.js";
 import { ciWithoutVerifySignal } from "../its-not-you-its-my-boundaries/ci-without-verify.js";
+import { crossDomainForeignKeysSignal } from "../its-not-you-its-my-boundaries/cross-domain-foreign-keys.js";
 import { rulesAtWarnSignal } from "../its-not-you-its-my-boundaries/rules-at-warn.js";
 import { compilerFlagsOffSignal } from "../its-not-you-its-my-boundaries/compiler-flags-off.js";
 import { noVerifyInScriptsSignal } from "../its-not-you-its-my-boundaries/no-verify-in-scripts.js";
@@ -54,6 +55,7 @@ export const TEXT_AND_PACKAGE_SIGNALS: readonly DoctorSignal[] = [
   compilerFlagsOffSignal,
   noVerifyInScriptsSignal,
   forcePushInWorkflowsSignal,
+  crossDomainForeignKeysSignal,
   guardsFailClosedSignal,
   hookRuntimeSignal,
 ];

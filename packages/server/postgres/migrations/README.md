@@ -18,6 +18,13 @@ files and its owner), and the module aliases a migration may import.
 part's `src/lib/**/migrations/` folder, plus an optional top-level
 `migrations/` folder owned by `app`.
 
+`applicationMigrationWorkspace(root, options?)` is the standard layout for
+applications: an optional top-level `migrations/*.migration.ts` folder owned by
+`app`, optional per-domain folders at `domains/*/server/migrations/` and
+`domains/*/server/src/lib/database/migrations/` owned by the domain directory
+name, plus optional `extraSources` (such as framework package migrations) and
+`moduleAliases`.
+
 `@dads-framework/postgres/migrations/journal-status` is the read-only view for
 reporting: the migration files a build ships and the database's applied
 journal, without bundling the runner or node-pg-migrate.

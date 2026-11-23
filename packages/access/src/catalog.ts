@@ -1,3 +1,10 @@
+export { buildGrantableCatalog } from "./core/build-grantable-catalog.js";
+export type {
+  GrantableCatalogBinding,
+  GrantableCatalogEntry,
+  GrantableCatalogLabel,
+  GrantableCatalogPlacement,
+} from "./core/build-grantable-catalog.js";
 export { catalogOnly, isCatalogOnlyCapability } from "./core/catalog-only.js";
 export type { CatalogOnlyCapability } from "./core/catalog-only.js";
 export { checkAccessConformance, missingGrantingAdvisories } from "./core/conformance.js";

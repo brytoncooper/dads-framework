@@ -58,6 +58,9 @@ try {
   } else if (command === "access") {
     const { accessCommand } = await import("./cli-access-commands.js");
     await accessCommand(args.slice(1), wantsJson);
+  } else if (command === "db") {
+    const { dbCommand } = await import("./cli-db-commands.js");
+    process.exitCode = await dbCommand(args.slice(1));
   } else if (command === "check" && subject === "boundaries") {
     const { checkBoundaries } = await import("./cli-boundary-commands.js");
     checkBoundaries(args.slice(2), wantsJson);

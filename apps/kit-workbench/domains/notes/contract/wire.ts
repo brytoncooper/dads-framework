@@ -1,9 +1,18 @@
-import { getOperation, listOperation, paginationQuerySchema, postOperation } from "@dads-framework/core/contract";
+import {
+  entityIdSchema,
+  getOperation,
+  listOperation,
+  paginationQuerySchema,
+  postOperation,
+} from "@dads-framework/core/contract";
 import { z } from "zod";
+
+export const noteIdSchema = entityIdSchema("NoteId", "Note identifier.");
+export type NoteId = z.infer<typeof noteIdSchema>;
 
 export const noteInput = z.object({ text: z.string().trim().min(1).max(2000) });
 export const note = noteInput.extend({
-  id: z.uuid(),
+  id: noteIdSchema,
   tenantId: z.uuid(),
 });
 
@@ -21,8 +30,10 @@ export const noteExportFile = z.strictObject({
 });
 
 const tenantPathParams = z.object({ tenantId: z.uuid() });
-const noteExportParams = tenantPathParams.extend({
-  noteId: z.uuid(),
+export const noteIdParamSchema = tenantPathParams.extend({
+  noteId: noteIdSchema,
+});
+const noteExportParams = noteIdParamSchema.extend({
   format: noteExportFormat,
 });
 

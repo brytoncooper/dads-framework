@@ -139,6 +139,13 @@ profile supplied says `strict` beside it.
 The report exits `0`. Pass `--online` to enable network checks.
 Unknown options are rejected.
 
+Setting `"strictForeignKeys": true` in `dads.project.json` opts into the
+`cross-domain-foreign-keys` Doctor signal (off by default). When enabled, domain
+migrations under `domains/<domain>/**` that declare a SQL `REFERENCES` or
+`node-pg-migrate` `references:` option targeting a table owned by another domain
+are flagged and pointed to `@dads-framework/core/references`
+(`declareCrossDomainReferences` and `checkCrossDomainReferences`).
+
 `dad doctor [path] --gate|--update|--seed|--report|--file <path>|--base <ref>
 [--today YYYY-MM-DD] [--reason <text>] [--key <key>] [--json]`
 
@@ -303,7 +310,11 @@ paths, custom roots, and a two-API example.
 
 `dad add --help` lists the eleven commands for domains, endpoints, tables,
 access, flags, email, pages, resources, workflows, integrations, and dependency
-libraries. In the starter, preview a domain on the staff API with
+libraries. `dad add domain <name>` scaffolds branded entity IDs with
+`entityIdSchema` in `domains/<name>/contract/index.ts`, passes that ID schema
+into `resource(..., { id })` in `domains/<name>/access/index.ts`, and threads
+the branded ID through `domains/<name>/pure/`. In the starter, preview a domain
+on the staff API with
 `npx dad add domain inventory --api staff --dry-run --json`. The preview
 lists the planned files and registration without editing the project.
 [Generator guide](../../../docs/generators.md)
@@ -316,6 +327,34 @@ a smoke test, and workspace and ownership entries. Run `npm install` to
 update workspace links and the lockfile. See the
 [dependency library guide](../../../docs/dependency-libraries.md) for the
 workflow from an owning repository to a consuming repository.
+
+### Database
+
+`dad db generate [--database-url <url>] [--out <dir>] [--metadata <path>] [--schema <name>] [--json]`
+
+Introspects a PostgreSQL database and writes deterministic Drizzle table modules
+via `@dads-framework/postgres/schema-generate`, resolved dynamically from the
+target workspace so `@dads-framework/toolbox` carries no static dependency on
+Postgres. Pass `--database-url` or set `DATABASE_URL`. `--schema` accepts a
+schema name (or comma-separated list), `--out` overrides the output directory,
+and `--metadata` loads an optional JSON table-metadata file.
+
+`dad db check [--database-url <url>] [--out <dir>] [--metadata <path>] [--schema <name>] [--json]`
+
+Runs the same introspection and compares generated table modules against what is
+on disk. Exits `0` when every module matches and `1` when any file is missing or
+drifted.
+
+`dad db migrate [--database-url <url>] [--json]`
+
+Applies pending database migrations for the current workspace through
+`@dads-framework/postgres/migrations`.
+
+`dad db status [--database-url <url>] [--json]`
+
+Reports migration status (`current`, `node-pg-pending`, or `legacy-pending`)
+together with applied, pending, and shipped migration counts from the database
+journal. Run `dad db --help` for subcommand usage.
 
 ### Access schemas
 
@@ -404,6 +443,10 @@ reports `initialization` and `installed`. `add library` reports `result`.
 `permissionChanges`, `requiresMigration`, and `summary`.
 `access migrate` reports `id`, `slug`, `fromPath`, `toPath`, `outDir`,
 `filePath`, `dryRun`, `written`, `requiresMigration`, `diff`, and `code`.
+`db generate` reports `command`, `outputRoot`, `files`, and `tableCount`.
+`db check` reports `ok`, `command`, `outputRoot`, `checkedCount`, `drifted`, and `missing`.
+`db migrate` reports `command` and `events`.
+`db status` reports `command`, `status`, `shippedCount`, `appliedCount`, `pendingCount`, `pending`, and `applied`.
 `test:recommend` prints `changedScope`, `recommendation`, and `notApplicable`;
 `verify` prints those plus `report`. A failure prints
 `{"ok":false,"error":"<message>"}` on stderr and exits `1`; without `--json`
@@ -445,6 +488,8 @@ Errors, and when each happens:
 | `access migrate requires a migration slug.`                                    | `access migrate` with no slug                           |
 | `access migrate requires --from <before>.` / `--to <after>.`                   | `access migrate` missing `--from` or `--to`             |
 | `Zed schema file not found: <path>.` / `Access schema file not found: <path>.` | `access` command with a missing schema file             |
+| `DATABASE_URL is required (pass --database-url <url> or set DATABASE_URL).`    | `db` command without `--database-url` or `DATABASE_URL` |
+| `@dads-framework/postgres is required for dad db commands. …`                  | `db` command in a workspace without Postgres installed  |
 | `npm install failed[: <detail>]`                                               | Dependency installation failed                          |
 
 The package requires Node.js 22 or newer.

@@ -1,6 +1,7 @@
 import { getFromApi, sendToApi } from "@dads-framework/client";
 import { defineRoute } from "@dads-framework/core/contract";
 import { z } from "zod";
+import type { NoteId } from "../../domains/notes/web-client/index.js";
 
 const attachmentUploadBody = z.strictObject({
   text: z.string().min(1).max(16_384),
@@ -23,7 +24,7 @@ const attachmentRecord = z.strictObject({
 export type NoteAttachmentInspection = z.output<typeof attachmentInspection>;
 export type NoteAttachmentRecord = z.output<typeof attachmentRecord>;
 
-function attachmentCollectionPath(tenantId: string, noteId: string): string {
+function attachmentCollectionPath(tenantId: string, noteId: NoteId): string {
   return `/tenants/${encodeURIComponent(tenantId)}/notes/${encodeURIComponent(noteId)}/attachments`;
 }
 
@@ -32,11 +33,11 @@ const uploadRoute = defineRoute("POST", "/tenants/:tenantId/notes/:noteId/attach
 const readRoute = defineRoute(
   "GET",
   "/tenants/:tenantId/notes/:noteId/attachments/:fileId",
-  (tenantId: string, noteId: string, fileId: string) =>
+  (tenantId: string, noteId: NoteId, fileId: string) =>
     `${attachmentCollectionPath(tenantId, noteId)}/${encodeURIComponent(fileId)}`,
 );
 
-export function uploadNoteAttachment(tenantId: string, noteId: string, text: string) {
+export function uploadNoteAttachment(tenantId: string, noteId: NoteId, text: string) {
   return sendToApi({
     route: uploadRoute.bind(tenantId, noteId),
     body: { schema: attachmentUploadBody, value: { text } },
@@ -44,7 +45,7 @@ export function uploadNoteAttachment(tenantId: string, noteId: string, text: str
   });
 }
 
-export function readNoteAttachment(tenantId: string, noteId: string, fileId: string, signal?: AbortSignal) {
+export function readNoteAttachment(tenantId: string, noteId: NoteId, fileId: string, signal?: AbortSignal) {
   return getFromApi({
     route: readRoute.bind(tenantId, noteId, fileId),
     returns: attachmentRecord,

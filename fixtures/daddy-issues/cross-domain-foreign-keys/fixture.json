@@ -1,0 +1,14 @@
+{
+  "signal": "cross-domain-foreign-keys",
+  "issue": "its-not-you-its-my-boundaries",
+  "why": "With strictForeignKeys enabled in dads.project.json, the orders domain declares a SQL foreign key referencing a table owned by the accounts domain.",
+  "files": {
+    "dads.project.json": "{\n  \"schemaVersion\": 1,\n  \"strictForeignKeys\": true,\n  \"packages\": []\n}\n",
+    "domains/accounts/server/migrations/20260101000000_create_accounts.sql": "CREATE TABLE accounts (\n  id uuid PRIMARY KEY\n);\n",
+    "domains/orders/server/migrations/20260102000000_create_orders.sql": "CREATE TABLE orders (\n  id uuid PRIMARY KEY,\n  account_id uuid NOT NULL REFERENCES accounts(id)\n);\n"
+  },
+  "expected": {
+    "domains/accounts/server/migrations/20260101000000_create_accounts.sql": 0,
+    "domains/orders/server/migrations/20260102000000_create_orders.sql": 1
+  }
+}

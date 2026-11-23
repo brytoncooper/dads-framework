@@ -7,12 +7,12 @@ import { z } from "zod";
 
 import type { StarterServices } from "../../../libraries/app-runtime/index.js";
 import { notesAccess, notesPermission } from "../access/index.js";
-import { inTenant } from "../contract/index.js";
+import { inTenant, noteIdSchema } from "../contract/index.js";
 import { noteTable } from "./tables.js";
 
 type Files = Pick<StarterServices, "files" | "jobs" | "writeWithPermission">;
 const attachmentJobName = "notes.inspect-attachment";
-const notePath = inTenant.extend({ noteId: z.uuid() });
+const notePath = inTenant.extend({ noteId: noteIdSchema });
 const filePath = notePath.extend({ fileId: z.uuid() });
 const digest = z.strictObject({
   bytes: z.number().int(),

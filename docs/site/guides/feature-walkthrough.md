@@ -27,6 +27,8 @@ export const accessModel = compileAccess([workspace]);
 ```
 
 > **Important:** Declaring `children: { project }` defines the authorization rule — it does **not** create rows or link any project to a workspace in Postgres. Your app supplies the actual parent link in Step 2.
+>
+> **Tip (Branded IDs & Catalog):** Pass `id: workspaceIdSchema` / `id: projectIdSchema` (from `entityIdSchema(...)` in `@dads-framework/core/contract`) on `resource(...)` and child specs so passing a `WorkspaceId` where a `ProjectId` is expected fails at compile time. Add `grantable(...)` metadata and call `buildGrantableCatalog(accessModel)` from `@dads-framework/access/catalog` to drive Roles & Permissions UIs directly from this policy.
 
 ## Step 2 — Supply the parent relationship in Postgres
 

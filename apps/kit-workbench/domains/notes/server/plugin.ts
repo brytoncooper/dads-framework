@@ -1,3 +1,4 @@
+import type { DslNode } from "@dads-framework/access";
 import { definePlugin } from "@dads-framework/core/plugin";
 import {
   databaseService,
@@ -6,15 +7,18 @@ import {
   objectStorageService,
   protectedWriteService,
 } from "../../../libraries/app-runtime/index.js";
+import { note } from "../access/index.js";
 import { noteAttachmentJobs, noteAttachmentRoutes } from "./attachments.js";
 import { noteExportRoutes } from "./exports.js";
 import { notesExportFlag } from "./flags.js";
 import { notesRoutes } from "./routes.js";
 
+const noteAccessNodes: readonly DslNode[] = [note];
+
 export const notesPlugin = definePlugin({
   name: "notes",
   requires: [databaseService, featureFlagsService, objectStorageService, jobQueueService, protectedWriteService],
-  contributes: { flags: [notesExportFlag] },
+  contributes: { access: noteAccessNodes, flags: [notesExportFlag] },
   setup: ({ use }) => {
     const db = use(databaseService);
     const flags = use(featureFlagsService);

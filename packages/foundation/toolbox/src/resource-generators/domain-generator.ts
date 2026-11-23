@@ -21,9 +21,9 @@ export function ensureDomain(plan: GenerationPlan, domain: string): void {
   );
   plan.create(`${directory}/pure/${item}.ts`, pureCore(item));
   plan.create(`${directory}/pure/${item}.test.ts`, pureCoreTest(item));
-  plan.create(`${directory}/contract/index.ts`, "export {};\n");
+  plan.create(`${directory}/contract/index.ts`, contractModule(item));
   plan.create(`${directory}/web-client/index.ts`, "export {};\n");
-  plan.create(`${directory}/access/index.ts`, accessRegistry());
+  plan.create(`${directory}/access/index.ts`, accessRegistry(item));
   plan.create(
     `${directory}/server/flags.ts`,
     `import type { FeatureFlagDefinition } from "@dads-framework/feature-flags";\n\n// dad:add imports\n\nexport const featureFlags: FeatureFlagDefinition[] = [\n  // dad:add flags\n];\n`,
@@ -32,14 +32,36 @@ export function ensureDomain(plan: GenerationPlan, domain: string): void {
   plan.create(`${directory}/server/plugin.ts`, domainPlugin(domain));
 }
 
+function contractModule(item: string): string {
+  const itemCamel = camel(item);
+  const typeName = pascal(item);
+  const label = title(item);
+  return `import { entityIdSchema } from "@dads-framework/core/contract";
+import { z } from "zod";
+
+export const ${itemCamel}IdSchema = entityIdSchema("${typeName}Id", "${label} identifier.");
+export type ${typeName}Id = z.infer<typeof ${itemCamel}IdSchema>;
+
+export const ${itemCamel}WireSchema = z.strictObject({
+  id: ${itemCamel}IdSchema,
+  title: z.string().trim().min(1),
+});
+export type ${typeName}Wire = z.infer<typeof ${itemCamel}WireSchema>;
+`;
+}
+
 function pureCore(item: string): string {
   const typeName = pascal(item);
   const label = title(item);
-  return `export type ${typeName}Draft = {
+  return `import type { ${typeName}Id } from "../contract/index.js";
+
+export type ${typeName}Draft = {
+  readonly id: ${typeName}Id;
   readonly title: string;
 };
 
 export type Normalized${typeName} = {
+  readonly id: ${typeName}Id;
   readonly title: string;
 };
 
@@ -48,38 +70,59 @@ export function normalize${typeName}(input: ${typeName}Draft): Normalized${typeN
   if (normalizedTitle.length === 0) {
     throw new Error("${label} title cannot be empty.");
   }
-  return { title: normalizedTitle };
+  return { id: input.id, title: normalizedTitle };
 }
 `;
 }
 
 function pureCoreTest(item: string): string {
+  const itemCamel = camel(item);
   const typeName = pascal(item);
   const label = title(item);
-  return `import { describe, expect, it } from "vitest";
+  return `import { mintEntityId } from "@dads-framework/core/contract";
+import { describe, expect, it } from "vitest";
 
+import { ${itemCamel}IdSchema } from "../contract/index.js";
 import { normalize${typeName} } from "./${item}.js";
 
 describe("normalize${typeName}", () => {
   it("trims and collapses whitespace in the title", () => {
-    expect(normalize${typeName}({ title: "  Sample   ${label}  " })).toEqual({
+    const id = mintEntityId(${itemCamel}IdSchema);
+    expect(normalize${typeName}({ id, title: "  Sample   ${label}  " })).toEqual({
+      id,
       title: "Sample ${label}",
     });
   });
 
   it("rejects an empty title", () => {
-    expect(() => normalize${typeName}({ title: "   " })).toThrow("${label} title cannot be empty.");
+    const id = mintEntityId(${itemCamel}IdSchema);
+    expect(() => normalize${typeName}({ id, title: "   " })).toThrow("${label} title cannot be empty.");
   });
 });
 `;
 }
 
-function accessRegistry(): string {
-  return `import type { DslNode } from "@dads-framework/access";
+function accessRegistry(item: string): string {
+  const itemCamel = camel(item);
+  const wireName = item.replaceAll("-", "_");
+  return `import { resource, type DslNode } from "@dads-framework/access";
+
+import { account } from "../../../libraries/app-runtime/index.js";
+import { ${itemCamel}IdSchema } from "../contract/index.js";
 
 // dad:add imports
 
+export const ${itemCamel}Resource = resource("${wireName}", {
+  id: ${itemCamel}IdSchema,
+  roles: { editor: account },
+  can: ({ editor }) => ({
+    view: editor,
+    edit: editor,
+  }),
+});
+
 export const accessDefinitions: DslNode[] = [
+  ${itemCamel}Resource,
   // dad:add access
 ];
 `;

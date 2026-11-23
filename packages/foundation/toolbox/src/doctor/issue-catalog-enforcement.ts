@@ -233,6 +233,10 @@ export const ENFORCEMENT_ISSUES: readonly DaddyIssue[] = [
         signals: ["rows-sent-whole"],
         text: "Does response code spread, return, or send a whole row, or bind an object rest, instead of naming each field it sends?",
       },
+      {
+        signals: ["cross-domain-foreign-keys"],
+        text: "When `strictForeignKeys: true` is set in `dads.project.json`, does any domain migration declare a SQL foreign key referencing a table owned by a different domain?",
+      },
     ],
     cure: "The declaration is one file, every rule is an error or is not a rule, and the same gate runs at edit time, at commit, at push, and in CI, with the bypass denied before the shell sees it.",
   },

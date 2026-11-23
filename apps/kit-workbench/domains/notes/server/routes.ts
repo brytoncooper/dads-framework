@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
+import { mintEntityId } from "@dads-framework/core/contract";
 import { getRoute, listRoute, postRoute, routeGroup } from "@dads-framework/http";
 import type { StarterServices } from "../../../libraries/app-runtime/index.js";
 import { notesAccess, notesPermission } from "../access/index.js";
-import { createNoteOp, listNotesOp, readNoteFeaturesOp } from "../contract/index.js";
+import { createNoteOp, listNotesOp, noteIdSchema, readNoteFeaturesOp } from "../contract/index.js";
 import { createNoteRecord } from "../pure/note-rules.js";
 import { createNotesStore } from "./notes-store.js";
 
@@ -37,7 +37,7 @@ export function notesRoutes({
       access: notesAccess,
       handler: ({ body, params, subject }) => {
         const value = createNoteRecord({
-          id: randomUUID(),
+          id: mintEntityId(noteIdSchema),
           tenantId: params.tenantId,
           text: body.text,
         });

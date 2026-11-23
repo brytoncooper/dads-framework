@@ -261,7 +261,9 @@ an arbitrary schema) — `res.json()` is `any` and defeats the type walls.
 - `lib/openapi/` — the generated document. The kit knows how to convert a route table, never which domains exist: nothing here imports a domain contract lib (`@dads-framework/core/contract` is the kit's own vocabulary). The parity golden test that pins the generated document against the committed artifact needs real domain schemas, so it lives with the composition root that already knows them.
 - `lib/request-log/` — the captured row: `request-record` (pure builder plus the header allowlist), `request-outcome` (what the pipeline learned and the response no longer shows), `capture-request-record` (the `onResponse` hook), `request-log-sink` (the seam `@dads-framework/audit` implements).
 - `lib/http-errors.ts` — typed failures this library produces while running a route.
-- `src/testing/` — `buildTestApp` + typed inject-response helpers.
+- `src/channels/` — auth-checked SSE channel fan-out (`createChannelFanOut`, `InProcessChannelFanOut`, `createChannelStreamRoutes`).
+- `src/live-actions/` — audited operational actions (`defineLiveAction`, `LiveActionRegistry`, `redactActionInput`, `executeLiveAction`, `InMemoryLiveActionRunStore`, `createLiveActionRoutes`).
+- `src/testing/` — `buildTestApp`, `FakeChannelFanOut`, and typed inject-response helpers.
 
 ## Protocol mounts — someone else's wire spec
 
@@ -338,6 +340,93 @@ from matched route parameters instead of the caller’s header. Preview response
 are private and non-cacheable. A resolver may return a `scopeKey` for its feature
 evaluator to match against
 the context being evaluated.
+
+## Auth-checked SSE channel fan-out
+
+Import `@dads-framework/http/channels` to stream scoped channel deltas over
+Server-Sent Events without exposing unauthorized scopes or channels.
+
+- `createChannelFanOut(options?)` builds an `InProcessChannelFanOut` that
+  routes `ChannelEnvelope` deltas by `(scopeId, channel)`, isolates throwing or
+  rejecting listeners, and removes empty buckets when the last subscriber
+  disconnects.
+- `createChannelStreamRoutes(options)` mounts an `sseRoute` behind
+  `requireSession()` (default path `/channels/stream`, default query param
+  `scopeId`). It validates the query with Zod (`400` on invalid input), checks
+  `canAccessScope` before opening (`404` on denial so scope existence never
+  leaks), drops channel names outside `allowedChannels`, and evaluates optional
+  per-channel `channelAccess` checks both before opening and before delivering
+  each published event.
+- `FakeChannelFanOut` from `@dads-framework/http/testing` records published
+  events while still delivering live updates to test subscribers.
+
+```ts
+import { createChannelFanOut, createChannelStreamRoutes } from "@dads-framework/http/channels";
+
+const fanOut = createChannelFanOut();
+const channelRoutes = createChannelStreamRoutes({
+  channelFanOut: fanOut,
+  allowedChannels: ["orders.updated", "billing.updated"],
+  canAccessScope: {
+    check: ({ subject, scopeId }) => Promise.resolve(subject.id === "user-1" && scopeId === "ws-1"),
+  },
+});
+```
+
+## Audited live-environment ops actions
+
+An operational escape hatch with no audit trail is a production incident
+waiting for a witness. Import `@dads-framework/http/live-actions` to declare,
+authorize, redact, and record live operational actions behind typed HTTP routes.
+
+- `defineLiveAction(spec)` validates action names (`/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/`),
+  descriptions (at least 10 characters), danger levels (`"safe"`, `"cautious"`,
+  `"destructive"`), permission declarations, and Zod `inputSchema`.
+- `LiveActionRegistry` registers unique actions and rejects duplicate names.
+- `redactActionInput(value, customRedactor?)` recursively replaces sensitive
+  keys (`password`, `secret`, `token`, `apiKey`, `authorization`, `cookie`,
+  `privateKey`, `credential`) with `"[REDACTED]"` and handles circular
+  references safely.
+- `executeLiveAction(options)` checks authorization before parsing input,
+  mints a UUIDv7 run ID, persists a `"running"` row with redacted input in a
+  `LiveActionRunStore` (such as `InMemoryLiveActionRunStore`), runs the action,
+  and records `"succeeded"` or `"failed"` with `finishedAt`.
+- `createLiveActionRoutes(options)` mounts four session-guarded routes under
+  `basePath` (default `"/live-actions"`):
+  - `GET /live-actions` — lists only actions the caller is authorized to run.
+  - `POST /live-actions/:name/runs` — validates `{ reason, input }`, answers
+    `404` for unknown or unauthorized actions, and returns `201` with the run
+    record.
+  - `GET /live-actions/runs` — lists recent runs filtered to actions the caller
+    is authorized to run (`?actionName=&limit=`).
+  - `GET /live-actions/runs/:runId` — reads one run, answering `404` when
+    missing or unauthorized for that run's action.
+
+```ts
+import { permissionToken } from "@dads-framework/access";
+import {
+  createLiveActionRegistry,
+  createLiveActionRoutes,
+  defineLiveAction,
+  InMemoryLiveActionRunStore,
+} from "@dads-framework/http/live-actions";
+import { z } from "zod";
+
+const clearCache = defineLiveAction({
+  name: "cache.clear",
+  description: "Clear cached entries for a namespace",
+  dangerLevel: "safe",
+  permission: permissionToken("ops/cache", "clear"),
+  inputSchema: z.strictObject({ namespace: z.string().min(1) }),
+  execute: ({ input }) => Promise.resolve({ summary: `Cleared ${input.namespace}` }),
+});
+
+const liveActionRoutes = createLiveActionRoutes({
+  registry: createLiveActionRegistry([clearCache]),
+  store: new InMemoryLiveActionRunStore(),
+  authorize: ({ subject }) => Promise.resolve(subject.id === "operator-1"),
+});
+```
 
 ## What it refuses to do
 

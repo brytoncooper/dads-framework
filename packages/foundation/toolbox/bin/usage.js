@@ -11,7 +11,15 @@ const accessCommands = [
   "  access migrate <slug> --from <before> --to <after> [--out <dir>] [--dry-run] [--json]",
 ];
 
+const dbCommands = [
+  "  db generate [--database-url <url>] [--out <dir>] [--metadata <path>] [--schema <name>] [--json]",
+  "  db check [--database-url <url>] [--out <dir>] [--metadata <path>] [--schema <name>] [--json]",
+  "  db migrate [--database-url <url>] [--json]",
+  "  db status [--database-url <url>] [--json]",
+];
+
 const accessSubcommands = new Set(["import", "tree", "diff", "migrate"]);
+const dbSubcommands = new Set(["generate", "check", "migrate", "status"]);
 
 export const usage = [
   "Usage: dad <command>",
@@ -20,6 +28,8 @@ export const usage = [
   "  add --help",
   ...accessCommands,
   "  access --help",
+  ...dbCommands,
+  "  db --help",
   "  orient|explain <path> [--json]",
   '  inspect http-operation "<METHOD /path>" [--json]',
   "  check boundaries [--json]",
@@ -46,6 +56,7 @@ export const usage = [
 
 const addUsage = ["Usage: dad add <generator>", ...addCommands].join("\n");
 const accessUsage = ["Usage: dad access <subcommand>", ...accessCommands].join("\n");
+const dbUsage = ["Usage: dad db <generate|check|migrate|status>", ...dbCommands].join("\n");
 
 function isHelpFlag(argument) {
   return argument === "--help" || argument === "-h";
@@ -57,5 +68,7 @@ export function helpFor(args) {
   if (command === "add" && isHelpFlag(subject)) return addUsage;
   if (command === "access" && isHelpFlag(subject)) return accessUsage;
   if (command === "access" && accessSubcommands.has(subject) && isHelpFlag(detail)) return accessUsage;
+  if (command === "db" && isHelpFlag(subject)) return dbUsage;
+  if (command === "db" && dbSubcommands.has(subject) && isHelpFlag(detail)) return dbUsage;
   return undefined;
 }

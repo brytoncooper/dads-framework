@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { compileAccess } from "@dads-framework/access";
 import { relationshipWrite } from "@dads-framework/access/runtime";
 import { withSystemActor } from "@dads-framework/core/audit-actor";
+import { mintUuidV7 } from "@dads-framework/core/contract";
 import { createHttpApp, registerRoutes } from "@dads-framework/http";
 import { sql } from "drizzle-orm";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
@@ -97,7 +98,7 @@ it("rechecks permission after the HTTP gate and rolls back data and access toget
             { subject, resourceId: tenant.id, permission: notesPermission },
             async (tx, scopedAuthorization) => {
               await tx.execute(
-                sql`INSERT INTO starter_note (id, tenant_id, text) VALUES (${randomUUID()}, ${tenant.id}, 'Discard')`,
+                sql`INSERT INTO starter_note (id, tenant_id, text) VALUES (${mintUuidV7()}, ${tenant.id}, 'Discard')`,
               );
               await scopedAuthorization.deleteRelationships(removeMembership);
               throw forcedRollback;
@@ -108,7 +109,7 @@ it("rechecks permission after the HTTP gate and rolls back data and access toget
       expect((await db.execute(sql`SELECT id FROM starter_note`)).rows).toEqual([]);
       expect(await authorization.check(check)).toBe(true);
 
-      const noteId = randomUUID();
+      const noteId = mintUuidV7();
       await withSystemActor("test", () =>
         db.execute(sql`INSERT INTO starter_note (id, tenant_id, text) VALUES (${noteId}, ${tenant.id}, 'Before')`),
       );

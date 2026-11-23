@@ -29,6 +29,14 @@
     "./migrations/journal-status": {
       "types": "./dist/migrations/journal-status.d.ts",
       "default": "./dist/migrations/journal-status.js"
+    },
+    "./schema-generate": {
+      "types": "./dist/schema-generate/index.d.ts",
+      "default": "./dist/schema-generate/index.js"
+    },
+    "./live-actions": {
+      "types": "./dist/live-actions/index.d.ts",
+      "default": "./dist/live-actions/index.js"
     }
   },
   "dadsConformance": {

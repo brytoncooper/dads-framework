@@ -285,8 +285,30 @@ fn scoped_table_drop_and_snapshot_skip_disjoint_domains_and_fk_propagates_bidire
         dir.join("migrations/sql/004_drop_maint.ts"),
         "export async function up(qr: any, t: string) { await qr.query(`DROP TABLE ${t}`); }\n",
     )?;
-    let p5 = plan(&dir, Some(empty_graph))?;
+    let p5 = plan(&dir, Some(empty_graph.clone()))?;
     assert_eq!(run_ids(&p5).len(), 6);
+
+    // 5. node-pg-migrate builder calls narrow to static table; unrecognized pgm.* fails closed!
+    fs::write(
+        dir.join("migrations/sql/004_drop_maint.ts"),
+        "export function up(pgm: any) { pgm.dropConstraint('maintenance_records', 'ck'); pgm.addConstraint('maintenance_records', 'ck', 'CHECK (true)'); }\n",
+    )?;
+    let p6 = plan(&dir, Some(empty_graph.clone()))?;
+    assert_eq!(
+        run_ids(&p6),
+        BTreeSet::from([
+            "db:migrate".to_owned(),
+            "maint:integration".to_owned(),
+            "legacy:integration".to_owned(),
+        ])
+    );
+
+    fs::write(
+        dir.join("migrations/sql/004_drop_maint.ts"),
+        "export function up(pgm: any) { pgm.createExtension('pgcrypto'); }\n",
+    )?;
+    let p7 = plan(&dir, Some(empty_graph))?;
+    assert_eq!(run_ids(&p7).len(), 6);
 
     let _ = fs::remove_dir_all(&dir);
     Ok(())

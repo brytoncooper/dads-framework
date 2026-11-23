@@ -76,32 +76,32 @@ pub(super) fn widen_through_graph<'a>(
     let changed_paths: Vec<String> = scope
         .changed_paths
         .iter()
+        .filter(|path| !is_declared_non_code(path, &manifest.workspace.non_code_suffixes))
         .filter(|path| !evidence.sql_handled_paths.contains(*path) || graph.contains_path(path))
         .cloned()
         .collect();
     if changed_paths.is_empty() {
         return;
     }
-    let uncovered_paths = changed_paths
-        .iter()
-        .filter(|path| !graph.contains_path(path))
-        .cloned()
-        .collect::<Vec<_>>();
+    let (covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
+        .into_iter()
+        .partition(|path| graph.contains_path(path));
     let has_non_test_reachability = manifest
         .tasks
         .iter()
         .any(|t| t.impact.mode == ImpactMode::Reachability && !matches!(t.kind, TaskKind::Test));
-    if uncovered_paths.is_empty() {
-        let runtime_reachable = graph.symbol_reachability_runtime(changed_paths.clone());
+    if !covered_paths.is_empty() {
+        let runtime_reachable = graph.symbol_reachability_runtime(covered_paths.clone());
         record_reachable_paths(manifest, &runtime_reachable.paths, evidence, true);
         record_reachable_uncertainties(manifest, runtime_reachable.uncertainties, evidence, true);
         evidence.reached_edges = runtime_reachable.edges;
         if has_non_test_reachability {
-            let full_reachable = graph.symbol_reachability_from(changed_paths);
+            let full_reachable = graph.symbol_reachability_from(covered_paths);
             record_reachable_paths(manifest, &full_reachable.paths, evidence, false);
             record_reachable_uncertainties(manifest, full_reachable.uncertainties, evidence, false);
         }
-    } else {
+    }
+    if !uncovered_paths.is_empty() {
         record_uncovered_paths(manifest, &uncovered_paths, evidence);
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
         record_reachable_uncertainties(manifest, workspace_uncertainties.clone(), evidence, true);
@@ -109,6 +109,10 @@ pub(super) fn widen_through_graph<'a>(
             record_reachable_uncertainties(manifest, workspace_uncertainties, evidence, false);
         }
     }
+}
+
+fn is_declared_non_code(path: &str, suffixes: &[String]) -> bool {
+    suffixes.iter().any(|suffix| path.ends_with(suffix))
 }
 
 /// No frontend answered at all: every changed project widens through its declared dependents.
@@ -142,32 +146,25 @@ fn record_missing_frontend(evidence: &mut PlanEvidence<'_>) {
     ));
 }
 
-/// The frontend answered, but not about these paths: their owners widen through dependents.
+/// The frontend answered, but not about these paths: ONLY their owning projects widen through
+/// declared fallback dependents; covered JS/TS paths in other projects keep exact symbol narrowing.
 fn record_uncovered_paths<'a>(
     manifest: &'a TestingManifest,
     uncovered_paths: &[String],
     evidence: &mut PlanEvidence<'a>,
 ) {
-    let changed = evidence
-        .changed_projects
-        .iter()
-        .copied()
-        .collect::<Vec<_>>();
-    evidence.reachability_impacted_projects.extend(&changed);
-    evidence
-        .typecheck_reachability_impacted_projects
-        .extend(&changed);
-    evidence.uncertainty_impacted_projects.extend(&changed);
-    evidence
-        .typecheck_uncertainty_impacted_projects
-        .extend(changed);
     for uncovered_path in uncovered_paths {
         let owning_project = deepest_project_for_path(&manifest.projects, uncovered_path);
         if let Some(project) = owning_project {
+            let id = project.id.as_str();
+            evidence.reachability_impacted_projects.insert(id);
+            evidence.typecheck_reachability_impacted_projects.insert(id);
+            evidence.uncertainty_impacted_projects.insert(id);
+            evidence.typecheck_uncertainty_impacted_projects.insert(id);
             let index = evidence.issues.len();
             evidence
                 .issue_indexes_by_project
-                .entry(project.id.as_str())
+                .entry(id)
                 .or_default()
                 .push(index);
         }

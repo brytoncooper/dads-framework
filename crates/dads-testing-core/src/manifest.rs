@@ -42,6 +42,8 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) full_fallback: FullFallback,
     #[serde(default)]
     pub(crate) sql: Option<WorkspaceSqlSettings>,
+    #[serde(default)]
+    pub(crate) non_code_suffixes: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -147,12 +149,7 @@ pub(crate) fn validate_manifest(
     manifest: &TestingManifest,
     _workspace_root: &Path,
 ) -> Result<(), TestingError> {
-    if let Some(root) = &manifest.workspace.root {
-        validate_relative_path(root, "workspace.root")?;
-    }
-    if let Some(sql) = &manifest.workspace.sql {
-        validate_workspace_sql(sql)?;
-    }
+    validate_workspace(&manifest.workspace)?;
     let mut project_ids: BTreeSet<String> = BTreeSet::new();
     for project in &manifest.projects {
         require_identifier(&project.id, "project id")?;
@@ -245,6 +242,23 @@ pub(crate) fn validate_manifest(
     }
     if manifest.tasks.is_empty() {
         return Err(message("Manifest must declare at least one task."));
+    }
+    Ok(())
+}
+
+fn validate_workspace(workspace: &WorkspaceSettings) -> Result<(), TestingError> {
+    if let Some(root) = &workspace.root {
+        validate_relative_path(root, "workspace.root")?;
+    }
+    if let Some(sql) = &workspace.sql {
+        validate_workspace_sql(sql)?;
+    }
+    for suffix in &workspace.non_code_suffixes {
+        if !suffix.starts_with('.') || suffix.len() < 2 || suffix.contains('/') {
+            return Err(message(format!(
+                "workspace.nonCodeSuffixes entry '{suffix}' must be a file extension like '.md'."
+            )));
+        }
     }
     Ok(())
 }

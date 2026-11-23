@@ -192,6 +192,8 @@ and optional `snapshotPatterns`) alongside per-task `sqlImpact`
 (`isMigrationRunner`, `tables`, or `hasUnmappedSql`) so table-scoped DDL runs
 migration runners plus only affected database domains via bidirectional FK
 closure while global/unrecognized DDL widens safely to all database tasks.
+Workspaces may also declare `workspace.nonCodeSuffixes` (for example `[".md"]`)
+so documentation-only edits do not widen JavaScript/TypeScript reachability.
 
 ## How selection works
 

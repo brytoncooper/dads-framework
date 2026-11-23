@@ -14,7 +14,7 @@
 //!   and skips disjoint domains.
 //! - Theorem 6 (`combined_js_and_sql_no_false_skips`): composes by union with JS/TS reachability.
 
-use crate::manifest::{DeclaredTask, ImpactMode, TestingManifest};
+use crate::manifest::{DeclaredTask, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
 use crate::scope::{deepest_project_for_path, path_is_inside};
 use crate::sql_lexer::normalize_sql_object;
@@ -68,14 +68,10 @@ pub(crate) fn analyze_sql_impact(
     let (schema_objects, mut edges) = collect_schema_inventory(manifest, sql_config);
     let mut touched_objects = BTreeSet::new();
     let mut global_issue_indexes = Vec::new();
-    let mut migration_projects = BTreeSet::new();
 
     for path in &sql_changed_paths {
         report.handled_paths.insert(path.clone());
         let owning_project = deepest_project_for_path(&manifest.projects, path);
-        if let Some(project) = owning_project {
-            migration_projects.insert(project.id.as_str());
-        }
         match classify_changed_sql_path(workspace_root, path, sql_config) {
             ParsedMigrationDdl::Scoped { tables, fk_edges } => {
                 for (from, to) in fk_edges {
@@ -121,7 +117,6 @@ pub(crate) fn analyze_sql_impact(
 
     let closure = bidirectional_sql_closure(&schema_objects, &edges, &touched_objects);
     let global_uncertainty = !global_issue_indexes.is_empty();
-    let migration_dependents = projects_depending_on(manifest, &migration_projects);
 
     for task in &manifest.tasks {
         if let Some(selection) = evaluate_task_sql_impact(
@@ -129,7 +124,6 @@ pub(crate) fn analyze_sql_impact(
             &closure,
             global_uncertainty,
             &global_issue_indexes,
-            &migration_dependents,
             &mut report.issues,
         ) {
             report.selected_tasks.insert(task.id.clone(), selection);
@@ -177,80 +171,26 @@ fn evaluate_task_sql_impact(
     closure: &BTreeSet<String>,
     global_uncertainty: bool,
     global_issue_indexes: &[usize],
-    migration_dependents: &BTreeSet<&str>,
     issues: &mut Vec<PlanIssue>,
 ) -> Option<SqlTaskSelection> {
-    if let Some(spec) = &task.sql_impact {
-        if spec.is_migration_runner {
-            return Some(SqlTaskSelection {
-                reason: "sql-migration-runner",
-                confidence: "sql-schema-derived",
-                widened: false,
-                matched_tables: Vec::new(),
-                issue_indexes: Vec::new(),
-            });
-        }
-        if spec.has_unmapped_sql {
-            let idx = issues.len();
-            issues.push(PlanIssue {
-                project: Some(task.project.clone()),
-                ..PlanIssue::new(
-                    "sql-task-unmapped",
-                    format!(
-                        "Task {} declares unmapped/dynamic SQL; selected conservatively for migration changes.",
-                        task.id
-                    ),
-                    IssueSeverity::Uncertainty,
-                    IssueScope::Module,
-                )
-            });
-            return Some(SqlTaskSelection {
-                reason: "sql-unmapped-project",
-                confidence: "conservative",
-                widened: true,
-                matched_tables: Vec::new(),
-                issue_indexes: vec![idx],
-            });
-        }
-        if global_uncertainty {
-            return Some(SqlTaskSelection {
-                reason: "sql-global-ddl-fallback",
-                confidence: "conservative",
-                widened: true,
-                matched_tables: Vec::new(),
-                issue_indexes: global_issue_indexes.to_vec(),
-            });
-        }
-        let matched: Vec<String> = spec
-            .tables
-            .iter()
-            .filter_map(|t| normalize_sql_object(t))
-            .filter(|t| closure.contains(t))
-            .collect();
-        if !matched.is_empty() {
-            return Some(SqlTaskSelection {
-                reason: "sql-table-impact",
-                confidence: "sql-schema-derived",
-                widened: false,
-                matched_tables: matched,
-                issue_indexes: Vec::new(),
-            });
-        }
-        return None;
+    let spec = task.sql_impact.as_ref()?;
+    if spec.is_migration_runner {
+        return Some(SqlTaskSelection {
+            reason: "sql-migration-runner",
+            confidence: "sql-schema-derived",
+            widened: false,
+            matched_tables: Vec::new(),
+            issue_indexes: Vec::new(),
+        });
     }
-
-    // Fail-closed guard: any unannotated reachability task whose project depends on a changed
-    // migration project MUST still run rather than silently skipping!
-    if task.impact.mode == ImpactMode::Reachability
-        && migration_dependents.contains(task.project.as_str())
-    {
+    if spec.has_unmapped_sql {
         let idx = issues.len();
         issues.push(PlanIssue {
             project: Some(task.project.clone()),
             ..PlanIssue::new(
-                "sql-task-missing-metadata",
+                "sql-task-unmapped",
                 format!(
-                    "Task {} depends on a changed migration project without sqlImpact metadata; selected conservatively.",
+                    "Task {} declares unmapped/dynamic SQL; selected conservatively for migration changes.",
                     task.id
                 ),
                 IssueSeverity::Uncertainty,
@@ -263,6 +203,30 @@ fn evaluate_task_sql_impact(
             widened: true,
             matched_tables: Vec::new(),
             issue_indexes: vec![idx],
+        });
+    }
+    if global_uncertainty {
+        return Some(SqlTaskSelection {
+            reason: "sql-global-ddl-fallback",
+            confidence: "conservative",
+            widened: true,
+            matched_tables: Vec::new(),
+            issue_indexes: global_issue_indexes.to_vec(),
+        });
+    }
+    let matched: Vec<String> = spec
+        .tables
+        .iter()
+        .filter_map(|t| normalize_sql_object(t))
+        .filter(|t| closure.contains(t))
+        .collect();
+    if !matched.is_empty() {
+        return Some(SqlTaskSelection {
+            reason: "sql-table-impact",
+            confidence: "sql-schema-derived",
+            widened: false,
+            matched_tables: matched,
+            issue_indexes: Vec::new(),
         });
     }
     None
@@ -363,25 +327,4 @@ fn bidirectional_sql_closure(
         }
     }
     reached
-}
-
-fn projects_depending_on<'a>(
-    manifest: &'a TestingManifest,
-    roots: &BTreeSet<&'a str>,
-) -> BTreeSet<&'a str> {
-    let mut affected: BTreeSet<&'a str> = roots.iter().copied().collect();
-    let mut queue: VecDeque<&'a str> = affected.iter().copied().collect();
-    while let Some(current) = queue.pop_front() {
-        for project in &manifest.projects {
-            if project
-                .fallback_dependencies
-                .iter()
-                .any(|dep| dep == current)
-                && affected.insert(project.id.as_str())
-            {
-                queue.push_back(project.id.as_str());
-            }
-        }
-    }
-    affected
 }

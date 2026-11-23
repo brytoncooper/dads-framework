@@ -33,6 +33,7 @@ export type TestingManifest = {
     readonly root?: string;
     readonly fullFallback: { readonly taskIds: readonly string[] };
     readonly sql?: TestingManifestWorkspaceSql;
+    readonly nonCodeSuffixes?: readonly string[];
   };
   readonly projects: readonly TestingManifestProject[];
   readonly tasks: readonly TestingManifestTask[];
@@ -141,6 +142,9 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       ...(manifest.workspace.root === undefined ? {} : { root: manifest.workspace.root }),
       fullFallback: { taskIds: [...manifest.workspace.fullFallback.taskIds] },
       ...(manifest.workspace.sql === undefined ? {} : { sql: serializeWorkspaceSql(manifest.workspace.sql) }),
+      ...(manifest.workspace.nonCodeSuffixes === undefined || manifest.workspace.nonCodeSuffixes.length === 0
+        ? {}
+        : { nonCodeSuffixes: [...manifest.workspace.nonCodeSuffixes] }),
     },
     projects: manifest.projects.map((project) => ({
       id: project.id,
@@ -173,17 +177,19 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
 
 function readWorkspace(value: unknown, subject: string): TestingManifest["workspace"] {
   const workspace = readRecord(value, "workspace", subject);
-  rejectUnknownKeys(workspace, ["root", "fullFallback", "sql"], "workspace", subject);
+  rejectUnknownKeys(workspace, ["root", "fullFallback", "sql", "nonCodeSuffixes"], "workspace", subject);
   const fullFallback = readRecord(workspace["fullFallback"], "workspace.fullFallback", subject);
   rejectUnknownKeys(fullFallback, ["taskIds"], "workspace.fullFallback", subject);
   const root = workspace["root"];
   const sql = workspace["sql"];
+  const nonCodeSuffixes = readOptionalStringArray(workspace["nonCodeSuffixes"], "workspace.nonCodeSuffixes", subject);
   return {
     ...(root === undefined ? {} : { root: readString(root, "workspace.root", subject) }),
     fullFallback: {
       taskIds: readStringArray(fullFallback["taskIds"], "workspace.fullFallback.taskIds", subject),
     },
     ...(sql === undefined ? {} : { sql: readWorkspaceSql(sql, "workspace.sql", subject) }),
+    ...(nonCodeSuffixes.length === 0 ? {} : { nonCodeSuffixes }),
   };
 }
 

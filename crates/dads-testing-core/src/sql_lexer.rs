@@ -32,10 +32,34 @@ fn is_valid_sql_ident(ident: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$')
 }
 
-/// Extracts static SQL strings passed to `.query(...)`, `.execute(...)`, or `.raw(...)`.
-/// Returns `None` if any call uses template interpolation (`${...}`) or non-literal SQL.
-pub(crate) fn extract_static_ts_sql_queries(source: &str) -> Option<Vec<String>> {
+/// Extracted static migration operations from a `.ts`/`.js` migration file.
+pub(crate) struct ExtractedTsMigration {
+    pub(crate) sql_chunks: Vec<String>,
+    pub(crate) builder_tables: Vec<String>,
+}
+
+const PGM_SINGLE_TABLE_METHODS: &[&str] = &[
+    "createTable",
+    "dropTable",
+    "addColumns",
+    "dropColumns",
+    "alterColumn",
+    "addConstraint",
+    "dropConstraint",
+    "createIndex",
+    "dropIndex",
+    "renameColumn",
+    "renameConstraint",
+    "createTrigger",
+    "dropTrigger",
+];
+
+/// Extracts static SQL strings (`.query`/`.execute`/`.raw`/`.sql`) and `node-pg-migrate`
+/// table-scoped builder calls (`pgm.addConstraint("tbl", ...)`, etc.).
+/// Returns `None` on any `${...}` interpolation, non-literal table name, or unrecognized `pgm.*` call.
+pub(crate) fn extract_static_ts_migration(source: &str) -> Option<ExtractedTsMigration> {
     let mut sql_chunks = Vec::new();
+    let mut builder_tables = Vec::new();
     let bytes = source.as_bytes();
     let mut idx = 0;
     while idx < bytes.len() {
@@ -53,19 +77,77 @@ pub(crate) fn extract_static_ts_sql_queries(source: &str) -> Option<Vec<String>>
             idx = (idx + 2).min(bytes.len());
             continue;
         }
-        if let Some(next_idx) = match_query_call_start(source, idx) {
-            idx = next_idx;
-            while idx < bytes.len() && bytes[idx].is_ascii_whitespace() {
-                idx += 1;
+        if let Some((method, args_start)) = match_pgm_call(source, idx) {
+            if method == "sql" {
+                let (literal, after) = read_arg_string(source, args_start)?;
+                sql_chunks.push(literal);
+                idx = after;
+                continue;
             }
-            let (literal, after) = read_static_js_string(source, idx)?;
+            if method == "renameTable" {
+                let (old_tbl, after_first) = read_arg_string(source, args_start)?;
+                let comma = find_next_non_ws(bytes, after_first)?;
+                if bytes[comma] != b',' {
+                    return None;
+                }
+                let (new_tbl, after_second) = read_arg_string(source, comma + 1)?;
+                builder_tables.push(normalize_sql_object(&old_tbl)?);
+                builder_tables.push(normalize_sql_object(&new_tbl)?);
+                idx = after_second;
+                continue;
+            }
+            if PGM_SINGLE_TABLE_METHODS.contains(&method) {
+                let (tbl, after) = read_arg_string(source, args_start)?;
+                builder_tables.push(normalize_sql_object(&tbl)?);
+                idx = after;
+                continue;
+            }
+            // Any unrecognized `pgm.<method>(` (e.g. createExtension, createType, createFunction) fails closed.
+            return None;
+        }
+        if let Some(next_idx) = match_query_call_start(source, idx) {
+            let (literal, after) = read_arg_string(source, next_idx)?;
             sql_chunks.push(literal);
             idx = after;
             continue;
         }
         idx += 1;
     }
-    Some(sql_chunks)
+    Some(ExtractedTsMigration {
+        sql_chunks,
+        builder_tables,
+    })
+}
+
+fn match_pgm_call(source: &str, idx: usize) -> Option<(&str, usize)> {
+    let bytes = source.as_bytes();
+    if !source[idx..].starts_with("pgm.") {
+        return None;
+    }
+    if idx > 0 && (bytes[idx - 1].is_ascii_alphanumeric() || bytes[idx - 1] == b'_') {
+        return None;
+    }
+    let method_start = idx + 4;
+    let mut end = method_start;
+    while end < bytes.len() && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_') {
+        end += 1;
+    }
+    if end == method_start || bytes.get(end) != Some(&b'(') {
+        return None;
+    }
+    Some((&source[method_start..end], end + 1))
+}
+
+fn find_next_non_ws(bytes: &[u8], mut idx: usize) -> Option<usize> {
+    while idx < bytes.len() && bytes[idx].is_ascii_whitespace() {
+        idx += 1;
+    }
+    (idx < bytes.len()).then_some(idx)
+}
+
+fn read_arg_string(source: &str, start: usize) -> Option<(String, usize)> {
+    let pos = find_next_non_ws(source.as_bytes(), start)?;
+    read_static_js_string(source, pos)
 }
 
 fn match_query_call_start(source: &str, idx: usize) -> Option<usize> {

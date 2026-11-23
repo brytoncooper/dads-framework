@@ -9,7 +9,7 @@
 //!   `ParsedMigrationDdl::GlobalDdl` so the planner widens conservatively to all DB tasks.
 
 use crate::sql_lexer::{
-    extract_static_ts_sql_queries, normalize_sql_object, split_sql_statements, tokenize_sql_head,
+    extract_static_ts_migration, normalize_sql_object, split_sql_statements, tokenize_sql_head,
 };
 use std::collections::BTreeSet;
 
@@ -50,17 +50,34 @@ pub(crate) fn parse_sql_migration_source(sql: &str) -> ParsedMigrationDdl {
     ParsedMigrationDdl::Scoped { tables, fk_edges }
 }
 
-/// Extracts static SQL strings from a `.ts`/`.js` migration file (e.g. `queryRunner.query(\`...\`)`).
-/// Fails closed to `GlobalDdl` on any `${...}` interpolation, missing static SQL, or global DDL.
+/// Extracts static SQL strings and structured `node-pg-migrate` builder calls from a `.ts`/`.js`
+/// migration file. Fails closed to `GlobalDdl` on any `${...}` interpolation, unrecognized builder
+/// method, missing static operations, or global DDL.
 pub(crate) fn parse_ts_migration_source(source: &str) -> ParsedMigrationDdl {
-    let Some(sql_chunks) = extract_static_ts_sql_queries(source) else {
-        return global("dynamic or interpolated SQL query in TS/JS migration".to_owned());
+    let Some(extracted) = extract_static_ts_migration(source) else {
+        return global(
+            "dynamic, interpolated, or unrecognized DDL call in TS/JS migration".to_owned(),
+        );
     };
-    if sql_chunks.is_empty() {
-        return global("no static SQL query calls recognized in TS/JS migration".to_owned());
+    if extracted.sql_chunks.is_empty() && extracted.builder_tables.is_empty() {
+        return global("no static SQL or builder calls recognized in TS/JS migration".to_owned());
     }
-    let combined = sql_chunks.join(";\n");
-    parse_sql_migration_source(&combined)
+    let mut tables: BTreeSet<String> = extracted.builder_tables.into_iter().collect();
+    let mut fk_edges = Vec::new();
+    if !extracted.sql_chunks.is_empty() {
+        let combined = extracted.sql_chunks.join(";\n");
+        match parse_sql_migration_source(&combined) {
+            ParsedMigrationDdl::Scoped {
+                tables: sql_tables,
+                fk_edges: sql_edges,
+            } => {
+                tables.extend(sql_tables);
+                fk_edges.extend(sql_edges);
+            }
+            global_ddl @ ParsedMigrationDdl::GlobalDdl { .. } => return global_ddl,
+        }
+    }
+    ParsedMigrationDdl::Scoped { tables, fk_edges }
 }
 
 fn classify_statement(statement: &str) -> ParsedMigrationDdl {

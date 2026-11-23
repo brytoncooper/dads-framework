@@ -10,6 +10,7 @@ Dads is a TypeScript backend framework built around three rules: every HTTP rout
 | **Trace one complete child feature (`workspace → project`)** from policy and Postgres to routes, client, and tests  | [Build a Feature End to End](feature-walkthrough.md)    |
 | **Decide where a new schema, rule, workflow, integration, or migration belongs**                                    | [Where Does Code Go?](where-code-goes.md)               |
 | **Add relationship permissions to an existing Postgres or SQLite app** without a separate auth database             | [Access & Permissions](permissions.md)                  |
+| **Run only tests proven affected by a diff** (Vitest, Jest, `tsc`, Postgres migrations) and X-ray repo coupling     | [Selective Testing (`dad-test`)](selective-testing.md)  |
 | **Look up SDK definitions, options, combinators, and CLI commands**                                                 | [SDK Glossary & Options](sdk-reference.md)              |
 | **Migrate SpiceDB into PostgreSQL** or replace hand-written `.zed` files with typed TypeScript                      | [Adopt One Package at a Time](adopt-standalone.md)      |
 
@@ -110,5 +111,6 @@ You can also run `npx dad doctor --gate` to check repo-wide rules such as zero `
 - **Look up SDK definitions and options:** [SDK Glossary & Options](sdk-reference.md)
 - **Define endpoints, Zod schemas, and clients:** [Routes, Contracts & Clients](routes-and-contracts.md)
 - **Split customer/staff APIs and enforce CI gates:** [Multi-API Composition & CI Gates](boundaries-and-apis.md)
+- **Run proof-backed selective tests and diagnose coupling:** [Selective Testing (`dad-test`)](selective-testing.md)
 - **Use packages in an existing codebase:** [Adopt One Package at a Time](adopt-standalone.md)
 - **Why Dads enforces these rules:** [`DAD.md`](../../../DAD.md) and [`Who let Gary back in?`](../../go-ask-your-other-database.md)

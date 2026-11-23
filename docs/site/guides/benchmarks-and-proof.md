@@ -251,3 +251,41 @@ cd formal/access-proofs && lake build
 ```
 
 For raw historical runs, planner notes, and opt-in lookup-reuse measurements, see [`packages/server/postgres-access/BENCHMARK.md`](../../../packages/server/postgres-access/BENCHMARK.md).
+
+---
+
+## 7. Selective Testing (`dad-test`) Benchmarks & Formal Proof
+
+`@dads-framework/testing` (`dad-test`) proves its selection and caching rules with **36 zero-`sorry` Lean 4 theorems** (`proofs/dad-test/`) and **3 Quint/TLA+ state-machine specs** (`specs/dad-test/`, verified with Apalache Z3 and replayed directly against the compiled Rust binary).
+
+### 7.1 Formal verification layers
+
+| Layer                                    | Scope                                                                                                                                                                                   | Verification result                                                   |
+| :--------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------- |
+| **Lean 4 (`proofs/dad-test/`)**          | Reachability soundness & exactness, private-helper hunk attribution, fail-closed SQL/migration FK closure, `export * as ns` member tracking, bound import-line & new-module attribution | **36 theorems**, 0 `sorry`, standard axioms only (`lake build`)       |
+| **Lean 4 ↔ Rust differential oracle**    | Compiled Lean 4 evaluator compared directly against `dad-test`                                                                                                                          | **6/6 suites**, 0 mismatches                                          |
+| **Quint/TLA+ specs (`specs/dad-test/`)** | Snapshot store cache equivalence, DAG scheduler safety, L1 local & L2 remote content-hashed receipt soundness                                                                           | **100% trace replay parity** (`0` false cache hits, `0` false misses) |
+| **Mutation soundness**                   | Real bugs injected across synthetic suites and 4 live repositories                                                                                                                      | **0 escaped mutants**                                                 |
+
+### 7.2 Real-repository precision & speed
+
+Measured with the release Rust binary (`dad-test`, parallel Oxc indexing) across public TypeScript repositories and a 20,095-file TypeScript monorepo:
+
+| Repository                  | Scale                                      | Edit tested                                             | Package-level baseline |                                   `dad-test` selected | Speed & outcome                                           |
+| :-------------------------- | :----------------------------------------- | :------------------------------------------------------ | ---------------------: | ----------------------------------------------------: | :-------------------------------------------------------- |
+| **`remeda/remeda`**         | 579 TS, 179 test files                     | Comment edit (`clamp.ts`)                               |              179 files |                                           **0 files** | 146 ms (**100% skipped**)                                 |
+| **`remeda/remeda`**         | 579 TS, 179 test files                     | Private helper bug (`clamp.ts`)                         |   179 files (3,344 ms) |                                   **1 file** (413 ms) | **99% skipped, 8× faster**, bug caught                    |
+| **`fabian-hiller/valibot`** | 1,112 TS, 280 test files                   | Type-only edit (`email.ts`)                             |              280 files |                                   **0 runtime files** | 233 ms (**100% runtime skipped**)                         |
+| **`fabian-hiller/valibot`** | 1,112 TS, 280 test files                   | Mutate `EMAIL_REGEX` in shared `regex.ts` (20+ exports) |              280 files |                                **9 files** (1,724 ms) | **97% skipped**, bug caught                               |
+| **`dads-framework`**        | 20 pkgs, 2,095 TS, 642 test files          | Bug in `dst/prng.ts` (`--cache`)                        |     3 pkgs (128 files) |                          **3 / 40** in `testing-core` | 572 ms vs 2,105 ms full pkg (**93% skipped**), bug caught |
+| **Enterprise TS monorepo**  | 20,095 files, 307 pkgs, 5,266 test files   | Small 3-file web PR                                     |    33 pkgs (987 files) |                               **19 pkgs (257 files)** | **74% fewer files**; 1.8 s cold / 0.4 s warm index        |
+| **Enterprise TS monorepo**  | 43 Postgres suites (531 integration files) | Scoped table migration vs. global `DO $$` DDL           |                      — | **12/43** scoped (**72% skipped**) / **43/43** global | Fail-closed on global DDL                                 |
+
+Reproduce the Lean 4 proofs and Rust/JS verification suites from any checkout:
+
+```sh
+cd proofs/dad-test && lake build
+cargo test --workspace
+node scripts/testing/verify-differential-oracle.mjs
+node scripts/testing/verify-mutation-soundness.mjs
+```

@@ -123,6 +123,14 @@
       "navigationGroup": "Operate & verify"
     },
     {
+      "slug": "selective-testing",
+      "title": "Selective Testing (dad-test)",
+      "owner": "@dads-framework/testing",
+      "section": "Guides",
+      "path": "docs/site/guides/selective-testing.md",
+      "navigationGroup": "Operate & verify"
+    },
+    {
       "slug": "sdk-reference",
       "title": "SDK Glossary & Options",
       "owner": "@dads-framework/access",

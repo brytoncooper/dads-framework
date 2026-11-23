@@ -1,6 +1,12 @@
 export {
+  diagnoseTesting,
   planTesting,
   runTesting,
+  type TestingCouplingHotspot,
+  type TestingDiagnoseRequest,
+  type TestingDiagnoseResult,
+  type TestingDiagnoseSummary,
+  type TestingFallbackTrap,
   type TestingOperationRequest,
   type TestingPlanIssue,
   type TestingPlanResult,
@@ -9,7 +15,9 @@ export {
   type TestingTaskDecision,
   type TestingTaskOutput,
   type TestingTaskRunResult,
+  type TestingWideningCulprit,
 } from "./testing-api.js";
+export { renderDiagnosis } from "./commands/diagnose.js";
 export { listDadTestCommands, runDadTestCli, type DadTestCliIo } from "./dad-test-cli.js";
 export {
   parseTestingManifest,

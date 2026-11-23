@@ -28,11 +28,12 @@ pub struct NativeRequest {
     pub remote_cache_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Operation {
     Plan,
     Run,
+    Diagnose,
 }
 
 #[derive(Debug, Serialize)]
@@ -73,6 +74,8 @@ pub struct OperationResult {
     pub plan: PlanResult,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub run: Option<RunResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnose: Option<DiagnoseResult>,
 }
 
 #[derive(Debug, Serialize)]
@@ -256,6 +259,71 @@ pub struct RunCounts {
     pub not_applicable: usize,
     #[serde(default, skip_serializing_if = "is_zero")]
     pub cached: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnoseResult {
+    pub schema_version: u32,
+    pub summary: DiagnoseSummary,
+    pub widening_culprits: Vec<WideningCulprit>,
+    pub coupling_hotspots: Vec<CouplingHotspot>,
+    pub fallback_traps: Vec<FallbackTrap>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnoseSummary {
+    pub total_modules: usize,
+    pub total_projects: usize,
+    pub total_tasks: usize,
+    pub total_test_files: usize,
+    pub total_uncertainties: usize,
+    pub whole_workspace_uncertainties: usize,
+    pub unowned_tracked_files: usize,
+    pub non_code_uncovered_files: usize,
+    pub estimated_leaf_skip_percent: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WideningCulprit {
+    pub code: String,
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub column: Option<u32>,
+    pub scope: IssueScope,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    pub message: String,
+    pub widened_projects: usize,
+    pub widened_tasks: usize,
+    pub widened_test_files: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CouplingHotspot {
+    pub path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    pub reached_modules: usize,
+    pub reached_projects: usize,
+    pub reached_test_files: usize,
+    pub reached_test_percent: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FallbackTrap {
+    pub kind: String,
+    pub prefix: String,
+    pub file_count: usize,
+    pub sample_paths: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
 }
 
 fn is_false(value: &bool) -> bool {

@@ -125,20 +125,80 @@ export type TestingRunResult = {
   readonly exitCode: number;
 };
 
+export type TestingDiagnoseRequest = {
+  readonly workspaceRoot: string;
+  readonly manifestPath?: string;
+  /** An explicit native binary is intended for local development and test harnesses. */
+  readonly nativeBinary?: string;
+};
+
+export type TestingDiagnoseSummary = {
+  readonly totalModules: number;
+  readonly totalProjects: number;
+  readonly totalTasks: number;
+  readonly totalTestFiles: number;
+  readonly totalUncertainties: number;
+  readonly wholeWorkspaceUncertainties: number;
+  readonly unownedTrackedFiles: number;
+  readonly nonCodeUncoveredFiles: number;
+  readonly estimatedLeafSkipPercent: number;
+};
+
+export type TestingWideningCulprit = {
+  readonly code: string;
+  readonly path: string;
+  readonly line?: number;
+  readonly column?: number;
+  readonly scope: "module" | "workspace";
+  readonly project?: string;
+  readonly message: string;
+  readonly widenedProjects: number;
+  readonly widenedTasks: number;
+  readonly widenedTestFiles: number;
+};
+
+export type TestingCouplingHotspot = {
+  readonly path: string;
+  readonly project?: string;
+  readonly reachedModules: number;
+  readonly reachedProjects: number;
+  readonly reachedTestFiles: number;
+  readonly reachedTestPercent: number;
+};
+
+export type TestingFallbackTrap = {
+  readonly kind: string;
+  readonly prefix: string;
+  readonly fileCount: number;
+  readonly samplePaths: readonly string[];
+  readonly project?: string;
+};
+
+export type TestingDiagnoseResult = {
+  readonly schemaVersion: 1;
+  readonly summary: TestingDiagnoseSummary;
+  readonly wideningCulprits: readonly TestingWideningCulprit[];
+  readonly couplingHotspots: readonly TestingCouplingHotspot[];
+  readonly fallbackTraps: readonly TestingFallbackTrap[];
+};
+
+type NativeOperation = "plan" | "run" | "diagnose";
+
 type NativeResponse = {
   readonly schemaVersion: number;
   readonly ok: boolean;
   readonly result?: {
-    readonly operation: "plan" | "run";
+    readonly operation: NativeOperation;
     readonly plan: TestingPlanResult;
     readonly run?: TestingRunResult;
+    readonly diagnose?: TestingDiagnoseResult;
   };
   readonly error?: string;
 };
 
 type NativeRequest = {
   readonly schemaVersion: number;
-  readonly operation: "plan" | "run";
+  readonly operation: NativeOperation;
   readonly workspaceRoot: string;
   readonly manifestPath?: string;
   readonly base?: string;
@@ -166,8 +226,16 @@ export async function runTesting(request: TestingOperationRequest): Promise<{
   return { plan: response.plan, run: response.run };
 }
 
+export async function diagnoseTesting(request: TestingDiagnoseRequest): Promise<TestingDiagnoseResult> {
+  const response = await invokeNativeTestingEngine("diagnose", request);
+  if (!response.diagnose) {
+    throw new Error("The native testing engine returned a diagnose response without diagnose details.");
+  }
+  return response.diagnose;
+}
+
 async function invokeNativeTestingEngine(
-  operation: "plan" | "run",
+  operation: NativeOperation,
   request: TestingOperationRequest,
 ): Promise<NonNullable<NativeResponse["result"]>> {
   const nativeRequest = toNativeRequest(operation, request);
@@ -180,7 +248,7 @@ async function invokeNativeTestingEngine(
 }
 
 /** An absent field is omitted rather than sent as null, which the engine refuses. */
-function toNativeRequest(operation: "plan" | "run", request: TestingOperationRequest): NativeRequest {
+function toNativeRequest(operation: NativeOperation, request: TestingOperationRequest): NativeRequest {
   return {
     schemaVersion: protocolSchemaVersion,
     operation,
@@ -200,7 +268,7 @@ function toNativeRequest(operation: "plan" | "run", request: TestingOperationReq
  * Every way the envelope can fail to carry the result asked for is an error
  * here, so a caller only ever sees a result for the operation it requested.
  */
-function requireResultFor(response: NativeResponse, operation: "plan" | "run"): NonNullable<NativeResponse["result"]> {
+function requireResultFor(response: NativeResponse, operation: NativeOperation): NonNullable<NativeResponse["result"]> {
   if (response.schemaVersion !== protocolSchemaVersion) {
     throw new Error(`Unsupported native response schemaVersion ${String(response.schemaVersion)}.`);
   }

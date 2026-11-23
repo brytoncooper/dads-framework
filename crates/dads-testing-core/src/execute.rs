@@ -1,10 +1,12 @@
 //! The entry point one request travels through: validate it, load the manifest, resolve the
 //! scope, plan, and — for a run operation — schedule. Every rejection leaves as a typed error.
+use crate::diagnose::build_diagnose;
 use crate::graph::DependencyGraph;
 use crate::manifest::{DEFAULT_MANIFEST_PATH, TestingManifest, load_manifest, validate_manifest};
 use crate::plan::build_plan;
 use crate::protocol::{
-    NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION,
+    NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts,
+    PlanResult, ResolvedScope,
 };
 use crate::receipts::TaskReceiptStore;
 use crate::scheduler;
@@ -104,6 +106,15 @@ fn execute(
     }
     let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
+    if request.operation == Operation::Diagnose {
+        let diagnose = build_diagnose(&manifest, &workspace_root, graph);
+        return Ok(OperationResult {
+            operation: "diagnose".into(),
+            plan: empty_diagnose_plan(),
+            run: None,
+            diagnose: Some(diagnose),
+        });
+    }
     let scope = resolve_scope(&request, &workspace_root)?;
     let plan = build_plan(
         &manifest,
@@ -118,6 +129,7 @@ fn execute(
             operation: "plan".into(),
             plan,
             run: None,
+            diagnose: None,
         }),
         Operation::Run => {
             let active_receipts = if request.cache { receipts } else { None };
@@ -133,8 +145,35 @@ fn execute(
                 operation: "run".into(),
                 plan,
                 run: Some(run),
+                diagnose: None,
             })
         }
+        Operation::Diagnose => Ok(OperationResult {
+            operation: "diagnose".into(),
+            plan: empty_diagnose_plan(),
+            run: None,
+            diagnose: Some(build_diagnose(&manifest, &workspace_root, graph)),
+        }),
+    }
+}
+
+fn empty_diagnose_plan() -> PlanResult {
+    PlanResult {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        scope: ResolvedScope {
+            kind: "diagnose".into(),
+            base: None,
+            head: None,
+            changed_paths: Vec::new(),
+            full_fallback: false,
+        },
+        tasks: Vec::new(),
+        issues: Vec::new(),
+        complete: true,
+        counts: PlanCounts {
+            run: 0,
+            skip_proven_unaffected: 0,
+        },
     }
 }
 

@@ -134,6 +134,15 @@ every cause came from the plan the native engine returned; `detail=derived`
 means that engine predates structured causes, so `explain` reconstructs what
 each reason code implies from the plan and the manifest instead.
 
+`dad-test diagnose` inspects the workspace's dependency graph and manifest
+without requiring a Git diff, taking `--manifest` and `--json`. It prints a
+read-only coupling and precision X-ray: summary totals (modules, projects,
+tasks, test files, uncertainties, and estimated leaf skip percentage), ranked
+widening culprits (`path:line:col [code] -> widens N tasks / M test files`),
+top module coupling hotspots (`path -> reaches M test files (P%) across K
+projects`), and fallback traps (unowned tracked directories and uncovered
+non-code files inside reachability projects).
+
 `dad-test init` refuses Nx workspaces and writes an unsuccessful coverage report
 instead of treating a few root scripts as the repository's entire task inventory.
 Use `dad-test-nx plan` for those repositories. The [Nx adapter and import guide](nx/README.md)
@@ -276,11 +285,11 @@ workspace facts, each package's tasks and skips, inferences, unsupported
 constructs, the manifest's checksum, and the validation method: `native` when
 a binary was available, otherwise `structural`, or `none`.
 
-The package also exposes `planTesting(request)` and `runTesting(request)`.
-Each operation makes one JSON request to the native `dad-test` process. For
-deterministic simulation testing (seeded PRNG, simulated `Clock`, UUIDv7,
-shrinking invariant runner, and fault-injecting adapters), see the
-[DST guide](dst/README.md) (`@dads-framework/testing/dst`).
+The package also exposes `planTesting(request)`, `runTesting(request)`, and
+`diagnoseTesting(request)`. Each operation makes one JSON request to the native
+`dad-test` process. For deterministic simulation testing (seeded PRNG, simulated
+`Clock`, UUIDv7, shrinking invariant runner, and fault-injecting adapters), see
+the [DST guide](dst/README.md) (`@dads-framework/testing/dst`).
 
 ## Native packages
 

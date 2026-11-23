@@ -1,5 +1,6 @@
 import { parseCommandOptions } from "./cli-arguments.js";
 import type { OptionSpecification, ParsedArguments } from "./cli-arguments.js";
+import { diagnoseCommand } from "./commands/diagnose.js";
 import { explainCommand } from "./commands/explain.js";
 import { initCommand } from "./commands/init.js";
 import { planCommand, runCommand } from "./commands/plan-run.js";
@@ -24,12 +25,14 @@ export type DadTestCommand = {
   readonly execute: (parsed: ParsedArguments, io: DadTestCliIo, json: boolean) => Promise<number>;
 };
 
-const usage = "Usage: dad-test plan|run|explain|init [options] [--json]. See the package README for each option.\n";
+const usage =
+  "Usage: dad-test plan|run|explain|diagnose|init [options] [--json]. See the package README for each option.\n";
 
 const commands = new Map<string, DadTestCommand>([
   ["plan", planCommand],
   ["run", runCommand],
   ["explain", explainCommand],
+  ["diagnose", diagnoseCommand],
   ["init", initCommand],
 ]);
 

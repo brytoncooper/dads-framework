@@ -19,15 +19,18 @@ const MIGRATIONS_DIR_PATTERN = /(?:^|\/)migrations\/[^/]+\.[cm]?[jt]s$/u;
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]s$/u;
 const EXPIRATION_MIGRATION_PATTERN = /\brelationshipExpirationMigration\b|\bexpires_at\b/u;
 
+export type MigrateTargetVersion = "0.3.0" | "0.4.0";
+
 export type MigrateToV03Options = {
   readonly root: string;
   readonly dryRun?: boolean;
   readonly includeMigrations?: boolean;
+  readonly targetVersion?: MigrateTargetVersion;
 };
 
 export type MigrateToV03Result = {
   readonly root: string;
-  readonly targetVersion: typeof V03_TARGET_VERSION;
+  readonly targetVersion: MigrateTargetVersion;
   readonly dryRun: boolean;
   readonly filesChanged: readonly string[];
   readonly packageManifestsUpdated: number;
@@ -38,6 +41,7 @@ export type MigrateToV03Result = {
 };
 
 type MigrationRunState = {
+  readonly targetVersion: MigrateTargetVersion;
   readonly filesChanged: string[];
   readonly addedPeers: Set<string>;
   readonly skippedMigrations: string[];
@@ -48,14 +52,16 @@ type MigrationRunState = {
 };
 
 /**
- * Rewrites a 0.1.x / 0.2.x Dads workspace to the consolidated 0.3.0 packages.
+ * Rewrites a 0.1.x / 0.2.x / 0.3.x Dads workspace to the consolidated target version.
  * Idempotent: running a second time produces zero edits.
  */
 export function migrateWorkspaceToV03(options: MigrateToV03Options): MigrateToV03Result {
   const root = resolve(options.root);
   const dryRun = options.dryRun === true;
   const includeMigrations = options.includeMigrations === true;
+  const targetVersion = options.targetVersion ?? V03_TARGET_VERSION;
   const state: MigrationRunState = {
+    targetVersion,
     filesChanged: [],
     addedPeers: new Set<string>(),
     skippedMigrations: [],
@@ -71,7 +77,7 @@ export function migrateWorkspaceToV03(options: MigrateToV03Options): MigrateToV0
 
   return {
     root,
-    targetVersion: V03_TARGET_VERSION,
+    targetVersion,
     dryRun,
     filesChanged: state.filesChanged.sort(),
     packageManifestsUpdated: state.packageManifestsUpdated,
@@ -93,7 +99,7 @@ function processCandidateFile(
   const original = readFileSync(absolutePath, "utf8");
   if (handleMigrationFile(relativePath, original, includeMigrations, state)) return;
 
-  const updated = transformFile(relativePath, original, state.addedPeers, (count) => {
+  const updated = transformFile(relativePath, original, state.addedPeers, state.targetVersion, (count) => {
     state.importReplacements += count;
   });
   const isManifest = isPackageManifestPath(relativePath);
@@ -173,11 +179,12 @@ function transformFile(
   relativePath: string,
   original: string,
   addedPeers: Set<string>,
+  targetVersion: MigrateTargetVersion,
   onImportReplacements: (count: number) => void,
 ): string {
   const baseName = relativePath.split("/").pop() ?? relativePath;
   if (baseName === "package.json") {
-    return rewritePackageJson(original, addedPeers);
+    return rewritePackageJson(original, addedPeers, targetVersion);
   }
   if (baseName === "dads.project.json") {
     return rewriteDadsProjectJson(original);
@@ -199,7 +206,7 @@ function isSpecifierBearingFile(baseName: string): boolean {
   return SOURCE_EXTENSIONS.has(extname(baseName)) || /^tsconfig(?:\..+)?\.json$/u.test(baseName);
 }
 
-function rewritePackageJson(original: string, addedPeers: Set<string>): string {
+function rewritePackageJson(original: string, addedPeers: Set<string>, targetVersion: MigrateTargetVersion): string {
   const parsed = parseJsonRecord(original);
   if (parsed === undefined) return original;
 
@@ -210,7 +217,11 @@ function rewritePackageJson(original: string, addedPeers: Set<string>): string {
   for (const sectionName of DEPENDENCY_SECTIONS) {
     const rawSection = parsed[sectionName];
     if (!isRecord(rawSection)) continue;
-    const result = rewriteDependencySection(rawSection, sectionName === "dependencies" ? peersToAdd : undefined);
+    const result = rewriteDependencySection(
+      rawSection,
+      sectionName === "dependencies" ? peersToAdd : undefined,
+      targetVersion,
+    );
     if (!result.changed) continue;
     changed = true;
     nextManifest[sectionName] = sortRecord(result.entries);
@@ -226,6 +237,7 @@ function rewritePackageJson(original: string, addedPeers: Set<string>): string {
 function rewriteDependencySection(
   rawSection: Readonly<Record<string, unknown>>,
   peersToAdd: Record<string, string> | undefined,
+  targetVersion: MigrateTargetVersion,
 ): { readonly changed: boolean; readonly entries: Record<string, string> } {
   const entries: Record<string, string> = {};
   let changed = false;
@@ -235,11 +247,11 @@ function rewriteDependencySection(
     const target = lookupRetiredTarget(name);
     if (target !== undefined) {
       changed = true;
-      entries[target] = resolveUpgradedVersion(version);
+      entries[target] = resolveUpgradedVersion(version, targetVersion);
       collectPeersForRetired(name, peersToAdd);
       continue;
     }
-    const nextVersion = isDadsPackage(name) ? resolveUpgradedVersion(version) : version;
+    const nextVersion = isDadsPackage(name) ? resolveUpgradedVersion(version, targetVersion) : version;
     if (nextVersion !== version) changed = true;
     entries[name] = nextVersion;
   }
@@ -333,13 +345,11 @@ function isDadsPackage(packageName: string): boolean {
   return packageName.startsWith("@dads-framework/") || packageName === "create-dads";
 }
 
-function resolveUpgradedVersion(current: string): string {
-  if (current.startsWith("workspace:") || current.startsWith("file:") || current.startsWith("link:")) {
-    return current;
-  }
-  if (current.startsWith("^")) return `^${V03_TARGET_VERSION}`;
-  if (current.startsWith("~")) return `~${V03_TARGET_VERSION}`;
-  return V03_TARGET_VERSION;
+function resolveUpgradedVersion(current: string, targetVersion: MigrateTargetVersion): string {
+  if (/^(?:workspace|file|link):/u.test(current)) return current;
+  if (current.startsWith("^")) return `^${targetVersion}`;
+  if (current.startsWith("~")) return `~${targetVersion}`;
+  return targetVersion;
 }
 
 function parseJsonRecord(text: string): Readonly<Record<string, unknown>> | undefined {
@@ -353,11 +363,9 @@ function parseJsonRecord(text: string): Readonly<Record<string, unknown>> | unde
 
 function readStringMap(value: unknown): Record<string, string> {
   if (!isRecord(value)) return {};
-  const result: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry === "string") result[key] = entry;
-  }
-  return result;
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
 }
 
 function sortRecord(record: Readonly<Record<string, string>>): Record<string, string> {
@@ -369,14 +377,10 @@ function collectCandidateFiles(root: string): readonly string[] {
   const walk = (directory: string): void => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       if (entry.isDirectory()) {
-        if (IGNORED_DIRECTORIES.has(entry.name)) continue;
-        walk(join(directory, entry.name));
+        if (!IGNORED_DIRECTORIES.has(entry.name)) walk(join(directory, entry.name));
         continue;
       }
-      if (!entry.isFile()) continue;
-      if (isMigrationCandidate(entry.name)) {
-        results.push(join(directory, entry.name));
-      }
+      if (entry.isFile() && isMigrationCandidate(entry.name)) results.push(join(directory, entry.name));
     }
   };
   walk(root);

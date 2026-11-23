@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/postgres",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -58,7 +58,7 @@
     "migrations/README.md"
   ],
   "dependencies": {
-    "@dads-framework/core": "0.3.0",
+    "@dads-framework/core": "0.4.0",
     "drizzle-orm": "^0.45.2",
     "jiti": "2.4.2",
     "node-pg-migrate": "^9.0.0",

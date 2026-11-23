@@ -472,4 +472,43 @@ describe("migrateWorkspaceToV03", () => {
       spy.mockRestore();
     }
   });
+
+  it("supports dad migrate 0.4 to jump directly from 0.2.x or 0.3.x to 0.4.0", () => {
+    const root = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "wayline-jump",
+          dependencies: {
+            "@dads-framework/contract": "^0.2.0",
+            "@dads-framework/health": "0.2.0",
+            "@dads-framework/http": "0.3.0",
+          },
+        },
+        null,
+        2,
+      ),
+      "src/app.ts": `import { createHealthRoutes } from "@dads-framework/health";\nexport { createHealthRoutes };\n`,
+    });
+
+    let stdout = "";
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: string | Uint8Array): boolean => {
+      stdout += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+      return true;
+    });
+    try {
+      migrateCommand(["0.4", root], false);
+      expect(stdout).toContain("Dad migrate 0.4: Updated 2 file(s)");
+    } finally {
+      spy.mockRestore();
+    }
+
+    const manifest = z
+      .object({ dependencies: z.record(z.string(), z.string()) })
+      .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
+    expect(manifest.dependencies).toEqual({
+      "@dads-framework/core": "^0.4.0",
+      "@dads-framework/http": "0.4.0",
+    });
+    expect(readFileSync(join(root, "src/app.ts"), "utf8")).toContain("@dads-framework/http/health");
+  });
 });

@@ -52,7 +52,12 @@ export { parseDadsInitializationArguments, type DadsInitializationArguments } fr
 export { dependenciesAreInstalled, recordDadsDependencyInstallation } from "./dependency-installation-receipt.js";
 export { diagnoseWorkspace, type DiagnoseWorkspaceOptions } from "./doctor/diagnose-workspace.js";
 export { renderDoctorJson, renderDoctorReport, type DoctorReport } from "./doctor/doctor-report.js";
-export { migrateWorkspaceToV03, type MigrateToV03Options, type MigrateToV03Result } from "./migrate-v03.js";
+export {
+  migrateWorkspaceToV03,
+  type MigrateTargetVersion,
+  type MigrateToV03Options,
+  type MigrateToV03Result,
+} from "./migrate-v03.js";
 export {
   PEERS_FOR_RETIRED_PACKAGE,
   RETIRED_PACKAGE_TO_TARGET,

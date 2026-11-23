@@ -4,6 +4,28 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-23
+
+### Added
+
+- Added standalone per-operation contracts (`getOperation`, `listOperation`, `postOperation`, `patchOperation`, `putOperation`, `deleteOperation`, `postNoContentOperation`, and `bindOperationPath`) in `@dads-framework/core/contract`, additive `operation` overloads on all seven `@dads-framework/http` verb helpers, and `callApi` / consumer-composed `createApiClient` in `@dads-framework/client`.
+- Added typed `can(...)` checks and `PermissionToken` support in `compileFilter` / `resolveFilter` on `PostgresAuthorization` and `SqliteAuthorization`, plus `withReadSnapshot` (`REPEATABLE READ READ ONLY`) in `@dads-framework/postgres-access`.
+- Added narrow capability service tokens (`clockService`, `databaseService`, `postgresPoolService`, `jobQueueService`), `overrideService` / `createTestHost` / `startTestHost` in `@dads-framework/core/plugin`, and `startHttpHost` in `@dads-framework/http`.
+- Added the `impure-code` Doctor signal banning I/O imports and ambient nondeterminism inside `pure/` modules, extended `dad check boundaries` with `workflows/`, `integrations/`, intra-domain layering, and mixed server/client barrel checks, and added `dad add workflow` and `dad add integration` generators.
+- Added [Where Does Code Go?](docs/site/guides/where-code-goes.md) and the end-to-end `workspace → project` [Feature Walkthrough](docs/site/guides/feature-walkthrough.md), and documented the Independent Evolution Principle in [docs/principles.md](docs/principles.md).
+- Added `-h` / `--help` usage output to `create-dads`.
+
+### Changed
+
+- Converted optional peer loaders (`pdfmake`, `pdfjs-dist`, `@napi-rs/canvas`, `exceljs`, `resend`, `@react-email/render`, OpenTelemetry packages, and `@sentry/react`) to emit actionable `npm install <pkg>` messages when a peer is missing.
+- Dogfooded `startHttpHost`, `domains/notes/pure/`, `*Operation` contracts, `createApiClient`, and narrow capability tokens in `apps/kit-workbench` and the `create-dads` starter.
+- Added Rust and npm caching and parallelized `verify-source` in CI release workflows, and auto-capped default local Vitest workers in `scripts/verify-test-step.mjs` to avoid Docker Desktop starvation.
+
+### Fixed
+
+- Updated `dad migrate 0.3` to map all 40 retired `0.2.0` packages (adding the 12 earlier consolidations), skip immutable `*.migration.ts` files by default (with `--include-migrations` opt-in), and report the required `relationshipExpirationMigration` (`expires_at`) database migration when `@dads-framework/postgres-access` is present.
+- Updated Doctor's `per-feature-authorization` signal to recognize `0.3+` `*-access` authorization packages alongside `*authorization*`.
+
 ## [0.3.0] - 2026-11-20
 
 ### Added

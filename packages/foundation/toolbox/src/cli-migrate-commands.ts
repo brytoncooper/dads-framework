@@ -1,17 +1,23 @@
 import { resolve } from "node:path";
 
 import { writeOutput } from "./cli-io.js";
-import { migrateWorkspaceToV03, type MigrateToV03Result } from "./migrate-v03.js";
+import { migrateWorkspaceToV03, type MigrateTargetVersion, type MigrateToV03Result } from "./migrate-v03.js";
 
-const SUPPORTED_TARGETS = new Set(["0.3", "0.3.0"]);
+const SUPPORTED_TARGETS: Readonly<Record<string, MigrateTargetVersion>> = {
+  "0.3": "0.3.0",
+  "0.3.0": "0.3.0",
+  "0.4": "0.4.0",
+  "0.4.0": "0.4.0",
+};
 
 export function migrateCommand(args: readonly string[], json: boolean): void {
-  const { directory, dryRun, includeMigrations } = parseMigrateArgs(args);
+  const { targetVersion, directory, dryRun, includeMigrations } = parseMigrateArgs(args);
 
   const result = migrateWorkspaceToV03({
     root: resolve(directory ?? process.cwd()),
     dryRun,
     includeMigrations,
+    targetVersion,
   });
 
   if (json) {
@@ -23,6 +29,7 @@ export function migrateCommand(args: readonly string[], json: boolean): void {
 }
 
 function parseMigrateArgs(args: readonly string[]): {
+  readonly targetVersion: MigrateTargetVersion;
   readonly directory: string | undefined;
   readonly dryRun: boolean;
   readonly includeMigrations: boolean;
@@ -48,34 +55,41 @@ function parseMigrateArgs(args: readonly string[]): {
   }
 
   const [target, directory] = positional;
-  if (target === undefined || !SUPPORTED_TARGETS.has(target)) {
-    throw new Error(`Unsupported migration target ${JSON.stringify(target ?? "")}. Supported targets: 0.3`);
+  const targetVersion =
+    target !== undefined && Object.hasOwn(SUPPORTED_TARGETS, target) ? SUPPORTED_TARGETS[target] : undefined;
+  if (targetVersion === undefined) {
+    throw new Error(`Unsupported migration target ${JSON.stringify(target ?? "")}. Supported targets: 0.3, 0.4`);
   }
 
-  return { directory, dryRun, includeMigrations };
+  return { targetVersion, directory, dryRun, includeMigrations };
+}
+
+function targetLabel(version: MigrateTargetVersion): string {
+  return version.slice(0, 3);
 }
 
 function formatHumanSummary(result: MigrateToV03Result): string {
+  const label = targetLabel(result.targetVersion);
   if (result.filesChanged.length === 0 && result.skippedMigrations.length === 0 && result.followUps.length === 0) {
-    return "Dad migrate 0.3: already up to date (0 files changed).";
+    return `Dad migrate ${label}: already up to date (0 files changed).`;
   }
 
   const lines: string[] = [];
-  appendChangedFilesSection(lines, result);
+  appendChangedFilesSection(lines, result, label);
   appendSkippedMigrationsSection(lines, result.skippedMigrations);
   appendFollowUpsSection(lines, result.followUps);
   appendNextSteps(lines, result);
   return lines.join("\n");
 }
 
-function appendChangedFilesSection(lines: string[], result: MigrateToV03Result): void {
+function appendChangedFilesSection(lines: string[], result: MigrateToV03Result, label: string): void {
   if (result.filesChanged.length === 0) {
-    lines.push("Dad migrate 0.3: 0 files changed, but manual follow-up is required.");
+    lines.push(`Dad migrate ${label}: 0 files changed, but manual follow-up is required.`);
     return;
   }
   const verb = result.dryRun ? "Would update" : "Updated";
   lines.push(
-    `Dad migrate 0.3: ${verb} ${String(result.filesChanged.length)} file(s) (${String(result.packageManifestsUpdated)} package.json, ${String(result.importReplacements)} import specifier(s)).`,
+    `Dad migrate ${label}: ${verb} ${String(result.filesChanged.length)} file(s) (${String(result.packageManifestsUpdated)} package.json, ${String(result.importReplacements)} import specifier(s)).`,
   );
   if (result.addedPeers.length > 0) {
     lines.push(`Added newly-optional peer dependencies: ${result.addedPeers.join(", ")}`);

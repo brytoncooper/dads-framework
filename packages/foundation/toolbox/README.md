@@ -26,7 +26,7 @@ commands, and the path to its README. Run `npx dad doctor explain enmeshment`
 to see the explanation for that diagnostic.
 
 To create a project that already includes the Toolbox, run
-`npm create dads@0.3.0 my-app` with Node 24 and Docker Compose running.
+`npm create dads@0.4.0 my-app` with Node 24 and Docker Compose running.
 
 Dads is the framework; its packages live under `@dads-framework/*`, and `dad`
 is the executable this package exposes. `dad --help` (or `dad help`) prints the
@@ -50,7 +50,7 @@ Applies the same idempotent recipes as `create-dads`. `--existing` writes an
 isolated project under `<path>/dads` beside an existing application,
 `--dry-run` previews the owned files, and `--skip-install` leaves dependency
 installation to another tool. Use `npm start` in the generated app to start
-Docker, or use `npm create dads@0.3.0` to install and start a new app in
+Docker, or use `npm create dads@0.4.0` to install and start a new app in
 one step.
 
 Generated projects include Git hooks, a shared CI shell job, and optional GitHub
@@ -64,9 +64,9 @@ Links `.cursor/skills`, `.claude/skills`, and `.codex/skills` at
 `../.agents/skills` so every harness reads one skill library. Each harness is
 reported as `created` or `correct`.
 
-`dad migrate 0.3 [path] [--dry-run] [--include-migrations] [--json]`
+`dad migrate <0.3|0.4> [path] [--dry-run] [--include-migrations] [--json]`
 
-Rewrites a `0.1.x` or `0.2.x` workspace to the consolidated `0.3.0` package
+Rewrites a `0.1.x`, `0.2.x`, or `0.3.x` workspace to the consolidated `0.3.0` or `0.4.0` package
 surface: updates every `package.json` (deduplicating merged packages and adding
 any newly-optional peer providers the project already used), rewrites TypeScript,
 JavaScript, CSS, and `tsconfig*.json` specifiers to their new subpaths, and

@@ -61,6 +61,9 @@ pub(crate) fn record_pure_declaration(
 ) -> Option<()> {
     match decl {
         Declaration::FunctionDeclaration(func) => {
+            if func.body.is_none() {
+                return Some(());
+            }
             let id = func.id.as_ref()?;
             let sym = find_root_symbol(semantic, id.name.as_str(), id.span)?;
             out.push((func.span, DeclNode::Symbol(sym)));
@@ -154,12 +157,18 @@ pub(crate) fn find_root_symbol(
     name: &str,
     span: Span,
 ) -> Option<SymbolId> {
+    use oxc_span::GetSpan;
     let scoping = semantic.scoping();
     let root_scope = scoping.root_scope_id();
     scoping.symbol_ids().find(|sym| {
         scoping.symbol_scope_id(*sym) == root_scope
             && scoping.symbol_name(*sym) == name
-            && scoping.symbol_span(*sym) == span
+            && (scoping.symbol_span(*sym) == span
+                || scoping.symbol_declarations(*sym).any(|node_id| {
+                    let node_span = semantic.nodes().get_node(node_id).span();
+                    node_span == span
+                        || (node_span.start <= span.start && span.end <= node_span.end)
+                }))
     })
 }
 

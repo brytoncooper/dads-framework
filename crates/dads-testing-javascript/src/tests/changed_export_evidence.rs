@@ -333,3 +333,30 @@ fn keeps_a_non_exported_helper_body_hunk_conservative() {
     );
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
+
+#[test]
+fn attributes_overloaded_typescript_function_without_widening() {
+    let root = symbol_fixture("dads-testing-javascript-overloaded-fn");
+    write(
+        root.join("src/leaf.ts"),
+        "export function a(): number;\nexport function a(x: number): number;\nexport function a(x?: number): number {\n  return (x ?? 0) + 1;\n}\n\nexport function b() {\n  return 1;\n}\n",
+    )
+    .expect("fixture overloaded leaf must be written");
+    commit_fixture(&root);
+    write(
+        root.join("src/leaf.ts"),
+        "export function a(): number;\nexport function a(x: number): number;\nexport function a(x?: number): number {\n  return (x ?? 0) + 2;\n}\n\nexport function b() {\n  return 1;\n}\n",
+    )
+    .expect("fixture overloaded body change must be written");
+
+    let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
+    let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
+    assert!(reachable.paths.contains("src/a.ts"));
+    assert!(!reachable.paths.contains("src/b.ts"));
+    assert!(
+        reachable.uncertainties.is_empty(),
+        "overloaded TS functions must not widen: {:?}",
+        reachable.uncertainties
+    );
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}

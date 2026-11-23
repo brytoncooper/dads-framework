@@ -2,11 +2,10 @@ use crate::diff_hunks::{
     ByteRange, attributed_exports_for_changed_bytes, changed_content_byte_ranges, changed_hunks,
     is_comment_only_range,
 };
+use crate::erased_spans::comment_and_type_only_spans_from_source;
 use crate::facts::JsModuleFacts;
 use crate::intra_file_deps::expand_same_file_changed_exports;
-use crate::module_analysis::{
-    comment_and_type_only_spans_from_source, runtime_export_declarations_from_source,
-};
+use crate::module_analysis::runtime_export_declarations_from_source;
 use crate::workspace::git_output;
 use dads_testing_core::graph::ChangedModuleEvidence;
 use std::collections::BTreeSet;

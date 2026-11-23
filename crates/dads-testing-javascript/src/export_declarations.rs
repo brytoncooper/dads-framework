@@ -37,26 +37,42 @@ pub(crate) fn runtime_export_declarations(
             position: None,
         });
     }
+    use oxc_syntax::module_record::ExportExportName;
     for (export_name, export_span) in &module_record.exported_bindings {
         let entries = module_record
             .local_export_entries
             .iter()
-            .filter(|entry| entry.export_name.span() == Some(*export_span))
+            .filter(|entry| {
+                !entry.is_type
+                    && matches!(&entry.export_name, ExportExportName::Name(name) if name.name == *export_name)
+            })
             .collect::<Vec<_>>();
-        let [entry] = entries.as_slice() else {
-            // Re-exports, export-star, and duplicate syntax do not identify one local runtime
-            // declaration. Their existing uncertainty handling remains the conservative path.
+        let Some(first_entry) = entries.first() else {
+            // Re-exports, export-star, and type-only exports do not identify one local runtime
+            // declaration. Keep existing conservative handling.
+            let _ = export_span;
             continue;
         };
-        if entry.is_type {
-            continue;
-        }
-        let Some(local_name) = entry.local_name.name() else {
+        let Some(local_name) = first_entry.local_name.name() else {
             // This is normally an anonymous/default form, already recorded above as an explicit
             // uncertainty. Leave its hunk unattributed as well.
             continue;
         };
-        let symbol_ids = matching_local_export_symbols(semantic, local_name.as_str(), entry.span);
+        if !entries
+            .iter()
+            .all(|entry| entry.local_name.name() == Some(local_name))
+        {
+            continue;
+        }
+        let mut symbol_ids = entries
+            .iter()
+            .flat_map(|entry| {
+                matching_local_export_symbols(semantic, local_name.as_str(), entry.span)
+            })
+            .collect::<Vec<_>>();
+        symbol_ids.sort_unstable();
+        symbol_ids.dedup();
+        let entry = *first_entry;
         let [symbol_id] = symbol_ids.as_slice() else {
             uncertainties.push(JsUncertainty {
                 path: path.to_owned(),
@@ -117,7 +133,13 @@ fn matching_local_export_symbols(
             }
             let declaration_span = scoping.symbol_span(*symbol_id);
             let declaration_is_in_export =
-                span_is_contained_by(declaration_span, export_entry_span);
+                span_is_contained_by(declaration_span, export_entry_span)
+                    || scoping.symbol_declarations(*symbol_id).any(|node_id| {
+                        span_is_contained_by(
+                            semantic.nodes().get_node(node_id).span(),
+                            export_entry_span,
+                        )
+                    });
             let exported_reference_resolves_to_symbol = scoping
                 .get_resolved_references(*symbol_id)
                 .any(|reference| {
@@ -131,16 +153,56 @@ fn matching_local_export_symbols(
         .collect()
 }
 
+fn is_ts_function_overload_signature(
+    semantic: &Semantic<'_>,
+    node_id: oxc_syntax::node::NodeId,
+) -> bool {
+    let nodes = semantic.nodes();
+    match nodes.get_node(node_id).kind() {
+        AstKind::Function(function) => {
+            function.is_declaration() && !function.declare && function.body.is_none()
+        }
+        AstKind::BindingIdentifier(_) => matches!(
+            nodes.parent_kind(node_id),
+            AstKind::Function(function)
+                if function.is_declaration() && !function.declare && function.body.is_none()
+        ),
+        _ => false,
+    }
+}
+
 fn runtime_declaration_span(semantic: &Semantic<'_>, symbol_id: SymbolId) -> Option<JsSpan> {
     let scoping = semantic.scoping();
     let declarations = scoping.symbol_declarations(symbol_id).collect::<Vec<_>>();
-    let [declaration_node_id] = declarations.as_slice() else {
-        // TypeScript declaration merging has multiple owners. A body hunk cannot safely select
+    let has_overloads = declarations.len() > 1;
+    let runtime_declarations = declarations
+        .iter()
+        .copied()
+        .filter(|node_id| !is_ts_function_overload_signature(semantic, *node_id))
+        .collect::<Vec<_>>();
+    let [declaration_node_id] = runtime_declarations.as_slice() else {
+        // TypeScript declaration merging with multiple runtime owners cannot safely select
         // just one exported runtime identity, so preserve the conservative widening route.
         return None;
     };
-    let binding_span = scoping.symbol_span(symbol_id);
     let nodes = semantic.nodes();
+    let binding_span = if has_overloads {
+        // Pure TS function overload signatures may only merge with one runtime function body.
+        let is_runtime_fn = std::iter::once(*declaration_node_id)
+            .chain(nodes.ancestor_ids(*declaration_node_id))
+            .any(|node_id| {
+                matches!(
+                    nodes.get_node(node_id).kind(),
+                    AstKind::Function(f) if f.is_declaration() && !f.declare && f.body.is_some()
+                )
+            });
+        if !is_runtime_fn {
+            return None;
+        }
+        nodes.get_node(*declaration_node_id).span()
+    } else {
+        scoping.symbol_span(symbol_id)
+    };
     let declaration_spans = std::iter::once(*declaration_node_id)
         .chain(nodes.ancestor_ids(*declaration_node_id))
         .filter_map(|node_id| {

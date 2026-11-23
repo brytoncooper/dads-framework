@@ -7,6 +7,7 @@
 mod changed_module_evidence;
 mod commonjs;
 mod diff_hunks;
+mod erased_spans;
 mod export_declarations;
 mod facts;
 mod frontend;

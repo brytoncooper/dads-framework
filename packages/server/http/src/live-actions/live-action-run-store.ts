@@ -1,46 +1,12 @@
-import type { LiveActionDangerLevel, LiveActionOutcome } from "./live-action.js";
+import type {
+  FinishLiveActionRunInput,
+  ListRecentLiveActionRunsOptions,
+  LiveActionRunRecord,
+  LiveActionRunStore,
+} from "@dads-framework/core/contract";
 
-/** Persisted audit record for one live action execution. */
-export type LiveActionRunRecord = {
-  readonly id: string;
-  readonly actionName: string;
-  readonly dangerLevel: LiveActionDangerLevel;
-  readonly actorType: string;
-  readonly actorId: string;
-  readonly reason: string;
-  readonly redactedInput: unknown;
-  readonly outcome: LiveActionOutcome;
-  readonly summary: string | null;
-  readonly errorMessage: string | null;
-  readonly startedAt: Date;
-  readonly finishedAt: Date | null;
-};
-
-export type FinishLiveActionRunInput = {
-  readonly id: string;
-  readonly outcome: "succeeded" | "failed";
-  readonly summary: string | null;
-  readonly errorMessage: string | null;
-  readonly finishedAt: Date;
-};
-
-export type ListLiveActionRunsOptions = {
-  readonly actionName?: string;
-  readonly limit?: number;
-};
-
-/**
- * Persistence seam for live action run audit records.
- *
- * Structurally compatible with SQL-backed stores such as
- * `@dads-framework/postgres/live-actions`.
- */
-export type LiveActionRunStore = {
-  recordStart(run: LiveActionRunRecord): Promise<void>;
-  recordFinish(input: FinishLiveActionRunInput): Promise<void>;
-  getById(id: string): Promise<LiveActionRunRecord | undefined>;
-  listRecent(options?: ListLiveActionRunsOptions): Promise<readonly LiveActionRunRecord[]>;
-};
+export type { FinishLiveActionRunInput, LiveActionRunRecord, LiveActionRunStore };
+export type ListLiveActionRunsOptions = ListRecentLiveActionRunsOptions;
 
 type StoredEntry = {
   readonly sequence: number;

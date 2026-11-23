@@ -16,7 +16,7 @@ Use Node 24 with Docker running and the Compose plugin available. Run the
 creator from a parent directory:
 
 ```sh
-npm create dads@0.4.0 my-app
+npm create dads@0.5.0 my-app
 cd my-app
 ```
 
@@ -24,7 +24,7 @@ To start without the notes domain, staff impersonation, or example walkthroughs,
 pass `--template minimal`:
 
 ```sh
-npm create dads@0.4.0 my-app -- --template minimal
+npm create dads@0.5.0 my-app -- --template minimal
 cd my-app
 ```
 

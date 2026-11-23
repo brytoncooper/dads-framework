@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import { isPermissionToken, type PermissionToken } from "@dads-framework/access";
+import type { LiveActionDangerLevel, LiveActionRunOutcome } from "@dads-framework/core/contract";
 
 /** Valid action name format: lowercase dot/hyphen-separated segments (e.g. `cache.clear`, `billing.reconcile-invoices`). */
 export const LIVE_ACTION_NAME_PATTERN = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
@@ -8,9 +9,8 @@ export const LIVE_ACTION_NAME_PATTERN = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
 /** Minimum length of a live action description so operators always see clear intent. */
 export const LIVE_ACTION_MIN_DESCRIPTION_LENGTH = 10;
 
-export type LiveActionDangerLevel = "safe" | "cautious" | "destructive";
-
-export type LiveActionOutcome = "running" | "succeeded" | "failed";
+export type { LiveActionDangerLevel };
+export type LiveActionOutcome = LiveActionRunOutcome;
 
 export type LiveActionCaller = {
   readonly type: string;

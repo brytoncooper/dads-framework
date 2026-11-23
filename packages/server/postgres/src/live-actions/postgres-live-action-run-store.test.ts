@@ -39,7 +39,7 @@ const SAMPLE_FINISHED = new Date("2026-06-01T10:00:05.000Z");
 const SAMPLE_RUN: LiveActionRunRecord = {
   id: "01990000-0000-7000-8000-000000000010",
   actionName: "cache.invalidate",
-  dangerLevel: "mutating",
+  dangerLevel: "cautious",
   actorType: "operator",
   actorId: "op-42",
   reason: "Refresh stale invoice projection",

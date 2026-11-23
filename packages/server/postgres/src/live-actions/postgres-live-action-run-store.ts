@@ -10,6 +10,7 @@ import type {
 const DEFAULT_RECENT_LIMIT = 50;
 const MAX_RECENT_LIMIT = 500;
 
+const liveActionDangerLevelSchema = z.enum(["safe", "cautious", "destructive"]);
 const liveActionOutcomeSchema = z.enum(["running", "succeeded", "failed"]);
 
 const pgTimestampSchema = z.union([z.date(), z.string().min(1)]).transform((value, ctx) => {
@@ -24,7 +25,7 @@ const pgTimestampSchema = z.union([z.date(), z.string().min(1)]).transform((valu
 const liveActionRunRowSchema = z.object({
   id: z.string().min(1),
   action_name: z.string().min(1),
-  danger_level: z.string().min(1),
+  danger_level: liveActionDangerLevelSchema,
   actor_type: z.string().min(1),
   actor_id: z.string().min(1),
   reason: z.string(),
@@ -39,7 +40,7 @@ const liveActionRunRowSchema = z.object({
 const startRunInputSchema = z.strictObject({
   id: z.string().min(1),
   actionName: z.string().min(1),
-  dangerLevel: z.string().min(1),
+  dangerLevel: liveActionDangerLevelSchema,
   actorType: z.string().min(1),
   actorId: z.string().min(1),
   reason: z.string(),

@@ -285,7 +285,7 @@ async function runCheck(
   return report.ok ? 0 : 1;
 }
 
-async function runMigrate(
+async function runDbMigrate(
   cwd: string,
   parsed: Extract<ParsedDbArguments, { readonly command: "migrate" | "status" }>,
   adapter: DbPostgresAdapter,
@@ -311,7 +311,7 @@ async function runMigrate(
   return 0;
 }
 
-async function runStatus(
+async function runDbStatus(
   cwd: string,
   parsed: Extract<ParsedDbArguments, { readonly command: "migrate" | "status" }>,
   adapter: DbPostgresAdapter,
@@ -365,9 +365,9 @@ export async function runDbCommand(args: readonly string[], options: RunDbComman
       : runCheck(cwd, parsed, adapter, stdout);
   }
   if (parsed.command === "migrate") {
-    return runMigrate(cwd, parsed, adapter, stdout);
+    return runDbMigrate(cwd, parsed, adapter, stdout);
   }
-  return runStatus(cwd, parsed, adapter, stdout);
+  return runDbStatus(cwd, parsed, adapter, stdout);
 }
 
 /** CLI entrypoint invoked by `dad db ...`. */

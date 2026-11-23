@@ -11,6 +11,15 @@ export * from "./lib/enum-vocabulary.js";
 export * from "./lib/envelope.schema.js";
 export * from "./lib/extensible-enum.js";
 export * from "./lib/list-query.js";
+export type {
+  FinishLiveActionRunInput,
+  ListRecentLiveActionRunsOptions,
+  LiveActionDangerLevel,
+  LiveActionRedactedInput,
+  LiveActionRunOutcome,
+  LiveActionRunRecord,
+  LiveActionRunStore,
+} from "./lib/live-action-run.js";
 export * from "./lib/locale.js";
 export * from "./lib/mint-uuid-v7.js";
 export type {

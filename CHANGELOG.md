@@ -4,6 +4,23 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-23
+
+### Added
+
+- Added the Postgres-to-Drizzle schema generator (`@dads-framework/postgres/schema-generate`) with catalog introspection, deterministic SHA-256 table fingerprints, branded ID and JSONB `$type<...>()` metadata support, and `checkGeneratedTableFiles` drift verification.
+- Added `applicationMigrationWorkspace` to `@dads-framework/postgres/migrations` to discover root `migrations/`, per-domain `domains/*/server/migrations/`, and additional package migration sources under one DAG runner.
+- Added `dad db generate`, `dad db check`, `dad db migrate`, and `dad db status` subcommands to `@dads-framework/toolbox`, plus `dad migrate 0.5` support.
+- Added the opt-in `cross-domain-foreign-keys` Doctor signal (enabled via `"strictForeignKeys": true` in `dads.project.json`, keeping SQL foreign keys allowed by default) paired with `@dads-framework/core/references`.
+- Added branded resource ID type propagation to `resource({ id })`, `.child(...)`, and inline `children` in `@dads-framework/access` (100% backwards-compatible when `id` is omitted).
+- Added `buildGrantableCatalog` to `@dads-framework/access/catalog` to build deterministic, grouped, conflict-checked UI capability catalogs from compiled access models.
+- Added auth-checked Server-Sent Events channel fan-out (`@dads-framework/http/channels` and `FakeChannelFanOut` in `@dads-framework/http/testing`).
+- Added audited live operational actions (`@dads-framework/http/live-actions` and `@dads-framework/postgres/live-actions`) with danger levels, recursive input redaction, permission-gated routes, and Postgres run persistence.
+
+### Changed
+
+- Dogfooded branded IDs (`entityIdSchema`, `mintEntityId`, Drizzle `$type<NoteId>()`, and typed resource IDs) across `apps/kit-workbench`, `create-dads`, and `dad add domain`.
+
 ## [0.4.0] - 2026-11-23
 
 ### Added

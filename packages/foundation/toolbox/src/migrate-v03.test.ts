@@ -544,9 +544,49 @@ describe("migrateWorkspaceToV03", () => {
       .object({ dependencies: z.record(z.string(), z.string()) })
       .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
     expect(manifest.dependencies).toEqual({
-      "@dads-framework/core": "^0.5.0",
-      "@dads-framework/http": "0.5.0",
+      "@dads-framework/core": "^0.5.1",
+      "@dads-framework/http": "0.5.1",
     });
     expect(readFileSync(join(root, "src/app.ts"), "utf8")).toContain("@dads-framework/core/contract");
+  });
+
+  it("preserves moduleAliases and tsconfig path keys while still rewriting regular imports", () => {
+    const root = createFixture({
+      "package.json": JSON.stringify(
+        { name: "alias-preserve", dependencies: { "@dads-framework/http": "0.4.0" } },
+        null,
+        2,
+      ),
+      "assembly/migrations.ts": `import { paginationQuerySchema } from "@dads-framework/contract";
+export const workspace = {
+  moduleAliases: {
+    "@dads-framework/postgres-authorization": "./compat/postgres-authorization.ts",
+    "@dads-framework/authorization": "./compat/authorization.ts",
+  },
+};
+export { paginationQuerySchema };
+`,
+      "tsconfig.json": JSON.stringify(
+        {
+          compilerOptions: {
+            paths: {
+              "@dads-framework/postgres-authorization": ["./compat/postgres-authorization.ts"],
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    });
+
+    migrateCommand(["0.5", root], false);
+
+    const migrationsFile = readFileSync(join(root, "assembly/migrations.ts"), "utf8");
+    expect(migrationsFile).toContain('from "@dads-framework/core/contract"');
+    expect(migrationsFile).toContain('"@dads-framework/postgres-authorization": "./compat/postgres-authorization.ts"');
+    expect(migrationsFile).toContain('"@dads-framework/authorization": "./compat/authorization.ts"');
+
+    const tsconfigFile = readFileSync(join(root, "tsconfig.json"), "utf8");
+    expect(tsconfigFile).toContain('"@dads-framework/postgres-authorization":');
   });
 });

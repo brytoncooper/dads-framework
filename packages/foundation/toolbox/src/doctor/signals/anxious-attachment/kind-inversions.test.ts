@@ -166,3 +166,17 @@ it("checks a public optional binding under its own kind", async () => {
   expect([...readings.keys()]).toEqual(["flags -> contract", "flags/postgres -> postgres"]);
   expect(readings.get("flags/postgres -> postgres")?.value).toBe(0);
 });
+
+it("accepts the application kind declared by starter projects", async () => {
+  expect(
+    await edges([
+      ["starter-app", "application", ["domains-notes", "assembly"]],
+      ["domains-notes", "core"],
+      ["assembly", "binding", ["domains-notes"]],
+    ]),
+  ).toStrictEqual([
+    ["starter-app -> domains-notes", 0],
+    ["starter-app -> assembly", 0],
+    ["assembly -> domains-notes", 0],
+  ]);
+});

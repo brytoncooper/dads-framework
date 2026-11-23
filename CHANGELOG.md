@@ -4,6 +4,15 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-23
+
+### Fixed
+
+- Fixed Postgres catalog introspection in `@dads-framework/postgres/schema-generate` (`dad db generate` / `dad db check`) by casting `pg_catalog` `name` columns inside `ARRAY(...)` subqueries to `::text` so `pg` returns JavaScript string arrays instead of raw `name[]` literals, backed by a live PostgreSQL Testcontainers integration test.
+- Fixed `dad doctor` package source discovery (`package-graph`) to scan canonical application layouts (`domains/*`, `assembly`, `workflows`, `integrations`, `libraries/*`, and `kind: "application"`) that do not nest source files under `src/`, so route access and schema checks actually inspect application domain routes.
+- Fixed `dad doctor` `kind-inversions` to recognize the `"application"` package kind declared by `create-dads` starter manifests.
+- Fixed `dad migrate` to preserve object-literal property keys (such as `moduleAliases` and `tsconfig.json` `paths` entries) while continuing to rewrite import specifiers.
+
 ## [0.5.0] - 2026-11-23
 
 ### Added

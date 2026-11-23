@@ -35,7 +35,14 @@ const ALLOWED_TARGET_KINDS = new Map<string, readonly string[]>([
   ["edge", ["core", "edge"]],
   ["profile", ["core", "adapter", "binding", "edge"]],
   ["tooling", ["core", "tooling", "artifact"]],
-  ["composition", ["core", "adapter", "binding", "edge", "profile", "tooling", "composition", "artifact"]],
+  [
+    "composition",
+    ["core", "adapter", "binding", "edge", "profile", "tooling", "composition", "application", "artifact"],
+  ],
+  [
+    "application",
+    ["core", "adapter", "binding", "edge", "profile", "tooling", "composition", "application", "artifact"],
+  ],
   ["artifact", []],
 ]);
 

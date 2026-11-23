@@ -19,7 +19,7 @@ const MIGRATIONS_DIR_PATTERN = /(?:^|\/)migrations\/[^/]+\.[cm]?[jt]s$/u;
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]s$/u;
 const EXPIRATION_MIGRATION_PATTERN = /\brelationshipExpirationMigration\b|\bexpires_at\b/u;
 
-export type MigrateTargetVersion = "0.3.0" | "0.4.0" | "0.5.0";
+export type MigrateTargetVersion = "0.3.0" | "0.4.0" | "0.5.0" | "0.5.1";
 
 export type MigrateToV03Options = {
   readonly root: string;
@@ -192,12 +192,17 @@ function transformFile(
   if (!isSpecifierBearingFile(baseName)) return original;
 
   let count = 0;
-  const rewritten = original.replace(QUOTED_DADS_SPECIFIER, (full, quote: string, specifier: string) => {
-    const next = rewriteV03ImportSpecifier(specifier);
-    if (next === specifier) return full;
-    count += 1;
-    return `${quote}${next}${quote}`;
-  });
+  const rewritten = original.replace(
+    QUOTED_DADS_SPECIFIER,
+    (full: string, quote: string, specifier: string, offset: number, source: string) => {
+      // Preserve object-literal keys such as `moduleAliases` or `tsconfig` path aliases.
+      if (/^\s*:/u.test(source.slice(offset + full.length))) return full;
+      const next = rewriteV03ImportSpecifier(specifier);
+      if (next === specifier) return full;
+      count += 1;
+      return `${quote}${next}${quote}`;
+    },
+  );
   onImportReplacements(count);
   return rewritten;
 }

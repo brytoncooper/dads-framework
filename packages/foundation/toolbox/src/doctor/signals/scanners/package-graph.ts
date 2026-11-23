@@ -121,8 +121,19 @@ type JoinedFacts = {
   readonly manifest: PackageManifestFacts | undefined;
 };
 
+const APPLICATION_LAYOUT_ROOTS = ["domains", "assembly", "workflows", "integrations", "libraries"] as const;
+
+function usesApplicationLayout(root: string, kind: string | undefined): boolean {
+  if (kind === "application") return true;
+  return APPLICATION_LAYOUT_ROOTS.some((segment) => root === segment || root.startsWith(`${segment}/`));
+}
+
 function joinPackage(context: DoctorContext, name: string, root: string, facts: JoinedFacts): GraphPackage {
-  const sources = context.files().filter((path) => isPackageProductionSource(path, root));
+  const files = context.files();
+  const srcPrefix = root === "." ? "src/" : `${root}/src/`;
+  const hasSrcDir = files.some((path) => path.startsWith(srcPrefix));
+  const includeDirectRoot = !hasSrcDir && usesApplicationLayout(root, facts.kind);
+  const sources = files.filter((path) => isPackageProductionSource(path, root, hasSrcDir, includeDirectRoot));
   return {
     name,
     root,
@@ -138,15 +149,35 @@ function joinPackage(context: DoctorContext, name: string, root: string, facts: 
 // What a package ships
 // ---------------------------------------------------------------------------
 
-/** True for a module under `<root>/src` that is neither a test nor a declaration. */
-function isPackageProductionSource(path: string, root: string): boolean {
-  if (!path.startsWith(`${root}/src/`)) return false;
-  if (!MODULE_EXTENSIONS.some((extension) => path.endsWith(extension))) {
-    return false;
-  }
-  if (path.endsWith(".d.ts")) return false;
+/**
+ * True for a production module owned by a package. Library packages keep
+ * production code under `<root>/src/`; canonical application packages
+ * (`domains/*`, `assembly`, `workflows`, `integrations`, `libraries/*`, or
+ * `kind: "application"`) without a `src/` directory include non-test modules
+ * directly under `<root>/`.
+ */
+function sourcePrefixFor(root: string, hasSrcDir: boolean): string {
+  if (root === ".") return hasSrcDir ? "src/" : "";
+  return hasSrcDir ? `${root}/src/` : `${root}/`;
+}
+
+function isProductionModuleFile(path: string): boolean {
+  if (!MODULE_EXTENSIONS.some((extension) => path.endsWith(extension))) return false;
+  if (path.endsWith(".d.ts") || path.endsWith(".generated.ts")) return false;
   if (TEST_SUFFIXES.some((suffix) => path.endsWith(suffix))) return false;
   return !NOT_PRODUCTION.some((segment) => path.includes(segment));
+}
+
+function isPackageProductionSource(
+  path: string,
+  root: string,
+  hasSrcDir: boolean,
+  includeDirectRoot: boolean,
+): boolean {
+  if (!hasSrcDir && !includeDirectRoot) return false;
+  const prefix = sourcePrefixFor(root, hasSrcDir);
+  if (prefix.length > 0 && !path.startsWith(prefix)) return false;
+  return isProductionModuleFile(path);
 }
 
 /** Every file of a package, tests included, in the order the file list gave them. */

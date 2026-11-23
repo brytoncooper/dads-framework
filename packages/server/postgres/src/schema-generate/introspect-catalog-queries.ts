@@ -17,10 +17,10 @@ export const SELECT_USER_SCHEMAS_SQL = `
 
 export const SELECT_ENUMS_SQL = `
   SELECT
-    n.nspname AS schema_name,
-    t.typname AS enum_name,
+    n.nspname::text AS schema_name,
+    t.typname::text AS enum_name,
     ARRAY(
-      SELECT e.enumlabel
+      SELECT e.enumlabel::text
       FROM pg_catalog.pg_enum e
       WHERE e.enumtypid = t.oid
       ORDER BY e.enumsortorder
@@ -80,18 +80,18 @@ export const SELECT_CONSTRAINTS_SQL = `
     pg_get_constraintdef(con.oid, true) AS definition,
     COALESCE(
       ARRAY(
-        SELECT a.attname
+        SELECT a.attname::text
         FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
         JOIN pg_catalog.pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum
         ORDER BY k.ord
       ),
       ARRAY[]::text[]
     ) AS columns,
-    fn.nspname AS referenced_schema,
-    frel.relname AS referenced_table,
+    fn.nspname::text AS referenced_schema,
+    frel.relname::text AS referenced_table,
     COALESCE(
       ARRAY(
-        SELECT fa.attname
+        SELECT fa.attname::text
         FROM unnest(con.confkey) WITH ORDINALITY AS fk(attnum, ord)
         JOIN pg_catalog.pg_attribute fa ON fa.attrelid = con.confrelid AND fa.attnum = fk.attnum
         ORDER BY fk.ord
@@ -123,7 +123,7 @@ export const SELECT_INDEXES_SQL = `
     pg_get_indexdef(ix.indexrelid) AS definition,
     COALESCE(
       ARRAY(
-        SELECT CASE WHEN key_col.attnum > 0 THEN a.attname ELSE '' END
+        SELECT CASE WHEN key_col.attnum > 0 THEN a.attname::text ELSE '' END
         FROM unnest(ix.indkey::int2[]) WITH ORDINALITY AS key_col(attnum, ord)
         LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = key_col.attnum
         WHERE key_col.ord <= ix.indnkeyatts
@@ -133,7 +133,7 @@ export const SELECT_INDEXES_SQL = `
     ) AS key_columns,
     COALESCE(
       ARRAY(
-        SELECT pg_get_indexdef(ix.indexrelid, pos, true)
+        SELECT pg_get_indexdef(ix.indexrelid, pos, true)::text
         FROM generate_series(1, ix.indnkeyatts) AS pos
       ),
       ARRAY[]::text[]

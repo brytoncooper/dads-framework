@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/audit",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -25,12 +25,12 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/core": "0.5.0",
-    "@dads-framework/email": "0.5.0",
-    "@dads-framework/http": "0.5.0",
-    "@dads-framework/job-queue": "0.5.0",
-    "@dads-framework/postgres": "0.5.0",
-    "@dads-framework/spicedb-access": "0.5.0",
+    "@dads-framework/core": "0.5.1",
+    "@dads-framework/email": "0.5.1",
+    "@dads-framework/http": "0.5.1",
+    "@dads-framework/job-queue": "0.5.1",
+    "@dads-framework/postgres": "0.5.1",
+    "@dads-framework/spicedb-access": "0.5.1",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "drizzle-orm": "^0.45.2",

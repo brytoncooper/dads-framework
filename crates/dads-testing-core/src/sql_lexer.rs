@@ -69,7 +69,7 @@ pub(crate) fn extract_static_ts_sql_queries(source: &str) -> Option<Vec<String>>
 }
 
 fn match_query_call_start(source: &str, idx: usize) -> Option<usize> {
-    for pattern in [".query(", ".execute(", ".raw("] {
+    for pattern in [".query(", ".execute(", ".raw(", ".sql("] {
         if source[idx..].starts_with(pattern) {
             return Some(idx + pattern.len());
         }

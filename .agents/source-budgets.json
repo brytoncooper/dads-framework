@@ -2,70 +2,7 @@
   "schemaVersion": 1,
   "countedLines": "non-blank, non-comment",
   "exempt": ["**/*.generated.ts", "**/dist/**"],
-  "ceilings": {
-    "migrations-edited": {
-      "apps/kit-workbench/migrations/20261120080000_starter.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "apps/kit-workbench/migrations/20261120080100_email_delivery.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "apps/kit-workbench/migrations/20261120080300_enterprise_identity.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "apps/kit-workbench/migrations/20261120080400_staff_impersonation.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "fixtures/default-services/migrations/20261120000000_default_services.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/authorization/src/lib/access-changes/postgres/migrations/20260828163001_authorization_outbox.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/email-delivery/src/lib/database/migrations/20260911220133_outbound_emails.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/email-delivery/src/lib/database/migrations/20261018010000_queued_email_documents.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/identity-better-auth/src/lib/migrations/20261120070500_identity.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/identity-better-auth/src/lib/migrations/20261120070530_identity_jwks.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/identity-better-auth/src/lib/migrations/20261120070600_enterprise_sso.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/identity-better-auth/src/lib/migrations/20261120070700_staff_impersonation.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/tenants/src/migrations/20261120040000_tenants.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/tenants/src/migrations/20261120080000_tenant_scim.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      },
-      "packages/server/tenants/src/migrations/20261120080100_tenant_scim_groups.migration.ts": {
-        "mark": 1,
-        "reason": "0.3.0 package consolidation moved package folders and updated import specifiers with zero SQL changes (recorded 2026-11-22)"
-      }
-    }
-  },
+  "ceilings": {},
   "floors": {
     "docsConformancePackages": {
       "packages": {

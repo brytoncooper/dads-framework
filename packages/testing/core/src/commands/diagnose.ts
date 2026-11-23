@@ -4,6 +4,7 @@ import type { DadTestCommand } from "../dad-test-cli.js";
 import { diagnoseTesting } from "../testing-api.js";
 import type {
   TestingCouplingHotspot,
+  TestingDiagnoseRemediation,
   TestingDiagnoseResult,
   TestingFallbackTrap,
   TestingWideningCulprit,
@@ -14,7 +15,7 @@ const diagnoseOptions: readonly OptionSpecification[] = [{ name: "--manifest", k
 /**
  * `dad-test diagnose` inspects the workspace's dependency graph and manifest
  * without requiring a Git diff, reporting widening culprits, coupling hotspots,
- * and fallback traps.
+ * fallback traps, and safety-tiered remediation guidance.
  */
 export const diagnoseCommand: DadTestCommand = {
   options: diagnoseOptions,
@@ -34,11 +35,16 @@ export const diagnoseCommand: DadTestCommand = {
   },
 };
 
-/** Renders a human-readable Coupling & Precision X-Ray report. */
+/** Renders a human-readable Coupling & Precision X-Ray report with safe remediation guidance. */
 export function renderDiagnosis(diagnosis: TestingDiagnoseResult): string {
   const { summary } = diagnosis;
+  const skipSummary =
+    summary.estimatedLeafSkipPercent === summary.potentialLeafSkipPercent
+      ? `${String(summary.estimatedLeafSkipPercent)}% effective`
+      : `${String(summary.estimatedLeafSkipPercent)}% effective today -> ${String(summary.potentialLeafSkipPercent)}% potential after fixing widening culprits`;
   const lines: string[] = [
-    `diagnose: ${String(summary.totalModules)} modules, ${String(summary.totalProjects)} projects, ${String(summary.totalTasks)} tasks, ${String(summary.totalTestFiles)} test files, ${String(summary.totalUncertainties)} uncertainties (${String(summary.wholeWorkspaceUncertainties)} workspace-wide), est. leaf skip ${String(summary.estimatedLeafSkipPercent)}%`,
+    `diagnose: ${String(summary.totalModules)} modules, ${String(summary.totalProjects)} projects, ${String(summary.totalTasks)} tasks, ${String(summary.totalTestFiles)} test files, ${String(summary.totalUncertainties)} uncertainties (${String(summary.wholeWorkspaceUncertainties)} workspace-wide)`,
+    `  leaf skip: ${skipSummary}`,
     `  unowned tracked files: ${String(summary.unownedTrackedFiles)}, uncovered non-code files: ${String(summary.nonCodeUncoveredFiles)}`,
   ];
   appendSection(lines, "Widening culprits", diagnosis.wideningCulprits, formatCulprit);
@@ -47,7 +53,7 @@ export function renderDiagnosis(diagnosis: TestingDiagnoseResult): string {
   return `${lines.join("\n")}\n`;
 }
 
-function appendSection<T>(
+function appendSection<T extends { readonly remediation: TestingDiagnoseRemediation }>(
   lines: string[],
   heading: string,
   items: readonly T[],
@@ -61,6 +67,8 @@ function appendSection<T>(
   lines.push(`${heading} (${String(items.length)}):`);
   for (const item of items) {
     lines.push(`  ${formatItem(item)}`);
+    lines.push(`    fix [${item.remediation.safety}]: ${item.remediation.action}`);
+    lines.push(`    caution: ${item.remediation.caution}`);
   }
 }
 
@@ -70,7 +78,11 @@ function formatCulprit(culprit: TestingWideningCulprit): string {
 }
 
 function formatHotspot(hotspot: TestingCouplingHotspot): string {
-  return `${hotspot.path} -> reaches ${String(hotspot.reachedTestFiles)} test files (${String(hotspot.reachedTestPercent)}%) across ${String(hotspot.reachedProjects)} projects`;
+  const typeNote =
+    hotspot.typecheckReachedTestFiles > hotspot.reachedTestFiles
+      ? ` / ${String(hotspot.typecheckReachedTestFiles)} with types${hotspot.reachedTestFiles === 0 ? " (type-only)" : ""}`
+      : "";
+  return `${hotspot.path} -> reaches ${String(hotspot.reachedTestFiles)} runtime test files (${String(hotspot.reachedTestPercent)}%)${typeNote} across ${String(hotspot.reachedProjects)} projects`;
 }
 
 function formatTrap(trap: TestingFallbackTrap): string {

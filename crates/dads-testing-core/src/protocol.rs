@@ -271,6 +271,23 @@ pub struct DiagnoseResult {
     pub fallback_traps: Vec<FallbackTrap>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RemediationSafety {
+    Safe,
+    VerifyBeforeChanging,
+    KeepWidenedUnlessVerified,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnoseRemediation {
+    pub safety: RemediationSafety,
+    pub action: String,
+    pub caution: String,
+    pub verify: String,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiagnoseSummary {
@@ -283,6 +300,7 @@ pub struct DiagnoseSummary {
     pub unowned_tracked_files: usize,
     pub non_code_uncovered_files: usize,
     pub estimated_leaf_skip_percent: f64,
+    pub potential_leaf_skip_percent: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -301,6 +319,7 @@ pub struct WideningCulprit {
     pub widened_projects: usize,
     pub widened_tasks: usize,
     pub widened_test_files: usize,
+    pub remediation: DiagnoseRemediation,
 }
 
 #[derive(Debug, Serialize)]
@@ -313,6 +332,8 @@ pub struct CouplingHotspot {
     pub reached_projects: usize,
     pub reached_test_files: usize,
     pub reached_test_percent: f64,
+    pub typecheck_reached_test_files: usize,
+    pub remediation: DiagnoseRemediation,
 }
 
 #[derive(Debug, Serialize)]
@@ -324,6 +345,7 @@ pub struct FallbackTrap {
     pub sample_paths: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project: Option<String>,
+    pub remediation: DiagnoseRemediation,
 }
 
 fn is_false(value: &bool) -> bool {

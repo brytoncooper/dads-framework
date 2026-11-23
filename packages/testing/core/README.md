@@ -137,11 +137,16 @@ each reason code implies from the plan and the manifest instead.
 `dad-test diagnose` inspects the workspace's dependency graph and manifest
 without requiring a Git diff, taking `--manifest` and `--json`. It prints a
 read-only coupling and precision X-ray: summary totals (modules, projects,
-tasks, test files, uncertainties, and estimated leaf skip percentage), ranked
-widening culprits (`path:line:col [code] -> widens N tasks / M test files`),
-top module coupling hotspots (`path -> reaches M test files (P%) across K
+tasks, test files, uncertainties, and effective-today vs. potential leaf skip
+percentages), ranked widening culprits (`path:line:col [code] -> widens N tasks
+/ M test files`), top module coupling hotspots separating runtime test reach
+from `import type` reach (`path -> reaches M runtime test files (P%) across K
 projects`), and fallback traps (unowned tracked directories and uncovered
-non-code files inside reachability projects).
+non-code files inside reachability projects, excluding intentional root policy
+files). Each finding carries a safety-tiered `remediation` (`safe`,
+`verify-before-changing`, or `keep-widened-unless-verified`) with an action, a
+soundness guardrail caution, and a verification step so narrowing never hides
+real regressions.
 
 `dad-test init` refuses Nx workspaces and writes an unsuccessful coverage report
 instead of treating a few root scripts as the repository's entire task inventory.

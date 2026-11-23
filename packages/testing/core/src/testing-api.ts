@@ -132,6 +132,15 @@ export type TestingDiagnoseRequest = {
   readonly nativeBinary?: string;
 };
 
+export type TestingRemediationSafety = "safe" | "verify-before-changing" | "keep-widened-unless-verified";
+
+export type TestingDiagnoseRemediation = {
+  readonly safety: TestingRemediationSafety;
+  readonly action: string;
+  readonly caution: string;
+  readonly verify: string;
+};
+
 export type TestingDiagnoseSummary = {
   readonly totalModules: number;
   readonly totalProjects: number;
@@ -142,6 +151,7 @@ export type TestingDiagnoseSummary = {
   readonly unownedTrackedFiles: number;
   readonly nonCodeUncoveredFiles: number;
   readonly estimatedLeafSkipPercent: number;
+  readonly potentialLeafSkipPercent: number;
 };
 
 export type TestingWideningCulprit = {
@@ -155,6 +165,7 @@ export type TestingWideningCulprit = {
   readonly widenedProjects: number;
   readonly widenedTasks: number;
   readonly widenedTestFiles: number;
+  readonly remediation: TestingDiagnoseRemediation;
 };
 
 export type TestingCouplingHotspot = {
@@ -164,6 +175,8 @@ export type TestingCouplingHotspot = {
   readonly reachedProjects: number;
   readonly reachedTestFiles: number;
   readonly reachedTestPercent: number;
+  readonly typecheckReachedTestFiles: number;
+  readonly remediation: TestingDiagnoseRemediation;
 };
 
 export type TestingFallbackTrap = {
@@ -172,6 +185,7 @@ export type TestingFallbackTrap = {
   readonly fileCount: number;
   readonly samplePaths: readonly string[];
   readonly project?: string;
+  readonly remediation: TestingDiagnoseRemediation;
 };
 
 export type TestingDiagnoseResult = {

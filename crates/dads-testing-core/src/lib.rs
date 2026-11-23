@@ -4,6 +4,9 @@
 //! manifest that declares the workspace, the scope git resolves, the plan the evidence selects,
 //! and the scheduler that runs it.
 mod diagnose;
+mod diagnose_reachability;
+mod diagnose_remediation;
+mod diagnose_traps;
 mod execute;
 mod git;
 pub mod graph;
@@ -24,10 +27,10 @@ pub use execute::{
     graph_analysis_can_change_the_plan, manifest_project_roots,
 };
 pub use protocol::{
-    CouplingHotspot, DiagnoseResult, DiagnoseSummary, FallbackTrap, IssueScope, IssueSeverity,
-    NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts,
-    PlanIssue, PlanResult, ResolvedScope, RunCounts, RunResult, TaskCause, TaskDecision,
-    TaskOutput, TaskRunResult, WideningCulprit,
+    CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
+    IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
+    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, RemediationSafety, ResolvedScope,
+    RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult, WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 

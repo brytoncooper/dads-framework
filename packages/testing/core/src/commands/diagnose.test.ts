@@ -35,7 +35,8 @@ const sampleDiagnosis: TestingDiagnoseResult = {
     wholeWorkspaceUncertainties: 1,
     unownedTrackedFiles: 5,
     nonCodeUncoveredFiles: 3,
-    estimatedLeafSkipPercent: 84.5,
+    estimatedLeafSkipPercent: 12.5,
+    potentialLeafSkipPercent: 84.5,
   },
   wideningCulprits: [
     {
@@ -49,6 +50,12 @@ const sampleDiagnosis: TestingDiagnoseResult = {
       widenedProjects: 2,
       widenedTasks: 4,
       widenedTestFiles: 20,
+      remediation: {
+        safety: "safe",
+        action: "Replace dynamic import with a static map.",
+        caution: "Do not suppress this file if tests execute it.",
+        verify: "Re-run dad-test diagnose.",
+      },
     },
     {
       code: "workspace-tsconfig-error",
@@ -58,6 +65,12 @@ const sampleDiagnosis: TestingDiagnoseResult = {
       widenedProjects: 4,
       widenedTasks: 8,
       widenedTestFiles: 30,
+      remediation: {
+        safety: "keep-widened-unless-verified",
+        action: "Fix tsconfig syntax.",
+        caution: "Widening protects soundness.",
+        verify: "Re-run dad-test diagnose.",
+      },
     },
   ],
   couplingHotspots: [
@@ -68,6 +81,13 @@ const sampleDiagnosis: TestingDiagnoseResult = {
       reachedProjects: 3,
       reachedTestFiles: 18,
       reachedTestPercent: 60,
+      typecheckReachedTestFiles: 25,
+      remediation: {
+        safety: "safe",
+        action: "Split barrel by domain.",
+        caution: "Keep public exports until callers migrate.",
+        verify: "Re-run dad-test diagnose.",
+      },
     },
   ],
   fallbackTraps: [
@@ -76,6 +96,12 @@ const sampleDiagnosis: TestingDiagnoseResult = {
       prefix: "docs/",
       fileCount: 5,
       samplePaths: ["docs/guide.md", "docs/faq.md"],
+      remediation: {
+        safety: "safe",
+        action: "Declare a docs project with no tasks.",
+        caution: "Only if no test reads docs/.",
+        verify: "Check dad-test plan on a docs edit.",
+      },
     },
     {
       kind: "non-code-in-reachability-project",
@@ -83,6 +109,12 @@ const sampleDiagnosis: TestingDiagnoseResult = {
       fileCount: 1,
       samplePaths: ["packages/core/fixture.json"],
       project: "core",
+      remediation: {
+        safety: "keep-widened-unless-verified",
+        action: "Keep widened by default.",
+        caution: "NEVER blindly add .json to nonCodeSuffixes.",
+        verify: "Audit tests before excluding.",
+      },
     },
   ],
 };
@@ -127,17 +159,23 @@ describe("dad-test diagnose", () => {
     expect(harness.stderr()).toBe("");
     const output = harness.stdout();
     expect(output).toContain(
-      "diagnose: 120 modules, 4 projects, 8 tasks, 30 test files, 2 uncertainties (1 workspace-wide), est. leaf skip 84.5%",
+      "diagnose: 120 modules, 4 projects, 8 tasks, 30 test files, 2 uncertainties (1 workspace-wide)",
     );
+    expect(output).toContain("leaf skip: 12.5% effective today -> 84.5% potential after fixing widening culprits");
     expect(output).toContain(
       "packages/core/src/loader.ts:12:4 [nonliteral-dynamic-import] -> widens 4 tasks / 20 test files",
     );
+    expect(output).toContain("fix [safe]: Replace dynamic import with a static map.");
     expect(output).toContain("tsconfig.json [workspace-tsconfig-error] -> widens 8 tasks / 30 test files");
-    expect(output).toContain("packages/core/src/index.ts -> reaches 18 test files (60%) across 3 projects");
+    expect(output).toContain(
+      "packages/core/src/index.ts -> reaches 18 runtime test files (60%) / 25 with types across 3 projects",
+    );
     expect(output).toContain("[unowned-directory] docs/ (5 files, e.g. docs/guide.md)");
     expect(output).toContain(
       "[non-code-in-reachability-project] *.json in core (1 file, e.g. packages/core/fixture.json)",
     );
+    expect(output).toContain("fix [keep-widened-unless-verified]: Keep widened by default.");
+    expect(output).toContain("caution: NEVER blindly add .json to nonCodeSuffixes.");
   });
 
   it("renders empty sections cleanly", () => {
@@ -153,6 +191,7 @@ describe("dad-test diagnose", () => {
         unownedTrackedFiles: 0,
         nonCodeUncoveredFiles: 0,
         estimatedLeafSkipPercent: 0,
+        potentialLeafSkipPercent: 0,
       },
       wideningCulprits: [],
       couplingHotspots: [],

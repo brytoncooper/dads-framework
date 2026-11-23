@@ -5,7 +5,7 @@ use dads_testing_core::graph::{
 };
 use dads_testing_core::{
     DiagnoseResult, IssueScope, NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION,
-    execute_request_with_graph,
+    RemediationSafety, execute_request_with_graph,
 };
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -31,7 +31,7 @@ fn diagnoses_culprits_hotspots_and_fallback_traps_without_a_diff() -> Result<(),
     assert_summary(&diag);
     assert_culprits(&diag);
     assert_hotspots(&diag);
-    assert_traps(&diag);
+    assert_traps(&diag)?;
     Ok(())
 }
 
@@ -100,7 +100,74 @@ fn handles_large_graph_and_caps_rankings() -> Result<(), Box<dyn Error>> {
     assert_eq!(diag.coupling_hotspots.len(), 15);
     assert_eq!(diag.coupling_hotspots[0].path, "packages/core/src/hub.ts");
     assert_eq!(diag.coupling_hotspots[0].reached_test_files, 28);
-    assert!(diag.summary.estimated_leaf_skip_percent > 90.0);
+    assert!(diag.summary.potential_leaf_skip_percent > 90.0);
+    assert!(diag.summary.estimated_leaf_skip_percent < diag.summary.potential_leaf_skip_percent);
+    Ok(())
+}
+
+#[test]
+fn separates_runtime_from_type_only_hotspots_and_finds_deep_transitive_roots()
+-> Result<(), Box<dyn Error>> {
+    let ws = TempRepo::create("runtime-vs-types")?;
+    let mut nodes = vec![
+        module_node("packages/core/src/deep_root.ts", &[]),
+        module_node("packages/core/src/types_only.ts", &[]),
+        module_node(
+            "packages/core/src/barrel_a.ts",
+            &["packages/core/src/deep_root.ts"],
+        ),
+        module_node(
+            "packages/core/src/barrel_b.ts",
+            &["packages/core/src/deep_root.ts"],
+        ),
+    ];
+    for i in 0..80 {
+        let barrel = if i % 2 == 0 {
+            "packages/core/src/barrel_a.ts"
+        } else {
+            "packages/core/src/barrel_b.ts"
+        };
+        let test = format!("packages/app/src/case_{i:03}.test.ts");
+        let mut node = module_node(&test, &[barrel]);
+        node.imports
+            .push(type_only_import("packages/core/src/types_only.ts"));
+        nodes.push(node);
+    }
+    let graph = DependencyGraph::new(nodes, Vec::new());
+    let response = execute_request_with_graph(diagnose_request(&ws.0), Some(graph));
+    assert!(response.ok, "{response:?}");
+    let diag = response
+        .result
+        .and_then(|r| r.diagnose)
+        .ok_or("missing diagnose payload")?;
+
+    // Deep root has only 2 direct importers yet reaches all 80 runtime test files — never missed.
+    assert_eq!(
+        diag.coupling_hotspots[0].path,
+        "packages/core/src/deep_root.ts"
+    );
+    assert_eq!(diag.coupling_hotspots[0].reached_test_files, 80);
+    assert_eq!(diag.coupling_hotspots[0].typecheck_reached_test_files, 80);
+
+    // Pure type-only hub has 0 runtime test reach, 80 typecheck reach, and safe type-only advice.
+    let types_hotspot = diag
+        .coupling_hotspots
+        .iter()
+        .find(|h| h.path == "packages/core/src/types_only.ts")
+        .ok_or("missing type-only hotspot")?;
+    assert_eq!(types_hotspot.reached_test_files, 0);
+    assert_eq!(types_hotspot.typecheck_reached_test_files, 80);
+    assert!(
+        types_hotspot
+            .remediation
+            .action
+            .contains("Type-only coupling")
+    );
+    // With zero uncertainties, effective leaf skip equals potential leaf skip exactly.
+    assert_eq!(
+        diag.summary.estimated_leaf_skip_percent,
+        diag.summary.potential_leaf_skip_percent
+    );
     Ok(())
 }
 
@@ -112,10 +179,14 @@ fn assert_summary(diag: &DiagnoseResult) {
     assert_eq!(diag.summary.total_test_files, 4);
     assert_eq!(diag.summary.total_uncertainties, 3);
     assert_eq!(diag.summary.whole_workspace_uncertainties, 1);
-    assert_eq!(diag.summary.unowned_tracked_files, 4);
+    // dads.testing.json is an intentional root policy file and is excluded from fallback traps.
+    assert_eq!(diag.summary.unowned_tracked_files, 3);
     assert_eq!(diag.summary.non_code_uncovered_files, 2);
-    assert!(diag.summary.estimated_leaf_skip_percent > 40.0);
-    assert!(diag.summary.estimated_leaf_skip_percent < 90.0);
+    // Whole-workspace uncertainty widens all 3 reachability projects today (0% effective skip),
+    // while fixing the culprits unlocks >40% potential leaf skip.
+    assert_eq!(diag.summary.estimated_leaf_skip_percent, 0.0);
+    assert!(diag.summary.potential_leaf_skip_percent > 40.0);
+    assert!(diag.summary.potential_leaf_skip_percent < 90.0);
 }
 
 fn assert_culprits(diag: &DiagnoseResult) {
@@ -155,34 +226,52 @@ fn assert_hotspots(diag: &DiagnoseResult) {
     assert_eq!(top.reached_test_percent, 75.0);
 }
 
-fn assert_traps(diag: &DiagnoseResult) {
-    assert!(
-        diag.fallback_traps
-            .iter()
-            .any(|t| t.kind == "unowned-directory"
+fn assert_traps(diag: &DiagnoseResult) -> Result<(), Box<dyn Error>> {
+    let docs_trap = diag
+        .fallback_traps
+        .iter()
+        .find(|t| {
+            t.kind == "unowned-directory"
                 && t.prefix == "docs/"
                 && t.file_count == 2
-                && t.project.is_none())
+                && t.project.is_none()
+        })
+        .ok_or("missing docs/ trap")?;
+    assert_eq!(docs_trap.remediation.safety, RemediationSafety::Safe);
+
+    let mobile_trap = diag
+        .fallback_traps
+        .iter()
+        .find(|t| t.kind == "unowned-directory" && t.prefix == "apps/mobile/")
+        .ok_or("missing apps/mobile/ trap")?;
+    assert_eq!(
+        mobile_trap.remediation.safety,
+        RemediationSafety::VerifyBeforeChanging
     );
-    assert!(
-        diag.fallback_traps
-            .iter()
-            .any(|t| t.kind == "unowned-directory" && t.prefix == "apps/mobile/")
-    );
-    assert!(
-        diag.fallback_traps
-            .iter()
-            .any(|t| t.kind == "non-code-in-reachability-project"
+
+    let json_trap = diag
+        .fallback_traps
+        .iter()
+        .find(|t| {
+            t.kind == "non-code-in-reachability-project"
                 && t.prefix == "*.json in app"
                 && t.file_count == 2
-                && t.project.as_deref() == Some("app"))
+                && t.project.as_deref() == Some("app")
+        })
+        .ok_or("missing *.json in app trap")?;
+    assert_eq!(
+        json_trap.remediation.safety,
+        RemediationSafety::KeepWidenedUnlessVerified
     );
+    assert!(json_trap.remediation.caution.contains("NEVER"));
+
     assert!(
         !diag
             .fallback_traps
             .iter()
-            .any(|t| t.prefix.contains("*.md") || t.prefix.contains("*.sql"))
+            .any(|t| t.prefix == "./" || t.prefix.contains("*.md") || t.prefix.contains("*.sql"))
     );
+    Ok(())
 }
 
 fn build_sample_graph() -> DependencyGraph {
@@ -266,6 +355,23 @@ fn module_node(path: &str, imports: &[&str]) -> ModuleNode {
                 member_reads: None,
             })
             .collect(),
+    }
+}
+
+fn type_only_import(target: &str) -> ImportFact {
+    ImportFact {
+        specifier: target.to_owned(),
+        span: SourceSpan { start: 0, end: 1 },
+        kind: ImportKind::Static,
+        type_only: true,
+        requested_symbols: BTreeSet::new(),
+        namespace_import: false,
+        reexport_all: false,
+        reexport_namespace: None,
+        resolved_path: Some(target.to_owned()),
+        position: None,
+        export_deps: None,
+        member_reads: None,
     }
 }
 

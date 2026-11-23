@@ -59,7 +59,8 @@ export type TestingTaskCause =
       readonly symbols: readonly string[];
     }
   | { readonly kind: "issue"; readonly index: number }
-  | { readonly kind: "fallback-dependency"; readonly project: string };
+  | { readonly kind: "fallback-dependency"; readonly project: string }
+  | { readonly kind: "sql-object"; readonly object: string };
 
 /**
  * One planning issue. Every classifying field is optional: an engine older than

@@ -18,7 +18,11 @@ export {
   type TestingManifest,
   type TestingManifestFileNarrowing,
   type TestingManifestProject,
+  type TestingManifestSqlEdge,
+  type TestingManifestSqlSnapshotPattern,
   type TestingManifestTask,
+  type TestingManifestTaskSqlImpact,
+  type TestingManifestWorkspaceSql,
 } from "./testing-manifest.js";
 export { owningProjectForPath, pathIsInside } from "./path-ownership.js";
 export { formatIssueLocation, issueScope, issueSeverity } from "./plan-issues.js";

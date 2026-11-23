@@ -1,6 +1,23 @@
 import { readFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { isRecord, isUnknownArray } from "./parse-guards.js";
+import {
+  readTaskSqlImpact,
+  readWorkspaceSql,
+  serializeTaskSqlImpact,
+  serializeWorkspaceSql,
+  type TestingManifestSqlEdge,
+  type TestingManifestSqlSnapshotPattern,
+  type TestingManifestTaskSqlImpact,
+  type TestingManifestWorkspaceSql,
+} from "./testing-manifest-sql.js";
+
+export type {
+  TestingManifestSqlEdge,
+  TestingManifestSqlSnapshotPattern,
+  TestingManifestTaskSqlImpact,
+  TestingManifestWorkspaceSql,
+};
 
 /**
  * A TypeScript reader and writer for `dads.testing.json`. The native engine owns
@@ -15,6 +32,7 @@ export type TestingManifest = {
   readonly workspace: {
     readonly root?: string;
     readonly fullFallback: { readonly taskIds: readonly string[] };
+    readonly sql?: TestingManifestWorkspaceSql;
   };
   readonly projects: readonly TestingManifestProject[];
   readonly tasks: readonly TestingManifestTask[];
@@ -49,6 +67,7 @@ export type TestingManifestTask = {
     readonly mode: TestingManifestImpactMode;
     readonly paths: readonly string[];
   };
+  readonly sqlImpact?: TestingManifestTaskSqlImpact;
 };
 
 export type TestingManifestTaskKind = "test" | "typecheck" | "lint" | "build" | "custom";
@@ -121,6 +140,7 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
     workspace: {
       ...(manifest.workspace.root === undefined ? {} : { root: manifest.workspace.root }),
       fullFallback: { taskIds: [...manifest.workspace.fullFallback.taskIds] },
+      ...(manifest.workspace.sql === undefined ? {} : { sql: serializeWorkspaceSql(manifest.workspace.sql) }),
     },
     projects: manifest.projects.map((project) => ({
       id: project.id,
@@ -145,6 +165,7 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       },
       dependsOn: [...task.dependsOn],
       impact: { mode: task.impact.mode, paths: [...task.impact.paths] },
+      ...(task.sqlImpact === undefined ? {} : { sqlImpact: serializeTaskSqlImpact(task.sqlImpact) }),
     })),
   };
   return `${JSON.stringify(document, null, 2)}\n`;
@@ -152,15 +173,17 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
 
 function readWorkspace(value: unknown, subject: string): TestingManifest["workspace"] {
   const workspace = readRecord(value, "workspace", subject);
-  rejectUnknownKeys(workspace, ["root", "fullFallback"], "workspace", subject);
+  rejectUnknownKeys(workspace, ["root", "fullFallback", "sql"], "workspace", subject);
   const fullFallback = readRecord(workspace["fullFallback"], "workspace.fullFallback", subject);
   rejectUnknownKeys(fullFallback, ["taskIds"], "workspace.fullFallback", subject);
   const root = workspace["root"];
+  const sql = workspace["sql"];
   return {
     ...(root === undefined ? {} : { root: readString(root, "workspace.root", subject) }),
     fullFallback: {
       taskIds: readStringArray(fullFallback["taskIds"], "workspace.fullFallback.taskIds", subject),
     },
+    ...(sql === undefined ? {} : { sql: readWorkspaceSql(sql, "workspace.sql", subject) }),
   };
 }
 
@@ -180,7 +203,8 @@ function readProject(value: unknown, where: string, subject: string): TestingMan
 
 function readTask(value: unknown, where: string, subject: string): TestingManifestTask {
   const task = readRecord(value, where, subject);
-  rejectUnknownKeys(task, ["id", "project", "kind", "execution", "dependsOn", "impact"], where, subject);
+  rejectUnknownKeys(task, ["id", "project", "kind", "execution", "dependsOn", "impact", "sqlImpact"], where, subject);
+  const sqlImpact = task["sqlImpact"];
   return {
     id: readString(task["id"], `${where}.id`, subject),
     project: readString(task["project"], `${where}.project`, subject),
@@ -188,6 +212,7 @@ function readTask(value: unknown, where: string, subject: string): TestingManife
     execution: readExecution(task["execution"], `${where}.execution`, subject),
     dependsOn: readOptionalStringArray(task["dependsOn"], `${where}.dependsOn`, subject),
     impact: readImpact(task["impact"], `${where}.impact`, subject),
+    ...(sqlImpact === undefined ? {} : { sqlImpact: readTaskSqlImpact(sqlImpact, `${where}.sqlImpact`, subject) }),
   };
 }
 

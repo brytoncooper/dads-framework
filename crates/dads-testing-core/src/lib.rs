@@ -12,6 +12,10 @@ mod protocol;
 pub mod receipts;
 mod scheduler;
 mod scope;
+mod sql_impact;
+mod sql_lexer;
+mod sql_manifest;
+mod sql_parser;
 mod task_causes;
 
 pub use execute::{

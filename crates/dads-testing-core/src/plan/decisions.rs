@@ -27,6 +27,7 @@ pub(super) fn explain_decisions<'a>(
         fallback_origins: &selection.fallback_origins,
         uncertainty_origins: &selection.uncertainty_origins,
         reached_edges: &evidence.reached_edges,
+        sql_selected_tasks: &evidence.sql_selected_tasks,
     };
     let mut decisions = Vec::new();
     for id in task_order(&manifest.tasks)? {
@@ -101,6 +102,12 @@ fn decision_reason(
     if run && task.impact.mode == ImpactMode::Reachability && evidence.is_widened_for_task(task) {
         return ("graph-uncertainty-project-fallback", "conservative", true);
     }
+    if run
+        && let Some(sql_sel) = evidence.sql_selected_tasks.get(id)
+        && !evidence.is_reachability_impacted_for_task(task)
+    {
+        return (sql_sel.reason, sql_sel.confidence, sql_sel.widened);
+    }
     if manifest.tasks.iter().any(|candidate| {
         candidate
             .depends_on
@@ -111,6 +118,7 @@ fn decision_reason(
         .fallback_impacted_projects
         .contains(task.project.as_str())
         && !evidence.is_reachability_impacted_for_task(task)
+        && !evidence.sql_selected_tasks.contains_key(id)
     {
         return ("selected-prerequisite", "dependency", false);
     }

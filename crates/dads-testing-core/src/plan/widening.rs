@@ -64,10 +64,24 @@ pub(super) fn widen_through_graph<'a>(
         return;
     }
     let Some(graph) = graph else {
-        record_missing_frontend(evidence);
+        let non_sql_changed = scope
+            .changed_paths
+            .iter()
+            .any(|path| !evidence.sql_handled_paths.contains(path));
+        if non_sql_changed {
+            record_missing_frontend(evidence);
+        }
         return;
     };
-    let changed_paths = scope.changed_paths.clone();
+    let changed_paths: Vec<String> = scope
+        .changed_paths
+        .iter()
+        .filter(|path| !evidence.sql_handled_paths.contains(*path) || graph.contains_path(path))
+        .cloned()
+        .collect();
+    if changed_paths.is_empty() {
+        return;
+    }
     let uncovered_paths = changed_paths
         .iter()
         .filter(|path| !graph.contains_path(path))

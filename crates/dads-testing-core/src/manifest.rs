@@ -1,6 +1,9 @@
 //! The `dads.testing.json` declaration: what a workspace says it owns, and every rule the
 //! declaration must satisfy before a plan is allowed to read it.
 use crate::execute::{TestingError, message};
+use crate::sql_manifest::{
+    TaskSqlImpact, WorkspaceSqlSettings, validate_task_sql_impact, validate_workspace_sql,
+};
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -37,6 +40,8 @@ pub(crate) struct WorkspaceSettings {
     #[serde(default)]
     pub(crate) root: Option<String>,
     pub(crate) full_fallback: FullFallback,
+    #[serde(default)]
+    pub(crate) sql: Option<WorkspaceSqlSettings>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,6 +69,8 @@ pub(crate) struct DeclaredTask {
     #[serde(default)]
     pub(crate) depends_on: Vec<String>,
     pub(crate) impact: TaskImpact,
+    #[serde(default)]
+    pub(crate) sql_impact: Option<TaskSqlImpact>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -143,6 +150,9 @@ pub(crate) fn validate_manifest(
     if let Some(root) = &manifest.workspace.root {
         validate_relative_path(root, "workspace.root")?;
     }
+    if let Some(sql) = &manifest.workspace.sql {
+        validate_workspace_sql(sql)?;
+    }
     let mut project_ids: BTreeSet<String> = BTreeSet::new();
     for project in &manifest.projects {
         require_identifier(&project.id, "project id")?;
@@ -193,6 +203,9 @@ pub(crate) fn validate_manifest(
         validate_task_env(&task.id, &task.execution.env)?;
         if let Some(narrowing) = &task.execution.file_narrowing {
             validate_file_narrowing(&task.id, narrowing)?;
+        }
+        if let Some(sql_impact) = &task.sql_impact {
+            validate_task_sql_impact(&task.id, sql_impact)?;
         }
         for path in &task.impact.paths {
             validate_relative_path(path, "impact.paths")?;

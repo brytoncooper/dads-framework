@@ -149,6 +149,9 @@ pub enum TaskCause {
     FallbackDependency {
         project: String,
     },
+    SqlObject {
+        object: String,
+    },
 }
 
 #[derive(Debug, Serialize)]

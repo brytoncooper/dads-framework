@@ -8,8 +8,10 @@ use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
 use crate::scope::path_is_inside;
+use crate::sql_impact::{SqlTaskSelection, analyze_sql_impact};
 use decisions::explain_decisions;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::path::Path;
 use widening::{own_changed_paths, widen_through_graph};
 
 /// What the changed paths and the graph proved, accumulated as the plan is built. The issue list
@@ -27,6 +29,8 @@ struct PlanEvidence<'a> {
     issue_indexes_by_project: BTreeMap<&'a str, Vec<usize>>,
     full_fallback_issue_indexes: Vec<usize>,
     reached_edges: Vec<ReachedEdge>,
+    sql_handled_paths: BTreeSet<String>,
+    sql_selected_tasks: BTreeMap<String, SqlTaskSelection>,
     issues: Vec<PlanIssue>,
     full_fallback: bool,
 }
@@ -46,6 +50,8 @@ impl<'a> PlanEvidence<'a> {
             issue_indexes_by_project: BTreeMap::new(),
             full_fallback_issue_indexes: Vec::new(),
             reached_edges: Vec::new(),
+            sql_handled_paths: BTreeSet::new(),
+            sql_selected_tasks: BTreeMap::new(),
             issues: Vec::new(),
             full_fallback: scope.full_fallback,
         }
@@ -96,7 +102,11 @@ impl<'a> PlanEvidence<'a> {
         task: &DeclaredTask,
         scope: &ResolvedScope,
     ) -> Option<Vec<String>> {
-        if self.full_fallback || scope.full_fallback || self.is_widened_for_task(task) {
+        if self.full_fallback
+            || scope.full_fallback
+            || self.is_widened_for_task(task)
+            || self.sql_selected_tasks.contains_key(&task.id)
+        {
             return None;
         }
         let narrowing = task.execution.file_narrowing.as_ref()?;
@@ -112,6 +122,9 @@ impl<'a> PlanEvidence<'a> {
     }
 
     fn should_run(&self, task: &DeclaredTask, scope: &ResolvedScope) -> bool {
+        if self.sql_selected_tasks.contains_key(&task.id) {
+            return true;
+        }
         match &task.impact.mode {
             ImpactMode::Always => true,
             ImpactMode::Reachability => {
@@ -163,6 +176,7 @@ struct Selection<'a> {
 
 pub(crate) fn build_plan(
     manifest: &TestingManifest,
+    workspace_root: &Path,
     scope: &ResolvedScope,
     requested_task_ids: &[String],
     jobs: Option<u32>,
@@ -179,6 +193,7 @@ pub(crate) fn build_plan(
     }
     let mut evidence = PlanEvidence::new(scope);
     own_changed_paths(manifest, scope, &mut evidence);
+    attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
     widen_through_graph(manifest, scope, graph, &mut evidence);
     let selection = select_tasks(manifest, scope, &task_by_id, direct_tasks, &mut evidence)?;
     let decisions = explain_decisions(manifest, scope, graph, &task_by_id, &evidence, &selection)?;
@@ -200,6 +215,27 @@ pub(crate) fn build_plan(
             skip_proven_unaffected: manifest.tasks.len() - run,
         },
     })
+}
+
+fn attach_sql_impact(
+    manifest: &TestingManifest,
+    workspace_root: &Path,
+    scope: &ResolvedScope,
+    evidence: &mut PlanEvidence<'_>,
+) {
+    if evidence.full_fallback {
+        return;
+    }
+    let report = analyze_sql_impact(manifest, scope, workspace_root);
+    let offset = evidence.issues.len();
+    evidence.issues.extend(report.issues);
+    evidence.sql_handled_paths = report.handled_paths;
+    for (task_id, mut selection) in report.selected_tasks {
+        for idx in &mut selection.issue_indexes {
+            *idx += offset;
+        }
+        evidence.sql_selected_tasks.insert(task_id, selection);
+    }
 }
 
 /// The tasks the caller named. An unknown id is a request error, not a widening.

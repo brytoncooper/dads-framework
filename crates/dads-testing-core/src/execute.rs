@@ -105,7 +105,14 @@ fn execute(
     let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
     let scope = resolve_scope(&request, &workspace_root)?;
-    let plan = build_plan(&manifest, &scope, &request.task_ids, request.jobs, graph)?;
+    let plan = build_plan(
+        &manifest,
+        &workspace_root,
+        &scope,
+        &request.task_ids,
+        request.jobs,
+        graph,
+    )?;
     match request.operation {
         Operation::Plan => Ok(OperationResult {
             operation: "plan".into(),

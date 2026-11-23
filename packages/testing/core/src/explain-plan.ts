@@ -42,7 +42,8 @@ export type ExplanationCause =
       readonly symbols: readonly string[];
     }
   | { readonly kind: "issue"; readonly issue: ExplainedIssue }
-  | { readonly kind: "fallback-dependency"; readonly project: string };
+  | { readonly kind: "fallback-dependency"; readonly project: string }
+  | { readonly kind: "sql-object"; readonly object: string };
 
 export type ExplainedTask = {
   readonly id: string;
@@ -150,32 +151,20 @@ function explainWithEngineCauses(task: TestingTaskDecision, issues: readonly Tes
 }
 
 function explainCause(cause: TestingTaskCause, issues: readonly TestingPlanIssue[]): ExplanationCause {
-  switch (cause.kind) {
-    case "direct-task-input":
-      return { kind: "direct-task-input", taskId: cause.taskId };
-    case "prerequisite-of":
-      return { kind: "prerequisite-of", taskId: cause.taskId };
-    case "changed-path":
-      return { kind: "changed-path", path: cause.path };
-    case "changed-export":
-      return { kind: "changed-export", path: cause.path, symbol: cause.symbol };
-    case "reached-import": {
-      // The location is carried only when it says more than the path already does.
-      const location =
-        cause.line === undefined ? undefined : formatSourceLocation(cause.path, cause.line, cause.column);
-      return {
-        kind: "reached-import",
-        path: cause.path,
-        ...(location === undefined ? {} : { location }),
-        importedFrom: cause.importedFrom,
-        symbols: cause.symbols,
-      };
-    }
-    case "issue":
-      return { kind: "issue", issue: explainIssueAt(issues, cause.index) };
-    case "fallback-dependency":
-      return { kind: "fallback-dependency", project: cause.project };
+  if (cause.kind === "reached-import") {
+    const location = cause.line === undefined ? undefined : formatSourceLocation(cause.path, cause.line, cause.column);
+    return {
+      kind: "reached-import",
+      path: cause.path,
+      ...(location === undefined ? {} : { location }),
+      importedFrom: cause.importedFrom,
+      symbols: cause.symbols,
+    };
   }
+  if (cause.kind === "issue") {
+    return { kind: "issue", issue: explainIssueAt(issues, cause.index) };
+  }
+  return cause;
 }
 
 function engineFullFallbackCauses(plan: TestingPlanResult): readonly ExplainedIssue[] {
@@ -379,15 +368,19 @@ function renderTaskHeadline(task: ExplainedTask): string {
 }
 
 function renderCause(cause: ExplanationCause): string {
+  if (cause.kind === "changed-path") return `changed ${cause.path}`;
+  if (cause.kind === "changed-export") return `export ${cause.symbol} ${cause.path}`;
+  if (cause.kind === "reached-import") {
+    const symbols = cause.symbols.length === 0 ? "" : ` ${cause.symbols.join(",")}`;
+    return `import ${cause.location ?? cause.path} from ${cause.importedFrom}${symbols}`;
+  }
+  return renderSecondaryCause(cause);
+}
+
+function renderSecondaryCause(
+  cause: Exclude<ExplanationCause, { kind: "changed-path" | "changed-export" | "reached-import" }>,
+): string {
   switch (cause.kind) {
-    case "changed-path":
-      return `changed ${cause.path}`;
-    case "changed-export":
-      return `export ${cause.symbol} ${cause.path}`;
-    case "reached-import": {
-      const symbols = cause.symbols.length === 0 ? "" : ` ${cause.symbols.join(",")}`;
-      return `import ${cause.location ?? cause.path} from ${cause.importedFrom}${symbols}`;
-    }
     case "prerequisite-of":
       return `prerequisite-of ${cause.taskId}`;
     case "direct-task-input":
@@ -396,6 +389,8 @@ function renderCause(cause: ExplanationCause): string {
       return `issue ${renderIssue(cause.issue)}`;
     case "fallback-dependency":
       return `fallback-dependency ${cause.project}`;
+    case "sql-object":
+      return `sql-object ${cause.object}`;
   }
 }
 

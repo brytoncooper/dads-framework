@@ -183,11 +183,15 @@ All fields are strict. Paths must stay within the workspace. Project and task
 ids are unique, all references must resolve, task cycles are rejected, and
 `workspace.fullFallback.taskIds` must list every task exactly once. Ordinary tasks are an executable plus arguments (with optional `env` key-value
 pairs passed to the process and hashed into receipts); an explicit `shell: true`
-runs `executable` and `args` through the platform shell for shell recipes. A
-`reachability` test task may also declare `execution.fileNarrowing`
+runs `executable` and `args` through the platform shell for shell recipes. A `reachability` test task may also declare `execution.fileNarrowing`
 (`suffixes`, optional `excludeSuffixes`, and optional `setupFiles`) so that an
 un-widened run appends only the reached test files to `execution.args` and
-skips the task when zero matching test files are reached.
+skips the task when zero matching test files are reached. Workspaces with SQL
+migrations may declare `workspace.sql` (`migrationRoots`, `objects`, `edges`,
+and optional `snapshotPatterns`) alongside per-task `sqlImpact`
+(`isMigrationRunner`, `tables`, or `hasUnmappedSql`) so table-scoped DDL runs
+migration runners plus only affected database domains via bidirectional FK
+closure while global/unrecognized DDL widens safely to all database tasks.
 
 ## How selection works
 

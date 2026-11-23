@@ -2,6 +2,7 @@ use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::manifest::{DeclaredTask, TestingManifest};
 use crate::protocol::TaskCause;
 use crate::scope::{deepest_project_for_path, path_is_inside};
+use crate::sql_impact::SqlTaskSelection;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The located evidence a decision can cite. Each reason names the subset that explains it.
@@ -16,6 +17,7 @@ pub(super) struct CauseEvidence<'a> {
     pub(super) fallback_origins: &'a BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) uncertainty_origins: &'a BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) reached_edges: &'a [ReachedEdge],
+    pub(super) sql_selected_tasks: &'a BTreeMap<String, SqlTaskSelection>,
 }
 
 impl CauseEvidence<'_> {
@@ -58,6 +60,10 @@ impl CauseEvidence<'_> {
             "graph-changed-export" => self.changed_export_causes(task.project.as_str()),
             "graph-symbol-importer" => self.reached_import_causes(task.project.as_str()),
             "changed-owned-project" => self.changed_project_causes(task),
+            "sql-table-impact"
+            | "sql-migration-runner"
+            | "sql-global-ddl-fallback"
+            | "sql-unmapped-project" => self.sql_causes(task),
             _ => Vec::new(),
         }
     }
@@ -163,5 +169,21 @@ impl CauseEvidence<'_> {
             .flatten()
             .map(|path| TaskCause::ChangedPath { path: path.clone() })
             .collect()
+    }
+
+    fn sql_causes(&self, task: &DeclaredTask) -> Vec<TaskCause> {
+        let Some(selection) = self.sql_selected_tasks.get(&task.id) else {
+            return Vec::new();
+        };
+        let mut causes = Vec::new();
+        for object in &selection.matched_tables {
+            causes.push(TaskCause::SqlObject {
+                object: object.clone(),
+            });
+        }
+        for index in &selection.issue_indexes {
+            causes.push(TaskCause::Issue { index: *index });
+        }
+        causes
     }
 }

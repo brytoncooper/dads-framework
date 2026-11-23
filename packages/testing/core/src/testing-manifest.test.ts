@@ -184,6 +184,48 @@ describe("testing manifest", () => {
       /invalid key/,
     );
   });
+
+  it("round-trips workspace.sql and task.sqlImpact cleanly", () => {
+    const text = JSON.stringify({
+      schemaVersion: 1,
+      workspace: {
+        fullFallback: { taskIds: ["db:migrate", "maint:integration"] },
+        sql: {
+          migrationRoots: ["migrations/sql"],
+          objects: ["public.maintenance_records", "public.users"],
+          edges: [{ from: "public.maintenance_records", to: "public.users" }],
+          snapshotPatterns: [{ prefix: "migrations/grants/", suffix: ".txt" }],
+        },
+      },
+      projects: [
+        { id: "db", root: "migrations" },
+        { id: "maint", root: "domains/maint", fallbackDependencies: ["db"] },
+      ],
+      tasks: [
+        {
+          id: "db:migrate",
+          project: "db",
+          kind: "test",
+          execution: { executable: "true" },
+          impact: { mode: "reachability" },
+          sqlImpact: { isMigrationRunner: true },
+        },
+        {
+          id: "maint:integration",
+          project: "maint",
+          kind: "test",
+          execution: { executable: "true" },
+          impact: { mode: "reachability" },
+          sqlImpact: { tables: ["public.maintenance_records"] },
+        },
+      ],
+    });
+    const manifest = parseTestingManifest(text, "dads.testing.json");
+    expect(manifest.workspace.sql?.migrationRoots).toEqual(["migrations/sql"]);
+    expect(manifest.tasks[0]?.sqlImpact).toEqual({ isMigrationRunner: true });
+    expect(manifest.tasks[1]?.sqlImpact).toEqual({ tables: ["public.maintenance_records"] });
+    expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
+  });
 });
 
 function makeTemporaryDirectory(): string {

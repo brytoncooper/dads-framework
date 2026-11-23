@@ -3,6 +3,7 @@ use crate::diff_hunks::{
     is_comment_only_range,
 };
 use crate::facts::JsModuleFacts;
+use crate::intra_file_deps::expand_same_file_changed_exports;
 use crate::module_analysis::{
     comment_and_type_only_spans_from_source, runtime_export_declarations_from_source,
 };
@@ -158,20 +159,16 @@ fn tracked_module_evidence(
             );
         if !hunk_is_erased {
             all_hunks_type_or_comment = false;
-            for (changed_bytes, declarations, side_source) in [
+            attribute_hunk_sides(
                 (
                     old_changed_bytes,
                     baseline_declarations.as_slice(),
                     baseline,
                 ),
                 (new_changed_bytes, module.declarations.as_slice(), source),
-            ] {
-                match attributed_exports_for_changed_bytes(changed_bytes, declarations, side_source)
-                {
-                    Some(exports) => changed_exports.extend(exports),
-                    None => every_hunk_is_attributed = false,
-                }
-            }
+                &mut changed_exports,
+                &mut every_hunk_is_attributed,
+            );
         }
     }
     if all_hunks_comment_only {
@@ -179,6 +176,9 @@ fn tracked_module_evidence(
     }
     if all_hunks_type_or_comment {
         return Some(Some(plain_evidence(&module.path, true, true)));
+    }
+    if every_hunk_is_attributed && !changed_exports.is_empty() {
+        changed_exports = close_same_file_exports(source, module, &changed_exports);
     }
     let zero_export_module = module.declarations.is_empty() && baseline_declarations.is_empty();
     Some(Some(ChangedModuleEvidence {
@@ -188,6 +188,35 @@ fn tracked_module_evidence(
         semantic_change: true,
         type_only_change: false,
     }))
+}
+
+fn attribute_hunk_sides(
+    old_side: (ByteRange, &[crate::facts::JsSymbolFact], &str),
+    new_side: (ByteRange, &[crate::facts::JsSymbolFact], &str),
+    changed_exports: &mut BTreeSet<String>,
+    every_hunk_is_attributed: &mut bool,
+) {
+    for (changed_bytes, declarations, side_source) in [old_side, new_side] {
+        match attributed_exports_for_changed_bytes(changed_bytes, declarations, side_source) {
+            Some(exports) => changed_exports.extend(exports),
+            None => *every_hunk_is_attributed = false,
+        }
+    }
+}
+
+fn close_same_file_exports(
+    source: &str,
+    module: &JsModuleFacts,
+    direct: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    if let Some(expanded) =
+        expand_same_file_changed_exports(source, Path::new(&module.path), direct)
+    {
+        return expanded;
+    }
+    let mut conservative = direct.clone();
+    conservative.extend(module.declarations.iter().map(|decl| decl.name.clone()));
+    conservative
 }
 
 fn load_baseline_source(workspace_root: &Path, comparison: &str, path: &str) -> Option<String> {

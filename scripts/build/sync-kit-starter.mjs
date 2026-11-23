@@ -29,6 +29,7 @@ const paths = [
   "DEPLOY.md",
   "README.md",
   "dads.project.json",
+  "dads.testing.json",
   "package.json",
   "tsconfig.json",
   "index.html",

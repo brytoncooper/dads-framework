@@ -331,6 +331,7 @@ async function runKitWorkbenchMutationSuite() {
     // Generate manifest automatically via `dad-test init` (`dads.project.json` discovery!)
     const init = await initTestingManifest({
       workspaceRoot: dir,
+      force: true,
       nativeBinary: RUST_BIN,
       environment: {},
     });
@@ -349,7 +350,7 @@ async function runKitWorkbenchMutationSuite() {
         file: "domains/notes/pure/note-rules.ts",
         mutate: (src) => src.replace(".trim()", ""),
         taskId: "domains-notes:unit",
-        expectSelected: ["domains/notes/pure/note-rules.test.ts"],
+        expectSelected: ["domains/notes/pure/note-rules.dst.test.ts", "domains/notes/pure/note-rules.test.ts"],
         expectCatch: true,
       },
       {

@@ -261,7 +261,10 @@ constructs, the manifest's checksum, and the validation method: `native` when
 a binary was available, otherwise `structural`, or `none`.
 
 The package also exposes `planTesting(request)` and `runTesting(request)`.
-Each operation makes one JSON request to the native `dad-test` process.
+Each operation makes one JSON request to the native `dad-test` process. For
+deterministic simulation testing (seeded PRNG, simulated `Clock`, UUIDv7,
+shrinking invariant runner, and fault-injecting adapters), see the
+[DST guide](dst/README.md) (`@dads-framework/testing/dst`).
 
 ## Native packages
 

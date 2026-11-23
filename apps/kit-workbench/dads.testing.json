@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "workspace": {
+    "root": ".",
+    "fullFallback": {
+      "taskIds": [
+        "assembly:unit",
+        "dads-fixture-kit-workbench:integration",
+        "dads-fixture-kit-workbench:typecheck",
+        "dads-fixture-kit-workbench:unit",
+        "domains-notes:unit"
+      ]
+    }
+  },
+  "projects": [
+    {
+      "id": "assembly",
+      "root": "assembly",
+      "fallbackDependencies": [
+        "domains-notes",
+        "domains-support",
+        "domains-tenants",
+        "libraries-app-runtime",
+        "libraries-sign-in-options",
+        "migrations"
+      ]
+    },
+    {
+      "id": "dads-fixture-kit-workbench",
+      "root": ".",
+      "fallbackDependencies": [
+        "assembly",
+        "domains-notes",
+        "domains-support",
+        "domains-tenants",
+        "libraries-app-runtime",
+        "libraries-sign-in-options",
+        "migrations",
+        "starter-app"
+      ]
+    },
+    {
+      "id": "domains-notes",
+      "root": "domains/notes",
+      "fallbackDependencies": ["libraries-app-runtime", "libraries-sign-in-options"]
+    },
+    {
+      "id": "domains-support",
+      "root": "domains/support",
+      "fallbackDependencies": ["libraries-app-runtime", "libraries-sign-in-options"]
+    },
+    {
+      "id": "domains-tenants",
+      "root": "domains/tenants",
+      "fallbackDependencies": ["libraries-app-runtime", "libraries-sign-in-options"]
+    },
+    {
+      "id": "libraries-app-runtime",
+      "root": "libraries/app-runtime",
+      "fallbackDependencies": []
+    },
+    {
+      "id": "libraries-sign-in-options",
+      "root": "libraries/sign-in-options",
+      "fallbackDependencies": []
+    },
+    {
+      "id": "migrations",
+      "root": "migrations",
+      "fallbackDependencies": []
+    },
+    {
+      "id": "starter-app",
+      "root": "apps",
+      "fallbackDependencies": [
+        "domains-notes",
+        "domains-support",
+        "domains-tenants",
+        "libraries-app-runtime",
+        "libraries-sign-in-options",
+        "migrations"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "assembly:unit",
+      "project": "assembly",
+      "kind": "test",
+      "execution": {
+        "executable": "npx",
+        "args": [
+          "vitest",
+          "run",
+          "--dir",
+          "assembly",
+          "--exclude",
+          "**/*.integration.test.*",
+          "--exclude",
+          "**/*.integration.spec.*"
+        ],
+        "fileNarrowing": {
+          "suffixes": [
+            ".test.ts",
+            ".test.tsx",
+            ".test.mts",
+            ".test.js",
+            ".test.mjs",
+            ".spec.ts",
+            ".spec.tsx",
+            ".spec.mts"
+          ],
+          "excludeSuffixes": [
+            ".integration.test.ts",
+            ".integration.test.tsx",
+            ".integration.test.mts",
+            ".integration.test.js",
+            ".integration.test.mjs",
+            ".integration.spec.ts",
+            ".integration.spec.tsx"
+          ],
+          "setupFiles": ["vite.config.ts"]
+        }
+      },
+      "dependsOn": ["dads-fixture-kit-workbench:typecheck"],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    },
+    {
+      "id": "dads-fixture-kit-workbench:integration",
+      "project": "dads-fixture-kit-workbench",
+      "kind": "test",
+      "execution": {
+        "executable": "npx",
+        "args": ["vitest", "run"],
+        "fileNarrowing": {
+          "suffixes": [
+            ".integration.test.ts",
+            ".integration.test.tsx",
+            ".integration.test.mts",
+            ".integration.test.js",
+            ".integration.test.mjs",
+            ".integration.spec.ts",
+            ".integration.spec.tsx"
+          ],
+          "setupFiles": ["vite.config.ts"]
+        }
+      },
+      "dependsOn": ["dads-fixture-kit-workbench:typecheck"],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    },
+    {
+      "id": "dads-fixture-kit-workbench:typecheck",
+      "project": "dads-fixture-kit-workbench",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "npm",
+        "args": ["run", "typecheck"]
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    },
+    {
+      "id": "dads-fixture-kit-workbench:unit",
+      "project": "dads-fixture-kit-workbench",
+      "kind": "test",
+      "execution": {
+        "executable": "npx",
+        "args": ["vitest", "run", "--exclude", "**/*.integration.test.*", "--exclude", "**/*.integration.spec.*"],
+        "fileNarrowing": {
+          "suffixes": [
+            ".test.ts",
+            ".test.tsx",
+            ".test.mts",
+            ".test.js",
+            ".test.mjs",
+            ".spec.ts",
+            ".spec.tsx",
+            ".spec.mts"
+          ],
+          "excludeSuffixes": [
+            ".integration.test.ts",
+            ".integration.test.tsx",
+            ".integration.test.mts",
+            ".integration.test.js",
+            ".integration.test.mjs",
+            ".integration.spec.ts",
+            ".integration.spec.tsx"
+          ],
+          "setupFiles": ["vite.config.ts"]
+        }
+      },
+      "dependsOn": ["dads-fixture-kit-workbench:typecheck"],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    },
+    {
+      "id": "domains-notes:unit",
+      "project": "domains-notes",
+      "kind": "test",
+      "execution": {
+        "executable": "npx",
+        "args": [
+          "vitest",
+          "run",
+          "--dir",
+          "domains/notes",
+          "--exclude",
+          "**/*.integration.test.*",
+          "--exclude",
+          "**/*.integration.spec.*"
+        ],
+        "fileNarrowing": {
+          "suffixes": [
+            ".test.ts",
+            ".test.tsx",
+            ".test.mts",
+            ".test.js",
+            ".test.mjs",
+            ".spec.ts",
+            ".spec.tsx",
+            ".spec.mts"
+          ],
+          "excludeSuffixes": [
+            ".integration.test.ts",
+            ".integration.test.tsx",
+            ".integration.test.mts",
+            ".integration.test.js",
+            ".integration.test.mjs",
+            ".integration.spec.ts",
+            ".integration.spec.tsx"
+          ],
+          "setupFiles": ["vite.config.ts"]
+        }
+      },
+      "dependsOn": ["dads-fixture-kit-workbench:typecheck"],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    }
+  ]
+}

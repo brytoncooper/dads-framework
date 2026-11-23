@@ -106,6 +106,49 @@ pub(crate) fn record_pure_declaration(
     }
 }
 
+pub(crate) fn record_any_declaration(
+    decl: &Declaration<'_>,
+    semantic: &Semantic<'_>,
+    out: &mut Vec<(Span, DeclNode)>,
+) {
+    match decl {
+        Declaration::FunctionDeclaration(func) => {
+            if let Some(id) = func.id.as_ref()
+                && let Some(sym) = find_root_symbol(semantic, id.name.as_str(), id.span)
+            {
+                out.push((func.span, DeclNode::Symbol(sym)));
+            }
+        }
+        Declaration::ClassDeclaration(class) => {
+            if let Some(id) = class.id.as_ref()
+                && let Some(sym) = find_root_symbol(semantic, id.name.as_str(), id.span)
+            {
+                out.push((class.span, DeclNode::Symbol(sym)));
+            }
+        }
+        Declaration::VariableDeclaration(var_decl) => {
+            for declarator in &var_decl.declarations {
+                if let BindingPattern::BindingIdentifier(ident) = &declarator.id
+                    && let Some(sym) = find_root_symbol(semantic, ident.name.as_str(), ident.span)
+                {
+                    out.push((declarator.span, DeclNode::Symbol(sym)));
+                }
+            }
+        }
+        Declaration::TSTypeAliasDeclaration(alias) => {
+            if let Some(sym) = find_root_symbol(semantic, alias.id.name.as_str(), alias.id.span) {
+                out.push((alias.span, DeclNode::Symbol(sym)));
+            }
+        }
+        Declaration::TSInterfaceDeclaration(iface) => {
+            if let Some(sym) = find_root_symbol(semantic, iface.id.name.as_str(), iface.id.span) {
+                out.push((iface.span, DeclNode::Symbol(sym)));
+            }
+        }
+        _ => {}
+    }
+}
+
 pub(crate) fn find_root_symbol(
     semantic: &Semantic<'_>,
     name: &str,

@@ -15,6 +15,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./dst": {
+      "types": "./dist/dst/index.d.ts",
+      "default": "./dist/dst/index.js"
+    },
     "./nx": {
       "types": "./dist/nx/index.d.ts",
       "default": "./dist/nx/index.js"
@@ -32,6 +36,7 @@
     "bin",
     "dist",
     "README.md",
+    "dst/README.md",
     "nx/README.md"
   ],
   "scripts": {

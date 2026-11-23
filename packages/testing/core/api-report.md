@@ -55,6 +55,56 @@ Entry point: @dads-framework/testing
 - function writeFilesAtomically: export declare function writeFilesAtomically(outputs: readonly FileOutput[]): void;
 ```
 
+Entry point: @dads-framework/testing/dst
+
+```
+- type AnySimAction: export type AnySimAction<State> = { readonly name: string; readonly weight: number; readonly enabled: (state: State, world: SimWorld) => boolean; readonly prepare: (state: State, world: SimWorld) => PreparedSimStep<State>; };
+- type DeliveryEnvelope: export type DeliveryEnvelope<Payload> = { readonly messageId: string; readonly deliveryNumber: number; readonly enqueuedAtMs: number; readonly deliverAtMs: number; readonly payload: Payload; };
+- type DstSeedInput: export type DstSeedInput = number | string;
+- type ExpiringTokenRecord: export type ExpiringTokenRecord<Payload> = { readonly id: string; readonly payload: Payload; readonly issuedAtMs: number; readonly expiresAtMs: number; readonly revokedAtMs?: number; };
+- type ExpiringTokenStore: export type ExpiringTokenStore<Payload> = { issue(payload: Payload, ttlMs: number): ExpiringTokenRecord<Payload>; verify(tokenId: string): ExpiringTokenRecord<Payload> | undefined; revoke(tokenId: string): boolean; activeCount(): number; };
+- type FaultyDeliveryOptions: export type FaultyDeliveryOptions = { /** Probability that an enqueued message is scheduled twice. Defaults to `0.25`. */ readonly duplicateRate?: number; /** Probability that a queued message is dropped before delivery. Defaults to `0.05`. */ readonly dropRate?: number; /** Probability that two ready messages are delivered out of order. Defaults to `0.3`. */ readonly reorderRate?: number; /** Maximum simulated delivery jitter in milliseconds. Defaults to `500`. */ readonly maxDelayMs?: number; };
+- type FaultyDeliveryQueue: export type FaultyDeliveryQueue<Payload> = { enqueue(payload: Payload, messageId?: string): string; /** Delivers one due message (possibly reordered); returns undefined if none is due. */ deliverNext(handler: (envelope: DeliveryEnvelope<Payload>) => Promise<void> | void): Promise<boolean>; /** Advances the clock as needed and drains all queued messages through `handler`. */ drainAll(handler: (envelope: DeliveryEnvelope<Payload>) => Promise<void> | void): Promise<number>; pendingCount(): number; stats(): FaultyDeliveryStats; };
+- type FaultyDeliveryStats: export type FaultyDeliveryStats = { readonly enqueued: number; readonly duplicatesInjected: number; readonly dropped: number; readonly delivered: number; readonly pending: number; };
+- type FaultyEventStream: export type FaultyEventStream<Event> = { subscribe(id?: string): StreamSubscriber<Event>; publish(event: Event): number; readonly publishedCount: number; };
+- type FaultyTransactionOptions: export type FaultyTransactionOptions = { /** Probability of injecting a `40001` serialization failure per attempt. Defaults to `0.25`. */ readonly serializationFailureRate?: number; /** Probability of injecting a `40P01` deadlock per attempt. Defaults to `0.05`. */ readonly deadlockRate?: number; /** Maximum attempts (initial + retries). Defaults to `4`. */ readonly maxAttempts?: number; /** Simulated backoff advanced on `world.clock` per retry. Defaults to `15` ms. */ readonly retryBackoffMs?: number; };
+- type FaultyTransactionRunner: export type FaultyTransactionRunner = { /** * Runs `work(attempt)` under fault injection, retrying `40001`/`40P01` up to * `maxAttempts` while advancing `world.clock` by deterministic backoff. */ run<Result>(work: (attempt: number) => Promise<Result> | Result): Promise<Result>; stats(): FaultyTransactionStats; };
+- type FaultyTransactionStats: export type FaultyTransactionStats = { readonly calls: number; readonly attempts: number; readonly injected40001: number; readonly injected40P01: number; readonly retries: number; readonly succeeded: number; readonly exhausted: number; };
+- type PostgresRetryableCode: export type PostgresRetryableCode = "40001" | "40P01";
+- type PreparedSimStep: export type PreparedSimStep<State> = { readonly action: string; readonly input: unknown; readonly run: (state: State, world: SimWorld) => Promise<void> | void; };
+- type RecordedSimStep: export type RecordedSimStep = { readonly action: string; readonly input: unknown; };
+- type RunSimulationOptions: export type RunSimulationOptions = { /** Number of distinct seeds to explore when `DADS_DST_SEED` is not pinned. Defaults to `25`. */ readonly seeds?: number; /** First seed to run; subsequent seeds derive deterministically from `baseSeed + i`. */ readonly baseSeed?: DstSeedInput; /** Maximum actions executed per seed. Defaults to `40`. */ readonly steps?: number; /** Starting timestamp for each seed's `SimClock`. */ readonly startTime?: SimClockInput; /** When true (default), shrinks a failing action sequence to a minimal repro. */ readonly shrink?: boolean; /** Environment object checked for `DADS_DST_SEED`. Defaults to `process.env`. */ readonly env?: NodeJS.ProcessEnv; };
+- type SeededRng: export type SeededRng = { readonly seed: number; /** Uniform float in `[0, 1)`. */ nextFloat(): number; /** Uniform integer in `[minInclusive, maxInclusive]`. */ int(minInclusive: number, maxInclusive: number): number; /** Returns true with probability `p` (defaults to `0.5`). */ bool(probability?: number): boolean; /** Picks one element uniformly from a non-empty array. */ pick<T>(items: readonly T[]): T; /** Returns a deterministically shuffled copy without mutating `items`. */ shuffle<T>(items: readonly T[]): T[]; /** Fills a new `Uint8Array` of length `length` with deterministic bytes. */ bytes(length: number): Uint8Array; /** Derives an independent child RNG from this stream's seed and a label. */ fork(label: string): SeededRng; };
+- type SimAction: export type SimAction<State, Input> = { readonly name: string; readonly weight?: number; readonly enabled?: (state: State, world: SimWorld) => boolean; readonly generate: (state: State, world: SimWorld) => Input; readonly execute: (state: State, input: Input, world: SimWorld) => Promise<void> | void; };
+- type SimClock: export type SimClock = { /** Current simulated timestamp as a `Date` (compatible with `@dads-framework/core` `Clock`). */ now(): Date; /** Current simulated timestamp in epoch milliseconds. */ nowMs(): number; /** Current simulated timestamp as an ISO-8601 UTC string. */ iso(): string; /** Advances the clock forward by `ms` milliseconds (`ms >= 0`). */ advance(ms: number): Date; /** Jumps the clock to a specific timestamp (forward or backward). */ jumpTo(target: SimClockInput): Date; /** Shifts the clock by `deltaMs` (positive or negative) to simulate clock skew. */ skew(deltaMs: number): Date; };
+- type SimClockInput: export type SimClockInput = Date | number | string;
+- type SimInvariant: export type SimInvariant<State> = { readonly name: string; readonly check: (state: State, world: SimWorld) => Promise<void> | void; };
+- type SimTraceEvent: export type SimTraceEvent = { readonly index: number; readonly timestampMs: number; readonly kind: string; readonly detail?: Readonly<Record<string, unknown>>; };
+- type SimWorld: export type SimWorld = { readonly seed: number; readonly rng: SeededRng; readonly clock: SimClock; readonly trace: readonly SimTraceEvent[]; nextUuidV7(): string; forkRng(label: string): SeededRng; record(kind: string, detail?: Readonly<Record<string, unknown>>): void; };
+- type SimWorldOptions: export type SimWorldOptions = { readonly seed?: DstSeedInput; readonly startTime?: SimClockInput; readonly env?: NodeJS.ProcessEnv; };
+- class SimulatedPostgresError: export declare class SimulatedPostgresError extends Error { readonly code: PostgresRetryableCode; constructor(code: PostgresRetryableCode, message: string); }
+- type SimulationFailureDetail: export type SimulationFailureDetail = { readonly simulation: string; readonly seed: number; readonly failedAt: string; readonly originalStepCount: number; readonly minimizedSteps: readonly RecordedSimStep[]; readonly replayEnv: string; readonly causeMessage: string; };
+- class SimulationFailureError: export declare class SimulationFailureError extends Error { readonly detail: SimulationFailureDetail; constructor(detail: SimulationFailureDetail, cause: unknown); }
+- type SimulationReport: export type SimulationReport = { readonly ok: true; readonly simulation: string; readonly seedsRun: number; readonly totalSteps: number; readonly actionCounts: Readonly<Record<string, number>>; };
+- type SimulationSpec: export type SimulationSpec<State> = { readonly name: string; readonly createState: (world: SimWorld) => Promise<State> | State; readonly actions: readonly AnySimAction<State>[]; readonly invariants: readonly SimInvariant<State>[]; };
+- type StreamSubscriber: export type StreamSubscriber<Event> = { readonly id: string; readonly received: readonly Event[]; readonly revoked: boolean; readonly closed: boolean; revoke(): void; disconnect(): void; reconnect(fromCursor?: number): boolean; };
+- function createExpiringTokenStore: export declare function createExpiringTokenStore<Payload>(world: SimWorld): ExpiringTokenStore<Payload>;
+- function createFaultyDeliveryQueue: export declare function createFaultyDeliveryQueue<Payload>(world: SimWorld, options?: FaultyDeliveryOptions): FaultyDeliveryQueue<Payload>;
+- function createFaultyEventStream: export declare function createFaultyEventStream<Event>(world: SimWorld): FaultyEventStream<Event>;
+- function createFaultyTransactionRunner: export declare function createFaultyTransactionRunner(world: SimWorld, options?: FaultyTransactionOptions): FaultyTransactionRunner;
+- function createSeededRng: export declare function createSeededRng(input: DstSeedInput): SeededRng;
+- function createSimClock: export declare function createSimClock(startTime?: SimClockInput): SimClock;
+- function createSimWorld: export declare function createSimWorld(options?: SimWorldOptions): SimWorld;
+- function createUuidV7Generator: export declare function createUuidV7Generator(clock: SimClock, rng: SeededRng): () => string;
+- const defaultSimStartMs: export declare const defaultSimStartMs: number;
+- function defineSimAction: export declare function defineSimAction<State, Input>(action: SimAction<State, Input>): AnySimAction<State>;
+- function defineSimulation: export declare function defineSimulation<State>(spec: SimulationSpec<State>): SimulationSpec<State>;
+- function isRetryablePostgresError: export declare function isRetryablePostgresError(error: unknown): boolean;
+- function parseSeed: export declare function parseSeed(raw: DstSeedInput): number;
+- function resolveDstSeed: export declare function resolveDstSeed(fallback?: DstSeedInput, env?: NodeJS.ProcessEnv): { readonly seed: number; readonly fromEnv: boolean; };
+- function runSimulation: export declare function runSimulation<State>(spec: SimulationSpec<State>, options?: RunSimulationOptions): Promise<SimulationReport>;
+```
+
 Entry point: @dads-framework/testing/nx
 
 ```

@@ -182,7 +182,11 @@ pub(crate) fn incremental_request(
     previous: DependencyGraph,
     changed_paths: &[String],
 ) -> Result<DependencyGraph, String> {
-    if previous.has_uncertainty() {
+    if previous
+        .uncertainties()
+        .iter()
+        .any(|uncertainty| !previous.contains_path(&uncertainty.path))
+    {
         return Err(
             "A graph with uncertainty requires a full rebuild before its files change.".to_owned(),
         );
@@ -223,7 +227,10 @@ pub(crate) fn incremental_request(
                 facts.modules.push(module);
                 facts.uncertainties.append(&mut uncertainties);
             }
-            Err(uncertainty) => facts.uncertainties.push(uncertainty),
+            Err(_) => {
+                // An unreadable changed file has no module node to overwrite the previous one.
+                return Err("Changed file could not be read for incremental patch.".to_owned());
+            }
         }
     }
     let fresh_changes =
@@ -241,11 +248,26 @@ pub(crate) fn incremental_request(
     merged_changes.extend(fresh_changes);
     let patched = copy_to_core_graph(facts);
     let modules = patched.materialize_modules();
-    // Fresh adapter uncertainties are deliberately not persisted as a usable snapshot.
-    if patched.has_uncertainty() {
-        return Err("Changed files have uncertain graph facts.".to_owned());
+    let mut uncertainties_by_path = std::collections::BTreeMap::<String, Vec<_>>::new();
+    for uncertainty in previous.uncertainties() {
+        if !patched_set.contains(uncertainty.path.as_str()) {
+            uncertainties_by_path
+                .entry(uncertainty.path.clone())
+                .or_default()
+                .push(uncertainty);
+        }
     }
-    Ok(previous.patch_modules(modules, merged_changes, Vec::new()))
+    for uncertainty in patched.uncertainties() {
+        uncertainties_by_path
+            .entry(uncertainty.path.clone())
+            .or_default()
+            .push(uncertainty);
+    }
+    let merged_uncertainties = uncertainties_by_path
+        .into_values()
+        .flatten()
+        .collect::<Vec<_>>();
+    Ok(previous.patch_modules(modules, merged_changes, merged_uncertainties))
 }
 
 fn collect_javascript_files(

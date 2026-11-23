@@ -214,7 +214,7 @@ impl DependencyGraph {
                 type_only_change: x.type_only_change,
             })
     }
-    pub(super) fn uncertainties(&self) -> Vec<GraphUncertainty> {
+    pub fn uncertainties(&self) -> Vec<GraphUncertainty> {
         self.uncertainties
             .iter()
             .filter_map(|x| {

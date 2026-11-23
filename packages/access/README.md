@@ -74,6 +74,9 @@ with `parent.child(name, spec)`. Every child declares `inherit` explicitly
 Use `parents: [organization, folder]` for multi-parent DAGs and `recursive: true`
 for self-nested folders.
 
+> Declaring `children` defines only the authorization rule — it does not create rows or link records in SQL.
+> Supply the parent link via `columnRelations` or a transactional relationship write; see the worked [`workspace → project` walkthrough](../../docs/site/guides/feature-walkthrough.md).
+
 At application startup, pass the root resources to `compileAccess([organization])`.
 `compileAccess` auto-discovers inline `children`, `.child()` branches, `parents`,
 lazy thunks, and actors into one `AccessModel`. Use `compileAccessFromIr(definitions)`

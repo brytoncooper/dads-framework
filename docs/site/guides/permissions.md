@@ -8,6 +8,8 @@ Dads lets you write your permission rules once in TypeScript and run them direct
 - **No sync bugs:** Permission checks and database writes run inside the same transaction, so revoking access takes effect immediately.
 - **Zero lock-in:** Drop just the access packages into any existing Node app, use them inside the full Dads framework, or migrate to/from SpiceDB later without rewriting your app code.
 
+> **Policy rule vs. database link:** Declaring `children` (or `.child()`) defines the authorization rule — it does not create rows or link a child to its parent in Postgres. Your app supplies the parent link either by binding an existing foreign-key column with `columnRelations` or by writing the parent tuple in the same transaction. See the worked end-to-end example in **[Build a Feature End to End](feature-walkthrough.md)**.
+
 ---
 
 ## Option A: Add Dads Access to an existing app (standalone)

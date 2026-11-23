@@ -64,14 +64,18 @@ Links `.cursor/skills`, `.claude/skills`, and `.codex/skills` at
 `../.agents/skills` so every harness reads one skill library. Each harness is
 reported as `created` or `correct`.
 
-`dad migrate 0.3 [path] [--dry-run] [--json]`
+`dad migrate 0.3 [path] [--dry-run] [--include-migrations] [--json]`
 
 Rewrites a `0.1.x` or `0.2.x` workspace to the consolidated `0.3.0` package
 surface: updates every `package.json` (deduplicating merged packages and adding
 any newly-optional peer providers the project already used), rewrites TypeScript,
 JavaScript, CSS, and `tsconfig*.json` specifiers to their new subpaths, and
-updates `dads.project.json` boundaries. Idempotent and safe to preview with
-`--dry-run`.
+updates `dads.project.json` boundaries. Immutable `*.migration.*` and
+`migrations/*` files are kept intact by default and reported in
+`skippedMigrations`; pass `--include-migrations` only when rewriting unapplied
+migrations. Workspaces using `@dads-framework/postgres-access` without an
+`expires_at` / `relationshipExpirationMigration` migration receive an explicit
+entry in `followUps`. Idempotent and safe to preview with `--dry-run`.
 
 ### Orientation
 

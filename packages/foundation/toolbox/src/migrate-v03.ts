@@ -10,16 +10,19 @@ import {
 import { isRecord } from "./parse-guards.js";
 
 const IGNORED_DIRECTORIES = new Set([".git", ".next", ".turbo", "coverage", "dist", "node_modules", "target"]);
-
 const SOURCE_EXTENSIONS = new Set([".cjs", ".css", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-
 const DEPENDENCY_SECTIONS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
-
 const QUOTED_DADS_SPECIFIER = /(["'])(@dads-framework\/[^"'\s]+)\1/gu;
+const POSTGRES_ACCESS_PACKAGE = "@dads-framework/postgres-access";
+const MIGRATION_FILE_PATTERN = /(?:^|\/)[^/]+\.migration\.[cm]?[jt]s$/u;
+const MIGRATIONS_DIR_PATTERN = /(?:^|\/)migrations\/[^/]+\.[cm]?[jt]s$/u;
+const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]s$/u;
+const EXPIRATION_MIGRATION_PATTERN = /\brelationshipExpirationMigration\b|\bexpires_at\b/u;
 
 export type MigrateToV03Options = {
   readonly root: string;
   readonly dryRun?: boolean;
+  readonly includeMigrations?: boolean;
 };
 
 export type MigrateToV03Result = {
@@ -30,6 +33,18 @@ export type MigrateToV03Result = {
   readonly packageManifestsUpdated: number;
   readonly importReplacements: number;
   readonly addedPeers: readonly string[];
+  readonly skippedMigrations: readonly string[];
+  readonly followUps: readonly string[];
+};
+
+type MigrationRunState = {
+  readonly filesChanged: string[];
+  readonly addedPeers: Set<string>;
+  readonly skippedMigrations: string[];
+  packageManifestsUpdated: number;
+  importReplacements: number;
+  usesPostgresAccess: boolean;
+  hasRelationshipExpirationMigration: boolean;
 };
 
 /**
@@ -39,32 +54,115 @@ export type MigrateToV03Result = {
 export function migrateWorkspaceToV03(options: MigrateToV03Options): MigrateToV03Result {
   const root = resolve(options.root);
   const dryRun = options.dryRun === true;
-  const filesChanged: string[] = [];
-  const addedPeers = new Set<string>();
-  let packageManifestsUpdated = 0;
-  let importReplacements = 0;
+  const includeMigrations = options.includeMigrations === true;
+  const state: MigrationRunState = {
+    filesChanged: [],
+    addedPeers: new Set<string>(),
+    skippedMigrations: [],
+    packageManifestsUpdated: 0,
+    importReplacements: 0,
+    usesPostgresAccess: false,
+    hasRelationshipExpirationMigration: false,
+  };
 
   for (const absolutePath of collectCandidateFiles(root)) {
-    const relativePath = toPosixPath(relative(root, absolutePath));
-    const original = readFileSync(absolutePath, "utf8");
-    const updated = transformFile(relativePath, original, addedPeers, (count) => {
-      importReplacements += count;
-    });
-    if (updated === original) continue;
-    filesChanged.push(relativePath);
-    if (isPackageManifestPath(relativePath)) packageManifestsUpdated += 1;
-    if (!dryRun) writeFileSync(absolutePath, updated, "utf8");
+    processCandidateFile(root, absolutePath, dryRun, includeMigrations, state);
   }
 
   return {
     root,
     targetVersion: V03_TARGET_VERSION,
     dryRun,
-    filesChanged: filesChanged.sort(),
-    packageManifestsUpdated,
-    importReplacements,
-    addedPeers: [...addedPeers].sort(),
+    filesChanged: state.filesChanged.sort(),
+    packageManifestsUpdated: state.packageManifestsUpdated,
+    importReplacements: state.importReplacements,
+    addedPeers: [...state.addedPeers].sort(),
+    skippedMigrations: state.skippedMigrations.sort(),
+    followUps: buildFollowUps(state),
   };
+}
+
+function processCandidateFile(
+  root: string,
+  absolutePath: string,
+  dryRun: boolean,
+  includeMigrations: boolean,
+  state: MigrationRunState,
+): void {
+  const relativePath = toPosixPath(relative(root, absolutePath));
+  const original = readFileSync(absolutePath, "utf8");
+  if (handleMigrationFile(relativePath, original, includeMigrations, state)) return;
+
+  const updated = transformFile(relativePath, original, state.addedPeers, (count) => {
+    state.importReplacements += count;
+  });
+  const isManifest = isPackageManifestPath(relativePath);
+  if (isManifest) recordPostgresAccessUsage(original, updated, state);
+  if (updated === original) return;
+
+  state.filesChanged.push(relativePath);
+  if (isManifest) state.packageManifestsUpdated += 1;
+  if (!dryRun) writeFileSync(absolutePath, updated, "utf8");
+}
+
+function handleMigrationFile(
+  relativePath: string,
+  original: string,
+  includeMigrations: boolean,
+  state: MigrationRunState,
+): boolean {
+  if (!isMigrationPath(relativePath)) return false;
+  if (EXPIRATION_MIGRATION_PATTERN.test(original)) {
+    state.hasRelationshipExpirationMigration = true;
+  }
+  if (includeMigrations) return false;
+  if (containsRetiredSpecifier(original)) state.skippedMigrations.push(relativePath);
+  return true;
+}
+
+function recordPostgresAccessUsage(original: string, updated: string, state: MigrationRunState): void {
+  if (manifestDependsOn(original, POSTGRES_ACCESS_PACKAGE) || manifestDependsOn(updated, POSTGRES_ACCESS_PACKAGE)) {
+    state.usesPostgresAccess = true;
+  }
+}
+
+function buildFollowUps(state: MigrationRunState): readonly string[] {
+  const followUps: string[] = [];
+  if (state.skippedMigrations.length > 0) {
+    followUps.push(
+      `Skipped ${String(state.skippedMigrations.length)} immutable migration file(s) containing retired @dads-framework/* imports so already-applied migrations remain intact. Keep applied migrations unchanged (using moduleAliases/tsconfig paths if needed), or re-run with --include-migrations if they have not been applied yet.`,
+    );
+  }
+  if (state.usesPostgresAccess && !state.hasRelationshipExpirationMigration) {
+    followUps.push(
+      "Add a new additive database migration executing relationshipExpirationMigration.sql from @dads-framework/postgres-access (adds expires_at timestamptz NULL and its partial index to dad_authorization_relationship) before running Postgres authorization checks.",
+    );
+  }
+  return followUps;
+}
+
+function isMigrationPath(relativePath: string): boolean {
+  if (TEST_FILE_PATTERN.test(relativePath)) return false;
+  return MIGRATION_FILE_PATTERN.test(relativePath) || MIGRATIONS_DIR_PATTERN.test(relativePath);
+}
+
+function containsRetiredSpecifier(content: string): boolean {
+  for (const match of content.matchAll(QUOTED_DADS_SPECIFIER)) {
+    const specifier = match[2];
+    if (specifier !== undefined && rewriteV03ImportSpecifier(specifier) !== specifier) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function manifestDependsOn(content: string, packageName: string): boolean {
+  const parsed = parseJsonRecord(content);
+  if (parsed === undefined) return false;
+  return DEPENDENCY_SECTIONS.some((sectionName) => {
+    const section = parsed[sectionName];
+    return isRecord(section) && Object.hasOwn(section, packageName);
+  });
 }
 
 function isPackageManifestPath(relativePath: string): boolean {

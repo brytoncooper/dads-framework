@@ -7,6 +7,7 @@ Dads is a TypeScript backend framework built around three rules: every HTTP rout
 | If you want to...                                                                                                   | Start with                                              |
 | :------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------ |
 | **Start a new TypeScript backend** with auth, workspaces, Postgres permissions, OpenAPI 3.1, and CI checks wired in | Follow the walkthrough below (`npm create dads@latest`) |
+| **Trace one complete child feature (`workspace → project`)** from policy and Postgres to routes, client, and tests  | [Build a Feature End to End](feature-walkthrough.md)    |
 | **Decide where a new schema, rule, workflow, integration, or migration belongs**                                    | [Where Does Code Go?](where-code-goes.md)               |
 | **Add relationship permissions to an existing Postgres or SQLite app** without a separate auth database             | [Access & Permissions](permissions.md)                  |
 | **Look up SDK definitions, options, combinators, and CLI commands**                                                 | [SDK Glossary & Options](sdk-reference.md)              |

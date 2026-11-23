@@ -176,6 +176,7 @@ npx dad verify --changed --json
 
 ## Next steps
 
+- **Trace one complete child feature from policy to Postgres, routes, client, and tests:** [Build a Feature End to End](feature-walkthrough.md)
 - **Define standalone operation contracts and clients:** [Routes, Contracts & Clients](routes-and-contracts.md)
 - **Compose customer/staff APIs and enforce CI gates:** [Multi-API Composition & CI Gates](boundaries-and-apis.md)
 - **Model resource roles and permissions:** [Access & Permissions](permissions.md)

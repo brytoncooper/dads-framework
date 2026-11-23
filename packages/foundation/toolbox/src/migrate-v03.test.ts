@@ -2,9 +2,10 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { migrateCommand } from "./cli-migrate-commands.js";
 import { RETIRED_PACKAGE_TO_TARGET, rewriteV03ImportSpecifier } from "./migrate-v03-map.js";
 import { migrateWorkspaceToV03 } from "./migrate-v03.js";
 
@@ -49,8 +50,68 @@ describe("rewriteV03ImportSpecifier", () => {
     expect(rewriteV03ImportSpecifier("@dads-framework/http")).toBe("@dads-framework/http");
   });
 
-  it("maps all 28 retired package names", () => {
-    expect(Object.keys(RETIRED_PACKAGE_TO_TARGET)).toHaveLength(28);
+  it("maps all 40 retired package names including the 12 consolidated 0.2.0 packages", () => {
+    expect(Object.keys(RETIRED_PACKAGE_TO_TARGET)).toHaveLength(40);
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/clock"]).toBe("@dads-framework/core");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/diagnostics"]).toBe("@dads-framework/core");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/request-work"]).toBe("@dads-framework/core");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/health"]).toBe("@dads-framework/http");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/telemetry-core"]).toBe("@dads-framework/http");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/client-telemetry-core"]).toBe("@dads-framework/client");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/email-sender-core"]).toBe("@dads-framework/email");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/feature-flags-http"]).toBe("@dads-framework/feature-flags");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/feature-flags-postgres"]).toBe("@dads-framework/feature-flags");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/job-queue-core"]).toBe("@dads-framework/job-queue");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/object-storage-core"]).toBe("@dads-framework/object-storage");
+    expect(RETIRED_PACKAGE_TO_TARGET["@dads-framework/testing-import-nx"]).toBe("@dads-framework/testing");
+  });
+
+  it("rewrites all 12 newly mapped 0.2.0 packages and subpaths without prefix collisions", () => {
+    expect(rewriteV03ImportSpecifier("@dads-framework/clock")).toBe("@dads-framework/core/runtime/clock");
+    expect(rewriteV03ImportSpecifier("@dads-framework/diagnostics")).toBe("@dads-framework/core/runtime/diagnostics");
+    expect(rewriteV03ImportSpecifier("@dads-framework/diagnostics/testing")).toBe(
+      "@dads-framework/core/runtime/diagnostics/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/request-work")).toBe("@dads-framework/core/runtime/request-work");
+    expect(rewriteV03ImportSpecifier("@dads-framework/request-work/testing")).toBe(
+      "@dads-framework/core/runtime/request-work/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/health")).toBe("@dads-framework/http/health");
+    expect(rewriteV03ImportSpecifier("@dads-framework/telemetry-core")).toBe("@dads-framework/http/telemetry/core");
+    expect(rewriteV03ImportSpecifier("@dads-framework/telemetry-core/testing")).toBe(
+      "@dads-framework/http/telemetry/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/telemetry")).toBe("@dads-framework/http/telemetry");
+    expect(rewriteV03ImportSpecifier("@dads-framework/client-telemetry-core")).toBe(
+      "@dads-framework/client/telemetry/core",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/client-telemetry-core/testing")).toBe(
+      "@dads-framework/client/telemetry/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/client-telemetry")).toBe("@dads-framework/client/telemetry");
+    expect(rewriteV03ImportSpecifier("@dads-framework/email-sender-core")).toBe("@dads-framework/email/core");
+    expect(rewriteV03ImportSpecifier("@dads-framework/email-sender-core/testing")).toBe(
+      "@dads-framework/email/core/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/email-sender")).toBe("@dads-framework/email");
+    expect(rewriteV03ImportSpecifier("@dads-framework/feature-flags-http")).toBe("@dads-framework/feature-flags/http");
+    expect(rewriteV03ImportSpecifier("@dads-framework/feature-flags-postgres")).toBe(
+      "@dads-framework/feature-flags/postgres",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/job-queue-core")).toBe("@dads-framework/job-queue/core");
+    expect(rewriteV03ImportSpecifier("@dads-framework/job-queue-core/testing")).toBe(
+      "@dads-framework/job-queue/core/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/job-queue-core/provider")).toBe(
+      "@dads-framework/job-queue/core/provider",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/object-storage-core")).toBe(
+      "@dads-framework/object-storage/core",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/object-storage-core/testing")).toBe(
+      "@dads-framework/object-storage/testing",
+    );
+    expect(rewriteV03ImportSpecifier("@dads-framework/testing-import-nx")).toBe("@dads-framework/testing/nx");
   });
 });
 
@@ -167,5 +228,248 @@ describe("migrateWorkspaceToV03", () => {
     const secondPass = migrateWorkspaceToV03({ root });
     expect(secondPass.filesChanged).toEqual([]);
     expect(secondPass.importReplacements).toBe(0);
+    expect(secondPass.skippedMigrations).toEqual([]);
+    expect(secondPass.followUps).toEqual([]);
+  });
+
+  it("migrates all 12 consolidated 0.2.0 packages across manifests and source imports idempotently", () => {
+    const root = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "v02-app",
+          private: true,
+          dependencies: {
+            "@dads-framework/client-telemetry": "^0.2.0",
+            "@dads-framework/client-telemetry-core": "^0.2.0",
+            "@dads-framework/clock": "^0.2.0",
+            "@dads-framework/diagnostics": "^0.2.0",
+            "@dads-framework/email-sender": "^0.2.0",
+            "@dads-framework/email-sender-core": "^0.2.0",
+            "@dads-framework/feature-flags-http": "^0.2.0",
+            "@dads-framework/feature-flags-postgres": "^0.2.0",
+            "@dads-framework/health": "^0.2.0",
+            "@dads-framework/job-queue-core": "^0.2.0",
+            "@dads-framework/object-storage-core": "^0.2.0",
+            "@dads-framework/request-work": "^0.2.0",
+            "@dads-framework/telemetry": "^0.2.0",
+            "@dads-framework/telemetry-core": "^0.2.0",
+          },
+          devDependencies: {
+            "@dads-framework/testing-import-nx": "^0.2.0",
+          },
+        },
+        null,
+        2,
+      ),
+      "src/index.ts": [
+        'import { systemClock } from "@dads-framework/clock";',
+        'import { createDiagnostics } from "@dads-framework/diagnostics";',
+        'import { runRequestWork } from "@dads-framework/request-work";',
+        'import { registerHealthRoutes } from "@dads-framework/health";',
+        'import { requestTraceAttributes } from "@dads-framework/telemetry-core";',
+        'import { startTelemetry } from "@dads-framework/telemetry";',
+        'import { ClientTelemetry } from "@dads-framework/client-telemetry-core";',
+        'import { createClientTelemetry } from "@dads-framework/client-telemetry";',
+        'import { EmailSender } from "@dads-framework/email-sender-core";',
+        'import { createResendEmailSender } from "@dads-framework/email-sender";',
+        'import { registerFeatureFlagsHttp } from "@dads-framework/feature-flags-http";',
+        'import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";',
+        'import { JobQueue } from "@dads-framework/job-queue-core";',
+        'import { ObjectStorage } from "@dads-framework/object-storage-core";',
+        'import { importNxTestingWorkspace } from "@dads-framework/testing-import-nx";',
+      ].join("\n"),
+    });
+
+    const applied = migrateWorkspaceToV03({ root });
+    expect(applied.filesChanged).toEqual(["package.json", "src/index.ts"]);
+    expect(applied.importReplacements).toBe(15);
+
+    const manifest = z
+      .object({
+        dependencies: z.record(z.string(), z.string()),
+        devDependencies: z.record(z.string(), z.string()),
+      })
+      .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
+    expect(manifest.dependencies["@dads-framework/core"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/http"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/client"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/email"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/feature-flags"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/job-queue"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/object-storage"]).toBe("^0.3.0");
+    expect(manifest.devDependencies["@dads-framework/testing"]).toBe("^0.3.0");
+    expect(manifest.dependencies["@dads-framework/clock"]).toBeUndefined();
+    expect(manifest.dependencies["@dads-framework/telemetry-core"]).toBeUndefined();
+
+    expect(readFileSync(join(root, "src/index.ts"), "utf8")).toBe(
+      [
+        'import { systemClock } from "@dads-framework/core/runtime/clock";',
+        'import { createDiagnostics } from "@dads-framework/core/runtime/diagnostics";',
+        'import { runRequestWork } from "@dads-framework/core/runtime/request-work";',
+        'import { registerHealthRoutes } from "@dads-framework/http/health";',
+        'import { requestTraceAttributes } from "@dads-framework/http/telemetry/core";',
+        'import { startTelemetry } from "@dads-framework/http/telemetry";',
+        'import { ClientTelemetry } from "@dads-framework/client/telemetry/core";',
+        'import { createClientTelemetry } from "@dads-framework/client/telemetry";',
+        'import { EmailSender } from "@dads-framework/email/core";',
+        'import { createResendEmailSender } from "@dads-framework/email";',
+        'import { registerFeatureFlagsHttp } from "@dads-framework/feature-flags/http";',
+        'import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags/postgres";',
+        'import { JobQueue } from "@dads-framework/job-queue/core";',
+        'import { ObjectStorage } from "@dads-framework/object-storage/core";',
+        'import { importNxTestingWorkspace } from "@dads-framework/testing/nx";',
+      ].join("\n"),
+    );
+
+    const secondPass = migrateWorkspaceToV03({ root });
+    expect(secondPass.filesChanged).toEqual([]);
+    expect(secondPass.importReplacements).toBe(0);
+  });
+
+  it("skips immutable migration files by default and rewrites them when includeMigrations is true", () => {
+    const migrationSource = 'import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";\n';
+    const cleanMigrationSource = 'export function up() { return "already-clean"; }\n';
+    const root = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "migrations-app",
+          dependencies: { "@dads-framework/feature-flags-postgres": "^0.2.0" },
+        },
+        null,
+        2,
+      ),
+      "assembly/migrations.ts": 'import { runNodePgMigrations } from "@dads-framework/migrations";\n',
+      "migrations/20261120080000_starter.migration.ts": migrationSource,
+      "migrations/20261120080100_clean.migration.ts": cleanMigrationSource,
+      "migrations/support/feature-flags.ts":
+        'export { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";\n',
+    });
+
+    const first = migrateWorkspaceToV03({ root });
+    expect(first.filesChanged).toEqual([
+      "assembly/migrations.ts",
+      "migrations/support/feature-flags.ts",
+      "package.json",
+    ]);
+    expect(first.skippedMigrations).toEqual(["migrations/20261120080000_starter.migration.ts"]);
+    expect(first.followUps).toHaveLength(1);
+    expect(first.followUps[0]).toContain("--include-migrations");
+    expect(readFileSync(join(root, "migrations/20261120080000_starter.migration.ts"), "utf8")).toBe(migrationSource);
+    expect(readFileSync(join(root, "migrations/support/feature-flags.ts"), "utf8")).toBe(
+      'export { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags/postgres";\n',
+    );
+
+    const secondDefault = migrateWorkspaceToV03({ root });
+    expect(secondDefault.filesChanged).toEqual([]);
+    expect(secondDefault.skippedMigrations).toEqual(["migrations/20261120080000_starter.migration.ts"]);
+
+    const withMigrations = migrateWorkspaceToV03({ root, includeMigrations: true });
+    expect(withMigrations.filesChanged).toEqual(["migrations/20261120080000_starter.migration.ts"]);
+    expect(withMigrations.skippedMigrations).toEqual([]);
+    expect(withMigrations.followUps).toEqual([]);
+    expect(readFileSync(join(root, "migrations/20261120080000_starter.migration.ts"), "utf8")).toBe(
+      'import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags/postgres";\n',
+    );
+  });
+
+  it("reports relationshipExpirationMigration follow-up when postgres-access is used without an expiration migration", () => {
+    const missingRoot = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "pg-access-app",
+          dependencies: { "@dads-framework/postgres-access": "^0.2.0" },
+        },
+        null,
+        2,
+      ),
+      "migrations/20261120080000_init.migration.ts":
+        'import { relationshipSchemaMigration } from "@dads-framework/postgres-access";\n',
+    });
+
+    const missingResult = migrateWorkspaceToV03({ root: missingRoot });
+    expect(missingResult.followUps.some((item) => item.includes("relationshipExpirationMigration.sql"))).toBe(true);
+    expect(missingResult.followUps.some((item) => item.includes("expires_at"))).toBe(true);
+
+    const secondMissing = migrateWorkspaceToV03({ root: missingRoot });
+    expect(secondMissing.filesChanged).toEqual([]);
+    expect(secondMissing.followUps.some((item) => item.includes("relationshipExpirationMigration.sql"))).toBe(true);
+
+    const satisfiedBySymbolRoot = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "pg-access-satisfied-symbol",
+          dependencies: { "@dads-framework/postgres-access": "^0.3.0" },
+        },
+        null,
+        2,
+      ),
+      "migrations/20261123000000_relationship_expiration.migration.ts":
+        'import { relationshipExpirationMigration } from "@dads-framework/postgres-access";\nexport const sql = relationshipExpirationMigration.sql;\n',
+    });
+    expect(migrateWorkspaceToV03({ root: satisfiedBySymbolRoot }).followUps).toEqual([]);
+
+    const satisfiedByColumnRoot = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "pg-access-satisfied-column",
+          dependencies: { "@dads-framework/postgres-access": "^0.3.0" },
+        },
+        null,
+        2,
+      ),
+      "migrations/20261123000000_add_expires_at.migration.ts":
+        'export const sql = "ALTER TABLE dad_authorization_relationship ADD COLUMN expires_at timestamptz NULL;";\n',
+    });
+    expect(migrateWorkspaceToV03({ root: satisfiedByColumnRoot }).followUps).toEqual([]);
+  });
+
+  it("prints skipped migrations, follow-ups, and honors --include-migrations in the CLI", () => {
+    const root = createFixture({
+      "package.json": JSON.stringify(
+        {
+          name: "cli-app",
+          dependencies: {
+            "@dads-framework/feature-flags-postgres": "^0.2.0",
+            "@dads-framework/postgres-access": "^0.2.0",
+          },
+        },
+        null,
+        2,
+      ),
+      "migrations/20261120080000_starter.migration.ts":
+        'import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";\n',
+    });
+
+    let stdout = "";
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: string | Uint8Array): boolean => {
+      stdout += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+      return true;
+    });
+    try {
+      migrateCommand(["0.3", root, "--dry-run"], false);
+      expect(stdout).toContain("Skipped immutable migration file(s):");
+      expect(stdout).toContain("migrations/20261120080000_starter.migration.ts");
+      expect(stdout).toContain("Follow-up actions required:");
+      expect(stdout).toContain("relationshipExpirationMigration.sql");
+
+      stdout = "";
+      migrateCommand(["0.3", root, "--include-migrations"], true);
+      const payload = z
+        .object({
+          ok: z.literal(true),
+          migration: z.object({
+            skippedMigrations: z.array(z.string()),
+            filesChanged: z.array(z.string()),
+            followUps: z.array(z.string()),
+          }),
+        })
+        .parse(JSON.parse(stdout));
+      expect(payload.migration.skippedMigrations).toEqual([]);
+      expect(payload.migration.filesChanged).toContain("migrations/20261120080000_starter.migration.ts");
+      expect(payload.migration.followUps).toHaveLength(1);
+      expect(payload.migration.followUps[0]).toContain("relationshipExpirationMigration.sql");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

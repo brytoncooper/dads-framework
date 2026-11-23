@@ -31,6 +31,14 @@
       "navigationGroup": "Get started"
     },
     {
+      "slug": "feature-walkthrough",
+      "title": "Build a Feature End to End",
+      "owner": "@dads-framework/toolbox",
+      "section": "Architecture",
+      "path": "docs/site/guides/feature-walkthrough.md",
+      "navigationGroup": "Build a feature"
+    },
+    {
       "slug": "permissions",
       "title": "Access & Permissions",
       "owner": "@dads-framework/postgres-access",

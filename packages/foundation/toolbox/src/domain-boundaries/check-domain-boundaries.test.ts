@@ -290,6 +290,37 @@ test("rejects domain root index.ts barrels that mix server/ with web-client/ or 
   expect(mixedUi.violations[0]?.message).toContain("affected graphs");
 });
 
+test("allows top-level tests/ to import domain root barrels while rejecting deep domain internals", () => {
+  const project = copyExample();
+  const tsconfig: unknown = JSON.parse(readFileSync(join(project, "tsconfig.json"), "utf8"));
+  if (!isRecord(tsconfig)) throw new Error("Expected object tsconfig.");
+  writeFileSync(
+    join(project, "tsconfig.json"),
+    `${JSON.stringify({ ...tsconfig, include: ["domains/**/*.ts", "libraries/**/*.ts", "src/**/*.ts", "tests/**/*.ts"] })}\n`,
+  );
+  source(project, "domains/orders/server/repo.ts", "export const secretRepo = 1;\n");
+  source(project, "domains/orders/index.ts", 'export { secretRepo } from "./server/repo.js";\n');
+  source(
+    project,
+    "tests/orders.integration.test.ts",
+    'import { secretRepo } from "../domains/orders/index.js";\nexport const ok = secretRepo;\n',
+  );
+  expect(checkDomainBoundaries(project)).toEqual({ ok: true, violations: [] });
+
+  source(
+    project,
+    "tests/orders-deep.integration.test.ts",
+    'import { secretRepo } from "../domains/orders/server/repo.js";\nexport const bad = secretRepo;\n',
+  );
+  const result = checkDomainBoundaries(project);
+  expect(result.ok).toBe(false);
+  expect(result.violations).toHaveLength(1);
+  expect(result.violations[0]).toMatchObject({
+    source: "tests/orders-deep.integration.test.ts",
+    target: "domains/orders/server/repo.ts",
+  });
+});
+
 function copyExample(): string {
   const root = temporaryRoot();
   cpSync(example, root, {

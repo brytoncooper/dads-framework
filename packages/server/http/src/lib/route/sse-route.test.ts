@@ -92,19 +92,26 @@ async function listen(app: Awaited<ReturnType<typeof createHttpApp>>): Promise<n
   return address.port;
 }
 
-function openStream(port: number, user: string | null): { chunks: string[]; responseHeaders: CapturedResponseHeaders } {
+function openStream(
+  port: number,
+  user: string | null,
+): { chunks: string[]; responseHeaders: CapturedResponseHeaders; ended: () => boolean } {
   const headers: Record<string, string> = {};
   if (user !== null) headers["x-test-user"] = user;
   const chunks: string[] = [];
   const responseHeaders: CapturedResponseHeaders = {};
+  let isEnded = false;
   const request = http.get({ host: "127.0.0.1", port, path: "/sse", headers }, (response) => {
     const vary = response.headers.vary;
     if (vary !== undefined) responseHeaders.vary = vary;
     response.setEncoding("utf8");
     response.on("data", (chunk: string) => chunks.push(chunk));
+    response.on("end", () => {
+      isEnded = true;
+    });
   });
   openRequests.push(request);
-  return { chunks, responseHeaders };
+  return { chunks, responseHeaders, ended: () => isEnded };
 }
 
 async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
@@ -160,5 +167,42 @@ describe("sseRoute", () => {
     expect(res.statusCode).toBe(401);
     expect(errorBodyOf(res).code).toBe("NOT_AUTHENTICATED");
     expect(stack.streams).toHaveLength(0);
+  });
+
+  it("supports server-initiated close() with idempotent cleanup and post-close send/comment no-ops", async () => {
+    const stack = await boot(20);
+    const port = await listen(stack.app);
+    const client = openStream(port, "alice");
+
+    await waitFor(() => stack.streams.length === 1 && client.chunks.join("").includes(":ready\n\n"));
+    const stream = stack.streams[0];
+    if (stream === undefined) {
+      throw new Error("expected an opened SSE stream");
+    }
+
+    expect(stream.closed).toBe(false);
+    stream.send({ phase: "before-close" });
+    await waitFor(() => client.chunks.join("").includes("before-close"));
+
+    stream.close();
+    expect(stream.closed).toBe(true);
+    expect(stack.cleanups()).toBe(1);
+
+    // Repeated close() calls and post-close writes are safe no-ops.
+    stream.close();
+    expect(() => {
+      stream.send({ phase: "after-close" });
+      stream.comment("ignored-after-close");
+    }).not.toThrow();
+
+    await waitFor(() => client.ended());
+    openRequests[0]?.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+
+    expect(stack.cleanups()).toBe(1);
+    const body = client.chunks.join("");
+    expect(body).toContain("before-close");
+    expect(body).not.toContain("after-close");
+    expect(body).not.toContain("ignored-after-close");
   });
 });

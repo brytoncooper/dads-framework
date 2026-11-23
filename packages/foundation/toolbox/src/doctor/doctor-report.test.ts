@@ -189,6 +189,8 @@ describe("the doctor report", () => {
 
     expect(parsed).toMatchObject({
       ok: true,
+      overCeilingCount: 1,
+      gatePassed: false,
       profile: "standard",
       issues: [
         {
@@ -202,6 +204,13 @@ describe("the doctor report", () => {
           ],
         },
       ],
+    });
+
+    const cleanLine = renderDoctorJson(reportOf([outcomeOf(signalNamed("files-over-ceiling"), [["small.ts", 12]])]));
+    expect(JSON.parse(cleanLine)).toMatchObject({
+      ok: true,
+      overCeilingCount: 0,
+      gatePassed: true,
     });
   });
 

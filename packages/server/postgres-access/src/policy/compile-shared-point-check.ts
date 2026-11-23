@@ -10,6 +10,7 @@ import { compileRecursiveSharedBody } from "./compile-recursive-policy.js";
 import { findColumnRelation } from "./column-relations.js";
 import {
   isPolymorphicRelation,
+  type LazySqlParam,
   notExpired,
   permissionIdentity,
   QueryBuilder,
@@ -25,7 +26,7 @@ export function compileSharedPointCheck(
   check: NormalizedPermissionCheck,
 ): CompiledAuthorizationQuery & { readonly canPrepare: false } {
   const builder = new QueryBuilder();
-  const namespaceSql = builder.value(namespace);
+  const namespaceSql = builder.lazyValue(namespace);
   const subjectKind = builder.value(check.subject.type);
   const subjectId = builder.value(check.subject.id);
   const resourceKind = builder.value(check.resource.type);
@@ -50,7 +51,7 @@ export function compileSharedPointCheck(
 }
 
 type SharedPointBinding = {
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly subjectKind: string;
   readonly subjectId: string;
   readonly resourceEntity: string;
@@ -77,7 +78,7 @@ function compileSharedPointPlan(
   const compiler = new SharedPointCompiler(model, cycles, builder, binding.namespace);
   const allowed = compiler.permission(binding.resourceEntity, binding.permission);
   const reachable = subjectReachability(
-    binding.namespace,
+    binding.namespace(),
     binding.subjectKind,
     binding.subjectId,
     model.columnRelations,
@@ -100,7 +101,7 @@ class SharedPointCompiler {
     private readonly model: AuthorizationModelDefinition,
     private readonly cycles: PermissionCyclePlan,
     private readonly builder: QueryBuilder,
-    private readonly namespace: string,
+    private readonly namespace: LazySqlParam,
   ) {}
 
   permission(entity: string, name: string): string {
@@ -224,13 +225,14 @@ class SharedPointCompiler {
       return `SELECT DISTINCT ${entitySql}::text AS resource_kind, parent.resource_id
         FROM ${child} reached
         CROSS JOIN LATERAL (
-          SELECT col_tuple.${columnRel.idColumn} AS resource_id
+          SELECT col_tuple.${columnRel.idColumn}::text AS resource_id
           FROM ${columnRel.table} col_tuple
           WHERE reached.resource_kind = ${targetKindSql}
-            AND col_tuple.${columnRel.targetIdColumn} = reached.resource_id
+            AND col_tuple.${columnRel.targetIdColumn}::text = reached.resource_id
           OFFSET 0
         ) parent`;
     }
+    const namespace = this.namespace();
     const relation = this.builder.value(name);
     const kindMatch = polymorphic
       ? `reached.resource_kind = ${this.builder.value(target.entity)} AND tuple.subject_kind = reached.resource_kind`
@@ -240,7 +242,7 @@ class SharedPointCompiler {
       CROSS JOIN LATERAL (
         SELECT tuple.resource_kind, tuple.resource_id
         FROM ${TUPLES} tuple
-        WHERE tuple.namespace = ${this.namespace}
+        WHERE tuple.namespace = ${namespace}
           AND ${kindMatch}
           AND tuple.subject_id = reached.resource_id
           AND tuple.relation = ${relation}
@@ -257,11 +259,11 @@ class SharedPointCompiler {
       const child = this.permission(targets[0].entity, targets[0].permission);
       const entitySql = this.builder.value(columnRel.entity);
       const targetKindSql = this.builder.value(columnRel.targetEntity);
-      return `SELECT DISTINCT ${entitySql}::text AS resource_kind, col_cand.${columnRel.idColumn} AS resource_id
+      return `SELECT DISTINCT ${entitySql}::text AS resource_kind, col_cand.${columnRel.idColumn}::text AS resource_id
         FROM ${child} reached
         JOIN ${columnRel.table} col_cand
           ON reached.resource_kind = ${targetKindSql}
-          AND col_cand.${columnRel.targetIdColumn} = reached.resource_id
+          AND col_cand.${columnRel.targetIdColumn}::text = reached.resource_id
         WHERE NOT EXISTS (
           SELECT 1
           FROM ${columnRel.table} col_all
@@ -270,10 +272,11 @@ class SharedPointCompiler {
             AND NOT EXISTS (
               SELECT 1 FROM ${child} allowed_parent
               WHERE allowed_parent.resource_kind = ${targetKindSql}
-                AND allowed_parent.resource_id = col_all.${columnRel.targetIdColumn}
+                AND allowed_parent.resource_id = col_all.${columnRel.targetIdColumn}::text
             )
         )`;
     }
+    const namespace = this.namespace();
     const compiledTargets = targets.map((target) => ({
       target,
       child: this.permission(target.entity, target.permission),
@@ -288,7 +291,7 @@ class SharedPointCompiler {
         CROSS JOIN LATERAL (
           SELECT tuple.resource_kind, tuple.resource_id
           FROM ${TUPLES} tuple
-          WHERE tuple.namespace = ${this.namespace}
+          WHERE tuple.namespace = ${namespace}
             AND ${kindMatch}
             AND tuple.subject_id = reached.resource_id
             AND tuple.relation = ${relation}
@@ -310,7 +313,7 @@ class SharedPointCompiler {
       WHERE NOT EXISTS (
         SELECT 1
         FROM ${TUPLES} all_tuple
-        WHERE all_tuple.namespace = ${this.namespace}
+        WHERE all_tuple.namespace = ${namespace}
           AND all_tuple.resource_kind = candidate.resource_kind
           AND all_tuple.resource_id = candidate.resource_id
           AND all_tuple.relation = ${relation}

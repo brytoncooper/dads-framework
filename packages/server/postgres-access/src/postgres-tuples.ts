@@ -98,7 +98,7 @@ export class PostgresTuples {
     const columnRel = findColumnRelation(this.model, filter.resourceType, filter.relation);
     if (columnRel !== undefined) {
       const rows = await this.execute({
-        text: `SELECT 1 FROM ${columnRel.table} WHERE ${columnRel.idColumn} = $1 AND ${columnRel.targetIdColumn} IS NOT NULL LIMIT 1`,
+        text: `SELECT 1 FROM ${columnRel.table} WHERE ${columnRel.idColumn}::text = ($1)::text AND ${columnRel.targetIdColumn} IS NOT NULL LIMIT 1`,
         values: [filter.resourceId],
       });
       return rows.length > 0;
@@ -115,7 +115,7 @@ export class PostgresTuples {
     const columnRel = findColumnRelation(this.model, query.resource.type, query.relation);
     if (columnRel !== undefined) {
       const rows = await this.execute({
-        text: `SELECT DISTINCT ${columnRel.targetIdColumn} AS subject_id FROM ${columnRel.table} WHERE ${columnRel.idColumn} = $1 AND ${columnRel.targetIdColumn} IS NOT NULL ORDER BY ${columnRel.targetIdColumn}`,
+        text: `SELECT DISTINCT ${columnRel.targetIdColumn}::text AS subject_id FROM ${columnRel.table} WHERE ${columnRel.idColumn}::text = ($1)::text AND ${columnRel.targetIdColumn} IS NOT NULL ORDER BY subject_id`,
         values: [query.resource.id],
       });
       return rows.map((row) => ({

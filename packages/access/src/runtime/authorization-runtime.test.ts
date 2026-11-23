@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-work";
 
+import { actor, resource } from "../index.js";
 import { AnswerOnceAuthorization } from "./answer-once-authorization.js";
 import { Authorization, relationshipWrite, type SpiceDbConsistencyToken, type SubjectRef } from "./authorization.js";
 import { FakeAuthorization } from "./fake-authorization.js";
@@ -236,5 +237,21 @@ describe("AnswerOnceAuthorization.lookupSubjects", () => {
         subjectType: "user",
       }),
     ).rejects.toThrow(/does not implement lookupSubjects/);
+  });
+
+  it("exposes typed .can() directly on Authorization base class", async () => {
+    const user = actor("user");
+    const doc = resource("document", {
+      roles: { viewer: user },
+      can: ({ viewer }) => ({ view: viewer }),
+    });
+    const fake: Authorization = new FakeAuthorization({ document: { view: ["viewer"] } });
+    await fake.writeRelationships([
+      relationshipWrite({ type: "document", id: "doc-1" }, "viewer", { type: "user", id: "alice" }),
+    ]);
+
+    expect(await fake.can({ type: "user", id: "alice" }, doc("doc-1").view)).toBe(true);
+    expect(await fake.can({ type: "user", id: "alice" }, doc.permissions.view, "doc-1")).toBe(true);
+    expect(await fake.can({ type: "user", id: "bob" }, doc("doc-1").view)).toBe(false);
   });
 });

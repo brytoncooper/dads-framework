@@ -2,6 +2,7 @@ import ts from "typescript";
 
 const fields = ["params", "body", "query", "headers", "response", "item"] as const;
 type SchemaField = (typeof fields)[number];
+export type RouteSchemas = Partial<Record<SchemaField, string>>;
 
 export function readProperty(object: ts.ObjectLiteralExpression, key: string) {
   const property = object.properties.find(({ name }) => {

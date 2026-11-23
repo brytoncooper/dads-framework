@@ -5,6 +5,7 @@ import { FakeAuthorization } from "@dads-framework/access/testing";
 import { ACCESS_REFUSAL_HEADER, ACCESS_REFUSAL_VALUE } from "@dads-framework/core/contract";
 
 import { createHttpApp } from "../lib/create-http-app.js";
+import { HttpWiringError } from "../lib/http-errors.js";
 import type { SubjectResolver } from "../lib/request-pipeline/enforce-access.js";
 import { registerRoutes } from "../lib/request-pipeline/register-routes.js";
 import { errorBodyOf, FakeChannelFanOut } from "../testing/index.js";
@@ -61,6 +62,7 @@ async function bootChannelApp(
       ...(options.path === undefined ? {} : { path: options.path }),
       ...(options.scopeQueryParam === undefined ? {} : { scopeQueryParam: options.scopeQueryParam }),
       ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
+      ...(options.recheckIntervalMs === undefined ? {} : { recheckIntervalMs: options.recheckIntervalMs }),
     }),
     subjects,
     authorization: new FakeAuthorization({}),
@@ -79,14 +81,22 @@ async function listen(app: Awaited<ReturnType<typeof createHttpApp>>): Promise<n
   return address.port;
 }
 
-function openStream(port: number, path: string, user: string): { request: http.ClientRequest; chunks: string[] } {
+function openStream(
+  port: number,
+  path: string,
+  user: string,
+): { request: http.ClientRequest; chunks: string[]; ended: () => boolean } {
   const chunks: string[] = [];
+  let isEnded = false;
   const request = http.get({ host: "127.0.0.1", port, path, headers: { "x-test-user": user } }, (response) => {
     response.setEncoding("utf8");
     response.on("data", (chunk: string) => chunks.push(chunk));
+    response.on("end", () => {
+      isEnded = true;
+    });
   });
   openRequests.push(request);
-  return { request, chunks };
+  return { request, chunks, ended: () => isEnded };
 }
 
 async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
@@ -182,7 +192,7 @@ describe("createChannelStreamRoutes", () => {
     expect(fanOut.subscriberCount()).toBe(0);
   });
 
-  it("blocks opening on per-channel denial and skips mid-stream events when revoked", async () => {
+  it("blocks opening on per-channel denial and closes the stream when channel access is revoked mid-stream", async () => {
     let allowBilling = false;
     const canAccessScope: ChannelAccessCheck = { check: () => Promise.resolve(true) };
     const billingCheck: ChannelAccessCheck = {
@@ -214,15 +224,86 @@ describe("createChannelStreamRoutes", () => {
 
     allowBilling = false;
     const revokedBilling = makeEnvelope("billing.updated", 2, { invoice: "inv-after-revoke" });
-    const allowedOrder = makeEnvelope("orders.updated", 3, { order: "ord-still-allowed" });
+    const laterOrder = makeEnvelope("orders.updated", 3, { order: "ord-after-close" });
     fanOut.publish("ws-1", revokedBilling);
-    fanOut.publish("ws-1", allowedOrder);
+    fanOut.publish("ws-1", laterOrder);
 
-    await waitFor(() => stream.chunks.join("").includes("ord-still-allowed"));
+    await waitFor(() => stream.ended() && fanOut.subscriberCount("ws-1") === 0);
     const body = stream.chunks.join("");
     expect(body).toContain("inv-before-revoke");
     expect(body).not.toContain("inv-after-revoke");
-    expect(body).toContain("ord-still-allowed");
+    expect(body).not.toContain("ord-after-close");
+  });
+
+  it("rechecks canAccessScope on delivery and closes the stream when scope access is revoked", async () => {
+    let allowScope = true;
+    const canAccessScope: ChannelAccessCheck = {
+      check: ({ subject, scopeId }) => Promise.resolve(allowScope && subject.id === "alice" && scopeId === "ws-1"),
+    };
+    const { app, fanOut } = await bootChannelApp({
+      canAccessScope,
+      allowedChannels: ["orders.updated"],
+    });
+    const port = await listen(app);
+
+    const stream = openStream(port, "/channels/stream?scopeId=ws-1", "alice");
+    await waitFor(() => stream.chunks.join("").includes(":ready\n\n"));
+
+    fanOut.publish("ws-1", makeEnvelope("orders.updated", 1, { order: "ord-before-scope-revoke" }));
+    await waitFor(() => stream.chunks.join("").includes("ord-before-scope-revoke"));
+
+    allowScope = false;
+    fanOut.publish("ws-1", makeEnvelope("orders.updated", 2, { order: "ord-after-scope-revoke" }));
+
+    await waitFor(() => stream.ended() && fanOut.subscriberCount("ws-1") === 0);
+    // Any further publishes after closure must never be delivered.
+    allowScope = true;
+    fanOut.publish("ws-1", makeEnvelope("orders.updated", 3, { order: "ord-after-regrant" }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const body = stream.chunks.join("");
+    expect(body).toContain("ord-before-scope-revoke");
+    expect(body).not.toContain("ord-after-scope-revoke");
+    expect(body).not.toContain("ord-after-regrant");
+    expect(fanOut.subscriberCount()).toBe(0);
+  });
+
+  it("closes an idle stream automatically when periodic recheck observes grant expiry", async () => {
+    let allowScope = true;
+    let allowBilling = true;
+    const { app, fanOut } = await bootChannelApp({
+      canAccessScope: { check: () => Promise.resolve(allowScope) },
+      allowedChannels: ["billing.updated"],
+      channelAccess: new Map([["billing.updated", { check: () => Promise.resolve(allowBilling) }]]),
+      recheckIntervalMs: 25,
+    });
+    const port = await listen(app);
+
+    const scopeStream = openStream(port, "/channels/stream?scopeId=ws-1", "alice");
+    await waitFor(() => scopeStream.chunks.join("").includes(":ready\n\n"));
+    expect(fanOut.subscriberCount("ws-1")).toBe(1);
+
+    allowScope = false;
+    await waitFor(() => scopeStream.ended() && fanOut.subscriberCount("ws-1") === 0);
+
+    allowScope = true;
+    const channelStream = openStream(port, "/channels/stream?scopeId=ws-1", "alice");
+    await waitFor(() => channelStream.chunks.join("").includes(":ready\n\n"));
+    expect(fanOut.subscriberCount("ws-1")).toBe(1);
+
+    allowBilling = false;
+    await waitFor(() => channelStream.ended() && fanOut.subscriberCount("ws-1") === 0);
+  });
+
+  it("rejects non-positive recheckIntervalMs at route creation", () => {
+    expect(() =>
+      createChannelStreamRoutes({
+        channelFanOut: new FakeChannelFanOut(),
+        canAccessScope: { check: () => Promise.resolve(true) },
+        allowedChannels: ["orders.updated"],
+        recheckIntervalMs: 0,
+      }),
+    ).toThrow(HttpWiringError);
   });
 
   it("cleans up the subscription when the client disconnects and supports custom scopeQueryParam", async () => {

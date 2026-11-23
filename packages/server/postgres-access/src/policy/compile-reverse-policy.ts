@@ -6,13 +6,20 @@ import type {
 import { analyzePermissionCycles, type PermissionCyclePlan } from "./permission-cycles.js";
 import { compileRecursiveReverseLookup } from "./compile-recursive-policy.js";
 import { findColumnRelation } from "./column-relations.js";
-import { notExpired, permissionIdentity, resolveArrowTargets, TUPLES, type QueryBuilder } from "./policy-sql.js";
+import {
+  type LazySqlParam,
+  notExpired,
+  permissionIdentity,
+  resolveArrowTargets,
+  TUPLES,
+  type QueryBuilder,
+} from "./policy-sql.js";
 
 type ReverseContext = {
   readonly model: AuthorizationModelDefinition;
   readonly cycles: PermissionCyclePlan;
   readonly builder: QueryBuilder;
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly active: Set<string>;
   readonly deduplicate: boolean;
 };
@@ -30,7 +37,7 @@ export type ReverseCompileOptions = {
 export function compileReverseExpressionQuery(
   model: AuthorizationModelDefinition,
   builder: QueryBuilder,
-  namespace: string,
+  namespace: LazySqlParam,
   entity: string,
   expression: CompiledPermissionExpression,
   active: Set<string>,
@@ -51,7 +58,7 @@ export function compileReverseExpressionQuery(
 export function compileReversePermission(
   model: AuthorizationModelDefinition,
   builder: QueryBuilder,
-  namespace: string,
+  namespace: LazySqlParam,
   entity: string,
   permissionName: string,
   active: Set<string>,
@@ -144,26 +151,27 @@ function compileReverseThroughBranch(
   relationName: string,
   target: CompiledArrowTarget,
 ): string {
-  const { builder, namespace } = context;
+  const { builder } = context;
   const throughAlias = builder.throughAlias();
   const relatedResourceIds = compileReversePermissionNode(context, target.entity, target.permission);
   const columnRel = findColumnRelation(context.model, entity, relationName);
   if (columnRel !== undefined) {
     if (!context.deduplicate) {
-      return `SELECT ${throughAlias}.${columnRel.idColumn} AS resource_id
+      return `SELECT ${throughAlias}.${columnRel.idColumn}::text AS resource_id
         FROM (${relatedResourceIds}) related_resource
         JOIN ${columnRel.table} ${throughAlias}
-          ON ${throughAlias}.${columnRel.targetIdColumn} = related_resource.resource_id`;
+          ON ${throughAlias}.${columnRel.targetIdColumn}::text = related_resource.resource_id`;
     }
     return `SELECT DISTINCT match.resource_id
       FROM (${relatedResourceIds}) related_resource
       CROSS JOIN LATERAL (
-        SELECT ${throughAlias}.${columnRel.idColumn} AS resource_id
+        SELECT ${throughAlias}.${columnRel.idColumn}::text AS resource_id
         FROM ${columnRel.table} ${throughAlias}
-        WHERE ${throughAlias}.${columnRel.targetIdColumn} = related_resource.resource_id
+        WHERE ${throughAlias}.${columnRel.targetIdColumn}::text = related_resource.resource_id
         OFFSET 0
       ) match`;
   }
+  const namespace = context.namespace();
   const resourceKind = builder.value(entity);
   const relation = builder.value(relationName);
   const relatedKind = builder.value(target.entity);
@@ -206,7 +214,7 @@ function compileReverseThroughAll(
   relationName: string,
   targets: readonly CompiledArrowTarget[],
 ): string {
-  const { builder, namespace } = context;
+  const { builder } = context;
   const candidates = compileReverseThrough(context, entity, relationName, targets);
   const allAlias = builder.throughAlias();
   const columnRel = findColumnRelation(context.model, entity, relationName);
@@ -217,14 +225,15 @@ function compileReverseThroughAll(
       WHERE NOT EXISTS (
         SELECT 1
         FROM ${columnRel.table} ${allAlias}
-        WHERE ${allAlias}.${columnRel.idColumn} = candidate.resource_id
+        WHERE ${allAlias}.${columnRel.idColumn}::text = candidate.resource_id
           AND ${allAlias}.${columnRel.targetIdColumn} IS NOT NULL
           AND NOT EXISTS (
             SELECT 1 FROM (${allowedIds}) allowed_target
-            WHERE allowed_target.resource_id = ${allAlias}.${columnRel.targetIdColumn}
+            WHERE allowed_target.resource_id = ${allAlias}.${columnRel.targetIdColumn}::text
           )
       )`;
   }
+  const namespace = context.namespace();
   const resourceKind = builder.value(entity);
   const relation = builder.value(relationName);
   const allowedChecks = targets.map((target) => {

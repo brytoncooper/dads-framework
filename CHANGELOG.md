@@ -4,6 +4,34 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-11-23
+
+### Added
+
+- Added the browser-safe `@dads-framework/identity/tenants/contract` subpath so web clients can import tenant wire schemas without pulling Node or PostgreSQL dependencies into browser bundles.
+- Added RFC 4180 CSV parsers (`parseCsv` and `parseCsvRecords`) to `@dads-framework/documents/csv`.
+- Added `filterColumnRelationsForModel` and the named `DrizzleTransaction<Db>` type export to `@dads-framework/postgres-access`.
+- Added `SseStream.close()` / `readonly closed`, periodic re-authorization (`recheckIntervalMs`) and immediate stream teardown on revoked channel/scope grants in `@dads-framework/http/channels`, and optional `redactError` hooks on `@dads-framework/http/live-actions`.
+- Added optional `rateLimit?: { enabled?: boolean }` configuration to `BetterAuthIdentityOptions` in `@dads-framework/identity`.
+- Added `gatePassed` and `overCeilingCount` fields to `dad doctor --json` output.
+
+### Changed
+
+- Upgraded `fastify` in `@dads-framework/http` to `^5.12.8` (clearing the high-severity Fastify advisory) and updated `createHttpApp` `trustProxy` hop handling to use Fastify 5.12's predicate form.
+- Moved `Authorization.can(...)` onto the base `Authorization` class in `@dads-framework/access` so typed permission checks work consistently across Postgres, SQLite, SpiceDB, fake, and recording implementations.
+- Lazy-loaded `@better-auth/sso` in `@dads-framework/identity` only when enterprise SSO providers are configured, eliminating startup overhead for standard email/password apps.
+- Raised starter `engines.node` to `>=22.22`, updated the minimal starter migration to `installIdentitySchemaV2`, moved starter `DrizzleAuditLogReader` wiring into `assembly/services.ts`, enabled Vitest JSON reporting, and suppressed benign `"use client"` Rollup directive warnings in starter Vite builds.
+
+### Fixed
+
+- Fixed native PostgreSQL `UUID` column-relation comparisons, `UNION` projections, and unused `namespace` parameter binding (`42883`, `UNION types text and uuid`, `22P02`, and `42P18`) across all `@dads-framework/postgres-access` query compilers, verified against live PostgreSQL UUID tables.
+- Fixed `definePlugin` zero-generic `Provides` inference and `composeApi` deduplication when the same plugin instance provides both routes and jobs in `@dads-framework/core`.
+- Fixed `PdfmakePdfRenderer.render` in `@dads-framework/documents` to merge caller `defaultStyle` instead of overwriting the default `Helvetica` font, and replaced external `@types/pdfmake` leakage with a self-contained structural type.
+- Fixed `listMigrationRelativePaths` in `@dads-framework/postgres` to apply each `MigrationSource`'s `files` filter before deduplicating migration IDs across shared roots.
+- Fixed `@dads-framework/http` scoped route registration to default `lookups` to `authorization` and fail fast at registration time when required lookups are missing.
+- Fixed `dad inspect http-operation` and Doctor route scanners to resolve local and imported `*Operation` contracts as well as `defineRawRoute` and `sseRoute` handlers.
+- Fixed `dad doctor` empty-repo git discovery, `--existing` subproject root resolution, single-package `test-count` mapping, and false positives across `rows-sent-whole`, `sequential-authz-writes`, `denial-tests-zero`, `mutations-without-ownership`, `framework-in-core`, `vendor-named-domain`, `provider-chosen-outside-root`, and `kind-inversions`, and allowed top-level `tests/` to import domain root barrels in `dad check boundaries`.
+
 ## [0.5.1] - 2026-11-23
 
 ### Fixed

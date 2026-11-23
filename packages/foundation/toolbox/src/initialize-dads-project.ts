@@ -115,9 +115,11 @@ function resolveProjectRoot(options: InitializeDadsProjectOptions): string {
   return options.mode === "existing" ? join(targetDirectory, "dads") : targetDirectory;
 }
 
+const IGNORED_EMPTY_ROOT_ENTRIES = new Set([".git", ".DS_Store"]);
+
 function assertRecognizedProjectRoot(projectRoot: string): void {
   if (!existsSync(projectRoot)) return;
-  const entries = readdirSync(projectRoot);
+  const entries = readdirSync(projectRoot).filter((entry) => !IGNORED_EMPTY_ROOT_ENTRIES.has(entry));
   if (entries.length > 0 && !existsSync(join(projectRoot, "dads.project.json"))) {
     throw new Error(
       `Refusing to initialize non-empty directory ${projectRoot}. Use existing-project mode to add an isolated Dads project.`,

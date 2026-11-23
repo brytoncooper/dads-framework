@@ -1,7 +1,7 @@
 import type { AuthorizationModelDefinition, CompiledPermissionExpression } from "./policy-model.js";
 import type { RecursiveEdge, RecursiveNodePlan, RecursiveSccPlan } from "./permission-cycles.js";
 import { findColumnRelation } from "./column-relations.js";
-import { notExpired, TUPLES, type QueryBuilder } from "./policy-sql.js";
+import { type LazySqlParam, notExpired, TUPLES, type QueryBuilder } from "./policy-sql.js";
 
 export type RecursiveResourceRef = {
   readonly type: string;
@@ -16,7 +16,7 @@ type CompileReverseExpression = (entity: string, expression: CompiledPermissionE
 export type RecursiveForwardInput = {
   readonly model: AuthorizationModelDefinition;
   readonly builder: QueryBuilder;
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly resource: RecursiveResourceRef;
   readonly entryEntity: string;
   readonly entryPermission: string;
@@ -27,7 +27,7 @@ export type RecursiveForwardInput = {
 export type RecursiveReverseInput = {
   readonly model: AuthorizationModelDefinition;
   readonly builder: QueryBuilder;
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly entryEntity: string;
   readonly entryPermission: string;
   readonly scc: RecursiveSccPlan;
@@ -37,7 +37,7 @@ export type RecursiveReverseInput = {
 export type RecursiveSharedInput = {
   readonly model: AuthorizationModelDefinition;
   readonly builder: QueryBuilder;
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly cteName: string;
   readonly scc: RecursiveSccPlan;
   readonly baseAliases: ReadonlyMap<string, string>;
@@ -77,7 +77,7 @@ export function compileRecursiveForwardCheck(input: RecursiveForwardInput): stri
 }
 
 function compileForwardEdge(input: RecursiveForwardInput, edge: RecursiveEdge, nodeAlias: string): string {
-  const { builder, namespace } = input;
+  const { builder } = input;
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
   const fromPerm = builder.value(edge.fromPermission);
@@ -86,13 +86,14 @@ function compileForwardEdge(input: RecursiveForwardInput, edge: RecursiveEdge, n
   const guardSql = compileForwardGuards(input, edge, nodeAlias);
   const columnRel = findColumnRelation(input.model, edge.fromEntity, edge.relation);
   if (columnRel !== undefined && columnRel.targetEntity === edge.toEntity) {
-    return `SELECT ${toEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.targetIdColumn} AS resource_id, ${toPerm}::text AS permission_name
+    return `SELECT ${toEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.targetIdColumn}::text AS resource_id, ${toPerm}::text AS permission_name
       FROM ${columnRel.table} ${tupleAlias}
       WHERE ${nodeAlias}.resource_kind = ${fromEntity}
         AND ${nodeAlias}.permission_name = ${fromPerm}
-        AND ${tupleAlias}.${columnRel.idColumn} = ${nodeAlias}.resource_id
+        AND ${tupleAlias}.${columnRel.idColumn}::text = ${nodeAlias}.resource_id
         AND ${tupleAlias}.${columnRel.targetIdColumn} IS NOT NULL${guardSql}`;
   }
+  const namespace = input.namespace();
   const relation = builder.value(edge.relation);
   return `SELECT ${tupleAlias}.subject_kind AS resource_kind, ${tupleAlias}.subject_id AS resource_id, ${toPerm}::text AS permission_name
     FROM ${TUPLES} ${tupleAlias}
@@ -176,7 +177,7 @@ function compileReverseBaseAnchor(input: RecursiveReverseInput, node: RecursiveN
 }
 
 function compileReverseEdge(input: RecursiveReverseInput, edge: RecursiveEdge): string {
-  const { builder, namespace } = input;
+  const { builder } = input;
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
   const fromPerm = builder.value(edge.fromPermission);
@@ -184,13 +185,14 @@ function compileReverseEdge(input: RecursiveReverseInput, edge: RecursiveEdge): 
   const toPerm = builder.value(edge.toPermission);
   const columnRel = findColumnRelation(input.model, edge.fromEntity, edge.relation);
   if (columnRel !== undefined && columnRel.targetEntity === edge.toEntity) {
-    const guardSql = compileReverseGuards(input, edge, `${tupleAlias}.${columnRel.idColumn}`);
-    return `SELECT ${fromEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.idColumn} AS resource_id, ${fromPerm}::text AS permission_name
+    const guardSql = compileReverseGuards(input, edge, `${tupleAlias}.${columnRel.idColumn}::text`);
+    return `SELECT ${fromEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.idColumn}::text AS resource_id, ${fromPerm}::text AS permission_name
       FROM ${columnRel.table} ${tupleAlias}
       WHERE parent_node.resource_kind = ${toEntity}
         AND parent_node.permission_name = ${toPerm}
-        AND ${tupleAlias}.${columnRel.targetIdColumn} = parent_node.resource_id${guardSql}`;
+        AND ${tupleAlias}.${columnRel.targetIdColumn}::text = parent_node.resource_id${guardSql}`;
   }
+  const namespace = input.namespace();
   const relation = builder.value(edge.relation);
   const guardSql = compileReverseGuards(input, edge, `${tupleAlias}.resource_id`);
   return `SELECT ${tupleAlias}.resource_kind, ${tupleAlias}.resource_id, ${fromPerm}::text AS permission_name
@@ -240,7 +242,7 @@ export function compileRecursiveSharedBody(input: RecursiveSharedInput): string 
 }
 
 function compileSharedEdge(input: RecursiveSharedInput, edge: RecursiveEdge): string {
-  const { builder, namespace, guardAliases } = input;
+  const { builder, guardAliases } = input;
   const tupleAlias = builder.throughAlias();
   const fromEntity = builder.value(edge.fromEntity);
   const fromPerm = builder.value(edge.fromPermission);
@@ -250,15 +252,16 @@ function compileSharedEdge(input: RecursiveSharedInput, edge: RecursiveEdge): st
   if (columnRel !== undefined && columnRel.targetEntity === edge.toEntity) {
     const colGuards = edge.guards.map((guard) => {
       const alias = guardAliases.get(guard) ?? "";
-      return `EXISTS (SELECT 1 FROM ${alias} guard_row WHERE guard_row.resource_kind = ${fromEntity} AND guard_row.resource_id = ${tupleAlias}.${columnRel.idColumn})`;
+      return `EXISTS (SELECT 1 FROM ${alias} guard_row WHERE guard_row.resource_kind = ${fromEntity} AND guard_row.resource_id = ${tupleAlias}.${columnRel.idColumn}::text)`;
     });
     const guardSql = colGuards.length > 0 ? ` AND ${colGuards.join(" AND ")}` : "";
-    return `SELECT ${fromEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.idColumn} AS resource_id, ${fromPerm}::text AS permission_name
+    return `SELECT ${fromEntity}::text AS resource_kind, ${tupleAlias}.${columnRel.idColumn}::text AS resource_id, ${fromPerm}::text AS permission_name
       FROM ${columnRel.table} ${tupleAlias}
       WHERE parent_node.resource_kind = ${toEntity}
         AND parent_node.permission_name = ${toPerm}
-        AND ${tupleAlias}.${columnRel.targetIdColumn} = parent_node.resource_id${guardSql}`;
+        AND ${tupleAlias}.${columnRel.targetIdColumn}::text = parent_node.resource_id${guardSql}`;
   }
+  const namespace = input.namespace();
   const relation = builder.value(edge.relation);
   const guardChecks = edge.guards.map((guard) => {
     const alias = guardAliases.get(guard) ?? "";

@@ -1,14 +1,14 @@
-import type {
+import {
   Authorization,
-  DirectSubjectLookup,
-  PermissionQuery,
-  RelationshipFilter,
-  RelationshipWrite,
-  ResourceLookup,
-  SpiceDbConsistencyToken,
-  SubjectLookup,
-  SubjectLookupResult,
-  SubjectRef,
+  type DirectSubjectLookup,
+  type PermissionQuery,
+  type RelationshipFilter,
+  type RelationshipWrite,
+  type ResourceLookup,
+  type SpiceDbConsistencyToken,
+  type SubjectLookup,
+  type SubjectLookupResult,
+  type SubjectRef,
 } from "./authorization.js";
 
 /**
@@ -27,7 +27,7 @@ import type {
  * last hop. A user-subject lookup returning [] here is usually THIS, not a
  * missing tuple.
  */
-export class FakeAuthorization implements Authorization {
+export class FakeAuthorization extends Authorization {
   private readonly tuples = new Map<string, Date | undefined>();
   private readonly now: () => Date;
   private writeCounter = 0;
@@ -37,6 +37,7 @@ export class FakeAuthorization implements Authorization {
     private readonly permissions: Record<string, Record<string, readonly string[]>> = {},
     options?: { readonly now?: () => Date },
   ) {
+    super();
     this.now = options?.now ?? (() => new Date());
   }
 
@@ -74,7 +75,7 @@ export class FakeAuthorization implements Authorization {
     return Promise.resolve([...new Set(ids)]);
   }
 
-  lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
+  override lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
     const relations = new Set(this.relationsFor(query.resource.type, query.permission));
     const subjectIds = new Set<string>();
     let hasWildcard = false;

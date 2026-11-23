@@ -102,7 +102,7 @@ function starterMigrationFile(): StarterProjectFile {
   installAuditSchemaV1,
 } from "@dads-framework/audit";
 import { installFeatureFlagSchemaV1 } from "@dads-framework/feature-flags-postgres";
-import { installIdentitySchemaV1 } from "@dads-framework/identity/better-auth";
+import { installIdentitySchemaV2 } from "@dads-framework/identity/better-auth";
 import { relationshipSchemaMigration } from "@dads-framework/postgres-access";
 import {
   installTenantSchemaV1,
@@ -112,7 +112,7 @@ import type { MigrationBuilder } from "node-pg-migrate";
 
 export function up(pgm: MigrationBuilder): void {
   pgm.sql(relationshipSchemaMigration.sql);
-  installIdentitySchemaV1(pgm);
+  installIdentitySchemaV2(pgm);
   installTenantSchemaV1(pgm);
   installFeatureFlagSchemaV1(pgm);
   installAuditSchemaV1(pgm);

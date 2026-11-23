@@ -4,9 +4,11 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, it } from "vitest";
+import { runGateCommand } from "../cli-doctor-gate.js";
 import { createDoctorContext } from "../doctor/doctor-context.js";
 import { hookRuntimeSignal } from "../doctor/signals/dad-has-issues-too/hook-runtime.js";
 import { ciWithoutVerifySignal } from "../doctor/signals/its-not-you-its-my-boundaries/ci-without-verify.js";
+import { DADDY_ISSUES } from "../doctor/issues.js";
 import { initializeDadsProject } from "../initialize-dads-project.js";
 import { environmentWithoutGitVariables } from "../verification/git-environment.js";
 
@@ -165,6 +167,53 @@ it(
       });
     } finally {
       rmSync(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+it(
+  "passes dad doctor --gate with zero errors on fresh example and minimal starters once CI and hooks are wired",
+  { timeout: 30_000 },
+  async () => {
+    for (const template of ["example", "minimal"] as const) {
+      const directory = mkdtempSync(join(tmpdir(), `dad-starter-gate-${template}-`));
+      const root = join(directory, "starter");
+      try {
+        initializeDadsProject({
+          targetDirectory: root,
+          mode: "new",
+          projectName: `starter-${template}`,
+          template,
+        });
+        succeeded(root, "git", "init", "-b", "main");
+        succeeded(root, "sh", ".githooks/install");
+        mkdirSync(join(root, ".github", "workflows"), { recursive: true });
+        writeFileSync(
+          join(root, ".github", "workflows", "verify.yml"),
+          readFileSync(join(root, "ci", "github-actions", "verify.yml"), "utf8"),
+        );
+
+        const gate = await runGateCommand({
+          root,
+          mode: {
+            json: false,
+            update: false,
+            seed: false,
+            report: false,
+            profile: "standard",
+            files: undefined,
+            base: undefined,
+            today: "2026-11-23",
+            reason: undefined,
+            key: undefined,
+          },
+          issues: DADDY_ISSUES,
+          issuesNarrowed: false,
+        });
+        expect(gate.exitCode, `${template} starter gate failed:\n${gate.output}`).toBe(0);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
     }
   },
 );

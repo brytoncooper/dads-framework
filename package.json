@@ -1,6 +1,6 @@
 {
   "name": "dads-workspace",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "packageManager": "npm@11.19.0",
@@ -70,7 +70,7 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.3.0",
     "eslint": "^10.9.1",
-    "fastify": "5.10.0",
+    "fastify": "^5.12.8",
     "marked": "^15.0.12",
     "oxlint": "1.81.0",
     "prettier": "^3.6.2",

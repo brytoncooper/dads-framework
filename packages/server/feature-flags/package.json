@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/feature-flags",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -37,7 +37,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/core": "0.5.1",
+    "@dads-framework/core": "0.5.2",
     "zod": "^4.4.3"
   },
   "dadsBindings": {
@@ -55,9 +55,9 @@
     ]
   },
   "peerDependencies": {
-    "@dads-framework/access": "0.5.1",
-    "@dads-framework/http": "0.5.1",
-    "@dads-framework/postgres": "0.5.1",
+    "@dads-framework/access": "0.5.2",
+    "@dads-framework/http": "0.5.2",
+    "@dads-framework/postgres": "0.5.2",
     "drizzle-orm": "^0.45.2",
     "node-pg-migrate": "^9.0.0",
     "react": "^19.0.0"
@@ -83,9 +83,9 @@
     }
   },
   "devDependencies": {
-    "@dads-framework/access": "0.5.1",
-    "@dads-framework/http": "0.5.1",
-    "@dads-framework/postgres": "0.5.1",
+    "@dads-framework/access": "0.5.2",
+    "@dads-framework/http": "0.5.2",
+    "@dads-framework/postgres": "0.5.2",
     "@testcontainers/postgresql": "^12.0.4",
     "@testing-library/react": "^16.3.2",
     "@types/pg": "^8.20.0",

@@ -10,6 +10,7 @@ import { deriveAutoScopeColumns } from "./column-relations.js";
 import { compileReverseExpressionQuery, compileReversePermission } from "./compile-reverse-policy.js";
 import {
   directSubjectReachability,
+  type LazySqlParam,
   modelHasUsersetTargets,
   QueryBuilder,
   resolveArrowTargets,
@@ -122,18 +123,18 @@ export function compilePostgresFilter(
   options: ValidatedPostgresFilterInput,
 ): PostgresAccessFilter {
   const builder = new QueryBuilder(options.paramOffset);
-  const namespaceSql = builder.value(namespace);
+  const namespaceSql = builder.lazyValue(namespace);
   const subjectTypeSql = builder.value(request.subject.type);
   const subjectIdSql = builder.value(request.subject.id);
   const usesUsersets = modelHasUsersetTargets(model);
   const reachCte = usesUsersets
-    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder)
-    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder);
+    ? subjectReachability(namespaceSql(), subjectTypeSql, subjectIdSql, model.columnRelations, builder)
+    : directSubjectReachability(namespaceSql(), subjectTypeSql, subjectIdSql, model.columnRelations, builder);
 
   const wrapSemiJoin = (column: string, innerSql: string, negated = false): string => {
     const withKeyword = usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
     const op = negated ? "NOT IN" : "IN";
-    return `(${column} ${op} (${withKeyword} ${reachCte} SELECT allowed_resource.resource_id FROM (${innerSql}) allowed_resource))`;
+    return `((${column})::text ${op} (${withKeyword} ${reachCte} SELECT allowed_resource.resource_id FROM (${innerSql}) allowed_resource))`;
   };
 
   if (options.scopeColumns !== undefined) {
@@ -177,7 +178,7 @@ export function compilePostgresFilter(
 type PostgresScopedContext = {
   readonly model: AuthorizationModelDefinition;
   readonly builder: QueryBuilder;
-  readonly namespaceSql: string;
+  readonly namespaceSql: LazySqlParam;
   readonly entity: string;
   readonly idColumn: string;
   readonly scopeColumns: Readonly<Record<string, string>>;

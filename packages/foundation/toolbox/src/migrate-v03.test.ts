@@ -544,8 +544,8 @@ describe("migrateWorkspaceToV03", () => {
       .object({ dependencies: z.record(z.string(), z.string()) })
       .parse(JSON.parse(readFileSync(join(root, "package.json"), "utf8")));
     expect(manifest.dependencies).toEqual({
-      "@dads-framework/core": "^0.5.1",
-      "@dads-framework/http": "0.5.1",
+      "@dads-framework/core": "^0.5.2",
+      "@dads-framework/http": "0.5.2",
     });
     expect(readFileSync(join(root, "src/app.ts"), "utf8")).toContain("@dads-framework/core/contract");
   });

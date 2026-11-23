@@ -16,7 +16,7 @@ class TaskListAuthorization extends WorkbenchMemoryAuthorization {
   readonly batches: string[][] = [];
   afterBatch: (answers: readonly boolean[]) => readonly boolean[] | Promise<readonly boolean[]> = (answers) => answers;
 
-  async checkMany(queries: readonly PermissionQuery[]) {
+  override async checkMany(queries: readonly PermissionQuery[]) {
     this.batches.push(queries.map((query) => query.resource.id));
     const answers = await Promise.all(queries.map((query) => this.check(query)));
     return this.afterBatch(answers);

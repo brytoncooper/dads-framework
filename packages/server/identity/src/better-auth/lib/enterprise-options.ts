@@ -145,8 +145,19 @@ function validateEndpoint(endpoint: string, origin: string): void {
   }
 }
 
+export const OIDC_CALLBACK = "/sso/callback";
+export const SAML_CALLBACK = "/sso/saml2/sp/acs";
+
 export function enterpriseEmailDomain(email: unknown): string | undefined {
   return normalizeIdentityEmail(email)?.split("@").at(-1);
+}
+
+export function forEmail(
+  providers: readonly EnterpriseSsoProvider[],
+  email: unknown,
+): EnterpriseSsoProvider | undefined {
+  const domain = enterpriseEmailDomain(email);
+  return providers.find((provider) => provider.domain === domain);
 }
 
 export function enterpriseProviderBinding(provider: EnterpriseSsoProvider): string {

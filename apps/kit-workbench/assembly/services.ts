@@ -1,4 +1,5 @@
 import type { AccessModel } from "@dads-framework/access";
+import { DrizzleAuditLogReader } from "@dads-framework/audit";
 import { currentAuditActor } from "@dads-framework/core/audit-actor";
 import { GetEffectiveFeatureState, type FeatureFlagDefinition } from "@dads-framework/feature-flags";
 import { readFeatureFlagPreview } from "@dads-framework/feature-flags/http";
@@ -122,6 +123,7 @@ export async function openServices(
   );
   return {
     db: connection.drizzle,
+    auditLogReader: new DrizzleAuditLogReader(connection.drizzle),
     local,
     mailJobs: mail?.jobs ?? [],
     files: local.storage,

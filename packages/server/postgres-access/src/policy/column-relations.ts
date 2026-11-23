@@ -1,4 +1,4 @@
-import type { RoleToken } from "@dads-framework/access";
+import type { AccessModel, RoleToken } from "@dads-framework/access";
 import type { PostgresQuery, PostgresRow } from "../postgres-types.js";
 import type { AuthorizationModelDefinition, CompiledColumnRelation } from "./policy-model.js";
 
@@ -45,6 +45,19 @@ function splitSchemaTable(qualifiedTable: string): {
     schema: qualifiedTable.slice(0, dotIndex),
     table: qualifiedTable.slice(dotIndex + 1),
   };
+}
+
+/**
+ * Filter a shared `columnRelations` binding list to entities present in `model`.
+ * Bindings on mounted entities are kept intact so `compileColumnRelations` still
+ * rejects unknown roles or invalid bindings on those entities.
+ */
+export function filterColumnRelationsForModel(
+  model: AccessModel,
+  bindings: readonly ColumnRelationBinding[],
+): readonly ColumnRelationBinding[] {
+  const entities = new Set(model.definitions.map((definition) => definition.entity.wireName));
+  return Object.freeze(bindings.filter((binding) => entities.has(binding.role.entityWireName)));
 }
 
 /** Validate and attach `columnRelations` bindings against the lowered policy model. */

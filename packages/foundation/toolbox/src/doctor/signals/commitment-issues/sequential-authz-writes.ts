@@ -39,11 +39,33 @@ const INSERT = "insert";
 const SEQUENTIAL_WRITE = "writeRelationships";
 const ROWLESS_APPEND = "append";
 const OUTBOX_SEAM = /\bEnqueueAccessChanges\b|\baccessChangesToWrite\b/;
+const PROTECTED_TRANSACTIONS = new Set([
+  "withProtectedDrizzleTransaction",
+  "withProtectedPgTransaction",
+  "withProtectedPostgresTransaction",
+  "writeWithPermission",
+]);
 
 function callsMethod(node: ts.Node, method: string): boolean {
   return (
     ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === method
   );
+}
+
+/** True when a function callback executes inside a protected Postgres transaction wrapper. */
+function isProtectedTransactionCallback(node: ts.Node): boolean {
+  let current: ts.Node = node.parent;
+  while (ts.isParenthesizedExpression(current)) {
+    current = current.parent;
+  }
+  if (!ts.isCallExpression(current)) return false;
+  const callee = current.expression;
+  const name = ts.isIdentifier(callee)
+    ? callee.text
+    : ts.isPropertyAccessExpression(callee)
+      ? callee.name.text
+      : undefined;
+  return name !== undefined && PROTECTED_TRANSACTIONS.has(name);
 }
 
 /** `const { writeRelationships } = …`, which is the same call, deferred. */
@@ -56,12 +78,11 @@ function bindsSequentialWrite(node: ts.Node): boolean {
 }
 
 /** True when an inserting body also writes the facts as a step of its own. */
-function writesInTwoSteps(body: ts.Block, holdsOutbox: boolean): boolean {
+function writesInTwoSteps(body: ts.Block, holdsOutbox: boolean, inProtectedTransaction: boolean): boolean {
   return containsInScope(
     body,
     (node) =>
-      callsMethod(node, SEQUENTIAL_WRITE) ||
-      bindsSequentialWrite(node) ||
+      (!inProtectedTransaction && (callsMethod(node, SEQUENTIAL_WRITE) || bindsSequentialWrite(node))) ||
       (holdsOutbox && callsMethod(node, ROWLESS_APPEND)),
   );
 }
@@ -81,7 +102,7 @@ function readInsertingFunctions(module: DoctorModule): InsertingFunctions {
     if (body === undefined) return;
     if (!containsInScope(body, (child) => callsMethod(child, INSERT))) return;
     inserting += 1;
-    if (!writesInTwoSteps(body, holdsOutbox)) return;
+    if (!writesInTwoSteps(body, holdsOutbox, isProtectedTransactionCallback(node))) return;
     twoStep.push(evidenceAt(module, node, functionName(node)));
   });
   return { inserting, twoStep };

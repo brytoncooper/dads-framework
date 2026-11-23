@@ -7,9 +7,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { actor, compileAccess, permissionToken, resource } from "@dads-framework/access";
+import { FakeAuthorization } from "@dads-framework/access/testing";
+import { paginationQuerySchema } from "@dads-framework/core/contract";
+
 import { HttpWiringError } from "../http-errors.js";
 import { getRoute } from "../route/get-route.js";
+import { listRoute } from "../route/list-route.js";
 import { publicAccess } from "../route/access.js";
+import { requiresVisible } from "../route/route-guards.test-support.js";
 import { routeGroup } from "../route/route-group.js";
 import { startHttpHost } from "./start-http-host.js";
 
@@ -144,6 +150,71 @@ describe("startHttpHost", () => {
       }),
     ).rejects.toThrow(HttpWiringError);
 
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("defaults lookups to authorization for requiresVisible routes and fails at startup when neither is supplied", async () => {
+    const userActor = actor("user", { id: z.string() });
+    const ticketResource = resource("host/ticket", {
+      id: z.string(),
+      roles: { owner: userActor },
+      can: ({ owner }) => ({ view: owner }),
+    });
+    const accessModel = compileAccess([userActor, ticketResource], {
+      allowLookupResourcesOn: [ticketResource],
+    });
+    const visibleRoute = listRoute({
+      route: { method: "GET", template: "/tickets" },
+      summary: "List visible tickets",
+      access: requiresVisible(permissionToken("host/ticket", "view")),
+      query: paginationQuerySchema,
+      item: z.object({ id: z.string() }),
+      handler: ({ visibleIds }) => ({
+        items: visibleIds.map((id) => ({ id })),
+        total: visibleIds.length,
+      }),
+    });
+    const authorization = new FakeAuthorization({
+      "host/ticket": { view: ["owner"] },
+    });
+    authorization.seed({
+      resource: { type: "host/ticket", id: "t-42" },
+      relation: "owner",
+      subject: { type: "user", id: "u1" },
+    });
+
+    const app = await startHttpHost({
+      baseUrl: "https://app.example.test",
+      nodeEnv: "test",
+      logger: false,
+      routes: routeGroup("Tickets", [visibleRoute]),
+      accessModel,
+      subjects: { resolve: () => Promise.resolve({ type: "user", id: "u1" }) },
+      authorization,
+    });
+    try {
+      const res = await app.inject({ method: "GET", url: "/api/tickets" });
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body)).toEqual({
+        data: [{ id: "t-42" }],
+        meta: { total: 1, page: 1, perPage: 25 },
+      });
+    } finally {
+      await app.close();
+    }
+
+    const onClose = vi.fn();
+    await expect(
+      startHttpHost({
+        baseUrl: "https://app.example.test",
+        nodeEnv: "test",
+        logger: false,
+        routes: routeGroup("Tickets", [visibleRoute]),
+        accessModel,
+        ...silentPorts,
+        onClose,
+      }),
+    ).rejects.toThrow(HttpWiringError);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

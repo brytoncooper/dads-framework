@@ -37,7 +37,7 @@ export type PluginSpec<
   /** Plugins and services this plugin's setup uses; they start first. */
   readonly requires?: Requires;
   /** The service this plugin's `provides` value implements. */
-  readonly implements?: ServiceBinding<ServiceName, NoInfer<Provides>>;
+  readonly implements?: ServiceBinding<ServiceName, Provides>;
   /** Declared contributions, readable without starting anything. */
   readonly contributes?: PluginContributions<Flag, Access>;
   readonly setup?: (

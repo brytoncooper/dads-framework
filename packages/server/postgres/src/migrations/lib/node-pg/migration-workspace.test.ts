@@ -118,4 +118,64 @@ describe("applicationMigrationWorkspace", () => {
       /vendor\/missing-package\/migrations does not exist/,
     );
   });
+
+  it("deduplicates walking when two MigrationSource entries share root with disjoint files regexes", async () => {
+    workspaceRoot = await createTempWorkspace({
+      "migrations/20260101000000_app_init.migration.ts": migrationSourceText(),
+      "migrations/identity/20260101000001_identity_tables.migration.ts": migrationSourceText(),
+      "migrations/billing/20260101000002_billing_tables.migration.ts": migrationSourceText(),
+    });
+
+    const workspace = applicationMigrationWorkspace(workspaceRoot, {
+      extraSources: [
+        {
+          root: "migrations",
+          files: /^migrations\/identity\/[^/]+\.migration\.ts$/,
+          owner: "identity",
+          required: true,
+        },
+        {
+          root: "migrations",
+          files: /^migrations\/billing\/[^/]+\.migration\.ts$/,
+          owner: "billing",
+          required: true,
+        },
+      ],
+    });
+
+    const discovered = await discoverDomainMigrations({ workspace });
+    expect(discovered.map((entry) => ({ id: entry.id, owner: entry.owner }))).toEqual([
+      { id: "20260101000000", owner: "app" },
+      { id: "20260101000001", owner: "identity" },
+      { id: "20260101000002", owner: "billing" },
+    ]);
+
+    const shipped = await listShippedDatabaseMigrations(workspace);
+    expect(shipped.map((entry) => ({ owner: entry.owner, file: entry.file }))).toEqual([
+      { owner: "app", file: "migrations/20260101000000_app_init.migration.ts" },
+      { owner: "identity", file: "migrations/identity/20260101000001_identity_tables.migration.ts" },
+      { owner: "billing", file: "migrations/billing/20260101000002_billing_tables.migration.ts" },
+    ]);
+  });
+
+  it("reports a clear error when two MigrationSource entries claim the same migration file", async () => {
+    workspaceRoot = await createTempWorkspace({
+      "migrations/20260101000000_shared.migration.ts": migrationSourceText(),
+    });
+
+    const workspace = applicationMigrationWorkspace(workspaceRoot, {
+      extraSources: [
+        {
+          root: "migrations",
+          files: /^migrations\/[^/]+\.migration\.ts$/,
+          owner: "duplicate-owner",
+          required: true,
+        },
+      ],
+    });
+
+    await expect(discoverDomainMigrations({ workspace })).rejects.toThrow(
+      /migrations\/20260101000000_shared\.migration\.ts matches more than one migration source/,
+    );
+  });
 });

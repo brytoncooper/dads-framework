@@ -33,7 +33,7 @@ import {
 } from "../scanners/typescript-program.js";
 
 const COMPOSITION_ROOTS = new Set(["main.ts", "composition-root.ts", "container.ts", "bootstrap.ts"]);
-const VENDOR_HOMES = new Set(["adapter", "integration"]);
+const VENDOR_HOMES = new Set(["adapter", "integration", "composition"]);
 const APPLICATION_ROOT = "apps/";
 const HANDLER_PATH = /route|handler|controller/i;
 

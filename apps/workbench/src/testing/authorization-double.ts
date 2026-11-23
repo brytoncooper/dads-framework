@@ -10,8 +10,10 @@ export function createAuthorizationDouble(
   backing: WorkbenchAuthorization,
   overrides: AuthorizationOverrides = {},
 ): WorkbenchAuthorization {
+  const check = overrides.check ?? backing.check.bind(backing);
   return {
-    check: overrides.check ?? backing.check.bind(backing),
+    can: backing.can.bind({ check }),
+    check,
     lookupResources: overrides.lookupResources ?? backing.lookupResources.bind(backing),
     writeRelationships: overrides.writeRelationships ?? backing.writeRelationships.bind(backing),
     deleteRelationships: overrides.deleteRelationships ?? backing.deleteRelationships.bind(backing),

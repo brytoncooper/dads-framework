@@ -1,14 +1,14 @@
-import type {
+import {
   Authorization,
-  DirectSubjectLookup,
-  PermissionQuery,
-  RelationshipFilter,
-  RelationshipWrite,
-  ResourceLookup,
-  SpiceDbConsistencyToken,
-  SubjectLookup,
-  SubjectLookupResult,
-  SubjectRef,
+  type DirectSubjectLookup,
+  type PermissionQuery,
+  type RelationshipFilter,
+  type RelationshipWrite,
+  type ResourceLookup,
+  type SpiceDbConsistencyToken,
+  type SubjectLookup,
+  type SubjectLookupResult,
+  type SubjectRef,
 } from "./authorization.js";
 import {
   lookupQuestionIdentity,
@@ -29,13 +29,14 @@ type RecordingAuthorizationOptions = {
 };
 
 /** An explicit-answer fake for decision tests; it records questions but never evaluates tuples or arrows. */
-export class RecordingAuthorization implements Authorization {
+export class RecordingAuthorization extends Authorization {
   readonly questions: (
     | { kind: "check"; query: PermissionQuery }
     | { kind: "lookup"; query: ResourceLookup }
     | { kind: "subject-lookup"; query: SubjectLookup }
   )[] = [];
   constructor(private readonly answers: RecordingAuthorizationOptions = {}) {
+    super();
     this.rejectDuplicateAnswers(answers.checks ?? [], permissionKey, "check");
     this.rejectDuplicateAnswers(answers.lookups ?? [], lookupAnswerKey, "lookup");
     this.rejectDuplicateAnswers(answers.subjectLookups ?? [], subjectLookupAnswerKey, "subject-lookup");
@@ -48,7 +49,7 @@ export class RecordingAuthorization implements Authorization {
     this.questions.push({ kind: "lookup", query });
     return Promise.resolve().then(() => this.find(this.answers.lookups ?? [], lookupAnswerKey, query, "lookup").answer);
   }
-  lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
+  override lookupSubjects(query: SubjectLookup): Promise<SubjectLookupResult> {
     this.questions.push({ kind: "subject-lookup", query });
     return Promise.resolve().then(
       () => this.find(this.answers.subjectLookups ?? [], subjectLookupAnswerKey, query, "subject-lookup").answer,

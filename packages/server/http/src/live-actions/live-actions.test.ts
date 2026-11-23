@@ -207,6 +207,47 @@ describe("executeLiveAction & InMemoryLiveActionRunStore", () => {
     expect(await store.getById(record.id)).toEqual(record);
   });
 
+  it("applies redactError from the action definition and execute options to sanitize stored error messages", async () => {
+    const store = new InMemoryLiveActionRunStore();
+    const sensitiveAction = defineLiveAction({
+      name: "db.vacuum",
+      description: "Run targeted vacuum against a database table",
+      dangerLevel: "cautious",
+      permission: permissionToken("ops/db", "vacuum"),
+      inputSchema: z.strictObject({ table: z.string().min(1) }),
+      redactError: (error) => (error instanceof Error ? "Database operation failed [REDACTED]" : "Unknown failure"),
+      execute: () => Promise.reject(new Error("postgres://admin:super-secret@db.internal:5432/prod failed")),
+    });
+
+    const fromDefinition = await executeLiveAction({
+      action: sensitiveAction,
+      caller: { type: "user", id: "operator-1" },
+      reason: "Reclaim dead tuples after migration",
+      input: { table: "orders" },
+      store,
+      canExecute: () => Promise.resolve(true),
+    });
+
+    expect(fromDefinition.outcome).toBe("failed");
+    expect(fromDefinition.errorMessage).toBe("Database operation failed [REDACTED]");
+    expect(fromDefinition.errorMessage).not.toContain("super-secret");
+    expect((await store.getById(fromDefinition.id))?.errorMessage).toBe("Database operation failed [REDACTED]");
+
+    const fromOptions = await executeLiveAction({
+      action: sensitiveAction,
+      caller: { type: "user", id: "operator-1" },
+      reason: "Retry vacuum with custom caller redactor",
+      input: { table: "orders" },
+      store,
+      canExecute: () => Promise.resolve(true),
+      redactError: () => "Sanitized by executeLiveAction caller",
+    });
+
+    expect(fromOptions.outcome).toBe("failed");
+    expect(fromOptions.errorMessage).toBe("Sanitized by executeLiveAction caller");
+    expect((await store.getById(fromOptions.id))?.errorMessage).toBe("Sanitized by executeLiveAction caller");
+  });
+
   it("denies unauthorized callers before validating input or persisting runs", async () => {
     const store = new InMemoryLiveActionRunStore();
     let thrown: unknown;

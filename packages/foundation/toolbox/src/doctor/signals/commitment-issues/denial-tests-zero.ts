@@ -21,14 +21,31 @@ import { readRouteModel } from "../scanners/route-model.js";
 
 const DENIAL_MARKS = ["proveMissingRelationshipDenial", "denial", "denies", "denied", "forbidden", "unauthorized"];
 const READABLE = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
+const EXTERNAL_TEST_FILE = /^(?:tests|assembly)\/.*\.test\.[cm]?[jt]sx?$/;
+const DOMAIN_ROOT = /^(?:src\/)?domains\/([^/]+)$/;
+
+function hasDenialMark(text: string): boolean {
+  const lower = text.toLowerCase();
+  return DENIAL_MARKS.some((mark) => lower.includes(mark.toLowerCase()));
+}
+
+function referencesPackage(text: string, declared: GraphPackage): boolean {
+  if (text.includes(declared.name) || text.includes(declared.root)) return true;
+  const domain = DOMAIN_ROOT.exec(declared.root)?.[1];
+  if (domain === undefined) return false;
+  const escaped = domain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+}
 
 function denialProofIn(context: DoctorContext, declared: GraphPackage): string | undefined {
   for (const path of packageFiles(context, declared)) {
     if (!READABLE.some((extension) => path.endsWith(extension))) continue;
-    const text = context.read(path).toLowerCase();
-    if (DENIAL_MARKS.some((mark) => text.includes(mark.toLowerCase()))) {
-      return path;
-    }
+    if (hasDenialMark(context.read(path))) return path;
+  }
+  for (const path of context.files()) {
+    if (!EXTERNAL_TEST_FILE.test(path)) continue;
+    const text = context.read(path);
+    if (referencesPackage(text, declared) && hasDenialMark(text)) return path;
   }
   return undefined;
 }

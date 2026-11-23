@@ -1,9 +1,6 @@
-import type { DslPermissionTarget, PermissionToken } from "@dads-framework/access";
 import {
   Authorization,
-  permissionQueryFromCan,
   type AccessChange,
-  type AuthorizationCanOptions,
   type DirectSubjectLookup,
   type PermissionQuery,
   type RelationshipFilter,
@@ -100,23 +97,6 @@ export class PostgresAuthorization extends Authorization {
       throw new Error("Postgres authorization requires a Drizzle transaction");
     }
     return this.inTransaction(lazyDrizzleTransactionExecutor(transaction));
-  }
-
-  /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
-  can(subject: SubjectRef, target: DslPermissionTarget, options?: AuthorizationCanOptions): Promise<boolean>;
-  can(
-    subject: SubjectRef,
-    permission: PermissionToken,
-    resourceId: string,
-    options?: AuthorizationCanOptions,
-  ): Promise<boolean>;
-  can(
-    subject: SubjectRef,
-    permissionOrTarget: DslPermissionTarget | PermissionToken,
-    resourceIdOrOptions?: string | AuthorizationCanOptions,
-    maybeOptions?: AuthorizationCanOptions,
-  ): Promise<boolean> {
-    return this.check(permissionQueryFromCan(subject, permissionOrTarget, resourceIdOrOptions, maybeOptions));
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {

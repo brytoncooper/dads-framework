@@ -428,4 +428,43 @@ describe("ergonomic access DSL", () => {
     expect(user.entity.wireName).toBe("user");
     expect(workspace.entity.wireName).toBe("workspace");
   });
+
+  it("types chained child and grandchild resources strictly without index signatures", () => {
+    const account = actor("account");
+    const org = resource("org", {
+      roles: {
+        approver: account,
+        operator: account,
+      },
+      can: ({ approver, operator }) => ({
+        oversee: approver,
+        decide: approver,
+        draft: [approver, operator],
+      }),
+    });
+    const treasuryAccount = org.child("treasury_account", {
+      inherit: ["oversee", "decide", "draft"],
+      roles: {
+        auditor: account,
+      },
+      can: ({ parent, auditor }) => ({
+        view: [parent.oversee, auditor],
+      }),
+    });
+    const payout = treasuryAccount.child("payout", {
+      inherit: ["view"],
+      roles: {
+        creator: account,
+      },
+      can: ({ parent, creator }) => ({
+        approve: parent.decide.unless(creator),
+        inspect: parent.oversee,
+      }),
+    });
+
+    const model = compileAccess([org, treasuryAccount, payout]);
+    const payoutDef = model.definitions.find((entry) => entry.entity.wireName === "payout");
+    expect(payoutDef?.permissions["approve"]).toBeDefined();
+    expect(payoutDef?.permissions["inspect"]).toBeDefined();
+  });
 });

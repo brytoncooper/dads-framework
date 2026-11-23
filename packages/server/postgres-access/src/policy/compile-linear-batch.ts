@@ -1,9 +1,9 @@
 import type { AuthorizationModelDefinition } from "./policy-model.js";
-import type { QueryBuilder } from "./policy-sql.js";
+import type { LazySqlParam, QueryBuilder } from "./policy-sql.js";
 import { compileSharedPointRows } from "./compile-shared-point-check.js";
 
 type LinearBatchBranch = {
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly resourceType: string;
   readonly permission: string;
   readonly index: number;

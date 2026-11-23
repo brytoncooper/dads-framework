@@ -20,7 +20,7 @@ export function providePlugin<
   service: Service<ServiceName, Value>,
   create: (scope: PluginScope) => Provided | Promise<Provided>,
 ): Plugin<Name, never, Provided, never, never, never, ServiceName, never> {
-  return definePlugin({
+  return definePlugin<Name, [], Provided, never, never, never, ServiceName>({
     name,
     implements: service,
     setup: async ({ scope }) => ({ provides: await create(scope) }),

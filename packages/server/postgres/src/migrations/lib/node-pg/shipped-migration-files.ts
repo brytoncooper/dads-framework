@@ -45,21 +45,43 @@ export async function listShippedDatabaseMigrations(
  * the runner would otherwise apply nothing and log success.
  */
 export async function listMigrationRelativePaths(workspace: MigrationWorkspace): Promise<string[]> {
+  const claimed = new Map<string, MigrationSource>();
   const files: string[] = [];
   for (const source of workspace.sources) {
-    const directory = join(workspace.root, source.root);
-    if (!(await directoryExists(directory))) {
-      if (!source.required) continue;
-      throw new Error(
-        `migration discovery: ${source.root} does not exist under ${workspace.root}. ` +
-          `Every migration this runner applies lives under one of ` +
-          `${workspace.sources.map((it) => it.root).join(", ")}, so a missing ` +
-          `root would leave the database unmigrated while the run reported success.`,
-      );
+    const matched = await walkSourceFiles(workspace, source);
+    for (const relativePath of matched) {
+      const existing = claimed.get(relativePath);
+      if (existing !== undefined) {
+        throw new Error(
+          `migration discovery: ${relativePath} matches more than one migration source ` +
+            `(${describeSource(existing)} and ${describeSource(source)}).`,
+        );
+      }
+      claimed.set(relativePath, source);
+      files.push(relativePath);
     }
-    await walkDirectory(workspace.root, directory, files);
   }
-  return files.filter((relativePath) => sourceOf(workspace, relativePath) !== undefined);
+  return files;
+}
+
+async function walkSourceFiles(workspace: MigrationWorkspace, source: MigrationSource): Promise<string[]> {
+  const directory = join(workspace.root, source.root);
+  if (!(await directoryExists(directory))) {
+    if (!source.required) return [];
+    throw new Error(
+      `migration discovery: ${source.root} does not exist under ${workspace.root}. ` +
+        `Every migration this runner applies lives under one of ` +
+        `${workspace.sources.map((it) => it.root).join(", ")}, so a missing ` +
+        `root would leave the database unmigrated while the run reported success.`,
+    );
+  }
+  const walked: string[] = [];
+  await walkDirectory(workspace.root, directory, walked);
+  return walked.filter((relativePath) => source.files.test(relativePath));
+}
+
+function describeSource(source: MigrationSource): string {
+  return source.owner === undefined ? source.root : `${source.root} (owner: ${source.owner})`;
 }
 
 function sourceOf(workspace: MigrationWorkspace, relativePath: string): MigrationSource | undefined {

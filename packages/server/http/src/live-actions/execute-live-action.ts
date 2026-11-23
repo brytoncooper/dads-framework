@@ -19,6 +19,8 @@ export type ExecuteLiveActionOptions<TInput = unknown> = {
   readonly canExecute: LiveActionExecutionAuthorizer<TInput>;
   readonly signal?: AbortSignal;
   readonly now?: () => Date;
+  /** Optional sanitizer for error text persisted to `errorMessage` on failure. */
+  readonly redactError?: (error: unknown) => string;
 };
 
 function formatErrorMessage(error: unknown): string {
@@ -109,7 +111,8 @@ async function runAndFinalize<TInput>(
     };
   } catch (error: unknown) {
     const finishedAt = clock();
-    const errorMessage = formatErrorMessage(error);
+    const redactError = options.redactError ?? options.action.redactError ?? formatErrorMessage;
+    const errorMessage = redactError(error);
     await options.store.recordFinish({
       id: initialRecord.id,
       outcome: "failed",

@@ -232,7 +232,7 @@ describe("PostgreSQL column-backed relations", () => {
       idColumn: "doc.id",
       scopeColumns: "auto",
     });
-    expect(compiledFilter.sql).toContain("doc.org_id IN");
+    expect(compiledFilter.sql).toContain("(doc.org_id)::text IN");
     const compiledRows = await postgres.pool.query<{ id: string }>(
       `SELECT doc.id FROM documents doc WHERE ${compiledFilter.sql} ORDER BY doc.id`,
       [...compiledFilter.values],
@@ -246,7 +246,7 @@ describe("PostgreSQL column-backed relations", () => {
       idColumn: "doc.id",
       scopeColumns: "auto",
     });
-    expect(resolvedFilter.sql).toContain("doc.org_id = ANY");
+    expect(resolvedFilter.sql).toContain("(doc.org_id)::text = ANY");
     const resolvedRows = await postgres.pool.query<{ id: string }>(
       `SELECT doc.id FROM documents doc WHERE ${resolvedFilter.sql} ORDER BY doc.id`,
       [...resolvedFilter.values],

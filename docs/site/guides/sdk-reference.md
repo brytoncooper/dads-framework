@@ -126,7 +126,9 @@ Drizzle is optional. Use the root entry point with plain `pg.Pool`, or import Dr
 | Export                                            | Entry point                               | Options & usage                                                                                                                                                                                       |
 | :------------------------------------------------ | :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `new PostgresAuthorization(options)`              | `@dads-framework/postgres-access`         | `{ model, namespace, executor, columnRelations?, queryTimeoutMs?, reuseLookupResultsOn? }`. Accepts a plain `pg.Pool` or `preparePostgresChecks(pool)`.                                               |
-| `authorization.verifyColumnRelations()`           | `@dads-framework/postgres-access`         | Checks live PostgreSQL `information_schema.columns` and `pg_indexes` for every `columnRelations` binding; throws if a column is missing.                                                              |
+| `authorization.verifyColumnRelations()`           | `@dads-framework/postgres-access`         | Checks live PostgreSQL `information_schema.columns` and `pg_indexes` for every `columnRelations` binding; throws if a column is missing. Supports both native `uuid` and `text` columns.              |
+| `filterColumnRelationsForModel(model, bindings)`  | `@dads-framework/postgres-access`         | Filters a shared `columnRelations` list down to entities present in one API entrypoint's compiled access model (for customer vs. staff hosts).                                                        |
+| `DrizzleTransaction<Db>`                          | `@dads-framework/postgres-access`         | Named structural type for the transaction handle passed to `withProtectedDrizzleTransaction` callbacks.                                                                                               |
 | `columnRelationIndexSql(bindings)`                | `@dads-framework/postgres-access`         | Generates `CREATE INDEX IF NOT EXISTS` DDL for `(targetIdColumn, idColumn)` reverse lookups on every column-backed table.                                                                             |
 | `authorization.compileFilter(query)`              | `@dads-framework/postgres-access`         | `{ subject, permission, resourceType, idColumn, scopeColumns?: Record<string, string> \| "auto", paramOffset? }`. Compiles a single-query SQL `WHERE` predicate (`{ sql, values }`).                  |
 | `authorization.resolveFilter(query)`              | `@dads-framework/postgres-access`         | Executes one tagged reverse-index probe and prunes empty `scopeColumns` branches to minimal `= ANY($N::text[])` predicates (0.39–1.88 ms on 10M rows). Supports `scopeColumns: "auto"`.               |
@@ -192,14 +194,15 @@ Use `getRoute`, `listRoute`, `postRoute`, `postNoContentRoute`, `patchRoute`, `p
 
 ### Route access guards (`@dads-framework/http`)
 
-| Helper                                 | What it enforces                                                                                   |
-| :------------------------------------- | :------------------------------------------------------------------------------------------------- |
-| `requires(permission, idSource)`       | Checks `permission` on the target ID (`401` if signed out, `404` if denied).                       |
-| `requiresScoped(permission, bindings)` | Lists child rows through parent scopes (useful when pairing with `scopeBindings` on SpiceDB).      |
-| `requiresVisible(permission)`          | Lists resources visible to the caller via `lookupResources`.                                       |
-| `requireSession`                       | Caller must be signed in (for routes like `GET /me`).                                              |
-| `publicAccess`                         | Explicitly open endpoint (for login or health checks).                                             |
-| `fromParam(name)`                      | Reads the resource ID from a path param. Also: `fromQuery`, `fromBody`, `fromHeader`, `fromFixed`. |
+| Helper                                   | What it enforces                                                                                                                            |
+| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| `requires(permission, idSource)`         | Checks `permission` on the target ID (`401` if signed out, `404` if denied).                                                                |
+| `requiresScoped(permission, bindings)`   | Lists child rows through parent scopes (useful when pairing with `scopeBindings` on SpiceDB).                                               |
+| `requiresVisible(permission)`            | Lists resources visible to the caller via `lookupResources`.                                                                                |
+| `requireSession`                         | Caller must be signed in (for routes like `GET /me`).                                                                                       |
+| `publicAccess()`                         | Function call declaring an explicitly open endpoint (for login or health checks).                                                           |
+| `fromParam(name)`                        | Reads the resource ID from a path param. Also: `fromQuery`, `fromBody`, `fromHeader`, `fromFixed`.                                          |
+| `sseRoute` / `createChannelStreamRoutes` | Guarded SSE routes (`stream.close()`, `stream.closed`) and channel streams with `recheckIntervalMs` and automatic disconnect on revocation. |
 
 ### Contracts & clients (`@dads-framework/core/contract`, `@dads-framework/client`)
 

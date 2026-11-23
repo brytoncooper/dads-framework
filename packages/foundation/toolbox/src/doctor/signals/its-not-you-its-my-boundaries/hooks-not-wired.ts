@@ -18,12 +18,29 @@
  * nobody wired at all.
  */
 
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import type { DoctorContext } from "../../doctor-context.js";
 import type { DoctorSignal, SignalReadings } from "../../doctor-signal.js";
-import { gitConfigValue, requireGitWorkspace } from "../scanners/git-history.js";
+import { gitConfigValue, requireGitWorkspace, runGit } from "../scanners/git-history.js";
 
 const HOOKS_PATH_SETTING = "core.hooksPath";
 const GIT_CONFIG = ".git/config";
+
+function findEnclosingHooks(root: string, configured: string): readonly string[] {
+  const shown = runGit(root, "rev-parse", ["--show-toplevel"]);
+  if (shown.status !== 0) return [];
+  const topLevel = shown.stdout.trim();
+  if (topLevel.length === 0) return [];
+  const hooksDir = resolve(topLevel, configured);
+  try {
+    return readdirSync(hooksDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => `${configured.replace(/\/$/, "")}/${entry.name}`);
+  } catch {
+    return [];
+  }
+}
 
 function readHooksWiring(context: DoctorContext): SignalReadings {
   requireGitWorkspace(context.root);
@@ -40,7 +57,8 @@ function readHooksWiring(context: DoctorContext): SignalReadings {
     ]);
   }
   const prefix = `${configured.replace(/\/$/, "")}/`;
-  const hooks = context.files().filter((path) => path.startsWith(prefix));
+  const localHooks = context.files().filter((path) => path.startsWith(prefix));
+  const hooks = localHooks.length > 0 ? localHooks : findEnclosingHooks(context.root, configured);
   return new Map([
     [
       HOOKS_PATH_SETTING,

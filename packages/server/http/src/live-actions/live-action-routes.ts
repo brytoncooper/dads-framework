@@ -76,6 +76,8 @@ export type LiveActionRoutesOptions = {
   readonly authorize: (input: LiveActionAuthorizeInput) => Promise<boolean>;
   readonly basePath?: string;
   readonly now?: () => Date;
+  /** Optional default sanitizer for error text persisted on failed runs when an action defines no `redactError`. */
+  readonly redactError?: (error: unknown) => string;
 };
 
 function normalizeBasePath(basePath: string | undefined): string {
@@ -167,6 +169,7 @@ export function createLiveActionRoutes(options: LiveActionRoutesOptions): HttpRo
       if (action === undefined) {
         throw notFound("LIVE_ACTION_NOT_FOUND", "Live action not found");
       }
+      const redactError = action.redactError ?? options.redactError;
       const run = await executeLiveAction({
         action,
         caller: subject,
@@ -175,6 +178,7 @@ export function createLiveActionRoutes(options: LiveActionRoutesOptions): HttpRo
         store: options.store,
         canExecute: ({ caller, action: target }) => options.authorize({ subject: caller, action: target }),
         ...(options.now === undefined ? {} : { now: options.now }),
+        ...(redactError === undefined ? {} : { redactError }),
       });
       return serializeRun(run);
     },

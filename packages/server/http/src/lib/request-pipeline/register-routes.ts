@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest, RouteOptions } from
 import { answeringEachQuestionOnce } from "@dads-framework/core/runtime/request-work";
 import { ACCESS_REFUSAL_HEADER, ACCESS_REFUSAL_VALUE } from "@dads-framework/core/contract";
 
+import { HttpWiringError } from "../http-errors.js";
 import { rememberAccessOutcome } from "../request-log/request-outcome.js";
 import type { RouteCapabilities } from "../route/capabilities.js";
 import type { RawRouteDefinition } from "../route/define-raw-route.js";
@@ -15,7 +16,14 @@ import {
   attachWrittenAuthorizationConsistencyCookie,
   carryAuthorizationConsistency,
 } from "./carry-authorization-consistency.js";
-import { type AccessDecision, type AccessPorts, enforceAccess, type SubjectResolver } from "./enforce-access.js";
+import {
+  type AccessDecision,
+  type AccessPorts,
+  enforceAccess,
+  resolveLookupsPort,
+  type SubjectResolver,
+  type VisibleResourceLookup,
+} from "./enforce-access.js";
 import { compileRouteScopePlan } from "./enforce-scope.js";
 import { envelope } from "./envelope.js";
 import {
@@ -296,6 +304,18 @@ function toFastifyRoute(definition: HttpRoute, options: RegisterRoutesOptions): 
   };
 }
 
+function assertLookupsPortForRoute(definition: HttpRoute, lookups: VisibleResourceLookup | undefined): void {
+  if (lookups !== undefined) {
+    return;
+  }
+  if (definition.access.kind === "visibility") {
+    throw new HttpWiringError(`${definition.method} ${definition.path} uses requiresVisible without a lookups port`);
+  }
+  if (definition.access.kind === "scoped") {
+    throw new HttpWiringError(`${definition.method} ${definition.path} uses requiresScoped without a lookups port`);
+  }
+}
+
 /**
  * Compiles a route table onto a Fastify instance. Each handler reads as the
  * composition it is: `enforceAccess` → `runRoute` (parse → handler → parse,
@@ -305,7 +325,10 @@ function toFastifyRoute(definition: HttpRoute, options: RegisterRoutesOptions): 
 export function registerRoutes(app: FastifyInstance, options: RegisterRoutesOptions): void {
   assertNoAppMachineCredential(options.capabilities);
   assertNoAppSiteServing(options.capabilities);
-  for (const definition of options.routes) {
-    app.route(toFastifyRoute(definition, routeOptionsFor(definition, options)));
+  const lookups = resolveLookupsPort(options);
+  const effectiveOptions: RegisterRoutesOptions = lookups === undefined ? options : { ...options, lookups };
+  for (const definition of effectiveOptions.routes) {
+    assertLookupsPortForRoute(definition, lookups);
+    app.route(toFastifyRoute(definition, routeOptionsFor(definition, effectiveOptions)));
   }
 }

@@ -23,6 +23,13 @@ export type DrizzleDatabaseLike<Tx extends DrizzleExecuteLike = DrizzleExecuteLi
 };
 
 /**
+ * Transaction handle type for a Drizzle database (`DrizzleTransaction<DrizzleHandle>`
+ * extracts the database's exact transaction type, or defaults to `DrizzleExecuteLike`).
+ */
+export type DrizzleTransaction<Db extends DrizzleDatabaseLike = DrizzleDatabaseLike> =
+  Db extends DrizzleDatabaseLike<infer Tx> ? Tx : DrizzleExecuteLike;
+
+/**
  * Detect a Drizzle `PgTransaction` instance via Drizzle's well-known
  * `Symbol.for("drizzle:entityKind")` metadata without loading `drizzle-orm`.
  */

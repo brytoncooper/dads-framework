@@ -20,7 +20,9 @@ Group your domain's routes with `routeGroup` and verb helpers (`getRoute`, `list
 
 ### Route rules enforced by TypeScript
 
-- **Required `access`:** Every route must pass a `PermissionAccess` (via `requires(...)`), `requiresVisible(...)`, `requiresScoped(...)`, `requireSession`, or `publicAccess`. Omitting `access` fails type-checking.
+- **Required `access`:** Every route must pass a `PermissionAccess` (via `requires(...)`), `requiresVisible(...)`, `requiresScoped(...)`, `requireSession`, or `publicAccess()`. Omitting `access` fails type-checking.
+- **Browser-safe shared contracts:** Import `tenantIdSchema`, `assignableTenantRoleSchema`, and `TenantId` from `@dads-framework/identity/tenants/contract` in `contract/` files so browser bundles never pull server/database code.
+- **Session response shape:** `GET /api/auth/get-session` returns `{ account: { id, email, emailVerified }, expiresAt }` (account IDs are opaque strings — validate with `opaqueIdSchema`).
 - **Named capabilities instead of anonymous middleware:** `rateLimit`, timeouts, and serving modes are declared fields on the route or group, never hidden middleware chains.
 - **Response drift protection:** Handler return values are validated against `response` (or `item` on `listRoute`) before leaving the server.
 

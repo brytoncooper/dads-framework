@@ -1,8 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { withEnterpriseCallback } from "./enterprise-callback-context.js";
-import { OIDC_CALLBACK, SAML_CALLBACK } from "./enterprise-plugin.js";
-import { type EnterpriseSsoProvider } from "./enterprise-options.js";
+import { OIDC_CALLBACK, SAML_CALLBACK, type EnterpriseSsoProvider } from "./enterprise-options.js";
 import { IDENTITY_PATH } from "./identity-options.js";
 
 const RELAY_COOKIE = "__Host-dads-sso-relay";

@@ -1,9 +1,7 @@
-import type { AccessModel, DslPermissionTarget, PermissionToken } from "@dads-framework/access";
+import type { AccessModel } from "@dads-framework/access";
 import {
   Authorization,
-  permissionQueryFromCan,
   type AccessChange,
-  type AuthorizationCanOptions,
   type DirectSubjectLookup,
   type PermissionCheckOutcome,
   type PermissionQuery,
@@ -99,23 +97,6 @@ export class SqliteAuthorization extends Authorization {
    */
   verifyColumnRelations(): Promise<readonly SqliteColumnRelationCheckResult[]> {
     return verifySqliteColumnRelations(this.#policy.model.columnRelations ?? [], this.#executor);
-  }
-
-  /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
-  can(subject: SubjectRef, target: DslPermissionTarget, options?: AuthorizationCanOptions): Promise<boolean>;
-  can(
-    subject: SubjectRef,
-    permission: PermissionToken,
-    resourceId: string,
-    options?: AuthorizationCanOptions,
-  ): Promise<boolean>;
-  can(
-    subject: SubjectRef,
-    permissionOrTarget: DslPermissionTarget | PermissionToken,
-    resourceIdOrOptions?: string | AuthorizationCanOptions,
-    maybeOptions?: AuthorizationCanOptions,
-  ): Promise<boolean> {
-    return this.check(permissionQueryFromCan(subject, permissionOrTarget, resourceIdOrOptions, maybeOptions));
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {

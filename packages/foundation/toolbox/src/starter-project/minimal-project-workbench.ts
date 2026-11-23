@@ -349,6 +349,15 @@ export default defineConfig({
     license: { fileName: "THIRD_PARTY_LICENSES.md" },
     rolldownOptions: {
       input: { workbench: "index.html" },
+      onwarn(warning, warn) {
+        if (
+          warning.code === "MODULE_LEVEL_DIRECTIVE" &&
+          warning.message.includes("use client")
+        ) {
+          return;
+        }
+        warn(warning);
+      },
     },
   },
   server: {

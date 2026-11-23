@@ -168,6 +168,23 @@ export function permissionQueryFromCan(
  * createSpiceDbAuthorization in the composition root; FakeAuthorization for unit tests.
  */
 export abstract class Authorization {
+  /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
+  can(subject: SubjectRef, target: DslPermissionTarget, options?: AuthorizationCanOptions): Promise<boolean>;
+  can(
+    subject: SubjectRef,
+    permission: PermissionToken,
+    resourceId: string,
+    options?: AuthorizationCanOptions,
+  ): Promise<boolean>;
+  can(
+    subject: SubjectRef,
+    permissionOrTarget: DslPermissionTarget | PermissionToken,
+    resourceIdOrOptions?: string | AuthorizationCanOptions,
+    maybeOptions?: AuthorizationCanOptions,
+  ): Promise<boolean> {
+    return this.check(permissionQueryFromCan(subject, permissionOrTarget, resourceIdOrOptions, maybeOptions));
+  }
+
   /** Enforcement decision; a completed revocation the server wrote cannot read stale. */
   abstract check(query: PermissionQuery): Promise<boolean>;
   /** Decisions in input order, as fresh as `check`; item errors deny and batch failures propagate. */

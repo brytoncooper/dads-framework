@@ -12,7 +12,7 @@
  * directory. In it, a value counts when it is a row by its name — `row`,
  * `record`, or a name ending in `Row` or `Record` — and it is spread into an
  * object, returned as it is, or handed whole to `ok`, `json`, `created`,
- * `send`, `envelope`, or a schema's `.parse`. An object rest binding counts
+ * `send`, or `envelope`. An object rest binding counts
  * wherever it appears, because a rest is "everything I did not name", which is
  * the leak spelled the other way round.
  *
@@ -27,7 +27,7 @@ import { isResponseCode } from "../scanners/response-code.js";
 import { evidenceAt, isProductionModule, ts, visitNodes, type DoctorModule } from "../scanners/typescript-program.js";
 
 const ROW_NAME = /^(?:row|record)$|(?:Row|Record)$/;
-const RESPONSE_SENDERS = new Set(["ok", "json", "created", "send", "envelope", "parse"]);
+const RESPONSE_SENDERS = new Set(["ok", "json", "created", "send", "envelope"]);
 
 /** True for an expression that names a whole row. */
 function isRowValue(node: ts.Node | undefined): boolean {

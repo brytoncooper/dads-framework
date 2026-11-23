@@ -5,7 +5,7 @@ import { renderMinimalServerFiles } from "./minimal-project-server.js";
 import { renderMinimalWebFiles } from "./minimal-project-web.js";
 import { renderMinimalWorkbenchFiles } from "./minimal-project-workbench.js";
 import type { StarterProjectFile } from "./render-starter-project.js";
-import { renderStarterVerificationFiles } from "./render-starter-verification-files.js";
+import { renderStarterVerificationFiles, withStarterScriptsPackage } from "./render-starter-verification-files.js";
 
 const PROJECT_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 
@@ -131,7 +131,7 @@ function minimalPackageManifest(content: string, projectName: string): string {
 }
 
 function minimalProjectManifest(content: string): string {
-  const parsed: unknown = JSON.parse(content);
+  const parsed: unknown = JSON.parse(withStarterScriptsPackage(content));
   if (!isRecord(parsed) || !Array.isArray(parsed["packages"])) {
     throw new Error("Starter dads.project.json must declare packages.");
   }

@@ -106,9 +106,11 @@ function ceilingState(
   };
 }
 
+const SIZE_MEASURES = new Set(["fileLines", "testFileLines", "functions-over-ceiling"]);
+
 /**
  * A key nobody recorded. Under the threshold it is simply fine; over it, it is
- * either the exception a seed was asked to record or the split nobody has made.
+ * either the exception a seed was asked to record or the fix/split nobody has made.
  */
 function unlistedCeiling(measure: GateMeasure, value: number, record: boolean): KeyState | undefined {
   if (value <= measure.threshold) return undefined;
@@ -119,9 +121,10 @@ function unlistedCeiling(measure: GateMeasure, value: number, record: boolean): 
       message: `recorded at ${value}`,
     };
   }
+  const action = measure.unit === "lines" || SIZE_MEASURES.has(measure.name) ? "split it" : "fix or baseline it";
   return {
     level: "error",
-    message: `${value} ${measure.unit} over the ${measure.threshold} ceiling and not listed — split it`,
+    message: `${value} ${measure.unit} over the ${measure.threshold} ceiling and not listed — ${action}`,
   };
 }
 

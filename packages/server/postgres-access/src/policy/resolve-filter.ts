@@ -8,6 +8,7 @@ import { compileReverseExpressionQuery, compileReversePermission } from "./compi
 import type { PostgresAccessFilter, ValidatedPostgresFilterInput } from "./compile-filter.js";
 import {
   directSubjectReachability,
+  type LazySqlParam,
   modelHasUsersetTargets,
   QueryBuilder,
   resolveArrowTargets,
@@ -23,7 +24,7 @@ type ResolvedBranchSpec = {
 type BranchCollectorContext = {
   readonly model: AuthorizationModelDefinition;
   readonly builder: QueryBuilder;
-  readonly namespaceSql: string;
+  readonly namespaceSql: LazySqlParam;
   readonly entity: string;
   readonly idColumn: string;
   readonly scopeColumns: Readonly<Record<string, string>>;
@@ -70,7 +71,7 @@ export function buildPostgresResolveFilterPlan(
   if (definition === undefined) return undefined;
 
   const builder = new QueryBuilder(1);
-  const namespaceSql = builder.value(namespace);
+  const namespaceSql = builder.lazyValue(namespace);
   const subjectTypeSql = builder.value(request.subject.type);
   const subjectIdSql = builder.value(request.subject.id);
 
@@ -89,8 +90,8 @@ export function buildPostgresResolveFilterPlan(
 
   const usesUsersets = modelHasUsersetTargets(model);
   const reachCte = usesUsersets
-    ? subjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder)
-    : directSubjectReachability(namespaceSql, subjectTypeSql, subjectIdSql, model.columnRelations, builder);
+    ? subjectReachability(namespaceSql(), subjectTypeSql, subjectIdSql, model.columnRelations, builder)
+    : directSubjectReachability(namespaceSql(), subjectTypeSql, subjectIdSql, model.columnRelations, builder);
   const withKeyword = usesUsersets || builder.hasRecursive ? "WITH RECURSIVE" : "WITH";
   const tagged = branches.map(
     (branch, index) =>
@@ -129,9 +130,9 @@ export function finalizePostgresResolvedFilter(
     const placeholder = `$${String(paramOffset + values.length)}::text[]`;
     values.push([...bucket]);
     if (branch.kind === "include") {
-      includeParts.push(`(${branch.column} = ANY(${placeholder}))`);
+      includeParts.push(`((${branch.column})::text = ANY(${placeholder}))`);
     } else {
-      excludeParts.push(`(NOT (${branch.column} = ANY(${placeholder})))`);
+      excludeParts.push(`(NOT ((${branch.column})::text = ANY(${placeholder})))`);
     }
   }
 

@@ -93,6 +93,8 @@ export type ReportedIssue = {
 
 export type DoctorReport = {
   readonly ok: true;
+  readonly overCeilingCount: number;
+  readonly gatePassed: boolean;
   readonly root: string;
   readonly profile: DoctorProfile;
   /** The date `--today` supplied, or `null`. Nothing here asks a clock. */
@@ -119,10 +121,14 @@ export type DoctorReportInput = {
  * appears.
  */
 export function buildDoctorReport(input: DoctorReportInput): DoctorReport {
+  const reportedById = new Map<string, ReportedSignal>();
+  for (const outcome of input.outcomes) {
+    reportedById.set(outcome.signal.id, reportSignal(outcome, input.profile));
+  }
   const issues = input.issues.map((issue) => {
     const signals = input.outcomes
       .filter((outcome) => signalEvidences(outcome.signal, issue.id))
-      .map((outcome) => reportSignal(outcome, input.profile));
+      .map((outcome) => reportedById.get(outcome.signal.id) ?? reportSignal(outcome, input.profile));
     return {
       id: issue.id,
       title: issue.title,
@@ -132,8 +138,13 @@ export function buildDoctorReport(input: DoctorReportInput): DoctorReport {
       signals,
     };
   });
+  const overCeilingCount = [...reportedById.values()]
+    .filter((signal) => signal.state === "over")
+    .reduce((sum, signal) => sum + signal.over, 0);
   return {
     ok: true,
+    overCeilingCount,
+    gatePassed: overCeilingCount === 0,
     root: input.root,
     profile: input.profile,
     today: input.today ?? null,

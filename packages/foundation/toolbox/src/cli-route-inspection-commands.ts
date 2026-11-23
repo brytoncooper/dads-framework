@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { lstatSync, readFileSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { writeOutput } from "./cli-io.js";
 import { loadDadsProject } from "./project-files.js";
 import { readRouteSource } from "./route-inspection/read-route-source.js";
@@ -9,9 +9,13 @@ export function inspect(subject: string | undefined, operation: string | undefin
     throw new Error('inspect requires http-operation "<METHOD /path>".');
   }
   const { root } = loadDadsProject(process.cwd());
+  const readFile = (relativePath: string): string | undefined => {
+    const fullPath = join(root, relativePath);
+    return lstatSync(fullPath, { throwIfNoEntry: false })?.isFile() ? readFileSync(fullPath, "utf8") : undefined;
+  };
   const operations = listTypeScriptFiles(root).flatMap((file) => {
-    const filename = relative(root, file);
-    return readRouteSource(readFileSync(file, "utf8"), filename)
+    const filename = relative(root, file).split(sep).join("/");
+    return readRouteSource(readFileSync(file, "utf8"), filename, { readFile })
       .filter((entry) => entry.operation === operation || `${entry.method} ${entry.routePath}` === operation)
       .map((entry) => ({
         file: filename,

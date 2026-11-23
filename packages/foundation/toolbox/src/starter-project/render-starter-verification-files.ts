@@ -1,6 +1,27 @@
+import { isRecord, isUnknownArray } from "../parse-guards.js";
 import type { StarterProjectFile } from "./render-starter-project.js";
 import { renderStarterStagedChecks } from "./render-starter-staged-checks.js";
 import { starterCiFiles } from "./starter-ci-workflow.js";
+
+const STARTER_SCRIPTS_PACKAGE = {
+  name: "scripts",
+  root: "scripts",
+  kind: "tooling",
+  responsibility: "Runs starter verification and pre-commit checks.",
+  allowedDependencies: [],
+  verification: ["npm run verify"],
+  skills: [],
+} as const;
+
+export function withStarterScriptsPackage(content: string): string {
+  const parsed: unknown = JSON.parse(content);
+  if (!isRecord(parsed)) return content;
+  const packages = parsed["packages"];
+  if (!isUnknownArray(packages)) return content;
+  const hasScripts = packages.some((entry) => isRecord(entry) && entry["root"] === "scripts");
+  if (hasScripts) return content;
+  return `${JSON.stringify({ ...parsed, packages: [...packages, STARTER_SCRIPTS_PACKAGE] }, null, 2)}\n`;
+}
 
 /** The starter keeps its verifier in the generated project, with its checks. */
 export function renderStarterVerificationFiles(): readonly StarterProjectFile[] {

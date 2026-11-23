@@ -63,7 +63,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "documents.id",
     });
 
-    expect(filter.sql.startsWith("(documents.id IN (")).toBe(true);
+    expect(filter.sql.startsWith("((documents.id)::text IN (")).toBe(true);
     expect(filter.sql).toContain("documents.id");
     expect(filter.sql).toContain("expires_at IS NULL OR");
     expect(filter.sql).toContain("$1");
@@ -106,7 +106,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "f.id",
       paramOffset: 2,
     });
-    expect(folderFilter.sql.startsWith("(f.id IN (WITH RECURSIVE ")).toBe(true);
+    expect(folderFilter.sql.startsWith("((f.id)::text IN (WITH RECURSIVE ")).toBe(true);
     expect(folderFilter.sql).not.toMatch(/\$1(?!\d)/);
     expect(folderFilter.sql).toContain("$2");
     expect(folderFilter.sql).toContain("rec_allowed_");
@@ -118,7 +118,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "documents.id",
       paramOffset: 3,
     });
-    expect(docFilter.sql.startsWith("(documents.id IN (WITH RECURSIVE ")).toBe(true);
+    expect(docFilter.sql.startsWith("((documents.id)::text IN (WITH RECURSIVE ")).toBe(true);
     expect(docFilter.sql).not.toMatch(/\$[12](?!\d)/);
     expect(docFilter.sql).toContain("$3");
     expect(docFilter.sql).toContain("rec_allowed_");
@@ -235,9 +235,9 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "d.id",
       scopeColumns: { ws: "d.workspace_id" },
     });
-    expect(filter.sql).toContain("d.workspace_id IN (");
-    expect(filter.sql).toContain("d.id IN (");
-    expect(filter.sql).toContain("d.id NOT IN (");
+    expect(filter.sql).toContain("(d.workspace_id)::text IN (");
+    expect(filter.sql).toContain("(d.id)::text IN (");
+    expect(filter.sql).toContain("(d.id)::text NOT IN (");
   });
 
   it("resolveFilter prunes empty branches, returns FALSE on zero access, and applies exclusions with paramOffset", async () => {
@@ -284,7 +284,7 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       scopeColumns: { ws: "d.workspace_id" },
       paramOffset: 3,
     });
-    expect(directOnly.sql).toBe("(d.id = ANY($3::text[]))");
+    expect(directOnly.sql).toBe("((d.id)::text = ANY($3::text[]))");
     expect(directOnly.values).toEqual([["doc_1", "doc_2"]]);
 
     // Scope + exclusion (direct branch empty -> pruned, exclusion retained!)
@@ -298,7 +298,9 @@ describe("PostgresAuthorization.compileFilter (unit)", () => {
       idColumn: "d.id",
       scopeColumns: { ws: "d.workspace_id" },
     });
-    expect(scopedWithBan.sql).toBe("((d.workspace_id = ANY($1::text[])) AND (NOT (d.id = ANY($2::text[]))))");
+    expect(scopedWithBan.sql).toBe(
+      "(((d.workspace_id)::text = ANY($1::text[])) AND (NOT ((d.id)::text = ANY($2::text[]))))",
+    );
     expect(scopedWithBan.values).toEqual([["ws_1"], ["doc_banned"]]);
   });
 });

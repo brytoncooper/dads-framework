@@ -180,3 +180,21 @@ it("accepts the application kind declared by starter projects", async () => {
     ["assembly -> domains-notes", 0],
   ]);
 });
+
+it("accepts the integration kind at the same architectural tier as adapter", async () => {
+  expect(
+    await edges([
+      ["integrations-stripe", "integration", ["core-one", "adapter-one"]],
+      ["binding-one", "binding", ["integrations-stripe"]],
+      ["starter-app", "application", ["integrations-stripe"]],
+      ["core-one", "core", ["integrations-stripe"]],
+      ["adapter-one", "adapter"],
+    ]),
+  ).toStrictEqual([
+    ["integrations-stripe -> core-one", 0],
+    ["integrations-stripe -> adapter-one", 1],
+    ["binding-one -> integrations-stripe", 0],
+    ["starter-app -> integrations-stripe", 0],
+    ["core-one -> integrations-stripe", 1],
+  ]);
+});

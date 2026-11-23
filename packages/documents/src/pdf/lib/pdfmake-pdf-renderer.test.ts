@@ -1,6 +1,8 @@
 import pdfmake from "pdfmake";
+import type { TDocumentDefinitions } from "pdfmake/interfaces.js";
 import { describe, expect, it } from "vitest";
 
+import type { PdfmakeDefinition } from "./pdf-renderer.js";
 import { PdfmakePdfRenderer } from "./pdfmake-pdf-renderer.js";
 
 describe("PdfmakePdfRenderer", () => {
@@ -149,6 +151,17 @@ describe("PdfmakePdfRenderer", () => {
       content: [{ text: "Batch Ticket FIN-14", style: "header" }, { text: "12.5 tons — Prairie Feed Co" }],
       styles: { header: { fontSize: 16, bold: true } },
     });
+    expect(bytes.length).toBeGreaterThan(500);
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+  });
+
+  it("preserves the Helvetica font default when callers pass defaultStyle properties", async () => {
+    const typedDefinition: TDocumentDefinitions = {
+      defaultStyle: { fontSize: 9 },
+      content: [{ text: "Bold", bold: true }],
+    };
+    const definition: PdfmakeDefinition = typedDefinition;
+    const bytes = await new PdfmakePdfRenderer().render(definition);
     expect(bytes.length).toBeGreaterThan(500);
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
   });

@@ -4,8 +4,10 @@ import { jwt } from "better-auth/plugins";
 import { PostgresDialect } from "kysely";
 import { IDENTITY_PATH, type BetterAuthIdentityOptions } from "./identity-options.js";
 
-import { enterpriseDatabaseHooks, enterpriseSsoPlugin } from "./enterprise-plugin.js";
-import type { EnterpriseSsoProvider } from "./enterprise-options.js";
+export type EnterpriseAuthExtension = {
+  readonly databaseHooks: NonNullable<BetterAuthOptions["databaseHooks"]>;
+  readonly plugin: NonNullable<BetterAuthOptions["plugins"]>[number];
+};
 
 const enterpriseSessionFields = {
   ssoProviderBinding: { type: "string", required: false, input: false },
@@ -17,7 +19,7 @@ export function configureBetterAuth(
   options: BetterAuthIdentityOptions,
   origin: string,
   sendEmail: (email: IdentityEmail) => void,
-  providers: readonly EnterpriseSsoProvider[] = [],
+  enterprise?: EnterpriseAuthExtension,
 ) {
   return betterAuth({
     baseURL: origin,
@@ -31,13 +33,13 @@ export function configureBetterAuth(
     user: { modelName: "identity_users" },
     account: {
       modelName: "identity_credentials",
-      ...(providers.length > 0 && {
+      ...(enterprise !== undefined && {
         updateAccountOnSignIn: false,
         additionalFields: enterpriseSessionFields,
       }),
     },
-    ...(providers.length > 0 && {
-      databaseHooks: enterpriseDatabaseHooks(providers),
+    ...(enterprise !== undefined && {
+      databaseHooks: enterprise.databaseHooks,
     }),
     verification: {
       modelName: "identity_verifications",
@@ -49,7 +51,7 @@ export function configureBetterAuth(
       updateAge: 0,
       disableSessionRefresh: true,
       cookieCache: { enabled: false },
-      ...(providers.length > 0 && {
+      ...(enterprise !== undefined && {
         additionalFields: enterpriseSessionFields,
       }),
     },
@@ -74,11 +76,11 @@ export function configureBetterAuth(
         return Promise.resolve();
       },
     },
-    rateLimit: { enabled: true },
+    rateLimit: { enabled: options.rateLimit?.enabled ?? true },
     telemetry: { enabled: false },
     logger: { disabled: true },
     plugins: [
-      ...(providers.length > 0 ? [enterpriseSsoPlugin(providers, origin)] : []),
+      ...(enterprise !== undefined ? [enterprise.plugin] : []),
       jwt({
         disableSettingJwtHeader: true,
         jwt: {

@@ -46,6 +46,14 @@ export function composeApi<
   }
 }
 
+/** True when a route-slot and job-slot reference point to the exact same plugin instance. */
+function samePlugin<Route, Job extends NamedJob>(
+  routePlugin: StartablePlugin<Route, NamedJob>,
+  jobPlugin: StartablePlugin<unknown, Job>,
+): jobPlugin is StartablePlugin<Route, Job> {
+  return Object.is(routePlugin, jobPlugin);
+}
+
 /** Assemble a service/route/job selection without requiring compile-time dependency proofs. */
 export function assembleApiSelection<
   Route,
@@ -57,26 +65,51 @@ export function assembleApiSelection<
   readonly routes: readonly Plugin<string, string, unknown, Route, NamedJob, Flag, string, Access>[];
   readonly jobs: readonly Plugin<string, string, unknown, unknown, Job, Flag, string, Access>[];
 }): ComposedApp<Route, Job, Flag, Access> {
-  const entries = [...selection.services, ...selection.routes, ...selection.jobs];
+  const entries: Plugin<string, string, unknown, unknown, NamedJob, Flag, string, Access>[] = [];
+  const seen = new Set<Plugin<string, string, unknown, unknown, NamedJob, Flag, string, Access>>();
+  const routeByName = new Map<string, StartablePlugin<Route, NamedJob>>();
+  const jobByName = new Map<string, StartablePlugin<unknown, Job>>();
   const plan = new Map<string, StartablePlugin<Route, Job>>();
+
+  const addEntry = (plugin: Plugin<string, string, unknown, unknown, NamedJob, Flag, string, Access>): void => {
+    if (!seen.has(plugin)) {
+      seen.add(plugin);
+      entries.push(plugin);
+    }
+  };
+
   for (const plugin of selection.services) {
+    addEntry(plugin);
     plan.set(
       plugin.name,
       expose(plugin, () => ({ routes: [], jobs: [] })),
     );
   }
   for (const plugin of selection.routes) {
+    addEntry(plugin);
+    routeByName.set(plugin.name, plugin);
     plan.set(
       plugin.name,
       expose(plugin, ({ routes }) => ({ routes, jobs: [] })),
     );
   }
   for (const plugin of selection.jobs) {
-    plan.set(
-      plugin.name,
-      expose(plugin, ({ jobs }) => ({ routes: [], jobs })),
-    );
+    addEntry(plugin);
+    jobByName.set(plugin.name, plugin);
+    const routePlugin = routeByName.get(plugin.name);
+    if (routePlugin !== undefined && samePlugin(routePlugin, plugin)) {
+      plan.set(
+        plugin.name,
+        expose(plugin, ({ routes, jobs }) => ({ routes, jobs })),
+      );
+    } else {
+      plan.set(
+        plugin.name,
+        expose(plugin, ({ jobs }) => ({ routes: [], jobs })),
+      );
+    }
   }
+
   return assembleApp<Route, Job, Flag, Access, (typeof entries)[number]>(entries, (ordered) =>
     startPlugins(
       ordered.map(({ name: pluginName }) => {

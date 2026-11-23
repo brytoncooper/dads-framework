@@ -192,6 +192,12 @@ function loggerOptionsFrom(options: HttpAppOptions): Exclude<FastifyServerOption
   };
 }
 
+/** Fastify 5.12+ fails numeric `trustProxy` closed; express hop-count trust as an explicit hop predicate. */
+function trustProxyForHops(hops: number): NonNullable<FastifyServerOptions["trustProxy"]> {
+  if (hops <= 0) return false;
+  return (_address: string, hop: number) => hop < hops;
+}
+
 /**
  * Builds a Fastify instance carrying the house edge behavior: pino logging
  * with credential redaction, request-id correlation (inbound `x-request-id`
@@ -212,7 +218,7 @@ export async function createHttpApp(options: HttpAppOptions): Promise<FastifyIns
     // close() destroys idle sockets instead of waiting on keep-alive — a
     // deploy drains in-flight work and exits, never hangs on idle clients.
     forceCloseConnections: "idle",
-    trustProxy: options.trustedProxyHops ?? 0,
+    trustProxy: trustProxyForHops(options.trustedProxyHops ?? 0),
   });
   applyHeadersTimeout(app, options);
 

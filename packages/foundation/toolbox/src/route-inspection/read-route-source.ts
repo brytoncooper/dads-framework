@@ -1,5 +1,10 @@
 import ts from "typescript";
 import {
+  createRouteReferenceResolver,
+  type RouteFileReader,
+  type RouteReferenceResolver,
+} from "./resolve-route-references.js";
+import {
   readRouteHandler,
   declaresResourceFreeTelemetry,
   readRouteSchemas,
@@ -16,6 +21,15 @@ const builders = new Map([
   ["delete", "DELETE"],
 ]);
 
+type RouteBuilderKind = {
+  readonly method: string | undefined;
+  readonly raw: boolean;
+};
+
+export type ReadRouteSourceOptions = {
+  readonly readFile?: RouteFileReader;
+};
+
 export type SourceRoute = {
   readonly operation: string;
   readonly method: string;
@@ -25,21 +39,25 @@ export type SourceRoute = {
   readonly declaresAccess: boolean;
   readonly explicitlyPublic?: true;
   readonly resourceFreeTelemetry?: true;
+  readonly raw?: true;
   readonly handlerStatements: number;
   readonly handlerText: string;
 };
 
 function mayDeclareRoutes(source: string): boolean {
-  return /\b(?:get|list|post|patch|put|delete)Route\b|\bdad\s*\.\s*(?:get|list|post|patch|put|delete)\b/.test(source);
+  return /\b(?:(?:get|list|post|patch|put|delete)Route|defineRawRoute|sseRoute)\b|\bdad\s*\.\s*(?:get|list|post|patch|put|delete)\b/.test(
+    source,
+  );
 }
 
-export function readRouteSource(text: string, file: string): readonly SourceRoute[] {
+export function readRouteSource(text: string, file: string, options?: ReadRouteSourceOptions): readonly SourceRoute[] {
   if (!mayDeclareRoutes(text)) return [];
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const resolver = createRouteReferenceResolver(source, file, options?.readFile);
   const routes: SourceRoute[] = [];
   function visit(node: ts.Node): void {
     if (ts.isCallExpression(node)) {
-      const route = readRoute(node, source);
+      const route = readRoute(node, source, resolver);
       if (route) routes.push(route);
     }
     ts.forEachChild(node, visit);
@@ -48,21 +66,64 @@ export function readRouteSource(text: string, file: string): readonly SourceRout
   return routes;
 }
 
-function readRoute(call: ts.CallExpression, source: ts.SourceFile): SourceRoute | undefined {
-  const builder = builderMethod(call.expression);
-  const config = call.arguments[0];
-  if (!builder || !config || !ts.isObjectLiteralExpression(config)) return undefined;
-  const routePath = readRoutePath(config);
-  if (!routePath?.startsWith("/")) return undefined;
-  const descriptor = readProperty(config, "route");
-  const method = readDescriptorText(descriptor, "method") ?? readText(readProperty(config, "method")) ?? builder;
-  const operation = readText(readProperty(config, "operation")) ?? `${method} ${routePath}`;
+function resolveEndpointPath(
+  config: ts.ObjectLiteralExpression,
+  resolver: RouteReferenceResolver,
+  descriptorPath: string | undefined,
+  operationPath: string | undefined,
+): string | undefined {
+  const inlinePath = resolver.resolveString(readProperty(config, "path") ?? readProperty(config, "template"));
+  const candidate = descriptorPath ?? inlinePath ?? operationPath;
+  return candidate?.startsWith("/") ? candidate : undefined;
+}
+
+function resolveEndpointMethod(
+  config: ts.ObjectLiteralExpression,
+  resolver: RouteReferenceResolver,
+  descriptorMethod: string | undefined,
+  operationMethod: string | undefined,
+  defaultMethod: string | undefined,
+): string | undefined {
+  return descriptorMethod ?? resolver.resolveString(readProperty(config, "method")) ?? operationMethod ?? defaultMethod;
+}
+
+function resolveRouteEndpoint(
+  config: ts.ObjectLiteralExpression,
+  resolver: RouteReferenceResolver,
+  defaultMethod: string | undefined,
+) {
+  const operationNode = readProperty(config, "operation");
+  const resolvedOperation = resolver.resolveOperation(operationNode);
+  const descriptor = resolver.resolveDescriptor(readProperty(config, "route"));
+  const routePath = resolveEndpointPath(config, resolver, descriptor?.routePath, resolvedOperation?.routePath);
+  if (!routePath) return undefined;
+  const method = resolveEndpointMethod(config, resolver, descriptor?.method, resolvedOperation?.method, defaultMethod);
+  if (!method) return undefined;
   return {
-    operation,
     method,
     routePath,
+    operation: readText(operationNode) ?? `${method} ${routePath}`,
+    resolvedSchemas: resolvedOperation?.schemas ?? {},
+  };
+}
+
+function readRoute(
+  call: ts.CallExpression,
+  source: ts.SourceFile,
+  resolver: RouteReferenceResolver,
+): SourceRoute | undefined {
+  const builder = builderKind(call.expression);
+  const config = call.arguments[0];
+  if (!builder || !config || !ts.isObjectLiteralExpression(config)) return undefined;
+  const endpoint = resolveRouteEndpoint(config, resolver, builder.method);
+  if (!endpoint) return undefined;
+  return {
+    operation: endpoint.operation,
+    method: endpoint.method,
+    routePath: endpoint.routePath,
     line: source.getLineAndCharacterOfPosition(call.getStart(source)).line + 1,
-    schemas: readRouteSchemas(config, source),
+    schemas: { ...endpoint.resolvedSchemas, ...readRouteSchemas(config, source) },
+    ...(builder.raw ? { raw: true } : {}),
     ...readAccessFacts(config, source),
     ...readRouteHandler(config, source),
   };
@@ -130,28 +191,22 @@ function localName(node: ts.Node): string | undefined {
   return undefined;
 }
 
-function readRoutePath(config: ts.ObjectLiteralExpression): string | undefined {
-  return (
-    readDescriptorText(readProperty(config, "route"), "template") ??
-    readText(readProperty(config, "path")) ??
-    readText(readProperty(config, "template"))
-  );
-}
-
-function readDescriptorText(descriptor: ts.Node | undefined, key: string): string | undefined {
-  return descriptor && ts.isObjectLiteralExpression(descriptor) ? readText(readProperty(descriptor, key)) : undefined;
-}
-
-function builderMethod(expression: ts.Expression): string | undefined {
-  if (ts.isIdentifier(expression) && expression.text.endsWith("Route")) {
-    return builders.get(expression.text.slice(0, -5));
+function builderKind(expression: ts.Expression): RouteBuilderKind | undefined {
+  if (ts.isIdentifier(expression)) {
+    if (expression.text === "defineRawRoute") return { method: undefined, raw: true };
+    if (expression.text === "sseRoute") return { method: "GET", raw: true };
+    if (expression.text.endsWith("Route")) {
+      const method = builders.get(expression.text.slice(0, -5));
+      return method !== undefined ? { method, raw: false } : undefined;
+    }
   }
   if (
     ts.isPropertyAccessExpression(expression) &&
     ts.isIdentifier(expression.expression) &&
     expression.expression.text === "dad"
   ) {
-    return builders.get(expression.name.text);
+    const method = builders.get(expression.name.text);
+    return method !== undefined ? { method, raw: false } : undefined;
   }
   return undefined;
 }

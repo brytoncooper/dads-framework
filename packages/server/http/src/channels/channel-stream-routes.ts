@@ -37,6 +37,8 @@ export type ChannelStreamRoutesOptions = {
   readonly path?: string;
   readonly scopeQueryParam?: string;
   readonly heartbeatMs?: number;
+  /** Optional periodic access recheck cadence so idle streams close when a grant lapses. */
+  readonly recheckIntervalMs?: number;
 };
 
 function sendNotFoundRefusal(reply: FastifyReply): void {
@@ -48,12 +50,15 @@ function sendNotFoundRefusal(reply: FastifyReply): void {
     });
 }
 
-function validateStreamConfig(path: string, scopeQueryParam: string): void {
+function validateStreamConfig(path: string, scopeQueryParam: string, recheckIntervalMs: number | undefined): void {
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new HttpWiringError(`Channel stream path must be mount-relative, received "${path}"`);
   }
   if (scopeQueryParam.trim().length === 0 || scopeQueryParam === "channels") {
     throw new HttpWiringError(`Invalid channel stream scopeQueryParam "${scopeQueryParam}"`);
+  }
+  if (recheckIntervalMs !== undefined && (!Number.isFinite(recheckIntervalMs) || recheckIntervalMs <= 0)) {
+    throw new HttpWiringError(`Invalid channel stream recheckIntervalMs "${String(recheckIntervalMs)}"`);
   }
 }
 
@@ -122,29 +127,113 @@ async function filterPermittedChannels(input: {
   return permitted;
 }
 
-function createDeliveryListener(input: {
+type DeliveryListenerInput = {
   readonly subject: SubjectRef;
   readonly scopeId: string;
   readonly stream: SseStream;
+  readonly canAccessScope: ChannelAccessCheck;
   readonly channelAccess: ReadonlyMap<string, ChannelAccessCheck> | undefined;
-  readonly isClosed: () => boolean;
-}): (envelope: ChannelEnvelope) => Promise<void> {
-  return async (envelope) => {
-    if (input.isClosed()) {
+};
+
+type StreamRecheckInput = DeliveryListenerInput & {
+  readonly channels: readonly string[];
+};
+
+async function isDeliveryAuthorized(input: DeliveryListenerInput, channel: string): Promise<boolean> {
+  const scopeAllowed = await input.canAccessScope.check({
+    subject: input.subject,
+    scopeId: input.scopeId,
+  });
+  if (!scopeAllowed) {
+    return false;
+  }
+  const check = input.channelAccess?.get(channel);
+  if (check === undefined) {
+    return true;
+  }
+  return check.check({
+    subject: input.subject,
+    scopeId: input.scopeId,
+    channel,
+  });
+}
+
+async function deliverAuthorizedEnvelope(input: DeliveryListenerInput, envelope: ChannelEnvelope): Promise<void> {
+  if (input.stream.closed) {
+    return;
+  }
+  const allowed = await isDeliveryAuthorized(input, envelope.channel);
+  if (!allowed) {
+    input.stream.close();
+    return;
+  }
+  input.stream.send(envelope);
+}
+
+function createDeliveryListener(input: DeliveryListenerInput): (envelope: ChannelEnvelope) => Promise<void> {
+  let pending: Promise<void> = Promise.resolve();
+  return (envelope) => {
+    const run = pending.then(() => deliverAuthorizedEnvelope(input, envelope));
+    pending = run.catch(() => undefined);
+    return run;
+  };
+}
+
+async function isStreamStillAuthorized(input: StreamRecheckInput): Promise<boolean> {
+  const scopeAllowed = await input.canAccessScope.check({
+    subject: input.subject,
+    scopeId: input.scopeId,
+  });
+  if (!scopeAllowed) {
+    return false;
+  }
+  if (input.channelAccess === undefined) {
+    return true;
+  }
+  for (const channel of input.channels) {
+    const check = input.channelAccess.get(channel);
+    if (check === undefined) {
+      continue;
+    }
+    const allowed = await check.check({
+      subject: input.subject,
+      scopeId: input.scopeId,
+      channel,
+    });
+    if (!allowed) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function runPeriodicRecheck(input: StreamRecheckInput): Promise<void> {
+  try {
+    const allowed = await isStreamStillAuthorized(input);
+    if (!allowed && !input.stream.closed) {
+      input.stream.close();
+    }
+  } catch {
+    if (!input.stream.closed) {
+      input.stream.close();
+    }
+  }
+}
+
+function startRecheckTimer(input: StreamRecheckInput, intervalMs: number): () => void {
+  let checking = false;
+  const timer = setInterval(() => {
+    if (checking || input.stream.closed) {
       return;
     }
-    const check = input.channelAccess?.get(envelope.channel);
-    if (check !== undefined) {
-      const allowed = await check.check({
-        subject: input.subject,
-        scopeId: input.scopeId,
-        channel: envelope.channel,
-      });
-      if (!allowed || input.isClosed()) {
-        return;
-      }
-    }
-    input.stream.send(envelope);
+    checking = true;
+    void runPeriodicRecheck(input).finally(() => {
+      checking = false;
+    });
+  }, intervalMs);
+  timer.unref();
+  return () => {
+    clearInterval(timer);
   };
 }
 
@@ -207,17 +296,21 @@ async function handleChannelStream(
     return;
   }
   open((stream) => {
-    let closed = false;
-    const listener = createDeliveryListener({
+    const accessContext: DeliveryListenerInput = {
       subject,
       scopeId,
       stream,
+      canAccessScope: options.canAccessScope,
       channelAccess: options.channelAccess,
-      isClosed: () => closed,
-    });
+    };
+    const listener = createDeliveryListener(accessContext);
     const unsubscribe = options.channelFanOut.subscribe(scopeId, permittedChannels, listener);
+    const stopRecheck =
+      options.recheckIntervalMs === undefined
+        ? undefined
+        : startRecheckTimer({ ...accessContext, channels: permittedChannels }, options.recheckIntervalMs);
     return () => {
-      closed = true;
+      stopRecheck?.();
       unsubscribe();
     };
   });
@@ -227,14 +320,15 @@ async function handleChannelStream(
  * Create the auth-checked SSE route group for streaming channel envelopes.
  *
  * Scope access is verified before the stream opens (denied callers receive 404
- * without leaking whether the scope exists). Channels with an entry in
- * `channelAccess` are checked both before opening and before delivering each
- * published envelope.
+ * without leaking whether the scope exists). Both `canAccessScope` and any
+ * per-channel `channelAccess` check are re-evaluated before delivering each
+ * envelope (and periodically when `recheckIntervalMs` is configured); denial
+ * closes the stream immediately and unsubscribes it.
  */
 export function createChannelStreamRoutes(options: ChannelStreamRoutesOptions): HttpRoute[] {
   const path = options.path ?? DEFAULT_CHANNEL_STREAM_PATH;
   const scopeQueryParam = options.scopeQueryParam ?? DEFAULT_SCOPE_QUERY_PARAM;
-  validateStreamConfig(path, scopeQueryParam);
+  validateStreamConfig(path, scopeQueryParam, options.recheckIntervalMs);
   const allowedSet = new Set(options.allowedChannels);
 
   return routeGroup("Channels", [

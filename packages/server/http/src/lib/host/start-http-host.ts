@@ -8,6 +8,7 @@ import {
   type ProtocolMountOptions,
 } from "../../protocol-mounts/lib/protocol-mount/mount-fetch-handler.js";
 import { createHttpApp, type HttpAppOptions } from "../create-http-app.js";
+import { resolveLookupsPort } from "../request-pipeline/enforce-access.js";
 import { registerRoutes, type RegisterRoutesOptions } from "../request-pipeline/register-routes.js";
 import type { RequestTrace } from "../request-pipeline/request-trace.js";
 import type { HttpRoute } from "../route/route-group.js";
@@ -139,10 +140,11 @@ function buildHttpAppObservability(options: HttpHostOptions): Partial<HttpAppOpt
 function buildAccessPorts(
   options: HttpHostOptions,
 ): Pick<RegisterRoutesOptions, "subjects" | "authorization" | "lookups" | "authorizationContexts" | "onDenied"> {
+  const lookups = resolveLookupsPort(options);
   return {
     subjects: options.subjects,
     authorization: options.authorization,
-    ...(options.lookups === undefined ? {} : { lookups: options.lookups }),
+    ...(lookups === undefined ? {} : { lookups }),
     ...(options.authorizationContexts === undefined ? {} : { authorizationContexts: options.authorizationContexts }),
     ...(options.onDenied === undefined ? {} : { onDenied: options.onDenied }),
   };

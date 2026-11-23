@@ -10,6 +10,7 @@ export type BetterAuthIdentityOptions = {
   readonly enqueueEmail: EnqueueIdentityEmail;
   readonly canInvite: (account: IdentityAccount) => Promise<boolean>;
   readonly onEmailError?: () => void;
+  readonly rateLimit?: { readonly enabled?: boolean };
 };
 
 export function validatedOrigin(baseUrl: string): string {

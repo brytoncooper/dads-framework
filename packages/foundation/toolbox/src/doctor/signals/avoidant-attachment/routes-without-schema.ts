@@ -24,6 +24,7 @@ import { operationEvidence, operationKey, readRouteModel, type RouteOperation } 
 const BODY_METHODS = new Set(["POST", "PATCH", "PUT"]);
 
 function missingSchemas(operation: RouteOperation): readonly string[] {
+  if (operation.raw === true) return [];
   const schemas = operation.schemas;
   const missing: string[] = [];
   if (operation.routePath.includes(":") && schemas.params === undefined) {

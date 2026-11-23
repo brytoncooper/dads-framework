@@ -63,3 +63,59 @@ it("names the API when two selected plugins implement the same service", () => {
     }),
   ).toThrow("API customer: service clock is implemented by both first and second");
 });
+
+it("exposes both routes and jobs when the same plugin is selected in both slots", async () => {
+  const startCount = vi.fn();
+  const billing = definePlugin({
+    name: "billing",
+    setup: () => {
+      startCount();
+      return {
+        routes: [{ path: "/billing" }],
+        jobs: [{ name: "reconcile" }],
+      };
+    },
+  });
+  const combined = await composeApi("combined", {
+    services: [],
+    routes: [billing],
+    jobs: [billing],
+  }).start();
+  try {
+    expect(startCount).toHaveBeenCalledTimes(1);
+    expect(combined.routes).toEqual([{ path: "/billing" }]);
+    expect(combined.jobs).toEqual([{ name: "reconcile" }]);
+  } finally {
+    await combined.stop();
+  }
+});
+
+it("infers Provides from implements on definePlugin without explicit generics", async () => {
+  type Mailer = { readonly send: (to: string) => string };
+  const configService = defineService("config").ofType<{ readonly prefix: string }>();
+  const mailerService = defineService("mailer").ofType<Mailer>();
+
+  const configPlugin = providePlugin("config", configService, () => ({ prefix: "hi:" }));
+  const mailPlugin = definePlugin({
+    name: "mail",
+    requires: [configService],
+    implements: mailerService,
+    setup: ({ use }) => {
+      const { prefix } = use(configService);
+      return {
+        provides: { send: (to) => `${prefix}${to}` },
+      };
+    },
+  });
+
+  const started = await composeApi("mail-api", {
+    services: [configPlugin, mailPlugin],
+    routes: [],
+    jobs: [],
+  }).start();
+  try {
+    expect(started.read(mailerService).send("ada")).toBe("hi:ada");
+  } finally {
+    await started.stop();
+  }
+});

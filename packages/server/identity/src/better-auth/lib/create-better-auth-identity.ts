@@ -1,6 +1,6 @@
 import type { Identity } from "../../index.js";
 import { createAccountInvitations } from "./account-invitations.js";
-import { configureBetterAuth } from "./configure-better-auth.js";
+import { configureBetterAuth, type EnterpriseAuthExtension } from "./configure-better-auth.js";
 import { type EnterpriseSsoProvider, verifyEnterpriseProviders } from "./enterprise-options.js";
 import { createEnterpriseRoutes } from "./enterprise-routes.js";
 import { createIdentitySessionReaders, type EnterpriseBetterAuthIdentity } from "./identity-session-readers.js";
@@ -20,7 +20,11 @@ export async function createEnterpriseBetterAuthIdentity(
 ): Promise<EnterpriseBetterAuthIdentity> {
   const origin = validatedIdentityOrigin(options);
   const providers = await verifyEnterpriseProviders(configured, options.secret, origin);
-  return createIdentity(options, origin, providers);
+  const { enterpriseDatabaseHooks, enterpriseSsoPlugin } = await import("./enterprise-plugin.js");
+  return createIdentity(options, origin, providers, {
+    databaseHooks: enterpriseDatabaseHooks(providers),
+    plugin: enterpriseSsoPlugin(providers, origin),
+  });
 }
 
 function validatedIdentityOrigin(options: BetterAuthIdentityOptions): string {
@@ -32,9 +36,10 @@ function createIdentity(
   options: BetterAuthIdentityOptions,
   origin: string,
   providers: readonly EnterpriseSsoProvider[],
+  enterprise?: EnterpriseAuthExtension,
 ): EnterpriseBetterAuthIdentity {
   const sendEmail = identityEmailSender(options);
-  const vendor = configureBetterAuth(options, origin, sendEmail, providers);
+  const vendor = configureBetterAuth(options, origin, sendEmail, enterprise);
   const invitations = createAccountInvitations(options, origin, sendEmail);
   const readers = createIdentitySessionReaders(vendor, providers);
   const enterpriseRoutes =

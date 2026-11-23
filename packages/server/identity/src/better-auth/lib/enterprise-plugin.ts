@@ -2,12 +2,16 @@ import { sso, type SSOOptions, type SSOUserResolutionInput, type SSOUserResoluti
 import { APIError } from "better-auth/api";
 import type { BetterAuthOptions } from "better-auth";
 import { normalizeIdentityEmail } from "../../index.js";
-import { enterpriseProviderBinding, enterpriseEmailDomain, type EnterpriseSsoProvider } from "./enterprise-options.js";
+import {
+  OIDC_CALLBACK,
+  SAML_CALLBACK,
+  enterpriseEmailDomain,
+  enterpriseProviderBinding,
+  forEmail,
+  type EnterpriseSsoProvider,
+} from "./enterprise-options.js";
 import { enterpriseCallback } from "./enterprise-callback-context.js";
 import { IDENTITY_PATH } from "./identity-options.js";
-
-export const OIDC_CALLBACK = "/sso/callback";
-export const SAML_CALLBACK = "/sso/saml2/sp/acs";
 
 export function enterpriseSsoPlugin(providers: readonly EnterpriseSsoProvider[], origin: string) {
   return sso({
@@ -96,11 +100,6 @@ export function enterpriseDatabaseHooks(
       },
     },
   };
-}
-
-export function forEmail(providers: readonly EnterpriseSsoProvider[], email: unknown) {
-  const domain = enterpriseEmailDomain(email);
-  return providers.find((provider) => provider.domain === domain);
 }
 
 const rejectEnterpriseSso: SSOUserResolution = {

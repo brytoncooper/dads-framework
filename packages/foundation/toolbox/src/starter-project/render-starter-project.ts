@@ -1,7 +1,7 @@
 import type { DadsProjectTemplate } from "../dads-initialization-arguments.js";
 import { kitStarterFiles } from "./kit-starter.generated.js";
 import { renderMinimalProjectFiles } from "./render-minimal-project.js";
-import { renderStarterVerificationFiles } from "./render-starter-verification-files.js";
+import { renderStarterVerificationFiles, withStarterScriptsPackage } from "./render-starter-verification-files.js";
 
 export type StarterProjectFile = {
   readonly path: string;
@@ -31,6 +31,12 @@ export function renderStarterProjectFiles(options: {
             '"verify": "npm run typecheck && npm test"',
             '"verify": "node scripts/verify.mjs",\n    "verify:checks": "npm run check:boundaries && npm run typecheck && npm run build:web && npm test",\n    "check:boundaries": "dad check boundaries",\n    "hooks:install": "sh .githooks/install"',
           ),
+      };
+    }
+    if (file.path === "dads.project.json") {
+      return {
+        ...file,
+        content: withStarterScriptsPackage(file.content),
       };
     }
     if (file.path === "dads.testing.json") {

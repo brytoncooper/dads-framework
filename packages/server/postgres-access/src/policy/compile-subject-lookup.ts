@@ -8,13 +8,20 @@ import type {
 import { analyzePermissionCycles, type PermissionCyclePlan } from "./permission-cycles.js";
 import { compileRecursiveSubjectLookup, type SubjectResourceRef } from "./compile-recursive-subjects.js";
 import { findColumnRelation } from "./column-relations.js";
-import { notExpired, permissionIdentity, QueryBuilder, resolveArrowTargets, TUPLES } from "./policy-sql.js";
+import {
+  type LazySqlParam,
+  notExpired,
+  permissionIdentity,
+  QueryBuilder,
+  resolveArrowTargets,
+  TUPLES,
+} from "./policy-sql.js";
 
 type SubjectContext = {
   readonly model: AuthorizationModelDefinition;
   readonly cycles: PermissionCyclePlan;
   readonly builder: QueryBuilder;
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly subjectType: string;
   readonly active: Set<string>;
 };
@@ -33,7 +40,7 @@ export function compilePostgresSubjectLookup(
     model,
     cycles: analyzePermissionCycles(model),
     builder,
-    namespace: builder.value(namespace),
+    namespace: builder.lazyValue(namespace),
     subjectType: builder.value(request.subjectType),
     active: new Set(),
   };
@@ -101,19 +108,20 @@ function compileSubjectExpression(
 }
 
 function compileRelationSubjects(context: SubjectContext, resource: SubjectResourceRef, relation: string): string {
-  const { builder, namespace, subjectType } = context;
+  const { builder, subjectType } = context;
   const columnRel = findColumnRelation(context.model, resource.entity, relation);
   if (columnRel !== undefined) {
     const colAlias = builder.throughAlias();
     const entitySql = builder.value(columnRel.entity);
     const targetEntitySql = builder.value(columnRel.targetEntity);
-    return `SELECT DISTINCT ${colAlias}.${columnRel.targetIdColumn} AS subject_id, false AS is_wildcard
+    return `SELECT DISTINCT ${colAlias}.${columnRel.targetIdColumn}::text AS subject_id, false AS is_wildcard
       FROM ${columnRel.table} ${colAlias}
       WHERE (${resource.type})::text = ${entitySql}::text
-        AND ${colAlias}.${columnRel.idColumn} = ${resource.id}
+        AND ${colAlias}.${columnRel.idColumn}::text = (${resource.id})::text
         AND ${colAlias}.${columnRel.targetIdColumn} IS NOT NULL
         AND (${subjectType})::text = ${targetEntitySql}::text`;
   }
+  const namespace = context.namespace();
   const reqAlias = builder.cteAlias("req");
   const relationSql = builder.value(relation);
   return `WITH RECURSIVE ${reqAlias}(resource_kind, resource_id, relation) AS (
@@ -210,7 +218,7 @@ function compileThroughSubjects(
   resource: SubjectResourceRef,
   expression: Extract<CompiledPermissionExpression, { kind: "through" }>,
 ): string {
-  const { builder, namespace } = context;
+  const { builder } = context;
   const targets = resolveArrowTargets(context.model, resource.entity, expression);
   const throughAlias = builder.throughAlias();
   const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
@@ -220,16 +228,17 @@ function compileThroughSubjects(
     const targetSql = compileTargetSubjectBranches(
       context,
       `${targetKindSql}::text`,
-      `${throughAlias}.${columnRel.targetIdColumn}`,
+      `${throughAlias}.${columnRel.targetIdColumn}::text`,
       targets,
     );
     return `SELECT DISTINCT sub.subject_id, sub.is_wildcard
       FROM ${columnRel.table} ${throughAlias}
       CROSS JOIN LATERAL (${targetSql}) sub
       WHERE (${resource.type})::text = ${entitySql}::text
-        AND ${throughAlias}.${columnRel.idColumn} = ${resource.id}
+        AND ${throughAlias}.${columnRel.idColumn}::text = (${resource.id})::text
         AND ${throughAlias}.${columnRel.targetIdColumn} IS NOT NULL`;
   }
+  const namespace = context.namespace();
   const relationSql = builder.value(expression.relation);
   const targetSql = compileTargetSubjectBranches(
     context,
@@ -254,7 +263,7 @@ function compileThroughAllSubjects(
   resource: SubjectResourceRef,
   expression: Extract<CompiledPermissionExpression, { kind: "through-all" }>,
 ): string {
-  const { builder, namespace } = context;
+  const { builder } = context;
   const targets = resolveArrowTargets(context.model, resource.entity, expression);
   const tupleAlias = builder.throughAlias();
   const parentsAlias = builder.cteAlias("all_parents");
@@ -262,14 +271,14 @@ function compileThroughAllSubjects(
   const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   const parentsQuery =
     columnRel !== undefined
-      ? `SELECT ${builder.value(columnRel.targetEntity)}::text AS parent_kind, ${tupleAlias}.${columnRel.targetIdColumn} AS parent_id
+      ? `SELECT ${builder.value(columnRel.targetEntity)}::text AS parent_kind, ${tupleAlias}.${columnRel.targetIdColumn}::text AS parent_id
       FROM ${columnRel.table} ${tupleAlias}
       WHERE (${resource.type})::text = ${builder.value(columnRel.entity)}::text
-        AND ${tupleAlias}.${columnRel.idColumn} = ${resource.id}
+        AND ${tupleAlias}.${columnRel.idColumn}::text = (${resource.id})::text
         AND ${tupleAlias}.${columnRel.targetIdColumn} IS NOT NULL`
       : `SELECT ${tupleAlias}.subject_kind AS parent_kind, ${tupleAlias}.subject_id AS parent_id
       FROM ${TUPLES} ${tupleAlias}
-      WHERE ${tupleAlias}.namespace = ${namespace}
+      WHERE ${tupleAlias}.namespace = ${context.namespace()}
         AND ${tupleAlias}.resource_kind = ${resource.type}
         AND ${tupleAlias}.resource_id = ${resource.id}
         AND ${tupleAlias}.relation = ${builder.value(expression.relation)}

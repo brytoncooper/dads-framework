@@ -1,7 +1,6 @@
 import type { Identity, IdentitySession } from "../../index.js";
 import type { configureBetterAuth } from "./configure-better-auth.js";
-import { enterpriseProviderBinding, type EnterpriseSsoProvider } from "./enterprise-options.js";
-import { forEmail } from "./enterprise-plugin.js";
+import { enterpriseProviderBinding, forEmail, type EnterpriseSsoProvider } from "./enterprise-options.js";
 
 export type EnterpriseSsoSession = IdentitySession & {
   readonly providerId: string;

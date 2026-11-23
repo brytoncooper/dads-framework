@@ -9,6 +9,7 @@ import { findColumnRelation } from "./column-relations.js";
 import {
   compiledRelationCheck,
   isPolymorphicRelation,
+  type LazySqlParam,
   notExpired,
   permissionIdentity,
   type QueryBuilder,
@@ -26,7 +27,7 @@ export type ForwardContext = {
   readonly model: AuthorizationModelDefinition;
   readonly cycles: PermissionCyclePlan;
   readonly builder: QueryBuilder;
-  readonly namespace: string;
+  readonly namespace: LazySqlParam;
   readonly subject: SqlReference;
   readonly active: Set<string>;
 };
@@ -51,7 +52,7 @@ export function createForwardContext(
     model,
     cycles: analyzePermissionCycles(model),
     builder,
-    namespace: builder.value(namespace),
+    namespace: builder.lazyValue(namespace),
     subject,
     active: new Set(),
   };
@@ -121,7 +122,7 @@ function compileThrough(
   resource: SqlReference,
   expression: Extract<CompiledPermissionExpression, { kind: "through" }>,
 ): string {
-  const { builder, namespace } = context;
+  const { builder } = context;
   const targets = resolveArrowTargets(context.model, resource.entity, expression);
   const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   if (columnRel !== undefined && targets[0] !== undefined) {
@@ -132,13 +133,14 @@ function compileThrough(
       context,
       {
         type: targetKindSql,
-        id: `${throughAlias}.${columnRel.targetIdColumn}`,
+        id: `${throughAlias}.${columnRel.targetIdColumn}::text`,
         entity: targets[0].entity,
       },
       targets[0].permission,
     );
-    return `EXISTS (SELECT 1 FROM ${columnRel.table} ${throughAlias} WHERE (${resource.type})::text = ${entitySql}::text AND ${throughAlias}.${columnRel.idColumn} = ${resource.id} AND ${throughAlias}.${columnRel.targetIdColumn} IS NOT NULL AND (${child}) OFFSET 0)`;
+    return `EXISTS (SELECT 1 FROM ${columnRel.table} ${throughAlias} WHERE (${resource.type})::text = ${entitySql}::text AND ${throughAlias}.${columnRel.idColumn}::text = (${resource.id})::text AND ${throughAlias}.${columnRel.targetIdColumn} IS NOT NULL AND (${child}) OFFSET 0)`;
   }
+  const namespace = context.namespace();
   const polymorphic = isPolymorphicRelation(context.model, resource.entity, expression.relation);
   const relationSql = builder.value(expression.relation);
   const throughAlias = builder.throughAlias();
@@ -153,7 +155,7 @@ function compileThroughAll(
   resource: SqlReference,
   expression: Extract<CompiledPermissionExpression, { kind: "through-all" }>,
 ): string {
-  const { builder, namespace } = context;
+  const { builder } = context;
   const targets = resolveArrowTargets(context.model, resource.entity, expression);
   const columnRel = findColumnRelation(context.model, resource.entity, expression.relation);
   if (columnRel !== undefined && targets[0] !== undefined) {
@@ -165,15 +167,16 @@ function compileThroughAll(
       context,
       {
         type: targetKindSql,
-        id: `${checkAlias}.${columnRel.targetIdColumn}`,
+        id: `${checkAlias}.${columnRel.targetIdColumn}::text`,
         entity: targets[0].entity,
       },
       targets[0].permission,
     );
     const match = (alias: string) =>
-      `(${resource.type})::text = ${entitySql}::text AND ${alias}.${columnRel.idColumn} = ${resource.id} AND ${alias}.${columnRel.targetIdColumn} IS NOT NULL`;
+      `(${resource.type})::text = ${entitySql}::text AND ${alias}.${columnRel.idColumn}::text = (${resource.id})::text AND ${alias}.${columnRel.targetIdColumn} IS NOT NULL`;
     return `(EXISTS (SELECT 1 FROM ${columnRel.table} ${existsAlias} WHERE ${match(existsAlias)}) AND NOT EXISTS (SELECT 1 FROM ${columnRel.table} ${checkAlias} WHERE ${match(checkAlias)} AND NOT (${child}) OFFSET 0))`;
   }
+  const namespace = context.namespace();
   const polymorphic = isPolymorphicRelation(context.model, resource.entity, expression.relation);
   const relationSql = builder.value(expression.relation);
   const existsAlias = builder.throughAlias();

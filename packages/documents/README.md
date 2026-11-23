@@ -45,7 +45,7 @@ and structured values use JSON.
 
 ## Subpaths and optional dependencies
 
-- `@dads-framework/documents/csv`: zero-dependency CSV serialization.
+- `@dads-framework/documents/csv`: zero-dependency RFC 4180 CSV serialization (`toCsv`) and parsing (`parseCsv`, `parseCsvRecords`).
 - `@dads-framework/documents/pdf`: PDF utilities and pdfmake adapter (`@dads-framework/documents/pdf/pdfmake`, optional peers `pdfmake`, `pdfjs-dist`, `@napi-rs/canvas`).
 - `@dads-framework/documents/xlsx`: spreadsheet table reading and writing (optional peer `exceljs`).
 

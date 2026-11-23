@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs";
-import { relative } from "node:path";
+import { relative, sep } from "node:path";
 import type ts from "typescript";
 import { findDadsProjectRoot } from "../project-files.js";
 import { moduleReferences } from "./module-references.js";
@@ -29,6 +29,7 @@ type BarrelState = {
 type SourceResolution = ReturnType<typeof createSourceResolution>;
 
 const DOMAIN_ROOT_BARREL = /^(?:src\/)?index\.[cm]?[jt]sx?$/;
+const TOP_LEVEL_TEST_FILE = /^tests\/.*\.(?:test|spec|test-support)\.[cm]?[jt]sx?$/;
 
 export function checkDomainBoundaries(startPath: string) {
   const project = realpathSync(findDadsProjectRoot(startPath));
@@ -60,7 +61,7 @@ function checkFile(
     if (!target || !isLocalTarget(project, target)) continue;
     const reference: ResolvedReference = { target, literal, node };
     const targetOwner = boundaryOwnerOf(owners, target);
-    const message = edgeRejection(sourceOwner, path, targetOwner, target);
+    const message = edgeRejection(project, sourceOwner, path, targetOwner, target);
     if (message) violations.push(toViolation(project, source, path, reference, message));
     recordBarrelReference(barrel, sourceOwner, targetOwner, reference);
   }
@@ -116,6 +117,7 @@ function toViolation(
 }
 
 function edgeRejection(
+  project: string,
   source: Owner | undefined,
   sourceFile: string,
   target: Owner | undefined,
@@ -123,13 +125,24 @@ function edgeRejection(
 ): string | undefined {
   if (source === target) return intraDomainRejection(source, sourceFile, targetFile);
   if (target === undefined) return appWiringRejection(source);
-  return crossOwnerRejection(source, target, targetFile);
+  return crossOwnerRejection(project, source, sourceFile, target, targetFile);
 }
 
-function crossOwnerRejection(source: Owner | undefined, target: Owner, targetFile: string): string | undefined {
+function crossOwnerRejection(
+  project: string,
+  source: Owner | undefined,
+  sourceFile: string,
+  target: Owner,
+  targetFile: string,
+): string | undefined {
   switch (target.kind) {
     case "domains":
-      return domainRejection(source, isPublicEntry(target, targetFile));
+      return domainRejection(
+        source,
+        isTopLevelTestFile(project, sourceFile),
+        isPublicEntry(target, targetFile),
+        isDomainRootBarrel(target, targetFile),
+      );
     case "libraries":
       return isPublicEntry(target, targetFile)
         ? undefined
@@ -176,20 +189,38 @@ function sourceMustStayLocal(owner: Owner | undefined): boolean {
   return owner?.kind === "domains" || owner?.kind === "libraries" || owner?.kind === "integrations";
 }
 
-function domainRejection(source: Owner | undefined, isPublic: boolean): string | undefined {
-  switch (source?.kind) {
-    case "composition":
-      return isPublic ? undefined : "Composition must import the domain through its public index entry point.";
-    case "workflows":
-      return isPublic ? undefined : "Workflows must import domains through their public index entry points.";
-    case "domains":
-      return "A domain cannot import a peer domain. Define the needed port in the consuming domain and bind the provider in composition.";
-    case "integrations":
-      return "Integrations cannot import domains. Keep integrations independent and bind them in workflows or composition.";
-    case "libraries":
-    case undefined:
-      return "Import domains from composition through their public entry points. Neutral libraries must stay independent of domains.";
+function unownedDomainRejection(sourceIsTest: boolean, isRootBarrel: boolean): string | undefined {
+  if (sourceIsTest) {
+    return isRootBarrel ? undefined : "Tests must import domains through their public index entry point.";
   }
+  return "Import domains from composition through their public entry points. Neutral libraries must stay independent of domains.";
+}
+
+function domainRejection(
+  source: Owner | undefined,
+  sourceIsTest: boolean,
+  isPublic: boolean,
+  isRootBarrel: boolean,
+): string | undefined {
+  if (source === undefined) return unownedDomainRejection(sourceIsTest, isRootBarrel);
+  if (source.kind === "composition") {
+    return isPublic ? undefined : "Composition must import the domain through its public index entry point.";
+  }
+  if (source.kind === "workflows") {
+    return isPublic ? undefined : "Workflows must import domains through their public index entry points.";
+  }
+  if (source.kind === "domains") {
+    return "A domain cannot import a peer domain. Define the needed port in the consuming domain and bind the provider in composition.";
+  }
+  if (source.kind === "integrations") {
+    return "Integrations cannot import domains. Keep integrations independent and bind them in workflows or composition.";
+  }
+  return "Import domains from composition through their public entry points. Neutral libraries must stay independent of domains.";
+}
+
+function isTopLevelTestFile(project: string, file: string): boolean {
+  const rel = relative(project, file).split(sep).join("/");
+  return TOP_LEVEL_TEST_FILE.test(rel);
 }
 
 function workflowRejection(source: Owner | undefined): string | undefined {

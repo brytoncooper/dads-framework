@@ -32,9 +32,17 @@ export function readRouteModel(context: DoctorContext): RouteModel {
 }
 
 function readPackageRoutes(context: DoctorContext, owner: GraphPackage): readonly RouteOperation[] {
+  const readFile = (relativePath: string): string | undefined => {
+    if (!context.exists(relativePath)) return undefined;
+    try {
+      return context.read(relativePath);
+    } catch {
+      return undefined;
+    }
+  };
   return owner.sources.flatMap((path) => {
     if (!/\.tsx?$/.test(path)) return [];
-    return readRouteSource(context.read(path), path).map((route) => ({
+    return readRouteSource(context.read(path), path, { readFile }).map((route) => ({
       ...route,
       path,
       packageName: owner.name,

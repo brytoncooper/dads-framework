@@ -5,7 +5,7 @@ import type { ScopePlan } from "@dads-framework/access/scopes";
 import { HttpWiringError } from "../http-errors.js";
 import type { ScopedAccess } from "../route/access.js";
 import type { HttpRoute } from "../route/route-group.js";
-import type { AccessDecision, AccessPorts } from "./enforce-access.js";
+import type { AccessDecision, AccessPorts, VisibleResourceLookup } from "./enforce-access.js";
 import { refuseVisibleRecordList } from "./refuse-visible-record-list.js";
 
 /**
@@ -15,6 +15,14 @@ import { refuseVisibleRecordList } from "./refuse-visible-record-list.js";
  * allow and are NOT short-circuited — the SQL decides, since one empty arm of
  * an `any` can still match.
  */
+function lookupsFromPorts(ports: Pick<AccessPorts, "authorization" | "lookups">): VisibleResourceLookup | undefined {
+  if (ports.lookups !== undefined) return ports.lookups;
+  const auth = ports.authorization;
+  if (auth.lookupResources === undefined) return undefined;
+  const lookup = auth.lookupResources.bind(auth);
+  return { lookupResources: lookup };
+}
+
 export async function enforceScope(
   access: ScopedAccess,
   subjects: Extract<AccessDecision, { outcome: "allow" }>,
@@ -31,7 +39,8 @@ export async function enforceScope(
       `requiresScoped route for ${access.resourceType}.${access.permission} enforced without its compiled scope plan`,
     );
   }
-  if (!ports.lookups) {
+  const lookups = lookupsFromPorts(ports);
+  if (lookups === undefined) {
     throw new HttpWiringError("requiresScoped route registered without a lookups port");
   }
   const scope = await answerScope({
@@ -39,7 +48,7 @@ export async function enforceScope(
     permission: access.permission,
     plan,
     subject,
-    lookups: ports.lookups,
+    lookups,
   });
   return { ...subjects, scope, permission: access.permission };
 }

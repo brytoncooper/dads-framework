@@ -20,18 +20,34 @@ import type { DoctorSignal, SignalReading, SignalReadings } from "../../doctor-s
 
 const REPORT_FILE = "node_modules/.dads/vitest-report.json";
 const COUNTED = new Set(["passed", "failed"]);
+const MANIFEST_NAME = "package.json";
 const MANIFEST_SUFFIX = "/package.json";
 
-/** Every package directory in the file list mapped to its declared name. */
+/** Every declared package and manifest directory mapped to its owner name. */
 function packageDirectories(context: DoctorContext): ReadonlyMap<string, string> {
   const owners = new Map<string, string>();
+  let hasSubManifests = false;
   for (const path of context.files()) {
     if (!path.endsWith(MANIFEST_SUFFIX)) continue;
+    hasSubManifests = true;
     const directory = path.slice(0, path.length - MANIFEST_SUFFIX.length);
     const name = readSuiteOwnerName(context, path);
     if (name !== undefined) owners.set(directory, name);
   }
+  for (const declared of context.packages()) {
+    const directory = normalizePackageRoot(declared.root);
+    owners.set(directory, declared.name);
+  }
+  if (!hasSubManifests && !owners.has("") && context.exists(MANIFEST_NAME)) {
+    const rootName = readSuiteOwnerName(context, MANIFEST_NAME);
+    if (rootName !== undefined) owners.set("", rootName);
+  }
   return owners;
+}
+
+function normalizePackageRoot(root: string): string {
+  const trimmed = root.replace(/\/+$/, "");
+  return trimmed === "." ? "" : trimmed;
 }
 
 function readSuiteOwnerName(context: DoctorContext, path: string): string | undefined {
@@ -48,7 +64,7 @@ function readSuiteOwnerName(context: DoctorContext, path: string): string | unde
 function ownerOf(path: string, owners: ReadonlyMap<string, string>): string | undefined {
   let best: string | undefined;
   for (const directory of owners.keys()) {
-    if (!path.startsWith(`${directory}/`)) continue;
+    if (directory.length > 0 && !path.startsWith(`${directory}/`)) continue;
     if (best === undefined || directory.length > best.length) best = directory;
   }
   return best === undefined ? undefined : owners.get(best);

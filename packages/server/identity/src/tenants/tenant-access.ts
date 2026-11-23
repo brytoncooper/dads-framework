@@ -1,12 +1,7 @@
 import { resource, type DslActor, type RoleToken } from "@dads-framework/access";
-import { z } from "zod";
+import { tenantIdSchema, type TenantRole } from "./contract.js";
 
-export const tenantIdSchema = z.uuid().brand<"TenantId">();
-export type TenantId = z.output<typeof tenantIdSchema>;
-
-export const tenantRoles = ["owner", "admin", "member"] as const;
-export type TenantRole = (typeof tenantRoles)[number];
-export const assignableTenantRoleSchema = z.enum(tenantRoles).exclude(["owner"]);
+export { assignableTenantRoleSchema, tenantIdSchema, tenantRoles, type TenantId, type TenantRole } from "./contract.js";
 
 export function createTenantAccess<WireName extends string = string>(account: DslActor<WireName>) {
   const tenant = resource("tenants/tenant", {

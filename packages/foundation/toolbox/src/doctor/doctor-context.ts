@@ -23,10 +23,11 @@
  * measured rather than counting a zero nobody measured.
  */
 
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isRecord, isString, isUnknownArray } from "../parse-guards.js";
+import { environmentWithoutGitVariables } from "../verification/git-environment.js";
 import { buildTypeScriptProgram, type DoctorProgram } from "./signals/scanners/typescript-program.js";
 
 const PROJECT_FILE = "dads.project.json";
@@ -196,7 +197,7 @@ function isHidden(segment: string): boolean {
 }
 
 function listHandWrittenFiles(root: string): readonly string[] {
-  const listed = isGitRoot(root) ? listTrackedFiles(root) : walkFiles(root, "");
+  const listed = isGitWorktree(root) ? listGitWorktreeFiles(root) : walkFiles(root, "");
   return listed.filter(isHandWritten);
 }
 
@@ -218,30 +219,26 @@ function listHandWrittenDirectories(path: string): readonly string[] {
     .sort();
 }
 
-/** True when `root` is itself the top of a git repository, not a directory in one. */
-function isGitRoot(root: string): boolean {
-  const shown = runCommand(root, "git", ["rev-parse", "--show-toplevel"]);
-  if (shown.status !== 0) return false;
-  const top = shown.stdout.trim();
-  if (top.length === 0) return false;
-  return realPath(top) === realPath(root);
+/** True when `root` is the top of or inside a git worktree. */
+function isGitWorktree(root: string): boolean {
+  const shown = runDoctorGit(root, ["rev-parse", "--show-toplevel"]);
+  return shown.status === 0 && shown.stdout.trim().length > 0;
 }
 
-function realPath(path: string): string {
-  try {
-    return realpathSync(path);
-  } catch {
-    return path;
-  }
+function listGitWorktreeFiles(root: string): readonly string[] {
+  const listed = runDoctorGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
+  if (listed.status !== 0) return walkFiles(root, "");
+  return listed.stdout.split("\0").filter((path) => path.length > 0 && existsSync(join(root, path)));
 }
 
-function listTrackedFiles(root: string): readonly string[] {
-  const listed = execFileSync("git", ["ls-files", "-z"], {
+function runDoctorGit(root: string, commandArguments: readonly string[]): DoctorCommandResult {
+  const finished = spawnSync("git", [...commandArguments], {
     cwd: root,
     encoding: "utf8",
+    env: environmentWithoutGitVariables(),
     maxBuffer: MAX_OUTPUT_BYTES,
   });
-  return listed.split("\0").filter((path) => path.length > 0);
+  return { status: finished.status ?? 1, stdout: finished.stdout };
 }
 
 function walkFiles(root: string, prefix: string): readonly string[] {

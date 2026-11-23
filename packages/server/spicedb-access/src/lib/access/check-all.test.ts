@@ -14,7 +14,7 @@ const queries: readonly PermissionQuery[] = ["a", "b"].map((id) => ({
 class BulkCheckingAuthorization extends FakeAuthorization {
   batches = 0;
 
-  checkMany(batch: readonly PermissionQuery[]): Promise<readonly boolean[]> {
+  override checkMany(batch: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     this.batches += 1;
     return Promise.all(batch.map((query) => super.check(query)));
   }

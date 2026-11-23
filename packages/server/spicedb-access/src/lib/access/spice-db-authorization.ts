@@ -2,23 +2,22 @@ import { v1 } from "@authzed/authzed-node";
 
 import type { AuthorizationReadFreshness } from "@dads-framework/core/runtime/request-work";
 
-import type { RelationshipPage, RelationshipPageRequest } from "@dads-framework/access/runtime";
-import type {
-  Authorization,
-  DirectSubjectLookup,
-  PermissionCheckOutcome,
-  PermissionQuery,
-  RelationshipFilter,
-  RelationshipWrite,
-  ResourceLookup,
-  SpiceDbConsistencyToken,
-  SubjectRef,
-} from "@dads-framework/access/runtime";
 import {
+  Authorization,
   authorizationConsistencyTokenOnThisRequest,
   recordWrittenAuthorizationConsistency,
+  resolveReadConsistency,
+  type DirectSubjectLookup,
+  type PermissionCheckOutcome,
+  type PermissionQuery,
+  type RelationshipFilter,
+  type RelationshipPage,
+  type RelationshipPageRequest,
+  type RelationshipWrite,
+  type ResourceLookup,
+  type SpiceDbConsistencyToken,
+  type SubjectRef,
 } from "@dads-framework/access/runtime";
-import { resolveReadConsistency } from "@dads-framework/access/runtime";
 import { isEmptySchemaError } from "./logic/spice-db-empty-schema.js";
 import {
   isRetryableSpiceDbWriteError,
@@ -98,7 +97,7 @@ type SpiceDbClient = {
  * Every queued write carries a deadline, so one that never answers is
  * abandoned, clears the token like any failed write, and frees the queue.
  */
-export class SpiceDbAuthorization implements Authorization {
+export class SpiceDbAuthorization extends Authorization {
   private readonly client: SpiceDbClient;
   private readonly writeClient: SpiceDbClient;
   private readonly adapterConsistency: "minimize-latency" | "fully-consistent";
@@ -109,6 +108,7 @@ export class SpiceDbAuthorization implements Authorization {
   private readonly writeDeadlineMs: number;
 
   constructor(options: SpiceDbAdapterOptions, client?: SpiceDbClient) {
+    super();
     this.writeDeadlineMs = options.relationshipWriteDeadlineMs ?? RELATIONSHIP_WRITE_DEADLINE_MS;
     const connected =
       client === undefined ? connectSpiceDb(options, this.writeDeadlineMs) : { reads: client, writes: client };
@@ -128,12 +128,12 @@ export class SpiceDbAuthorization implements Authorization {
   }
 
   /** An item error denies that item, and is logged and noted on the request. */
-  async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
+  override async checkMany(queries: readonly PermissionQuery[]): Promise<readonly boolean[]> {
     return denyingFailedItems(queries, await this.checkEach(queries));
   }
 
   /** An item error is that item's `failed` outcome, and is logged. */
-  async checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
+  override async checkEach(queries: readonly PermissionQuery[]): Promise<readonly PermissionCheckOutcome[]> {
     if (queries.length === 0) return [];
     return checkSpiceDbPermissions(
       this.client.promises,

@@ -26,6 +26,9 @@ export function notExpired(alias: string): string {
   return `(${alias}.expires_at IS NULL OR ${alias}.expires_at > now())`;
 }
 
+/** Lazily allocates and caches a single `$N` placeholder when first referenced in SQL. */
+export type LazySqlParam = () => string;
+
 /**
  * Collects every literal a compiled statement needs as an ordinal parameter and
  * hands out the distinct table aliases a nested `through` traversal joins on.
@@ -45,6 +48,14 @@ export class QueryBuilder {
     const index = this.#paramOffset + this.values.length;
     this.values.push(value);
     return `$${String(index)}`;
+  }
+
+  lazyValue(value: PostgresValue): LazySqlParam {
+    let placeholder: string | undefined;
+    return () => {
+      placeholder ??= this.value(value);
+      return placeholder;
+    };
   }
 
   get throughCount(): number {
@@ -144,7 +155,7 @@ export function relationTargetCapabilities(
 export function compiledRelationCheck(
   model: AuthorizationModelDefinition,
   builder: QueryBuilder,
-  namespace: string,
+  namespace: LazySqlParam,
   subjectKind: string,
   subjectId: string,
   resourceEntity: string,
@@ -160,9 +171,10 @@ export function compiledRelationCheck(
       FROM ${columnRel.table} col_tuple
       WHERE (${resourceKind})::text = ${entitySql}::text
         AND (${subjectKind})::text = ${targetKindSql}::text
-        AND col_tuple.${columnRel.idColumn} = ${resourceId}
-        AND col_tuple.${columnRel.targetIdColumn} = ${subjectId})`;
+        AND col_tuple.${columnRel.idColumn}::text = (${resourceId})::text
+        AND col_tuple.${columnRel.targetIdColumn}::text = (${subjectId})::text)`;
   }
+  const namespaceSql = namespace();
   const relationSql = builder.value(relationName);
   const { allowsUsersets, allowsWildcards } = relationTargetCapabilities(model, resourceEntity, relationName);
   // Top-level concrete checks (and checkMany input rows) always bind a declared
@@ -173,7 +185,7 @@ export function compiledRelationCheck(
   const skipUsersetRecursion = isDeclaredEntityBinding ? !allowsUsersets : !modelHasUsersetTargets(model);
   if (skipUsersetRecursion) {
     return directRelationMembershipCheck(
-      namespace,
+      namespaceSql,
       subjectKind,
       subjectId,
       resourceKind,
@@ -182,7 +194,7 @@ export function compiledRelationCheck(
       allowsWildcards,
     );
   }
-  return relationMembershipCheck(namespace, subjectKind, subjectId, resourceKind, resourceId, relationSql);
+  return relationMembershipCheck(namespaceSql, subjectKind, subjectId, resourceKind, resourceId, relationSql);
 }
 
 /** Direct primary-key membership check when a relation has no userset targets. */
@@ -224,10 +236,10 @@ function columnRelationDirectBranches(
       const entitySql = builder.value(col.entity);
       const relationSql = builder.value(col.relation);
       const targetKindSql = builder.value(col.targetEntity);
-      return ` UNION ALL SELECT ${entitySql}::text, col_direct.${col.idColumn}, ${relationSql}::text
+      return ` UNION ALL SELECT ${entitySql}::text, col_direct.${col.idColumn}::text, ${relationSql}::text
         FROM ${col.table} col_direct
         WHERE (${subjectKind})::text = ${targetKindSql}::text
-          AND col_direct.${col.targetIdColumn} = ${subjectId}`;
+          AND col_direct.${col.targetIdColumn}::text = (${subjectId})::text`;
     })
     .join("");
 }

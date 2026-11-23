@@ -13,6 +13,7 @@ import {
 
 import { bodyOf, errorBodyOf } from "../../testing/index.js";
 import { createHttpApp, type HttpAppOptions } from "../create-http-app.js";
+import { HttpWiringError } from "../http-errors.js";
 import { fromBody, fromFixed, fromParam, fromQuery, publicAccess, requireSession } from "../route/access.js";
 import { getRoute } from "../route/get-route.js";
 import { listRoute } from "../route/list-route.js";
@@ -526,28 +527,36 @@ describe("the finished access vocabulary — fromBody, requireVisibility, onDeni
     });
   });
 
-  it("a visibility route without a lookups port is a loud 500, not a quiet allow", async () => {
-    const authorization = new FakeAuthorization({});
-    const app = await createHttpApp({
-      nodeEnv: "test",
-      trustedOrigins: [],
-      logger: false,
+  it("a visibility route defaults lookups to authorization and fails eagerly at registration without one", async () => {
+    const authorization = new FakeAuthorization({ "ticketing/ticket": { view: ["owner"] } });
+    authorization.seed({
+      resource: { type: "ticketing/ticket", id: "t2" },
+      relation: "owner",
+      subject: { type: "user", id: "u1" },
     });
-    registerRoutes(app, {
+    const appWithDefault = await createHttpApp({ nodeEnv: "test", trustedOrigins: [], logger: false });
+    registerRoutes(appWithDefault, {
       routes: vocabularyRoutes,
       accessModel: vocabularyModel,
       subjects: subjectsFromHeader(),
       authorization,
-      // no lookups port — wired wrong on purpose
     });
-    await app.ready();
-    apps.push(app);
-    const response = await app.inject({
-      method: "GET",
-      url: "/tickets",
-      headers: { "x-test-user": "u1" },
-    });
-    expect(response.statusCode).toBe(500);
+    await appWithDefault.ready();
+    apps.push(appWithDefault);
+    const listed = await appWithDefault.inject({ method: "GET", url: "/tickets", headers: { "x-test-user": "u1" } });
+    expect(listed.statusCode).toBe(200);
+    expect(bodyOf(listed)).toEqual({ data: [{ id: "t2" }], meta: { total: 1, page: 1, perPage: 25 } });
+
+    const appWithoutLookups = await createHttpApp({ nodeEnv: "test", trustedOrigins: [], logger: false });
+    apps.push(appWithoutLookups);
+    expect(() => {
+      registerRoutes(appWithoutLookups, {
+        routes: vocabularyRoutes,
+        accessModel: vocabularyModel,
+        subjects: subjectsFromHeader(),
+        authorization: { check: () => Promise.resolve(false) },
+      });
+    }).toThrow(HttpWiringError);
   });
 
   it("fromFixed checks the singleton resource id (platform:command)", async () => {

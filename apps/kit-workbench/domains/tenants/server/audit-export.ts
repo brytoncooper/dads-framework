@@ -1,8 +1,8 @@
-import { createAuditLogExporter, DrizzleAuditLogReader, type AuditLogCursor } from "@dads-framework/audit";
+import { createAuditLogExporter, type AuditLogCursor } from "@dads-framework/audit";
 import { notFound, validation } from "@dads-framework/core/errors";
 import { defineRawRoute, fromParam, requires, routeGroup } from "@dads-framework/http";
 import { definePlugin } from "@dads-framework/core/plugin";
-import { tenantIdSchema } from "@dads-framework/identity/tenants";
+import { tenantIdSchema } from "@dads-framework/identity/tenants/contract";
 import { z } from "zod";
 
 import { starterServices, tenantAccess, type StarterServices } from "../../../libraries/app-runtime/index.js";
@@ -34,8 +34,14 @@ export const tenantAuditExportPlugin = definePlugin({
   }),
 });
 
-function tenantAuditExportRoutes({ db, authorization }: Pick<StarterServices, "db" | "authorization">) {
-  const reader = new DrizzleAuditLogReader(db);
+function tenantAuditExportRoutes({
+  auditLogReader,
+  authorization,
+}: Pick<StarterServices, "auditLogReader" | "authorization">) {
+  if (auditLogReader === undefined) {
+    throw new Error("Audit log export requires StarterServices.auditLogReader to be configured in assembly.");
+  }
+  const reader = auditLogReader;
   return routeGroup(auditExportCopy["tenants.auditExport.tag"].en, [
     defineRawRoute({
       method: "GET",

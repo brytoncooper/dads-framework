@@ -73,6 +73,7 @@ function ceiling(
     id?: string;
     measure?: string | undefined;
     threshold?: number | null;
+    unit?: DoctorSignal["unit"];
   } = {},
 ): DoctorSignal {
   const standard = options.threshold === undefined ? 400 : options.threshold;
@@ -81,7 +82,7 @@ function ceiling(
     issue: "enmeshment",
     question: "A ceiling under test?",
     reads: "text",
-    unit: "lines",
+    unit: options.unit ?? "lines",
     direction: "ceiling",
     thresholds: { standard, strict: 400 },
     sentence: "A ceiling under test.",
@@ -630,5 +631,27 @@ describe("the signals a gate judges", () => {
   it("names the section a signal is recorded under", () => {
     expect(baselineSectionOf(ceiling({}, FILE_LINES))).toBe("fileLines");
     expect(baselineSectionOf(ceiling({}, { id: "god-classes", measure: undefined }))).toBe("god-classes");
+  });
+
+  it("prints fix-or-baseline advice for non-size ceilings and split advice for size ceilings", async () => {
+    const { result } = await runGate({
+      mode: gateMode({}),
+      signals: [
+        ceiling({ "src/big.ts": 401 }, FILE_LINES),
+        ceiling(
+          { ".github/workflows/ci.yml": 1 },
+          { id: "ci-without-verify", measure: undefined, unit: "count", threshold: 0 },
+        ),
+        ceiling(
+          { "domains/notes": 1 },
+          { id: "vendor-outside-adapter", measure: undefined, unit: "files", threshold: 0 },
+        ),
+      ],
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("401 lines over the 400 ceiling and not listed — split it");
+    expect(result.output).toContain("1 count over the 0 ceiling and not listed — fix or baseline it");
+    expect(result.output).toContain("1 files over the 0 ceiling and not listed — fix or baseline it");
   });
 });

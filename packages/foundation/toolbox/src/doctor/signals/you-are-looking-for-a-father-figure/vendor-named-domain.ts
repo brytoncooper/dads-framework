@@ -103,7 +103,7 @@ function borrowedFromVendor(
       const specifier = bindings.get(name);
       if (specifier === undefined || isLocalSpecifier(specifier)) continue;
       const vendor = packageOfSpecifier(specifier);
-      if (workspace.has(vendor)) continue;
+      if (workspace.has(vendor) || vendor.startsWith("@dads-framework/")) continue;
       if (isPrivateVendorSubclass(node, owner, vendor)) continue;
       found.push(evidenceAt(module, node, `${name} from ${specifier}`));
     }

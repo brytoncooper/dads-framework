@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { actor, compileAccess, resource, type PermissionToken } from "@dads-framework/access";
 import { scopeBindings } from "@dads-framework/access/scopes";
+import { FakeAuthorization } from "@dads-framework/access/testing";
 import { requiresScoped } from "../route/route-guards.test-support.js";
 import type { ResourceLookup } from "@dads-framework/access/runtime";
 import { paginationQuerySchema } from "@dads-framework/core/contract";
@@ -165,5 +166,58 @@ describe("requiresScoped list routes", () => {
     await expect(appWith(routeGroup("Raw", [raw]), () => [])).rejects.toThrow(
       "raw route GET /raw-scoped declares requiresScoped; only listRoute renders a scope",
     );
+  });
+
+  it("defaults lookups to authorization when authorization implements lookupResources", async () => {
+    const authorization = new FakeAuthorization({
+      "scopedhttp/team": { view: ["member"] },
+    });
+    authorization.seed({
+      resource: { type: "scopedhttp/team", id: "team-9" },
+      relation: "member",
+      subject: { type: User.wireName, id: "u1" },
+    });
+    const app = await createHttpApp({
+      nodeEnv: "test",
+      trustedOrigins: [],
+      logger: false,
+    });
+    apps.push(app);
+    registerRoutes(app, {
+      routes: routeGroup("Notes", [scopedNotesRoute(note.permissions.view)]),
+      accessModel: model,
+      subjects,
+      authorization,
+    });
+    await app.ready();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/scoped",
+      headers: { "x-test-user": "u1" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(listBodyOf(response, z.array(itemSchema), z.unknown()).data).toEqual([
+      { question: "scopedhttp/team#view", ids: ["team-9"] },
+    ]);
+  });
+
+  it("throws HttpWiringError at registration when requiresScoped has neither lookups nor authorization.lookupResources", async () => {
+    const app = await createHttpApp({
+      nodeEnv: "test",
+      trustedOrigins: [],
+      logger: false,
+    });
+    apps.push(app);
+
+    expect(() => {
+      registerRoutes(app, {
+        routes: routeGroup("Notes", [scopedNotesRoute(note.permissions.view)]),
+        accessModel: model,
+        subjects,
+        authorization: { check: () => Promise.resolve(false) },
+      });
+    }).toThrow(HttpWiringError);
   });
 });

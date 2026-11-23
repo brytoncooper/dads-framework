@@ -60,6 +60,19 @@ function frameworkImports(imports: readonly PackageImport[]): ReadonlyMap<string
   return found;
 }
 
+function permitsDomainServerPersistence(
+  declared: { readonly root: string; readonly allowedDependencies: readonly string[] },
+  entry: PackageImport,
+): boolean {
+  if (entry.module !== "drizzle-orm") return false;
+  if (!declared.allowedDependencies.includes("drizzle-orm")) return false;
+  const serverPrefix = `${declared.root}/server/`;
+  return (
+    (declared.root.startsWith("domains/") || declared.root.startsWith("src/domains/")) &&
+    entry.path.startsWith(serverPrefix)
+  );
+}
+
 function countFrameworksInCore(context: DoctorContext) {
   const graph = readPackageGraph(context);
   const readings = new Map<string, SignalReading>();
@@ -70,6 +83,7 @@ function countFrameworksInCore(context: DoctorContext) {
     const found = frameworkImports(
       vendorImports(graph, declared).filter(
         (entry) =>
+          !permitsDomainServerPersistence(declared, entry) &&
           !bindings.some(
             (binding) =>
               entry.module !== undefined &&

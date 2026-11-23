@@ -27,13 +27,17 @@ export const DEFAULT_SSE_HEARTBEAT_MS = 15_000;
 
 /** The write surface a stream handler uses; the kit owns the wire framing. */
 export type SseStream = {
-  /** Emit one `data: <json>\n\n` event frame. */
+  /** Whether the stream has been closed by the server or client disconnect. */
+  readonly closed: boolean;
+  /** Emit one `data: <json>\n\n` event frame. No-op once the stream is closed. */
   send(data: unknown): void;
-  /** Emit a bare `:<text>\n\n` comment (readiness marker, manual keep-alive). */
+  /** Emit a bare `:<text>\n\n` comment (readiness marker, manual keep-alive). No-op once closed. */
   comment(text?: string): void;
+  /** Idempotently close the stream, clear its heartbeat, run teardown once, and end the HTTP response. */
+  close(): void;
 };
 
-/** Runs when the client disconnects — release every subscription here. */
+/** Runs when the client disconnects or the server closes the stream — release every subscription here. */
 export type SseCleanup = () => void;
 
 export type SseRouteContext = RawRouteContext & {
@@ -61,8 +65,76 @@ export type SseRouteConfig = {
   readonly handler: (ctx: SseRouteContext) => Promise<void>;
 };
 
+function openSseStream(ctx: RawRouteContext, heartbeatMs: number, onOpen: (stream: SseStream) => SseCleanup): void {
+  const { reply, request } = ctx;
+  reply.hijack();
+  reply.raw.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": String(reply.getHeader("cache-control") ?? "no-cache"),
+    connection: "keep-alive",
+  });
+
+  const state = { closed: false };
+  let release: SseCleanup | undefined;
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+
+  const teardown = (): void => {
+    if (state.closed) {
+      return;
+    }
+    state.closed = true;
+    request.raw.off("close", teardown);
+    if (heartbeat !== undefined) {
+      clearInterval(heartbeat);
+      heartbeat = undefined;
+    }
+    const cleanup = release;
+    release = undefined;
+    cleanup?.();
+    if (!reply.raw.writableEnded && !reply.raw.destroyed) {
+      reply.raw.end();
+    }
+  };
+
+  const stream: SseStream = {
+    get closed() {
+      return state.closed;
+    },
+    send: (data) => {
+      if (state.closed || reply.raw.writableEnded || reply.raw.destroyed) {
+        return;
+      }
+      reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+    },
+    comment: (text = "") => {
+      if (state.closed || reply.raw.writableEnded || reply.raw.destroyed) {
+        return;
+      }
+      reply.raw.write(`:${text}\n\n`);
+    },
+    close: teardown,
+  };
+
+  const onOpenRelease = onOpen(stream);
+  if (state.closed) {
+    onOpenRelease();
+    return;
+  }
+  release = onOpenRelease;
+  heartbeat = setInterval(() => {
+    stream.comment();
+  }, heartbeatMs);
+  heartbeat.unref();
+  request.raw.once("close", teardown);
+
+  // Flush headers so the client (and tests) know the stream is ready
+  // before any delta arrives.
+  stream.comment("ready");
+}
+
 /** Declare an SSE route. `access` is required — the same wall as every verb. */
 export function sseRoute(config: SseRouteConfig): RawRouteBlueprint {
+  const heartbeatMs = config.heartbeatMs ?? DEFAULT_SSE_HEARTBEAT_MS;
   return defineRawRoute({
     method: "GET",
     path: config.path,
@@ -72,36 +144,7 @@ export function sseRoute(config: SseRouteConfig): RawRouteBlueprint {
     openapi: config.openapi,
     handler: async (ctx) => {
       const open = (onOpen: (stream: SseStream) => SseCleanup): void => {
-        const { reply, request } = ctx;
-        reply.hijack();
-        reply.raw.writeHead(200, {
-          "content-type": "text/event-stream",
-          "cache-control": String(reply.getHeader("cache-control") ?? "no-cache"),
-          connection: "keep-alive",
-        });
-
-        const stream: SseStream = {
-          send: (data) => {
-            reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
-          },
-          comment: (text = "") => {
-            reply.raw.write(`:${text}\n\n`);
-          },
-        };
-
-        const release = onOpen(stream);
-        const heartbeat = setInterval(() => {
-          stream.comment();
-        }, config.heartbeatMs ?? DEFAULT_SSE_HEARTBEAT_MS);
-        heartbeat.unref();
-        request.raw.once("close", () => {
-          clearInterval(heartbeat);
-          release();
-        });
-
-        // Flush headers so the client (and tests) know the stream is ready
-        // before any delta arrives.
-        stream.comment("ready");
+        openSseStream(ctx, heartbeatMs, onOpen);
       };
 
       await config.handler({ ...ctx, open });

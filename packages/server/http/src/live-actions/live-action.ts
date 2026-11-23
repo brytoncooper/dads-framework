@@ -45,6 +45,8 @@ export type LiveActionSpec<TInput> = {
   readonly permission: LiveActionPermission;
   readonly inputSchema: z.ZodType<TInput>;
   readonly redactInput?: (input: TInput) => unknown;
+  /** Optional sanitizer for error text persisted to `errorMessage` on failure. */
+  readonly redactError?: (error: unknown) => string;
   readonly execute: (context: LiveActionContext<TInput>) => Promise<LiveActionResult>;
 };
 
@@ -62,6 +64,8 @@ export type LiveActionDefinition<TInput = unknown> = {
   readonly permission: LiveActionPermission;
   readonly inputSchema: z.ZodType<TInput>;
   redactInput?(input: TInput): unknown;
+  /** Optional sanitizer for error text persisted to `errorMessage` on failure. */
+  readonly redactError?: (error: unknown) => string;
   execute(context: LiveActionContext<TInput>): Promise<LiveActionResult>;
 };
 
@@ -118,6 +122,7 @@ export function defineLiveAction<TInput>(spec: LiveActionSpec<TInput>): LiveActi
     permission: spec.permission,
     inputSchema: spec.inputSchema,
     ...(spec.redactInput === undefined ? {} : { redactInput: spec.redactInput }),
+    ...(spec.redactError === undefined ? {} : { redactError: spec.redactError }),
     execute: spec.execute,
   });
 }

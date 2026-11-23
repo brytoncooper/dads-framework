@@ -324,9 +324,12 @@ database, job queue, and file store. [Starter health wiring](../../../apps/kit-w
 Use `requires`, `requiresVisible`, or `requiresScoped` from
 `@dads-framework/http` with an access permission token. Pass the app's
 `accessModel` as `registerRoutes`'s `accessModel` option for visibility and
-scoped routes. Registration refuses an omitted model or a missing list
-resource definition. Record routes use `requiresScoped` with scope bindings. Tests can pass the same
-model and a fake lookup port to `buildTestApp`.
+scoped routes. Registration refuses an omitted model, a missing list resource
+definition, or a `requiresVisible`/`requiresScoped` route with no `lookups`
+port (both `startHttpHost` and `registerRoutes` default `lookups` to
+`authorization` whenever it implements `lookupResources`). Record routes use
+`requiresScoped` with scope bindings. Tests can pass the same model and a fake
+lookup port to `buildTestApp`.
 
 Set `currentTraceId` and `requestTrace` on `createHttpApp` to correlate request records and annotate the active request span. The observer receives the request ID and the audit actor kind.
 
@@ -354,9 +357,11 @@ Server-Sent Events without exposing unauthorized scopes or channels.
   `requireSession()` (default path `/channels/stream`, default query param
   `scopeId`). It validates the query with Zod (`400` on invalid input), checks
   `canAccessScope` before opening (`404` on denial so scope existence never
-  leaks), drops channel names outside `allowedChannels`, and evaluates optional
-  per-channel `channelAccess` checks both before opening and before delivering
-  each published event.
+  leaks), drops channel names outside `allowedChannels`, and re-evaluates both
+  `canAccessScope` and optional per-channel `channelAccess` checks before
+  delivering each published event (and periodically when `recheckIntervalMs` is
+  set), closing the stream and unsubscribing immediately on denial via
+  `SseStream.close()`.
 - `FakeChannelFanOut` from `@dads-framework/http/testing` records published
   events while still delivering live updates to test subscribers.
 
@@ -390,7 +395,9 @@ authorize, redact, and record live operational actions behind typed HTTP routes.
 - `executeLiveAction(options)` checks authorization before parsing input,
   mints a UUIDv7 run ID, persists a `"running"` row with redacted input in a
   `LiveActionRunStore` (such as `InMemoryLiveActionRunStore`), runs the action,
-  and records `"succeeded"` or `"failed"` with `finishedAt`.
+  and records `"succeeded"` or `"failed"` with `finishedAt` (passing failed
+  errors through an optional `redactError` hook on the action definition,
+  execute options, or `createLiveActionRoutes`).
 - `createLiveActionRoutes(options)` mounts four session-guarded routes under
   `basePath` (default `"/live-actions"`):
   - `GET /live-actions` — lists only actions the caller is authorized to run.

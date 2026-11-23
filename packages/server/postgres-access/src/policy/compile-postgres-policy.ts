@@ -16,7 +16,13 @@ import {
   type ForwardContext,
   type SqlReference,
 } from "./compile-forward-policy.js";
-import { permissionIdentity, QueryBuilder, splitIdentity, subjectReachability } from "./policy-sql.js";
+import {
+  type LazySqlParam,
+  permissionIdentity,
+  QueryBuilder,
+  splitIdentity,
+  subjectReachability,
+} from "./policy-sql.js";
 
 export type CompiledAuthorizationQuery = PostgresQuery & {
   readonly kind: "check" | "check-many" | "lookup" | "subject-lookup" | "candidate-predicate";
@@ -72,7 +78,7 @@ export function compilePostgresCheckMany(
   requests: readonly NormalizedPermissionCheck[],
 ): CompiledAuthorizationQuery & { readonly canPrepare: boolean } {
   const builder = new QueryBuilder();
-  const namespaceSql = builder.value(namespace);
+  const namespaceSql = builder.lazyValue(namespace);
   const cycles = analyzePermissionCycles(model);
   const ordinals = requests.map((_, ordinal) => ordinal);
   const subjectKinds = requests.map((request) => request.subject.type);
@@ -87,7 +93,7 @@ export function compilePostgresCheckMany(
     ...new Set(requests.map((request) => permissionIdentity(request.resource.type, request.permission))),
   ];
   const branches = identities.map((identity) =>
-    compileBatchBranch(model, cycles, builder, namespaceSql, identity, shared, joins),
+    compileBatchBranch(model, cycles, builder, namespace, namespaceSql, identity, shared, joins),
   );
   const joinSql = joins.length === 0 ? "" : ` ${joins.join(" ")}`;
   const text = `WITH input(ordinal, subject_kind, subject_id, resource_kind, resource_id, permission) AS (${inputRows})${shared.map((query) => `, ${query}`).join("")} SELECT i.ordinal AS ordinal, CASE ${branches.join(" ")} ELSE false END AS allowed FROM input i${joinSql} ORDER BY i.ordinal`;
@@ -102,7 +108,7 @@ export function compilePostgresCheckMany(
 function shouldUseSharedBatchBranch(
   model: AuthorizationModelDefinition,
   cycles: PermissionCyclePlan,
-  namespaceSql: string,
+  namespace: string,
   resourceType: string,
   permission: string,
 ): boolean {
@@ -114,7 +120,7 @@ function shouldUseSharedBatchBranch(
     model,
     cycles,
     builder: probeBuilder,
-    namespace: namespaceSql,
+    namespace: probeBuilder.lazyValue(namespace),
     subject: {
       type: "i.subject_kind",
       id: "i.subject_id",
@@ -134,13 +140,14 @@ function compileBatchBranch(
   model: AuthorizationModelDefinition,
   cycles: PermissionCyclePlan,
   builder: QueryBuilder,
-  namespaceSql: string,
+  namespace: string,
+  namespaceSql: LazySqlParam,
   identity: string,
   shared: string[],
   joins: string[],
 ): string {
   const [resourceType, permission] = splitIdentity(identity);
-  if (shouldUseSharedBatchBranch(model, cycles, namespaceSql, resourceType, permission)) {
+  if (shouldUseSharedBatchBranch(model, cycles, namespace, resourceType, permission)) {
     const branch = compileLinearBatchBranch(model, builder, {
       namespace: namespaceSql,
       resourceType,
@@ -181,7 +188,7 @@ export function compilePostgresLookup(
   request: NormalizedResourceLookup,
 ): CompiledAuthorizationQuery {
   const builder = new QueryBuilder();
-  const namespaceSql = builder.value(namespace);
+  const namespaceSql = builder.lazyValue(namespace);
   const subject: SqlReference = {
     type: builder.value(request.subject.type),
     id: builder.value(request.subject.id),
@@ -199,7 +206,7 @@ export function compilePostgresLookup(
   // Flattening the LATERAL probe can scan the namespace once per iteration.
   return Object.freeze({
     kind: "lookup",
-    text: `WITH RECURSIVE ${subjectReachability(namespaceSql, subject.type, subject.id, model.columnRelations, builder)} SELECT DISTINCT allowed_resource.resource_id FROM (${allowedResourceIds}) allowed_resource ORDER BY allowed_resource.resource_id`,
+    text: `WITH RECURSIVE ${subjectReachability(namespaceSql(), subject.type, subject.id, model.columnRelations, builder)} SELECT DISTINCT allowed_resource.resource_id FROM (${allowedResourceIds}) allowed_resource ORDER BY allowed_resource.resource_id`,
     values: builder.values,
   });
 }

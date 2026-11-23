@@ -35,6 +35,7 @@ const TRANSPORT_WRITES = [
 const BARE_ARRAY_RETURN = /\breturn\s*\[/;
 
 function escapesFrom(operation: RouteOperation): readonly string[] {
+  if (operation.raw === true) return [];
   const text = operation.handlerText;
   const found = TRANSPORT_WRITES.filter((pattern) => pattern.test(text)).map((pattern) => pattern.source);
   return BARE_ARRAY_RETURN.test(text) ? [...found, "return []"] : found;

@@ -5,9 +5,11 @@ export {
 } from "./postgres-authorization.js";
 export {
   columnRelationIndexSql,
+  filterColumnRelationsForModel,
   type ColumnRelationBinding,
   type ColumnRelationCheckResult,
 } from "./policy/column-relations.js";
+export type { DrizzleTransaction } from "./drizzle-structural.js";
 export type { PostgresFilterQuery, PostgresAccessFilter } from "./policy/compile-filter.js";
 export type {
   PgClientLike,

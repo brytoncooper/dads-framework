@@ -20,7 +20,18 @@ import type { DoctorSignal, SignalReading } from "../../doctor-signal.js";
 import { packageFiles, type GraphPackage } from "../scanners/package-graph.js";
 import { operationEvidence, operationKey, readRouteModel } from "../scanners/route-model.js";
 
-const OWNERSHIP_MARKS = ["proveOwnershipIntent", "relationships.add(", ".owner(", ".owner."];
+const OWNERSHIP_MARKS = [
+  "proveOwnershipIntent",
+  "relationships.add(",
+  ".owner(",
+  ".owner.",
+  "writeRelationships",
+  "withProtectedDrizzleTransaction",
+  "writeWithPermission",
+  "columnRelations",
+  "tenants.create",
+  "createTenant",
+];
 const READABLE = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 
 /** True when anything in the package writes an ownership relationship. */

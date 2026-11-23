@@ -42,7 +42,7 @@ import { renderGateOutput, summarizeGate, type GateOutcome } from "./doctor-gate
 import { evaluateCeiling, evaluateFloor } from "./doctor-gate-states.js";
 import { thresholdFor, type DoctorSignal } from "./doctor-signal.js";
 import { DOCTOR_SIGNALS, runDoctorSignals, type SignalOutcome } from "./doctor-signals.js";
-import { runGit } from "./signals/scanners/git-history.js";
+import { gitWorkspacePrefix, runGit } from "./signals/scanners/git-history.js";
 import { isTypeScriptProjectFile } from "./signals/scanners/typescript-program.js";
 
 /** Never measured, whatever a baseline does or does not say. */
@@ -336,7 +336,8 @@ function comparedOutcome(input: GateInput, context: DoctorContext, baseline: Gat
 
 /** One read-only `git show`, through the one function the doctor spawns git in. */
 function gitShowAtRef(root: string): ReadAtRef {
-  return (ref: string, path: string): RefContents => runGit(root, "show", [`${ref}:${path}`]);
+  const prefix = gitWorkspacePrefix(root) ?? "";
+  return (ref: string, path: string): RefContents => runGit(root, "show", [`${ref}:${prefix}${path}`]);
 }
 
 // ---------------------------------------------------------------------------

@@ -40,12 +40,42 @@ export type SubjectResolver = {
 
 export type PermissionChecker = {
   check(query: { subject: SubjectRef; permission: string; resource: { type: string; id: string } }): Promise<boolean>;
+  /**
+   * Optional set-question method: every full `Authorization` implements it, so
+   * `startHttpHost` and `registerRoutes` default `lookups` to `authorization`
+   * when `lookups` is omitted. Narrow `check`-only stubs omit it.
+   */
+  lookupResources?(query: {
+    subject: SubjectRef;
+    permission: string;
+    resourceType: string;
+  }): Promise<readonly string[]>;
 };
 
 /** The set-question port `requireVisibility` and `requiresScoped` need (Authorization has it). */
 export type VisibleResourceLookup = {
   lookupResources(query: { subject: SubjectRef; permission: string; resourceType: string }): Promise<readonly string[]>;
 };
+
+function hasLookupResources(
+  authorization: PermissionChecker,
+): authorization is PermissionChecker & VisibleResourceLookup {
+  return "lookupResources" in authorization && typeof authorization.lookupResources === "function";
+}
+
+/**
+ * Resolve the effective `VisibleResourceLookup` port: prefer an explicit
+ * `ports.lookups`, and otherwise fall back to `ports.authorization` whenever
+ * it implements `lookupResources` (as every `Authorization` does).
+ */
+export function resolveLookupsPort(
+  ports: Pick<AccessPorts, "authorization" | "lookups">,
+): VisibleResourceLookup | undefined {
+  if (ports.lookups !== undefined) {
+    return ports.lookups;
+  }
+  return hasLookupResources(ports.authorization) ? ports.authorization : undefined;
+}
 
 /** Domain-owned context policy; the HTTP kit never constructs a business actor. */
 export type AuthorizationContextResolver = {
@@ -413,11 +443,12 @@ async function enforceVisibility(
   if (subject === null) {
     return { outcome: "unauthenticated" };
   }
-  if (!ports.lookups) {
+  const lookups = resolveLookupsPort(ports);
+  if (lookups === undefined) {
     // Wired wrong (a visibility route without a lookup port) — loud 500.
     throw new HttpWiringError("requireVisibility route registered without a lookups port");
   }
-  const visibleIds = await ports.lookups.lookupResources({
+  const visibleIds = await lookups.lookupResources({
     subject,
     permission: access.permission,
     resourceType: access.resourceType,

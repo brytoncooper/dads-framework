@@ -132,6 +132,10 @@ SCIM group membership is directory data. Application roles are managed separatel
 See [SCIM Core Schema](https://www.rfc-editor.org/rfc/rfc7643) and
 [SCIM Protocol](https://www.rfc-editor.org/rfc/rfc7644).
 
+## Tenant contracts
+
+Import `tenantIdSchema`, `assignableTenantRoleSchema`, `tenantRoles`, `TenantId`, and `TenantRole` from `@dads-framework/identity/tenants/contract` in shared or browser code. That subpath depends only on `zod` and avoids Node built-ins and database modules pulled in by `@dads-framework/identity/tenants`.
+
 ## Staff impersonation
 
 Use a short-lived grant to let a staff member act as a specific account in one tenant. The caller keeps their own session, so the audit trail can record who acted and on whose behalf. [Configure staff impersonation](./src/impersonation/README.md)

@@ -1,6 +1,6 @@
 /** Proves initialization is safe, repeatable, and isolated in existing apps. */
 
-import { lstatSync, mkdtempSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -107,6 +107,21 @@ describe("initialize Dads project", () => {
       `Refusing to initialize non-empty directory ${targetDirectory}. Use existing-project mode to add an isolated Dads project.`,
     );
     expect(readFileSync(join(targetDirectory, "package.json"), "utf8")).toBe('{"name":"host"}\n');
+  });
+
+  it("allows initializing a directory that only contains .git or .DS_Store", () => {
+    const targetDirectory = temporaryDirectory();
+    mkdirSync(join(targetDirectory, ".git"));
+    writeFileSync(join(targetDirectory, ".DS_Store"), "");
+
+    const result = initializeDadsProject({
+      targetDirectory,
+      mode: "new",
+      projectName: "git-first-api",
+    });
+
+    expect(result.created).toContain("dads.project.json");
+    expect(result.created).toContain("domains/notes/server/routes.ts");
   });
 
   it("previews every change without writing a file", () => {

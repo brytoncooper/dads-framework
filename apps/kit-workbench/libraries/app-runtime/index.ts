@@ -1,11 +1,13 @@
 import type { Authorization, SubjectRef } from "@dads-framework/access/runtime";
 import { actor, type PermissionToken } from "@dads-framework/access";
+import type { AuditLogReader } from "@dads-framework/audit";
 import type { GetEffectiveFeatureState } from "@dads-framework/feature-flags";
 import type { Identity, IdentityEmail, IdentitySession } from "@dads-framework/identity";
 import { jobQueueService, type JobQueue } from "@dads-framework/job-queue/core";
 import type { ObjectStorage } from "@dads-framework/object-storage/core";
 import { defineService } from "@dads-framework/core/plugin";
 import { databaseService, type DrizzleHandle } from "@dads-framework/postgres";
+import type { DrizzleTransaction } from "@dads-framework/postgres-access";
 import { createTenantAccess, type TenantId, type Tenants } from "@dads-framework/identity/tenants";
 
 export { databaseService, jobQueueService };
@@ -14,7 +16,7 @@ export const account = actor("account");
 export const accountAccess = account;
 export const tenantAccess = createTenantAccess(account);
 
-type WriteTransaction = Parameters<Parameters<DrizzleHandle["transaction"]>[0]>[0];
+type WriteTransaction = DrizzleTransaction<DrizzleHandle>;
 
 export type WriteWithPermission = <Result>(
   check: {
@@ -27,6 +29,7 @@ export type WriteWithPermission = <Result>(
 
 export type StarterServices = {
   readonly db: DrizzleHandle;
+  readonly auditLogReader?: AuditLogReader;
   readonly authorization: Pick<Authorization, "check">;
   readonly files: ObjectStorage;
   readonly jobs: JobQueue;

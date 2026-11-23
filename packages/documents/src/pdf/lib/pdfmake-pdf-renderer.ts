@@ -1,8 +1,26 @@
-import type * as PdfmakeNamespace from "pdfmake";
 import { loadOptionalPeer } from "../../optional-peer.js";
 import type { PdfmakeDefinition, PdfRenderer, PdfTextMetrics } from "./pdf-renderer.js";
 
-type PdfmakeModule = typeof PdfmakeNamespace;
+type PdfkitStreamDocument = {
+  font(name: string): PdfkitStreamDocument;
+  fontSize(size: number): PdfkitStreamDocument;
+  currentLineHeight(includeGap?: boolean): number;
+  once(event: "end", listener: () => void): PdfkitStreamDocument;
+  once(event: "error", listener: (error: Error) => void): PdfkitStreamDocument;
+  resume(): PdfkitStreamDocument;
+  end(): void;
+  destroy(): void;
+};
+
+type PdfmakeModule = {
+  createPdf(definition: PdfmakeDefinition): {
+    getBuffer(): Promise<Uint8Array>;
+    getStream(): Promise<PdfkitStreamDocument>;
+  };
+  addFonts(fonts: Readonly<Record<string, Readonly<Record<string, string>>>>): void;
+  setLocalAccessPolicy(policy: (path: string) => boolean): void;
+  setUrlAccessPolicy(policy: (url: string) => boolean): void;
+};
 
 // The standard 14 PDF fonts — built into every PDF viewer, no font files
 // shipped. Access policies locked down: a definition is data, not a
@@ -71,7 +89,11 @@ export class PdfmakePdfRenderer implements PdfRenderer {
 
   async render(definition: PdfmakeDefinition): Promise<Uint8Array> {
     const pdfmake = await loadPdfmake();
-    const buffer = await pdfmake.createPdf({ defaultStyle: { font: "Helvetica" }, ...definition }).getBuffer();
+    const defaultStyle = {
+      ...definition.defaultStyle,
+      font: definition.defaultStyle?.font ?? "Helvetica",
+    };
+    const buffer = await pdfmake.createPdf({ ...definition, defaultStyle }).getBuffer();
     return new Uint8Array(buffer);
   }
 
@@ -112,7 +134,7 @@ type HelveticaFont = {
   advancesForGlyphs(glyphs: string[]): number[];
 };
 
-function readHelveticaFont(document: PDFKit.PDFDocument): HelveticaFont {
+function readHelveticaFont(document: PdfkitStreamDocument): HelveticaFont {
   // Reads the document's current font. PDFKit's StandardFont retains its
   // document. Only its independent AFM metrics contain the glyph widths and
   // kerning needed after stream disposal.

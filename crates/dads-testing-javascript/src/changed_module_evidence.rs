@@ -6,7 +6,7 @@ use crate::erased_spans::comment_and_type_only_spans_from_source;
 use crate::facts::JsModuleFacts;
 use crate::intra_file_deps::expand_same_file_changed_exports;
 use crate::module_analysis::runtime_export_declarations_from_source;
-use crate::private_helper_attribution::attribute_pure_module_hunks;
+use crate::private_helper_attribution::{attribute_pure_module_hunks, is_pure_top_level_module};
 use crate::workspace::git_output;
 use dads_testing_core::graph::ChangedModuleEvidence;
 use std::collections::BTreeSet;
@@ -53,11 +53,22 @@ pub(crate) fn changed_module_evidence(
         }
         let source = fs::read_to_string(workspace_root.join(&module.path)).ok()?;
         if untracked.contains(&module.path) {
-            // There is no old-side source proving the complete impact surface of a new module.
+            // Proved in `NamespaceAndImports.lean` (`new_pure_module_sound` / `new_impure_module_widens`):
+            // pure newly-added modules attribute to their declared exports; impure ones widen.
+            let pure = is_pure_top_level_module(&source, Path::new(&module.path));
+            let changed_exports = if pure {
+                module
+                    .declarations
+                    .iter()
+                    .map(|decl| decl.name.clone())
+                    .collect()
+            } else {
+                BTreeSet::new()
+            };
             changes.push(ChangedModuleEvidence {
                 path: module.path.clone(),
-                changed_exports: BTreeSet::new(),
-                every_hunk_is_attributed: false,
+                changed_exports,
+                every_hunk_is_attributed: pure,
                 semantic_change: true,
                 type_only_change: false,
             });

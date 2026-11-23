@@ -2,7 +2,7 @@
 //! and the incremental replacement path that decides when a patch is still safe.
 
 use crate::changed_module_evidence::changed_module_evidence;
-use crate::facts::{JsUncertainty, JsWorkspaceFacts};
+use crate::facts::{JsModuleFacts, JsUncertainty, JsWorkspaceFacts};
 use crate::graph_export::copy_to_core_graph;
 use crate::module_analysis::analyze_file;
 use crate::removed_paths::removed_javascript_path_exists;
@@ -12,7 +12,11 @@ use dads_testing_core::graph::DependencyGraph;
 use dads_testing_store::GraphFrontend;
 use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery};
 use std::fs;
+use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+type FileAnalysisResult = Result<(JsModuleFacts, Vec<JsUncertainty>), JsUncertainty>;
 
 pub fn analyze_workspace(workspace_root: &Path) -> JsWorkspaceFacts {
     analyze_workspace_roots(workspace_root, None)
@@ -38,12 +42,18 @@ pub(crate) fn analyze_workspace_roots(
     files.sort();
     files.dedup();
 
+    let targets = files
+        .into_iter()
+        .map(|absolute_path| {
+            let path = workspace_relative_path(workspace_root, &absolute_path)
+                .unwrap_or_else(|| absolute_path.to_string_lossy().replace('\\', "/"));
+            (absolute_path, path)
+        })
+        .collect::<Vec<_>>();
     let resolver = javascript_resolver();
-    let mut modules = Vec::new();
-    for absolute_path in files {
-        let path = workspace_relative_path(workspace_root, &absolute_path)
-            .unwrap_or_else(|| absolute_path.to_string_lossy().replace('\\', "/"));
-        match analyze_file(workspace_root, &absolute_path, &path, &resolver) {
+    let mut modules = Vec::with_capacity(targets.len());
+    for result in analyze_workspace_paths(workspace_root, &targets, &resolver) {
+        match result {
             Ok((module, mut file_uncertainties)) => {
                 modules.push(module);
                 uncertainties.append(&mut file_uncertainties);
@@ -55,6 +65,71 @@ pub(crate) fn analyze_workspace_roots(
         modules,
         uncertainties,
     }
+}
+
+pub(crate) fn analyze_workspace_paths(
+    workspace_root: &Path,
+    targets: &[(PathBuf, String)],
+    resolver: &Resolver,
+) -> Vec<FileAnalysisResult> {
+    let workers = std::thread::available_parallelism()
+        .map(NonZeroUsize::get)
+        .unwrap_or(1)
+        .min(targets.len());
+    analyze_paths_with_workers(workspace_root, targets, resolver, workers)
+}
+
+fn analyze_paths_with_workers(
+    workspace_root: &Path,
+    targets: &[(PathBuf, String)],
+    resolver: &Resolver,
+    max_workers: usize,
+) -> Vec<FileAnalysisResult> {
+    let workers = max_workers.min(targets.len());
+    if targets.len() <= 1 || workers <= 1 {
+        return targets
+            .iter()
+            .map(|(absolute_path, path)| {
+                analyze_file(workspace_root, absolute_path, path, resolver)
+            })
+            .collect();
+    }
+
+    let next_index = AtomicUsize::new(0);
+    let (mut indexed_results, all_joined) = std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        for _ in 0..workers {
+            handles.push(scope.spawn(|| {
+                let mut local = Vec::new();
+                loop {
+                    let index = next_index.fetch_add(1, Ordering::Relaxed);
+                    let Some((absolute_path, path)) = targets.get(index) else {
+                        break;
+                    };
+                    let result = analyze_file(workspace_root, absolute_path, path, resolver);
+                    local.push((index, result));
+                }
+                local
+            }));
+        }
+        let mut collected = Vec::with_capacity(targets.len());
+        let mut all_joined = true;
+        for handle in handles {
+            match handle.join() {
+                Ok(local) => collected.extend(local),
+                Err(_) => all_joined = false,
+            }
+        }
+        (collected, all_joined)
+    });
+    if !all_joined {
+        return analyze_paths_with_workers(workspace_root, targets, resolver, 1);
+    }
+    indexed_results.sort_unstable_by_key(|(index, _)| *index);
+    indexed_results
+        .into_iter()
+        .map(|(_, result)| result)
+        .collect()
 }
 
 /// Uses manifest project roots when none declares the workspace root `"."`, avoiding spurious
@@ -98,21 +173,13 @@ fn collect_root_javascript_files(workspace_root: &Path, files: &mut Vec<PathBuf>
 }
 
 fn javascript_resolver() -> Resolver {
+    let owned = |items: &[&str]| items.iter().map(|item| (*item).to_owned()).collect();
     Resolver::new(ResolveOptions {
         tsconfig: Some(TsconfigDiscovery::Auto),
-        condition_names: vec!["node".to_owned(), "import".to_owned(), "default".to_owned()],
-        extensions: vec![
-            ".js".to_owned(),
-            ".jsx".to_owned(),
-            ".mjs".to_owned(),
-            ".cjs".to_owned(),
-            ".ts".to_owned(),
-            ".tsx".to_owned(),
-            ".mts".to_owned(),
-            ".cts".to_owned(),
-            ".json".to_owned(),
-            ".node".to_owned(),
-        ],
+        condition_names: owned(&["node", "import", "default"]),
+        extensions: owned(&[
+            ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".json", ".node",
+        ]),
         ..ResolveOptions::default()
     })
 }
@@ -158,7 +225,7 @@ pub struct JavaScriptFrontend;
 
 impl GraphFrontend for JavaScriptFrontend {
     fn frontend_version(&self) -> u32 {
-        10
+        11
     }
 
     fn initial_index(&mut self, request: &NativeRequest) -> Result<DependencyGraph, String> {
@@ -207,32 +274,7 @@ pub(crate) fn incremental_request(
         // path would retain the old module and its resolution edges, so rebuild the current graph.
         return Err("A delete or rename invalidates retained resolution edges.".to_owned());
     }
-    let resolver = javascript_resolver();
-    let mut facts = JsWorkspaceFacts {
-        modules: Vec::new(),
-        uncertainties: Vec::new(),
-    };
-    for path in changed_paths {
-        if !previous.contains_path(path) {
-            // A newly created source file can shadow or redirect resolution for unchanged
-            // importers (for example `foo/index.ts` or `foo.ts`), so rebuild the full graph.
-            return Err("A newly added file invalidates retained resolution edges.".to_owned());
-        }
-        let absolute_path = workspace_root.join(path);
-        if !absolute_path.is_file() {
-            return Err("A delete or rename invalidates retained resolution edges.".to_owned());
-        }
-        match analyze_file(workspace_root, &absolute_path, path, &resolver) {
-            Ok((module, mut uncertainties)) => {
-                facts.modules.push(module);
-                facts.uncertainties.append(&mut uncertainties);
-            }
-            Err(_) => {
-                // An unreadable changed file has no module node to overwrite the previous one.
-                return Err("Changed file could not be read for incremental patch.".to_owned());
-            }
-        }
-    }
+    let facts = analyze_changed_paths(workspace_root, &previous, changed_paths)?;
     let fresh_changes =
         changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)
             .ok_or_else(|| "Cannot attribute changed module exports.".to_owned())?;
@@ -249,15 +291,12 @@ pub(crate) fn incremental_request(
     let patched = copy_to_core_graph(facts);
     let modules = patched.materialize_modules();
     let mut uncertainties_by_path = std::collections::BTreeMap::<String, Vec<_>>::new();
-    for uncertainty in previous.uncertainties() {
-        if !patched_set.contains(uncertainty.path.as_str()) {
-            uncertainties_by_path
-                .entry(uncertainty.path.clone())
-                .or_default()
-                .push(uncertainty);
-        }
-    }
-    for uncertainty in patched.uncertainties() {
+    for uncertainty in previous
+        .uncertainties()
+        .into_iter()
+        .filter(|entry| !patched_set.contains(entry.path.as_str()))
+        .chain(patched.uncertainties())
+    {
         uncertainties_by_path
             .entry(uncertainty.path.clone())
             .or_default()
@@ -269,6 +308,55 @@ pub(crate) fn incremental_request(
         .collect::<Vec<_>>();
     Ok(previous.patch_modules(modules, merged_changes, merged_uncertainties))
 }
+
+fn analyze_changed_paths(
+    workspace_root: &Path,
+    previous: &DependencyGraph,
+    changed_paths: &[String],
+) -> Result<JsWorkspaceFacts, String> {
+    let mut targets = Vec::with_capacity(changed_paths.len());
+    for path in changed_paths {
+        if !previous.contains_path(path) {
+            // A newly created source file can shadow or redirect resolution for unchanged
+            // importers (for example `foo/index.ts` or `foo.ts`), so rebuild the full graph.
+            return Err("A newly added file invalidates retained resolution edges.".to_owned());
+        }
+        let absolute_path = workspace_root.join(path);
+        if !absolute_path.is_file() {
+            return Err("A delete or rename invalidates retained resolution edges.".to_owned());
+        }
+        targets.push((absolute_path, path.clone()));
+    }
+    let resolver = javascript_resolver();
+    let mut facts = JsWorkspaceFacts {
+        modules: Vec::with_capacity(targets.len()),
+        uncertainties: Vec::new(),
+    };
+    for result in analyze_workspace_paths(workspace_root, &targets, &resolver) {
+        match result {
+            Ok((module, mut uncertainties)) => {
+                facts.modules.push(module);
+                facts.uncertainties.append(&mut uncertainties);
+            }
+            Err(_) => {
+                // An unreadable changed file has no module node to overwrite the previous one.
+                return Err("Changed file could not be read for incremental patch.".to_owned());
+            }
+        }
+    }
+    Ok(facts)
+}
+
+const IGNORED_DIRS: &[&str] = &[
+    ".git",
+    "node_modules",
+    "target",
+    "dist",
+    "coverage",
+    ".next",
+    ".lake",
+    "_apalache-out",
+];
 
 fn collect_javascript_files(
     workspace_root: &Path,
@@ -305,19 +393,10 @@ fn collect_javascript_files(
         let path = entry.path();
         let file_name = entry.file_name();
         if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
-            if matches!(
-                file_name.to_str(),
-                Some(
-                    ".git"
-                        | "node_modules"
-                        | "target"
-                        | "dist"
-                        | "coverage"
-                        | ".next"
-                        | ".lake"
-                        | "_apalache-out"
-                )
-            ) {
+            if file_name
+                .to_str()
+                .is_some_and(|name| IGNORED_DIRS.contains(&name))
+            {
                 continue;
             }
             collect_javascript_files(workspace_root, &path, files, uncertainties);

@@ -58,9 +58,11 @@ pub(crate) fn copy_to_core_graph(facts: JsWorkspaceFacts) -> DependencyGraph {
                     requested_symbols: import.requested_symbols,
                     namespace_import: import.namespace_import,
                     reexport_all: import.reexport_all,
+                    reexport_namespace: import.reexport_namespace,
                     resolved_path: import.resolved_path,
                     position: import.position.map(core_position),
                     export_deps: import.export_deps,
+                    member_reads: import.member_reads,
                 })
                 .collect(),
         })

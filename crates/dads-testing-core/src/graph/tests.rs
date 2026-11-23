@@ -38,9 +38,11 @@ fn literal_runtime_import_reaches_its_importer_without_named_symbols() {
         requested_symbols: BTreeSet::new(),
         namespace_import: false,
         reexport_all: false,
+        reexport_namespace: None,
         resolved_path: Some("leaf".into()),
         position: None,
         export_deps: None,
+        member_reads: None,
     });
     let graph = DependencyGraph::new(vec![node("leaf", "value", None), importer], vec![])
         .with_changed_module_evidence(vec![ChangedModuleEvidence {
@@ -89,9 +91,11 @@ fn export_star_preserves_the_changed_symbol_for_downstream_importers() {
             requested_symbols: BTreeSet::new(),
             namespace_import: false,
             reexport_all: true,
+            reexport_namespace: None,
             resolved_path: Some("leaf".into()),
             position: None,
             export_deps: None,
+            member_reads: None,
         }],
     };
     let changed_consumer = node("changed-consumer", "result", Some(("barrel", "changed")));
@@ -138,9 +142,11 @@ fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
                 requested_symbols: BTreeSet::new(),
                 namespace_import: false,
                 reexport_all: true,
+                reexport_namespace: None,
                 resolved_path: Some("a".into()),
                 position: None,
                 export_deps: None,
+                member_reads: None,
             },
             ImportFact {
                 specifier: "b".into(),
@@ -150,9 +156,11 @@ fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
                 requested_symbols: BTreeSet::new(),
                 namespace_import: false,
                 reexport_all: true,
+                reexport_namespace: None,
                 resolved_path: Some("b".into()),
                 position: None,
                 export_deps: None,
+                member_reads: None,
             },
         ],
     };
@@ -205,9 +213,11 @@ fn mixed_export_star_and_named_import_still_propagates_own_exports() {
                 requested_symbols: BTreeSet::new(),
                 namespace_import: false,
                 reexport_all: true,
+                reexport_namespace: None,
                 resolved_path: Some("a".into()),
                 position: None,
                 export_deps: None,
+                member_reads: None,
             },
             ImportFact {
                 specifier: "b".into(),
@@ -217,9 +227,11 @@ fn mixed_export_star_and_named_import_still_propagates_own_exports() {
                 requested_symbols: ["bar".to_owned()].into_iter().collect(),
                 namespace_import: false,
                 reexport_all: false,
+                reexport_namespace: None,
                 resolved_path: Some("b".into()),
                 position: None,
                 export_deps: None,
+                member_reads: None,
             },
         ],
     };
@@ -266,9 +278,11 @@ fn terminal_importer_without_exports_does_not_make_reachability_uncertain() {
         requested_symbols: ["value".to_owned()].into_iter().collect(),
         namespace_import: false,
         reexport_all: false,
+        reexport_namespace: None,
         resolved_path: Some("leaf".into()),
         position: None,
         export_deps: None,
+        member_reads: None,
     });
     let graph = DependencyGraph::new(vec![node("leaf", "value", None), terminal_test], vec![])
         .with_changed_module_evidence(vec![ChangedModuleEvidence {
@@ -427,9 +441,11 @@ fn node(path: &str, export: &str, dep: Option<(&str, &str)>) -> ModuleNode {
                     requested_symbols: [n.to_owned()].into_iter().collect(),
                     namespace_import: false,
                     reexport_all: false,
+                    reexport_namespace: None,
                     resolved_path: Some(p.into()),
                     position: None,
                     export_deps: None,
+                    member_reads: None,
                 }]
             })
             .unwrap_or_default(),

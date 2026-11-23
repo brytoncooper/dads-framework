@@ -39,9 +39,11 @@ pub struct JsImportFact {
     pub requested_symbols: BTreeSet<String>,
     pub namespace_import: bool,
     pub reexport_all: bool,
+    pub reexport_namespace: Option<String>,
     pub resolved_path: Option<String>,
     pub position: Option<JsPosition>,
     pub export_deps: Option<BTreeMap<String, BTreeSet<String>>>,
+    pub member_reads: Option<BTreeMap<String, BTreeSet<String>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

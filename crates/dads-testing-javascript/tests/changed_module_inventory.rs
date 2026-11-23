@@ -75,14 +75,23 @@ fn preserves_added_and_untracked_module_attribution() -> Result<(), Box<dyn Erro
     workspace.write("lib/added.ts", "export const added = 1;\n")?;
     workspace.git(&["add", "--", "lib/added.ts"])?;
     workspace.write("lib/untracked.ts", "export const untracked = 1;\n")?;
+    workspace.write(
+        "lib/untracked-impure.ts",
+        "console.log('side-effect');\nexport const impure = 1;\n",
+    )?;
     let graph = analyze_request(&workspace.request()).ok_or("missing new-module graph")?;
     assert_eq!(
         graph.changed_exports("lib/added.ts"),
         Some(BTreeSet::from(["added".to_owned()]))
     );
     assert!(graph.contains_path("lib/untracked.ts"));
-    assert!(graph.changed_exports("lib/untracked.ts").is_none());
-    let reachable = graph.symbol_reachability_from(["lib/untracked.ts".to_owned()]);
+    assert_eq!(
+        graph.changed_exports("lib/untracked.ts"),
+        Some(BTreeSet::from(["untracked".to_owned()]))
+    );
+    assert!(graph.contains_path("lib/untracked-impure.ts"));
+    assert!(graph.changed_exports("lib/untracked-impure.ts").is_none());
+    let reachable = graph.symbol_reachability_from(["lib/untracked-impure.ts".to_owned()]);
     assert!(
         reachable
             .uncertainties
@@ -232,7 +241,10 @@ fn trace_changed_modules_child() -> Result<(), Box<dyn Error>> {
         Some(BTreeSet::from(["second".to_owned()]))
     );
     assert!(graph.contains_path("lib/untracked.ts"));
-    assert!(graph.changed_exports("lib/untracked.ts").is_none());
+    assert_eq!(
+        graph.changed_exports("lib/untracked.ts"),
+        Some(BTreeSet::from(["untracked".to_owned()]))
+    );
     Ok(())
 }
 

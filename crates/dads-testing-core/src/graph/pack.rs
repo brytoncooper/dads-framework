@@ -50,11 +50,14 @@ fn intern_symbols(
             for s in &i.requested_symbols {
                 table.insert(s.clone());
             }
+            if let Some(ns) = &i.reexport_namespace {
+                table.insert(ns.clone());
+            }
             if let Some(p) = &i.resolved_path {
                 table.insert(p.clone());
             }
-            if let Some(deps) = &i.export_deps {
-                for (k, vs) in deps {
+            for map in [&i.export_deps, &i.member_reads].into_iter().flatten() {
+                for (k, vs) in map {
                     table.insert(k.clone());
                     for v in vs {
                         table.insert(v.clone());
@@ -151,18 +154,12 @@ fn pack_imports(
             .as_deref()
             .and_then(|p| string_id(strings, p))
             .and_then(|p| paths.get(&p).copied());
-        let export_deps = x.export_deps.as_ref().map(|deps| {
-            deps.iter()
-                .filter_map(|(k, vs)| {
-                    let key = string_id(strings, k)?;
-                    let vals = vs
-                        .iter()
-                        .filter_map(|v| string_id(strings, v))
-                        .collect::<Vec<_>>();
-                    Some((key, vals))
-                })
-                .collect::<Vec<_>>()
-        });
+        let export_deps = pack_symbol_map(x.export_deps.as_ref(), strings);
+        let member_reads = pack_symbol_map(x.member_reads.as_ref(), strings);
+        let reexport_namespace = x
+            .reexport_namespace
+            .as_deref()
+            .and_then(|ns| string_id(strings, ns));
         out.push(CImport {
             source,
             specifier,
@@ -172,11 +169,32 @@ fn pack_imports(
             requested,
             namespace: x.namespace_import,
             reexport_all: x.reexport_all,
+            reexport_namespace,
             target,
             position: x.position,
             export_deps,
+            member_reads,
         });
     }
+}
+
+fn pack_symbol_map(
+    map: Option<&BTreeMap<String, BTreeSet<String>>>,
+    strings: &[String],
+) -> Option<Vec<(u32, Vec<u32>)>> {
+    map.map(|entries| {
+        entries
+            .iter()
+            .filter_map(|(k, vs)| {
+                let key = string_id(strings, k)?;
+                let vals = vs
+                    .iter()
+                    .filter_map(|v| string_id(strings, v))
+                    .collect::<Vec<_>>();
+                Some((key, vals))
+            })
+            .collect::<Vec<_>>()
+    })
 }
 
 /// Importer edges grouped by the module they point at, so a target's importers are one slice.

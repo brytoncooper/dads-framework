@@ -261,6 +261,8 @@ fn requested_module_imports(
                     requested_symbols: binding.requested_symbols,
                     namespace_import: binding.namespace_import,
                     reexport_all: binding.reexport_all,
+                    reexport_namespace: binding.reexport_namespace,
+                    member_reads: binding.member_reads,
                 },
             ));
         }
@@ -273,10 +275,13 @@ fn ambiguous_reexport_uncertainty(
     semantic: &Semantic<'_>,
     path: &str,
 ) -> Option<JsUncertainty> {
-    use oxc_syntax::module_record::ExportImportName;
+    use oxc_syntax::module_record::{ExportExportName, ExportImportName};
     let ambiguous_reexport = module_record.indirect_export_entries.iter().find(|entry| {
+        let is_named_ns_reexport = matches!(entry.import_name, ExportImportName::All)
+            && matches!(entry.export_name, ExportExportName::Name(_));
         !entry.is_type
             && !matches!(entry.import_name, ExportImportName::Name(_))
+            && !is_named_ns_reexport
             && !is_explicit_import_reexport(semantic, entry.span)
     })?;
     Some(JsUncertainty {
@@ -314,6 +319,8 @@ fn dynamic_import_facts(
                     requested_symbols: BTreeSet::new(),
                     namespace_import: false,
                     reexport_all: false,
+                    reexport_namespace: None,
+                    member_reads: None,
                 },
             )),
             None => uncertainties.push(JsUncertainty {

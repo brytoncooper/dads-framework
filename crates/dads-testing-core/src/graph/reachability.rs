@@ -16,6 +16,10 @@ struct SymbolWalk {
     queue: VecDeque<(String, BTreeSet<String>)>,
     seen_exports: BTreeMap<String, BTreeSet<String>>,
     own_exports_propagated: BTreeSet<String>,
+    /// Tracks exact changed target members behind `export * as ns from "./target"` per `(barrel, ns)`.
+    ns_reexport_members: BTreeMap<(String, String), BTreeSet<String>>,
+    /// Exports that changed directly (not exclusively via `export * as ns`), disabling member filtering.
+    non_ns_exports: BTreeSet<(String, String)>,
 }
 
 impl DependencyGraph {
@@ -98,6 +102,9 @@ impl DependencyGraph {
                 Some(c) if c.complete && c.type_only_change && erase_type_only => {}
                 Some(c) if c.complete && !c.exports.is_empty() => {
                     walk.paths.insert(p.clone());
+                    for sym in &c.exports {
+                        walk.non_ns_exports.insert((p.clone(), sym.clone()));
+                    }
                     enqueue_exports(&mut walk, p, c.exports);
                 }
                 Some(c)
@@ -160,6 +167,12 @@ impl DependencyGraph {
             follow_reexport_all(walk, e, source, target, exports);
             return;
         }
+        if let Some(ns_id) = e.reexport_namespace
+            && let Some(ns_name) = self.str(ns_id)
+        {
+            follow_reexport_namespace(walk, e, source, target, ns_name, exports);
+            return;
+        }
         let runtime_module_dependency =
             e.kind == ImportKind::Runtime && !e.namespace && e.requested.is_empty();
         if e.namespace || (e.requested.is_empty() && !runtime_module_dependency) {
@@ -169,9 +182,12 @@ impl DependencyGraph {
         let matched_exports = e
             .requested
             .iter()
-            .filter_map(|id| self.str(*id))
-            .filter(|n| exports.contains(*n))
-            .map(str::to_owned)
+            .filter_map(|id| self.str(*id).map(|name| (*id, name)))
+            .filter(|(id, name)| {
+                exports.contains(*name)
+                    && self.matches_namespace_member_reads(walk, e, target, *id, name)
+            })
+            .map(|(_, name)| name.to_owned())
             .collect::<BTreeSet<_>>();
         if runtime_module_dependency || !matched_exports.is_empty() {
             walk.edges.push(ReachedEdge {
@@ -195,12 +211,43 @@ impl DependencyGraph {
                     }
                 }
                 if !affected.is_empty() {
+                    for sym in &affected {
+                        walk.non_ns_exports.insert((source.clone(), sym.clone()));
+                    }
                     enqueue_exports(walk, source, affected);
                 }
             } else if walk.own_exports_propagated.insert(source.clone()) {
                 self.propagate_own_exports(walk, e.source, source);
             }
         }
+    }
+
+    fn matches_namespace_member_reads(
+        &self,
+        walk: &SymbolWalk,
+        edge: &CImport,
+        target: &str,
+        symbol_id: u32,
+        symbol_name: &str,
+    ) -> bool {
+        let key = (target.to_owned(), symbol_name.to_owned());
+        if walk.non_ns_exports.contains(&key) {
+            return true;
+        }
+        let Some(changed_members) = walk.ns_reexport_members.get(&key) else {
+            return true;
+        };
+        let Some(reads_map) = &edge.member_reads else {
+            return true;
+        };
+        let Some((_, read_ids)) = reads_map.iter().find(|(k, _)| *k == symbol_id) else {
+            // Binding escaped (e.g. `Object.keys(ns)`): conservatively affected (`ns_reexport_escape_widens`).
+            return true;
+        };
+        read_ids
+            .iter()
+            .filter_map(|id| self.str(*id))
+            .any(|member| changed_members.contains(member))
     }
 
     /// A reached module carries the change onward through its own exports. A module that exports
@@ -218,6 +265,9 @@ impl DependencyGraph {
                 });
             }
         } else {
+            for sym in &next {
+                walk.non_ns_exports.insert((source.clone(), sym.clone()));
+            }
             enqueue_exports(walk, source, next);
         }
     }
@@ -270,7 +320,49 @@ fn follow_reexport_all(
         position: e.position,
     });
     walk.paths.insert(source.clone());
+    for sym in &reexported {
+        walk.non_ns_exports.insert((source.clone(), sym.clone()));
+    }
     enqueue_exports(walk, source, reexported);
+}
+
+/// An `export * as ns from "./target"` namespace re-export binds EVERY runtime export of `target`
+/// (including `"default"`) under exported name `ns`, recording the exact changed member names so
+/// tracked downstream `ns.foo` reads stay symbol-precise (`NamespaceAndImports.lean` Theorems 1–3).
+fn follow_reexport_namespace(
+    walk: &mut SymbolWalk,
+    e: &CImport,
+    source: String,
+    target: &str,
+    ns_name: &str,
+    exports: &BTreeSet<String>,
+) {
+    if exports.is_empty() {
+        return;
+    }
+    walk.edges.push(ReachedEdge {
+        importer: source.clone(),
+        target: target.to_owned(),
+        symbols: exports.clone(),
+        position: e.position,
+    });
+    walk.paths.insert(source.clone());
+    let entry = walk
+        .ns_reexport_members
+        .entry((source.clone(), ns_name.to_owned()))
+        .or_default();
+    let mut grew = false;
+    for sym in exports {
+        grew |= entry.insert(sym.clone());
+    }
+    if grew {
+        walk.seen_exports
+            .entry(source.clone())
+            .or_default()
+            .insert(ns_name.to_owned());
+        walk.queue
+            .push_back((source, BTreeSet::from([ns_name.to_owned()])));
+    }
 }
 
 /// Enqueues only `(module, symbol)` pairs not yet seen so diamond `export *` barrels and mixed

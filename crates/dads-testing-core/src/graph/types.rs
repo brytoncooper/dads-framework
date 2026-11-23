@@ -34,6 +34,9 @@ pub struct ImportFact {
     pub namespace_import: bool,
     #[serde(default)]
     pub reexport_all: bool,
+    /// When set, this edge is `export * as <name> from "<specifier>"`.
+    #[serde(default)]
+    pub reexport_namespace: Option<String>,
     pub resolved_path: Option<String>,
     #[serde(default)]
     pub position: Option<LineColumn>,
@@ -42,6 +45,10 @@ pub struct ImportFact {
     /// own exports of the importer.
     #[serde(default)]
     pub export_deps: Option<BTreeMap<String, BTreeSet<String>>>,
+    /// Optional per-imported-symbol static member reads (`ns.foo`) when every runtime use of that
+    /// imported binding is a static property access (never escaped). Used to narrow `export * as ns`.
+    #[serde(default)]
+    pub member_reads: Option<BTreeMap<String, BTreeSet<String>>>,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ImportKind {

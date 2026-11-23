@@ -8,8 +8,10 @@ use oxc_ast::ast::Expression;
 use oxc_resolver::Resolver;
 use oxc_semantic::Semantic;
 use oxc_span::{GetSpan, Span};
-use oxc_syntax::module_record::{ExportImportName, ImportImportName, ModuleRecord};
-use std::collections::BTreeSet;
+use oxc_syntax::module_record::{
+    ExportExportName, ExportImportName, ImportImportName, ModuleRecord,
+};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 pub(crate) struct RequestedBindingFacts {
@@ -17,6 +19,8 @@ pub(crate) struct RequestedBindingFacts {
     pub(crate) requested_symbols: BTreeSet<String>,
     pub(crate) namespace_import: bool,
     pub(crate) reexport_all: bool,
+    pub(crate) reexport_namespace: Option<String>,
+    pub(crate) member_reads: Option<BTreeMap<String, BTreeSet<String>>>,
 }
 
 pub(crate) fn requested_binding_facts(
@@ -31,48 +35,26 @@ pub(crate) fn requested_binding_facts(
         requested_symbols: BTreeSet::new(),
         namespace_import: false,
         reexport_all: false,
+        reexport_namespace: None,
+        member_reads: None,
     };
+    let mut member_reads = BTreeMap::<String, BTreeSet<String>>::new();
     let mut has_type_only_binding = request_is_type_only;
     let mut has_runtime_binding = false;
     let mut type_requested_symbols = BTreeSet::new();
-    for entry in &module_record.import_entries {
-        if entry.module_request.name != specifier || entry.statement_span != statement_span {
-            continue;
-        }
-        if entry.is_type {
-            has_type_only_binding = true;
-            match &entry.import_name {
-                ImportImportName::Name(name) => {
-                    type_requested_symbols.insert(name.name.to_string());
-                }
-                ImportImportName::Default(_) => {
-                    type_requested_symbols.insert("default".to_owned());
-                }
-                ImportImportName::NamespaceObject => {}
-            }
-            continue;
-        }
-        has_runtime_binding = true;
-        match &entry.import_name {
-            ImportImportName::Name(name) => {
-                facts.requested_symbols.insert(name.name.to_string());
-            }
-            ImportImportName::Default(_) => {
-                facts.requested_symbols.insert("default".to_owned());
-            }
-            ImportImportName::NamespaceObject => {
-                if let Some(members) = tracked_namespace_members(
-                    semantic,
-                    entry.local_name.name.as_str(),
-                    entry.local_name.span,
-                ) {
-                    facts.requested_symbols.extend(members);
-                } else {
-                    facts.namespace_import = true;
-                }
-            }
-        }
-    }
+    collect_import_entry_bindings(
+        module_record,
+        semantic,
+        specifier,
+        statement_span,
+        &mut BindingAccumulator {
+            facts: &mut facts,
+            member_reads: &mut member_reads,
+            has_type_only_binding: &mut has_type_only_binding,
+            has_runtime_binding: &mut has_runtime_binding,
+            type_requested_symbols: &mut type_requested_symbols,
+        },
+    );
     for entry in &module_record.star_export_entries {
         let Some(module_request) = &entry.module_request else {
             continue;
@@ -111,17 +93,103 @@ pub(crate) fn requested_binding_facts(
             ExportImportName::Name(name) => {
                 facts.requested_symbols.insert(name.name.to_string());
             }
-            ExportImportName::All | ExportImportName::AllButDefault => {
-                facts.namespace_import = true
+            ExportImportName::All => {
+                if let ExportExportName::Name(exported_ns) = &entry.export_name
+                    && facts.reexport_namespace.is_none()
+                {
+                    facts.reexport_namespace = Some(exported_ns.name.to_string());
+                } else {
+                    facts.namespace_import = true;
+                }
             }
-            ExportImportName::Null => facts.namespace_import = true,
+            ExportImportName::AllButDefault | ExportImportName::Null => {
+                facts.namespace_import = true;
+            }
         }
     }
     facts.type_only = has_type_only_binding && !has_runtime_binding;
     if facts.type_only {
         facts.requested_symbols = type_requested_symbols;
+    } else if !member_reads.is_empty() {
+        facts.member_reads = Some(member_reads);
     }
     facts
+}
+
+struct BindingAccumulator<'a> {
+    facts: &'a mut RequestedBindingFacts,
+    member_reads: &'a mut BTreeMap<String, BTreeSet<String>>,
+    has_type_only_binding: &'a mut bool,
+    has_runtime_binding: &'a mut bool,
+    type_requested_symbols: &'a mut BTreeSet<String>,
+}
+
+fn collect_import_entry_bindings(
+    module_record: &ModuleRecord<'_>,
+    semantic: &Semantic<'_>,
+    specifier: &str,
+    statement_span: Span,
+    acc: &mut BindingAccumulator<'_>,
+) {
+    for entry in &module_record.import_entries {
+        if entry.module_request.name != specifier || entry.statement_span != statement_span {
+            continue;
+        }
+        if entry.is_type {
+            *acc.has_type_only_binding = true;
+            match &entry.import_name {
+                ImportImportName::Name(name) => {
+                    acc.type_requested_symbols.insert(name.name.to_string());
+                }
+                ImportImportName::Default(_) => {
+                    acc.type_requested_symbols.insert("default".to_owned());
+                }
+                ImportImportName::NamespaceObject => {}
+            }
+            continue;
+        }
+        *acc.has_runtime_binding = true;
+        match &entry.import_name {
+            ImportImportName::Name(name) => {
+                let imported = name.name.to_string();
+                acc.facts.requested_symbols.insert(imported.clone());
+                if let Some(members) = tracked_namespace_members(
+                    semantic,
+                    entry.local_name.name.as_str(),
+                    entry.local_name.span,
+                ) {
+                    acc.member_reads
+                        .entry(imported)
+                        .or_default()
+                        .extend(members);
+                }
+            }
+            ImportImportName::Default(_) => {
+                acc.facts.requested_symbols.insert("default".to_owned());
+                if let Some(members) = tracked_namespace_members(
+                    semantic,
+                    entry.local_name.name.as_str(),
+                    entry.local_name.span,
+                ) {
+                    acc.member_reads
+                        .entry("default".to_owned())
+                        .or_default()
+                        .extend(members);
+                }
+            }
+            ImportImportName::NamespaceObject => {
+                if let Some(members) = tracked_namespace_members(
+                    semantic,
+                    entry.local_name.name.as_str(),
+                    entry.local_name.span,
+                ) {
+                    acc.facts.requested_symbols.extend(members);
+                } else {
+                    acc.facts.namespace_import = true;
+                }
+            }
+        }
+    }
 }
 
 /// If every runtime reference to `import * as ns` is a direct static property read (`ns.foo`),
@@ -176,6 +244,8 @@ pub(crate) struct ImportFactInput<'a> {
     pub(crate) requested_symbols: BTreeSet<String>,
     pub(crate) namespace_import: bool,
     pub(crate) reexport_all: bool,
+    pub(crate) reexport_namespace: Option<String>,
+    pub(crate) member_reads: Option<BTreeMap<String, BTreeSet<String>>>,
 }
 
 pub(crate) fn import_fact(
@@ -199,8 +269,10 @@ pub(crate) fn import_fact(
         requested_symbols: input.requested_symbols,
         namespace_import: input.namespace_import,
         reexport_all: input.reexport_all,
+        reexport_namespace: input.reexport_namespace,
         resolved_path,
         position: None,
         export_deps: None,
+        member_reads: input.member_reads,
     }
 }

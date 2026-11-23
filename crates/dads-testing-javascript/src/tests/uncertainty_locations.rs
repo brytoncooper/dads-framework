@@ -155,5 +155,5 @@ fn file_level_uncertainties_have_no_location() {
 
 #[test]
 fn located_facts_declare_their_own_frontend_version() {
-    assert_eq!(JavaScriptFrontend.frontend_version(), 10);
+    assert_eq!(JavaScriptFrontend.frontend_version(), 11);
 }

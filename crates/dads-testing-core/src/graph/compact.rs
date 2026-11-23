@@ -28,11 +28,15 @@ pub(super) struct CImport {
     pub(super) namespace: bool,
     #[serde(default)]
     pub(super) reexport_all: bool,
+    #[serde(default)]
+    pub(super) reexport_namespace: Option<u32>,
     pub(super) target: Option<u32>,
     #[serde(default)]
     pub(super) position: Option<LineColumn>,
     #[serde(default)]
     pub(super) export_deps: Option<Vec<(u32, Vec<u32>)>>,
+    #[serde(default)]
+    pub(super) member_reads: Option<Vec<(u32, Vec<u32>)>>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct CUncertainty {
@@ -269,20 +273,31 @@ impl DependencyGraph {
                 .collect(),
             namespace_import: x.namespace,
             reexport_all: x.reexport_all,
+            reexport_namespace: x
+                .reexport_namespace
+                .and_then(|n| self.str(n).map(str::to_owned)),
             resolved_path: x.target.and_then(|t| self.path(t).map(str::to_owned)),
             position: x.position,
-            export_deps: x.export_deps.as_ref().map(|deps| {
-                deps.iter()
-                    .filter_map(|(k, vs)| {
-                        let key = self.str(*k)?.to_owned();
-                        let vals = vs
-                            .iter()
-                            .filter_map(|v| self.str(*v).map(str::to_owned))
-                            .collect();
-                        Some((key, vals))
-                    })
-                    .collect()
-            }),
+            export_deps: self.materialize_symbol_map(x.export_deps.as_deref()),
+            member_reads: self.materialize_symbol_map(x.member_reads.as_deref()),
+        })
+    }
+    fn materialize_symbol_map(
+        &self,
+        packed: Option<&[(u32, Vec<u32>)]>,
+    ) -> Option<BTreeMap<String, BTreeSet<String>>> {
+        packed.map(|entries| {
+            entries
+                .iter()
+                .filter_map(|(k, vs)| {
+                    let key = self.str(*k)?.to_owned();
+                    let vals = vs
+                        .iter()
+                        .filter_map(|v| self.str(*v).map(str::to_owned))
+                        .collect();
+                    Some((key, vals))
+                })
+                .collect()
         })
     }
 }

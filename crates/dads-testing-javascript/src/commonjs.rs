@@ -69,6 +69,8 @@ pub(crate) fn scan_commonjs_requires(
                 requested_symbols: BTreeSet::new(),
                 namespace_import: false,
                 reexport_all: false,
+                reexport_namespace: None,
+                member_reads: None,
             },
         ));
         offset = content_end + quote.len_utf8();

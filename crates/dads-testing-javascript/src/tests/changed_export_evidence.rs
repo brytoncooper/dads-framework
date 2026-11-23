@@ -183,8 +183,11 @@ fn marks_a_completely_untracked_module_as_unattributed() {
     )
     .expect("tracked fixture must be written");
     commit_fixture(&root);
-    write(root.join("src/new.ts"), "export const newValue = true;\n")
-        .expect("untracked fixture must be written");
+    write(
+        root.join("src/new.ts"),
+        "console.log('init'); export const newValue = true;\n",
+    )
+    .expect("untracked fixture must be written");
 
     let facts = analyze_workspace(&root);
     let changes = changed_module_evidence(&root, None, &facts.modules)

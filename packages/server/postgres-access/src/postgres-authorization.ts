@@ -1,6 +1,12 @@
+import type {
+  DslPermissionTarget,
+  PermissionToken,
+} from "@dads-framework/access";
 import {
   Authorization,
+  permissionQueryFromCan,
   type AccessChange,
+  type AuthorizationCanOptions,
   type DirectSubjectLookup,
   type PermissionQuery,
   type RelationshipFilter,
@@ -17,17 +23,18 @@ import {
   compilePostgresCheckMany,
   compilePostgresLookup,
 } from "./policy/compile-postgres-policy.js";
-import {
-  compilePostgresFilter,
-  validatePostgresFilterQuery,
-  type PostgresFilterQuery,
-  type PostgresAccessFilter,
+import type {
+  PostgresFilterQuery,
+  PostgresAccessFilter,
 } from "./policy/compile-filter.js";
 import {
   verifyPostgresColumnRelations,
   type ColumnRelationCheckResult,
 } from "./policy/column-relations.js";
-import { resolvePostgresFilter } from "./policy/resolve-filter.js";
+import {
+  runCompilePostgresFilter,
+  runResolvePostgresFilter,
+} from "./policy/run-filter.js";
 import { compileLinearCheck } from "./policy/compile-linear-check.js";
 import { compilePostgresSubjectLookup } from "./policy/compile-subject-lookup.js";
 import type { NormalizedPermissionCheck } from "./policy/policy-model.js";
@@ -120,6 +127,34 @@ export class PostgresAuthorization extends Authorization {
       throw new Error("Postgres authorization requires a Drizzle transaction");
     }
     return this.inTransaction(lazyDrizzleTransactionExecutor(transaction));
+  }
+
+  /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
+  can(
+    subject: SubjectRef,
+    target: DslPermissionTarget,
+    options?: AuthorizationCanOptions,
+  ): Promise<boolean>;
+  can(
+    subject: SubjectRef,
+    permission: PermissionToken,
+    resourceId: string,
+    options?: AuthorizationCanOptions,
+  ): Promise<boolean>;
+  can(
+    subject: SubjectRef,
+    permissionOrTarget: DslPermissionTarget | PermissionToken,
+    resourceIdOrOptions?: string | AuthorizationCanOptions,
+    maybeOptions?: AuthorizationCanOptions,
+  ): Promise<boolean> {
+    return this.check(
+      permissionQueryFromCan(
+        subject,
+        permissionOrTarget,
+        resourceIdOrOptions,
+        maybeOptions,
+      ),
+    );
   }
 
   override async check(query: PermissionQuery): Promise<boolean> {
@@ -215,58 +250,20 @@ export class PostgresAuthorization extends Authorization {
 
   /** Compile a parameterized SQL Boolean filter predicate for single-query resource listing. */
   compileFilter(query: PostgresFilterQuery): PostgresAccessFilter {
-    requireConcreteSubject(query.subject);
-    const validated = validatePostgresFilterQuery(query, this.#policy.model);
-    const permission = this.#policy.permissionName(
-      query.resourceType,
-      query.permission,
-    );
-    if (permission === undefined) {
-      return Object.freeze({ sql: "FALSE", values: [] });
-    }
-    return compilePostgresFilter(
-      this.#policy.model,
+    return runCompilePostgresFilter(
+      this.#policy,
       this.#options.namespace,
-      {
-        subject: { type: query.subject.type, id: query.subject.id },
-        permission,
-        resourceType: query.resourceType,
-      },
-      validated,
+      query,
     );
   }
 
   /** Resolves a `scopeColumns`-assisted filter, pruning empty branches for optimal SQL plans. */
-  async resolveFilter(
-    query: PostgresFilterQuery,
-  ): Promise<PostgresAccessFilter> {
-    requireConcreteSubject(query.subject);
-    const validated = validatePostgresFilterQuery(query, this.#policy.model);
-    const permission = this.#policy.permissionName(
-      query.resourceType,
-      query.permission,
-    );
-    if (permission === undefined) {
-      return Object.freeze({ sql: "FALSE", values: [] });
-    }
-    const normalized = {
-      subject: { type: query.subject.type, id: query.subject.id },
-      permission,
-      resourceType: query.resourceType,
-    };
-    return resolvePostgresFilter(
-      this.#policy.model,
+  resolveFilter(query: PostgresFilterQuery): Promise<PostgresAccessFilter> {
+    return runResolvePostgresFilter(
+      this.#policy,
       this.#options.namespace,
-      normalized,
-      validated,
+      query,
       (planQuery) => this.#query(planQuery, "check"),
-      () =>
-        compilePostgresFilter(
-          this.#policy.model,
-          this.#options.namespace,
-          normalized,
-          validated,
-        ),
     );
   }
 

@@ -241,7 +241,7 @@ type LiteralMountRelativePath<Path extends string> = string extends Path
     : never;
 
 /** One transient route source: the legacy descriptor or the literal route card path. */
-type VerbRouteSource<Method extends HttpMethod, Path extends string> =
+export type VerbRouteSource<Method extends HttpMethod, Path extends string> =
   | {
       readonly route: RouteContract<Method, Path>;
       readonly path?: never;

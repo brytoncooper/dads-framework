@@ -52,6 +52,8 @@ and structured values use JSON.
 - `@dads-framework/documents/pdf`: PDF utilities and pdfmake adapter (`@dads-framework/documents/pdf/pdfmake`, optional peers `pdfmake`, `pdfjs-dist`, `@napi-rs/canvas`).
 - `@dads-framework/documents/xlsx`: spreadsheet table reading and writing (optional peer `exceljs`).
 
+Optional peers load lazily on first use. Calling a subpath whose peer is not installed rejects with an actionable error naming the subpath and `npm install <pkg>` command.
+
 ## What it refuses to do
 
 - It does not bundle heavy PDF or spreadsheet runtimes into the default install; optional renderers stay behind optional peer dependencies on their dedicated subpaths.

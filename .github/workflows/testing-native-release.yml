@@ -11,6 +11,7 @@ jobs:
   build-and-smoke:
     name: ${{ matrix.package }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -37,6 +38,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.3
@@ -46,6 +49,9 @@ jobs:
           toolchain: "1.96.0"
           components: rust-docs
           targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: testing-native-release-${{ matrix.target }}
       - name: Install JavaScript tooling
         run: npm ci --ignore-scripts
       - name: Build facade
@@ -78,7 +84,7 @@ jobs:
           facade_tar="../testing-packages/dads-framework-testing-$facade_version.tgz"
           test "${#native_tar[@]}" -eq 1
           test -f "${native_tar[0]}" && test -f "$facade_tar"
-          npm install --no-save --omit=optional "${native_tar[0]}" "$facade_tar" >/dev/null
+          npm install --no-save --omit=optional --no-audit --no-fund "${native_tar[0]}" "$facade_tar" >/dev/null
           node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("dads.testing.json", JSON.stringify({schemaVersion:1,workspace:{root:".",fullFallback:{taskIds:["consumer:test"]}},projects:[{id:"consumer",root:".",fallbackDependencies:[]}],tasks:[{id:"consumer:test",project:"consumer",kind:"test",execution:{executable:"node",args:["--version"],cwd:"."},dependsOn:[],impact:{mode:"always"}}]})); const { planTesting } = await import("@dads-framework/testing"); const plan = await planTesting({workspaceRoot:process.cwd(), all:true}); if (plan.tasks[0]?.id !== "consumer:test") throw new Error("dad-test clean-consumer smoke returned the wrong plan");'
           node node_modules/@dads-framework/testing/bin/dad-test.js explain --all --json > explain.json
           node -e 'const r = JSON.parse(require("node:fs").readFileSync("explain.json", "utf8")); if (r.ok !== true || r.result.tasks[0]?.id !== "consumer:test" || r.result.summary.selected !== 1) throw new Error("dad-test explain smoke failed: " + JSON.stringify(r).slice(0, 500));'

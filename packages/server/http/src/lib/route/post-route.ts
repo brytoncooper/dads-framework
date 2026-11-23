@@ -1,5 +1,9 @@
 import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
+import type {
+  OperationPathParamsShape,
+  PostOperationContract,
+} from "@dads-framework/core/contract";
 import { HttpWiringError } from "../http-errors.js";
 import type {
   PermissionAccess,
@@ -8,9 +12,14 @@ import type {
   SessionAccess,
 } from "./access.js";
 import {
+  resolvePostOperationConfig,
+  type ErasedOperationPostConfig,
+  type ErasedPostVerbConfig,
+  type OperationVerbCommon,
+} from "./operation-route.js";
+import {
   buildDefinition,
   resolveVerbRoute,
-  type ErasedVerbConfig,
   type HandlerResult,
   type PathParamsShape,
   type ResourceFreePostPolicy,
@@ -64,6 +73,53 @@ type PostResourcePolicy<Access extends RouteAccess, BodySchema> =
         }
       : never);
 
+type PostOperationResourcePolicy<
+  Access extends RouteAccess,
+  BodySchema extends z.ZodType | undefined,
+  Status extends 200 | 201 | 202,
+> =
+  | { readonly resourcePolicy?: never }
+  | (Access extends PublicAccess
+      ? Status extends 200
+        ? BodySchema extends z.ZodType
+          ? { readonly resourcePolicy: ResourceFreePostPolicy }
+          : never
+        : never
+      : never);
+
+/** Operation-backed POST config: path, status, and wire schemas come from `operation`. */
+export type PostOperationRouteConfig<
+  Path extends string,
+  Access extends RouteAccess,
+  Subject,
+  ResponseSchema extends z.ZodType,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined,
+  QuerySchema extends z.ZodType<Record<string, unknown>> | undefined,
+  BodySchema extends z.ZodType | undefined,
+  MetaSchema extends z.ZodType | undefined,
+  Status extends 200 | 201 | 202,
+> = OperationVerbCommon<Access> & {
+  readonly operation: PostOperationContract<
+    Path,
+    ResponseSchema,
+    ParamsSchema,
+    QuerySchema,
+    BodySchema,
+    MetaSchema,
+    Status
+  >;
+  handler(
+    ctx: RouteHandlerContext<
+      SchemaOutput<ParamsSchema>,
+      SchemaOutput<QuerySchema>,
+      SchemaOutput<BodySchema>,
+      Subject
+    >,
+  ):
+    | Promise<HandlerResult<ResponseSchema, MetaSchema>>
+    | HandlerResult<ResponseSchema, MetaSchema>;
+} & PostOperationResourcePolicy<Access, BodySchema, Status>;
+
 /** Parsed inputs and subject available to a named POST handler module. */
 export type PostRouteHandlerContext<Params, Query, Body, Subject> =
   RouteHandlerContext<Params, Query, Body, Subject>;
@@ -116,16 +172,61 @@ export function postRoute<
     MetaSchema
   >,
 ): RouteBlueprint;
+/** Guarded POST declared from a standalone `postOperation` contract. */
+export function postRoute<
+  Path extends string,
+  Access extends SessionAccess | PermissionAccess,
+  ResponseSchema extends z.ZodType,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined,
+  QuerySchema extends z.ZodType<Record<string, unknown>> | undefined,
+  BodySchema extends z.ZodType | undefined,
+  MetaSchema extends z.ZodType | undefined,
+  Status extends 200 | 201 | 202,
+>(
+  config: PostOperationRouteConfig<
+    Path,
+    Access,
+    SubjectRef,
+    ResponseSchema,
+    ParamsSchema,
+    QuerySchema,
+    BodySchema,
+    MetaSchema,
+    Status
+  >,
+): RouteBlueprint;
+/** Public POST declared from a standalone `postOperation` contract. */
+export function postRoute<
+  Path extends string,
+  Access extends PublicAccess,
+  ResponseSchema extends z.ZodType,
+  ParamsSchema extends z.ZodType<OperationPathParamsShape<Path>> | undefined,
+  QuerySchema extends z.ZodType<Record<string, unknown>> | undefined,
+  BodySchema extends z.ZodType | undefined,
+  MetaSchema extends z.ZodType | undefined,
+  Status extends 200 | 201 | 202,
+>(
+  config: PostOperationRouteConfig<
+    Path,
+    Access,
+    SubjectRef | null,
+    ResponseSchema,
+    ParamsSchema,
+    QuerySchema,
+    BodySchema,
+    MetaSchema,
+    Status
+  >,
+): RouteBlueprint;
 export function postRoute(
-  config: ErasedVerbConfig & {
-    readonly resourcePolicy?: ResourceFreePostPolicy;
-  },
+  config: ErasedPostVerbConfig | ErasedOperationPostConfig,
 ): RouteBlueprint {
+  const normalized = resolvePostOperationConfig(config);
   const route = buildDefinition({
-    ...config,
-    ...resolveVerbRoute(config, "POST"),
+    ...normalized,
+    ...resolveVerbRoute(normalized, "POST"),
   });
-  const policy = config.resourcePolicy;
+  const policy = normalized.resourcePolicy;
   if (policy === undefined) return route;
   assertPublicTelemetry(route, policy);
   return { ...route, resourcePolicy: policy };

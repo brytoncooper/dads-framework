@@ -1,7 +1,13 @@
-import type { AccessModel } from "@dads-framework/access";
+import type {
+  AccessModel,
+  DslPermissionTarget,
+  PermissionToken,
+} from "@dads-framework/access";
 import {
   Authorization,
+  permissionQueryFromCan,
   type AccessChange,
+  type AuthorizationCanOptions,
   type DirectSubjectLookup,
   type PermissionCheckOutcome,
   type PermissionQuery,
@@ -19,23 +25,23 @@ import {
   type SqliteColumnRelationBinding,
   type SqliteColumnRelationCheckResult,
 } from "./policy/column-relations.js";
-import {
-  compileAccessPolicy,
-  type CompiledSqliteAccessPolicy,
-} from "./policy/compile-access-policy.js";
-import {
-  compileSqliteCheck,
-  compileSqliteCheckMany,
-} from "./policy/compile-check.js";
+import type { CompiledSqliteAccessPolicy } from "./policy/compile-access-policy.js";
+import { getOrCompileSqlitePolicy } from "./sqlite-policy-cache.js";
+import { compileSqliteCheck } from "./policy/compile-check.js";
 import {
   compileSqliteFilter,
+  resolveSqliteFilterTarget,
   validateSqliteFilterQuery,
   type SqliteAccessFilter,
   type SqliteFilterQuery,
 } from "./policy/compile-filter.js";
 import { compileSqliteLookupResources } from "./policy/compile-lookup-resources.js";
 import { compileSqliteLookupSubjects } from "./policy/compile-lookup-subjects.js";
-import type { SqlitePermissionCheck } from "./policy/policy-model.js";
+import {
+  normalizeSqliteCheck,
+  runSqliteCheckBatch,
+  runSqliteCheckEachBatch,
+} from "./sqlite-check-batch.js";
 import type { SqliteExecutor } from "./sqlite-executor.js";
 import { SqliteTuples } from "./sqlite-tuples.js";
 import { readDecisionFlag, readStringColumn } from "./sqlite-types.js";
@@ -46,10 +52,6 @@ import {
 } from "./sqlite-validation.js";
 
 const CHECK_BATCH_SIZE = 64;
-const compiledPolicyCache = new WeakMap<
-  AccessModel,
-  CompiledSqliteAccessPolicy
->();
 
 export type SqliteAccessOptions = {
   readonly model: AccessModel;
@@ -62,11 +64,6 @@ export type SqliteAccessOptions = {
    */
   readonly columnRelations?: readonly SqliteColumnRelationBinding[];
 };
-
-type PreparedBatchItem =
-  | { readonly kind: "known"; readonly check: SqlitePermissionCheck }
-  | { readonly kind: "unknown" }
-  | { readonly kind: "failed"; readonly error: Error };
 
 /** Authorization backend backed by SQLite via Node built-in `node:sqlite` or compatible executors. */
 export class SqliteAuthorization extends Authorization {
@@ -88,7 +85,10 @@ export class SqliteAuthorization extends Authorization {
     this.#executor = options.executor;
     this.#now = options.now ?? (() => new Date());
     this.#columnRelations = options.columnRelations;
-    this.#policy = getOrCompilePolicy(options.model, options.columnRelations);
+    this.#policy = getOrCompileSqlitePolicy(
+      options.model,
+      options.columnRelations,
+    );
     this.#tuples = new SqliteTuples(
       this.#policy.model,
       this.#namespace,
@@ -128,8 +128,36 @@ export class SqliteAuthorization extends Authorization {
     );
   }
 
+  /** Typed permission check accepting `document(id).edit` or `(document.permissions.edit, id)`. */
+  can(
+    subject: SubjectRef,
+    target: DslPermissionTarget,
+    options?: AuthorizationCanOptions,
+  ): Promise<boolean>;
+  can(
+    subject: SubjectRef,
+    permission: PermissionToken,
+    resourceId: string,
+    options?: AuthorizationCanOptions,
+  ): Promise<boolean>;
+  can(
+    subject: SubjectRef,
+    permissionOrTarget: DslPermissionTarget | PermissionToken,
+    resourceIdOrOptions?: string | AuthorizationCanOptions,
+    maybeOptions?: AuthorizationCanOptions,
+  ): Promise<boolean> {
+    return this.check(
+      permissionQueryFromCan(
+        subject,
+        permissionOrTarget,
+        resourceIdOrOptions,
+        maybeOptions,
+      ),
+    );
+  }
+
   override async check(query: PermissionQuery): Promise<boolean> {
-    const normalized = this.#normalizeCheck(query);
+    const normalized = normalizeSqliteCheck(this.#policy, query);
     if (normalized === undefined) return false;
     const compiled = compileSqliteCheck(
       this.#policy.model,
@@ -145,10 +173,15 @@ export class SqliteAuthorization extends Authorization {
     queries: readonly PermissionQuery[],
   ): Promise<readonly boolean[]> {
     const nowMs = this.currentTimeMs();
+    const context = {
+      policy: this.#policy,
+      namespace: this.#namespace,
+      executor: this.#executor,
+    };
     const answers: boolean[] = [];
     for (let offset = 0; offset < queries.length; offset += CHECK_BATCH_SIZE) {
       const slice = queries.slice(offset, offset + CHECK_BATCH_SIZE);
-      answers.push(...(await this.#checkBatch(slice, nowMs)));
+      answers.push(...(await runSqliteCheckBatch(context, slice, nowMs)));
     }
     return answers;
   }
@@ -157,10 +190,15 @@ export class SqliteAuthorization extends Authorization {
     queries: readonly PermissionQuery[],
   ): Promise<readonly PermissionCheckOutcome[]> {
     const nowMs = this.currentTimeMs();
+    const context = {
+      policy: this.#policy,
+      namespace: this.#namespace,
+      executor: this.#executor,
+    };
     const outcomes: PermissionCheckOutcome[] = [];
     for (let offset = 0; offset < queries.length; offset += CHECK_BATCH_SIZE) {
       const slice = queries.slice(offset, offset + CHECK_BATCH_SIZE);
-      outcomes.push(...(await this.#checkEachBatch(slice, nowMs)));
+      outcomes.push(...(await runSqliteCheckEachBatch(context, slice, nowMs)));
     }
     return outcomes;
   }
@@ -168,14 +206,15 @@ export class SqliteAuthorization extends Authorization {
   /** Compile a parameterized SQLite Boolean filter predicate for single-query resource listing. */
   compileFilter(query: SqliteFilterQuery): SqliteAccessFilter {
     requireConcreteSubject(query.subject);
+    const target = resolveSqliteFilterTarget(query);
     const { idColumn, nowMs, scopeColumns } = validateSqliteFilterQuery(
-      query,
+      { ...query, resourceType: target.resourceType },
       this.currentTimeMs(),
       this.#policy.model,
     );
     const permission = this.#policy.permissionName(
-      query.resourceType,
-      query.permission,
+      target.resourceType,
+      target.permission,
     );
     if (permission === undefined) {
       return Object.freeze({ sql: "0 = 1", values: [] });
@@ -187,7 +226,7 @@ export class SqliteAuthorization extends Authorization {
       {
         subject: { type: query.subject.type, id: query.subject.id },
         permission,
-        resourceType: query.resourceType,
+        resourceType: target.resourceType,
       },
       idColumn,
       scopeColumns,
@@ -280,109 +319,4 @@ export class SqliteAuthorization extends Authorization {
   ): Promise<readonly SubjectRef[]> {
     return this.#tuples.list(query, this.currentTimeMs());
   }
-
-  async #checkBatch(
-    queries: readonly PermissionQuery[],
-    nowMs: number,
-  ): Promise<readonly boolean[]> {
-    const normalized = queries.map((query) => this.#normalizeCheck(query));
-    const known = normalized.filter(
-      (entry): entry is SqlitePermissionCheck => entry !== undefined,
-    );
-    if (known.length === 0) return normalized.map(() => false);
-    const compiled = compileSqliteCheckMany(
-      this.#policy.model,
-      this.#namespace,
-      nowMs,
-      known,
-    );
-    const rows = await this.#executor.all(compiled.sql, compiled.params);
-    if (rows.length !== known.length) {
-      throw new Error("SQLite authorization omitted a decision");
-    }
-    let index = 0;
-    return normalized.map((entry) =>
-      entry === undefined ? false : readDecisionFlag(rows[index++]),
-    );
-  }
-
-  async #checkEachBatch(
-    queries: readonly PermissionQuery[],
-    nowMs: number,
-  ): Promise<readonly PermissionCheckOutcome[]> {
-    const prepared = queries.map((query) => this.#prepareBatchItem(query));
-    const known = prepared
-      .filter(
-        (
-          entry,
-        ): entry is Extract<PreparedBatchItem, { readonly kind: "known" }> =>
-          entry.kind === "known",
-      )
-      .map((entry) => entry.check);
-    const rows =
-      known.length === 0 ? [] : await this.#runCheckMany(known, nowMs);
-    let index = 0;
-    return prepared.map((entry): PermissionCheckOutcome => {
-      if (entry.kind === "failed")
-        return { kind: "failed", error: entry.error };
-      if (entry.kind === "unknown") return { kind: "answered", allowed: false };
-      return { kind: "answered", allowed: readDecisionFlag(rows[index++]) };
-    });
-  }
-
-  async #runCheckMany(known: readonly SqlitePermissionCheck[], nowMs: number) {
-    const compiled = compileSqliteCheckMany(
-      this.#policy.model,
-      this.#namespace,
-      nowMs,
-      known,
-    );
-    const rows = await this.#executor.all(compiled.sql, compiled.params);
-    if (rows.length !== known.length) {
-      throw new Error("SQLite authorization omitted a decision");
-    }
-    return rows;
-  }
-
-  #prepareBatchItem(query: PermissionQuery): PreparedBatchItem {
-    try {
-      const normalized = this.#normalizeCheck(query);
-      return normalized === undefined
-        ? { kind: "unknown" }
-        : { kind: "known", check: normalized };
-    } catch (error) {
-      return {
-        kind: "failed",
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
-  }
-
-  #normalizeCheck(query: PermissionQuery): SqlitePermissionCheck | undefined {
-    requireConcreteSubject(query.subject);
-    const permission = this.#policy.permissionName(
-      query.resource.type,
-      query.permission,
-    );
-    if (permission === undefined) return undefined;
-    return {
-      subject: { type: query.subject.type, id: query.subject.id },
-      resource: { type: query.resource.type, id: query.resource.id },
-      permission,
-    };
-  }
-}
-
-function getOrCompilePolicy(
-  model: AccessModel,
-  columnRelations?: readonly SqliteColumnRelationBinding[],
-): CompiledSqliteAccessPolicy {
-  if (columnRelations !== undefined && columnRelations.length > 0) {
-    return compileAccessPolicy(model, columnRelations);
-  }
-  const cached = compiledPolicyCache.get(model);
-  if (cached !== undefined) return cached;
-  const compiled = compileAccessPolicy(model);
-  compiledPolicyCache.set(model, compiled);
-  return compiled;
 }

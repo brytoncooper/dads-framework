@@ -16,6 +16,7 @@
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
@@ -32,13 +33,29 @@ const ROOT = realpathSync(fileURLToPath(new URL("..", import.meta.url)));
 const VITEST = "node_modules/vitest/vitest.mjs";
 const REPORT = "node_modules/.dads/vitest-report.json";
 const BASE_ARGS = ["run", "--reporter=default", "--reporter=json"];
+/**
+ * Default upper bound on concurrent Vitest workers so Docker-backed integration
+ * suites do not starve Docker Desktop on high-core laptops. Override with
+ * `VITEST_MAX_WORKERS=<n>` when benchmarking or tuning a host.
+ */
+const DEFAULT_MAX_WORKERS = 4;
 const TEST_FILE = /\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
 const NOT_COLLECTED = /(?:^|\/)(?:node_modules|dist)\/|\.test\.mjs$/u;
 
+export function resolveVitestMaxWorkers(
+  env = process.env,
+  parallelism = availableParallelism(),
+) {
+  const configured = env.VITEST_MAX_WORKERS?.trim();
+  if (configured !== undefined && configured.length > 0) return configured;
+  return String(Math.max(1, Math.min(DEFAULT_MAX_WORKERS, parallelism)));
+}
+
 function runVitest(extraArgs) {
+  const maxWorkers = resolveVitestMaxWorkers();
   const run = spawnSync(
     process.execPath,
-    [VITEST, ...BASE_ARGS, ...extraArgs],
+    [VITEST, ...BASE_ARGS, `--maxWorkers=${maxWorkers}`, ...extraArgs],
     {
       cwd: ROOT,
       stdio: "inherit",

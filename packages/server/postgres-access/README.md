@@ -35,9 +35,14 @@ Use `withProtectedPgTransaction({ pool, authorization }, work)` when a decision
 protects a write on a standard node-postgres pool. The helper checks out a
 client, starts `BEGIN ISOLATION LEVEL SERIALIZABLE`, and passes
 `{ client, authorization }` bound to that client. Check access again inside the
-callback (for example via `createAccessClient(authorization)`), run application
+callback (for example via `authorization.can(user(id), document.permissions.edit, docId)` or `createAccessClient(authorization)`), run application
 SQL on `client`, and await all work before returning. The authorization handle
 expires as soon as the callback finishes or throws.
+
+For paginated reads that combine `resolveFilter(...)` with a `SELECT`, use
+`withReadSnapshot({ pool, authorization }, work)` to run inside
+`BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY` on one MVCC
+snapshot without serializable write-conflict retry overhead.
 
 ### Drizzle (`@dads-framework/postgres-access/drizzle`)
 
@@ -215,7 +220,7 @@ listing, and relationship existence reads. Unknown permission names give denied
 checks, empty resource lookups, and `{ subjects: [], hasWildcard: false }` for
 `lookupSubjects`. Invalid tuple writes and failed storage operations reject.
 
-- **Compiled SQL list filters (`compileFilter` / `resolveFilter`)**: `authorization.compileFilter({ subject, permission, resourceType, idColumn, scopeColumns?, paramOffset? })` and `authorization.resolveFilter(...)` return `{ sql, values }` so paginated, sorted `SELECT ... WHERE ... LIMIT N` queries filter authorized rows in one database round trip without loading ID lists into Node. Pass `scopeColumns: "auto"` to derive parent foreign-key mappings automatically from `columnRelations`. Validates `idColumn` strictly and fails closed to `FALSE` on unknown permissions.
+- **Compiled SQL list filters (`compileFilter` / `resolveFilter`)**: `authorization.compileFilter({ subject, permission, idColumn, scopeColumns?, paramOffset? })` and `authorization.resolveFilter(...)` accept either a typed `PermissionToken` (`document.permissions.view`, inferring `resourceType` automatically) or explicit `{ permission, resourceType }` wire strings, and return `{ sql, values }` so paginated, sorted `SELECT ... WHERE ... LIMIT N` queries filter authorized rows in one database round trip without loading ID lists into Node. Pass `scopeColumns: "auto"` to derive parent foreign-key mappings automatically from `columnRelations`. Validates `idColumn` strictly and fails closed to `FALSE` on unknown permissions.
 - **Column-backed relations (`columnRelations`)**: Bind single-target FK relations directly to columns on application tables (parent FKs such as `documents.org_id`, recursive self-FKs such as `folders.parent_id`, or direct actor FKs such as `documents.owner_id`) so authorization reads them directly with zero dual-writes and zero duplicate tuple storage. `NULL` values mean no relationship. `writeRelationships` and `deleteRelationships` refuse manual mutations on column-backed relations to preserve a single source of truth. Run `await authorization.verifyColumnRelations()` at startup to verify live columns and check reverse-lookup indexes, and generate recommended index DDL with `columnRelationIndexSql(bindings)`. Cannot be combined with `reuseLookupResultsOn`.
 - **Expiring relationships (`expiresAt`)**: `relationshipSchemaMigration` creates `expires_at timestamptz NULL` with a partial index (`dad_authorization_relationship_expires_at`). Existing v1 installations can apply the additive `relationshipExpirationMigration` (version 2). `writeRelationships` persists `expiresAt ?? null` with `ON CONFLICT (...) DO UPDATE SET expires_at = EXCLUDED.expires_at` so re-writing a tuple updates or clears its expiration. Every read (`check`, `checkMany`, `lookupResources`, `lookupSubjects`, `compileFilter`, `listDirectSubjects`, and `relationshipExists`) filters `(expires_at IS NULL OR expires_at > now())` using transaction-scoped Postgres `now()`.
 - **Polymorphic arrows**: Relations with multiple direct entity types (such as `parents: [organization, folder]`) lower parent arrows and `every()` across every target entity type that defines the target permission, matching `subject_kind` per branch across checks, resource lookups, filters, shared point checks, and subject lookups.

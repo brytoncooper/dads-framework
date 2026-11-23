@@ -13,6 +13,19 @@ export * from "./lib/extensible-enum.js";
 export * from "./lib/list-query.js";
 export * from "./lib/locale.js";
 export * from "./lib/mint-uuid-v7.js";
+export type {
+  AnyOperationContract,
+  DeleteOperationContract,
+  GetOperationContract,
+  ListOperationContract,
+  OperationPathParamNames,
+  OperationPathParamsShape,
+  PatchOperationContract,
+  PostNoContentOperationContract,
+  PostOperationContract,
+  PutOperationContract,
+} from "./lib/operation-contract-types.js";
+export * from "./lib/operation-contract.js";
 export * from "./lib/pagination.schema.js";
 export * from "./lib/request-id.js";
 export * from "./lib/slug.js";

@@ -1,3 +1,4 @@
+import type { PermissionToken } from "@dads-framework/access";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type {
@@ -26,10 +27,8 @@ export type PostgresAccessFilter = {
   readonly values: readonly unknown[];
 };
 
-export type PostgresFilterQuery = {
+type PostgresFilterQueryCommon = {
   readonly subject: SubjectRef;
-  readonly permission: string;
-  readonly resourceType: string;
   /** SQL column/expression for the candidate resource ID, e.g. `"documents.id"` or `"id"`. */
   readonly idColumn: string;
   /**
@@ -44,6 +43,28 @@ export type PostgresFilterQuery = {
   readonly paramOffset?: number;
 };
 
+export type PostgresFilterQuery =
+  | (PostgresFilterQueryCommon & {
+      readonly permission: string;
+      readonly resourceType: string;
+    })
+  | (PostgresFilterQueryCommon & {
+      readonly permission: PermissionToken;
+    });
+
+export function resolvePostgresFilterTarget(query: PostgresFilterQuery): {
+  readonly resourceType: string;
+  readonly permission: string;
+} {
+  if ("resourceType" in query) {
+    return { resourceType: query.resourceType, permission: query.permission };
+  }
+  return {
+    resourceType: query.permission.entityWireName,
+    permission: query.permission.permissionName,
+  };
+}
+
 export type ValidatedPostgresFilterInput = {
   readonly idColumn: string;
   readonly paramOffset: number;
@@ -52,10 +73,7 @@ export type ValidatedPostgresFilterInput = {
 
 /** Validates `idColumn`, optional `scopeColumns`, and `paramOffset` before SQL compilation. */
 export function validatePostgresFilterQuery(
-  query: Pick<
-    PostgresFilterQuery,
-    "resourceType" | "idColumn" | "scopeColumns" | "paramOffset"
-  >,
+  query: PostgresFilterQueryCommon & { readonly resourceType: string },
   model?: AuthorizationModelDefinition,
 ): ValidatedPostgresFilterInput {
   if (!SQL_ID_COLUMN_PATTERN.test(query.idColumn)) {

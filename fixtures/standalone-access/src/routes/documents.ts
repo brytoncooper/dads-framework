@@ -1,5 +1,6 @@
 import {
   withProtectedPgTransaction,
+  withReadSnapshot,
   type PostgresAuthorization,
 } from "@dads-framework/postgres-access";
 import type { Pool } from "pg";
@@ -19,19 +20,18 @@ function toDocumentRow(row: Readonly<Record<string, unknown>>): DocumentRow {
   return { id, title };
 }
 
-/** Paginated list: resolves permissions and reads rows in one transaction snapshot. */
+/** Paginated list: resolves permissions and reads rows in one read-only snapshot. */
 export async function listVisibleDocuments(
   pool: Pool,
   authorization: PostgresAuthorization,
   userId: string,
 ): Promise<readonly DocumentRow[]> {
-  return withProtectedPgTransaction(
-    { pool, authorization, retries: 2 },
+  return withReadSnapshot(
+    { pool, authorization },
     async ({ client, authorization: scopedAuthorization }) => {
       const filter = await scopedAuthorization.resolveFilter({
         subject: user(userId),
-        resourceType: document.wireName,
-        permission: document.permissions.view.permissionName,
+        permission: document.permissions.view,
         idColumn: "doc.id",
         scopeColumns: "auto",
       });
@@ -58,11 +58,11 @@ export async function renameDocument(
   return withProtectedPgTransaction(
     { pool, authorization, retries: 2 },
     async ({ client, authorization: scopedAuthorization }) => {
-      const allowed = await scopedAuthorization.check({
-        subject: user(input.userId),
-        permission: document.permissions.edit.permissionName,
-        resource: document(input.documentId),
-      });
+      const allowed = await scopedAuthorization.can(
+        user(input.userId),
+        document.permissions.edit,
+        input.documentId,
+      );
       if (!allowed) return false;
 
       await client.query("UPDATE documents SET title = $1 WHERE id = $2", [

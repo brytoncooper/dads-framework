@@ -30,7 +30,7 @@ import {
 } from "../scanners/typescript-program.js";
 
 const DECIDES_ACCESS = /^(?:authorize|isAllowed|can)(?:[A-Z0-9]|$)/;
-const AUTHORIZATION = "authorization";
+const AUTHORIZATION_PACKAGE = /(?:authorization|(?:^|\/|-)access)(?:$|\/)/;
 
 function isFunctionValue(node: ts.Node): boolean {
   return ts.isArrowFunction(node) || ts.isFunctionExpression(node);
@@ -64,7 +64,7 @@ function countFeatureAuthorization(context: DoctorContext): SignalReadings {
   const readings = new Map<string, SignalReading>();
   for (const module of context.program().modules) {
     if (!isProductionModule(module.path)) continue;
-    if (module.packageRoot.includes(AUTHORIZATION)) continue;
+    if (AUTHORIZATION_PACKAGE.test(module.packageRoot)) continue;
     const evidence = accessDeciders(module);
     readings.set(module.path, { value: evidence.length, evidence });
   }

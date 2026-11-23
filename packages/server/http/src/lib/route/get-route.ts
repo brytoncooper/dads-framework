@@ -1,5 +1,9 @@
 import type { z } from "zod";
 import type { ScopeAnswer, SubjectRef } from "@dads-framework/access/runtime";
+import type {
+  GetOperationContract,
+  OperationPathParamsShape,
+} from "@dads-framework/core/contract";
 import { HttpWiringError } from "../http-errors.js";
 import type {
   PermissionAccess,
@@ -8,6 +12,11 @@ import type {
   ScopedAccess,
   SessionAccess,
 } from "./access.js";
+import {
+  resolveGetOperationConfig,
+  type ErasedOperationVerbConfig,
+  type OperationVerbCommon,
+} from "./operation-route.js";
 import {
   buildDefinition,
   resolveVerbRoute,
@@ -19,6 +28,7 @@ import {
   type SchemaOutput,
   type VerbCommon,
   type VerbParams,
+  type VerbRouteSource,
 } from "./route-definition.js";
 
 /**
@@ -64,6 +74,32 @@ export type GetRouteConfig<
     | HandlerResult<ResponseSchema, MetaSchema>;
 } & VerbParams<Path, ParamsSchema>;
 
+type GetRouteContractSource<
+  Path extends string,
+  ResponseSchema extends z.ZodType,
+  ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined,
+  QuerySchema extends z.ZodType | undefined,
+  MetaSchema extends z.ZodType | undefined,
+> =
+  | (VerbRouteSource<"GET", Path> & {
+      readonly operation?: never;
+      readonly response: ResponseSchema & NonArrayResponse<ResponseSchema>;
+      /** Declares `{ data, meta }` responses; shapes the handler's return. */
+      readonly meta?: MetaSchema;
+      readonly query?: QuerySchema;
+    } & VerbParams<Path, ParamsSchema>)
+  | {
+      readonly route?: never;
+      readonly path?: never;
+      readonly operation: GetOperationContract<
+        Path,
+        ResponseSchema,
+        ParamsSchema & (z.ZodType<OperationPathParamsShape<Path>> | undefined),
+        Extract<QuerySchema, z.ZodType<Record<string, unknown>> | undefined>,
+        MetaSchema
+      >;
+    };
+
 /** Parsed inputs and subject available to a named GET handler module. */
 export type GetRouteHandlerContext<Params, Query, Subject> =
   RouteHandlerContext<Params, Query, undefined, Subject>;
@@ -106,32 +142,44 @@ export function getRoute<
   MetaSchema extends z.ZodType | undefined = undefined,
   BodySchema extends z.ZodType | undefined = undefined,
 >(
-  config: GetRouteConfig<
+  config: GetRouteContractSource<
     Path,
-    Access,
-    GetRouteSubject<Access>,
     ResponseSchema,
     ParamsSchema,
     QuerySchema,
-    MetaSchema,
-    BodySchema,
-    GetRouteContext<Access>
-  >,
+    MetaSchema
+  > &
+    OperationVerbCommon<Access> & {
+      handler(
+        ctx: RouteHandlerContext<
+          SchemaOutput<ParamsSchema>,
+          SchemaOutput<QuerySchema>,
+          SchemaOutput<BodySchema>,
+          GetRouteSubject<Access>
+        > &
+          GetRouteContext<Access>,
+      ):
+        | Promise<HandlerResult<ResponseSchema, MetaSchema>>
+        | HandlerResult<ResponseSchema, MetaSchema>;
+    },
 ): RouteBlueprint;
-export function getRoute(config: ErasedVerbConfig): RouteBlueprint {
-  const resolved = resolveVerbRoute(config, "GET");
+export function getRoute(
+  config: ErasedVerbConfig | ErasedOperationVerbConfig,
+): RouteBlueprint {
+  const normalized = resolveGetOperationConfig(config);
+  const resolved = resolveVerbRoute(normalized, "GET");
   return buildDefinition({
-    ...config,
+    ...normalized,
     ...resolved,
     handler: (ctx) => {
-      if (config.access.kind === "scoped" && ctx.scope === undefined) {
+      if (normalized.access.kind === "scoped" && ctx.scope === undefined) {
         // No answers means no scope to render: refuse rather than answer
         // unscoped. An empty answer is still an answer and reaches the SQL.
         throw new HttpWiringError(
           `scoped route ${resolved.path} ran without a scope answer`,
         );
       }
-      return config.handler(ctx);
+      return normalized.handler(ctx);
     },
   });
 }

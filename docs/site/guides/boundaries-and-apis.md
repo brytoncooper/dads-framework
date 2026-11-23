@@ -1,6 +1,6 @@
 # Multi-API Composition & CI Gates
 
-Dads separates **which routes exist on an HTTP process** from **where domain code lives**, then checks import boundaries and code rules mechanically in CI.
+Dads is governed by the **[Independent Evolution Principle](../../principles.md#the-independent-evolution-principle)**: _things that can evolve independently are owned, represented, and contracted independently; things that change together live together_. Dads separates **which routes exist on an HTTP process** from **where domain code lives**, then checks import boundaries and code rules mechanically in CI.
 
 ![Multi-API composition across customer and staff entrypoints](../../../website/site/assets/diagrams/multi-api-composition.svg)
 

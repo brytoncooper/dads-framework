@@ -6,7 +6,13 @@ Wire schemas for HTTP pagination, responses, errors, and channel messages. Use t
 
 Pagination queries reject undeclared keys, including when extended. Response envelopes and pagination metadata strip undeclared fields. Channel envelopes reject unknown top-level fields. The publishing domain owns the opaque `payload`.
 
-The package also provides namespaced channel names, request ID and API path helpers, and UUID v7 entity ID schemas and minting.
+The package also provides namespaced channel names, request ID and API path helpers, standalone per-operation contracts, and UUID v7 entity ID schemas and minting.
+
+## Per-operation contracts
+
+Define one frozen wire contract per endpoint with `getOperation`, `listOperation`, `postOperation`, `patchOperation`, `putOperation`, `deleteOperation`, or `postNoContentOperation`. Each contract pairs a literal mount-relative path template with its Zod `params`, `query`, `body`, `response` (or `item`), `meta`, and `status` schemas, plus validated `bind(...)` and `path(...)` helpers backed by `bindOperationPath`.
+
+The compiler enforces the same verb rules as `@dads-framework/http`: `getOperation` refuses array responses, `listOperation` requires a paginated query (`{ page, perPage }`), `patchOperation` and `putOperation` require `body`, `deleteOperation` and `postNoContentOperation` omit `response`, and `:param` path segments require a matching `params` schema. Share the contract between server routes (`operation: ...`) and `@dads-framework/client` (`callApi` / `createApiClient`).
 
 ## Versioned writes
 

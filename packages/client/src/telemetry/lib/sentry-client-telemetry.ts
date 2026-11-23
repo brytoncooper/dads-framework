@@ -22,6 +22,8 @@
  * no. The local driver is unaffected either way.
  */
 
+import type * as SentryReact from "@sentry/react";
+
 import {
   ClientTelemetry,
   type TelemetryBreadcrumb,
@@ -32,6 +34,7 @@ import {
   type SentryConfiguration,
   type SentryConfigurationInput,
 } from "./logic/sentry-configuration.js";
+import { loadOptionalPeer } from "./optional-peer.js";
 
 /** Where a fault happened, in terms the vendor indexes. */
 export type VendorCaptureHint = {
@@ -188,10 +191,20 @@ function hintFor(context: TelemetryContext): VendorCaptureHint {
  * the recorder from `sentryConfiguration` and from nowhere else — there is no
  * argument here a caller could pass to loosen it.
  */
+export function loadSentryReactModule(
+  load: () => Promise<typeof SentryReact> = () => import("@sentry/react"),
+): Promise<typeof SentryReact> {
+  return loadOptionalPeer(
+    "@dads-framework/client/telemetry",
+    "@sentry/react",
+    load,
+  );
+}
+
 async function loadSentryReact(
   configuration: SentryConfiguration,
 ): Promise<VendorErrorReporter> {
-  const sentry = await import("@sentry/react");
+  const sentry = await loadSentryReactModule();
   const { replayMasking } = configuration;
   sentry.init({
     dsn: configuration.dsn,

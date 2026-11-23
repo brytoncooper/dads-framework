@@ -27,6 +27,7 @@ import {
 import { criticalPath } from "./verify-report.mjs";
 import { runVerifyGraph, slotsFor } from "./verify-scheduler.mjs";
 import { spawnStep } from "./verify-spawn.mjs";
+import { resolveVitestMaxWorkers } from "./verify-test-step.mjs";
 
 const GIBIBYTE = 1024 ** 3;
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -358,4 +359,11 @@ test("CI runs the full graph across independent jobs without cached results", ()
   for (const shard of [1, 2, 3]) {
     assert.ok(evidence.includes(`soundness-${shard}.json`));
   }
+});
+
+test("verify-test-step caps default Vitest workers to avoid Docker starvation while honoring VITEST_MAX_WORKERS", () => {
+  assert.equal(resolveVitestMaxWorkers({}, 16), "4");
+  assert.equal(resolveVitestMaxWorkers({}, 2), "2");
+  assert.equal(resolveVitestMaxWorkers({ VITEST_MAX_WORKERS: "6" }, 16), "6");
+  assert.equal(resolveVitestMaxWorkers({ VITEST_MAX_WORKERS: "  " }, 12), "4");
 });

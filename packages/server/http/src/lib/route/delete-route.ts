@@ -1,11 +1,20 @@
 import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import type {
+  DeleteOperationContract,
+  OperationPathParamsShape,
+} from "@dads-framework/core/contract";
+import type {
   PermissionAccess,
   PublicAccess,
   RouteAccess,
   SessionAccess,
 } from "./access.js";
+import {
+  resolveNoContentOperationConfig,
+  type ErasedOperationNoContentConfig,
+  type OperationVerbCommon,
+} from "./operation-route.js";
 import {
   buildNoContentDefinition,
   resolveVerbRoute,
@@ -16,6 +25,7 @@ import {
   type SchemaOutput,
   type VerbCommon,
   type VerbParams,
+  type VerbRouteSource,
 } from "./route-definition.js";
 
 /**
@@ -43,49 +53,59 @@ export type DeleteRouteConfig<
   ): Promise<void> | void;
 } & VerbParams<Path, ParamsSchema>;
 
+type DeleteRouteContractSource<
+  Path extends string,
+  ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined,
+  BodySchema extends z.ZodType | undefined,
+> =
+  | (VerbRouteSource<"DELETE", Path> & {
+      readonly operation?: never;
+      readonly body?: BodySchema;
+    } & VerbParams<Path, ParamsSchema>)
+  | {
+      readonly route?: never;
+      readonly path?: never;
+      readonly operation: DeleteOperationContract<
+        Path,
+        ParamsSchema & (z.ZodType<OperationPathParamsShape<Path>> | undefined),
+        BodySchema
+      >;
+    };
+
 /** Parsed inputs and subject available to a named DELETE handler module. */
 export type DeleteRouteHandlerContext<Params, Body, Subject> =
   RouteHandlerContext<Params, undefined, Body, Subject>;
 
-type DeleteRouteFn = {
-  /** Guarded DELETE — the handler's subject is non-null by construction. */
-  <
-    Path extends string,
-    Access extends SessionAccess | PermissionAccess,
-    ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined =
-      undefined,
-    BodySchema extends z.ZodType | undefined = undefined,
-  >(
-    config: DeleteRouteConfig<
-      Path,
-      Access,
-      SubjectRef,
-      ParamsSchema,
-      BodySchema
-    >,
-  ): RouteBlueprint;
-  /** Public DELETE — the handler must deal with a null subject. */
-  <
-    Path extends string,
-    Access extends PublicAccess,
-    ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined =
-      undefined,
-    BodySchema extends z.ZodType | undefined = undefined,
-  >(
-    config: DeleteRouteConfig<
-      Path,
-      Access,
-      SubjectRef | null,
-      ParamsSchema,
-      BodySchema
-    >,
-  ): RouteBlueprint;
-};
+type DeleteRouteAccess = SessionAccess | PermissionAccess | PublicAccess;
 
-export const deleteRoute: DeleteRouteFn = (
-  config: ErasedNoContentVerbConfig,
-): RouteBlueprint =>
-  buildNoContentDefinition({
-    ...config,
-    ...resolveVerbRoute(config, "DELETE"),
+type DeleteRouteSubject<Access extends DeleteRouteAccess> =
+  Access extends PublicAccess ? SubjectRef | null : SubjectRef;
+
+/** DELETE handler subject nullability follows the declared access. */
+export function deleteRoute<
+  Path extends string,
+  Access extends DeleteRouteAccess,
+  ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined = undefined,
+  BodySchema extends z.ZodType | undefined = undefined,
+>(
+  config: DeleteRouteContractSource<Path, ParamsSchema, BodySchema> &
+    OperationVerbCommon<Access> & {
+      handler(
+        ctx: RouteHandlerContext<
+          SchemaOutput<ParamsSchema>,
+          undefined,
+          SchemaOutput<BodySchema>,
+          DeleteRouteSubject<Access>
+        >,
+      ): Promise<void> | void;
+    },
+): RouteBlueprint;
+export function deleteRoute(
+  config: ErasedNoContentVerbConfig | ErasedOperationNoContentConfig,
+): RouteBlueprint {
+  const normalized = resolveNoContentOperationConfig(config, "delete");
+  return buildNoContentDefinition({
+    ...normalized,
+    ...resolveVerbRoute(normalized, "DELETE"),
   });
+}

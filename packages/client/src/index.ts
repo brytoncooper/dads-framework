@@ -1,4 +1,17 @@
 export {
+  callApi,
+  createApiClient,
+  type ApiClient,
+  type ApiDataWithMeta,
+  type CallApiOptions,
+  type OperationCallArgs,
+  type OperationCallInput,
+  type OperationCallPromise,
+  type OperationCallResult,
+  type OperationClientMethod,
+  type OperationRecord,
+} from "./lib/call-api.js";
+export {
   getFromApi,
   getPageFromApi,
   getPageWithMetaFromApi,

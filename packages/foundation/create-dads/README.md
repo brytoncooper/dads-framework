@@ -54,6 +54,7 @@ The links open the starter source in this repo.
 - `--skip-doctor` skips the initial report on an existing project.
 - `--today YYYY-MM-DD` supplies a date to the initial Doctor report.
 - `--json` prints one machine-readable result.
+- `-h`, `--help` prints command usage and options.
 
 The Doctor report runs before writes when the target already contains a
 project. It can surface adoption issues without changing the project. Existing-project mode leaves local startup to the adopter.

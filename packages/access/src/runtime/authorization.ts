@@ -7,6 +7,9 @@
  * (docs/architecture/api-conventions.md#errors).
  */
 
+import type { DslPermissionTarget } from "../core/dsl-types.js";
+import type { PermissionToken } from "../core/refs.js";
+
 /** Maps `user:abc123` to an explicit subject type and identifier. */
 export type SubjectRef = {
   type: string;
@@ -113,6 +116,59 @@ export type PermissionCheckOutcome =
 
 /** Opaque consistency token — pass back for read-your-writes flows. */
 export type SpiceDbConsistencyToken = string;
+
+/** Options for `Authorization.can(...)` typed permission checks. */
+export type AuthorizationCanOptions = {
+  readonly consistencyToken?: SpiceDbConsistencyToken;
+  readonly consistency?: "fully-consistent";
+};
+
+function optionalConsistencyFields(
+  options: AuthorizationCanOptions | undefined,
+): Pick<PermissionQuery, "consistencyToken" | "consistency"> {
+  if (options === undefined) return {};
+  return {
+    ...(options.consistencyToken !== undefined
+      ? { consistencyToken: options.consistencyToken }
+      : {}),
+    ...(options.consistency !== undefined
+      ? { consistency: options.consistency }
+      : {}),
+  };
+}
+
+/** Builds a `PermissionQuery` from a DSL permission target or permission token + resource id. */
+export function permissionQueryFromCan(
+  subject: SubjectRef,
+  permissionOrTarget: DslPermissionTarget | PermissionToken,
+  resourceIdOrOptions: string | AuthorizationCanOptions | undefined,
+  maybeOptions: AuthorizationCanOptions | undefined,
+): PermissionQuery {
+  if (permissionOrTarget.kind === "dsl-permission-target") {
+    const options =
+      typeof resourceIdOrOptions === "string" ? undefined : resourceIdOrOptions;
+    return {
+      subject,
+      permission: permissionOrTarget.permissionName,
+      resource: permissionOrTarget.resource,
+      ...optionalConsistencyFields(options),
+    };
+  }
+  if (typeof resourceIdOrOptions !== "string") {
+    throw new Error(
+      "can(subject, permissionToken, resourceId) requires a string resourceId.",
+    );
+  }
+  return {
+    subject,
+    permission: permissionOrTarget.permissionName,
+    resource: {
+      type: permissionOrTarget.entityWireName,
+      id: resourceIdOrOptions,
+    },
+    ...optionalConsistencyFields(maybeOptions),
+  };
+}
 
 /**
  * Abstract class on purpose: it is both the TypeScript interface and the

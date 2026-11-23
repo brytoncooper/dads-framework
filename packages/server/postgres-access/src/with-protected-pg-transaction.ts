@@ -1,3 +1,8 @@
+import {
+  abortPgTransaction,
+  releasePgClient,
+  type PgTransactionState,
+} from "./pg-transaction-lifecycle.js";
 import type { PostgresAuthorization } from "./postgres-authorization.js";
 import { readPostgresSerializationConflict } from "./postgres-serialization-conflict.js";
 import type { PgClientLike, PgPoolLike } from "./postgres-types.js";
@@ -112,12 +117,6 @@ function waitBeforeRetry(baseDelayMs: number, attempt: number): Promise<void> {
   });
 }
 
-type PgTransactionState = {
-  began: boolean;
-  committed: boolean;
-  destroyClient: boolean;
-};
-
 async function executePgTransaction<Client extends PgClientLike, Result>(
   client: Client,
   authorization: PostgresAuthorization,
@@ -136,38 +135,4 @@ async function executePgTransaction<Client extends PgClientLike, Result>(
   await client.query("COMMIT");
   state.committed = true;
   return result;
-}
-
-async function abortPgTransaction(
-  client: PgClientLike,
-  state: PgTransactionState,
-): Promise<boolean> {
-  if (!state.began) return true;
-  if (state.committed) return false;
-  if (isIdleClient(client)) return false;
-  try {
-    await client.query("ROLLBACK");
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-function releasePgClient(client: PgClientLike, destroy: boolean): void {
-  const needsDestroy = destroy || !isIdleOrUnknownClient(client);
-  client.release(needsDestroy ? true : undefined);
-}
-
-function isIdleClient(client: PgClientLike): boolean {
-  return (
-    typeof client.getTransactionStatus === "function" &&
-    client.getTransactionStatus() === "I"
-  );
-}
-
-function isIdleOrUnknownClient(client: PgClientLike): boolean {
-  return (
-    typeof client.getTransactionStatus !== "function" ||
-    client.getTransactionStatus() === "I"
-  );
 }

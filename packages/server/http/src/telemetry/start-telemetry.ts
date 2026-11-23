@@ -21,8 +21,11 @@ export async function startTelemetry(
 ): Promise<TelemetryRuntime | undefined> {
   const endpoint = otlpTraceEndpoint(process.env);
   if (endpoint === undefined) return undefined;
-  started ??= import("./node-telemetry.js").then(({ openTelemetry }) =>
-    openTelemetry(options, endpoint),
-  );
+  started ??= import("./node-telemetry.js")
+    .then(({ openTelemetry }) => openTelemetry(options, endpoint))
+    .catch((error: unknown) => {
+      started = undefined;
+      throw error;
+    });
   return started;
 }

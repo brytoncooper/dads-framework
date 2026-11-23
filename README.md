@@ -73,6 +73,7 @@ Explore the framework guides and references:
 - [Multi-API Composition & CI Gates](./docs/site/guides/boundaries-and-apis.md): Customer/staff entrypoints, boundary checks, Doctor gates, and production deployment.
 - [Adopt One Package at a Time](./docs/site/guides/adopt-standalone.md): Drizzle-free Postgres ReBAC, standalone SQLite ReBAC, SpiceDB to PostgreSQL cutover, and incremental adoption.
 - [Generator guide](./docs/generators.md): All nine `dad add` scaffolding commands.
+- [Guiding Principles (Independent Evolution)](./docs/principles.md): The governing principle, meaningful boundaries vs. not boundaries, companion test, and precedence rules.
 - [Domain boundaries](./docs/domain-boundaries.md): Public entrypoints, import checks, and composition rules.
 - [Toolbox command reference](./packages/foundation/toolbox/README.md): CLI flags and JSON output schemas.
 - [Plugin composition](./packages/core/README.md): Selective customer and staff API entrypoints.

@@ -2,9 +2,10 @@ import { z } from "zod";
 
 import type { ScopeAnswer, SubjectRef } from "@dads-framework/access/runtime";
 import {
+  type ListOperationContract,
+  type OperationPathParamsShape,
   type PaginationMeta,
   paginationMetaSchema,
-  type RouteContract,
 } from "@dads-framework/core/contract";
 
 import { HttpWiringError } from "../http-errors.js";
@@ -16,7 +17,12 @@ import type {
   SessionAccess,
   VisibilityAccess,
 } from "./access.js";
-import type { RouteCapabilities } from "./capabilities.js";
+import {
+  resolveListOperationConfig,
+  type ErasedListConfig,
+  type ErasedOperationVerbConfig,
+  type OperationVerbCommon,
+} from "./operation-route.js";
 import {
   buildDefinition,
   type PathParamsShape,
@@ -26,6 +32,7 @@ import {
   type SchemaOutput,
   type VerbCommon,
   type VerbParams,
+  type VerbRouteSource,
 } from "./route-definition.js";
 
 /**
@@ -72,6 +79,10 @@ export type ListRouteHandlerResult<ItemSchema extends z.ZodType> =
 /** The query must parse to at least `{ page, perPage }`. */
 type PaginatedQuerySchema = z.ZodType<{ page: number; perPage: number }>;
 
+type PaginatedOperationQuery = z.ZodType<
+  Record<string, unknown> & { page: number; perPage: number }
+>;
+
 export type ListRouteConfig<
   Path extends string,
   Access extends RouteAccess,
@@ -102,6 +113,34 @@ export type ListRouteConfig<
     | (ListResult<ItemSchema> & ListMetaExtra<MetaSchema>);
 } & VerbParams<Path, ParamsSchema>;
 
+type ListRouteContractSource<
+  Path extends string,
+  ItemSchema extends z.ZodType,
+  QuerySchema extends PaginatedQuerySchema,
+  ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined,
+  MetaSchema extends ListMetaSchema | undefined,
+> =
+  | (VerbRouteSource<"GET", Path> & {
+      readonly operation?: never;
+      /** The ELEMENT schema — the kit wraps it in an array for the wire. */
+      readonly item: ItemSchema;
+      /** Must extend paginationQuerySchema (page/perPage compile-enforced). */
+      readonly query: QuerySchema;
+      /** Optional: a meta schema extending `paginationMetaSchema`; the handler returns its extra fields. */
+      readonly meta?: MetaSchema;
+    } & VerbParams<Path, ParamsSchema>)
+  | {
+      readonly route?: never;
+      readonly path?: never;
+      readonly operation: ListOperationContract<
+        Path,
+        ItemSchema,
+        Extract<QuerySchema, PaginatedOperationQuery>,
+        ParamsSchema & (z.ZodType<OperationPathParamsShape<Path>> | undefined),
+        MetaSchema
+      >;
+    };
+
 /** A handler's extra meta, when its route declared a meta schema; the response schema checks it. */
 function extraMetaOf(result: object): object {
   if (!("meta" in result)) return {};
@@ -127,21 +166,6 @@ function pageWindowOf(query: unknown): { page: number; perPage: number } {
     "listRoute query parsed without page/perPage — the query schema must extend paginationQuerySchema",
   );
 }
-
-type ErasedListConfig = {
-  readonly route?: RouteContract<"GET">;
-  readonly path?: string;
-  readonly summary: string;
-  readonly access: RouteAccess;
-  readonly capabilities?: RouteCapabilities;
-  readonly params?: z.ZodType;
-  readonly query: z.ZodType;
-  readonly item: z.ZodType;
-  readonly meta?: z.ZodType;
-  handler(
-    ctx: RouteHandlerContext<unknown, unknown, unknown, SubjectRef>,
-  ): unknown;
-};
 
 type ListRouteAccess =
   | SessionAccess
@@ -174,33 +198,48 @@ export function listRoute<
   BodySchema extends z.ZodType | undefined = undefined,
   MetaSchema extends ListMetaSchema | undefined = undefined,
 >(
-  config: ListRouteConfig<
+  config: ListRouteContractSource<
     Path,
-    Access,
-    ListRouteSubject<Access>,
     ItemSchema,
     QuerySchema,
     ParamsSchema,
-    BodySchema,
-    ListRouteContext<Access>,
     MetaSchema
-  >,
+  > &
+    OperationVerbCommon<Access> & {
+      readonly handler: (
+        ctx: RouteHandlerContext<
+          SchemaOutput<ParamsSchema>,
+          SchemaOutput<QuerySchema>,
+          SchemaOutput<BodySchema>,
+          ListRouteSubject<Access>
+        > &
+          ListRouteContext<Access>,
+      ) =>
+        | Promise<ListResult<ItemSchema> & ListMetaExtra<MetaSchema>>
+        | (ListResult<ItemSchema> & ListMetaExtra<MetaSchema>);
+    },
 ): RouteBlueprint;
-export function listRoute(config: ErasedListConfig): RouteBlueprint {
-  const resolvedRoute = resolveVerbRoute(config, "GET");
+export function listRoute(
+  config: ErasedListConfig | ErasedOperationVerbConfig,
+): RouteBlueprint {
+  const normalized = resolveListOperationConfig(config);
+  const resolvedRoute = resolveVerbRoute(normalized, "GET");
   return buildDefinition({
     ...resolvedRoute,
-    summary: config.summary,
-    access: config.access,
-    ...(config.capabilities === undefined
+    summary: normalized.summary,
+    access: normalized.access,
+    ...(normalized.bodyLimitBytes === undefined
       ? {}
-      : { capabilities: config.capabilities }),
-    ...(config.params === undefined ? {} : { params: config.params }),
-    query: config.query,
-    response: z.array(config.item),
-    meta: config.meta ?? paginationMetaSchema,
+      : { bodyLimitBytes: normalized.bodyLimitBytes }),
+    ...(normalized.capabilities === undefined
+      ? {}
+      : { capabilities: normalized.capabilities }),
+    ...(normalized.params === undefined ? {} : { params: normalized.params }),
+    query: normalized.query,
+    response: z.array(normalized.item),
+    meta: normalized.meta ?? paginationMetaSchema,
     handler: async (ctx) => {
-      if (config.access.kind === "visibility") {
+      if (normalized.access.kind === "visibility") {
         const visibleIds = ctx.visibleIds ?? [];
         if (visibleIds.length === 0) {
           // Fail-closed by construction: an empty visible set is an empty
@@ -208,14 +247,14 @@ export function listRoute(config: ErasedListConfig): RouteBlueprint {
           return { data: [], meta: { total: 0, ...pageWindowOf(ctx.query) } };
         }
       }
-      if (config.access.kind === "scoped" && ctx.scope === undefined) {
+      if (normalized.access.kind === "scoped" && ctx.scope === undefined) {
         // No answers means no scope to render: refuse rather than list
         // unscoped. An empty answer is still an answer and reaches the SQL.
         throw new HttpWiringError(
           `scoped list route ${resolvedRoute.path} ran without a scope answer`,
         );
       }
-      const result = await config.handler(ctx);
+      const result = await normalized.handler(ctx);
       if (
         typeof result !== "object" ||
         result === null ||

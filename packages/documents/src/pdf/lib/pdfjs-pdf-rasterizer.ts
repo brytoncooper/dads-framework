@@ -1,6 +1,10 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 
+import type * as NapiCanvas from "@napi-rs/canvas";
+import type * as PdfjsLegacy from "pdfjs-dist/legacy/build/pdf.mjs";
+
+import { loadOptionalPeer } from "../../optional-peer.js";
 import {
   PdfRasterizer,
   type RasterizedPdfPage,
@@ -9,6 +13,26 @@ import {
 
 /** PDF points per inch. */
 const POINTS_PER_INCH = 72;
+
+export type PdfRasterizerPeerLoaders = {
+  readonly loadPdfjs?: () => Promise<typeof PdfjsLegacy>;
+  readonly loadCanvas?: () => Promise<typeof NapiCanvas>;
+};
+
+export function loadPdfRasterizerPeers(loaders: PdfRasterizerPeerLoaders = {}) {
+  return Promise.all([
+    loadOptionalPeer(
+      "@dads-framework/documents/pdf",
+      "pdfjs-dist",
+      loaders.loadPdfjs ?? (() => import("pdfjs-dist/legacy/build/pdf.mjs")),
+    ),
+    loadOptionalPeer(
+      "@dads-framework/documents/pdf",
+      "@napi-rs/canvas",
+      loaders.loadCanvas ?? (() => import("@napi-rs/canvas")),
+    ),
+  ]);
+}
 
 /**
  * pdf.js (legacy Node build) draws each page onto an `@napi-rs/canvas`
@@ -20,10 +44,7 @@ export class PdfjsPdfRasterizer extends PdfRasterizer {
     pdf: Uint8Array,
     options: RasterizeOptions,
   ): Promise<readonly RasterizedPdfPage[]> {
-    const [pdfjs, canvasModule] = await Promise.all([
-      import("pdfjs-dist/legacy/build/pdf.mjs"),
-      import("@napi-rs/canvas"),
-    ]);
+    const [pdfjs, canvasModule] = await loadPdfRasterizerPeers();
     const document = await pdfjs.getDocument({
       // pdf.js takes ownership of (and detaches) the buffer it is given.
       data: new Uint8Array(pdf),

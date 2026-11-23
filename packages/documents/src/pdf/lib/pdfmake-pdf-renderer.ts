@@ -1,16 +1,20 @@
-import pdfmake from "pdfmake";
+import type * as PdfmakeNamespace from "pdfmake";
+import { loadOptionalPeer } from "../../optional-peer.js";
 import type {
   PdfmakeDefinition,
   PdfRenderer,
   PdfTextMetrics,
 } from "./pdf-renderer.js";
 
+type PdfmakeModule = typeof PdfmakeNamespace;
+
 // The standard 14 PDF fonts — built into every PDF viewer, no font files
 // shipped. Access policies locked down: a definition is data, not a
 // capability — it can never read the filesystem or fetch URLs.
-let configured = false;
-function configure(): void {
-  if (configured) return;
+const configuredInstances = new WeakSet<object>();
+
+function configure(pdfmake: PdfmakeModule): void {
+  if (configuredInstances.has(pdfmake)) return;
   pdfmake.addFonts({
     Helvetica: {
       normal: "Helvetica",
@@ -20,7 +24,7 @@ function configure(): void {
     },
   });
   // Standard-font names route through the local policy too — allow exactly
-  // those five identifiers; anything path-like (real file access) is denied.
+  // those four identifiers; anything path-like (real file access) is denied.
   const standardFonts = new Set([
     "Helvetica",
     "Helvetica-Bold",
@@ -29,17 +33,69 @@ function configure(): void {
   ]);
   pdfmake.setLocalAccessPolicy((path) => standardFonts.has(path));
   pdfmake.setUrlAccessPolicy(() => false);
-  configured = true;
+  configuredInstances.add(pdfmake);
+}
+
+export async function loadPdfmake(
+  load: () => Promise<unknown> = () => import("pdfmake"),
+): Promise<PdfmakeModule> {
+  const loaded = await loadOptionalPeer(
+    "@dads-framework/documents/pdf",
+    "pdfmake",
+    load,
+  );
+  const pdfmake = unwrapPdfmake(loaded);
+  configure(pdfmake);
+  return pdfmake;
+}
+
+function hasPdfmakeCore(value: object): boolean {
+  return (
+    "createPdf" in value &&
+    typeof value.createPdf === "function" &&
+    "addFonts" in value &&
+    typeof value.addFonts === "function"
+  );
+}
+
+function hasPdfmakePolicies(value: object): boolean {
+  return (
+    "setLocalAccessPolicy" in value &&
+    typeof value.setLocalAccessPolicy === "function" &&
+    "setUrlAccessPolicy" in value &&
+    typeof value.setUrlAccessPolicy === "function"
+  );
+}
+
+function isPdfmakeApi(value: unknown): value is PdfmakeModule {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    hasPdfmakeCore(value) &&
+    hasPdfmakePolicies(value)
+  );
+}
+
+function unwrapPdfmake(loaded: unknown): PdfmakeModule {
+  if (
+    typeof loaded === "object" &&
+    loaded !== null &&
+    "default" in loaded &&
+    isPdfmakeApi(loaded.default)
+  ) {
+    return loaded.default;
+  }
+  if (isPdfmakeApi(loaded)) {
+    return loaded;
+  }
+  throw new Error("pdfmake did not export the expected API");
 }
 
 export class PdfmakePdfRenderer implements PdfRenderer {
   #metrics: Promise<PdfTextMetrics> | undefined;
 
-  constructor() {
-    configure();
-  }
-
   async render(definition: PdfmakeDefinition): Promise<Uint8Array> {
+    const pdfmake = await loadPdfmake();
     const buffer = await pdfmake
       .createPdf({ defaultStyle: { font: "Helvetica" }, ...definition })
       .getBuffer();
@@ -55,6 +111,7 @@ export class PdfmakePdfRenderer implements PdfRenderer {
   }
 
   async #loadTextMetrics(): Promise<PdfTextMetrics> {
+    const pdfmake = await loadPdfmake();
     const document = await pdfmake
       .createPdf({ content: [], defaultStyle: { font: "Helvetica" } })
       .getStream();

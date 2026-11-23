@@ -1,3 +1,4 @@
+import type { PermissionToken } from "@dads-framework/access";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 
 import type { SqliteValue } from "../sqlite-types.js";
@@ -22,10 +23,8 @@ export type SqliteAccessFilter = {
   readonly values: readonly SqliteValue[];
 };
 
-export type SqliteFilterQuery = {
+type SqliteFilterQueryCommon = {
   readonly subject: SubjectRef;
-  readonly permission: string;
-  readonly resourceType: string;
   readonly idColumn: string;
   /**
    * Optional mapping from parent relation wire name to foreign-key column on
@@ -39,6 +38,28 @@ export type SqliteFilterQuery = {
   readonly now?: Date;
 };
 
+export type SqliteFilterQuery =
+  | (SqliteFilterQueryCommon & {
+      readonly permission: string;
+      readonly resourceType: string;
+    })
+  | (SqliteFilterQueryCommon & {
+      readonly permission: PermissionToken;
+    });
+
+export function resolveSqliteFilterTarget(query: SqliteFilterQuery): {
+  readonly resourceType: string;
+  readonly permission: string;
+} {
+  if ("resourceType" in query) {
+    return { resourceType: query.resourceType, permission: query.permission };
+  }
+  return {
+    resourceType: query.permission.entityWireName,
+    permission: query.permission.permissionName,
+  };
+}
+
 export type ValidatedSqliteFilterInput = {
   readonly idColumn: string;
   readonly nowMs: number;
@@ -47,10 +68,7 @@ export type ValidatedSqliteFilterInput = {
 
 /** Validates `idColumn`, optional `scopeColumns`, and optional `now` override before SQL compilation. */
 export function validateSqliteFilterQuery(
-  query: Pick<
-    SqliteFilterQuery,
-    "resourceType" | "idColumn" | "scopeColumns" | "now"
-  >,
+  query: SqliteFilterQueryCommon & { readonly resourceType: string },
   defaultNowMs: number,
   model?: SqliteAuthorizationModel,
 ): ValidatedSqliteFilterInput {

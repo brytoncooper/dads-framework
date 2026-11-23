@@ -36,6 +36,10 @@ Bind route templates once with `defineRoute` from `@dads-framework/core/contract
 
 `getFromApi`, `getPageFromApi`, and `sendToApi` validate outgoing bodies and parse incoming responses against your Zod schemas, and work in React, Next.js, Vue, Svelte, or Node.js.
 
+### Sharing a single per-operation contract
+
+To avoid repeating paths and Zod schemas between server routes and clients, declare standalone operation contracts with `getOperation`, `listOperation`, `postOperation`, `patchOperation`, `putOperation`, `deleteOperation`, or `postNoContentOperation` from [`@dads-framework/core/contract`](../../../packages/core/contract/README.md). Pass the contract directly to the matching verb helper (`getRoute({ operation, ... })`, `listRoute({ operation, ... })`, etc.) on the server, and invoke it on the client with `callApi(operation, input?)` or compose a frozen per-operation client with `createApiClient({ list, get, ... })` from [`@dads-framework/client`](../../../packages/client/README.md).
+
 ## 5. Generate OpenAPI 3.1
 
 Pass your composed routes to `buildOpenApiDocument` from `@dads-framework/http` to generate an OpenAPI 3.1 document from the exact same Zod schemas and route metadata.

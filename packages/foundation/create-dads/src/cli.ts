@@ -10,29 +10,56 @@ import {
 
 const argumentsAfterExecutable = process.argv.slice(2);
 const wantsJson = argumentsAfterExecutable.includes("--json");
+const wantsHelp =
+  argumentsAfterExecutable.includes("--help") ||
+  argumentsAfterExecutable.includes("-h");
 
-try {
-  const creation = await createDads(argumentsAfterExecutable, {
-    installDependencies: async (projectRoot) => {
-      await runNpm(
-        projectRoot,
-        ["install", "--include=dev", "--include=optional", "--package-lock"],
-        "npm install",
-        wantsJson,
-      );
-    },
-    startDevelopment,
-    write: (text) => process.stdout.write(text),
-  });
-  reportCreation(creation);
-} catch (error: unknown) {
-  const message = error instanceof Error ? error.message : "Unknown failure.";
-  process.stderr.write(
-    wantsJson
-      ? `${JSON.stringify({ ok: false, error: message })}\n`
-      : `Dads: ${message}\n`,
-  );
-  process.exitCode = 1;
+const usageText = [
+  "Usage: create-dads <directory> [options]",
+  "",
+  "Create a Postgres-backed TypeScript API with email sign-in, tenants,",
+  "relationship-guarded notes, and named customer and staff entrypoints.",
+  "",
+  "Options:",
+  "  --template <minimal|example>  Project template (default: example)",
+  "  --name <name>                 Set the npm package name",
+  "  --existing                    Add an isolated dads/ project to an existing repo",
+  "  --dry-run                     List planned files without writing",
+  "  --skip-install                Write files without running npm install or Docker startup",
+  "  --skip-doctor                 Skip the initial Doctor report on an existing project",
+  "  --today YYYY-MM-DD            Supply a date for the Doctor report",
+  "  --yes                         Accept non-interactive defaults",
+  "  --json                        Emit one machine-readable JSON result",
+  "  -h, --help                    Show this help message",
+  "",
+].join("\n");
+
+if (wantsHelp) {
+  process.stdout.write(usageText);
+} else {
+  try {
+    const creation = await createDads(argumentsAfterExecutable, {
+      installDependencies: async (projectRoot) => {
+        await runNpm(
+          projectRoot,
+          ["install", "--include=dev", "--include=optional", "--package-lock"],
+          "npm install",
+          wantsJson,
+        );
+      },
+      startDevelopment,
+      write: (text) => process.stdout.write(text),
+    });
+    reportCreation(creation);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown failure.";
+    process.stderr.write(
+      wantsJson
+        ? `${JSON.stringify({ ok: false, error: message })}\n`
+        : `Dads: ${message}\n`,
+    );
+    process.exitCode = 1;
+  }
 }
 
 function reportCreation(creation: DadsProjectCreation): void {

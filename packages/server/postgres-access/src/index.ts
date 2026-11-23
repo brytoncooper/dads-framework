@@ -45,3 +45,8 @@ export {
   type ProtectedPostgresTransaction,
   type ProtectedPostgresTransactionOptions,
 } from "./with-protected-postgres-transaction.js";
+export {
+  withReadSnapshot,
+  type ReadSnapshotOptions,
+  type ReadSnapshotScope,
+} from "./with-read-snapshot.js";

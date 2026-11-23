@@ -33,8 +33,54 @@ forces API changes, changing the API forces UI changes, or changing one feature
 drags unrelated features along with it, the boundary isn't doing its job.
 
 Every abstraction, layer, adapter, mapper, or SDK should answer one question:
-**what change does this absorb?** If the answer is "none," it's indirection
-without independence — remove it.
+**what change does this absorb, and is that change real?** Name it (a second
+implementation that exists, an independently deployed client, another domain's
+release, a vendor swap). If you cannot name one, it is indirection without
+independence — remove it.
+
+### Meaningful boundaries vs. not boundaries
+
+**Meaningful boundaries** — a contract is required, and provider internals stay
+walled behind it:
+
+- **Wire (API ↔ every client):** web, mobile, SDKs, and external integrations.
+  Contract schemas are hand-written and owned by the wire boundary, never
+  derived from database tables.
+- **Domain ↔ domain:** a consumer-owned port (a narrow `type`, bound in the
+  composition root) or a domain event — never an internal import.
+- **Application ↔ framework / kit** (and package ↔ package): public exports
+  only.
+- **Persistence ↔ wire:** a database row never becomes a DTO.
+- **Application code ↔ swappable vendor:** one chokepoint (Authorization,
+  clock, queue, object storage, email, identity).
+
+**Not boundaries** — one owner, change together, so no port, no extra file, and
+no extra package:
+
+- A route, its handler, and its access declaration.
+- Row/insert types and their table definition (derive from the table schema).
+- A feature page and its data loader.
+- An SDK facade and its only implementation.
+
+Inside one owner, prefer direct imports and concrete types. **One test seam is
+kept on purpose:** an operation may reach its own domain's store through a
+bare-name reader/writer contract so unit tests can swap in an in-memory fake
+that stores and returns rows — a test seam, not an architectural boundary; it
+never re-implements a database constraint or lock, and nothing else inside one
+owner gets a fake.
+
+### Precedence
+
+The Independent Evolution Principle outranks more specific _structural_ rules —
+layout conventions, generator defaults, and file-splitting habits. When a
+structural rule demands a seam that fails the companion test, follow IEP, name
+the rule you set aside, and flag the doc or generator.
+
+IEP **never** overrides safety walls or meaningful boundaries: strict TypeScript
+and lint gates, cross-domain import isolation, deep-import bans, mandatory
+`Authorization`, or keeping ORM/table imports out of pure domain logic. It is
+never a licence to merge across a meaningful boundary merely because two shapes
+look alike today.
 
 ### What this doesn't mean
 

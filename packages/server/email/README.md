@@ -100,9 +100,10 @@ or verification email owns the message content.
 | `resend`      | `ResendEmailSender`     | Yes    | Resend's message id  | Real delivery. Requires the `resend` SDK and `RESEND_API_KEY`.                                          |
 | `mailgun`     | `MailgunEmailSender`    | Yes    | Mailgun's message id | Real delivery. Requires `MAILGUN_API_KEY` + `MAILGUN_DOMAIN`; `MAILGUN_REGION` picks the US or EU host. |
 
-Install the optional SDK with `npm install resend@^6.17.2` when using the Resend
-driver. The sender loads the SDK on its first send. If the SDK is missing,
-that send rejects with the install command.
+Install the optional SDK with `npm install resend` when using the Resend
+driver. The sender loads `resend` lazily on its first send; `@dads-framework/email/templates`
+likewise loads `@react-email/render` lazily on first render. If either optional
+peer is missing, the call rejects with an actionable `npm install <pkg>` hint.
 
 Attachment BYTES stop at the two non-sending drivers: `capture` and
 `log-verbose` keep each attachment's filename, content type and size, never its

@@ -6,6 +6,20 @@ bodies and query strings, unwraps response envelopes, and exposes typed
 errors. Put the calls in the domain's API client so browser views can work
 with application-specific operations.
 
+## Calling operation contracts
+
+Pass a standalone operation contract from `@dads-framework/core/contract` to
+`callApi(operation, input?)` to bind URL-encoded `:params`, validate `query`
+and `body` before `fetch`, and parse the response envelope (including `{ data,
+meta }` or paginated `{ items, meta }`). When an operation has no required
+`params`, `query`, or `body`, omit the second argument or pass only `{ signal,
+headers }`.
+
+Compose a frozen, typed client for any subset of operations with
+`createApiClient({ list: listNotesOp, get: getNoteOp })`. Each method delegates
+to `callApi` with the operation's exact input and return types so consumers
+depend only on the operations they call.
+
 `requestBinary` accepts a bound route, validated body/query arguments, request-local
 headers, and an abort signal. It returns bytes and uses the same credentials,
 metadata, and typed failures as JSON requests. Callers set `accept` for the

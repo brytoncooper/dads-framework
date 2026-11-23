@@ -1,11 +1,21 @@
 import type { z } from "zod";
 import type { SubjectRef } from "@dads-framework/access/runtime";
 import type {
+  OperationPathParamsShape,
+  PatchOperationContract,
+  PutOperationContract,
+} from "@dads-framework/core/contract";
+import type {
   PermissionAccess,
   PublicAccess,
   RouteAccess,
   SessionAccess,
 } from "./access.js";
+import {
+  resolveMutateOperationConfig,
+  type ErasedOperationVerbConfig,
+  type OperationVerbCommon,
+} from "./operation-route.js";
 import {
   buildDefinition,
   resolveVerbRoute,
@@ -16,6 +26,7 @@ import {
   type SchemaOutput,
   type VerbCommon,
   type VerbParams,
+  type VerbRouteSource,
 } from "./route-definition.js";
 
 /**
@@ -46,6 +57,38 @@ export type MutateRouteConfig<
   ) => Promise<z.input<ResponseSchema>> | z.input<ResponseSchema>;
 } & VerbParams<Path, ParamsSchema>;
 
+type MutateRouteContractSource<
+  Path extends string,
+  ResponseSchema extends z.ZodType,
+  ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined,
+  BodySchema extends z.ZodType,
+  Method extends "PATCH" | "PUT",
+> =
+  | (VerbRouteSource<Method, Path> & {
+      readonly operation?: never;
+      readonly response: ResponseSchema;
+      readonly body: BodySchema;
+    } & VerbParams<Path, ParamsSchema>)
+  | {
+      readonly route?: never;
+      readonly path?: never;
+      readonly operation: Method extends "PATCH"
+        ? PatchOperationContract<
+            Path,
+            ResponseSchema,
+            BodySchema,
+            ParamsSchema &
+              (z.ZodType<OperationPathParamsShape<Path>> | undefined)
+          >
+        : PutOperationContract<
+            Path,
+            ResponseSchema,
+            BodySchema,
+            ParamsSchema &
+              (z.ZodType<OperationPathParamsShape<Path>> | undefined)
+          >;
+    };
+
 /** Parsed inputs and subject available to a named PATCH or PUT handler. */
 export type MutateRouteHandlerContext<Params, Body, Subject> =
   RouteHandlerContext<Params, undefined, Body, Subject>;
@@ -68,19 +111,32 @@ export function patchRoute<
   ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined = undefined,
   QuerySchema extends z.ZodType | undefined = undefined,
 >(
-  config: MutateRouteConfig<
+  config: MutateRouteContractSource<
     Path,
-    Access,
-    MutateRouteSubject<Access>,
     ResponseSchema,
     ParamsSchema,
     BodySchema,
-    QuerySchema,
     "PATCH"
-  >,
+  > &
+    OperationVerbCommon<Access> & {
+      readonly handler: (
+        ctx: RouteHandlerContext<
+          SchemaOutput<ParamsSchema>,
+          SchemaOutput<QuerySchema>,
+          SchemaOutput<BodySchema>,
+          MutateRouteSubject<Access>
+        >,
+      ) => Promise<z.input<ResponseSchema>> | z.input<ResponseSchema>;
+    },
 ): RouteBlueprint;
-export function patchRoute(config: ErasedVerbConfig): RouteBlueprint {
-  return buildDefinition({ ...config, ...resolveVerbRoute(config, "PATCH") });
+export function patchRoute(
+  config: ErasedVerbConfig | ErasedOperationVerbConfig,
+): RouteBlueprint {
+  const normalized = resolveMutateOperationConfig(config, "patch");
+  return buildDefinition({
+    ...normalized,
+    ...resolveVerbRoute(normalized, "PATCH"),
+  });
 }
 
 /** PUT handler subject nullability follows the declared access. */
@@ -92,17 +148,30 @@ export function putRoute<
   ParamsSchema extends z.ZodType<PathParamsShape<Path>> | undefined = undefined,
   QuerySchema extends z.ZodType | undefined = undefined,
 >(
-  config: MutateRouteConfig<
+  config: MutateRouteContractSource<
     Path,
-    Access,
-    MutateRouteSubject<Access>,
     ResponseSchema,
     ParamsSchema,
     BodySchema,
-    QuerySchema,
     "PUT"
-  >,
+  > &
+    OperationVerbCommon<Access> & {
+      readonly handler: (
+        ctx: RouteHandlerContext<
+          SchemaOutput<ParamsSchema>,
+          SchemaOutput<QuerySchema>,
+          SchemaOutput<BodySchema>,
+          MutateRouteSubject<Access>
+        >,
+      ) => Promise<z.input<ResponseSchema>> | z.input<ResponseSchema>;
+    },
 ): RouteBlueprint;
-export function putRoute(config: ErasedVerbConfig): RouteBlueprint {
-  return buildDefinition({ ...config, ...resolveVerbRoute(config, "PUT") });
+export function putRoute(
+  config: ErasedVerbConfig | ErasedOperationVerbConfig,
+): RouteBlueprint {
+  const normalized = resolveMutateOperationConfig(config, "put");
+  return buildDefinition({
+    ...normalized,
+    ...resolveVerbRoute(normalized, "PUT"),
+  });
 }

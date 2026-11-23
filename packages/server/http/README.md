@@ -98,6 +98,36 @@ Handlers may be sync or async — the return type is `X | Promise<X>` and the
 kit awaits either, so you only write `async` when you `await` inside (and
 forgetting it there is a compile error, not a runtime bug).
 
+### Mounting a standalone operation contract
+
+Every verb helper also accepts `operation` from `@dads-framework/core/contract`
+instead of repeating `path`/`route` and wire schemas inline. Each helper accepts
+only its matching operation kind (`getRoute` → `getOperation`, `listRoute` →
+`listOperation`, `postRoute` → `postOperation`, `patchRoute` → `patchOperation`,
+`putRoute` → `putOperation`, `deleteRoute` → `deleteOperation`,
+`postNoContentRoute` → `postNoContentOperation`), infers `params`, `query`,
+`body`, `response`/`item`, `meta`, and `status` from the contract, and throws
+`HttpWiringError` at runtime if a mismatched operation kind is passed.
+
+```ts
+import { getOperation } from "@dads-framework/core/contract";
+import { getRoute, requireSession } from "@dads-framework/http";
+import { z } from "zod";
+
+const getNoteOp = getOperation({
+  path: "/notes/:id",
+  params: z.strictObject({ id: z.uuid() }),
+  response: z.object({ id: z.uuid(), title: z.string() }),
+});
+
+export const getNote = getRoute({
+  operation: getNoteOp,
+  summary: "Get a note",
+  access: requireSession(),
+  handler: ({ params }) => ({ id: params.id, title: "Draft" }),
+});
+```
+
 ## Groups — the only door to registration
 
 Verbs return **blueprints**; `registerRoutes` accepts only grouped routes,

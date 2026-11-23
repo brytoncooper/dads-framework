@@ -1,9 +1,11 @@
+import type * as ResendModule from "resend";
 import type { CreateEmailOptions, Resend } from "resend";
 import type {
   EmailMessage,
   EmailSender,
   EmailSendReceipt,
 } from "../core/index.js";
+import { loadOptionalPeer } from "../optional-peer.js";
 import { formatEmailAddress } from "./logic/format-email-address.js";
 
 /**
@@ -12,7 +14,7 @@ import { formatEmailAddress } from "./logic/format-email-address.js";
  * branch.
  */
 export class ResendEmailSender implements EmailSender {
-  private resend?: Promise<Resend>;
+  private resend: Promise<Resend> | undefined;
 
   constructor(
     private readonly apiKey: string,
@@ -20,7 +22,10 @@ export class ResendEmailSender implements EmailSender {
   ) {}
 
   async send(message: EmailMessage): Promise<EmailSendReceipt> {
-    this.resend ??= createResendClient(this.apiKey);
+    this.resend ??= createResendClient(this.apiKey).catch((error: unknown) => {
+      this.resend = undefined;
+      throw error;
+    });
     const resend = await this.resend;
     const { data, error } = await resend.emails.send(
       toResendPayload(message, this.from),
@@ -32,24 +37,14 @@ export class ResendEmailSender implements EmailSender {
   }
 }
 
-async function createResendClient(apiKey: string): Promise<Resend> {
-  try {
-    import.meta.resolve("resend");
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      error.code === "ERR_MODULE_NOT_FOUND"
-    ) {
-      throw new Error(
-        "The Resend email driver requires the resend SDK. Run npm install resend@^6.17.2.",
-        { cause: error },
-      );
-    }
-    throw error;
-  }
+export function loadResendModule(
+  load: () => Promise<typeof ResendModule> = () => import("resend"),
+): Promise<typeof ResendModule> {
+  return loadOptionalPeer("@dads-framework/email", "resend", load);
+}
 
-  const { Resend } = await import("resend");
+async function createResendClient(apiKey: string): Promise<Resend> {
+  const { Resend } = await loadResendModule();
   return new Resend(apiKey);
 }
 

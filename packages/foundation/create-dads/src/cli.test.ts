@@ -185,6 +185,20 @@ describe("create-dads executable", () => {
     expect(existsSync(npm.invocationLog)).toBe(false);
   });
 
+  it("prints usage help for --help and -h without touching the filesystem", () => {
+    const npm = failingNpmShim();
+    for (const flag of ["--help", "-h"]) {
+      const completed = runCreateDads([flag], npm.pathValue);
+      expect(completed.status).toBe(0);
+      expect(completed.stderr).toBe("");
+      expect(completed.stdout).toContain(
+        "Usage: create-dads <directory> [options]",
+      );
+      expect(completed.stdout).toContain("--template <minimal|example>");
+      expect(existsSync(npm.invocationLog)).toBe(false);
+    }
+  });
+
   it("scaffolds --template minimal through the shipped executable and rejects invalid templates", () => {
     const targetDirectory = join(temporaryDirectory(), "minimal-cli");
     const npm = failingNpmShim();

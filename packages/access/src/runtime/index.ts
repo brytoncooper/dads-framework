@@ -1,7 +1,9 @@
 export {
   Authorization,
   checkOutcome,
+  permissionQueryFromCan,
   relationshipWrite,
+  type AuthorizationCanOptions,
   type DirectSubjectLookup,
   type PermissionCheckOutcome,
   type PermissionQuery,

@@ -50,6 +50,28 @@ npx dad-test diagnose
 - **Runtime vs. typecheck coupling hotspots:** Shared modules and deep transitive hubs ranked by exact runtime test reach, separated from `import type` reach so you do not refactor type-only barrels by mistake.
 - **Fallback traps with safety guardrails:** Unowned directories and uncovered non-code files paired with safety-tiered remediations (`safe`, `verify-before-changing`, or `keep-widened-unless-verified`). Data, fixture, and schema suffixes (`.json`, `.txt`, `.yaml`, `.env`, `.sql`) carry explicit cautions against blindly adding them to `workspace.nonCodeSuffixes`.
 
+## Leaving Nx cleanly (3-stage exit ramp)
+
+For Nx monorepos, you do not need to rip out Nx on day one — and you do not have to stay on Nx's project-graph cache forever:
+
+```sh
+# 1. Day 1 (zero edits): get the coupling X-ray and symbol-level planning in place
+npx dad-test diagnose
+npx dad-test-nx plan --base origin/main
+
+# 2. Preview ejecting off Nx (dry-run — writes nothing)
+npx dad-test-nx eject
+
+# 3. Eject to a standalone zero-Nx dads.testing.json + swap nxViteTsPaths() -> dadsTsconfigPaths()
+npx dad-test-nx eject --write --replace-nx-vite-paths
+
+# 4. Verify standalone dad-test with per-file Vitest narrowing and L1/L2 receipts, then uninstall Nx
+npx dad-test plan --base origin/main
+npx dad-test run --base origin/main --cache
+```
+
+`dad-test-nx eject` materializes plugin-inferred Vitest, ESLint, TypeScript, and `nx:run-commands` targets into standalone commands, wires per-file Vitest narrowing (disabling narrowing fail-closed if a config uses dynamic `setupFiles`), preserves pure-check prerequisites via `dependsOn`, audits any remaining opaque executors honestly, and prints exact uninstall commands for `nx` and `@nx/*`.
+
 ## Local and remote receipt caching
 
 ```sh

@@ -65,7 +65,7 @@ adapter follows dependencies and expands inputs.
 
 ## Commands
 
-### `dad-test-nx plan|run|diagnose [workspace]`
+### `dad-test-nx plan|run|diagnose|eject [workspace]`
 
 `plan` discovers the current Nx project graph and plans verification without
 executing targets, using Oxc symbol-level reachability for `test`, `typecheck`,
@@ -74,8 +74,13 @@ targets to the installed Nx CLI, preserving configurations, inferred
 executors, command options, environment settings, and prerequisites. `diagnose`
 runs the coupling and precision X-ray directly against the live Nx graph with
 zero hand-authored manifest (`dad-test diagnose` also auto-detects `nx.json`
-and invokes this path automatically). The workspace defaults to the current
-directory. Options:
+and invokes this path automatically). `eject` is the one-command exit ramp off
+Nx: it reads the live Nx project graph (including plugin-inferred Vitest,
+ESLint, TypeScript, and `nx:run-commands` targets) and generates a standalone,
+zero-Nx `dads.testing.json` with Vitest `fileNarrowing`, pure-check `dependsOn`
+wiring, optional `nxViteTsPaths()` → `dadsTsconfigPaths()` config rewriting,
+and an uninstall checklist. The workspace defaults to the current directory.
+Options:
 
 - `--base <ref>` compares that ref with the working tree (`plan`, `run`).
 - `--head <ref>` narrows the comparison to two commits; it requires `--base`,
@@ -85,6 +90,11 @@ directory. Options:
 - `--targets <a,b>` selects exact Nx target names instead of the default
   verification families. Each name must be non-empty.
 - `--jobs <n>` sets the worker limit; it must be a positive integer (`run`).
+- `--write` writes `dads.testing.json` and `dads.testing.eject-report.json`
+  (`eject` runs as a dry-run preview without `--write`).
+- `--force` allows overwriting an existing `dads.testing.json` (`eject --write`).
+- `--replace-nx-vite-paths` rewrites clean `nxViteTsPaths()` imports and calls
+  to `dadsTsconfigPaths()` from `@dads-framework/testing/vitest` (`eject --write`).
 - `--json` prints the whole result object with readable project and task ids
   (such as `api:test`, escaping only names that contain non-identifier
   characters). The human summary lines are not a contract.
@@ -200,6 +210,10 @@ diagnostic, identifier, and migration functions:
 - `diagnoseNativeNxTesting(options)` runs the coupling and precision X-ray
   directly against the live Nx graph (`workspaceRoot`, optional `targetNames`,
   optional `nativeBinary`).
+- `ejectNativeNxTesting(options)` materializes Vitest, ESLint, TypeScript, and
+  `nx:run-commands` targets into a standalone zero-Nx `dads.testing.json`
+  (`workspaceRoot`, optional `targetNames`, `write`, `force`,
+  `replaceNxViteTsPaths`, `nativeBinary`).
 - `dadsIdentifier(name)` and `decodeDadsIdentifier(id)` convert between Nx
   names and readable, collision-free Dads identifiers.
 - `importNxTestingWorkspace(options)` backs the one-way migration, taking
@@ -260,7 +274,7 @@ Failures are thrown as errors and, at the CLI, written to stderr. Notable ones:
 
 | Message                                                                                       | When                                                   |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `Usage: dad-test-nx plan\|run\|diagnose [workspace] …`                                        | No operation, or more than two positionals             |
+| `Usage: dad-test-nx plan\|run\|diagnose\|eject [workspace] …`                                 | No operation, or more than two positionals             |
 | `Usage: dad-test-import-nx <nx-workspace-root> --sha <full-git-sha>`                          | Wrong argument shape; exits `2`                        |
 | `--all cannot be combined with --base or --head.`                                             | Conflicting scope options                              |
 | `--head requires --base.`                                                                     | `--head` alone                                         |

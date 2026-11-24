@@ -181,7 +181,7 @@ function wirePrerequisiteDependencies(entries: ReadonlyMap<string, BuiltTaskEntr
     for (const prerequisite of entry.checkPrerequisites) {
       const targetId = taskIdentifier(prerequisite.project.name, prerequisite.name);
       if (targetId === entry.task.id || !entries.has(targetId)) continue;
-      if (reaches(targetId, entry.task.id, edges)) {
+      if (reachesTask(targetId, entry.task.id, edges)) {
         cyclic = true;
         continue;
       }
@@ -198,7 +198,7 @@ function wirePrerequisiteDependencies(entries: ReadonlyMap<string, BuiltTaskEntr
   return tasks;
 }
 
-function reaches(start: string, target: string, edges: ReadonlyMap<string, readonly string[]>): boolean {
+export function reachesTask(start: string, target: string, edges: ReadonlyMap<string, readonly string[]>): boolean {
   const seen = new Set<string>([start]);
   const stack = [start];
   while (stack.length > 0) {

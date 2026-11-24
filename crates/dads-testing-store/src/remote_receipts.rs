@@ -1,4 +1,4 @@
-//! Pluggable L2 remote receipt client (`file://`, `http://`, and `https://`).
+//! Pluggable L2 remote receipt client (`file://`, `http://`, `https://`, and `s3://`).
 //!
 //! Enforces the fail-closed guarantees verified in `specs/dad-test/remote_receipts_and_env.qnt`:
 //! - Any unreachable endpoint, timeout, non-200 response, oversized payload, or malformed key
@@ -32,6 +32,10 @@ pub(crate) enum RemoteReceiptClient {
         base_url: String,
         token: Option<String>,
     },
+    S3 {
+        bucket: String,
+        prefix: String,
+    },
 }
 
 impl RemoteReceiptClient {
@@ -42,6 +46,10 @@ impl RemoteReceiptClient {
                 return None;
             }
             return Some(Self::FileDir(PathBuf::from(path)));
+        }
+        if let Some(rest) = trimmed.strip_prefix("s3://") {
+            let (bucket, prefix) = parse_s3_location(rest)?;
+            return Some(Self::S3 { bucket, prefix });
         }
         if let Some(rest) = trimmed.strip_prefix("http://") {
             let (authority, prefix) = match rest.find('/') {
@@ -78,6 +86,7 @@ impl RemoteReceiptClient {
                 token,
             } => http_get(host, *port, prefix, key, token.as_deref()),
             Self::Https { base_url, token } => https_get(base_url, key, token.as_deref()),
+            Self::S3 { bucket, prefix } => s3_get(bucket, prefix, key),
         }
     }
 
@@ -94,6 +103,7 @@ impl RemoteReceiptClient {
                 token,
             } => http_put(host, *port, prefix, key, payload, token.as_deref()),
             Self::Https { base_url, token } => https_put(base_url, key, payload, token.as_deref()),
+            Self::S3 { bucket, prefix } => s3_put(bucket, prefix, key, payload),
         }
     }
 }
@@ -271,6 +281,107 @@ fn https_put(base_url: &str, key: &str, payload: &[u8], token: Option<&str>) {
     }
     command.arg(format!("{base_url}/{key}.json"));
     let Ok(mut child) = command.spawn() else {
+        return;
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(payload);
+    }
+    let _ = child.wait();
+}
+
+pub(crate) fn parse_s3_location(rest: &str) -> Option<(String, String)> {
+    let (bucket, raw_prefix) = match rest.find('/') {
+        Some(idx) => (&rest[..idx], &rest[idx + 1..]),
+        None => (rest, ""),
+    };
+    if bucket.is_empty()
+        || !bucket
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.')
+    {
+        return None;
+    }
+    let prefix = raw_prefix.trim_matches('/');
+    if !prefix.is_empty()
+        && prefix.split('/').any(|segment| {
+            segment.is_empty()
+                || segment == "."
+                || segment == ".."
+                || segment
+                    .bytes()
+                    .any(|byte| byte.is_ascii_control() || byte.is_ascii_whitespace())
+        })
+    {
+        return None;
+    }
+    Some((bucket.to_owned(), prefix.to_owned()))
+}
+
+fn s3_object_uri(bucket: &str, prefix: &str, key: &str) -> String {
+    if prefix.is_empty() {
+        format!("s3://{bucket}/{key}.json")
+    } else {
+        format!("s3://{bucket}/{prefix}/{key}.json")
+    }
+}
+
+fn s3_aws_command() -> Command {
+    let executable = std::env::var("DADS_TESTING_AWS_CLI")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "aws".to_owned());
+    let mut command = Command::new(executable);
+    command
+        .env("AWS_CLI_AUTO_PROMPT", "off")
+        .env("AWS_PAGER", "");
+    command
+}
+
+fn s3_get(bucket: &str, prefix: &str, key: &str) -> Option<Vec<u8>> {
+    let uri = s3_object_uri(bucket, prefix, key);
+    let output = s3_aws_command()
+        .args([
+            "s3",
+            "cp",
+            &uri,
+            "-",
+            "--only-show-errors",
+            "--cli-read-timeout",
+            "5",
+            "--cli-connect-timeout",
+            "3",
+        ])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !output.status.success() || output.stdout.len() > MAX_RECEIPT_BYTES {
+        return None;
+    }
+    Some(output.stdout)
+}
+
+fn s3_put(bucket: &str, prefix: &str, key: &str, payload: &[u8]) {
+    let uri = s3_object_uri(bucket, prefix, key);
+    let Ok(mut child) = s3_aws_command()
+        .args([
+            "s3",
+            "cp",
+            "-",
+            &uri,
+            "--content-type",
+            "application/json",
+            "--only-show-errors",
+            "--cli-read-timeout",
+            "5",
+            "--cli-connect-timeout",
+            "3",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
         return;
     };
     if let Some(mut stdin) = child.stdin.take() {

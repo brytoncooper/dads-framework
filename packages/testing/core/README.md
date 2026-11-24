@@ -88,12 +88,20 @@ does this in `fixtures/testing/` and makes its test task depend on typecheck.
 `plan`, `run`, and `explain` share the same selection flags: `--manifest`
 (path to `dads.testing.json`), `--base` and `--head` (Git refs), `--all`,
 and `--task` (repeatable, one task id each). `plan` and `run` additionally
-take `--jobs` and `--report` (with an optional path). `--json` works on every
-command and is the contract; the human line format is not.
+take `--kind` (repeatable: `test`, `typecheck`, `lint`, `build`, `custom`),
+`--shard` (`<index>/<total>`, 1-based deterministic partition across selected
+tasks), `--jobs`, and `--report` (with an optional path). `--json` works on
+every command and is the contract; the human line format is not.
 
 `dad-test plan` selects tasks and reports one decision per task without
 executing anything. With `--report [path]` it also writes the analysis report
-described under [Contract](#contract).
+described under [Contract](#contract). When `package-lock.json` (and optionally
+root `package.json` dependency blocks) changes against `--base`, `dad-test`
+diffs the npm lockfile packages map, closes changed packages upward through
+lockfile dependency edges, fails closed on parse errors, non-dependency
+manifest edits, or global toolchain packages (`typescript`, `vitest`, `eslint`,
+`@types/*`, etc.), and seeds only workspace modules that import an impacted
+package.
 
 `dad-test run` selects the same way and then executes the selected tasks as a
 dependency-aware DAG, four workers at a time by default; `--jobs` sets a
@@ -106,7 +114,8 @@ selected-file change; failing runs never write receipts); `--no-cache` forces
 fresh execution. Passing `--remote-cache <url>` (or setting
 `DADS_TESTING_REMOTE_CACHE_URL`, with optional
 `DADS_TESTING_REMOTE_CACHE_TOKEN`) adds a fail-closed L2 remote receipt store
-(`file://`, `http://`, or `https://`) shared across workers.
+(`file://`, `http://`, `https://`, or `s3://bucket/prefix`) shared across
+workers.
 
 `dad-test explain` prints the same selection in readable lines, taking
 `--manifest`, `--base`, `--head`, `--all`, `--task`, and `--json`:

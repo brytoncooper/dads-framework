@@ -121,6 +121,8 @@ fn execute(
         &workspace_root,
         &scope,
         &request.task_ids,
+        &request.task_kinds,
+        request.shard,
         request.jobs,
         graph,
     )?;

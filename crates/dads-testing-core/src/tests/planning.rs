@@ -397,6 +397,8 @@ fn reachability_task_runs_explicitly_when_extra_impact_path_changes() {
             head: None,
             all: false,
             task_ids: Vec::new(),
+            task_kinds: Vec::new(),
+            shard: None,
             jobs: None,
             cache: false,
             remote_cache_url: None,

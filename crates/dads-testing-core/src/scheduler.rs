@@ -118,6 +118,8 @@ fn prepare_tasks(
         .iter()
         .map(|task| (task.id.as_str(), task))
         .collect();
+    let planned_ids: std::collections::BTreeSet<&str> =
+        plan.tasks.iter().map(|d| d.id.as_str()).collect();
     plan.tasks
         .iter()
         .map(|decision| {
@@ -145,9 +147,15 @@ fn prepare_tasks(
             } else {
                 None
             };
+            let dependencies = task
+                .depends_on
+                .iter()
+                .filter(|dep| planned_ids.contains(dep.as_str()))
+                .cloned()
+                .collect();
             Ok(PreparedTask {
                 id: task.id.clone(),
-                dependencies: task.depends_on.clone(),
+                dependencies,
                 execution,
                 receipt_key,
             })

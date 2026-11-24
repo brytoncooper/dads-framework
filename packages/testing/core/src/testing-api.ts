@@ -4,6 +4,11 @@ import { resolveNativeTestingBinary } from "./native-platform.js";
 
 const protocolSchemaVersion = 1;
 
+export type TestingTaskShard = {
+  readonly index: number;
+  readonly total: number;
+};
+
 export type TestingOperationRequest = {
   readonly workspaceRoot: string;
   readonly manifestPath?: string;
@@ -11,10 +16,12 @@ export type TestingOperationRequest = {
   readonly head?: string;
   readonly all?: boolean;
   readonly taskIds?: readonly string[];
+  readonly taskKinds?: readonly string[];
+  readonly shard?: TestingTaskShard;
   readonly jobs?: number;
   /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */
   readonly cache?: boolean;
-  /** Optional L2 remote receipt store URL (`file://`, `http://`, or `https://`). */
+  /** Optional L2 remote receipt store URL (`file://`, `http://`, `https://`, or `s3://`). */
   readonly remoteCacheUrl?: string;
   /** An explicit native binary is intended for local development and test harnesses. */
   readonly nativeBinary?: string;
@@ -219,6 +226,8 @@ type NativeRequest = {
   readonly head?: string;
   readonly all: boolean;
   readonly taskIds: readonly string[];
+  readonly taskKinds?: readonly string[];
+  readonly shard?: TestingTaskShard;
   readonly jobs?: number;
   readonly cache?: boolean;
   readonly remoteCacheUrl?: string;
@@ -267,11 +276,25 @@ function toNativeRequest(operation: NativeOperation, request: TestingOperationRe
     schemaVersion: protocolSchemaVersion,
     operation,
     workspaceRoot: resolve(request.workspaceRoot),
+    all: request.all ?? false,
+    taskIds: request.taskIds ?? [],
+    ...optionalNativeScopeFields(request),
+    ...optionalNativeRunFields(request),
+  };
+}
+
+function optionalNativeScopeFields(request: TestingOperationRequest): Partial<NativeRequest> {
+  return {
     ...(request.manifestPath === undefined ? {} : { manifestPath: request.manifestPath }),
     ...(request.base === undefined ? {} : { base: request.base }),
     ...(request.head === undefined ? {} : { head: request.head }),
-    all: request.all ?? false,
-    taskIds: request.taskIds ?? [],
+    ...(request.taskKinds === undefined || request.taskKinds.length === 0 ? {} : { taskKinds: request.taskKinds }),
+    ...(request.shard === undefined ? {} : { shard: request.shard }),
+  };
+}
+
+function optionalNativeRunFields(request: TestingOperationRequest): Partial<NativeRequest> {
+  return {
     ...(request.jobs === undefined ? {} : { jobs: request.jobs }),
     ...(request.cache === true ? { cache: true } : {}),
     ...(request.remoteCacheUrl === undefined ? {} : { remoteCacheUrl: request.remoteCacheUrl }),

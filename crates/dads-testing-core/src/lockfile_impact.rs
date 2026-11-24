@@ -1,0 +1,272 @@
+//! Fail-closed lockfile package-diff narrowing, mirroring the machine-checked soundness proof in
+//! `proofs/dad-test/DadTest/LockfileNarrowing.lean`.
+
+use crate::graph::DependencyGraph;
+use crate::lockfile_parse::{
+    is_toolchain_package, only_dependency_blocks_changed, parse_lockfile_v3_packages,
+};
+use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::fs;
+use std::path::Path;
+use std::process::Command;
+
+const LOCKFILE_PATH: &str = "package-lock.json";
+const MANIFEST_PATH: &str = "package.json";
+
+#[derive(Debug, Default)]
+pub(crate) struct LockfileImpactReport {
+    pub(crate) handled_paths: BTreeSet<String>,
+    pub(crate) impacted_packages: BTreeSet<String>,
+    pub(crate) seeded_modules: Vec<String>,
+    pub(crate) issues: Vec<PlanIssue>,
+}
+
+pub(crate) fn analyze_lockfile_impact(
+    workspace_root: &Path,
+    scope: &ResolvedScope,
+    graph: Option<&DependencyGraph>,
+) -> LockfileImpactReport {
+    let mut report = LockfileImpactReport::default();
+    let lock_changed = scope.changed_paths.iter().any(|p| p == LOCKFILE_PATH);
+    let pkg_changed = scope.changed_paths.iter().any(|p| p == MANIFEST_PATH);
+    if !lock_changed && !pkg_changed {
+        return report;
+    }
+    let (Some(graph), Some(base_ref)) = (graph, scope.base.as_deref()) else {
+        return report;
+    };
+
+    if pkg_changed && !validate_manifest_change(workspace_root, base_ref, scope, &mut report) {
+        return report;
+    }
+    if !lock_changed {
+        return report;
+    }
+
+    let Some(base_lock) = read_git_file(workspace_root, base_ref, LOCKFILE_PATH) else {
+        return report;
+    };
+    let Some(head_lock) = read_target_file(workspace_root, scope, LOCKFILE_PATH) else {
+        return report;
+    };
+    let Some(diff) = diff_lockfiles_v3(&base_lock, &head_lock) else {
+        report.issues.push(PlanIssue {
+            path: Some(LOCKFILE_PATH.to_owned()),
+            ..PlanIssue::new(
+                "lockfile-parse-fallback",
+                "Could not parse package-lock.json (lockfileVersion 3); keeping conservative widening.",
+                IssueSeverity::Uncertainty,
+                IssueScope::Workspace,
+            )
+        });
+        return report;
+    };
+    if diff.must_widen {
+        report.issues.push(PlanIssue {
+            path: Some(LOCKFILE_PATH.to_owned()),
+            ..PlanIssue::new(
+                "lockfile-toolchain-change",
+                diff.widen_reason.unwrap_or_else(|| {
+                    "package-lock.json changed a global toolchain package; keeping conservative widening.".to_owned()
+                }),
+                IssueSeverity::Info,
+                IssueScope::Workspace,
+            )
+        });
+        return report;
+    }
+
+    report.seeded_modules = graph.modules_importing_external_packages(&diff.impacted_packages);
+    report.handled_paths.insert(LOCKFILE_PATH.to_owned());
+    if pkg_changed {
+        report.handled_paths.insert(MANIFEST_PATH.to_owned());
+    }
+    report.impacted_packages = diff.impacted_packages;
+    let detail = if report.seeded_modules.is_empty() && diff.newly_added_only {
+        format!(
+            "package-lock.json added {} unused package(s) with no toolchain impact; 0 workspace modules import them.",
+            report.impacted_packages.len()
+        )
+    } else {
+        format!(
+            "package-lock.json impacted {} package(s), seeding {} workspace module(s).",
+            report.impacted_packages.len(),
+            report.seeded_modules.len()
+        )
+    };
+    report.issues.push(PlanIssue {
+        path: Some(LOCKFILE_PATH.to_owned()),
+        ..PlanIssue::new(
+            "lockfile-narrowed",
+            detail,
+            IssueSeverity::Info,
+            IssueScope::Workspace,
+        )
+    });
+    report
+}
+
+fn validate_manifest_change(
+    workspace_root: &Path,
+    base_ref: &str,
+    scope: &ResolvedScope,
+    report: &mut LockfileImpactReport,
+) -> bool {
+    let Some(base_pkg) = read_git_file(workspace_root, base_ref, MANIFEST_PATH) else {
+        return false;
+    };
+    let Some(head_pkg) = read_target_file(workspace_root, scope, MANIFEST_PATH) else {
+        return false;
+    };
+    if !only_dependency_blocks_changed(&base_pkg, &head_pkg) {
+        report.issues.push(PlanIssue {
+            path: Some(MANIFEST_PATH.to_owned()),
+            ..PlanIssue::new(
+                "lockfile-manifest-global-change",
+                "package.json changed outside dependency blocks; keeping conservative widening.",
+                IssueSeverity::Info,
+                IssueScope::Workspace,
+            )
+        });
+        return false;
+    }
+    true
+}
+
+struct LockfileDiffOutcome {
+    impacted_packages: BTreeSet<String>,
+    newly_added_only: bool,
+    must_widen: bool,
+    widen_reason: Option<String>,
+}
+
+fn diff_lockfiles_v3(base_raw: &str, head_raw: &str) -> Option<LockfileDiffOutcome> {
+    let base_map = parse_lockfile_v3_packages(base_raw)?;
+    let head_map = parse_lockfile_v3_packages(head_raw)?;
+
+    let mut direct_changed = BTreeSet::new();
+    let mut newly_added = BTreeSet::new();
+    let mut existing_changed_or_removed = BTreeSet::new();
+    for (key, head_entry) in &head_map {
+        match base_map.get(key) {
+            None => {
+                direct_changed.insert(head_entry.name.clone());
+                newly_added.insert(head_entry.name.clone());
+            }
+            Some(base_entry) if base_entry != head_entry => {
+                direct_changed.insert(head_entry.name.clone());
+                existing_changed_or_removed.insert(head_entry.name.clone());
+            }
+            _ => {}
+        }
+    }
+    for (key, base_entry) in &base_map {
+        if !head_map.contains_key(key) {
+            direct_changed.insert(base_entry.name.clone());
+            existing_changed_or_removed.insert(base_entry.name.clone());
+        }
+    }
+
+    let mut reverse_deps: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut all_packages: BTreeSet<String> = BTreeSet::new();
+    let mut existing_with_bin_or_install: BTreeSet<String> = BTreeSet::new();
+    let base_names: BTreeSet<&str> = base_map.values().map(|e| e.name.as_str()).collect();
+    for entry in base_map.values().chain(head_map.values()) {
+        all_packages.insert(entry.name.clone());
+        if (entry.has_bin || entry.has_install_script) && base_names.contains(entry.name.as_str()) {
+            existing_with_bin_or_install.insert(entry.name.clone());
+        }
+        for dep in &entry.deps {
+            reverse_deps
+                .entry(dep.clone())
+                .or_default()
+                .insert(entry.name.clone());
+        }
+    }
+
+    let mut closure = BTreeSet::new();
+    let mut queue = VecDeque::new();
+    for pkg in &direct_changed {
+        if !all_packages.contains(pkg) {
+            return Some(LockfileDiffOutcome {
+                impacted_packages: BTreeSet::new(),
+                newly_added_only: false,
+                must_widen: true,
+                widen_reason: Some(format!(
+                    "Changed package {pkg} is missing from parsed lockfile packages."
+                )),
+            });
+        }
+        if closure.insert(pkg.clone()) {
+            queue.push_back(pkg.clone());
+        }
+    }
+    while let Some(current) = queue.pop_front() {
+        if let Some(dependents) = reverse_deps.get(&current) {
+            for dependent in dependents {
+                if closure.insert(dependent.clone()) {
+                    queue.push_back(dependent.clone());
+                }
+            }
+        }
+    }
+
+    for pkg in &closure {
+        if is_toolchain_package(pkg) {
+            let reason = format!(
+                "package-lock.json impacted global toolchain package {pkg}; widening all tasks."
+            );
+            return Some(LockfileDiffOutcome {
+                impacted_packages: closure,
+                newly_added_only: false,
+                must_widen: true,
+                widen_reason: Some(reason),
+            });
+        }
+        if existing_changed_or_removed.contains(pkg) && existing_with_bin_or_install.contains(pkg) {
+            let reason = format!(
+                "package-lock.json changed existing package {pkg} with bin/install script; widening all tasks."
+            );
+            return Some(LockfileDiffOutcome {
+                impacted_packages: closure,
+                newly_added_only: false,
+                must_widen: true,
+                widen_reason: Some(reason),
+            });
+        }
+    }
+
+    Some(LockfileDiffOutcome {
+        impacted_packages: closure,
+        newly_added_only: existing_changed_or_removed.is_empty() && !newly_added.is_empty(),
+        must_widen: false,
+        widen_reason: None,
+    })
+}
+
+fn read_git_file(workspace_root: &Path, rev: &str, relative_path: &str) -> Option<String> {
+    let spec = format!("{rev}:{relative_path}");
+    let output = Command::new("git")
+        .args(["show", &spec])
+        .current_dir(workspace_root)
+        .output()
+        .ok()?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8(output.stdout).ok())
+        .flatten()
+}
+
+fn read_target_file(
+    workspace_root: &Path,
+    scope: &ResolvedScope,
+    relative_path: &str,
+) -> Option<String> {
+    if scope.kind == "commit-to-commit" {
+        read_git_file(workspace_root, scope.head.as_deref()?, relative_path)
+    } else {
+        fs::read_to_string(workspace_root.join(relative_path)).ok()
+    }
+}

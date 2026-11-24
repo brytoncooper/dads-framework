@@ -62,6 +62,8 @@ fn run_with_cache(
         head: None,
         all: true,
         task_ids: Vec::new(),
+        task_kinds: Vec::new(),
+        shard: None,
         jobs: Some(1),
         cache,
         remote_cache_url: None,

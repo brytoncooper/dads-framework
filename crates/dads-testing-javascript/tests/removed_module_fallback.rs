@@ -256,6 +256,8 @@ impl TemporaryWorkspace {
             head: None,
             all: false,
             task_ids: Vec::new(),
+            task_kinds: Vec::new(),
+            shard: None,
             jobs: None,
             cache: false,
             remote_cache_url: None,

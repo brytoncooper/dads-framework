@@ -78,7 +78,7 @@ pub(crate) struct DeclaredTask {
     pub(crate) sql_impact: Option<TaskSqlImpact>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum TaskKind {
     Test,

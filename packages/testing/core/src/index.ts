@@ -17,6 +17,7 @@ export {
   type TestingTaskDecision,
   type TestingTaskOutput,
   type TestingTaskRunResult,
+  type TestingTaskShard,
   type TestingWideningCulprit,
 } from "./testing-api.js";
 export { renderDiagnosis } from "./commands/diagnose.js";

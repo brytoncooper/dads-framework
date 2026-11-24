@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/toolbox",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -25,8 +25,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.6.4",
-    "@dads-framework/testing": "0.6.4",
+    "@dads-framework/access": "0.6.5",
+    "@dads-framework/testing": "0.6.5",
     "typescript": "6.0.3",
     "zod": "^4.4.3"
   },

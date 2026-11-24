@@ -1,15 +1,22 @@
 //! Planning one request: own the changed paths, widen through whatever graph evidence exists,
 //! select the tasks that answer, and explain every decision with located evidence.
 mod decisions;
+mod filtering;
 mod widening;
 
 use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
+use crate::lockfile_impact::analyze_lockfile_impact;
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
-use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
+use crate::protocol::{
+    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope, TaskShard,
+};
 use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::{SqlTaskSelection, analyze_sql_impact};
 use decisions::explain_decisions;
+use filtering::{
+    apply_kind_and_shard_filters, matches_file_narrowing, parse_kind_filter, validate_shard,
+};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 use widening::{own_changed_paths, widen_through_graph};
@@ -33,6 +40,9 @@ struct PlanEvidence<'a> {
     reached_edges: Vec<ReachedEdge>,
     sql_handled_paths: BTreeSet<String>,
     sql_selected_tasks: BTreeMap<String, SqlTaskSelection>,
+    lockfile_handled_paths: BTreeSet<String>,
+    lockfile_impacted_packages: BTreeSet<String>,
+    lockfile_seeded_modules: Vec<String>,
     issues: Vec<PlanIssue>,
     full_fallback: bool,
 }
@@ -56,6 +66,9 @@ impl<'a> PlanEvidence<'a> {
             reached_edges: Vec::new(),
             sql_handled_paths: BTreeSet::new(),
             sql_selected_tasks: BTreeMap::new(),
+            lockfile_handled_paths: BTreeSet::new(),
+            lockfile_impacted_packages: BTreeSet::new(),
+            lockfile_seeded_modules: Vec::new(),
             issues: Vec::new(),
             full_fallback: scope.full_fallback,
         }
@@ -103,10 +116,10 @@ impl<'a> PlanEvidence<'a> {
 
     fn has_changed_file_input(&self, task: &DeclaredTask, scope: &ResolvedScope) -> bool {
         task.impact.paths.iter().any(|owned_path| {
-            scope
-                .changed_paths
-                .iter()
-                .any(|changed_path| path_matches_impact(changed_path, owned_path))
+            scope.changed_paths.iter().any(|changed_path| {
+                !self.lockfile_handled_paths.contains(changed_path)
+                    && path_matches_impact(changed_path, owned_path)
+            })
         })
     }
 
@@ -166,17 +179,6 @@ impl<'a> PlanEvidence<'a> {
     }
 }
 
-fn matches_file_narrowing(path: &str, narrowing: &FileNarrowing) -> bool {
-    narrowing
-        .suffixes
-        .iter()
-        .any(|suffix| path.ends_with(suffix))
-        && !narrowing
-            .exclude_suffixes
-            .iter()
-            .any(|excluded| path.ends_with(excluded))
-}
-
 /// The selected task set together with the widening that produced it: which originally impacted
 /// project put each dependent project in scope.
 struct Selection<'a> {
@@ -191,6 +193,8 @@ pub(crate) fn build_plan(
     workspace_root: &Path,
     scope: &ResolvedScope,
     requested_task_ids: &[String],
+    requested_task_kinds: &[String],
+    shard: Option<TaskShard>,
     jobs: Option<u32>,
     graph: Option<&DependencyGraph>,
 ) -> Result<PlanResult, TestingError> {
@@ -200,19 +204,25 @@ pub(crate) fn build_plan(
         .map(|task| (task.id.as_str(), task))
         .collect();
     let direct_tasks = direct_task_inputs(&task_by_id, requested_task_ids)?;
+    let kind_filter = parse_kind_filter(requested_task_kinds)?;
+    validate_shard(shard)?;
     if matches!(jobs, Some(0)) {
         return Err(message("jobs must be greater than zero."));
     }
     let mut evidence = PlanEvidence::new(scope);
+    attach_lockfile_impact(workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);
     attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
     widen_through_graph(manifest, scope, graph, &mut evidence);
     let selection = select_tasks(manifest, scope, &task_by_id, direct_tasks, &mut evidence)?;
-    let decisions = explain_decisions(manifest, scope, graph, &task_by_id, &evidence, &selection)?;
+    let mut decisions =
+        explain_decisions(manifest, scope, graph, &task_by_id, &evidence, &selection)?;
+    apply_kind_and_shard_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), shard);
     let run = decisions
         .iter()
         .filter(|decision| decision.decision == "run")
         .count();
+    let skip_proven_unaffected = decisions.len() - run;
     Ok(PlanResult {
         schema_version: PROTOCOL_SCHEMA_VERSION,
         scope: ResolvedScope {
@@ -224,9 +234,25 @@ pub(crate) fn build_plan(
         complete: true,
         counts: PlanCounts {
             run,
-            skip_proven_unaffected: manifest.tasks.len() - run,
+            skip_proven_unaffected,
         },
     })
+}
+
+fn attach_lockfile_impact(
+    workspace_root: &Path,
+    scope: &ResolvedScope,
+    graph: Option<&DependencyGraph>,
+    evidence: &mut PlanEvidence<'_>,
+) {
+    if evidence.full_fallback {
+        return;
+    }
+    let report = analyze_lockfile_impact(workspace_root, scope, graph);
+    evidence.issues.extend(report.issues);
+    evidence.lockfile_handled_paths = report.handled_paths;
+    evidence.lockfile_impacted_packages = report.impacted_packages;
+    evidence.lockfile_seeded_modules = report.seeded_modules;
 }
 
 fn attach_sql_impact(

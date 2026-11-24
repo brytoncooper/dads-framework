@@ -4,6 +4,14 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-11-24
+
+### Added
+
+- Added native `s3://bucket/prefix` support to `dad-test`'s fail-closed L2 remote receipt cache (`--remote-cache` / `DADS_TESTING_REMOTE_CACHE_URL`).
+- Added Lean 4-proved lockfile package-diff narrowing (`proofs/dad-test/DadTest/LockfileNarrowing.lean` + `crates/dads-testing-core/src/lockfile_impact.rs`): diffs `package-lock.json` (v3) packages, closes changed packages upward through transitive npm dependency edges, fails closed on parse errors, non-dependency `package.json` edits, or global toolchain packages (`typescript`, `vitest`, `eslint`, `@types/*`, etc.), and seeds only workspace modules importing an impacted package.
+- Added `--kind <test|typecheck|lint|build|custom>` (repeatable) and `--shard <index>/<total>` deterministic round-robin sharding to `dad-test plan` and `dad-test run`.
+
 ## [0.6.4] - 2026-11-24
 
 ### Added

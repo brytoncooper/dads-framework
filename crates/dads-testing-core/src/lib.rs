@@ -10,6 +10,8 @@ mod diagnose_traps;
 mod execute;
 mod git;
 pub mod graph;
+mod lockfile_impact;
+mod lockfile_parse;
 mod manifest;
 mod plan;
 mod protocol;
@@ -30,7 +32,8 @@ pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
     PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, RemediationSafety, ResolvedScope,
-    RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult, WideningCulprit,
+    RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult, TaskShard,
+    WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 

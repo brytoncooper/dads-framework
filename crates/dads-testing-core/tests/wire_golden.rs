@@ -51,6 +51,8 @@ fn live_plan_response() -> Value {
         head: None,
         all: true,
         task_ids: Vec::new(),
+        task_kinds: Vec::new(),
+        shard: None,
         jobs: None,
         cache: false,
         remote_cache_url: None,

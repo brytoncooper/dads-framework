@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/postgres-access",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -25,10 +25,10 @@
     "BENCHMARK.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.6.4"
+    "@dads-framework/access": "0.6.5"
   },
   "peerDependencies": {
-    "@dads-framework/postgres": "0.6.4",
+    "@dads-framework/postgres": "0.6.5",
     "drizzle-orm": "^0.45.2"
   },
   "peerDependenciesMeta": {
@@ -40,8 +40,8 @@
     }
   },
   "devDependencies": {
-    "@dads-framework/postgres": "0.6.4",
-    "@dads-framework/spicedb-access": "0.6.4",
+    "@dads-framework/postgres": "0.6.5",
+    "@dads-framework/spicedb-access": "0.6.5",
     "@types/pg": "^8.20.0",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.21.0",

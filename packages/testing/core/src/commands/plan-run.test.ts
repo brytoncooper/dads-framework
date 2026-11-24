@@ -247,6 +247,36 @@ describe("plan/run --report", () => {
       cache: true,
       remoteCacheUrl: "http://127.0.0.1:9000/cache",
     });
+
+    expect(
+      await runDadTestCli(
+        [
+          "run",
+          "--all",
+          "--kind",
+          "test",
+          "--kind",
+          "lint",
+          "--shard",
+          "2/4",
+          "--cache",
+          "--remote-cache",
+          "s3://example-cache-bucket/dad-test/v1",
+          "--json",
+        ],
+        harness.io,
+      ),
+    ).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({
+      operation: "run",
+      taskKinds: ["test", "lint"],
+      shard: { index: 2, total: 4 },
+      cache: true,
+      remoteCacheUrl: "s3://example-cache-bucket/dad-test/v1",
+    });
+
+    expect(await runDadTestCli(["plan", "--all", "--shard", "5/4", "--json"], harness.io)).toBe(1);
+    expect(await runDadTestCli(["plan", "--all", "--shard", "bad", "--json"], harness.io)).toBe(1);
   });
 });
 

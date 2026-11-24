@@ -4,3 +4,4 @@ import DadTest.Planner
 import DadTest.PrivateHelper
 import DadTest.SqlMigration
 import DadTest.NamespaceAndImports
+import DadTest.LockfileNarrowing

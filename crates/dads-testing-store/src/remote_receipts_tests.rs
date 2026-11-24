@@ -82,6 +82,8 @@ fn run_task(dir: &Path, store: &FileReceiptStore) -> Result<RunResult, Box<dyn E
         head: None,
         all: true,
         task_ids: Vec::new(),
+        task_kinds: Vec::new(),
+        shard: None,
         jobs: Some(1),
         cache: true,
         remote_cache_url: None,
@@ -252,6 +254,44 @@ fn env_changes_deliver_values_and_invalidate_l1_and_l2_http_receipts() -> Result
     assert_eq!(r_offline.exit_code, 0);
     assert_eq!(r_offline.counts.cached, 0);
 
+    let _ = fs::remove_dir_all(&dir);
+    Ok(())
+}
+
+#[test]
+fn s3_remote_location_parsing_rejects_traversal_and_accepts_bucket_prefixes() {
+    use crate::remote_receipts::{RemoteReceiptClient, parse_s3_location};
+
+    assert_eq!(
+        parse_s3_location("example-cache-bucket/prefix/v1"),
+        Some(("example-cache-bucket".to_owned(), "prefix/v1".to_owned()))
+    );
+    assert_eq!(
+        parse_s3_location("example-cache-bucket/"),
+        Some(("example-cache-bucket".to_owned(), String::new()))
+    );
+    assert_eq!(
+        parse_s3_location("example-cache-bucket"),
+        Some(("example-cache-bucket".to_owned(), String::new()))
+    );
+    assert_eq!(parse_s3_location(""), None);
+    assert_eq!(parse_s3_location("/leading"), None);
+    assert_eq!(parse_s3_location("bad bucket/prefix"), None);
+    assert_eq!(parse_s3_location("bucket/../escape"), None);
+    assert_eq!(parse_s3_location("bucket/a//b"), None);
+
+    assert!(RemoteReceiptClient::from_url("s3://example-cache-bucket/dad-test/v1/", None).is_some());
+    assert!(RemoteReceiptClient::from_url("s3://bucket/../escape", None).is_none());
+}
+
+#[test]
+fn s3_remote_cache_fails_closed_when_bucket_is_unreachable() -> Result<(), Box<dyn Error>> {
+    let dir = make_repo("s3-fail-closed", "unit", "printf 'ok'")?;
+    let worker = FileReceiptStore::in_directory(dir.join(".git/l1-s3"))
+        .with_remote_url("s3://nonexistent-bucket-invalid.invalid/dad-test/v1", None);
+    let result = run_task(&dir, &worker)?;
+    assert_eq!(result.exit_code, 0);
+    assert_eq!(result.counts.cached, 0);
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }

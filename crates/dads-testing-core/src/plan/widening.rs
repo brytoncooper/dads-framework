@@ -20,6 +20,9 @@ pub(super) fn own_changed_paths<'a>(
         return;
     }
     for changed_path in &scope.changed_paths {
+        if evidence.lockfile_handled_paths.contains(changed_path) {
+            continue;
+        }
         match deepest_project_for_path(&manifest.projects, changed_path) {
             Some(project) => {
                 evidence.changed_projects.insert(project.id.as_str());
@@ -51,6 +54,19 @@ pub(super) fn own_changed_paths<'a>(
             }
         }
     }
+    for seeded in &evidence.lockfile_seeded_modules {
+        if let Some(project) = deepest_project_for_path(&manifest.projects, seeded) {
+            evidence.changed_projects.insert(project.id.as_str());
+            evidence
+                .fallback_impacted_projects
+                .insert(project.id.as_str());
+            evidence
+                .changed_paths_by_project
+                .entry(project.id.as_str())
+                .or_default()
+                .push(seeded.clone());
+        }
+    }
 }
 
 /// Follows the precision frontend's evidence where there is any, and records the widening where
@@ -75,13 +91,19 @@ pub(super) fn widen_through_graph<'a>(
         }
         return;
     };
-    let changed_paths: Vec<String> = scope
+    let mut changed_paths: Vec<String> = scope
         .changed_paths
         .iter()
         .filter(|path| !is_declared_non_code(path, &manifest.workspace.non_code_suffixes))
+        .filter(|path| !evidence.lockfile_handled_paths.contains(*path))
         .filter(|path| !evidence.sql_handled_paths.contains(*path) || graph.contains_path(path))
         .cloned()
         .collect();
+    for seeded in &evidence.lockfile_seeded_modules {
+        if !changed_paths.contains(seeded) {
+            changed_paths.push(seeded.clone());
+        }
+    }
     if changed_paths.is_empty() {
         return;
     }

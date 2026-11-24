@@ -25,6 +25,8 @@ fn assert_transitive_blocking(jobs: u32) -> Result<(), Box<dyn Error>> {
         head: None,
         all: true,
         task_ids: Vec::new(),
+        task_kinds: Vec::new(),
+        shard: None,
         jobs: Some(jobs),
         cache: false,
         remote_cache_url: None,

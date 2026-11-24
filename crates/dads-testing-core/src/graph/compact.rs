@@ -88,6 +88,30 @@ impl DependencyGraph {
         self.module_index(path)
             .is_some_and(|m| !self.reverse(m).is_empty())
     }
+
+    /// Returns every workspace module path that statically imports or requires any external npm
+    /// package whose normalized package name appears in `packages`.
+    pub fn modules_importing_external_packages(&self, packages: &BTreeSet<String>) -> Vec<String> {
+        if packages.is_empty() {
+            return Vec::new();
+        }
+        let mut matched = BTreeSet::new();
+        for import in &self.imports {
+            if import.target.is_some() {
+                continue;
+            }
+            let Some(specifier) = self.str(import.specifier) else {
+                continue;
+            };
+            if let Some(pkg) = external_package_name(specifier)
+                && packages.contains(pkg)
+                && let Some(source_path) = self.str(self.modules[import.source as usize].path)
+            {
+                matched.insert(source_path.to_owned());
+            }
+        }
+        matched.into_iter().collect()
+    }
     pub fn has_uncertainty(&self) -> bool {
         !self.uncertainties.is_empty()
     }
@@ -311,4 +335,35 @@ pub(super) struct CChangeView {
     pub(super) complete: bool,
     pub(super) semantic_change: bool,
     pub(super) type_only_change: bool,
+}
+
+/// Extracts the npm package name from a bare module specifier (`"zod/v4"` -> `"zod"`,
+/// `"@scope/pkg/subpath"` -> `"@scope/pkg"`). Relative, absolute, `node:`, and `virtual:`
+/// specifiers return `None`.
+pub fn external_package_name(specifier: &str) -> Option<&str> {
+    if specifier.is_empty()
+        || specifier.starts_with('.')
+        || specifier.starts_with('/')
+        || specifier.starts_with('#')
+        || specifier.starts_with("node:")
+        || specifier.starts_with("virtual:")
+        || specifier.starts_with('\0')
+    {
+        return None;
+    }
+    if let Some(rest) = specifier.strip_prefix('@') {
+        let slash = rest.find('/')?;
+        let after_scope = &rest[slash + 1..];
+        if after_scope.is_empty() {
+            return None;
+        }
+        let pkg_len = match after_scope.find('/') {
+            Some(sub) => 1 + slash + 1 + sub,
+            None => specifier.len(),
+        };
+        Some(&specifier[..pkg_len])
+    } else {
+        let pkg_len = specifier.find('/').unwrap_or(specifier.len());
+        (pkg_len > 0).then_some(&specifier[..pkg_len])
+    }
 }

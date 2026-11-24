@@ -4,6 +4,13 @@ use serde::{Deserialize, Serialize};
 
 pub const PROTOCOL_SCHEMA_VERSION: u32 = 1;
 
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TaskShard {
+    pub index: u32,
+    pub total: u32,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct NativeRequest {
@@ -20,6 +27,10 @@ pub struct NativeRequest {
     pub all: bool,
     #[serde(default)]
     pub task_ids: Vec<String>,
+    #[serde(default)]
+    pub task_kinds: Vec<String>,
+    #[serde(default)]
+    pub shard: Option<TaskShard>,
     #[serde(default)]
     pub jobs: Option<u32>,
     #[serde(default)]

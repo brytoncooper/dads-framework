@@ -1,6 +1,6 @@
 {
   "name": "create-dads",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -20,7 +20,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/toolbox": "0.6.4"
+    "@dads-framework/toolbox": "0.6.5"
   },
   "scripts": {
     "prepublishOnly": "node ../../../scripts/verify-prepublish.mjs",

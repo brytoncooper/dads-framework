@@ -4,7 +4,7 @@ import { readPositiveInteger } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
 import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
 import { planTesting, runTesting } from "../testing-api.js";
-import type { TestingOperationRequest, TestingPlanResult, TestingRunResult } from "../testing-api.js";
+import type { TestingOperationRequest, TestingPlanResult, TestingRunResult, TestingTaskShard } from "../testing-api.js";
 import { readTestingManifest } from "../testing-manifest.js";
 import { buildTestingReport } from "../testing-report.js";
 import type { TestingReport } from "../testing-report.js";
@@ -17,6 +17,8 @@ const operationOptions: readonly OptionSpecification[] = [
   { name: "--head", kind: "value" },
   { name: "--all", kind: "flag" },
   { name: "--task", kind: "repeatable" },
+  { name: "--kind", kind: "repeatable" },
+  { name: "--shard", kind: "value" },
   { name: "--jobs", kind: "value" },
   { name: "--report", kind: "optional-value" },
 ];
@@ -100,22 +102,51 @@ function writeReportWrittenLine(
 
 /** Builds the one request the native engine receives for `plan` and `run`. */
 export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo): TestingOperationRequest {
+  return {
+    workspaceRoot: io.cwd,
+    all: parsed.flags.has("--all"),
+    taskIds: parsed.repeated.get("--task") ?? [],
+    ...optionalSelectionFields(parsed),
+    ...optionalExecutionFields(parsed, io),
+  };
+}
+
+function optionalSelectionFields(parsed: ParsedArguments): Partial<TestingOperationRequest> {
   const manifestPath = parsed.values.get("--manifest");
   const base = parsed.values.get("--base");
   const head = parsed.values.get("--head");
+  const shardRaw = parsed.values.get("--shard");
+  const taskKinds = parsed.repeated.get("--kind") ?? [];
+  return {
+    ...(manifestPath === undefined ? {} : { manifestPath }),
+    ...(base === undefined ? {} : { base }),
+    ...(head === undefined ? {} : { head }),
+    ...(taskKinds.length === 0 ? {} : { taskKinds }),
+    ...(shardRaw === undefined ? {} : { shard: parseShardOption(shardRaw) }),
+  };
+}
+
+function optionalExecutionFields(parsed: ParsedArguments, io: DadTestCliIo): Partial<TestingOperationRequest> {
   const jobs = parsed.values.get("--jobs");
   const cacheEnabled = parsed.flags.has("--cache") && !parsed.flags.has("--no-cache");
   const remoteCacheUrl = parsed.values.get("--remote-cache");
   return {
-    workspaceRoot: io.cwd,
-    ...(manifestPath === undefined ? {} : { manifestPath }),
-    ...(base === undefined ? {} : { base }),
-    ...(head === undefined ? {} : { head }),
-    all: parsed.flags.has("--all"),
-    taskIds: parsed.repeated.get("--task") ?? [],
     ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
     ...(cacheEnabled ? { cache: true } : {}),
     ...(remoteCacheUrl === undefined ? {} : { remoteCacheUrl }),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
   };
+}
+
+function parseShardOption(raw: string): TestingTaskShard {
+  const match = /^([1-9]\d*)\/([1-9]\d*)$/u.exec(raw.trim());
+  if (match === null) {
+    throw new Error(`Invalid --shard value '${raw}'. Expected '<index>/<total>' (for example, '1/4').`);
+  }
+  const index = Number(match[1]);
+  const total = Number(match[2]);
+  if (!Number.isSafeInteger(index) || !Number.isSafeInteger(total) || index < 1 || index > total) {
+    throw new Error(`Invalid --shard value '${raw}'. Index must be between 1 and total.`);
+  }
+  return { index, total };
 }

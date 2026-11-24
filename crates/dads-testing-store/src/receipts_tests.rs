@@ -67,6 +67,7 @@ fn run_with_cache(
         jobs: Some(1),
         cache,
         remote_cache_url: None,
+        ..NativeRequest::default()
     };
     let resp = execute_request_with_graph_and_receipts(req, None, Some(store));
     assert!(resp.ok, "{resp:?}");

@@ -1,13 +1,13 @@
 //! Builds content-hashed receipt keys for planned tasks by resolving a task's owning project
 //! root together with all transitive `fallbackDependencies` project roots.
-use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
+use crate::manifest::{DeclaredTask, Project, TaskExecution};
 use crate::receipts::{TaskReceiptRequest, TaskReceiptStore};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 
 pub(super) fn compute_task_receipt_key(
     receipts: Option<&dyn TaskReceiptStore>,
-    manifest: &TestingManifest,
+    projects_by_id: &BTreeMap<&str, &Project>,
     task: &DeclaredTask,
     execution: &TaskExecution,
     selected_files: &[String],
@@ -15,7 +15,7 @@ pub(super) fn compute_task_receipt_key(
     workspace_root: &Path,
 ) -> Option<String> {
     let store = receipts?;
-    let project_roots = transitive_project_roots(manifest, &task.project);
+    let project_roots = transitive_project_roots(projects_by_id, &task.project);
     let setup_files: &[String] = execution
         .file_narrowing
         .as_ref()
@@ -36,12 +36,10 @@ pub(super) fn compute_task_receipt_key(
     })
 }
 
-fn transitive_project_roots(manifest: &TestingManifest, root_project: &str) -> Vec<String> {
-    let projects_by_id: BTreeMap<&str, _> = manifest
-        .projects
-        .iter()
-        .map(|project| (project.id.as_str(), project))
-        .collect();
+fn transitive_project_roots(
+    projects_by_id: &BTreeMap<&str, &Project>,
+    root_project: &str,
+) -> Vec<String> {
     let mut visited = BTreeSet::new();
     let mut queue = VecDeque::new();
     let mut roots = BTreeSet::new();

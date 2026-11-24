@@ -8,15 +8,12 @@ use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::lockfile_impact::analyze_lockfile_impact;
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
-use crate::protocol::{
-    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope, TaskShard,
-};
+use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
 use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::{SqlTaskSelection, analyze_sql_impact};
 use decisions::explain_decisions;
-use filtering::{
-    apply_kind_and_shard_filters, matches_file_narrowing, parse_kind_filter, validate_shard,
-};
+pub(crate) use filtering::PlanFilters;
+use filtering::{apply_plan_filters, matches_file_narrowing, parse_kind_filter, validate_shard};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 use widening::{own_changed_paths, widen_through_graph};
@@ -193,8 +190,7 @@ pub(crate) fn build_plan(
     workspace_root: &Path,
     scope: &ResolvedScope,
     requested_task_ids: &[String],
-    requested_task_kinds: &[String],
-    shard: Option<TaskShard>,
+    filters: &PlanFilters<'_>,
     jobs: Option<u32>,
     graph: Option<&DependencyGraph>,
 ) -> Result<PlanResult, TestingError> {
@@ -204,8 +200,8 @@ pub(crate) fn build_plan(
         .map(|task| (task.id.as_str(), task))
         .collect();
     let direct_tasks = direct_task_inputs(&task_by_id, requested_task_ids)?;
-    let kind_filter = parse_kind_filter(requested_task_kinds)?;
-    validate_shard(shard)?;
+    let kind_filter = parse_kind_filter(filters.task_kinds)?;
+    validate_shard(filters.shard)?;
     if matches!(jobs, Some(0)) {
         return Err(message("jobs must be greater than zero."));
     }
@@ -217,7 +213,7 @@ pub(crate) fn build_plan(
     let selection = select_tasks(manifest, scope, &task_by_id, direct_tasks, &mut evidence)?;
     let mut decisions =
         explain_decisions(manifest, scope, graph, &task_by_id, &evidence, &selection)?;
-    apply_kind_and_shard_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), shard);
+    apply_plan_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), filters);
     let run = decisions
         .iter()
         .filter(|decision| decision.decision == "run")

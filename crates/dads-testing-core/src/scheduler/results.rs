@@ -1,6 +1,6 @@
 //! The shapes one task's outcome can take. Every terminal status a run reports is built here, so
 //! the status strings and the explanations that go with them stay in one place.
-use super::TaskStatus;
+use super::progress::TaskStatus;
 use crate::protocol::{TaskOutput, TaskRunResult};
 use std::collections::BTreeMap;
 

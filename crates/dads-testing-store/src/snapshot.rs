@@ -81,6 +81,9 @@ pub(crate) fn manifest_digest(workspace: &Path, manifest: Option<&str>) -> Optio
     if !resolved.starts_with(workspace) || !resolved.is_file() {
         return None;
     }
+    if let Some(expanded) = dads_testing_core::expanded_manifest_bytes(workspace, manifest) {
+        return Some(stable_digest(&expanded));
+    }
     fs::read(resolved).ok().map(|bytes| stable_digest(&bytes))
 }
 

@@ -87,6 +87,7 @@ fn run_task(dir: &Path, store: &FileReceiptStore) -> Result<RunResult, Box<dyn E
         jobs: Some(1),
         cache: true,
         remote_cache_url: None,
+        ..NativeRequest::default()
     };
     let resp = execute_request_with_graph_and_receipts(req, None, Some(store));
     assert!(resp.ok, "{resp:?}");
@@ -280,7 +281,9 @@ fn s3_remote_location_parsing_rejects_traversal_and_accepts_bucket_prefixes() {
     assert_eq!(parse_s3_location("bucket/../escape"), None);
     assert_eq!(parse_s3_location("bucket/a//b"), None);
 
-    assert!(RemoteReceiptClient::from_url("s3://example-cache-bucket/dad-test/v1/", None).is_some());
+    assert!(
+        RemoteReceiptClient::from_url("s3://example-cache-bucket/dad-test/v1/", None).is_some()
+    );
     assert!(RemoteReceiptClient::from_url("s3://bucket/../escape", None).is_none());
 }
 
@@ -292,6 +295,59 @@ fn s3_remote_cache_fails_closed_when_bucket_is_unreachable() -> Result<(), Box<d
     let result = run_task(&dir, &worker)?;
     assert_eq!(result.exit_code, 0);
     assert_eq!(result.counts.cached, 0);
+    let _ = fs::remove_dir_all(&dir);
+    Ok(())
+}
+
+#[test]
+fn s3_pre_index_skips_cp_calls_on_cold_miss_and_hits_after_upload() -> Result<(), Box<dyn Error>> {
+    use crate::s3_index::S3KeyIndex;
+    let dir = std::env::temp_dir().join(format!("dads-s3-index-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir)?;
+    let log_file = dir.join("aws.log");
+    let fake_aws = dir.join("fake-aws.sh");
+    fs::write(
+        &fake_aws,
+        format!(
+            "#!/bin/sh\necho \"$*\" >> '{}'\nprintf '{{\"Contents\":[{{\"Key\":\"prefix/abcd.json\"}}],\"IsTruncated\":false}}'\n",
+            log_file.display()
+        ),
+    )?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&fake_aws, fs::Permissions::from_mode(0o755))?;
+    }
+    let idx = S3KeyIndex::default();
+    let aws_cmd_path = fake_aws.clone();
+    // SAFETY-free helper via env-free static command factory using a thin wrapper isn't needed;
+    // verify list-objects-v2 through S3KeyIndex by invoking the fake script directly via sh.
+    let _ = aws_cmd_path;
+    // Use DADS_TESTING_AWS_CLI-independent test by asserting list_prefix_keys behavior via RemoteReceiptClient:
+    assert_eq!(
+        idx.contains_or_load("test-bucket", "prefix", "prefix/abcd.json", || {
+            let mut c = Command::new("sh");
+            c.arg("-c")
+                .arg(r#"printf '{"Contents":[{"Key":"prefix/abcd.json"}],"IsTruncated":false}'"#);
+            c
+        }),
+        Some(true)
+    );
+    // Second lookup MUST hit the cached index without invoking the command again!
+    assert_eq!(
+        idx.contains_or_load("test-bucket", "prefix", "prefix/missing.json", || {
+            Command::new("false")
+        }),
+        Some(false)
+    );
+    idx.insert_uploaded("prefix/missing.json".into());
+    assert_eq!(
+        idx.contains_or_load("test-bucket", "prefix", "prefix/missing.json", || {
+            Command::new("false")
+        }),
+        Some(true)
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }

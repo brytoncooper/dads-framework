@@ -7,12 +7,16 @@ mod diagnose;
 mod diagnose_reachability;
 mod diagnose_remediation;
 mod diagnose_traps;
+mod discover;
+mod discover_scan;
+mod discover_schema;
 mod execute;
 mod git;
 pub mod graph;
 mod lockfile_impact;
 mod lockfile_parse;
 mod manifest;
+mod manifest_validate;
 mod plan;
 mod protocol;
 pub mod receipts;
@@ -26,7 +30,7 @@ mod task_causes;
 
 pub use execute::{
     execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,
-    graph_analysis_can_change_the_plan, manifest_project_roots,
+    expanded_manifest_bytes, graph_analysis_can_change_the_plan, manifest_project_roots,
 };
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
@@ -36,6 +40,7 @@ pub use protocol::{
     WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
+pub use scope::is_empty_tree_sha;
 
 #[cfg(test)]
 mod tests;

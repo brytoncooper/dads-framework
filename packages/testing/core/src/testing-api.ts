@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { resolveNativeTestingBinary } from "./native-platform.js";
+import { parseTestingManifest, type TestingManifest } from "./testing-manifest.js";
 
 const protocolSchemaVersion = 1;
 
@@ -17,12 +18,20 @@ export type TestingOperationRequest = {
   readonly all?: boolean;
   readonly taskIds?: readonly string[];
   readonly taskKinds?: readonly string[];
+  readonly targets?: readonly string[];
+  readonly projects?: readonly string[];
+  readonly excludeProjects?: readonly string[];
   readonly shard?: TestingTaskShard;
+  readonly shardWeights?: Readonly<Record<string, number>>;
   readonly jobs?: number;
   /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */
   readonly cache?: boolean;
   /** Optional L2 remote receipt store URL (`file://`, `http://`, `https://`, or `s3://`). */
   readonly remoteCacheUrl?: string;
+  /** Stream live task progress to stderr during `run`. */
+  readonly stream?: boolean;
+  /** Optional sink receiving live progress chunks when `stream` is enabled. */
+  readonly onStream?: (chunk: string) => void;
   /** An explicit native binary is intended for local development and test harnesses. */
   readonly nativeBinary?: string;
 };
@@ -139,6 +148,13 @@ export type TestingDiagnoseRequest = {
   readonly nativeBinary?: string;
 };
 
+export type TestingExpandManifestRequest = {
+  readonly workspaceRoot: string;
+  readonly manifestPath?: string;
+  /** An explicit native binary is intended for local development and test harnesses. */
+  readonly nativeBinary?: string;
+};
+
 export type TestingRemediationSafety = "safe" | "verify-before-changing" | "keep-widened-unless-verified";
 
 export type TestingDiagnoseRemediation = {
@@ -203,7 +219,7 @@ export type TestingDiagnoseResult = {
   readonly fallbackTraps: readonly TestingFallbackTrap[];
 };
 
-type NativeOperation = "plan" | "run" | "diagnose";
+type NativeOperation = "plan" | "run" | "diagnose" | "expand-manifest";
 
 type NativeResponse = {
   readonly schemaVersion: number;
@@ -213,6 +229,7 @@ type NativeResponse = {
     readonly plan: TestingPlanResult;
     readonly run?: TestingRunResult;
     readonly diagnose?: TestingDiagnoseResult;
+    readonly manifest?: unknown;
   };
   readonly error?: string;
 };
@@ -227,10 +244,15 @@ type NativeRequest = {
   readonly all: boolean;
   readonly taskIds: readonly string[];
   readonly taskKinds?: readonly string[];
+  readonly targets?: readonly string[];
+  readonly projects?: readonly string[];
+  readonly excludeProjects?: readonly string[];
   readonly shard?: TestingTaskShard;
+  readonly shardWeights?: Readonly<Record<string, number>>;
   readonly jobs?: number;
   readonly cache?: boolean;
   readonly remoteCacheUrl?: string;
+  readonly stream?: boolean;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -257,6 +279,14 @@ export async function diagnoseTesting(request: TestingDiagnoseRequest): Promise<
   return response.diagnose;
 }
 
+export async function expandTestingManifest(request: TestingExpandManifestRequest): Promise<TestingManifest> {
+  const response = await invokeNativeTestingEngine("expand-manifest", request);
+  if (response.manifest === undefined) {
+    throw new Error("The native testing engine returned an expand-manifest response without a manifest.");
+  }
+  return parseTestingManifest(JSON.stringify(response.manifest), request.manifestPath ?? "dads.testing.json");
+}
+
 async function invokeNativeTestingEngine(
   operation: NativeOperation,
   request: TestingOperationRequest,
@@ -266,6 +296,7 @@ async function invokeNativeTestingEngine(
     resolveNativeTestingBinary(request.nativeBinary === undefined ? {} : { explicitBinary: request.nativeBinary })
       .binary,
     nativeRequest,
+    request.stream === true ? request.onStream : undefined,
   );
   return requireResultFor(response, operation);
 }
@@ -279,6 +310,7 @@ function toNativeRequest(operation: NativeOperation, request: TestingOperationRe
     all: request.all ?? false,
     taskIds: request.taskIds ?? [],
     ...optionalNativeScopeFields(request),
+    ...optionalNativeFilterFields(request),
     ...optionalNativeRunFields(request),
   };
 }
@@ -293,11 +325,25 @@ function optionalNativeScopeFields(request: TestingOperationRequest): Partial<Na
   };
 }
 
+function optionalNativeFilterFields(request: TestingOperationRequest): Partial<NativeRequest> {
+  return {
+    ...(request.targets === undefined || request.targets.length === 0 ? {} : { targets: request.targets }),
+    ...(request.projects === undefined || request.projects.length === 0 ? {} : { projects: request.projects }),
+    ...(request.excludeProjects === undefined || request.excludeProjects.length === 0
+      ? {}
+      : { excludeProjects: request.excludeProjects }),
+    ...(request.shardWeights === undefined || Object.keys(request.shardWeights).length === 0
+      ? {}
+      : { shardWeights: request.shardWeights }),
+  };
+}
+
 function optionalNativeRunFields(request: TestingOperationRequest): Partial<NativeRequest> {
   return {
     ...(request.jobs === undefined ? {} : { jobs: request.jobs }),
     ...(request.cache === true ? { cache: true } : {}),
     ...(request.remoteCacheUrl === undefined ? {} : { remoteCacheUrl: request.remoteCacheUrl }),
+    ...(request.stream === true ? { stream: true } : {}),
   };
 }
 
@@ -318,7 +364,11 @@ function requireResultFor(response: NativeResponse, operation: NativeOperation):
   return response.result;
 }
 
-async function runNativeProcess(nativeBinary: string, request: NativeRequest): Promise<NativeResponse> {
+async function runNativeProcess(
+  nativeBinary: string,
+  request: NativeRequest,
+  onStream?: (chunk: string) => void,
+): Promise<NativeResponse> {
   return new Promise<NativeResponse>((resolveResponse, reject) => {
     const child = spawn(nativeBinary, [], { stdio: ["pipe", "pipe", "pipe"] });
     const stdout: string[] = [];
@@ -326,7 +376,10 @@ async function runNativeProcess(nativeBinary: string, request: NativeRequest): P
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => stdout.push(chunk));
-    child.stderr.on("data", (chunk: string) => stderr.push(chunk));
+    child.stderr.on("data", (chunk: string) => {
+      stderr.push(chunk);
+      if (onStream !== undefined) onStream(chunk);
+    });
     child.once("error", (error: Error) => {
       reject(error);
     });

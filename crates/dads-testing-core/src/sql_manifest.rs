@@ -3,9 +3,9 @@
 use crate::execute::{TestingError, message};
 use crate::manifest::validate_relative_path;
 use crate::sql_lexer::normalize_sql_object;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct WorkspaceSqlSettings {
     pub(crate) migration_roots: Vec<String>,
@@ -17,21 +17,21 @@ pub(crate) struct WorkspaceSqlSettings {
     pub(crate) snapshot_patterns: Vec<SqlSnapshotPattern>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct SqlDepEdgeConfig {
     pub(crate) from: String,
     pub(crate) to: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct SqlSnapshotPattern {
     pub(crate) prefix: String,
     pub(crate) suffix: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct TaskSqlImpact {
     #[serde(default)]

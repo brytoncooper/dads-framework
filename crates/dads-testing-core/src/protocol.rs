@@ -1,6 +1,7 @@
 //! The protocol-v1 wire contract: the request the host sends, and the plan and run it gets back.
 //! Every name and every `serde` attribute here is the published format, held by `wire_golden`.
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 pub const PROTOCOL_SCHEMA_VERSION: u32 = 1;
 
@@ -30,21 +31,57 @@ pub struct NativeRequest {
     #[serde(default)]
     pub task_kinds: Vec<String>,
     #[serde(default)]
+    pub targets: Vec<String>,
+    #[serde(default)]
+    pub projects: Vec<String>,
+    #[serde(default)]
+    pub exclude_projects: Vec<String>,
+    #[serde(default)]
     pub shard: Option<TaskShard>,
+    #[serde(default)]
+    pub shard_weights: BTreeMap<String, f64>,
     #[serde(default)]
     pub jobs: Option<u32>,
     #[serde(default)]
     pub cache: bool,
     #[serde(default)]
     pub remote_cache_url: Option<String>,
+    #[serde(default)]
+    pub stream: bool,
+}
+
+impl Default for NativeRequest {
+    fn default() -> Self {
+        Self {
+            schema_version: PROTOCOL_SCHEMA_VERSION,
+            operation: Operation::Plan,
+            workspace_root: String::new(),
+            manifest_path: None,
+            base: None,
+            head: None,
+            all: false,
+            task_ids: Vec::new(),
+            task_kinds: Vec::new(),
+            targets: Vec::new(),
+            projects: Vec::new(),
+            exclude_projects: Vec::new(),
+            shard: None,
+            shard_weights: BTreeMap::new(),
+            jobs: None,
+            cache: false,
+            remote_cache_url: None,
+            stream: false,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum Operation {
     Plan,
     Run,
     Diagnose,
+    ExpandManifest,
 }
 
 #[derive(Debug, Serialize)]
@@ -87,6 +124,8 @@ pub struct OperationResult {
     pub run: Option<RunResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnose: Option<DiagnoseResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manifest: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]

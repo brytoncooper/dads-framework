@@ -30,6 +30,9 @@ pub struct TaskReceiptEntry {
 }
 
 pub trait TaskReceiptStore: Sync {
+    /// Resets per-run ephemeral memoization caches (workspace file inventory, per-file hashes,
+    /// remote bucket listings) before starting a new scheduled run.
+    fn begin_run(&self) {}
     /// Computes the exact content-addressed key for this task invocation, or `None` when inputs
     /// cannot be hashed safely (fail-closed: caller executes without caching).
     fn compute_key(&self, request: &TaskReceiptRequest<'_>) -> Option<String>;

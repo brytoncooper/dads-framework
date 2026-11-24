@@ -34,6 +34,7 @@ pub(super) fn request(root: &std::path::Path) -> NativeRequest {
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     }
 }
 

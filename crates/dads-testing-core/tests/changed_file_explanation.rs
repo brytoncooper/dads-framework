@@ -150,6 +150,7 @@ impl TemporaryWorkspace {
             jobs: None,
             cache: false,
             remote_cache_url: None,
+            ..NativeRequest::default()
         });
         assert!(response.ok, "{response:?}");
         Ok(response.result.ok_or("missing plan result")?.plan)

@@ -86,12 +86,19 @@ does this in `fixtures/testing/` and makes its test task depend on typecheck.
 ## Commands
 
 `plan`, `run`, and `explain` share the same selection flags: `--manifest`
-(path to `dads.testing.json`), `--base` and `--head` (Git refs), `--all`,
-and `--task` (repeatable, one task id each). `plan` and `run` additionally
-take `--kind` (repeatable: `test`, `typecheck`, `lint`, `build`, `custom`),
-`--shard` (`<index>/<total>`, 1-based deterministic partition across selected
-tasks), `--jobs`, and `--report` (with an optional path). `--json` works on
-every command and is the contract; the human line format is not.
+(path to `dads.testing.json`), `--base` and `--head` (Git refs; passing Git's
+empty tree SHA as `--base` resolves directly to `all` scope without dumping
+every tracked file), `--all`, and `--task` (repeatable, one task id each).
+`plan` and `run` additionally take `--kind` (repeatable or comma-separated:
+`test`, `typecheck`, `lint`, `build`, `custom`), `--target` (repeatable or
+comma-separated task target names such as `lint` or `test:integration`),
+`--project` (repeatable or comma-separated project ids), `--exclude`
+(repeatable or comma-separated project ids to omit), `--shard`
+(`<index>/<total>`, 1-based deterministic partition across selected tasks),
+`--weights` (path to a JSON map of project or task weights for Longest-
+Processing-Time weighted sharding), `--jobs`, and `--report` (with an optional
+path). `--json` works on every command and is the contract; the human line
+format is not.
 
 `dad-test plan` selects tasks and reports one decision per task without
 executing anything. With `--report [path]` it also writes the analysis report
@@ -106,16 +113,25 @@ package.
 `dad-test run` selects the same way and then executes the selected tasks as a
 dependency-aware DAG, four workers at a time by default; `--jobs` sets a
 different positive limit. Independent tasks keep going after another task
-fails; dependents of a failed or blocked prerequisite are blocked. By default
-every selected task executes fresh. Passing `--cache` opts into content-hashed
-passing receipts persisted under Git metadata (invalidated by any source,
-policy-file, manifest, command, `execution.env`, runtime fingerprint, or
-selected-file change; failing runs never write receipts); `--no-cache` forces
-fresh execution. Passing `--remote-cache <url>` (or setting
-`DADS_TESTING_REMOTE_CACHE_URL`, with optional
+fails; dependents of a failed or blocked prerequisite are blocked. Passing
+`--stream` (enabled automatically in non-`--json` human mode) streams live task
+starts, cache hits, passes, and failure output to `stderr` while keeping
+`stdout` clean for the JSON envelope. By default every selected task executes
+fresh. Passing `--cache` opts into content-hashed passing receipts persisted
+under Git metadata (memoized per run and computed in parallel across workers;
+invalidated by any source, policy-file, manifest, command, `execution.env`,
+runtime fingerprint, or selected-file change; failing runs never write
+receipts); `--no-cache` forces fresh execution. Passing `--remote-cache <url>`
+(or setting `DADS_TESTING_REMOTE_CACHE_URL`, with optional
 `DADS_TESTING_REMOTE_CACHE_TOKEN`) adds a fail-closed L2 remote receipt store
-(`file://`, `http://`, `https://`, or `s3://bucket/prefix`) shared across
+(`file://`, `http://`, `https://`, or `s3://bucket/prefix`, using a per-run S3
+`list-objects-v2` pre-index plus background concurrent uploads) shared across
 workers.
+
+`dad-test expand` expands a declarative `workspace.discover` manifest into its
+exact canonical `dads.testing.json` IR without running graph analysis or
+executing tasks, taking `--manifest`, `--out` (optional output file path), and
+`--json`.
 
 `dad-test explain` prints the same selection in readable lines, taking
 `--manifest`, `--base`, `--head`, `--all`, `--task`, and `--json`:
@@ -210,10 +226,26 @@ All fields are strict. Paths must stay within the workspace. Project and task
 ids are unique, all references must resolve, task cycles are rejected, and
 `workspace.fullFallback.taskIds` must list every task exactly once. Ordinary tasks are an executable plus arguments (with optional `env` key-value
 pairs passed to the process and hashed into receipts); an explicit `shell: true`
-runs `executable` and `args` through the platform shell for shell recipes. A `reachability` test task may also declare `execution.fileNarrowing`
-(`suffixes`, optional `excludeSuffixes`, and optional `setupFiles`) so that an
-un-widened run appends only the reached test files to `execution.args` and
-skips the task when zero matching test files are reached. Workspaces with SQL
+runs `executable` and `args` through the platform shell for shell recipes.
+Tasks that accept multiple paths in one invocation (such as `oxlint` or
+`eslint`) may declare `execution.batch` (`maxSize`, optional `groupKey`, and
+optional `sharedArgs`): the scheduler groups ready uncached tasks with matching
+command signatures into one process, caches each task's individual receipt on
+exit `0`, and automatically falls back to individual execution if a multi-task
+batch fails so only the failing task fails. A `reachability` test task may also
+declare `execution.fileNarrowing` (`suffixes`, optional `excludeSuffixes`, and
+optional `setupFiles`) so that an un-widened run appends only the reached test
+files to `execution.args` and skips the task when zero matching test files are
+reached.
+
+Large monorepos may declare `workspace.discover` (`projectFiles` globs,
+optional `excludeRoots`, `namedImpacts`, `targetTemplates` with `{project}` /
+`{projectRoot}` placeholders and `dependsOnIfExists`, and `taskOverrides`) so
+`dads.testing.json` stays compact and never drifts when projects are added.
+`workspace.discover` expands losslessly into the exact canonical `projects`,
+`tasks`, and `workspace.fullFallback.taskIds` IR in memory before validation
+and planning, preserving every `fileNarrowing` and graph-soundness guarantee.
+Inspect the expanded canonical form anytime with `dad-test expand --json`. Workspaces with SQL
 migrations may declare `workspace.sql` (`migrationRoots`, `objects`, `edges`,
 and optional `snapshotPatterns`) alongside per-task `sqlImpact`
 (`isMigrationRunner`, `tables`, or `hasUnmappedSql`) so table-scoped DDL runs
@@ -357,18 +389,38 @@ workspace facts, each package's tasks and skips, inferences, unsupported
 constructs, the manifest's checksum, and the validation method: `native` when
 a binary was available, otherwise `structural`, or `none`.
 
-The package also exposes `planTesting(request)`, `runTesting(request)`, and
-`diagnoseTesting(request)`. Each operation makes one JSON request to the native
-`dad-test` process. For deterministic simulation testing (seeded PRNG, simulated
-`Clock`, UUIDv7, shrinking invariant runner, and fault-injecting adapters), see
-the [DST guide](dst/README.md) (`@dads-framework/testing/dst`).
+The package also exposes `planTesting(request)`, `runTesting(request)`,
+`diagnoseTesting(request)`, `expandTestingManifest(request)`,
+`nativePackageNameForPlatform()`, and `resolveNativeTestingBinary()`. Each
+operation makes one JSON request to the native `dad-test` process. Companion
+subpath exports cover standalone Nx-free workflows:
+
+- `@dads-framework/testing/dst`: deterministic simulation testing (seeded PRNG,
+  simulated `Clock`, UUIDv7, shrinking invariant runner, and fault-injecting
+  adapters — see the [DST guide](dst/README.md)).
+- `@dads-framework/testing/esbuild`: standalone Node.js `esbuild` runner
+  (`bundleNodeApp`), metafile runtime-dependency collector
+  (`collectRuntimeDependencies`), lockfileVersion-3 pruner for Docker
+  (`buildPrunedManifests`), and post-build `runBundleSafetyChecks`.
+- `@dads-framework/testing/eslint`: drop-in zero-Nx ESLint flat-config plugin
+  (`enforceModuleBoundariesPlugin`, `createEnforceModuleBoundariesRule`,
+  `loadWorkspaceBoundaryIndex`) enforcing cross-project relative import bans,
+  tag `depConstraints`, `bannedExternalImports`, `banTransitiveDependencies`,
+  `enforceBuildableLibDependency`, and project dependency cycles.
+- `@dads-framework/testing/vitest`: `dadsTsconfigPaths()` Vite/Vitest plugin.
+- `@dads-framework/testing/nx`: live Nx adapter and `dad-test-nx eject`
+  (see the [Nx guide](nx/README.md)).
 
 ## Native packages
 
-The public npm release will ship platform executables as separate optional
-packages for macOS arm64/x64, Linux glibc arm64/x64, and Windows x64. npm selects
-the dependency matching the host platform and architecture, and the facade
-uses its executable.
+The public npm release ships platform executables as separate optional packages
+for macOS arm64/x64, Linux glibc arm64/x64, and Windows x64. npm selects the
+dependency matching the host platform and architecture, and the facade uses its
+executable. Lightweight CI planning jobs that run before `npm ci` can fetch
+only the ~15 MB platform binary directly from npm without installing
+`node_modules` (see `scripts/testing/fetch-native-binary.mjs` or unpack
+`@dads-framework/testing-native-<platform>` via `npm pack` and point
+`DADS_TEST_NATIVE_BINARY` at `package/bin/dad-test`).
 
 Inside this repository those packages are deliberately not npm workspaces:
 each declares `os` and `cpu`, and npm refuses to install a workspace whose

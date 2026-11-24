@@ -57,6 +57,7 @@ pub(super) fn request(repository: &Path, task_ids: Vec<String>) -> NativeRequest
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     }
 }
 
@@ -75,6 +76,7 @@ pub(super) fn run_request(repository: &Path, jobs: Option<u32>) -> NativeRequest
         jobs,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     }
 }
 

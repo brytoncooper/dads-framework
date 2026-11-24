@@ -98,7 +98,10 @@ pub(crate) fn parse_lockfile_v3_packages(raw: &str) -> Option<BTreeMap<String, P
             key.clone(),
             PackageSnapshot {
                 name,
-                version: obj.get("version").and_then(Value::as_str).map(str::to_owned),
+                version: obj
+                    .get("version")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
                 integrity: obj
                     .get("integrity")
                     .and_then(Value::as_str)

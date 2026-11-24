@@ -9,6 +9,7 @@
 //! - Only passing executions (`exit_code == 0`) are persisted, via atomic temp-file + rename.
 
 use crate::git_state::git_dir;
+use crate::receipt_cache::{FileDigestEntry, GitFileInventory, RunMemoCache};
 use crate::remote_receipts::RemoteReceiptClient;
 use dads_testing_core::{TaskOutput, TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 use serde::{Deserialize, Serialize};
@@ -21,7 +22,7 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 const RECEIPT_SCHEMA_VERSION: u32 = 1;
-const RECEIPT_KEY_DOMAIN: &[u8] = b"dads-testing-receipt-v2\0";
+const RECEIPT_KEY_DOMAIN: &[u8] = b"dads-testing-receipt-v3\0";
 
 const POLICY_FILES: &[&str] = &[
     "package.json",
@@ -70,6 +71,7 @@ struct StoredReceipt {
 pub struct FileReceiptStore {
     receipts_dir: PathBuf,
     remote: Option<RemoteReceiptClient>,
+    memo: RunMemoCache,
 }
 
 impl FileReceiptStore {
@@ -84,6 +86,7 @@ impl FileReceiptStore {
                 .join("receipts")
                 .join(format!("v{RECEIPT_SCHEMA_VERSION}")),
             remote: None,
+            memo: RunMemoCache::default(),
         })
     }
 
@@ -105,6 +108,7 @@ impl FileReceiptStore {
         Self {
             receipts_dir,
             remote: None,
+            memo: RunMemoCache::default(),
         }
     }
 
@@ -137,6 +141,13 @@ impl FileReceiptStore {
 }
 
 impl TaskReceiptStore for FileReceiptStore {
+    fn begin_run(&self) {
+        self.memo.clear();
+        if let Some(remote) = &self.remote {
+            remote.begin_run();
+        }
+    }
+
     fn compute_key(&self, request: &TaskReceiptRequest<'_>) -> Option<String> {
         let mut hasher = Sha256::new();
         hasher.update(RECEIPT_KEY_DOMAIN);
@@ -164,19 +175,17 @@ impl TaskReceiptStore for FileReceiptStore {
         for file in request.selected_files {
             hash_field(&mut hasher, "selected", file.as_bytes());
         }
-        let manifest_bytes = fs::read(request.manifest_path).ok()?;
+        let manifest_bytes = self.memo.manifest_bytes(request.manifest_path)?;
         hash_field(&mut hasher, "manifest", &manifest_bytes);
 
-        let files = collect_input_files(request)?;
+        let files = collect_input_files(request, &self.memo)?;
         for rel_path in files {
             let full = request.workspace_root.join(&rel_path);
-            let metadata = fs::symlink_metadata(&full).ok()?;
-            if metadata.file_type().is_symlink() || !metadata.is_file() {
+            let FileDigestEntry::Regular(digest) = self.memo.file_entry(&full) else {
                 return None;
-            }
-            let bytes = fs::read(&full).ok()?;
+            };
             hash_field(&mut hasher, "file", rel_path.as_bytes());
-            hash_field(&mut hasher, "bytes", &bytes);
+            hash_field(&mut hasher, "sha256", &digest);
         }
 
         Some(hex_digest(hasher.finalize()))
@@ -253,7 +262,10 @@ fn runtime_fingerprint() -> String {
         .clone()
 }
 
-fn collect_input_files(request: &TaskReceiptRequest<'_>) -> Option<BTreeSet<String>> {
+fn collect_input_files(
+    request: &TaskReceiptRequest<'_>,
+    memo: &RunMemoCache,
+) -> Option<BTreeSet<String>> {
     let mut files = BTreeSet::new();
     for policy in POLICY_FILES {
         let candidate = request.workspace_root.join(policy);
@@ -278,7 +290,7 @@ fn collect_input_files(request: &TaskReceiptRequest<'_>) -> Option<BTreeSet<Stri
         }
     }
     if let Some(git_files) =
-        collect_git_project_files(request.workspace_root, request.project_roots)?
+        collect_git_project_files(request.workspace_root, request.project_roots, memo)?
     {
         files.extend(git_files);
     } else {
@@ -306,41 +318,25 @@ fn collect_input_files(request: &TaskReceiptRequest<'_>) -> Option<BTreeSet<Stri
 fn collect_git_project_files(
     workspace_root: &Path,
     project_roots: &[String],
+    memo: &RunMemoCache,
 ) -> Option<Option<BTreeSet<String>>> {
-    let output = std::process::Command::new("git")
-        .args([
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-        ])
-        .current_dir(workspace_root)
-        .output()
-        .ok();
-    let Some(output) = output.filter(|out| out.status.success()) else {
-        return Some(None);
+    let all_files = match memo.git_inventory(workspace_root) {
+        GitFileInventory::Files(files) => files,
+        GitFileInventory::Unavailable => return Some(None),
+        GitFileInventory::InvalidEncoding => return None,
     };
     let mut collected = BTreeSet::new();
-    for raw in output.stdout.split(|byte| *byte == 0) {
-        if raw.is_empty() {
-            continue;
-        }
-        let Ok(rel) = std::str::from_utf8(raw) else {
-            return None;
-        };
+    for rel in all_files.iter() {
         if !matches_any_project_root(rel, project_roots) {
             continue;
         }
         let candidate = workspace_root.join(rel);
-        let Ok(meta) = fs::symlink_metadata(&candidate) else {
-            continue;
-        };
-        if meta.file_type().is_symlink() {
-            return None;
-        }
-        if meta.is_file() {
-            collected.insert(rel.to_owned());
+        match memo.file_entry(&candidate) {
+            FileDigestEntry::Regular(_) => {
+                collected.insert(rel.clone());
+            }
+            FileDigestEntry::Missing => {}
+            FileDigestEntry::NonRegularOrUnreadable => return None,
         }
     }
     Some(Some(collected))
@@ -352,7 +348,9 @@ fn matches_any_project_root(rel: &str, project_roots: &[String]) -> bool {
         trimmed.is_empty()
             || trimmed == "."
             || rel == trimmed
-            || rel.starts_with(&format!("{trimmed}/"))
+            || rel
+                .strip_prefix(trimmed)
+                .is_some_and(|rest| rest.starts_with('/'))
     })
 }
 

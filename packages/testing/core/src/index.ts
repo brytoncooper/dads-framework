@@ -1,5 +1,6 @@
 export {
   diagnoseTesting,
+  expandTestingManifest,
   planTesting,
   runTesting,
   type TestingCouplingHotspot,
@@ -7,6 +8,7 @@ export {
   type TestingDiagnoseRequest,
   type TestingDiagnoseResult,
   type TestingDiagnoseSummary,
+  type TestingExpandManifestRequest,
   type TestingFallbackTrap,
   type TestingOperationRequest,
   type TestingPlanIssue,
@@ -32,6 +34,7 @@ export {
   type TestingManifestSqlEdge,
   type TestingManifestSqlSnapshotPattern,
   type TestingManifestTask,
+  type TestingManifestTaskBatch,
   type TestingManifestTaskSqlImpact,
   type TestingManifestWorkspaceSql,
 } from "./testing-manifest.js";
@@ -60,4 +63,13 @@ export {
   type InitUnsupported,
 } from "./init/infer-testing-manifest.js";
 export { checkTestingManifest } from "./init/check-testing-manifest.js";
+export {
+  detectNativeLibc,
+  nativePackageNameForPlatform,
+  resolveNativeTestingBinary,
+  type NativeBinaryResolution,
+  type NativeBinarySource,
+  type NativeLibc,
+  type NativePackageResolver,
+} from "./native-platform.js";
 export { detectWorkspace, type DetectedWorkspace } from "./init/detect-workspace.js";

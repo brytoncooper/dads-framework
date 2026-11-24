@@ -100,7 +100,7 @@ describe("dad-test command line", () => {
   it("names every operation when the operation is missing or unknown", async () => {
     const harness = createHarness();
     expect(await runDadTestCli(["frobnicate"], harness.io)).toBe(1);
-    expect(harness.stderr()).toBe("dad-test: Expected operation plan, run, explain, diagnose, or init.\n");
+    expect(harness.stderr()).toBe("dad-test: Expected operation plan, run, explain, diagnose, init, or expand.\n");
 
     const jsonHarness = createHarness();
     expect(await runDadTestCli(["frobnicate", "--json"], jsonHarness.io)).toBe(1);
@@ -108,7 +108,7 @@ describe("dad-test command line", () => {
       `${JSON.stringify({
         schemaVersion: 1,
         ok: false,
-        error: "Expected operation plan, run, explain, diagnose, or init.",
+        error: "Expected operation plan, run, explain, diagnose, init, or expand.",
       })}\n`,
     );
   });

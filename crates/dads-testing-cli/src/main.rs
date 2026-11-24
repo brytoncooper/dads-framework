@@ -2,6 +2,7 @@ use dads_testing_core::graph::DependencyGraph;
 use dads_testing_core::{
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, PlanIssue,
     TaskReceiptStore, execute_request_with_graph_and_receipts, graph_analysis_can_change_the_plan,
+    is_empty_tree_sha,
 };
 use dads_testing_javascript::JavaScriptFrontend;
 use dads_testing_store::{FileReceiptStore, StoreIssue, StoreIssueSeverity, load_or_update};
@@ -72,6 +73,20 @@ fn answer(request: NativeRequest) -> NativeResponse {
 /// plans identically with no graph, and skipping the analysis leaves the snapshot store untouched:
 /// nothing is read, nothing is rebuilt, and nothing is written.
 fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
+    if request.operation == Operation::ExpandManifest {
+        return GraphAnalysis {
+            graph: None,
+            issues: Vec::new(),
+        };
+    }
+    if request.operation != Operation::Diagnose
+        && (request.all || request.base.as_deref().is_some_and(is_empty_tree_sha))
+    {
+        return GraphAnalysis {
+            graph: None,
+            issues: Vec::new(),
+        };
+    }
     if request.operation != Operation::Diagnose && !graph_analysis_can_change_the_plan(request) {
         return GraphAnalysis {
             graph: None,

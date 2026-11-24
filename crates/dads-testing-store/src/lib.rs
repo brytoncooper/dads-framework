@@ -22,12 +22,14 @@ mod deleted_path_tests;
 mod git_state;
 mod issues;
 mod persist;
+mod receipt_cache;
 mod receipts;
 #[cfg(test)]
 mod receipts_tests;
 mod remote_receipts;
 #[cfg(test)]
 mod remote_receipts_tests;
+mod s3_index;
 mod snapshot;
 #[cfg(test)]
 mod tests;

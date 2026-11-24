@@ -83,6 +83,7 @@ fn kind_filter_and_sharding_partition_selected_tasks_and_run_without_deadlock()
             jobs: Some(2),
             cache: false,
             remote_cache_url: None,
+            ..NativeRequest::default()
         };
         let resp = execute_request(req);
         assert!(resp.ok, "{resp:?}");
@@ -90,7 +91,11 @@ fn kind_filter_and_sharding_partition_selected_tasks_and_run_without_deadlock()
         let run = res.run.ok_or("missing run")?;
         assert_eq!(run.exit_code, 0);
         for task in res.plan.tasks {
-            assert!(task.id.ends_with(":test"), "non-test task leaked: {}", task.id);
+            assert!(
+                task.id.ends_with(":test"),
+                "non-test task leaked: {}",
+                task.id
+            );
             assert!(
                 union.insert(task.id.clone()),
                 "duplicate task across shards: {}",
@@ -122,6 +127,7 @@ fn kind_filter_and_sharding_partition_selected_tasks_and_run_without_deadlock()
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     });
     assert!(!bad.ok);
 

@@ -33,6 +33,7 @@ fn make_request(root: &Path) -> NativeRequest {
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     }
 }
 

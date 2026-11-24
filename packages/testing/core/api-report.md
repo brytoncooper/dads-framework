@@ -17,6 +17,10 @@ Entry point: @dads-framework/testing
 - type InitTestingManifestOptions: export type InitTestingManifestOptions = { readonly workspaceRoot: string; readonly manifestPath?: string; readonly force?: boolean; /** An explicit native binary is intended for local development and test harnesses. */ readonly nativeBinary?: string; readonly environment?: NodeJS.ProcessEnv; /** Overrides how the native engine is found; undefined means "not installed". */ readonly resolveNativeBinary?: () => string | undefined; };
 - type InitTestingManifestResult: export type InitTestingManifestResult = { /** Workspace-relative path of the manifest that was written. */ readonly manifestPath: string; /** Workspace-relative path of the report that explains it. */ readonly reportPath: string; readonly manifest: TestingManifest; readonly report: InitReport; };
 - type InitUnsupported: export type InitUnsupported = { readonly subject: string; readonly message: string; };
+- type NativeBinaryResolution: export type NativeBinaryResolution = { readonly binary: string; readonly source: NativeBinarySource; };
+- type NativeBinarySource: export type NativeBinarySource = "DADS_TEST_NATIVE_BINARY" | "nativeBinary" | "platform-package";
+- type NativeLibc: export type NativeLibc = "glibc" | "musl" | "not-applicable" | "unknown";
+- type NativePackageResolver: export type NativePackageResolver = (packageName: string) => string;
 - type PlanExplanation: export type PlanExplanation = { readonly schemaVersion: 1; readonly scope: TestingPlanResult["scope"]; readonly summary: { readonly tasks: number; readonly selected: number; readonly skipped: number; readonly widened: number; readonly byReason: Readonly<Record<string, number>>; readonly fullFallback: boolean; readonly fullFallbackCauses: readonly ExplainedIssue[]; }; readonly tasks: readonly ExplainedTask[]; readonly informational: readonly ExplainedIssue[]; readonly detail: "derived" | "engine"; };
 - type ReportIssue: export type ReportIssue = { readonly code: string; readonly message: string; readonly severity: "error" | "info" | "uncertainty"; readonly location?: string; readonly path?: string; readonly line?: number; readonly column?: number; readonly project?: string; };
 - type TestingCouplingHotspot: export type TestingCouplingHotspot = { readonly path: string; readonly project?: string; readonly reachedModules: number; readonly reachedProjects: number; readonly reachedTestFiles: number; readonly reachedTestPercent: number; readonly typecheckReachedTestFiles: number; readonly remediation: TestingDiagnoseRemediation; };
@@ -24,16 +28,18 @@ Entry point: @dads-framework/testing
 - type TestingDiagnoseRequest: export type TestingDiagnoseRequest = { readonly workspaceRoot: string; readonly manifestPath?: string; /** An explicit native binary is intended for local development and test harnesses. */ readonly nativeBinary?: string; };
 - type TestingDiagnoseResult: export type TestingDiagnoseResult = { readonly schemaVersion: 1; readonly summary: TestingDiagnoseSummary; readonly wideningCulprits: readonly TestingWideningCulprit[]; readonly couplingHotspots: readonly TestingCouplingHotspot[]; readonly fallbackTraps: readonly TestingFallbackTrap[]; };
 - type TestingDiagnoseSummary: export type TestingDiagnoseSummary = { readonly totalModules: number; readonly totalProjects: number; readonly totalTasks: number; readonly totalTestFiles: number; readonly totalUncertainties: number; readonly wholeWorkspaceUncertainties: number; readonly unownedTrackedFiles: number; readonly nonCodeUncoveredFiles: number; readonly estimatedLeafSkipPercent: number; readonly potentialLeafSkipPercent: number; };
+- type TestingExpandManifestRequest: export type TestingExpandManifestRequest = { readonly workspaceRoot: string; readonly manifestPath?: string; /** An explicit native binary is intended for local development and test harnesses. */ readonly nativeBinary?: string; };
 - type TestingFallbackTrap: export type TestingFallbackTrap = { readonly kind: string; readonly prefix: string; readonly fileCount: number; readonly samplePaths: readonly string[]; readonly project?: string; readonly remediation: TestingDiagnoseRemediation; };
 - type TestingManifest: export type TestingManifest = { readonly schemaVersion: 1; readonly workspace: { readonly root?: string; readonly fullFallback: { readonly taskIds: readonly string[]; }; readonly sql?: TestingManifestWorkspaceSql; readonly nonCodeSuffixes?: readonly string[]; readonly dynamicImportScopes?: Readonly<Record<string, readonly string[]>>; }; readonly projects: readonly TestingManifestProject[]; readonly tasks: readonly TestingManifestTask[]; };
 - type TestingManifestFileNarrowing: export type TestingManifestFileNarrowing = { readonly suffixes: readonly string[]; readonly excludeSuffixes?: readonly string[]; readonly setupFiles?: readonly string[]; };
 - type TestingManifestProject: export type TestingManifestProject = { readonly id: string; readonly root: string; readonly fallbackDependencies: readonly string[]; };
 - type TestingManifestSqlEdge: export type TestingManifestSqlEdge = { readonly from: string; readonly to: string; };
 - type TestingManifestSqlSnapshotPattern: export type TestingManifestSqlSnapshotPattern = { readonly prefix: string; readonly suffix: string; };
-- type TestingManifestTask: export type TestingManifestTask = { readonly id: string; readonly project: string; readonly kind: TestingManifestTaskKind; readonly execution: { readonly executable: string; readonly args: readonly string[]; readonly cwd?: string; readonly shell?: boolean; readonly env?: Readonly<Record<string, string>>; readonly fileNarrowing?: TestingManifestFileNarrowing; }; readonly dependsOn: readonly string[]; readonly impact: { readonly mode: TestingManifestImpactMode; readonly paths: readonly string[]; }; readonly sqlImpact?: TestingManifestTaskSqlImpact; };
+- type TestingManifestTask: export type TestingManifestTask = { readonly id: string; readonly project: string; readonly kind: TestingManifestTaskKind; readonly execution: { readonly executable: string; readonly args: readonly string[]; readonly cwd?: string; readonly shell?: boolean; readonly env?: Readonly<Record<string, string>>; readonly fileNarrowing?: TestingManifestFileNarrowing; readonly batch?: TestingManifestTaskBatch; }; readonly dependsOn: readonly string[]; readonly impact: { readonly mode: TestingManifestImpactMode; readonly paths: readonly string[]; }; readonly sqlImpact?: TestingManifestTaskSqlImpact; };
+- type TestingManifestTaskBatch: export type TestingManifestTaskBatch = { readonly maxSize: number; readonly groupKey?: string; readonly sharedArgs?: number; };
 - type TestingManifestTaskSqlImpact: export type TestingManifestTaskSqlImpact = { readonly isMigrationRunner?: boolean; readonly tables?: readonly string[]; readonly hasUnmappedSql?: boolean; };
 - type TestingManifestWorkspaceSql: export type TestingManifestWorkspaceSql = { readonly migrationRoots: readonly string[]; readonly objects?: readonly string[]; readonly edges?: readonly TestingManifestSqlEdge[]; readonly snapshotPatterns?: readonly TestingManifestSqlSnapshotPattern[]; };
-- type TestingOperationRequest: export type TestingOperationRequest = { readonly workspaceRoot: string; readonly manifestPath?: string; readonly base?: string; readonly head?: string; readonly all?: boolean; readonly taskIds?: readonly string[]; readonly taskKinds?: readonly string[]; readonly shard?: TestingTaskShard; readonly jobs?: number; /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */ readonly cache?: boolean; /** Optional L2 remote receipt store URL (`file://`, `http://`, `https://`, or `s3://`). */ readonly remoteCacheUrl?: string; /** An explicit native binary is intended for local development and test harnesses. */ readonly nativeBinary?: string; };
+- type TestingOperationRequest: export type TestingOperationRequest = { readonly workspaceRoot: string; readonly manifestPath?: string; readonly base?: string; readonly head?: string; readonly all?: boolean; readonly taskIds?: readonly string[]; readonly taskKinds?: readonly string[]; readonly targets?: readonly string[]; readonly projects?: readonly string[]; readonly excludeProjects?: readonly string[]; readonly shard?: TestingTaskShard; readonly shardWeights?: Readonly<Record<string, number>>; readonly jobs?: number; /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */ readonly cache?: boolean; /** Optional L2 remote receipt store URL (`file://`, `http://`, `https://`, or `s3://`). */ readonly remoteCacheUrl?: string; /** Stream live task progress to stderr during `run`. */ readonly stream?: boolean; /** Optional sink receiving live progress chunks when `stream` is enabled. */ readonly onStream?: (chunk: string) => void; /** An explicit native binary is intended for local development and test harnesses. */ readonly nativeBinary?: string; };
 - type TestingPlanIssue: export type TestingPlanIssue = { readonly code: string; readonly message: string; readonly severity?: "error" | "info" | "uncertainty"; readonly scope?: "module" | "workspace"; readonly path?: string; readonly line?: number; readonly column?: number; readonly project?: string; };
 - type TestingPlanResult: export type TestingPlanResult = { readonly schemaVersion: 1; readonly scope: { readonly kind: string; readonly base?: string; readonly head?: string; readonly changedPaths: readonly string[]; readonly fullFallback: boolean; }; readonly tasks: readonly TestingTaskDecision[]; readonly issues: readonly TestingPlanIssue[]; readonly complete: boolean; readonly counts: { readonly run: number; readonly skipProvenUnaffected: number; }; };
 - type TestingRemediationSafety: export type TestingRemediationSafety = "keep-widened-unless-verified" | "safe" | "verify-before-changing";
@@ -47,8 +53,10 @@ Entry point: @dads-framework/testing
 - type TestingWideningCulprit: export type TestingWideningCulprit = { readonly code: string; readonly path: string; readonly line?: number; readonly column?: number; readonly scope: "module" | "workspace"; readonly project?: string; readonly message: string; readonly widenedProjects: number; readonly widenedTasks: number; readonly widenedTestFiles: number; readonly remediation: TestingDiagnoseRemediation; };
 - function buildTestingReport: export declare function buildTestingReport(input: { readonly plan: TestingPlanResult; readonly manifest: TestingManifest; readonly run?: TestingRunResult; }): TestingReport;
 - function checkTestingManifest: export declare function checkTestingManifest(manifest: TestingManifest): readonly string[];
+- function detectNativeLibc: export declare function detectNativeLibc(platform?: string): NativeLibc;
 - function detectWorkspace: export declare function detectWorkspace(workspaceRoot: string): DetectedWorkspace;
 - function diagnoseTesting: export declare function diagnoseTesting(request: TestingDiagnoseRequest): Promise<TestingDiagnoseResult>;
+- function expandTestingManifest: export declare function expandTestingManifest(request: TestingExpandManifestRequest): Promise<TestingManifest>;
 - function explainPlan: export declare function explainPlan(plan: TestingPlanResult, manifest?: TestingManifest): PlanExplanation;
 - function formatIssueLocation: export declare function formatIssueLocation(issue: TestingPlanIssue): string | undefined;
 - function inferTestingManifest: export declare function inferTestingManifest(workspace: DetectedWorkspace, packages: readonly WorkspacePackage[]): InferredTesting;
@@ -56,6 +64,7 @@ Entry point: @dads-framework/testing
 - function issueScope: export declare function issueScope(issue: TestingPlanIssue): "module" | "unknown" | "workspace";
 - function issueSeverity: export declare function issueSeverity(issue: TestingPlanIssue): "error" | "info" | "uncertainty";
 - function listDadTestCommands: export declare function listDadTestCommands(): readonly { readonly name: string; readonly options: readonly string[]; }[];
+- function nativePackageNameForPlatform: export declare function nativePackageNameForPlatform(platform?: string, architecture?: string, libc?: NativeLibc): string;
 - function owningProjectForPath: export declare function owningProjectForPath<Project extends { readonly root: string; }>(projects: readonly Project[], path: string): Project | undefined;
 - function parseTestingManifest: export declare function parseTestingManifest(text: string, subject: string): TestingManifest;
 - function pathIsInside: export declare function pathIsInside(path: string, root: string): boolean;
@@ -64,6 +73,7 @@ Entry point: @dads-framework/testing
 - const reasonTexts: export declare const reasonTexts: Readonly<Record<string, string>>;
 - function renderDiagnosis: export declare function renderDiagnosis(diagnosis: TestingDiagnoseResult): string;
 - function renderPlanExplanation: export declare function renderPlanExplanation(explanation: PlanExplanation): string;
+- function resolveNativeTestingBinary: export declare function resolveNativeTestingBinary(options?: { readonly explicitBinary?: string; readonly environment?: NodeJS.ProcessEnv; readonly platform?: string; readonly architecture?: string; readonly libc?: NativeLibc; readonly packageResolver?: NativePackageResolver; }): NativeBinaryResolution;
 - function runDadTestCli: export declare function runDadTestCli(argumentsAfterExecutable: readonly string[], io: DadTestCliIo): Promise<number>;
 - function runTesting: export declare function runTesting(request: TestingOperationRequest): Promise<{ readonly plan: TestingPlanResult; readonly run: TestingRunResult; }>;
 - function serializeTestingManifest: export declare function serializeTestingManifest(manifest: TestingManifest): string;
@@ -118,6 +128,47 @@ Entry point: @dads-framework/testing/dst
 - function parseSeed: export declare function parseSeed(raw: DstSeedInput): number;
 - function resolveDstSeed: export declare function resolveDstSeed(fallback?: DstSeedInput, env?: NodeJS.ProcessEnv): { readonly seed: number; readonly fromEnv: boolean; };
 - function runSimulation: export declare function runSimulation<State>(spec: SimulationSpec<State>, options?: RunSimulationOptions): Promise<SimulationReport>;
+```
+
+Entry point: @dads-framework/testing/esbuild
+
+```
+- type BundleNodeResult: export type BundleNodeResult = { readonly outfile: string; readonly runtimeDeps: readonly string[]; };
+- type BundleNodeTarget: export type BundleNodeTarget = { readonly name: string; readonly entry: string; readonly outputPath: string; readonly outputFileName: string; readonly tsconfig: string; readonly external?: readonly string[]; readonly extraRuntimeDeps?: readonly string[]; readonly generatePackageJson?: boolean; readonly writeMetafile?: boolean; readonly format?: "cjs" | "esm"; readonly sourcemap?: boolean; readonly define?: Readonly<Record<string, string>>; readonly extraEsbuildOptions?: Readonly<Record<string, unknown>>; readonly checks?: readonly BundleSafetyCheck[]; };
+- type BundleSafetyCheck: export type BundleSafetyCheck = { readonly kind: "boot-no-error-substring"; readonly substring: string; readonly timeoutMs?: number; } | { readonly kind: "forbid-pattern"; readonly pattern: RegExp; readonly label: string; } | { readonly kind: "forbid-substring"; readonly substring: string; readonly label: string; };
+- type EsbuildLike: export type EsbuildLike = { readonly build: (options: Readonly<Record<string, unknown>>) => Promise<{ readonly metafile?: EsbuildMetafile; }>; };
+- type EsbuildMetafile: export type EsbuildMetafile = { readonly inputs?: Readonly<Record<string, EsbuildMetafileInput>>; };
+- type EsbuildMetafileImport: export type EsbuildMetafileImport = { readonly path?: string; readonly original?: string; };
+- type EsbuildMetafileInput: export type EsbuildMetafileInput = { readonly imports?: readonly EsbuildMetafileImport[]; };
+- type LockfilePackageEntry: export type LockfilePackageEntry = Readonly<Record<string, unknown>>;
+- type PrunedManifests: export type PrunedManifests = { readonly prunedPackageJson: Readonly<Record<string, unknown>>; readonly prunedPackageLock: Readonly<Record<string, unknown>>; };
+- type RootLockfile: export type RootLockfile = { readonly lockfileVersion?: number; readonly packages?: Readonly<Record<string, LockfilePackageEntry>>; };
+- type RootPackageJson: export type RootPackageJson = { readonly dependencies?: Readonly<Record<string, string>>; readonly packageManager?: string; };
+- function buildPrunedManifests: export declare function buildPrunedManifests(input: { readonly packageName: string; readonly main?: string; readonly type?: "commonjs" | "module"; readonly runtimeDeps: readonly string[]; readonly rootPackageJson: RootPackageJson; readonly rootLockfile: RootLockfile; }): PrunedManifests;
+- function bundleNodeApp: export declare function bundleNodeApp(input: { readonly esbuild: EsbuildLike; readonly workspaceRoot: string; readonly target: BundleNodeTarget; }): Promise<BundleNodeResult>;
+- function collectRuntimeDependencies: export declare function collectRuntimeDependencies(input: { readonly external?: readonly string[]; readonly extraRuntimeDeps?: readonly string[]; readonly metafile: EsbuildMetafile; readonly rootPackageJson: RootPackageJson; }): readonly string[];
+- function packageNameFromSpecifier: export declare function packageNameFromSpecifier(specifier: string): string | undefined;
+- function runBundleSafetyChecks: export declare function runBundleSafetyChecks(targetName: string, outfile: string, checks: readonly BundleSafetyCheck[]): void;
+```
+
+Entry point: @dads-framework/testing/eslint
+
+```
+- type BoundaryProject: export type BoundaryProject = { readonly name: string; readonly root: string; readonly tags: readonly string[]; readonly projectType: string; readonly isBuildable: boolean; };
+- type DepConstraint: export type DepConstraint = { readonly sourceTag: string; readonly onlyDependOnLibsWithTags?: readonly string[]; readonly notDependOnLibsWithTags?: readonly string[]; readonly bannedExternalImports?: readonly string[]; };
+- type EslintBoundaryPlugin: export type EslintBoundaryPlugin = { readonly rules: { readonly "enforce-module-boundaries": EslintRuleDefinition; }; };
+- type EslintReportDescriptor: export type EslintReportDescriptor = { readonly node: unknown; readonly messageId: string; readonly data?: Readonly<Record<string, string>>; };
+- type EslintRuleContext: export type EslintRuleContext = { readonly options: readonly unknown[]; readonly filename?: string; readonly getFilename?: () => string; readonly report: (descriptor: EslintReportDescriptor) => void; };
+- type EslintRuleDefinition: export type EslintRuleDefinition = { readonly meta: Readonly<Record<string, unknown>>; readonly create: (context: EslintRuleContext) => EslintRuleListener; };
+- type EslintRuleListener: export type EslintRuleListener = Readonly<Record<string, (node: unknown) => void>>;
+- type ModuleBoundariesOptions: export type ModuleBoundariesOptions = { readonly enforceBuildableLibDependency?: boolean; readonly banTransitiveDependencies?: boolean; readonly allow?: readonly string[]; readonly depConstraints?: readonly DepConstraint[]; };
+- type WorkspaceBoundaryIndex: export type WorkspaceBoundaryIndex = { readonly workspaceRoot: string; readonly projects: readonly BoundaryProject[]; readonly findProjectForRelPath: (relPath: string) => BoundaryProject | undefined; readonly resolveAliasTarget: (specifier: string) => BoundaryProject | undefined; readonly isDeclaredForFile: (absFilePath: string, packageName: string) => boolean; readonly hasDependencyPath: (fromProject: string, toProject: string) => boolean; };
+- function createEnforceModuleBoundariesRule: export declare function createEnforceModuleBoundariesRule(overrideIndex?: WorkspaceBoundaryIndex): EslintRuleDefinition;
+- const enforceModuleBoundariesPlugin: export declare const enforceModuleBoundariesPlugin: EslintBoundaryPlugin;
+- function extractBoundaryPackageName: export declare function extractBoundaryPackageName(specifier: string): string;
+- function findBoundaryWorkspaceRoot: export declare function findBoundaryWorkspaceRoot(startDir: string): string;
+- function getCachedWorkspaceBoundaryIndex: export declare function getCachedWorkspaceBoundaryIndex(workspaceRoot: string): WorkspaceBoundaryIndex;
+- function loadWorkspaceBoundaryIndex: export declare function loadWorkspaceBoundaryIndex(workspaceRoot: string): WorkspaceBoundaryIndex;
 ```
 
 Entry point: @dads-framework/testing/nx

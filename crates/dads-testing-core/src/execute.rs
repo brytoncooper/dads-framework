@@ -1,9 +1,10 @@
 //! The entry point one request travels through: validate it, load the manifest, resolve the
 //! scope, plan, and — for a run operation — schedule. Every rejection leaves as a typed error.
 use crate::diagnose::build_diagnose;
+use crate::discover::expand_manifest;
 use crate::graph::DependencyGraph;
 use crate::manifest::{DEFAULT_MANIFEST_PATH, TestingManifest, load_manifest, validate_manifest};
-use crate::plan::build_plan;
+use crate::plan::{PlanFilters, build_plan};
 use crate::protocol::{
     NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts,
     PlanResult, ResolvedScope,
@@ -87,6 +88,21 @@ pub fn manifest_project_roots(request: &NativeRequest) -> Option<Vec<String>> {
     )
 }
 
+/// Returns the canonical serialized expanded manifest bytes when the manifest uses declarative
+/// `workspace.discover`, or `None` when it is static (callers hash raw manifest bytes instead).
+pub fn expanded_manifest_bytes(
+    workspace_root: &Path,
+    manifest_path: Option<&str>,
+) -> Option<Vec<u8>> {
+    let manifest_rel = manifest_path.unwrap_or(DEFAULT_MANIFEST_PATH);
+    let manifest_file =
+        resolve_existing_inside(workspace_root, Path::new(manifest_rel), "manifestPath").ok()?;
+    let raw = load_manifest(&manifest_file).ok()?;
+    raw.workspace.discover.as_ref()?;
+    let expanded = expand_manifest(raw, workspace_root).ok()?;
+    serde_json::to_vec(&expanded).ok()
+}
+
 fn execute(
     request: NativeRequest,
     graph: Option<&DependencyGraph>,
@@ -106,23 +122,42 @@ fn execute(
     }
     let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
+    if request.operation == Operation::ExpandManifest {
+        let serialized = serde_json::to_value(&manifest)
+            .map_err(|error| message(format!("Unable to serialize expanded manifest: {error}")))?;
+        return Ok(OperationResult {
+            operation: "expand-manifest".into(),
+            plan: empty_plan_for("expand-manifest"),
+            run: None,
+            diagnose: None,
+            manifest: Some(serialized),
+        });
+    }
     if request.operation == Operation::Diagnose {
         let diagnose = build_diagnose(&manifest, &workspace_root, graph);
         return Ok(OperationResult {
             operation: "diagnose".into(),
-            plan: empty_diagnose_plan(),
+            plan: empty_plan_for("diagnose"),
             run: None,
             diagnose: Some(diagnose),
+            manifest: None,
         });
     }
     let scope = resolve_scope(&request, &workspace_root)?;
+    let filters = PlanFilters {
+        task_kinds: &request.task_kinds,
+        targets: &request.targets,
+        projects: &request.projects,
+        exclude_projects: &request.exclude_projects,
+        shard: request.shard,
+        shard_weights: &request.shard_weights,
+    };
     let plan = build_plan(
         &manifest,
         &workspace_root,
         &scope,
         &request.task_ids,
-        &request.task_kinds,
-        request.shard,
+        &filters,
         request.jobs,
         graph,
     )?;
@@ -132,6 +167,7 @@ fn execute(
             plan,
             run: None,
             diagnose: None,
+            manifest: None,
         }),
         Operation::Run => {
             let active_receipts = if request.cache { receipts } else { None };
@@ -142,28 +178,38 @@ fn execute(
                 &plan,
                 request.jobs,
                 active_receipts,
+                request.stream,
             )?;
             Ok(OperationResult {
                 operation: "run".into(),
                 plan,
                 run: Some(run),
                 diagnose: None,
+                manifest: None,
             })
         }
         Operation::Diagnose => Ok(OperationResult {
             operation: "diagnose".into(),
-            plan: empty_diagnose_plan(),
+            plan: empty_plan_for("diagnose"),
             run: None,
             diagnose: Some(build_diagnose(&manifest, &workspace_root, graph)),
+            manifest: None,
+        }),
+        Operation::ExpandManifest => Ok(OperationResult {
+            operation: "expand-manifest".into(),
+            plan: empty_plan_for("expand-manifest"),
+            run: None,
+            diagnose: None,
+            manifest: serde_json::to_value(&manifest).ok(),
         }),
     }
 }
 
-fn empty_diagnose_plan() -> PlanResult {
+fn empty_plan_for(kind: &str) -> PlanResult {
     PlanResult {
         schema_version: PROTOCOL_SCHEMA_VERSION,
         scope: ResolvedScope {
-            kind: "diagnose".into(),
+            kind: kind.into(),
             base: None,
             head: None,
             changed_paths: Vec::new(),
@@ -179,7 +225,7 @@ fn empty_diagnose_plan() -> PlanResult {
     }
 }
 
-/// The workspace root a request names, the manifest file path, and the manifest it declares.
+/// The workspace root a request names, the manifest file path, and the expanded manifest it declares.
 fn load_declared_manifest(
     request: &NativeRequest,
 ) -> Result<(PathBuf, PathBuf, TestingManifest), TestingError> {
@@ -190,6 +236,6 @@ fn load_declared_manifest(
         .unwrap_or(DEFAULT_MANIFEST_PATH);
     let manifest_file =
         resolve_existing_inside(&workspace_root, Path::new(manifest_path), "manifestPath")?;
-    let manifest = load_manifest(&manifest_file)?;
+    let manifest = expand_manifest(load_manifest(&manifest_file)?, &workspace_root)?;
     Ok((workspace_root, manifest_file, manifest))
 }

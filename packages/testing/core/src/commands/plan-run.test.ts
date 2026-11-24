@@ -278,6 +278,63 @@ describe("plan/run --report", () => {
     expect(await runDadTestCli(["plan", "--all", "--shard", "5/4", "--json"], harness.io)).toBe(1);
     expect(await runDadTestCli(["plan", "--all", "--shard", "bad", "--json"], harness.io)).toBe(1);
   });
+
+  it("forwards --target, --project, --exclude, --weights, --stream, and expand", async () => {
+    const directory = makeManifestDirectory();
+    writeFileSync(join(directory, "weights.json"), JSON.stringify({ api: 120, web: 40 }), "utf8");
+    const fixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: { operation: "run", plan: planResult, run: runResult },
+    });
+    const harness = createHarness(directory, fixture.binary);
+
+    expect(
+      await runDadTestCli(
+        [
+          "run",
+          "--all",
+          "--target",
+          "lint,lint-typed",
+          "--project",
+          "api",
+          "--exclude",
+          "legacy",
+          "--shard",
+          "1/2",
+          "--weights",
+          "weights.json",
+          "--stream",
+          "--json",
+        ],
+        harness.io,
+      ),
+    ).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({
+      operation: "run",
+      targets: ["lint", "lint-typed"],
+      projects: ["api"],
+      excludeProjects: ["legacy"],
+      shard: { index: 1, total: 2 },
+      shardWeights: { api: 120, web: 40 },
+      stream: true,
+    });
+
+    const parsedManifest: unknown = JSON.parse(singleProjectManifest);
+    const expandFixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: {
+        operation: "expand-manifest",
+        plan: planResult,
+        manifest: parsedManifest,
+      },
+    });
+    const expandHarness = createHarness(directory, expandFixture.binary);
+    expect(await runDadTestCli(["expand", "--out", "expanded.json", "--json"], expandHarness.io)).toBe(0);
+    expect(expandFixture.readRequest()).toMatchObject({ operation: "expand-manifest" });
+    expect(JSON.parse(readFileSync(join(directory, "expanded.json"), "utf8"))).toMatchObject({ schemaVersion: 1 });
+  });
 });
 
 function makeTemporaryDirectory(): string {

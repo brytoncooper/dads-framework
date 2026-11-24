@@ -1,6 +1,7 @@
 import { parseCommandOptions } from "./cli-arguments.js";
 import type { OptionSpecification, ParsedArguments } from "./cli-arguments.js";
 import { diagnoseCommand } from "./commands/diagnose.js";
+import { expandCommand } from "./commands/expand.js";
 import { explainCommand } from "./commands/explain.js";
 import { initCommand } from "./commands/init.js";
 import { planCommand, runCommand } from "./commands/plan-run.js";
@@ -27,14 +28,15 @@ export type DadTestCommand = {
 
 const usage =
   [
-    "Usage: dad-test <plan|run|explain|diagnose|init> [options] [--json]",
+    "Usage: dad-test <plan|run|explain|diagnose|init|expand> [options] [--json]",
     "",
     "Commands:",
-    "  plan      Compute affected tasks without running them (--base, --head, --all, --task, --kind, --shard, --manifest)",
-    "  run       Execute affected tasks (--base, --head, --all, --task, --kind, --shard, --jobs, --cache, --remote-cache, --report)",
+    "  plan      Compute affected tasks without running them (--base, --head, --all, --task, --kind, --target, --project, --exclude, --shard, --weights, --manifest)",
+    "  run       Execute affected tasks (--base, --head, --all, --task, --kind, --target, --project, --exclude, --shard, --weights, --jobs, --cache, --remote-cache, --stream, --report)",
     "  explain   Show why each task ran or was skipped with located evidence (--base, --head, --all, --task)",
     "  diagnose  Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
     "  init      Generate dads.testing.json for npm/pnpm/yarn workspaces (--manifest, --force)",
+    "  expand    Expand declarative workspace.discover into the canonical manifest IR (--manifest, --out)",
     "",
     "Options:",
     "  --json    Emit versioned machine-readable JSON output",
@@ -49,6 +51,7 @@ const commands = new Map<string, DadTestCommand>([
   ["explain", explainCommand],
   ["diagnose", diagnoseCommand],
   ["init", initCommand],
+  ["expand", expandCommand],
 ]);
 
 /**
@@ -82,7 +85,7 @@ export async function runDadTestCli(argumentsAfterExecutable: readonly string[],
     }
     const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
-      throw new Error("Expected operation plan, run, explain, diagnose, or init.");
+      throw new Error("Expected operation plan, run, explain, diagnose, init, or expand.");
     }
     const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);
     return await command.execute(parsed, io, json);

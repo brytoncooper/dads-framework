@@ -8,18 +8,39 @@ use crate::protocol::{NativeRequest, ResolvedScope};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path, PathBuf};
 
+const GIT_EMPTY_TREE_SHA1: &str = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+const GIT_EMPTY_TREE_SHA256: &str =
+    "6ef19b41225c5369f1c104d45d8d85efa9b057b53b14b4b9b939dd74decc5321";
+
+pub fn is_empty_tree_sha(sha: &str) -> bool {
+    sha.eq_ignore_ascii_case(GIT_EMPTY_TREE_SHA1) || sha.eq_ignore_ascii_case(GIT_EMPTY_TREE_SHA256)
+}
+
+fn all_scope(base: Option<String>, head: Option<String>) -> ResolvedScope {
+    ResolvedScope {
+        kind: "all".into(),
+        base,
+        head,
+        changed_paths: Vec::new(),
+        full_fallback: true,
+    }
+}
+
+fn resolve_base_ref(workspace_root: &Path, base: &str) -> Result<(String, bool), TestingError> {
+    if is_empty_tree_sha(base) {
+        return Ok((base.to_ascii_lowercase(), true));
+    }
+    let sha = resolve_git_ref(workspace_root, base)?;
+    let empty = is_empty_tree_sha(&sha);
+    Ok((sha, empty))
+}
+
 pub(crate) fn resolve_scope(
     request: &NativeRequest,
     workspace_root: &Path,
 ) -> Result<ResolvedScope, TestingError> {
     if request.all {
-        return Ok(ResolvedScope {
-            kind: "all".into(),
-            base: None,
-            head: None,
-            changed_paths: Vec::new(),
-            full_fallback: true,
-        });
+        return Ok(all_scope(None, None));
     }
     let mut paths = BTreeSet::new();
     let kind;
@@ -27,8 +48,13 @@ pub(crate) fn resolve_scope(
     let resolved_head;
     match (&request.base, &request.head) {
         (Some(base), Some(head)) => {
-            resolved_base = Some(resolve_git_ref(workspace_root, base)?);
-            resolved_head = Some(resolve_git_ref(workspace_root, head)?);
+            let (base_sha, is_empty) = resolve_base_ref(workspace_root, base)?;
+            let head_sha = resolve_git_ref(workspace_root, head)?;
+            if is_empty {
+                return Ok(all_scope(Some(base_sha), Some(head_sha)));
+            }
+            resolved_base = Some(base_sha);
+            resolved_head = Some(head_sha);
             paths.extend(git_changed_paths(
                 workspace_root,
                 &["diff", "--name-status", "-z", base, head],
@@ -36,8 +62,13 @@ pub(crate) fn resolve_scope(
             kind = "commit-to-commit";
         }
         (Some(base), None) => {
-            resolved_base = Some(resolve_git_ref(workspace_root, base)?);
-            resolved_head = Some(resolve_git_ref(workspace_root, "HEAD")?);
+            let (base_sha, is_empty) = resolve_base_ref(workspace_root, base)?;
+            let head_sha = resolve_git_ref(workspace_root, "HEAD")?;
+            if is_empty {
+                return Ok(all_scope(Some(base_sha), Some(head_sha)));
+            }
+            resolved_base = Some(base_sha);
+            resolved_head = Some(head_sha);
             paths.extend(git_changed_paths(
                 workspace_root,
                 &["diff", "--name-status", "-z", base, "HEAD"],

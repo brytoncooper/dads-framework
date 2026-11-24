@@ -402,6 +402,7 @@ fn reachability_task_runs_explicitly_when_extra_impact_path_changes() {
             jobs: None,
             cache: false,
             remote_cache_url: None,
+            ..crate::NativeRequest::default()
         },
         Some(graph),
     );

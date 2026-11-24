@@ -228,6 +228,7 @@ fn base_request(workspace_root: &Path, operation: Operation) -> NativeRequest {
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     }
 }
 

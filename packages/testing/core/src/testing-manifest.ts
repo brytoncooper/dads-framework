@@ -52,6 +52,12 @@ export type TestingManifestFileNarrowing = {
   readonly setupFiles?: readonly string[];
 };
 
+export type TestingManifestTaskBatch = {
+  readonly maxSize: number;
+  readonly groupKey?: string;
+  readonly sharedArgs?: number;
+};
+
 export type TestingManifestTask = {
   readonly id: string;
   readonly project: string;
@@ -63,6 +69,7 @@ export type TestingManifestTask = {
     readonly shell?: boolean;
     readonly env?: Readonly<Record<string, string>>;
     readonly fileNarrowing?: TestingManifestFileNarrowing;
+    readonly batch?: TestingManifestTaskBatch;
   };
   readonly dependsOn: readonly string[];
   readonly impact: {
@@ -171,6 +178,7 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
         ...(task.execution.fileNarrowing === undefined
           ? {}
           : { fileNarrowing: serializeFileNarrowing(task.execution.fileNarrowing) }),
+        ...(task.execution.batch === undefined ? {} : { batch: serializeTaskBatch(task.execution.batch) }),
       },
       dependsOn: [...task.dependsOn],
       impact: { mode: task.impact.mode, paths: [...task.impact.paths] },
@@ -240,11 +248,12 @@ function readTask(value: unknown, where: string, subject: string): TestingManife
 
 function readExecution(value: unknown, where: string, subject: string): TestingManifestTask["execution"] {
   const execution = readRecord(value, where, subject);
-  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell", "env", "fileNarrowing"], where, subject);
+  rejectUnknownKeys(execution, ["executable", "args", "cwd", "shell", "env", "fileNarrowing", "batch"], where, subject);
   const cwd = execution["cwd"];
   const shell = execution["shell"];
   const env = execution["env"];
   const fileNarrowing = execution["fileNarrowing"];
+  const batch = execution["batch"];
   if (shell !== undefined && typeof shell !== "boolean") {
     throw new Error(`${subject}: ${where}.shell must be a boolean`);
   }
@@ -258,6 +267,34 @@ function readExecution(value: unknown, where: string, subject: string): TestingM
     ...(fileNarrowing === undefined
       ? {}
       : { fileNarrowing: readFileNarrowing(fileNarrowing, `${where}.fileNarrowing`, subject) }),
+    ...(batch === undefined ? {} : { batch: readTaskBatch(batch, `${where}.batch`, subject) }),
+  };
+}
+
+function readTaskBatch(value: unknown, where: string, subject: string): TestingManifestTaskBatch {
+  const batch = readRecord(value, where, subject);
+  rejectUnknownKeys(batch, ["maxSize", "groupKey", "sharedArgs"], where, subject);
+  const maxSize = batch["maxSize"];
+  if (typeof maxSize !== "number" || !Number.isInteger(maxSize) || maxSize < 2) {
+    throw new Error(`${subject}: ${where}.maxSize must be an integer >= 2`);
+  }
+  const groupKey = batch["groupKey"];
+  const sharedArgs = batch["sharedArgs"];
+  if (sharedArgs !== undefined && (typeof sharedArgs !== "number" || !Number.isInteger(sharedArgs) || sharedArgs < 0)) {
+    throw new Error(`${subject}: ${where}.sharedArgs must be a non-negative integer`);
+  }
+  return {
+    maxSize,
+    ...(groupKey === undefined ? {} : { groupKey: readString(groupKey, `${where}.groupKey`, subject) }),
+    ...(sharedArgs === undefined ? {} : { sharedArgs }),
+  };
+}
+
+function serializeTaskBatch(batch: TestingManifestTaskBatch): TestingManifestTaskBatch {
+  return {
+    maxSize: batch.maxSize,
+    ...(batch.groupKey === undefined ? {} : { groupKey: batch.groupKey }),
+    ...(batch.sharedArgs === undefined ? {} : { sharedArgs: batch.sharedArgs }),
   };
 }
 

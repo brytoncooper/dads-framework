@@ -1,8 +1,10 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { OptionSpecification, ParsedArguments } from "../cli-arguments.js";
 import { readPositiveInteger } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
 import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
+import { isRecord } from "../parse-guards.js";
 import { planTesting, runTesting } from "../testing-api.js";
 import type { TestingOperationRequest, TestingPlanResult, TestingRunResult, TestingTaskShard } from "../testing-api.js";
 import { readTestingManifest } from "../testing-manifest.js";
@@ -18,7 +20,11 @@ const operationOptions: readonly OptionSpecification[] = [
   { name: "--all", kind: "flag" },
   { name: "--task", kind: "repeatable" },
   { name: "--kind", kind: "repeatable" },
+  { name: "--target", kind: "repeatable" },
+  { name: "--project", kind: "repeatable" },
+  { name: "--exclude", kind: "repeatable" },
   { name: "--shard", kind: "value" },
+  { name: "--weights", kind: "value" },
   { name: "--jobs", kind: "value" },
   { name: "--report", kind: "optional-value" },
 ];
@@ -28,6 +34,7 @@ const runOptions: readonly OptionSpecification[] = [
   { name: "--cache", kind: "flag" },
   { name: "--no-cache", kind: "flag" },
   { name: "--remote-cache", kind: "value" },
+  { name: "--stream", kind: "flag" },
 ];
 
 export const planCommand: DadTestCommand = {
@@ -44,7 +51,19 @@ export const planCommand: DadTestCommand = {
 export const runCommand: DadTestCommand = {
   options: runOptions,
   execute: async (parsed, io, json) => {
-    const result = await runTesting(buildOperationRequest(parsed, io));
+    const request = buildOperationRequest(parsed, io);
+    const shouldStream = parsed.flags.has("--stream") || !json;
+    const result = await runTesting({
+      ...request,
+      ...(shouldStream
+        ? {
+            stream: true,
+            onStream: (chunk) => {
+              io.stderr(chunk);
+            },
+          }
+        : {}),
+    });
     const report = buildReportIfRequested(parsed, io, result.plan, result.run);
     writeCommandSuccess(
       io,
@@ -106,24 +125,64 @@ export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo)
     workspaceRoot: io.cwd,
     all: parsed.flags.has("--all"),
     taskIds: parsed.repeated.get("--task") ?? [],
-    ...optionalSelectionFields(parsed),
+    ...optionalSelectionFields(parsed, io.cwd),
     ...optionalExecutionFields(parsed, io),
   };
 }
 
-function optionalSelectionFields(parsed: ParsedArguments): Partial<TestingOperationRequest> {
+function optionalSelectionFields(parsed: ParsedArguments, cwd: string): Partial<TestingOperationRequest> {
   const manifestPath = parsed.values.get("--manifest");
   const base = parsed.values.get("--base");
   const head = parsed.values.get("--head");
   const shardRaw = parsed.values.get("--shard");
-  const taskKinds = parsed.repeated.get("--kind") ?? [];
+  const weightsPath = parsed.values.get("--weights");
   return {
     ...(manifestPath === undefined ? {} : { manifestPath }),
     ...(base === undefined ? {} : { base }),
     ...(head === undefined ? {} : { head }),
-    ...(taskKinds.length === 0 ? {} : { taskKinds }),
     ...(shardRaw === undefined ? {} : { shard: parseShardOption(shardRaw) }),
+    ...(weightsPath === undefined ? {} : { shardWeights: loadShardWeightsFile(cwd, weightsPath) }),
+    ...optionalFilterLists(parsed),
   };
+}
+
+function optionalFilterLists(parsed: ParsedArguments): Partial<TestingOperationRequest> {
+  const taskKinds = splitCommaValues(parsed.repeated.get("--kind") ?? []);
+  const targets = splitCommaValues(parsed.repeated.get("--target") ?? []);
+  const projects = splitCommaValues(parsed.repeated.get("--project") ?? []);
+  const excludeProjects = splitCommaValues(parsed.repeated.get("--exclude") ?? []);
+  return {
+    ...(taskKinds.length === 0 ? {} : { taskKinds }),
+    ...(targets.length === 0 ? {} : { targets }),
+    ...(projects.length === 0 ? {} : { projects }),
+    ...(excludeProjects.length === 0 ? {} : { excludeProjects }),
+  };
+}
+
+function splitCommaValues(values: readonly string[]): readonly string[] {
+  const result: string[] = [];
+  for (const raw of values) {
+    for (const part of raw.split(",")) {
+      const trimmed = part.trim();
+      if (trimmed.length > 0 && !result.includes(trimmed)) result.push(trimmed);
+    }
+  }
+  return result;
+}
+
+function loadShardWeightsFile(cwd: string, weightsPath: string): Readonly<Record<string, number>> {
+  const raw: unknown = JSON.parse(readFileSync(resolve(cwd, weightsPath), "utf8"));
+  if (!isRecord(raw)) {
+    throw new Error(`--weights file '${weightsPath}' must be a JSON object mapping project or task IDs to numbers.`);
+  }
+  const weights: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+      throw new Error(`--weights entry '${key}' in '${weightsPath}' must be a positive finite number.`);
+    }
+    weights[key] = value;
+  }
+  return weights;
 }
 
 function optionalExecutionFields(parsed: ParsedArguments, io: DadTestCliIo): Partial<TestingOperationRequest> {

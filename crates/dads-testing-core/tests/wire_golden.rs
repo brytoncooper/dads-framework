@@ -56,6 +56,7 @@ fn live_plan_response() -> Value {
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     });
     serde_json::to_value(&response).expect("the response must serialize")
 }

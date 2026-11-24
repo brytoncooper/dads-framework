@@ -17,6 +17,8 @@ const eslintExecutors = new Set(["@nx/eslint:lint", "@nx/linter:eslint"]);
 const tscExecutors = new Set(["@nx/js:tsc"]);
 const defaultVitestSuffixes = [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"];
 const shellSyntaxPattern = /[|&;`$<>\n\r]/;
+const envAssignmentPattern = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/;
+const rootLockfilePaths = new Set(["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"]);
 
 export type EjectedTargetAudit = {
   readonly project: string;
@@ -271,17 +273,46 @@ function materializeRunCommand(
   }
   const argv = splitSimpleArgv(resolvedCommand);
   if (argv instanceof Error) return argv;
+  const extracted = extractLeadingEnv(argv);
+  if (extracted instanceof Error) return extracted;
   return {
     execution: {
-      executable: argv[0] ?? "",
-      args: argv.slice(1),
+      executable: extracted.executable,
+      args: extracted.args,
       ...(cwd === "." ? {} : { cwd }),
+      ...(Object.keys(extracted.env).length === 0 ? {} : { env: extracted.env }),
       ...(vitestMeta.fileNarrowing === undefined ? {} : { fileNarrowing: vitestMeta.fileNarrowing }),
     },
     extraImpactPaths: vitestMeta.extraImpactPaths,
     ...(vitestMeta.nxViteConfigPath === undefined ? {} : { nxViteConfigPath: vitestMeta.nxViteConfigPath }),
     reason: vitestMeta.reason,
   };
+}
+
+function extractLeadingEnv(argv: readonly string[]):
+  | {
+      readonly env: Readonly<Record<string, string>>;
+      readonly executable: string;
+      readonly args: readonly string[];
+    }
+  | Error {
+  const env: Record<string, string> = {};
+  let index = 0;
+  while (index < argv.length) {
+    const token = argv[index];
+    if (token === undefined) break;
+    const match = envAssignmentPattern.exec(token);
+    if (match === null) break;
+    const key = match[1];
+    const value = match[2];
+    if (key !== undefined && value !== undefined) env[key] = value;
+    index += 1;
+  }
+  const executable = argv[index];
+  if (executable === undefined || executable.length === 0) {
+    return new Error("Command contains only environment variable assignments.");
+  }
+  return { env, executable, args: argv.slice(index + 1) };
 }
 
 function inspectRunCommandVitest(
@@ -331,7 +362,9 @@ function buildImpact(
   if (scope.mode === "always") return { mode: "always", paths: [] };
   const useReachability = kind === "test" || kind === "typecheck" || kind === "lint" || kind === "build";
   const basePaths = useReachability ? scope.extraPaths : scope.paths;
-  const merged = [...new Set([...basePaths, ...extraPaths])].sort();
+  const merged = [...new Set([...basePaths, ...extraPaths])]
+    .filter((entry) => !useReachability || !rootLockfilePaths.has(entry))
+    .sort();
   return { mode: useReachability ? "reachability" : "changed-files", paths: merged };
 }
 

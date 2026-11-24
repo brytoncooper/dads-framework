@@ -141,7 +141,8 @@ fn build_index<'a>(
         if u.scope == GraphUncertaintyScope::WholeWorkspace {
             if let Some(prefixes) = manifest.workspace.dynamic_import_scopes.get(&u.path) {
                 for m in &mut mods {
-                    if m.path == u.path || prefixes.iter().any(|p| path_matches_impact(&m.path, p)) {
+                    if m.path == u.path || prefixes.iter().any(|p| path_matches_impact(&m.path, p))
+                    {
                         m.module_uncertainty_targets.push(target);
                     }
                 }

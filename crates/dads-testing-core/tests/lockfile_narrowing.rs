@@ -1,7 +1,7 @@
+use dads_testing_core::graph::{DependencyGraph, ImportFact, ImportKind, ModuleNode, SourceSpan};
 use dads_testing_core::{
     NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, execute_request_with_graph,
 };
-use dads_testing_core::graph::{DependencyGraph, ImportFact, ImportKind, ModuleNode, SourceSpan};
 use serde_json::json;
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -70,7 +70,10 @@ fn make_lockfile_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
             "typescript": "5.8.0"
         }
     });
-    fs::write(dir.join("package.json"), serde_json::to_string_pretty(&pkg)?)?;
+    fs::write(
+        dir.join("package.json"),
+        serde_json::to_string_pretty(&pkg)?,
+    )?;
 
     let lock = json!({
         "name": "lockfile-fixture",
@@ -188,6 +191,7 @@ fn run_plan(dir: &Path) -> Result<Vec<String>, Box<dyn Error>> {
         jobs: None,
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     };
     let resp = execute_request_with_graph(req, Some(fixture_graph()));
     assert!(resp.ok, "{resp:?}");
@@ -207,7 +211,10 @@ fn adding_unused_dev_dependency_selects_zero_tasks() -> Result<(), Box<dyn Error
     let mut pkg: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(dir.join("package.json"))?)?;
     pkg["devDependencies"]["@dads-framework/testing"] = json!("0.6.4");
-    fs::write(dir.join("package.json"), serde_json::to_string_pretty(&pkg)?)?;
+    fs::write(
+        dir.join("package.json"),
+        serde_json::to_string_pretty(&pkg)?,
+    )?;
 
     let mut lock: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(dir.join("package-lock.json"))?)?;
@@ -273,7 +280,10 @@ fn editing_package_json_scripts_widens_all_tasks() -> Result<(), Box<dyn Error>>
     let mut pkg: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(dir.join("package.json"))?)?;
     pkg["scripts"] = json!({ "test": "vitest run" });
-    fs::write(dir.join("package.json"), serde_json::to_string_pretty(&pkg)?)?;
+    fs::write(
+        dir.join("package.json"),
+        serde_json::to_string_pretty(&pkg)?,
+    )?;
 
     assert_eq!(
         run_plan(&dir)?,

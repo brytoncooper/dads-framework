@@ -30,6 +30,7 @@ fn assert_transitive_blocking(jobs: u32) -> Result<(), Box<dyn Error>> {
         jobs: Some(jobs),
         cache: false,
         remote_cache_url: None,
+        ..NativeRequest::default()
     });
     assert!(response.ok, "jobs={jobs}: {response:?}");
     let run = response

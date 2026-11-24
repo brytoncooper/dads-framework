@@ -6,6 +6,7 @@
 //! - Callers still verify schema version, `passed == true`, and embedded `key == requested_key`
 //!   before accepting any downloaded payload.
 
+use crate::s3_index::S3KeyIndex;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -35,6 +36,7 @@ pub(crate) enum RemoteReceiptClient {
     S3 {
         bucket: String,
         prefix: String,
+        index: S3KeyIndex,
     },
 }
 
@@ -49,7 +51,11 @@ impl RemoteReceiptClient {
         }
         if let Some(rest) = trimmed.strip_prefix("s3://") {
             let (bucket, prefix) = parse_s3_location(rest)?;
-            return Some(Self::S3 { bucket, prefix });
+            return Some(Self::S3 {
+                bucket,
+                prefix,
+                index: S3KeyIndex::default(),
+            });
         }
         if let Some(rest) = trimmed.strip_prefix("http://") {
             let (authority, prefix) = match rest.find('/') {
@@ -73,6 +79,12 @@ impl RemoteReceiptClient {
         None
     }
 
+    pub(crate) fn begin_run(&self) {
+        if let Self::S3 { index, .. } = self {
+            index.clear();
+        }
+    }
+
     pub(crate) fn get(&self, key: &str) -> Option<Vec<u8>> {
         if !is_valid_hex_key(key) {
             return None;
@@ -86,7 +98,19 @@ impl RemoteReceiptClient {
                 token,
             } => http_get(host, *port, prefix, key, token.as_deref()),
             Self::Https { base_url, token } => https_get(base_url, key, token.as_deref()),
-            Self::S3 { bucket, prefix } => s3_get(bucket, prefix, key),
+            Self::S3 {
+                bucket,
+                prefix,
+                index,
+            } => {
+                let bucket_key = s3_bucket_key(prefix, key);
+                if index.contains_or_load(bucket, prefix, &bucket_key, s3_aws_command)
+                    == Some(false)
+                {
+                    return None;
+                }
+                s3_get(bucket, prefix, key)
+            }
         }
     }
 
@@ -103,7 +127,14 @@ impl RemoteReceiptClient {
                 token,
             } => http_put(host, *port, prefix, key, payload, token.as_deref()),
             Self::Https { base_url, token } => https_put(base_url, key, payload, token.as_deref()),
-            Self::S3 { bucket, prefix } => s3_put(bucket, prefix, key, payload),
+            Self::S3 {
+                bucket,
+                prefix,
+                index,
+            } => {
+                s3_put(bucket, prefix, key, payload);
+                index.insert_uploaded(s3_bucket_key(prefix, key));
+            }
         }
     }
 }
@@ -317,12 +348,16 @@ pub(crate) fn parse_s3_location(rest: &str) -> Option<(String, String)> {
     Some((bucket.to_owned(), prefix.to_owned()))
 }
 
-fn s3_object_uri(bucket: &str, prefix: &str, key: &str) -> String {
+fn s3_bucket_key(prefix: &str, key: &str) -> String {
     if prefix.is_empty() {
-        format!("s3://{bucket}/{key}.json")
+        format!("{key}.json")
     } else {
-        format!("s3://{bucket}/{prefix}/{key}.json")
+        format!("{prefix}/{key}.json")
     }
+}
+
+fn s3_object_uri(bucket: &str, prefix: &str, key: &str) -> String {
+    format!("s3://{bucket}/{}", s3_bucket_key(prefix, key))
 }
 
 fn s3_aws_command() -> Command {

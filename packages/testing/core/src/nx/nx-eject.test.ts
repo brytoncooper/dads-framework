@@ -98,6 +98,47 @@ describe("dad-test-nx eject", () => {
     }
   });
 
+  it("extracts leading KEY=VAL tokens into execution.env and omits root lockfiles from reachability impact.paths", () => {
+    const project = {
+      name: "domain-audit",
+      root: "libs/domain-audit",
+      targets: {},
+      dependencies: [],
+      namedInputs: undefined,
+    };
+    const projects = new Map([[project.name, project]]);
+    const ejected = ejectTarget({
+      workspaceRoot: "/tmp/unused",
+      project,
+      name: "test:integration",
+      target: {
+        executor: "nx:run-commands",
+        options: {
+          command: "VITEST_TIER=integration NODE_OPTIONS=--max-old-space-size=4096 vitest run --root {projectRoot}",
+        },
+        inputs: [
+          "{workspaceRoot}/package-lock.json",
+          "{workspaceRoot}/package.json",
+          "{workspaceRoot}/tsconfig.base.json",
+          "{projectRoot}/**/*",
+        ],
+      },
+      projects,
+      nxConfiguration: {},
+    });
+    expect(ejected.audit.classification).toBe("converted");
+    expect(ejected.task?.execution.executable).toBe("vitest");
+    expect(ejected.task?.execution.args).toEqual(["run", "--root", "libs/domain-audit"]);
+    expect(ejected.task?.execution.env).toEqual({
+      VITEST_TIER: "integration",
+      NODE_OPTIONS: "--max-old-space-size=4096",
+    });
+    expect(ejected.task?.impact.mode).toBe("reachability");
+    expect(ejected.task?.impact.paths).toContain("tsconfig.base.json");
+    expect(ejected.task?.impact.paths).not.toContain("package-lock.json");
+    expect(ejected.task?.impact.paths).not.toContain("package.json");
+  });
+
   it("writes dads.testing.json, rewrites nxViteTsPaths to dadsTsconfigPaths, and runs with zero Nx installed", async () => {
     const workspace = await createNxWorkspace();
     const nativeBinary = findLocalNativeBinary();

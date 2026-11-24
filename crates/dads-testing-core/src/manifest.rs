@@ -1,11 +1,10 @@
 //! The `dads.testing.json` declaration: what a workspace says it owns, and every rule the
 //! declaration must satisfy before a plan is allowed to read it.
+use crate::discover::WorkspaceDiscover;
 use crate::execute::{TestingError, message};
-use crate::scope::validate_dynamic_import_scopes;
-use crate::sql_manifest::{
-    TaskSqlImpact, WorkspaceSqlSettings, validate_task_sql_impact, validate_workspace_sql,
-};
-use serde::Deserialize;
+pub(crate) use crate::manifest_validate::validate_manifest;
+use crate::sql_manifest::{TaskSqlImpact, WorkspaceSqlSettings};
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Component, Path};
@@ -13,12 +12,14 @@ use std::path::{Component, Path};
 /// Where a workspace declares itself when the request does not name another file.
 pub(crate) const DEFAULT_MANIFEST_PATH: &str = "dads.testing.json";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct TestingManifest {
     pub(crate) schema_version: u32,
     pub(crate) workspace: WorkspaceSettings,
+    #[serde(default)]
     pub(crate) projects: Vec<Project>,
+    #[serde(default)]
     pub(crate) tasks: Vec<DeclaredTask>,
 }
 
@@ -35,27 +36,31 @@ impl TestingManifest {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct WorkspaceSettings {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) root: Option<String>,
+    #[serde(default)]
     pub(crate) full_fallback: FullFallback,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) sql: Option<WorkspaceSqlSettings>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) non_code_suffixes: Vec<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) dynamic_import_scopes: BTreeMap<String, Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) discover: Option<WorkspaceDiscover>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct FullFallback {
+    #[serde(default)]
     pub(crate) task_ids: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct Project {
     pub(crate) id: String,
@@ -64,7 +69,7 @@ pub(crate) struct Project {
     pub(crate) fallback_dependencies: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct DeclaredTask {
     pub(crate) id: String,
@@ -74,11 +79,11 @@ pub(crate) struct DeclaredTask {
     #[serde(default)]
     pub(crate) depends_on: Vec<String>,
     pub(crate) impact: TaskImpact,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) sql_impact: Option<TaskSqlImpact>,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum TaskKind {
     Test,
@@ -88,36 +93,50 @@ pub(crate) enum TaskKind {
     Custom,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct TaskExecution {
     pub(crate) executable: String,
     #[serde(default)]
     pub(crate) args: Vec<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) cwd: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub(crate) shell: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) env: BTreeMap<String, String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) file_narrowing: Option<FileNarrowing>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) batch: Option<TaskBatchConfig>,
+}
+
+/// Optional native batching configuration for commands that accept multiple project or file paths
+/// in a single process invocation (for example `oxlint` or `eslint`).
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct TaskBatchConfig {
+    pub(crate) max_size: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) group_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) shared_args: Option<usize>,
 }
 
 /// Optional file-level test narrowing for an un-widened `reachability` task (for example Vitest).
 /// When a task is proven un-widened and no declared `setup_files` were touched, only reached files
 /// matching `suffixes` (and not `exclude_suffixes`) are appended to the task's command arguments.
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct FileNarrowing {
     pub(crate) suffixes: Vec<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) exclude_suffixes: Vec<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) setup_files: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct TaskImpact {
     pub(crate) mode: ImpactMode,
@@ -125,7 +144,7 @@ pub(crate) struct TaskImpact {
     pub(crate) paths: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum ImpactMode {
     Reachability,
@@ -148,184 +167,8 @@ pub(crate) fn load_manifest(path: &Path) -> Result<TestingManifest, TestingError
     Ok(manifest)
 }
 
-pub(crate) fn validate_manifest(
-    manifest: &TestingManifest,
-    _workspace_root: &Path,
-) -> Result<(), TestingError> {
-    validate_workspace(&manifest.workspace)?;
-    let mut project_ids: BTreeSet<String> = BTreeSet::new();
-    for project in &manifest.projects {
-        require_identifier(&project.id, "project id")?;
-        if !project_ids.insert(project.id.clone()) {
-            return Err(message(format!("Duplicate project id {}.", project.id)));
-        }
-        validate_relative_path(&project.root, "project.root")?;
-        for dependency in &project.fallback_dependencies {
-            if dependency == &project.id {
-                return Err(message(format!(
-                    "Project {} cannot fallback-depend on itself.",
-                    project.id
-                )));
-            }
-        }
-    }
-    for project in &manifest.projects {
-        for dependency in &project.fallback_dependencies {
-            if !project_ids.contains(dependency) {
-                return Err(message(format!(
-                    "Project {} references unknown fallback dependency {}.",
-                    project.id, dependency
-                )));
-            }
-        }
-    }
-    let mut task_ids: BTreeSet<String> = BTreeSet::new();
-    for task in &manifest.tasks {
-        require_identifier(&task.id, "task id")?;
-        if !task_ids.insert(task.id.clone()) {
-            return Err(message(format!("Duplicate task id {}.", task.id)));
-        }
-        if !project_ids.contains(&task.project) {
-            return Err(message(format!(
-                "Task {} references unknown project {}.",
-                task.id, task.project
-            )));
-        }
-        if task.execution.executable.trim().is_empty() {
-            return Err(message(format!(
-                "Task {} is missing execution.executable.",
-                task.id
-            )));
-        }
-        if let Some(cwd) = &task.execution.cwd {
-            validate_relative_path(cwd, "execution.cwd")?;
-        }
-        validate_task_env(&task.id, &task.execution.env)?;
-        if let Some(narrowing) = &task.execution.file_narrowing {
-            validate_file_narrowing(&task.id, narrowing)?;
-        }
-        if let Some(sql_impact) = &task.sql_impact {
-            validate_task_sql_impact(&task.id, sql_impact)?;
-        }
-        for path in &task.impact.paths {
-            validate_relative_path(path, "impact.paths")?;
-        }
-        if task.impact.mode == ImpactMode::ChangedFiles && task.impact.paths.is_empty() {
-            return Err(message(format!(
-                "Task {} uses changed-files impact without paths.",
-                task.id
-            )));
-        }
-    }
-    for task in &manifest.tasks {
-        for dependency in &task.depends_on {
-            if dependency == &task.id {
-                return Err(message(format!(
-                    "Task {} cannot depend on itself.",
-                    task.id
-                )));
-            }
-            if !task_ids.contains(dependency) {
-                return Err(message(format!(
-                    "Task {} references unknown dependency {}.",
-                    task.id, dependency
-                )));
-            }
-        }
-    }
-    validate_task_cycles(&manifest.tasks)?;
-    let fallback_ids = unique_set(
-        &manifest.workspace.full_fallback.task_ids,
-        "fullFallback.taskIds",
-    )?;
-    if fallback_ids.len() != task_ids.len() || fallback_ids != task_ids {
-        return Err(message(
-            "workspace.fullFallback.taskIds must contain every declared task exactly once.",
-        ));
-    }
-    if manifest.tasks.is_empty() {
-        return Err(message("Manifest must declare at least one task."));
-    }
-    Ok(())
-}
-
-fn validate_workspace(workspace: &WorkspaceSettings) -> Result<(), TestingError> {
-    if let Some(root) = &workspace.root {
-        validate_relative_path(root, "workspace.root")?;
-    }
-    if let Some(sql) = &workspace.sql {
-        validate_workspace_sql(sql)?;
-    }
-    for suffix in &workspace.non_code_suffixes {
-        if !suffix.starts_with('.') || suffix.len() < 2 || suffix.contains('/') {
-            return Err(message(format!(
-                "workspace.nonCodeSuffixes entry '{suffix}' must be a file extension like '.md'."
-            )));
-        }
-    }
-    validate_dynamic_import_scopes(&workspace.dynamic_import_scopes)
-}
-
-fn validate_task_env(task_id: &str, env: &BTreeMap<String, String>) -> Result<(), TestingError> {
-    for (key, value) in env {
-        if key.is_empty() || key.contains('=') || key.contains('\0') {
-            return Err(message(format!(
-                "Task {task_id} has invalid execution.env key '{key}'."
-            )));
-        }
-        if value.contains('\0') {
-            return Err(message(format!(
-                "Task {task_id} has invalid execution.env value for '{key}'."
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn validate_file_narrowing(task_id: &str, narrowing: &FileNarrowing) -> Result<(), TestingError> {
-    if narrowing.suffixes.is_empty() {
-        return Err(message(format!(
-            "Task {task_id} uses execution.fileNarrowing without suffixes."
-        )));
-    }
-    for setup_file in &narrowing.setup_files {
-        validate_relative_path(setup_file, "execution.fileNarrowing.setupFiles")?;
-    }
-    Ok(())
-}
-
-fn validate_task_cycles(tasks: &[DeclaredTask]) -> Result<(), TestingError> {
-    let task_map: BTreeMap<&str, &DeclaredTask> =
-        tasks.iter().map(|task| (task.id.as_str(), task)).collect();
-    let mut active = BTreeSet::new();
-    let mut complete = BTreeSet::new();
-    for task in tasks {
-        visit_task(task.id.as_str(), &task_map, &mut active, &mut complete)?;
-    }
-    Ok(())
-}
-
-fn visit_task<'a>(
-    id: &'a str,
-    tasks: &BTreeMap<&'a str, &'a DeclaredTask>,
-    active: &mut BTreeSet<&'a str>,
-    complete: &mut BTreeSet<&'a str>,
-) -> Result<(), TestingError> {
-    if complete.contains(id) {
-        return Ok(());
-    }
-    if !active.insert(id) {
-        return Err(message(format!("Task dependency cycle includes {id}.")));
-    }
-    let task = tasks
-        .get(id)
-        .ok_or_else(|| message(format!("Unknown task {id}.")))?;
-    for dependency in &task.depends_on {
-        visit_task(dependency, tasks, active, complete)?;
-    }
-    active.remove(id);
-    complete.insert(id);
-    Ok(())
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 /// Declared tasks in dependency-first order: every prerequisite is emitted before the task that
@@ -378,25 +221,4 @@ pub(crate) fn validate_relative_path(value: &str, field: &str) -> Result<(), Tes
         )));
     }
     Ok(())
-}
-
-fn require_identifier(value: &str, field: &str) -> Result<(), TestingError> {
-    if value.is_empty()
-        || !value.chars().all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.' | ':')
-        })
-    {
-        return Err(message(format!(
-            "{field} must use letters, numbers, -, _, ., or :."
-        )));
-    }
-    Ok(())
-}
-
-fn unique_set(values: &[String], field: &str) -> Result<BTreeSet<String>, TestingError> {
-    let set: BTreeSet<String> = values.iter().cloned().collect();
-    if set.len() != values.len() {
-        return Err(message(format!("{field} contains duplicate task ids.")));
-    }
-    Ok(set)
 }

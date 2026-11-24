@@ -1,52 +1,42 @@
 //! Running the selected task DAG. The default is deliberately fixed at four workers so the
 //! protocol's default behavior is predictable across machines; callers can provide `jobs` to
 //! select a different positive bound.
+mod batch;
+mod cache_ops;
+mod progress;
 mod receipt_keys;
 mod results;
+mod stream;
 mod worker;
 
 use crate::execute::{TestingError, message};
-use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
-use crate::protocol::{PlanResult, RunCounts, RunResult, TaskRunResult};
+use crate::manifest::TestingManifest;
+use crate::protocol::{PlanResult, RunResult, TaskRunResult};
 use crate::receipts::{TaskReceiptEntry, TaskReceiptStore};
-use receipt_keys::compute_task_receipt_key;
-use results::{blocked_result, cached_task_result, not_applicable_result, worker_panic_result};
-use std::collections::BTreeMap;
+use batch::{WorkUnit, pack_work_units};
+use cache_ops::{lookup_receipts_parallel, prepare_tasks};
+use progress::{PreparedTask, RunProgress, TaskStatus, count_outcomes, partition_pending};
+use results::{cached_task_result, worker_panic_result};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use worker::execute_task;
 
 const DEFAULT_JOBS: usize = 4;
+const UPLOAD_WORKERS: usize = 8;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum TaskStatus {
-    Pending,
-    Running,
-    Executed,
-    Failed,
-    Blocked,
-    NotApplicable,
-}
-
-struct PreparedTask {
-    id: String,
-    dependencies: Vec<String>,
-    execution: TaskExecution,
-    receipt_key: Option<String>,
-}
-
-struct TaskCompletion {
-    index: usize,
+struct WorkerCompletion {
+    worker_id: usize,
+    indices: Vec<usize>,
     result: TaskRunResult,
 }
 
-/// What the run knows so far, indexed the same way `prepared` is: a task's result, its status,
-/// and the running outcome tally the response reports.
-struct RunProgress {
-    statuses: BTreeMap<String, TaskStatus>,
-    results: Vec<Option<TaskRunResult>>,
-    counts: RunCounts,
+struct LoopState {
+    progress: RunProgress,
+    workers: BTreeMap<usize, thread::JoinHandle<()>>,
+    next_worker_id: usize,
+    isolated_single: BTreeSet<usize>,
 }
 
 pub(crate) fn run_plan(
@@ -56,30 +46,92 @@ pub(crate) fn run_plan(
     plan: &PlanResult,
     jobs: Option<u32>,
     receipts: Option<&dyn TaskReceiptStore>,
+    stream_enabled: bool,
 ) -> Result<RunResult, TestingError> {
     let job_limit = job_limit(jobs)?;
+    if let Some(store) = receipts {
+        store.begin_run();
+    }
     let prepared = prepare_tasks(manifest, workspace_root, manifest_file, plan, receipts)?;
-    let (sender, receiver) = mpsc::channel::<TaskCompletion>();
-    let mut progress = RunProgress::start(&prepared, plan);
-    let mut workers = BTreeMap::new();
-
-    while progress.results.iter().any(Option::is_none) {
-        let (ready, blocked) = partition_pending(&prepared, &progress);
-        progress.block(&prepared, &blocked);
-        let (mut to_spawn, hit_cache) =
-            serve_cached_receipts(&prepared, &ready, receipts, &mut progress);
-        to_spawn.truncate(job_limit.saturating_sub(workers.len()));
-        dispatch_ready(
+    let progress = thread::scope(|scope| {
+        let upload_sender = spawn_upload_pool(scope, receipts);
+        let outcome = run_scheduler_loop(
             &prepared,
-            &to_spawn,
+            workspace_root,
+            plan,
+            job_limit,
+            receipts,
+            upload_sender.as_ref(),
+            stream_enabled,
+        );
+        drop(upload_sender);
+        outcome
+    })?;
+    count_outcomes(progress)
+}
+
+fn spawn_upload_pool<'scope, 'env>(
+    scope: &'scope thread::Scope<'scope, 'env>,
+    receipts: Option<&'env dyn TaskReceiptStore>,
+) -> Option<mpsc::Sender<(String, TaskReceiptEntry)>> {
+    let store = receipts?;
+    let (tx, rx) = mpsc::channel::<(String, TaskReceiptEntry)>();
+    let shared_rx = Arc::new(Mutex::new(rx));
+    for _ in 0..UPLOAD_WORKERS {
+        let rx_clone = Arc::clone(&shared_rx);
+        scope.spawn(move || {
+            loop {
+                let next = rx_clone.lock().ok().and_then(|guard| guard.recv().ok());
+                let Some((key, entry)) = next else {
+                    break;
+                };
+                store.record_pass(&key, &entry);
+            }
+        });
+    }
+    Some(tx)
+}
+
+fn run_scheduler_loop(
+    prepared: &[PreparedTask],
+    workspace_root: &Path,
+    plan: &PlanResult,
+    job_limit: usize,
+    receipts: Option<&dyn TaskReceiptStore>,
+    upload_sender: Option<&mpsc::Sender<(String, TaskReceiptEntry)>>,
+    stream_enabled: bool,
+) -> Result<RunProgress, TestingError> {
+    let (sender, receiver) = mpsc::channel::<WorkerCompletion>();
+    let mut state = LoopState {
+        progress: RunProgress::start(prepared, plan),
+        workers: BTreeMap::new(),
+        next_worker_id: 0,
+        isolated_single: BTreeSet::new(),
+    };
+
+    while state.progress.results.iter().any(Option::is_none) {
+        let (ready, blocked) = partition_pending(prepared, &state.progress);
+        state.progress.block(prepared, &blocked);
+        let (to_run, hit_cache) = serve_cached_receipts(
+            prepared,
+            &ready,
+            receipts,
+            &mut state.progress,
+            stream_enabled,
+        );
+        let slots = job_limit.saturating_sub(state.workers.len());
+        let units = pack_work_units(prepared, &to_run, slots, &state.isolated_single);
+        dispatch_units(
+            prepared,
+            units,
             workspace_root,
             &sender,
-            &mut workers,
-            &mut progress,
+            &mut state,
+            stream_enabled,
         );
 
-        if workers.is_empty() {
-            let unresolved = progress.unresolved(&prepared);
+        if state.workers.is_empty() {
+            let unresolved = state.progress.unresolved(prepared);
             if unresolved.is_empty() || !blocked.is_empty() || hit_cache {
                 continue;
             }
@@ -89,10 +141,15 @@ pub(crate) fn run_plan(
             )));
         }
 
-        collect_finished(&receiver, &mut workers, &prepared, receipts, &mut progress)?;
+        collect_finished(
+            &receiver,
+            prepared,
+            upload_sender,
+            &mut state,
+            stream_enabled,
+        )?;
     }
-
-    count_outcomes(progress)
+    Ok(state.progress)
 }
 
 fn job_limit(jobs: Option<u32>) -> Result<usize, TestingError> {
@@ -104,81 +161,22 @@ fn job_limit(jobs: Option<u32>) -> Result<usize, TestingError> {
     }
 }
 
-/// The planned decisions resolved against the manifest, in plan order, so every later step can
-/// address a task by index instead of looking it up again.
-fn prepare_tasks(
-    manifest: &TestingManifest,
-    workspace_root: &Path,
-    manifest_file: &Path,
-    plan: &PlanResult,
-    receipts: Option<&dyn TaskReceiptStore>,
-) -> Result<Vec<PreparedTask>, TestingError> {
-    let declared: BTreeMap<&str, &DeclaredTask> = manifest
-        .tasks
-        .iter()
-        .map(|task| (task.id.as_str(), task))
-        .collect();
-    let planned_ids: std::collections::BTreeSet<&str> =
-        plan.tasks.iter().map(|d| d.id.as_str()).collect();
-    plan.tasks
-        .iter()
-        .map(|decision| {
-            let task = declared
-                .get(decision.id.as_str())
-                .ok_or_else(|| message(format!("Unknown task {}.", decision.id)))?;
-            let mut execution = task.execution.clone();
-            if !decision.selected_files.is_empty() {
-                for file in &decision.selected_files {
-                    execution
-                        .args
-                        .push(rebase_file_for_cwd(file, execution.cwd.as_deref()));
-                }
-            }
-            let receipt_key = if decision.decision == "run" {
-                compute_task_receipt_key(
-                    receipts,
-                    manifest,
-                    task,
-                    &execution,
-                    &decision.selected_files,
-                    manifest_file,
-                    workspace_root,
-                )
-            } else {
-                None
-            };
-            let dependencies = task
-                .depends_on
-                .iter()
-                .filter(|dep| planned_ids.contains(dep.as_str()))
-                .cloned()
-                .collect();
-            Ok(PreparedTask {
-                id: task.id.clone(),
-                dependencies,
-                execution,
-                receipt_key,
-            })
-        })
-        .collect::<Result<Vec<_>, TestingError>>()
-}
-
 fn serve_cached_receipts(
     prepared: &[PreparedTask],
     ready: &[usize],
     receipts: Option<&dyn TaskReceiptStore>,
     progress: &mut RunProgress,
+    stream_enabled: bool,
 ) -> (Vec<usize>, bool) {
     let Some(store) = receipts else {
         return (ready.to_vec(), false);
     };
+    let lookups = lookup_receipts_parallel(store, prepared, ready);
     let mut to_spawn = Vec::new();
     let mut hit_cache = false;
-    for &index in ready {
+    for (index, maybe_entry) in lookups {
         let task = &prepared[index];
-        if let Some(key) = task.receipt_key.as_deref()
-            && let Some(entry) = store.lookup(key)
-        {
+        if let Some(entry) = maybe_entry {
             progress.results[index] =
                 Some(cached_task_result(&task.id, entry.stdout, entry.stderr));
             progress
@@ -186,6 +184,7 @@ fn serve_cached_receipts(
                 .insert(task.id.clone(), TaskStatus::Executed);
             progress.counts.executed += 1;
             progress.counts.cached += 1;
+            stream::emit_cached(stream_enabled, &task.id);
             hit_cache = true;
             continue;
         }
@@ -194,94 +193,35 @@ fn serve_cached_receipts(
     (to_spawn, hit_cache)
 }
 
-impl RunProgress {
-    /// A task the plan did not select is already finished before the run begins.
-    fn start(prepared: &[PreparedTask], plan: &PlanResult) -> Self {
-        let mut statuses = BTreeMap::new();
-        let mut results = (0..prepared.len())
-            .map(|_| None)
-            .collect::<Vec<Option<TaskRunResult>>>();
-        let mut counts = RunCounts {
-            executed: 0,
-            failed: 0,
-            blocked: 0,
-            not_applicable: 0,
-            cached: 0,
-        };
-        for (index, decision) in plan.tasks.iter().enumerate() {
-            if decision.decision != "run" {
-                let task = &prepared[index];
-                results[index] = Some(not_applicable_result(&task.id));
-                statuses.insert(task.id.clone(), TaskStatus::NotApplicable);
-                counts.not_applicable += 1;
-            } else {
-                statuses.insert(prepared[index].id.clone(), TaskStatus::Pending);
-            }
-        }
-        Self {
-            statuses,
-            results,
-            counts,
-        }
-    }
-
-    fn block(&mut self, prepared: &[PreparedTask], blocked: &[usize]) {
-        for &index in blocked {
-            let task = &prepared[index];
-            let result = blocked_result(&task.id, &task.dependencies, &self.statuses);
-            self.results[index] = Some(result);
-            self.statuses.insert(task.id.clone(), TaskStatus::Blocked);
-            self.counts.blocked += 1;
-        }
-    }
-
-    fn unresolved<'a>(&self, prepared: &'a [PreparedTask]) -> Vec<&'a str> {
-        prepared
-            .iter()
-            .enumerate()
-            .filter(|(index, _)| self.results[*index].is_none())
-            .map(|(_, task)| task.id.as_str())
-            .collect()
-    }
-}
-
-/// Pending tasks split by what their prerequisites have already done: runnable now, or blocked
-/// because a prerequisite will never succeed. A task still waiting appears in neither.
-fn partition_pending(
+fn dispatch_units(
     prepared: &[PreparedTask],
-    progress: &RunProgress,
-) -> (Vec<usize>, Vec<usize>) {
-    let mut ready = Vec::new();
-    let mut blocked = Vec::new();
-    for (index, task) in prepared.iter().enumerate() {
-        if progress.results[index].is_some()
-            || progress.statuses.get(&task.id) != Some(&TaskStatus::Pending)
-        {
-            continue;
-        }
-        match dependency_state(&task.dependencies, &progress.statuses) {
-            DependencyState::Ready => ready.push(index),
-            DependencyState::Blocked => blocked.push(index),
-            DependencyState::Waiting => {}
-        }
-    }
-    (ready, blocked)
-}
-
-/// Starts one worker thread per ready task. A worker that panics still reports an outcome, so a
-/// panicking task cannot leave the run waiting on a result that never arrives.
-fn dispatch_ready(
-    prepared: &[PreparedTask],
-    ready: &[usize],
+    units: Vec<WorkUnit>,
     workspace_root: &Path,
-    sender: &mpsc::Sender<TaskCompletion>,
-    workers: &mut BTreeMap<usize, thread::JoinHandle<()>>,
-    progress: &mut RunProgress,
+    sender: &mpsc::Sender<WorkerCompletion>,
+    state: &mut LoopState,
+    stream_enabled: bool,
 ) {
-    for &index in ready {
-        let task = &prepared[index];
-        let task_id = task.id.clone();
-        let execution = task.execution.clone();
+    for unit in units {
+        let worker_id = state.next_worker_id;
+        state.next_worker_id += 1;
+        let (indices, task_id, execution) = match unit {
+            WorkUnit::Single(index) => {
+                let task = &prepared[index];
+                (vec![index], task.id.clone(), task.execution.clone())
+            }
+            WorkUnit::Batch { indices, execution } => {
+                let first_id = prepared[indices[0]].id.clone();
+                (indices, first_id, *execution)
+            }
+        };
+        let ids_for_stream: Vec<&str> = indices.iter().map(|&i| prepared[i].id.as_str()).collect();
+        stream::emit_start(stream_enabled, &ids_for_stream);
+        for &index in &indices {
+            state
+                .progress
+                .statuses
+                .insert(prepared[index].id.clone(), TaskStatus::Running);
+        }
         let root = workspace_root.to_path_buf();
         let task_sender = sender.clone();
         let worker = thread::spawn(move || {
@@ -290,124 +230,114 @@ fn dispatch_ready(
                 Ok(result) => result,
                 Err(_) => worker_panic_result(&panic_task_id),
             };
-            let _ = task_sender.send(TaskCompletion { index, result });
+            let _ = task_sender.send(WorkerCompletion {
+                worker_id,
+                indices,
+                result,
+            });
         });
-        workers.insert(index, worker);
-        progress
-            .statuses
-            .insert(task.id.clone(), TaskStatus::Running);
+        state.workers.insert(worker_id, worker);
     }
 }
 
-/// Waits for exactly one worker to finish and records what it reported.
 fn collect_finished(
-    receiver: &mpsc::Receiver<TaskCompletion>,
-    workers: &mut BTreeMap<usize, thread::JoinHandle<()>>,
+    receiver: &mpsc::Receiver<WorkerCompletion>,
     prepared: &[PreparedTask],
-    receipts: Option<&dyn TaskReceiptStore>,
-    progress: &mut RunProgress,
+    upload_sender: Option<&mpsc::Sender<(String, TaskReceiptEntry)>>,
+    state: &mut LoopState,
+    stream_enabled: bool,
 ) -> Result<(), TestingError> {
     let completion = receiver
         .recv()
         .map_err(|error| message(format!("Testing task worker channel failed: {error}")))?;
-    if let Some(worker) = workers.remove(&completion.index)
-        && worker.join().is_err()
-    {
-        let task = &prepared[completion.index];
-        progress.results[completion.index] = Some(worker_panic_result(&task.id));
-        progress
-            .statuses
-            .insert(task.id.clone(), TaskStatus::Failed);
-        progress.counts.executed += 1;
-        progress.counts.failed += 1;
+    let panicked = state
+        .workers
+        .remove(&completion.worker_id)
+        .is_some_and(|worker| worker.join().is_err());
+    if panicked {
+        for index in completion.indices {
+            let task = &prepared[index];
+            let result = worker_panic_result(&task.id);
+            stream::emit_finish(stream_enabled, &result);
+            state.progress.results[index] = Some(result);
+            state
+                .progress
+                .statuses
+                .insert(task.id.clone(), TaskStatus::Failed);
+            state.progress.counts.executed += 1;
+            state.progress.counts.failed += 1;
+        }
         return Ok(());
     }
-    let status = if completion.result.status == "executed" {
+    let succeeded =
+        completion.result.status == "executed" && completion.result.exit_code == Some(0);
+    if !succeeded && completion.indices.len() > 1 {
+        let first_id = prepared[completion.indices[0]].id.as_str();
+        stream::emit_batch_fallback(stream_enabled, completion.indices.len(), first_id);
+        for index in completion.indices {
+            state.isolated_single.insert(index);
+            state
+                .progress
+                .statuses
+                .insert(prepared[index].id.clone(), TaskStatus::Pending);
+        }
+        return Ok(());
+    }
+    record_unit_outcome(
+        completion.indices,
+        completion.result,
+        prepared,
+        upload_sender,
+        &mut state.progress,
+        stream_enabled,
+    );
+    Ok(())
+}
+
+fn record_unit_outcome(
+    indices: Vec<usize>,
+    outcome: TaskRunResult,
+    prepared: &[PreparedTask],
+    upload_sender: Option<&mpsc::Sender<(String, TaskReceiptEntry)>>,
+    progress: &mut RunProgress,
+    stream_enabled: bool,
+) {
+    let status = if outcome.status == "executed" {
         TaskStatus::Executed
     } else {
         TaskStatus::Failed
     };
-    if status == TaskStatus::Executed
-        && completion.result.exit_code == Some(0)
-        && let Some(store) = receipts
-        && let Some(key) = prepared[completion.index].receipt_key.as_deref()
-    {
-        store.record_pass(
-            key,
-            &TaskReceiptEntry {
-                stdout: completion.result.stdout.clone(),
-                stderr: completion.result.stderr.clone(),
-            },
-        );
-    }
-    progress.counts.executed += 1;
-    if status == TaskStatus::Failed {
-        progress.counts.failed += 1;
-    }
-    progress
-        .statuses
-        .insert(prepared[completion.index].id.clone(), status);
-    progress.results[completion.index] = Some(completion.result);
-    Ok(())
-}
-
-/// A run exits non-zero when anything failed or was blocked, whether or not the failure was the
-/// task the caller cared about.
-fn count_outcomes(progress: RunProgress) -> Result<RunResult, TestingError> {
-    let tasks = progress
-        .results
-        .into_iter()
-        .collect::<Option<Vec<_>>>()
-        .ok_or_else(|| message("Scheduler completed without a result for every planned task."))?;
-    let exit_code = if progress.counts.failed > 0 || progress.counts.blocked > 0 {
-        1
-    } else {
-        0
-    };
-    Ok(RunResult {
-        tasks,
-        counts: progress.counts,
-        exit_code,
-    })
-}
-
-enum DependencyState {
-    Ready,
-    Waiting,
-    Blocked,
-}
-
-fn dependency_state(
-    dependencies: &[String],
-    statuses: &BTreeMap<String, TaskStatus>,
-) -> DependencyState {
-    let mut waiting = false;
-    for dependency in dependencies {
-        match statuses.get(dependency) {
-            Some(TaskStatus::Executed) => {}
-            Some(TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::NotApplicable) | None => {
-                return DependencyState::Blocked;
-            }
-            Some(TaskStatus::Pending | TaskStatus::Running) => waiting = true,
+    let should_cache = status == TaskStatus::Executed && outcome.exit_code == Some(0);
+    for index in indices {
+        let task = &prepared[index];
+        let task_result = TaskRunResult {
+            id: task.id.clone(),
+            status: outcome.status.clone(),
+            exit_code: outcome.exit_code,
+            duration_ms: outcome.duration_ms,
+            stdout: outcome.stdout.clone(),
+            stderr: outcome.stderr.clone(),
+            error: outcome.error.clone(),
+            cached: outcome.cached,
+        };
+        if should_cache
+            && let Some(sender) = upload_sender
+            && let Some(key) = task.receipt_key.as_ref()
+        {
+            let _ = sender.send((
+                key.clone(),
+                TaskReceiptEntry {
+                    stdout: task_result.stdout.clone(),
+                    stderr: task_result.stderr.clone(),
+                },
+            ));
         }
+        stream::emit_finish(stream_enabled, &task_result);
+        progress.counts.executed += 1;
+        if status == TaskStatus::Failed {
+            progress.counts.failed += 1;
+        }
+        progress.statuses.insert(task.id.clone(), status);
+        progress.results[index] = Some(task_result);
     }
-    if waiting {
-        DependencyState::Waiting
-    } else {
-        DependencyState::Ready
-    }
-}
-
-/// Converts a workspace-relative selected test file path to be relative to `execution.cwd` when
-/// the task runs from a subdirectory (for example a package root).
-fn rebase_file_for_cwd(file: &str, cwd: Option<&str>) -> String {
-    let Some(cwd) = cwd else {
-        return file.to_owned();
-    };
-    let trimmed = cwd.trim_end_matches('/');
-    if trimmed.is_empty() || trimmed == "." {
-        return file.to_owned();
-    }
-    let prefix = format!("{trimmed}/");
-    file.strip_prefix(&prefix).unwrap_or(file).to_owned()
 }

@@ -19,6 +19,14 @@
       "types": "./dist/dst/index.d.ts",
       "default": "./dist/dst/index.js"
     },
+    "./esbuild": {
+      "types": "./dist/esbuild/index.d.ts",
+      "default": "./dist/esbuild/index.js"
+    },
+    "./eslint": {
+      "types": "./dist/eslint/index.d.ts",
+      "default": "./dist/eslint/index.js"
+    },
     "./nx": {
       "types": "./dist/nx/index.d.ts",
       "default": "./dist/nx/index.js"

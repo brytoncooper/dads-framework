@@ -86,7 +86,8 @@ pub(super) fn widen_through_graph<'a>(
         return;
     }
     let (covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
-        .into_iter()
+        .iter()
+        .cloned()
         .partition(|path| graph.contains_path(path));
     let has_non_test_reachability = manifest
         .tasks
@@ -97,7 +98,7 @@ pub(super) fn widen_through_graph<'a>(
         record_reachable_paths(manifest, &runtime_reachable.paths, evidence, true);
         record_reachable_uncertainties(
             manifest,
-            scope,
+            &changed_paths,
             graph,
             runtime_reachable.uncertainties,
             evidence,
@@ -109,7 +110,7 @@ pub(super) fn widen_through_graph<'a>(
             record_reachable_paths(manifest, &full_reachable.paths, evidence, false);
             record_reachable_uncertainties(
                 manifest,
-                scope,
+                &changed_paths,
                 graph,
                 full_reachable.uncertainties,
                 evidence,
@@ -122,7 +123,7 @@ pub(super) fn widen_through_graph<'a>(
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
         record_reachable_uncertainties(
             manifest,
-            scope,
+            &changed_paths,
             graph,
             workspace_uncertainties.clone(),
             evidence,
@@ -131,7 +132,7 @@ pub(super) fn widen_through_graph<'a>(
         if has_non_test_reachability {
             record_reachable_uncertainties(
                 manifest,
-                scope,
+                &changed_paths,
                 graph,
                 workspace_uncertainties,
                 evidence,
@@ -265,7 +266,7 @@ fn record_reachable_paths<'a>(
 /// widen, so it selects the complete fallback.
 fn record_reachable_uncertainties<'a>(
     manifest: &'a TestingManifest,
-    scope: &ResolvedScope,
+    changed_paths: &[String],
     graph: &DependencyGraph,
     uncertainties: Vec<GraphUncertainty>,
     evidence: &mut PlanEvidence<'a>,
@@ -277,7 +278,7 @@ fn record_reachable_uncertainties<'a>(
                 .workspace
                 .dynamic_import_scopes
                 .get(&uncertainty.path)
-            && !dynamic_import_scope_triggered(&uncertainty.path, prefixes, &scope.changed_paths)
+            && !dynamic_import_scope_triggered(&uncertainty.path, prefixes, changed_paths)
         {
             continue;
         }

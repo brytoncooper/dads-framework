@@ -14,7 +14,7 @@ import { buildNativeNxManifest, type NativeNxCoverage } from "./nx-native-model.
 import { nativeNxProcess } from "./nx-native-process.js";
 import { requireNativeNxScope } from "./nx-native-scope.js";
 import { createNativeNxScratch, nativeNxSourceIdentity } from "./nx-native-scratch.js";
-import { hasSnapshotRevision, withEphemeralNxSnapshot } from "./nx-native-snapshot.js";
+import { hasSnapshotRevision, isCleanWorkingTree, withEphemeralNxSnapshot } from "./nx-native-snapshot.js";
 
 export type NativeNxTestingOptions = Omit<TestingOperationRequest, "manifestPath" | "taskIds"> & {
   /** Exact Nx target names; omitted selects verification target families. */
@@ -60,11 +60,14 @@ export async function runNativeNxTesting(options: NativeNxTestingOptions): Promi
   return withNativeNxManifest(options, true);
 }
 
-/** Runs `dad-test diagnose` against an isolated Git snapshot of the Nx graph when available. */
+/** Runs `dad-test diagnose` against an isolated Git snapshot when dirty or pinned to `--head`. */
 export async function diagnoseNativeNxTesting(options: NativeNxDiagnoseOptions): Promise<NativeNxDiagnoseResult> {
   const workspaceRoot = await fs.realpath(path.resolve(options.workspaceRoot));
   const revision = options.head ?? "HEAD";
-  if (options.head !== undefined || (await hasSnapshotRevision(workspaceRoot, revision))) {
+  const needsSnapshot =
+    options.head !== undefined ||
+    ((await hasSnapshotRevision(workspaceRoot, revision)) && !(await isCleanWorkingTree(workspaceRoot)));
+  if (needsSnapshot) {
     return withEphemeralNxSnapshot(workspaceRoot, revision, ({ snapshotRoot }) =>
       runDiagnoseInWorkspace(snapshotRoot, options, true),
     );
@@ -100,6 +103,7 @@ async function runDiagnoseInWorkspace(
     return { coverage, diagnose };
   } finally {
     await fs.rm(scratch, { recursive: true, force: true });
+    await fs.rmdir(path.dirname(scratch)).catch(() => undefined);
   }
 }
 

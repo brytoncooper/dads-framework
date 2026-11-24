@@ -22,6 +22,11 @@ pub(crate) fn runtime_export_declarations(
     path: &str,
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<JsSymbolFact> {
+    if path.ends_with(".d.ts") || path.ends_with(".d.mts") || path.ends_with(".d.cts") {
+        // Ambient TypeScript declaration files contain no runtime exports; type-only edges
+        // still flow through module imports for typecheck tasks.
+        return Vec::new();
+    }
     let mut declarations = Vec::new();
     if let Some(default_export) = module_record
         .local_export_entries

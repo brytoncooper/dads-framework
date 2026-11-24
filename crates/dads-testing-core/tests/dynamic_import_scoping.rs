@@ -121,6 +121,26 @@ fn dynamic_import_scopes_limit_widening_to_declared_prefixes_in_plan_and_diagnos
             "web:test".to_owned()
         ])
     );
+
+    // Modifying the scoped loader file itself must widen even when none of its
+    // declared prefixes changed, so changing what a loader scans never false-skips.
+    fs::write(
+        ws.0.join("packages/core/src/intents/a.ts"),
+        "export const a = 1;\n",
+    )?;
+    fs::write(
+        ws.0.join("packages/core/src/shared.ts"),
+        "export const s = 2;\n",
+    )?;
+    let loader_changed = selected_tasks(&ws.0, &graph)?;
+    assert_eq!(
+        loader_changed,
+        BTreeSet::from([
+            "app:test".to_owned(),
+            "core:test".to_owned(),
+            "web:test".to_owned()
+        ])
+    );
     Ok(())
 }
 

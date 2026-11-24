@@ -49,6 +49,16 @@ export async function hasSnapshotRevision(workspaceRoot: string, revision: strin
   }
 }
 
+/** Returns true when `workspaceRoot` has no uncommitted or untracked Git changes. */
+export async function isCleanWorkingTree(workspaceRoot: string): Promise<boolean> {
+  try {
+    const status = await nativeNxProcess("git", ["status", "--porcelain"], workspaceRoot);
+    return status.trim() === "";
+  } catch {
+    return false;
+  }
+}
+
 async function resolveSnapshotRevision(workspaceRoot: string, revision: string): Promise<string> {
   const stdout = await nativeNxProcess(
     "git",

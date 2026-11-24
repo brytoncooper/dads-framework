@@ -501,3 +501,26 @@ fn resolves_bare_type_subpath_from_at_types_package() {
     );
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
+
+#[test]
+fn skips_runtime_export_ownership_uncertainties_for_declaration_files() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-dts-no-runtime-uncertainty");
+    let _ = remove_dir_all(&root);
+    create_dir_all(root.join("src")).expect("fixture source directory must be created");
+    write(
+        root.join("src/helper.d.mts"),
+        "export declare function runHelper(input: string): Promise<void>;\nexport declare const VERSION: string;\n",
+    )
+    .expect("fixture declaration file must be written");
+
+    let facts = analyze_workspace(&root);
+    assert!(
+        !facts
+            .uncertainties
+            .iter()
+            .any(|u| u.code == "ambiguous-local-export-ownership"),
+        "declaration files should not emit runtime export ownership uncertainties: {:?}",
+        facts.uncertainties
+    );
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}

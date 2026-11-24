@@ -38,6 +38,7 @@ export function siteHeader(currentPage) {
   <a href="/" class="brand"${currentPage === "home" ? ' aria-current="page"' : ""}><img src="/assets/dads-symbol-light.png" class="brand-symbol brand-symbol-on-dark" alt="" width="26" height="26"><img src="/assets/dads-symbol-dark.png" class="brand-symbol brand-symbol-on-light" alt="" width="26" height="26">Dads Framework</a>
   <nav aria-label="Main">${searchButton}
     <a href="/docs/"${currentPage === "docs" ? ' aria-current="page"' : ""}>Docs</a>
+    <a href="/docs/benchmarks-and-proof.html">Proofs</a>
     <a href="${repository}">GitHub <span aria-hidden="true">↗</span></a>
     ${themeToggleButton}
   </nav>

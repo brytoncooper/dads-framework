@@ -64,5 +64,5 @@ Failing runs never write receipts, and corrupt or unreachable remote receipts fa
 
 ## Proofs and package reference
 
-- **Formal proofs and real-repo benchmarks:** [Benchmarks & Proof](benchmarks-and-proof.md#7-selective-testing-dad-test-benchmarks--formal-proof)
+- **Formal proofs and real-repo benchmarks:** [Testing Benchmarks & Proofs](testing-benchmarks.md) · [All Proofs Overview](benchmarks-and-proof.md)
 - **Full CLI, manifest schema, and DST API:** [`@dads-framework/testing` README](../../../packages/testing/core/README.md)

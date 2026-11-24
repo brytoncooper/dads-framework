@@ -45,6 +45,7 @@ function renderMarkdown(markdown, link) {
 
 const NAVIGATION_GROUPS = [
   "Get started",
+  "Proof & Benchmarks",
   "Build a feature",
   "Operate & verify",
   "Architecture",

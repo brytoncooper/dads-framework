@@ -153,7 +153,7 @@ test("siteHeader renders search trigger only on docs pages", () => {
   assert.equal(trigger.querySelector("kbd")?.textContent, "⌘K");
 
   const navLinks = Array.from(docsDoc.querySelectorAll("nav a")).map((a) => a.textContent.trim());
-  assert.deepEqual(navLinks, ["Docs", "GitHub ↗"]);
+  assert.deepEqual(navLinks, ["Docs", "Proofs", "GitHub ↗"]);
 
   const homeDoc = domino.createDocument(siteHeader("home"));
   assert.equal(Boolean(homeDoc.querySelector("#docs-search-trigger")), false);

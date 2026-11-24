@@ -11,6 +11,7 @@ Dads is a TypeScript backend framework built around three rules: every HTTP rout
 | **Decide where a new schema, rule, workflow, integration, or migration belongs**                                    | [Where Does Code Go?](where-code-goes.md)               |
 | **Add relationship permissions to an existing Postgres or SQLite app** without a separate auth database             | [Access & Permissions](permissions.md)                  |
 | **Run only tests proven affected by a diff** (Vitest, Jest, `tsc`, Postgres migrations) and X-ray repo coupling     | [Selective Testing (`dad-test`)](selective-testing.md)  |
+| **Inspect all 63 Lean 4 proofs, Quint specs, and live benchmarks** (100M Postgres rows + Nx/Remeda/Valibot runs)    | [Benchmarks & Proof](benchmarks-and-proof.md)           |
 | **Look up SDK definitions, options, combinators, and CLI commands**                                                 | [SDK Glossary & Options](sdk-reference.md)              |
 | **Migrate SpiceDB into PostgreSQL** or replace hand-written `.zed` files with typed TypeScript                      | [Adopt One Package at a Time](adopt-standalone.md)      |
 

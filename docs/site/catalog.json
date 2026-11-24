@@ -87,10 +87,26 @@
     {
       "slug": "benchmarks-and-proof",
       "title": "Benchmarks & Proof",
-      "owner": "@dads-framework/postgres-access",
+      "owner": "@dads-framework/testing",
       "section": "Guides",
       "path": "docs/site/guides/benchmarks-and-proof.md",
-      "navigationGroup": "Build a feature"
+      "navigationGroup": "Proof & Benchmarks"
+    },
+    {
+      "slug": "testing-benchmarks",
+      "title": "Testing Benchmarks & Proofs",
+      "owner": "@dads-framework/testing",
+      "section": "Guides",
+      "path": "docs/site/guides/testing-benchmarks.md",
+      "navigationGroup": "Proof & Benchmarks"
+    },
+    {
+      "slug": "access-benchmarks",
+      "title": "Access Benchmarks & Proofs",
+      "owner": "@dads-framework/postgres-access",
+      "section": "Guides",
+      "path": "docs/site/guides/access-benchmarks.md",
+      "navigationGroup": "Proof & Benchmarks"
     },
     {
       "slug": "routes-and-contracts",

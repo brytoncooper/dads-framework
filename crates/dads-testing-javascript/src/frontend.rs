@@ -123,9 +123,10 @@ fn javascript_resolver() -> Resolver {
     let owned = |items: &[&str]| items.iter().map(|item| (*item).to_owned()).collect();
     Resolver::new(ResolveOptions {
         tsconfig: Some(TsconfigDiscovery::Auto),
-        condition_names: owned(&["node", "import", "default"]),
+        condition_names: owned(&["node", "import", "default", "types"]),
         extensions: owned(&[
-            ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".json", ".node",
+            ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".d.ts", ".d.mts",
+            ".d.cts", ".json", ".node",
         ]),
         ..ResolveOptions::default()
     })
@@ -172,7 +173,7 @@ pub struct JavaScriptFrontend;
 
 impl GraphFrontend for JavaScriptFrontend {
     fn frontend_version(&self) -> u32 {
-        13
+        14
     }
 
     fn initial_index(&mut self, request: &NativeRequest) -> Result<DependencyGraph, String> {

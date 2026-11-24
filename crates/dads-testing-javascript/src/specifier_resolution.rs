@@ -51,6 +51,11 @@ pub(crate) fn resolve_static_specifier(
         }
         Err(_) if specifier.starts_with("node:") => None,
         Err(error) if is_bare_specifier(specifier) => {
+            if let Some(types_specifier) = at_types_specifier(specifier)
+                && let Ok(resolution) = resolver.resolve_file(absolute_path, &types_specifier)
+            {
+                return canonical_workspace_javascript_path(workspace_root, resolution.path());
+            }
             uncertainties.push(JsUncertainty {
                 path: path.to_owned(),
                 code: "unresolved-bare-module".to_owned(),
@@ -84,29 +89,31 @@ fn canonical_workspace_javascript_path(workspace_root: &Path, path: &Path) -> Op
     workspace_relative_path(&canonical_workspace_root, &canonical_path)
 }
 
-/// TypeScript commonly preserves `.js` specifiers in source that is emitted as JavaScript. Oxc
-/// resolves real JavaScript first; only after that fails do we map the final `.js` extension to an
-/// existing source sibling. This is deliberately not general extension inference.
+/// TypeScript commonly preserves `.js`/`.mjs`/`.cjs` specifiers in source that is emitted as
+/// JavaScript. Oxc resolves real JavaScript first; only after that fails do we map the final
+/// extension to an existing TypeScript sibling. This is deliberately not general extension inference.
 fn resolve_local_javascript_specifier_to_typescript_source(
     workspace_root: &Path,
     absolute_path: &Path,
     specifier: &str,
 ) -> Option<String> {
     let requested_path = Path::new(specifier);
-    if requested_path
+    let extensions: &[&str] = match requested_path
         .extension()
         .and_then(|extension| extension.to_str())
-        != Some("js")
     {
-        return None;
-    }
+        Some("js") => &["ts", "tsx", "mts", "cts"],
+        Some("mjs") => &["mts"],
+        Some("cjs") => &["cts"],
+        _ => return None,
+    };
     let canonical_workspace_root = workspace_root.canonicalize().ok()?;
     let requested_path = if requested_path.is_absolute() {
         requested_path.to_path_buf()
     } else {
         absolute_path.parent()?.join(requested_path)
     };
-    for extension in ["ts", "tsx", "mts", "cts"] {
+    for extension in extensions {
         let candidate = requested_path.with_extension(extension);
         let canonical_candidate = candidate.canonicalize().ok();
         if candidate.is_file()
@@ -120,6 +127,20 @@ fn resolve_local_javascript_specifier_to_typescript_source(
         }
     }
     None
+}
+
+fn at_types_specifier(specifier: &str) -> Option<String> {
+    if specifier.starts_with("@types/") {
+        return None;
+    }
+    if let Some(rest) = specifier.strip_prefix('@') {
+        let (scope, tail) = rest.split_once('/')?;
+        return Some(match tail.split_once('/') {
+            Some((pkg, sub)) => format!("@types/{scope}__{pkg}/{sub}"),
+            None => format!("@types/{scope}__{tail}"),
+        });
+    }
+    Some(format!("@types/{specifier}"))
 }
 
 fn is_local_specifier(specifier: &str) -> bool {

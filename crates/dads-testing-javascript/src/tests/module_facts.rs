@@ -386,3 +386,118 @@ fn skips_gitignored_build_outputs_and_nested_worktrees_while_indexing_unignored_
     );
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
+
+#[test]
+fn ignores_method_declarations_member_calls_and_comments_named_require() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-require-false-positives");
+    let _ = remove_dir_all(&root);
+    create_dir_all(root.join("src")).expect("fixture source directory must be created");
+    write(
+        root.join("src/service.ts"),
+        r#"
+// require(commentedPath)
+const label = "require(inString)";
+export class Guard {
+  async require(permission: string): Promise<boolean> {
+    return permission.length > 0;
+  }
+  async check(permission: string): Promise<boolean> {
+    return this.require(permission);
+  }
+}
+export function helper(obj: { require: (x: string) => void }, x: string) {
+  obj.require(x);
+}
+export { label };
+"#,
+    )
+    .expect("fixture service must be written");
+    write(
+        root.join("src/dynamic.cjs"),
+        "module.exports = (target) => require(target);\n",
+    )
+    .expect("fixture dynamic require must be written");
+
+    let facts = analyze_workspace(&root);
+    let nonliteral_paths: Vec<&str> = facts
+        .uncertainties
+        .iter()
+        .filter(|u| u.code == "nonliteral-commonjs-require")
+        .map(|u| u.path.as_str())
+        .collect();
+    assert_eq!(nonliteral_paths, vec!["src/dynamic.cjs"]);
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}
+
+#[test]
+fn resolves_local_mjs_and_cjs_specifiers_to_typescript_mts_and_cts_siblings() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-mts-cts-siblings");
+    let _ = remove_dir_all(&root);
+    create_dir_all(root.join("src")).expect("fixture source directory must be created");
+    write(root.join("src/esm-leaf.mts"), "export const esm = 1;\n")
+        .expect("fixture mts leaf must be written");
+    write(root.join("src/cjs-leaf.cts"), "export const cjs = 2;\n")
+        .expect("fixture cts leaf must be written");
+    write(
+        root.join("src/importer.mts"),
+        "import { esm } from './esm-leaf.mjs';\nimport { cjs } from './cjs-leaf.cjs';\nexport const sum = esm + cjs;\n",
+    )
+    .expect("fixture importer must be written");
+
+    let facts = analyze_workspace(&root);
+    let importer = facts
+        .modules
+        .iter()
+        .find(|module| module.path == "src/importer.mts")
+        .expect("importer facts must exist");
+    let resolved: std::collections::BTreeSet<&str> = importer
+        .imports
+        .iter()
+        .filter_map(|import| import.resolved_path.as_deref())
+        .collect();
+    assert_eq!(
+        resolved,
+        std::collections::BTreeSet::from(["src/esm-leaf.mts", "src/cjs-leaf.cts"])
+    );
+    assert!(
+        facts.uncertainties.is_empty(),
+        "mts/cts sibling imports must not emit uncertainties: {:?}",
+        facts.uncertainties
+    );
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}
+
+#[test]
+fn resolves_bare_type_subpath_from_at_types_package() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-at-types-subpath");
+    let _ = remove_dir_all(&root);
+    create_dir_all(root.join("src")).expect("fixture source directory must be created");
+    create_dir_all(root.join("node_modules/@types/example-doc"))
+        .expect("fixture @types package directory must be created");
+    write(
+        root.join("node_modules/@types/example-doc/package.json"),
+        r#"{"name":"@types/example-doc","version":"1.0.0"}"#,
+    )
+    .expect("fixture @types package manifest must be written");
+    write(
+        root.join("node_modules/@types/example-doc/interfaces.d.ts"),
+        "export interface DocDefinition { title: string; }\n",
+    )
+    .expect("fixture @types declaration must be written");
+    write(
+        root.join("src/consumer.ts"),
+        "import type { DocDefinition } from 'example-doc/interfaces';\nexport const make = (d: DocDefinition) => d.title;\n",
+    )
+    .expect("fixture consumer must be written");
+
+    let facts = analyze_workspace(&root);
+    assert!(
+        !facts
+            .uncertainties
+            .iter()
+            .any(|uncertainty| uncertainty.code == "unresolved-bare-module"),
+        "@types subpath should resolve without unresolved-bare-module: {:?}",
+        facts.uncertainties
+    );
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}

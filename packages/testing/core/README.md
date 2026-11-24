@@ -211,11 +211,16 @@ and optional `snapshotPatterns`) alongside per-task `sqlImpact`
 migration runners plus only affected database domains via bidirectional FK
 closure while global/unrecognized DDL widens safely to all database tasks.
 Workspaces may also declare `workspace.nonCodeSuffixes` (for example `[".md"]`)
-so documentation-only edits do not widen JavaScript/TypeScript reachability.
+so documentation-only edits do not widen JavaScript/TypeScript reachability, and
+`workspace.dynamicImportScopes` (a map from module path to allowed directory
+prefixes, such as `{ "scripts/load-rules.mjs": ["scripts/rules"] }`) to bound a
+deliberate directory-scanning loader (such as a plugin or rule loader) to the
+workspace directories it actually reads instead of widening to every change in
+the repository.
 
-Optional `fileNarrowing` and `workspace.sql` / `sqlImpact` shape (`objects` is
-an array of `"schema.table"` strings; `edges` is an array of `{ from, to }`
-foreign-key pairs):
+Optional `fileNarrowing`, `workspace.dynamicImportScopes`, and `workspace.sql` /
+`sqlImpact` shape (`objects` is an array of `"schema.table"` strings; `edges` is
+an array of `{ from, to }` foreign-key pairs):
 
 ```json
 {
@@ -223,6 +228,7 @@ foreign-key pairs):
     "root": ".",
     "fullFallback": { "taskIds": ["billing:test", "db:migrate-test"] },
     "nonCodeSuffixes": [".md"],
+    "dynamicImportScopes": { "scripts/load-rules.mjs": ["scripts/rules"] },
     "sql": {
       "migrationRoots": ["db/migrations"],
       "objects": ["public.accounts", "public.invoices"],

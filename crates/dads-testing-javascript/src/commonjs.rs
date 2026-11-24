@@ -18,64 +18,137 @@ pub(crate) fn scan_commonjs_requires(
 ) -> Vec<JsImportFact> {
     let mut imports = Vec::new();
     let mut offset = 0;
-    while let Some(found) = source[offset..].find("require(") {
-        let call_start = offset + found;
-        let argument_start = call_start + "require(".len();
-        let remaining = &source[argument_start..];
-        let whitespace = remaining.len() - remaining.trim_start().len();
-        let value_start = argument_start + whitespace;
-        let Some(quote) = source[value_start..]
-            .chars()
-            .next()
-            .filter(|character| matches!(character, '\'' | '\"'))
-        else {
-            uncertainties.push(JsUncertainty {
-                path: path.to_owned(),
-                code: "nonliteral-commonjs-require".to_owned(),
-                message: "A CommonJS require does not have a static module specifier.".to_owned(),
-                span: Some(byte_span(value_start, value_start.saturating_add(1))),
-                position: None,
-            });
-            offset = value_start.saturating_add(1);
+    while offset < source.len() {
+        let remaining = &source[offset..];
+        if remaining.starts_with("//") {
+            offset = skip_line_comment(source, offset + 2);
             continue;
-        };
-        let content_start = value_start + quote.len_utf8();
-        let Some(relative_end) = source[content_start..].find(quote) else {
-            uncertainties.push(JsUncertainty {
-                path: path.to_owned(),
-                code: "nonliteral-commonjs-require".to_owned(),
-                message: "A CommonJS require could not be read as a static string.".to_owned(),
-                span: Some(byte_span(value_start, content_start)),
-                position: None,
-            });
-            offset = content_start;
+        }
+        if remaining.starts_with("/*") {
+            offset = skip_block_comment(source, offset + 2);
             continue;
-        };
-        let content_end = content_start + relative_end;
-        let specifier = &source[content_start..content_end];
-        imports.push(import_fact(
-            ImportFactContext {
-                workspace_root,
-                absolute_path,
-                path,
-                resolver,
-                uncertainties: &mut *uncertainties,
-            },
-            ImportFactInput {
-                specifier,
-                span: byte_span(content_start, content_end),
-                kind: JsImportKind::CommonJsRequire,
-                type_only: false,
-                requested_symbols: BTreeSet::new(),
-                namespace_import: false,
-                reexport_all: false,
-                reexport_namespace: None,
-                member_reads: None,
-            },
-        ));
-        offset = content_end + quote.len_utf8();
+        }
+        let byte = source.as_bytes()[offset];
+        if matches!(byte, b'\'' | b'\"' | b'`') {
+            offset = skip_quoted_text(source, offset + 1, byte);
+            continue;
+        }
+        if remaining.starts_with("require(") && is_commonjs_require_call(source, offset) {
+            let argument_start = offset + "require(".len();
+            let after_open = &source[argument_start..];
+            let whitespace = after_open.len() - after_open.trim_start().len();
+            let value_start = argument_start + whitespace;
+            let Some(quote) = source[value_start..]
+                .chars()
+                .next()
+                .filter(|character| matches!(character, '\'' | '\"'))
+            else {
+                uncertainties.push(JsUncertainty {
+                    path: path.to_owned(),
+                    code: "nonliteral-commonjs-require".to_owned(),
+                    message: "A CommonJS require does not have a static module specifier."
+                        .to_owned(),
+                    span: Some(byte_span(value_start, value_start.saturating_add(1))),
+                    position: None,
+                });
+                offset = value_start.saturating_add(1);
+                continue;
+            };
+            let content_start = value_start + quote.len_utf8();
+            let Some(relative_end) = source[content_start..].find(quote) else {
+                uncertainties.push(JsUncertainty {
+                    path: path.to_owned(),
+                    code: "nonliteral-commonjs-require".to_owned(),
+                    message: "A CommonJS require could not be read as a static string.".to_owned(),
+                    span: Some(byte_span(value_start, content_start)),
+                    position: None,
+                });
+                offset = content_start;
+                continue;
+            };
+            let content_end = content_start + relative_end;
+            let specifier = &source[content_start..content_end];
+            imports.push(import_fact(
+                ImportFactContext {
+                    workspace_root,
+                    absolute_path,
+                    path,
+                    resolver,
+                    uncertainties: &mut *uncertainties,
+                },
+                ImportFactInput {
+                    specifier,
+                    span: byte_span(content_start, content_end),
+                    kind: JsImportKind::CommonJsRequire,
+                    type_only: false,
+                    requested_symbols: BTreeSet::new(),
+                    namespace_import: false,
+                    reexport_all: false,
+                    reexport_namespace: None,
+                    member_reads: None,
+                },
+            ));
+            offset = content_end + quote.len_utf8();
+            continue;
+        }
+        offset += remaining.chars().next().map_or(1, char::len_utf8);
     }
     imports
+}
+
+fn is_commonjs_require_call(source: &str, start: usize) -> bool {
+    let bytes = source.as_bytes();
+    let prev = start.checked_sub(1).and_then(|i| bytes.get(i)).copied();
+    if prev.is_some_and(|b| is_javascript_identifier_byte(b) || b == b'.') {
+        return false;
+    }
+    let before = source[..start].trim_end();
+    let prev_word = before
+        .rsplit(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '$')
+        .next()
+        .unwrap_or("");
+    if matches!(
+        prev_word,
+        "function" | "async" | "get" | "set" | "private" | "public" | "protected" | "static"
+    ) {
+        return false;
+    }
+    // A method declaration like `require(a: T): R {` has `{` or `:` right after the closing `)`.
+    let after_close = matching_close_paren(source, start + "require(".len())
+        .map(|i| source[i..].trim_start().as_bytes().first().copied());
+    !matches!(after_close, Some(Some(b'{' | b':')))
+}
+
+fn matching_close_paren(source: &str, mut offset: usize) -> Option<usize> {
+    let mut depth = 1_u32;
+    while offset < source.len() {
+        let remaining = &source[offset..];
+        if remaining.starts_with("//") {
+            offset = skip_line_comment(source, offset + 2);
+            continue;
+        }
+        if remaining.starts_with("/*") {
+            offset = skip_block_comment(source, offset + 2);
+            continue;
+        }
+        let byte = source.as_bytes()[offset];
+        if matches!(byte, b'\'' | b'\"' | b'`') {
+            offset = skip_quoted_text(source, offset + 1, byte);
+            continue;
+        }
+        match byte {
+            b'(' => depth += 1,
+            b')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(offset + 1);
+                }
+            }
+            _ => {}
+        }
+        offset += remaining.chars().next().map_or(1, char::len_utf8);
+    }
+    None
 }
 
 const COMMONJS_MODULE_VALUE_EXPORT: &str = "__dads_commonjs_module_value__";

@@ -110,4 +110,38 @@ describe("@dads-framework/testing/eslint enforce-module-boundaries", () => {
     const buildableReports = runImports(dir, "libs/buildable/src/index.ts", ["@ws/non-buildable"], options);
     expect(buildableReports.map((r) => r.messageId)).toEqual(["buildableLibDependency"]);
   });
+
+  it("checks TSImportType and TSImportEqualsDeclaration and ignores commented imports in cycle graph", () => {
+    const dir = createBoundaryWorkspace();
+    // Overwrite server's index.ts so the import of @ws/ui only appears inside a comment and string.
+    writeFileSync(
+      join(dir, "libs/server/src/index.ts"),
+      `// import { x } from "@ws/ui";\nexport const doc = 'from "@ws/ui"';\n`,
+    );
+    const index = loadWorkspaceBoundaryIndex(dir);
+    expect(index.hasDependencyPath("server", "ui")).toBe(false);
+
+    const rule = createEnforceModuleBoundariesRule(index);
+    const reports: EslintReportDescriptor[] = [];
+    const visitors = rule.create({
+      options: [
+        {
+          depConstraints: [{ sourceTag: "env:browser", notDependOnLibsWithTags: ["env:server"] }],
+        },
+      ],
+      filename: join(dir, "libs/ui/src/page.ts"),
+      report: (descriptor) => reports.push(descriptor),
+    });
+
+    visitors["TSImportType"]?.({
+      argument: { type: "TSLiteralType", literal: { type: "Literal", value: "@ws/server" } },
+    });
+    visitors["TSImportEqualsDeclaration"]?.({
+      moduleReference: {
+        type: "TSExternalModuleReference",
+        expression: { type: "Literal", value: "@ws/server" },
+      },
+    });
+    expect(reports.map((r) => r.messageId)).toEqual(["notTagConstraint", "notTagConstraint"]);
+  });
 });

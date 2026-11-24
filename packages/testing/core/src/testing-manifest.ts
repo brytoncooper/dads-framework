@@ -34,6 +34,7 @@ export type TestingManifest = {
     readonly fullFallback: { readonly taskIds: readonly string[] };
     readonly sql?: TestingManifestWorkspaceSql;
     readonly nonCodeSuffixes?: readonly string[];
+    readonly ignorePaths?: readonly string[];
     readonly dynamicImportScopes?: Readonly<Record<string, readonly string[]>>;
   };
   readonly projects: readonly TestingManifestProject[];
@@ -77,6 +78,7 @@ export type TestingManifestTask = {
     readonly paths: readonly string[];
   };
   readonly sqlImpact?: TestingManifestTaskSqlImpact;
+  readonly cache?: boolean;
 };
 
 export type TestingManifestTaskKind = "test" | "typecheck" | "lint" | "build" | "custom";
@@ -153,6 +155,9 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       ...(manifest.workspace.nonCodeSuffixes === undefined || manifest.workspace.nonCodeSuffixes.length === 0
         ? {}
         : { nonCodeSuffixes: [...manifest.workspace.nonCodeSuffixes] }),
+      ...(manifest.workspace.ignorePaths === undefined || manifest.workspace.ignorePaths.length === 0
+        ? {}
+        : { ignorePaths: [...manifest.workspace.ignorePaths] }),
       ...(manifest.workspace.dynamicImportScopes === undefined ||
       Object.keys(manifest.workspace.dynamicImportScopes).length === 0
         ? {}
@@ -183,6 +188,7 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       dependsOn: [...task.dependsOn],
       impact: { mode: task.impact.mode, paths: [...task.impact.paths] },
       ...(task.sqlImpact === undefined ? {} : { sqlImpact: serializeTaskSqlImpact(task.sqlImpact) }),
+      ...(task.cache === undefined || task.cache ? {} : { cache: false }),
     })),
   };
   return `${JSON.stringify(document, null, 2)}\n`;
@@ -192,7 +198,7 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
   const workspace = readRecord(value, "workspace", subject);
   rejectUnknownKeys(
     workspace,
-    ["root", "fullFallback", "sql", "nonCodeSuffixes", "dynamicImportScopes"],
+    ["root", "fullFallback", "sql", "nonCodeSuffixes", "ignorePaths", "dynamicImportScopes"],
     "workspace",
     subject,
   );
@@ -201,6 +207,7 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
   const root = workspace["root"];
   const sql = workspace["sql"];
   const nonCodeSuffixes = readOptionalStringArray(workspace["nonCodeSuffixes"], "workspace.nonCodeSuffixes", subject);
+  const ignorePaths = readOptionalStringArray(workspace["ignorePaths"], "workspace.ignorePaths", subject);
   const rawScopes = workspace["dynamicImportScopes"];
   const dynamicImportScopes =
     rawScopes === undefined ? undefined : readDynamicImportScopes(rawScopes, "workspace.dynamicImportScopes", subject);
@@ -211,6 +218,7 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
     },
     ...(sql === undefined ? {} : { sql: readWorkspaceSql(sql, "workspace.sql", subject) }),
     ...(nonCodeSuffixes.length === 0 ? {} : { nonCodeSuffixes }),
+    ...(ignorePaths.length === 0 ? {} : { ignorePaths }),
     ...(dynamicImportScopes === undefined || Object.keys(dynamicImportScopes).length === 0
       ? {}
       : { dynamicImportScopes }),
@@ -233,8 +241,17 @@ function readProject(value: unknown, where: string, subject: string): TestingMan
 
 function readTask(value: unknown, where: string, subject: string): TestingManifestTask {
   const task = readRecord(value, where, subject);
-  rejectUnknownKeys(task, ["id", "project", "kind", "execution", "dependsOn", "impact", "sqlImpact"], where, subject);
+  rejectUnknownKeys(
+    task,
+    ["id", "project", "kind", "execution", "dependsOn", "impact", "sqlImpact", "cache"],
+    where,
+    subject,
+  );
   const sqlImpact = task["sqlImpact"];
+  const cache = task["cache"];
+  if (cache !== undefined && typeof cache !== "boolean") {
+    throw new Error(`${subject}: ${where}.cache must be a boolean.`);
+  }
   return {
     id: readString(task["id"], `${where}.id`, subject),
     project: readString(task["project"], `${where}.project`, subject),
@@ -243,6 +260,7 @@ function readTask(value: unknown, where: string, subject: string): TestingManife
     dependsOn: readOptionalStringArray(task["dependsOn"], `${where}.dependsOn`, subject),
     impact: readImpact(task["impact"], `${where}.impact`, subject),
     ...(sqlImpact === undefined ? {} : { sqlImpact: readTaskSqlImpact(sqlImpact, `${where}.sqlImpact`, subject) }),
+    ...(cache === undefined ? {} : { cache }),
   };
 }
 

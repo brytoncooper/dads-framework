@@ -62,7 +62,7 @@ pub(super) fn prepare_tasks(
             *task,
             execution,
             dependencies,
-            decision.decision == "run",
+            decision.decision == "run" && task.cache,
             decision.selected_files.as_slice(),
         ));
     }

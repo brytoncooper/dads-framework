@@ -141,17 +141,19 @@ fn parse_project_file(
     if targets.is_empty() {
         targets = read_object_keys(object.get("scripts"));
     }
-    let fallback_dependencies = object
-        .get("fallbackDependencies")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(Value::as_str)
-                .map(normalize_identifier)
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut dep_set = BTreeSet::new();
+    for key in ["fallbackDependencies", "implicitDependencies"] {
+        if let Some(items) = object.get(key).and_then(Value::as_array) {
+            for raw in items.iter().filter_map(Value::as_str) {
+                let trimmed = raw.trim();
+                if trimmed.is_empty() || trimmed.starts_with('!') {
+                    continue;
+                }
+                dep_set.insert(normalize_identifier(trimmed));
+            }
+        }
+    }
+    let fallback_dependencies: Vec<String> = dep_set.into_iter().collect();
     Ok(DiscoveredProject {
         id,
         root: root.to_owned(),

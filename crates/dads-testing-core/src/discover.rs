@@ -75,6 +75,13 @@ fn merge_projects(
             by_id.insert(project.id.clone(), project);
         }
     }
+    let known_ids: BTreeSet<String> = by_id.keys().cloned().collect();
+    for project in by_id.values_mut() {
+        let self_id = project.id.clone();
+        project
+            .fallback_dependencies
+            .retain(|dep| dep != &self_id && known_ids.contains(dep));
+    }
     (by_id.into_values().collect(), discovered_by_id)
 }
 
@@ -108,11 +115,15 @@ fn expand_templates(
                 project,
             );
             if template.auto_vitest_narrowing {
+                let exclude_integration_tiers = template.target == "test"
+                    && (project.targets.contains("test:integration")
+                        || project.targets.contains("test:e2e"));
                 apply_auto_vitest_narrowing(
                     workspace_root,
                     &project.root,
                     &mut execution,
                     &mut impact_paths,
+                    exclude_integration_tiers,
                 );
             }
             tasks.push(DeclaredTask {
@@ -126,6 +137,7 @@ fn expand_templates(
                     paths: impact_paths,
                 },
                 sql_impact: template.sql_impact.clone(),
+                cache: template.cache,
             });
         }
     }
@@ -162,6 +174,15 @@ fn apply_overrides(
             task.impact.paths = paths.into_iter().collect();
             for (k, v) in &rule.env {
                 task.execution.env.insert(k.clone(), substitute(v, project));
+            }
+            if let Some(cwd) = &rule.cwd {
+                task.execution.cwd = Some(substitute(cwd, project));
+            }
+            if let Some(args) = &rule.args {
+                task.execution.args = args.iter().map(|arg| substitute(arg, project)).collect();
+            }
+            if let Some(cache) = rule.cache {
+                task.cache = cache;
             }
             if let Some(narrowing) = &rule.file_narrowing {
                 task.execution.file_narrowing = Some(substitute_narrowing(narrowing, project));

@@ -47,6 +47,8 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) sql: Option<WorkspaceSqlSettings>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) non_code_suffixes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) ignore_paths: Vec<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) dynamic_import_scopes: BTreeMap<String, Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -81,6 +83,8 @@ pub(crate) struct DeclaredTask {
     pub(crate) impact: TaskImpact,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) sql_impact: Option<TaskSqlImpact>,
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub(crate) cache: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -169,6 +173,14 @@ pub(crate) fn load_manifest(path: &Path) -> Result<TestingManifest, TestingError
 
 fn is_false(value: &bool) -> bool {
     !*value
+}
+
+pub(crate) fn default_true() -> bool {
+    true
+}
+
+fn is_true(value: &bool) -> bool {
+    *value
 }
 
 /// Declared tasks in dependency-first order: every prerequisite is emitted before the task that

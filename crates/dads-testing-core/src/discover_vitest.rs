@@ -63,11 +63,14 @@ pub(crate) fn normalize_vitest_run_args(execution: &mut TaskExecution) {
 
 /// Inspects a project's Vitest config to wire static `setupFiles` into `fileNarrowing` and record
 /// the config file in `impact.paths`. Fails closed (omits `fileNarrowing`) on dynamic `setupFiles`.
+/// When `exclude_integration_tiers` is true (dual-tier projects with `test:integration` or
+/// `test:e2e`), automatically excludes `.integration.test.*` and `.e2e.test.*` from unit narrowing.
 pub(crate) fn apply_auto_vitest_narrowing(
     workspace_root: &Path,
     project_root: &str,
     execution: &mut TaskExecution,
     impact_paths: &mut Vec<String>,
+    exclude_integration_tiers: bool,
 ) {
     let inspection = inspect_project_vitest_config(workspace_root, project_root);
     if let Some(config_path) = inspection.config_path
@@ -86,6 +89,16 @@ pub(crate) fn apply_auto_vitest_narrowing(
         ".spec.ts".to_owned(),
         ".spec.tsx".to_owned(),
     ];
+    let default_excludes = if exclude_integration_tiers {
+        vec![
+            ".integration.test.ts".to_owned(),
+            ".integration.test.tsx".to_owned(),
+            ".e2e.test.ts".to_owned(),
+            ".e2e.test.tsx".to_owned(),
+        ]
+    } else {
+        Vec::new()
+    };
     let existing = execution.file_narrowing.take();
     let (suffixes, exclude_suffixes, mut setup_set) = match existing {
         Some(n) => (
@@ -94,10 +107,14 @@ pub(crate) fn apply_auto_vitest_narrowing(
             } else {
                 n.suffixes
             },
-            n.exclude_suffixes,
+            if n.exclude_suffixes.is_empty() {
+                default_excludes
+            } else {
+                n.exclude_suffixes
+            },
             n.setup_files.into_iter().collect::<BTreeSet<_>>(),
         ),
-        None => (default_suffixes, Vec::new(), BTreeSet::new()),
+        None => (default_suffixes, default_excludes, BTreeSet::new()),
     };
     setup_set.extend(inspection.setup_files);
     execution.file_narrowing = Some(FileNarrowing {

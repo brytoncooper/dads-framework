@@ -294,13 +294,81 @@ function collectFileAliasDeps(
   } catch {
     return;
   }
-  const importRe = /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["']([^"']+)["']/g;
-  for (let match = importRe.exec(text); match !== null; match = importRe.exec(text)) {
-    const spec = (match[1] ?? "").split("?")[0] ?? "";
+  for (const rawSpec of scanImportSpecifiersIgnoringComments(text)) {
+    const spec = rawSpec.split("?")[0] ?? "";
     if (spec.length === 0 || spec.startsWith(".") || spec.startsWith("/")) continue;
     const target = resolveAliasTarget(spec);
     if (target !== undefined && target.name !== projectName) deps.add(target.name);
   }
+}
+
+/**
+ * Strips line/block comments and non-import string/template contents before matching static
+ * `from "..."`, `import("...")`, and `require("...")` specifiers so comments and string literals
+ * never create false circular-dependency edges.
+ */
+function scanImportSpecifiersIgnoringComments(text: string): string[] {
+  const cleaned = stripCommentsAndNonImportTemplates(text);
+  const importRe = /(?:^|[\s;{}()])(?:from\s+|import\s*\(\s*|require\s*\(\s*)(["'])([^"'\\]+)\1/g;
+  const results: string[] = [];
+  for (let match = importRe.exec(cleaned); match !== null; match = importRe.exec(cleaned)) {
+    const spec = match[2];
+    if (spec !== undefined) results.push(spec);
+  }
+  return results;
+}
+
+function stripCommentsAndNonImportTemplates(text: string): string {
+  const out: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    i = consumeSourceToken(text, i, out);
+  }
+  return out.join("");
+}
+
+function consumeSourceToken(text: string, i: number, out: string[]): number {
+  const ch = text[i];
+  const next = text[i + 1];
+  if (ch === "/" && next === "/") return skipLineComment(text, i + 2);
+  if (ch === "/" && next === "*") {
+    out.push(" ");
+    return skipBlockComment(text, i + 2);
+  }
+  if (ch === "`") {
+    out.push('""');
+    return skipQuoted(text, i + 1, "`");
+  }
+  if (ch === "'" || ch === '"') return consumeQuotedLiteral(text, i, ch, out);
+  out.push(ch ?? "");
+  return i + 1;
+}
+
+function consumeQuotedLiteral(text: string, start: number, quote: string, out: string[]): number {
+  const end = skipQuoted(text, start + 1, quote);
+  const isImportString = /(?:^|[\s;{}()])(?:from\s+|import\s*\(\s*|require\s*\(\s*)$/.test(out.join(""));
+  out.push(isImportString ? text.slice(start, end) : '""');
+  return end;
+}
+
+function skipLineComment(text: string, start: number): number {
+  let i = start;
+  while (i < text.length && text[i] !== "\n") i += 1;
+  return i;
+}
+
+function skipBlockComment(text: string, start: number): number {
+  let i = start;
+  while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i += 1;
+  return i + 2;
+}
+
+function skipQuoted(text: string, start: number, quote: string): number {
+  let i = start;
+  while (i < text.length && text[i] !== quote) {
+    i += text[i] === "\\" ? 2 : 1;
+  }
+  return i + 1;
 }
 
 function collectBoundarySourceFiles(absDir: string, out: string[]): string[] {

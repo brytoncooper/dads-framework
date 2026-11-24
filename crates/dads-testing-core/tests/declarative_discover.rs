@@ -231,3 +231,133 @@ fn expand_manifest_produces_canonical_ir_preserving_file_narrowing_and_optional_
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
+
+fn make_v071_repo() -> Result<PathBuf, Box<dyn Error>> {
+    let dir =
+        std::env::temp_dir().join(format!("dads-testing-discover-v071-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("libs/styles"))?;
+    fs::create_dir_all(dir.join("libs/app/src"))?;
+    fs::create_dir_all(dir.join("docs"))?;
+    git(&dir, &["init", "-q"])?;
+    git(&dir, &["config", "user.email", "test@example.com"])?;
+    git(&dir, &["config", "user.name", "Test"])?;
+
+    fs::write(
+        dir.join("libs/styles/project.json"),
+        r#"{"name": "styles", "targets": {"lint": {}}}"#,
+    )?;
+    fs::write(
+        dir.join("libs/app/project.json"),
+        r#"{
+          "name": "app",
+          "implicitDependencies": ["styles", "!excluded", "missing-project"],
+          "targets": {"test": {}, "test:integration": {}}
+        }"#,
+    )?;
+    fs::write(
+        dir.join("libs/app/vitest.config.mts"),
+        "export default { test: {} };\n",
+    )?;
+    fs::write(dir.join("libs/app/src/index.ts"), "export const x = 1;\n")?;
+    fs::write(dir.join("docs/guide.md"), "# Guide\n")?;
+    fs::write(
+        dir.join("dads.testing.json"),
+        r#"{
+          "schemaVersion": 1,
+          "workspace": {
+            "ignorePaths": ["docs/**", "apps/mobile/**"],
+            "discover": {
+              "projectFiles": ["libs/*/project.json"],
+              "targetTemplates": [
+                {
+                  "target": "test",
+                  "kind": "test",
+                  "when": {"hasTarget": "test"},
+                  "execution": {"executable": "vitest", "args": ["run"], "cwd": "{projectRoot}"},
+                  "autoVitestNarrowing": true,
+                  "impact": {"mode": "reachability"}
+                }
+              ],
+              "taskOverrides": [
+                {
+                  "target": "test",
+                  "when": {"projects": ["app"]},
+                  "cwd": ".",
+                  "args": ["run", "--root", "{projectRoot}"],
+                  "cache": false
+                }
+              ]
+            }
+          }
+        }"#,
+    )?;
+    git(&dir, &["add", "."])?;
+    git(&dir, &["commit", "-q", "-m", "init"])?;
+    Ok(dir)
+}
+
+#[test]
+fn discover_reads_implicit_deps_dual_tier_excludes_ignore_paths_and_task_override_cwd_cache()
+-> Result<(), Box<dyn Error>> {
+    let dir = make_v071_repo()?;
+
+    let resp = execute_request(NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::ExpandManifest,
+        workspace_root: dir.display().to_string(),
+        ..NativeRequest::default()
+    });
+    assert!(resp.ok, "{resp:?}");
+    let expanded = resp
+        .result
+        .and_then(|r| r.manifest)
+        .ok_or("missing expanded manifest")?;
+    let projects = expanded["projects"].as_array().ok_or("projects array")?;
+    let app_project = projects
+        .iter()
+        .find(|p| p["id"].as_str() == Some("app"))
+        .ok_or("app project")?;
+    assert_eq!(
+        app_project["fallbackDependencies"],
+        serde_json::json!(["styles"])
+    );
+
+    let tasks = expanded["tasks"].as_array().ok_or("tasks array")?;
+    let app_test = tasks
+        .iter()
+        .find(|t| t["id"].as_str() == Some("app:test"))
+        .ok_or("app:test")?;
+    assert_eq!(app_test["execution"]["cwd"], ".");
+    assert_eq!(
+        app_test["execution"]["args"],
+        serde_json::json!(["run", "--root", "libs/app"])
+    );
+    assert_eq!(app_test["cache"], false);
+    assert_eq!(
+        app_test["execution"]["fileNarrowing"]["excludeSuffixes"],
+        serde_json::json!([
+            ".integration.test.ts",
+            ".integration.test.tsx",
+            ".e2e.test.ts",
+            ".e2e.test.tsx"
+        ])
+    );
+
+    // Changing an unowned file matching workspace.ignorePaths does NOT trigger fullFallback!
+    fs::write(dir.join("docs/guide.md"), "# Guide updated\n")?;
+    let plan_resp = execute_request(NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::Plan,
+        workspace_root: dir.display().to_string(),
+        base: Some("HEAD".to_owned()),
+        ..NativeRequest::default()
+    });
+    assert!(plan_resp.ok, "{plan_resp:?}");
+    let plan = plan_resp.result.ok_or("plan result")?.plan;
+    assert!(!plan.scope.full_fallback);
+    assert_eq!(plan.counts.run, 0);
+
+    let _ = fs::remove_dir_all(&dir);
+    Ok(())
+}

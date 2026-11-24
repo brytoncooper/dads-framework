@@ -2,7 +2,8 @@
 
 use crate::execute::{TestingError, message};
 use crate::manifest::{
-    FileNarrowing, ImpactMode, TaskBatchConfig, TaskExecution, TaskKind, validate_relative_path,
+    FileNarrowing, ImpactMode, TaskBatchConfig, TaskExecution, TaskKind, default_true,
+    validate_relative_path,
 };
 use crate::sql_manifest::TaskSqlImpact;
 use serde::{Deserialize, Serialize};
@@ -39,6 +40,8 @@ pub(crate) struct TargetTemplate {
     pub(crate) impact: TemplateImpact,
     #[serde(default)]
     pub(crate) sql_impact: Option<TaskSqlImpact>,
+    #[serde(default = "default_true")]
+    pub(crate) cache: bool,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -90,6 +93,12 @@ pub(crate) struct TaskOverride {
     pub(crate) add_impact_paths: Vec<String>,
     #[serde(default)]
     pub(crate) env: BTreeMap<String, String>,
+    #[serde(default)]
+    pub(crate) cwd: Option<String>,
+    #[serde(default)]
+    pub(crate) args: Option<Vec<String>>,
+    #[serde(default)]
+    pub(crate) cache: Option<bool>,
     #[serde(default)]
     pub(crate) file_narrowing: Option<FileNarrowing>,
     #[serde(default)]

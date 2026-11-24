@@ -6,6 +6,7 @@ use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
 use crate::scope::{
     deepest_project_for_path, dynamic_import_scope_triggered, is_isolated_test_file,
+    path_matches_impact,
 };
 use std::collections::BTreeSet;
 
@@ -21,6 +22,14 @@ pub(super) fn own_changed_paths<'a>(
     }
     for changed_path in &scope.changed_paths {
         if evidence.lockfile_handled_paths.contains(changed_path) {
+            continue;
+        }
+        if manifest
+            .workspace
+            .ignore_paths
+            .iter()
+            .any(|pattern| path_matches_impact(changed_path, pattern))
+        {
             continue;
         }
         match deepest_project_for_path(&manifest.projects, changed_path) {
@@ -94,6 +103,13 @@ pub(super) fn widen_through_graph<'a>(
     let mut changed_paths: Vec<String> = scope
         .changed_paths
         .iter()
+        .filter(|path| {
+            !manifest
+                .workspace
+                .ignore_paths
+                .iter()
+                .any(|pattern| path_matches_impact(path, pattern))
+        })
         .filter(|path| !is_declared_non_code(path, &manifest.workspace.non_code_suffixes))
         .filter(|path| !evidence.lockfile_handled_paths.contains(*path))
         .filter(|path| !evidence.sql_handled_paths.contains(*path) || graph.contains_path(path))

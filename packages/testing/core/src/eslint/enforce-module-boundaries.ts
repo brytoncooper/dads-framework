@@ -232,7 +232,44 @@ function createAstVisitors(checkCtx: CheckContext): EslintRuleListener {
       const arg = extractRequireLiteralArg(node);
       if (arg !== undefined) checkImportSpecifier(checkCtx, arg.node, arg.value);
     },
+    TSImportType: (node) => {
+      const arg = extractTsImportTypeLiteral(node);
+      if (arg !== undefined) checkImportSpecifier(checkCtx, arg.node, arg.value);
+    },
+    TSImportEqualsDeclaration: (node) => {
+      const arg = extractTsImportEqualsLiteral(node);
+      if (arg !== undefined) checkImportSpecifier(checkCtx, arg.node, arg.value);
+    },
   };
+}
+
+function extractTsImportTypeLiteral(node: unknown): { readonly node: unknown; readonly value: string } | undefined {
+  if (!isRecord(node)) return undefined;
+  // typescript-eslint v8 uses `source` (Literal); v7 uses `argument` (TSLiteralType -> literal).
+  const candidate = node["source"] ?? node["argument"];
+  if (!isRecord(candidate)) return undefined;
+  if (candidate["type"] === "Literal" && typeof candidate["value"] === "string") {
+    return { node: candidate, value: candidate["value"] };
+  }
+  if (
+    candidate["type"] === "TSLiteralType" &&
+    isRecord(candidate["literal"]) &&
+    candidate["literal"]["type"] === "Literal" &&
+    typeof candidate["literal"]["value"] === "string"
+  ) {
+    return { node: candidate["literal"], value: candidate["literal"]["value"] };
+  }
+  return undefined;
+}
+
+function extractTsImportEqualsLiteral(node: unknown): { readonly node: unknown; readonly value: string } | undefined {
+  if (!isRecord(node) || !isRecord(node["moduleReference"])) return undefined;
+  const ref = node["moduleReference"];
+  if (ref["type"] !== "TSExternalModuleReference" || !isRecord(ref["expression"])) return undefined;
+  if (ref["expression"]["type"] === "Literal" && typeof ref["expression"]["value"] === "string") {
+    return { node: ref["expression"], value: ref["expression"]["value"] };
+  }
+  return undefined;
 }
 
 function extractRequireLiteralArg(node: unknown): { readonly node: unknown; readonly value: string } | undefined {

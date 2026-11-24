@@ -4,6 +4,29 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.7.0] - 2026-11-24
+
+Independent release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Added
+
+- **Decoupled testing release track:** `Prepare npm release artifacts` (`scope: testing`) and the release scripts now package, verify, and Sigstore-sign the 6 `@dads-framework/testing` packages independently from the 18 framework packages.
+- **Declarative workspace discovery (`workspace.discover`) & `dad-test expand`:** Automatically expands JSONC `project.json` files using `namedImpacts`, `targetTemplates`, `dependsOnIfExists`, `taskOverrides`, `autoVitestNarrowing`, and automatic `fullFallback.taskIds`, with snapshot-digest invalidation so repos no longer maintain giant static manifests.
+- **Explicit-only `--only` scope:** `dad-test plan|run|explain --only` runs strictly the requested `--task`, `--project`, `--target`, or `--kind` selectors plus their `dependsOn` prerequisites without running a git diff or Oxc graph scan.
+- **Native CLI filters, weighted sharding & task batching:** Added `--target`, `--project`, `--exclude`, `--weights <file>` (LPT bin-packing), native Git `EMPTY_TREE` handling, and `execution.batch` with automatic individual failure isolation.
+- **Zero-dependency Nx replacement companions:** Added `@dads-framework/testing/esbuild` (esbuild Node bundler + lockfileVersion 3 pruner), `@dads-framework/testing/eslint` (`enforce-module-boundaries` rule), and `scripts/testing/fetch-native-binary.mjs` for standalone CI binary fetching.
+
+### Changed
+
+- **Default live human streaming:** `dad-test run` now streams `[dad-test] START / CACHED / PASS / FAIL` lines and failing task output to `stderr` by default in non-`--json` mode and prints a one-line summary to `stdout` instead of dumping JSON; `--json` remains clean on `stdout`.
+- **Parallel receipt hashing & S3 cache acceleration:** Memoized per-run `git ls-files`, manifest bytes, and file SHA-256 hashes; added single-pass S3 `list-objects-v2` pre-indexing (up to 100k keys / 10s budget), parallel receipt hashing and L2 GETs, 8 background L2 PUT workers, and skipped Oxc graph analysis on `--all`, `--only`, and `EMPTY_TREE`.
+
+### Fixed
+
+- **Refuse `--all` + `--task` footgun:** Combining `--all` with `--task` now fails loudly instead of silently selecting every task in the manifest.
+- **Vitest `run` & `fileNarrowing`:** Both `dad-test-nx eject` and declarative `autoVitestNarrowing` normalize bare `vitest` commands to `vitest run` and wire `fileNarrowing` plus static `setupFiles` detection (failing closed on dynamic `setupFiles`).
+- **`dad-test-nx eject` hygiene:** Extracts leading `KEY=VAL` env prefixes into `execution.env` and strips root lockfiles from per-task `impact.paths`.
+
 ## [0.6.5] - 2026-11-24
 
 ### Added

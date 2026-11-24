@@ -26,7 +26,7 @@
   ],
   "dependencies": {
     "@dads-framework/access": "0.6.5",
-    "@dads-framework/testing": "0.6.5",
+    "@dads-framework/testing": ">=0.6.5 <1.0.0",
     "typescript": "6.0.3",
     "zod": "^4.4.3"
   },

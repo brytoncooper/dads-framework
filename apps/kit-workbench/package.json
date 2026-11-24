@@ -62,7 +62,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@dads-framework/testing": "0.6.5",
+    "@dads-framework/testing": ">=0.6.5 <1.0.0",
     "@dads-framework/toolbox": "0.6.5",
     "@tailwindcss/vite": "^4.3.3",
     "@testcontainers/postgresql": "^12.0.4",

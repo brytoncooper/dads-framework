@@ -11,7 +11,7 @@
     "start": "tsx assembly/main.ts",
     "migrate": "tsx assembly/migrate.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --reporter=default --reporter=json --outputFile=node_modules/.dads/vitest-report.json",
+    "test": "vitest run --reporter=default --reporter=json --outputFile.json=node_modules/.dads/vitest-report.json",
     "verify": "npm run typecheck && npm test",
     "dev:web": "vite --host 127.0.0.1",
     "build:web": "vite build",

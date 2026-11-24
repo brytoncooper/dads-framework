@@ -224,6 +224,7 @@
                   <li>Email</li>
                   <li>PDF &amp; CSV</li>
                   <li>React UI</li>
+                  <li>Selective Testing (TIA)</li>
                 </ul>
               </div>
               <p class="preview-caption" id="template-caption">
@@ -650,11 +651,79 @@
         </div>
       </section>
 
+      <section class="wrap starter-section" aria-labelledby="testing-tia-heading">
+        <div class="starter-copy">
+          <p class="section-eyebrow">Test Impact Analysis &amp; beyond</p>
+          <h2 id="testing-tia-heading">Skip only the tests Dad can prove are unaffected.</h2>
+          <p class="section-lede">
+            The same domain boundaries that keep a Dads backend clean also let <code>dad-test</code> prove which tests a
+            diff can reach. It is a proof-backed Test Impact Analysis (TIA) engine with a coupling X-ray, SQL migration
+            narrowing, remote receipt caching, and deterministic simulation testing built in — and works standalone on
+            any TypeScript, Vitest, Jest, or Nx repo.
+          </p>
+          <ul class="contrast-list">
+            <li>
+              <strong>Symbol-, helper-, and table-level TIA</strong>
+              <span>
+                Parsed in Rust with Oxc and backed by 36 Lean 4 theorems and Quint/TLA+ specs. Comment edits run zero
+                tests, type-only edits skip runtime suites, private-helper edits narrow to affected files, and scoped
+                Postgres migrations run only impacted database suites.
+              </span>
+            </li>
+            <li>
+              <strong>Fail-closed safety + repo coupling X-ray</strong>
+              <span>
+                When dynamic code or global SQL cannot be proved narrow, Dad widens out loud with the exact
+                <code>file:line:col</code>. Run <code>dad-test diagnose</code> on a clean repo to see your effective vs.
+                potential skip rate, runtime coupling hotspots, and safety-tiered fix guides.
+              </span>
+            </li>
+            <li>
+              <strong>More than TIA: remote receipts &amp; DST</strong>
+              <span>
+                Share content-hashed passing receipts across CI workers (<code>--cache</code>,
+                <code>--remote-cache</code>) and stress-test retries, clock expiry, and stream revocations with
+                <code>@dads-framework/testing/dst</code>.
+                <a href="/docs/selective-testing.html">Read the selective testing guide →</a>
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="terminal-box" aria-label="Dad Test diagnose and explain output">
+          <div class="terminal-bar">
+            <span class="terminal-prompt-badge" aria-hidden="true">&gt;_</span>
+            <span class="terminal-title">npx dad-test diagnose</span>
+            <span class="terminal-tag">TIA + X-ray</span>
+          </div>
+          <pre tabindex="0"><code><span class="term-prompt">$</span> npx dad-test diagnose
+diagnose: 19656 modules, 307 projects, 5266 test files, 15 workspace-wide
+  leaf skip: <span class="term-fail">1.1% effective today</span> -&gt; <span class="term-pass">97.1% potential</span> after fixing culprits
+
+Widening culprits:
+  <span class="term-path">scripts/package-installer.mjs:27:36</span> [nonliteral-dynamic-import]
+    <span class="term-hint">fix [safe]: replace import(expr) with a static literal map.</span>
+    caution: do not ignore if tests execute this loader.
+
+<span class="term-prompt">$</span> npx dad-test run --cache
+<span class="term-pass">RUN</span>  domains-notes:unit   2/10 files (80% skipped, 0 widened)
+<span class="term-pass">SKIP</span> domains-billing:unit proven unaffected</code></pre>
+        </div>
+      </section>
+
       <section class="further">
         <div class="wrap further-grid">
           <div class="further-title"><h2>Keep reading</h2></div>
           <div class="reading-list">
             <a href="/docs/"><span>Documentation</span><small>Guides</small><i aria-hidden="true">↗</i></a>
+            <a href="/docs/selective-testing.html"
+              ><span>Selective testing &amp; TIA (dad-test)</span><small>Testing &amp; CI</small
+              ><i aria-hidden="true">↗</i></a
+            >
+            <a href="/docs/benchmarks-and-proof.html"
+              ><span>Benchmarks &amp; formal proofs</span><small>63 Lean 4 theorems</small
+              ><i aria-hidden="true">↗</i></a
+            >
             <a href="/docs/packages.html"
               ><span>Adopt one package in any TypeScript app</span><small>Packages</small><i aria-hidden="true">↗</i></a
             >

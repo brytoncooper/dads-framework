@@ -36,7 +36,10 @@ export async function verifyGeneratedCommands(transcript, projectRoot) {
   const manifestPath = join(projectRoot, "package.json");
   const reportPath = ".adoption-vitest.json";
   const manifest = readJson(manifestPath);
-  manifest.scripts.test += ` --reporter=default --reporter=json --outputFile.json=${reportPath}`;
+  const baseTestScript = manifest.scripts.test
+    .replace(/\s+--reporter=\S+/g, "")
+    .replace(/\s+--outputFile(?:\.\w+)?=\S+/g, "");
+  manifest.scripts.test = `${baseTestScript} --reporter=default --reporter=json --outputFile.json=${reportPath}`;
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
   const { stdout } = await transcript.run("sh", ["ci/verify.sh"], {

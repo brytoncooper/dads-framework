@@ -39,6 +39,15 @@ pub(crate) fn resolve_scope(
     request: &NativeRequest,
     workspace_root: &Path,
 ) -> Result<ResolvedScope, TestingError> {
+    if request.only {
+        return Ok(ResolvedScope {
+            kind: "explicit".into(),
+            base: None,
+            head: None,
+            changed_paths: Vec::new(),
+            full_fallback: false,
+        });
+    }
     if request.all {
         return Ok(all_scope(None, None));
     }

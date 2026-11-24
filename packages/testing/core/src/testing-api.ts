@@ -16,6 +16,8 @@ export type TestingOperationRequest = {
   readonly base?: string;
   readonly head?: string;
   readonly all?: boolean;
+  /** Run only explicitly named `--task` / `--project` / `--target` / `--kind` items without Git diff widening. */
+  readonly only?: boolean;
   readonly taskIds?: readonly string[];
   readonly taskKinds?: readonly string[];
   readonly targets?: readonly string[];
@@ -242,6 +244,7 @@ type NativeRequest = {
   readonly base?: string;
   readonly head?: string;
   readonly all: boolean;
+  readonly only?: boolean;
   readonly taskIds: readonly string[];
   readonly taskKinds?: readonly string[];
   readonly targets?: readonly string[];
@@ -320,6 +323,7 @@ function optionalNativeScopeFields(request: TestingOperationRequest): Partial<Na
     ...(request.manifestPath === undefined ? {} : { manifestPath: request.manifestPath }),
     ...(request.base === undefined ? {} : { base: request.base }),
     ...(request.head === undefined ? {} : { head: request.head }),
+    ...(request.only === true ? { only: true } : {}),
     ...(request.taskKinds === undefined || request.taskKinds.length === 0 ? {} : { taskKinds: request.taskKinds }),
     ...(request.shard === undefined ? {} : { shard: request.shard }),
   };

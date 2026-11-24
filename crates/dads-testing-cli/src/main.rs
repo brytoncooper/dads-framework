@@ -80,7 +80,7 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
         };
     }
     if request.operation != Operation::Diagnose
-        && (request.all || request.base.as_deref().is_some_and(is_empty_tree_sha))
+        && (request.all || request.only || request.base.as_deref().is_some_and(is_empty_tree_sha))
     {
         return GraphAnalysis {
             graph: None,

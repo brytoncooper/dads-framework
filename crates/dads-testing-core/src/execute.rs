@@ -103,11 +103,7 @@ pub fn expanded_manifest_bytes(
     serde_json::to_vec(&expanded).ok()
 }
 
-fn execute(
-    request: NativeRequest,
-    graph: Option<&DependencyGraph>,
-    receipts: Option<&dyn TaskReceiptStore>,
-) -> Result<OperationResult, TestingError> {
+fn validate_request(request: &NativeRequest) -> Result<(), TestingError> {
     if request.schema_version != PROTOCOL_SCHEMA_VERSION {
         return Err(message(format!(
             "Unsupported request schemaVersion {}. Expected 1.",
@@ -120,6 +116,36 @@ fn execute(
     if request.all && (request.base.is_some() || request.head.is_some()) {
         return Err(message("--all cannot be combined with --base or --head."));
     }
+    if request.all && !request.task_ids.is_empty() {
+        return Err(message(
+            "--all cannot be combined with --task. Use --only --task <id> to run only the requested tasks and their prerequisites.",
+        ));
+    }
+    if request.only {
+        if request.all || request.base.is_some() || request.head.is_some() {
+            return Err(message(
+                "--only cannot be combined with --all, --base, or --head.",
+            ));
+        }
+        if request.task_ids.is_empty()
+            && request.projects.is_empty()
+            && request.targets.is_empty()
+            && request.task_kinds.is_empty()
+        {
+            return Err(message(
+                "--only requires at least one --task, --project, --target, or --kind selector.",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn execute(
+    request: NativeRequest,
+    graph: Option<&DependencyGraph>,
+    receipts: Option<&dyn TaskReceiptStore>,
+) -> Result<OperationResult, TestingError> {
+    validate_request(&request)?;
     let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
     if request.operation == Operation::ExpandManifest {

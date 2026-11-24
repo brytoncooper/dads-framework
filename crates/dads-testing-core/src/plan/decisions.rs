@@ -90,6 +90,9 @@ fn decision_reason(
     if selection.direct_tasks.contains(id) {
         return ("direct-task-input", "explicit", false);
     }
+    if scope.kind == "explicit" && run {
+        return ("direct-task-input", "explicit", false);
+    }
     if scope.full_fallback || evidence.full_fallback {
         return ("full-fallback", "conservative", false);
     }

@@ -201,6 +201,45 @@ fn target_project_exclude_and_weighted_sharding_filter_deterministically()
     assert_eq!(ids1, vec!["a:lint"]);
     assert_eq!(ids2, vec!["b:lint", "c:lint"]);
 
+    // `--only --task b:lint` on a dirty working tree selects ONLY `b:lint` without git-diff widening
+    // or unrelated `impact: always` tasks!
+    fs::write(dir.join("a/index.ts"), "export const a = 999;\n")?;
+    let only_task = execute_request(NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::Plan,
+        workspace_root: dir.display().to_string(),
+        only: true,
+        task_ids: vec!["b:lint".into()],
+        ..NativeRequest::default()
+    });
+    assert!(only_task.ok, "{only_task:?}");
+    let only_plan = only_task.result.ok_or("only_task")?.plan;
+    assert_eq!(only_plan.scope.kind, "explicit");
+    assert_eq!(only_plan.counts.run, 1);
+    let ran: Vec<&str> = only_plan
+        .tasks
+        .iter()
+        .filter(|t| t.decision == "run")
+        .map(|t| t.id.as_str())
+        .collect();
+    assert_eq!(ran, vec!["b:lint"]);
+
+    // `--only --target test:integration --project a` selects ONLY `a:test:integration` without git-diff!
+    let only_filtered = execute_request(NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::Plan,
+        workspace_root: dir.display().to_string(),
+        only: true,
+        targets: vec!["test:integration".into()],
+        projects: vec!["a".into()],
+        ..NativeRequest::default()
+    });
+    assert!(only_filtered.ok, "{only_filtered:?}");
+    let only_f_plan = only_filtered.result.ok_or("only_filtered")?.plan;
+    assert_eq!(only_f_plan.scope.kind, "explicit");
+    assert_eq!(only_f_plan.counts.run, 1);
+    assert_eq!(only_f_plan.tasks[0].id, "a:test:integration");
+
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }

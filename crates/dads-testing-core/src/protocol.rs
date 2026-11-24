@@ -27,6 +27,8 @@ pub struct NativeRequest {
     #[serde(default)]
     pub all: bool,
     #[serde(default)]
+    pub only: bool,
+    #[serde(default)]
     pub task_ids: Vec<String>,
     #[serde(default)]
     pub task_kinds: Vec<String>,
@@ -60,6 +62,7 @@ impl Default for NativeRequest {
             base: None,
             head: None,
             all: false,
+            only: false,
             task_ids: Vec::new(),
             task_kinds: Vec::new(),
             targets: Vec::new(),

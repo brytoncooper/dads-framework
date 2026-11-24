@@ -88,7 +88,10 @@ does this in `fixtures/testing/` and makes its test task depend on typecheck.
 `plan`, `run`, and `explain` share the same selection flags: `--manifest`
 (path to `dads.testing.json`), `--base` and `--head` (Git refs; passing Git's
 empty tree SHA as `--base` resolves directly to `all` scope without dumping
-every tracked file), `--all`, and `--task` (repeatable, one task id each).
+every tracked file), `--all`, `--only` (runs only explicitly named `--task`,
+`--project`, `--target`, or `--kind` items plus their `dependsOn` with no Git
+diff or graph widening; cannot be combined with `--all`, `--base`, or `--head`),
+and `--task` (repeatable, one task id each; cannot be combined with `--all`).
 `plan` and `run` additionally take `--kind` (repeatable or comma-separated:
 `test`, `typecheck`, `lint`, `build`, `custom`), `--target` (repeatable or
 comma-separated task target names such as `lint` or `test:integration`),
@@ -113,10 +116,10 @@ package.
 `dad-test run` selects the same way and then executes the selected tasks as a
 dependency-aware DAG, four workers at a time by default; `--jobs` sets a
 different positive limit. Independent tasks keep going after another task
-fails; dependents of a failed or blocked prerequisite are blocked. Passing
-`--stream` (enabled automatically in non-`--json` human mode) streams live task
-starts, cache hits, passes, and failure output to `stderr` while keeping
-`stdout` clean for the JSON envelope. By default every selected task executes
+fails; dependents of a failed or blocked prerequisite are blocked. Passing `--stream` (enabled automatically in non-`--json` human mode, which
+streams live `START` / `CACHED` / `PASS` / `FAIL` lines plus failing output to
+`stderr` and prints a concise summary instead of a raw JSON dump) streams live
+task progress to `stderr` while keeping `stdout` clean for the JSON envelope. By default every selected task executes
 fresh. Passing `--cache` opts into content-hashed passing receipts persisted
 under Git metadata (memoized per run and computed in parallel across workers;
 invalidated by any source, policy-file, manifest, command, `execution.env`,
@@ -134,7 +137,7 @@ executing tasks, taking `--manifest`, `--out` (optional output file path), and
 `--json`.
 
 `dad-test explain` prints the same selection in readable lines, taking
-`--manifest`, `--base`, `--head`, `--all`, `--task`, and `--json`:
+`--manifest`, `--base`, `--head`, `--all`, `--only`, `--task`, and `--json`:
 
 ```
 explain: N of M tasks selected, K skipped, W widened detail=engine|derived
@@ -240,8 +243,10 @@ reached.
 
 Large monorepos may declare `workspace.discover` (`projectFiles` globs,
 optional `excludeRoots`, `namedImpacts`, `targetTemplates` with `{project}` /
-`{projectRoot}` placeholders and `dependsOnIfExists`, and `taskOverrides`) so
-`dads.testing.json` stays compact and never drifts when projects are added.
+`{projectRoot}` placeholders, `dependsOnIfExists`, and `autoVitestNarrowing` to
+inspect each project's `vitest.config.*` for static `setupFiles` while ensuring
+`vitest run`), and `taskOverrides` so `dads.testing.json` stays compact and
+never drifts when projects are added.
 `workspace.discover` expands losslessly into the exact canonical `projects`,
 `tasks`, and `workspace.fullFallback.taskIds` IR in memory before validation
 and planning, preserving every `fileNarrowing` and graph-soundness guarantee.

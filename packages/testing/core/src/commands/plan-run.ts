@@ -18,6 +18,7 @@ const operationOptions: readonly OptionSpecification[] = [
   { name: "--base", kind: "value" },
   { name: "--head", kind: "value" },
   { name: "--all", kind: "flag" },
+  { name: "--only", kind: "flag" },
   { name: "--task", kind: "repeatable" },
   { name: "--kind", kind: "repeatable" },
   { name: "--target", kind: "repeatable" },
@@ -65,16 +66,27 @@ export const runCommand: DadTestCommand = {
         : {}),
     });
     const report = buildReportIfRequested(parsed, io, result.plan, result.run);
-    writeCommandSuccess(
-      io,
-      json,
-      "run",
-      report === undefined ? result : { plan: result.plan, run: result.run, report },
-    );
+    if (json) {
+      writeCommandSuccess(
+        io,
+        true,
+        "run",
+        report === undefined ? result : { plan: result.plan, run: result.run, report },
+      );
+    } else {
+      writeHumanRunSummary(io, result.plan, result.run);
+    }
     writeReportWrittenLine(parsed, io, json, report);
     return result.run.exitCode;
   },
 };
+
+function writeHumanRunSummary(io: DadTestCliIo, plan: TestingPlanResult, run: TestingRunResult): void {
+  const cached = run.counts.cached ?? 0;
+  io.stdout(
+    `run completed. ${String(run.counts.executed)} executed (${String(cached)} cached), ${String(run.counts.failed)} failed, ${String(run.counts.blocked)} blocked, ${String(plan.counts.skipProvenUnaffected)} skipped. Use --json for the versioned machine-readable result.\n`,
+  );
+}
 
 /**
  * Builds the `--report` output when `--report` was given, reading the manifest
@@ -124,6 +136,7 @@ export function buildOperationRequest(parsed: ParsedArguments, io: DadTestCliIo)
   return {
     workspaceRoot: io.cwd,
     all: parsed.flags.has("--all"),
+    ...(parsed.flags.has("--only") ? { only: true } : {}),
     taskIds: parsed.repeated.get("--task") ?? [],
     ...optionalSelectionFields(parsed, io.cwd),
     ...optionalExecutionFields(parsed, io),

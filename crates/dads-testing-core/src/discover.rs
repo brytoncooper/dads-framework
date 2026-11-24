@@ -7,6 +7,7 @@
 use crate::discover_scan::{DiscoveredProject, discover_projects};
 pub(crate) use crate::discover_schema::WorkspaceDiscover;
 use crate::discover_schema::{TargetMatch, validate_discover};
+use crate::discover_vitest::{apply_auto_vitest_narrowing, normalize_vitest_run_args};
 use crate::execute::TestingError;
 use crate::manifest::{
     DeclaredTask, FileNarrowing, Project, TaskExecution, TaskImpact, TestingManifest,
@@ -93,18 +94,27 @@ fn expand_templates(
             if template.depends_on_if_exists {
                 optional_dep_tasks.insert(id.clone());
             }
-            let execution = substitute_execution(&template.execution, project);
+            let mut execution = substitute_execution(&template.execution, project);
+            normalize_vitest_run_args(&mut execution);
             let depends_on = template
                 .depends_on
                 .iter()
                 .map(|dep| substitute(dep, project))
                 .collect();
-            let impact_paths = resolve_impact_paths(
+            let mut impact_paths = resolve_impact_paths(
                 &discover.named_impacts,
                 &template.impact.named,
                 &template.impact.paths,
                 project,
             );
+            if template.auto_vitest_narrowing {
+                apply_auto_vitest_narrowing(
+                    workspace_root,
+                    &project.root,
+                    &mut execution,
+                    &mut impact_paths,
+                );
+            }
             tasks.push(DeclaredTask {
                 id,
                 project: project.id.clone(),

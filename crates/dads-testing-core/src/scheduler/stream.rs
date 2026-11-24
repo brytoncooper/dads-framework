@@ -10,7 +10,7 @@ pub(super) fn emit_cached(enabled: bool, task_id: &str) {
     if !enabled {
         return;
     }
-    let _ = writeln!(io::stderr(), "[dad-test] cached {task_id}");
+    let _ = writeln!(io::stderr(), "[dad-test] CACHED {task_id}");
 }
 
 pub(super) fn emit_start(enabled: bool, task_ids: &[&str]) {
@@ -18,11 +18,11 @@ pub(super) fn emit_start(enabled: bool, task_ids: &[&str]) {
         return;
     }
     if task_ids.len() == 1 {
-        let _ = writeln!(io::stderr(), "[dad-test] start  {}", task_ids[0]);
+        let _ = writeln!(io::stderr(), "[dad-test] START  {}", task_ids[0]);
     } else {
         let _ = writeln!(
             io::stderr(),
-            "[dad-test] start  batch({} tasks: {} ..)",
+            "[dad-test] START  batch({} tasks: {} ..)",
             task_ids.len(),
             task_ids[0]
         );
@@ -35,7 +35,7 @@ pub(super) fn emit_batch_fallback(enabled: bool, count: usize, first_id: &str) {
     }
     let _ = writeln!(
         io::stderr(),
-        "[dad-test] retry  batch({count} tasks: {first_id} ..) failed; isolating individually"
+        "[dad-test] RETRY  batch({count} tasks: {first_id} ..) failed; isolating individually"
     );
 }
 
@@ -46,7 +46,7 @@ pub(super) fn emit_finish(enabled: bool, result: &TaskRunResult) {
     let ms = result.duration_ms.unwrap_or(0);
     let mut stderr = io::stderr();
     if result.status == "executed" {
-        let _ = writeln!(stderr, "[dad-test] pass   {} ({ms}ms)", result.id);
+        let _ = writeln!(stderr, "[dad-test] PASS   {} ({ms}ms)", result.id);
         return;
     }
     let code = result

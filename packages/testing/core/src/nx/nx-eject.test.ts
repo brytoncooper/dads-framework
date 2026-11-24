@@ -139,6 +139,47 @@ describe("dad-test-nx eject", () => {
     expect(ejected.task?.impact.paths).not.toContain("package.json");
   });
 
+  it("normalizes bare vitest commands to vitest run and attaches fileNarrowing with static setupFiles", async () => {
+    const workspace = await mkdtemp(path.join(tmpdir(), "dads-nx-eject-vitest-"));
+    tempDirs.push(workspace);
+    await mkdir(path.join(workspace, "libs/unit/src"), { recursive: true });
+    await writeFile(
+      path.join(workspace, "libs/unit/vitest.config.mts"),
+      'export default { test: { setupFiles: ["./src/setup.ts"] } };\n',
+      "utf8",
+    );
+    const project = {
+      name: "unit",
+      root: "libs/unit",
+      targets: {},
+      dependencies: [],
+      namedInputs: undefined,
+    };
+    const projects = new Map([[project.name, project]]);
+    const bare = ejectTarget({
+      workspaceRoot: workspace,
+      project,
+      name: "test",
+      target: {
+        executor: "nx:run-commands",
+        options: { command: "vitest", cwd: "{projectRoot}" },
+      },
+      projects,
+      nxConfiguration: {},
+    });
+    expect(bare.audit.classification).toBe("converted");
+    expect(bare.task?.execution).toEqual({
+      executable: "vitest",
+      args: ["run"],
+      cwd: "libs/unit",
+      fileNarrowing: {
+        suffixes: [".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx"],
+        setupFiles: ["libs/unit/src/setup.ts"],
+      },
+    });
+    expect(bare.task?.impact.paths).toContain("libs/unit/vitest.config.mts");
+  });
+
   it("writes dads.testing.json, rewrites nxViteTsPaths to dadsTsconfigPaths, and runs with zero Nx installed", async () => {
     const workspace = await createNxWorkspace();
     const nativeBinary = findLocalNativeBinary();

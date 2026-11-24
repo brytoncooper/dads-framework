@@ -254,6 +254,8 @@ function buildRunCommandsPlan(
   return materializeRunCommand(workspaceRoot, project, resolvedCommand, rawCwd, scope);
 }
 
+const nonRunVitestSubcommands = new Set(["run", "bench", "list", "init", "--run", "--version", "-v", "--help", "-h"]);
+
 function materializeRunCommand(
   workspaceRoot: string,
   project: NativeProject,
@@ -261,9 +263,9 @@ function materializeRunCommand(
   cwd: string,
   scope: InputScope,
 ): ExecutionPlan | Error {
-  const isVitest = /(?:^|\s)vitest\s+run(?:\s|$)/.test(resolvedCommand);
-  const vitestMeta = inspectRunCommandVitest(workspaceRoot, project.root, isVitest, scope);
   if (shellSyntaxPattern.test(resolvedCommand)) {
+    const isVitest = /(?:^|\s)vitest(?:\s|$)/.test(resolvedCommand);
+    const vitestMeta = inspectRunCommandVitest(workspaceRoot, project.root, isVitest, scope);
     return {
       execution: { executable: resolvedCommand, args: [], ...(cwd === "." ? {} : { cwd }), shell: true },
       extraImpactPaths: vitestMeta.extraImpactPaths,
@@ -275,10 +277,12 @@ function materializeRunCommand(
   if (argv instanceof Error) return argv;
   const extracted = extractLeadingEnv(argv);
   if (extracted instanceof Error) return extracted;
+  const normalized = normalizeEjectedVitest(extracted.executable, extracted.args);
+  const vitestMeta = inspectRunCommandVitest(workspaceRoot, project.root, normalized.isVitest, scope);
   return {
     execution: {
-      executable: extracted.executable,
-      args: extracted.args,
+      executable: normalized.executable,
+      args: normalized.args,
       ...(cwd === "." ? {} : { cwd }),
       ...(Object.keys(extracted.env).length === 0 ? {} : { env: extracted.env }),
       ...(vitestMeta.fileNarrowing === undefined ? {} : { fileNarrowing: vitestMeta.fileNarrowing }),
@@ -287,6 +291,23 @@ function materializeRunCommand(
     ...(vitestMeta.nxViteConfigPath === undefined ? {} : { nxViteConfigPath: vitestMeta.nxViteConfigPath }),
     reason: vitestMeta.reason,
   };
+}
+
+function normalizeEjectedVitest(
+  executable: string,
+  args: readonly string[],
+): { readonly executable: string; readonly args: readonly string[]; readonly isVitest: boolean } {
+  const isDirect = executable === "vitest" || executable.endsWith("/vitest");
+  if (isDirect) {
+    const hasSub = args.some((arg) => nonRunVitestSubcommands.has(arg));
+    return { executable, args: hasSub ? args : ["run", ...args], isVitest: true };
+  }
+  if (executable === "npx" && args[0] === "vitest") {
+    const rest = args.slice(1);
+    const hasSub = rest.some((arg) => nonRunVitestSubcommands.has(arg));
+    return { executable, args: hasSub ? args : ["vitest", "run", ...rest], isVitest: true };
+  }
+  return { executable, args, isVitest: false };
 }
 
 function extractLeadingEnv(argv: readonly string[]):

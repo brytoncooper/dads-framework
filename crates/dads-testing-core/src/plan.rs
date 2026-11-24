@@ -127,6 +127,7 @@ impl<'a> PlanEvidence<'a> {
     ) -> Option<Vec<String>> {
         if self.full_fallback
             || scope.full_fallback
+            || scope.kind == "explicit"
             || self.is_widened_for_task(task)
             || self.sql_selected_tasks.contains_key(&task.id)
             || self.has_changed_file_input(task, scope)
@@ -299,6 +300,11 @@ fn select_tasks<'a>(
     let mut uncertainty_origins = BTreeMap::new();
     if evidence.full_fallback {
         selected.extend(task_by_id.keys().copied());
+    } else if scope.kind == "explicit" {
+        if direct_tasks.is_empty() {
+            // `--only` with --project/--target/--kind selects all manifest tasks before post-plan filtering.
+            selected.extend(task_by_id.keys().copied());
+        }
     } else {
         fallback_origins =
             propagate_fallback_dependents(manifest, &mut evidence.fallback_impacted_projects);

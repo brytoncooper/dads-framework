@@ -15,6 +15,7 @@ const explainOptions: readonly OptionSpecification[] = [
   { name: "--base", kind: "value" },
   { name: "--head", kind: "value" },
   { name: "--all", kind: "flag" },
+  { name: "--only", kind: "flag" },
   { name: "--task", kind: "repeatable" },
 ];
 

@@ -320,6 +320,13 @@ describe("plan/run --report", () => {
       stream: true,
     });
 
+    // `--only --task` forwards `only: true` and human `run` emits a concise summary without dumping JSON.
+    const humanHarness = createHarness(directory, fixture.binary);
+    expect(await runDadTestCli(["run", "--only", "--task", "api:test"], humanHarness.io)).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({ operation: "run", only: true, taskIds: ["api:test"], stream: true });
+    expect(humanHarness.stdout()).toContain("run completed.");
+    expect(humanHarness.stdout()).not.toContain('"tasks": [');
+
     const parsedManifest: unknown = JSON.parse(singleProjectManifest);
     const expandFixture = createFakeNativeBinary(directory, {
       schemaVersion: 1,

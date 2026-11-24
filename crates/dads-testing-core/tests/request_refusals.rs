@@ -70,6 +70,41 @@ fn all_combined_with_a_base_or_a_head_is_refused() {
     }
 }
 
+#[test]
+fn all_combined_with_task_is_refused_and_only_requires_selector() {
+    let workspace = TemporaryWorkspace::create();
+    workspace.write_manifest();
+    let all_with_task = execute_request(NativeRequest {
+        all: true,
+        task_ids: vec!["fixture:test".into()],
+        ..plan_request(&workspace.0)
+    });
+    assert_refusal(
+        &all_with_task,
+        "--all cannot be combined with --task. Use --only --task <id> to run only the requested tasks and their prerequisites.",
+    );
+
+    let only_empty = execute_request(NativeRequest {
+        only: true,
+        ..plan_request(&workspace.0)
+    });
+    assert_refusal(
+        &only_empty,
+        "--only requires at least one --task, --project, --target, or --kind selector.",
+    );
+
+    let only_with_base = execute_request(NativeRequest {
+        only: true,
+        base: Some("HEAD".into()),
+        task_ids: vec!["fixture:test".into()],
+        ..plan_request(&workspace.0)
+    });
+    assert_refusal(
+        &only_with_base,
+        "--only cannot be combined with --all, --base, or --head.",
+    );
+}
+
 /// The planner's own bound: `plan.rs` refuses a zero job limit, so a `run` never reaches the
 /// scheduler with one. `src/tests/running.rs` holds the scheduler's matching refusal.
 #[test]

@@ -28,8 +28,9 @@ fn make_declarative_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
     )?;
     fs::write(
         dir.join("libs/alpha/vitest.config.mts"),
-        "export default {};\n",
+        "export default { test: { setupFiles: ['./src/setup.ts'] } };\n",
     )?;
+    fs::write(dir.join("libs/alpha/src/setup.ts"), "export {};\n")?;
     fs::write(
         dir.join("libs/alpha/src/a.test.ts"),
         "export const t = 1;\n",
@@ -90,15 +91,13 @@ fn make_declarative_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
                         "target": "test",
                         "kind": "test",
                         "when": { "fileExists": ["vitest.config.mts"], "hasTarget": "test" },
+                        "autoVitestNarrowing": true,
                         "execution": {
                             "executable": "vitest",
-                            "args": ["run", "--root", "{projectRoot}"],
-                            "fileNarrowing": {
-                                "suffixes": [".test.ts"],
-                                "setupFiles": ["{projectRoot}/vitest.config.mts"]
-                            }
+                            "args": [],
+                            "cwd": "{projectRoot}"
                         },
-                        "impact": { "mode": "reachability", "paths": ["{projectRoot}/vitest.config.mts"] }
+                        "impact": { "mode": "reachability", "paths": [] }
                     },
                     {
                         "target": "test:integration",
@@ -191,12 +190,17 @@ fn expand_manifest_produces_canonical_ir_preserving_file_narrowing_and_optional_
     let beta_lint = find_task("beta:lint").ok_or("beta:lint")?;
     assert_eq!(beta_lint["dependsOn"], serde_json::json!([]));
 
-    // alpha:test preserves fileNarrowing with expanded setupFiles!
+    // alpha:test normalizes bare `vitest` -> `vitest run` and auto-detects static setupFiles + config impact!
     let alpha_test = find_task("alpha:test").ok_or("alpha:test")?;
+    assert_eq!(alpha_test["execution"]["args"], serde_json::json!(["run"]));
     assert_eq!(
         alpha_test["execution"]["fileNarrowing"]["setupFiles"],
-        serde_json::json!(["libs/alpha/vitest.config.mts"])
+        serde_json::json!(["libs/alpha/src/setup.ts"])
     );
+    assert!(alpha_test["impact"]["paths"].as_array().is_some_and(|arr| {
+        arr.iter()
+            .any(|v| v.as_str() == Some("libs/alpha/vitest.config.mts"))
+    }));
 
     // beta:test:integration received dbMigrations via taskOverrides + hasTag!
     let beta_int = find_task("beta:test:integration").ok_or("beta:test:integration")?;

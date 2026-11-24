@@ -8,8 +8,10 @@ use serde::Deserialize;
 use std::collections::HashSet;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
-const MAX_LIST_PAGES: usize = 10;
+const MAX_LIST_PAGES: usize = 100;
+const MAX_LIST_DURATION: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct S3KeyIndex {
@@ -91,8 +93,12 @@ fn list_prefix_keys(
     };
     let mut keys = HashSet::new();
     let mut continuation: Option<String> = None;
+    let started = Instant::now();
 
     for _ in 0..MAX_LIST_PAGES {
+        if started.elapsed() > MAX_LIST_DURATION {
+            return None;
+        }
         let mut command = aws_command();
         command
             .args([

@@ -10,6 +10,7 @@ mod diagnose_traps;
 mod discover;
 mod discover_scan;
 mod discover_schema;
+mod discover_vitest;
 mod execute;
 mod git;
 pub mod graph;

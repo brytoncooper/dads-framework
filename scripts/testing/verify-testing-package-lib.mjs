@@ -79,6 +79,21 @@ function parsePackReport(output, label) {
   return { filename: report.filename, files };
 }
 
+export function inspectPackedTarball(tarballPath, label) {
+  requireFile(tarballPath, `${label} tarball`);
+  const entries = execFileSync("tar", ["-tzf", tarballPath], { encoding: "utf8" })
+    .trim()
+    .split("\n")
+    .filter((entry) => entry.length > 0 && !entry.endsWith("/"))
+    .map((entry) => {
+      if (!entry.startsWith("package/") || entry.split("/").includes("..")) {
+        throw new Error(`${label} tarball contains an invalid package path: ${entry}`);
+      }
+      return entry.slice("package/".length);
+    });
+  return { path: tarballPath, files: entries };
+}
+
 export function verifyPackedContents(packed, label, manifest, nativePackageName) {
   const files = packed.files;
   const forbidden = files.filter((file) => {
@@ -111,8 +126,9 @@ export function verifyPackedContents(packed, label, manifest, nativePackageName)
     }
   } else {
     const expectedBinary = process.platform === "win32" ? "bin/dad-test.exe" : "bin/dad-test";
-    const expectedFiles = ["package.json", "README.md", expectedBinary, ...nativeNoticeFiles];
-    if (files.length !== expectedFiles.length || expectedFiles.some((file) => !files.includes(file))) {
+    const requiredFiles = ["package.json", "README.md", expectedBinary, ...nativeNoticeFiles];
+    const allowedFiles = new Set([...requiredFiles, "LICENSE.md"]);
+    if (requiredFiles.some((file) => !files.includes(file)) || files.some((file) => !allowedFiles.has(file))) {
       throw new Error(
         `${nativePackageName} package must contain its executable, manifest, README and license notices.`,
       );

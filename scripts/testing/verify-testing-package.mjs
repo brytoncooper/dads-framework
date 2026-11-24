@@ -12,11 +12,20 @@ import {
   runCleanConsumerNx,
   runCleanConsumerPlan,
 } from "./verify-testing-package-consumer.mjs";
-import { packPackage, readJson, requireFile, verifyPackedContents } from "./verify-testing-package-lib.mjs";
+import {
+  inspectPackedTarball,
+  packPackage,
+  readJson,
+  requireFile,
+  verifyPackedContents,
+} from "./verify-testing-package-lib.mjs";
 
 const args = process.argv.slice(2);
 const buildHost = args.length === 1 && args[0] === "--build-host";
-if (args.length !== 0 && !buildHost) throw new Error("Usage: verify-testing-package.mjs [--build-host]");
+const packedDirectoryArg = args.length === 2 && args[0] === "--packed-directory" ? resolve(args[1]) : undefined;
+if (args.length !== 0 && !buildHost && packedDirectoryArg === undefined) {
+  throw new Error("Usage: verify-testing-package.mjs [--build-host | --packed-directory <release-dir>]");
+}
 import {
   assertNativeNoticeLock,
   stageNativePackageNotices,
@@ -56,18 +65,34 @@ try {
   if (dirname(temporaryRoot) !== resolve(tmpdir())) {
     throw new Error(`Refusing to use an unexpected temporary path: ${temporaryRoot}`);
   }
-  const proofPackageRoot = buildHost
-    ? stageTestingPackage(root, nativePackageRoot, nativeBinaryName, temporaryRoot)
-    : nativePackageRoot;
-  assertNativeBinary(proofPackageRoot);
-  assertNativeNoticeLock(root);
-  verifyNativePackageNotices(root, proofPackageRoot);
-  const packedDirectory = join(temporaryRoot, "packed");
   const consumerDirectory = join(temporaryRoot, "consumer");
-  mkdirSync(packedDirectory, { recursive: true });
   mkdirSync(consumerDirectory, { recursive: true });
-  const facadeTarball = packPackage(root, packageRoot, packedDirectory, facadeManifest, "facade");
-  const nativeTarball = packPackage(root, proofPackageRoot, packedDirectory, nativeManifest, "native");
+  let facadeTarball;
+  let nativeTarball;
+  if (packedDirectoryArg !== undefined) {
+    facadeTarball = inspectPackedTarball(
+      join(packedDirectoryArg, `dads-framework-testing-${facadeManifest.version}.tgz`),
+      "facade",
+    );
+    nativeTarball = inspectPackedTarball(
+      join(
+        packedDirectoryArg,
+        `dads-framework-testing-native-${nativePlatformDirectoryName}-${nativeManifest.version}.tgz`,
+      ),
+      "native",
+    );
+  } else {
+    const proofPackageRoot = buildHost
+      ? stageTestingPackage(root, nativePackageRoot, nativeBinaryName, temporaryRoot)
+      : nativePackageRoot;
+    assertNativeBinary(proofPackageRoot);
+    assertNativeNoticeLock(root);
+    verifyNativePackageNotices(root, proofPackageRoot);
+    const packedDirectory = join(temporaryRoot, "packed");
+    mkdirSync(packedDirectory, { recursive: true });
+    facadeTarball = packPackage(root, packageRoot, packedDirectory, facadeManifest, "facade");
+    nativeTarball = packPackage(root, proofPackageRoot, packedDirectory, nativeManifest, "native");
+  }
   verifyPackedContents(facadeTarball, "facade", facadeManifest, nativePackageName);
   verifyPackedContents(nativeTarball, "native", nativeManifest, nativePackageName);
   installCleanConsumer(consumerDirectory, facadeTarball, nativeTarball, nativePackageName);

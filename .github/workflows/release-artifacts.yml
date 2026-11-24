@@ -2,12 +2,21 @@ name: Prepare npm release artifacts
 
 on:
   workflow_dispatch:
+    inputs:
+      scope:
+        description: "Release track to prepare: all (24 packages) or testing (6 testing packages)"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - testing
 
 permissions:
   contents: read
 
 concurrency:
-  group: npm-release-artifacts
+  group: npm-release-artifacts-${{ inputs.scope || 'all' }}
   cancel-in-progress: false
 
 jobs:
@@ -65,19 +74,28 @@ jobs:
           path: ${{ runner.temp }}/native-release
       - name: Assemble and prove release archives
         env:
+          RELEASE_SCOPE: ${{ inputs.scope || 'all' }}
           RELEASE_DIR: ${{ runner.temp }}/npm-release
           NATIVE_DIR: ${{ runner.temp }}/native-release
           DADS_ADOPTION_JOBS: 4
         run: |
           node scripts/release/sync-package-licenses.mjs
-          npm run build
+          if [[ "$RELEASE_SCOPE" == "testing" ]]; then
+            npm run build --workspace @dads-framework/testing
+          else
+            npm run build
+          fi
           mkdir "$RELEASE_DIR"
           node scripts/release/collect-native-release.mjs "$NATIVE_DIR" "$RELEASE_DIR"
-          node scripts/release/pack-preflight.mjs --output "$RELEASE_DIR"
-          node scripts/adoption/verify-adoption.mjs --packed-directory "$RELEASE_DIR"
+          node scripts/release/pack-preflight.mjs --scope "$RELEASE_SCOPE" --output "$RELEASE_DIR"
+          if [[ "$RELEASE_SCOPE" == "testing" ]]; then
+            node scripts/testing/verify-testing-package.mjs --packed-directory "$RELEASE_DIR"
+          else
+            node scripts/adoption/verify-adoption.mjs --packed-directory "$RELEASE_DIR"
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: dads-npm-verified-${{ github.run_attempt }}
+          name: dads-npm-verified-${{ inputs.scope || 'all' }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/npm-release/*.tgz
           if-no-files-found: error
           retention-days: 3
@@ -99,17 +117,18 @@ jobs:
           node-version: 24.22.3
       - uses: actions/download-artifact@v4
         with:
-          name: dads-npm-verified-${{ github.run_attempt }}
+          name: dads-npm-verified-${{ inputs.scope || 'all' }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/npm-release
       - name: Sign exact release archives
         env:
+          RELEASE_SCOPE: ${{ inputs.scope || 'all' }}
           RELEASE_DIR: ${{ runner.temp }}/npm-release
         run: |
           npm install --prefix "$RUNNER_TEMP/npm-signing" --registry=https://registry.npmjs.org/ --ignore-scripts --no-audit --no-fund --save-exact npm@11.21.2
-          node scripts/release/sign-release.mjs sign "$RELEASE_DIR" "$RUNNER_TEMP/npm-signing/node_modules/npm"
+          node scripts/release/sign-release.mjs sign "$RELEASE_DIR" "$RUNNER_TEMP/npm-signing/node_modules/npm" --scope "$RELEASE_SCOPE"
       - uses: actions/upload-artifact@v4
         with:
-          name: dads-npm-release-${{ github.sha }}-${{ github.run_attempt }}
+          name: dads-npm-release-${{ inputs.scope || 'all' }}-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/npm-release/
           if-no-files-found: error
           retention-days: 14

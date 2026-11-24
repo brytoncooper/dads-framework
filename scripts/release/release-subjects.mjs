@@ -2,10 +2,11 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { releaseVersion } from "./release-version.mjs";
+import { TESTING_FACADE_PACKAGE, expectedPackageVersion, normalizeReleaseScope } from "./release-version.mjs";
 import { releaseWorkspaces } from "./release-workspaces.mjs";
 
-const releasePackageCount = 24;
+const ALL_RELEASE_PACKAGE_COUNT = 24;
+const TESTING_RELEASE_PACKAGE_COUNT = 6;
 
 function readJson(file) {
   return JSON.parse(readFileSync(file, "utf8"));
@@ -18,20 +19,25 @@ export function repositorySlug(root) {
   return match[1];
 }
 
-export function releaseSubjects(root, directory) {
-  const version = releaseVersion(root);
+export function releaseSubjects(root, directory, scope = "all") {
+  const normalizedScope = normalizeReleaseScope(scope);
   const workspaces = releaseWorkspaces(root);
   const facade = readJson(join(root, "packages/testing/core/package.json"));
   const native = Object.keys(facade.optionalDependencies ?? {});
-  const expectedNames = new Set([...workspaces.map(({ name }) => name), ...native]);
-  if (native.length !== 5 || expectedNames.size !== releasePackageCount) {
-    throw new Error(`Expected exactly ${releasePackageCount} release names, including five native packages.`);
+  const selectedWorkspaces =
+    normalizedScope === "testing" ? workspaces.filter(({ name }) => name === TESTING_FACADE_PACKAGE) : workspaces;
+  const expectedCount = normalizedScope === "testing" ? TESTING_RELEASE_PACKAGE_COUNT : ALL_RELEASE_PACKAGE_COUNT;
+  const expectedNames = new Set([...selectedWorkspaces.map(({ name }) => name), ...native]);
+  if (native.length !== 5 || expectedNames.size !== expectedCount) {
+    throw new Error(
+      `Expected exactly ${expectedCount} release names for scope "${normalizedScope}", including five native packages.`,
+    );
   }
   const archives = readdirSync(directory)
     .filter((name) => name.endsWith(".tgz"))
     .sort();
-  if (archives.length !== releasePackageCount) {
-    throw new Error(`Expected exactly ${releasePackageCount} release tarballs.`);
+  if (archives.length !== expectedCount) {
+    throw new Error(`Expected exactly ${expectedCount} release tarballs for scope "${normalizedScope}".`);
   }
 
   const repository = `git+https://github.com/${repositorySlug(root)}.git`;
@@ -45,9 +51,10 @@ export function releaseSubjects(root, directory) {
         maxBuffer: 128 * 1024,
       }),
     );
+    const expectedVersion = expectedPackageVersion(root, manifest.name);
     if (
       !remainingNames.delete(manifest.name) ||
-      manifest.version !== version ||
+      manifest.version !== expectedVersion ||
       manifest.private === true ||
       manifest.repository?.url !== repository
     )

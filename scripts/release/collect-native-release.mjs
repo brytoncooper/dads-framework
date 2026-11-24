@@ -3,12 +3,12 @@ import { copyFileSync, constants, readFileSync, readdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import process from "node:process";
 import { nativeArchiveRustTarget } from "./native-executable.mjs";
-import { releaseVersion } from "./release-version.mjs";
+import { testingReleaseVersion } from "./release-version.mjs";
 
 const [inputs, output] = process.argv.slice(2);
 if (!inputs || !output) throw new Error("Expected native input and release output directories.");
 
-const version = releaseVersion(process.cwd());
+const version = testingReleaseVersion(process.cwd());
 const entries = readdirSync(inputs, { withFileTypes: true });
 if (entries.length !== 5 || entries.some((entry) => !entry.isDirectory())) {
   throw new Error("Expected five hosted native matrix artifacts.");

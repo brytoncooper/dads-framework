@@ -6,16 +6,41 @@ import { join, resolve } from "node:path";
 import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
 import { releaseSubjects, repositorySlug } from "./release-subjects.mjs";
+import { normalizeReleaseScope } from "./release-version.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const npmVersion = "11.21.2";
 const issuer = "https://token.actions.githubusercontent.com";
 
-async function main() {
-  const [command, directory, npmInstall, expectedCommit] = process.argv.slice(2);
-  if (!directory || !npmInstall || !["sign", "verify"].includes(command)) {
-    throw new Error("Usage: sign-release.mjs sign|verify <release-dir> <npm-install-dir> [expected-commit-for-verify]");
+function parseArgs(argv) {
+  const positional = [];
+  let scope;
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--scope") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("-")) {
+        throw new Error("Expected --scope all|testing.");
+      }
+      scope = normalizeReleaseScope(value);
+      index += 1;
+    } else if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    } else {
+      positional.push(arg);
+    }
   }
+  const [command, directory, npmInstall, expectedCommit, ...extra] = positional;
+  if (!directory || !npmInstall || !["sign", "verify"].includes(command) || extra.length > 0) {
+    throw new Error(
+      "Usage: sign-release.mjs sign|verify <release-dir> <npm-install-dir> [expected-commit-for-verify] [--scope all|testing]",
+    );
+  }
+  return { command, directory, npmInstall, expectedCommit, scope };
+}
+
+async function main() {
+  const { command, directory, npmInstall, expectedCommit, scope: requestedScope } = parseArgs(process.argv.slice(2));
   const npmRoot = resolve(npmInstall);
   const npmManifest = JSON.parse(readFileSync(join(npmRoot, "package.json"), "utf8"));
   if (npmManifest.name !== "npm" || npmManifest.version !== npmVersion) {
@@ -29,7 +54,13 @@ async function main() {
   const workflow = ".github/workflows/release-artifacts.yml";
   const manifestPath = join(directory, "release.json");
   const manifest =
-    command === "sign" ? githubBuild(repository, workflow) : JSON.parse(readFileSync(manifestPath, "utf8"));
+    command === "sign"
+      ? githubBuild(repository, workflow, requestedScope ?? "all")
+      : JSON.parse(readFileSync(manifestPath, "utf8"));
+  const scope = normalizeReleaseScope(manifest.scope ?? "all");
+  if (command === "verify" && requestedScope !== undefined && requestedScope !== scope) {
+    throw new Error(`Release manifest scope "${scope}" does not match requested "${requestedScope}".`);
+  }
   const commit =
     expectedCommit ||
     execFileSync("git", ["rev-parse", "HEAD"], {
@@ -46,7 +77,7 @@ async function main() {
     !/^\d+$/.test(manifest.runAttempt)
   )
     throw new Error("Release build identity does not match the expected source.");
-  const packages = releaseSubjects(root, directory);
+  const packages = releaseSubjects(root, directory, scope);
   if (command === "verify" && JSON.stringify(manifest.packages) !== JSON.stringify(packages)) {
     throw new Error("Release inventory or tarball integrity differs from the manifest.");
   }
@@ -71,12 +102,16 @@ async function main() {
     verifySource(bundle, manifest);
   }
   if (command === "sign") {
-    writeFileSync(manifestPath, JSON.stringify({ ...manifest, packages }, null, 2) + "\n", { flag: "wx" });
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, packages }, null, 2) + "\n", {
+      flag: "wx",
+    });
   }
-  process.stdout.write(`Verified ${packages.length} release tarballs and provenance bundles at ${commit}.\n`);
+  process.stdout.write(
+    `Verified ${packages.length} release tarballs (${scope}) and provenance bundles at ${commit}.\n`,
+  );
 }
 
-function githubBuild(repository, workflow) {
+function githubBuild(repository, workflow, scope) {
   const env = process.env;
   if (
     env.GITHUB_ACTIONS !== "true" ||
@@ -91,6 +126,7 @@ function githubBuild(repository, workflow) {
   return {
     repository,
     workflow,
+    scope: normalizeReleaseScope(scope),
     ref: env.GITHUB_REF,
     commit: env.GITHUB_SHA,
     runId: env.GITHUB_RUN_ID,

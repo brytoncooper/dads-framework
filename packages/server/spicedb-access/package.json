@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/spicedb-access",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -33,10 +33,10 @@
   ],
   "dependencies": {
     "@authzed/authzed-node": "^1.6.1",
-    "@dads-framework/access": "0.6.2",
-    "@dads-framework/core": "0.6.2",
-    "@dads-framework/job-queue": "0.6.2",
-    "@dads-framework/postgres": "0.6.2",
+    "@dads-framework/access": "0.6.3",
+    "@dads-framework/core": "0.6.3",
+    "@dads-framework/job-queue": "0.6.3",
+    "@dads-framework/postgres": "0.6.3",
     "drizzle-orm": "^0.45.2",
     "jiti": "2.4.2",
     "node-pg-migrate": "^9.0.0",
@@ -51,8 +51,8 @@
     }
   },
   "devDependencies": {
-    "@dads-framework/postgres-access": "0.6.2",
-    "@dads-framework/sqlite-access": "0.6.2",
+    "@dads-framework/postgres-access": "0.6.3",
+    "@dads-framework/sqlite-access": "0.6.3",
     "@types/pg": "^8.20.0",
     "pg": "^8.20.0",
     "testcontainers": "^12.0.4",

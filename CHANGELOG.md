@@ -4,6 +4,12 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-11-23
+
+### Added
+
+- Isolated Nx diagnosis and revision-range planning in ephemeral detached Git worktrees (`os.tmpdir()`): `dad-test diagnose` / `dad-test-nx diagnose`, `dad-test-nx plan --base <A> --head <B>`, and `dad-test-nx plan --snapshot` now run against an immutable commit snapshot while symlinking `node_modules`, so concurrent edits on shared checkouts never interrupt discovery or planning.
+
 ## [0.6.2] - 2026-11-23
 
 ### Fixed

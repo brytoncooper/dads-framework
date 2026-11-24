@@ -1,13 +1,13 @@
 {
   "name": "@dads-fixture/boundary-verification",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@dads-framework/access": "0.6.2"
+    "@dads-framework/access": "0.6.3"
   },
   "scripts": {
     "build": "tsc -b",

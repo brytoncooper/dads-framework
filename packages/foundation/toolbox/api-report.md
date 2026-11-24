@@ -31,7 +31,7 @@ Entry point: @dads-framework/toolbox
 - type InitializeDadsProjectOptions: export type InitializeDadsProjectOptions = { readonly targetDirectory: string; readonly mode: "existing" | "new"; readonly projectName: string; readonly template?: DadsProjectTemplate; readonly dryRun?: boolean; };
 - type LoadedAccessSource: export type LoadedAccessSource = { readonly path: string; readonly kind: AccessSourceKind; readonly model: AccessModel; readonly definitions: readonly AccessIrDefinition[]; };
 - type LoadedDadsProject: export type LoadedDadsProject = { readonly root: string; readonly project: DadsProject; };
-- type MigrateTargetVersion: export type MigrateTargetVersion = "0.3.0" | "0.4.0" | "0.5.0" | "0.5.1" | "0.5.2" | "0.6.0" | "0.6.1" | "0.6.2";
+- type MigrateTargetVersion: export type MigrateTargetVersion = "0.3.0" | "0.4.0" | "0.5.0" | "0.5.1" | "0.5.2" | "0.6.0" | "0.6.1" | "0.6.2" | "0.6.3";
 - type MigrateToV03Options: export type MigrateToV03Options = { readonly root: string; readonly dryRun?: boolean; readonly includeMigrations?: boolean; readonly targetVersion?: MigrateTargetVersion; };
 - type MigrateToV03Result: export type MigrateToV03Result = { readonly root: string; readonly targetVersion: MigrateTargetVersion; readonly dryRun: boolean; readonly filesChanged: readonly string[]; readonly packageManifestsUpdated: number; readonly importReplacements: number; readonly addedPeers: readonly string[]; readonly skippedMigrations: readonly string[]; readonly followUps: readonly string[]; };
 - const PEERS_FOR_RETIRED_PACKAGE: export declare const PEERS_FOR_RETIRED_PACKAGE: Readonly<Record<string, Readonly<Record<string, string>>>>;

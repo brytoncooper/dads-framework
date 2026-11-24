@@ -19,7 +19,8 @@ const MIGRATIONS_DIR_PATTERN = /(?:^|\/)migrations\/[^/]+\.[cm]?[jt]s$/u;
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]s$/u;
 const EXPIRATION_MIGRATION_PATTERN = /\brelationshipExpirationMigration\b|\bexpires_at\b/u;
 
-export type MigrateTargetVersion = "0.3.0" | "0.4.0" | "0.5.0" | "0.5.1" | "0.5.2" | "0.6.0" | "0.6.1" | "0.6.2";
+export type MigrateTargetVersion =
+  "0.3.0" | "0.4.0" | "0.5.0" | "0.5.1" | "0.5.2" | "0.6.0" | "0.6.1" | "0.6.2" | "0.6.3";
 
 export type MigrateToV03Options = {
   readonly root: string;

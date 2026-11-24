@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/sqlite-access",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "type": "module",
   "engines": {
     "node": ">=22.5"
@@ -20,7 +20,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.6.2"
+    "@dads-framework/access": "0.6.3"
   },
   "devDependencies": {
     "vitest": "~4.1.0",

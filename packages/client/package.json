@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/client",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -28,7 +28,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/core": "0.6.2",
+    "@dads-framework/core": "0.6.3",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

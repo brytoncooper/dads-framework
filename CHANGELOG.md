@@ -4,6 +4,24 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-11-23
+
+### Added
+
+- Added `dad-test-nx eject` (and `ejectNativeNxTesting` in `@dads-framework/testing/nx`), a one-command exit ramp off Nx that converts plugin-inferred Vitest, ESLint, TypeScript, and `nx:run-commands` targets into a standalone zero-Nx `dads.testing.json` with automatic fail-closed Vitest `fileNarrowing`, pure-check `dependsOn` wiring, optional `--replace-nx-vite-paths` codemod (`nxViteTsPaths()` → `dadsTsconfigPaths()`), and an uninstall checklist.
+- Added `dad-test-nx diagnose` (and `diagnoseNativeNxTesting`) plus automatic Nx detection in `dad-test diagnose` when no `dads.testing.json` exists and `nx.json` is present.
+- Added destructured static `await import("./mod")` and tracked member-read narrowing in `dads-testing-javascript` (`frontend_version = 12`), preserving conservative widening for bare side-effect imports and rest spreads.
+- Added `dad-test-nx --help` and expanded inline `dad-test --help` usage output.
+
+### Changed
+
+- Upgraded `dad-test-nx` (`buildNativeNxManifest`) so `test`, `typecheck`, and `build` targets use full Oxc symbol-level `reachability` with extra non-graph Nx `impact.paths` (honored explicitly by `dads-testing-core` `ImpactMode::Reachability`), while `lint` stays on `changed-files`.
+- Separated pure-check Nx prerequisites (targets with `outputs: []` or `lint`/`test`/`typecheck` targets without declared outputs, such as repo-wide wall checks) into standalone `dependsOn` tasks so they run once instead of widening every unaffected project.
+- Replaced hex-encoded Nx identifiers (`nx-61-63-...`) with readable, collision-free reversible identifiers (`dadsIdentifier` / `decodeDadsIdentifier`, e.g. `api:test`).
+- Reused Nx's warm `.nx/workspace-data` plugin cache when `.nx/` is gitignored instead of forcing a cold scratch scan on every `dad-test-nx` invocation.
+- Upgraded `dad-test init` to emit `impact.mode: "reachability"` for `typecheck` tasks so comment-only edits skip both `test` and `typecheck`.
+- Improved `dad-test diagnose` pluralization, leaf-module coupling advice thresholds, and workspace-wide widening labels.
+
 ## [0.6.0] - 2026-11-23
 
 ### Added

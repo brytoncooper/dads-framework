@@ -1,10 +1,10 @@
 {
   "name": "@dads-fixture/domain-boundaries",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@dads-framework/core": "0.6.0"
+    "@dads-framework/core": "0.6.1"
   },
   "devDependencies": {
     "vitest": "~4.1.0"

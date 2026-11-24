@@ -1,6 +1,6 @@
 {
   "name": "@dads-app/workbench",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -12,12 +12,12 @@
     "test": "vitest run src"
   },
   "dependencies": {
-    "@dads-framework/access": "0.6.0",
-    "@dads-framework/core": "0.6.0",
-    "@dads-framework/http": "0.6.0",
-    "@dads-framework/postgres": "0.6.0",
-    "@dads-framework/postgres-access": "0.6.0",
-    "@dads-framework/spicedb-access": "0.6.0",
+    "@dads-framework/access": "0.6.1",
+    "@dads-framework/core": "0.6.1",
+    "@dads-framework/http": "0.6.1",
+    "@dads-framework/postgres": "0.6.1",
+    "@dads-framework/postgres-access": "0.6.1",
+    "@dads-framework/spicedb-access": "0.6.1",
     "drizzle-orm": "^0.45.2",
     "zod": "^4.4.3"
   }

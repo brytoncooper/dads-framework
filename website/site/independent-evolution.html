@@ -13,7 +13,7 @@
     <meta property="og:title" content="The Independent Evolution Principle · Dads Framework" />
     <meta
       property="og:description"
-      content="Align the shape of your dependency graph with the shape of change. Interactive blast-radius simulator, boundary audit examples, and the 7 design-review tests."
+      content="Align the shape of your dependency graph with the shape of change. Interactive blast-radius flow simulator, how major frameworks break IEP, and the 7 design-review tests."
     />
     <meta property="og:image" content="https://dadsframework.dev/assets/dads-social.png" />
     <meta property="og:image:alt" content="Dads Framework monogram" />
@@ -47,11 +47,9 @@
             change so every edit stops as close as possible to the place that owns it.
           </p>
           <div class="iep-hero-actions">
-            <a class="primary-action" href="#simulator"
-              >Try the blast-radius simulator <span aria-hidden="true">↓</span></a
-            >
-            <a class="text-action" href="#seven-tests">Jump to the 7 review tests</a>
-            <a class="text-action" href="/docs/where-code-goes.html">Where does code go? →</a>
+            <a class="primary-action" href="#simulator">Try the blast-radius flow <span aria-hidden="true">↓</span></a>
+            <a class="text-action" href="#framework-traps">How frameworks break IEP</a>
+            <a class="text-action" href="#seven-tests">The 7 review tests</a>
           </div>
         </div>
       </section>
@@ -59,12 +57,12 @@
       <section class="iep-section" id="simulator">
         <div class="wrap">
           <div class="iep-section-head">
-            <p class="iep-eyebrow">Interactive proof</p>
-            <h2>Click a real change. Watch where it stops.</h2>
+            <p class="iep-eyebrow">Interactive flow proof</p>
+            <h2>Click a change. Watch the blast wave hit the boundary.</h2>
             <p>
-              A boundary earns its existence by absorbing change. Pick a realistic edit below and compare a coupled
-              codebase (where shapes are shared because they looked similar on day one) against a codebase shaped by
-              Independent Evolution.
+              A boundary earns its existence by absorbing change. Pick a realistic edit below and trace the arrows: in a
+              coupled codebase, one change ripples through every consumer; under Independent Evolution, the boundary
+              wall stops it cold.
             </p>
           </div>
 
@@ -83,45 +81,143 @@
             </button>
           </div>
 
+          <div class="sim-legend" aria-hidden="true">
+            <span class="sim-legend-item"><span class="sim-dot sim-dot-origin"></span>Edited source</span>
+            <span class="sim-legend-item"><span class="sim-dot sim-dot-dirty"></span>Blast wave leaks</span>
+            <span class="sim-legend-item"><span class="sim-dot sim-dot-absorbed"></span>Absorbed at boundary</span>
+            <span class="sim-legend-item"><span class="sim-dot sim-dot-clean"></span>Untouched / skipped in CI</span>
+          </div>
+
           <div id="sim-live-status" class="sr" aria-live="polite"></div>
 
           <div class="sim-grid">
             <article class="sim-panel">
               <div class="sim-panel-head">
                 <h3>Shared because they looked alike</h3>
-                <span class="sim-badge sim-badge-bad">Coupled graph</span>
+                <span class="sim-badge sim-badge-bad">No wall · blast cascades</span>
               </div>
-              <div class="sim-graph" aria-label="Coupled architecture nodes">
-                <div class="sim-node" data-panel="coupled" data-node="db" data-status="origin">
-                  <span class="sim-node-kind">Storage</span>
-                  <span class="sim-node-name">invoices table</span>
-                  <span class="sim-node-state">column renamed</span>
-                </div>
-                <div class="sim-node" data-panel="coupled" data-node="dto" data-status="dirty">
-                  <span class="sim-node-kind">Shared DTO</span>
-                  <span class="sim-node-name">shared/invoice.ts</span>
-                  <span class="sim-node-state">row leaked</span>
-                </div>
-                <div class="sim-node" data-panel="coupled" data-node="web" data-status="dirty">
-                  <span class="sim-node-kind">Client</span>
-                  <span class="sim-node-name">Web app</span>
-                  <span class="sim-node-state">type breaks</span>
-                </div>
-                <div class="sim-node" data-panel="coupled" data-node="mobile" data-status="dirty">
-                  <span class="sim-node-kind">Client</span>
-                  <span class="sim-node-name">Mobile app</span>
-                  <span class="sim-node-state">older app breaks</span>
-                </div>
-                <div class="sim-node" data-panel="coupled" data-node="shipping" data-status="dirty">
-                  <span class="sim-node-kind">Domain</span>
-                  <span class="sim-node-name">Shipping</span>
-                  <span class="sim-node-state">reads raw row</span>
-                </div>
-                <div class="sim-node" data-panel="coupled" data-node="vendor" data-status="clean">
-                  <span class="sim-node-kind">Vendor</span>
-                  <span class="sim-node-name">Stripe SDK</span>
-                  <span class="sim-node-state">untouched</span>
-                </div>
+              <div class="sim-svg-wrap">
+                <svg class="sim-svg" viewBox="0 0 560 278" role="img" aria-label="Coupled architecture flow diagram">
+                  <defs>
+                    <marker
+                      id="flow-arrow-neutral"
+                      viewBox="0 0 10 10"
+                      refX="8"
+                      refY="5"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path class="flow-arrow-neutral" d="M 0 1 L 10 5 L 0 9 z" />
+                    </marker>
+                    <marker
+                      id="flow-arrow-dirty"
+                      viewBox="0 0 10 10"
+                      refX="8"
+                      refY="5"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path class="flow-arrow-dirty" d="M 0 1 L 10 5 L 0 9 z" />
+                    </marker>
+                    <marker
+                      id="flow-arrow-absorbed"
+                      viewBox="0 0 10 10"
+                      refX="8"
+                      refY="5"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path class="flow-arrow-absorbed" d="M 0 1 L 10 5 L 0 9 z" />
+                    </marker>
+                  </defs>
+
+                  <!-- Edges -->
+                  <path
+                    class="flow-edge"
+                    data-panel="coupled"
+                    data-edge="db-dto"
+                    data-edge-state="dirty"
+                    d="M 152 80 L 204 132"
+                    marker-end="url(#flow-arrow-dirty)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="coupled"
+                    data-edge="vendor-dto"
+                    data-edge-state="neutral"
+                    d="M 152 204 L 204 152"
+                    marker-end="url(#flow-arrow-neutral)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="coupled"
+                    data-edge="dto-web"
+                    data-edge-state="dirty"
+                    d="M 356 124 L 406 46"
+                    marker-end="url(#flow-arrow-dirty)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="coupled"
+                    data-edge="dto-mobile"
+                    data-edge-state="dirty"
+                    d="M 356 142 L 406 142"
+                    marker-end="url(#flow-arrow-dirty)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="coupled"
+                    data-edge="dto-shipping"
+                    data-edge-state="dirty"
+                    d="M 356 160 L 406 234"
+                    marker-end="url(#flow-arrow-dirty)"
+                  />
+
+                  <!-- Column 1: Storage & Vendor -->
+                  <g class="flow-node" data-panel="coupled" data-node="db" data-status="origin">
+                    <rect x="10" y="48" width="142" height="64" rx="8" />
+                    <text class="fn-kind" x="22" y="66">Storage</text>
+                    <text class="fn-title" x="22" y="84">invoices table</text>
+                    <text class="fn-state" x="22" y="101">column renamed</text>
+                  </g>
+                  <g class="flow-node" data-panel="coupled" data-node="vendor" data-status="clean">
+                    <rect x="10" y="172" width="142" height="64" rx="8" />
+                    <text class="fn-kind" x="22" y="190">Vendor</text>
+                    <text class="fn-title" x="22" y="208">Stripe SDK</text>
+                    <text class="fn-state" x="22" y="225">untouched</text>
+                  </g>
+
+                  <!-- Column 2: Shared God DTO -->
+                  <g class="flow-node" data-panel="coupled" data-node="dto" data-status="dirty">
+                    <rect x="206" y="110" width="150" height="64" rx="8" />
+                    <text class="fn-kind" x="218" y="128">Shared DTO / Barrel</text>
+                    <text class="fn-title" x="218" y="146">shared/invoice.ts</text>
+                    <text class="fn-state" x="218" y="163">row leaked</text>
+                  </g>
+
+                  <!-- Column 3: Consumers -->
+                  <g class="flow-node" data-panel="coupled" data-node="web" data-status="dirty">
+                    <rect x="408" y="14" width="142" height="64" rx="8" />
+                    <text class="fn-kind" x="420" y="32">Client</text>
+                    <text class="fn-title" x="420" y="50">Web app</text>
+                    <text class="fn-state" x="420" y="67">type breaks</text>
+                  </g>
+                  <g class="flow-node" data-panel="coupled" data-node="mobile" data-status="dirty">
+                    <rect x="408" y="110" width="142" height="64" rx="8" />
+                    <text class="fn-kind" x="420" y="128">Client</text>
+                    <text class="fn-title" x="420" y="146">Mobile app</text>
+                    <text class="fn-state" x="420" y="163">older app breaks</text>
+                  </g>
+                  <g class="flow-node" data-panel="coupled" data-node="shipping" data-status="dirty">
+                    <rect x="408" y="202" width="142" height="64" rx="8" />
+                    <text class="fn-kind" x="420" y="220">Domain</text>
+                    <text class="fn-title" x="420" y="238">Shipping</text>
+                    <text class="fn-state" x="420" y="255">reads raw row</text>
+                  </g>
+                </svg>
               </div>
               <div class="sim-metrics" data-metrics="coupled">
                 <div>
@@ -138,47 +234,120 @@
                 </div>
               </div>
               <p class="sim-note" data-note="coupled">
-                Because the database table is shared as the API DTO, renaming one internal column forces coordinated
-                changes across web, mobile, and shipping.
+                Because the database table is shared as the API DTO, renaming one internal column cascades through every
+                client and sibling domain.
               </p>
             </article>
 
             <article class="sim-panel">
               <div class="sim-panel-head">
                 <h3>Independent Evolution (Dads)</h3>
-                <span class="sim-badge sim-badge-good">Contained blast radius</span>
+                <span class="sim-badge sim-badge-good">Boundary wall stops change</span>
               </div>
-              <div class="sim-graph" aria-label="Independent Evolution architecture nodes">
-                <div class="sim-node" data-panel="iep" data-node="db" data-status="origin">
-                  <span class="sim-node-kind">Storage</span>
-                  <span class="sim-node-name">invoices table</span>
-                  <span class="sim-node-state">column renamed</span>
-                </div>
-                <div class="sim-node" data-panel="iep" data-node="store" data-status="absorbed">
-                  <span class="sim-node-kind">Boundary</span>
-                  <span class="sim-node-name">billing/store.ts</span>
-                  <span class="sim-node-state">mapped once</span>
-                </div>
-                <div class="sim-node" data-panel="iep" data-node="wire" data-status="clean">
-                  <span class="sim-node-kind">Wire contract</span>
-                  <span class="sim-node-name">billing/contract</span>
-                  <span class="sim-node-state">stable contract</span>
-                </div>
-                <div class="sim-node" data-panel="iep" data-node="web" data-status="clean">
-                  <span class="sim-node-kind">Clients</span>
-                  <span class="sim-node-name">Web &amp; Mobile</span>
-                  <span class="sim-node-state">untouched</span>
-                </div>
-                <div class="sim-node" data-panel="iep" data-node="shipping" data-status="clean">
-                  <span class="sim-node-kind">Domain</span>
-                  <span class="sim-node-name">Shipping</span>
-                  <span class="sim-node-state">port unchanged</span>
-                </div>
-                <div class="sim-node" data-panel="iep" data-node="vendor" data-status="clean">
-                  <span class="sim-node-kind">Capability</span>
-                  <span class="sim-node-name">Payments port</span>
-                  <span class="sim-node-state">untouched</span>
-                </div>
+              <div class="sim-svg-wrap">
+                <svg
+                  class="sim-svg"
+                  viewBox="0 0 560 286"
+                  role="img"
+                  aria-label="Independent Evolution architecture flow diagram with boundary wall"
+                >
+                  <!-- Boundary wall separating internal implementation from external contracts & sibling domains -->
+                  <line
+                    id="iep-wall-line"
+                    class="flow-wall-line"
+                    data-wall-active="true"
+                    x1="366"
+                    y1="26"
+                    x2="366"
+                    y2="278"
+                  />
+                  <g class="flow-wall-pill">
+                    <rect x="296" y="4" width="140" height="20" rx="10" />
+                    <text id="iep-wall-text" x="366" y="17" text-anchor="middle">STOPPED AT STORE</text>
+                  </g>
+
+                  <!-- Edges -->
+                  <path
+                    class="flow-edge"
+                    data-panel="iep"
+                    data-edge="db-store"
+                    data-edge-state="absorbed"
+                    d="M 148 80 L 194 128"
+                    marker-end="url(#flow-arrow-absorbed)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="iep"
+                    data-edge="vendor-store"
+                    data-edge-state="neutral"
+                    d="M 148 206 L 194 158"
+                    marker-end="url(#flow-arrow-neutral)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="iep"
+                    data-edge="store-wire"
+                    data-edge-state="blocked"
+                    d="M 336 124 L 404 54"
+                    marker-end="url(#flow-arrow-absorbed)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="iep"
+                    data-edge="wire-web"
+                    data-edge-state="neutral"
+                    d="M 478 86 L 478 108"
+                    marker-end="url(#flow-arrow-neutral)"
+                  />
+                  <path
+                    class="flow-edge"
+                    data-panel="iep"
+                    data-edge="wire-shipping"
+                    data-edge-state="neutral"
+                    d="M 336 164 L 404 234"
+                    marker-end="url(#flow-arrow-neutral)"
+                  />
+
+                  <!-- Left of wall: internal storage, vendor adapter & domain boundary -->
+                  <g class="flow-node" data-panel="iep" data-node="db" data-status="origin">
+                    <rect x="10" y="48" width="138" height="64" rx="8" />
+                    <text class="fn-kind" x="22" y="66">Storage</text>
+                    <text class="fn-title" x="22" y="84">invoices table</text>
+                    <text class="fn-state" x="22" y="101">column renamed</text>
+                  </g>
+                  <g class="flow-node" data-panel="iep" data-node="vendor" data-status="clean">
+                    <rect x="10" y="174" width="138" height="64" rx="8" />
+                    <text class="fn-kind" x="22" y="192">Capability</text>
+                    <text class="fn-title" x="22" y="210">Payments port</text>
+                    <text class="fn-state" x="22" y="227">untouched</text>
+                  </g>
+                  <g class="flow-node" data-panel="iep" data-node="store" data-status="absorbed">
+                    <rect x="196" y="110" width="140" height="66" rx="8" />
+                    <text class="fn-kind" x="208" y="128">Boundary</text>
+                    <text class="fn-title" x="208" y="146">billing/store.ts</text>
+                    <text class="fn-state" x="208" y="163">mapped once</text>
+                  </g>
+
+                  <!-- Right of wall: protected wire contract, clients & sibling domain -->
+                  <g class="flow-node" data-panel="iep" data-node="wire" data-status="clean">
+                    <rect x="406" y="20" width="144" height="64" rx="8" />
+                    <text class="fn-kind" x="418" y="38">Wire contract</text>
+                    <text class="fn-title" x="418" y="56">billing/contract</text>
+                    <text class="fn-state" x="418" y="73">contract frozen</text>
+                  </g>
+                  <g class="flow-node" data-panel="iep" data-node="web" data-status="clean">
+                    <rect x="406" y="110" width="144" height="64" rx="8" />
+                    <text class="fn-kind" x="418" y="128">Clients</text>
+                    <text class="fn-title" x="418" y="146">Web &amp; Mobile</text>
+                    <text class="fn-state" x="418" y="163">untouched</text>
+                  </g>
+                  <g class="flow-node" data-panel="iep" data-node="shipping" data-status="clean">
+                    <rect x="406" y="202" width="144" height="64" rx="8" />
+                    <text class="fn-kind" x="418" y="220">Domain</text>
+                    <text class="fn-title" x="418" y="238">Shipping</text>
+                    <text class="fn-state" x="418" y="255">port unchanged</text>
+                  </g>
+                </svg>
               </div>
               <div class="sim-metrics" data-metrics="iep">
                 <div>
@@ -196,14 +365,132 @@
               </div>
               <p class="sim-note" data-note="iep">
                 The persistence boundary absorbs the rename inside billing/store.ts. The hand-written wire contract
-                never changes, so web, mobile, and shipping stay untouched.
+                never moves, so clients and shipping stay untouched.
               </p>
             </article>
           </div>
         </div>
       </section>
 
-      <section class="iep-section iep-section-alt" id="boundaries-vs-seams">
+      <section class="iep-section iep-section-alt" id="framework-traps">
+        <div class="wrap">
+          <div class="iep-section-head">
+            <p class="iep-eyebrow">Mildly petty, technically true</p>
+            <h2>How popular frameworks bake coupling right into the happy path.</h2>
+            <p>
+              Most frameworks optimize for the 5-minute demo by collapsing independent owners into a single shortcut. It
+              feels fast on day one — then turns every schema change, second client, or vendor swap into a repo-wide
+              tax. Pick a stack to see the trap:
+            </p>
+          </div>
+
+          <div class="fw-controls" role="group" aria-label="Choose a framework pattern to inspect">
+            <button type="button" class="fw-btn" data-framework="nextjs" aria-pressed="true">Next.js</button>
+            <button type="button" class="fw-btn" data-framework="nestjs" aria-pressed="false">NestJS</button>
+            <button type="button" class="fw-btn" data-framework="laravel" aria-pressed="false">Laravel / Rails</button>
+            <button type="button" class="fw-btn" data-framework="trpc" aria-pressed="false">tRPC</button>
+            <button type="button" class="fw-btn" data-framework="orm" aria-pressed="false">ORM-derived DTOs</button>
+          </div>
+
+          <div id="fw-live-status" class="sr" aria-live="polite"></div>
+
+          <article class="fw-stage">
+            <div class="fw-stage-head">
+              <h3 id="fw-title">Next.js (Server Actions &amp; RSC)</h3>
+              <span id="fw-rule" class="fw-broken-rule">Breaks: Wire ↔ Clients &amp; Persistence ↔ Wire</span>
+            </div>
+            <div class="fw-stage-grid">
+              <div class="fw-col">
+                <span id="fw-bad-label" class="case-col-label bad">What Next.js nudges you into</span>
+                <pre><code id="fw-bad-code">// app/invoices/page.tsx (Server Component)
+import { db } from "@/lib/db";
+import { InvoiceCard } from "./invoice-card";
+
+export default async function Page() {
+  // DB row handed straight to UI props — zero wire contract
+  const rows = await db.select().from(invoicesTable);
+  return &lt;InvoiceCard invoices={rows} /&gt;;
+}
+
+// app/invoices/actions.ts ("use server")
+export async function renameInvoice(id: string, title: string) {
+  // Tied to Next's RPC transport; unreachable from mobile or webhooks
+}</code></pre>
+                <p id="fw-bad-copy">
+                  Server Components and 'use server' actions erase the wire boundary completely. Your SQL columns become
+                  React props, and mutations live behind a Next-only RPC protocol. The day you add an iOS app, public
+                  API, or partner webhook, you have to build a real backend boundary from scratch.
+                </p>
+              </div>
+              <div class="fw-col">
+                <span id="fw-good-label" class="case-col-label good">What Dads enforces instead</span>
+                <pre><code id="fw-good-code">// domains/billing/contract/wire.ts (owned wire boundary)
+export const invoiceResponse = z.strictObject({
+  id: invoiceId,
+  amountMinor: z.number().int(),
+});
+
+// apps/web uses typed callApi() — same contract as iOS &amp; webhooks.
+// apps/customer exposes OpenAPI 3.1 + compile-time access checks.</code></pre>
+                <p id="fw-good-copy">
+                  Web is just one client of an explicit Zod wire contract. Your React UI, mobile app, and external
+                  integrations share the exact same typed contract without leaking a single Postgres column.
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <div class="fw-table-wrap">
+            <table class="fw-table">
+              <caption class="sr">
+                How popular frameworks violate the Independent Evolution Principle
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Framework / Pattern</th>
+                  <th scope="col">Shortcut it pushes</th>
+                  <th scope="col">Boundary broken</th>
+                  <th scope="col">Day-2 tax</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Next.js</th>
+                  <td>Server Components passing DB rows as props + <code>"use server"</code> RPC</td>
+                  <td>Wire ↔ Clients · Persistence ↔ Wire</td>
+                  <td>No real HTTP contract when mobile, webhooks, or a second API arrives.</td>
+                </tr>
+                <tr>
+                  <th scope="row">NestJS</th>
+                  <td>Decorated Entity/DTO classes + global DI / <code>forwardRef()</code></td>
+                  <td>Domain ↔ Domain · Persistence ↔ Wire</td>
+                  <td>One class owns SQL + OpenAPI + DTO; DI hides cross-domain coupling until boot.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Laravel / Rails</th>
+                  <td>ActiveRecord god-models (<code>$hidden</code>, scopes, lazy views)</td>
+                  <td>Persistence ↔ Domain ↔ Wire ↔ UI</td>
+                  <td>Table changes leak into controllers, JSON responses, and templates everywhere.</td>
+                </tr>
+                <tr>
+                  <th scope="row">tRPC</th>
+                  <td>Sharing server <code>typeof appRouter</code> with inferred ORM returns</td>
+                  <td>Wire ↔ Independently Deployed Clients</td>
+                  <td>Internal refactors break clients in lockstep; non-TS clients get no contract.</td>
+                </tr>
+                <tr>
+                  <th scope="row">ORM-derived DTOs</th>
+                  <td><code>createSelectSchema(table)</code> / raw Prisma payload types</td>
+                  <td>Similarity ≠ Ownership</td>
+                  <td>Every new DB column risks leaking on the wire; renames break older clients.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="iep-section" id="boundaries-vs-seams">
         <div class="wrap">
           <div class="iep-section-head">
             <p class="iep-eyebrow">Both halves of the rule</p>
@@ -298,10 +585,10 @@
         </div>
       </section>
 
-      <section class="iep-section" id="code-comparisons">
+      <section class="iep-section iep-section-alt" id="code-comparisons">
         <div class="wrap">
           <div class="accordion-bar">
-            <div class="iep-section-head" style="margin-bottom: 0">
+            <div class="iep-section-head iep-section-head-tight">
               <p class="iep-eyebrow">In actual code</p>
               <h2>Three boundary decisions, side by side.</h2>
             </div>
@@ -415,7 +702,7 @@ export function normalizeTitle(raw: string): string {
         </div>
       </section>
 
-      <section class="iep-section iep-section-alt" id="seven-tests">
+      <section class="iep-section" id="seven-tests">
         <div class="wrap">
           <div class="iep-section-head">
             <p class="iep-eyebrow">Design &amp; PR checklist</p>
@@ -480,7 +767,7 @@ export function normalizeTitle(raw: string): string {
         </div>
       </section>
 
-      <section class="iep-section">
+      <section class="iep-section iep-section-alt">
         <div class="wrap">
           <div class="iep-section-head">
             <p class="iep-eyebrow">The payoff</p>

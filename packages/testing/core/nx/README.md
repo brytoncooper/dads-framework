@@ -83,8 +83,15 @@ and an uninstall checklist. The workspace defaults to the current directory.
 Options:
 
 - `--base <ref>` compares that ref with the working tree (`plan`, `run`).
-- `--head <ref>` narrows the comparison to two commits; it requires `--base`,
-  and that revision must be the clean checked-out `HEAD` (`plan`, `run`).
+- `--head <ref>` narrows the comparison to two commits; it requires `--base`.
+  For `plan` (and `diagnose --head <ref>`), Dads automatically runs inside an
+  ephemeral detached Git worktree in `os.tmpdir()` so any two commits can be
+  analyzed even on a dirty or actively edited checkout; for `run`, `--head`
+  still requires the clean checked-out `HEAD`.
+- `--snapshot` runs `plan` inside an ephemeral detached Git worktree at `HEAD`
+  so concurrent edits in a shared checkout cannot interrupt discovery or
+  planning (`plan` only; `diagnose` always snapshots `HEAD` automatically when
+  a commit exists).
 - `--all` selects the complete fallback. It cannot be combined with `--base`
   or `--head` (`plan`, `run`).
 - `--targets <a,b>` selects exact Nx target names instead of the default

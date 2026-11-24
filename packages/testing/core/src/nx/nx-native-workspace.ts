@@ -14,10 +14,13 @@ import { buildNativeNxManifest, type NativeNxCoverage } from "./nx-native-model.
 import { nativeNxProcess } from "./nx-native-process.js";
 import { requireNativeNxScope } from "./nx-native-scope.js";
 import { createNativeNxScratch, nativeNxSourceIdentity } from "./nx-native-scratch.js";
+import { hasSnapshotRevision, withEphemeralNxSnapshot } from "./nx-native-snapshot.js";
 
 export type NativeNxTestingOptions = Omit<TestingOperationRequest, "manifestPath" | "taskIds"> & {
   /** Exact Nx target names; omitted selects verification target families. */
   readonly targetNames?: readonly string[];
+  /** Plan inside an ephemeral detached Git worktree snapshot so live edits cannot interrupt discovery. */
+  readonly snapshot?: boolean;
 };
 
 export type NativeNxTestingResult = {
@@ -30,6 +33,8 @@ export type NativeNxDiagnoseOptions = {
   readonly workspaceRoot: string;
   /** Exact Nx target names; omitted selects verification target families. */
   readonly targetNames?: readonly string[];
+  /** Git revision to diagnose inside an isolated temporary worktree (defaults to HEAD when available). */
+  readonly head?: string;
   /** Explicit native binary path for local development and tests. */
   readonly nativeBinary?: string;
 };
@@ -41,35 +46,105 @@ export type NativeNxDiagnoseResult = {
 
 /** Discovers current targets on every call; does not execute any Nx target. */
 export async function planNativeNxTesting(options: NativeNxTestingOptions): Promise<NativeNxTestingResult> {
+  if (options.head !== undefined || options.snapshot === true) {
+    return planInEphemeralSnapshot(options);
+  }
   return withNativeNxManifest(options, false);
 }
 
 /** Lets Nx execute the targets selected by Dads, preserving native prerequisites. */
 export async function runNativeNxTesting(options: NativeNxTestingOptions): Promise<NativeNxTestingResult> {
+  if (options.snapshot === true) {
+    throw new Error("--snapshot is only supported for plan; omit --snapshot to execute targets in the working tree.");
+  }
   return withNativeNxManifest(options, true);
 }
 
-/** Runs `dad-test diagnose` directly against the live Nx workspace graph without a hand-authored manifest. */
+/** Runs `dad-test diagnose` against an isolated Git snapshot of the Nx graph when available. */
 export async function diagnoseNativeNxTesting(options: NativeNxDiagnoseOptions): Promise<NativeNxDiagnoseResult> {
   const workspaceRoot = await fs.realpath(path.resolve(options.workspaceRoot));
+  const revision = options.head ?? "HEAD";
+  if (options.head !== undefined || (await hasSnapshotRevision(workspaceRoot, revision))) {
+    return withEphemeralNxSnapshot(workspaceRoot, revision, ({ snapshotRoot }) =>
+      runDiagnoseInWorkspace(snapshotRoot, options, true),
+    );
+  }
+  return runDiagnoseInWorkspace(workspaceRoot, options, false);
+}
+
+async function runDiagnoseInWorkspace(
+  workspaceRoot: string,
+  options: NativeNxDiagnoseOptions,
+  isolatedSnapshot: boolean,
+): Promise<NativeNxDiagnoseResult> {
   const nxCli = await resolveLocalNxCli(workspaceRoot);
   const scratch = await createNativeNxScratch(workspaceRoot);
   try {
-    const before = await nativeNxSourceIdentity(workspaceRoot);
-    const { manifest, coverage } = await discoverManifest(workspaceRoot, nxCli, scratch, options.targetNames);
+    const before = isolatedSnapshot ? undefined : await nativeNxSourceIdentity(workspaceRoot);
+    const { manifest, coverage } = await discoverManifest(
+      workspaceRoot,
+      nxCli,
+      scratch,
+      options.targetNames,
+      isolatedSnapshot,
+    );
     const manifestFile = path.join(scratch, "manifest.json");
     await fs.writeFile(manifestFile, `${JSON.stringify(manifest)}\n`);
-    await requireUnchangedSource(workspaceRoot, before);
+    if (before !== undefined) await requireUnchangedSource(workspaceRoot, before);
     const diagnose = await diagnoseTesting({
       workspaceRoot,
       manifestPath: path.relative(workspaceRoot, manifestFile).split(path.sep).join("/"),
       ...(options.nativeBinary === undefined ? {} : { nativeBinary: options.nativeBinary }),
     });
-    await requireUnchangedSource(workspaceRoot, before);
+    if (before !== undefined) await requireUnchangedSource(workspaceRoot, before);
     return { coverage, diagnose };
   } finally {
     await fs.rm(scratch, { recursive: true, force: true });
   }
+}
+
+async function planInEphemeralSnapshot(options: NativeNxTestingOptions): Promise<NativeNxTestingResult> {
+  validateSnapshotPlanScope(options);
+  const workspaceRoot = await fs.realpath(path.resolve(options.workspaceRoot));
+  const targetRevision = options.head ?? "HEAD";
+  return withEphemeralNxSnapshot(workspaceRoot, targetRevision, async ({ snapshotRoot, revision }) => {
+    const nxCli = await resolveLocalNxCli(snapshotRoot);
+    const scratch = await createNativeNxScratch(snapshotRoot);
+    try {
+      const { manifest, coverage } = await discoverManifest(snapshotRoot, nxCli, scratch, options.targetNames, true);
+      const manifestFile = path.join(scratch, "manifest.json");
+      await fs.writeFile(manifestFile, `${JSON.stringify(manifest)}\n`);
+      const plan = await planTesting(snapshotPlanRequest(options, snapshotRoot, revision, manifestFile));
+      return { coverage, plan };
+    } finally {
+      await fs.rm(scratch, { recursive: true, force: true });
+    }
+  });
+}
+
+function validateSnapshotPlanScope(options: NativeNxTestingOptions): void {
+  if (options.all && (options.base !== undefined || options.head !== undefined)) {
+    throw new Error("--all cannot be combined with --base or --head.");
+  }
+  if (options.head !== undefined && options.base === undefined) {
+    throw new Error("--head requires --base.");
+  }
+}
+
+function snapshotPlanRequest(
+  options: NativeNxTestingOptions,
+  snapshotRoot: string,
+  revision: string,
+  manifestFile: string,
+): TestingOperationRequest {
+  return {
+    workspaceRoot: snapshotRoot,
+    manifestPath: path.relative(snapshotRoot, manifestFile).split(path.sep).join("/"),
+    ...(options.base === undefined ? {} : { base: options.base, head: revision }),
+    ...(options.all === undefined ? {} : { all: options.all }),
+    ...(options.jobs === undefined ? {} : { jobs: options.jobs }),
+    ...(options.nativeBinary === undefined ? {} : { nativeBinary: options.nativeBinary }),
+  };
 }
 
 async function withNativeNxManifest(options: NativeNxTestingOptions, run: boolean): Promise<NativeNxTestingResult> {
@@ -114,14 +189,16 @@ async function discoverManifest(
   nxCli: string,
   scratch: string,
   targetNames: readonly string[] | undefined,
+  forceIsolatedCache = false,
 ) {
   const graphPath = path.join(scratch, "project-graph.json");
-  const nxCacheEnv = (await isNxDirectoryIgnored(workspaceRoot))
-    ? {}
-    : {
-        NX_WORKSPACE_DATA_DIRECTORY: path.join(scratch, "workspace-data"),
-        NX_CACHE_DIRECTORY: path.join(scratch, "cache"),
-      };
+  const nxCacheEnv =
+    !forceIsolatedCache && (await isNxDirectoryIgnored(workspaceRoot))
+      ? {}
+      : {
+          NX_WORKSPACE_DATA_DIRECTORY: path.join(scratch, "workspace-data"),
+          NX_CACHE_DIRECTORY: path.join(scratch, "cache"),
+        };
   await nativeNxProcess(
     process.execPath,
     [nxCli, "graph", `--file=${graphPath}`, "--open=false"],

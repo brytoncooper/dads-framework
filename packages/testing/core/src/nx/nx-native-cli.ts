@@ -19,7 +19,8 @@ const usageText = [
   "",
   "Options:",
   "  --base <ref>             Compare working tree (or --head) against a Git base ref",
-  "  --head <ref>             Compare --base..<ref> (must match clean checked-out HEAD)",
+  "  --head <ref>             Compare --base..<ref> (plan/diagnose use an isolated temporary worktree)",
+  "  --snapshot               Plan against an isolated temporary worktree at HEAD (plan only)",
   "  --targets <a,b>          Comma-separated exact Nx target names",
   "  --all                    Select every registered verification target",
   "  --jobs <n>               Maximum concurrent tasks during run",
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
 async function runDiagnoseCli(request: NativeNxTestingOptions, json: boolean): Promise<void> {
   const result = await diagnoseNativeNxTesting({
     workspaceRoot: request.workspaceRoot,
+    ...(request.head === undefined ? {} : { head: request.head }),
     ...(request.targetNames === undefined ? {} : { targetNames: request.targetNames }),
   });
   process.stdout.write(
@@ -78,6 +80,7 @@ function readInvocation(): CliInvocation {
     options: {
       base: { type: "string" },
       head: { type: "string" },
+      snapshot: { type: "boolean" },
       targets: { type: "string" },
       jobs: { type: "string" },
       all: { type: "boolean" },
@@ -97,7 +100,7 @@ function readInvocation(): CliInvocation {
   }
   if ((operation !== "plan" && operation !== "run" && operation !== "diagnose") || positionals.length > 2) {
     throw new Error(
-      "Usage: dad-test-nx plan|run|diagnose|eject [workspace] [--base ref] [--head ref] [--targets test,lint] [--all] [--jobs n] [--write] [--replace-nx-vite-paths] [--json]",
+      "Usage: dad-test-nx plan|run|diagnose|eject [workspace] [--base ref] [--head ref] [--snapshot] [--targets test,lint] [--all] [--jobs n] [--write] [--replace-nx-vite-paths] [--json]",
     );
   }
   return {
@@ -149,6 +152,7 @@ function readOptions(
   values: {
     readonly base?: string;
     readonly head?: string;
+    readonly snapshot?: boolean;
     readonly all?: boolean;
     readonly jobs?: string;
     readonly targets?: string;
@@ -160,6 +164,7 @@ function readOptions(
     workspaceRoot,
     ...(values.base === undefined ? {} : { base: values.base }),
     ...(values.head === undefined ? {} : { head: values.head }),
+    ...(values.snapshot === true ? { snapshot: true } : {}),
     ...(values.all === undefined ? {} : { all: values.all }),
     ...(jobs === undefined ? {} : { jobs }),
     ...(targetNames === undefined ? {} : { targetNames }),

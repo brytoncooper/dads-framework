@@ -115,7 +115,9 @@ describe("native Nx workspace wrapper", () => {
     });
     expect(result.coverage.registered).toBe(1);
     expect(result.diagnose.summary.totalProjects).toBe(1);
-    expect(await readdir(path.join(workspace, "node_modules", ".cache", "dads-testing"))).toEqual([]);
+    await expect(readdir(path.join(workspace, "node_modules", ".cache", "dads-testing"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 });
 

@@ -38,6 +38,23 @@ const sampleDiagnosis: TestingDiagnoseResult = {
     estimatedLeafSkipPercent: 12.5,
     potentialLeafSkipPercent: 84.5,
   },
+  workspaceUncertainties: [
+    {
+      code: "workspace-tsconfig-error",
+      path: "tsconfig.json",
+      scope: "workspace",
+      message: "Unable to parse tsconfig.",
+      widenedProjects: 4,
+      widenedTasks: 8,
+      widenedTestFiles: 30,
+      remediation: {
+        safety: "keep-widened-unless-verified",
+        action: "Fix tsconfig syntax.",
+        caution: "Widening protects soundness.",
+        verify: "Re-run dad-test diagnose.",
+      },
+    },
+  ],
   wideningCulprits: [
     {
       code: "nonliteral-dynamic-import",
@@ -193,6 +210,7 @@ describe("dad-test diagnose", () => {
         estimatedLeafSkipPercent: 0,
         potentialLeafSkipPercent: 0,
       },
+      workspaceUncertainties: [],
       wideningCulprits: [],
       couplingHotspots: [],
       fallbackTraps: [],
@@ -245,6 +263,32 @@ describe("dad-test diagnose", () => {
     expect(exitCode).toBe(1);
     expect(harness.stdout()).toBe("");
     expect(harness.stderr()).toContain("without diagnose details");
+  });
+
+  it("enforces --max-workspace-uncertainties, --fail-on-workspace-uncertainties, and --max-unowned-files ratchets", async () => {
+    const directory = makeTemporaryDirectory();
+    const fixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: { operation: "diagnose", plan: emptyPlan, diagnose: sampleDiagnosis },
+    });
+
+    const passHarness = createHarness(directory, fixture.binary);
+    expect(
+      await runDadTestCli(
+        ["diagnose", "--max-workspace-uncertainties", "1", "--max-unowned-files", "5"],
+        passHarness.io,
+      ),
+    ).toBe(0);
+
+    const failWsHarness = createHarness(directory, fixture.binary);
+    expect(await runDadTestCli(["diagnose", "--fail-on-workspace-uncertainties"], failWsHarness.io)).toBe(1);
+    expect(failWsHarness.stderr()).toContain("1 workspace-wide uncertainties (max allowed: 0)");
+    expect(failWsHarness.stderr()).toContain("tsconfig.json [workspace-tsconfig-error]");
+
+    const failUnownedHarness = createHarness(directory, fixture.binary);
+    expect(await runDadTestCli(["diagnose", "--max-unowned-files", "2"], failUnownedHarness.io)).toBe(1);
+    expect(failUnownedHarness.stderr()).toContain("5 unowned tracked files (max allowed: 2)");
   });
 });
 

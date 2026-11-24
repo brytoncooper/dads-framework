@@ -319,6 +319,7 @@ pub struct RunCounts {
 pub struct DiagnoseResult {
     pub schema_version: u32,
     pub summary: DiagnoseSummary,
+    pub workspace_uncertainties: Vec<WideningCulprit>,
     pub widening_culprits: Vec<WideningCulprit>,
     pub coupling_hotspots: Vec<CouplingHotspot>,
     pub fallback_traps: Vec<FallbackTrap>,
@@ -356,7 +357,7 @@ pub struct DiagnoseSummary {
     pub potential_leaf_skip_percent: f64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WideningCulprit {
     pub code: String,

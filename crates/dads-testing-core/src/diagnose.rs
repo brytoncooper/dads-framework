@@ -55,6 +55,7 @@ pub(crate) fn build_diagnose(
     let idx = build_index(manifest, graph);
     let (effective_skip, potential_skip, hotspots) = analyze_reachability(manifest, &idx);
     let (unowned, uncovered, traps) = find_fallback_traps(manifest, &idx, workspace_root, graph);
+    let (workspace_uncertainties, widening_culprits) = rank_culprits(manifest, &idx);
     DiagnoseResult {
         schema_version: PROTOCOL_SCHEMA_VERSION,
         summary: DiagnoseSummary {
@@ -69,7 +70,8 @@ pub(crate) fn build_diagnose(
             estimated_leaf_skip_percent: effective_skip,
             potential_leaf_skip_percent: potential_skip,
         },
-        widening_culprits: rank_culprits(manifest, &idx),
+        workspace_uncertainties,
+        widening_culprits,
         coupling_hotspots: hotspots,
         fallback_traps: traps,
     }
@@ -233,7 +235,10 @@ fn is_local_test_uncertainty(path: &str, by_path: &HashMap<&str, usize>, mods: &
     (mods[m_i].is_test || is_standard_test_path(path)) && mods[m_i].all_importers.is_empty()
 }
 
-fn rank_culprits(manifest: &TestingManifest, idx: &WorkspaceIndex<'_>) -> Vec<WideningCulprit> {
+fn rank_culprits(
+    manifest: &TestingManifest,
+    idx: &WorkspaceIndex<'_>,
+) -> (Vec<WideningCulprit>, Vec<WideningCulprit>) {
     let by_path: HashMap<&str, usize> = idx
         .mods
         .iter()
@@ -290,15 +295,20 @@ fn rank_culprits(manifest: &TestingManifest, idx: &WorkspaceIndex<'_>) -> Vec<Wi
     }
     let is_ws = |c: &WideningCulprit| c.scope == IssueScope::Workspace;
     out.sort_by(|a, b| {
-        b.widened_test_files
-            .cmp(&a.widened_test_files)
+        is_ws(b)
+            .cmp(&is_ws(a))
+            .then_with(|| b.widened_test_files.cmp(&a.widened_test_files))
             .then_with(|| b.widened_tasks.cmp(&a.widened_tasks))
             .then_with(|| b.widened_projects.cmp(&a.widened_projects))
-            .then_with(|| is_ws(b).cmp(&is_ws(a)))
             .then_with(|| {
                 (&a.path, a.line, a.column, &a.code).cmp(&(&b.path, b.line, b.column, &b.code))
             })
     });
+    let workspace_uncertainties: Vec<WideningCulprit> = out
+        .iter()
+        .filter(|culprit| is_ws(culprit))
+        .cloned()
+        .collect();
     out.truncate(50);
-    out
+    (workspace_uncertainties, out)
 }

@@ -163,12 +163,17 @@ means that engine predates structured causes, so `explain` reconstructs what
 each reason code implies from the plan and the manifest instead.
 
 `dad-test diagnose` inspects the workspace's dependency graph and manifest
-without requiring a Git diff, taking `--manifest` and `--json`. In an Nx
+without requiring a Git diff, taking `--manifest`, `--json`, and optional CI
+ratchet flags `--max-workspace-uncertainties <n>`,
+`--fail-on-workspace-uncertainties` (shorthand for `--max-workspace-uncertainties 0`),
+and `--max-unowned-files <n>` (exiting `1` with offending file/line/remediation
+details when exceeded). In an Nx
 workspace without a `dads.testing.json`, `dad-test diagnose` detects `nx.json`
 and runs directly through the live Nx adapter (equivalent to `dad-test-nx
 diagnose`). It prints a read-only coupling and precision X-ray: summary totals
 (modules, projects, tasks, test files, uncertainties, and effective-today vs.
-potential leaf skip percentages), ranked widening culprits (`path:line:col
+potential leaf skip percentages), every workspace-wide uncertainty uncapped
+(`workspaceUncertainties`), ranked widening culprits (`path:line:col
 [code] -> widens N tasks / M test files`), top module coupling hotspots
 separating runtime test reach from `import type` reach (`path -> reaches M
 runtime test files (P%) across K projects`), and fallback traps (unowned

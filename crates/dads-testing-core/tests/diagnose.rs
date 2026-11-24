@@ -227,8 +227,17 @@ fn leaf_owned_whole_workspace_uncertainty_widens_only_its_own_closure() -> Resul
 
     // Tool configs (`eslint.config.mjs`, `vitest.config.mts`) are not flagged as actionable culprits.
     assert_eq!(diag.widening_culprits.len(), 1);
+    assert_eq!(diag.workspace_uncertainties.len(), 1);
     let culprit = &diag.widening_culprits[0];
     assert_eq!(culprit.path, "packages/app/src/leaf.ts");
+    assert!(
+        culprit
+            .remediation
+            .action
+            .contains(r#"workspace.dynamicImportScopes: { "packages/app/src/leaf.ts": ["packages/app/src/**"] }"#),
+        "expected dynamicImportScopes snippet in remediation, got: {}",
+        culprit.remediation.action
+    );
     // `app` is a leaf project with zero dependents, so its owned dynamic import widens ONLY `app`,
     // matching `plan` behavior instead of claiming all 3 projects / 0% skip.
     assert_eq!(culprit.widened_projects, 1);

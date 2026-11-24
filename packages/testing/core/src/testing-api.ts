@@ -216,6 +216,7 @@ export type TestingFallbackTrap = {
 export type TestingDiagnoseResult = {
   readonly schemaVersion: 1;
   readonly summary: TestingDiagnoseSummary;
+  readonly workspaceUncertainties: readonly TestingWideningCulprit[];
   readonly wideningCulprits: readonly TestingWideningCulprit[];
   readonly couplingHotspots: readonly TestingCouplingHotspot[];
   readonly fallbackTraps: readonly TestingFallbackTrap[];

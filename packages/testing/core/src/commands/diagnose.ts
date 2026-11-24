@@ -14,7 +14,12 @@ import type {
 } from "../testing-api.js";
 import { defaultTestingManifestFileName } from "../testing-manifest.js";
 
-const diagnoseOptions: readonly OptionSpecification[] = [{ name: "--manifest", kind: "value" }];
+const diagnoseOptions: readonly OptionSpecification[] = [
+  { name: "--manifest", kind: "value" },
+  { name: "--max-workspace-uncertainties", kind: "value" },
+  { name: "--fail-on-workspace-uncertainties", kind: "flag" },
+  { name: "--max-unowned-files", kind: "value" },
+];
 
 /**
  * `dad-test diagnose` inspects the workspace's dependency graph and manifest
@@ -29,15 +34,73 @@ export const diagnoseCommand: DadTestCommand = {
   options: diagnoseOptions,
   execute: async (parsed, io, json) => {
     const manifestPath = parsed.values.get("--manifest");
+    const maxWorkspace = resolveMaxWorkspaceThreshold(parsed);
+    const maxUnowned = parseOptionalNonNegativeInt(parsed.values.get("--max-unowned-files"), "--max-unowned-files");
     const diagnosis = await runDiagnosis(io.cwd, manifestPath, io.nativeBinary);
     if (json) {
       writeCommandSuccess(io, json, "diagnose", diagnosis);
     } else {
       io.stdout(renderDiagnosis(diagnosis));
     }
+    const failures = checkDiagnoseThresholds(diagnosis, maxWorkspace, maxUnowned);
+    if (failures.length > 0) {
+      io.stderr(`${failures.join("\n")}\n`);
+      return 1;
+    }
     return 0;
   },
 };
+
+function resolveMaxWorkspaceThreshold(parsed: {
+  readonly flags: ReadonlySet<string>;
+  readonly values: ReadonlyMap<string, string>;
+}): number | undefined {
+  const explicit = parseOptionalNonNegativeInt(
+    parsed.values.get("--max-workspace-uncertainties"),
+    "--max-workspace-uncertainties",
+  );
+  if (parsed.flags.has("--fail-on-workspace-uncertainties")) {
+    return explicit === undefined ? 0 : Math.min(0, explicit);
+  }
+  return explicit;
+}
+
+function parseOptionalNonNegativeInt(raw: string | undefined, flag: string): number | undefined {
+  if (raw === undefined) return undefined;
+  if (!/^\d+$/.test(raw)) {
+    throw new Error(`${flag} requires a non-negative integer, received '${raw}'.`);
+  }
+  return Number.parseInt(raw, 10);
+}
+
+function checkDiagnoseThresholds(
+  diagnosis: TestingDiagnoseResult,
+  maxWorkspace: number | undefined,
+  maxUnowned: number | undefined,
+): string[] {
+  const failures: string[] = [];
+  const wsCount = diagnosis.summary.wholeWorkspaceUncertainties;
+  if (maxWorkspace !== undefined && wsCount > maxWorkspace) {
+    failures.push(
+      `diagnose threshold exceeded: ${String(wsCount)} workspace-wide uncertainties (max allowed: ${String(maxWorkspace)}).`,
+    );
+    const culprits = diagnosis.workspaceUncertainties;
+    for (const culprit of culprits) {
+      const projectLabel = culprit.project === undefined ? "unowned" : culprit.project;
+      failures.push(
+        `  - ${formatLocation(culprit.path, culprit.line, culprit.column)} [${culprit.code}] (${projectLabel})`,
+      );
+      failures.push(`    fix: ${culprit.remediation.action}`);
+    }
+  }
+  const unownedCount = diagnosis.summary.unownedTrackedFiles;
+  if (maxUnowned !== undefined && unownedCount > maxUnowned) {
+    failures.push(
+      `diagnose threshold exceeded: ${String(unownedCount)} unowned tracked files (max allowed: ${String(maxUnowned)}).`,
+    );
+  }
+  return failures;
+}
 
 async function runDiagnosis(
   workspaceRoot: string,
@@ -96,6 +159,9 @@ export function renderDiagnosis(diagnosis: TestingDiagnoseResult): string {
     `  leaf skip: ${skipSummary}`,
     `  unowned tracked files: ${String(summary.unownedTrackedFiles)}, uncovered non-code files: ${String(summary.nonCodeUncoveredFiles)}`,
   ];
+  if (diagnosis.workspaceUncertainties.length > 0) {
+    appendSection(lines, "Workspace-wide uncertainties", diagnosis.workspaceUncertainties, formatCulprit);
+  }
   appendSection(lines, "Widening culprits", diagnosis.wideningCulprits, formatCulprit);
   appendSection(lines, "Coupling hotspots", diagnosis.couplingHotspots, formatHotspot);
   appendSection(lines, "Fallback traps", diagnosis.fallbackTraps, formatTrap);

@@ -6,6 +6,13 @@ const SAFE_DOC_OR_ASSET_EXTS: &[&str] = &[
     "md", "mdx", "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "pdf",
 ];
 
+fn suggested_dynamic_scope_prefix(path: &str) -> String {
+    match path.rsplit_once('/') {
+        Some((dir, _)) if !dir.is_empty() => format!("{dir}/**"),
+        _ => path.to_owned(),
+    }
+}
+
 pub(crate) fn culprit_remediation(code: &str, path: &str) -> DiagnoseRemediation {
     if code == "ambiguous-default-export" && is_tool_config_file(path) {
         return DiagnoseRemediation {
@@ -16,12 +23,17 @@ pub(crate) fn culprit_remediation(code: &str, path: &str) -> DiagnoseRemediation
         };
     }
     match code {
-        "nonliteral-dynamic-import" | "nonliteral-commonjs-require" => DiagnoseRemediation {
-            safety: RemediationSafety::Safe,
-            action: "Replace dynamic import(expr)/require(expr) with a static string-literal map (e.g. const loaders = { a: () => import('./a') }), or isolate CLI/build scripts in a separate non-reachability project.".into(),
-            caution: "Do not suppress or ignore this file if any test can execute the dynamic load; hiding it risks skipping broken tests.".into(),
-            verify: "Re-run 'dad-test diagnose' to confirm this site disappears, then run the tests covering that loader.".into(),
-        },
+        "nonliteral-dynamic-import" | "nonliteral-commonjs-require" => {
+            let suggested_prefix = suggested_dynamic_scope_prefix(path);
+            DiagnoseRemediation {
+                safety: RemediationSafety::Safe,
+                action: format!(
+                    "Replace dynamic import(expr)/require(expr) with a static string-literal map (e.g. const loaders = {{ a: () => import('./a') }}), or scope it in dads.testing.json under workspace.dynamicImportScopes: {{ \"{path}\": [\"{suggested_prefix}\"] }}."
+                ),
+                caution: "Do not suppress or ignore this file if any test can execute the dynamic load; hiding it risks skipping broken tests.".into(),
+                verify: "Re-run 'dad-test diagnose' to confirm this site disappears, then run the tests covering that loader.".into(),
+            }
+        }
         "unresolved-bare-module" | "unresolved-local-module" | "unresolved-module-scheme" => {
             DiagnoseRemediation {
                 safety: RemediationSafety::Safe,

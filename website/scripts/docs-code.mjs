@@ -1,5 +1,6 @@
 import domino from "@mixmark-io/domino";
 import highlighter from "highlight.js";
+import { renderMermaidDiagram } from "./docs-mermaid.mjs";
 
 const labels = new Map([
   ["bash", "Shell"],
@@ -169,16 +170,46 @@ function groupConsecutiveFiles(document) {
   }
 }
 
+function nearestHeadingLabel(element) {
+  let cursor = element.previousElementSibling;
+  while (cursor) {
+    if (/^H[1-6]$/u.test(cursor.tagName)) {
+      return cursor.textContent.trim();
+    }
+    cursor = cursor.previousElementSibling;
+  }
+  return "Diagram";
+}
+
 export function renderDocsCode(html) {
   const document = domino.createDocument(html);
   const blocks = document.querySelectorAll("article pre > code");
   if (!blocks.length) return html;
 
+  let mermaidIndex = 0;
   for (const code of blocks) {
     const language = Array.from(code.classList)
       .find((className) => className.startsWith("language-"))
       ?.slice("language-".length)
       .toLowerCase();
+    if (language === "mermaid") {
+      const block = code.parentNode;
+      const source = code.textContent;
+      const label = nearestHeadingLabel(block);
+      const svg = renderMermaidDiagram(source, mermaidIndex, `${label} diagram`);
+      mermaidIndex += 1;
+
+      const figure = document.createElement("figure");
+      figure.className = "docs-diagram";
+      figure.innerHTML = `<div class="docs-diagram-canvas">${svg}</div>
+<details class="docs-diagram-source">
+  <summary>Mermaid source</summary>
+  <pre tabindex="0"><code></code></pre>
+</details>`;
+      figure.querySelector("code").textContent = source;
+      block.parentNode.replaceChild(figure, block);
+      continue;
+    }
     const syntax = aliases.get(language) ?? language;
     const grammar = syntax && highlighter.getLanguage(syntax);
     const label =

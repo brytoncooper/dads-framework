@@ -1138,3 +1138,103 @@ article blockquote > :last-child {
 :root[data-theme="light"] dialog.search-dialog::backdrop {
   background: rgb(15 23 42 / 0.45);
 }
+
+/* Build-time Mermaid SVG diagrams (strict CSP compliant, theme-aware) */
+.docs-diagram {
+  margin: 1.5rem 0;
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 1rem 2.25rem rgb(0 0 0 / 0.24);
+}
+
+:root[data-theme="light"] .docs-diagram {
+  border-color: #cbd5e1;
+  box-shadow: 0 0.85rem 2rem rgb(15 23 42 / 0.08);
+}
+
+.docs-diagram-canvas {
+  padding: 1.35rem 1.25rem;
+  overflow-x: auto;
+  background: var(--surface);
+}
+
+.docs-diagram svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  --_text: var(--ink);
+  --_text-sec: var(--ink-secondary);
+  --_text-muted: var(--muted);
+  --_text-faint: color-mix(in srgb, var(--ink) 32%, var(--surface));
+  --_line: var(--control-border);
+  --_arrow: var(--accent);
+  --_node-fill: var(--surface-elevated);
+  --_node-stroke: var(--control-border);
+  --_group-fill: var(--paper);
+  --_group-hdr: var(--surface-elevated);
+  --_inner-stroke: var(--rule-subtle);
+  --_key-badge: var(--accent-surface);
+}
+
+:root[data-theme="light"] .docs-diagram svg {
+  --_node-fill: #f8fafc;
+  --_node-stroke: #94a3b8;
+  --_line: #64748b;
+  --_arrow: #0f766e;
+  --_text: #0f172a;
+  --_text-sec: #334155;
+  --_text-muted: #64748b;
+}
+
+.docs-diagram svg text {
+  font-family: var(--sans);
+}
+
+.docs-diagram-source {
+  border-top: 1px solid var(--rule-subtle);
+  background: var(--surface-subtle);
+}
+
+.docs-diagram-source > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-block-size: 2.4rem;
+  padding: 0.45rem 1rem;
+  color: var(--muted);
+  font: 520 0.78rem/1.2 var(--mono);
+  cursor: pointer;
+}
+
+.docs-diagram-source > summary::-webkit-details-marker {
+  display: none;
+}
+
+.docs-diagram-source > summary::before {
+  content: "▸";
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.docs-diagram-source[open] > summary::before {
+  content: "▾";
+}
+
+.docs-diagram-source > summary:hover {
+  color: var(--ink);
+}
+
+.docs-diagram-source pre {
+  margin: 0;
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid var(--rule-subtle);
+  background: #11161a;
+  color: #dff4ec;
+  overflow-x: auto;
+  font: 430 0.8rem/1.55 var(--mono);
+}

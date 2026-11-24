@@ -24,7 +24,7 @@ This guide is the canonical placement map for a Dads application. `npx dad check
 Dependencies flow in one direction toward lower-volatility primitives. No domain imports another domain, UI never touches server code, and pure logic sits below every I/O seam:
 
 ```mermaid
-flowchart LR
+flowchart TD
   libs["libraries/* (pure primitives)"]
   contract["domains/*/contract (Zod + *Operation)"]
   access["domains/*/access (resources & permissions)"]

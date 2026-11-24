@@ -38,6 +38,7 @@ export function siteHeader(currentPage) {
   <a href="/" class="brand"${currentPage === "home" ? ' aria-current="page"' : ""}><img src="/assets/dads-symbol-light.png" class="brand-symbol brand-symbol-on-dark" alt="" width="26" height="26"><img src="/assets/dads-symbol-dark.png" class="brand-symbol brand-symbol-on-light" alt="" width="26" height="26">Dads Framework</a>
   <nav aria-label="Main">${searchButton}
     <a href="/docs/"${currentPage === "docs" ? ' aria-current="page"' : ""}>Docs</a>
+    <a href="/independent-evolution"${currentPage === "principle" ? ' aria-current="page"' : ""}>Principle</a>
     <a href="/docs/benchmarks-and-proof.html">Proofs</a>
     <a href="${repository}">GitHub <span aria-hidden="true">↗</span></a>
     ${themeToggleButton}
@@ -154,9 +155,13 @@ async function buildSite() {
     "home",
   );
   const supportingPages = await Promise.all(
-    ["credits.html", "404.html"].map(async (page) => {
+    [
+      ["independent-evolution.html", "principle"],
+      ["credits.html", ""],
+      ["404.html", ""],
+    ].map(async ([page, active]) => {
       let html = await readFile(join(source, page), "utf8");
-      html = replaceRequired(html, "<!-- site-header -->", siteHeader(""), page);
+      html = replaceRequired(html, "<!-- site-header -->", siteHeader(active), page);
       html = replaceRequired(html, "<!-- site-footer -->", siteFooter(markdownPath(page)), page);
       return [page, markdownAlternate(html, page)];
     }),
@@ -202,7 +207,7 @@ async function buildSite() {
     ),
     writeFile(
       join(output, "sitemap.xml"),
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", ...pages.map((page) => (page === "index.html" ? "/docs/" : `/docs/${page.slice(0, -5)}`))].map((path) => `  <url><loc>https://dadsframework.dev${path}</loc></url>`).join("\n")}\n</urlset>\n`,
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${["/", "/independent-evolution", ...pages.map((page) => (page === "index.html" ? "/docs/" : `/docs/${page.slice(0, -5)}`))].map((path) => `  <url><loc>https://dadsframework.dev${path}</loc></url>`).join("\n")}\n</urlset>\n`,
     ),
   ]);
   console.log(`Built landing page and ${pages.length} documentation pages in dist/.`);

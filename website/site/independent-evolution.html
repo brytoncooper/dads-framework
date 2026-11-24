@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Independent Evolution Principle · Dads Framework</title>
+    <meta
+      name="description"
+      content="Things that can evolve independently should be owned, represented, and contracted independently. Things that change together live together."
+    />
+    <meta name="theme-color" content="#0e1114" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="The Independent Evolution Principle · Dads Framework" />
+    <meta
+      property="og:description"
+      content="Align the shape of your dependency graph with the shape of change. Interactive blast-radius simulator, boundary audit examples, and the 7 design-review tests."
+    />
+    <meta property="og:image" content="https://dadsframework.dev/assets/dads-social.png" />
+    <meta property="og:image:alt" content="Dads Framework monogram" />
+    <link rel="canonical" href="https://dadsframework.dev/independent-evolution" />
+    <link rel="icon" href="/assets/dads-favicon.png" type="image/png" />
+    <script src="/assets/theme-init.js"></script>
+    <link rel="stylesheet" href="/assets/base.css" />
+    <link rel="stylesheet" href="/assets/home.css" />
+    <link rel="stylesheet" href="/assets/iep.css" />
+    <script src="/assets/theme.js" defer></script>
+    <script src="/assets/iep.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main-heading">Skip to content</a>
+    <!-- site-header -->
+    <main id="main">
+      <section class="iep-hero">
+        <div class="wrap iep-hero-inner">
+          <p class="iep-eyebrow">Governing Principle · IEP</p>
+          <h1 id="main-heading" tabindex="-1">
+            The Independent Evolution
+            <span>Principle.</span>
+          </h1>
+          <blockquote class="iep-axiom">
+            Things that can evolve independently should be owned, represented, and contracted independently. Things that
+            change together live together.
+          </blockquote>
+          <p class="iep-lede">
+            Two shapes looking identical today does not mean they share an owner, a lifecycle, or a reason to change.
+            <strong>Similarity is not ownership.</strong> Align the shape of your dependency graph with the shape of
+            change so every edit stops as close as possible to the place that owns it.
+          </p>
+          <div class="iep-hero-actions">
+            <a class="primary-action" href="#simulator"
+              >Try the blast-radius simulator <span aria-hidden="true">↓</span></a
+            >
+            <a class="text-action" href="#seven-tests">Jump to the 7 review tests</a>
+            <a class="text-action" href="/docs/where-code-goes.html">Where does code go? →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="iep-section" id="simulator">
+        <div class="wrap">
+          <div class="iep-section-head">
+            <p class="iep-eyebrow">Interactive proof</p>
+            <h2>Click a real change. Watch where it stops.</h2>
+            <p>
+              A boundary earns its existence by absorbing change. Pick a realistic edit below and compare a coupled
+              codebase (where shapes are shared because they looked similar on day one) against a codebase shaped by
+              Independent Evolution.
+            </p>
+          </div>
+
+          <div class="sim-controls" role="group" aria-label="Choose a change scenario">
+            <button type="button" class="sim-btn" data-scenario="db-column" aria-pressed="true">
+              <span class="sim-btn-code">01</span> Rename DB column
+            </button>
+            <button type="button" class="sim-btn" data-scenario="vendor-swap" aria-pressed="false">
+              <span class="sim-btn-code">02</span> Swap Stripe → Adyen
+            </button>
+            <button type="button" class="sim-btn" data-scenario="mobile-field" aria-pressed="false">
+              <span class="sim-btn-code">03</span> Mobile adds draft field
+            </button>
+            <button type="button" class="sim-btn" data-scenario="pure-helper" aria-pressed="false">
+              <span class="sim-btn-code">04</span> Refactor internal helper
+            </button>
+          </div>
+
+          <div id="sim-live-status" class="sr" aria-live="polite"></div>
+
+          <div class="sim-grid">
+            <article class="sim-panel">
+              <div class="sim-panel-head">
+                <h3>Shared because they looked alike</h3>
+                <span class="sim-badge sim-badge-bad">Coupled graph</span>
+              </div>
+              <div class="sim-graph" aria-label="Coupled architecture nodes">
+                <div class="sim-node" data-panel="coupled" data-node="db" data-status="origin">
+                  <span class="sim-node-kind">Storage</span>
+                  <span class="sim-node-name">invoices table</span>
+                  <span class="sim-node-state">column renamed</span>
+                </div>
+                <div class="sim-node" data-panel="coupled" data-node="dto" data-status="dirty">
+                  <span class="sim-node-kind">Shared DTO</span>
+                  <span class="sim-node-name">shared/invoice.ts</span>
+                  <span class="sim-node-state">row leaked</span>
+                </div>
+                <div class="sim-node" data-panel="coupled" data-node="web" data-status="dirty">
+                  <span class="sim-node-kind">Client</span>
+                  <span class="sim-node-name">Web app</span>
+                  <span class="sim-node-state">type breaks</span>
+                </div>
+                <div class="sim-node" data-panel="coupled" data-node="mobile" data-status="dirty">
+                  <span class="sim-node-kind">Client</span>
+                  <span class="sim-node-name">Mobile app</span>
+                  <span class="sim-node-state">older app breaks</span>
+                </div>
+                <div class="sim-node" data-panel="coupled" data-node="shipping" data-status="dirty">
+                  <span class="sim-node-kind">Domain</span>
+                  <span class="sim-node-name">Shipping</span>
+                  <span class="sim-node-state">reads raw row</span>
+                </div>
+                <div class="sim-node" data-panel="coupled" data-node="vendor" data-status="clean">
+                  <span class="sim-node-kind">Vendor</span>
+                  <span class="sim-node-name">Stripe SDK</span>
+                  <span class="sim-node-state">untouched</span>
+                </div>
+              </div>
+              <div class="sim-metrics" data-metrics="coupled">
+                <div>
+                  <span class="sim-metric-label">Blast radius</span>
+                  <span class="sim-metric-val">5 / 6 modules</span>
+                </div>
+                <div>
+                  <span class="sim-metric-label">CI runs</span>
+                  <span class="sim-metric-val">480 tests</span>
+                </div>
+                <div>
+                  <span class="sim-metric-label">Outcome</span>
+                  <span class="sim-metric-val">Mobile breaks</span>
+                </div>
+              </div>
+              <p class="sim-note" data-note="coupled">
+                Because the database table is shared as the API DTO, renaming one internal column forces coordinated
+                changes across web, mobile, and shipping.
+              </p>
+            </article>
+
+            <article class="sim-panel">
+              <div class="sim-panel-head">
+                <h3>Independent Evolution (Dads)</h3>
+                <span class="sim-badge sim-badge-good">Contained blast radius</span>
+              </div>
+              <div class="sim-graph" aria-label="Independent Evolution architecture nodes">
+                <div class="sim-node" data-panel="iep" data-node="db" data-status="origin">
+                  <span class="sim-node-kind">Storage</span>
+                  <span class="sim-node-name">invoices table</span>
+                  <span class="sim-node-state">column renamed</span>
+                </div>
+                <div class="sim-node" data-panel="iep" data-node="store" data-status="absorbed">
+                  <span class="sim-node-kind">Boundary</span>
+                  <span class="sim-node-name">billing/store.ts</span>
+                  <span class="sim-node-state">mapped once</span>
+                </div>
+                <div class="sim-node" data-panel="iep" data-node="wire" data-status="clean">
+                  <span class="sim-node-kind">Wire contract</span>
+                  <span class="sim-node-name">billing/contract</span>
+                  <span class="sim-node-state">stable contract</span>
+                </div>
+                <div class="sim-node" data-panel="iep" data-node="web" data-status="clean">
+                  <span class="sim-node-kind">Clients</span>
+                  <span class="sim-node-name">Web &amp; Mobile</span>
+                  <span class="sim-node-state">untouched</span>
+                </div>
+                <div class="sim-node" data-panel="iep" data-node="shipping" data-status="clean">
+                  <span class="sim-node-kind">Domain</span>
+                  <span class="sim-node-name">Shipping</span>
+                  <span class="sim-node-state">port unchanged</span>
+                </div>
+                <div class="sim-node" data-panel="iep" data-node="vendor" data-status="clean">
+                  <span class="sim-node-kind">Capability</span>
+                  <span class="sim-node-name">Payments port</span>
+                  <span class="sim-node-state">untouched</span>
+                </div>
+              </div>
+              <div class="sim-metrics" data-metrics="iep">
+                <div>
+                  <span class="sim-metric-label">Blast radius</span>
+                  <span class="sim-metric-val">1 / 6 modules</span>
+                </div>
+                <div>
+                  <span class="sim-metric-label">CI runs</span>
+                  <span class="sim-metric-val">3 tests (99% skipped)</span>
+                </div>
+                <div>
+                  <span class="sim-metric-label">Outcome</span>
+                  <span class="sim-metric-val">Zero client impact</span>
+                </div>
+              </div>
+              <p class="sim-note" data-note="iep">
+                The persistence boundary absorbs the rename inside billing/store.ts. The hand-written wire contract
+                never changes, so web, mobile, and shipping stay untouched.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="iep-section iep-section-alt" id="boundaries-vs-seams">
+        <div class="wrap">
+          <div class="iep-section-head">
+            <p class="iep-eyebrow">Both halves of the rule</p>
+            <h2>Wall off real boundaries. Delete fake abstractions.</h2>
+            <p>
+              IEP cuts in both directions. Putting a boundary between independent owners prevents cascading rewrites.
+              Removing unearned layers inside a single owner prevents enterprise ceremony. Every seam must name the real
+              change it absorbs — if you cannot name one, delete it.
+            </p>
+          </div>
+
+          <div class="boundary-columns">
+            <div class="boundary-card">
+              <h3>Meaningful boundaries (wall it off)</h3>
+              <p class="boundary-card-sub">Different owners or deploy lifecycles. Explicit contract required.</p>
+              <ul class="boundary-list" role="list">
+                <li>
+                  <strong>Wire (API ↔ every client)</strong>
+                  <span>Hand-written Zod schemas owned by the wire contract, never derived from database tables.</span>
+                </li>
+                <li>
+                  <strong>Domain ↔ domain</strong>
+                  <span
+                    >A consumer-owned port (a narrow TypeScript type wired in <code>assembly/</code>) or domain event —
+                    never an internal import.</span
+                  >
+                </li>
+                <li>
+                  <strong>Persistence ↔ wire</strong>
+                  <span
+                    >A database row never becomes a public DTO. Rename columns freely without breaking clients.</span
+                  >
+                </li>
+                <li>
+                  <strong>Application code ↔ swappable vendor</strong>
+                  <span
+                    >One owned chokepoint (<code>Authorization</code>, clock, queue, object storage, email,
+                    identity).</span
+                  >
+                </li>
+                <li>
+                  <strong>Application ↔ framework / package</strong>
+                  <span>Public package exports only. Deep imports are blocked mechanically in CI.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="boundary-card">
+              <h3>Not boundaries (keep it together)</h3>
+              <p class="boundary-card-sub">
+                One owner, always changes together. No port, no extra file, no fake layer.
+              </p>
+              <ul class="boundary-list" role="list">
+                <li>
+                  <strong>A route, its handler, and its access declaration</strong>
+                  <span
+                    >Keep them together in one route definition. Separating a route from its permission check hides
+                    bugs.</span
+                  >
+                </li>
+                <li>
+                  <strong>Row/insert types and their table definition</strong>
+                  <span
+                    >Derive internal row types straight from the Drizzle table schema. Only the wire boundary is
+                    hand-written.</span
+                  >
+                </li>
+                <li>
+                  <strong>A feature page and its data loader</strong>
+                  <span
+                    >One UI feature owns both. Adding a generic repository layer between them absorbs zero real
+                    change.</span
+                  >
+                </li>
+                <li>
+                  <strong>An SDK facade and its only implementation</strong>
+                  <span
+                    >Do not invent a <code>FooServiceInterface</code> + <code>FooServiceImpl</code> when only one
+                    implementation exists.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="boundary-callout">
+            <strong>One deliberate test seam:</strong> An operation may reach its own domain's store through a narrow
+            reader/writer contract so pure unit tests can swap in an in-memory fake. That is a test seam, not an
+            architectural boundary — it never re-implements PostgreSQL locks or constraints, and nothing else inside one
+            owner gets a fake.
+          </div>
+        </div>
+      </section>
+
+      <section class="iep-section" id="code-comparisons">
+        <div class="wrap">
+          <div class="accordion-bar">
+            <div class="iep-section-head" style="margin-bottom: 0">
+              <p class="iep-eyebrow">In actual code</p>
+              <h2>Three boundary decisions, side by side.</h2>
+            </div>
+            <button
+              type="button"
+              class="toggle-all-btn"
+              id="iep-toggle-all"
+              commandfor="iep-cases-accordion"
+              command="--toggle-all"
+              aria-expanded="false"
+            >
+              <span class="expand-label">Expand all</span>
+              <span class="collapse-label">Collapse all</span>
+            </button>
+          </div>
+
+          <div class="iep-accordion" id="iep-cases-accordion">
+            <details open>
+              <summary>
+                <span>1. Persistence vs. Wire: never derive public API shapes from DB tables</span>
+                <span class="summary-verdict">Boundary required</span>
+              </summary>
+              <div class="case-body">
+                <div class="case-col">
+                  <span class="case-col-label bad">Coupled: DB schema leaks onto the wire</span>
+                  <pre><code>// Renaming a column breaks mobile &amp; web clients
+export const invoiceDto = createSelectSchema(invoicesTable);
+
+// Also silently exposes internal columns like
+// internal_cost_cents or stripe_customer_id.</code></pre>
+                  <p>
+                    One schema serves two owners (Postgres storage and external HTTP clients) with different lifecycles.
+                  </p>
+                </div>
+                <div class="case-col">
+                  <span class="case-col-label good">IEP: hand-written wire contract + explicit mapper</span>
+                  <pre><code>// domains/billing/contract/wire.ts (wire owner)
+export const invoiceResponse = z.strictObject({
+  id: invoiceId,
+  amountMinor: z.number().int(),
+  currency: z.string(),
+});</code></pre>
+                  <p>
+                    Postgres columns can be renamed, split, or indexed inside <code>billing/server/</code> while the
+                    wire stays frozen.
+                  </p>
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>2. Domain vs. Domain: consumer-owned port instead of private imports</span>
+                <span class="summary-verdict">Boundary required</span>
+              </summary>
+              <div class="case-body">
+                <div class="case-col">
+                  <span class="case-col-label bad">Coupled: Shipping reaches into Billing internals</span>
+                  <pre><code>// domains/shipping/server/routes.ts
+import { invoicesTable } from "../../billing/server/tables.js";
+// Every Billing migration now dirties Shipping's tests.</code></pre>
+                  <p>
+                    Shipping depends on how Billing happens to store rows today rather than the fact it actually needs.
+                  </p>
+                </div>
+                <div class="case-col">
+                  <span class="case-col-label good">IEP: narrow consumer port bound in assembly/</span>
+                  <pre><code>// domains/shipping/server/ports.ts
+export type OrderPaymentStatus = {
+  isPaid(orderId: OrderId): Promise&lt;boolean&gt;;
+};
+// Wired once in assembly/services.ts — enforced by dad check boundaries.</code></pre>
+                  <p>
+                    Shipping depends only on <code>isPaid(orderId)</code>. Billing can replace its entire storage engine
+                    underneath.
+                  </p>
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>3. Inside one owner: delete unearned interfaces and layers</span>
+                <span class="summary-verdict">Not a boundary</span>
+              </summary>
+              <div class="case-body">
+                <div class="case-col">
+                  <span class="case-col-label bad">Unearned indirection: 4 files for 1 owner</span>
+                  <pre><code>NoteValidatorInterface.ts
+NoteValidatorImpl.ts
+NoteMapperFactory.ts
+NoteControllerAdapter.ts
+// No second implementation exists. Changes hit all 4 files.</code></pre>
+                  <p>Abstracting inside one owner creates ceremony without absorbing any real independent change.</p>
+                </div>
+                <div class="case-col">
+                  <span class="case-col-label good">IEP: concrete code living together</span>
+                  <pre><code>// domains/notes/pure/note-rules.ts
+export function normalizeTitle(raw: string): string {
+  return raw.trim().replace(/\s+/g, " ");
+}
+// Direct import, concrete types, zero ceremony.</code></pre>
+                  <p>
+                    IEP outranks structural habits whenever a habit demands a seam that cannot name a real change it
+                    absorbs.
+                  </p>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="iep-section iep-section-alt" id="seven-tests">
+        <div class="wrap">
+          <div class="iep-section-head">
+            <p class="iep-eyebrow">Design &amp; PR checklist</p>
+            <h2>The 7 tests for every boundary and abstraction.</h2>
+            <p>
+              Run these seven questions during code review or architecture design. They replace taste arguments with one
+              consistent rule.
+            </p>
+          </div>
+
+          <ol class="tests-grid" role="list">
+            <li class="test-card">
+              <span class="test-num">Test 01 · Change</span>
+              <h3>What stops here?</h3>
+              <p>
+                Name the exact changes that must stop at this boundary. If nothing stops, the boundary is decorative.
+              </p>
+            </li>
+            <li class="test-card">
+              <span class="test-num">Test 02 · Ownership</span>
+              <h3>Who owns the meaning?</h3>
+              <p>
+                Dependencies point toward whoever owns the meaning, not toward whichever file happened to exist first.
+              </p>
+            </li>
+            <li class="test-card">
+              <span class="test-num">Test 03 · Evolution</span>
+              <h3>Do these move separately?</h3>
+              <p>Could both sides reasonably change at different times for different reasons? If yes, separate them.</p>
+            </li>
+            <li class="test-card">
+              <span class="test-num">Test 04 · Leak</span>
+              <h3>Contract or internals?</h3>
+              <p>
+                Is the consumer relying on what the provider means to expose, or on how it happens to be implemented?
+              </p>
+            </li>
+            <li class="test-card">
+              <span class="test-num">Test 05 · Abstraction</span>
+              <h3>What change is absorbed?</h3>
+              <p>
+                Name a real second client, vendor swap, or domain release. If you cannot name one, delete the layer.
+              </p>
+            </li>
+            <li class="test-card">
+              <span class="test-num">Test 06 · Coupling</span>
+              <h3>What else gets dirty?</h3>
+              <p>
+                If this file changes, what else re-runs in CI? Run <code>dad-test diagnose</code> to measure the real
+                blast radius.
+              </p>
+            </li>
+            <li class="test-card">
+              <span class="test-num">Test 07 · Sharing</span>
+              <h3>Same owner or same shape?</h3>
+              <p>
+                Are we sharing a type because both concepts truly evolve together, or merely because they look alike
+                today?
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="iep-section">
+        <div class="wrap">
+          <div class="iep-section-head">
+            <p class="iep-eyebrow">The payoff</p>
+            <h2>Why Dads enforces IEP mechanically.</h2>
+            <p>
+              An architectural principle is unfinished until ordinary tools enforce it. Every major tool in Dads is a
+              direct consequence of the Independent Evolution Principle.
+            </p>
+          </div>
+
+          <div class="payoff-grid">
+            <article class="payoff-card">
+              <h3>Enforced domain walls</h3>
+              <p>
+                <code>dad check boundaries</code> and <code>dad doctor --gate</code> stop cross-domain imports, vendor
+                leaks, and unsafe shortcuts before code review — whether a human or an AI agent wrote the PR.
+              </p>
+              <a href="/docs/boundaries-and-apis.html">Multi-API &amp; CI gates →</a>
+            </article>
+            <article class="payoff-card">
+              <h3>Replaceable authorization</h3>
+              <p>
+                Every permission check runs behind one app-owned <code>Authorization</code> capability proved in 27 Lean
+                4 theorems — swap PostgreSQL, SQLite, or SpiceDB at one seam without touching a single route.
+              </p>
+              <a href="/docs/access-benchmarks.html">Access benchmarks &amp; proofs →</a>
+            </article>
+            <article class="payoff-card">
+              <h3>90–99% faster selective CI</h3>
+              <p>
+                When your dependency graph matches real ownership, <code>dad-test</code> mathematically proves which
+                tests a diff can reach (36 Lean 4 theorems) — and <code>dad-test diagnose</code> exposes every leak.
+              </p>
+              <a href="/docs/testing-benchmarks.html">Testing benchmarks &amp; proofs →</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="further">
+        <div class="wrap further-grid">
+          <div class="further-title"><h2>Keep reading</h2></div>
+          <div class="reading-list">
+            <a href="/docs/where-code-goes.html"
+              ><span>Where Does Code Go?</span><small>One-page placement map</small><i aria-hidden="true">↗</i></a
+            >
+            <a href="/docs/selective-testing.html"
+              ><span>Selective Testing &amp; TIA (dad-test)</span><small>Blast radius in CI</small
+              ><i aria-hidden="true">↗</i></a
+            >
+            <a href="/docs/benchmarks-and-proof.html"
+              ><span>Benchmarks &amp; Formal Proofs</span><small>63 Lean 4 theorems</small
+              ><i aria-hidden="true">↗</i></a
+            >
+            <a href="https://github.com/brytoncooper/dads-framework/blob/main/docs/principles.md"
+              ><span>Full Guiding Principles essay</span><small>docs/principles.md</small><i aria-hidden="true">↗</i></a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- site-footer -->
+  </body>
+</html>

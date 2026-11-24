@@ -2,41 +2,13 @@ name: Testing native packages
 
 on:
   workflow_dispatch:
-    inputs:
-      use_self_hosted_mac:
-        description: Build darwin-arm64 and darwin-x64 on self-hosted dads-release-mac runner
-        type: boolean
-        default: false
-      use_self_hosted_linux:
-        description: Build linux-x64-gnu on self-hosted dads-release-linux runner
-        type: boolean
-        default: false
-      use_self_hosted_win:
-        description: Build win32-x64 on self-hosted dads-release-win runner
-        type: boolean
-        default: false
   workflow_call:
-    inputs:
-      use_self_hosted_mac:
-        description: Build darwin-arm64 and darwin-x64 on self-hosted dads-release-mac runner
-        type: boolean
-        default: false
-      use_self_hosted_linux:
-        description: Build linux-x64-gnu on self-hosted dads-release-linux runner
-        type: boolean
-        default: false
-      use_self_hosted_win:
-        description: Build win32-x64 on self-hosted dads-release-win runner
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 jobs:
   build-and-smoke:
-    if: github.ref == 'refs/heads/main'
-    environment: release
     name: ${{ matrix.package }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
@@ -45,19 +17,19 @@ jobs:
       matrix:
         include:
           - package: packages/testing/native/darwin-arm64
-            runner: ${{ fromJSON(inputs.use_self_hosted_mac && '["self-hosted","dads-release-mac"]' || '"macos-15"') }}
+            runner: macos-15
             target: aarch64-apple-darwin
           - package: packages/testing/native/darwin-x64
-            runner: ${{ fromJSON(inputs.use_self_hosted_mac && '["self-hosted","dads-release-mac"]' || '"macos-15-intel"') }}
+            runner: macos-15-intel
             target: x86_64-apple-darwin
           - package: packages/testing/native/linux-arm64-gnu
             runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
           - package: packages/testing/native/linux-x64-gnu
-            runner: ${{ fromJSON(inputs.use_self_hosted_linux && '["self-hosted","dads-release-linux"]' || '"ubuntu-22.04"') }}
+            runner: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
           - package: packages/testing/native/win32-x64
-            runner: ${{ fromJSON(inputs.use_self_hosted_win && '["self-hosted","dads-release-win"]' || '"windows-2025"') }}
+            runner: windows-2025
             target: x86_64-pc-windows-msvc
 
     defaults:
@@ -71,14 +43,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.3
-          cache: ${{ runner.environment == 'github-hosted' && 'npm' || '' }}
+          cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.96.0"
           components: rust-docs
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
-        if: runner.environment == 'github-hosted'
         with:
           key: testing-native-release-${{ matrix.target }}
       - name: Install JavaScript tooling
@@ -113,16 +84,7 @@ jobs:
           facade_tar="../testing-packages/dads-framework-testing-$facade_version.tgz"
           test "${#native_tar[@]}" -eq 1
           test -f "${native_tar[0]}" && test -f "$facade_tar"
-          npm_cross_flag=()
-          if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
-            npm_cross_flag=(--force)
-          fi
-          npm install --no-save --omit=optional --no-audit --no-fund "${npm_cross_flag[@]}" "${native_tar[0]}" "$facade_tar" >/dev/null
-          if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
-            native_bin="$consumer/node_modules/@dads-framework/testing-native-darwin-x64/bin/dad-test"
-            file "$native_bin" | grep -q "x86_64"
-            export DADS_TEST_NATIVE_BINARY="$native_bin"
-          fi
+          npm install --no-save --omit=optional --no-audit --no-fund "${native_tar[0]}" "$facade_tar" >/dev/null
           node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("dads.testing.json", JSON.stringify({schemaVersion:1,workspace:{root:".",fullFallback:{taskIds:["consumer:test"]}},projects:[{id:"consumer",root:".",fallbackDependencies:[]}],tasks:[{id:"consumer:test",project:"consumer",kind:"test",execution:{executable:"node",args:["--version"],cwd:"."},dependsOn:[],impact:{mode:"always"}}]})); const { planTesting } = await import("@dads-framework/testing"); const plan = await planTesting({workspaceRoot:process.cwd(), all:true}); if (plan.tasks[0]?.id !== "consumer:test") throw new Error("dad-test clean-consumer smoke returned the wrong plan");'
           node node_modules/@dads-framework/testing/bin/dad-test.js explain --all --json > explain.json
           node -e 'const r = JSON.parse(require("node:fs").readFileSync("explain.json", "utf8")); if (r.ok !== true || r.result.tasks[0]?.id !== "consumer:test" || r.result.summary.selected !== 1) throw new Error("dad-test explain smoke failed: " + JSON.stringify(r).slice(0, 500));'

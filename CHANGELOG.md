@@ -4,6 +4,22 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-11-24
+
+### Added
+
+- Isolated test-file widening uncertainties (`is_isolated_test_file`): unimported test/spec files with dynamic imports or unresolved edges now widen only their own owning project instead of cascading to downstream dependents.
+- Added `workspace.dynamicImportScopes` with segment-aware `*` and `**` glob matching (also supported in `impact.paths`), allowing known runtime plugin/migration loaders to declare their exact scanned directory prefixes while still widening whenever the loader file itself changes.
+
+### Fixed
+
+- Fixed JavaScript/TypeScript CommonJS `require()` scanning (`frontend_version = 14`) so member method calls such as `obj.require(...)`, string literals, and comments are no longer misclassified as dynamic CommonJS `require()` expressions.
+- Fixed ESM/CJS specifier resolution in `dads-testing-javascript` to map `.mjs` → `.mts` and `.cjs` → `.cts` source files and resolve `@types/*` ambient type packages cleanly.
+- Skipped runtime export-ownership widening checks on TypeScript ambient declaration files (`.d.ts`, `.d.mts`, `.d.cts`; `frontend_version = 15`).
+- Preserved `*`/`**` globs in Nx native input expansion (`nx-native-input-expansion.ts`) instead of truncating patterns to parent directories.
+- Upgraded `dad-test-nx eject` so ejected `lint` tasks use full `reachability` (catching cross-project type-aware lint rules).
+- Skipped creating a cold ephemeral Git worktree in `dad-test-nx diagnose` when the working tree is clean, eliminating the 0.6.3 diagnose latency regression.
+
 ## [0.6.3] - 2026-11-23
 
 ### Added

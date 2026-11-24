@@ -1,14 +1,14 @@
 {
   "name": "@dads-fixture/stale-save",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "private": true,
   "type": "module",
   "dependencies": {
-    "@dads-framework/access": "0.6.3",
-    "@dads-framework/core": "0.6.3",
-    "@dads-framework/http": "0.6.3",
-    "@dads-framework/postgres": "0.6.3",
-    "@dads-framework/spicedb-access": "0.6.3",
+    "@dads-framework/access": "0.6.4",
+    "@dads-framework/core": "0.6.4",
+    "@dads-framework/http": "0.6.4",
+    "@dads-framework/postgres": "0.6.4",
+    "@dads-framework/spicedb-access": "0.6.4",
     "drizzle-orm": "^0.45.2",
     "zod": "^4.4.3"
   },

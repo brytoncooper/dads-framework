@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/job-queue",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -53,7 +53,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/core": "0.6.3",
+    "@dads-framework/core": "0.6.4",
     "cron-parser": "4.9.0"
   },
   "devDependencies": {

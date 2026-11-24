@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/access",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -36,7 +36,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/core": "0.6.3",
+    "@dads-framework/core": "0.6.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {

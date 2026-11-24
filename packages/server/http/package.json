@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/http",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -48,8 +48,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@dads-framework/access": "0.6.3",
-    "@dads-framework/core": "0.6.3",
+    "@dads-framework/access": "0.6.4",
+    "@dads-framework/core": "0.6.4",
     "@fastify/cors": "^11.3.0",
     "fastify": "^5.12.8",
     "pino": "^10.3.1",

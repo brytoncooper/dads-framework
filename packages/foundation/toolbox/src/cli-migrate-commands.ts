@@ -12,11 +12,12 @@ const SUPPORTED_TARGETS: Readonly<Record<string, MigrateTargetVersion>> = {
   "0.5.0": "0.5.0",
   "0.5.1": "0.5.1",
   "0.5.2": "0.5.2",
-  "0.6": "0.6.3",
+  "0.6": "0.6.4",
   "0.6.0": "0.6.0",
   "0.6.1": "0.6.1",
   "0.6.2": "0.6.2",
   "0.6.3": "0.6.3",
+  "0.6.4": "0.6.4",
 };
 
 export function migrateCommand(args: readonly string[], json: boolean): void {

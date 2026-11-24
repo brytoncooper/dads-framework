@@ -8,9 +8,18 @@ use crate::manifest::{FileNarrowing, ImpactMode, TestingManifest};
 use crate::protocol::{
     DiagnoseResult, DiagnoseSummary, IssueScope, PROTOCOL_SCHEMA_VERSION, WideningCulprit,
 };
-use crate::scope::deepest_project_for_path;
+use crate::scope::{
+    deepest_project_for_path, is_standard_test_path, is_test_module_with_narrowings, path_is_inside,
+};
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::path::Path;
+
+#[derive(Clone, Copy)]
+pub(crate) enum UncertaintyTarget {
+    Closure(usize),
+    LocalProject(usize),
+    FullFallback,
+}
 
 pub(crate) struct ModNode {
     pub(crate) path: String,
@@ -20,7 +29,7 @@ pub(crate) struct ModNode {
     pub(crate) all_deps: Vec<usize>,
     pub(crate) runtime_importers: Vec<usize>,
     pub(crate) all_importers: Vec<usize>,
-    pub(crate) module_uncertainty_owners: Vec<Option<usize>>,
+    pub(crate) module_uncertainty_targets: Vec<UncertaintyTarget>,
 }
 
 pub(crate) struct WorkspaceIndex<'a> {
@@ -99,7 +108,7 @@ fn build_index<'a>(
         by_path.insert(node.path.as_str(), i);
         let project = deepest_project_for_path(&manifest.projects, &node.path)
             .and_then(|p| proj_by_id.get(p.id.as_str()).copied());
-        let is_test = is_test_module(&node.path, &narrowings);
+        let is_test = is_test_module_with_narrowings(&node.path, &narrowings);
         total_tests += usize::from(is_test);
         if is_test && let Some(p) = project {
             tests_by_proj[p] += 1;
@@ -112,7 +121,7 @@ fn build_index<'a>(
             all_deps: Vec::new(),
             runtime_importers: Vec::new(),
             all_importers: Vec::new(),
-            module_uncertainty_owners: Vec::new(),
+            module_uncertainty_targets: Vec::new(),
         });
     }
     wire_edges(&nodes, &by_path, &mut mods);
@@ -122,14 +131,33 @@ fn build_index<'a>(
     for u in &uncertainties {
         let owner = deepest_project_for_path(&manifest.projects, &u.path)
             .and_then(|p| proj_by_id.get(p.id.as_str()).copied());
+        let local_only = is_local_test_uncertainty(&u.path, &by_path, &mods);
+        let target = match owner {
+            Some(p) if local_only => UncertaintyTarget::LocalProject(p),
+            Some(p) => UncertaintyTarget::Closure(p),
+            None => UncertaintyTarget::FullFallback,
+        };
         if u.scope == GraphUncertaintyScope::WholeWorkspace {
+            if let Some(prefixes) = manifest.workspace.dynamic_import_scopes.get(&u.path) {
+                for m in &mut mods {
+                    if m.path == u.path || prefixes.iter().any(|p| path_is_inside(&m.path, p)) {
+                        m.module_uncertainty_targets.push(target);
+                    }
+                }
+                continue;
+            }
             whole_ws_count += 1;
-            match owner {
-                Some(p) => whole_ws_owned_widened.extend(closures[p].iter().copied()),
-                None => has_unowned_whole_ws = true,
+            match target {
+                UncertaintyTarget::LocalProject(p) => {
+                    whole_ws_owned_widened.insert(p);
+                }
+                UncertaintyTarget::Closure(p) => {
+                    whole_ws_owned_widened.extend(closures[p].iter().copied());
+                }
+                UncertaintyTarget::FullFallback => has_unowned_whole_ws = true,
             }
         } else if let Some(&m_i) = by_path.get(u.path.as_str()) {
-            mods[m_i].module_uncertainty_owners.push(owner);
+            mods[m_i].module_uncertainty_targets.push(target);
         }
     }
     WorkspaceIndex {
@@ -196,30 +224,36 @@ fn compute_closures(
         .collect()
 }
 
-fn is_test_module(path: &str, narrowings: &[&FileNarrowing]) -> bool {
-    if !narrowings.is_empty() {
-        return narrowings.iter().any(|n| {
-            n.suffixes.iter().any(|s| path.ends_with(s))
-                && !n.exclude_suffixes.iter().any(|e| path.ends_with(e))
-        });
-    }
-    const EXTS: &[&str] = &["ts", "tsx", "js", "jsx", "mts", "mjs", "cts", "cjs"];
-    path.contains("/__tests__/")
-        || path.rsplit_once('.').is_some_and(|(stem, ext)| {
-            EXTS.contains(&ext) && (stem.ends_with(".test") || stem.ends_with(".spec"))
-        })
+fn is_local_test_uncertainty(path: &str, by_path: &HashMap<&str, usize>, mods: &[ModNode]) -> bool {
+    let Some(&m_i) = by_path.get(path) else {
+        return false;
+    };
+    (mods[m_i].is_test || is_standard_test_path(path)) && mods[m_i].all_importers.is_empty()
 }
 
 fn rank_culprits(manifest: &TestingManifest, idx: &WorkspaceIndex<'_>) -> Vec<WideningCulprit> {
+    let by_path: HashMap<&str, usize> = idx
+        .mods
+        .iter()
+        .enumerate()
+        .map(|(i, m)| (m.path.as_str(), i))
+        .collect();
     let mut out = Vec::with_capacity(idx.uncertainties.len());
     for u in &idx.uncertainties {
         if u.code == "ambiguous-default-export" && is_tool_config_file(&u.path) {
             continue;
         }
+        let scoped = u.scope == GraphUncertaintyScope::WholeWorkspace
+            && manifest
+                .workspace
+                .dynamic_import_scopes
+                .contains_key(&u.path);
         let owner = deepest_project_for_path(&manifest.projects, &u.path);
         let owner_i = owner.and_then(|p| idx.proj_by_id.get(p.id.as_str()).copied());
-        let ws = u.scope == GraphUncertaintyScope::WholeWorkspace;
+        let local_only = is_local_test_uncertainty(&u.path, &by_path, &idx.mods);
+        let ws = u.scope == GraphUncertaintyScope::WholeWorkspace && !scoped;
         let (wp, wt, wf) = match owner_i {
+            Some(i) if local_only => (1, idx.reach_tasks[i], idx.tests_by_proj[i]),
             Some(i) => {
                 let s = &idx.closures[i];
                 let (t, f) = s.iter().fold((0, 0), |(t, f), &p| {

@@ -14,6 +14,7 @@ export function checkTestingManifest(manifest: TestingManifest): readonly string
   if (root !== undefined) {
     addRelativePathProblem(messages, root, "workspace.root");
   }
+  addDynamicImportScopeProblems(messages, manifest.workspace.dynamicImportScopes);
 
   const projectIds = addProjectProblems(messages, manifest.projects);
   addUnknownFallbackProblems(messages, manifest.projects, projectIds);
@@ -163,6 +164,22 @@ function addRelativePathProblem(messages: string[], value: string, field: string
   const isAbsolute = value.startsWith("/") || value.startsWith("\\") || /^[A-Za-z]:/.test(value);
   if (isAbsolute || value.split(/[\\/]/).includes("..")) {
     messages.push(`${field} must be a workspace-relative path without parent traversal.`);
+  }
+}
+
+function addDynamicImportScopeProblems(
+  messages: string[],
+  scopes: Readonly<Record<string, readonly string[]>> | undefined,
+): void {
+  if (scopes === undefined) return;
+  for (const [loader, prefixes] of Object.entries(scopes)) {
+    addRelativePathProblem(messages, loader, "workspace.dynamicImportScopes key");
+    if (prefixes.length === 0) {
+      messages.push(`workspace.dynamicImportScopes entry '${loader}' must list at least one path prefix.`);
+    }
+    for (const prefix of prefixes) {
+      addRelativePathProblem(messages, prefix, "workspace.dynamicImportScopes prefix");
+    }
   }
 }
 

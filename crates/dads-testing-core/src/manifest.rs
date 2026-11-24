@@ -1,6 +1,7 @@
 //! The `dads.testing.json` declaration: what a workspace says it owns, and every rule the
 //! declaration must satisfy before a plan is allowed to read it.
 use crate::execute::{TestingError, message};
+use crate::scope::validate_dynamic_import_scopes;
 use crate::sql_manifest::{
     TaskSqlImpact, WorkspaceSqlSettings, validate_task_sql_impact, validate_workspace_sql,
 };
@@ -44,6 +45,8 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) sql: Option<WorkspaceSqlSettings>,
     #[serde(default)]
     pub(crate) non_code_suffixes: Vec<String>,
+    #[serde(default)]
+    pub(crate) dynamic_import_scopes: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -260,7 +263,7 @@ fn validate_workspace(workspace: &WorkspaceSettings) -> Result<(), TestingError>
             )));
         }
     }
-    Ok(())
+    validate_dynamic_import_scopes(&workspace.dynamic_import_scopes)
 }
 
 fn validate_task_env(task_id: &str, env: &BTreeMap<String, String>) -> Result<(), TestingError> {

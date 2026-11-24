@@ -34,6 +34,7 @@ export type TestingManifest = {
     readonly fullFallback: { readonly taskIds: readonly string[] };
     readonly sql?: TestingManifestWorkspaceSql;
     readonly nonCodeSuffixes?: readonly string[];
+    readonly dynamicImportScopes?: Readonly<Record<string, readonly string[]>>;
   };
   readonly projects: readonly TestingManifestProject[];
   readonly tasks: readonly TestingManifestTask[];
@@ -145,6 +146,10 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       ...(manifest.workspace.nonCodeSuffixes === undefined || manifest.workspace.nonCodeSuffixes.length === 0
         ? {}
         : { nonCodeSuffixes: [...manifest.workspace.nonCodeSuffixes] }),
+      ...(manifest.workspace.dynamicImportScopes === undefined ||
+      Object.keys(manifest.workspace.dynamicImportScopes).length === 0
+        ? {}
+        : { dynamicImportScopes: serializeDynamicImportScopes(manifest.workspace.dynamicImportScopes) }),
     },
     projects: manifest.projects.map((project) => ({
       id: project.id,
@@ -177,12 +182,20 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
 
 function readWorkspace(value: unknown, subject: string): TestingManifest["workspace"] {
   const workspace = readRecord(value, "workspace", subject);
-  rejectUnknownKeys(workspace, ["root", "fullFallback", "sql", "nonCodeSuffixes"], "workspace", subject);
+  rejectUnknownKeys(
+    workspace,
+    ["root", "fullFallback", "sql", "nonCodeSuffixes", "dynamicImportScopes"],
+    "workspace",
+    subject,
+  );
   const fullFallback = readRecord(workspace["fullFallback"], "workspace.fullFallback", subject);
   rejectUnknownKeys(fullFallback, ["taskIds"], "workspace.fullFallback", subject);
   const root = workspace["root"];
   const sql = workspace["sql"];
   const nonCodeSuffixes = readOptionalStringArray(workspace["nonCodeSuffixes"], "workspace.nonCodeSuffixes", subject);
+  const rawScopes = workspace["dynamicImportScopes"];
+  const dynamicImportScopes =
+    rawScopes === undefined ? undefined : readDynamicImportScopes(rawScopes, "workspace.dynamicImportScopes", subject);
   return {
     ...(root === undefined ? {} : { root: readString(root, "workspace.root", subject) }),
     fullFallback: {
@@ -190,6 +203,9 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
     },
     ...(sql === undefined ? {} : { sql: readWorkspaceSql(sql, "workspace.sql", subject) }),
     ...(nonCodeSuffixes.length === 0 ? {} : { nonCodeSuffixes }),
+    ...(dynamicImportScopes === undefined || Object.keys(dynamicImportScopes).length === 0
+      ? {}
+      : { dynamicImportScopes }),
   };
 }
 
@@ -266,6 +282,30 @@ function serializeEnv(env: Readonly<Record<string, string>>): Readonly<Record<st
   for (const key of Object.keys(env).sort()) {
     const value = env[key];
     if (value !== undefined) sorted[key] = value;
+  }
+  return sorted;
+}
+
+function readDynamicImportScopes(
+  value: unknown,
+  where: string,
+  subject: string,
+): Readonly<Record<string, readonly string[]>> {
+  const record = readRecord(value, where, subject);
+  const result: Record<string, readonly string[]> = {};
+  for (const key of Object.keys(record).sort()) {
+    result[key] = readStringArray(record[key], `${where}.${key}`, subject);
+  }
+  return result;
+}
+
+function serializeDynamicImportScopes(
+  scopes: Readonly<Record<string, readonly string[]>>,
+): Readonly<Record<string, readonly string[]>> {
+  const sorted: Record<string, readonly string[]> = {};
+  for (const key of Object.keys(scopes).sort()) {
+    const value = scopes[key];
+    if (value !== undefined) sorted[key] = [...value];
   }
   return sorted;
 }

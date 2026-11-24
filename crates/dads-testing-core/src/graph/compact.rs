@@ -84,6 +84,10 @@ impl DependencyGraph {
     pub fn contains_path(&self, path: &str) -> bool {
         self.module_index(path).is_some()
     }
+    pub fn has_importers(&self, path: &str) -> bool {
+        self.module_index(path)
+            .is_some_and(|m| !self.reverse(m).is_empty())
+    }
     pub fn has_uncertainty(&self) -> bool {
         !self.uncertainties.is_empty()
     }

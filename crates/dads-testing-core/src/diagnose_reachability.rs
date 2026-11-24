@@ -1,5 +1,5 @@
 //! Exact runtime and typecheck reachability analysis for `dad-test diagnose`.
-use crate::diagnose::WorkspaceIndex;
+use crate::diagnose::{UncertaintyTarget, WorkspaceIndex};
 use crate::diagnose_remediation::hotspot_remediation;
 use crate::manifest::TestingManifest;
 use crate::protocol::CouplingHotspot;
@@ -95,10 +95,15 @@ fn compute_effective_skip(idx: &WorkspaceIndex<'_>, sources: &[usize], potential
             if idx.mods[c].is_test {
                 reached_tests.push(c);
             }
-            for &owner in &idx.mods[c].module_uncertainty_owners {
-                match owner {
-                    Some(p) => widened_projs.extend(idx.closures[p].iter().copied()),
-                    None => all_widened = true,
+            for &target in &idx.mods[c].module_uncertainty_targets {
+                match target {
+                    UncertaintyTarget::LocalProject(p) => {
+                        widened_projs.insert(p);
+                    }
+                    UncertaintyTarget::Closure(p) => {
+                        widened_projs.extend(idx.closures[p].iter().copied());
+                    }
+                    UncertaintyTarget::FullFallback => all_widened = true,
                 }
             }
             for &imp in &idx.mods[c].runtime_importers {

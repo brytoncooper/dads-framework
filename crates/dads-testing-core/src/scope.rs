@@ -2,9 +2,10 @@
 //! ownership rules the planner reads it with.
 use crate::execute::{TestingError, message};
 use crate::git::{git_changed_paths, git_untracked_paths, resolve_git_ref};
-use crate::manifest::Project;
+use crate::graph::DependencyGraph;
+use crate::manifest::{FileNarrowing, Project, TestingManifest, validate_relative_path};
 use crate::protocol::{NativeRequest, ResolvedScope};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path, PathBuf};
 
 pub(crate) fn resolve_scope(
@@ -171,4 +172,72 @@ pub(crate) fn resolve_existing_inside(
         )));
     }
     Ok(resolved)
+}
+
+pub(crate) fn validate_dynamic_import_scopes(
+    scopes: &BTreeMap<String, Vec<String>>,
+) -> Result<(), TestingError> {
+    for (loader, prefixes) in scopes {
+        validate_relative_path(loader, "workspace.dynamicImportScopes key")?;
+        if prefixes.is_empty() {
+            return Err(message(format!(
+                "workspace.dynamicImportScopes entry '{loader}' must list at least one path prefix."
+            )));
+        }
+        for prefix in prefixes {
+            validate_relative_path(prefix, "workspace.dynamicImportScopes prefix")?;
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn dynamic_import_scope_triggered(
+    loader_path: &str,
+    allowed_prefixes: &[String],
+    changed_paths: &[String],
+) -> bool {
+    changed_paths.iter().any(|changed| {
+        changed == loader_path
+            || allowed_prefixes
+                .iter()
+                .any(|prefix| path_is_inside(changed, prefix))
+    })
+}
+
+pub(crate) fn is_test_module_with_narrowings(path: &str, narrowings: &[&FileNarrowing]) -> bool {
+    let matches_narrowing = narrowings.iter().any(|n| {
+        n.suffixes.iter().any(|s| path.ends_with(s))
+            && !n.exclude_suffixes.iter().any(|e| path.ends_with(e))
+    });
+    if !narrowings.is_empty() {
+        return matches_narrowing;
+    }
+    is_standard_test_path(path)
+}
+
+pub(crate) fn is_standard_test_path(path: &str) -> bool {
+    const EXTS: &[&str] = &["ts", "tsx", "js", "jsx", "mts", "mjs", "cts", "cjs"];
+    path.contains("/__tests__/")
+        || path.rsplit_once('.').is_some_and(|(stem, ext)| {
+            EXTS.contains(&ext) && (stem.ends_with(".test") || stem.ends_with(".spec"))
+        })
+}
+
+pub(crate) fn is_isolated_test_file(
+    path: &str,
+    manifest: &TestingManifest,
+    graph: &DependencyGraph,
+) -> bool {
+    if graph.has_importers(path) {
+        return false;
+    }
+    if is_standard_test_path(path) {
+        return true;
+    }
+    manifest.tasks.iter().any(|task| {
+        task.execution.file_narrowing.as_ref().is_some_and(|n| {
+            n.suffixes.iter().any(|s| path.ends_with(s))
+                && !n.exclude_suffixes.iter().any(|e| path.ends_with(e))
+        })
+    })
 }

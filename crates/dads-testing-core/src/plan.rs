@@ -21,8 +21,10 @@ struct PlanEvidence<'a> {
     fallback_impacted_projects: BTreeSet<&'a str>,
     reachability_impacted_projects: BTreeSet<&'a str>,
     uncertainty_impacted_projects: BTreeSet<&'a str>,
+    local_uncertainty_impacted_projects: BTreeSet<&'a str>,
     typecheck_reachability_impacted_projects: BTreeSet<&'a str>,
     typecheck_uncertainty_impacted_projects: BTreeSet<&'a str>,
+    typecheck_local_uncertainty_impacted_projects: BTreeSet<&'a str>,
     changed_paths_by_project: BTreeMap<&'a str, Vec<String>>,
     reached_paths: BTreeSet<String>,
     reached_paths_by_project: BTreeMap<&'a str, BTreeSet<String>>,
@@ -42,8 +44,10 @@ impl<'a> PlanEvidence<'a> {
             fallback_impacted_projects: BTreeSet::new(),
             reachability_impacted_projects: BTreeSet::new(),
             uncertainty_impacted_projects: BTreeSet::new(),
+            local_uncertainty_impacted_projects: BTreeSet::new(),
             typecheck_reachability_impacted_projects: BTreeSet::new(),
             typecheck_uncertainty_impacted_projects: BTreeSet::new(),
+            typecheck_local_uncertainty_impacted_projects: BTreeSet::new(),
             changed_paths_by_project: BTreeMap::new(),
             reached_paths: BTreeSet::new(),
             reached_paths_by_project: BTreeMap::new(),
@@ -288,6 +292,7 @@ fn select_tasks<'a>(
                 .or_default()
                 .extend(origins);
         }
+        merge_local_uncertainties(evidence, &mut uncertainty_origins);
         let widened = evidence
             .uncertainty_impacted_projects
             .iter()
@@ -315,6 +320,20 @@ fn select_tasks<'a>(
         fallback_origins,
         uncertainty_origins,
     })
+}
+
+fn merge_local_uncertainties<'a>(
+    evidence: &mut PlanEvidence<'a>,
+    uncertainty_origins: &mut BTreeMap<&'a str, BTreeSet<&'a str>>,
+) {
+    for &p in &evidence.local_uncertainty_impacted_projects {
+        evidence.uncertainty_impacted_projects.insert(p);
+        uncertainty_origins.entry(p).or_default().insert(p);
+    }
+    for &p in &evidence.typecheck_local_uncertainty_impacted_projects {
+        evidence.typecheck_uncertainty_impacted_projects.insert(p);
+        uncertainty_origins.entry(p).or_default().insert(p);
+    }
 }
 
 fn clone_scope(scope: &ResolvedScope) -> ResolvedScope {

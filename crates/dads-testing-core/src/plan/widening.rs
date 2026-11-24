@@ -4,7 +4,9 @@ use super::PlanEvidence;
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
-use crate::scope::deepest_project_for_path;
+use crate::scope::{
+    deepest_project_for_path, dynamic_import_scope_triggered, is_isolated_test_file,
+};
 use std::collections::BTreeSet;
 
 /// Attributes each changed path to its owning project. A path no declared project owns cannot be
@@ -93,20 +95,48 @@ pub(super) fn widen_through_graph<'a>(
     if !covered_paths.is_empty() {
         let runtime_reachable = graph.symbol_reachability_runtime(covered_paths.clone());
         record_reachable_paths(manifest, &runtime_reachable.paths, evidence, true);
-        record_reachable_uncertainties(manifest, runtime_reachable.uncertainties, evidence, true);
+        record_reachable_uncertainties(
+            manifest,
+            scope,
+            graph,
+            runtime_reachable.uncertainties,
+            evidence,
+            true,
+        );
         evidence.reached_edges = runtime_reachable.edges;
         if has_non_test_reachability {
             let full_reachable = graph.symbol_reachability_from(covered_paths);
             record_reachable_paths(manifest, &full_reachable.paths, evidence, false);
-            record_reachable_uncertainties(manifest, full_reachable.uncertainties, evidence, false);
+            record_reachable_uncertainties(
+                manifest,
+                scope,
+                graph,
+                full_reachable.uncertainties,
+                evidence,
+                false,
+            );
         }
     }
     if !uncovered_paths.is_empty() {
         record_uncovered_paths(manifest, &uncovered_paths, evidence);
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
-        record_reachable_uncertainties(manifest, workspace_uncertainties.clone(), evidence, true);
+        record_reachable_uncertainties(
+            manifest,
+            scope,
+            graph,
+            workspace_uncertainties.clone(),
+            evidence,
+            true,
+        );
         if has_non_test_reachability {
-            record_reachable_uncertainties(manifest, workspace_uncertainties, evidence, false);
+            record_reachable_uncertainties(
+                manifest,
+                scope,
+                graph,
+                workspace_uncertainties,
+                evidence,
+                false,
+            );
         }
     }
 }
@@ -230,15 +260,27 @@ fn record_reachable_paths<'a>(
     }
 }
 
-/// Where the traversal stopped being provable. An owned uncertainty widens its project; an
-/// unowned one has nothing to widen, so it selects the complete fallback.
+/// Where the traversal stopped being provable. An owned uncertainty widens its project (confined
+/// to its own project when it lives in an unimported test file); an unowned one has nothing to
+/// widen, so it selects the complete fallback.
 fn record_reachable_uncertainties<'a>(
     manifest: &'a TestingManifest,
+    scope: &ResolvedScope,
+    graph: &DependencyGraph,
     uncertainties: Vec<GraphUncertainty>,
     evidence: &mut PlanEvidence<'a>,
     for_runtime_tests: bool,
 ) {
     for uncertainty in uncertainties {
+        if uncertainty.scope == GraphUncertaintyScope::WholeWorkspace
+            && let Some(prefixes) = manifest
+                .workspace
+                .dynamic_import_scopes
+                .get(&uncertainty.path)
+            && !dynamic_import_scope_triggered(&uncertainty.path, prefixes, &scope.changed_paths)
+        {
+            continue;
+        }
         let owning_project = deepest_project_for_path(&manifest.projects, &uncertainty.path);
         let position = uncertainty
             .location
@@ -250,14 +292,28 @@ fn record_reachable_uncertainties<'a>(
         };
         match owning_project {
             Some(project) => {
-                if for_runtime_tests {
-                    evidence
-                        .uncertainty_impacted_projects
-                        .insert(project.id.as_str());
-                } else {
-                    evidence
-                        .typecheck_uncertainty_impacted_projects
-                        .insert(project.id.as_str());
+                let local_only = is_isolated_test_file(&uncertainty.path, manifest, graph);
+                match (for_runtime_tests, local_only) {
+                    (true, true) => {
+                        evidence
+                            .local_uncertainty_impacted_projects
+                            .insert(project.id.as_str());
+                    }
+                    (true, false) => {
+                        evidence
+                            .uncertainty_impacted_projects
+                            .insert(project.id.as_str());
+                    }
+                    (false, true) => {
+                        evidence
+                            .typecheck_local_uncertainty_impacted_projects
+                            .insert(project.id.as_str());
+                    }
+                    (false, false) => {
+                        evidence
+                            .typecheck_uncertainty_impacted_projects
+                            .insert(project.id.as_str());
+                    }
                 }
                 let index = evidence.issues.len();
                 evidence

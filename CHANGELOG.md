@@ -4,6 +4,24 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.7.1] - 2026-11-24
+
+Independent patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Added
+
+- **Declarative `workspace.ignorePaths`:** Unowned non-JS paths matching `workspace.ignorePaths` (e.g. `docs/**`, mobile apps, agent metadata) are skipped cleanly instead of triggering `unknown-changed-path` full fallback.
+- **Per-task `cache: false` and `taskOverrides.{cwd,args,cache}`:** Manifest tasks and declarative `taskOverrides` can now disable local/S3 receipt caching per task and override `cwd`/`args` directly without duplicating full task blocks under `tasks`.
+
+### Changed
+
+- **Auto-discover `implicitDependencies`:** `workspace.discover` now reads `implicitDependencies` from discovered `project.json` files into `fallbackDependencies` (skipping `!` negations and pruning unknown/excluded IDs).
+- **Dual-tier `autoVitestNarrowing` excludes:** Projects declaring both `test` and `test:integration` (or `test:e2e`) automatically exclude `.integration.test.{ts,tsx}` and `.e2e.test.{ts,tsx}` from unit `:test` file narrowing.
+
+### Fixed
+
+- **`@dads-framework/testing/eslint` (`enforce-module-boundaries`):** Added `TSImportType` and `TSImportEqualsDeclaration` AST visitors and stripped comments, template literals, and non-import string literals before scanning alias dependencies for circular-dependency detection.
+
 ## [@dads-framework/testing 0.7.0] - 2026-11-24
 
 Independent release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/testing-native-linux-arm64-gnu",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Native dad-test executable for Linux arm64 with glibc.",
   "license": "MIT",
   "os": [

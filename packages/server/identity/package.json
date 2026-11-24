@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/identity",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -55,9 +55,9 @@
     "vitest": "~4.1.0",
     "@better-auth/core": "1.7.26",
     "@better-auth/sso": "1.7.26",
-    "@dads-framework/access": "0.6.1",
-    "@dads-framework/postgres": "0.6.1",
-    "@dads-framework/postgres-access": "0.6.1",
+    "@dads-framework/access": "0.6.2",
+    "@dads-framework/postgres": "0.6.2",
+    "@dads-framework/postgres-access": "0.6.2",
     "@types/pg": "^8.20.0",
     "better-auth": "1.7.26",
     "drizzle-orm": "^0.45.2",
@@ -76,8 +76,8 @@
   "peerDependencies": {
     "@better-auth/core": "1.7.26",
     "@better-auth/sso": "1.7.26",
-    "@dads-framework/access": "0.6.1",
-    "@dads-framework/postgres": "0.6.1",
+    "@dads-framework/access": "0.6.2",
+    "@dads-framework/postgres": "0.6.2",
     "better-auth": "1.7.26",
     "drizzle-orm": "^0.45.2",
     "kysely": "0.28.17",

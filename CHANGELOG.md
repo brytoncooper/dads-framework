@@ -4,6 +4,12 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-11-23
+
+### Fixed
+
+- Switched JavaScript/TypeScript file discovery in `dads-testing-javascript` (`frontend_version = 13`) and receipt input hashing in `dads-testing-store` to use `git ls-files --cached --others --exclude-standard -z` inside Git repositories, so gitignored build outputs (such as `cdk.out`, `.nx`, `.turbo`) and nested agent worktrees (such as `.claude/worktrees/`) are never scanned, parsed, or allowed to inject phantom widening uncertainties. Non-Git fixtures fall back cleanly to directory traversal with an expanded ignore list.
+
 ## [0.6.1] - 2026-11-23
 
 ### Added

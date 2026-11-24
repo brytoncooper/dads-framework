@@ -26,7 +26,7 @@ commands, and the path to its README. Run `npx dad doctor explain enmeshment`
 to see the explanation for that diagnostic.
 
 To create a project that already includes the Toolbox, run
-`npm create dads@0.6.1 my-app` with Node 24 and Docker Compose running.
+`npm create dads@0.6.2 my-app` with Node 24 and Docker Compose running.
 
 Dads is the framework; its packages live under `@dads-framework/*`, and `dad`
 is the executable this package exposes. `dad --help` (or `dad help`) prints the
@@ -50,7 +50,7 @@ Applies the same idempotent recipes as `create-dads`. `--existing` writes an
 isolated project under `<path>/dads` beside an existing application,
 `--dry-run` previews the owned files, and `--skip-install` leaves dependency
 installation to another tool. Use `npm start` in the generated app to start
-Docker, or use `npm create dads@0.6.1` to install and start a new app in
+Docker, or use `npm create dads@0.6.2` to install and start a new app in
 one step.
 
 Generated projects include Git hooks, a shared CI shell job, and optional GitHub

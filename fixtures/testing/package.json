@@ -1,13 +1,13 @@
 {
   "name": "@dads-fixture/testing",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@dads-framework/testing": "0.6.1"
+    "@dads-framework/testing": "0.6.2"
   },
   "scripts": {
     "test": "vitest run",

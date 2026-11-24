@@ -1,7 +1,7 @@
 //! Read-only coupling and precision X-ray: indexes the dependency graph and ranks widening
 //! culprits, delegating reachability and fallback-trap passes to sibling modules.
 use crate::diagnose_reachability::analyze_reachability;
-use crate::diagnose_remediation::culprit_remediation;
+use crate::diagnose_remediation::{culprit_remediation, is_tool_config_file};
 use crate::diagnose_traps::find_fallback_traps;
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{FileNarrowing, ImpactMode, TestingManifest};
@@ -32,6 +32,7 @@ pub(crate) struct WorkspaceIndex<'a> {
     pub(crate) tests_by_proj: Vec<usize>,
     pub(crate) total_tests: usize,
     pub(crate) uncertainties: Vec<GraphUncertainty>,
+    pub(crate) whole_ws_owned_widened: BTreeSet<usize>,
     pub(crate) has_unowned_whole_ws: bool,
     pub(crate) whole_ws_count: usize,
 }
@@ -117,12 +118,16 @@ fn build_index<'a>(
     wire_edges(&nodes, &by_path, &mut mods);
     let uncertainties = graph.map_or_else(Vec::new, DependencyGraph::uncertainties);
     let (mut whole_ws_count, mut has_unowned_whole_ws) = (0, false);
+    let mut whole_ws_owned_widened = BTreeSet::new();
     for u in &uncertainties {
         let owner = deepest_project_for_path(&manifest.projects, &u.path)
             .and_then(|p| proj_by_id.get(p.id.as_str()).copied());
         if u.scope == GraphUncertaintyScope::WholeWorkspace {
             whole_ws_count += 1;
-            has_unowned_whole_ws |= owner.is_none();
+            match owner {
+                Some(p) => whole_ws_owned_widened.extend(closures[p].iter().copied()),
+                None => has_unowned_whole_ws = true,
+            }
         } else if let Some(&m_i) = by_path.get(u.path.as_str()) {
             mods[m_i].module_uncertainty_owners.push(owner);
         }
@@ -136,6 +141,7 @@ fn build_index<'a>(
         tests_by_proj,
         total_tests,
         uncertainties,
+        whole_ws_owned_widened,
         has_unowned_whole_ws,
         whole_ws_count,
     }
@@ -207,16 +213,15 @@ fn is_test_module(path: &str, narrowings: &[&FileNarrowing]) -> bool {
 fn rank_culprits(manifest: &TestingManifest, idx: &WorkspaceIndex<'_>) -> Vec<WideningCulprit> {
     let mut out = Vec::with_capacity(idx.uncertainties.len());
     for u in &idx.uncertainties {
+        if u.code == "ambiguous-default-export" && is_tool_config_file(&u.path) {
+            continue;
+        }
         let owner = deepest_project_for_path(&manifest.projects, &u.path);
         let owner_i = owner.and_then(|p| idx.proj_by_id.get(p.id.as_str()).copied());
         let ws = u.scope == GraphUncertaintyScope::WholeWorkspace;
         let (wp, wt, wf) = match owner_i {
             Some(i) => {
-                let s = if ws {
-                    &idx.reach_projs
-                } else {
-                    &idx.closures[i]
-                };
+                let s = &idx.closures[i];
                 let (t, f) = s.iter().fold((0, 0), |(t, f), &p| {
                     (t + idx.reach_tasks[p], f + idx.tests_by_proj[p])
                 });
@@ -230,7 +235,7 @@ fn rank_culprits(manifest: &TestingManifest, idx: &WorkspaceIndex<'_>) -> Vec<Wi
         };
         let pos = u.location.as_ref().map(|l| l.position);
         out.push(WideningCulprit {
-            remediation: culprit_remediation(&u.code),
+            remediation: culprit_remediation(&u.code, &u.path),
             code: u.code.clone(),
             path: u.path.clone(),
             line: pos.map(|p| p.line),

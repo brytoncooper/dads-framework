@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import { planTesting } from "../testing-api.js";
 import { ejectNativeNxTesting, ejectReportFileName } from "./nx-eject-workspace.js";
+import { ejectTarget } from "./nx-eject-targets.js";
 import { inspectVitestConfig, rewriteNxViteTsPaths } from "./nx-eject-vitest.js";
 
 const run = promisify(execFile);
@@ -71,6 +72,30 @@ describe("dad-test-nx eject", () => {
     expect(result.report.nxPackagesDetected).toEqual(["@nx/eslint", "@nx/js", "@nx/vite", "nx"]);
     expect(result.report.uninstallCommands).toContain("rm -rf nx.json .nx");
     expect(result.report.uninstallCommands).toContain("npm uninstall @nx/eslint @nx/js @nx/vite nx");
+  });
+
+  it("normalizes empty and workspaceRoot cwd values in nx:run-commands targets instead of emitting cwd: ''", () => {
+    const project = {
+      name: "domain-access",
+      root: "libs/domain-access",
+      targets: {},
+      dependencies: [],
+      namedInputs: undefined,
+    };
+    const projects = new Map([[project.name, project]]);
+    for (const cwd of ["", "   ", "{workspaceRoot}", "{workspaceRoot}/", "."]) {
+      const ejected = ejectTarget({
+        workspaceRoot: "/tmp/unused",
+        project,
+        name: "test:integration",
+        target: { executor: "nx:run-commands", options: { command: "node --version", cwd } },
+        projects,
+        nxConfiguration: {},
+      });
+      expect(ejected.audit.classification).toBe("converted");
+      expect(ejected.task?.id).toBe("domain-access:test:integration");
+      expect(ejected.task?.execution.cwd).toBeUndefined();
+    }
   });
 
   it("writes dads.testing.json, rewrites nxViteTsPaths to dadsTsconfigPaths, and runs with zero Nx installed", async () => {

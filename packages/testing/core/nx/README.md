@@ -221,8 +221,10 @@ diagnostic, identifier, and migration functions:
   `nx:run-commands` targets into a standalone zero-Nx `dads.testing.json`
   (`workspaceRoot`, optional `targetNames`, `write`, `force`,
   `replaceNxViteTsPaths`, `nativeBinary`).
-- `dadsIdentifier(name)` and `decodeDadsIdentifier(id)` convert between Nx
-  names and readable, collision-free Dads identifiers.
+- `dadsIdentifier(name)`, `dadsTargetIdentifier(name)`,
+  `dadsTaskIdentifier(project, target)`, and `decodeDadsIdentifier(id)` convert
+  between Nx names and readable, collision-free Dads identifiers (preserving
+  colons in targets such as `api:test:integration`).
 - `importNxTestingWorkspace(options)` backs the one-way migration, taking
   `workspaceRoot`, the approved `expectedGitSha`, and an optional `runner`.
 

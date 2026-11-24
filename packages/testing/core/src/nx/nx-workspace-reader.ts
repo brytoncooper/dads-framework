@@ -13,7 +13,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { isRecord, isUnknownArray } from "../parse-guards.js";
-import { dadsIdentifier } from "./dads-identifier.js";
+import { dadsIdentifier, dadsTargetIdentifier } from "./dads-identifier.js";
 import { parseNxConfiguration } from "./nx-installation.js";
 import type { GitSnapshot, NxCommandRunner, NxProject, NxTarget } from "./import-nx-types.js";
 import {
@@ -246,7 +246,7 @@ function parseTarget(name: string, value: JsonValue): NxTarget {
   const cwd = options ? readOptionalString(options, "cwd") : undefined;
   return {
     name,
-    id: dadsIdentifier(name),
+    id: dadsTargetIdentifier(name),
     ...(executor === undefined ? {} : { executor }),
     ...(command === undefined ? {} : { command }),
     ...(cwd === undefined ? {} : { cwd }),
@@ -261,7 +261,7 @@ function parseTarget(name: string, value: JsonValue): NxTarget {
 function unreadableTarget(name: string): NxTarget {
   return {
     name,
-    id: dadsIdentifier(name),
+    id: dadsTargetIdentifier(name),
     continuous: false,
     inferred: false,
     unresolvedExecutionFields: ["target:non-object"],

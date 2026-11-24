@@ -27,4 +27,4 @@ export {
 export { type EjectedTargetAudit } from "./nx-eject-targets.js";
 export { type RewriteNxViteResult } from "./nx-eject-vitest.js";
 export { type NativeNxCoverage } from "./nx-native-model.js";
-export { dadsIdentifier, decodeDadsIdentifier } from "./dads-identifier.js";
+export { dadsIdentifier, dadsTargetIdentifier, dadsTaskIdentifier, decodeDadsIdentifier } from "./dads-identifier.js";

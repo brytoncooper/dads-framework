@@ -1,6 +1,6 @@
 import process from "node:process";
 import { describe, expect, it } from "vitest";
-import { dadsIdentifier, decodeDadsIdentifier } from "./dads-identifier.js";
+import { dadsIdentifier, dadsTargetIdentifier, dadsTaskIdentifier, decodeDadsIdentifier } from "./dads-identifier.js";
 import { buildNativeNxManifest } from "./nx-native-model.js";
 
 const nxCli = "/synthetic/node_modules/nx/bin/nx.js";
@@ -95,13 +95,18 @@ describe("native Nx manifest inventory", () => {
   });
 
   it("uses readable, reversible IDs for plain and special names without flattening Nx target identity", () => {
-    const result = build({ test: {}, "test:unit": {} });
+    const result = build({ test: {}, "test:unit": {}, "test:integration": {} });
     expect(result.manifest.tasks.find((t) => t.execution.args[3] === "--target=test")?.id).toBe("harbor:test");
-    const special = result.manifest.tasks.find((t) => t.execution.args[3] === "--target=test:unit");
-    expect(special?.id).toBe("harbor:_test_3a_unit");
-    expect(special?.execution.args).toEqual([nxCli, "run", "--project=harbor", "--target=test:unit"]);
+    const unit = result.manifest.tasks.find((t) => t.execution.args[3] === "--target=test:unit");
+    expect(unit?.id).toBe("harbor:test:unit");
+    expect(unit?.execution.args).toEqual([nxCli, "run", "--project=harbor", "--target=test:unit"]);
+    expect(result.manifest.tasks.find((t) => t.execution.args[3] === "--target=test:integration")?.id).toBe(
+      "harbor:test:integration",
+    );
+    expect(dadsTaskIdentifier("a:b", "c")).not.toBe(dadsTaskIdentifier("a", "b:c"));
     for (const sample of ["harbor", "api-errors", "my_lib", "@org/pkg", "test:unit", "_leading", "a__b", ""]) {
       expect(decodeDadsIdentifier(dadsIdentifier(sample))).toBe(sample);
+      expect(decodeDadsIdentifier(dadsTargetIdentifier(sample))).toBe(sample);
     }
   });
 

@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { isRecord } from "../parse-guards.js";
 import type { TestingManifestFileNarrowing, TestingManifestTask } from "../testing-manifest.js";
-import { dadsIdentifier } from "./dads-identifier.js";
+import { dadsIdentifier, dadsTaskIdentifier } from "./dads-identifier.js";
 import type { NativeProject } from "./nx-native-graph.js";
 import { inputScope, type InputScope, type PrerequisiteTarget } from "./nx-native-inputs.js";
 import { inspectVitestConfig } from "./nx-eject-vitest.js";
@@ -79,7 +79,7 @@ export function ejectTarget(input: {
       checkPrerequisites: [],
     };
   }
-  const id = `${dadsIdentifier(project.name)}:${dadsIdentifier(name)}`;
+  const id = dadsTaskIdentifier(project.name, name);
   const impact = buildImpact(kind, scope, plan.extraImpactPaths);
   return {
     task: {
@@ -152,7 +152,7 @@ function buildVitestPlan(
     execution: {
       executable: "npx",
       args: ["vitest", "run", ...configArgs],
-      ...(project.root === "." ? {} : { cwd: project.root }),
+      ...(project.root === "." || project.root === "" ? {} : { cwd: project.root }),
       ...(fileNarrowing === undefined ? {} : { fileNarrowing }),
     },
     extraImpactPaths: extraPaths,
@@ -193,7 +193,7 @@ function buildEslintPlan(project: NativeProject, options: Readonly<Record<string
     execution: {
       executable: "npx",
       args: ["eslint", ...(usesWorkspacePatterns ? patterns : ["."])],
-      ...(usesWorkspacePatterns || project.root === "." ? {} : { cwd: project.root }),
+      ...(usesWorkspacePatterns || project.root === "." || project.root === "" ? {} : { cwd: project.root }),
     },
     extraImpactPaths: [],
     reason: "Ejected ESLint target to standalone 'npx eslint'.",
@@ -239,7 +239,10 @@ function buildRunCommandsPlan(
   if (rawCommand === undefined) return new Error("nx:run-commands target has no single command to eject.");
   const resolvedCommand = resolvePlaceholders(rawCommand, project.root);
   if (/[{][^}]+[}]/.test(resolvedCommand)) return new Error("Command contains unresolved Nx placeholders.");
-  const rawCwd = typeof options["cwd"] === "string" ? resolvePlaceholders(options["cwd"], project.root) : ".";
+  const resolvedCwd =
+    typeof options["cwd"] === "string" ? resolvePlaceholders(options["cwd"], project.root).trim() : "";
+  const strippedCwd = resolvedCwd.replace(/\/+$/, "");
+  const rawCwd = strippedCwd === "" || strippedCwd === "." ? "." : strippedCwd;
   if (path.isAbsolute(rawCwd) || rawCwd.split("/").includes("..")) {
     return new Error("Command cwd escapes the workspace.");
   }

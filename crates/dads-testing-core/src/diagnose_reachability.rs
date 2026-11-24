@@ -69,8 +69,12 @@ fn compute_effective_skip(idx: &WorkspaceIndex<'_>, sources: &[usize], potential
     if idx.uncertainties.is_empty() {
         return potential_skip;
     }
-    let reach_tests: usize = idx.reach_projs.iter().map(|&p| idx.tests_by_proj[p]).sum();
-    if idx.whole_ws_count > 0 && reach_tests >= idx.total_tests {
+    let whole_ws_tests: usize = idx
+        .whole_ws_owned_widened
+        .iter()
+        .map(|&p| idx.tests_by_proj[p])
+        .sum();
+    if whole_ws_tests >= idx.total_tests {
         return 0.0;
     }
     let step_n = sources.len().min(64);
@@ -82,9 +86,7 @@ fn compute_effective_skip(idx: &WorkspaceIndex<'_>, sources: &[usize], potential
         epoch += 1;
         queue.clear();
         widened_projs.clear();
-        if idx.whole_ws_count > 0 {
-            widened_projs.extend(idx.reach_projs.iter().copied());
-        }
+        widened_projs.extend(idx.whole_ws_owned_widened.iter().copied());
         seen[start] = epoch;
         queue.push_back(start);
         let mut all_widened = false;

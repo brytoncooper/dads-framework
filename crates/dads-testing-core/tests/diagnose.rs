@@ -171,6 +171,77 @@ fn separates_runtime_from_type_only_hotspots_and_finds_deep_transitive_roots()
     Ok(())
 }
 
+#[test]
+fn leaf_owned_whole_workspace_uncertainty_widens_only_its_own_closure() -> Result<(), Box<dyn Error>>
+{
+    let ws = TempRepo::create("leaf-whole-ws")?;
+    let nodes = vec![
+        module_node("packages/core/src/shared.ts", &[]),
+        module_node(
+            "packages/core/src/shared.test.ts",
+            &["packages/core/src/shared.ts"],
+        ),
+        module_node("packages/app/src/leaf.ts", &[]),
+        module_node(
+            "packages/app/src/leaf.test.ts",
+            &["packages/app/src/leaf.ts"],
+        ),
+        module_node("packages/web/src/page.ts", &[]),
+        module_node(
+            "packages/web/src/page.test.ts",
+            &["packages/web/src/page.ts"],
+        ),
+    ];
+    let uncertainties = vec![
+        GraphUncertainty {
+            path: "packages/app/src/leaf.ts".into(),
+            code: "nonliteral-dynamic-import".into(),
+            message: "Dynamic import is not a string literal.".into(),
+            scope: GraphUncertaintyScope::WholeWorkspace,
+            location: None,
+        },
+        GraphUncertainty {
+            path: "packages/app/eslint.config.mjs".into(),
+            code: "ambiguous-default-export".into(),
+            message: "A default export does not have a stable named-import identity in this graph."
+                .into(),
+            scope: GraphUncertaintyScope::ReachedModule,
+            location: None,
+        },
+        GraphUncertainty {
+            path: "packages/web/vitest.config.mts".into(),
+            code: "ambiguous-default-export".into(),
+            message: "A default export does not have a stable named-import identity in this graph."
+                .into(),
+            scope: GraphUncertaintyScope::ReachedModule,
+            location: None,
+        },
+    ];
+    let graph = DependencyGraph::new(nodes, uncertainties);
+    let response = execute_request_with_graph(diagnose_request(&ws.0), Some(graph));
+    assert!(response.ok, "{response:?}");
+    let diag = response
+        .result
+        .and_then(|r| r.diagnose)
+        .ok_or("missing diagnose payload")?;
+
+    // Tool configs (`eslint.config.mjs`, `vitest.config.mts`) are not flagged as actionable culprits.
+    assert_eq!(diag.widening_culprits.len(), 1);
+    let culprit = &diag.widening_culprits[0];
+    assert_eq!(culprit.path, "packages/app/src/leaf.ts");
+    // `app` is a leaf project with zero dependents, so its owned dynamic import widens ONLY `app`,
+    // matching `plan` behavior instead of claiming all 3 projects / 0% skip.
+    assert_eq!(culprit.widened_projects, 1);
+    assert_eq!(culprit.widened_tasks, 1);
+    assert_eq!(culprit.widened_test_files, 1);
+    assert!(
+        diag.summary.estimated_leaf_skip_percent > 20.0,
+        "expected non-zero effective skip for unrelated projects, got {}",
+        diag.summary.estimated_leaf_skip_percent
+    );
+    Ok(())
+}
+
 fn assert_summary(diag: &DiagnoseResult) {
     assert_eq!(diag.schema_version, PROTOCOL_SCHEMA_VERSION);
     assert_eq!(diag.summary.total_modules, 8);

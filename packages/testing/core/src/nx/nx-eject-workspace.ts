@@ -18,7 +18,7 @@ import {
   type TestingManifestTask,
 } from "../testing-manifest.js";
 import { writeFilesAtomically } from "../write-files-atomically.js";
-import { dadsIdentifier } from "./dads-identifier.js";
+import { dadsIdentifier, dadsTaskIdentifier } from "./dads-identifier.js";
 import { ejectTarget, type EjectedTargetAudit, type EjectedTargetResult } from "./nx-eject-targets.js";
 import { detectWorkspaceTsconfig, rewriteNxViteTsPaths, type RewriteNxViteResult } from "./nx-eject-vitest.js";
 import { parseNxConfiguration, resolveLocalNxCli } from "./nx-installation.js";
@@ -205,7 +205,7 @@ function ejectCheckPrerequisites(
   for (let index = 0; index < pendingPrereqs.length; index += 1) {
     const prereq = pendingPrereqs[index];
     if (prereq === undefined) continue;
-    const id = `${dadsIdentifier(prereq.project.name)}:${dadsIdentifier(prereq.name)}`;
+    const id = dadsTaskIdentifier(prereq.project.name, prereq.name);
     if (entries.has(id)) continue;
     const raw = prereq.project.targets[prereq.name];
     if (!isRecord(raw) || raw["continuous"] === true) continue;
@@ -250,7 +250,7 @@ function wireDependencies(entries: ReadonlyMap<string, EjectedEntry>): readonly 
   for (const entry of entries.values()) {
     const dependsOn: string[] = [];
     for (const prereq of entry.checkPrerequisites) {
-      const targetId = `${dadsIdentifier(prereq.project.name)}:${dadsIdentifier(prereq.name)}`;
+      const targetId = dadsTaskIdentifier(prereq.project.name, prereq.name);
       if (targetId === entry.task.id || !entries.has(targetId) || reachesTask(targetId, entry.task.id, edges)) continue;
       if (!dependsOn.includes(targetId)) dependsOn.push(targetId);
     }

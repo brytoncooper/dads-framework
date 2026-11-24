@@ -6,7 +6,15 @@ const SAFE_DOC_OR_ASSET_EXTS: &[&str] = &[
     "md", "mdx", "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "pdf",
 ];
 
-pub(crate) fn culprit_remediation(code: &str) -> DiagnoseRemediation {
+pub(crate) fn culprit_remediation(code: &str, path: &str) -> DiagnoseRemediation {
+    if code == "ambiguous-default-export" && is_tool_config_file(path) {
+        return DiagnoseRemediation {
+            safety: RemediationSafety::KeepWidenedUnlessVerified,
+            action: "Tool configuration files require 'export default'; keep this default export as-is. It only widens when this config file itself changes.".into(),
+            caution: "Do not convert tool config default exports to named exports; ESLint, Vitest, Vite, and similar tools require a default export.".into(),
+            verify: "No change required.".into(),
+        };
+    }
     match code {
         "nonliteral-dynamic-import" | "nonliteral-commonjs-require" => DiagnoseRemediation {
             safety: RemediationSafety::Safe,
@@ -140,6 +148,16 @@ pub(crate) fn fallback_trap_remediation(
 pub(crate) fn is_safe_doc_or_asset(path: &str) -> bool {
     path.rsplit_once('.')
         .is_some_and(|(_, ext)| SAFE_DOC_OR_ASSET_EXTS.contains(&ext.to_ascii_lowercase().as_str()))
+}
+
+pub(crate) fn is_tool_config_file(path: &str) -> bool {
+    let file = path.rsplit('/').next().unwrap_or(path);
+    let Some((stem, ext)) = file.rsplit_once('.') else {
+        return false;
+    };
+    const JS_TS_EXTS: &[&str] = &["js", "mjs", "cjs", "ts", "mts", "cts"];
+    JS_TS_EXTS.contains(&ext)
+        && (stem.ends_with(".config") || stem == ".eslintrc" || stem == ".prettierrc")
 }
 
 fn prefix_extension(prefix: &str) -> Option<&str> {

@@ -10,6 +10,13 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - Isolated Nx diagnosis and revision-range planning in ephemeral detached Git worktrees (`os.tmpdir()`): `dad-test diagnose` / `dad-test-nx diagnose`, `dad-test-nx plan --base <A> --head <B>`, and `dad-test-nx plan --snapshot` now run against an immutable commit snapshot while symlinking `node_modules`, so concurrent edits on shared checkouts never interrupt discovery or planning.
 
+### Fixed
+
+- Fixed `dad-test-nx eject` emitting `execution.cwd: ""` for `nx:run-commands` targets with empty or `{workspaceRoot}` working directories (now normalized to workspace root `"."`).
+- Aligned `dad-test diagnose` widening calculations with `plan`: project-owned `WholeWorkspace` dynamic-import uncertainties now report and widen only their owning project's declared dependency closure instead of claiming every reachability project in the workspace (`0%` effective skip).
+- Stopped flagging standard tool configuration files (`*.config.{js,mjs,cjs,ts,mts,cts}`, `.eslintrc.*`, `.prettierrc.*`) as actionable `ambiguous-default-export` culprits with a `"safe"` fix while preserving sound widening when those config files change.
+- Preserved colons in Nx target names (e.g. `domain-access:test:integration` instead of `domain-access:_test_3a_integration`) via collision-free `dadsTargetIdentifier` / `dadsTaskIdentifier`.
+
 ## [0.6.2] - 2026-11-23
 
 ### Fixed

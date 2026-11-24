@@ -1,4 +1,4 @@
-import { dadsIdentifier } from "./dads-identifier.js";
+import { dadsIdentifier, dadsTaskIdentifier } from "./dads-identifier.js";
 import { isRecord } from "../parse-guards.js";
 import { readNativeProjects, type NativeProject } from "./nx-native-graph.js";
 import process from "node:process";
@@ -216,7 +216,7 @@ export function reachesTask(start: string, target: string, edges: ReadonlyMap<st
 }
 
 function taskIdentifier(project: string, target: string): string {
-  return `${dadsIdentifier(project)}:${dadsIdentifier(target)}`;
+  return dadsTaskIdentifier(project, target);
 }
 
 function usesReachability(kind: TestingManifestTask["kind"]): boolean {

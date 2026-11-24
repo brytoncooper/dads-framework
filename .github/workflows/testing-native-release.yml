@@ -113,11 +113,11 @@ jobs:
           facade_tar="../testing-packages/dads-framework-testing-$facade_version.tgz"
           test "${#native_tar[@]}" -eq 1
           test -f "${native_tar[0]}" && test -f "$facade_tar"
-          npm_cpu_flag=()
+          npm_cross_flag=()
           if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
-            npm_cpu_flag=(--cpu=x64)
+            npm_cross_flag=(--force)
           fi
-          npm install --no-save --omit=optional --no-audit --no-fund "${npm_cpu_flag[@]}" "${native_tar[0]}" "$facade_tar" >/dev/null
+          npm install --no-save --omit=optional --no-audit --no-fund "${npm_cross_flag[@]}" "${native_tar[0]}" "$facade_tar" >/dev/null
           if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
             native_bin="$consumer/node_modules/@dads-framework/testing-native-darwin-x64/bin/dad-test"
             file "$native_bin" | grep -q "x86_64"

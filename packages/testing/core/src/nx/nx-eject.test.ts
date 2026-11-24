@@ -55,7 +55,7 @@ describe("dad-test-nx eject", () => {
     const billingLint = result.manifest.tasks.find((t) => t.id === "billing:lint");
     expect(billingLint?.execution).toEqual({ executable: "npx", args: ["eslint", "."], cwd: "libs/billing" });
     expect(billingLint?.dependsOn).toEqual(["workspace-scripts:lint-walls"]);
-    expect(billingLint?.impact.mode).toBe("changed-files");
+    expect(billingLint?.impact.mode).toBe("reachability");
 
     const gate = result.manifest.tasks.find((t) => t.id === "workspace-scripts:lint-walls");
     expect(gate?.execution).toEqual({ executable: "node", args: ["scripts/lint-walls.mjs"] });

@@ -73,10 +73,10 @@ function expandDependencyInput(
 
 function expandFileInput(value: string, owner: NativeProject, context: InputExpansion): void {
   const substituted = value.replace(/^\{projectRoot\}/, owner.root).replace(/^\{workspaceRoot\}/, ".");
-  const prefix = literalPrefix(substituted);
-  if (prefix === null) context.reasons.add("unresolved or escaping input path");
-  else if (prefix === ".") context.reasons.add("workspace-wide input");
-  else context.paths.add(prefix);
+  const pattern = normalizeFileInput(substituted);
+  if (pattern === null) context.reasons.add("unresolved or escaping input path");
+  else if (pattern === ".") context.reasons.add("workspace-wide input");
+  else context.paths.add(pattern);
 }
 
 function expandNamedInput(
@@ -114,6 +114,21 @@ function namedInputs(owner: NativeProject, context: InputExpansion): Readonly<Re
 
 function defaultDefinition(value: string): unknown {
   return value === "default" ? ["{projectRoot}/**/*"] : undefined;
+}
+
+function normalizeFileInput(value: string): string | null {
+  if (value.includes("\\") || value.startsWith("/") || /^[A-Za-z]:/.test(value)) return null;
+  const normalized = value.replace(/^\.\//, "");
+  if (normalized.split("/").includes("..")) return null;
+  if (!normalized.includes("*") || /[?[\]{}()+@!]/.test(normalized)) return literalPrefix(normalized);
+  return normalizeGlobPattern(normalized);
+}
+
+function normalizeGlobPattern(normalized: string): string {
+  const withoutCatchAll = normalized.replace(/(?:\/\*\*\/\*|\/\*\*)$/, "");
+  const source = withoutCatchAll.includes("*") ? normalized : withoutCatchAll;
+  const parts = source.split("/").filter((part) => part !== "" && part !== ".");
+  return parts.length === 0 || parts[0]?.includes("*") === true ? "." : parts.join("/");
 }
 
 function literalPrefix(value: string): string | null {

@@ -1,7 +1,7 @@
 use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::manifest::{DeclaredTask, TestingManifest};
 use crate::protocol::TaskCause;
-use crate::scope::{deepest_project_for_path, path_is_inside};
+use crate::scope::{deepest_project_for_path, path_matches_impact};
 use crate::sql_impact::SqlTaskSelection;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -76,7 +76,7 @@ impl CauseEvidence<'_> {
             task.impact
                 .paths
                 .iter()
-                .any(|input_path| path_is_inside(changed_path, input_path))
+                .any(|input_path| path_matches_impact(changed_path, input_path))
         })
     }
 

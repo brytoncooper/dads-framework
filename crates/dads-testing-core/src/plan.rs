@@ -7,7 +7,7 @@ use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
-use crate::scope::path_is_inside;
+use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::{SqlTaskSelection, analyze_sql_impact};
 use decisions::explain_decisions;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -106,7 +106,7 @@ impl<'a> PlanEvidence<'a> {
             scope
                 .changed_paths
                 .iter()
-                .any(|changed_path| path_is_inside(changed_path, owned_path))
+                .any(|changed_path| path_matches_impact(changed_path, owned_path))
         })
     }
 

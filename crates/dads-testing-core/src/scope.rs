@@ -88,6 +88,62 @@ pub(crate) fn path_is_inside(path: &str, root: &str) -> bool {
             .is_some_and(|remainder| remainder.starts_with('/'))
 }
 
+/// Matches a workspace-relative path against either a directory/file prefix or a `*`/`**` glob.
+pub(crate) fn path_matches_impact(path: &str, declared: &str) -> bool {
+    if !declared.contains('*') {
+        return path_is_inside(path, declared);
+    }
+    let path_parts: Vec<&str> = path.split('/').collect();
+    let pat_parts: Vec<&str> = declared.split('/').collect();
+    match_glob_segments(&path_parts, &pat_parts)
+}
+
+fn match_glob_segments(path: &[&str], pattern: &[&str]) -> bool {
+    match (path.first(), pattern.first()) {
+        (None, None) => true,
+        (_, Some(&"**")) => {
+            match_glob_segments(path, &pattern[1..])
+                || (!path.is_empty() && match_glob_segments(&path[1..], pattern))
+        }
+        (Some(seg), Some(pat)) => {
+            match_wildcard_segment(seg, pat) && match_glob_segments(&path[1..], &pattern[1..])
+        }
+        _ => false,
+    }
+}
+
+fn match_wildcard_segment(segment: &str, pattern: &str) -> bool {
+    if !pattern.contains('*') {
+        return segment == pattern;
+    }
+    let parts: Vec<&str> = pattern.split('*').collect();
+    let mut cursor = segment;
+    if let Some(first) = parts.first() {
+        let Some(rest) = cursor.strip_prefix(first) else {
+            return false;
+        };
+        cursor = rest;
+    }
+    if let Some(last) = parts.last()
+        && parts.len() > 1
+    {
+        let Some(rest) = cursor.strip_suffix(last) else {
+            return false;
+        };
+        cursor = rest;
+    }
+    for middle in &parts[1..parts.len().saturating_sub(1)] {
+        if middle.is_empty() {
+            continue;
+        }
+        let Some(pos) = cursor.find(middle) else {
+            return false;
+        };
+        cursor = &cursor[pos + middle.len()..];
+    }
+    true
+}
+
 /// Ownership specificity of a project root. The workspace root owns everything but is the least
 /// specific owner, so it must never tie with a declared subdirectory.
 fn root_specificity(root: &str) -> usize {
@@ -200,7 +256,7 @@ pub(crate) fn dynamic_import_scope_triggered(
         changed == loader_path
             || allowed_prefixes
                 .iter()
-                .any(|prefix| path_is_inside(changed, prefix))
+                .any(|prefix| path_matches_impact(changed, prefix))
     })
 }
 

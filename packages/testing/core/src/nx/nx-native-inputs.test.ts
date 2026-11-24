@@ -70,7 +70,7 @@ describe("native Nx conservative input scopes", () => {
         "apps/harbor",
         "config/global.json",
         "harbor-config",
-        "library-config",
+        "library-config/*.json",
         "libs/shared",
       ].sort(),
     );
@@ -131,7 +131,7 @@ describe("native Nx conservative input scopes", () => {
     );
     expect(scope.mode).toBe("changed-files");
     expect(scope.paths).toEqual(
-      [...globalPolicyPaths, "apps/harbor", "apps/harbor/src", "libs/shared", "release/versions.json"].sort(),
+      [...globalPolicyPaths, "apps/harbor", "apps/harbor/src/**/*.ts", "libs/shared", "release/versions.json"].sort(),
     );
   });
 

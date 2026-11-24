@@ -329,7 +329,7 @@ function buildImpact(
   extraPaths: readonly string[],
 ): { readonly mode: "reachability" | "changed-files" | "always"; readonly paths: readonly string[] } {
   if (scope.mode === "always") return { mode: "always", paths: [] };
-  const useReachability = kind === "test" || kind === "typecheck" || kind === "build";
+  const useReachability = kind === "test" || kind === "typecheck" || kind === "lint" || kind === "build";
   const basePaths = useReachability ? scope.extraPaths : scope.paths;
   const merged = [...new Set([...basePaths, ...extraPaths])].sort();
   return { mode: useReachability ? "reachability" : "changed-files", paths: merged };

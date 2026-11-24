@@ -5,7 +5,7 @@ use super::support::{
     testing_repository, write_manifest,
 };
 use crate::manifest::Project;
-use crate::scope::path_is_inside;
+use crate::scope::{path_is_inside, path_matches_impact};
 use crate::{TaskCause, execute_request};
 use std::fs::{create_dir_all, remove_dir_all, write};
 #[test]
@@ -261,6 +261,22 @@ fn root_project_owns_every_path() {
     assert!(path_is_inside("tooling.config.json", "."));
     assert!(path_is_inside(".", "."));
     assert!(!path_is_inside("packages-other/loader.ts", "packages"));
+    assert!(path_matches_impact(
+        "libs/domains/orders/server/migrations/001.migration.ts",
+        "libs/domains/*/server/migrations/*.migration.ts"
+    ));
+    assert!(!path_matches_impact(
+        "libs/domains/orders/DESIGN.md",
+        "libs/domains/*/server/migrations/*.migration.ts"
+    ));
+    assert!(path_matches_impact(
+        "libs/kit/pg/src/migrations/001.migration.ts",
+        "libs/kit/*/src/**/migrations/*.migration.ts"
+    ));
+    assert!(path_matches_impact(
+        "libs/kit/pg/src/a/b/migrations/001.migration.ts",
+        "libs/kit/*/src/**/migrations/*.migration.ts"
+    ));
 
     let projects = vec![
         declared_project("workspace", "."),

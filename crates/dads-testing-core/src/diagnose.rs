@@ -9,7 +9,8 @@ use crate::protocol::{
     DiagnoseResult, DiagnoseSummary, IssueScope, PROTOCOL_SCHEMA_VERSION, WideningCulprit,
 };
 use crate::scope::{
-    deepest_project_for_path, is_standard_test_path, is_test_module_with_narrowings, path_is_inside,
+    deepest_project_for_path, is_standard_test_path, is_test_module_with_narrowings,
+    path_matches_impact,
 };
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::path::Path;
@@ -140,7 +141,7 @@ fn build_index<'a>(
         if u.scope == GraphUncertaintyScope::WholeWorkspace {
             if let Some(prefixes) = manifest.workspace.dynamic_import_scopes.get(&u.path) {
                 for m in &mut mods {
-                    if m.path == u.path || prefixes.iter().any(|p| path_is_inside(&m.path, p)) {
+                    if m.path == u.path || prefixes.iter().any(|p| path_matches_impact(&m.path, p)) {
                         m.module_uncertainty_targets.push(target);
                     }
                 }

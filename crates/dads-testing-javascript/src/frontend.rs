@@ -3,15 +3,15 @@
 
 use crate::changed_module_evidence::changed_module_evidence;
 use crate::facts::{JsModuleFacts, JsUncertainty, JsWorkspaceFacts};
+use crate::file_discovery::discover_javascript_files;
 use crate::graph_export::copy_to_core_graph;
 use crate::module_analysis::analyze_file;
 use crate::removed_paths::removed_javascript_path_exists;
-use crate::workspace::{git_output, is_javascript_path, uncertainty, workspace_relative_path};
+use crate::workspace::{git_output, is_javascript_path, workspace_relative_path};
 use dads_testing_core::NativeRequest;
 use dads_testing_core::graph::DependencyGraph;
 use dads_testing_store::GraphFrontend;
 use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery};
-use std::fs;
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -26,21 +26,8 @@ pub(crate) fn analyze_workspace_roots(
     workspace_root: &Path,
     project_roots: Option<&[String]>,
 ) -> JsWorkspaceFacts {
-    let mut files = Vec::new();
     let mut uncertainties = Vec::new();
-    let scan_roots = resolve_scan_roots(workspace_root, project_roots);
-    let scoped = scan_roots.len() > 1
-        || scan_roots
-            .first()
-            .is_some_and(|root| root != workspace_root);
-    for scan_root in scan_roots {
-        collect_javascript_files(workspace_root, &scan_root, &mut files, &mut uncertainties);
-    }
-    if scoped {
-        collect_root_javascript_files(workspace_root, &mut files);
-    }
-    files.sort();
-    files.dedup();
+    let files = discover_javascript_files(workspace_root, project_roots, &mut uncertainties);
 
     let targets = files
         .into_iter()
@@ -132,46 +119,6 @@ fn analyze_paths_with_workers(
         .collect()
 }
 
-/// Uses manifest project roots when none declares the workspace root `"."`, avoiding spurious
-/// uncertainties from unrelated repo scripts or fixtures outside declared projects.
-fn resolve_scan_roots(workspace_root: &Path, project_roots: Option<&[String]>) -> Vec<PathBuf> {
-    let Some(roots) = project_roots else {
-        return vec![workspace_root.to_path_buf()];
-    };
-    if roots.is_empty()
-        || roots.iter().any(|root| {
-            let trimmed = root.trim().trim_end_matches('/');
-            trimmed.is_empty() || trimmed == "."
-        })
-    {
-        return vec![workspace_root.to_path_buf()];
-    }
-    let mut resolved = roots
-        .iter()
-        .map(|root| workspace_root.join(root))
-        .filter(|path| path.is_dir())
-        .collect::<Vec<_>>();
-    resolved.sort();
-    resolved.dedup();
-    if resolved.is_empty() {
-        vec![workspace_root.to_path_buf()]
-    } else {
-        resolved
-    }
-}
-
-fn collect_root_javascript_files(workspace_root: &Path, files: &mut Vec<PathBuf>) {
-    let Ok(entries) = fs::read_dir(workspace_root) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if entry.file_type().is_ok_and(|kind| kind.is_file()) && is_javascript_path(&path) {
-            files.push(path);
-        }
-    }
-}
-
 fn javascript_resolver() -> Resolver {
     let owned = |items: &[&str]| items.iter().map(|item| (*item).to_owned()).collect();
     Resolver::new(ResolveOptions {
@@ -225,7 +172,7 @@ pub struct JavaScriptFrontend;
 
 impl GraphFrontend for JavaScriptFrontend {
     fn frontend_version(&self) -> u32 {
-        12
+        13
     }
 
     fn initial_index(&mut self, request: &NativeRequest) -> Result<DependencyGraph, String> {
@@ -345,63 +292,4 @@ fn analyze_changed_paths(
         }
     }
     Ok(facts)
-}
-
-const IGNORED_DIRS: &[&str] = &[
-    ".git",
-    "node_modules",
-    "target",
-    "dist",
-    "coverage",
-    ".next",
-    ".lake",
-    "_apalache-out",
-];
-
-fn collect_javascript_files(
-    workspace_root: &Path,
-    directory: &Path,
-    files: &mut Vec<PathBuf>,
-    uncertainties: &mut Vec<JsUncertainty>,
-) {
-    let entries = match fs::read_dir(directory) {
-        Ok(entries) => entries,
-        Err(error) => {
-            uncertainties.push(uncertainty(
-                workspace_root,
-                directory,
-                "javascript-directory-read-failed",
-                format!("Could not inspect JavaScript sources: {error}"),
-            ));
-            return;
-        }
-    };
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                uncertainties.push(JsUncertainty {
-                    path: String::new(),
-                    code: "javascript-directory-entry-failed".to_owned(),
-                    message: format!("Could not inspect a workspace entry: {error}"),
-                    span: None,
-                    position: None,
-                });
-                continue;
-            }
-        };
-        let path = entry.path();
-        let file_name = entry.file_name();
-        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
-            if file_name
-                .to_str()
-                .is_some_and(|name| IGNORED_DIRS.contains(&name))
-            {
-                continue;
-            }
-            collect_javascript_files(workspace_root, &path, files, uncertainties);
-        } else if is_javascript_path(&path) {
-            files.push(path);
-        }
-    }
 }

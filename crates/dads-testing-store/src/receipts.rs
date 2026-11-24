@@ -277,24 +277,83 @@ fn collect_input_files(request: &TaskReceiptRequest<'_>) -> Option<BTreeSet<Stri
             }
         }
     }
-    for root in request.project_roots {
-        let trimmed = root.trim().trim_end_matches('/');
-        let start = if trimmed.is_empty() || trimmed == "." {
-            request.workspace_root.to_path_buf()
-        } else {
-            request.workspace_root.join(trimmed)
-        };
-        if !start.exists() {
-            continue;
+    if let Some(git_files) =
+        collect_git_project_files(request.workspace_root, request.project_roots)?
+    {
+        files.extend(git_files);
+    } else {
+        for root in request.project_roots {
+            let trimmed = root.trim().trim_end_matches('/');
+            let start = if trimmed.is_empty() || trimmed == "." {
+                request.workspace_root.to_path_buf()
+            } else {
+                request.workspace_root.join(trimmed)
+            };
+            if !start.exists() {
+                continue;
+            }
+            let prefix = if trimmed.is_empty() || trimmed == "." {
+                String::new()
+            } else {
+                trimmed.to_owned()
+            };
+            walk_regular_files(&start, &prefix, &mut files)?;
         }
-        let prefix = if trimmed.is_empty() || trimmed == "." {
-            String::new()
-        } else {
-            trimmed.to_owned()
-        };
-        walk_regular_files(&start, &prefix, &mut files)?;
     }
     Some(files)
+}
+
+fn collect_git_project_files(
+    workspace_root: &Path,
+    project_roots: &[String],
+) -> Option<Option<BTreeSet<String>>> {
+    let output = std::process::Command::new("git")
+        .args([
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ])
+        .current_dir(workspace_root)
+        .output()
+        .ok();
+    let Some(output) = output.filter(|out| out.status.success()) else {
+        return Some(None);
+    };
+    let mut collected = BTreeSet::new();
+    for raw in output.stdout.split(|byte| *byte == 0) {
+        if raw.is_empty() {
+            continue;
+        }
+        let Ok(rel) = std::str::from_utf8(raw) else {
+            return None;
+        };
+        if !matches_any_project_root(rel, project_roots) {
+            continue;
+        }
+        let candidate = workspace_root.join(rel);
+        let Ok(meta) = fs::symlink_metadata(&candidate) else {
+            continue;
+        };
+        if meta.file_type().is_symlink() {
+            return None;
+        }
+        if meta.is_file() {
+            collected.insert(rel.to_owned());
+        }
+    }
+    Some(Some(collected))
+}
+
+fn matches_any_project_root(rel: &str, project_roots: &[String]) -> bool {
+    project_roots.iter().any(|root| {
+        let trimmed = root.trim().trim_matches('/');
+        trimmed.is_empty()
+            || trimmed == "."
+            || rel == trimmed
+            || rel.starts_with(&format!("{trimmed}/"))
+    })
 }
 
 fn walk_regular_files(dir: &Path, prefix: &str, out: &mut BTreeSet<String>) -> Option<()> {

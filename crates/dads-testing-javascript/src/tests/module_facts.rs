@@ -320,3 +320,69 @@ fn destructured_static_dynamic_import_narrows_while_rest_and_bare_widen() {
     assert!(requested_for("src/side-effect.ts").is_empty());
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
+
+#[test]
+fn skips_gitignored_build_outputs_and_nested_worktrees_while_indexing_unignored_files() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-respects-gitignore");
+    let _ = remove_dir_all(&root);
+    create_dir_all(root.join("src")).expect("src dir must be created");
+    create_dir_all(root.join("infrastructure/cdk.out")).expect("cdk.out dir must be created");
+    create_dir_all(root.join(".claude/worktrees/agent-a/src"))
+        .expect("worktree dir must be created");
+
+    write(
+        root.join(".gitignore"),
+        "infrastructure/cdk.out/\n.claude/\n",
+    )
+    .expect(".gitignore must be written");
+    write(root.join("src/tracked.ts"), "export const tracked = 1;\n")
+        .expect("tracked file must be written");
+    write(
+        root.join("infrastructure/cdk.out/bundle.js"),
+        "export const x = (p) => import(p);\n",
+    )
+    .expect("gitignored cdk bundle must be written");
+    write(
+        root.join(".claude/worktrees/agent-a/src/broken.ts"),
+        "export const broken = (((\n",
+    )
+    .expect("gitignored worktree file must be written");
+
+    let run_git = |args: &[&str]| {
+        let status = std::process::Command::new("git")
+            .args(args)
+            .current_dir(&root)
+            .status()
+            .expect("git must start");
+        assert!(status.success(), "git {:?} must succeed", args);
+    };
+    run_git(&["init", "-q"]);
+    run_git(&["config", "user.email", "test@example.invalid"]);
+    run_git(&["config", "user.name", "Dads Test"]);
+    run_git(&["add", "."]);
+    run_git(&["commit", "-qm", "baseline"]);
+
+    // Add a new unignored untracked source file after baseline commit.
+    write(
+        root.join("src/untracked.ts"),
+        "export const untracked = 2;\n",
+    )
+    .expect("untracked file must be written");
+
+    let facts = analyze_workspace(&root);
+    let paths: std::collections::BTreeSet<String> =
+        facts.modules.iter().map(|m| m.path.clone()).collect();
+    assert_eq!(
+        paths,
+        std::collections::BTreeSet::from([
+            "src/tracked.ts".to_owned(),
+            "src/untracked.ts".to_owned(),
+        ])
+    );
+    assert!(
+        facts.uncertainties.is_empty(),
+        "gitignored dynamic imports and broken files must not produce uncertainties: {:?}",
+        facts.uncertainties
+    );
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}

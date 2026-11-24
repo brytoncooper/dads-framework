@@ -10,6 +10,7 @@ mod diff_hunks;
 mod erased_spans;
 mod export_declarations;
 mod facts;
+mod file_discovery;
 mod frontend;
 mod graph_export;
 mod import_declarations;

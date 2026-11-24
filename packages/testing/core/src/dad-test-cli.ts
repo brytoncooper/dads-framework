@@ -26,7 +26,22 @@ export type DadTestCommand = {
 };
 
 const usage =
-  "Usage: dad-test plan|run|explain|diagnose|init [options] [--json]. See the package README for each option.\n";
+  [
+    "Usage: dad-test <plan|run|explain|diagnose|init> [options] [--json]",
+    "",
+    "Commands:",
+    "  plan      Compute affected tasks without running them (--base, --head, --all, --task, --manifest)",
+    "  run       Execute affected tasks (--base, --head, --all, --task, --jobs, --cache, --remote-cache, --report)",
+    "  explain   Show why each task ran or was skipped with located evidence (--base, --head, --all, --task)",
+    "  diagnose  Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
+    "  init      Generate dads.testing.json for npm/pnpm/yarn workspaces (--manifest, --force)",
+    "",
+    "Options:",
+    "  --json    Emit versioned machine-readable JSON output",
+    "  --help    Show this help message",
+    "",
+    "Nx workspaces: use 'dad-test-nx plan|run|diagnose' (or 'dad-test diagnose').",
+  ].join("\n") + "\n";
 
 const commands = new Map<string, DadTestCommand>([
   ["plan", planCommand],
@@ -61,13 +76,13 @@ export async function runDadTestCli(argumentsAfterExecutable: readonly string[],
   const json = argumentsAfterExecutable.includes("--json");
   try {
     const operation = argumentsAfterExecutable[0];
-    if (operation === "--help" || operation === "help") {
+    if (operation === "--help" || operation === "-h" || operation === "help") {
       io.stdout(usage);
       return 0;
     }
     const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
-      throw new Error("Expected operation plan, run, explain, or init.");
+      throw new Error("Expected operation plan, run, explain, diagnose, or init.");
     }
     const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);
     return await command.execute(parsed, io, json);

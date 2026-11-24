@@ -65,27 +65,35 @@ adapter follows dependencies and expands inputs.
 
 ## Commands
 
-### `dad-test-nx plan|run [workspace]`
+### `dad-test-nx plan|run|diagnose [workspace]`
 
 `plan` discovers the current Nx project graph and plans verification without
-executing targets. `run` plans the same way, then delegates the selected
+executing targets, using Oxc symbol-level reachability for `test`, `typecheck`,
+and `build` targets. `run` plans the same way, then delegates the selected
 targets to the installed Nx CLI, preserving configurations, inferred
-executors, command options, environment settings, and prerequisites. The
-workspace defaults to the current directory. Both accept:
+executors, command options, environment settings, and prerequisites. `diagnose`
+runs the coupling and precision X-ray directly against the live Nx graph with
+zero hand-authored manifest (`dad-test diagnose` also auto-detects `nx.json`
+and invokes this path automatically). The workspace defaults to the current
+directory. Options:
 
-- `--base <ref>` compares that ref with the working tree.
+- `--base <ref>` compares that ref with the working tree (`plan`, `run`).
 - `--head <ref>` narrows the comparison to two commits; it requires `--base`,
-  and that revision must be the clean checked-out `HEAD`.
+  and that revision must be the clean checked-out `HEAD` (`plan`, `run`).
 - `--all` selects the complete fallback. It cannot be combined with `--base`
-  or `--head`.
+  or `--head` (`plan`, `run`).
 - `--targets <a,b>` selects exact Nx target names instead of the default
   verification families. Each name must be non-empty.
-- `--jobs <n>` sets the worker limit; it must be a positive integer.
-- `--json` prints the whole result object. The human two-line summary above is
-  not a contract.
+- `--jobs <n>` sets the worker limit; it must be a positive integer (`run`).
+- `--json` prints the whole result object with readable project and task ids
+  (such as `api:test`, escaping only names that contain non-identifier
+  characters). The human summary lines are not a contract.
+- `-h`, `--help` prints full command usage and exits `0`.
 
 Each call rebuilds the declared task inventory, so there is no frozen manifest
-to silently omit a newly inferred task.
+to silently omit a newly inferred task. When `.nx/` is gitignored, `nx graph`
+reuses the workspace's existing `.nx/workspace-data` cache instead of forcing a
+cold plugin scan.
 
 The default inventory is the exact targets `test`, `typecheck`, `lint`, and
 `build`, plus any target starting with `test:`, `typecheck:`, `typecheck-`,
@@ -96,23 +104,34 @@ inside a selected target, and Dads counts the selected root invocations.
 
 #### What a registered task's scope is
 
-A plugin-inferred target is scoped, not refused. Each registered task carries a
-conservative file scope built from what Nx itself declares:
+A plugin-inferred target is scoped, not refused. Each registered task combines
+Nx's declared input model with Oxc symbol-level reachability:
 
-- the project's own root, and the root of every project it transitively depends
-  on;
-- the workspace policy files — `nx.json`, `package.json`, the npm, pnpm and
-  yarn lockfiles, `pnpm-workspace.yaml`, `tsconfig.json`, `tsconfig.base.json`;
-- every file input the target declares, or — when it declares none — the inputs
-  of the `targetDefaults` entries keyed by its target name, its executor, or a
-  wildcard, with named inputs expanded through the workspace and project
-  `namedInputs`;
-- the inputs of every configuration, unioned, because a configuration matters
-  only when it adds an input the default does not;
-- the project root, dependency roots and further prerequisites of every task in
-  `dependsOn`. Nx normalizes `^build` into an explicit project list, and those
-  projects are frequently outside the declaring project's import graph, so each
-  one is followed rather than assumed.
+- **`test`, `typecheck`, and `build` targets** use `impact.mode: "reachability"`
+  across their project root and transitive Nx dependency roots (runtime edges
+  for `test`, full runtime plus `import type` edges for `typecheck` and
+  `build`), while retaining all non-graph paths in `impact.paths` (workspace
+  policy files, shared global inputs, and output-producing `dependsOn`
+  prerequisites such as `build` or codegen targets). Editing a comment,
+  private unused helper, or unimported export skips unaffected downstream
+  projects; editing a non-JS file, shared input, policy file, or dynamic
+  import widens conservatively.
+- **`lint` and custom targets** stay on `impact.mode: "changed-files"` across
+  their project root, transitive dependency roots, workspace policy files, and
+  expanded file inputs so comment and formatting edits still run linters.
+- **Pure-check prerequisites** (targets with explicit `outputs: []`, or
+  `lint`/`test`/`typecheck` targets with no declared `outputs`, such as a
+  repo-wide `workspace-scripts:lint-walls` gate) are registered once and wired
+  into `dependsOn` instead of folding their inputs into every consumer. When
+  the gate's own inputs change (or it is `always`), the gate runs once while
+  unaffected projects stay skipped.
+- **Output-producing prerequisites** (`^build`, codegen targets, or any target
+  with declared `outputs`) stay folded into their consumer's `impact.paths` so
+  upstream generator or build source changes always invalidate the consumer.
+- Workspace policy files (`nx.json`, `package.json`, lockfiles,
+  `pnpm-workspace.yaml`, `tsconfig.json`, `tsconfig.base.json`), target-level
+  and `targetDefaults` inputs (with `namedInputs` expanded), and every
+  configuration's inputs are always included.
 
 Neither the presence of plugins, nor `targetDefaults`, nor `dependsOn`, nor
 configurations is by itself a reason to give up on a scope. External
@@ -134,8 +153,7 @@ unowned path and the fallback cannot fire; a root-level file is then in scope
 only if Nx's own input model names it. That assumption is written into every
 registered task's reason rather than left implied.
 
-This first adapter does not promise symbol-level precision for opaque Nx tasks;
-Nx remains authoritative for their execution. Its input model is documented in
+Nx remains authoritative for target execution; its input model is documented in
 the [Nx input reference](https://nx.dev/docs/reference/inputs).
 
 The working tree may be dirty. Discovery and planning reject concurrent changes
@@ -171,15 +189,20 @@ import and writes an explicit report rather than guessing edge direction.
 
 ## Use it
 
-The `@dads-framework/testing/nx` entry point exports three functions, each
-taking one options object:
+The `@dads-framework/testing/nx` entry point exports the live adapter,
+diagnostic, identifier, and migration functions:
 
 - `planNativeNxTesting(options)` and `runNativeNxTesting(options)` back the
   live adapter. Options are the testing operation request minus `manifestPath`
   and `taskIds` — `workspaceRoot`, `base`, `head`, `all`, `jobs`, plus exact
   `targetNames`. An explicit `nativeBinary` is available for local integration
   testing.
-- `importNxTestingWorkspace(options)` backs the migration, taking
+- `diagnoseNativeNxTesting(options)` runs the coupling and precision X-ray
+  directly against the live Nx graph (`workspaceRoot`, optional `targetNames`,
+  optional `nativeBinary`).
+- `dadsIdentifier(name)` and `decodeDadsIdentifier(id)` convert between Nx
+  names and readable, collision-free Dads identifiers.
+- `importNxTestingWorkspace(options)` backs the one-way migration, taking
   `workspaceRoot`, the approved `expectedGitSha`, and an optional `runner`.
 
 Installing `@dads-framework/testing` provides both CLI commands. The adapter
@@ -208,12 +231,14 @@ invokes the Nx installation in the target workspace.
 ## Contract
 
 `planNativeNxTesting` and `runNativeNxTesting` resolve to
-`{ coverage, plan, run? }`. `coverage` carries `projects`, `targets`,
+`{ coverage, plan, run? }`; `diagnoseNativeNxTesting` resolves to
+`{ coverage, diagnose }`. `coverage` carries `projects`, `targets`,
 `registered`, `excluded`, `always`, and a `tasks` list; each entry names its
 `project` and `target`, a `classification` of `registered` or `excluded`, a
-`reason`, and for a registered target its `taskId` and an `impactMode` of
-`changed-files` or `always`. `plan` and `run` are the testing facade's plan and
-run results. `dad-test-nx` exits with the run's exit code, or `0` after a plan.
+`reason`, and for a registered target its readable `taskId` and an `impactMode`
+of `reachability`, `changed-files`, or `always`. `plan`, `run`, and `diagnose`
+are the testing facade's plan, run, and diagnosis results. `dad-test-nx` exits
+with the run's exit code, or `0` after `plan`, `diagnose`, or `--help`.
 
 `importNxTestingWorkspace` resolves to `{ manifest, report, manifestPath,
 reportPath }`. The manifest is `schemaVersion: 1` with a workspace rooted at
@@ -235,7 +260,7 @@ Failures are thrown as errors and, at the CLI, written to stderr. Notable ones:
 
 | Message                                                                                       | When                                                   |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `Usage: dad-test-nx plan\|run [workspace] …`                                                  | No operation, or more than two positionals             |
+| `Usage: dad-test-nx plan\|run\|diagnose [workspace] …`                                        | No operation, or more than two positionals             |
 | `Usage: dad-test-import-nx <nx-workspace-root> --sha <full-git-sha>`                          | Wrong argument shape; exits `2`                        |
 | `--all cannot be combined with --base or --head.`                                             | Conflicting scope options                              |
 | `--head requires --base.`                                                                     | `--head` alone                                         |

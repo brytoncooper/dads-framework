@@ -2,8 +2,8 @@ import { dadsIdentifier } from "./dads-identifier.js";
 import { isRecord } from "../parse-guards.js";
 import { readNativeProjects, type NativeProject } from "./nx-native-graph.js";
 import process from "node:process";
-import type { TestingManifest, TestingManifestTask } from "../index.js";
-import { inputScope } from "./nx-native-inputs.js";
+import type { TestingManifest, TestingManifestTask } from "../testing-manifest.js";
+import { inputScope, type PrerequisiteTarget } from "./nx-native-inputs.js";
 
 export type NativeNxCoverage = {
   readonly projects: number;
@@ -17,7 +17,7 @@ export type NativeNxCoverage = {
     readonly classification: "registered" | "excluded";
     readonly reason: string;
     readonly taskId?: string;
-    readonly impactMode?: "changed-files" | "always";
+    readonly impactMode?: "reachability" | "changed-files" | "always";
   }[];
 };
 
@@ -28,10 +28,14 @@ type BuildInput = {
   readonly targetNames?: readonly string[];
 };
 type TaskAudit = NativeNxCoverage["tasks"][number];
-type TaskRegistration = {
-  readonly task?: TestingManifestTask;
+type BuiltTaskEntry = {
+  readonly task: TestingManifestTask;
   readonly audit: TaskAudit;
+  readonly checkPrerequisites: readonly PrerequisiteTarget[];
 };
+
+const reachabilityReason =
+  "Scope: symbol-level reachability across project and transitive dependency roots, plus global policy files, build prerequisites, and expanded non-graph inputs; plugin-inferred inputs assumed inside the project root.";
 
 export function buildNativeNxManifest(input: BuildInput): {
   readonly manifest: TestingManifest;
@@ -39,16 +43,14 @@ export function buildNativeNxManifest(input: BuildInput): {
 } {
   const projects = readNativeProjects(input.graph);
   if (input.targetNames?.some((name) => !name.trim())) throw new Error("Requested target names must be nonempty.");
-  const tasks: TestingManifestTask[] = [];
-  const audits: TaskAudit[] = [];
-  for (const project of projects.values()) {
-    for (const [name, value] of Object.entries(project.targets).sort(([left], [right]) => left.localeCompare(right))) {
-      const registration = registerTarget(project, name, value, projects, input);
-      audits.push(registration.audit);
-      if (registration.task) tasks.push(registration.task);
-    }
-  }
+  const entries = new Map<string, BuiltTaskEntry>();
+  const auditsByKey = new Map<string, TaskAudit>();
+  const pendingPrerequisites = registerSelectedTargets(projects, input, entries, auditsByKey);
+  registerCheckPrerequisites(pendingPrerequisites, projects, input, entries, auditsByKey);
+
+  const tasks = wirePrerequisiteDependencies(entries);
   if (tasks.length === 0) throw new Error("No non-continuous verification targets were registered.");
+  const audits = [...auditsByKey.values()];
   return {
     manifest: {
       schemaVersion: 1,
@@ -74,50 +76,151 @@ export function buildNativeNxManifest(input: BuildInput): {
   };
 }
 
-function registerTarget(
-  project: NativeProject,
-  name: string,
-  value: unknown,
+function registerSelectedTargets(
   projects: ReadonlyMap<string, NativeProject>,
   input: BuildInput,
-): TaskRegistration {
-  const target = readTarget(project.name, name, value);
-  const chosen = input.targetNames === undefined ? verificationTarget(name) : input.targetNames.includes(name);
-  if (target["continuous"] === true || !chosen) {
-    return {
-      audit: {
-        project: project.name,
-        target: name,
-        classification: "excluded",
-        reason:
-          target["continuous"] === true ? "Continuous targets are excluded." : "Outside requested verification scope.",
-      },
-    };
+  entries: Map<string, BuiltTaskEntry>,
+  auditsByKey: Map<string, TaskAudit>,
+): PrerequisiteTarget[] {
+  const pending: PrerequisiteTarget[] = [];
+  for (const project of projects.values()) {
+    for (const [name, value] of Object.entries(project.targets).sort(([left], [right]) => left.localeCompare(right))) {
+      const target = readTarget(project.name, name, value);
+      const key = `${project.name}:${name}`;
+      const chosen = input.targetNames === undefined ? verificationTarget(name) : input.targetNames.includes(name);
+      if (target["continuous"] === true || !chosen) {
+        auditsByKey.set(key, excludedAudit(project.name, name, target["continuous"] === true));
+        continue;
+      }
+      const built = buildTaskEntry(project, name, target, projects, input);
+      entries.set(built.task.id, built);
+      auditsByKey.set(key, built.audit);
+      pending.push(...built.checkPrerequisites);
+    }
   }
-  const id = `${dadsIdentifier(project.name)}:${dadsIdentifier(name)}`;
-  const impact = inputScope(project, name, target, projects, input.nxConfiguration);
+  return pending;
+}
+
+function excludedAudit(project: string, target: string, continuous: boolean): TaskAudit {
+  return {
+    project,
+    target,
+    classification: "excluded",
+    reason: continuous ? "Continuous targets are excluded." : "Outside requested verification scope.",
+  };
+}
+
+function registerCheckPrerequisites(
+  pendingPrerequisites: PrerequisiteTarget[],
+  projects: ReadonlyMap<string, NativeProject>,
+  input: BuildInput,
+  entries: Map<string, BuiltTaskEntry>,
+  auditsByKey: Map<string, TaskAudit>,
+): void {
+  for (let index = 0; index < pendingPrerequisites.length; index += 1) {
+    const prerequisite = pendingPrerequisites[index];
+    if (prerequisite === undefined) continue;
+    const id = taskIdentifier(prerequisite.project.name, prerequisite.name);
+    if (entries.has(id)) continue;
+    const rawTarget = prerequisite.project.targets[prerequisite.name];
+    if (!isRecord(rawTarget)) continue;
+    const target = readTarget(prerequisite.project.name, prerequisite.name, rawTarget);
+    if (target["continuous"] === true) continue;
+    const built = buildTaskEntry(prerequisite.project, prerequisite.name, target, projects, input);
+    entries.set(built.task.id, built);
+    auditsByKey.set(`${prerequisite.project.name}:${prerequisite.name}`, built.audit);
+    pendingPrerequisites.push(...built.checkPrerequisites);
+  }
+}
+
+function buildTaskEntry(
+  project: NativeProject,
+  name: string,
+  target: Readonly<Record<string, unknown>>,
+  projects: ReadonlyMap<string, NativeProject>,
+  input: BuildInput,
+): BuiltTaskEntry {
+  const id = taskIdentifier(project.name, name);
+  const kind = nativeTaskKind(name);
+  const scope = inputScope(project, name, target, projects, input.nxConfiguration);
+  const useReachability = scope.mode !== "always" && usesReachability(kind);
+  const mode = scope.mode === "always" ? "always" : useReachability ? "reachability" : "changed-files";
+  const paths = scope.mode === "always" ? [] : useReachability ? scope.extraPaths : scope.paths;
+  const reason = useReachability ? reachabilityReason : scope.reason;
   return {
     task: {
       id,
       project: dadsIdentifier(project.name),
-      kind: nativeTaskKind(name),
+      kind,
       execution: {
         executable: process.execPath,
         args: [input.nxCli, "run", `--project=${project.name}`, `--target=${name}`],
         cwd: ".",
       },
       dependsOn: [],
-      impact: { mode: impact.mode, paths: impact.paths },
+      impact: { mode, paths },
     },
     audit: {
       project: project.name,
       target: name,
       classification: "registered",
-      reason: impact.reason,
+      reason,
       taskId: id,
-      impactMode: impact.mode,
+      impactMode: mode,
     },
+    checkPrerequisites: scope.checkPrerequisites,
   };
+}
+
+function wirePrerequisiteDependencies(entries: ReadonlyMap<string, BuiltTaskEntry>): readonly TestingManifestTask[] {
+  const edges = new Map<string, string[]>();
+  const tasks: TestingManifestTask[] = [];
+  for (const entry of entries.values()) {
+    const dependsOn: string[] = [];
+    let cyclic = false;
+    for (const prerequisite of entry.checkPrerequisites) {
+      const targetId = taskIdentifier(prerequisite.project.name, prerequisite.name);
+      if (targetId === entry.task.id || !entries.has(targetId)) continue;
+      if (reaches(targetId, entry.task.id, edges)) {
+        cyclic = true;
+        continue;
+      }
+      if (!dependsOn.includes(targetId)) dependsOn.push(targetId);
+    }
+    dependsOn.sort();
+    edges.set(entry.task.id, dependsOn);
+    tasks.push({
+      ...entry.task,
+      dependsOn,
+      ...(cyclic ? { impact: { mode: "always" as const, paths: [] } } : {}),
+    });
+  }
+  return tasks;
+}
+
+function reaches(start: string, target: string, edges: ReadonlyMap<string, readonly string[]>): boolean {
+  const seen = new Set<string>([start]);
+  const stack = [start];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) continue;
+    if (current === target) return true;
+    for (const next of edges.get(current) ?? []) {
+      if (!seen.has(next)) {
+        seen.add(next);
+        stack.push(next);
+      }
+    }
+  }
+  return false;
+}
+
+function taskIdentifier(project: string, target: string): string {
+  return `${dadsIdentifier(project)}:${dadsIdentifier(target)}`;
+}
+
+function usesReachability(kind: TestingManifestTask["kind"]): boolean {
+  return kind === "test" || kind === "typecheck" || kind === "build";
 }
 
 function readTarget(project: string, name: string, value: unknown): Readonly<Record<string, unknown>> {

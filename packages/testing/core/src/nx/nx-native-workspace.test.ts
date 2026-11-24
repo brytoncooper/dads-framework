@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import { planNativeNxTesting, runNativeNxTesting } from "./nx-native-workspace.js";
+import { diagnoseNativeNxTesting, planNativeNxTesting, runNativeNxTesting } from "./nx-native-workspace.js";
 
 const run = promisify(execFile);
 const temporaryWorkspaces: string[] = [];
@@ -24,7 +24,7 @@ describe("native Nx workspace wrapper", () => {
 
     expect(result.coverage.registered).toBe(1);
     expect(result.plan.tasks).toHaveLength(1);
-    expect(result.plan.tasks[0]?.id).toContain("nx-61-70-70");
+    expect(result.plan.tasks[0]?.id).toBe("app:test");
   });
 
   it("refreshes target inventory on every call", async () => {
@@ -83,7 +83,7 @@ describe("native Nx workspace wrapper", () => {
     });
 
     expect(result.coverage.registered).toBe(1);
-    expect(result.plan.tasks[0]?.id).toBe("nx-61-70-70:nx-74-65-73-74");
+    expect(result.plan.tasks[0]?.id).toBe("app:test");
     expect(result.run?.tasks[0]?.status).toBe("executed");
     expect(result.run?.counts).toEqual({
       executed: 1,
@@ -104,6 +104,18 @@ describe("native Nx workspace wrapper", () => {
         targetNames: ["test"],
       }),
     ).rejects.toThrow("workspace changed during Nx discovery, planning, or execution");
+  });
+
+  it("diagnoses an Nx workspace directly without a hand-authored manifest", async () => {
+    const workspace = await createWorkspace(undefined, false);
+    const result = await diagnoseNativeNxTesting({
+      workspaceRoot: workspace,
+      nativeBinary: path.join(workspace, "fake-dad-test.mjs"),
+      targetNames: ["test"],
+    });
+    expect(result.coverage.registered).toBe(1);
+    expect(result.diagnose.summary.totalProjects).toBe(1);
+    expect(await readdir(path.join(workspace, "node_modules", ".cache", "dads-testing"))).toEqual([]);
   });
 });
 
@@ -157,8 +169,13 @@ const request = JSON.parse(input);
 if (!request.manifestPath || request.manifestPath.startsWith("/")) process.exit(10);
 if (readFileSync(path.join(request.workspaceRoot, "source.ts"), "utf8").includes("value = 2")) writeFileSync(path.join(request.workspaceRoot, "native-called"), "yes");
 if (${String(mutateOnRun)} && request.operation === "run") writeFileSync(path.join(request.workspaceRoot, "source.ts"), "export const value = 3;\\n");
-const operation = request.operation === "run" ? { run: { tasks: [{ id: "nx-61-70-70:nx-74-65-73-74", status: "executed" }], counts: { executed: 1, failed: 0, blocked: 0, notApplicable: 0 }, exitCode: 0 } } : {};
-process.stdout.write(JSON.stringify({ schemaVersion: 1, ok: true, result: { operation: request.operation, plan: { schemaVersion: 1, scope: { kind: "working-tree", changedPaths: [], fullFallback: false }, tasks: [{ id: "nx-61-70-70:nx-74-65-73-74", decision: "run", reason: "impact-always", confidence: "explicit", widened: false, project: "nx-61-70-70" }], issues: [], complete: true, counts: { run: 1, skipProvenUnaffected: 0 } }, ...operation } }));
+const operation =
+  request.operation === "run"
+    ? { run: { tasks: [{ id: "app:test", status: "executed" }], counts: { executed: 1, failed: 0, blocked: 0, notApplicable: 0 }, exitCode: 0 } }
+    : request.operation === "diagnose"
+      ? { diagnose: { schemaVersion: 1, summary: { totalModules: 1, totalProjects: 1, totalTasks: 1, totalTestFiles: 0, totalUncertainties: 0, wholeWorkspaceUncertainties: 0, unownedTrackedFiles: 0, nonCodeUncoveredFiles: 0, estimatedLeafSkipPercent: 0, potentialLeafSkipPercent: 0 }, wideningCulprits: [], couplingHotspots: [], fallbackTraps: [] } }
+      : {};
+process.stdout.write(JSON.stringify({ schemaVersion: 1, ok: true, result: { operation: request.operation, plan: { schemaVersion: 1, scope: { kind: "working-tree", changedPaths: [], fullFallback: false }, tasks: [{ id: "app:test", decision: "run", reason: "impact-always", confidence: "explicit", widened: false, project: "app" }], issues: [], complete: true, counts: { run: 1, skipProvenUnaffected: 0 } }, ...operation } }));
 `;
 }
 

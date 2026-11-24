@@ -97,6 +97,15 @@ impl<'a> PlanEvidence<'a> {
             .unwrap_or_default()
     }
 
+    fn has_changed_file_input(&self, task: &DeclaredTask, scope: &ResolvedScope) -> bool {
+        task.impact.paths.iter().any(|owned_path| {
+            scope
+                .changed_paths
+                .iter()
+                .any(|changed_path| path_is_inside(changed_path, owned_path))
+        })
+    }
+
     fn narrowed_files_for_task(
         &self,
         task: &DeclaredTask,
@@ -106,6 +115,7 @@ impl<'a> PlanEvidence<'a> {
             || scope.full_fallback
             || self.is_widened_for_task(task)
             || self.sql_selected_tasks.contains_key(&task.id)
+            || self.has_changed_file_input(task, scope)
         {
             return None;
         }
@@ -128,6 +138,9 @@ impl<'a> PlanEvidence<'a> {
         match &task.impact.mode {
             ImpactMode::Always => true,
             ImpactMode::Reachability => {
+                if self.has_changed_file_input(task, scope) {
+                    return true;
+                }
                 if let Some(narrowing) = &task.execution.file_narrowing
                     && self.setup_file_touched(narrowing, scope)
                 {
@@ -144,12 +157,7 @@ impl<'a> PlanEvidence<'a> {
             ImpactMode::Project => self
                 .fallback_impacted_projects
                 .contains(task.project.as_str()),
-            ImpactMode::ChangedFiles => task.impact.paths.iter().any(|owned_path| {
-                scope
-                    .changed_paths
-                    .iter()
-                    .any(|changed_path| path_is_inside(changed_path, owned_path))
-            }),
+            ImpactMode::ChangedFiles => self.has_changed_file_input(task, scope),
         }
     }
 }

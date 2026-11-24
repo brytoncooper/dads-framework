@@ -19,20 +19,20 @@ describe("importNxTestingWorkspace", () => {
       schemaVersion: 1,
       workspace: {
         root: ".",
-        fullFallback: { taskIds: ["nx-61-70-70:nx-74-65-73-74"] },
+        fullFallback: { taskIds: ["app:test"] },
       },
       projects: [
         {
-          id: "nx-61-70-70",
+          id: "app",
           root: "apps/app",
-          fallbackDependencies: ["nx-75-74-69-6c"],
+          fallbackDependencies: ["util"],
         },
-        { id: "nx-75-74-69-6c", root: "libs/util", fallbackDependencies: [] },
+        { id: "util", root: "libs/util", fallbackDependencies: [] },
       ],
       tasks: [
         {
-          id: "nx-61-70-70:nx-74-65-73-74",
-          project: "nx-61-70-70",
+          id: "app:test",
+          project: "app",
           kind: "test",
           execution: {
             executable: "node",

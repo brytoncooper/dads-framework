@@ -9,7 +9,8 @@ use crate::facts::{
     JsImportFact, JsImportKind, JsLanguage, JsModuleFacts, JsSymbolFact, JsUncertainty,
 };
 use crate::import_declarations::{
-    ImportFactContext, ImportFactInput, import_fact, requested_binding_facts,
+    ImportFactContext, ImportFactInput, dynamic_import_requested_symbols, import_fact,
+    requested_binding_facts,
 };
 use crate::intra_file_deps::attach_intra_file_export_deps;
 use crate::spans::{copied_span, line_and_column, static_string_at_span};
@@ -20,7 +21,6 @@ use oxc_resolver::Resolver;
 use oxc_semantic::{Semantic, SemanticBuilder, SemanticBuilderReturn};
 use oxc_span::SourceType;
 use oxc_syntax::module_record::ModuleRecord;
-use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
@@ -205,7 +205,12 @@ fn collect_imports(
     {
         uncertainties.push(ambiguous_reexport);
     }
-    imports.extend(dynamic_import_facts(scan, module_record, uncertainties));
+    imports.extend(dynamic_import_facts(
+        scan,
+        module_record,
+        semantic,
+        uncertainties,
+    ));
     imports.extend(scan_commonjs_requires(
         scan.workspace_root,
         scan.absolute_path,
@@ -297,6 +302,7 @@ fn ambiguous_reexport_uncertainty(
 fn dynamic_import_facts(
     scan: &ImportScan<'_>,
     module_record: &ModuleRecord<'_>,
+    semantic: &Semantic<'_>,
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<JsImportFact> {
     let mut imports = Vec::new();
@@ -316,7 +322,10 @@ fn dynamic_import_facts(
                     span,
                     kind: JsImportKind::DynamicImport,
                     type_only: false,
-                    requested_symbols: BTreeSet::new(),
+                    requested_symbols: dynamic_import_requested_symbols(
+                        semantic,
+                        dynamic_import.module_request,
+                    ),
                     namespace_import: false,
                     reexport_all: false,
                     reexport_namespace: None,

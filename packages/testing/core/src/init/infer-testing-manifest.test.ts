@@ -49,7 +49,7 @@ describe("testing manifest inference", () => {
       { id: "core:build", kind: "build", mode: "project" },
       { id: "core:lint", kind: "lint", mode: "project" },
       { id: "core:test", kind: "test", mode: "reachability" },
-      { id: "core:typecheck", kind: "typecheck", mode: "project" },
+      { id: "core:typecheck", kind: "typecheck", mode: "reachability" },
     ]);
     expect(inferred.manifest?.workspace).toEqual({
       root: ".",

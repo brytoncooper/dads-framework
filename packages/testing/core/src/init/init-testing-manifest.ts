@@ -201,7 +201,7 @@ function requireStandaloneWorkspace(
 ): void {
   if (!existsSync(join(workspaceRoot, "nx.json"))) return;
   const message =
-    "Nx workspace detected. Generic script discovery cannot establish Nx target coverage; use dad-test-nx plan and review its coverage report.";
+    "Nx workspace detected. Generic script discovery cannot establish Nx target coverage; use 'dad-test-nx diagnose', 'dad-test-nx plan', or 'dad-test-nx run' instead.";
   const report: InitReport = {
     ...inferredReport,
     validation: { method: "none", ok: false, messages: [message] },

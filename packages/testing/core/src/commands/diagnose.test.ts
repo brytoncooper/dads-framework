@@ -201,6 +201,34 @@ describe("dad-test diagnose", () => {
     expect(rendered).toContain("Widening culprits: none");
     expect(rendered).toContain("Coupling hotspots: none");
     expect(rendered).toContain("Fallback traps: none");
+    expect(rendered).toContain("1 project, 1 task");
+  });
+
+  it("uses singular nouns for single-item hotspots and clarifies workspace-wide culprits", () => {
+    const rendered = renderDiagnosis({
+      ...sampleDiagnosis,
+      couplingHotspots: [
+        {
+          path: "packages/app-a/src/index.ts",
+          project: "app-a",
+          reachedModules: 2,
+          reachedProjects: 1,
+          reachedTestFiles: 1,
+          reachedTestPercent: 20,
+          typecheckReachedTestFiles: 1,
+          remediation: {
+            safety: "safe",
+            action: "Local leaf module.",
+            caution: "Keep exports narrow.",
+            verify: "No change required.",
+          },
+        },
+      ],
+    });
+    expect(rendered).toContain("packages/app-a/src/index.ts -> reaches 1 runtime test file (20%) across 1 project");
+    expect(rendered).toContain(
+      "tsconfig.json [workspace-tsconfig-error] -> widens 8 tasks / 30 test files (worst-case workspace-wide)",
+    );
   });
 
   it("fails loudly if the native binary omits diagnose details", async () => {

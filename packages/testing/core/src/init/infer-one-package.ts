@@ -39,13 +39,14 @@ type InferredTask = {
 };
 
 /**
- * Only the four scripts every workspace already agrees on. A test run is scoped
- * by reachability because a test exercises code it imports; the others are
- * scoped to their project because they read the whole project either way.
+ * Only the four scripts every workspace already agrees on. Tests and typecheck
+ * are scoped by symbol reachability (runtime edges for tests; full runtime +
+ * type edges for typecheck) so comment-only and unrelated-export edits skip
+ * cleanly; lint and build stay project-scoped.
  */
 const recognizedScripts: readonly RecognizedScript[] = [
   { script: "test", kind: "test", impactMode: "reachability" },
-  { script: "typecheck", kind: "typecheck", impactMode: "project" },
+  { script: "typecheck", kind: "typecheck", impactMode: "reachability" },
   { script: "lint", kind: "lint", impactMode: "project" },
   { script: "build", kind: "build", impactMode: "project" },
 ];

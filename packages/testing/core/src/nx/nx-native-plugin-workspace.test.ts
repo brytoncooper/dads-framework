@@ -28,7 +28,11 @@ type ManifestTask = {
   };
 };
 type Manifest = {
-  readonly projects: readonly { readonly id: string; readonly root: string }[];
+  readonly projects: readonly {
+    readonly id: string;
+    readonly root: string;
+    readonly fallbackDependencies: readonly string[];
+  }[];
   readonly tasks: readonly ManifestTask[];
   readonly workspace: {
     readonly fullFallback: { readonly taskIds: readonly string[] };
@@ -92,9 +96,9 @@ describe("native Nx scopes for a plugin-inferred workspace", () => {
       "yarn.lock",
     ]);
     expect(pathsOf("catalog", "test")).toContain("tooling/vitest-preset.ts");
+    expect(pathsOf("catalog", "test")).toContain("tools/codegen");
     expect(pathsOf("catalog", "test")).not.toContain("eslint.config.js");
     expect(pathsOf("standalone", "test")).toEqual([
-      "apps/standalone",
       "nx.json",
       "package-lock.json",
       "package.json",
@@ -124,9 +128,12 @@ describe("native Nx scopes for a plugin-inferred workspace", () => {
       expect(audit.impactMode).toBe("always");
       expect(audit.reason).toBe("non-file or unresolved input");
     }
-    const narrowed = coverage.tasks.find((audit) => audit.project === "catalog");
-    expect(narrowed?.impactMode).toBe("changed-files");
-    expect(narrowed?.reason).toContain("plugin-inferred inputs assumed");
+    const narrowedLint = coverage.tasks.find((audit) => audit.project === "catalog" && audit.target === "lint");
+    expect(narrowedLint?.impactMode).toBe("changed-files");
+    expect(narrowedLint?.reason).toContain("plugin-inferred inputs assumed");
+    const narrowedTest = coverage.tasks.find((audit) => audit.project === "catalog" && audit.target === "test");
+    expect(narrowedTest?.impactMode).toBe("reachability");
+    expect(narrowedTest?.reason).toContain("symbol-level reachability");
   });
 });
 
@@ -137,17 +144,32 @@ describe("native Nx scopes for a plugin-inferred workspace", () => {
 /**
  * `packages/testing/core`'s README states the rules that decide these tasks: an `always` task runs
  * in every plan, a `changed-files` task runs when a changed path is inside one of its declared
- * paths, and a changed path no declared project owns selects the complete fallback. The engine
- * owns the real implementation; repeating it here lets the fixture assert on the manifest this
- * adapter actually sent rather than on a canned plan.
+ * paths, a `reachability` task runs on extra input paths or conservative fallback dependents when
+ * symbol narrowing is not invoked, and a changed path no declared project owns selects the complete
+ * fallback. The engine owns the real implementation; repeating the conservative envelope here lets
+ * the fixture assert on the manifest this adapter actually sent rather than on a canned plan.
  */
 function selected(changedPath: string): readonly string[] {
-  const owned = manifest.projects.some((project) => pathIsInside(changedPath, project.root));
-  if (!owned) return [...manifest.workspace.fullFallback.taskIds].sort();
+  const owner = manifest.projects.find((project) => pathIsInside(changedPath, project.root));
+  if (owner === undefined) return [...manifest.workspace.fullFallback.taskIds].sort();
+  const impactedProjects = new Set<string>([owner.id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const project of manifest.projects) {
+      if (impactedProjects.has(project.id)) continue;
+      if (project.fallbackDependencies.some((dep) => impactedProjects.has(dep))) {
+        impactedProjects.add(project.id);
+        grew = true;
+      }
+    }
+  }
   return manifest.tasks
     .filter(
       (task) =>
-        task.impact.mode === "always" || (task.impact.paths ?? []).some((owner) => pathIsInside(changedPath, owner)),
+        task.impact.mode === "always" ||
+        (task.impact.paths ?? []).some((declared) => pathIsInside(changedPath, declared)) ||
+        (task.impact.mode === "reachability" && impactedProjects.has(task.project)),
     )
     .map((task) => task.id)
     .sort();

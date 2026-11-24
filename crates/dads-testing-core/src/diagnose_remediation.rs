@@ -57,6 +57,7 @@ pub(crate) fn culprit_remediation(code: &str) -> DiagnoseRemediation {
 pub(crate) fn hotspot_remediation(
     runtime_tests: usize,
     typecheck_tests: usize,
+    reached_projects: usize,
 ) -> DiagnoseRemediation {
     if runtime_tests == 0 && typecheck_tests > 0 {
         return DiagnoseRemediation {
@@ -64,6 +65,16 @@ pub(crate) fn hotspot_remediation(
             action: "Type-only coupling: runtime tests already erase 'import type' edges here. Only split this barrel if typecheck latency is a bottleneck.".into(),
             caution: "Do not convert 'import type' edges to value imports; that would turn zero-cost type edges into runtime test coupling.".into(),
             verify: "Run 'dad-test plan' after a type-only edit to verify runtime test tasks skip cleanly.".into(),
+        };
+    }
+    if reached_projects <= 1 && runtime_tests <= 2 {
+        return DiagnoseRemediation {
+            safety: RemediationSafety::Safe,
+            action:
+                "Local leaf module: low fan-out within a single project (no barrel split needed)."
+                    .into(),
+            caution: "Keep exports narrow if other projects start importing this file.".into(),
+            verify: "No change required unless fan-out grows across projects.".into(),
         };
     }
     DiagnoseRemediation {

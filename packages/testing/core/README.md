@@ -135,23 +135,26 @@ means that engine predates structured causes, so `explain` reconstructs what
 each reason code implies from the plan and the manifest instead.
 
 `dad-test diagnose` inspects the workspace's dependency graph and manifest
-without requiring a Git diff, taking `--manifest` and `--json`. It prints a
-read-only coupling and precision X-ray: summary totals (modules, projects,
-tasks, test files, uncertainties, and effective-today vs. potential leaf skip
-percentages), ranked widening culprits (`path:line:col [code] -> widens N tasks
-/ M test files`), top module coupling hotspots separating runtime test reach
-from `import type` reach (`path -> reaches M runtime test files (P%) across K
-projects`), and fallback traps (unowned tracked directories and uncovered
-non-code files inside reachability projects, excluding intentional root policy
-files). Each finding carries a safety-tiered `remediation` (`safe`,
-`verify-before-changing`, or `keep-widened-unless-verified`) with an action, a
-soundness guardrail caution, and a verification step so narrowing never hides
-real regressions.
+without requiring a Git diff, taking `--manifest` and `--json`. In an Nx
+workspace without a `dads.testing.json`, `dad-test diagnose` detects `nx.json`
+and runs directly through the live Nx adapter (equivalent to `dad-test-nx
+diagnose`). It prints a read-only coupling and precision X-ray: summary totals
+(modules, projects, tasks, test files, uncertainties, and effective-today vs.
+potential leaf skip percentages), ranked widening culprits (`path:line:col
+[code] -> widens N tasks / M test files`), top module coupling hotspots
+separating runtime test reach from `import type` reach (`path -> reaches M
+runtime test files (P%) across K projects`), and fallback traps (unowned
+tracked directories and uncovered non-code files inside reachability projects,
+excluding intentional root policy files). Each finding carries a safety-tiered
+`remediation` (`safe`, `verify-before-changing`, or
+`keep-widened-unless-verified`) with an action, a soundness guardrail caution,
+and a verification step so narrowing never hides real regressions.
 
 `dad-test init` refuses Nx workspaces and writes an unsuccessful coverage report
 instead of treating a few root scripts as the repository's entire task inventory.
-Use `dad-test-nx plan` for those repositories. The [Nx adapter and import guide](nx/README.md)
-covers both CLIs and the `@dads-framework/testing/nx` API.
+Use `dad-test-nx diagnose`, `dad-test-nx plan`, and `dad-test-nx run` for those
+repositories. The [Nx adapter and import guide](nx/README.md) covers both CLIs
+and the `@dads-framework/testing/nx` API.
 
 `dad-test init` writes `dads.testing.json` at the workspace root, taking
 `--manifest`, `--force`, and `--json`. It detects the package manager — npm,
@@ -162,12 +165,13 @@ that file are ignored and reported, and anything else refuses with a
 `package.json`'s `workspaces` field; absent that, a single-package Dads
 application with `dads.project.json` and Vitest gets per-domain projects plus
 file-level Vitest narrowing, and any other single-package repository is treated
-as one project. Recognized `test` scripts become `reachability` tasks; `typecheck`,
-`lint`, and `build` scripts become `project` tasks; `test` depends on
-`typecheck`; and `fallbackDependencies` come from workspace dependencies and
-`tsconfig` references. `init` refuses to overwrite an existing manifest
-without `--force`, and a workspace with zero recognized scripts still gets a
-report before `init` refuses.
+as one project. Recognized `test` and `typecheck` scripts become `reachability`
+tasks (runtime edges for `test`, full runtime plus `import type` edges for
+`typecheck`, so comment-only edits skip both); `lint` and `build` scripts become
+`project` tasks; `test` depends on `typecheck`; and `fallbackDependencies` come
+from workspace dependencies and `tsconfig` references. `init` refuses to
+overwrite an existing manifest without `--force`, and a workspace with zero
+recognized scripts still gets a report before `init` refuses.
 
 Toolbox's `dad test plan|run|explain|init` is a passthrough to the commands
 above. Toolbox's own `dad init` (scaffolds an application) and `dad explain
@@ -208,6 +212,54 @@ migration runners plus only affected database domains via bidirectional FK
 closure while global/unrecognized DDL widens safely to all database tasks.
 Workspaces may also declare `workspace.nonCodeSuffixes` (for example `[".md"]`)
 so documentation-only edits do not widen JavaScript/TypeScript reachability.
+
+Optional `fileNarrowing` and `workspace.sql` / `sqlImpact` shape (`objects` is
+an array of `"schema.table"` strings; `edges` is an array of `{ from, to }`
+foreign-key pairs):
+
+```json
+{
+  "workspace": {
+    "root": ".",
+    "fullFallback": { "taskIds": ["billing:test", "db:migrate-test"] },
+    "nonCodeSuffixes": [".md"],
+    "sql": {
+      "migrationRoots": ["db/migrations"],
+      "objects": ["public.accounts", "public.invoices"],
+      "edges": [{ "from": "public.invoices", "to": "public.accounts" }],
+      "snapshotPatterns": [{ "prefix": "db/snapshots/", "suffix": ".sql", "schema": "public" }]
+    }
+  },
+  "tasks": [
+    {
+      "id": "billing:test",
+      "project": "billing",
+      "kind": "test",
+      "execution": {
+        "executable": "npx",
+        "args": ["vitest", "run"],
+        "fileNarrowing": {
+          "suffixes": [".test.ts"],
+          "excludeSuffixes": [".integration.test.ts"],
+          "setupFiles": ["vitest.setup.ts"]
+        }
+      },
+      "dependsOn": [],
+      "impact": { "mode": "reachability", "paths": ["vitest.config.ts"] },
+      "sqlImpact": { "tables": ["public.invoices"] }
+    },
+    {
+      "id": "db:migrate-test",
+      "project": "db",
+      "kind": "test",
+      "execution": { "executable": "npm", "args": ["run", "test:migrations"] },
+      "dependsOn": [],
+      "impact": { "mode": "reachability" },
+      "sqlImpact": { "isMigrationRunner": true }
+    }
+  ]
+}
+```
 
 ## How selection works
 

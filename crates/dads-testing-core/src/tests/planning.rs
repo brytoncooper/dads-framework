@@ -290,3 +290,113 @@ fn declared_project(id: &str, root: &str) -> Project {
 fn owning_project_id<'a>(projects: &'a [Project], path: &str) -> Option<&'a str> {
     crate::scope::deepest_project_for_path(projects, path).map(|project| project.id.as_str())
 }
+
+#[test]
+fn reachability_task_runs_explicitly_when_extra_impact_path_changes() {
+    let repository = testing_repository();
+    create_dir_all(repository.join("apps/app")).expect("app dir must be created");
+    create_dir_all(repository.join("tools/codegen")).expect("codegen dir must be created");
+    write(
+        repository.join("apps/app/index.ts"),
+        "export const ok = true;\n",
+    )
+    .expect("app file must be written");
+    write(
+        repository.join("tools/codegen/index.ts"),
+        "export const version = 1;\n",
+    )
+    .expect("codegen file must be written");
+    write_manifest(
+        &repository,
+        r#"{
+              "schemaVersion": 1,
+              "workspace": { "fullFallback": { "taskIds": ["app:test", "tooling:build"] } },
+              "projects": [
+                { "id": "app", "root": "apps/app", "fallbackDependencies": [] },
+                { "id": "tooling", "root": "tools/codegen", "fallbackDependencies": [] }
+              ],
+              "tasks": [
+                {
+                  "id": "app:test",
+                  "project": "app",
+                  "kind": "test",
+                  "execution": { "executable": "true", "args": [] },
+                  "dependsOn": [],
+                  "impact": { "mode": "reachability", "paths": ["tools/codegen"] }
+                },
+                {
+                  "id": "tooling:build",
+                  "project": "tooling",
+                  "kind": "build",
+                  "execution": { "executable": "true", "args": [] },
+                  "dependsOn": [],
+                  "impact": { "mode": "changed-files", "paths": ["tools/codegen"] }
+                }
+              ]
+            }"#
+        .to_owned(),
+    );
+    git(&repository, &["add", "."]);
+    git(&repository, &["commit", "-m", "add projects"]);
+    write(
+        repository.join("tools/codegen/index.ts"),
+        "export const version = 2;\n",
+    )
+    .expect("codegen edit must be written");
+
+    let graph = crate::graph::DependencyGraph::new(
+        vec![
+            crate::graph::ModuleNode {
+                path: "apps/app/index.ts".into(),
+                language: "typescript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![],
+            },
+            crate::graph::ModuleNode {
+                path: "tools/codegen/index.ts".into(),
+                language: "typescript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![],
+            },
+        ],
+        vec![],
+    )
+    .with_changed_module_evidence(vec![crate::graph::ChangedModuleEvidence {
+        path: "tools/codegen/index.ts".into(),
+        changed_exports: std::collections::BTreeSet::from(["version".to_owned()]),
+        every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
+    }]);
+
+    let response = crate::execute_request_with_graph(
+        crate::NativeRequest {
+            schema_version: 1,
+            operation: crate::Operation::Plan,
+            workspace_root: repository.to_string_lossy().into_owned(),
+            manifest_path: None,
+            base: None,
+            head: None,
+            all: false,
+            task_ids: Vec::new(),
+            jobs: None,
+            cache: false,
+            remote_cache_url: None,
+        },
+        Some(graph),
+    );
+    assert!(response.ok, "{response:?}");
+    let plan = &response.result.expect("plan must exist").plan;
+    let app_test = plan
+        .tasks
+        .iter()
+        .find(|task| task.id == "app:test")
+        .expect("app:test decision must exist");
+    assert_eq!(app_test.decision, "run");
+    assert_eq!(app_test.reason, "changed-file-input");
+    assert_eq!(app_test.confidence, "explicit");
+    assert!(!app_test.widened);
+    remove_dir_all(repository).expect("temporary repository must be removable");
+}

@@ -26,7 +26,7 @@ npm install --save-dev @dads-framework/testing
 npx dad-test init
 ```
 
-`dad-test init` inspects `pnpm-workspace.yaml`, `package.json` workspaces, or `dads.project.json` and writes `dads.testing.json`. For Nx workspaces, use `dad-test-nx plan` and `dad-test-nx run`.
+`dad-test init` inspects `pnpm-workspace.yaml`, `package.json` workspaces, or `dads.project.json` and writes `dads.testing.json` (using symbol-level `reachability` for both `test` and `typecheck`). For Nx workspaces, no manifest is required: run `npx dad-test diagnose` (which auto-detects `nx.json`) or `npx dad-test-nx diagnose|plan|run` for full Oxc symbol-level reachability directly against the live Nx project graph.
 
 ## Commands
 

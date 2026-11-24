@@ -4,7 +4,7 @@
 use crate::facts::{JsImportFact, JsImportKind, JsSpan, JsUncertainty};
 use crate::specifier_resolution::resolve_static_specifier;
 use oxc_ast::AstKind;
-use oxc_ast::ast::Expression;
+use oxc_ast::ast::{BindingPattern, Expression};
 use oxc_resolver::Resolver;
 use oxc_semantic::Semantic;
 use oxc_span::{GetSpan, Span};
@@ -226,6 +226,56 @@ fn tracked_namespace_members(
         }
     }
     saw_reference.then_some(members)
+}
+
+/// If a static-specifier `await import("./mod")` is immediately destructured into explicit static
+/// properties (`const { foo, bar: baz } = await import("./mod")`) with no rest element, or bound to
+/// a local identifier whose every read is a static member access (`mod.foo`), returns those exact
+/// requested export names. Bare side-effect imports, rest spreads, computed keys, and escaped
+/// bindings return an empty set so the planner widens conservatively.
+pub(crate) fn dynamic_import_requested_symbols(
+    semantic: &Semantic<'_>,
+    module_request_span: Span,
+) -> BTreeSet<String> {
+    let nodes = semantic.nodes();
+    let Some(import_node) = nodes.iter().find(|node| {
+        matches!(
+            node.kind(),
+            AstKind::ImportExpression(expr) if expr.source.span() == module_request_span
+        )
+    }) else {
+        return BTreeSet::new();
+    };
+    let await_node = nodes.parent_node(import_node.id());
+    if !matches!(await_node.kind(), AstKind::AwaitExpression(_)) {
+        return BTreeSet::new();
+    }
+    let declarator_node = nodes.parent_node(await_node.id());
+    let AstKind::VariableDeclarator(declarator) = declarator_node.kind() else {
+        return BTreeSet::new();
+    };
+    match &declarator.id {
+        BindingPattern::ObjectPattern(pattern) => {
+            if pattern.rest.is_some() || pattern.properties.is_empty() {
+                return BTreeSet::new();
+            }
+            let mut symbols = BTreeSet::new();
+            for prop in &pattern.properties {
+                if prop.computed {
+                    return BTreeSet::new();
+                }
+                let Some(name) = prop.key.static_name() else {
+                    return BTreeSet::new();
+                };
+                symbols.insert(name.into_owned());
+            }
+            symbols
+        }
+        BindingPattern::BindingIdentifier(ident) => {
+            tracked_namespace_members(semantic, ident.name.as_str(), ident.span).unwrap_or_default()
+        }
+        _ => BTreeSet::new(),
+    }
 }
 
 pub(crate) struct ImportFactContext<'a> {

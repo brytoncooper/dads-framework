@@ -193,7 +193,7 @@ fn rank_hotspots(
                 reached_test_files: rt,
                 reached_test_percent: pct,
                 typecheck_reached_test_files: tc,
-                remediation: hotspot_remediation(rt, tc),
+                remediation: hotspot_remediation(rt, tc, rp),
             }
         })
         .collect()

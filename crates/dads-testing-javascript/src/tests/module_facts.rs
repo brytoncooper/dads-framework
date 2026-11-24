@@ -261,3 +261,62 @@ fn records_an_imported_local_reexport_at_its_export_statement_span() {
     );
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
+
+#[test]
+fn destructured_static_dynamic_import_narrows_while_rest_and_bare_widen() {
+    let root = std::env::temp_dir().join("dads-testing-javascript-dynamic-import-narrowing");
+    let _ = remove_dir_all(&root);
+    create_dir_all(root.join("src")).expect("fixture source directory must be created");
+    write(
+        root.join("src/target.ts"),
+        "export const alpha = 1;\nexport const beta = 2;\n",
+    )
+    .expect("fixture target must be written");
+    write(
+        root.join("src/destructured.ts"),
+        "export async function run() {\n  const { alpha, beta: b } = await import('./target');\n  return [alpha, b];\n}\n",
+    )
+    .expect("fixture destructured importer must be written");
+    write(
+        root.join("src/member-only.ts"),
+        "export async function run() {\n  const mod = await import('./target');\n  return mod.alpha;\n}\n",
+    )
+    .expect("fixture member-only importer must be written");
+    write(
+        root.join("src/rest-spread.ts"),
+        "export async function run() {\n  const { alpha, ...rest } = await import('./target');\n  return { alpha, rest };\n}\n",
+    )
+    .expect("fixture rest-spread importer must be written");
+    write(
+        root.join("src/side-effect.ts"),
+        "export async function run() {\n  await import('./target');\n}\n",
+    )
+    .expect("fixture side-effect importer must be written");
+
+    let facts = analyze_workspace(&root);
+    let requested_for = |path: &str| {
+        facts
+            .modules
+            .iter()
+            .find(|module| module.path == path)
+            .expect("module must exist")
+            .imports
+            .iter()
+            .find(|import| import.kind == JsImportKind::DynamicImport)
+            .expect("dynamic import must exist")
+            .requested_symbols
+            .clone()
+    };
+
+    assert_eq!(
+        requested_for("src/destructured.ts"),
+        std::collections::BTreeSet::from(["alpha".to_owned(), "beta".to_owned()])
+    );
+    assert_eq!(
+        requested_for("src/member-only.ts"),
+        std::collections::BTreeSet::from(["alpha".to_owned()])
+    );
+    assert!(requested_for("src/rest-spread.ts").is_empty());
+    assert!(requested_for("src/side-effect.ts").is_empty());
+    remove_dir_all(root).expect("fixture source directory must be removed");
+}

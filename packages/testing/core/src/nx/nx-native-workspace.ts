@@ -1,12 +1,14 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import {
+  diagnoseTesting,
   planTesting,
   runTesting,
+  type TestingDiagnoseResult,
   type TestingOperationRequest,
   type TestingPlanResult,
   type TestingRunResult,
-} from "../index.js";
+} from "../testing-api.js";
 import { parseNxConfiguration, resolveLocalNxCli } from "./nx-installation.js";
 import { buildNativeNxManifest, type NativeNxCoverage } from "./nx-native-model.js";
 import { nativeNxProcess } from "./nx-native-process.js";
@@ -24,6 +26,19 @@ export type NativeNxTestingResult = {
   readonly run?: TestingRunResult;
 };
 
+export type NativeNxDiagnoseOptions = {
+  readonly workspaceRoot: string;
+  /** Exact Nx target names; omitted selects verification target families. */
+  readonly targetNames?: readonly string[];
+  /** Explicit native binary path for local development and tests. */
+  readonly nativeBinary?: string;
+};
+
+export type NativeNxDiagnoseResult = {
+  readonly coverage: NativeNxCoverage;
+  readonly diagnose: TestingDiagnoseResult;
+};
+
 /** Discovers current targets on every call; does not execute any Nx target. */
 export async function planNativeNxTesting(options: NativeNxTestingOptions): Promise<NativeNxTestingResult> {
   return withNativeNxManifest(options, false);
@@ -32,6 +47,29 @@ export async function planNativeNxTesting(options: NativeNxTestingOptions): Prom
 /** Lets Nx execute the targets selected by Dads, preserving native prerequisites. */
 export async function runNativeNxTesting(options: NativeNxTestingOptions): Promise<NativeNxTestingResult> {
   return withNativeNxManifest(options, true);
+}
+
+/** Runs `dad-test diagnose` directly against the live Nx workspace graph without a hand-authored manifest. */
+export async function diagnoseNativeNxTesting(options: NativeNxDiagnoseOptions): Promise<NativeNxDiagnoseResult> {
+  const workspaceRoot = await fs.realpath(path.resolve(options.workspaceRoot));
+  const nxCli = await resolveLocalNxCli(workspaceRoot);
+  const scratch = await createNativeNxScratch(workspaceRoot);
+  try {
+    const before = await nativeNxSourceIdentity(workspaceRoot);
+    const { manifest, coverage } = await discoverManifest(workspaceRoot, nxCli, scratch, options.targetNames);
+    const manifestFile = path.join(scratch, "manifest.json");
+    await fs.writeFile(manifestFile, `${JSON.stringify(manifest)}\n`);
+    await requireUnchangedSource(workspaceRoot, before);
+    const diagnose = await diagnoseTesting({
+      workspaceRoot,
+      manifestPath: path.relative(workspaceRoot, manifestFile).split(path.sep).join("/"),
+      ...(options.nativeBinary === undefined ? {} : { nativeBinary: options.nativeBinary }),
+    });
+    await requireUnchangedSource(workspaceRoot, before);
+    return { coverage, diagnose };
+  } finally {
+    await fs.rm(scratch, { recursive: true, force: true });
+  }
 }
 
 async function withNativeNxManifest(options: NativeNxTestingOptions, run: boolean): Promise<NativeNxTestingResult> {
@@ -78,10 +116,18 @@ async function discoverManifest(
   targetNames: readonly string[] | undefined,
 ) {
   const graphPath = path.join(scratch, "project-graph.json");
-  await nativeNxProcess(process.execPath, [nxCli, "graph", `--file=${graphPath}`, "--open=false"], workspaceRoot, {
-    NX_WORKSPACE_DATA_DIRECTORY: path.join(scratch, "workspace-data"),
-    NX_CACHE_DIRECTORY: path.join(scratch, "cache"),
-  });
+  const nxCacheEnv = (await isNxDirectoryIgnored(workspaceRoot))
+    ? {}
+    : {
+        NX_WORKSPACE_DATA_DIRECTORY: path.join(scratch, "workspace-data"),
+        NX_CACHE_DIRECTORY: path.join(scratch, "cache"),
+      };
+  await nativeNxProcess(
+    process.execPath,
+    [nxCli, "graph", `--file=${graphPath}`, "--open=false"],
+    workspaceRoot,
+    nxCacheEnv,
+  );
   const graph: unknown = JSON.parse(await fs.readFile(graphPath, "utf8"));
   const nxConfiguration = parseNxConfiguration(
     await fs.readFile(path.join(workspaceRoot, "nx.json"), "utf8"),
@@ -93,6 +139,15 @@ async function discoverManifest(
     nxCli,
     ...(targetNames === undefined ? {} : { targetNames }),
   });
+}
+
+async function isNxDirectoryIgnored(workspaceRoot: string): Promise<boolean> {
+  try {
+    await nativeNxProcess("git", ["check-ignore", "--quiet", "--", ".nx/"], workspaceRoot);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function requireUnchangedSource(workspaceRoot: string, before: string): Promise<void> {

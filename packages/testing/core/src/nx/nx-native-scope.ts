@@ -1,4 +1,4 @@
-import type { TestingOperationRequest } from "../index.js";
+import type { TestingOperationRequest } from "../testing-api.js";
 import { nativeNxProcess } from "./nx-native-process.js";
 
 /** A live graph describes the checkout, never a different historical head. */

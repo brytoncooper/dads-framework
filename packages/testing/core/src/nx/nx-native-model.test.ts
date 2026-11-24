@@ -1,5 +1,6 @@
 import process from "node:process";
 import { describe, expect, it } from "vitest";
+import { dadsIdentifier, decodeDadsIdentifier } from "./dads-identifier.js";
 import { buildNativeNxManifest } from "./nx-native-model.js";
 
 const nxCli = "/synthetic/node_modules/nx/bin/nx.js";
@@ -56,7 +57,10 @@ describe("native Nx manifest inventory", () => {
       cwd: ".",
     });
     expect(task?.dependsOn).toEqual([]);
-    expect(task?.impact.mode).toBe("changed-files");
+    expect(task?.impact.mode).toBe("reachability");
+    expect(result.manifest.tasks.find((t) => t.execution.args[3] === "--target=lint-ci")?.impact.mode).toBe(
+      "changed-files",
+    );
     expect(result.coverage.tasks.find((audit) => audit.target === "typecheck-lib-isolation")?.reason).toContain(
       "non-file or unresolved input",
     );
@@ -90,10 +94,62 @@ describe("native Nx manifest inventory", () => {
     }
   });
 
-  it("uses reversible IDs for special names without flattening the Nx target identity", () => {
-    const result = build({ "test:unit": {} });
-    expect(result.manifest.tasks[0]?.id).toBe("nx-68-61-72-62-6f-72:nx-74-65-73-74-3a-75-6e-69-74");
-    expect(result.manifest.tasks[0]?.execution.args).toEqual([nxCli, "run", "--project=harbor", "--target=test:unit"]);
+  it("uses readable, reversible IDs for plain and special names without flattening Nx target identity", () => {
+    const result = build({ test: {}, "test:unit": {} });
+    expect(result.manifest.tasks.find((t) => t.execution.args[3] === "--target=test")?.id).toBe("harbor:test");
+    const special = result.manifest.tasks.find((t) => t.execution.args[3] === "--target=test:unit");
+    expect(special?.id).toBe("harbor:_test_3a_unit");
+    expect(special?.execution.args).toEqual([nxCli, "run", "--project=harbor", "--target=test:unit"]);
+    for (const sample of ["harbor", "api-errors", "my_lib", "@org/pkg", "test:unit", "_leading", "a__b", ""]) {
+      expect(decodeDadsIdentifier(dadsIdentifier(sample))).toBe(sample);
+    }
+  });
+
+  it("separates repo-wide pure-check prerequisites into dependsOn instead of widening every consumer", () => {
+    const result = buildNativeNxManifest({
+      nxCli,
+      nxConfiguration: {},
+      graph: {
+        nodes: {
+          "workspace-scripts": {
+            data: {
+              name: "workspace-scripts",
+              root: ".",
+              targets: { "lint-walls": { inputs: ["{workspaceRoot}/**/*"] } },
+            },
+          },
+          alpha: {
+            data: {
+              name: "alpha",
+              root: "packages/alpha",
+              targets: {
+                lint: { dependsOn: [{ projects: ["workspace-scripts"], target: "lint-walls" }] },
+              },
+            },
+          },
+          beta: {
+            data: {
+              name: "beta",
+              root: "packages/beta",
+              targets: {
+                lint: { dependsOn: [{ projects: ["workspace-scripts"], target: "lint-walls" }] },
+              },
+            },
+          },
+        },
+        dependencies: { "workspace-scripts": [], alpha: [], beta: [] },
+      },
+      targetNames: ["lint"],
+    });
+    const gate = result.manifest.tasks.find((t) => t.id === "workspace-scripts:lint-walls");
+    const alphaLint = result.manifest.tasks.find((t) => t.id === "alpha:lint");
+    const betaLint = result.manifest.tasks.find((t) => t.id === "beta:lint");
+    expect(gate?.impact.mode).toBe("always");
+    expect(alphaLint?.impact.mode).toBe("changed-files");
+    expect(alphaLint?.dependsOn).toEqual(["workspace-scripts:lint-walls"]);
+    expect(betaLint?.impact.mode).toBe("changed-files");
+    expect(betaLint?.dependsOn).toEqual(["workspace-scripts:lint-walls"]);
+    expect(result.coverage.always).toBe(1);
   });
 
   it("rejects malformed graph structure and ambiguous project identities", () => {
@@ -153,10 +209,8 @@ describe("native Nx manifest inventory", () => {
       },
     });
     expect(result.manifest.tasks[0]?.impact).toEqual({
-      mode: "changed-files",
+      mode: "reachability",
       paths: [
-        "apps/harbor",
-        "libs/shared",
         "nx.json",
         "package-lock.json",
         "package.json",
@@ -167,6 +221,8 @@ describe("native Nx manifest inventory", () => {
         "yarn.lock",
       ],
     });
+    expect(result.manifest.projects.find((p) => p.id === "harbor")?.fallbackDependencies).toEqual(["shared"]);
+    expect(result.manifest.projects.find((p) => p.id === "shared")?.fallbackDependencies).toEqual(["harbor"]);
   });
 
   it("keeps external dependency inputs conservative without inventing projects", () => {
@@ -192,7 +248,7 @@ describe("native Nx manifest inventory", () => {
     });
     expect(result.manifest.projects).toHaveLength(1);
     expect(result.manifest.projects[0]?.fallbackDependencies).toEqual([]);
-    expect(result.manifest.tasks[0]?.impact.mode).toBe("changed-files");
+    expect(result.manifest.tasks[0]?.impact.mode).toBe("reachability");
     expect(result.manifest.tasks[0]?.impact.paths).toContain("package-lock.json");
     expect(result.manifest.tasks[0]?.impact.paths).toContain("package.json");
     expect(() =>

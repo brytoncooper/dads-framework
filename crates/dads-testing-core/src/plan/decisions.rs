@@ -96,7 +96,13 @@ fn decision_reason(
     if task.impact.mode == ImpactMode::Always {
         return ("impact-always", "explicit", false);
     }
-    if run && task.impact.mode == ImpactMode::ChangedFiles && causes.has_changed_file_input(task) {
+    if run
+        && matches!(
+            task.impact.mode,
+            ImpactMode::ChangedFiles | ImpactMode::Reachability
+        )
+        && causes.has_changed_file_input(task)
+    {
         return ("changed-file-input", "explicit", false);
     }
     if run && task.impact.mode == ImpactMode::Reachability && evidence.is_widened_for_task(task) {

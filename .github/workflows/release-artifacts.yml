@@ -2,6 +2,19 @@ name: Prepare npm release artifacts
 
 on:
   workflow_dispatch:
+    inputs:
+      use_self_hosted_mac:
+        description: Build macOS native binaries on self-hosted dads-release-mac runner
+        type: boolean
+        default: false
+      use_self_hosted_linux:
+        description: Run verify-source, collect, and linux-x64 native build on self-hosted dads-release-linux runner
+        type: boolean
+        default: false
+      use_self_hosted_win:
+        description: Build win32-x64 native binary on self-hosted dads-release-win runner
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,10 +27,15 @@ jobs:
   native:
     if: github.ref == 'refs/heads/main' && github.event.repository.private == false
     uses: ./.github/workflows/testing-native-release.yml
+    with:
+      use_self_hosted_mac: ${{ inputs.use_self_hosted_mac }}
+      use_self_hosted_linux: ${{ inputs.use_self_hosted_linux }}
+      use_self_hosted_win: ${{ inputs.use_self_hosted_win }}
 
   verify-source:
     if: github.ref == 'refs/heads/main' && github.event.repository.private == false
-    runs-on: ubuntu-24.04
+    environment: release
+    runs-on: ${{ fromJSON(inputs.use_self_hosted_linux && '["self-hosted","dads-release-linux"]' || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +49,8 @@ jobs:
         run: npm ci
       - name: Verify source
         env:
-          DADS_VERIFY_JOBS: 2
-          VITEST_MAX_WORKERS: 2
+          DADS_VERIFY_JOBS: ${{ inputs.use_self_hosted_linux && '12' || '2' }}
+          VITEST_MAX_WORKERS: ${{ inputs.use_self_hosted_linux && '12' || '2' }}
           DADS_VERIFY_TEST_PROGRESS: 1
         run: |
           node scripts/release/sync-package-licenses.mjs
@@ -40,7 +58,8 @@ jobs:
 
   collect:
     needs: [native, verify-source]
-    runs-on: ubuntu-24.04
+    environment: release
+    runs-on: ${{ fromJSON(inputs.use_self_hosted_linux && '["self-hosted","dads-release-linux"]' || '"ubuntu-24.04"') }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -67,7 +86,7 @@ jobs:
         env:
           RELEASE_DIR: ${{ runner.temp }}/npm-release
           NATIVE_DIR: ${{ runner.temp }}/native-release
-          DADS_ADOPTION_JOBS: 4
+          DADS_ADOPTION_JOBS: ${{ inputs.use_self_hosted_linux && '8' || '4' }}
         run: |
           node scripts/release/sync-package-licenses.mjs
           npm run build

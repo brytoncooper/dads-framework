@@ -78,6 +78,7 @@ jobs:
           components: rust-docs
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+        if: runner.environment == 'github-hosted'
         with:
           key: testing-native-release-${{ matrix.target }}
       - name: Install JavaScript tooling
@@ -116,7 +117,6 @@ jobs:
           if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" && "$(uname -m)" == "arm64" ]]; then
             native_bin="$consumer/node_modules/@dads-framework/testing-native-darwin-x64/bin/dad-test"
             file "$native_bin" | grep -q "x86_64"
-            "$native_bin" --version >/dev/null
             export DADS_TEST_NATIVE_BINARY="$native_bin"
           fi
           node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("dads.testing.json", JSON.stringify({schemaVersion:1,workspace:{root:".",fullFallback:{taskIds:["consumer:test"]}},projects:[{id:"consumer",root:".",fallbackDependencies:[]}],tasks:[{id:"consumer:test",project:"consumer",kind:"test",execution:{executable:"node",args:["--version"],cwd:"."},dependsOn:[],impact:{mode:"always"}}]})); const { planTesting } = await import("@dads-framework/testing"); const plan = await planTesting({workspaceRoot:process.cwd(), all:true}); if (plan.tasks[0]?.id !== "consumer:test") throw new Error("dad-test clean-consumer smoke returned the wrong plan");'

@@ -111,7 +111,12 @@ diffs the npm lockfile packages map, closes changed packages upward through
 lockfile dependency edges, fails closed on parse errors, non-dependency
 manifest edits, or global toolchain packages (`typescript`, `vitest`, `eslint`,
 `@types/*`, etc.), and seeds only workspace modules that import an impacted
-package.
+package. Similarly, when a `tsconfig*.json` file changes against `--base` and
+only `compilerOptions.paths` changed (parsing JSONC comments and trailing
+commas), `dad-test` lifts whole-workspace widening for that file and seeds only
+modules whose imports match an added, modified, or removed alias (plus their
+reverse-reachable dependents), failing closed on parse errors, missing base
+files, catch-all `*` edits, or any change outside `compilerOptions.paths`.
 
 `dad-test run` selects the same way and then executes the selected tasks as a
 dependency-aware DAG, four workers at a time by default; `--jobs` sets a

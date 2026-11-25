@@ -28,6 +28,8 @@ mod sql_lexer;
 mod sql_manifest;
 mod sql_parser;
 mod task_causes;
+mod tsconfig_impact;
+mod tsconfig_parse;
 
 pub use execute::{
     execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,

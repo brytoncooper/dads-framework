@@ -38,6 +38,7 @@ mod sql_lexer;
 mod sql_manifest;
 mod sql_parser;
 mod task_causes;
+mod tsconfig_extends;
 mod tsconfig_impact;
 mod tsconfig_parse;
 
@@ -59,6 +60,10 @@ pub use protocol::{
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 pub use scope::{is_empty_tree_sha, path_matches_impact};
+pub use tsconfig_extends::{
+    collect_project_tsconfig_extends_allowlist, collect_tsconfig_extends_chain,
+    list_tsconfig_files_in_dir,
+};
 
 #[cfg(test)]
 mod tests;

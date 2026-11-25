@@ -201,7 +201,7 @@ pub(crate) fn build_plan(
     }
     let mut evidence = PlanEvidence::new(scope);
     attach_lockfile_impact(workspace_root, scope, graph, &mut evidence);
-    attach_tsconfig_impact(workspace_root, scope, graph, &mut evidence);
+    attach_tsconfig_impact(manifest, workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);
     attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
     widen_through_graph(

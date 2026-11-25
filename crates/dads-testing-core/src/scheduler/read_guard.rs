@@ -5,6 +5,7 @@ use super::read_guard_allowlist::TaskReadGuardAllowlist;
 use crate::execute::{TestingError, message};
 use crate::manifest::{TaskExecution, TaskKind};
 use crate::protocol::{ReadGuardMode, TaskOutput, TaskRunResult, UndeclaredRead};
+use crate::tsconfig_extends::collect_project_tsconfig_extends_allowlist;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -142,6 +143,16 @@ impl ReadGuardSession {
         let raw_str = self.workspace_root_raw.to_string_lossy().into_owned();
         let workspace_root_raw = (raw_str != canonical_str).then_some(raw_str);
 
+        let mut allowed_extra_files = allowlist.allowed_extra_files.clone();
+        for extended in collect_project_tsconfig_extends_allowlist(
+            &self.workspace_root,
+            &allowlist.allowed_project_roots,
+        ) {
+            if !allowed_extra_files.contains(&extended) {
+                allowed_extra_files.push(extended);
+            }
+        }
+
         let payload = HookConfig {
             mode: match self.mode {
                 ReadGuardMode::Enforce => "enforce",
@@ -152,7 +163,7 @@ impl ReadGuardSession {
             report_path: report_path.to_string_lossy().into_owned(),
             allowed_project_roots: &allowlist.allowed_project_roots,
             allowed_impact_paths: &allowlist.allowed_impact_paths,
-            allowed_extra_files: &allowlist.allowed_extra_files,
+            allowed_extra_files: &allowed_extra_files,
             allowed_ancestor_dirs: &allowlist.allowed_ancestor_dirs,
         };
         let encoded = serde_json::to_vec(&payload)

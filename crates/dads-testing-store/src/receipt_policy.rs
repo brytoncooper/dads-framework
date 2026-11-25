@@ -1,5 +1,6 @@
 //! Root, ancestor, and project-root configuration & `.env*` files hashed into every task receipt.
 
+use dads_testing_core::collect_tsconfig_extends_chain;
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::ErrorKind;
@@ -204,6 +205,29 @@ fn collect_tsconfig_files_in_dir(
             };
             out.insert(rel);
         }
+    }
+    Some(())
+}
+
+/// Walks every `tsconfig*.json` already collected in `out` and adds every transitively extended
+/// workspace file via `"extends"` (including sideways cross-package presets and array `extends`).
+/// Fails closed (`None`) if any extended workspace config is unreadable, malformed, missing, or
+/// symlinked outside the workspace.
+pub(crate) fn expand_tsconfig_extends_files(
+    workspace_root: &Path,
+    out: &mut BTreeSet<String>,
+) -> Option<()> {
+    let tsconfigs: Vec<String> = out
+        .iter()
+        .filter(|path| {
+            let base = path.rsplit('/').next().unwrap_or(path.as_str());
+            base.starts_with("tsconfig") && base.ends_with(".json")
+        })
+        .cloned()
+        .collect();
+    for tsconfig_rel in tsconfigs {
+        let chain = collect_tsconfig_extends_chain(workspace_root, &tsconfig_rel)?;
+        out.extend(chain);
     }
     Some(())
 }

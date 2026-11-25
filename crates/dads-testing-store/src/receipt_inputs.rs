@@ -5,6 +5,7 @@
 use crate::receipt_cache::{FileDigestEntry, GitFileInventory, RunMemoCache};
 use crate::receipt_policy::{
     collect_policy_files, collect_project_and_ancestor_configs, collect_root_tsconfig_files,
+    expand_tsconfig_extends_files,
 };
 use dads_testing_core::{TaskReceiptRequest, path_matches_impact};
 use std::collections::BTreeSet;
@@ -42,6 +43,7 @@ pub(crate) fn collect_receipt_input_files(
         request.project_roots,
         &mut files,
     )?;
+    expand_tsconfig_extends_files(request.workspace_root, &mut files)?;
     collect_extra_input_files(request, memo, &mut files, &mut missing_extra_files)?;
 
     for impact_path in request.impact_paths {

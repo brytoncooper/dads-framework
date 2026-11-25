@@ -4,6 +4,18 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.8.3] - 2026-11-25
+
+Independent precision & caching patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Direct-only static `fs` file/directory read edges (`ImportKind::FileRead`):** Static `fs` reads (`readFileSync`, `readFile`, `readdirSync`, `readdir`, `existsSync`, `statSync`) now emit `ImportKind::FileRead` edges (and single directory nodes for `readdir*`) instead of transitive JS `ImportKind::Runtime` edges. Direct edits, additions, or deletions to read files/directories still trigger the reader and invalidate its `cacheInputs` (`extraFiles`/`impactPaths`), while transitive JS edits behind a read file no longer cause false `unattributed-transitive-export` uncertainties, phantom cross-project dependencies, or monorepo-wide cache widening. `import.meta.glob` remains a real transitive `Runtime` edge.
+- **Pure side-effect JS imports in `propagate_own_exports`:** Zero-export entry/route modules reached via bare side-effect imports (`import "./foo"`) now propagate through module-evaluation reachability rather than emitting false `unattributed-transitive-export` uncertainties, while reverse edges requesting named/namespace/re-export bindings stay fail-closed.
+- **Respect `workspace.ignorePaths` in JS graph discovery, project graph, cache closures, and `diagnose`:** Ignored config stubs (such as nested per-project `eslint.config.mjs` files) are excluded from Oxc file discovery, fallback project edges, and `cacheInputs` roots while explicit `task.impact.paths` remain honored.
+- **Sound `v4` `cacheInputs` on `--all` runs:** `dad-test plan/run --all` now computes exact `v4` `cacheInputs` using the Oxc graph when healthy instead of marking every `--all` task uncacheable, while still failing closed on error fallbacks, missing graphs, `impact.mode: "always"`, or blocking uncertainties.
+- **`dad-test explain` with `workspace.discover`:** `explain` and `--report` now expand `workspace.discover` via the native manifest expander before rendering explanations.
+
 ## [@dads-framework/testing 0.8.2] - 2026-11-25
 
 Independent soundness & precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

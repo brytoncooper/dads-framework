@@ -7,7 +7,8 @@ use crate::graph::{ImportFact, ModuleNode};
 use crate::scope::{is_standard_test_path, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-pub(crate) const IGNORED_SPECIFIER_PREFIXES: &[&str] = &["virtual:", "data:", "http:", "https:"];
+pub(crate) const IGNORED_SPECIFIER_PREFIXES: &[&str] =
+    &["virtual:", "data:", "http:", "https:", "fs:"];
 
 const NODE_BUILTINS: &[&str] = &[
     "_http_agent",
@@ -218,7 +219,12 @@ pub(crate) fn build_project_graph(
                 continue;
             }
             let spec = raw.split('?').next().unwrap_or(raw);
-            if spec.starts_with('.') || spec.starts_with('/') {
+            if spec.starts_with('.')
+                || spec.starts_with('/')
+                || IGNORED_SPECIFIER_PREFIXES
+                    .iter()
+                    .any(|prefix| spec.starts_with(prefix))
+            {
                 continue;
             }
             if let Some(target) = resolve_non_relative_target(index, import, spec)

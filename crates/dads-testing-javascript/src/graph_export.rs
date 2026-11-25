@@ -1,6 +1,7 @@
 //! The one place adapter facts become the core-owned dependency graph. Every value is copied, so
 //! the returned graph shares nothing with the Oxc arena that produced it.
 
+use crate::asset_evidence::{referenced_asset_paths, synthetic_asset_node};
 use crate::facts::{JsImportKind, JsLanguage, JsPosition, JsWorkspaceFacts};
 use dads_testing_core::graph::{
     DependencyGraph, GraphUncertainty, GraphUncertaintyScope, ImportFact, ImportKind, LineColumn,
@@ -8,7 +9,23 @@ use dads_testing_core::graph::{
 };
 
 pub(crate) fn copy_to_core_graph(facts: JsWorkspaceFacts) -> DependencyGraph {
-    let modules = facts
+    copy_workspace_facts_to_graph(facts, true)
+}
+
+pub(crate) fn copy_to_core_graph_patch(facts: JsWorkspaceFacts) -> DependencyGraph {
+    copy_workspace_facts_to_graph(facts, false)
+}
+
+fn copy_workspace_facts_to_graph(
+    facts: JsWorkspaceFacts,
+    include_synthetic_assets: bool,
+) -> DependencyGraph {
+    let synthetic_assets = if include_synthetic_assets {
+        referenced_asset_paths(&facts.modules)
+    } else {
+        std::collections::BTreeSet::new()
+    };
+    let mut modules: Vec<ModuleNode> = facts
         .modules
         .into_iter()
         .map(|module| ModuleNode {
@@ -16,6 +33,7 @@ pub(crate) fn copy_to_core_graph(facts: JsWorkspaceFacts) -> DependencyGraph {
             language: match module.language {
                 JsLanguage::JavaScript => "javascript".to_owned(),
                 JsLanguage::TypeScript => "typescript".to_owned(),
+                JsLanguage::Asset => "asset".to_owned(),
             },
             declarations: module
                 .declarations
@@ -52,7 +70,7 @@ pub(crate) fn copy_to_core_graph(facts: JsWorkspaceFacts) -> DependencyGraph {
                         JsImportKind::StaticImport => ImportKind::Static,
                         JsImportKind::ExportFrom => ImportKind::ReExport,
                         JsImportKind::DynamicImport => ImportKind::Dynamic,
-                        JsImportKind::CommonJsRequire => ImportKind::Runtime,
+                        JsImportKind::CommonJsRequire | JsImportKind::Asset => ImportKind::Runtime,
                     },
                     type_only: import.type_only,
                     requested_symbols: import.requested_symbols,
@@ -67,6 +85,9 @@ pub(crate) fn copy_to_core_graph(facts: JsWorkspaceFacts) -> DependencyGraph {
                 .collect(),
         })
         .collect();
+    for asset_path in synthetic_assets {
+        modules.push(synthetic_asset_node(asset_path));
+    }
     let uncertainties = facts
         .uncertainties
         .into_iter()

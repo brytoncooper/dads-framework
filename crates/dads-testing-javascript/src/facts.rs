@@ -22,6 +22,7 @@ pub struct JsModuleFacts {
 pub enum JsLanguage {
     JavaScript,
     TypeScript,
+    Asset,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +53,7 @@ pub enum JsImportKind {
     ExportFrom,
     DynamicImport,
     CommonJsRequire,
+    Asset,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -2,7 +2,7 @@
 //! namespace objects, and export-star forms are separated here so the graph can stay precise.
 
 use crate::facts::{JsImportFact, JsImportKind, JsSpan, JsUncertainty};
-use crate::specifier_resolution::resolve_static_specifier;
+use crate::specifier_resolution::{ResolvedSpecifier, resolve_static_specifier};
 use oxc_ast::AstKind;
 use oxc_ast::ast::{BindingPattern, Expression};
 use oxc_resolver::Resolver;
@@ -302,7 +302,7 @@ pub(crate) fn import_fact(
     context: ImportFactContext<'_>,
     input: ImportFactInput<'_>,
 ) -> JsImportFact {
-    let resolved_path = resolve_static_specifier(
+    match resolve_static_specifier(
         context.workspace_root,
         context.absolute_path,
         context.path,
@@ -310,19 +310,37 @@ pub(crate) fn import_fact(
         input.specifier,
         input.span,
         context.uncertainties,
-    );
-    JsImportFact {
-        specifier: input.specifier.to_owned(),
-        span: input.span,
-        kind: input.kind,
-        type_only: input.type_only,
-        requested_symbols: input.requested_symbols,
-        namespace_import: input.namespace_import,
-        reexport_all: input.reexport_all,
-        reexport_namespace: input.reexport_namespace,
-        resolved_path,
-        position: None,
-        export_deps: None,
-        member_reads: input.member_reads,
+    ) {
+        Some(ResolvedSpecifier::Asset(asset_path)) => JsImportFact {
+            specifier: input.specifier.to_owned(),
+            span: input.span,
+            kind: JsImportKind::Asset,
+            type_only: input.type_only,
+            requested_symbols: BTreeSet::new(),
+            namespace_import: false,
+            reexport_all: false,
+            reexport_namespace: None,
+            resolved_path: Some(asset_path),
+            position: None,
+            export_deps: None,
+            member_reads: None,
+        },
+        resolved => JsImportFact {
+            specifier: input.specifier.to_owned(),
+            span: input.span,
+            kind: input.kind,
+            type_only: input.type_only,
+            requested_symbols: input.requested_symbols,
+            namespace_import: input.namespace_import,
+            reexport_all: input.reexport_all,
+            reexport_namespace: input.reexport_namespace,
+            resolved_path: match resolved {
+                Some(ResolvedSpecifier::JavaScript(path)) => Some(path),
+                _ => None,
+            },
+            position: None,
+            export_deps: None,
+            member_reads: input.member_reads,
+        },
     }
 }

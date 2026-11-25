@@ -28,17 +28,17 @@ pub(crate) fn check_boundaries(
     modules.sort_by(|left, right| left.path.cmp(&right.path));
 
     let project_graph = build_project_graph(&modules, &index, config);
-    let excluded_projects: BTreeSet<&str> = config
-        .exclude_projects
-        .iter()
-        .map(String::as_str)
-        .collect();
+    let excluded_projects: BTreeSet<&str> =
+        config.exclude_projects.iter().map(String::as_str).collect();
     let mut reach_cache = BTreeMap::new();
     let mut package_json_cache = BTreeMap::new();
     let mut violations = Vec::new();
     let mut checked_files = 0usize;
 
     for module in &modules {
+        if module.language == "asset" {
+            continue;
+        }
         if let Some(filter) = changed_paths
             && !filter.contains(&module.path)
         {

@@ -6,6 +6,12 @@ use crate::workspace::{is_javascript_path, workspace_relative_path};
 use oxc_resolver::Resolver;
 use std::path::Path;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ResolvedSpecifier {
+    JavaScript(String),
+    Asset(String),
+}
+
 /// Every resolution uncertainty is located at the specifier that could not be resolved, so a plan
 /// can point at the import instead of the file.
 pub(crate) fn resolve_static_specifier(
@@ -16,7 +22,7 @@ pub(crate) fn resolve_static_specifier(
     specifier: &str,
     span: JsSpan,
     uncertainties: &mut Vec<JsUncertainty>,
-) -> Option<String> {
+) -> Option<ResolvedSpecifier> {
     if specifier.starts_with("virtual:") || specifier.starts_with('\0') {
         uncertainties.push(JsUncertainty {
             path: path.to_owned(),
@@ -28,16 +34,14 @@ pub(crate) fn resolve_static_specifier(
         return None;
     }
     match resolver.resolve_file(absolute_path, specifier) {
-        Ok(resolution) => {
-            let resolved = resolution.path();
-            canonical_workspace_javascript_path(workspace_root, resolved)
-        }
+        Ok(resolution) => canonical_workspace_path(workspace_root, resolution.path()),
         Err(error) if is_local_specifier(specifier) => {
             resolve_local_javascript_specifier_to_typescript_source(
                 workspace_root,
                 absolute_path,
                 specifier,
             )
+            .map(ResolvedSpecifier::JavaScript)
             .or_else(|| {
                 uncertainties.push(JsUncertainty {
                     path: path.to_owned(),
@@ -54,7 +58,7 @@ pub(crate) fn resolve_static_specifier(
             if let Some(types_specifier) = at_types_specifier(specifier)
                 && let Ok(resolution) = resolver.resolve_file(absolute_path, &types_specifier)
             {
-                return canonical_workspace_javascript_path(workspace_root, resolution.path());
+                return canonical_workspace_path(workspace_root, resolution.path());
             }
             uncertainties.push(JsUncertainty {
                 path: path.to_owned(),
@@ -78,15 +82,24 @@ pub(crate) fn resolve_static_specifier(
     }
 }
 
-fn canonical_workspace_javascript_path(workspace_root: &Path, path: &Path) -> Option<String> {
+fn canonical_workspace_path(workspace_root: &Path, path: &Path) -> Option<ResolvedSpecifier> {
     let canonical_workspace_root = workspace_root.canonicalize().ok()?;
     let canonical_path = path.canonicalize().ok()?;
-    if !is_javascript_path(&canonical_path)
-        || !canonical_path.starts_with(&canonical_workspace_root)
+    if !canonical_path.starts_with(&canonical_workspace_root) || !canonical_path.is_file() {
+        return None;
+    }
+    let rel = workspace_relative_path(&canonical_workspace_root, &canonical_path)?;
+    if rel
+        .split('/')
+        .any(|segment| matches!(segment, "node_modules" | ".git"))
     {
         return None;
     }
-    workspace_relative_path(&canonical_workspace_root, &canonical_path)
+    if is_javascript_path(&canonical_path) {
+        Some(ResolvedSpecifier::JavaScript(rel))
+    } else {
+        Some(ResolvedSpecifier::Asset(rel))
+    }
 }
 
 /// TypeScript commonly preserves `.js`/`.mjs`/`.cjs` specifiers in source that is emitted as

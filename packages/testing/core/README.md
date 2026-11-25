@@ -153,7 +153,11 @@ passing `--enforce-declared-reads` (or setting
 `--no-enforce-declared-reads`) preloads a lightweight V8 file-read guard on
 Node/Vitest test tasks that fails any task reading undeclared workspace files,
 never caches its receipt, and lists every missing path with its callsite and
-remediation in one run.
+remediation in one run. Passing `--verify-shadow` executes every task skipped as
+`skip-proven-unaffected` in a fresh uncached shadow pass and emits a structured
+trust receipt (`skipped`, `verifiedSkipped`, `escapedFailures`,
+`undeclaredReads`, `reductionRatio`); add `--fail-on-shadow-escape` to exit
+non-zero if any skipped task fails.
 
 `dad-test audit` executes test tasks with the runtime file-read guard in
 non-failing audit mode (uncached, disabling cross-project Vitest batching for
@@ -182,7 +186,9 @@ violations (`file`, `line`, `column`, `sourceProject`, `targetProject`,
 `specifier`, `rule`, `message`).
 
 `dad-test explain` prints the same selection in readable lines, taking
-`--manifest`, `--base`, `--head`, `--all`, `--only`, `--task`, and `--json`:
+`--manifest`, `--base`, `--head`, `--all`, `--only`, `--task`, `--why <taskId>`
+(plans the real Git diff without forcing `--task` and prints a focused 3-line
+causal chain plus a one-line fix for `<taskId>`), and `--json`:
 
 ```
 explain: N of M tasks selected, K skipped, W widened detail=engine|derived
@@ -208,8 +214,11 @@ means that engine predates structured causes, so `explain` reconstructs what
 each reason code implies from the plan and the manifest instead.
 
 `dad-test diagnose` inspects the workspace's dependency graph and manifest
-without requiring a Git diff, taking `--manifest`, `--json`, and optional CI
-ratchet flags `--max-workspace-uncertainties <n>`,
+without requiring a Git diff, taking `--manifest`, `--fix` (applies safe
+deterministic `workspace.ignorePaths`, `workspace.pureFactories`, and scoped
+`workspace.dynamicImportScopes` updates to `dads.testing.json` after validating
+with `dad-test plan`), `--dry-run` (previews `--fix` edits without modifying
+disk), `--json`, and optional CI ratchet flags `--max-workspace-uncertainties <n>`,
 `--fail-on-workspace-uncertainties` (shorthand for `--max-workspace-uncertainties 0`),
 and `--max-unowned-files <n>` (exiting `1` with offending file/line/remediation
 details when exceeded). In an Nx
@@ -245,7 +254,10 @@ repositories. The [Nx adapter and import guide](nx/README.md) covers both CLIs
 and the `@dads-framework/testing/nx` API.
 
 `dad-test init` writes `dads.testing.json` at the workspace root, taking
-`--manifest`, `--force`, and `--json`. It detects the package manager — npm,
+`--discover` (generates a compact declarative `workspace.discover` manifest for
+npm, pnpm, yarn, or Nx `project.json` workspaces with auto-detected
+`pureFactories`, root Vitest `setupFiles`, SQL `migrationRoots`, and safe
+`ignorePaths`), `--manifest`, `--force`, and `--json`. It detects the package manager — npm,
 yarn, or pnpm — from the lockfile. Workspace patterns come from
 `pnpm-workspace.yaml`'s `packages` list of strings; other top-level keys in
 that file are ignored and reported, and anything else refuses with a

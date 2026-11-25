@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { isRecord } from "../parse-guards.js";
+import { isRecord, readStringList } from "../parse-guards.js";
 import { planTesting } from "../testing-api.js";
 import { defaultTestingManifestFileName } from "../testing-manifest.js";
 import { writeFilesAtomically } from "../write-files-atomically.js";
@@ -235,11 +235,6 @@ function ensureArrayField(container: Record<string, unknown>, key: string): unkn
   const created: unknown[] = [];
   container[key] = created;
   return created;
-}
-
-function readStringList(value: unknown): readonly string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string");
 }
 
 function mergeUniquePaths(

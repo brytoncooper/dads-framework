@@ -5,7 +5,7 @@ import { describeError } from "../init/describe-error.js";
 import { detectWorkspacePureFactories, normalizeSafeRelativePath } from "../init/detect-pure-factories.js";
 import { compareText } from "../init/infer-one-package.js";
 import { workspaceRelative } from "../init/workspace-relative-path.js";
-import { isRecord, isUnknownArray } from "../parse-guards.js";
+import { isRecord, isUnknownArray, readStringList } from "../parse-guards.js";
 import {
   expandTestingManifest,
   planTesting,
@@ -133,10 +133,6 @@ function readRawManifestAndWorkspace(
   const workspace = parsed["workspace"];
   if (!isRecord(workspace)) throw new Error(`${manifestPath} must contain a workspace object.`);
   return { document: parsed, workspace };
-}
-
-function readStringList(value: unknown): readonly string[] {
-  return isUnknownArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function readScopesRecord(value: unknown): Readonly<Record<string, readonly string[]>> {

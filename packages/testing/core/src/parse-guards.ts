@@ -16,3 +16,8 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 export function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
+
+/** Extracts string elements from an untrusted array value, or an empty list otherwise. */
+export function readStringList(value: unknown): readonly string[] {
+  return isUnknownArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}

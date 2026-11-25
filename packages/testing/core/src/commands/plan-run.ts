@@ -12,6 +12,7 @@ import { readTestingManifest } from "../testing-manifest.js";
 import { buildTestingReport } from "../testing-report.js";
 import type { TestingReport } from "../testing-report.js";
 import { writeFilesAtomically } from "../write-files-atomically.js";
+import { renderShadowVerification, runShadowVerification } from "./verify-shadow.js";
 
 /** `plan` and `run` select the same scope, so they accept the same options. */
 const operationOptions: readonly OptionSpecification[] = [
@@ -41,6 +42,8 @@ const runOptions: readonly OptionSpecification[] = [
   { name: "--cache-dir", kind: "value" },
   { name: "--remote-cache", kind: "value" },
   { name: "--stream", kind: "flag" },
+  { name: "--verify-shadow", kind: "flag" },
+  { name: "--fail-on-shadow-escape", kind: "flag" },
 ];
 
 export const planCommand: DadTestCommand = {
@@ -57,34 +60,73 @@ export const planCommand: DadTestCommand = {
 export const runCommand: DadTestCommand = {
   options: runOptions,
   execute: async (parsed, io, json) => {
-    const request = buildOperationRequest(parsed, io);
-    const shouldStream = parsed.flags.has("--stream") || !json;
-    const result = await runTesting({
-      ...request,
-      ...(shouldStream
-        ? {
-            stream: true,
-            onStream: (chunk) => {
-              io.stderr(chunk);
-            },
-          }
-        : {}),
-    });
-    const report = buildReportIfRequested(parsed, io, result.plan, result.run);
-    if (json) {
-      writeCommandSuccess(
-        io,
-        true,
-        "run",
-        report === undefined ? result : { plan: result.plan, run: result.run, report },
-      );
-    } else {
-      writeHumanRunSummary(io, result.plan, result.run);
+    const verifyShadow = parsed.flags.has("--verify-shadow");
+    const failOnShadowEscape = parsed.flags.has("--fail-on-shadow-escape");
+    if (failOnShadowEscape && !verifyShadow) {
+      throw new Error("--fail-on-shadow-escape requires --verify-shadow.");
     }
+    const request = buildOperationRequest(parsed, io);
+    const streamOptions = buildStreamOptions(parsed, io, json);
+    const result = await runTesting({ ...request, ...streamOptions });
+    const shadow = verifyShadow
+      ? await runShadowVerification(request, result, { strict: failOnShadowEscape, ...streamOptions })
+      : undefined;
+    const report = buildReportIfRequested(parsed, io, result.plan, result.run);
+    emitRunOutput(io, json, result, report, shadow);
     writeReportWrittenLine(parsed, io, json, report);
-    return result.run.exitCode;
+    return resolveRunExitCode(result.run.exitCode, failOnShadowEscape, shadow);
   },
 };
+
+function buildStreamOptions(
+  parsed: ParsedArguments,
+  io: DadTestCliIo,
+  json: boolean,
+): { readonly stream?: true; readonly onStream?: (chunk: string) => void } {
+  if (!parsed.flags.has("--stream") && json) return {};
+  return {
+    stream: true,
+    onStream: (chunk: string) => {
+      io.stderr(chunk);
+    },
+  };
+}
+
+function emitRunOutput(
+  io: DadTestCliIo,
+  json: boolean,
+  result: { readonly plan: TestingPlanResult; readonly run: TestingRunResult },
+  report: TestingReport | undefined,
+  shadow: Awaited<ReturnType<typeof runShadowVerification>> | undefined,
+): void {
+  if (json) {
+    const payload =
+      report === undefined && shadow === undefined
+        ? result
+        : {
+            plan: result.plan,
+            run: result.run,
+            ...(report === undefined ? {} : { report }),
+            ...(shadow === undefined ? {} : { shadowVerification: shadow }),
+          };
+    writeCommandSuccess(io, true, "run", payload);
+    return;
+  }
+  writeHumanRunSummary(io, result.plan, result.run);
+  if (shadow !== undefined) {
+    io.stdout(renderShadowVerification(shadow));
+  }
+}
+
+function resolveRunExitCode(
+  primaryExitCode: number,
+  failOnShadowEscape: boolean,
+  shadow: Awaited<ReturnType<typeof runShadowVerification>> | undefined,
+): number {
+  if (primaryExitCode !== 0) return primaryExitCode;
+  if (failOnShadowEscape && shadow !== undefined && shadow.escapedFailures.length > 0) return 1;
+  return 0;
+}
 
 function writeHumanRunSummary(io: DadTestCliIo, plan: TestingPlanResult, run: TestingRunResult): void {
   const cached = run.counts.cached ?? 0;

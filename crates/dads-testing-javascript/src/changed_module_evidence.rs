@@ -63,7 +63,10 @@ pub(crate) fn changed_module_evidence_with_pure_factories(
         if !changed_paths.contains(&module.path) && !untracked.contains(&module.path) {
             continue;
         }
-        let source = fs::read_to_string(workspace_root.join(&module.path)).ok()?;
+        let Ok(source) = fs::read_to_string(workspace_root.join(&module.path)) else {
+            changes.push(unattributed_evidence(&module.path));
+            continue;
+        };
         if untracked.contains(&module.path) {
             // Proved in `NamespaceAndImports.lean` (`new_pure_module_sound` / `new_impure_module_widens`):
             // pure newly-added modules attribute to their declared exports; impure ones widen.
@@ -87,10 +90,10 @@ pub(crate) fn changed_module_evidence_with_pure_factories(
             });
             continue;
         }
-        if let Some(change) =
-            tracked_module_evidence(workspace_root, comparison, module, &source, pure_factories)?
-        {
-            changes.push(change);
+        match tracked_module_evidence(workspace_root, comparison, module, &source, pure_factories) {
+            Some(Some(change)) => changes.push(change),
+            Some(None) => {}
+            None => changes.push(unattributed_evidence(&module.path)),
         }
     }
     Some(changes)
@@ -148,14 +151,12 @@ fn tracked_module_evidence(
     } else {
         None
     };
-    let baseline_declarations = match baseline_source.as_deref() {
-        Some(baseline) => runtime_export_declarations_from_source(
-            baseline,
-            Path::new(&module.path),
-            &module.path,
-        )?,
-        None => Vec::new(),
-    };
+    let baseline_declarations = baseline_source
+        .as_deref()
+        .and_then(|baseline| {
+            runtime_export_declarations_from_source(baseline, Path::new(&module.path), &module.path)
+        })
+        .unwrap_or_default();
     let baseline_erased = baseline_source.as_deref().and_then(|baseline| {
         comment_and_type_only_spans_from_source(baseline, Path::new(&module.path))
     });
@@ -269,6 +270,17 @@ fn load_baseline_source(workspace_root: &Path, comparison: &str, path: &str) -> 
     let baseline_spec = format!("{comparison}:{path}");
     let baseline = git_output(workspace_root, &["show", &baseline_spec])?;
     String::from_utf8(baseline).ok()
+}
+
+fn unattributed_evidence(path: &str) -> ChangedModuleEvidence {
+    ChangedModuleEvidence {
+        path: path.to_owned(),
+        changed_exports: BTreeSet::new(),
+        every_hunk_is_attributed: false,
+        semantic_change: true,
+        type_only_change: false,
+        module_eval_changed: false,
+    }
 }
 
 fn plain_evidence(

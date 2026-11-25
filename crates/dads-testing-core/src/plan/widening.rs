@@ -96,16 +96,6 @@ pub(super) fn widen_through_graph<'a>(
     {
         return;
     }
-    let Some(graph) = graph else {
-        let non_sql_changed = scope
-            .changed_paths
-            .iter()
-            .any(|path| !evidence.sql_handled_paths.contains(path));
-        if non_sql_changed {
-            record_missing_frontend(evidence);
-        }
-        return;
-    };
     let mut changed_paths: Vec<String> = scope
         .changed_paths
         .iter()
@@ -119,7 +109,10 @@ pub(super) fn widen_through_graph<'a>(
         .filter(|path| !is_declared_non_code(path, &manifest.workspace.non_code_suffixes))
         .filter(|path| !evidence.lockfile_handled_paths.contains(*path))
         .filter(|path| !evidence.tsconfig_handled_paths.contains(*path))
-        .filter(|path| !evidence.sql_handled_paths.contains(*path) || graph.contains_path(path))
+        .filter(|path| {
+            !evidence.sql_handled_paths.contains(*path)
+                || graph.is_some_and(|g| g.contains_path(path))
+        })
         .cloned()
         .collect();
     for seeded in evidence
@@ -134,6 +127,10 @@ pub(super) fn widen_through_graph<'a>(
     if changed_paths.is_empty() {
         return;
     }
+    let Some(graph) = graph else {
+        record_missing_frontend(manifest, evidence);
+        return;
+    };
     let (covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
         .iter()
         .cloned()
@@ -195,8 +192,22 @@ fn is_declared_non_code(path: &str, suffixes: &[String]) -> bool {
     suffixes.iter().any(|suffix| path.ends_with(suffix))
 }
 
-/// No frontend answered at all: every changed project widens through its declared dependents.
-fn record_missing_frontend(evidence: &mut PlanEvidence<'_>) {
+/// No frontend answered at all: in a multi-project workspace, project dependencies cannot be
+/// proven without graph analysis, so fail closed to the complete fallback. In a single-project
+/// workspace, widening the lone project already selects every task.
+fn record_missing_frontend(manifest: &TestingManifest, evidence: &mut PlanEvidence<'_>) {
+    let issue_index = evidence.issues.len();
+    if manifest.projects.len() > 1 {
+        evidence.full_fallback = true;
+        evidence.full_fallback_issue_indexes.push(issue_index);
+        evidence.issues.push(PlanIssue::new(
+            "reachability-frontend-unavailable",
+            "No precision frontend was available for changed modules; selected the complete fallback because cross-project dependencies cannot be proven without graph analysis.",
+            IssueSeverity::Uncertainty,
+            IssueScope::Workspace,
+        ));
+        return;
+    }
     let changed = evidence
         .changed_projects
         .iter()
@@ -211,12 +222,11 @@ fn record_missing_frontend(evidence: &mut PlanEvidence<'_>) {
         .typecheck_uncertainty_impacted_projects
         .extend(&changed);
     for project in changed {
-        let index = evidence.issues.len();
         evidence
             .issue_indexes_by_project
             .entry(project)
             .or_default()
-            .push(index);
+            .push(issue_index);
     }
     evidence.issues.push(PlanIssue::new(
         "reachability-frontend-unavailable",

@@ -9,17 +9,24 @@ use dads_testing_core::graph::{
 };
 
 pub(crate) fn copy_to_core_graph(facts: JsWorkspaceFacts) -> DependencyGraph {
-    copy_workspace_facts_to_graph(facts, true)
+    let (modules, uncertainties) = convert_workspace_facts(facts, true);
+    DependencyGraph::new(modules, uncertainties)
 }
 
-pub(crate) fn copy_to_core_graph_patch(facts: JsWorkspaceFacts) -> DependencyGraph {
-    copy_workspace_facts_to_graph(facts, false)
+/// Converts incrementally re-analyzed modules directly into core `ModuleNode`s and
+/// `GraphUncertainty` values without round-tripping through a partial `DependencyGraph`, so
+/// `ImportFact::resolved_path` targets pointing at unchanged modules are preserved for
+/// `DependencyGraph::patch_modules`.
+pub(crate) fn copy_to_core_patch_parts(
+    facts: JsWorkspaceFacts,
+) -> (Vec<ModuleNode>, Vec<GraphUncertainty>) {
+    convert_workspace_facts(facts, false)
 }
 
-fn copy_workspace_facts_to_graph(
+fn convert_workspace_facts(
     facts: JsWorkspaceFacts,
     include_synthetic_assets: bool,
-) -> DependencyGraph {
+) -> (Vec<ModuleNode>, Vec<GraphUncertainty>) {
     let synthetic_assets = if include_synthetic_assets {
         referenced_asset_paths(&facts.modules)
     } else {
@@ -108,7 +115,7 @@ fn copy_workspace_facts_to_graph(
                 }),
         })
         .collect();
-    DependencyGraph::new(modules, uncertainties)
+    (modules, uncertainties)
 }
 
 fn core_position(position: JsPosition) -> LineColumn {

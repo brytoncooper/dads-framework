@@ -5,7 +5,7 @@ use crate::asset_evidence::{asset_changed_evidence, referenced_asset_paths};
 use crate::changed_module_evidence::changed_module_evidence;
 use crate::facts::{JsImportKind, JsModuleFacts, JsUncertainty, JsWorkspaceFacts};
 use crate::file_discovery::{WorkspaceFileIndex, discover_javascript_files};
-use crate::graph_export::{copy_to_core_graph, copy_to_core_graph_patch};
+use crate::graph_export::{copy_to_core_graph, copy_to_core_patch_parts};
 use crate::module_analysis::analyze_file;
 use crate::removed_paths::removed_javascript_path_exists;
 use crate::workspace::{git_output, is_javascript_path, workspace_relative_path};
@@ -279,14 +279,13 @@ pub(crate) fn incremental_request(
         .filter(|entry| !patched_set.contains(entry.path.as_str()))
         .collect::<Vec<_>>();
     merged_changes.extend(fresh_changes);
-    let patched = copy_to_core_graph_patch(facts);
-    let modules = patched.materialize_modules();
+    let (modules, patched_uncertainties) = copy_to_core_patch_parts(facts);
     let mut uncertainties_by_path = std::collections::BTreeMap::<String, Vec<_>>::new();
     for uncertainty in previous
         .uncertainties()
         .into_iter()
         .filter(|entry| !patched_set.contains(entry.path.as_str()))
-        .chain(patched.uncertainties())
+        .chain(patched_uncertainties)
     {
         uncertainties_by_path
             .entry(uncertainty.path.clone())

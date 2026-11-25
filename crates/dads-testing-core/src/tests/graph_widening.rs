@@ -51,8 +51,14 @@ fn static_importers_select_their_reachability_tasks_across_projects() {
         .find(|task| task.id == "app:test")
         .expect("application task must be planned");
     assert_eq!(application.decision, "run");
-    assert_eq!(application.reason, "graph-uncertainty-project-fallback");
-    assert!(application.widened);
+    assert_eq!(application.reason, "full-fallback");
+    assert!(plan.scope.full_fallback);
+    assert!(
+        cited_issues(plan, application)
+            .iter()
+            .any(|issue| issue.code == "reachability-frontend-unavailable"),
+        "missing frontend on multi-project workspace must cite reachability-frontend-unavailable: {application:?}"
+    );
     assert!(
         plan.tasks
             .iter()

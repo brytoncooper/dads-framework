@@ -254,6 +254,7 @@ fn supported_runtime_declaration_span(kind: AstKind<'_>) -> Option<Span> {
             Some(class.span)
         }
         AstKind::VariableDeclaration(declaration) if !declaration.declare => Some(declaration.span),
+        AstKind::TSEnumDeclaration(declaration) if !declaration.declare => Some(declaration.span),
         _ => None,
     }
 }

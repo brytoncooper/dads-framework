@@ -66,6 +66,9 @@ pub fn verify_step_invariants(
 
     if ctx.mutation.is_precision_noop() {
         for task in &result.plan.tasks {
+            if task.id == "adv-always:test" {
+                continue;
+            }
             stats.precision_checks += 1;
             acc.precision_checks_total += 1;
             if task.decision != "run" {
@@ -162,6 +165,49 @@ pub fn verify_failed_not_cached(
         }
     }
     violated
+}
+
+pub fn verify_unrelated_batch_isolation(
+    ctx: &StepCheckCtx<'_>,
+    invocation: &DadInvocation,
+    acc: &mut WorkerAccumulator,
+) -> bool {
+    let Some(result) = &invocation.envelope.result else {
+        return false;
+    };
+    let Some(run) = &result.run else {
+        return false;
+    };
+    let planned_ok = result
+        .plan
+        .tasks
+        .iter()
+        .find(|t| t.id == "unrelated:test")
+        .is_some_and(|t| t.decision == "run");
+    let executed = run.tasks.iter().find(|t| t.id == "unrelated:test");
+    let passed_ok =
+        executed.is_some_and(|t| t.status != "failed" && (t.cached || t.exit_code == Some(0)));
+    if planned_ok && passed_ok {
+        return false;
+    }
+    acc.cache_integrity_violations += 1;
+    if acc.sample_failures.len() < ctx.config.max_sample_failures {
+        acc.sample_failures.push(SoundnessFailure {
+            seed: ctx.generated.shape.seed,
+            step: ctx.step_idx,
+            mutation: ctx.mutation,
+            kind: "batch-isolation-violation".to_owned(),
+            task_id: "unrelated:test".to_owned(),
+            test_file: "unrelated/control.test.ts".to_owned(),
+            detail: format!("planned_ok={planned_ok} executed={executed:?}"),
+            shape: ctx.generated.shape.clone(),
+            kept_dir: ctx
+                .config
+                .keep_failed
+                .then(|| ctx.workspace_dir.to_string_lossy().into_owned()),
+        });
+    }
+    true
 }
 
 pub fn merge_accumulator(summary: &mut DstSummary, acc: WorkerAccumulator, max_samples: usize) {

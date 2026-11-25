@@ -1,17 +1,22 @@
 //! Parallel seeded DST executor comparing real `dad-test` runs against the real Node 24 oracle.
 
-use crate::dad_client::{DadInvocation, NativeRequestPayload, invoke_dad};
 use crate::generator::{GeneratedWorkspace, generate_workspace, pick_workspace_shape};
 use crate::invariants::{
     StepCheckCtx, WorkerAccumulator, merge_accumulator, verify_failed_not_cached,
-    verify_step_invariants,
+    verify_step_invariants, verify_unrelated_batch_isolation,
 };
 use crate::model::{DstSummary, MutationKind, SoundnessFailure, WorkspaceShape};
 use crate::mutations::{
-    apply_mutation, corrupt_cache_dir, git_commit_all, git_init_and_commit, git_reset_clean,
+    AppliedMutation, apply_mutation, corrupt_cache_dir, git_commit_all, git_init_and_commit,
+    git_reset_clean, run_build_dep_script,
 };
-use crate::node_oracle::{DST_RUNNER_JS, NodeOracleWorker};
+use crate::mutations_advanced::AdvancedMutationPaths;
+use crate::node_oracle::{DST_RUNNER_JS, NodeOracleWorker, oracle_specs_with_override};
 use crate::rng::SeededRng;
+use crate::timelines::{
+    ShardedRunSpec, prepare_chained_dirty_sequence, prepare_multi_branch_shared_l2,
+    run_dad_single_step, run_sharded_plan_union, warm_shared_cache,
+};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -29,6 +34,32 @@ pub struct DstConfig {
     pub keep_failed: bool,
     pub max_sample_failures: usize,
     pub filter_mutation: Option<MutationKind>,
+}
+
+struct ScenarioPaths {
+    workspace_dir: PathBuf,
+    shared_cache_dir: PathBuf,
+    runner_script: PathBuf,
+    external_flag_path: PathBuf,
+    symlink_target_path: PathBuf,
+}
+
+struct TimelineInput<'a> {
+    config: &'a DstConfig,
+    scenario_index: usize,
+    paths: &'a ScenarioPaths,
+    shape: &'a WorkspaceShape,
+    node_dir: Option<&'a Path>,
+}
+
+struct StepRunInput<'a> {
+    config: &'a DstConfig,
+    paths: &'a ScenarioPaths,
+    baseline_sha: &'a str,
+    generated: &'a GeneratedWorkspace,
+    mutation: MutationKind,
+    step_idx: usize,
+    node_dir: Option<&'a Path>,
 }
 
 pub fn run_dst_sweep(config: &DstConfig) -> Result<DstSummary, String> {
@@ -95,23 +126,6 @@ fn run_worker(config: &DstConfig, next_index: &AtomicUsize) -> Result<WorkerAccu
     Ok(acc)
 }
 
-struct ScenarioPaths {
-    workspace_dir: PathBuf,
-    shared_cache_dir: PathBuf,
-    runner_script: PathBuf,
-}
-
-struct DadStepSpec<'a> {
-    dad_bin: &'a Path,
-    paths: &'a ScenarioPaths,
-    baseline_sha: &'a str,
-    head_sha: Option<&'a str>,
-    use_plan_file: bool,
-    use_cache: bool,
-    step_tag: usize,
-    node_dir: Option<&'a Path>,
-}
-
 fn run_one_scenario(
     config: &DstConfig,
     scenario_index: usize,
@@ -127,10 +141,13 @@ fn run_one_scenario(
         workspace_dir: temp_root.join("ws"),
         shared_cache_dir: temp_root.join("shared-cache"),
         runner_script: temp_root.join("dst-runner.mjs"),
+        external_flag_path: temp_root.join("external-flag.txt"),
+        symlink_target_path: temp_root.join("symlink-target.json"),
     };
     fs::create_dir_all(&paths.workspace_dir).map_err(|e| format!("mkdir ws: {e}"))?;
     fs::create_dir_all(&paths.shared_cache_dir).map_err(|e| format!("mkdir cache: {e}"))?;
     fs::write(&paths.runner_script, DST_RUNNER_JS).map_err(|e| format!("write dst-runner: {e}"))?;
+    fs::write(&paths.external_flag_path, "ok\n").map_err(|e| format!("write ext flag: {e}"))?;
 
     let result = execute_scenario_timeline(
         &TimelineInput {
@@ -152,14 +169,6 @@ fn run_one_scenario(
     result.map(|_| ())
 }
 
-struct TimelineInput<'a> {
-    config: &'a DstConfig,
-    scenario_index: usize,
-    paths: &'a ScenarioPaths,
-    shape: &'a WorkspaceShape,
-    node_dir: Option<&'a Path>,
-}
-
 fn execute_scenario_timeline(
     input: &TimelineInput<'_>,
     rng: &mut SeededRng,
@@ -169,10 +178,12 @@ fn execute_scenario_timeline(
     let generated = generate_workspace(
         &input.paths.workspace_dir,
         &input.paths.runner_script,
+        &input.paths.external_flag_path,
         &input.config.node_bin,
         input.shape,
         rng,
     )?;
+    run_build_dep_script(&input.config.node_bin, &input.paths.workspace_dir)?;
     let baseline_sha = git_init_and_commit(&input.paths.workspace_dir, "dst baseline")?;
 
     let baseline_oracle = oracle.evaluate(&input.paths.workspace_dir, &generated.oracle_tests)?;
@@ -197,6 +208,9 @@ fn execute_scenario_timeline(
     for step_idx in 0..steps {
         if step_idx > 0 {
             git_reset_clean(&input.paths.workspace_dir, &baseline_sha)?;
+            fs::write(&input.paths.external_flag_path, "ok\n")
+                .map_err(|e| format!("reset ext flag: {e}"))?;
+            run_build_dep_script(&input.config.node_bin, &input.paths.workspace_dir)?;
         }
         let mutation = pick_mutation(
             input.config.filter_mutation,
@@ -233,47 +247,10 @@ fn pick_mutation(
         return kind;
     }
     if step_idx == 0 {
-        let index = scenario_index % MutationKind::ALL.len();
-        return MutationKind::ALL[index];
+        return MutationKind::ALL[scenario_index % MutationKind::ALL.len()];
     }
     *rng.choose(MutationKind::ALL)
         .unwrap_or(&MutationKind::PureExportValue)
-}
-
-fn warm_shared_cache(
-    dad_bin: &Path,
-    workspace_dir: &Path,
-    shared_cache_dir: &Path,
-    node_dir: Option<&Path>,
-) -> Result<(), String> {
-    let mut request =
-        NativeRequestPayload::new("run", workspace_dir.to_string_lossy().into_owned());
-    request.only = true;
-    request.task_ids = vec![
-        "ui:test".to_owned(),
-        "impact-consumer:test".to_owned(),
-        "unrelated:test".to_owned(),
-    ];
-    request.cache = true;
-    request.cache_dir = Some(shared_cache_dir.to_string_lossy().into_owned());
-    let response = invoke_dad(dad_bin, &request, node_dir)?;
-    if !response.envelope.ok || !response.exit_ok {
-        return Err(format!(
-            "baseline warm-cache run failed: {:?}",
-            response.envelope.error
-        ));
-    }
-    Ok(())
-}
-
-struct StepRunInput<'a> {
-    config: &'a DstConfig,
-    paths: &'a ScenarioPaths,
-    baseline_sha: &'a str,
-    generated: &'a GeneratedWorkspace,
-    mutation: MutationKind,
-    step_idx: usize,
-    node_dir: Option<&'a Path>,
 }
 
 fn run_mutation_step(
@@ -282,40 +259,59 @@ fn run_mutation_step(
     acc: &mut WorkerAccumulator,
 ) -> Result<bool, String> {
     let workspace_dir = &input.paths.workspace_dir;
-    let applied = apply_mutation(
+    let adv_paths = AdvancedMutationPaths {
         workspace_dir,
+        external_flag_path: &input.paths.external_flag_path,
+        symlink_target_path: &input.paths.symlink_target_path,
+    };
+    let applied = apply_mutation(
+        &adv_paths,
         &input.generated.shape,
         input.mutation,
         input.step_idx,
     )?;
-    let commit_step = applied.force_commit || input.generated.shape.commit_before_plan;
-    let head_sha = if commit_step {
-        Some(git_commit_all(
-            workspace_dir,
-            &format!("dst step {} {}", input.step_idx, input.mutation.as_str()),
-        )?)
-    } else {
-        None
-    };
+    let head_sha = prepare_step_head(input, &applied)?;
     if applied.corrupt_shared_cache {
         let _ = corrupt_cache_dir(&input.paths.shared_cache_dir)?;
     }
 
-    let oracle_outcomes = oracle.evaluate(workspace_dir, &input.generated.oracle_tests)?;
+    let oracle_specs = oracle_specs_with_override(
+        &input.generated.oracle_tests,
+        applied.oracle_env_override.as_ref(),
+    );
+    if applied.rebuild_dep_for_oracle {
+        run_build_dep_script(&input.config.node_bin, workspace_dir)?;
+    }
+    let oracle_outcomes = oracle.evaluate(workspace_dir, &oracle_specs)?;
+    if applied.rebuild_dep_for_oracle {
+        fs::write(
+            workspace_dir.join("build-dep/dist/out.json"),
+            "{\"val\":2}\n",
+        )
+        .map_err(|e| format!("reset out.json: {e}"))?;
+    }
+
     let use_plan_file = applied.force_plan_file || input.generated.shape.use_plan_file;
     let use_cache = input.generated.shape.use_shared_cache
         || applied.force_commit
-        || applied.corrupt_shared_cache;
-    let invocation = run_dad_step(&DadStepSpec {
+        || applied.corrupt_shared_cache
+        || applied.multi_branch_l2_cache
+        || input.mutation == MutationKind::AlwaysModeNeverCached;
+    let step_spec = ShardedRunSpec {
         dad_bin: &input.config.dad_bin,
-        paths: input.paths,
+        workspace_dir,
+        shared_cache_dir: &input.paths.shared_cache_dir,
         baseline_sha: input.baseline_sha,
         head_sha: head_sha.as_deref(),
-        use_plan_file,
         use_cache,
         step_tag: input.step_idx,
         node_dir: input.node_dir,
-    })?;
+    };
+    let invocation = if applied.sharded_plan_union {
+        run_sharded_plan_union(&step_spec)?
+    } else {
+        run_dad_single_step(&step_spec, use_plan_file)?
+    };
 
     let check_ctx = StepCheckCtx {
         config: input.config,
@@ -326,61 +322,59 @@ fn run_mutation_step(
         oracle_outcomes: &oracle_outcomes,
     };
     let mut had_failure = verify_step_invariants(&check_ctx, &invocation, acc);
+    if applied.verify_unrelated_passes {
+        had_failure |= verify_unrelated_batch_isolation(&check_ctx, &invocation, acc);
+    }
 
     let oracle_had_failure = oracle_outcomes.values().any(|o| !o.ok);
-    if oracle_had_failure && !had_failure && use_cache {
-        let repeat = run_dad_step(&DadStepSpec {
-            dad_bin: &input.config.dad_bin,
-            paths: input.paths,
-            baseline_sha: input.baseline_sha,
-            head_sha: head_sha.as_deref(),
-            use_plan_file,
+    if oracle_had_failure && !had_failure && use_cache && !applied.sharded_plan_union {
+        let repeat_spec = ShardedRunSpec {
             use_cache: true,
             step_tag: input.step_idx + 1000,
-            node_dir: input.node_dir,
-        })?;
+            ..step_spec
+        };
+        let repeat = run_dad_single_step(&repeat_spec, use_plan_file)?;
         had_failure |= verify_failed_not_cached(&check_ctx, &repeat, acc);
+        if applied.verify_unrelated_passes {
+            had_failure |= verify_unrelated_batch_isolation(&check_ctx, &repeat, acc);
+        }
     }
 
     acc.steps_executed += 1;
     Ok(had_failure)
 }
 
-fn run_dad_step(spec: &DadStepSpec<'_>) -> Result<DadInvocation, String> {
-    let workspace_root = spec.paths.workspace_dir.to_string_lossy().into_owned();
-    let cache_dir = spec
-        .use_cache
-        .then(|| spec.paths.shared_cache_dir.to_string_lossy().into_owned());
-
-    if spec.use_plan_file {
-        let mut plan_req = NativeRequestPayload::new("plan", workspace_root.clone());
-        plan_req.base = Some(spec.baseline_sha.to_owned());
-        plan_req.head = spec.head_sha.map(str::to_owned);
-        let planned = invoke_dad(spec.dad_bin, &plan_req, spec.node_dir)?;
-        let Some(plan_json) = planned.raw_plan_json else {
-            return Err(format!(
-                "plan failed before --plan-file run: {:?}",
-                planned.envelope.error
-            ));
-        };
-        let plan_file_path = spec
-            .paths
-            .shared_cache_dir
-            .join(format!("plan-{}.json", spec.step_tag));
-        fs::write(&plan_file_path, plan_json).map_err(|e| format!("write plan file: {e}"))?;
-        let mut run_req = NativeRequestPayload::new("run", workspace_root);
-        run_req.cache = spec.use_cache;
-        run_req.cache_dir = cache_dir;
-        run_req.plan_file = Some(plan_file_path.to_string_lossy().into_owned());
-        return invoke_dad(spec.dad_bin, &run_req, spec.node_dir);
+fn prepare_step_head(
+    input: &StepRunInput<'_>,
+    applied: &AppliedMutation,
+) -> Result<Option<String>, String> {
+    let workspace_dir = &input.paths.workspace_dir;
+    if applied.chained_dirty_steps {
+        prepare_chained_dirty_sequence(
+            &input.config.dad_bin,
+            workspace_dir,
+            &input.paths.shared_cache_dir,
+            input.baseline_sha,
+            input.node_dir,
+        )?;
+        Ok(None)
+    } else if applied.multi_branch_l2_cache {
+        Ok(Some(prepare_multi_branch_shared_l2(
+            &input.config.dad_bin,
+            workspace_dir,
+            &input.paths.shared_cache_dir,
+            input.baseline_sha,
+            input.step_idx,
+            input.node_dir,
+        )?))
+    } else if applied.force_commit || input.generated.shape.commit_before_plan {
+        Ok(Some(git_commit_all(
+            workspace_dir,
+            &format!("dst step {} {}", input.step_idx, input.mutation.as_str()),
+        )?))
+    } else {
+        Ok(None)
     }
-
-    let mut run_req = NativeRequestPayload::new("run", workspace_root);
-    run_req.base = Some(spec.baseline_sha.to_owned());
-    run_req.head = spec.head_sha.map(str::to_owned);
-    run_req.cache = spec.use_cache;
-    run_req.cache_dir = cache_dir;
-    invoke_dad(spec.dad_bin, &run_req, spec.node_dir)
 }
 
 fn create_scenario_dir(seed: u64, index: usize) -> Result<PathBuf, String> {

@@ -1,18 +1,26 @@
-//! Deterministic mutation catalog + git/cache fault-injection helpers for DST timelines.
+//! Deterministic mutation dispatcher + git/cache fault-injection helpers for DST timelines.
 
 use crate::model::{MutationKind, WorkspaceShape};
+use crate::mutations_advanced::{AdvancedMutationPaths, apply_advanced_mutation};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+#[derive(Debug, Default)]
 pub struct AppliedMutation {
     pub force_commit: bool,
     pub force_plan_file: bool,
     pub corrupt_shared_cache: bool,
+    pub chained_dirty_steps: bool,
+    pub multi_branch_l2_cache: bool,
+    pub rebuild_dep_for_oracle: bool,
+    pub sharded_plan_union: bool,
+    pub verify_unrelated_passes: bool,
+    pub oracle_env_override: Option<(String, String, String)>,
 }
 
 pub fn apply_mutation(
-    root: &Path,
+    paths: &AdvancedMutationPaths<'_>,
     shape: &WorkspaceShape,
     kind: MutationKind,
     step_idx: usize,
@@ -27,7 +35,9 @@ pub fn apply_mutation(
         | MutationKind::ClassStaticBlockSideEffect
         | MutationKind::TopLevelStatementSideEffect
         | MutationKind::MixedExportAndUnusedRuntimeImport
-        | MutationKind::CommentOrTypeOnlyEdit => apply_code_mutation(root, kind, step_idx),
+        | MutationKind::CommentOrTypeOnlyEdit => {
+            apply_core_code_mutation(paths.workspace_dir, kind, step_idx)
+        }
         MutationKind::StaticJsonImport
         | MutationKind::FsReadFileSyncNewUrl
         | MutationKind::FsReaddirSyncExistingFile
@@ -38,12 +48,13 @@ pub fn apply_mutation(
         | MutationKind::UpstreamLibWithWarmCacheAndPlanFile
         | MutationKind::UncertainUpstreamWithEmptyFallback
         | MutationKind::CorruptSharedCacheBlob => {
-            apply_env_or_asset_mutation(root, shape, kind, step_idx)
+            apply_core_env_or_asset_mutation(paths.workspace_dir, shape, kind, step_idx)
         }
+        _ => apply_advanced_mutation(paths, shape, kind, step_idx),
     }
 }
 
-fn apply_code_mutation(
+fn apply_core_code_mutation(
     root: &Path,
     kind: MutationKind,
     step_idx: usize,
@@ -88,12 +99,14 @@ fn apply_code_mutation(
             "shared.staticBlock = 2;",
             "shared.staticBlock = 5;",
         )?,
-        MutationKind::TopLevelStatementSideEffect => replace_once(
-            root,
-            "billing/tax.ts",
-            "// top-stmt-slot",
-            "shared.topStmt = 5;",
-        )?,
+        MutationKind::TopLevelStatementSideEffect => {
+            replace_once(
+                root,
+                "billing/tax.ts",
+                "// top-stmt-slot",
+                "shared.topStmt = 5;",
+            )?;
+        }
         MutationKind::MixedExportAndUnusedRuntimeImport => {
             let path = root.join("billing/tax.ts");
             let current = fs::read_to_string(&path).map_err(|e| format!("read tax.ts: {e}"))?;
@@ -114,24 +127,16 @@ fn apply_code_mutation(
         )?,
         _ => {}
     }
-    Ok(AppliedMutation {
-        force_commit: false,
-        force_plan_file: false,
-        corrupt_shared_cache: false,
-    })
+    Ok(AppliedMutation::default())
 }
 
-fn apply_env_or_asset_mutation(
+fn apply_core_env_or_asset_mutation(
     root: &Path,
     shape: &WorkspaceShape,
     kind: MutationKind,
     step_idx: usize,
 ) -> Result<AppliedMutation, String> {
-    let mut outcome = AppliedMutation {
-        force_commit: false,
-        force_plan_file: false,
-        corrupt_shared_cache: false,
-    };
+    let mut outcome = AppliedMutation::default();
     match kind {
         MutationKind::StaticJsonImport => {
             fs::write(root.join("settings/limit.json"), "{\"limit\": 9}\n")
@@ -154,7 +159,12 @@ fn apply_env_or_asset_mutation(
         }
         MutationKind::SetupFileMutation => {
             if shape.use_setup_file {
-                replace_once(root, "ui/setup-helper.ts", "\"ok\"", "\"broken\"")?;
+                replace_once(
+                    root,
+                    "ui/setup-helper.ts",
+                    "=> CORE_SETUP_TAG;",
+                    "=> \"broken\";",
+                )?;
             } else {
                 replace_once(root, "core/math.ts", "=> 2;", "=> 6;")?;
             }
@@ -227,6 +237,45 @@ pub fn git_reset_clean(root: &Path, commit: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn git_checkout_new_branch(root: &Path, branch: &str, start_ref: &str) -> Result<(), String> {
+    run_git(root, &["checkout", "-q", "-B", branch, start_ref])?;
+    Ok(())
+}
+
+pub fn run_build_dep_script(node_bin: &Path, root: &Path) -> Result<(), String> {
+    let output = Command::new(node_bin)
+        .arg("build-dep/build.mjs")
+        .current_dir(root)
+        .output()
+        .map_err(|e| format!("spawn build-dep/build.mjs: {e}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("build-dep/build.mjs failed: {stderr}"));
+    }
+    Ok(())
+}
+
+pub fn corrupt_cache_dir(cache_dir: &Path) -> Result<usize, String> {
+    if !cache_dir.exists() {
+        return Ok(0);
+    }
+    let mut corrupted = 0usize;
+    corrupt_walk(cache_dir, &mut corrupted)?;
+    Ok(corrupted)
+}
+
+pub fn replace_once(root: &Path, rel: &str, needle: &str, replacement: &str) -> Result<(), String> {
+    let path = root.join(rel);
+    let content = fs::read_to_string(&path).map_err(|e| format!("read {rel}: {e}"))?;
+    if !content.contains(needle) {
+        return Err(format!(
+            "{rel} does not contain expected pattern `{needle}`"
+        ));
+    }
+    let updated = content.replacen(needle, replacement, 1);
+    fs::write(&path, updated).map_err(|e| format!("write {rel}: {e}"))
+}
+
 fn commit_with_identity(root: &Path, message: &str) -> Result<String, String> {
     run_git(
         root,
@@ -238,20 +287,12 @@ fn commit_with_identity(root: &Path, message: &str) -> Result<String, String> {
             "-c",
             "commit.gpgsign=false",
             "commit",
+            "--allow-empty",
             "-qm",
             message,
         ],
     )?;
     run_git(root, &["rev-parse", "HEAD"]).map(|s| s.trim().to_owned())
-}
-
-pub fn corrupt_cache_dir(cache_dir: &Path) -> Result<usize, String> {
-    if !cache_dir.exists() {
-        return Ok(0);
-    }
-    let mut corrupted = 0usize;
-    corrupt_walk(cache_dir, &mut corrupted)?;
-    Ok(corrupted)
 }
 
 fn corrupt_walk(dir: &Path, count: &mut usize) -> Result<(), String> {
@@ -267,18 +308,6 @@ fn corrupt_walk(dir: &Path, count: &mut usize) -> Result<(), String> {
         }
     }
     Ok(())
-}
-
-fn replace_once(root: &Path, rel: &str, needle: &str, replacement: &str) -> Result<(), String> {
-    let path = root.join(rel);
-    let content = fs::read_to_string(&path).map_err(|e| format!("read {rel}: {e}"))?;
-    if !content.contains(needle) {
-        return Err(format!(
-            "{rel} does not contain expected pattern `{needle}`"
-        ));
-    }
-    let updated = content.replacen(needle, replacement, 1);
-    fs::write(&path, updated).map_err(|e| format!("write {rel}: {e}"))
 }
 
 fn run_git(root: &Path, args: &[&str]) -> Result<String, String> {

@@ -5,6 +5,13 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskShardPayload {
+    pub index: u32,
+    pub total: u32,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeRequestPayload {
@@ -25,6 +32,8 @@ pub struct NativeRequestPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub plan_file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub shard: Option<TaskShardPayload>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub jobs: Option<u32>,
 }
 
@@ -43,6 +52,7 @@ impl NativeRequestPayload {
             cache: false,
             cache_dir: None,
             plan_file: None,
+            shard: None,
             jobs: Some(2),
         }
     }

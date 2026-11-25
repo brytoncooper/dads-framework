@@ -1,10 +1,10 @@
 //! Deterministic generator of executable multi-project TypeScript workspaces for DST.
 
-use crate::generator_manifest::write_manifest;
+use crate::generator_advanced::write_advanced_workspace;
+use crate::generator_manifest::{ManifestInputs, write_manifest, write_root_config_files};
 use crate::model::{BarrelStyle, FallbackMode, WorkspaceShape};
 use crate::node_oracle::OracleTestSpec;
 use crate::rng::SeededRng;
-use serde_json::json;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
@@ -50,15 +50,26 @@ pub fn pick_workspace_shape(seed: u64, rng: &mut SeededRng) -> WorkspaceShape {
 pub fn generate_workspace(
     root: &Path,
     runner_script: &Path,
+    external_flag_path: &Path,
     node_bin: &Path,
     shape: &WorkspaceShape,
     rng: &mut SeededRng,
 ) -> Result<GeneratedWorkspace, String> {
-    write_root_files(root, shape)?;
+    write_root_config_files(root, shape)?;
     write_core_and_billing(root, shape)?;
     write_settings(root)?;
     write_ui_and_consumers(root, shape)?;
-    write_manifest(root, runner_script, node_bin, shape, rng)?;
+    let adv = write_advanced_workspace(root, external_flag_path, shape)?;
+    write_manifest(
+        &ManifestInputs {
+            root,
+            runner_script,
+            node_bin,
+            external_flag_path,
+            shape,
+        },
+        rng,
+    )?;
 
     let setup_opt = shape.use_setup_file.then(|| "ui/setup.ts".to_owned());
     let ui_files = vec![
@@ -74,16 +85,20 @@ pub fn generate_workspace(
         oracle_tests.push(OracleTestSpec {
             file: file.clone(),
             setup_file: setup_opt.clone(),
+            env: BTreeMap::new(),
         });
     }
     oracle_tests.push(OracleTestSpec {
         file: "impact-consumer/flag.test.ts".to_owned(),
         setup_file: None,
+        env: BTreeMap::new(),
     });
     oracle_tests.push(OracleTestSpec {
         file: "unrelated/control.test.ts".to_owned(),
         setup_file: None,
+        env: BTreeMap::new(),
     });
+    oracle_tests.extend(adv.oracle_tests);
 
     let mut task_tests = BTreeMap::new();
     task_tests.insert("ui:test".to_owned(), ui_files);
@@ -95,6 +110,7 @@ pub fn generate_workspace(
         "unrelated:test".to_owned(),
         vec!["unrelated/control.test.ts".to_owned()],
     );
+    task_tests.extend(adv.task_tests);
 
     Ok(GeneratedWorkspace {
         shape: shape.clone(),
@@ -112,45 +128,12 @@ fn write_file(root: &Path, rel: &str, content: &str) -> Result<(), String> {
     fs::write(&full, content).map_err(|error| format!("write {rel}: {error}"))
 }
 
-fn write_root_files(root: &Path, shape: &WorkspaceShape) -> Result<(), String> {
-    write_file(
-        root,
-        "package.json",
-        "{\n  \"name\": \"dst-workspace\",\n  \"type\": \"module\"\n}\n",
-    )?;
-    let paths = if shape.use_tsconfig_aliases {
-        json!({
-            "@pkg/core": ["core/math.ts"],
-            "@pkg/billing": ["billing/tax.ts"],
-            "@pkg/dynamic": ["billing/dynamic.ts"]
-        })
-    } else {
-        json!({
-            "@pkg/core": ["core/math.ts"]
-        })
-    };
-    let tsconfig_base = json!({
-        "compilerOptions": {
-            "baseUrl": ".",
-            "paths": paths
-        }
-    });
-    write_file(
-        root,
-        "tsconfig.base.json",
-        &format!(
-            "{}\n",
-            serde_json::to_string_pretty(&tsconfig_base).map_err(|e| e.to_string())?
-        ),
-    )?;
-    write_file(
-        root,
-        "tsconfig.json",
-        "{\n  \"extends\": \"./tsconfig.base.json\"\n}\n",
-    )
-}
-
 fn write_core_and_billing(root: &Path, shape: &WorkspaceShape) -> Result<(), String> {
+    write_file(
+        root,
+        "core/setup-const.ts",
+        "export const CORE_SETUP_TAG = \"ok\";\n",
+    )?;
     write_file(
         root,
         "core/math.ts",
@@ -238,8 +221,14 @@ export const getDynamicRate = async (): Promise<number> => dynamicRate;
 fn write_settings(root: &Path) -> Result<(), String> {
     write_file(root, "settings/limit.json", "{\"limit\": 5}\n")?;
     write_file(root, "settings/disk-limit.json", "{\"limit\": 5}\n")?;
+    write_file(root, "settings/helper-disk.json", "{\"limit\": 5}\n")?;
+    write_file(root, "settings/async-limit.json", "{\"limit\": 5}\n")?;
+    write_file(root, "settings/sentinel.txt", "present\n")?;
     write_file(root, "settings/impact-flag.json", "{\"flag\": \"ok\"}\n")?;
-    write_file(root, "settings/rules/rule-a.txt", "safe-rule\n")
+    write_file(root, "settings/impact-extra.json", "{\"extra\": \"ok\"}\n")?;
+    write_file(root, "settings/rules/rule-a.txt", "safe-rule\n")?;
+    write_file(root, "settings/rules/rule-b.txt", "safe-rule-b\n")?;
+    write_file(root, "settings/nested-rules/sub/deep.txt", "safe-deep\n")
 }
 
 fn write_ui_and_consumers(root: &Path, shape: &WorkspaceShape) -> Result<(), String> {
@@ -267,7 +256,7 @@ fn write_ui_barrel_and_unit_tests(root: &Path, shape: &WorkspaceShape) -> Result
     write_file(
         root,
         "ui/setup-helper.ts",
-        "export const setupTag = (): string => \"ok\";\n",
+        "import { CORE_SETUP_TAG } from \"../core/setup-const.ts\";\nexport const setupTag = (): string => CORE_SETUP_TAG;\n",
     )?;
     write_file(
         root,
@@ -346,7 +335,11 @@ readFileSync(scratch, "utf8");
 rmSync(scratch, { force: true });
 
 for (const dir of RULE_DIRS) {
-  for (const name of readdirSync(dir)) {
+  const names = readdirSync(dir);
+  if (names.length < 2) {
+    throw new Error(`missing rule files: ${names.length}`);
+  }
+  for (const name of names) {
     const text = readFileSync(join(dir, name), "utf8");
     if (text.includes("FORBIDDEN")) {
       throw new Error(`forbidden rule in ${name}`);
@@ -365,11 +358,12 @@ for (const dir of RULE_DIRS) {
     write_file(
         root,
         "impact-consumer/flag.test.ts",
-        r#"import { readFileSync } from "node:fs";
+        r#"import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const parsed = JSON.parse(readFileSync(join(root, "settings/impact-flag.json"), "utf8"));
 if (parsed.flag !== "ok") throw new Error(`flag=${parsed.flag}`);
+if (!existsSync(join(root, "settings/impact-extra.json"))) throw new Error("impact-extra missing");
 "#,
     )?;
     write_file(

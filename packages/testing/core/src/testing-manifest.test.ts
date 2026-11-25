@@ -226,6 +226,57 @@ describe("testing manifest", () => {
     expect(manifest.tasks[1]?.sqlImpact).toEqual({ tables: ["public.maintenance_records"] });
     expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
   });
+
+  it("round-trips execution.batch with vitest-files and args modes and rejects unknown modes", () => {
+    const text = JSON.stringify({
+      schemaVersion: 1,
+      workspace: { fullFallback: { taskIds: ["api:test", "api:lint"] } },
+      projects: [{ id: "api", root: "apps/api" }],
+      tasks: [
+        {
+          id: "api:test",
+          project: "api",
+          kind: "test",
+          execution: {
+            executable: "npx",
+            args: ["vitest", "run"],
+            fileNarrowing: { suffixes: [".test.ts"] },
+            batch: { maxSize: 16, groupKey: "vitest:test", mode: "vitest-files" },
+          },
+          impact: { mode: "reachability" },
+        },
+        {
+          id: "api:lint",
+          project: "api",
+          kind: "lint",
+          execution: {
+            executable: "npx",
+            args: ["oxlint", "apps/api"],
+            batch: { maxSize: 8, groupKey: "oxlint", sharedArgs: 1, mode: "args" },
+          },
+          impact: { mode: "reachability" },
+        },
+      ],
+    });
+    const manifest = parseTestingManifest(text, "dads.testing.json");
+
+    expect(manifest.tasks[0]?.execution.batch).toEqual({
+      maxSize: 16,
+      groupKey: "vitest:test",
+      mode: "vitest-files",
+    });
+    expect(manifest.tasks[1]?.execution.batch).toEqual({
+      maxSize: 8,
+      groupKey: "oxlint",
+      sharedArgs: 1,
+      mode: "args",
+    });
+    expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
+
+    expect(() => parseTestingManifest(text.replace('"vitest-files"', '"unknown-mode"'), "dads.testing.json")).toThrow(
+      "dads.testing.json: tasks[0].execution.batch.mode must be one of args, vitest-files",
+    );
+  });
 });
 
 function makeTemporaryDirectory(): string {

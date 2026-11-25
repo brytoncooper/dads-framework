@@ -35,6 +35,7 @@ export {
   type TestingManifestSqlSnapshotPattern,
   type TestingManifestTask,
   type TestingManifestTaskBatch,
+  type TestingManifestTaskBatchMode,
   type TestingManifestTaskSqlImpact,
   type TestingManifestWorkspaceSql,
 } from "./testing-manifest.js";

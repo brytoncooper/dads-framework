@@ -8,9 +8,34 @@ use crate::protocol::PlanResult;
 use crate::receipts::{TaskReceiptEntry, TaskReceiptStore};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 const MAX_CACHE_WORKERS: usize = 16;
+const UPLOAD_WORKERS: usize = 8;
+
+/// Spawns a bounded pool of scoped threads that asynchronously persist passing task receipts.
+pub(super) fn spawn_upload_pool<'scope, 'env>(
+    scope: &'scope thread::Scope<'scope, 'env>,
+    receipts: Option<&'env dyn TaskReceiptStore>,
+) -> Option<mpsc::Sender<(String, TaskReceiptEntry)>> {
+    let store = receipts?;
+    let (tx, rx) = mpsc::channel::<(String, TaskReceiptEntry)>();
+    let shared_rx = Arc::new(Mutex::new(rx));
+    for _ in 0..UPLOAD_WORKERS {
+        let rx_clone = Arc::clone(&shared_rx);
+        scope.spawn(move || {
+            loop {
+                let next = rx_clone.lock().ok().and_then(|guard| guard.recv().ok());
+                let Some((key, entry)) = next else {
+                    break;
+                };
+                store.record_pass(&key, &entry);
+            }
+        });
+    }
+    Some(tx)
+}
 
 struct KeyInput<'a> {
     task: &'a DeclaredTask,
@@ -45,6 +70,7 @@ pub(super) fn prepare_tasks(
             .get(decision.id.as_str())
             .ok_or_else(|| message(format!("Unknown task {}.", decision.id)))?;
         let mut execution = task.execution.clone();
+        let base_args_len = execution.args.len();
         if !decision.selected_files.is_empty() {
             for file in &decision.selected_files {
                 execution
@@ -61,6 +87,7 @@ pub(super) fn prepare_tasks(
         staged.push((
             *task,
             execution,
+            base_args_len,
             dependencies,
             decision.decision == "run" && task.cache,
             decision.selected_files.as_slice(),
@@ -69,7 +96,7 @@ pub(super) fn prepare_tasks(
     let key_inputs: Vec<KeyInput<'_>> = staged
         .iter()
         .map(
-            |(task, execution, _, should_hash, selected_files)| KeyInput {
+            |(task, execution, _, _, should_hash, selected_files)| KeyInput {
                 task,
                 execution,
                 selected_files,
@@ -89,12 +116,16 @@ pub(super) fn prepare_tasks(
         .into_iter()
         .zip(keys)
         .map(
-            |((task, execution, dependencies, _, selected), receipt_key)| PreparedTask {
-                id: task.id.clone(),
-                dependencies,
-                execution,
-                receipt_key,
-                has_selected_files: !selected.is_empty(),
+            |((task, execution, base_args_len, dependencies, _, selected), receipt_key)| {
+                PreparedTask {
+                    id: task.id.clone(),
+                    dependencies,
+                    execution,
+                    receipt_key,
+                    cache: task.cache,
+                    selected_files: selected.to_vec(),
+                    base_args_len,
+                }
             },
         )
         .collect())

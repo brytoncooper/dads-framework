@@ -8,8 +8,40 @@ permissions:
   contents: read
 
 jobs:
+  facade:
+    name: testing facade
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.3
+          cache: npm
+      - name: Install JavaScript tooling
+        run: npm ci --ignore-scripts
+      - name: Build facade
+        run: npm run build --workspace @dads-framework/testing
+      - name: Prepare MIT notices
+        run: node scripts/release/sync-package-licenses.mjs
+      - name: Pack facade
+        run: |
+          mkdir -p testing-facade
+          npm pack ./packages/testing/core --pack-destination testing-facade >/dev/null
+      - name: Upload built facade tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: dads-testing-facade-${{ github.run_attempt }}
+          path: testing-facade/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+
   build-and-smoke:
     name: ${{ matrix.package }}
+    needs: facade
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     strategy:
@@ -43,7 +75,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.3
-          cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.96.0"
@@ -52,23 +83,23 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: testing-native-release-${{ matrix.target }}
-      - name: Install JavaScript tooling
-        run: npm ci --ignore-scripts
-      - name: Build facade
-        run: npm run build --workspace @dads-framework/testing
       - name: Build platform native package
         run: node scripts/testing/build-testing-native-package.mjs --target "${{ matrix.target }}" --package-dir "${{ matrix.package }}"
       - name: Verify native package metadata and artifact
         run: node scripts/testing/verify-testing-native-packages.mjs --package-dir "${{ matrix.package }}"
       - name: Prepare MIT notices
         run: node scripts/release/sync-package-licenses.mjs
-      - name: Pack facade and matching native package
+      - name: Download built facade tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: dads-testing-facade-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/testing-packages
+      - name: Pack matching native package
         run: |
           runner_temp="$RUNNER_TEMP"
           if [[ "$RUNNER_OS" == Windows ]]; then runner_temp="$(cygpath -u "$runner_temp")"; fi
           mkdir -p "$runner_temp/testing-packages"
           npm pack "./${{ matrix.package }}" --pack-destination "$runner_temp/testing-packages" >/dev/null
-          npm pack ./packages/testing/core --pack-destination "$runner_temp/testing-packages" >/dev/null
       - name: Smoke clean consumer
         run: |
           set -euo pipefail

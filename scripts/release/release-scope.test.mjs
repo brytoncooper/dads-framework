@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { fileURLToPath, URL } from "node:url";
 import { parsePackPreflightArgs } from "./pack-preflight.mjs";
 import { releaseSubjects, repositorySlug } from "./release-subjects.mjs";
+import { testingSourceSteps } from "./verify-testing-source.mjs";
 import {
   expectedPackageVersion,
   isTestingReleasePackage,
@@ -109,4 +110,46 @@ test("releaseSubjects supports testing scope with 6 packages and 2 dependency wa
 
   // Full scope rejects a testing-only tarball directory.
   assert.throws(() => releaseSubjects(repoRoot, tarDir, "all"), /Expected exactly 24 release tarballs/);
+});
+
+test("testingSourceSteps covers all required testing-scope release proofs", () => {
+  const steps = testingSourceSteps(repoRoot, { VITEST_MAX_WORKERS: "2" });
+  const byId = new Map(steps.map((step) => [step.id, step]));
+  for (const required of [
+    "sync-licenses",
+    "build",
+    "format",
+    "vitest-testing",
+    "test-types",
+    "eslint-testing",
+    "docs",
+    "invariants",
+    "dependency-boundaries",
+    "private-references",
+    "api-report",
+    "markdown-links",
+    "script-tests",
+  ]) {
+    assert.ok(byId.has(required), `missing testing-source step ${required}`);
+  }
+  assert.ok(byId.get("vitest-testing").args.includes("--maxWorkers=2"));
+  assert.ok(byId.get("vitest-testing").args.includes("packages/testing/core/"));
+  const scriptTestArgs = byId.get("script-tests").args;
+  assert.ok(scriptTestArgs.includes("scripts/release/release-scope.test.mjs"));
+  assert.ok(scriptTestArgs.includes("scripts/testing/verify-testing-release.test.mjs"));
+});
+
+test("release workflows split facade build and pin gitleaks SHA-256 without weakening scope=all", () => {
+  const nativeWorkflow = readFileSync(join(repoRoot, ".github/workflows/testing-native-release.yml"), "utf8");
+  assert.match(nativeWorkflow, /^ {2}facade:/m);
+  assert.match(nativeWorkflow, /^ {4}needs: facade$/m);
+  assert.match(nativeWorkflow, /dads-testing-facade-\$\{\{ github\.run_attempt \}\}/);
+  // Only the single ubuntu facade job runs npm ci; the 5 OS native runners do not.
+  assert.equal([...nativeWorkflow.matchAll(/npm ci --ignore-scripts/g)].length, 1);
+
+  const releaseWorkflow = readFileSync(join(repoRoot, ".github/workflows/release-artifacts.yml"), "utf8");
+  assert.match(releaseWorkflow, /node scripts\/release\/verify-testing-source\.mjs/);
+  assert.match(releaseWorkflow, /npm run verify -- --no-cache --require-receipt/);
+  assert.match(releaseWorkflow, /9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c/);
+  assert.doesNotMatch(releaseWorkflow, /actions\/setup-go/);
 });

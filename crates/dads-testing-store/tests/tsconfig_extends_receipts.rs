@@ -1,8 +1,7 @@
 use dads_testing_core::graph::{DependencyGraph, ModuleNode};
 use dads_testing_core::{
-    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, TaskDecision, TaskReceiptEntry,
-    TaskReceiptRequest, TaskReceiptStore, collect_project_tsconfig_extends_allowlist,
-    execute_request_with_graph,
+    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, TaskDecision, TaskReceiptRequest,
+    TaskReceiptStore, collect_project_tsconfig_extends_allowlist, execute_request_with_graph,
 };
 use dads_testing_store::FileReceiptStore;
 use std::collections::BTreeMap;
@@ -73,33 +72,35 @@ fn plan_with_empty_graph(root: &Path) -> Result<dads_testing_core::PlanResult, B
     Ok(resp.result.ok_or("missing plan result")?.plan)
 }
 
-fn receipt_request<'a>(
-    root: &'a Path,
-    task_id: &'a str,
-    project_roots: &'a [String],
-    empty_str: &'a [String],
-    empty_env: &'a BTreeMap<String, String>,
-) -> TaskReceiptRequest<'a> {
-    TaskReceiptRequest {
-        workspace_root: root,
+fn receipt_key(
+    store: &FileReceiptStore,
+    root: &Path,
+    task_id: &str,
+    project_roots: &[String],
+) -> Option<String> {
+    let empty: Vec<String> = Vec::new();
+    let env = BTreeMap::new();
+    let manifest = root.join("dads.testing.json");
+    store.begin_run();
+    store.compute_key(&TaskReceiptRequest {
         task_id,
+        project: task_id.split(':').next().unwrap_or(task_id),
         executable: "tsc",
-        args: empty_str,
+        args: &empty,
         cwd: None,
-        env: empty_env,
+        shell: false,
+        env: &env,
+        setup_files: &empty,
+        selected_files: &empty,
         project_roots,
-        impact_paths: empty_str,
-        setup_files: empty_str,
-        extra_files: empty_str,
-        selected_files: empty_str,
-        read_guard_enforced: false,
-    }
+        impact_paths: &empty,
+        extra_files: &empty,
+        manifest_path: &manifest,
+        workspace_root: root,
+    })
 }
 
-#[test]
-fn sideways_multi_hop_and_array_tsconfig_extends_widen_planner_and_invalidate_v5_receipts()
--> Result<(), Box<dyn Error>> {
-    let root = fresh_repo("sideways-tsconfig-extends")?;
+fn write_fixture(root: &Path) -> Result<(), Box<dyn Error>> {
     for dir in [
         "packages/base-config",
         "packages/shared-config",
@@ -162,8 +163,17 @@ fn sideways_multi_hop_and_array_tsconfig_extends_widen_planner_and_invalidate_v5
 }
 "#,
     )?;
-    git(&root, &["add", "."])?;
-    git(&root, &["commit", "-q", "-m", "baseline"])?;
+    git(root, &["add", "."])?;
+    git(root, &["commit", "-q", "-m", "baseline"])?;
+
+    Ok(())
+}
+
+#[test]
+fn sideways_multi_hop_and_array_tsconfig_extends_widen_planner_and_invalidate_v5_receipts()
+-> Result<(), Box<dyn Error>> {
+    let root = fresh_repo("sideways-tsconfig-extends")?;
+    write_fixture(&root)?;
 
     // 1. Read-guard allowlist sees both sideways hops for apps/web.
     let web_roots = vec!["apps/web".to_owned()];
@@ -179,32 +189,12 @@ fn sideways_multi_hop_and_array_tsconfig_extends_widen_planner_and_invalidate_v5
         "allowlist must include multi-hop sideways extends: {allow_web:?}"
     );
 
-    // 2. Warm v5 cache receipts for web, admin, and cli.
-    let cache_dir = root.join(".cache-receipts");
-    let store = FileReceiptStore::with_custom_dir(&cache_dir);
-    let empty_str: Vec<String> = Vec::new();
-    let empty_env = BTreeMap::new();
-    let ok_entry = TaskReceiptEntry {
-        exit_code: 0,
-        stdout: String::new(),
-        stderr: String::new(),
-        duration_ms: 5,
-    };
-    let web_req = receipt_request(&root, "web:typecheck", &web_roots, &empty_str, &empty_env);
-    let admin_req = receipt_request(
-        &root,
-        "admin:typecheck",
-        &admin_roots,
-        &empty_str,
-        &empty_env,
-    );
-    let cli_req = receipt_request(&root, "cli:typecheck", &cli_roots, &empty_str, &empty_env);
-    store.write(&web_req, &ok_entry);
-    store.write(&admin_req, &ok_entry);
-    store.write(&cli_req, &ok_entry);
-    assert!(store.lookup(&web_req).is_some());
-    assert!(store.lookup(&admin_req).is_some());
-    assert!(store.lookup(&cli_req).is_some());
+    // 2. Compute baseline v5 receipt keys for web, admin, and cli.
+    let store = FileReceiptStore::for_cache_dir(&root.join(".cache-receipts"));
+    let web_before = receipt_key(&store, &root, "web:typecheck", &web_roots).ok_or("web key")?;
+    let admin_before =
+        receipt_key(&store, &root, "admin:typecheck", &admin_roots).ok_or("admin key")?;
+    let cli_before = receipt_key(&store, &root, "cli:typecheck", &cli_roots).ok_or("cli key")?;
 
     // 3. Mutate the 2-hop sideways base config (not named tsconfig*.json!).
     write(
@@ -229,19 +219,21 @@ fn sideways_multi_hop_and_array_tsconfig_extends_widen_planner_and_invalidate_v5
         plan.issues
     );
 
-    // Fresh store instance (clears in-memory RunMemoCache) verifies v5 cache invalidation!
-    let store_after = FileReceiptStore::with_custom_dir(&cache_dir);
-    assert!(
-        store_after.lookup(&web_req).is_none(),
-        "web:typecheck v5 receipt must invalidate on 2-hop sideways extends edit"
+    let web_after = receipt_key(&store, &root, "web:typecheck", &web_roots).ok_or("web key")?;
+    let admin_after =
+        receipt_key(&store, &root, "admin:typecheck", &admin_roots).ok_or("admin key")?;
+    let cli_after = receipt_key(&store, &root, "cli:typecheck", &cli_roots).ok_or("cli key")?;
+    assert_ne!(
+        web_before, web_after,
+        "web receipt key must change on 2-hop sideways extends edit"
     );
-    assert!(
-        store_after.lookup(&admin_req).is_none(),
-        "admin:typecheck v5 receipt must invalidate on array extends edit"
+    assert_ne!(
+        admin_before, admin_after,
+        "admin receipt key must change on array extends edit"
     );
-    assert!(
-        store_after.lookup(&cli_req).is_some(),
-        "unrelated cli:typecheck v5 receipt must remain cached"
+    assert_eq!(
+        cli_before, cli_after,
+        "unrelated cli receipt key must stay stable"
     );
 
     // 4. Deleting a sideways extended config fails closed in both planner and receipts.
@@ -267,10 +259,13 @@ fn sideways_multi_hop_and_array_tsconfig_extends_widen_planner_and_invalidate_v5
         "expected tsconfig-extends-unresolved on deleted extended config: {:?}",
         plan_del.issues
     );
-    let store_del = FileReceiptStore::with_custom_dir(&cache_dir);
     assert!(
-        store_del.lookup(&admin_req).is_none(),
-        "broken extends chain must fail closed (no cache hit)"
+        receipt_key(&store, &root, "admin:typecheck", &admin_roots).is_none(),
+        "broken extends chain must fail closed (no receipt key)"
+    );
+    assert!(
+        receipt_key(&store, &root, "cli:typecheck", &cli_roots).is_some(),
+        "unrelated cli must still be cacheable"
     );
 
     remove_dir_all(&root)?;

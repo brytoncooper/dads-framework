@@ -50,9 +50,12 @@ export function verifyNativeExecutable(root, nativeArchive, version) {
   if (
     manifest.name !== `@dads-framework/testing-native-${platform}` ||
     manifest.version !== version ||
-    manifest.bin?.["dad-test"] !== `./${binary}`
+    manifest.exports?.["."] !== `./${binary}`
   )
     throw new Error("Native tarball manifest does not match its release target.");
+  if (manifest.bin !== undefined) {
+    throw new Error("Native tarball manifest must not declare bin entries.");
+  }
   const bytes = readFileSync(join(root, binary));
   if (!matchesHeader(bytes, platform, target)) {
     throw new Error("Native executable format or architecture does not match its release target.");

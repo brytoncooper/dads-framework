@@ -91,11 +91,11 @@ for (const definition of definitionsToVerify) {
   if (JSON.stringify(manifest.files) !== JSON.stringify(expectedFiles)) {
     throw new Error(`${manifestPath} must publish only its executable, README and license notices.`);
   }
-  if (
-    manifest.exports?.["."] !== `./bin/${definition.binary}` ||
-    manifest.bin?.["dad-test"] !== `./bin/${definition.binary}`
-  ) {
+  if (manifest.exports?.["."] !== `./bin/${definition.binary}`) {
     throw new Error(`${manifestPath} has incorrect executable exports.`);
+  }
+  if (manifest.bin !== undefined) {
+    throw new Error(`${manifestPath} must not declare bin entries (they collide with @dads-framework/testing).`);
   }
   if (!existsSync(join(packageRoot, "README.md"))) throw new Error(`Missing native package README: ${packageRoot}`);
   if (!metadataOnly) {

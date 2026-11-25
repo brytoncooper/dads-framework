@@ -19,9 +19,6 @@
   "exports": {
     ".": "./bin/dad-test.exe"
   },
-  "bin": {
-    "dad-test": "./bin/dad-test.exe"
-  },
   "author": "Bryton Cooper",
   "repository": {
     "type": "git",

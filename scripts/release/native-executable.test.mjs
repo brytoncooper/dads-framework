@@ -28,7 +28,7 @@ test("release archives require the exact release version in their name and manif
   const manifest = {
     name: `@dads-framework/testing-native-${platform}`,
     version,
-    bin: { "dad-test": `./${binary}` },
+    exports: { ".": `./${binary}` },
   };
   const manifestPath = join(packageRoot, "package.json");
   writeFileSync(manifestPath, JSON.stringify(manifest));
@@ -42,6 +42,9 @@ test("release archives require the exact release version in their name and manif
 
   writeFileSync(manifestPath, JSON.stringify({ ...manifest, version: "0.1.0" }));
   assert.throws(() => verifyNativeExecutable(packageRoot, archive, expectedVersion), /manifest does not match/);
+
+  writeFileSync(manifestPath, JSON.stringify({ ...manifest, bin: { "dad-test": `./${binary}` } }));
+  assert.throws(() => verifyNativeExecutable(packageRoot, archive, expectedVersion), /must not declare bin/);
 });
 
 test("matches each hosted Rust build record to its versioned npm tarball", () => {

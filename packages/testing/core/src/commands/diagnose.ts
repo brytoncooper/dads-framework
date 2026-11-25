@@ -133,7 +133,7 @@ function shouldDiagnoseViaNx(workspaceRoot: string, manifestPath: string | undef
   );
 }
 
-function enrichMissingManifestError(error: unknown, manifestPath: string | undefined): unknown {
+export function enrichMissingManifestError(error: unknown, manifestPath: string | undefined): unknown {
   if (
     manifestPath === undefined &&
     error instanceof Error &&
@@ -208,7 +208,7 @@ function formatTrap(trap: TestingFallbackTrap): string {
   return `[${trap.kind}] ${trap.prefix} (${detail})`;
 }
 
-function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
+export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${String(count)} ${count === 1 ? singular : pluralForm}`;
 }
 

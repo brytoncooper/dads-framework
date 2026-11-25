@@ -111,23 +111,23 @@ function readSnapshotPatterns(
   });
 }
 
-function readObj(value: unknown, where: string, subject: string): Record<string, unknown> {
+export function readObj(value: unknown, where: string, subject: string): Record<string, unknown> {
   if (!isRecord(value)) throw new Error(`${subject}: ${where} must be an object`);
   return value;
 }
 
-function readStr(value: unknown, where: string, subject: string): string {
+export function readStr(value: unknown, where: string, subject: string): string {
   if (typeof value !== "string") throw new Error(`${subject}: ${where} must be a string`);
   return value;
 }
 
-function readOptStrings(value: unknown, where: string, subject: string): readonly string[] {
+export function readOptStrings(value: unknown, where: string, subject: string): readonly string[] {
   if (value === undefined) return [];
   if (!isUnknownArray(value)) throw new Error(`${subject}: ${where} must be an array`);
   return value.map((entry, idx) => readStr(entry, `${where}[${String(idx)}]`, subject));
 }
 
-function rejectExtraKeys(
+export function rejectExtraKeys(
   record: Readonly<Record<string, unknown>>,
   allowed: readonly string[],
   where: string,

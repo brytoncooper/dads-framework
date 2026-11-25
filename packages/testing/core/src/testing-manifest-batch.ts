@@ -21,7 +21,7 @@ export function readTaskBatch(value: unknown, where: string, subject: string): T
     }
   }
   const maxSize = readBatchMaxSize(value["maxSize"], where, subject);
-  const groupKey = readOptionalString(value["groupKey"], `${where}.groupKey`, subject);
+  const groupKey = readBatchOptionalString(value["groupKey"], `${where}.groupKey`, subject);
   const sharedArgs = readOptionalSharedArgs(value["sharedArgs"], where, subject);
   const mode = readOptionalBatchMode(value["mode"], `${where}.mode`, subject);
   return {
@@ -56,7 +56,7 @@ function readOptionalSharedArgs(value: unknown, where: string, subject: string):
   return value;
 }
 
-function readOptionalString(value: unknown, where: string, subject: string): string | undefined {
+function readBatchOptionalString(value: unknown, where: string, subject: string): string | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "string") {
     throw new Error(`${subject}: ${where} must be a string`);

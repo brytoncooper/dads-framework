@@ -4,7 +4,7 @@ import { writeCommandSuccess } from "../cli-output.js";
 import type { DadTestCommand } from "../dad-test-cli.js";
 import { hotspotsTesting } from "../testing-api.js";
 import type { TestingHotspotFile, TestingHotspotProject, TestingHotspotsResult } from "../testing-api.js";
-import { defaultTestingManifestFileName } from "../testing-manifest.js";
+import { enrichMissingManifestError, plural } from "./diagnose.js";
 
 const hotspotsOptions: readonly OptionSpecification[] = [
   { name: "--manifest", kind: "value" },
@@ -58,20 +58,6 @@ async function runHotspots(
   } catch (error: unknown) {
     throw enrichMissingManifestError(error, manifestPath);
   }
-}
-
-function enrichMissingManifestError(error: unknown, manifestPath: string | undefined): unknown {
-  if (
-    manifestPath === undefined &&
-    error instanceof Error &&
-    /Unable to resolve manifestPath|No such file or directory/i.test(error.message)
-  ) {
-    return new Error(
-      `No ${defaultTestingManifestFileName} found. Run 'dad-test init' to generate one or pass --manifest <path>.`,
-      { cause: error },
-    );
-  }
-  return error;
 }
 
 /** Renders a human-readable blast-radius hotspot table for files and projects. */
@@ -169,8 +155,4 @@ function formatRow(
       return alignment === "right" ? cell.padStart(width) : cell.padEnd(width);
     })
     .join("  ");
-}
-
-function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
-  return `${String(count)} ${count === 1 ? singular : pluralForm}`;
 }

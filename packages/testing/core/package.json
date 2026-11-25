@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/testing",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -54,11 +54,11 @@
     "typecheck": "tsc -b --pretty false"
   },
   "optionalDependencies": {
-    "@dads-framework/testing-native-darwin-arm64": "0.7.1",
-    "@dads-framework/testing-native-darwin-x64": "0.7.1",
-    "@dads-framework/testing-native-linux-arm64-gnu": "0.7.1",
-    "@dads-framework/testing-native-linux-x64-gnu": "0.7.1",
-    "@dads-framework/testing-native-win32-x64": "0.7.1"
+    "@dads-framework/testing-native-darwin-arm64": "0.8.0",
+    "@dads-framework/testing-native-darwin-x64": "0.8.0",
+    "@dads-framework/testing-native-linux-arm64-gnu": "0.8.0",
+    "@dads-framework/testing-native-linux-x64-gnu": "0.8.0",
+    "@dads-framework/testing-native-win32-x64": "0.8.0"
   },
   "license": "MIT",
   "author": "Bryton Cooper",

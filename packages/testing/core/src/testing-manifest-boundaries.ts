@@ -1,4 +1,5 @@
-import { isRecord, isUnknownArray } from "./parse-guards.js";
+import { isUnknownArray } from "./parse-guards.js";
+import { readObj, readOptStrings, readStr, rejectExtraKeys } from "./testing-manifest-sql.js";
 
 export type TestingManifestDepConstraint = {
   readonly sourceTag: string;
@@ -31,7 +32,7 @@ export function readWorkspaceBoundaries(
   const depConstraints =
     boundaries["depConstraints"] === undefined
       ? []
-      : readDepConstraints(boundaries["depConstraints"], `${where}.depConstraints`, subject);
+      : parseManifestDepConstraints(boundaries["depConstraints"], `${where}.depConstraints`, subject);
   const allow = readOptStrings(boundaries["allow"], `${where}.allow`, subject);
   const allowCircularSelfDependency = readOptBool(
     boundaries["allowCircularSelfDependency"],
@@ -67,7 +68,11 @@ export function serializeWorkspaceBoundaries(
   };
 }
 
-function readDepConstraints(value: unknown, where: string, subject: string): readonly TestingManifestDepConstraint[] {
+function parseManifestDepConstraints(
+  value: unknown,
+  where: string,
+  subject: string,
+): readonly TestingManifestDepConstraint[] {
   if (!isUnknownArray(value)) throw new Error(`${subject}: ${where} must be an array`);
   return value.map((item, idx) => {
     const loc = `${where}[${String(idx)}]`;
@@ -132,41 +137,14 @@ function serializeDepConstraint(constraint: TestingManifestDepConstraint): Testi
   };
 }
 
-function readObj(value: unknown, where: string, subject: string): Record<string, unknown> {
-  if (!isRecord(value)) throw new Error(`${subject}: ${where} must be an object`);
-  return value;
-}
-
-function readStr(value: unknown, where: string, subject: string): string {
-  if (typeof value !== "string") throw new Error(`${subject}: ${where} must be a string`);
-  return value;
-}
-
 function readOptBool(value: unknown, where: string, subject: string): boolean | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "boolean") throw new Error(`${subject}: ${where} must be a boolean`);
   return value;
 }
 
-function readOptStrings(value: unknown, where: string, subject: string): readonly string[] {
-  if (value === undefined) return [];
-  if (!isUnknownArray(value)) throw new Error(`${subject}: ${where} must be an array`);
-  return value.map((entry, idx) => readStr(entry, `${where}[${String(idx)}]`, subject));
-}
-
 function readOptionalExplicitStrings(value: unknown, where: string, subject: string): readonly string[] | undefined {
   if (value === undefined) return undefined;
   if (!isUnknownArray(value)) throw new Error(`${subject}: ${where} must be an array`);
   return value.map((entry, idx) => readStr(entry, `${where}[${String(idx)}]`, subject));
-}
-
-function rejectExtraKeys(
-  record: Readonly<Record<string, unknown>>,
-  allowed: readonly string[],
-  where: string,
-  subject: string,
-): void {
-  for (const key of Object.keys(record)) {
-    if (!allowed.includes(key)) throw new Error(`${subject}: unknown key "${key}" in ${where}`);
-  }
 }

@@ -4,6 +4,20 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.8.0] - 2026-11-24
+
+Independent feature release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Added
+
+- **Native Rust module-boundary enforcement (`dad-test check-boundaries`):** Checks `depConstraints` (`sourceTag`, `onlyDependOnLibsWithTags`, `notDependOnLibsWithTags`, `bannedExternalImports`, `allowedExternalImports`), `allow`, `allowCircularSelfDependency`, `enforceBuildableLibDependency`, `checkNestedImports`, and cycles directly on the Oxc workspace graph (declared in `workspace.boundaries` or `--config <path>`, full workspace or `--base`/`--head`).
+- **Per-alias `tsconfig*.json` (`compilerOptions.paths`) narrowing:** When a workspace `tsconfig` changes only `compilerOptions.paths`, `dad-test` lifts global widening and marks only files/projects referencing the added, modified, or removed path aliases (and their reverse-reachable dependents) as affected; non-`paths` edits and malformed JSONC stay strictly fail-closed.
+- **Vitest file-batching (`execution.batch.mode: "vitest-files"` & `autoVitestBatching`):** Groups compatible narrowed Vitest tasks into a single Vitest run with `--reporter=json` per-task pass/fail/duration attribution and selective caching of passing tasks.
+- **Project-grouped deterministic LPT sharding & `--plan-file` reuse:** `--shard <index>/<total>` uses deterministic project-grouped LPT bin-packing, emits `plan.shard` metadata, accepts nested `{ projects: { <id>: { durationMs } } }` `--weights` JSON, and `dad-test run --plan-file <path>` reuses a precomputed plan without re-running `git diff` or Oxc graph analysis.
+- **Shared local disk cache (`--cache-dir` / `DAD_TEST_CACHE_DIR`):** Shares workspace-relative content-hashed receipts safely across git worktrees and parallel local processes using atomic temp-file writes (`O_CREAT | O_EXCL` + `rename`).
+- **Graph blast-radius & barrel hotspots (`dad-test hotspots`):** Ranks highest-blast-radius files, Oxc-detected barrel re-export hubs, and projects (`--limit`, `--min-projects`, `--barrels-only`, `--json`).
+- **`dad-test diagnose` CI ratchet flags:** Uncapped `workspaceUncertainties`, `--max-workspace-uncertainties <N>`, `--fail-on-workspace-uncertainties`, `--max-unowned-files <N>`, and copy-pasteable `workspace.dynamicImportScopes` remediation snippets.
+
 ## [@dads-framework/testing 0.7.1] - 2026-11-24
 
 Independent patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

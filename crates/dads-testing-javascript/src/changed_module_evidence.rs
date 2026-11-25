@@ -4,11 +4,13 @@ use crate::diff_hunks::{
 };
 use crate::erased_spans::comment_and_type_only_spans_from_source;
 use crate::facts::JsModuleFacts;
-use crate::intra_file_deps::expand_same_file_changed_exports;
 use crate::module_analysis::runtime_export_declarations_from_source;
-use crate::private_helper_attribution::{attribute_pure_module_hunks, is_pure_top_level_module};
+use crate::private_helper_attribution::{
+    attribute_module_hunks_with_eval, is_pure_top_level_module,
+};
 use crate::workspace::git_output;
 use dads_testing_core::graph::ChangedModuleEvidence;
+use dads_testing_core::manifest_pure_factories_from_root;
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
@@ -17,6 +19,16 @@ pub(crate) fn changed_module_evidence(
     workspace_root: &Path,
     base: Option<&str>,
     modules: &[JsModuleFacts],
+) -> Option<Vec<ChangedModuleEvidence>> {
+    let pure_factories = manifest_pure_factories_from_root(workspace_root);
+    changed_module_evidence_with_pure_factories(workspace_root, base, modules, &pure_factories)
+}
+
+pub(crate) fn changed_module_evidence_with_pure_factories(
+    workspace_root: &Path,
+    base: Option<&str>,
+    modules: &[JsModuleFacts],
+    pure_factories: &[String],
 ) -> Option<Vec<ChangedModuleEvidence>> {
     let comparison = git_output(
         workspace_root,
@@ -55,7 +67,7 @@ pub(crate) fn changed_module_evidence(
         if untracked.contains(&module.path) {
             // Proved in `NamespaceAndImports.lean` (`new_pure_module_sound` / `new_impure_module_widens`):
             // pure newly-added modules attribute to their declared exports; impure ones widen.
-            let pure = is_pure_top_level_module(&source, Path::new(&module.path));
+            let pure = is_pure_top_level_module(&source, Path::new(&module.path), pure_factories);
             let changed_exports = if pure {
                 module
                     .declarations
@@ -71,10 +83,12 @@ pub(crate) fn changed_module_evidence(
                 every_hunk_is_attributed: pure,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: !pure,
             });
             continue;
         }
-        if let Some(change) = tracked_module_evidence(workspace_root, comparison, module, &source)?
+        if let Some(change) =
+            tracked_module_evidence(workspace_root, comparison, module, &source, pure_factories)?
         {
             changes.push(change);
         }
@@ -119,6 +133,7 @@ fn tracked_module_evidence(
     comparison: &str,
     module: &JsModuleFacts,
     source: &str,
+    pure_factories: &[String],
 ) -> Option<Option<ChangedModuleEvidence>> {
     let hunks = load_tracked_diff_hunks(workspace_root, comparison, &module.path)?;
     if hunks.is_empty() {
@@ -145,14 +160,12 @@ fn tracked_module_evidence(
         comment_and_type_only_spans_from_source(baseline, Path::new(&module.path))
     });
     let current_erased = comment_and_type_only_spans_from_source(source, Path::new(&module.path));
-    let mut changed_exports = BTreeSet::new();
-    let mut every_hunk_is_attributed = true;
-    let mut unattributed_old_ranges = Vec::new();
-    let mut unattributed_new_ranges = Vec::new();
     let can_check_erased =
         current_erased.is_some() && (baseline_source.is_none() || baseline_erased.is_some());
     let mut all_hunks_comment_only = can_check_erased;
     let mut all_hunks_type_or_comment = can_check_erased;
+    let mut runtime_old_ranges = Vec::new();
+    let mut runtime_new_ranges = Vec::new();
     for hunk in hunks {
         let baseline = baseline_source.as_deref().unwrap_or("");
         let (old_changed_bytes, new_changed_bytes) =
@@ -180,22 +193,8 @@ fn tracked_module_evidence(
             );
         if !hunk_is_erased {
             all_hunks_type_or_comment = false;
-            let mut hunk_attributed = true;
-            attribute_hunk_sides(
-                (
-                    old_changed_bytes,
-                    baseline_declarations.as_slice(),
-                    baseline,
-                ),
-                (new_changed_bytes, module.declarations.as_slice(), source),
-                &mut changed_exports,
-                &mut hunk_attributed,
-            );
-            if !hunk_attributed {
-                every_hunk_is_attributed = false;
-                unattributed_old_ranges.push(old_changed_bytes);
-                unattributed_new_ranges.push(new_changed_bytes);
-            }
+            runtime_old_ranges.push(old_changed_bytes);
+            runtime_new_ranges.push(new_changed_bytes);
         }
     }
     if all_hunks_comment_only {
@@ -209,20 +208,10 @@ fn tracked_module_evidence(
         source,
         module,
         &baseline_declarations,
-        HunkAttributionState {
-            changed_exports,
-            every_hunk_is_attributed,
-            unattributed_old_ranges,
-            unattributed_new_ranges,
-        },
+        &runtime_old_ranges,
+        &runtime_new_ranges,
+        pure_factories,
     )))
-}
-
-struct HunkAttributionState {
-    changed_exports: BTreeSet<String>,
-    every_hunk_is_attributed: bool,
-    unattributed_old_ranges: Vec<ByteRange>,
-    unattributed_new_ranges: Vec<ByteRange>,
 }
 
 fn finalize_module_evidence(
@@ -230,74 +219,50 @@ fn finalize_module_evidence(
     source: &str,
     module: &JsModuleFacts,
     baseline_declarations: &[crate::facts::JsSymbolFact],
-    mut state: HunkAttributionState,
+    runtime_old_ranges: &[ByteRange],
+    runtime_new_ranges: &[ByteRange],
+    pure_factories: &[String],
 ) -> ChangedModuleEvidence {
-    if !state.every_hunk_is_attributed
-        && let Some(private_exports) = try_private_helper_attribution(
-            baseline_source,
-            source,
-            Path::new(&module.path),
-            &state.unattributed_old_ranges,
-            &state.unattributed_new_ranges,
-        )
-    {
-        state.changed_exports.extend(private_exports);
-        state.every_hunk_is_attributed = true;
-    }
-    if state.every_hunk_is_attributed && !state.changed_exports.is_empty() {
-        state.changed_exports = close_same_file_exports(source, module, &state.changed_exports);
-    }
-    let zero_export_module = module.declarations.is_empty() && baseline_declarations.is_empty();
-    ChangedModuleEvidence {
-        path: module.path.clone(),
-        changed_exports: state.changed_exports,
-        every_hunk_is_attributed: state.every_hunk_is_attributed || zero_export_module,
-        semantic_change: true,
-        type_only_change: false,
-    }
-}
-
-fn attribute_hunk_sides(
-    old_side: (ByteRange, &[crate::facts::JsSymbolFact], &str),
-    new_side: (ByteRange, &[crate::facts::JsSymbolFact], &str),
-    changed_exports: &mut BTreeSet<String>,
-    every_hunk_is_attributed: &mut bool,
-) {
-    for (changed_bytes, declarations, side_source) in [old_side, new_side] {
-        match attributed_exports_for_changed_bytes(changed_bytes, declarations, side_source) {
-            Some(exports) => changed_exports.extend(exports),
-            None => *every_hunk_is_attributed = false,
+    let Some(mut attr) = attribute_module_hunks_with_eval(
+        baseline_source,
+        source,
+        Path::new(&module.path),
+        runtime_old_ranges,
+        runtime_new_ranges,
+        pure_factories,
+    ) else {
+        return ChangedModuleEvidence {
+            path: module.path.clone(),
+            changed_exports: BTreeSet::new(),
+            every_hunk_is_attributed: false,
+            semantic_change: true,
+            type_only_change: false,
+            module_eval_changed: false,
+        };
+    };
+    let baseline = baseline_source.unwrap_or("");
+    for range in runtime_old_ranges {
+        if let Some(exports) =
+            attributed_exports_for_changed_bytes(*range, baseline_declarations, baseline)
+        {
+            attr.changed_exports.extend(exports);
         }
     }
-}
-
-fn try_private_helper_attribution(
-    baseline_source: Option<&str>,
-    current_source: &str,
-    path: &Path,
-    old_ranges: &[ByteRange],
-    new_ranges: &[ByteRange],
-) -> Option<BTreeSet<String>> {
-    let mut exports = attribute_pure_module_hunks(current_source, path, new_ranges)?;
-    if let Some(baseline) = baseline_source {
-        exports.extend(attribute_pure_module_hunks(baseline, path, old_ranges)?);
+    for range in runtime_new_ranges {
+        if let Some(exports) =
+            attributed_exports_for_changed_bytes(*range, &module.declarations, source)
+        {
+            attr.changed_exports.extend(exports);
+        }
     }
-    Some(exports)
-}
-
-fn close_same_file_exports(
-    source: &str,
-    module: &JsModuleFacts,
-    direct: &BTreeSet<String>,
-) -> BTreeSet<String> {
-    if let Some(expanded) =
-        expand_same_file_changed_exports(source, Path::new(&module.path), direct)
-    {
-        return expanded;
+    ChangedModuleEvidence {
+        path: module.path.clone(),
+        changed_exports: attr.changed_exports,
+        every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
+        module_eval_changed: attr.module_eval_changed,
     }
-    let mut conservative = direct.clone();
-    conservative.extend(module.declarations.iter().map(|decl| decl.name.clone()));
-    conservative
 }
 
 fn load_baseline_source(workspace_root: &Path, comparison: &str, path: &str) -> Option<String> {
@@ -317,6 +282,7 @@ fn plain_evidence(
         every_hunk_is_attributed: true,
         semantic_change,
         type_only_change,
+        module_eval_changed: false,
     }
 }
 

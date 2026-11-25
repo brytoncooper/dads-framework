@@ -188,7 +188,9 @@ fn keeps_semantic_whitespace_changed_in_unexported_code_conservative() {
 
     let request = request(&root);
     let graph = analyze_request(&request).expect("working-tree graph must be available");
+    assert!(graph.module_eval_changed("lib/leaf.ts"));
     let reachable = graph.symbol_reachability_from(["lib/leaf.ts".to_owned()]);
+    assert!(reachable.paths.contains("app-b/index.ts"));
     let response = execute_request_with_graph(request, Some(graph));
     assert!(response.ok, "{response:?}");
     let plan = &response
@@ -202,14 +204,9 @@ fn keeps_semantic_whitespace_changed_in_unexported_code_conservative() {
         .expect("app B task must exist");
 
     assert_eq!(app_b_task.decision, "run");
-    assert_eq!(app_b_task.reason, "graph-uncertainty-project-fallback");
-    assert!(app_b_task.widened);
-    assert!(
-        reachable
-            .uncertainties
-            .iter()
-            .any(|uncertainty| uncertainty.code == "unattributed-module-change")
-    );
+    assert_eq!(app_b_task.reason, "graph-symbol-importer");
+    assert!(!app_b_task.widened);
+    assert!(reachable.uncertainties.is_empty());
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
 

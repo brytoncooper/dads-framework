@@ -386,6 +386,7 @@ fn reachability_task_runs_explicitly_when_extra_impact_path_changes() {
         every_hunk_is_attributed: true,
         semantic_change: true,
         type_only_change: false,
+        module_eval_changed: false,
     }]);
 
     let response = crate::execute_request_with_graph(
@@ -419,4 +420,22 @@ fn reachability_task_runs_explicitly_when_extra_impact_path_changes() {
     assert_eq!(app_test.confidence, "explicit");
     assert!(!app_test.widened);
     remove_dir_all(repository).expect("temporary repository must be removable");
+}
+
+#[test]
+fn validates_pure_factory_patterns() {
+    let valid = vec![
+        "pgTable".into(),
+        "React.memo".into(),
+        "z.*".into(),
+        "React.forwardRef".into(),
+        "$custom._fn".into(),
+    ];
+    assert!(crate::manifest_validate::validate_pure_factories(&valid).is_ok());
+    for bad in ["", "*", ".*", "a..b", "1bad", "z.*.x", "a/b", "z. "] {
+        assert!(
+            crate::manifest_validate::validate_pure_factories(&[bad.into()]).is_err(),
+            "expected '{bad}' to be rejected"
+        );
+    }
 }

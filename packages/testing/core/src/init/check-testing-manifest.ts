@@ -14,6 +14,7 @@ export function checkTestingManifest(manifest: TestingManifest): readonly string
   if (root !== undefined) {
     addRelativePathProblem(messages, root, "workspace.root");
   }
+  addPureFactoryProblems(messages, manifest.workspace.pureFactories);
   addDynamicImportScopeProblems(messages, manifest.workspace.dynamicImportScopes);
 
   const projectIds = addProjectProblems(messages, manifest.projects);
@@ -164,6 +165,19 @@ function addRelativePathProblem(messages: string[], value: string, field: string
   const isAbsolute = value.startsWith("/") || value.startsWith("\\") || /^[A-Za-z]:/.test(value);
   if (isAbsolute || value.split(/[\\/]/).includes("..")) {
     messages.push(`${field} must be a workspace-relative path without parent traversal.`);
+  }
+}
+
+const pureFactoryPattern = /^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*(?:\.\*)?$/;
+
+function addPureFactoryProblems(messages: string[], patterns: readonly string[] | undefined): void {
+  if (patterns === undefined) return;
+  for (const pattern of patterns) {
+    if (!pureFactoryPattern.test(pattern)) {
+      messages.push(
+        `workspace.pureFactories entry '${pattern}' must be an identifier chain like 'pgTable', 'React.memo', or 'z.*'.`,
+      );
+    }
   }
 }
 

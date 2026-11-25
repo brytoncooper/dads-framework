@@ -42,6 +42,11 @@ inductive ImportKind where
   | boundedDynamic
   deriving DecidableEq, Repr
 
+/-- True for every edge that evaluates `target` at runtime (every edge except `import type`). -/
+def ImportKind.isRuntime : ImportKind → Bool
+  | .typeOnly _ => false
+  | _ => true
+
 structure ImportEdge where
   source : ModuleId
   target : ModuleId
@@ -53,14 +58,17 @@ AST-normalized change evidence for a modified module:
 - `complete = false`: an unattributed diff hunk exists; widens conservatively.
 - `complete = true, semanticChange = false`: comment/whitespace/formatting-only change;
   no runtime or type behavior changed, so zero tests need to run.
-- `complete = true, semanticChange = true`: AST changed; module itself is impacted and
-  `exports` lists the exact exported symbols whose AST changed (may be empty, e.g. a
-  changed test file with no exports).
+- `complete = true, semanticChange = true`: AST changed; module itself is impacted,
+  `exports` lists the exact exported symbols whose AST changed, and `moduleEvalChanged`
+  is true whenever top-level module-evaluation behavior changed (effectful initializer,
+  top-level statement, impure class static block, private helper called by an effectful
+  node, or runtime import specifier graph change).
 -/
 structure ChangeEvidence where
   complete : Bool
   semanticChange : Bool
   exports : List Symbol
+  moduleEvalChanged : Bool := false
   deriving DecidableEq, Repr
 
 inductive UncertaintyScope where

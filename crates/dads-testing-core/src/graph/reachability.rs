@@ -15,6 +15,8 @@ struct SymbolWalk {
     edges: Vec<ReachedEdge>,
     queue: VecDeque<(String, BTreeSet<String>)>,
     seen_exports: BTreeMap<String, BTreeSet<String>>,
+    module_eval_queue: VecDeque<String>,
+    seen_module_eval: BTreeSet<String>,
     own_exports_propagated: BTreeSet<String>,
     /// Tracks exact changed target members behind `export * as ns from "./target"` per `(barrel, ns)`.
     ns_reexport_members: BTreeMap<(String, String), BTreeSet<String>>,
@@ -100,12 +102,14 @@ impl DependencyGraph {
             match self.change(&p) {
                 Some(c) if c.complete && !c.semantic_change => {}
                 Some(c) if c.complete && c.type_only_change && erase_type_only => {}
-                Some(c) if c.complete && !c.exports.is_empty() => {
+                Some(c) if c.complete && (c.module_eval_changed || !c.exports.is_empty()) => {
                     walk.paths.insert(p.clone());
-                    for sym in &c.exports {
-                        walk.non_ns_exports.insert((p.clone(), sym.clone()));
+                    if c.module_eval_changed && walk.seen_module_eval.insert(p.clone()) {
+                        walk.module_eval_queue.push_back(p.clone());
                     }
-                    enqueue_exports(&mut walk, p, c.exports);
+                    if !c.exports.is_empty() {
+                        enqueue_direct_exports(&mut walk, p, c.exports);
+                    }
                 }
                 Some(c)
                     if c.complete
@@ -131,20 +135,56 @@ impl DependencyGraph {
         walk
     }
 
+    fn reverse_import_sources<'a>(&'a self, target: &str) -> Vec<(&'a CImport, String)> {
+        let Some(t) = self.module_index(target) else {
+            return Vec::new();
+        };
+        self.reverse(t)
+            .iter()
+            .filter_map(|edge_id| {
+                let e = self.imports.get(*edge_id as usize)?;
+                let source = self.path(e.source)?.to_owned();
+                Some((e, source))
+            })
+            .collect()
+    }
+
     fn walk_importers(&self, walk: &mut SymbolWalk, erase_type_only: bool) {
+        while let Some(p) = walk.module_eval_queue.pop_front() {
+            for (e, source) in self.reverse_import_sources(&p) {
+                self.follow_module_eval_edge(walk, e, source, &p, erase_type_only);
+            }
+        }
         while let Some((p, exports)) = walk.queue.pop_front() {
-            let Some(t) = self.module_index(&p) else {
-                continue;
-            };
-            for edge_id in self.reverse(t) {
-                let Some(e) = self.imports.get(*edge_id as usize) else {
-                    continue;
-                };
-                let Some(source) = self.path(e.source).map(str::to_owned) else {
-                    continue;
-                };
+            for (e, source) in self.reverse_import_sources(&p) {
                 self.follow_edge(walk, e, source, &p, &exports, erase_type_only);
             }
+        }
+    }
+
+    fn follow_module_eval_edge(
+        &self,
+        walk: &mut SymbolWalk,
+        e: &CImport,
+        source: String,
+        target: &str,
+        erase_type_only: bool,
+    ) {
+        if e.type_only {
+            if !erase_type_only {
+                walk.uncertainties.push(ambiguous_import(source, e));
+            }
+            return;
+        }
+        walk.edges.push(ReachedEdge {
+            importer: source.clone(),
+            target: target.to_owned(),
+            symbols: BTreeSet::new(),
+            position: e.position,
+        });
+        walk.paths.insert(source.clone());
+        if walk.seen_module_eval.insert(source.clone()) {
+            walk.module_eval_queue.push_back(source);
         }
     }
 
@@ -211,10 +251,7 @@ impl DependencyGraph {
                     }
                 }
                 if !affected.is_empty() {
-                    for sym in &affected {
-                        walk.non_ns_exports.insert((source.clone(), sym.clone()));
-                    }
-                    enqueue_exports(walk, source, affected);
+                    enqueue_direct_exports(walk, source, affected);
                 }
             } else if walk.own_exports_propagated.insert(source.clone()) {
                 self.propagate_own_exports(walk, e.source, source);
@@ -265,10 +302,7 @@ impl DependencyGraph {
                 });
             }
         } else {
-            for sym in &next {
-                walk.non_ns_exports.insert((source.clone(), sym.clone()));
-            }
-            enqueue_exports(walk, source, next);
+            enqueue_direct_exports(walk, source, next);
         }
     }
 
@@ -320,10 +354,7 @@ fn follow_reexport_all(
         position: e.position,
     });
     walk.paths.insert(source.clone());
-    for sym in &reexported {
-        walk.non_ns_exports.insert((source.clone(), sym.clone()));
-    }
-    enqueue_exports(walk, source, reexported);
+    enqueue_direct_exports(walk, source, reexported);
 }
 
 /// An `export * as ns from "./target"` namespace re-export binds EVERY runtime export of `target`
@@ -363,6 +394,13 @@ fn follow_reexport_namespace(
         walk.queue
             .push_back((source, BTreeSet::from([ns_name.to_owned()])));
     }
+}
+
+fn enqueue_direct_exports(walk: &mut SymbolWalk, module: String, exports: BTreeSet<String>) {
+    for sym in &exports {
+        walk.non_ns_exports.insert((module.clone(), sym.clone()));
+    }
+    enqueue_exports(walk, module, exports);
 }
 
 /// Enqueues only `(module, symbol)` pairs not yet seen so diamond `export *` barrels and mixed

@@ -90,6 +90,10 @@ pub struct ChangedModuleEvidence {
     pub semantic_change: bool,
     #[serde(default)]
     pub type_only_change: bool,
+    /// True when the change can alter top-level module-evaluation behavior at import/load time
+    /// (impure initializer, top-level statement, class static block, or runtime import change).
+    #[serde(default)]
+    pub module_eval_changed: bool,
 }
 
 fn default_semantic_change() -> bool {

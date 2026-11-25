@@ -1880,8 +1880,8 @@
     },
     "soundnessCases": {
       "cases": {
-        "floor": 21,
-        "reason": "seeded 2026-09-04 before the gate existed"
+        "floor": 28,
+        "reason": "expanded with 7 real load-time side-effect and pure-narrowing corpus cases"
       }
     },
     "typeTestNegativeCases": {

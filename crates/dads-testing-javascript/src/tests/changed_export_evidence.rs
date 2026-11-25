@@ -96,13 +96,11 @@ fn follows_only_importers_of_a_proven_changed_export() {
     )
     .expect("fixture impure top-level change must be written");
     let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
+    assert!(graph.module_eval_changed("src/leaf.ts"));
     let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
-    assert!(
-        reachable
-            .uncertainties
-            .iter()
-            .any(|uncertainty| uncertainty.code == "unattributed-module-change")
-    );
+    assert!(reachable.paths.contains("src/a.ts"));
+    assert!(reachable.paths.contains("src/b.ts"));
+    assert!(reachable.uncertainties.is_empty());
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
 
@@ -311,14 +309,32 @@ fn attributes_an_exported_const_initializer_hunk_to_that_const() {
     write(root.join("src/leaf.ts"), "export const a = makeValue(\n  1,\n);\n\nexport const b = makeValue(\n  1,\n);\n\nfunction makeValue(value: number) {\n  return value;\n}\n")
             .expect("fixture leaf must be written");
     commit_fixture(&root);
+    // Unannotated top-level function call may have module-load side effects, so editing it must
+    // propagate along runtime import edges (`module_eval_changed`) and reach `src/b.ts` too.
     write(root.join("src/leaf.ts"), "export const a = makeValue(\n  2,\n);\n\nexport const b = makeValue(\n  1,\n);\n\nfunction makeValue(value: number) {\n  return value;\n}\n")
             .expect("fixture const initializer change must be written");
 
     let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
+    assert!(graph.module_eval_changed("src/leaf.ts"));
     let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
     assert!(reachable.paths.contains("src/a.ts"));
-    assert!(!reachable.paths.contains("src/b.ts"));
+    assert!(reachable.paths.contains("src/b.ts"));
     assert!(reachable.uncertainties.is_empty());
+
+    // Annotated `/*#__PURE__*/` calls narrow strictly to importers of `a`.
+    write(root.join("src/leaf.ts"), "export const a = /*#__PURE__*/ makeValue(\n  1,\n);\n\nexport const b = /*#__PURE__*/ makeValue(\n  1,\n);\n\nfunction makeValue(value: number) {\n  return value;\n}\n")
+            .expect("pure fixture leaf must be written");
+    git(&root, &["add", "."]);
+    git(&root, &["commit", "-m", "annotate pure"]);
+    write(root.join("src/leaf.ts"), "export const a = /*#__PURE__*/ makeValue(\n  2,\n);\n\nexport const b = /*#__PURE__*/ makeValue(\n  1,\n);\n\nfunction makeValue(value: number) {\n  return value;\n}\n")
+            .expect("pure const initializer change must be written");
+
+    let pure_graph = analyze_request(&request(&root)).expect("pure graph must be available");
+    assert!(!pure_graph.module_eval_changed("src/leaf.ts"));
+    let pure_reachable = pure_graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
+    assert!(pure_reachable.paths.contains("src/a.ts"));
+    assert!(!pure_reachable.paths.contains("src/b.ts"));
+    assert!(pure_reachable.uncertainties.is_empty());
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
 
@@ -365,13 +381,11 @@ fn keeps_impure_module_private_helper_edit_conservative() {
     .expect("fixture impure helper change must be written");
 
     let graph = analyze_request(&request(&root)).expect("working-tree graph must be available");
+    assert!(graph.module_eval_changed("src/leaf.ts"));
     let reachable = graph.symbol_reachability_from(["src/leaf.ts".to_owned()]);
-    assert!(
-        reachable
-            .uncertainties
-            .iter()
-            .any(|uncertainty| uncertainty.code == "unattributed-module-change")
-    );
+    assert!(reachable.paths.contains("src/a.ts"));
+    assert!(reachable.paths.contains("src/b.ts"));
+    assert!(reachable.uncertainties.is_empty());
     remove_dir_all(root).expect("fixture source directory must be removed");
 }
 

@@ -474,4 +474,221 @@ theorem private_helper_attribution_exact_iff (m : ModuleIR)
   ⟨private_helper_attribution_precise m hpure hattr sym,
    private_helper_attribution_sound m hwf hpure hattr sym⟩
 
+/-! ### Per-Declaration / Per-Statement Module-Evaluation Soundness (`EffectModuleIR`) -/
+
+/--
+Per-node intra-file def-use model matching the 0.8.2 Rust load-time analyzer:
+every top-level declaration AND effectful top-level statement/initializer is a node in `decls`,
+tagged by `isEffectful`. Pure annotations (`/*#__PURE__*/`), unshadowed pure built-ins, and
+configured `workspace.pureFactories` with pure arguments classify a declaration as `isEffectful = false`.
+-/
+structure EffectModuleIR where
+  decls : List DeclId
+  exportedName : DeclId → Option Symbol
+  isEffectful : DeclId → Bool
+  uses : DeclId → List DeclId
+  hunks : List HunkAttribution
+  /-- True iff the ordered runtime import specifier list changed or a touched runtime binding is unused. -/
+  runtimeImportSpecifiersChanged : Bool
+
+/-- Forget `isEffectful` to reuse the proven reverse def-use closure lemmas on `ModuleIR`. -/
+def EffectModuleIR.toModuleIR (m : EffectModuleIR) : ModuleIR :=
+  { isPureTopLevel := true
+    decls := m.decls
+    exportedName := m.exportedName
+    uses := m.uses
+    hunks := m.hunks }
+
+/-- Ground-truth export observation predicate for `EffectModuleIR`. -/
+def EffectModuleExportMayObserve (m : EffectModuleIR) (sym : Symbol) : Prop :=
+  ExportMayObserveHunk m.toModuleIR sym
+
+/--
+Ground-truth module-evaluation side-effect predicate:
+top-level evaluation of `m` may change iff either the runtime import specifier graph changed
+OR some effectful top-level node `eff` (including an impure export initializer, impure class
+static block, or top-level statement) directly or transitively depends on a changed declaration `d`.
+-/
+def ModuleEvalMayChange (m : EffectModuleIR) : Prop :=
+  m.runtimeImportSpecifiersChanged = true ∨
+    ∃ eff ∈ m.decls, m.isEffectful eff = true ∧
+      ∃ d ∈ m.decls, HunkAttribution.inDecl d ∈ m.hunks ∧ UsesStar m.uses eff d
+
+/--
+Executable per-node attribution matching `attribute_module_hunks_with_eval`:
+- No hunks and unchanged runtime import specifiers -> no semantic change.
+- Any unattributed hunk -> `complete = false` (fail-closed project widening).
+- All hunks in known nodes -> `complete = true`, exact reverse def-use `exports`, and
+  `moduleEvalChanged = true` iff runtime import specifiers changed or reverse def-use
+  reaches any effectful top-level node.
+-/
+def attributeEffectModuleHunks (m : EffectModuleIR) : ChangeEvidence :=
+  if m.hunks.isEmpty && !m.runtimeImportSpecifiersChanged then
+    { complete := true, semanticChange := false, exports := [], moduleEvalChanged := false }
+  else if !allHunksInKnownDecls m.toModuleIR then
+    { complete := false, semanticChange := true, exports := [], moduleEvalChanged := false }
+  else
+    let reached := reverseDefUseClosure m.toModuleIR
+    let exports := m.decls.filterMap (fun d =>
+      if reached.contains d then m.exportedName d else none)
+    let evalChanged :=
+      m.runtimeImportSpecifiersChanged ||
+      m.decls.any (fun d => m.isEffectful d && reached.contains d)
+    { complete := true
+      semanticChange := true
+      exports := exports
+      moduleEvalChanged := evalChanged }
+
+/--
+**Theorem 6 (Effect Module Unattributed Safety):**
+Any unattributed hunk in `EffectModuleIR` fails closed (`complete = false`).
+-/
+theorem effect_module_unattributed_widens (m : EffectModuleIR)
+    (hunattr : HunkAttribution.unattributed ∈ m.hunks) :
+    (attributeEffectModuleHunks m).complete = false := by
+  have hnonempty : m.hunks.isEmpty = false := by
+    cases h : m.hunks with
+    | nil => simp [h] at hunattr
+    | cons _ _ => rfl
+  have hall : allHunksInKnownDecls m.toModuleIR = false := by
+    unfold allHunksInKnownDecls EffectModuleIR.toModuleIR
+    rw [List.all_eq_false]
+    exact ⟨HunkAttribution.unattributed, hunattr, by simp⟩
+  unfold attributeEffectModuleHunks
+  simp [hnonempty, hall]
+
+/--
+**Theorem 7 (Module-Eval Soundness):**
+If `m` is well-formed and every hunk lies in a known node, then ANY load-time change
+(direct edit to an impure export initializer, class static block, top-level statement,
+private helper transitively called at module load, or runtime import specifier edit)
+MUST set `(attributeEffectModuleHunks m).moduleEvalChanged = true`.
+-/
+theorem effect_module_eval_sound (m : EffectModuleIR)
+    (hwf : ∀ a ∈ m.decls, ∀ b ∈ m.uses a, b ∈ m.decls)
+    (hattr : allHunksInKnownDecls m.toModuleIR = true)
+    (heval : ModuleEvalMayChange m) :
+    (attributeEffectModuleHunks m).moduleEvalChanged = true := by
+  unfold attributeEffectModuleHunks
+  rcases heval with hImp | ⟨eff, heff, heffFlag, d, hd, hhunk, hpath⟩
+  · simp [hImp, hattr]
+  · have hnonempty : m.hunks.isEmpty = false := by
+      cases h : m.hunks with
+      | nil => simp [h] at hhunk
+      | cons _ _ => rfl
+    have hd_seed : d ∈ seedChangedDecls m.toModuleIR :=
+      (mem_seedChangedDecls_iff m.toModuleIR d).mpr ⟨hd, hhunk⟩
+    have hd_closed : d ∈ reverseDefUseClosure m.toModuleIR :=
+      mem_expandReverseN_mono m.toModuleIR m.toModuleIR.decls.length
+        (seedChangedDecls m.toModuleIR) d hd_seed
+    have heff_closed : eff ∈ reverseDefUseClosure m.toModuleIR :=
+      reverseDefUseClosure_backwards_closed m.toModuleIR hwf heff hpath hd_closed
+    simp only [hnonempty, Bool.false_and, Bool.false_eq_true, ↓reduceIte, hattr, Bool.not_true,
+      Bool.or_eq_true]
+    right
+    rw [List.any_eq_true]
+    exact ⟨eff, heff, by simp [heffFlag, heff_closed]⟩
+
+/--
+**Theorem 8 (Module-Eval Precision — Zero Spurious Eval Widening):**
+Whenever `(attributeEffectModuleHunks m).moduleEvalChanged = true` on a fully attributed module,
+`ModuleEvalMayChange m` genuinely holds.
+-/
+theorem effect_module_eval_precise (m : EffectModuleIR)
+    (hattr : allHunksInKnownDecls m.toModuleIR = true)
+    (heval : (attributeEffectModuleHunks m).moduleEvalChanged = true) :
+    ModuleEvalMayChange m := by
+  unfold attributeEffectModuleHunks at heval
+  by_cases hnoop : (m.hunks.isEmpty && !m.runtimeImportSpecifiersChanged) = true
+  · simp [hnoop] at heval
+  · simp only [hnoop, ↓reduceIte, hattr, Bool.not_true, Bool.false_eq_true,
+      Bool.or_eq_true] at heval
+    rcases heval with hImp | hAny
+    · exact Or.inl hImp
+    · right
+      rcases List.any_eq_true.mp hAny with ⟨eff, heff, hCond⟩
+      simp only [Bool.and_eq_true, List.contains_iff_mem] at hCond
+      have hreach := expandReverseN_reaches_seed m.toModuleIR m.toModuleIR.decls.length
+        (seedChangedDecls m.toModuleIR) (fun z hz => ⟨z, hz, UsesStar.refl z⟩) eff hCond.2
+      rcases hreach with ⟨d, hd_seed, hpath⟩
+      rcases (mem_seedChangedDecls_iff m.toModuleIR d).mp hd_seed with ⟨hd_decl, hhunk⟩
+      exact ⟨eff, heff, hCond.1, d, hd_decl, hhunk, hpath⟩
+
+/--
+**Theorem 9 (Exact `↔` Characterization for `moduleEvalChanged`):**
+On any well-formed, fully attributed `EffectModuleIR`, `moduleEvalChanged = true`
+if and only if `ModuleEvalMayChange m` holds.
+-/
+theorem effect_module_eval_exact_iff (m : EffectModuleIR)
+    (hwf : ∀ a ∈ m.decls, ∀ b ∈ m.uses a, b ∈ m.decls)
+    (hattr : allHunksInKnownDecls m.toModuleIR = true) :
+    (attributeEffectModuleHunks m).moduleEvalChanged = true ↔ ModuleEvalMayChange m :=
+  ⟨effect_module_eval_precise m hattr, effect_module_eval_sound m hwf hattr⟩
+
+/--
+**Theorem 10 (Pure Edit Beside Untouched Effectful Top-Level Node Stays Narrow):**
+Editing a pure declaration inside a file that ALSO contains untouched effectful top-level
+declarations (which do NOT transitively reference any changed hunk, and with no runtime
+import specifier change) yields `moduleEvalChanged = false`.
+-/
+theorem pure_edit_beside_untouched_effectful_narrow (m : EffectModuleIR)
+    (hattr : allHunksInKnownDecls m.toModuleIR = true)
+    (hNoImp : m.runtimeImportSpecifiersChanged = false)
+    (hNoEffPath : ∀ eff ∈ m.decls, m.isEffectful eff = true →
+      ∀ d ∈ m.decls, HunkAttribution.inDecl d ∈ m.hunks → ¬ UsesStar m.uses eff d) :
+    (attributeEffectModuleHunks m).moduleEvalChanged = false := by
+  cases hEv : (attributeEffectModuleHunks m).moduleEvalChanged
+  · rfl
+  · exfalso
+    rcases effect_module_eval_precise m hattr hEv with hImp | ⟨eff, heff, heffFlag, d, hd, hhunk, hpath⟩
+    · simp [hNoImp] at hImp
+    · exact hNoEffPath eff heff heffFlag d hd hhunk hpath
+
+/--
+**Theorem 11 (Exact `↔` Export Attribution for `EffectModuleIR`):**
+Export attribution remains BOTH sound and exact alongside per-node load-time effect tracking.
+-/
+theorem effect_module_exports_exact_iff (m : EffectModuleIR)
+    (hwf : ∀ a ∈ m.decls, ∀ b ∈ m.uses a, b ∈ m.decls)
+    (hattr : allHunksInKnownDecls m.toModuleIR = true)
+    (sym : Symbol) :
+    sym ∈ (attributeEffectModuleHunks m).exports ↔ EffectModuleExportMayObserve m sym := by
+  constructor
+  · intro hmem
+    unfold attributeEffectModuleHunks at hmem
+    by_cases hnoop : (m.hunks.isEmpty && !m.runtimeImportSpecifiersChanged) = true
+    · simp [hnoop] at hmem
+    · simp only [hnoop, ↓reduceIte, hattr, Bool.not_true, Bool.false_eq_true] at hmem
+      rw [List.mem_filterMap] at hmem
+      rcases hmem with ⟨e, he, hmatch⟩
+      split at hmatch
+      · have he_closed : e ∈ reverseDefUseClosure m.toModuleIR := List.contains_iff_mem.mp ‹_›
+        have hreach := expandReverseN_reaches_seed m.toModuleIR m.toModuleIR.decls.length
+          (seedChangedDecls m.toModuleIR) (fun z hz => ⟨z, hz, UsesStar.refl z⟩) e he_closed
+        rcases hreach with ⟨d, hd_seed, hpath⟩
+        rcases (mem_seedChangedDecls_iff m.toModuleIR d).mp hd_seed with ⟨hd_decl, hhunk⟩
+        exact ⟨e, he, hmatch, d, hd_decl, hhunk, hpath⟩
+      · simp at hmatch
+  · intro hobs
+    rcases hobs with ⟨e, he, hexp, d, hd, hhunk, hpath⟩
+    have hnonempty : m.hunks.isEmpty = false := by
+      cases h : m.hunks with
+      | nil =>
+          have hmem : HunkAttribution.inDecl d ∈ m.hunks := hhunk
+          simp [h] at hmem
+      | cons _ _ => rfl
+    have hd_seed : d ∈ seedChangedDecls m.toModuleIR :=
+      (mem_seedChangedDecls_iff m.toModuleIR d).mpr ⟨hd, hhunk⟩
+    have hd_closed : d ∈ reverseDefUseClosure m.toModuleIR :=
+      mem_expandReverseN_mono m.toModuleIR m.toModuleIR.decls.length
+        (seedChangedDecls m.toModuleIR) d hd_seed
+    have he_closed : e ∈ reverseDefUseClosure m.toModuleIR :=
+      reverseDefUseClosure_backwards_closed m.toModuleIR hwf he hpath hd_closed
+    unfold attributeEffectModuleHunks
+    simp only [hnonempty, Bool.false_and, Bool.false_eq_true, ↓reduceIte, hattr, Bool.not_true]
+    rw [List.mem_filterMap]
+    refine ⟨e, he, ?_⟩
+    simp only [List.contains_iff_mem.mpr he_closed, ↓reduceIte]
+    exact hexp
+
 end DadTest

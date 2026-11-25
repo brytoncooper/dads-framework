@@ -57,6 +57,8 @@ pub(super) struct CChange {
     pub(super) semantic_change: bool,
     #[serde(default)]
     pub(super) type_only_change: bool,
+    #[serde(default)]
+    pub(super) module_eval_changed: bool,
 }
 
 fn default_semantic_change() -> bool {
@@ -161,6 +163,7 @@ impl DependencyGraph {
                     every_hunk_is_attributed: c.complete,
                     semantic_change: c.semantic_change,
                     type_only_change: c.type_only_change,
+                    module_eval_changed: c.module_eval_changed,
                 })
             })
             .collect()
@@ -194,6 +197,11 @@ impl DependencyGraph {
         let change = self.change(path)?;
         change.complete.then_some(change.exports)
     }
+    /// Returns whether the change evidence for `path` indicates a top-level module-evaluation change.
+    pub fn module_eval_changed(&self, path: &str) -> bool {
+        self.change(path)
+            .is_some_and(|change| change.complete && change.module_eval_changed)
+    }
     pub(super) fn pack_changes(&self, changes: Vec<ChangedModuleEvidence>) -> Vec<CChange> {
         changes
             .into_iter()
@@ -208,6 +216,7 @@ impl DependencyGraph {
                     complete: c.every_hunk_is_attributed,
                     semantic_change: c.semantic_change,
                     type_only_change: c.type_only_change,
+                    module_eval_changed: c.module_eval_changed,
                 })
             })
             .collect()
@@ -270,6 +279,7 @@ impl DependencyGraph {
                 complete: x.complete,
                 semantic_change: x.semantic_change,
                 type_only_change: x.type_only_change,
+                module_eval_changed: x.module_eval_changed,
             })
     }
     pub fn uncertainties(&self) -> Vec<GraphUncertainty> {
@@ -361,6 +371,7 @@ pub(super) struct CChangeView {
     pub(super) complete: bool,
     pub(super) semantic_change: bool,
     pub(super) type_only_change: bool,
+    pub(super) module_eval_changed: bool,
 }
 
 /// Extracts the npm package name from a bare module specifier (`"zod/v4"` -> `"zod"`,

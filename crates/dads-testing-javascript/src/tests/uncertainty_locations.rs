@@ -30,6 +30,7 @@ fn nonliteral_dynamic_import_is_a_whole_workspace_uncertainty() {
             every_hunk_is_attributed: true,
             semantic_change: true,
             type_only_change: false,
+            module_eval_changed: false,
         },
     ]);
     let reachable = graph.symbol_reachability_from(["src/changed.ts".to_owned()]);

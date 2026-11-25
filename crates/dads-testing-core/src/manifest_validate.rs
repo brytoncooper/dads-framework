@@ -153,7 +153,36 @@ fn validate_workspace(workspace: &WorkspaceSettings) -> Result<(), TestingError>
             )));
         }
     }
+    validate_pure_factories(&workspace.pure_factories)?;
     validate_dynamic_import_scopes(&workspace.dynamic_import_scopes)
+}
+
+pub(crate) fn validate_pure_factories(patterns: &[String]) -> Result<(), TestingError> {
+    for pattern in patterns {
+        if !is_valid_pure_factory_pattern(pattern) {
+            return Err(message(format!(
+                "workspace.pureFactories entry '{pattern}' must be an identifier chain like 'pgTable', 'React.memo', or 'z.*'."
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn is_valid_pure_factory_pattern(pattern: &str) -> bool {
+    if pattern.is_empty() {
+        return false;
+    }
+    let body = pattern.strip_suffix(".*").unwrap_or(pattern);
+    !body.is_empty() && body.split('.').all(is_js_identifier_segment)
+}
+
+fn is_js_identifier_segment(segment: &str) -> bool {
+    let mut chars = segment.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || matches!(first, '_' | '$'))
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '$'))
 }
 
 fn validate_task_env(task_id: &str, env: &BTreeMap<String, String>) -> Result<(), TestingError> {

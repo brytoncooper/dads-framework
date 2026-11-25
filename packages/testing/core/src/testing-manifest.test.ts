@@ -335,6 +335,32 @@ describe("testing manifest", () => {
       ),
     ).toThrow(/banTransitiveDependencies must be a boolean/);
   });
+
+  it("round-trips workspace.pureFactories cleanly and omits it when empty", () => {
+    const text = JSON.stringify({
+      schemaVersion: 1,
+      workspace: {
+        fullFallback: { taskIds: ["api:test"] },
+        pureFactories: ["z.*", "pgTable", "React.memo"],
+      },
+      projects: [{ id: "api", root: "apps/api" }],
+      tasks: [
+        {
+          id: "api:test",
+          project: "api",
+          kind: "test",
+          execution: { executable: "true" },
+          impact: { mode: "reachability" },
+        },
+      ],
+    });
+    const manifest = parseTestingManifest(text, "dads.testing.json");
+
+    expect(manifest.workspace.pureFactories).toEqual(["z.*", "pgTable", "React.memo"]);
+    const serialized = serializeTestingManifest(manifest);
+    expect(serialized).toContain('"pureFactories"');
+    expect(parseTestingManifest(serialized, "round-trip")).toEqual(manifest);
+  });
 });
 
 function makeTemporaryDirectory(): string {

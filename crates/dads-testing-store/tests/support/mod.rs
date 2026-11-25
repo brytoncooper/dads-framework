@@ -167,6 +167,7 @@ pub fn changed_evidence(path: &str, export: &str) -> ChangedModuleEvidence {
         every_hunk_is_attributed: true,
         semantic_change: true,
         type_only_change: false,
+        module_eval_changed: false,
     }
 }
 

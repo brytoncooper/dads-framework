@@ -8,6 +8,8 @@ use crate::export_declarations::{
 use crate::facts::{
     JsImportFact, JsImportKind, JsLanguage, JsModuleFacts, JsSymbolFact, JsUncertainty,
 };
+use crate::file_discovery::WorkspaceFileIndex;
+use crate::fs_reads::collect_fs_read_imports;
 use crate::import_declarations::{
     ImportFactContext, ImportFactInput, dynamic_import_requested_symbols, import_fact,
     requested_binding_facts,
@@ -31,6 +33,7 @@ struct ImportScan<'a> {
     path: &'a str,
     resolver: &'a Resolver,
     source: &'a str,
+    workspace_index: &'a WorkspaceFileIndex,
 }
 
 pub(crate) fn analyze_file(
@@ -38,6 +41,7 @@ pub(crate) fn analyze_file(
     absolute_path: &Path,
     path: &str,
     resolver: &Resolver,
+    workspace_index: &WorkspaceFileIndex,
 ) -> Result<(JsModuleFacts, Vec<JsUncertainty>), JsUncertainty> {
     let (source, source_type) = read_source(workspace_root, absolute_path)?;
     let allocator = Allocator::default();
@@ -63,6 +67,7 @@ pub(crate) fn analyze_file(
         path,
         resolver,
         source: &source,
+        workspace_index,
     };
     let mut imports = collect_imports(&scan, module_record, &semantic.semantic, &mut uncertainties);
     attach_intra_file_export_deps(
@@ -218,6 +223,15 @@ fn collect_imports(
         scan.resolver,
         scan.source,
         uncertainties,
+    ));
+    imports.extend(collect_fs_read_imports(
+        module_record,
+        semantic,
+        scan.source,
+        scan.workspace_root,
+        scan.absolute_path,
+        scan.path,
+        scan.workspace_index,
     ));
     imports.sort_by(|left, right| {
         left.specifier

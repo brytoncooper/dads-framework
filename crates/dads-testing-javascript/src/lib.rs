@@ -4,6 +4,7 @@
 //! strings and byte spans before this crate returns, so consumers never retain Oxc IDs, lifetimes,
 //! AST nodes, or resolver values.
 
+mod asset_evidence;
 mod changed_module_evidence;
 mod commonjs;
 mod diff_hunks;
@@ -12,12 +13,16 @@ mod export_declarations;
 mod facts;
 mod file_discovery;
 mod frontend;
+mod fs_bindings;
+mod fs_reads;
 mod graph_export;
 mod import_declarations;
 mod intra_file_deps;
 mod intra_file_purity;
+mod meta_glob;
 mod module_analysis;
 mod module_statement_spans;
+mod path_eval;
 mod private_helper_attribution;
 mod removed_paths;
 mod spans;

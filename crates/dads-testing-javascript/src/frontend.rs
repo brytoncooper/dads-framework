@@ -1,10 +1,11 @@
 //! The entry points the store and CLI call: a whole-workspace analysis, a request-scoped graph,
 //! and the incremental replacement path that decides when a patch is still safe.
 
+use crate::asset_evidence::{asset_changed_evidence, referenced_asset_paths};
 use crate::changed_module_evidence::changed_module_evidence;
-use crate::facts::{JsModuleFacts, JsUncertainty, JsWorkspaceFacts};
-use crate::file_discovery::discover_javascript_files;
-use crate::graph_export::copy_to_core_graph;
+use crate::facts::{JsImportKind, JsModuleFacts, JsUncertainty, JsWorkspaceFacts};
+use crate::file_discovery::{WorkspaceFileIndex, discover_javascript_files};
+use crate::graph_export::{copy_to_core_graph, copy_to_core_graph_patch};
 use crate::module_analysis::analyze_file;
 use crate::removed_paths::removed_javascript_path_exists;
 use crate::workspace::{git_output, is_javascript_path, workspace_relative_path};
@@ -47,8 +48,9 @@ pub(crate) fn analyze_workspace_roots(
         })
         .collect::<Vec<_>>();
     let resolver = javascript_resolver();
+    let workspace_index = WorkspaceFileIndex::build(workspace_root);
     let mut modules = Vec::with_capacity(targets.len());
-    for result in analyze_workspace_paths(workspace_root, &targets, &resolver) {
+    for result in analyze_workspace_paths(workspace_root, &targets, &resolver, &workspace_index) {
         match result {
             Ok((module, mut file_uncertainties)) => {
                 modules.push(module);
@@ -67,18 +69,20 @@ pub(crate) fn analyze_workspace_paths(
     workspace_root: &Path,
     targets: &[(PathBuf, String)],
     resolver: &Resolver,
+    workspace_index: &WorkspaceFileIndex,
 ) -> Vec<FileAnalysisResult> {
     let workers = std::thread::available_parallelism()
         .map(NonZeroUsize::get)
         .unwrap_or(1)
         .min(targets.len());
-    analyze_paths_with_workers(workspace_root, targets, resolver, workers)
+    analyze_paths_with_workers(workspace_root, targets, resolver, workspace_index, workers)
 }
 
 fn analyze_paths_with_workers(
     workspace_root: &Path,
     targets: &[(PathBuf, String)],
     resolver: &Resolver,
+    workspace_index: &WorkspaceFileIndex,
     max_workers: usize,
 ) -> Vec<FileAnalysisResult> {
     let workers = max_workers.min(targets.len());
@@ -86,7 +90,13 @@ fn analyze_paths_with_workers(
         return targets
             .iter()
             .map(|(absolute_path, path)| {
-                analyze_file(workspace_root, absolute_path, path, resolver)
+                analyze_file(
+                    workspace_root,
+                    absolute_path,
+                    path,
+                    resolver,
+                    workspace_index,
+                )
             })
             .collect();
     }
@@ -102,7 +112,13 @@ fn analyze_paths_with_workers(
                     let Some((absolute_path, path)) = targets.get(index) else {
                         break;
                     };
-                    let result = analyze_file(workspace_root, absolute_path, path, resolver);
+                    let result = analyze_file(
+                        workspace_root,
+                        absolute_path,
+                        path,
+                        resolver,
+                        workspace_index,
+                    );
                     local.push((index, result));
                 }
                 local
@@ -119,7 +135,7 @@ fn analyze_paths_with_workers(
         (collected, all_joined)
     });
     if !all_joined {
-        return analyze_paths_with_workers(workspace_root, targets, resolver, 1);
+        return analyze_paths_with_workers(workspace_root, targets, resolver, workspace_index, 1);
     }
     indexed_results.sort_unstable_by_key(|(index, _)| *index);
     indexed_results
@@ -172,7 +188,14 @@ pub fn analyze_request(request: &NativeRequest) -> Option<DependencyGraph> {
     }
     let project_roots = dads_testing_core::manifest_project_roots(request);
     let facts = analyze_workspace_roots(workspace_root, project_roots.as_deref());
-    let changes = changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)?;
+    let asset_paths = referenced_asset_paths(&facts.modules);
+    let mut changes =
+        changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)?;
+    changes.extend(asset_changed_evidence(
+        workspace_root,
+        request.base.as_deref(),
+        &asset_paths,
+    )?);
     Some(copy_to_core_graph(facts).with_changed_module_evidence(changes))
 }
 
@@ -182,7 +205,7 @@ pub struct JavaScriptFrontend;
 
 impl GraphFrontend for JavaScriptFrontend {
     fn frontend_version(&self) -> u32 {
-        15
+        16
     }
 
     fn initial_index(&mut self, request: &NativeRequest) -> Result<DependencyGraph, String> {
@@ -232,6 +255,17 @@ pub(crate) fn incremental_request(
         return Err("A delete or rename invalidates retained resolution edges.".to_owned());
     }
     let facts = analyze_changed_paths(workspace_root, &previous, changed_paths)?;
+    if facts.modules.iter().any(|module| {
+        module.imports.iter().any(|import| {
+            import.kind == JsImportKind::Asset
+                && import
+                    .resolved_path
+                    .as_deref()
+                    .is_some_and(|resolved| !previous.contains_path(resolved))
+        })
+    }) {
+        return Err("A newly referenced asset requires a full graph rebuild.".to_owned());
+    }
     let fresh_changes =
         changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)
             .ok_or_else(|| "Cannot attribute changed module exports.".to_owned())?;
@@ -245,7 +279,7 @@ pub(crate) fn incremental_request(
         .filter(|entry| !patched_set.contains(entry.path.as_str()))
         .collect::<Vec<_>>();
     merged_changes.extend(fresh_changes);
-    let patched = copy_to_core_graph(facts);
+    let patched = copy_to_core_graph_patch(facts);
     let modules = patched.materialize_modules();
     let mut uncertainties_by_path = std::collections::BTreeMap::<String, Vec<_>>::new();
     for uncertainty in previous
@@ -285,11 +319,12 @@ fn analyze_changed_paths(
         targets.push((absolute_path, path.clone()));
     }
     let resolver = javascript_resolver();
+    let workspace_index = WorkspaceFileIndex::build(workspace_root);
     let mut facts = JsWorkspaceFacts {
         modules: Vec::with_capacity(targets.len()),
         uncertainties: Vec::new(),
     };
-    for result in analyze_workspace_paths(workspace_root, &targets, &resolver) {
+    for result in analyze_workspace_paths(workspace_root, &targets, &resolver, &workspace_index) {
         match result {
             Ok((module, mut uncertainties)) => {
                 facts.modules.push(module);

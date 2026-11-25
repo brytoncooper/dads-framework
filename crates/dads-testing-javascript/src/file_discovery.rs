@@ -6,7 +6,8 @@
 //! directory traversal with a conservative ignore list.
 
 use crate::facts::JsUncertainty;
-use crate::workspace::{git_output, is_javascript_path, uncertainty};
+use crate::workspace::{git_output, is_javascript_path, uncertainty, workspace_relative_path};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -27,6 +28,133 @@ const IGNORED_DIRS: &[&str] = &[
     ".lake",
     "_apalache-out",
 ];
+
+/// Sorted workspace file inventory built once per analysis pass so static `fs` directory reads and
+/// `import.meta.glob` patterns resolve in O(log N) via binary search.
+#[derive(Debug, Default)]
+pub(crate) struct WorkspaceFileIndex {
+    files: Vec<String>,
+    canonical_root: Option<PathBuf>,
+}
+
+impl WorkspaceFileIndex {
+    pub(crate) fn build(workspace_root: &Path) -> Self {
+        let canonical_root = workspace_root.canonicalize().ok();
+        let mut files = collect_git_workspace_files(workspace_root).unwrap_or_else(|| {
+            let mut discovered = Vec::new();
+            collect_all_workspace_files(workspace_root, workspace_root, &mut discovered);
+            discovered
+        });
+        files.sort();
+        files.dedup();
+        Self {
+            files,
+            canonical_root,
+        }
+    }
+
+    pub(crate) fn canonical_root(&self) -> Option<&Path> {
+        self.canonical_root.as_deref()
+    }
+
+    /// Returns all indexed workspace files strictly underneath `dir_rel` using O(log N) range
+    /// binary search. Refuses to expand the workspace root itself.
+    pub(crate) fn files_under_dir(&self, dir_rel: &str) -> &[String] {
+        let trimmed = dir_rel.trim_matches('/');
+        if trimmed.is_empty() || trimmed == "." {
+            return &[];
+        }
+        let prefix = format!("{trimmed}/");
+        let start = self
+            .files
+            .partition_point(|path| path.as_str() < prefix.as_str());
+        let len = self.files[start..].partition_point(|path| path.starts_with(&prefix));
+        &self.files[start..start + len]
+    }
+}
+
+pub(crate) fn is_ignored_workspace_rel_path(rel: &str) -> bool {
+    rel.split('/')
+        .any(|segment| IGNORED_DIRS.contains(&segment))
+}
+
+fn collect_git_workspace_files(workspace_root: &Path) -> Option<Vec<String>> {
+    let output = git_output(
+        workspace_root,
+        &[
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ],
+    )?;
+    if !output.is_empty() && output.last() != Some(&0) {
+        return None;
+    }
+    let deleted: Option<HashSet<String>> =
+        git_output(workspace_root, &["ls-files", "--deleted", "-z"]).and_then(|raw_deleted| {
+            if !raw_deleted.is_empty() && raw_deleted.last() != Some(&0) {
+                return None;
+            }
+            Some(
+                raw_deleted
+                    .split(|byte| *byte == 0)
+                    .filter(|entry| !entry.is_empty())
+                    .filter_map(|entry| std::str::from_utf8(entry).ok())
+                    .map(|rel| rel.replace('\\', "/"))
+                    .collect(),
+            )
+        });
+    let mut files = Vec::new();
+    for raw in output.split(|byte| *byte == 0) {
+        if raw.is_empty() {
+            continue;
+        }
+        let Ok(rel) = std::str::from_utf8(raw) else {
+            continue;
+        };
+        let normalized = rel.replace('\\', "/");
+        if is_ignored_workspace_rel_path(&normalized) {
+            continue;
+        }
+        let exists = match &deleted {
+            Some(deleted_set) => !deleted_set.contains(&normalized),
+            None => workspace_root.join(&normalized).is_file(),
+        };
+        if exists {
+            files.push(normalized);
+        }
+    }
+    Some(files)
+}
+
+fn collect_all_workspace_files(workspace_root: &Path, directory: &Path, files: &mut Vec<String>) {
+    let Ok(entries) = fs::read_dir(directory) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let file_name = entry.file_name();
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if file_type.is_dir() {
+            if file_name
+                .to_str()
+                .is_some_and(|name| IGNORED_DIRS.contains(&name))
+            {
+                continue;
+            }
+            collect_all_workspace_files(workspace_root, &path, files);
+        } else if file_type.is_file()
+            && let Some(rel) = workspace_relative_path(workspace_root, &path)
+            && !is_ignored_workspace_rel_path(&rel)
+        {
+            files.push(rel);
+        }
+    }
+}
 
 pub(crate) fn discover_javascript_files(
     workspace_root: &Path,

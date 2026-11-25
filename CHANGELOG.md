@@ -4,6 +4,22 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.8.2] - 2026-11-25
+
+Independent soundness & precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Single-source-of-truth planner → receipt cache input closure (`dads-testing-receipt-v4`):** The planner now emits authoritative `cacheInputs` (`cacheable`, `projectRoots`, `impactPaths`, `extraFiles`) on every runnable `TaskDecision` (carried through `--plan-file`), and `FileReceiptStore` hashes all Oxc-imported dependency projects, `fallbackDependencies`, `task.impact.paths` (exact files, directories, and globs), `sql_impact` roots/snapshots, `setupFiles`, and root `tsconfig*.json` / workspace config files. Tasks with incomplete closures (`impact.mode: "always"`, `fullFallback`, missing graph, or unscoped dynamic imports on the forward closure) fail closed (`cacheable: false`). Receipt key domain bumped from `v3` to `v4`.
+- **Unified Oxc + `fallbackDependencies` project widening:** Uncertainty widening (`propagate_fallback_dependents`) and `dad-test diagnose` closures now union Oxc cross-project imports with declared `fallbackDependencies` so projects without manual `implicitDependencies` never silently skip downstream dependents on uncertainties.
+- **Top-level module-evaluation side-effect soundness (`module_eval_changed`):** Impure export initializers (`export const marker = setRate(5)`, `export const marker = (shared.factor = 5)`), class static blocks/impure static fields, private helpers called by impure top-level statements, and added/changed runtime imports now propagate transitively across all runtime import edges (preserving `import type` erasure and file-level Vitest narrowing), backed by updated Lean 4 proofs (`lake build`, 0 `sorry`s, 6/6 differential oracle) and an expanded 28-case release soundness corpus (0 false negatives, 0 skipped changed outcomes).
+- **First-class static non-JS imports & native static `fs` / `import.meta.glob` edges:** Static imports of workspace non-JS files (`.json`, `.css`, `.sql`, etc.) and statically resolvable `fs` file/directory reads (`readFileSync`, `readFile`, `readdirSync`, `readdir`, `existsSync`, `statSync`, `new URL(..., import.meta.url)`, `join`/`resolve` from `__dirname`/`import.meta.dirname`, `import.meta.glob`) are now wired directly into the Oxc graph without false `check-boundaries` violations or manual `impact.paths`.
+- **Task failure output streaming:** Failing tasks now stream tails from both `stdout` (last 30 lines) and `stderr` (last 20 lines) so Vitest assertion failures are never masked behind stderr noise.
+
+### Added
+
+- **Purity narrowing (`/*#__PURE__*/`, pure built-ins, and `workspace.pureFactories`):** Supports standard `/*#__PURE__*/`/`/*@__PURE__*/` annotations, unshadowed pure JS built-ins (`Object.freeze`, `Symbol`, pure `RegExp`/`Set`/`Map`), and optional manifest `workspace.pureFactories` (e.g. `["z.*", "pgTable", "createContext"]`) so pure declarative schema/component factories stay symbol-narrow.
+
 ## [@dads-framework/testing 0.8.1] - 2026-11-24
 
 Independent patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

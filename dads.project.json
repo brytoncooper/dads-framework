@@ -77,6 +77,15 @@
       "skills": ["dads-orient"]
     },
     {
+      "name": "dads-testing-dst",
+      "root": "crates/dads-testing-dst",
+      "responsibility": "Deterministic Simulation Testing harness that verifies dad-test selection and caching soundness across thousands of seeded workspaces against a real Node oracle.",
+      "kind": "tooling",
+      "allowedDependencies": [],
+      "verification": ["cargo clippy -p dads-testing-dst --all-targets -- -D warnings"],
+      "skills": ["dads-orient"]
+    },
+    {
       "name": "@dads-framework/testing-native-darwin-arm64",
       "root": "packages/testing/native/darwin-arm64",
       "responsibility": "Distributes the macOS arm64 dad-test executable.",

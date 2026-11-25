@@ -30,4 +30,6 @@ pub use facts::{
     JsImportFact, JsImportKind, JsLanguage, JsModuleFacts, JsPosition, JsSpan, JsSymbolFact,
     JsUncertainty, JsWorkspaceFacts,
 };
-pub use frontend::{JavaScriptFrontend, analyze_request, analyze_workspace};
+pub use frontend::{
+    JavaScriptFrontend, analyze_request, analyze_workspace, analyze_workspace_graph,
+};

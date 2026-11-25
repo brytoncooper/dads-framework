@@ -3,6 +3,10 @@
 //! The wire contract lives in `protocol`; everything else is how the answer is reached — the
 //! manifest that declares the workspace, the scope git resolves, the plan the evidence selects,
 //! and the scheduler that runs it.
+mod boundaries;
+mod boundaries_config;
+mod boundaries_index;
+mod boundaries_match;
 mod diagnose;
 mod diagnose_reachability;
 mod diagnose_remediation;
@@ -29,6 +33,9 @@ mod sql_manifest;
 mod sql_parser;
 mod task_causes;
 
+pub use boundaries_config::{
+    BoundariesResult, BoundaryViolation, DepConstraint, WorkspaceBoundaries,
+};
 pub use execute::{
     execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,
     expanded_manifest_bytes, graph_analysis_can_change_the_plan, manifest_project_roots,

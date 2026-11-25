@@ -157,6 +157,34 @@ export type TestingExpandManifestRequest = {
   readonly nativeBinary?: string;
 };
 
+export type TestingCheckBoundariesRequest = {
+  readonly workspaceRoot: string;
+  readonly manifestPath?: string;
+  readonly base?: string;
+  readonly head?: string;
+  readonly boundariesConfigPath?: string;
+  /** An explicit native binary is intended for local development and test harnesses. */
+  readonly nativeBinary?: string;
+};
+
+export type TestingBoundaryViolation = {
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+  readonly sourceProject: string;
+  readonly targetProject?: string;
+  readonly specifier: string;
+  readonly rule: string;
+  readonly message: string;
+};
+
+export type TestingBoundariesResult = {
+  readonly schemaVersion: 1;
+  readonly checkedFiles: number;
+  readonly totalProjects: number;
+  readonly violations: readonly TestingBoundaryViolation[];
+};
+
 export type TestingRemediationSafety = "safe" | "verify-before-changing" | "keep-widened-unless-verified";
 
 export type TestingDiagnoseRemediation = {
@@ -222,7 +250,7 @@ export type TestingDiagnoseResult = {
   readonly fallbackTraps: readonly TestingFallbackTrap[];
 };
 
-type NativeOperation = "plan" | "run" | "diagnose" | "expand-manifest";
+type NativeOperation = "plan" | "run" | "diagnose" | "expand-manifest" | "check-boundaries";
 
 type NativeResponse = {
   readonly schemaVersion: number;
@@ -233,6 +261,7 @@ type NativeResponse = {
     readonly run?: TestingRunResult;
     readonly diagnose?: TestingDiagnoseResult;
     readonly manifest?: unknown;
+    readonly boundaries?: TestingBoundariesResult;
   };
   readonly error?: string;
 };
@@ -257,6 +286,7 @@ type NativeRequest = {
   readonly cache?: boolean;
   readonly remoteCacheUrl?: string;
   readonly stream?: boolean;
+  readonly boundariesConfigPath?: string;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -291,9 +321,21 @@ export async function expandTestingManifest(request: TestingExpandManifestReques
   return parseTestingManifest(JSON.stringify(response.manifest), request.manifestPath ?? "dads.testing.json");
 }
 
+export async function checkTestingBoundaries(request: TestingCheckBoundariesRequest): Promise<TestingBoundariesResult> {
+  const response = await invokeNativeTestingEngine("check-boundaries", request);
+  if (!response.boundaries) {
+    throw new Error("The native testing engine returned a check-boundaries response without boundary details.");
+  }
+  return response.boundaries;
+}
+
+type NativeInvocationRequest = TestingOperationRequest & {
+  readonly boundariesConfigPath?: string;
+};
+
 async function invokeNativeTestingEngine(
   operation: NativeOperation,
-  request: TestingOperationRequest,
+  request: NativeInvocationRequest,
 ): Promise<NonNullable<NativeResponse["result"]>> {
   const nativeRequest = toNativeRequest(operation, request);
   const response = await runNativeProcess(
@@ -306,7 +348,7 @@ async function invokeNativeTestingEngine(
 }
 
 /** An absent field is omitted rather than sent as null, which the engine refuses. */
-function toNativeRequest(operation: NativeOperation, request: TestingOperationRequest): NativeRequest {
+function toNativeRequest(operation: NativeOperation, request: NativeInvocationRequest): NativeRequest {
   return {
     schemaVersion: protocolSchemaVersion,
     operation,
@@ -316,6 +358,7 @@ function toNativeRequest(operation: NativeOperation, request: TestingOperationRe
     ...optionalNativeScopeFields(request),
     ...optionalNativeFilterFields(request),
     ...optionalNativeRunFields(request),
+    ...(request.boundariesConfigPath === undefined ? {} : { boundariesConfigPath: request.boundariesConfigPath }),
   };
 }
 

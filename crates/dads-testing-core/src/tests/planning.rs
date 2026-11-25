@@ -300,6 +300,7 @@ fn declared_project(id: &str, root: &str) -> Project {
         id: id.to_owned(),
         root: root.to_owned(),
         fallback_dependencies: Vec::new(),
+        tags: Vec::new(),
     }
 }
 

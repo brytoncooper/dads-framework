@@ -22,6 +22,15 @@ pub fn analyze_workspace(workspace_root: &Path) -> JsWorkspaceFacts {
     analyze_workspace_roots(workspace_root, None)
 }
 
+/// Analyzes the workspace's JavaScript/TypeScript modules in parallel and returns a core
+/// `DependencyGraph` without requiring Git metadata or changed-module diff attribution.
+pub fn analyze_workspace_graph(
+    workspace_root: &Path,
+    project_roots: Option<&[String]>,
+) -> DependencyGraph {
+    copy_to_core_graph(analyze_workspace_roots(workspace_root, project_roots))
+}
+
 pub(crate) fn analyze_workspace_roots(
     workspace_root: &Path,
     project_roots: Option<&[String]>,

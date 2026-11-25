@@ -1,5 +1,6 @@
 import { parseCommandOptions } from "./cli-arguments.js";
 import type { OptionSpecification, ParsedArguments } from "./cli-arguments.js";
+import { checkBoundariesCommand } from "./commands/check-boundaries.js";
 import { diagnoseCommand } from "./commands/diagnose.js";
 import { expandCommand } from "./commands/expand.js";
 import { explainCommand } from "./commands/explain.js";
@@ -28,15 +29,16 @@ export type DadTestCommand = {
 
 const usage =
   [
-    "Usage: dad-test <plan|run|explain|diagnose|init|expand> [options] [--json]",
+    "Usage: dad-test <plan|run|explain|diagnose|init|expand|check-boundaries> [options] [--json]",
     "",
     "Commands:",
-    "  plan      Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --manifest)",
-    "  run       Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --jobs, --cache, --remote-cache, --stream, --report)",
-    "  explain   Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task)",
-    "  diagnose  Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
-    "  init      Generate dads.testing.json for npm/pnpm/yarn workspaces (--manifest, --force)",
-    "  expand    Expand declarative workspace.discover into the canonical manifest IR (--manifest, --out)",
+    "  plan              Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --manifest)",
+    "  run               Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --jobs, --cache, --remote-cache, --stream, --report)",
+    "  explain           Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task)",
+    "  diagnose          Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
+    "  init              Generate dads.testing.json for npm/pnpm/yarn workspaces (--manifest, --force)",
+    "  expand            Expand declarative workspace.discover into the canonical manifest IR (--manifest, --out)",
+    "  check-boundaries  Enforce module boundary constraints natively using the Oxc workspace graph (--base, --head, --config, --manifest)",
     "",
     "Options:",
     "  --json    Emit versioned machine-readable JSON output",
@@ -52,6 +54,7 @@ const commands = new Map<string, DadTestCommand>([
   ["diagnose", diagnoseCommand],
   ["init", initCommand],
   ["expand", expandCommand],
+  ["check-boundaries", checkBoundariesCommand],
 ]);
 
 /**
@@ -85,7 +88,7 @@ export async function runDadTestCli(argumentsAfterExecutable: readonly string[],
     }
     const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
-      throw new Error("Expected operation plan, run, explain, diagnose, init, or expand.");
+      throw new Error("Expected operation plan, run, explain, diagnose, init, expand, or check-boundaries.");
     }
     const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);
     return await command.execute(parsed, io, json);

@@ -1,5 +1,6 @@
 //! Validation rules for canonical `TestingManifest` declarations.
 
+use crate::boundaries_config::validate_workspace_boundaries;
 use crate::execute::{TestingError, message};
 use crate::manifest::{
     DeclaredTask, FileNarrowing, ImpactMode, TaskBatchConfig, TaskExecution, TestingManifest,
@@ -141,6 +142,9 @@ fn validate_workspace(workspace: &WorkspaceSettings) -> Result<(), TestingError>
     }
     if let Some(sql) = &workspace.sql {
         validate_workspace_sql(sql)?;
+    }
+    if let Some(boundaries) = &workspace.boundaries {
+        validate_workspace_boundaries(boundaries)?;
     }
     for suffix in &workspace.non_code_suffixes {
         if !suffix.starts_with('.') || suffix.len() < 2 || suffix.contains('/') {

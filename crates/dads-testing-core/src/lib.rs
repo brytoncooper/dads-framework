@@ -27,6 +27,8 @@ mod plan;
 mod plan_file;
 mod protocol;
 mod protocol_diagnose;
+mod protocol_read_guard;
+mod protocol_run;
 pub mod receipts;
 mod scheduler;
 mod scope;
@@ -44,15 +46,15 @@ pub use boundaries_config::{
 pub use execute::{
     execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,
     expanded_manifest_bytes, graph_analysis_can_change_the_plan, manifest_project_roots,
-    manifest_pure_factories_from_root,
+    manifest_pure_factories_from_root, request_uses_read_guard,
 };
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary, IssueScope,
     IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
-    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata,
+    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata, ReadGuardMode,
     RemediationSafety, ResolvedScope, RunCounts, RunResult, TaskCacheInputs, TaskCause,
-    TaskDecision, TaskOutput, TaskRunResult, TaskShard, WideningCulprit,
+    TaskDecision, TaskOutput, TaskRunResult, TaskShard, UndeclaredRead, WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 pub use scope::{is_empty_tree_sha, path_matches_impact};

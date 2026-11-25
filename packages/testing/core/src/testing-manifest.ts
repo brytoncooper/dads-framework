@@ -62,6 +62,7 @@ export type TestingManifest = {
     readonly pureFactories?: readonly string[];
     readonly dynamicImportScopes?: Readonly<Record<string, readonly string[]>>;
     readonly boundaries?: TestingManifestWorkspaceBoundaries;
+    readonly enforceDeclaredReads?: boolean;
   };
   readonly projects: readonly TestingManifestProject[];
   readonly tasks: readonly TestingManifestTask[];
@@ -226,6 +227,7 @@ function serializeWorkspace(workspace: TestingManifest["workspace"]): Readonly<R
       ? {}
       : { dynamicImportScopes: serializeDynamicImportScopes(scopes) }),
     ...(workspace.boundaries === undefined ? {} : { boundaries: serializeWorkspaceBoundaries(workspace.boundaries) }),
+    ...(workspace.enforceDeclaredReads === true ? { enforceDeclaredReads: true } : {}),
   };
 }
 
@@ -242,6 +244,7 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
       "pureFactories",
       "dynamicImportScopes",
       "boundaries",
+      "enforceDeclaredReads",
     ],
     "workspace",
     subject,
@@ -251,6 +254,11 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
   const root = workspace["root"];
   const sql = workspace["sql"];
   const boundaries = workspace["boundaries"];
+  const enforceDeclaredReads = readOptionalWorkspaceBoolean(
+    workspace["enforceDeclaredReads"],
+    "workspace.enforceDeclaredReads",
+    subject,
+  );
   const rawScopes = workspace["dynamicImportScopes"];
   const dynamicImportScopes =
     rawScopes === undefined ? undefined : readDynamicImportScopes(rawScopes, "workspace.dynamicImportScopes", subject);
@@ -267,7 +275,14 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
     ...(boundaries === undefined
       ? {}
       : { boundaries: readWorkspaceBoundaries(boundaries, "workspace.boundaries", subject) }),
+    ...(enforceDeclaredReads === undefined ? {} : { enforceDeclaredReads }),
   };
+}
+
+function readOptionalWorkspaceBoolean(value: unknown, where: string, subject: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new Error(`${subject}: ${where} must be a boolean`);
+  return value;
 }
 
 function readWorkspaceStringLists(

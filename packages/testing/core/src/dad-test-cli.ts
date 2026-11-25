@@ -1,5 +1,6 @@
 import { parseCommandOptions } from "./cli-arguments.js";
 import type { OptionSpecification, ParsedArguments } from "./cli-arguments.js";
+import { auditCommand } from "./commands/audit.js";
 import { checkBoundariesCommand } from "./commands/check-boundaries.js";
 import { diagnoseCommand } from "./commands/diagnose.js";
 import { expandCommand } from "./commands/expand.js";
@@ -30,11 +31,12 @@ export type DadTestCommand = {
 
 const usage =
   [
-    "Usage: dad-test <plan|run|explain|diagnose|hotspots|init|expand|check-boundaries> [options] [--json]",
+    "Usage: dad-test <plan|run|audit|explain|diagnose|hotspots|init|expand|check-boundaries> [options] [--json]",
     "",
     "Commands:",
-    "  plan              Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --manifest)",
-    "  run               Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --plan-file, --jobs, --cache, --cache-dir, --remote-cache, --stream, --report)",
+    "  plan              Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --enforce-declared-reads, --no-enforce-declared-reads, --manifest)",
+    "  run               Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --plan-file, --jobs, --cache, --cache-dir, --remote-cache, --enforce-declared-reads, --no-enforce-declared-reads, --stream, --report)",
+    "  audit             Trace runtime workspace file reads per task and optionally patch dads.testing.json (--fix, --dry-run, --project, --task, --jobs, --manifest)",
     "  explain           Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task)",
     "  diagnose          Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
     "  hotspots          Rank highest-blast-radius files, barrel re-export hubs, and projects (--limit, --min-projects, --barrels-only, --manifest)",
@@ -52,6 +54,7 @@ const usage =
 const commands = new Map<string, DadTestCommand>([
   ["plan", planCommand],
   ["run", runCommand],
+  ["audit", auditCommand],
   ["explain", explainCommand],
   ["diagnose", diagnoseCommand],
   ["hotspots", hotspotsCommand],
@@ -91,7 +94,9 @@ export async function runDadTestCli(argumentsAfterExecutable: readonly string[],
     }
     const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
-      throw new Error("Expected operation plan, run, explain, diagnose, hotspots, init, expand, or check-boundaries.");
+      throw new Error(
+        "Expected operation plan, run, audit, explain, diagnose, hotspots, init, expand, or check-boundaries.",
+      );
     }
     const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);
     return await command.execute(parsed, io, json);

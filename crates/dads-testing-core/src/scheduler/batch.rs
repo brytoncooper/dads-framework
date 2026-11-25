@@ -45,6 +45,7 @@ pub(super) fn pack_work_units(
     ready: &[usize],
     slot_budget: usize,
     isolated_single: &BTreeSet<usize>,
+    disable_guarded_batching: bool,
 ) -> Vec<WorkUnit> {
     if slot_budget == 0 || ready.is_empty() {
         return Vec::new();
@@ -57,7 +58,9 @@ pub(super) fn pack_work_units(
 
     for &index in ready {
         let task = &prepared[index];
-        if isolated_single.contains(&index) {
+        if isolated_single.contains(&index)
+            || (disable_guarded_batching && task.allowlist.is_some())
+        {
             singles.push(index);
             continue;
         }

@@ -1,5 +1,7 @@
 //! One task, run as a child process: start it inside the workspace, capture both streams under a
 //! fixed byte budget, and report an outcome rather than propagating a failure to start.
+use super::read_guard::{ReadGuardSession, apply_read_guard_result};
+use super::read_guard_allowlist::TaskReadGuardAllowlist;
 use super::results::{completed_task_result, task_error_result};
 use crate::manifest::TaskExecution;
 use crate::protocol::{TaskOutput, TaskRunResult};
@@ -19,8 +21,9 @@ struct CapturedStream {
 
 pub(super) fn execute_task(
     id: String,
-    execution: TaskExecution,
+    mut execution: TaskExecution,
     workspace_root: PathBuf,
+    read_guard: Option<(&ReadGuardSession, &TaskReadGuardAllowlist, usize)>,
 ) -> TaskRunResult {
     let started_at = Instant::now();
     let task_directory = match &execution.cwd {
@@ -31,6 +34,15 @@ pub(super) fn execute_task(
             }
         }
         None => workspace_root,
+    };
+    let guard_invocation = match read_guard {
+        Some((session, allowlist, worker_id)) => {
+            match session.prepare_invocation(worker_id, allowlist, &mut execution) {
+                Ok(invocation) => Some((session.mode(), invocation)),
+                Err(error) => return task_error_result(id, started_at, error),
+            }
+        }
+        None => None,
     };
     let mut command = command_for(&execution);
     if !execution.env.is_empty() {
@@ -61,12 +73,17 @@ pub(super) fn execute_task(
     let stdout = join_capture(stdout_reader, "stdout");
     let stderr = join_capture(stderr_reader, "stderr");
     let duration_ms = u64::try_from(started_at.elapsed().as_millis()).unwrap_or(u64::MAX);
-    match (stdout, stderr) {
+    let mut result = match (stdout, stderr) {
         (Ok(stdout), Ok(stderr)) => {
             completed_task_result(id, status.code(), duration_ms, stdout, stderr)
         }
         (Err(error), _) | (_, Err(error)) => task_error_result(id, started_at, error),
+    };
+    if let Some((mode, invocation)) = guard_invocation {
+        let violations = invocation.collect_violations();
+        apply_read_guard_result(&mut result, mode, violations);
     }
+    result
 }
 
 fn command_for(execution: &TaskExecution) -> Command {

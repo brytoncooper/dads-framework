@@ -4,10 +4,15 @@
 //! an unattributed global failure.
 
 use super::progress::rebase_file_for_cwd;
+use super::read_guard::ReadGuardSession;
+use super::read_guard_allowlist::TaskReadGuardAllowlist;
+use super::vitest_report::{
+    FileOutcome, VitestJsonReport, collect_failure_lines, duration_from_timestamps,
+    normalize_relative_str, normalize_report_path,
+};
 use super::worker::execute_task;
 use crate::manifest::TaskExecution;
-use crate::protocol::{TaskOutput, TaskRunResult};
-use serde::Deserialize;
+use crate::protocol::{ReadGuardMode, TaskOutput, TaskRunResult};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -29,77 +34,44 @@ impl Drop for TempFileGuard {
     }
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct VitestJsonReport {
-    #[serde(default)]
-    success: bool,
-    #[serde(default)]
-    test_results: Vec<VitestFileResult>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct VitestFileResult {
-    name: String,
-    status: String,
-    #[serde(default)]
-    start_time: f64,
-    #[serde(default)]
-    end_time: f64,
-    #[serde(default)]
-    message: String,
-    #[serde(default)]
-    assertion_results: Vec<VitestAssertionResult>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct VitestAssertionResult {
-    #[serde(default)]
-    full_name: String,
-    #[serde(default)]
-    status: String,
-    #[serde(default)]
-    failure_messages: Vec<String>,
-}
-
-struct FileOutcome {
-    passed: bool,
-    duration_ms: u64,
-    failure_lines: Vec<String>,
-}
-
-/// Runs a single batched Vitest invocation for `members` and returns one attributed `TaskRunResult`
-/// per member in `members` order.
+/// Runs a batched Vitest invocation for `members`. Returns `(results, isolate_for_read_guard)`.
 pub(super) fn execute_vitest_batch(
     worker_id: usize,
     mut execution: TaskExecution,
     members: Vec<VitestBatchMember>,
     workspace_root: PathBuf,
-) -> Vec<(usize, TaskRunResult)> {
+    read_guard: Option<(&ReadGuardSession, &TaskReadGuardAllowlist)>,
+) -> (Vec<(usize, TaskRunResult)>, bool) {
     let seq = REPORT_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let report_path = std::env::temp_dir().join(format!(
         "dads-vitest-batch-{}-{worker_id}-{seq}.json",
         std::process::id()
     ));
     let _guard = TempFileGuard(report_path.clone());
-
     let batch_cwd = execution.cwd.clone();
     append_vitest_batch_args(&mut execution, &members, &report_path);
-
     let first_id = members
         .first()
         .map_or_else(|| "vitest-batch".to_owned(), |m| m.id.clone());
-    let batch_result = execute_task(first_id, execution, workspace_root.clone());
-
-    attribute_from_report_file(
+    let batch_result = execute_task(
+        first_id,
+        execution,
+        workspace_root.clone(),
+        read_guard.map(|(session, allowlist)| (session, allowlist, worker_id)),
+    );
+    if read_guard.is_some_and(|(session, _)| session.mode() == ReadGuardMode::Enforce)
+        && !batch_result.undeclared_reads.is_empty()
+    {
+        return (Vec::new(), true);
+    }
+    let attributed = attribute_from_report_file(
         &report_path,
         &members,
         &batch_result,
         &workspace_root,
         batch_cwd.as_deref(),
-    )
+    );
+    (attributed, false)
 }
 
 fn append_vitest_batch_args(
@@ -282,6 +254,7 @@ fn attribute_member(
                 },
                 error: None,
                 cached: false,
+                undeclared_reads: Vec::new(),
             },
             false,
         );
@@ -313,6 +286,7 @@ fn attribute_member(
             stderr,
             error,
             cached: false,
+            undeclared_reads: Vec::new(),
         },
         true,
     )
@@ -338,91 +312,9 @@ fn fail_all_members(
                     stderr: batch_result.stderr.clone(),
                     error: Some(error.clone()),
                     cached: false,
+                    undeclared_reads: Vec::new(),
                 },
             )
         })
         .collect()
-}
-
-fn collect_failure_lines(file_path: &str, file_result: &VitestFileResult) -> Vec<String> {
-    let mut lines = Vec::new();
-    let trimmed_message = file_result.message.trim();
-    if !trimmed_message.is_empty() {
-        lines.push(format!("{file_path}: {trimmed_message}"));
-    }
-    for assertion in &file_result.assertion_results {
-        if assertion.status != "failed" {
-            continue;
-        }
-        if assertion.failure_messages.is_empty() {
-            lines.push(format!("FAIL {file_path} > {}", assertion.full_name));
-        } else {
-            for message in &assertion.failure_messages {
-                lines.push(format!(
-                    "FAIL {file_path} > {}: {}",
-                    assertion.full_name,
-                    message.trim()
-                ));
-            }
-        }
-    }
-    lines
-}
-
-fn normalize_report_path(
-    raw: &str,
-    workspace_root: &Path,
-    canonical_root: Option<&Path>,
-    batch_cwd: Option<&str>,
-) -> Option<String> {
-    let candidate = Path::new(raw);
-    if candidate.is_absolute() {
-        if let Ok(rel) = candidate.strip_prefix(workspace_root) {
-            return Some(path_to_forward_slashes(rel));
-        }
-        if let Some(canon_root) = canonical_root {
-            if let Ok(rel) = candidate.strip_prefix(canon_root) {
-                return Some(path_to_forward_slashes(rel));
-            }
-            if let Ok(canon_file) = fs::canonicalize(candidate)
-                && let Ok(rel) = canon_file.strip_prefix(canon_root)
-            {
-                return Some(path_to_forward_slashes(rel));
-            }
-        }
-        return None;
-    }
-    let normalized = normalize_relative_str(raw);
-    if let Some(cwd) = batch_cwd {
-        let trimmed = cwd.trim_end_matches('/');
-        if !trimmed.is_empty()
-            && trimmed != "."
-            && !workspace_root.join(&normalized).exists()
-            && !normalized.starts_with(&format!("{trimmed}/"))
-        {
-            return Some(format!("{trimmed}/{normalized}"));
-        }
-    }
-    Some(normalized)
-}
-
-fn normalize_relative_str(raw: &str) -> String {
-    let replaced = raw.replace('\\', "/");
-    replaced.strip_prefix("./").unwrap_or(&replaced).to_owned()
-}
-
-fn path_to_forward_slashes(path: &Path) -> String {
-    normalize_relative_str(&path.to_string_lossy())
-}
-
-fn duration_from_timestamps(start_ms: f64, end_ms: f64) -> u64 {
-    if !start_ms.is_finite() || !end_ms.is_finite() {
-        return 0;
-    }
-    let diff = (end_ms - start_ms).max(0.0).round();
-    if diff >= u64::MAX as f64 {
-        u64::MAX
-    } else {
-        diff as u64
-    }
 }

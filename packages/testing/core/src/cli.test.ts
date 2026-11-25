@@ -101,7 +101,7 @@ describe("dad-test command line", () => {
     const harness = createHarness();
     expect(await runDadTestCli(["frobnicate"], harness.io)).toBe(1);
     expect(harness.stderr()).toBe(
-      "dad-test: Expected operation plan, run, explain, diagnose, hotspots, init, expand, or check-boundaries.\n",
+      "dad-test: Expected operation plan, run, audit, explain, diagnose, hotspots, init, expand, or check-boundaries.\n",
     );
 
     const jsonHarness = createHarness();
@@ -110,7 +110,7 @@ describe("dad-test command line", () => {
       `${JSON.stringify({
         schemaVersion: 1,
         ok: false,
-        error: "Expected operation plan, run, explain, diagnose, hotspots, init, expand, or check-boundaries.",
+        error: "Expected operation plan, run, audit, explain, diagnose, hotspots, init, expand, or check-boundaries.",
       })}\n`,
     );
   });
@@ -125,6 +125,7 @@ describe("dad-test command line", () => {
     for (const operation of [
       "plan",
       "run",
+      "audit",
       "explain",
       "diagnose",
       "hotspots",

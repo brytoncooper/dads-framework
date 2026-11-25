@@ -14,6 +14,7 @@ pub(super) fn not_applicable_result(id: &str) -> TaskRunResult {
         stderr: None,
         error: None,
         cached: false,
+        undeclared_reads: Vec::new(),
     }
 }
 
@@ -31,6 +32,7 @@ pub(super) fn cached_task_result(
         stderr,
         error: None,
         cached: true,
+        undeclared_reads: Vec::new(),
     }
 }
 
@@ -66,6 +68,7 @@ pub(super) fn blocked_result(
             failed_dependencies.join(", ")
         )),
         cached: false,
+        undeclared_reads: Vec::new(),
     }
 }
 
@@ -79,6 +82,7 @@ pub(super) fn worker_panic_result(id: &str) -> TaskRunResult {
         stderr: None,
         error: Some("Task worker panicked before reporting a result.".into()),
         cached: false,
+        undeclared_reads: Vec::new(),
     }
 }
 
@@ -99,6 +103,7 @@ pub(super) fn completed_task_result(
             stderr,
             error: None,
             cached: false,
+            undeclared_reads: Vec::new(),
         },
         Some(exit_code) => TaskRunResult {
             id,
@@ -109,6 +114,7 @@ pub(super) fn completed_task_result(
             stderr,
             error: None,
             cached: false,
+            undeclared_reads: Vec::new(),
         },
         None => TaskRunResult {
             id,
@@ -119,6 +125,7 @@ pub(super) fn completed_task_result(
             stderr,
             error: Some("Task ended without an exit code.".into()),
             cached: false,
+            undeclared_reads: Vec::new(),
         },
     }
 }
@@ -138,5 +145,6 @@ pub(super) fn task_error_result(
         stderr: None,
         error: Some(error),
         cached: false,
+        undeclared_reads: Vec::new(),
     }
 }

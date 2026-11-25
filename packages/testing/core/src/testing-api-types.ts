@@ -41,6 +41,14 @@ export type TestingOperationRequest = {
   readonly stream?: boolean;
   /** Optional path to a precomputed `dad-test plan --json` file reused by `run`. */
   readonly planFile?: string;
+  /** Enforce that test tasks only read declared workspace inputs (`--enforce-declared-reads`). */
+  readonly enforceDeclaredReads?: boolean;
+  /** Disable runtime read enforcement even when `workspace.enforceDeclaredReads` is enabled (`--no-enforce-declared-reads`). */
+  readonly noEnforceDeclaredReads?: boolean;
+  /** Audit undeclared workspace file reads per task without failing tasks (used by `dad-test audit`). */
+  readonly auditReads?: boolean;
+  /** Optional explicit path to the V8 read-guard preload hook (for testing). */
+  readonly readGuardHookPath?: string;
   /** Optional sink receiving live progress chunks when `stream` is enabled. */
   readonly onStream?: (chunk: string) => void;
   /** An explicit native binary is intended for local development and test harnesses. */
@@ -134,6 +142,12 @@ export type TestingPlanResult = {
   readonly shard?: TestingPlanShard;
 };
 
+export type TestingUndeclaredRead = {
+  readonly path: string;
+  readonly location?: string;
+  readonly api?: string;
+};
+
 export type TestingTaskRunResult = {
   readonly id: string;
   readonly status: "executed" | "failed" | "blocked" | "not-applicable";
@@ -144,6 +158,8 @@ export type TestingTaskRunResult = {
   readonly error?: string;
   /** True when the passing outcome was replayed from a verified content-hashed receipt. */
   readonly cached?: boolean;
+  /** Undeclared workspace file reads observed at runtime when the read guard is active. */
+  readonly undeclaredReads?: readonly TestingUndeclaredRead[];
 };
 
 export type TestingTaskOutput = {

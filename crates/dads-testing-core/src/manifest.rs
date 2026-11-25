@@ -58,6 +58,8 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) discover: Option<WorkspaceDiscover>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) boundaries: Option<WorkspaceBoundaries>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub(crate) enforce_declared_reads: bool,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]

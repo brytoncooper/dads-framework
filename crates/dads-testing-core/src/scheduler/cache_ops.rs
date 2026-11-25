@@ -1,8 +1,11 @@
 //! Task preparation, parallel receipt key hashing, and parallel L2 lookups using scoped threads.
 
 use super::progress::{PreparedTask, rebase_file_for_cwd};
+use super::read_guard::should_guard_task;
+use super::read_guard_allowlist::AllowlistBuilder;
 use super::receipt_keys::compute_task_receipt_key;
 use crate::execute::{TestingError, message};
+use crate::graph::DependencyGraph;
 use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
 use crate::protocol::{PlanResult, TaskCacheInputs};
 use crate::receipts::{TaskReceiptEntry, TaskReceiptStore};
@@ -53,6 +56,8 @@ pub(super) fn prepare_tasks(
     manifest_file: &Path,
     plan: &PlanResult,
     receipts: Option<&dyn TaskReceiptStore>,
+    graph: Option<&DependencyGraph>,
+    read_guard_active: bool,
 ) -> Result<Vec<PreparedTask>, TestingError> {
     let declared: BTreeMap<&str, &DeclaredTask> = manifest
         .tasks
@@ -60,6 +65,7 @@ pub(super) fn prepare_tasks(
         .map(|task| (task.id.as_str(), task))
         .collect();
     let planned_ids: BTreeSet<&str> = plan.tasks.iter().map(|d| d.id.as_str()).collect();
+    let allowlist_builder = read_guard_active.then(|| AllowlistBuilder::new(manifest, graph));
     let mut staged = Vec::with_capacity(plan.tasks.len());
     for decision in &plan.tasks {
         let task = declared
@@ -80,6 +86,10 @@ pub(super) fn prepare_tasks(
             .filter(|dep| planned_ids.contains(dep.as_str()))
             .cloned()
             .collect();
+        let allowlist = allowlist_builder.as_ref().and_then(|builder| {
+            (decision.decision == "run" && should_guard_task(&task.kind, &execution))
+                .then(|| builder.for_task(task, decision))
+        });
         staged.push((
             *task,
             execution,
@@ -88,12 +98,13 @@ pub(super) fn prepare_tasks(
             decision.decision == "run" && task.cache,
             decision.selected_files.as_slice(),
             decision.cache_inputs.as_ref(),
+            allowlist,
         ));
     }
     let key_inputs: Vec<KeyInput<'_>> = staged
         .iter()
         .map(
-            |(task, execution, _, _, should_hash, selected_files, cache_inputs)| KeyInput {
+            |(task, execution, _, _, should_hash, selected_files, cache_inputs, _)| KeyInput {
                 task,
                 execution,
                 selected_files,
@@ -107,16 +118,18 @@ pub(super) fn prepare_tasks(
         .into_iter()
         .zip(keys)
         .map(
-            |((task, execution, base_args_len, dependencies, _, selected, _), receipt_key)| {
-                PreparedTask {
-                    id: task.id.clone(),
-                    dependencies,
-                    execution,
-                    receipt_key,
-                    cache: task.cache,
-                    selected_files: selected.to_vec(),
-                    base_args_len,
-                }
+            |(
+                (task, execution, base_args_len, dependencies, _, selected, _, allowlist),
+                receipt_key,
+            )| PreparedTask {
+                id: task.id.clone(),
+                dependencies,
+                execution,
+                receipt_key,
+                cache: task.cache,
+                selected_files: selected.to_vec(),
+                base_args_len,
+                allowlist,
             },
         )
         .collect())

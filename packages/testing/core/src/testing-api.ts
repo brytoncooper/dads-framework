@@ -72,6 +72,10 @@ type NativeRequest = {
   readonly remoteCacheUrl?: string;
   readonly stream?: boolean;
   readonly planFile?: string;
+  readonly enforceDeclaredReads?: boolean;
+  readonly noEnforceDeclaredReads?: boolean;
+  readonly auditReads?: boolean;
+  readonly readGuardHookPath?: string;
   readonly hotspots?: NativeHotspotsOptions;
   readonly boundariesConfigPath?: string;
 };
@@ -195,6 +199,16 @@ function optionalNativeRunFields(request: TestingOperationRequest): Partial<Nati
     ...(request.remoteCacheUrl === undefined ? {} : { remoteCacheUrl: request.remoteCacheUrl }),
     ...(request.stream === true ? { stream: true } : {}),
     ...(request.planFile === undefined ? {} : { planFile: request.planFile }),
+    ...optionalNativeReadGuardFields(request),
+  };
+}
+
+function optionalNativeReadGuardFields(request: TestingOperationRequest): Partial<NativeRequest> {
+  return {
+    ...(request.enforceDeclaredReads === true ? { enforceDeclaredReads: true } : {}),
+    ...(request.noEnforceDeclaredReads === true ? { noEnforceDeclaredReads: true } : {}),
+    ...(request.auditReads === true ? { auditReads: true } : {}),
+    ...(request.readGuardHookPath === undefined ? {} : { readGuardHookPath: request.readGuardHookPath }),
   };
 }
 

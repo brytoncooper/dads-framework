@@ -28,6 +28,8 @@ const operationOptions: readonly OptionSpecification[] = [
   { name: "--shard", kind: "value" },
   { name: "--weights", kind: "value" },
   { name: "--jobs", kind: "value" },
+  { name: "--enforce-declared-reads", kind: "flag" },
+  { name: "--no-enforce-declared-reads", kind: "flag" },
   { name: "--report", kind: "optional-value" },
 ];
 
@@ -245,7 +247,17 @@ function optionalExecutionFields(parsed: ParsedArguments, io: DadTestCliIo): Par
     ...(cacheDir === undefined ? {} : { cacheDir }),
     ...(remoteCacheUrl === undefined ? {} : { remoteCacheUrl }),
     ...(planFile === undefined ? {} : { planFile: resolve(io.cwd, planFile) }),
+    ...optionalReadGuardFlags(parsed),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
+  };
+}
+
+function optionalReadGuardFlags(parsed: ParsedArguments): Partial<TestingOperationRequest> {
+  const noEnforce = parsed.flags.has("--no-enforce-declared-reads");
+  const enforce = parsed.flags.has("--enforce-declared-reads") && !noEnforce;
+  return {
+    ...(enforce ? { enforceDeclaredReads: true } : {}),
+    ...(noEnforce ? { noEnforceDeclaredReads: true } : {}),
   };
 }
 

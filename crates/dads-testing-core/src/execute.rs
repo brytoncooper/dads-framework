@@ -11,7 +11,7 @@ use crate::plan::{PlanFilters, build_plan};
 use crate::plan_file::load_plan_file;
 use crate::protocol::{
     NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts,
-    PlanResult, ResolvedScope,
+    PlanResult, ReadGuardMode, ResolvedScope,
 };
 use crate::receipts::TaskReceiptStore;
 use crate::scheduler;
@@ -78,6 +78,23 @@ pub fn graph_analysis_can_change_the_plan(request: &NativeRequest) -> bool {
     load_declared_manifest(request)
         .map(|(_, _, manifest)| manifest.declares_graph_reader())
         .unwrap_or(true)
+}
+
+/// Whether a `run` request enables runtime read guarding (audit or enforce via CLI or manifest).
+pub fn request_uses_read_guard(request: &NativeRequest) -> bool {
+    if request.operation != Operation::Run {
+        return false;
+    }
+    if request.audit_reads {
+        return true;
+    }
+    if request.no_enforce_declared_reads {
+        return false;
+    }
+    request.enforce_declared_reads
+        || load_declared_manifest(request)
+            .map(|(_, _, manifest)| manifest.workspace.enforce_declared_reads)
+            .unwrap_or(false)
 }
 
 /// Returns the declared project roots from the workspace's manifest so a language frontend can
@@ -187,34 +204,20 @@ fn execute(
             let serialized = serde_json::to_value(&manifest).map_err(|error| {
                 message(format!("Unable to serialize expanded manifest: {error}"))
             })?;
-            Ok(OperationResult {
-                operation: "expand-manifest".into(),
-                plan: empty_plan_for("expand-manifest"),
-                run: None,
-                diagnose: None,
-                hotspots: None,
-                manifest: Some(serialized),
-                boundaries: None,
-            })
+            let mut result = result_for("expand-manifest", empty_plan_for("expand-manifest"));
+            result.manifest = Some(serialized);
+            Ok(result)
         }
-        Operation::Diagnose => Ok(OperationResult {
-            operation: "diagnose".into(),
-            plan: empty_plan_for("diagnose"),
-            run: None,
-            diagnose: Some(build_diagnose(&manifest, &workspace_root, graph)),
-            hotspots: None,
-            manifest: None,
-            boundaries: None,
-        }),
-        Operation::Hotspots => Ok(OperationResult {
-            operation: "hotspots".into(),
-            plan: empty_plan_for("hotspots"),
-            run: None,
-            diagnose: None,
-            hotspots: Some(build_hotspots(&manifest, graph, request.hotspots.as_ref())),
-            manifest: None,
-            boundaries: None,
-        }),
+        Operation::Diagnose => {
+            let mut result = result_for("diagnose", empty_plan_for("diagnose"));
+            result.diagnose = Some(build_diagnose(&manifest, &workspace_root, graph));
+            Ok(result)
+        }
+        Operation::Hotspots => {
+            let mut result = result_for("hotspots", empty_plan_for("hotspots"));
+            result.hotspots = Some(build_hotspots(&manifest, graph, request.hotspots.as_ref()));
+            Ok(result)
+        }
         Operation::CheckBoundaries => execute_check_boundaries(&request, graph),
         Operation::Plan | Operation::Run => execute_plan_or_run(
             request,
@@ -235,6 +238,8 @@ fn execute_plan_or_run(
     graph: Option<&DependencyGraph>,
     receipts: Option<&dyn TaskReceiptStore>,
 ) -> Result<OperationResult, TestingError> {
+    let effective_enforce = !request.no_enforce_declared_reads
+        && (request.enforce_declared_reads || manifest.workspace.enforce_declared_reads);
     let filters = PlanFilters {
         task_kinds: &request.task_kinds,
         targets: &request.targets,
@@ -242,7 +247,7 @@ fn execute_plan_or_run(
         exclude_projects: &request.exclude_projects,
         shard: request.shard,
         shard_weights: &request.shard_weights,
-        enforce_declared_reads: request.enforce_declared_reads,
+        enforce_declared_reads: effective_enforce,
     };
     let plan = if let Some(plan_file) = request.plan_file.as_deref() {
         load_plan_file(workspace_root, plan_file, manifest, &filters, request.jobs)?
@@ -259,35 +264,33 @@ fn execute_plan_or_run(
         )?
     };
     if request.operation == Operation::Run {
-        let active_receipts = if request.cache { receipts } else { None };
+        let read_guard_mode = if request.audit_reads {
+            Some(ReadGuardMode::Audit)
+        } else if effective_enforce {
+            Some(ReadGuardMode::Enforce)
+        } else {
+            None
+        };
         let run = scheduler::run_plan(
             manifest,
             workspace_root,
             manifest_file,
             &plan,
-            request.jobs,
-            active_receipts,
-            request.stream,
+            scheduler::RunOptions {
+                jobs: request.jobs,
+                receipts: request.cache.then_some(receipts).flatten(),
+                stream_enabled: request.stream,
+                graph,
+                read_guard_mode,
+                read_guard_hook_path: request.read_guard_hook_path.as_deref(),
+                workspace_root_raw: Path::new(&request.workspace_root),
+            },
         )?;
-        return Ok(OperationResult {
-            operation: "run".into(),
-            plan,
-            run: Some(run),
-            diagnose: None,
-            hotspots: None,
-            manifest: None,
-            boundaries: None,
-        });
+        let mut result = result_for("run", plan);
+        result.run = Some(run);
+        return Ok(result);
     }
-    Ok(OperationResult {
-        operation: "plan".into(),
-        plan,
-        run: None,
-        diagnose: None,
-        hotspots: None,
-        manifest: None,
-        boundaries: None,
-    })
+    Ok(result_for("plan", plan))
 }
 
 fn execute_check_boundaries(
@@ -338,15 +341,21 @@ fn execute_check_boundaries(
         graph,
         changed_paths.as_ref(),
     );
-    Ok(OperationResult {
-        operation: "check-boundaries".into(),
-        plan: empty_plan_for("check-boundaries"),
+    let mut op = result_for("check-boundaries", empty_plan_for("check-boundaries"));
+    op.boundaries = Some(result);
+    Ok(op)
+}
+
+fn result_for(operation: &str, plan: PlanResult) -> OperationResult {
+    OperationResult {
+        operation: operation.into(),
+        plan,
         run: None,
         diagnose: None,
         hotspots: None,
         manifest: None,
-        boundaries: Some(result),
-    })
+        boundaries: None,
+    }
 }
 
 fn load_optional_manifest_for_boundaries(

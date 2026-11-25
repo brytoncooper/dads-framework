@@ -197,6 +197,16 @@ excluding intentional root policy files). Each finding carries a safety-tiered
 `keep-widened-unless-verified`) with an action, a soundness guardrail caution,
 and a verification step so narrowing never hides real regressions.
 
+`dad-test hotspots` traverses the workspace's Oxc import graph without requiring
+a Git diff to rank the highest-blast-radius source files, barrel re-export hubs,
+and projects, taking `--manifest`, `--limit <n>` (default `25`),
+`--min-projects <n>` (default `1`), `--barrels-only`, and `--json`. For each
+source file it reports reverse-reachable `affectedProjects`, `affectedFiles`,
+`directImporters`, `isBarrel`, and owning `project`, sorted descending by
+`(affectedProjects, affectedFiles, directImporters)` with alphabetical path
+tie-breaking, alongside top projects ranked by reverse-reachable dependent
+project count.
+
 `dad-test init` refuses Nx workspaces and writes an unsuccessful coverage report
 instead of treating a few root scripts as the repository's entire task inventory.
 Use `dad-test-nx diagnose`, `dad-test-nx plan`, and `dad-test-nx run` for those

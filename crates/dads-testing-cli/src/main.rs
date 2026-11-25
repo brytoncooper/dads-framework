@@ -2,9 +2,9 @@ use dads_testing_core::graph::DependencyGraph;
 use dads_testing_core::{
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, PlanIssue,
     TaskReceiptStore, execute_request_with_graph_and_receipts, graph_analysis_can_change_the_plan,
-    is_empty_tree_sha,
+    is_empty_tree_sha, manifest_project_roots,
 };
-use dads_testing_javascript::JavaScriptFrontend;
+use dads_testing_javascript::{JavaScriptFrontend, analyze_workspace_graph};
 use dads_testing_store::{
     FileReceiptStore, StoreIssue, StoreIssueSeverity, load_or_update, resolve_cache_dir,
 };
@@ -94,6 +94,29 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
     if request.operation == Operation::ExpandManifest {
         return GraphAnalysis {
             graph: None,
+            issues: Vec::new(),
+        };
+    }
+    if request.operation == Operation::CheckBoundaries {
+        let stored = load_or_update(request, &mut JavaScriptFrontend);
+        if stored.graph.is_some() {
+            return GraphAnalysis {
+                graph: stored.graph,
+                issues: stored.issues.into_iter().map(plan_issue).collect(),
+            };
+        }
+        let workspace_root = Path::new(&request.workspace_root);
+        let graph = if workspace_root.is_absolute() && workspace_root.is_dir() {
+            let project_roots = manifest_project_roots(request);
+            Some(analyze_workspace_graph(
+                workspace_root,
+                project_roots.as_deref(),
+            ))
+        } else {
+            None
+        };
+        return GraphAnalysis {
+            graph,
             issues: Vec::new(),
         };
     }

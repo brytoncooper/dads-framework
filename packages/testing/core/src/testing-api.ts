@@ -18,6 +18,8 @@ export type {
 } from "./hotspots-types.js";
 
 import type {
+  TestingBoundariesResult,
+  TestingCheckBoundariesRequest,
   TestingDiagnoseRequest,
   TestingDiagnoseResult,
   TestingExpandManifestRequest,
@@ -31,7 +33,7 @@ export type * from "./testing-api-types.js";
 
 const protocolSchemaVersion = 1;
 
-type NativeOperation = "plan" | "run" | "diagnose" | "hotspots" | "expand-manifest";
+type NativeOperation = "plan" | "run" | "diagnose" | "hotspots" | "expand-manifest" | "check-boundaries";
 
 type NativeResponse = {
   readonly schemaVersion: number;
@@ -43,6 +45,7 @@ type NativeResponse = {
     readonly diagnose?: TestingDiagnoseResult;
     readonly hotspots?: TestingHotspotsResult;
     readonly manifest?: unknown;
+    readonly boundaries?: TestingBoundariesResult;
   };
   readonly error?: string;
 };
@@ -70,6 +73,7 @@ type NativeRequest = {
   readonly stream?: boolean;
   readonly planFile?: string;
   readonly hotspots?: NativeHotspotsOptions;
+  readonly boundariesConfigPath?: string;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -112,9 +116,21 @@ export async function expandTestingManifest(request: TestingExpandManifestReques
   return parseTestingManifest(JSON.stringify(response.manifest), request.manifestPath ?? "dads.testing.json");
 }
 
+export async function checkTestingBoundaries(request: TestingCheckBoundariesRequest): Promise<TestingBoundariesResult> {
+  const response = await invokeNativeTestingEngine("check-boundaries", request);
+  if (!response.boundaries) {
+    throw new Error("The native testing engine returned a check-boundaries response without boundary details.");
+  }
+  return response.boundaries;
+}
+
+type NativeInvocationRequest = TestingOperationRequest & {
+  readonly boundariesConfigPath?: string;
+};
+
 async function invokeNativeTestingEngine(
   operation: NativeOperation,
-  request: TestingOperationRequest,
+  request: NativeInvocationRequest,
   hotspots?: NativeHotspotsOptions,
 ): Promise<NonNullable<NativeResponse["result"]>> {
   const nativeRequest = toNativeRequest(operation, request, hotspots);
@@ -130,7 +146,7 @@ async function invokeNativeTestingEngine(
 /** An absent field is omitted rather than sent as null, which the engine refuses. */
 function toNativeRequest(
   operation: NativeOperation,
-  request: TestingOperationRequest,
+  request: NativeInvocationRequest,
   hotspots?: NativeHotspotsOptions,
 ): NativeRequest {
   return {
@@ -143,6 +159,7 @@ function toNativeRequest(
     ...optionalNativeFilterFields(request),
     ...optionalNativeRunFields(request),
     ...(hotspots === undefined ? {} : { hotspots }),
+    ...(request.boundariesConfigPath === undefined ? {} : { boundariesConfigPath: request.boundariesConfigPath }),
   };
 }
 

@@ -168,6 +168,34 @@ export type TestingExpandManifestRequest = {
   readonly nativeBinary?: string;
 };
 
+export type TestingCheckBoundariesRequest = {
+  readonly workspaceRoot: string;
+  readonly manifestPath?: string;
+  readonly base?: string;
+  readonly head?: string;
+  readonly boundariesConfigPath?: string;
+  /** An explicit native binary is intended for local development and test harnesses. */
+  readonly nativeBinary?: string;
+};
+
+export type TestingBoundaryViolation = {
+  readonly file: string;
+  readonly line: number;
+  readonly column: number;
+  readonly sourceProject: string;
+  readonly targetProject?: string;
+  readonly specifier: string;
+  readonly rule: string;
+  readonly message: string;
+};
+
+export type TestingBoundariesResult = {
+  readonly schemaVersion: 1;
+  readonly checkedFiles: number;
+  readonly totalProjects: number;
+  readonly violations: readonly TestingBoundaryViolation[];
+};
+
 export type TestingRemediationSafety = "safe" | "verify-before-changing" | "keep-widened-unless-verified";
 
 export type TestingDiagnoseRemediation = {

@@ -1,5 +1,6 @@
 //! The `dads.testing.json` declaration: what a workspace says it owns, and every rule the
 //! declaration must satisfy before a plan is allowed to read it.
+use crate::boundaries_config::WorkspaceBoundaries;
 use crate::discover::WorkspaceDiscover;
 use crate::execute::{TestingError, message};
 pub(crate) use crate::manifest_validate::validate_manifest;
@@ -53,6 +54,8 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) dynamic_import_scopes: BTreeMap<String, Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) discover: Option<WorkspaceDiscover>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) boundaries: Option<WorkspaceBoundaries>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -69,6 +72,8 @@ pub(crate) struct Project {
     pub(crate) root: String,
     #[serde(default)]
     pub(crate) fallback_dependencies: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) tags: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

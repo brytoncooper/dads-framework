@@ -1,9 +1,13 @@
 export {
+  checkTestingBoundaries,
   diagnoseTesting,
   expandTestingManifest,
   hotspotsTesting,
   planTesting,
   runTesting,
+  type TestingBoundariesResult,
+  type TestingBoundaryViolation,
+  type TestingCheckBoundariesRequest,
   type TestingCouplingHotspot,
   type TestingDiagnoseRemediation,
   type TestingDiagnoseRequest,
@@ -29,6 +33,7 @@ export {
   type TestingTaskShard,
   type TestingWideningCulprit,
 } from "./testing-api.js";
+export { renderBoundariesResult } from "./commands/check-boundaries.js";
 export { renderDiagnosis } from "./commands/diagnose.js";
 export { renderHotspots } from "./commands/hotspots.js";
 export { listDadTestCommands, runDadTestCli, type DadTestCliIo } from "./dad-test-cli.js";
@@ -37,6 +42,7 @@ export {
   readTestingManifest,
   serializeTestingManifest,
   type TestingManifest,
+  type TestingManifestDepConstraint,
   type TestingManifestFileNarrowing,
   type TestingManifestProject,
   type TestingManifestSqlEdge,
@@ -45,6 +51,7 @@ export {
   type TestingManifestTaskBatch,
   type TestingManifestTaskBatchMode,
   type TestingManifestTaskSqlImpact,
+  type TestingManifestWorkspaceBoundaries,
   type TestingManifestWorkspaceSql,
 } from "./testing-manifest.js";
 export { owningProjectForPath, pathIsInside } from "./path-ownership.js";

@@ -1,5 +1,7 @@
 //! The entry point one request travels through: validate it, load the manifest, resolve the
 //! scope, plan, and — for a run operation — schedule. Every rejection leaves as a typed error.
+use crate::boundaries::check_boundaries;
+use crate::boundaries_config::{load_boundaries_config, validate_workspace_boundaries};
 use crate::diagnose::build_diagnose;
 use crate::discover::expand_manifest;
 use crate::graph::DependencyGraph;
@@ -14,6 +16,7 @@ use crate::protocol::{
 use crate::receipts::TaskReceiptStore;
 use crate::scheduler;
 use crate::scope::{absolute_existing_directory, resolve_existing_inside, resolve_scope};
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -165,6 +168,9 @@ fn execute(
     receipts: Option<&dyn TaskReceiptStore>,
 ) -> Result<OperationResult, TestingError> {
     validate_request(&request)?;
+    if request.operation == Operation::CheckBoundaries {
+        return execute_check_boundaries(&request, graph);
+    }
     let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
     match request.operation {
@@ -179,6 +185,7 @@ fn execute(
                 diagnose: None,
                 hotspots: None,
                 manifest: Some(serialized),
+                boundaries: None,
             })
         }
         Operation::Diagnose => Ok(OperationResult {
@@ -188,6 +195,7 @@ fn execute(
             diagnose: Some(build_diagnose(&manifest, &workspace_root, graph)),
             hotspots: None,
             manifest: None,
+            boundaries: None,
         }),
         Operation::Hotspots => Ok(OperationResult {
             operation: "hotspots".into(),
@@ -196,7 +204,9 @@ fn execute(
             diagnose: None,
             hotspots: Some(build_hotspots(&manifest, graph, request.hotspots.as_ref())),
             manifest: None,
+            boundaries: None,
         }),
+        Operation::CheckBoundaries => execute_check_boundaries(&request, graph),
         Operation::Plan | Operation::Run => execute_plan_or_run(
             request,
             &workspace_root,
@@ -256,6 +266,7 @@ fn execute_plan_or_run(
             diagnose: None,
             hotspots: None,
             manifest: None,
+            boundaries: None,
         });
     }
     Ok(OperationResult {
@@ -265,7 +276,79 @@ fn execute_plan_or_run(
         diagnose: None,
         hotspots: None,
         manifest: None,
+        boundaries: None,
     })
+}
+
+fn execute_check_boundaries(
+    request: &NativeRequest,
+    graph: Option<&DependencyGraph>,
+) -> Result<OperationResult, TestingError> {
+    let workspace_root = absolute_existing_directory(&request.workspace_root, "workspaceRoot")?;
+    let manifest = load_optional_manifest_for_boundaries(request, &workspace_root)?;
+    let config = match &request.boundaries_config_path {
+        Some(config_path) => {
+            let resolved = resolve_existing_inside(
+                &workspace_root,
+                Path::new(config_path),
+                "boundariesConfigPath",
+            )?;
+            load_boundaries_config(&resolved)?
+        }
+        None => {
+            let boundaries = manifest
+                .as_ref()
+                .and_then(|m| m.workspace.boundaries.clone())
+                .ok_or_else(|| {
+                    message(
+                        "No boundaries configuration found. Declare workspace.boundaries in dads.testing.json or pass --config <path>.",
+                    )
+                })?;
+            validate_workspace_boundaries(&boundaries)?;
+            boundaries
+        }
+    };
+    let changed_paths = if request.base.is_some() {
+        let scope = resolve_scope(request, &workspace_root)?;
+        if scope.full_fallback {
+            None
+        } else {
+            Some(scope.changed_paths.into_iter().collect::<BTreeSet<_>>())
+        }
+    } else {
+        None
+    };
+    let graph = graph.ok_or_else(|| {
+        message("Boundary checking requires a JavaScript/TypeScript dependency graph.")
+    })?;
+    let result = check_boundaries(
+        &workspace_root,
+        manifest.as_ref().map(|m| m.projects.as_slice()),
+        &config,
+        graph,
+        changed_paths.as_ref(),
+    );
+    Ok(OperationResult {
+        operation: "check-boundaries".into(),
+        plan: empty_plan_for("check-boundaries"),
+        run: None,
+        diagnose: None,
+        hotspots: None,
+        manifest: None,
+        boundaries: Some(result),
+    })
+}
+
+fn load_optional_manifest_for_boundaries(
+    request: &NativeRequest,
+    workspace_root: &Path,
+) -> Result<Option<TestingManifest>, TestingError> {
+    if request.manifest_path.is_some() || workspace_root.join(DEFAULT_MANIFEST_PATH).is_file() {
+        let (_, _, manifest) = load_declared_manifest(request)?;
+        validate_manifest(&manifest, workspace_root)?;
+        return Ok(Some(manifest));
+    }
+    Ok(None)
 }
 
 fn empty_plan_for(kind: &str) -> PlanResult {

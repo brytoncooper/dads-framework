@@ -277,6 +277,52 @@ describe("testing manifest", () => {
       "dads.testing.json: tasks[0].execution.batch.mode must be one of args, vitest-files",
     );
   });
+
+  it("round-trips workspace.boundaries and project.tags cleanly and rejects unknown keys", () => {
+    const text = JSON.stringify({
+      schemaVersion: 1,
+      workspace: {
+        fullFallback: { taskIds: ["ui:test"] },
+        boundaries: {
+          depConstraints: [
+            {
+              sourceTag: "env:browser",
+              onlyDependOnLibsWithTags: ["env:browser", "shared"],
+              notDependOnLibsWithTags: ["env:server"],
+              bannedExternalImports: ["pg", "node-pg-*"],
+              allowedExternalImports: ["zod"],
+            },
+          ],
+          allow: ["@ws/special"],
+          allowCircularSelfDependency: true,
+          enforceBuildableLibDependency: true,
+          checkNestedImports: true,
+        },
+      },
+      projects: [{ id: "ui", root: "libs/ui", tags: ["env:browser"] }],
+      tasks: [
+        {
+          id: "ui:test",
+          project: "ui",
+          kind: "test",
+          execution: { executable: "true" },
+          impact: { mode: "project" },
+        },
+      ],
+    });
+    const manifest = parseTestingManifest(text, "dads.testing.json");
+    expect(manifest.workspace.boundaries?.depConstraints?.[0]?.sourceTag).toBe("env:browser");
+    expect(manifest.workspace.boundaries?.allow).toEqual(["@ws/special"]);
+    expect(manifest.workspace.boundaries?.allowCircularSelfDependency).toBe(true);
+    expect(manifest.workspace.boundaries?.enforceBuildableLibDependency).toBe(true);
+    expect(manifest.workspace.boundaries?.checkNestedImports).toBe(true);
+    expect(manifest.projects[0]?.tags).toEqual(["env:browser"]);
+    expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
+
+    expect(() =>
+      parseTestingManifest(text.replace('"checkNestedImports":true', '"unknownBoundaryKey":true'), "dads.testing.json"),
+    ).toThrow(/unknown key "unknownBoundaryKey"/);
+  });
 });
 
 function makeTemporaryDirectory(): string {

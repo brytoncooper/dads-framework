@@ -208,7 +208,7 @@ fn read_object_keys(value: Option<&Value>) -> BTreeSet<String> {
 
 /// Strips `//` line comments, `/* ... */` block comments, and trailing commas outside string
 /// literals so JSONC `project.json` files parse cleanly.
-fn strip_jsonc(input: &str) -> String {
+pub(crate) fn strip_jsonc(input: &str) -> String {
     let chars: Vec<char> = input.chars().collect();
     let mut no_comments = String::with_capacity(input.len());
     let mut i = 0;

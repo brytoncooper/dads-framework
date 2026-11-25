@@ -1,6 +1,20 @@
 import { readFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
-import { isRecord, isUnknownArray } from "./parse-guards.js";
+import {
+  readWorkspaceBoundaries,
+  serializeWorkspaceBoundaries,
+  type TestingManifestDepConstraint,
+  type TestingManifestWorkspaceBoundaries,
+} from "./testing-manifest-boundaries.js";
+import {
+  readArray,
+  readEnumeration,
+  readOptionalStringArray,
+  readRecord,
+  readString,
+  readStringArray,
+  rejectUnknownKeys,
+} from "./testing-manifest-readers.js";
 import {
   readTaskBatch,
   serializeTaskBatch,
@@ -19,11 +33,13 @@ import {
 } from "./testing-manifest-sql.js";
 
 export type {
+  TestingManifestDepConstraint,
   TestingManifestSqlEdge,
   TestingManifestSqlSnapshotPattern,
   TestingManifestTaskBatch,
   TestingManifestTaskBatchMode,
   TestingManifestTaskSqlImpact,
+  TestingManifestWorkspaceBoundaries,
   TestingManifestWorkspaceSql,
 };
 
@@ -44,6 +60,7 @@ export type TestingManifest = {
     readonly nonCodeSuffixes?: readonly string[];
     readonly ignorePaths?: readonly string[];
     readonly dynamicImportScopes?: Readonly<Record<string, readonly string[]>>;
+    readonly boundaries?: TestingManifestWorkspaceBoundaries;
   };
   readonly projects: readonly TestingManifestProject[];
   readonly tasks: readonly TestingManifestTask[];
@@ -53,6 +70,7 @@ export type TestingManifestProject = {
   readonly id: string;
   readonly root: string;
   readonly fallbackDependencies: readonly string[];
+  readonly tags?: readonly string[];
 };
 
 export type TestingManifestFileNarrowing = {
@@ -164,11 +182,15 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
       Object.keys(manifest.workspace.dynamicImportScopes).length === 0
         ? {}
         : { dynamicImportScopes: serializeDynamicImportScopes(manifest.workspace.dynamicImportScopes) }),
+      ...(manifest.workspace.boundaries === undefined
+        ? {}
+        : { boundaries: serializeWorkspaceBoundaries(manifest.workspace.boundaries) }),
     },
     projects: manifest.projects.map((project) => ({
       id: project.id,
       root: project.root,
       fallbackDependencies: [...project.fallbackDependencies],
+      ...(project.tags === undefined || project.tags.length === 0 ? {} : { tags: [...project.tags] }),
     })),
     tasks: manifest.tasks.map((task) => ({
       id: task.id,
@@ -200,7 +222,7 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
   const workspace = readRecord(value, "workspace", subject);
   rejectUnknownKeys(
     workspace,
-    ["root", "fullFallback", "sql", "nonCodeSuffixes", "ignorePaths", "dynamicImportScopes"],
+    ["root", "fullFallback", "sql", "nonCodeSuffixes", "ignorePaths", "dynamicImportScopes", "boundaries"],
     "workspace",
     subject,
   );
@@ -208,6 +230,7 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
   rejectUnknownKeys(fullFallback, ["taskIds"], "workspace.fullFallback", subject);
   const root = workspace["root"];
   const sql = workspace["sql"];
+  const boundaries = workspace["boundaries"];
   const nonCodeSuffixes = readOptionalStringArray(workspace["nonCodeSuffixes"], "workspace.nonCodeSuffixes", subject);
   const ignorePaths = readOptionalStringArray(workspace["ignorePaths"], "workspace.ignorePaths", subject);
   const rawScopes = workspace["dynamicImportScopes"];
@@ -224,12 +247,16 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
     ...(dynamicImportScopes === undefined || Object.keys(dynamicImportScopes).length === 0
       ? {}
       : { dynamicImportScopes }),
+    ...(boundaries === undefined
+      ? {}
+      : { boundaries: readWorkspaceBoundaries(boundaries, "workspace.boundaries", subject) }),
   };
 }
 
 function readProject(value: unknown, where: string, subject: string): TestingManifestProject {
   const project = readRecord(value, where, subject);
-  rejectUnknownKeys(project, ["id", "root", "fallbackDependencies"], where, subject);
+  rejectUnknownKeys(project, ["id", "root", "fallbackDependencies", "tags"], where, subject);
+  const tags = readOptionalStringArray(project["tags"], `${where}.tags`, subject);
   return {
     id: readString(project["id"], `${where}.id`, subject),
     root: readString(project["root"], `${where}.root`, subject),
@@ -238,6 +265,7 @@ function readProject(value: unknown, where: string, subject: string): TestingMan
       `${where}.fallbackDependencies`,
       subject,
     ),
+    ...(tags.length === 0 ? {} : { tags }),
   };
 }
 
@@ -371,61 +399,4 @@ function readImpact(value: unknown, where: string, subject: string): TestingMani
     mode: readEnumeration(impact["mode"], impactModes, `${where}.mode`, subject),
     paths: readOptionalStringArray(impact["paths"], `${where}.paths`, subject),
   };
-}
-
-function rejectUnknownKeys(
-  record: Readonly<Record<string, unknown>>,
-  allowedKeys: readonly string[],
-  where: string,
-  subject: string,
-): void {
-  for (const key of Object.keys(record)) {
-    if (allowedKeys.includes(key)) continue;
-    throw new Error(`${subject}: unknown key "${key}" in ${where}`);
-  }
-}
-
-function readRecord(value: unknown, where: string, subject: string): Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new Error(`${subject}: ${where} must be an object`);
-  }
-  return value;
-}
-
-function readArray(value: unknown, where: string, subject: string): readonly unknown[] {
-  if (!isUnknownArray(value)) {
-    throw new Error(`${subject}: ${where} must be an array`);
-  }
-  return value;
-}
-
-function readString(value: unknown, where: string, subject: string): string {
-  if (typeof value !== "string") {
-    throw new Error(`${subject}: ${where} must be a string`);
-  }
-  return value;
-}
-
-function readStringArray(value: unknown, where: string, subject: string): readonly string[] {
-  return readArray(value, where, subject).map((entry, index) =>
-    readString(entry, `${where}[${String(index)}]`, subject),
-  );
-}
-
-function readOptionalStringArray(value: unknown, where: string, subject: string): readonly string[] {
-  return value === undefined ? [] : readStringArray(value, where, subject);
-}
-
-function readEnumeration<Value extends string>(
-  value: unknown,
-  allowedValues: readonly Value[],
-  where: string,
-  subject: string,
-): Value {
-  const text = readString(value, where, subject);
-  const match = allowedValues.find((candidate) => candidate === text);
-  if (match === undefined) {
-    throw new Error(`${subject}: ${where} must be one of ${allowedValues.join(", ")}`);
-  }
-  return match;
 }

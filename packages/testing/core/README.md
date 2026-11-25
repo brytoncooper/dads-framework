@@ -150,6 +150,17 @@ exact canonical `dads.testing.json` IR without running graph analysis or
 executing tasks, taking `--manifest`, `--out` (optional output file path), and
 `--json`.
 
+`dad-test check-boundaries` enforces module-boundary rules natively in Rust
+using the parallel Oxc workspace graph, taking `--manifest`, `--base`,
+`--head`, `--config` (path to a standalone boundaries JSON file overriding
+`workspace.boundaries`), and `--json`. Without `--base`, it checks every
+project module in the workspace; with `--base <ref>` (and optional
+`--head <ref>`), it checks only files changed in that Git range while still
+detecting cross-project cycles against the full workspace graph. It exits `0`
+when zero violations are found and `1` otherwise, emitting structured
+violations (`file`, `line`, `column`, `sourceProject`, `targetProject`,
+`specifier`, `rule`, `message`).
+
 `dad-test explain` prints the same selection in readable lines, taking
 `--manifest`, `--base`, `--head`, `--all`, `--only`, `--task`, and `--json`:
 
@@ -296,12 +307,17 @@ and optional `snapshotPatterns`) alongside per-task `sqlImpact`
 migration runners plus only affected database domains via bidirectional FK
 closure while global/unrecognized DDL widens safely to all database tasks.
 Workspaces may also declare `workspace.nonCodeSuffixes` (for example `[".md"]`)
-so documentation-only edits do not widen JavaScript/TypeScript reachability, and
+so documentation-only edits do not widen JavaScript/TypeScript reachability,
 `workspace.dynamicImportScopes` (a map from module path to allowed directory
 prefixes, such as `{ "scripts/load-rules.mjs": ["scripts/rules"] }`) to bound a
 deliberate directory-scanning loader (such as a plugin or rule loader) to the
 workspace directories it actually reads instead of widening to every change in
-the repository.
+the repository, and `workspace.boundaries` (`depConstraints` with `sourceTag`,
+`onlyDependOnLibsWithTags`, `notDependOnLibsWithTags`, `bannedExternalImports`,
+and `allowedExternalImports`; `allow`; `allowCircularSelfDependency`;
+`enforceBuildableLibDependency`; and `checkNestedImports`) for native
+`dad-test check-boundaries` enforcement mirroring `@dads-framework/testing/eslint`.
+Projects may also carry optional `tags` alongside `project.json` metadata.
 
 Optional `fileNarrowing`, `workspace.dynamicImportScopes`, and `workspace.sql` /
 `sqlImpact` shape (`objects` is an array of `"schema.table"` strings; `edges` is

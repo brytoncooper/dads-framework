@@ -61,6 +61,7 @@ fn merge_projects(
                 id: item.id.clone(),
                 root: item.root.clone(),
                 fallback_dependencies: item.fallback_dependencies.clone(),
+                tags: item.tags.iter().cloned().collect(),
             },
         );
         discovered_by_id.insert(item.id.clone(), item);
@@ -72,6 +73,9 @@ fn merge_projects(
                 existing.fallback_dependencies.iter().cloned().collect();
             deps.extend(project.fallback_dependencies);
             existing.fallback_dependencies = deps.into_iter().collect();
+            let mut tags: BTreeSet<String> = existing.tags.iter().cloned().collect();
+            tags.extend(project.tags);
+            existing.tags = tags.into_iter().collect();
         } else {
             by_id.insert(project.id.clone(), project);
         }

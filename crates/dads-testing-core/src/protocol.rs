@@ -1,5 +1,6 @@
 //! The protocol-v1 wire contract: the request the host sends, and the plan and run it gets back.
 //! Every name and every `serde` attribute here is the published format, held by `wire_golden`.
+use crate::boundaries_config::BoundariesResult;
 pub use crate::hotspots::{
     HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary,
 };
@@ -73,6 +74,8 @@ pub struct NativeRequest {
     pub plan_file: Option<String>,
     #[serde(default)]
     pub hotspots: Option<HotspotsOptions>,
+    #[serde(default)]
+    pub boundaries_config_path: Option<String>,
 }
 
 impl Default for NativeRequest {
@@ -100,6 +103,7 @@ impl Default for NativeRequest {
             stream: false,
             plan_file: None,
             hotspots: None,
+            boundaries_config_path: None,
         }
     }
 }
@@ -112,6 +116,7 @@ pub enum Operation {
     Diagnose,
     Hotspots,
     ExpandManifest,
+    CheckBoundaries,
 }
 
 #[derive(Debug, Serialize)]
@@ -158,6 +163,8 @@ pub struct OperationResult {
     pub hotspots: Option<HotspotsResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manifest: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boundaries: Option<BoundariesResult>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

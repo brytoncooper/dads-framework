@@ -1,32 +1,32 @@
 use dads_testing_core::{
-    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, execute_request_with_graph,
+    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, TaskDecision, execute_request_with_graph,
 };
 use dads_testing_javascript::analyze_request;
+use std::error::Error;
 use std::fs::{create_dir_all, remove_dir_all, remove_file, write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-fn git(root: &Path, args: &[&str]) {
-    let out = Command::new("git")
-        .current_dir(root)
-        .args(args)
-        .output()
-        .expect("git must execute");
-    assert!(
-        out.status.success(),
-        "git {args:?} failed: {}",
-        String::from_utf8_lossy(&out.stderr)
-    );
+fn git(root: &Path, args: &[&str]) -> Result<(), Box<dyn Error>> {
+    let out = Command::new("git").current_dir(root).args(args).output()?;
+    if !out.status.success() {
+        return Err(format!(
+            "git {args:?} failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        )
+        .into());
+    }
+    Ok(())
 }
 
-fn fresh_repo(name: &str) -> PathBuf {
+fn fresh_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
     let root = std::env::temp_dir().join(format!("dads-testing-js-{name}-{}", std::process::id()));
     let _ = remove_dir_all(&root);
-    create_dir_all(&root).expect("temp repo root must be created");
-    git(&root, &["init", "-q"]);
-    git(&root, &["config", "user.email", "test@example.com"]);
-    git(&root, &["config", "user.name", "Test"]);
-    root
+    create_dir_all(&root)?;
+    git(&root, &["init", "-q"])?;
+    git(&root, &["config", "user.email", "test@example.com"])?;
+    git(&root, &["config", "user.name", "Test"])?;
+    Ok(root)
 }
 
 fn plan_request(root: &Path) -> NativeRequest {
@@ -38,11 +38,19 @@ fn plan_request(root: &Path) -> NativeRequest {
     }
 }
 
+fn find_task<'a>(tasks: &'a [TaskDecision], id: &str) -> Result<&'a TaskDecision, Box<dyn Error>> {
+    tasks
+        .iter()
+        .find(|t| t.id == id)
+        .ok_or_else(|| format!("missing task {id}").into())
+}
+
 #[test]
-fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fallbacks() {
-    let root = fresh_repo("deleted-cross-project-module");
+fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fallbacks()
+-> Result<(), Box<dyn Error>> {
+    let root = fresh_repo("deleted-cross-project-module")?;
     for dir in ["lib", "app-rel", "app-alias", "unrelated"] {
-        create_dir_all(root.join(dir)).expect("project dir must exist");
+        create_dir_all(root.join(dir))?;
     }
     write(
         root.join("tsconfig.json"),
@@ -53,24 +61,20 @@ fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fal
   }
 }
 "#,
-    )
-    .expect("tsconfig must be written");
-    write(root.join("lib/deleted.ts"), "export const val = 42;\n").expect("lib module");
+    )?;
+    write(root.join("lib/deleted.ts"), "export const val = 42;\n")?;
     write(
         root.join("app-rel/consumer.test.ts"),
         "import { val } from '../lib/deleted.ts';\nif (val !== 42) throw new Error('bad');\n",
-    )
-    .expect("relative consumer");
+    )?;
     write(
         root.join("app-alias/consumer.test.ts"),
         "import { val } from '@lib/deleted.ts';\nif (val !== 42) throw new Error('bad');\n",
-    )
-    .expect("alias consumer");
+    )?;
     write(
         root.join("unrelated/clean.test.ts"),
         "export const ok = true;\n",
-    )
-    .expect("unrelated project");
+    )?;
     write(
         root.join("dads.testing.json"),
         r#"{
@@ -92,35 +96,31 @@ fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fal
   ]
 }
 "#,
-    )
-    .expect("manifest must be written");
-    git(&root, &["add", "."]);
-    git(&root, &["commit", "-q", "-m", "baseline"]);
+    )?;
+    git(&root, &["add", "."])?;
+    git(&root, &["commit", "-q", "-m", "baseline"])?;
 
-    remove_file(root.join("lib/deleted.ts")).expect("delete cross-project module");
+    remove_file(root.join("lib/deleted.ts"))?;
 
     let req = plan_request(&root);
-    let graph = analyze_request(&req).expect("graph must build after delete");
+    let graph = analyze_request(&req).ok_or("graph must build after delete")?;
     let resp = execute_request_with_graph(req, Some(graph));
     assert!(resp.ok, "{resp:?}");
-    let plan = &resp.result.expect("plan result").plan;
+    let plan = &resp.result.ok_or("plan result")?.plan;
     assert!(
         !plan.scope.full_fallback,
         "must not fall back workspace-wide"
     );
 
-    let decision = |id: &str| {
-        plan.tasks
-            .iter()
-            .find(|t| t.id == id)
-            .unwrap_or_else(|| panic!("missing task {id}"))
-    };
-    assert_eq!(decision("app-rel:test").decision, "run");
-    assert_eq!(decision("app-rel:typecheck").decision, "run");
-    assert_eq!(decision("app-alias:test").decision, "run");
-    assert_eq!(decision("app-alias:typecheck").decision, "run");
+    assert_eq!(find_task(&plan.tasks, "app-rel:test")?.decision, "run");
+    assert_eq!(find_task(&plan.tasks, "app-rel:typecheck")?.decision, "run");
+    assert_eq!(find_task(&plan.tasks, "app-alias:test")?.decision, "run");
     assert_eq!(
-        decision("unrelated:test").decision,
+        find_task(&plan.tasks, "app-alias:typecheck")?.decision,
+        "run"
+    );
+    assert_eq!(
+        find_task(&plan.tasks, "unrelated:test")?.decision,
         "skip-proven-unaffected",
         "unrelated clean project must remain skipped"
     );
@@ -132,5 +132,6 @@ fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fal
         plan.issues
     );
 
-    remove_dir_all(&root).expect("cleanup temp repo");
+    remove_dir_all(&root)?;
+    Ok(())
 }

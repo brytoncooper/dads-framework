@@ -24,6 +24,7 @@ mod git_state;
 mod issues;
 mod persist;
 mod receipt_cache;
+mod receipt_inputs;
 mod receipts;
 #[cfg(test)]
 mod receipts_tests;

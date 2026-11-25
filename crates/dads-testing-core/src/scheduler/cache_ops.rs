@@ -3,8 +3,8 @@
 use super::progress::{PreparedTask, rebase_file_for_cwd};
 use super::receipt_keys::compute_task_receipt_key;
 use crate::execute::{TestingError, message};
-use crate::manifest::{DeclaredTask, Project, TaskExecution, TestingManifest};
-use crate::protocol::PlanResult;
+use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
+use crate::protocol::{PlanResult, TaskCacheInputs};
 use crate::receipts::{TaskReceiptEntry, TaskReceiptStore};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -41,6 +41,7 @@ struct KeyInput<'a> {
     task: &'a DeclaredTask,
     execution: &'a TaskExecution,
     selected_files: &'a [String],
+    cache_inputs: Option<&'a TaskCacheInputs>,
     should_hash: bool,
 }
 
@@ -57,11 +58,6 @@ pub(super) fn prepare_tasks(
         .tasks
         .iter()
         .map(|task| (task.id.as_str(), task))
-        .collect();
-    let projects_by_id: BTreeMap<&str, &Project> = manifest
-        .projects
-        .iter()
-        .map(|project| (project.id.as_str(), project))
         .collect();
     let planned_ids: BTreeSet<&str> = plan.tasks.iter().map(|d| d.id.as_str()).collect();
     let mut staged = Vec::with_capacity(plan.tasks.len());
@@ -91,32 +87,27 @@ pub(super) fn prepare_tasks(
             dependencies,
             decision.decision == "run" && task.cache,
             decision.selected_files.as_slice(),
+            decision.cache_inputs.as_ref(),
         ));
     }
     let key_inputs: Vec<KeyInput<'_>> = staged
         .iter()
         .map(
-            |(task, execution, _, _, should_hash, selected_files)| KeyInput {
+            |(task, execution, _, _, should_hash, selected_files, cache_inputs)| KeyInput {
                 task,
                 execution,
                 selected_files,
+                cache_inputs: *cache_inputs,
                 should_hash: *should_hash,
             },
         )
         .collect();
-    let keys = compute_keys_parallel(
-        receipts,
-        manifest,
-        &projects_by_id,
-        &key_inputs,
-        manifest_file,
-        workspace_root,
-    );
+    let keys = compute_keys_parallel(receipts, &key_inputs, manifest_file, workspace_root);
     Ok(staged
         .into_iter()
         .zip(keys)
         .map(
-            |((task, execution, base_args_len, dependencies, _, selected), receipt_key)| {
+            |((task, execution, base_args_len, dependencies, _, selected, _), receipt_key)| {
                 PreparedTask {
                     id: task.id.clone(),
                     dependencies,
@@ -133,8 +124,6 @@ pub(super) fn prepare_tasks(
 
 fn compute_keys_parallel(
     receipts: Option<&dyn TaskReceiptStore>,
-    manifest: &TestingManifest,
-    projects_by_id: &BTreeMap<&str, &Project>,
     inputs: &[KeyInput<'_>],
     manifest_file: &Path,
     workspace_root: &Path,
@@ -150,10 +139,10 @@ fn compute_keys_parallel(
                 if item.should_hash {
                     compute_task_receipt_key(
                         Some(store),
-                        projects_by_id,
                         item.task,
                         item.execution,
                         item.selected_files,
+                        item.cache_inputs,
                         manifest_file,
                         workspace_root,
                     )
@@ -163,7 +152,6 @@ fn compute_keys_parallel(
             })
             .collect();
     }
-    let _ = manifest;
     let worker_count = hashable_count.clamp(1, MAX_CACHE_WORKERS);
     let chunk_size = inputs.len().div_ceil(worker_count);
     let mut keys = vec![None; inputs.len()];
@@ -177,10 +165,10 @@ fn compute_keys_parallel(
                     let key = if item.should_hash {
                         compute_task_receipt_key(
                             Some(store),
-                            projects_by_id,
                             item.task,
                             item.execution,
                             item.selected_files,
+                            item.cache_inputs,
                             manifest_file,
                             workspace_root,
                         )

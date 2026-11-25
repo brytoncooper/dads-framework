@@ -41,7 +41,7 @@ fn write_manifest(dir: &Path, command: &str) -> Result<(), Box<dyn Error>> {
             "kind": "test",
             "execution": { "executable": "sh", "args": ["-c", command] },
             "dependsOn": [],
-            "impact": { "mode": "always", "paths": [] }
+            "impact": { "mode": "project", "paths": [] }
         }]
     });
     fs::write(
@@ -63,8 +63,9 @@ fn run_with_cache(
         manifest_path: None,
         base: None,
         head: None,
-        all: true,
-        task_ids: Vec::new(),
+        all: false,
+        only: true,
+        task_ids: vec!["app:test".to_owned()],
         task_kinds: Vec::new(),
         shard: None,
         jobs: Some(1),
@@ -171,10 +172,8 @@ fn receipts_hit_when_unchanged_and_invalidate_on_source_policy_command_or_corrup
 fn shared_cache_dir_hits_across_separate_worktree_directories() -> Result<(), Box<dyn Error>> {
     let wt_a = temp_repo("shared-wt-a")?;
     let wt_b = temp_repo("shared-wt-b")?;
-    let shared_cache = std::env::temp_dir().join(format!(
-        "dads-testing-shared-cache-{}",
-        std::process::id()
-    ));
+    let shared_cache =
+        std::env::temp_dir().join(format!("dads-testing-shared-cache-{}", std::process::id()));
     let _ = fs::remove_dir_all(&shared_cache);
 
     let cmd = "printf x >> .git/ran.txt && printf 'shared-ok'";

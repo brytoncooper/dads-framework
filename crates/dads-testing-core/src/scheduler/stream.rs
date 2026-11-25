@@ -6,6 +6,9 @@
 use crate::protocol::TaskRunResult;
 use std::io::{self, Write};
 
+const FAILED_STDOUT_TAIL_LINES: usize = 30;
+const FAILED_STDERR_TAIL_LINES: usize = 20;
+
 pub(super) fn emit_cached(enabled: bool, task_id: &str) {
     if !enabled {
         return;
@@ -43,25 +46,42 @@ pub(super) fn emit_finish(enabled: bool, result: &TaskRunResult) {
     if !enabled {
         return;
     }
-    let ms = result.duration_ms.unwrap_or(0);
     let mut stderr = io::stderr();
+    write_finish(&mut stderr, result);
+}
+
+pub(crate) fn write_finish(out: &mut impl Write, result: &TaskRunResult) {
+    let ms = result.duration_ms.unwrap_or(0);
     if result.status == "executed" {
-        let _ = writeln!(stderr, "[dad-test] PASS   {} ({ms}ms)", result.id);
+        let _ = writeln!(out, "[dad-test] PASS   {} ({ms}ms)", result.id);
         return;
     }
     let code = result
         .exit_code
         .map_or_else(|| "error".to_owned(), |c| format!("exit {c}"));
-    let _ = writeln!(stderr, "[dad-test] FAIL   {} ({ms}ms, {code})", result.id);
+    let _ = writeln!(out, "[dad-test] FAIL   {} ({ms}ms, {code})", result.id);
     if let Some(error) = result.error.as_deref() {
-        let _ = writeln!(stderr, "  error: {error}");
+        let _ = writeln!(out, "  error: {error}");
     }
-    if let Some(out) = result.stderr.as_ref().or(result.stdout.as_ref()) {
-        let trimmed = out.text.trim();
-        if !trimmed.is_empty() {
-            for line in trimmed.lines().take(20) {
-                let _ = writeln!(stderr, "  | {line}");
-            }
-        }
+    if let Some(stdout) = result.stdout.as_ref() {
+        write_tail_section(out, "stdout", &stdout.text, FAILED_STDOUT_TAIL_LINES);
+    }
+    if let Some(stderr) = result.stderr.as_ref() {
+        write_tail_section(out, "stderr", &stderr.text, FAILED_STDERR_TAIL_LINES);
+    }
+}
+
+fn write_tail_section(out: &mut impl Write, label: &str, text: &str, max_lines: usize) {
+    let non_empty: Vec<&str> = text
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    if non_empty.is_empty() {
+        return;
+    }
+    let start = non_empty.len().saturating_sub(max_lines);
+    let _ = writeln!(out, "  [{label}]");
+    for line in &non_empty[start..] {
+        let _ = writeln!(out, "  | {line}");
     }
 }

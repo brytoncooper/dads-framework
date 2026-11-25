@@ -62,7 +62,7 @@ fn write_manifest_with_env(
                 "env": { "VITEST_TIER": env_tier }
             },
             "dependsOn": [],
-            "impact": { "mode": "always", "paths": [] }
+            "impact": { "mode": "project", "paths": [] }
         }]
     });
     fs::write(
@@ -80,8 +80,9 @@ fn run_task(dir: &Path, store: &FileReceiptStore) -> Result<RunResult, Box<dyn E
         manifest_path: None,
         base: None,
         head: None,
-        all: true,
-        task_ids: Vec::new(),
+        all: false,
+        only: true,
+        task_ids: vec!["app:test".to_owned()],
         task_kinds: Vec::new(),
         shard: None,
         jobs: Some(1),

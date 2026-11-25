@@ -230,3 +230,70 @@ fn run_does_not_reuse_a_previous_task_result() {
     );
     remove_dir_all(repository).expect("temporary repository must be removable");
 }
+
+#[test]
+fn failed_stream_output_prints_both_stdout_and_stderr_tails() {
+    let stdout_lines: Vec<String> = (1..=45)
+        .map(|i| {
+            if i == 20 {
+                "   ".to_owned()
+            } else {
+                format!("stdout-line-{i:02}")
+            }
+        })
+        .collect();
+    let stderr_lines: Vec<String> = (1..=30).map(|i| format!("stderr-line-{i:02}")).collect();
+    let failed = crate::TaskRunResult {
+        id: "web:test".into(),
+        status: "failed".into(),
+        exit_code: Some(1),
+        duration_ms: Some(420),
+        stdout: Some(crate::TaskOutput {
+            text: stdout_lines.join("\n"),
+            truncated: false,
+        }),
+        stderr: Some(crate::TaskOutput {
+            text: stderr_lines.join("\n"),
+            truncated: false,
+        }),
+        error: Some("assertion failure".into()),
+        cached: false,
+    };
+
+    let mut rendered = Vec::new();
+    crate::scheduler::write_finish(&mut rendered, &failed);
+    let text = String::from_utf8(rendered).expect("rendered output must be UTF-8");
+
+    assert!(text.contains("[dad-test] FAIL   web:test (420ms, exit 1)"));
+    assert!(text.contains("  error: assertion failure"));
+    assert!(text.contains("  [stdout]"));
+    assert!(text.contains("  [stderr]"));
+    // Tail of last 30 non-empty stdout lines: 44 non-empty lines total (line 20 blank),
+    // so lines 15..=45 skipping 20 => starts at stdout-line-15, omits stdout-line-14.
+    assert!(!text.contains("stdout-line-14"));
+    assert!(text.contains("  | stdout-line-15"));
+    assert!(text.contains("  | stdout-line-45"));
+    // Tail of last 20 non-empty stderr lines: lines 11..=30, omits stderr-line-10.
+    assert!(!text.contains("stderr-line-10"));
+    assert!(text.contains("  | stderr-line-11"));
+    assert!(text.contains("  | stderr-line-30"));
+
+    // Passing tasks only emit a single PASS line without stdout/stderr sections.
+    let passed = crate::TaskRunResult {
+        id: "web:test".into(),
+        status: "executed".into(),
+        exit_code: Some(0),
+        duration_ms: Some(15),
+        stdout: Some(crate::TaskOutput {
+            text: "ok\n".into(),
+            truncated: false,
+        }),
+        stderr: None,
+        error: None,
+        cached: false,
+    };
+    let mut pass_buf = Vec::new();
+    crate::scheduler::write_finish(&mut pass_buf, &passed);
+    let pass_text = String::from_utf8(pass_buf).expect("pass output must be UTF-8");
+    assert_eq!(pass_text, "[dad-test] PASS   web:test (15ms)\n");
+}

@@ -196,6 +196,22 @@ pub struct ResolvedScope {
     pub full_fallback: bool,
 }
 
+/// Planner-computed receipt cache inputs for one runnable task.
+///
+/// The planner is the single source of truth for what inputs can affect a task; the receipt cache
+/// hashes strictly from this structure and fails closed whenever `cacheable` is `false` or absent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskCacheInputs {
+    pub cacheable: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub project_roots: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub impact_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_files: Vec<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskDecision {
@@ -212,6 +228,8 @@ pub struct TaskDecision {
     pub reached_files: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selected_files: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache_inputs: Option<TaskCacheInputs>,
 }
 
 /// The located evidence behind one task decision. Every widening reason names either the issue

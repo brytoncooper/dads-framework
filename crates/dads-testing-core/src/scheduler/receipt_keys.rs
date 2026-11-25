@@ -1,21 +1,23 @@
-//! Builds content-hashed receipt keys for planned tasks by resolving a task's owning project
-//! root together with all transitive `fallbackDependencies` project roots.
-use crate::manifest::{DeclaredTask, Project, TaskExecution};
+//! Builds content-hashed receipt keys strictly from the planner-computed `TaskCacheInputs`.
+//!
+//! Fails closed (`None`) whenever `cache_inputs` is absent or marks the task non-cacheable so the
+//! scheduler never invents an independent dependency closure.
+use crate::manifest::{DeclaredTask, TaskExecution};
+use crate::protocol::TaskCacheInputs;
 use crate::receipts::{TaskReceiptRequest, TaskReceiptStore};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 
 pub(super) fn compute_task_receipt_key(
     receipts: Option<&dyn TaskReceiptStore>,
-    projects_by_id: &BTreeMap<&str, &Project>,
     task: &DeclaredTask,
     execution: &TaskExecution,
     selected_files: &[String],
+    cache_inputs: Option<&TaskCacheInputs>,
     manifest_file: &Path,
     workspace_root: &Path,
 ) -> Option<String> {
     let store = receipts?;
-    let project_roots = transitive_project_roots(projects_by_id, &task.project);
+    let inputs = cache_inputs.filter(|inputs| inputs.cacheable)?;
     let setup_files: &[String] = execution
         .file_narrowing
         .as_ref()
@@ -30,32 +32,10 @@ pub(super) fn compute_task_receipt_key(
         env: &execution.env,
         setup_files,
         selected_files,
-        project_roots: &project_roots,
+        project_roots: &inputs.project_roots,
+        impact_paths: &inputs.impact_paths,
+        extra_files: &inputs.extra_files,
         manifest_path: manifest_file,
         workspace_root,
     })
-}
-
-fn transitive_project_roots(
-    projects_by_id: &BTreeMap<&str, &Project>,
-    root_project: &str,
-) -> Vec<String> {
-    let mut visited = BTreeSet::new();
-    let mut queue = VecDeque::new();
-    let mut roots = BTreeSet::new();
-    if visited.insert(root_project) {
-        queue.push_back(root_project);
-    }
-    while let Some(project_id) = queue.pop_front() {
-        let Some(project) = projects_by_id.get(project_id) else {
-            continue;
-        };
-        roots.insert(project.root.clone());
-        for dep in &project.fallback_dependencies {
-            if visited.insert(dep.as_str()) {
-                queue.push_back(dep.as_str());
-            }
-        }
-    }
-    roots.into_iter().collect()
 }

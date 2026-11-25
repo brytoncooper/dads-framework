@@ -5,6 +5,7 @@ use crate::diagnose_remediation::{culprit_remediation, is_tool_config_file};
 use crate::diagnose_traps::find_fallback_traps;
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{FileNarrowing, ImpactMode, TestingManifest};
+use crate::plan::project_graph::unified_project_dependencies;
 use crate::protocol::{
     DiagnoseResult, DiagnoseSummary, IssueScope, PROTOCOL_SCHEMA_VERSION, WideningCulprit,
 };
@@ -12,7 +13,7 @@ use crate::scope::{
     deepest_project_for_path, is_standard_test_path, is_test_module_with_narrowings,
     path_matches_impact,
 };
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::path::Path;
 
 #[derive(Clone, Copy)]
@@ -97,8 +98,9 @@ fn build_index<'a>(
             reach_tasks[i] += 1;
         }
     }
-    let closures = compute_closures(manifest, &proj_by_id);
     let nodes = graph.map_or_else(Vec::new, DependencyGraph::materialize_modules);
+    let project_deps = unified_project_dependencies(manifest, &nodes);
+    let closures = compute_closures(manifest, &proj_by_id, &project_deps);
     let narrowings: Vec<&FileNarrowing> = manifest
         .tasks
         .iter()
@@ -208,11 +210,15 @@ fn push_unique(list: &mut Vec<usize>, value: usize) {
 fn compute_closures(
     manifest: &TestingManifest,
     by_id: &HashMap<&str, usize>,
+    project_deps: &BTreeMap<&str, BTreeSet<&str>>,
 ) -> Vec<BTreeSet<usize>> {
     let mut rev = vec![Vec::new(); manifest.projects.len()];
-    for (i, p) in manifest.projects.iter().enumerate() {
-        for dep in &p.fallback_dependencies {
-            if let Some(&d) = by_id.get(dep.as_str()) {
+    for (proj_id, deps) in project_deps {
+        let Some(&i) = by_id.get(proj_id) else {
+            continue;
+        };
+        for dep in deps {
+            if let Some(&d) = by_id.get(dep) {
                 rev[d].push(i);
             }
         }

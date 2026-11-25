@@ -26,6 +26,7 @@ export {
   type TestingPlanShard,
   type TestingRemediationSafety,
   type TestingRunResult,
+  type TestingTaskCacheInputs,
   type TestingTaskCause,
   type TestingTaskDecision,
   type TestingTaskOutput,

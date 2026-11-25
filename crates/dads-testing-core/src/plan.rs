@@ -1,8 +1,10 @@
 //! Planning one request: own the changed paths, widen through whatever graph evidence exists,
 //! select the tasks that answer, and explain every decision with located evidence.
+mod cache_inputs;
 mod decisions;
 mod filtering;
 mod impacts;
+pub(crate) mod project_graph;
 mod widening;
 
 use crate::execute::{TestingError, message};
@@ -11,10 +13,12 @@ use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, Testing
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
 use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::SqlTaskSelection;
+use cache_inputs::CacheInputIndex;
 use decisions::explain_decisions;
 use filtering::matches_file_narrowing;
 pub(crate) use filtering::{PlanFilters, apply_plan_filters, parse_kind_filter, validate_shard};
 use impacts::{attach_lockfile_impact, attach_sql_impact, attach_tsconfig_impact};
+use project_graph::unified_project_dependencies;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 use widening::{own_changed_paths, widen_through_graph};
@@ -220,9 +224,26 @@ pub(crate) fn build_plan(
     own_changed_paths(manifest, scope, &mut evidence);
     attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
     widen_through_graph(manifest, scope, graph, &mut evidence);
-    let selection = select_tasks(manifest, scope, &task_by_id, direct_tasks, &mut evidence)?;
-    let mut decisions =
-        explain_decisions(manifest, scope, graph, &task_by_id, &evidence, &selection)?;
+    let nodes = graph.map_or_else(Vec::new, DependencyGraph::materialize_modules);
+    let project_deps = unified_project_dependencies(manifest, &nodes);
+    let selection = select_tasks(
+        manifest,
+        scope,
+        &task_by_id,
+        direct_tasks,
+        &project_deps,
+        &mut evidence,
+    )?;
+    let cache_index = CacheInputIndex::new(manifest, graph, &nodes, &project_deps);
+    let mut decisions = explain_decisions(
+        manifest,
+        scope,
+        graph,
+        &task_by_id,
+        &evidence,
+        &selection,
+        &cache_index,
+    )?;
     let shard = apply_plan_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), filters);
     let run = decisions
         .iter()
@@ -266,6 +287,7 @@ fn select_tasks<'a>(
     scope: &ResolvedScope,
     task_by_id: &BTreeMap<&'a str, &'a DeclaredTask>,
     direct_tasks: BTreeSet<&'a str>,
+    project_deps: &BTreeMap<&'a str, BTreeSet<&'a str>>,
     evidence: &mut PlanEvidence<'a>,
 ) -> Result<Selection<'a>, TestingError> {
     let mut selected: BTreeSet<&'a str> = direct_tasks.iter().copied().collect();
@@ -280,11 +302,13 @@ fn select_tasks<'a>(
         }
     } else {
         fallback_origins =
-            propagate_fallback_dependents(manifest, &mut evidence.fallback_impacted_projects);
-        uncertainty_origins =
-            propagate_fallback_dependents(manifest, &mut evidence.uncertainty_impacted_projects);
+            propagate_fallback_dependents(project_deps, &mut evidence.fallback_impacted_projects);
+        uncertainty_origins = propagate_fallback_dependents(
+            project_deps,
+            &mut evidence.uncertainty_impacted_projects,
+        );
         let typecheck_uncertainty_origins = propagate_fallback_dependents(
-            manifest,
+            project_deps,
             &mut evidence.typecheck_uncertainty_impacted_projects,
         );
         for (project, origins) in typecheck_uncertainty_origins {
@@ -347,13 +371,19 @@ fn clone_scope(scope: &ResolvedScope) -> ResolvedScope {
     }
 }
 
-/// Widens an impacted-project set through declared fallback dependencies and reports, for every
-/// impacted project, which originally impacted projects put it there. A project that was impacted
-/// on its own account is its own origin.
+/// Widens an impacted-project set through the unified project dependency graph (`fallbackDependencies`
+/// union resolved cross-project imports) and reports, for every impacted project, which originally
+/// impacted projects put it there. A project that was impacted on its own account is its own origin.
 fn propagate_fallback_dependents<'a>(
-    manifest: &'a TestingManifest,
+    project_deps: &BTreeMap<&'a str, BTreeSet<&'a str>>,
     impacted: &mut BTreeSet<&'a str>,
 ) -> BTreeMap<&'a str, BTreeSet<&'a str>> {
+    let mut dependents_by_dep: BTreeMap<&'a str, Vec<&'a str>> = BTreeMap::new();
+    for (&dependent, deps) in project_deps {
+        for &dep in deps {
+            dependents_by_dep.entry(dep).or_default().push(dependent);
+        }
+    }
     let mut origins: BTreeMap<&'a str, BTreeSet<&'a str>> = impacted
         .iter()
         .map(|project| (*project, BTreeSet::from([*project])))
@@ -361,22 +391,18 @@ fn propagate_fallback_dependents<'a>(
     let mut queue: VecDeque<&'a str> = impacted.iter().copied().collect();
     while let Some(changed_project) = queue.pop_front() {
         let inherited = origins.get(changed_project).cloned().unwrap_or_default();
-        for candidate in &manifest.projects {
-            if !candidate
-                .fallback_dependencies
-                .iter()
-                .any(|dependency| dependency == changed_project)
-            {
-                continue;
-            }
-            let candidate_origins = origins.entry(candidate.id.as_str()).or_default();
+        let Some(dependents) = dependents_by_dep.get(changed_project) else {
+            continue;
+        };
+        for &candidate in dependents {
+            let candidate_origins = origins.entry(candidate).or_default();
             let mut gained_origin = false;
             for origin in &inherited {
                 // Every origin must be recorded, so this cannot short-circuit on the first new one.
                 gained_origin |= candidate_origins.insert(origin);
             }
-            if impacted.insert(candidate.id.as_str()) || gained_origin {
-                queue.push_back(candidate.id.as_str());
+            if impacted.insert(candidate) || gained_origin {
+                queue.push_back(candidate);
             }
         }
     }

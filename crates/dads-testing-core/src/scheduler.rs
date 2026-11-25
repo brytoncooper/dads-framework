@@ -10,6 +10,9 @@ mod stream;
 mod vitest_batch;
 mod worker;
 
+#[cfg(test)]
+pub(crate) use stream::write_finish;
+
 use crate::execute::{TestingError, message};
 use crate::manifest::TestingManifest;
 use crate::protocol::{PlanResult, RunResult, TaskRunResult};

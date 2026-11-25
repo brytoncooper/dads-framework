@@ -76,8 +76,9 @@ fn build_receipt_store(request: &NativeRequest) -> Option<FileReceiptStore> {
         });
     let workspace_root = Path::new(&request.workspace_root);
     let base_store = match explicit_cache_dir {
-        Some(raw) => resolve_cache_dir(&raw, workspace_root)
-            .map(|dir| FileReceiptStore::for_cache_dir(&dir)),
+        Some(raw) => {
+            resolve_cache_dir(&raw, workspace_root).map(|dir| FileReceiptStore::for_cache_dir(&dir))
+        }
         None => FileReceiptStore::for_workspace(workspace_root),
     };
     base_store.map(|store| match remote_url {
@@ -123,7 +124,7 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
     let always_needs_graph = matches!(request.operation, Operation::Diagnose | Operation::Hotspots);
     if !always_needs_graph
         && (request.all
-            || request.only
+            || (request.only && !request.cache)
             || request.plan_file.is_some()
             || request.base.as_deref().is_some_and(is_empty_tree_sha))
     {

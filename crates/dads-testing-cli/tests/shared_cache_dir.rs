@@ -38,7 +38,7 @@ fn run_manifest() -> Value {
                     "args": ["-c", "printf ran >> .git/marker.txt && printf 'cached-output'"]
                 },
                 "dependsOn": [],
-                "impact": { "mode": "always", "paths": [] }
+                "impact": { "mode": "project", "paths": [] }
             }
         ]
     })
@@ -73,8 +73,8 @@ fn run_native_cli(
         "schemaVersion": 1,
         "operation": "run",
         "workspaceRoot": workspace_root.to_string_lossy(),
-        "all": true,
-        "taskIds": [],
+        "only": true,
+        "taskIds": ["app:test"],
         "jobs": 1,
         "cache": true
     });

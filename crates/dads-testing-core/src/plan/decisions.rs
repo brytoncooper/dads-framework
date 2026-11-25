@@ -1,5 +1,6 @@
 //! Why each declared task runs or is skipped. The reason is chosen from the strongest evidence
 //! that applies, and the same evidence is turned into the located causes the decision cites.
+use super::cache_inputs::CacheInputIndex;
 use super::{PlanEvidence, Selection};
 use crate::execute::{TestingError, message};
 use crate::graph::DependencyGraph;
@@ -15,6 +16,7 @@ pub(super) fn explain_decisions<'a>(
     task_by_id: &BTreeMap<&'a str, &'a DeclaredTask>,
     evidence: &PlanEvidence<'a>,
     selection: &Selection<'a>,
+    cache_index: &CacheInputIndex<'a>,
 ) -> Result<Vec<TaskDecision>, TestingError> {
     let causes = CauseEvidence {
         manifest,
@@ -57,6 +59,8 @@ pub(super) fn explain_decisions<'a>(
         } else {
             Vec::new()
         };
+        let cache_inputs =
+            run.then(|| cache_index.for_task(task, scope, evidence, &selected_files));
         decisions.push(TaskDecision {
             decision: if run {
                 "run".into()
@@ -70,6 +74,7 @@ pub(super) fn explain_decisions<'a>(
             causes: causes.for_task(task, reason),
             reached_files,
             selected_files,
+            cache_inputs,
             id,
         });
     }

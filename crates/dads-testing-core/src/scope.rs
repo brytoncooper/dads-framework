@@ -129,12 +129,20 @@ pub(crate) fn path_is_inside(path: &str, root: &str) -> bool {
 }
 
 /// Matches a workspace-relative path against either a directory/file prefix or a `*`/`**` glob.
-pub(crate) fn path_matches_impact(path: &str, declared: &str) -> bool {
-    if !declared.contains('*') {
-        return path_is_inside(path, declared);
+pub fn path_matches_impact(path: &str, declared: &str) -> bool {
+    let normalized = if declared == "." {
+        "."
+    } else {
+        declared.trim_end_matches('/')
+    };
+    if normalized.is_empty() {
+        return false;
+    }
+    if !normalized.contains('*') {
+        return path_is_inside(path, normalized);
     }
     let path_parts: Vec<&str> = path.split('/').collect();
-    let pat_parts: Vec<&str> = declared.split('/').collect();
+    let pat_parts: Vec<&str> = normalized.split('/').collect();
     match_glob_segments(&path_parts, &pat_parts)
 }
 

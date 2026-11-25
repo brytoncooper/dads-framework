@@ -391,7 +391,8 @@ an array of `{ from, to }` foreign-key pairs):
   the persisted state is not read or rewritten, and the plan says so with a
   `graph-analysis-unneeded` issue.
 - If a graph fact is unavailable or untrusted for an owned path, Dads widens
-  from that project through its declared `fallbackDependencies`. Unowned paths
+  from that project through the unified project dependency graph (its declared
+  `fallbackDependencies` union resolved cross-project imports). Unowned paths
   and unowned graph uncertainty select the complete workspace fallback.
 - The only skip decision is `skip-proven-unaffected`.
 - A project rooted at `.` owns every path in the workspace.
@@ -417,7 +418,9 @@ an array of `{ from, to }` foreign-key pairs):
 The plan JSON carries `scope`, `tasks`, and `issues`. A task has `id`,
 `decision`, `reason`, `confidence`, and `widened`, plus an optional `project`
 that owns it, optional `reachedFiles` and `selectedFiles` lists for narrowed
-test selection, and an optional `causes` list naming every reason it was
+test selection, optional `cacheInputs` (`cacheable`, `projectRoots`,
+`impactPaths`, `extraFiles`) carrying the planner's receipt input closure for
+`run` and `--plan-file`, and an optional `causes` list naming every reason it was
 selected: a direct task input, a prerequisite of another selected task, a
 changed path, a changed export, a reached import (with its location, the
 module it was imported from, and the symbols), a plan issue, or a fallback

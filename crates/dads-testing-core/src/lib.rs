@@ -50,11 +50,11 @@ pub use protocol::{
     HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary, IssueScope,
     IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
     PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata,
-    RemediationSafety, ResolvedScope, RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput,
-    TaskRunResult, TaskShard, WideningCulprit,
+    RemediationSafety, ResolvedScope, RunCounts, RunResult, TaskCacheInputs, TaskCause,
+    TaskDecision, TaskOutput, TaskRunResult, TaskShard, WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
-pub use scope::is_empty_tree_sha;
+pub use scope::{is_empty_tree_sha, path_matches_impact};
 
 #[cfg(test)]
 mod tests;

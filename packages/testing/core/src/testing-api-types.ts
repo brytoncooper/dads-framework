@@ -47,6 +47,13 @@ export type TestingOperationRequest = {
   readonly nativeBinary?: string;
 };
 
+export type TestingTaskCacheInputs = {
+  readonly cacheable: boolean;
+  readonly projectRoots?: readonly string[];
+  readonly impactPaths?: readonly string[];
+  readonly extraFiles?: readonly string[];
+};
+
 export type TestingTaskDecision = {
   readonly id: string;
   readonly decision: "run" | "skip-proven-unaffected";
@@ -61,6 +68,8 @@ export type TestingTaskDecision = {
   readonly reachedFiles?: readonly string[];
   /** Narrowed test files passed to the runner when `execution.fileNarrowing` applies. */
   readonly selectedFiles?: readonly string[];
+  /** Planner-computed receipt cache input closure for runnable tasks. */
+  readonly cacheInputs?: TestingTaskCacheInputs;
 };
 
 /**

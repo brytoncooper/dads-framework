@@ -19,6 +19,8 @@ pub struct TaskReceiptRequest<'a> {
     pub setup_files: &'a [String],
     pub selected_files: &'a [String],
     pub project_roots: &'a [String],
+    pub impact_paths: &'a [String],
+    pub extra_files: &'a [String],
     pub manifest_path: &'a Path,
     pub workspace_root: &'a Path,
 }

@@ -5,8 +5,10 @@ pub use crate::node_runner_js::DST_RUNNER_JS;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+
+const MAX_CALLS_PER_WORKER: usize = 20;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,6 +60,9 @@ pub fn oracle_specs_with_override(
 }
 
 pub struct NodeOracleWorker {
+    node_bin: PathBuf,
+    typescript_js: PathBuf,
+    calls_served: usize,
     child: Child,
     stdin: ChildStdin,
     stdout: BufReader<ChildStdout>,
@@ -65,33 +70,26 @@ pub struct NodeOracleWorker {
 
 impl NodeOracleWorker {
     pub fn spawn(node_bin: &Path, typescript_js: &Path) -> Result<Self, String> {
-        let mut child = Command::new(node_bin)
-            .args([
-                "--no-warnings",
-                "--experimental-transform-types",
-                "--input-type=module",
-                "-e",
-                PERSISTENT_ORACLE_JS,
-            ])
-            .env("DADS_DST_TS_PATH", typescript_js)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|error| format!("failed to spawn node oracle worker: {error}"))?;
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| "node oracle stdin unavailable".to_owned())?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| "node oracle stdout unavailable".to_owned())?;
+        let (child, stdin, stdout) = spawn_oracle_child(node_bin, typescript_js)?;
         Ok(Self {
+            node_bin: node_bin.to_path_buf(),
+            typescript_js: typescript_js.to_path_buf(),
+            calls_served: 0,
             child,
             stdin,
             stdout: BufReader::new(stdout),
         })
+    }
+
+    fn recycle(&mut self) -> Result<(), String> {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        let (child, stdin, stdout) = spawn_oracle_child(&self.node_bin, &self.typescript_js)?;
+        self.child = child;
+        self.stdin = stdin;
+        self.stdout = BufReader::new(stdout);
+        self.calls_served = 0;
+        Ok(())
     }
 
     pub fn evaluate(
@@ -99,6 +97,10 @@ impl NodeOracleWorker {
         workspace_root: &Path,
         tests: &[OracleTestSpec],
     ) -> Result<BTreeMap<String, OracleTestOutcome>, String> {
+        if self.calls_served >= MAX_CALLS_PER_WORKER {
+            self.recycle()?;
+        }
+        self.calls_served += 1;
         let root_str = workspace_root.to_string_lossy();
         let payload = serde_json::to_string(&OracleRequest {
             workspace_root: &root_str,
@@ -134,4 +136,33 @@ impl Drop for NodeOracleWorker {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+fn spawn_oracle_child(
+    node_bin: &Path,
+    typescript_js: &Path,
+) -> Result<(Child, ChildStdin, ChildStdout), String> {
+    let mut child = Command::new(node_bin)
+        .args([
+            "--no-warnings",
+            "--experimental-transform-types",
+            "--input-type=module",
+            "-e",
+            PERSISTENT_ORACLE_JS,
+        ])
+        .env("DADS_DST_TS_PATH", typescript_js)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|error| format!("failed to spawn node oracle worker: {error}"))?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "node oracle stdin unavailable".to_owned())?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "node oracle stdout unavailable".to_owned())?;
+    Ok((child, stdin, stdout))
 }

@@ -19,6 +19,7 @@ use crate::tsc_oracle::{DST_TYPECHECK_JS, TscOracleWorker};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "macos")]
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};

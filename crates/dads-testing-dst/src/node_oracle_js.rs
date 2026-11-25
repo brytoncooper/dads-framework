@@ -196,11 +196,13 @@ function runOne(workspaceRoot, testFile, setupFile, extraEnv) {
     let settled = false;
     worker.once("message", (msg) => {
       settled = true;
+      worker.terminate().catch(() => {});
       resolvePromise(msg);
     });
     worker.once("error", (err) => {
       if (!settled) {
         settled = true;
+        worker.terminate().catch(() => {});
         resolvePromise({ ok: false, error: err.message });
       }
     });
@@ -213,17 +215,29 @@ function runOne(workspaceRoot, testFile, setupFile, extraEnv) {
   });
 }
 
+async function mapLimited(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const idx = next;
+      next += 1;
+      out[idx] = await fn(items[idx]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
 const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
 rl.on("line", async (line) => {
   if (!line.trim()) return;
   try {
     const req = JSON.parse(line);
-    const entries = await Promise.all(
-      req.tests.map(async (item) => {
-        const res = await runOne(req.workspaceRoot, item.file, item.setupFile ?? null, item.env ?? null);
-        return [item.file, res];
-      }),
-    );
+    const entries = await mapLimited(req.tests, 4, async (item) => {
+      const res = await runOne(req.workspaceRoot, item.file, item.setupFile ?? null, item.env ?? null);
+      return [item.file, res];
+    });
     const results = Object.fromEntries(entries);
     process.stdout.write(JSON.stringify({ ok: true, results }) + "\n");
   } catch (error) {

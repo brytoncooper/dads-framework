@@ -12,8 +12,8 @@ use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult
 use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::SqlTaskSelection;
 use decisions::explain_decisions;
-pub(crate) use filtering::PlanFilters;
-use filtering::{apply_plan_filters, matches_file_narrowing, parse_kind_filter, validate_shard};
+use filtering::matches_file_narrowing;
+pub(crate) use filtering::{PlanFilters, apply_plan_filters, parse_kind_filter, validate_shard};
 use impacts::{attach_lockfile_impact, attach_sql_impact, attach_tsconfig_impact};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
@@ -223,7 +223,7 @@ pub(crate) fn build_plan(
     let selection = select_tasks(manifest, scope, &task_by_id, direct_tasks, &mut evidence)?;
     let mut decisions =
         explain_decisions(manifest, scope, graph, &task_by_id, &evidence, &selection)?;
-    apply_plan_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), filters);
+    let shard = apply_plan_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), filters);
     let run = decisions
         .iter()
         .filter(|decision| decision.decision == "run")
@@ -242,6 +242,7 @@ pub(crate) fn build_plan(
             run,
             skip_proven_unaffected,
         },
+        shard,
     })
 }
 

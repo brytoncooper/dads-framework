@@ -97,11 +97,15 @@ and `--task` (repeatable, one task id each; cannot be combined with `--all`).
 comma-separated task target names such as `lint` or `test:integration`),
 `--project` (repeatable or comma-separated project ids), `--exclude`
 (repeatable or comma-separated project ids to omit), `--shard`
-(`<index>/<total>`, 1-based deterministic partition across selected tasks),
-`--weights` (path to a JSON map of project or task weights for Longest-
-Processing-Time weighted sharding), `--jobs`, and `--report` (with an optional
-path). `--json` works on every command and is the contract; the human line
-format is not.
+(`<index>/<total>`, 1-based deterministic project-grouped Longest-Processing-Time
+partition across runnable tasks; emits `shard` metadata in `plan --json`),
+`--weights` (path to a JSON weight file in either flat `{ "project-or-task": 1234 }`
+or nested `{ "projects": { "proj": { "durationMs": 1234 } } }` form), `--jobs`,
+and `--report` (with an optional path). `run` also accepts `--plan-file <path>`
+to reuse the JSON output of `dad-test plan --json` (envelope or raw `PlanResult`)
+with post-plan filters and `--shard` without re-running Git diff or Oxc graph
+analysis on every CI shard. `--json` works on every command and is the contract;
+the human line format is not.
 
 `dad-test plan` selects tasks and reports one decision per task without
 executing anything. With `--report [path]` it also writes the analysis report

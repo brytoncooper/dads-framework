@@ -32,7 +32,7 @@ const usage =
     "",
     "Commands:",
     "  plan      Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --manifest)",
-    "  run       Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --jobs, --cache, --cache-dir, --remote-cache, --stream, --report)",
+    "  run       Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --plan-file, --jobs, --cache, --cache-dir, --remote-cache, --stream, --report)",
     "  explain   Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task)",
     "  diagnose  Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
     "  init      Generate dads.testing.json for npm/pnpm/yarn workspaces (--manifest, --force)",

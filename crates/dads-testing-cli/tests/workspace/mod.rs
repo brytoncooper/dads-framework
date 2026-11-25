@@ -48,31 +48,32 @@ impl TemporaryWorkspace {
 
     /// One plan request through the shipped binary, exactly as a caller sends it.
     pub fn plan(&self) -> Value {
+        let response = self.send_request(serde_json::json!({
+            "schemaVersion": 1,
+            "operation": "plan",
+            "workspaceRoot": self.0.to_string_lossy(),
+            "all": false,
+            "taskIds": [],
+        }));
+        assert_eq!(response["ok"], true, "{response}");
+        response["result"]["plan"].clone()
+    }
+
+    pub fn send_request(&self, request: Value) -> Value {
         let mut child = Command::new(env!("CARGO_BIN_EXE_dad-test"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
             .expect("dad-test must start");
-        let request = serde_json::json!({
-            "schemaVersion": 1,
-            "operation": "plan",
-            "workspaceRoot": self.0.to_string_lossy(),
-            "all": false,
-            "taskIds": [],
-        })
-        .to_string();
         child
             .stdin
             .as_mut()
             .expect("stdin must be piped")
-            .write_all(request.as_bytes())
+            .write_all(request.to_string().as_bytes())
             .expect("the request must be writable");
         let output = child.wait_with_output().expect("dad-test must finish");
-        let response: Value = serde_json::from_slice(&output.stdout)
-            .expect("dad-test must answer with one JSON response");
-        assert_eq!(response["ok"], true, "{response}");
-        response["result"]["plan"].clone()
+        serde_json::from_slice(&output.stdout).expect("dad-test must answer with one JSON response")
     }
 
     fn git(&self, arguments: &[&str]) {

@@ -387,6 +387,94 @@ describe("plan/run --report", () => {
     expect(expandFixture.readRequest()).toMatchObject({ operation: "expand-manifest" });
     expect(JSON.parse(readFileSync(join(directory, "expanded.json"), "utf8"))).toMatchObject({ schemaVersion: 1 });
   });
+
+  it("parses nested projects durationMs weights files and forwards --plan-file on run", async () => {
+    const directory = makeManifestDirectory();
+    writeFileSync(
+      join(directory, "integration-weights.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        generatedAt: "2026-01-01T00:00:00Z",
+        projects: {
+          api: { durationMs: 4200, budgetMs: 10000 },
+          web: { durationMs: 0 },
+          worker: 850,
+        },
+      }),
+      "utf8",
+    );
+    writeFileSync(
+      join(directory, "plan.json"),
+      JSON.stringify({ schemaVersion: 1, ok: true, result: planResult }),
+      "utf8",
+    );
+
+    const shardedPlanResult = {
+      ...planResult,
+      shard: {
+        index: 1,
+        total: 2,
+        weighted: true,
+        totalProjects: 2,
+        selectedProjects: 1,
+        totalRunnableTasks: 2,
+        selectedRunnableTasks: 1,
+        shardWeight: 4200,
+        totalWeight: 5050,
+      },
+    };
+    const runFixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: { operation: "run", plan: shardedPlanResult, run: runResult },
+    });
+    const runHarness = createHarness(directory, runFixture.binary);
+
+    expect(
+      await runDadTestCli(
+        ["run", "--plan-file", "plan.json", "--shard", "1/2", "--weights", "integration-weights.json", "--json"],
+        runHarness.io,
+      ),
+    ).toBe(0);
+    expect(runFixture.readRequest()).toMatchObject({
+      operation: "run",
+      planFile: join(directory, "plan.json"),
+      shard: { index: 1, total: 2 },
+      shardWeights: { api: 4200, web: 1, worker: 850 },
+    });
+    const runEnvelope: unknown = JSON.parse(runHarness.stdout());
+    expect(runEnvelope).toMatchObject({
+      schemaVersion: 1,
+      ok: true,
+      result: {
+        plan: { shard: shardedPlanResult.shard },
+      },
+    });
+
+    // --plan-file is only accepted by `run`, not `plan`.
+    const planFixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: { operation: "plan", plan: shardedPlanResult },
+    });
+    const planHarness = createHarness(directory, planFixture.binary);
+    expect(await runDadTestCli(["plan", "--plan-file", "plan.json", "--json"], planHarness.io)).toBe(1);
+
+    // Invalid nested weights entry fails closed.
+    writeFileSync(
+      join(directory, "bad-weights.json"),
+      JSON.stringify({ projects: { api: { durationMs: -5 } } }),
+      "utf8",
+    );
+    const badHarness = createHarness(directory, planFixture.binary);
+    expect(
+      await runDadTestCli(
+        ["plan", "--all", "--shard", "1/2", "--weights", "bad-weights.json", "--json"],
+        badHarness.io,
+      ),
+    ).toBe(1);
+    expect(badHarness.stderr()).toContain("durationMs");
+  });
 });
 
 function makeTemporaryDirectory(): string {

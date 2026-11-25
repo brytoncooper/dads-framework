@@ -10,6 +10,18 @@ export type TestingTaskShard = {
   readonly total: number;
 };
 
+export type TestingPlanShard = {
+  readonly index: number;
+  readonly total: number;
+  readonly weighted: boolean;
+  readonly totalProjects: number;
+  readonly selectedProjects: number;
+  readonly totalRunnableTasks: number;
+  readonly selectedRunnableTasks: number;
+  readonly shardWeight: number;
+  readonly totalWeight: number;
+};
+
 export type TestingOperationRequest = {
   readonly workspaceRoot: string;
   readonly manifestPath?: string;
@@ -34,6 +46,8 @@ export type TestingOperationRequest = {
   readonly remoteCacheUrl?: string;
   /** Stream live task progress to stderr during `run`. */
   readonly stream?: boolean;
+  /** Optional path to a precomputed `dad-test plan --json` file reused by `run`. */
+  readonly planFile?: string;
   /** Optional sink receiving live progress chunks when `stream` is enabled. */
   readonly onStream?: (chunk: string) => void;
   /** An explicit native binary is intended for local development and test harnesses. */
@@ -114,6 +128,8 @@ export type TestingPlanResult = {
     readonly run: number;
     readonly skipProvenUnaffected: number;
   };
+  /** Shard partition metadata, present when `--shard` was requested. */
+  readonly shard?: TestingPlanShard;
 };
 
 export type TestingTaskRunResult = {
@@ -260,6 +276,7 @@ type NativeRequest = {
   readonly cacheDir?: string;
   readonly remoteCacheUrl?: string;
   readonly stream?: boolean;
+  readonly planFile?: string;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -353,6 +370,7 @@ function optionalNativeRunFields(request: TestingOperationRequest): Partial<Nati
     ...(request.cacheDir === undefined ? {} : { cacheDir: request.cacheDir }),
     ...(request.remoteCacheUrl === undefined ? {} : { remoteCacheUrl: request.remoteCacheUrl }),
     ...(request.stream === true ? { stream: true } : {}),
+    ...(request.planFile === undefined ? {} : { planFile: request.planFile }),
   };
 }
 

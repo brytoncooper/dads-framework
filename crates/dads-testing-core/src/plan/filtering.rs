@@ -1,9 +1,9 @@
 //! Post-plan selection filters (kind, target name, project inclusion/exclusion) and
-//! deterministic sharding (round-robin or weighted LPT bin-packing) applied after full planning.
+//! deterministic project-grouped LPT sharding applied after full planning.
 
 use crate::execute::{TestingError, message};
 use crate::manifest::{DeclaredTask, FileNarrowing, TaskKind};
-use crate::protocol::{TaskDecision, TaskShard};
+use crate::protocol::{PlanShardMetadata, TaskDecision, TaskShard};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(crate) struct PlanFilters<'a> {
@@ -26,7 +26,7 @@ pub(super) fn matches_file_narrowing(path: &str, narrowing: &FileNarrowing) -> b
             .any(|excluded| path.ends_with(excluded))
 }
 
-pub(super) fn parse_kind_filter(
+pub(crate) fn parse_kind_filter(
     requested: &[String],
 ) -> Result<Option<Vec<TaskKind>>, TestingError> {
     if requested.is_empty() {
@@ -53,7 +53,7 @@ pub(super) fn parse_kind_filter(
     Ok(Some(kinds))
 }
 
-pub(super) fn validate_shard(shard: Option<TaskShard>) -> Result<(), TestingError> {
+pub(crate) fn validate_shard(shard: Option<TaskShard>) -> Result<(), TestingError> {
     let Some(shard) = shard else {
         return Ok(());
     };
@@ -69,12 +69,12 @@ pub(super) fn validate_shard(shard: Option<TaskShard>) -> Result<(), TestingErro
     Ok(())
 }
 
-pub(super) fn apply_plan_filters(
+pub(crate) fn apply_plan_filters(
     decisions: &mut Vec<TaskDecision>,
     task_by_id: &BTreeMap<&str, &DeclaredTask>,
     kind_filter: Option<&[TaskKind]>,
     filters: &PlanFilters<'_>,
-) {
+) -> Option<PlanShardMetadata> {
     if let Some(allowed_kinds) = kind_filter {
         decisions.retain(|decision| {
             task_by_id
@@ -101,13 +101,9 @@ pub(super) fn apply_plan_filters(
             .collect();
         decisions.retain(|decision| !excluded.contains(decision.project.as_str()));
     }
-    if let Some(shard) = filters.shard {
-        if filters.shard_weights.is_empty() {
-            apply_round_robin_shard(decisions, shard);
-        } else {
-            apply_weighted_project_shard(decisions, shard, filters.shard_weights);
-        }
-    }
+    filters
+        .shard
+        .map(|shard| apply_weighted_project_shard(decisions, shard, filters.shard_weights))
 }
 
 fn task_target_name<'a>(task_id: &'a str, project: &str) -> Option<&'a str> {
@@ -120,27 +116,19 @@ fn task_target_name<'a>(task_id: &'a str, project: &str) -> Option<&'a str> {
     task_id.rsplit_once(':').map(|(_, target)| target)
 }
 
-fn apply_round_robin_shard(decisions: &mut Vec<TaskDecision>, shard: TaskShard) {
-    let mut run_index: u32 = 0;
-    decisions.retain(|decision| {
-        if decision.decision != "run" {
-            return true;
-        }
-        let belongs = (run_index % shard.total) + 1 == shard.index;
-        run_index += 1;
-        belongs
-    });
-}
-
 /// Assigns runnable projects across shards using deterministic Longest-Processing-Time (LPT)
-/// bin-packing so heavy projects spread evenly across CI shards.
+/// bin-packing (ties broken alphabetically by project ID, then lowest bucket index) so all
+/// runnable targets for a project stay together on the same shard and heavy projects spread
+/// evenly across CI shards.
 fn apply_weighted_project_shard(
     decisions: &mut Vec<TaskDecision>,
     shard: TaskShard,
     weights: &BTreeMap<String, f64>,
-) {
+) -> PlanShardMetadata {
+    let mut total_runnable_tasks = 0_usize;
     let mut project_weights: BTreeMap<String, f64> = BTreeMap::new();
     for decision in decisions.iter().filter(|d| d.decision == "run") {
+        total_runnable_tasks += 1;
         let w = weights
             .get(&decision.id)
             .or_else(|| weights.get(&decision.project))
@@ -151,6 +139,8 @@ fn apply_weighted_project_shard(
             .entry(decision.project.clone())
             .or_insert(0.0) += w;
     }
+    let total_projects = project_weights.len();
+    let total_weight: f64 = project_weights.values().sum();
     let mut ranked: Vec<(String, f64)> = project_weights.into_iter().collect();
     ranked.sort_by(|left, right| {
         right
@@ -175,7 +165,20 @@ fn apply_weighted_project_shard(
             selected_projects.insert(project);
         }
     }
+    let shard_weight = loads.get(target_bucket).copied().unwrap_or(0.0);
     decisions.retain(|decision| {
         decision.decision != "run" || selected_projects.contains(decision.project.as_str())
     });
+    let selected_runnable_tasks = decisions.iter().filter(|d| d.decision == "run").count();
+    PlanShardMetadata {
+        index: shard.index,
+        total: shard.total,
+        weighted: !weights.is_empty(),
+        total_projects,
+        selected_projects: selected_projects.len(),
+        total_runnable_tasks,
+        selected_runnable_tasks,
+        shard_weight,
+        total_weight,
+    }
 }

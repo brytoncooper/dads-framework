@@ -73,6 +73,50 @@ fn one_reachability_task_still_gets_its_graph_analyzed() {
     );
 }
 
+#[test]
+fn run_with_plan_file_skips_graph_analysis_even_for_reachability_manifest() {
+    let workspace = TemporaryWorkspace::create("plan-file-skip-graph", &reachability_manifest());
+    let plan_envelope = json!({
+        "schemaVersion": 1,
+        "ok": true,
+        "result": {
+            "schemaVersion": 1,
+            "scope": {
+                "kind": "working-tree",
+                "changedPaths": ["app/index.ts"],
+                "fullFallback": false
+            },
+            "tasks": [{
+                "id": "app:test",
+                "decision": "run",
+                "reason": "changed-path",
+                "confidence": "proven",
+                "widened": false,
+                "project": "app"
+            }],
+            "issues": [],
+            "complete": true,
+            "counts": { "run": 1, "skipProvenUnaffected": 0 }
+        }
+    });
+    workspace.write("precomputed-plan.json", &plan_envelope.to_string());
+
+    let response = workspace.send_request(json!({
+        "schemaVersion": 1,
+        "operation": "run",
+        "workspaceRoot": workspace.0.to_string_lossy(),
+        "planFile": "precomputed-plan.json",
+        "shard": { "index": 1, "total": 1 }
+    }));
+    assert_eq!(response["ok"], true, "{response}");
+    assert_eq!(response["result"]["run"]["exitCode"], 0, "{response}");
+    let codes = issue_codes(&response["result"]["plan"]);
+    assert!(
+        codes.is_empty(),
+        "plan-file run must skip graph analysis completely, got issues: {codes:?}"
+    );
+}
+
 fn is_store_code(code: &str) -> bool {
     STORE_CODE_PREFIXES
         .iter()

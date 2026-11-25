@@ -4,6 +4,28 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.9.0] - 2026-11-25
+
+Independent soundness, runtime-verification, adversarial DST, and onboarding DX feature release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Added
+
+- **Zero-fast-path runtime file-read guard (`--enforce-declared-reads` / `workspace.enforceDeclaredReads`) & `dad-test audit [--fix]`:** Preloads a V8 `fs` / `fs/promises` / `child_process` tracer only on spawned Node/Vitest tasks (0.00ms overhead when off, on `plan`, or on `CACHED` hits), reports every undeclared workspace file read with `file:line` and a 1-line remediation, marks violating tasks failed without caching receipts, and auto-remediates manifests via `dad-test audit --fix` (collapsing `>= 3` sibling paths into `<dir>/**`).
+- **Effortless onboarding & trust DX:**
+  - `dad-test init --discover`: generates compact `workspace.discover` manifests for npm/pnpm/yarn/Nx workspaces with auto-detected `pureFactories`, Vitest `setupFiles`, SQL `migrationRoots`, and safe `ignorePaths`.
+  - `dad-test diagnose --fix [--dry-run]`: applies safe `ignorePaths`, `pureFactories`, and scoped `dynamicImportScopes` validated through `planTesting` before atomic write.
+  - `dad-test explain --why <taskId>`: prints a focused 3-line causal chain and remediation hint.
+  - `dad-test run --verify-shadow [--fail-on-shadow-escape]`: runs skipped tasks uncached in shadow mode and emits a structured trust receipt.
+- **Sideways `tsconfig*.json` `extends` chain walking (`tsconfig_extends`):** Follows multi-hop relative, extensionless, directory, TypeScript 5 array, and workspace-symlinked `node_modules` `extends` chains across planner widening, `v5` cache receipts, and runtime read-guard allowlists — failing closed on missing, malformed, or symlink-escaping targets while keeping zero cost on non-JSON commits.
+- **95-family curated DST + generative random-graph chaos fuzzer (`dads-testing-dst`):** Expanded curated DST from 58 to 95 families (including real `tsc`, Vitest, SQL, read-guard, and HTTP cache fault-injection oracles) plus a seeded random-graph chaos fuzzer with un-reset stateful timelines, cold-vs-incremental snapshot parity checks, and 4-stage `ddmin` shrinking. Verified at `0` soundness misses / `0` stale cache hits across 1,000 curated scenarios (2,000 steps, `1,971` oracle failures, `100.0%` noop skip `789/789`) and 1,000 chaos scenarios (6,000 un-reset steps, `65,869` oracle failures, `0/6,000` snapshot parity divergences, `100.0%` clean comment skip `4,348/4,348`).
+
+### Fixed
+
+- **Hardened purity & static `fs` analysis (`frontend_version` 17):** Restricted `Object.freeze(...)` purity to fresh literals, rejected non-primitive template/binary/unary coercions, validated `new RegExp(...)` patterns via `oxc_parser`, rejected throwing `BigInt(...)` / root-scope TDZ / unknown globals, expanded `FS_READ_METHODS` + `child_process` script edges + `fs.globSync` + `for..of` const arrays, tracked missing-at-baseline `existsSync` and `fs-dir:` directory watches, and added conservative `unresolved-fs-read` widening when `--enforce-declared-reads` is off.
+- **Receipt `v5` cache soundness (`dads-testing-receipt-v5`):** Walks gitignored `impact.paths` globs, hashes `.env*` / framework configs (`next`, `drizzle`, `tailwind`, `postcss`, `babel`) and ancestor/extended `tsconfig*.json` files, hashes Unix executable permission bits (`mode & 0o111`) and ambient process env vars (`TZ`, `NODE_ENV`, `NODE_OPTIONS`, `LC_ALL`, `LANG`), and verifies `--plan-file` workspace freshness (`workspaceFingerprint`) before skipping tasks.
+- **Deleted cross-project modules, ambient `.d.ts`, and static-manifest Vitest `setupFiles`:** Widens unresolved module importers when workspace files are deleted (caught by chaos fuzzer `seed=142`), widens cross-project `typecheck` tasks on ambient `.d.ts`/`.d.mts`/`.d.cts` edits and hashes `.d.ts` files into `typecheck` receipts, and hydrates project-level `vitest.config.*` `setupFiles` for static manifests.
+- **20k-file monorepo precision & plan JSON scaling (caught by real `command` shadow replay):** Ignored raw `fs:`/`fs-dir:` edges in `DependencyGraph::has_importers` so isolated test files scanned by architecture tests never widen downstream library dependents (lifting leaf-commit skip rate on `command` from `1.5%` to `98.9%–99.7%`), confined `unresolved-fs-read` on isolated test files, deduplicated per-project widening issues, and bounded `TaskCause::Issue` entries per origin/task (cutting worst-case 1,499-task plan JSON from `276 MB` to `11.3 MB`).
+
 ## [@dads-framework/testing 0.8.2] - 2026-11-25
 
 Independent soundness & precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

@@ -14,6 +14,7 @@ mod discover_vitest;
 mod execute;
 mod git;
 pub mod graph;
+mod hotspots;
 mod lockfile_impact;
 mod lockfile_parse;
 mod manifest;
@@ -35,7 +36,8 @@ pub use execute::{
 };
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
-    IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
+    HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary, IssueScope,
+    IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
     PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, RemediationSafety, ResolvedScope,
     RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult, TaskShard,
     WideningCulprit,

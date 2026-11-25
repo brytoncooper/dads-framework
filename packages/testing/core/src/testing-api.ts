@@ -1,7 +1,21 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import {
+  toNativeHotspotsOptions,
+  type NativeHotspotsOptions,
+  type TestingHotspotsRequest,
+  type TestingHotspotsResult,
+} from "./hotspots-types.js";
 import { resolveNativeTestingBinary } from "./native-platform.js";
 import { parseTestingManifest, type TestingManifest } from "./testing-manifest.js";
+
+export type {
+  TestingHotspotFile,
+  TestingHotspotProject,
+  TestingHotspotsRequest,
+  TestingHotspotsResult,
+  TestingHotspotsSummary,
+} from "./hotspots-types.js";
 
 const protocolSchemaVersion = 1;
 
@@ -222,7 +236,7 @@ export type TestingDiagnoseResult = {
   readonly fallbackTraps: readonly TestingFallbackTrap[];
 };
 
-type NativeOperation = "plan" | "run" | "diagnose" | "expand-manifest";
+type NativeOperation = "plan" | "run" | "diagnose" | "hotspots" | "expand-manifest";
 
 type NativeResponse = {
   readonly schemaVersion: number;
@@ -232,6 +246,7 @@ type NativeResponse = {
     readonly plan: TestingPlanResult;
     readonly run?: TestingRunResult;
     readonly diagnose?: TestingDiagnoseResult;
+    readonly hotspots?: TestingHotspotsResult;
     readonly manifest?: unknown;
   };
   readonly error?: string;
@@ -257,6 +272,7 @@ type NativeRequest = {
   readonly cache?: boolean;
   readonly remoteCacheUrl?: string;
   readonly stream?: boolean;
+  readonly hotspots?: NativeHotspotsOptions;
 };
 
 export async function planTesting(request: TestingOperationRequest): Promise<TestingPlanResult> {
@@ -283,6 +299,14 @@ export async function diagnoseTesting(request: TestingDiagnoseRequest): Promise<
   return response.diagnose;
 }
 
+export async function hotspotsTesting(request: TestingHotspotsRequest): Promise<TestingHotspotsResult> {
+  const response = await invokeNativeTestingEngine("hotspots", request, toNativeHotspotsOptions(request));
+  if (!response.hotspots) {
+    throw new Error("The native testing engine returned a hotspots response without hotspots details.");
+  }
+  return response.hotspots;
+}
+
 export async function expandTestingManifest(request: TestingExpandManifestRequest): Promise<TestingManifest> {
   const response = await invokeNativeTestingEngine("expand-manifest", request);
   if (response.manifest === undefined) {
@@ -294,8 +318,9 @@ export async function expandTestingManifest(request: TestingExpandManifestReques
 async function invokeNativeTestingEngine(
   operation: NativeOperation,
   request: TestingOperationRequest,
+  hotspots?: NativeHotspotsOptions,
 ): Promise<NonNullable<NativeResponse["result"]>> {
-  const nativeRequest = toNativeRequest(operation, request);
+  const nativeRequest = toNativeRequest(operation, request, hotspots);
   const response = await runNativeProcess(
     resolveNativeTestingBinary(request.nativeBinary === undefined ? {} : { explicitBinary: request.nativeBinary })
       .binary,
@@ -306,7 +331,11 @@ async function invokeNativeTestingEngine(
 }
 
 /** An absent field is omitted rather than sent as null, which the engine refuses. */
-function toNativeRequest(operation: NativeOperation, request: TestingOperationRequest): NativeRequest {
+function toNativeRequest(
+  operation: NativeOperation,
+  request: TestingOperationRequest,
+  hotspots?: NativeHotspotsOptions,
+): NativeRequest {
   return {
     schemaVersion: protocolSchemaVersion,
     operation,
@@ -316,6 +345,7 @@ function toNativeRequest(operation: NativeOperation, request: TestingOperationRe
     ...optionalNativeScopeFields(request),
     ...optionalNativeFilterFields(request),
     ...optionalNativeRunFields(request),
+    ...(hotspots === undefined ? {} : { hotspots }),
   };
 }
 

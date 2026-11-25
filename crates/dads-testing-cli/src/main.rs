@@ -79,7 +79,8 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
             issues: Vec::new(),
         };
     }
-    if request.operation != Operation::Diagnose
+    let always_needs_graph = matches!(request.operation, Operation::Diagnose | Operation::Hotspots);
+    if !always_needs_graph
         && (request.all || request.only || request.base.as_deref().is_some_and(is_empty_tree_sha))
     {
         return GraphAnalysis {
@@ -87,7 +88,7 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
             issues: Vec::new(),
         };
     }
-    if request.operation != Operation::Diagnose && !graph_analysis_can_change_the_plan(request) {
+    if !always_needs_graph && !graph_analysis_can_change_the_plan(request) {
         return GraphAnalysis {
             graph: None,
             issues: vec![PlanIssue::new(

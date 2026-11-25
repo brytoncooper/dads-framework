@@ -1,5 +1,8 @@
 //! The protocol-v1 wire contract: the request the host sends, and the plan and run it gets back.
 //! Every name and every `serde` attribute here is the published format, held by `wire_golden`.
+pub use crate::hotspots::{
+    HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -50,6 +53,8 @@ pub struct NativeRequest {
     pub remote_cache_url: Option<String>,
     #[serde(default)]
     pub stream: bool,
+    #[serde(default)]
+    pub hotspots: Option<HotspotsOptions>,
 }
 
 impl Default for NativeRequest {
@@ -74,6 +79,7 @@ impl Default for NativeRequest {
             cache: false,
             remote_cache_url: None,
             stream: false,
+            hotspots: None,
         }
     }
 }
@@ -84,6 +90,7 @@ pub enum Operation {
     Plan,
     Run,
     Diagnose,
+    Hotspots,
     ExpandManifest,
 }
 
@@ -127,6 +134,8 @@ pub struct OperationResult {
     pub run: Option<RunResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnose: Option<DiagnoseResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hotspots: Option<HotspotsResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub manifest: Option<serde_json::Value>,
 }

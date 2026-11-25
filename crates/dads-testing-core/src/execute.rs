@@ -3,6 +3,7 @@
 use crate::diagnose::build_diagnose;
 use crate::discover::expand_manifest;
 use crate::graph::DependencyGraph;
+use crate::hotspots::build_hotspots;
 use crate::manifest::{DEFAULT_MANIFEST_PATH, TestingManifest, load_manifest, validate_manifest};
 use crate::plan::{PlanFilters, build_plan};
 use crate::protocol::{
@@ -148,28 +149,56 @@ fn execute(
     validate_request(&request)?;
     let (workspace_root, manifest_file, manifest) = load_declared_manifest(&request)?;
     validate_manifest(&manifest, &workspace_root)?;
-    if request.operation == Operation::ExpandManifest {
-        let serialized = serde_json::to_value(&manifest)
-            .map_err(|error| message(format!("Unable to serialize expanded manifest: {error}")))?;
-        return Ok(OperationResult {
-            operation: "expand-manifest".into(),
-            plan: empty_plan_for("expand-manifest"),
-            run: None,
-            diagnose: None,
-            manifest: Some(serialized),
-        });
-    }
-    if request.operation == Operation::Diagnose {
-        let diagnose = build_diagnose(&manifest, &workspace_root, graph);
-        return Ok(OperationResult {
+    match request.operation {
+        Operation::ExpandManifest => {
+            let serialized = serde_json::to_value(&manifest).map_err(|error| {
+                message(format!("Unable to serialize expanded manifest: {error}"))
+            })?;
+            Ok(OperationResult {
+                operation: "expand-manifest".into(),
+                plan: empty_plan_for("expand-manifest"),
+                run: None,
+                diagnose: None,
+                hotspots: None,
+                manifest: Some(serialized),
+            })
+        }
+        Operation::Diagnose => Ok(OperationResult {
             operation: "diagnose".into(),
             plan: empty_plan_for("diagnose"),
             run: None,
-            diagnose: Some(diagnose),
+            diagnose: Some(build_diagnose(&manifest, &workspace_root, graph)),
+            hotspots: None,
             manifest: None,
-        });
+        }),
+        Operation::Hotspots => Ok(OperationResult {
+            operation: "hotspots".into(),
+            plan: empty_plan_for("hotspots"),
+            run: None,
+            diagnose: None,
+            hotspots: Some(build_hotspots(&manifest, graph, request.hotspots.as_ref())),
+            manifest: None,
+        }),
+        Operation::Plan | Operation::Run => execute_plan_or_run(
+            request,
+            &workspace_root,
+            &manifest_file,
+            &manifest,
+            graph,
+            receipts,
+        ),
     }
-    let scope = resolve_scope(&request, &workspace_root)?;
+}
+
+fn execute_plan_or_run(
+    request: NativeRequest,
+    workspace_root: &Path,
+    manifest_file: &Path,
+    manifest: &TestingManifest,
+    graph: Option<&DependencyGraph>,
+    receipts: Option<&dyn TaskReceiptStore>,
+) -> Result<OperationResult, TestingError> {
+    let scope = resolve_scope(&request, workspace_root)?;
     let filters = PlanFilters {
         task_kinds: &request.task_kinds,
         targets: &request.targets,
@@ -179,56 +208,42 @@ fn execute(
         shard_weights: &request.shard_weights,
     };
     let plan = build_plan(
-        &manifest,
-        &workspace_root,
+        manifest,
+        workspace_root,
         &scope,
         &request.task_ids,
         &filters,
         request.jobs,
         graph,
     )?;
-    match request.operation {
-        Operation::Plan => Ok(OperationResult {
-            operation: "plan".into(),
+    if request.operation == Operation::Run {
+        let active_receipts = if request.cache { receipts } else { None };
+        let run = scheduler::run_plan(
+            manifest,
+            workspace_root,
+            manifest_file,
+            &plan,
+            request.jobs,
+            active_receipts,
+            request.stream,
+        )?;
+        return Ok(OperationResult {
+            operation: "run".into(),
             plan,
-            run: None,
+            run: Some(run),
             diagnose: None,
+            hotspots: None,
             manifest: None,
-        }),
-        Operation::Run => {
-            let active_receipts = if request.cache { receipts } else { None };
-            let run = scheduler::run_plan(
-                &manifest,
-                &workspace_root,
-                &manifest_file,
-                &plan,
-                request.jobs,
-                active_receipts,
-                request.stream,
-            )?;
-            Ok(OperationResult {
-                operation: "run".into(),
-                plan,
-                run: Some(run),
-                diagnose: None,
-                manifest: None,
-            })
-        }
-        Operation::Diagnose => Ok(OperationResult {
-            operation: "diagnose".into(),
-            plan: empty_plan_for("diagnose"),
-            run: None,
-            diagnose: Some(build_diagnose(&manifest, &workspace_root, graph)),
-            manifest: None,
-        }),
-        Operation::ExpandManifest => Ok(OperationResult {
-            operation: "expand-manifest".into(),
-            plan: empty_plan_for("expand-manifest"),
-            run: None,
-            diagnose: None,
-            manifest: serde_json::to_value(&manifest).ok(),
-        }),
+        });
     }
+    Ok(OperationResult {
+        operation: "plan".into(),
+        plan,
+        run: None,
+        diagnose: None,
+        hotspots: None,
+        manifest: None,
+    })
 }
 
 fn empty_plan_for(kind: &str) -> PlanResult {

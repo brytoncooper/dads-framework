@@ -1,6 +1,7 @@
 export {
   diagnoseTesting,
   expandTestingManifest,
+  hotspotsTesting,
   planTesting,
   runTesting,
   type TestingCouplingHotspot,
@@ -10,6 +11,11 @@ export {
   type TestingDiagnoseSummary,
   type TestingExpandManifestRequest,
   type TestingFallbackTrap,
+  type TestingHotspotFile,
+  type TestingHotspotProject,
+  type TestingHotspotsRequest,
+  type TestingHotspotsResult,
+  type TestingHotspotsSummary,
   type TestingOperationRequest,
   type TestingPlanIssue,
   type TestingPlanResult,
@@ -23,6 +29,7 @@ export {
   type TestingWideningCulprit,
 } from "./testing-api.js";
 export { renderDiagnosis } from "./commands/diagnose.js";
+export { renderHotspots } from "./commands/hotspots.js";
 export { listDadTestCommands, runDadTestCli, type DadTestCliIo } from "./dad-test-cli.js";
 export {
   parseTestingManifest,

@@ -3,6 +3,7 @@ import type { OptionSpecification, ParsedArguments } from "./cli-arguments.js";
 import { diagnoseCommand } from "./commands/diagnose.js";
 import { expandCommand } from "./commands/expand.js";
 import { explainCommand } from "./commands/explain.js";
+import { hotspotsCommand } from "./commands/hotspots.js";
 import { initCommand } from "./commands/init.js";
 import { planCommand, runCommand } from "./commands/plan-run.js";
 
@@ -28,13 +29,14 @@ export type DadTestCommand = {
 
 const usage =
   [
-    "Usage: dad-test <plan|run|explain|diagnose|init|expand> [options] [--json]",
+    "Usage: dad-test <plan|run|explain|diagnose|hotspots|init|expand> [options] [--json]",
     "",
     "Commands:",
     "  plan      Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --manifest)",
     "  run       Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --jobs, --cache, --remote-cache, --stream, --report)",
     "  explain   Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task)",
     "  diagnose  Coupling & precision X-ray with widening culprits and fixes (auto-detects Nx workspaces)",
+    "  hotspots  Rank highest-blast-radius files, barrel re-export hubs, and projects (--limit, --min-projects, --barrels-only, --manifest)",
     "  init      Generate dads.testing.json for npm/pnpm/yarn workspaces (--manifest, --force)",
     "  expand    Expand declarative workspace.discover into the canonical manifest IR (--manifest, --out)",
     "",
@@ -50,6 +52,7 @@ const commands = new Map<string, DadTestCommand>([
   ["run", runCommand],
   ["explain", explainCommand],
   ["diagnose", diagnoseCommand],
+  ["hotspots", hotspotsCommand],
   ["init", initCommand],
   ["expand", expandCommand],
 ]);
@@ -85,7 +88,7 @@ export async function runDadTestCli(argumentsAfterExecutable: readonly string[],
     }
     const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
-      throw new Error("Expected operation plan, run, explain, diagnose, init, or expand.");
+      throw new Error("Expected operation plan, run, explain, diagnose, hotspots, init, or expand.");
     }
     const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);
     return await command.execute(parsed, io, json);

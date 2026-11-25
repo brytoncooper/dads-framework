@@ -50,6 +50,14 @@ pub struct NativeRequestPayload {
     pub jobs: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub boundaries_config_path: Option<String>,
+    #[serde(skip_serializing_if = "is_false")]
+    pub enforce_declared_reads: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    pub audit_reads: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl NativeRequestPayload {
@@ -76,6 +84,8 @@ impl NativeRequestPayload {
             shard_weights: BTreeMap::new(),
             jobs: Some(2),
             boundaries_config_path: None,
+            enforce_declared_reads: false,
+            audit_reads: false,
         }
     }
 }
@@ -172,6 +182,16 @@ pub struct TaskOutputView {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct UndeclaredReadView {
+    pub path: String,
+    #[serde(default)]
+    pub location: Option<String>,
+    #[serde(default)]
+    pub api: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutedTaskView {
     pub id: String,
     pub status: String,
@@ -180,6 +200,8 @@ pub struct ExecutedTaskView {
     pub cached: bool,
     #[serde(default)]
     pub stderr: Option<TaskOutputView>,
+    #[serde(default)]
+    pub undeclared_reads: Vec<UndeclaredReadView>,
 }
 
 pub struct DadInvocation {

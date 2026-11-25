@@ -20,6 +20,9 @@ use crate::timelines::{
 };
 use crate::timelines_cli::run_cli_filters_shard_stale_plan_timeline;
 use crate::timelines_concurrency::run_concurrent_cache_writers_timeline;
+use crate::timelines_read_guard::{
+    run_audit_fix_remediates_timeline, run_read_guard_enforced_timeline,
+};
 use crate::timelines_remote_cache::run_remote_cache_fault_timeline;
 use crate::timelines_subsystems::{SpecialTimelineCtx, run_boundaries_timeline};
 use crate::tsc_oracle::{TscOracleOutcome, TscOracleWorker};
@@ -99,6 +102,8 @@ fn dispatch_special_timeline(
         SpecialTimeline::CliFiltersShardStalePlan => {
             run_cli_filters_shard_stale_plan_timeline(&ctx, acc)
         }
+        SpecialTimeline::ReadGuardEnforced => run_read_guard_enforced_timeline(&ctx, acc),
+        SpecialTimeline::AuditFixRemediates => run_audit_fix_remediates_timeline(&ctx, acc),
     }
 }
 

@@ -4,8 +4,9 @@ use super::PlanEvidence;
 use crate::graph::DependencyGraph;
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
-use crate::scope::{deepest_project_for_path, path_matches_impact};
+use crate::scope::{deepest_project_for_path, is_isolated_test_file, path_matches_impact};
 use std::collections::BTreeSet;
+use std::path::Path;
 
 pub(crate) const FS_DIR_PREFIX: &str = "fs-dir:";
 
@@ -207,6 +208,103 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
                 "unresolved-fs-read",
                 format!(
                     "{reached_path} depends on an unresolved dynamic filesystem read while uncovered files changed; widened conservatively (enable --enforce-declared-reads to verify at runtime)."
+                ),
+                IssueSeverity::Uncertainty,
+                IssueScope::Module,
+            )
+        });
+    }
+}
+
+/// When any changed path has been deleted from disk, its reverse edges vanish from the current
+/// working-tree graph and every consumer that still imports it records an unresolved module
+/// uncertainty. Widen those unresolved importers (and every module that imports them) so
+/// cross-project deletes never silently skip broken tests or typechecks.
+pub(super) fn widen_unresolved_module_importers_on_delete<'a>(
+    manifest: &'a TestingManifest,
+    workspace_root: &Path,
+    changed_paths: &[String],
+    graph: &DependencyGraph,
+    evidence: &mut PlanEvidence<'a>,
+    has_non_test_reachability: bool,
+) {
+    if !changed_paths
+        .iter()
+        .any(|path| !workspace_root.join(path).is_file())
+    {
+        return;
+    }
+    let seeds: Vec<String> = graph
+        .uncertainties()
+        .into_iter()
+        .filter(|u| {
+            matches!(
+                u.code.as_str(),
+                "unresolved-local-module" | "unresolved-bare-module" | "unresolved-module-scheme"
+            )
+        })
+        .map(|u| u.path)
+        .collect();
+    if seeds.is_empty() {
+        return;
+    }
+    let reached = graph.reachability_from(seeds);
+    for reached_path in &reached.paths {
+        let Some(project) = deepest_project_for_path(&manifest.projects, reached_path) else {
+            evidence.full_fallback = true;
+            evidence
+                .full_fallback_issue_indexes
+                .push(evidence.issues.len());
+            evidence.issues.push(PlanIssue {
+                path: Some(reached_path.clone()),
+                ..PlanIssue::new(
+                    "unresolved-import-after-delete",
+                    format!(
+                        "{reached_path} has an unresolved module import while workspace files were deleted and has no declared project owner; selected the complete fallback."
+                    ),
+                    IssueSeverity::Uncertainty,
+                    IssueScope::Workspace,
+                )
+            });
+            continue;
+        };
+        let id = project.id.as_str();
+        evidence.reached_paths.insert(reached_path.clone());
+        evidence
+            .reached_paths_by_project
+            .entry(id)
+            .or_default()
+            .insert(reached_path.clone());
+        evidence.reachability_impacted_projects.insert(id);
+        let local_only = is_isolated_test_file(reached_path, manifest, graph);
+        if local_only {
+            evidence.local_uncertainty_impacted_projects.insert(id);
+        } else {
+            evidence.uncertainty_impacted_projects.insert(id);
+        }
+        if has_non_test_reachability {
+            evidence.typecheck_reachability_impacted_projects.insert(id);
+            if local_only {
+                evidence
+                    .typecheck_local_uncertainty_impacted_projects
+                    .insert(id);
+            } else {
+                evidence.typecheck_uncertainty_impacted_projects.insert(id);
+            }
+        }
+        let issue_index = evidence.issues.len();
+        evidence
+            .issue_indexes_by_project
+            .entry(id)
+            .or_default()
+            .push(issue_index);
+        evidence.issues.push(PlanIssue {
+            path: Some(reached_path.clone()),
+            project: Some(project.id.clone()),
+            ..PlanIssue::new(
+                "unresolved-import-after-delete",
+                format!(
+                    "{reached_path} depends on an unresolved module import while changed workspace files were deleted; widened conservatively."
                 ),
                 IssueSeverity::Uncertainty,
                 IssueScope::Module,

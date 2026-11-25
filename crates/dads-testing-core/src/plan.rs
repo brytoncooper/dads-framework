@@ -206,6 +206,7 @@ pub(crate) fn build_plan(
     attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
     widen_through_graph(
         manifest,
+        workspace_root,
         scope,
         graph,
         filters.enforce_declared_reads,
@@ -255,7 +256,7 @@ pub(crate) fn build_plan(
         schema_version: PROTOCOL_SCHEMA_VERSION,
         scope: ResolvedScope {
             full_fallback: evidence.full_fallback,
-            ..clone_scope(scope)
+            ..scope.clone()
         },
         tasks: decisions,
         issues: evidence.issues,
@@ -360,16 +361,6 @@ fn merge_local_uncertainties<'a>(
     for &p in &evidence.typecheck_local_uncertainty_impacted_projects {
         evidence.typecheck_uncertainty_impacted_projects.insert(p);
         uncertainty_origins.entry(p).or_default().insert(p);
-    }
-}
-
-fn clone_scope(scope: &ResolvedScope) -> ResolvedScope {
-    ResolvedScope {
-        kind: scope.kind.clone(),
-        base: scope.base.clone(),
-        head: scope.head.clone(),
-        changed_paths: scope.changed_paths.clone(),
-        full_fallback: scope.full_fallback,
     }
 }
 

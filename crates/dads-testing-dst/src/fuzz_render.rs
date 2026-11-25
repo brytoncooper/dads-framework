@@ -136,7 +136,7 @@ fn render_barrel_module(
     let mut out = String::from("// @comment: 0\n");
     match (style, target.export_shape) {
         (ChaosBarrelStyle::Named, ExportShape::Standard) => {
-            let _ = writeln!(out, "export {{ compute, unusedPure }} from \"{s}\";");
+            let _ = writeln!(out, "export {{ compute }} from \"{s}\";");
             let _ = writeln!(out, "export {{ default }} from \"{s}\";");
             let _ = writeln!(out, "export type {{ ModTag }} from \"{s}\";");
         }
@@ -157,10 +157,7 @@ fn render_barrel_module(
             let _ = writeln!(out, "export type {{ ModTag }} from \"{s}\";");
         }
         (ChaosBarrelStyle::Aliased, _) => {
-            let _ = writeln!(
-                out,
-                "export {{ compute as aliasedCompute, unusedPure }} from \"{s}\";"
-            );
+            let _ = writeln!(out, "export {{ compute as aliasedCompute }} from \"{s}\";");
             let _ = writeln!(out, "export type {{ ModTag }} from \"{s}\";");
         }
         (ChaosBarrelStyle::DefaultWrap, _) => {

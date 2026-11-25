@@ -197,7 +197,7 @@ pub struct PlanResult {
     pub workspace_fingerprint: Option<WorkspaceFingerprint>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedScope {
     pub kind: String,

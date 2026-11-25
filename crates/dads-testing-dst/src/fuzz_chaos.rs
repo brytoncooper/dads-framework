@@ -138,6 +138,19 @@ fn run_chaos_worker(
     Ok(acc)
 }
 
+struct ChaosTempGuard {
+    dir: PathBuf,
+    keep: bool,
+}
+
+impl Drop for ChaosTempGuard {
+    fn drop(&mut self) {
+        if !self.keep {
+            let _ = fs::remove_dir_all(&self.dir);
+        }
+    }
+}
+
 fn execute_one_chaos_scenario(
     config: &ChaosConfig,
     scripts: &ChaosSharedScripts,
@@ -148,6 +161,10 @@ fn execute_one_chaos_scenario(
     acc: &mut ChaosSummary,
 ) -> Result<(), String> {
     let temp_root = fresh_chaos_dir(spec.seed, "run")?;
+    let mut temp_guard = ChaosTempGuard {
+        dir: temp_root.clone(),
+        keep: false,
+    };
     let ws_dir = temp_root.join("ws");
     let cache_dir = temp_root.join("shared-cache");
     fs::create_dir_all(&cache_dir).map_err(|e| format!("mkdir chaos cache: {e}"))?;
@@ -221,15 +238,12 @@ fn execute_one_chaos_scenario(
             failure.shrunk = Some(shrunk);
         }
         if config.keep_failed {
+            temp_guard.keep = true;
             failure.kept_dir = Some(ws_dir.to_string_lossy().into_owned());
-        } else {
-            let _ = fs::remove_dir_all(&temp_root);
         }
         if acc.sample_failures.len() < config.max_sample_failures {
             acc.sample_failures.push(failure);
         }
-    } else {
-        let _ = fs::remove_dir_all(&temp_root);
     }
     Ok(())
 }

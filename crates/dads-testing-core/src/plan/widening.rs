@@ -4,6 +4,7 @@ use super::PlanEvidence;
 use super::widening_fs::{
     collect_graph_changed_paths, matching_fs_dir_nodes, record_fs_dir_reachable_path,
     record_missing_frontend, widen_ambient_dts_typechecks, widen_unresolved_fs_readers,
+    widen_unresolved_module_importers_on_delete,
 };
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
@@ -13,6 +14,7 @@ use crate::scope::{
     path_matches_impact,
 };
 use std::collections::BTreeSet;
+use std::path::Path;
 
 /// Attributes each changed path to its owning project. A path no declared project owns cannot be
 /// reasoned about at all, so it selects the complete fallback.
@@ -92,6 +94,7 @@ pub(super) fn own_changed_paths<'a>(
 /// there is not. Only a manifest that declares reachability impact can use a graph at all.
 pub(super) fn widen_through_graph<'a>(
     manifest: &'a TestingManifest,
+    workspace_root: &Path,
     scope: &ResolvedScope,
     graph: Option<&DependencyGraph>,
     enforce_declared_reads: bool,
@@ -185,6 +188,14 @@ pub(super) fn widen_through_graph<'a>(
             );
         }
     }
+    widen_unresolved_module_importers_on_delete(
+        manifest,
+        workspace_root,
+        &changed_paths,
+        graph,
+        evidence,
+        has_non_test_reachability,
+    );
 }
 
 /// The frontend answered, but not about these paths: ONLY their owning projects widen through

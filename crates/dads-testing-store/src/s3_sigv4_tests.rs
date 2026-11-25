@@ -54,10 +54,11 @@ fn sigv4_matches_aws_spec_key_derivation_and_s3_get_put_vectors() {
     };
     let put_signed =
         sign_s3_request_at(&put_req, &creds_with_token, "20261125T200000Z", "20261125").unwrap();
-    assert_eq!(
-        put_signed.authorization,
-        "AWS4-HMAC-SHA256 Credential=TESTACCESSKEY0000001/20261125/us-west-2/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=3461fc917ca031fac40a9edf181ba69c53d759e1773278ca5c67f33c04fac815"
+    let expected_put_sig = "3461fc917ca031fac40a9edf181ba69c53d759e1773278ca5c67f33c04fac815";
+    let expected_put_header = format!(
+        "AWS4-HMAC-SHA256 Credential=TESTACCESSKEY0000001/20261125/us-west-2/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature={expected_put_sig}"
     );
+    assert_eq!(put_signed.authorization, expected_put_header);
 }
 
 #[test]

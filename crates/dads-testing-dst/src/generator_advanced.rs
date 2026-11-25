@@ -13,7 +13,6 @@ pub struct AdvancedTests {
 
 pub fn write_advanced_workspace(
     root: &Path,
-    external_flag_path: &Path,
     shape: &WorkspaceShape,
 ) -> Result<AdvancedTests, String> {
     write_lang_core_constructs(root)?;
@@ -52,7 +51,7 @@ pub fn write_advanced_workspace(
     let mut always_env = BTreeMap::new();
     always_env.insert(
         "DST_EXTERNAL_FLAG_PATH".to_owned(),
-        external_flag_path.to_string_lossy().into_owned(),
+        "../external-flag.txt".to_owned(),
     );
     oracle_tests.push(OracleTestSpec {
         file: "adv-always/always.test.ts".to_owned(),
@@ -342,7 +341,7 @@ fn write_build_chain_and_special_tests(root: &Path) -> Result<(), String> {
     write_file(
         root,
         "adv-always/always.test.ts",
-        "import { readFileSync } from \"node:fs\";\nconst target = process.env.DST_EXTERNAL_FLAG_PATH;\nif (!target) throw new Error(\"missing DST_EXTERNAL_FLAG_PATH\");\nif (readFileSync(target, \"utf8\").trim() !== \"ok\") throw new Error(\"external flag changed\");\n",
+        "import { readFileSync } from \"node:fs\";\nimport { resolve } from \"node:path\";\nconst raw = process.env.DST_EXTERNAL_FLAG_PATH;\nif (!raw) throw new Error(\"missing DST_EXTERNAL_FLAG_PATH\");\nconst target = resolve(import.meta.dirname, \"..\", raw);\nif (readFileSync(target, \"utf8\").trim() !== \"ok\") throw new Error(\"external flag changed\");\n",
     )?;
     write_file(
         root,

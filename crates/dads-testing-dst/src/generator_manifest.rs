@@ -1,40 +1,70 @@
-//! Manifest generation (`dads.testing.json`) for seeded 58-family DST workspaces.
+//! Root workspace config files and manifest (`dads.testing.json`) generation for 93-family DST.
 
+use crate::generator_manifest_tasks::build_tasks;
 use crate::model::{FallbackMode, WorkspaceShape};
-use crate::rng::SeededRng;
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 pub struct ManifestInputs<'a> {
     pub root: &'a Path,
     pub runner_script: &'a Path,
+    pub typecheck_script: &'a Path,
+    pub typescript_js: &'a Path,
     pub node_bin: &'a Path,
-    pub external_flag_path: &'a Path,
     pub shape: &'a WorkspaceShape,
 }
 
-pub fn write_root_config_files(root: &Path, shape: &WorkspaceShape) -> Result<(), String> {
+/// Writes shape-independent root files (`.gitignore`, `package.json`, `package-lock.json`,
+/// `tsconfig.json`) into the static skeleton workspace.
+pub fn write_static_root_config_files(root: &Path) -> Result<(), String> {
     fs::write(
         root.join(".gitignore"),
-        "build-dep/dist/\nsettings/generated-ignored/\n.env.test\n",
+        "build-dep/dist/\nsettings/generated-ignored/\n.env.test\nnode_modules/\n",
     )
     .map_err(|e| format!("write .gitignore: {e}"))?;
     fs::write(
         root.join("package.json"),
-        "{\n  \"name\": \"dst-workspace\",\n  \"type\": \"module\",\n  \"imports\": {\n    \"#subpath\": \"./lang/subpath-target.ts\"\n  }\n}\n",
+        concat!(
+            "{\n",
+            "  \"name\": \"dst-workspace\",\n",
+            "  \"type\": \"module\",\n",
+            "  \"imports\": {\n",
+            "    \"#subpath\": \"./lang/subpath-target.ts\"\n",
+            "  },\n",
+            "  \"dependencies\": {\n",
+            "    \"dst-alpha-dep\": \"1.0.0\",\n",
+            "    \"dst-beta-dep\": \"1.0.0\"\n",
+            "  }\n",
+            "}\n",
+        ),
     )
     .map_err(|e| format!("write package.json: {e}"))?;
+    write_baseline_package_lock(root)?;
+    fs::write(
+        root.join("tsconfig.json"),
+        "{\n  \"extends\": \"./tsconfig.base.json\"\n}\n",
+    )
+    .map_err(|e| format!("write tsconfig.json: {e}"))
+}
+
+/// Writes shape-dependent `tsconfig.base.json` (switching `@pkg/*` aliases per shape).
+pub fn write_shape_tsconfig_base(root: &Path, shape: &WorkspaceShape) -> Result<(), String> {
     let paths = if shape.use_tsconfig_aliases {
         json!({
             "@pkg/core": ["core/math.ts"],
             "@pkg/billing": ["billing/tax.ts"],
-            "@pkg/dynamic": ["billing/dynamic.ts"]
+            "@pkg/dynamic": ["billing/dynamic.ts"],
+            "@bnd/shared": ["bnd-shared/util.ts"],
+            "@bnd/server": ["bnd-server/db.ts"],
+            "@bnd/browser": ["bnd-browser/app.ts"]
         })
     } else {
         json!({
-            "@pkg/core": ["core/math.ts"]
+            "@pkg/core": ["core/math.ts"],
+            "@bnd/shared": ["bnd-shared/util.ts"],
+            "@bnd/server": ["bnd-server/db.ts"],
+            "@bnd/browser": ["bnd-browser/app.ts"]
         })
     };
     let tsconfig_base = json!({
@@ -45,35 +75,15 @@ pub fn write_root_config_files(root: &Path, shape: &WorkspaceShape) -> Result<()
     });
     let base_json = serde_json::to_string_pretty(&tsconfig_base).map_err(|e| e.to_string())?;
     fs::write(root.join("tsconfig.base.json"), format!("{base_json}\n"))
-        .map_err(|e| format!("write tsconfig.base.json: {e}"))?;
-    fs::write(
-        root.join("tsconfig.json"),
-        "{\n  \"extends\": \"./tsconfig.base.json\"\n}\n",
-    )
-    .map_err(|e| format!("write tsconfig.json: {e}"))
+        .map_err(|e| format!("write tsconfig.base.json: {e}"))
 }
 
-pub fn write_manifest(inputs: &ManifestInputs<'_>, rng: &mut SeededRng) -> Result<(), String> {
+pub fn write_manifest(inputs: &ManifestInputs<'_>) -> Result<(), String> {
     let manifest = json!({
         "schemaVersion": 1,
-        "workspace": {
-            "root": ".",
-            "fullFallback": {
-                "taskIds": [
-                    "ui:test",
-                    "adv:test",
-                    "adv-dyn-fs:test",
-                    "adv-always:test",
-                    "adv-env:test",
-                    "impact-consumer:test",
-                    "build-dep:build",
-                    "build-consumer:test",
-                    "unrelated:test"
-                ]
-            }
-        },
+        "workspace": build_workspace_settings(),
         "projects": build_projects(inputs.shape),
-        "tasks": build_tasks(inputs, rng)
+        "tasks": build_tasks(inputs)
     });
     let serialized = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())?;
     fs::write(
@@ -81,6 +91,106 @@ pub fn write_manifest(inputs: &ManifestInputs<'_>, rng: &mut SeededRng) -> Resul
         format!("{serialized}\n"),
     )
     .map_err(|error| format!("write dads.testing.json: {error}"))
+}
+
+fn write_baseline_package_lock(root: &Path) -> Result<(), String> {
+    let lock = json!({
+        "name": "dst-workspace",
+        "lockfileVersion": 3,
+        "packages": {
+            "": {
+                "name": "dst-workspace",
+                "dependencies": {
+                    "dst-alpha-dep": "1.0.0",
+                    "dst-beta-dep": "1.0.0"
+                }
+            },
+            "node_modules/dst-alpha-dep": {
+                "version": "1.0.0",
+                "dependencies": {
+                    "dst-alpha-leaf": "1.0.0"
+                }
+            },
+            "node_modules/dst-alpha-leaf": {
+                "version": "1.0.0"
+            },
+            "node_modules/dst-beta-dep": {
+                "version": "1.0.0"
+            },
+            "node_modules/typescript": {
+                "version": "5.8.0",
+                "dev": true
+            }
+        }
+    });
+    let serialized = serde_json::to_string_pretty(&lock).map_err(|e| e.to_string())?;
+    fs::write(root.join("package-lock.json"), format!("{serialized}\n"))
+        .map_err(|e| format!("write package-lock.json: {e}"))
+}
+
+fn build_workspace_settings() -> Value {
+    json!({
+        "root": ".",
+        "pureFactories": ["z.*", "createCtx"],
+        "fullFallback": {
+            "taskIds": [
+                "ui:test",
+                "adv:test",
+                "adv-dyn-fs:test",
+                "adv-always:test",
+                "adv-env:test",
+                "impact-consumer:test",
+                "build-dep:build",
+                "build-consumer:test",
+                "unrelated:test",
+                "typecheck-app:typecheck",
+                "typecheck-app:test",
+                "sql-migrations:test",
+                "sql-accounts:test",
+                "sql-audits:test",
+                "lock-alpha:test",
+                "lock-beta:test",
+                "vitest-proj:test",
+                "next-app:test",
+                "adv-cache:test"
+            ]
+        },
+        "sql": {
+            "migrationRoots": ["sql-migrations/sql"],
+            "objects": ["public.accounts", "public.audits"],
+            "edges": [],
+            "snapshotPatterns": [
+                { "prefix": "sql-migrations/grants/", "suffix": ".txt" }
+            ]
+        },
+        "boundaries": {
+            "depConstraints": [
+                {
+                    "sourceTag": "scope:browser",
+                    "onlyDependOnLibsWithTags": ["scope:shared"],
+                    "notDependOnLibsWithTags": ["scope:server"],
+                    "bannedExternalImports": ["pg", "fs-extra"]
+                },
+                {
+                    "sourceTag": "scope:server",
+                    "onlyDependOnLibsWithTags": ["scope:shared", "scope:server"]
+                },
+                {
+                    "sourceTag": "scope:shared",
+                    "onlyDependOnLibsWithTags": ["scope:shared"]
+                }
+            ],
+            "banTransitiveDependencies": true,
+            "excludeProjects": [
+                "core", "billing", "settings", "ui", "lang", "lang-pkg",
+                "adv", "adv-dyn-fs", "adv-always", "adv-env",
+                "impact-consumer", "build-dep", "build-consumer", "unrelated",
+                "types-lib", "typecheck-app",
+                "sql-migrations", "sql-accounts", "sql-audits",
+                "lock-alpha", "lock-beta", "vitest-proj", "next-app", "adv-cache"
+            ]
+        }
+    })
 }
 
 fn build_projects(shape: &WorkspaceShape) -> Value {
@@ -98,6 +208,10 @@ fn build_projects(shape: &WorkspaceShape) -> Value {
         FallbackMode::Partial => vec!["lang"],
         FallbackMode::Complete => vec!["lang", "settings"],
     };
+    let tc_deps: Vec<&str> = match shape.fallback_mode {
+        FallbackMode::Empty => vec![],
+        FallbackMode::Partial | FallbackMode::Complete => vec!["types-lib"],
+    };
     json!([
         { "id": "core", "root": "core", "fallbackDependencies": [] },
         { "id": "billing", "root": "billing", "fallbackDependencies": billing_deps },
@@ -112,156 +226,19 @@ fn build_projects(shape: &WorkspaceShape) -> Value {
         { "id": "impact-consumer", "root": "impact-consumer", "fallbackDependencies": [] },
         { "id": "build-dep", "root": "build-dep", "fallbackDependencies": [] },
         { "id": "build-consumer", "root": "build-consumer", "fallbackDependencies": ["build-dep"] },
-        { "id": "unrelated", "root": "unrelated", "fallbackDependencies": [] }
+        { "id": "unrelated", "root": "unrelated", "fallbackDependencies": [] },
+        { "id": "types-lib", "root": "types-lib", "fallbackDependencies": [] },
+        { "id": "typecheck-app", "root": "typecheck-app", "fallbackDependencies": tc_deps },
+        { "id": "sql-migrations", "root": "sql-migrations", "fallbackDependencies": [] },
+        { "id": "sql-accounts", "root": "sql-accounts", "fallbackDependencies": [] },
+        { "id": "sql-audits", "root": "sql-audits", "fallbackDependencies": [] },
+        { "id": "lock-alpha", "root": "lock-alpha", "fallbackDependencies": [] },
+        { "id": "lock-beta", "root": "lock-beta", "fallbackDependencies": [] },
+        { "id": "vitest-proj", "root": "vitest-proj", "fallbackDependencies": [] },
+        { "id": "bnd-shared", "root": "bnd-shared", "fallbackDependencies": [], "tags": ["scope:shared"] },
+        { "id": "bnd-server", "root": "bnd-server", "fallbackDependencies": [], "tags": ["scope:server"] },
+        { "id": "bnd-browser", "root": "bnd-browser", "fallbackDependencies": [], "tags": ["scope:browser"] },
+        { "id": "next-app", "root": "next-app", "fallbackDependencies": [] },
+        { "id": "adv-cache", "root": "adv-cache", "fallbackDependencies": [] }
     ])
-}
-
-fn build_tasks(inputs: &ManifestInputs<'_>, rng: &mut SeededRng) -> Value {
-    let shape = inputs.shape;
-    let runner_arg = inputs.runner_script.to_string_lossy().into_owned();
-    let mut ui_args = base_node_args(&runner_arg);
-    if shape.use_setup_file {
-        ui_args.push("--setup".to_owned());
-        ui_args.push("ui/setup.ts".to_owned());
-    }
-    ui_args.push("ui".to_owned());
-
-    let (ui_impact_paths, adv_impact_paths) = if shape.declare_fs_impact_paths {
-        (
-            vec![
-                "settings/disk-limit.json".to_owned(),
-                "settings/rules".to_owned(),
-            ],
-            vec![
-                "settings/helper-disk.json".to_owned(),
-                "settings/async-limit.json".to_owned(),
-                "settings/sentinel.txt".to_owned(),
-                "settings/nested-rules".to_owned(),
-            ],
-        )
-    } else {
-        (Vec::new(), Vec::new())
-    };
-
-    let impact_pattern = match rng.range_usize(3) {
-        0 => "settings/impact-flag.json",
-        1 => "settings",
-        _ => "settings/impact-*.json",
-    };
-    let impact_paths = vec![
-        impact_pattern.to_owned(),
-        "settings/impact-*.json".to_owned(),
-        "settings/generated-ignored/*.json".to_owned(),
-    ];
-
-    let mut always_env = BTreeMap::new();
-    always_env.insert(
-        "DST_EXTERNAL_FLAG_PATH".to_owned(),
-        inputs.external_flag_path.to_string_lossy().into_owned(),
-    );
-    let mut mode_env = BTreeMap::new();
-    mode_env.insert("DST_MODE".to_owned(), "safe".to_owned());
-    let empty_env = BTreeMap::new();
-
-    json!([
-        {
-            "id": "ui:test", "project": "ui", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, ui_args, shape.use_file_narrowing, shape.use_setup_file.then_some("ui/setup.ts"), &empty_env),
-            "dependsOn": [],
-            "impact": { "mode": "reachability", "paths": ui_impact_paths }
-        },
-        {
-            "id": "adv:test", "project": "adv", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "adv"), shape.use_file_narrowing, None, &empty_env),
-            "dependsOn": [],
-            "impact": { "mode": "reachability", "paths": adv_impact_paths }
-        },
-        {
-            "id": "adv-dyn-fs:test", "project": "adv-dyn-fs", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "adv-dyn-fs"), false, None, &empty_env),
-            "dependsOn": [],
-            "impact": { "mode": "reachability", "paths": [] }
-        },
-        {
-            "id": "adv-always:test", "project": "adv-always", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "adv-always"), false, None, &always_env),
-            "dependsOn": [],
-            "impact": { "mode": "always", "paths": [] }
-        },
-        {
-            "id": "adv-env:test", "project": "adv-env", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "adv-env"), false, None, &mode_env),
-            "dependsOn": [],
-            "impact": { "mode": "reachability", "paths": [] }
-        },
-        {
-            "id": "impact-consumer:test", "project": "impact-consumer", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "impact-consumer"), shape.use_file_narrowing, None, &empty_env),
-            "dependsOn": [],
-            "impact": { "mode": "reachability", "paths": impact_paths }
-        },
-        {
-            "id": "build-dep:build", "project": "build-dep", "kind": "build", "cache": false,
-            "execution": { "executable": inputs.node_bin.to_string_lossy(), "args": ["build-dep/build.mjs"] },
-            "dependsOn": [],
-            "impact": { "mode": "project", "paths": [] }
-        },
-        {
-            "id": "build-consumer:test", "project": "build-consumer", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "build-consumer"), false, None, &empty_env),
-            "dependsOn": ["build-dep:build"],
-            "impact": { "mode": "project", "paths": [] }
-        },
-        {
-            "id": "unrelated:test", "project": "unrelated", "kind": "test", "cache": true,
-            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "unrelated"), shape.use_file_narrowing, None, &empty_env),
-            "dependsOn": [],
-            "impact": { "mode": "reachability", "paths": [] }
-        }
-    ])
-}
-
-fn base_node_args(runner_arg: &str) -> Vec<String> {
-    vec![
-        "--no-warnings".to_owned(),
-        "--experimental-transform-types".to_owned(),
-        runner_arg.to_owned(),
-    ]
-}
-
-fn project_args(runner_arg: &str, project_dir: &str) -> Vec<String> {
-    let mut args = base_node_args(runner_arg);
-    args.push(project_dir.to_owned());
-    args
-}
-
-fn build_execution(
-    node_bin: &Path,
-    args: Vec<String>,
-    file_narrowing: bool,
-    setup_file: Option<&str>,
-    env: &BTreeMap<String, String>,
-) -> Value {
-    let mut exec = json!({
-        "executable": node_bin.to_string_lossy(),
-        "args": args
-    });
-    if !env.is_empty()
-        && let Some(obj) = exec.as_object_mut()
-    {
-        obj.insert("env".to_owned(), json!(env));
-    }
-    if file_narrowing {
-        let setup_files: Vec<&str> = setup_file.into_iter().collect();
-        if let Some(obj) = exec.as_object_mut() {
-            obj.insert(
-                "fileNarrowing".to_owned(),
-                json!({
-                    "suffixes": [".test.ts"],
-                    "setupFiles": setup_files
-                }),
-            );
-        }
-    }
-    exec
 }

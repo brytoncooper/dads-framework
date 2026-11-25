@@ -1,6 +1,7 @@
 //! Black-box protocol-v1 JSON client for invoking any compiled `dad-test` binary.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -26,15 +27,29 @@ pub struct NativeRequestPayload {
     pub all: bool,
     pub only: bool,
     pub task_ids: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub task_kinds: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub projects: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub exclude_projects: Vec<String>,
     pub cache: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cache_dir: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub remote_cache_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub plan_file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shard: Option<TaskShardPayload>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub shard_weights: BTreeMap<String, f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jobs: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boundaries_config_path: Option<String>,
 }
 
 impl NativeRequestPayload {
@@ -49,11 +64,18 @@ impl NativeRequestPayload {
             all: false,
             only: false,
             task_ids: Vec::new(),
+            task_kinds: Vec::new(),
+            targets: Vec::new(),
+            projects: Vec::new(),
+            exclude_projects: Vec::new(),
             cache: false,
             cache_dir: None,
+            remote_cache_url: None,
             plan_file: None,
             shard: None,
+            shard_weights: BTreeMap::new(),
             jobs: Some(2),
+            boundaries_config_path: None,
         }
     }
 }
@@ -71,6 +93,28 @@ pub struct NativeEnvelope {
 pub struct NativeResult {
     pub plan: PlanView,
     pub run: Option<RunView>,
+    #[serde(default)]
+    pub boundaries: Option<BoundariesView>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoundariesView {
+    pub checked_files: usize,
+    pub total_projects: usize,
+    #[serde(default)]
+    pub violations: Vec<BoundaryViolationView>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoundaryViolationView {
+    pub file: String,
+    pub source_project: String,
+    pub target_project: Option<String>,
+    pub specifier: String,
+    pub rule: String,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -79,6 +123,20 @@ pub struct PlanView {
     pub tasks: Vec<PlannedTaskView>,
     #[serde(default)]
     pub issues: Vec<PlanIssueView>,
+    #[serde(default)]
+    pub shard: Option<PlanShardView>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanShardView {
+    pub index: u32,
+    pub total: u32,
+    pub weighted: bool,
+    pub selected_runnable_tasks: usize,
+    pub total_runnable_tasks: usize,
+    pub shard_weight: f64,
+    pub total_weight: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -108,12 +166,20 @@ pub struct RunView {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TaskOutputView {
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutedTaskView {
     pub id: String,
     pub status: String,
     pub exit_code: Option<i32>,
     #[serde(default)]
     pub cached: bool,
+    #[serde(default)]
+    pub stderr: Option<TaskOutputView>,
 }
 
 pub struct DadInvocation {
@@ -126,6 +192,15 @@ pub fn invoke_dad(
     dad_bin: &Path,
     request: &NativeRequestPayload,
     extra_path: Option<&Path>,
+) -> Result<DadInvocation, String> {
+    invoke_dad_with_env(dad_bin, request, extra_path, &[])
+}
+
+pub fn invoke_dad_with_env(
+    dad_bin: &Path,
+    request: &NativeRequestPayload,
+    extra_path: Option<&Path>,
+    extra_env: &[(&str, &str)],
 ) -> Result<DadInvocation, String> {
     let payload = serde_json::to_string(request)
         .map_err(|error| format!("serialize NativeRequest: {error}"))?;
@@ -140,6 +215,9 @@ pub fn invoke_dad(
         combined.push(":");
         combined.push(current);
         command.env("PATH", combined);
+    }
+    for (key, value) in extra_env {
+        command.env(key, value);
     }
     let mut child = command
         .spawn()

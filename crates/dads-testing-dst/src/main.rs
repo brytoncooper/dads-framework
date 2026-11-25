@@ -183,7 +183,7 @@ fn print_human_summary(summary: &DstSummary, config: &DstConfig) {
     println!("\nBreakdown by mutation:");
     for (name, stats) in &summary.by_mutation {
         println!(
-            "  {name:<42} steps={:<5} oracle_fail={:<5} misses={:<5} stale_cache={:<5}",
+            "  {name:<48} steps={:<5} oracle_fail={:<5} misses={:<5} stale_cache={:<5}",
             stats.steps, stats.oracle_failures, stats.soundness_misses, stats.stale_cache_hits
         );
     }

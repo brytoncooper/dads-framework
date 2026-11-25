@@ -7,8 +7,11 @@ use std::path::Path;
 
 pub struct AdvancedMutationPaths<'a> {
     pub workspace_dir: &'a Path,
+    pub temp_root: &'a Path,
     pub external_flag_path: &'a Path,
     pub symlink_target_path: &'a Path,
+    pub baseline_sha: &'a str,
+    pub node_bin: &'a Path,
 }
 
 pub fn apply_advanced_mutation(

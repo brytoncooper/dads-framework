@@ -4,6 +4,7 @@ members = [
     "crates/dads-testing-javascript",
     "crates/dads-testing-store",
     "crates/dads-testing-cli",
+    "crates/dads-testing-dst",
 ]
 resolver = "2"
 

@@ -43,7 +43,9 @@ function __dstMetaGlob(parentUrl, pattern) {
   return out;
 }
 `;
-loadSqlState(root);
+if (projectDir && projectDir.startsWith("sql-")) {
+  loadSqlState(root);
+}
 installResolverHooks(root, cliTsPath);
 
 const files = selected.length > 0

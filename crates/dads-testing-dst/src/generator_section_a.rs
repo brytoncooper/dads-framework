@@ -207,9 +207,13 @@ fn write_fs_and_config_fixtures(root: &Path) -> Result<(), String> {
         root,
         "adv-dyn-fs/dyn-fs.test.ts",
         concat!(
+            "import { resolve } from \"node:path\";\n",
             "import { fileURLToPath } from \"node:url\";\n",
             "import { readDynamicPath } from \"../lang/fs-unresolved-helper.ts\";\n",
-            "const target = fileURLToPath(new URL([\"..\", \"settings\", \"dyn-secret.json\"].join(\"/\"), import.meta.url));\n",
+            "const envPath = process.env.DST_SECRET_FIXTURE;\n",
+            "const target = envPath\n",
+            "  ? resolve(process.cwd(), envPath)\n",
+            "  : fileURLToPath(new URL([\"..\", \"settings\", \"dyn-secret.json\"].join(\"/\"), import.meta.url));\n",
             "if (JSON.parse(readDynamicPath(target)).secret !== 2) throw new Error(\"dyn-secret\");\n",
         ),
     )?;

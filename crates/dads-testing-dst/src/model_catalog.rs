@@ -1,4 +1,4 @@
-//! Complete 93-family `MutationKind` catalog, slug mapping, and classification helpers.
+//! Complete 95-family `MutationKind` catalog, slug mapping, and classification helpers.
 
 use crate::model::MutationKind;
 
@@ -72,6 +72,8 @@ impl MutationKind {
         Self::GitignoredImpactPathsGlob,
         Self::UpstreamPackageExportsAndNestedTsconfig,
         Self::NonRootAndDotenvConfigFiles,
+        Self::UndeclaredDynamicFsReadEnforced,
+        Self::AuditFixRemediatesDynamicRead,
         Self::TypecheckTypeOnlyAndAmbientDts,
         Self::ImportMetaGlobAddEditDelete,
         Self::SqlMigrationImpactAndCache,
@@ -121,6 +123,13 @@ impl MutationKind {
 
     pub fn uses_remote_cache(self) -> bool {
         matches!(self, Self::RemoteHttpCacheFaultInjection)
+    }
+
+    pub fn is_read_guard(self) -> bool {
+        matches!(
+            self,
+            Self::UndeclaredDynamicFsReadEnforced | Self::AuditFixRemediatesDynamicRead
+        )
     }
 
     pub fn is_section_b(self) -> bool {
@@ -250,6 +259,8 @@ fn as_str_expanded(kind: MutationKind) -> &'static str {
             "upstream-package-exports-and-nested-tsconfig"
         }
         MutationKind::NonRootAndDotenvConfigFiles => "non-root-and-dotenv-config-files",
+        MutationKind::UndeclaredDynamicFsReadEnforced => "undeclared-dynamic-fs-read-enforced",
+        MutationKind::AuditFixRemediatesDynamicRead => "audit-fix-remediates-dynamic-read",
         MutationKind::TypecheckTypeOnlyAndAmbientDts => "typecheck-type-only-and-ambient-dts",
         MutationKind::ImportMetaGlobAddEditDelete => "import-meta-glob-add-edit-delete",
         MutationKind::SqlMigrationImpactAndCache => "sql-migration-impact-and-cache",

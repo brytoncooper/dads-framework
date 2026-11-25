@@ -17,6 +17,8 @@ pub enum SpecialTimeline {
     RemoteCacheFault,
     ConcurrentCacheWriters,
     CliFiltersShardStalePlan,
+    ReadGuardEnforced,
+    AuditFixRemediates,
 }
 
 #[derive(Debug, Default)]
@@ -75,6 +77,14 @@ pub fn apply_mutation(
         _ if is_section_a_mutation(kind) => {
             apply_section_a_mutation(paths.workspace_dir, kind, step_idx)
         }
+        MutationKind::UndeclaredDynamicFsReadEnforced => Ok(AppliedMutation {
+            special_timeline: Some(SpecialTimeline::ReadGuardEnforced),
+            ..AppliedMutation::default()
+        }),
+        MutationKind::AuditFixRemediatesDynamicRead => Ok(AppliedMutation {
+            special_timeline: Some(SpecialTimeline::AuditFixRemediates),
+            ..AppliedMutation::default()
+        }),
         _ if kind.is_section_b() => {
             apply_section_b_mutation(paths.workspace_dir, shape, kind, step_idx)
         }

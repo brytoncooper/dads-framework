@@ -1,4 +1,4 @@
-//! Scenario topology, 93-family mutation catalog types, and report structures for DST sweeps.
+//! Scenario topology, 95-family mutation catalog types, and report structures for DST sweeps.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -99,6 +99,9 @@ pub enum MutationKind {
     GitignoredImpactPathsGlob,
     UpstreamPackageExportsAndNestedTsconfig,
     NonRootAndDotenvConfigFiles,
+    // --- Phase 2: Runtime Read Tracer & Enforcement (#69-#70) ---
+    UndeclaredDynamicFsReadEnforced,
+    AuditFixRemediatesDynamicRead,
     // --- Section B: Uncovered dad-test Subsystems (#71-#78) ---
     TypecheckTypeOnlyAndAmbientDts,
     ImportMetaGlobAddEditDelete,

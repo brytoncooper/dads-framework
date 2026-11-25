@@ -1,7 +1,25 @@
-use dads_testing_dst::{DstConfig, DstSummary, MutationKind, run_dst_sweep};
+use dads_testing_dst::{
+    ChaosConfig, ChaosSummary, DstConfig, DstSummary, MutationKind, print_chaos_summary,
+    run_chaos_sweep, run_dst_sweep,
+};
+use serde::Serialize;
 use std::env;
 use std::path::PathBuf;
 use std::process;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CombinedSummary {
+    curated: DstSummary,
+    chaos: ChaosSummary,
+}
+
+struct ParsedArgs {
+    curated: Option<DstConfig>,
+    chaos: Option<ChaosConfig>,
+    json: bool,
+    allow_misses: bool,
+}
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -10,119 +28,198 @@ fn main() {
         Err(message) => {
             eprintln!("error: {message}");
             eprintln!(
-                "usage: dads-testing-dst [--scenarios N] [--steps K] [--seed S] [--jobs J] [--bin PATH] [--node PATH] [--filter MUTATION] [--keep-failed] [--json] [--allow-misses]"
+                "usage: dads-testing-dst [--scenarios N] [--steps K] [--chaos N] [--chaos-steps K] [--shrink] [--seed S] [--jobs J] [--bin PATH] [--node PATH] [--filter MUTATION] [--keep-failed] [--json] [--allow-misses]"
             );
             process::exit(2);
         }
     };
-    let summary = match run_dst_sweep(&parsed.config) {
+    let curated_summary = parsed.curated.as_ref().map(|cfg| match run_dst_sweep(cfg) {
         Ok(summary) => summary,
         Err(error) => {
             eprintln!("dst sweep error: {error}");
             process::exit(1);
         }
-    };
-    if parsed.json {
-        if let Ok(text) = serde_json::to_string_pretty(&summary) {
-            println!("{text}");
+    });
+    let chaos_summary = parsed.chaos.as_ref().map(|cfg| match run_chaos_sweep(cfg) {
+        Ok(summary) => summary,
+        Err(error) => {
+            eprintln!("chaos sweep error: {error}");
+            process::exit(1);
         }
-    } else {
-        print_human_summary(&summary, &parsed.config);
-    }
-    let has_failures = summary.soundness_misses_total > 0
-        || summary.cache_integrity_violations > 0
-        || summary.harness_errors > 0;
-    if has_failures && !parsed.allow_misses {
+    });
+    emit_output(&parsed, curated_summary.as_ref(), chaos_summary.as_ref());
+
+    let curated_failed = curated_summary.as_ref().is_some_and(|s| {
+        s.soundness_misses_total > 0 || s.cache_integrity_violations > 0 || s.harness_errors > 0
+    });
+    let chaos_failed = chaos_summary.as_ref().is_some_and(|s| {
+        s.soundness_misses_total > 0
+            || s.snapshot_parity_divergences > 0
+            || s.cache_integrity_violations > 0
+            || s.harness_errors > 0
+    });
+    if (curated_failed || chaos_failed) && !parsed.allow_misses {
         process::exit(1);
     }
 }
 
-struct ParsedArgs {
-    config: DstConfig,
+fn emit_output(parsed: &ParsedArgs, curated: Option<&DstSummary>, chaos: Option<&ChaosSummary>) {
+    if parsed.json {
+        let encoded = match (curated, chaos) {
+            (Some(c), Some(ch)) => serde_json::to_string_pretty(&CombinedSummary {
+                curated: c.clone(),
+                chaos: ch.clone(),
+            }),
+            (Some(c), None) => serde_json::to_string_pretty(c),
+            (None, Some(ch)) => serde_json::to_string_pretty(ch),
+            (None, None) => Ok("{}".to_owned()),
+        };
+        if let Ok(text) = encoded {
+            println!("{text}");
+        }
+        return;
+    }
+    if let (Some(summary), Some(cfg)) = (curated, parsed.curated.as_ref()) {
+        print_human_summary(summary, cfg);
+    }
+    if let (Some(summary), Some(cfg)) = (chaos, parsed.chaos.as_ref()) {
+        if curated.is_some() {
+            println!();
+        }
+        print_chaos_summary(summary, cfg);
+    }
+}
+
+struct RawFlags {
+    scenarios: Option<usize>,
+    steps_per_scenario: usize,
+    chaos_scenarios: Option<usize>,
+    chaos_steps: usize,
+    shrink: bool,
+    base_seed: u64,
+    jobs: usize,
+    dad_bin: PathBuf,
+    node_bin: PathBuf,
+    keep_failed: bool,
     json: bool,
     allow_misses: bool,
+    filter_mutation: Option<MutationKind>,
 }
 
 fn parse_args(args: &[String]) -> Result<ParsedArgs, String> {
-    let mut scenarios = 100usize;
-    let mut steps_per_scenario = 2usize;
-    let mut base_seed = 1u64;
-    let mut jobs = std::thread::available_parallelism()
-        .map(std::num::NonZeroUsize::get)
-        .unwrap_or(4);
-    let mut dad_bin = default_dad_bin();
-    let mut node_bin = find_in_path("node").unwrap_or_else(|| PathBuf::from("node"));
-    let mut keep_failed = false;
-    let mut json = false;
-    let mut allow_misses = false;
-    let mut filter_mutation = None;
+    let mut raw = RawFlags {
+        scenarios: None,
+        steps_per_scenario: 2,
+        chaos_scenarios: None,
+        chaos_steps: 6,
+        shrink: false,
+        base_seed: 1,
+        jobs: std::thread::available_parallelism()
+            .map(std::num::NonZeroUsize::get)
+            .unwrap_or(4),
+        dad_bin: default_dad_bin(),
+        node_bin: find_in_path("node").unwrap_or_else(|| PathBuf::from("node")),
+        keep_failed: false,
+        json: false,
+        allow_misses: false,
+        filter_mutation: None,
+    };
 
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--scenarios" => {
                 i += 1;
-                scenarios = parse_next(args, i, "--scenarios")?;
+                raw.scenarios = Some(parse_next(args, i, "--scenarios")?);
             }
             "--steps" => {
                 i += 1;
-                steps_per_scenario = parse_next(args, i, "--steps")?;
+                raw.steps_per_scenario = parse_next(args, i, "--steps")?;
             }
+            "--chaos" => {
+                i += 1;
+                raw.chaos_scenarios = Some(parse_next(args, i, "--chaos")?);
+            }
+            "--chaos-steps" => {
+                i += 1;
+                raw.chaos_steps = parse_next(args, i, "--chaos-steps")?;
+            }
+            "--shrink" => raw.shrink = true,
             "--seed" => {
                 i += 1;
-                base_seed = parse_next(args, i, "--seed")?;
+                raw.base_seed = parse_next(args, i, "--seed")?;
             }
             "--jobs" => {
                 i += 1;
-                jobs = parse_next(args, i, "--jobs")?;
+                raw.jobs = parse_next(args, i, "--jobs")?;
             }
             "--bin" => {
                 i += 1;
-                let raw = args
-                    .get(i)
-                    .ok_or_else(|| "--bin requires a path".to_owned())?;
-                dad_bin = PathBuf::from(raw);
+                raw.dad_bin = PathBuf::from(parse_path_arg(args, i, "--bin")?);
             }
             "--node" => {
                 i += 1;
-                let raw = args
-                    .get(i)
-                    .ok_or_else(|| "--node requires a path".to_owned())?;
-                node_bin = PathBuf::from(raw);
+                raw.node_bin = PathBuf::from(parse_path_arg(args, i, "--node")?);
             }
             "--filter" => {
                 i += 1;
-                let raw = args
-                    .get(i)
-                    .ok_or_else(|| "--filter requires a mutation name".to_owned())?;
-                filter_mutation = Some(
-                    MutationKind::parse(raw)
-                        .ok_or_else(|| format!("unknown mutation kind `{raw}`"))?,
+                let value = parse_path_arg(args, i, "--filter")?;
+                raw.filter_mutation = Some(
+                    MutationKind::parse(value)
+                        .ok_or_else(|| format!("unknown mutation kind `{value}`"))?,
                 );
             }
-            "--keep-failed" => keep_failed = true,
-            "--json" => json = true,
-            "--allow-misses" => allow_misses = true,
+            "--keep-failed" => raw.keep_failed = true,
+            "--json" => raw.json = true,
+            "--allow-misses" => raw.allow_misses = true,
             other => return Err(format!("unknown argument `{other}`")),
         }
         i += 1;
     }
 
-    Ok(ParsedArgs {
-        config: DstConfig {
-            dad_bin,
-            node_bin,
+    Ok(build_parsed_args(raw))
+}
+
+fn build_parsed_args(raw: RawFlags) -> ParsedArgs {
+    let run_curated =
+        raw.scenarios.is_some() || raw.chaos_scenarios.is_none() || raw.filter_mutation.is_some();
+    let curated = run_curated.then(|| DstConfig {
+        dad_bin: raw.dad_bin.clone(),
+        node_bin: raw.node_bin.clone(),
+        scenarios: raw.scenarios.unwrap_or(100),
+        steps_per_scenario: raw.steps_per_scenario,
+        base_seed: raw.base_seed,
+        jobs: raw.jobs,
+        keep_failed: raw.keep_failed,
+        max_sample_failures: 25,
+        filter_mutation: raw.filter_mutation,
+    });
+    let chaos = raw
+        .chaos_scenarios
+        .filter(|&n| n > 0)
+        .map(|scenarios| ChaosConfig {
+            dad_bin: raw.dad_bin,
+            node_bin: raw.node_bin,
             scenarios,
-            steps_per_scenario,
-            base_seed,
-            jobs,
-            keep_failed,
+            steps_per_scenario: raw.chaos_steps,
+            base_seed: raw.base_seed,
+            jobs: raw.jobs,
+            keep_failed: raw.keep_failed,
+            shrink: raw.shrink,
             max_sample_failures: 25,
-            filter_mutation,
-        },
-        json,
-        allow_misses,
-    })
+        });
+    ParsedArgs {
+        curated,
+        chaos,
+        json: raw.json,
+        allow_misses: raw.allow_misses,
+    }
+}
+
+fn parse_path_arg<'a>(args: &'a [String], index: usize, flag: &str) -> Result<&'a str, String> {
+    args.get(index)
+        .map(String::as_str)
+        .ok_or_else(|| format!("{flag} requires a value"))
 }
 
 fn parse_next<T: std::str::FromStr>(
@@ -130,9 +227,7 @@ fn parse_next<T: std::str::FromStr>(
     index: usize,
     flag: &str,
 ) -> Result<T, String> {
-    let raw = args
-        .get(index)
-        .ok_or_else(|| format!("{flag} requires a value"))?;
+    let raw = parse_path_arg(args, index, flag)?;
     raw.parse::<T>()
         .map_err(|_| format!("invalid value `{raw}` for {flag}"))
 }

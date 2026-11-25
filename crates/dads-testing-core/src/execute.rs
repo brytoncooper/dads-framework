@@ -93,6 +93,14 @@ pub fn manifest_project_roots(request: &NativeRequest) -> Option<Vec<String>> {
     )
 }
 
+/// Returns the declared `workspace.ignorePaths` patterns from the workspace's manifest so a
+/// language frontend excludes ignored files from discovery and graph construction.
+pub fn manifest_ignore_paths(request: &NativeRequest) -> Vec<String> {
+    load_declared_manifest(request)
+        .map(|(_, _, manifest)| manifest.workspace.ignore_paths)
+        .unwrap_or_default()
+}
+
 /// Returns the declared `workspace.pureFactories` patterns from the default workspace manifest
 /// (or empty when no default manifest exists or cannot be read).
 pub fn manifest_pure_factories_from_root(workspace_root: &Path) -> Vec<String> {

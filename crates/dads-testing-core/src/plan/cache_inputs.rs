@@ -5,11 +5,19 @@
 //! closed (`cacheable = false`) whenever closure soundness cannot be guaranteed.
 
 use super::PlanEvidence;
-use crate::graph::{DependencyGraph, GraphUncertainty, ModuleNode};
+use crate::graph::{DependencyGraph, GraphUncertainty, ImportKind, ModuleNode};
 use crate::manifest::{DeclaredTask, ImpactMode, Project, TestingManifest};
 use crate::protocol::{ResolvedScope, TaskCacheInputs};
 use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+
+struct ForwardClosure {
+    visited_nodes: BTreeSet<usize>,
+    dynamic_scope_paths: BTreeSet<String>,
+    file_read_targets: BTreeSet<String>,
+    file_read_dirs: BTreeSet<String>,
+    using_full_project: bool,
+}
 
 pub(super) struct CacheInputIndex<'a> {
     manifest: &'a TestingManifest,
@@ -41,8 +49,12 @@ impl<'a> CacheInputIndex<'a> {
         let mut owner_by_node = Vec::with_capacity(nodes.len());
         for (idx, node) in nodes.iter().enumerate() {
             node_by_path.insert(node.path.as_str(), idx);
-            let owner =
-                deepest_project_for_path(&manifest.projects, &node.path).map(|p| p.id.as_str());
+            let ignored = is_ignored_path(&node.path, &manifest.workspace.ignore_paths);
+            let owner = if ignored {
+                None
+            } else {
+                deepest_project_for_path(&manifest.projects, &node.path).map(|p| p.id.as_str())
+            };
             owner_by_node.push(owner);
             if let Some(proj_id) = owner {
                 nodes_by_project.entry(proj_id).or_default().push(idx);
@@ -89,9 +101,10 @@ impl<'a> CacheInputIndex<'a> {
         selected_files: &[String],
     ) -> TaskCacheInputs {
         if task.impact.mode == ImpactMode::Always
-            || scope.full_fallback
+            || (scope.full_fallback && scope.kind != "all")
             || evidence.full_fallback
-            || (task.impact.mode == ImpactMode::Reachability && !self.has_graph)
+            || ((task.impact.mode == ImpactMode::Reachability || scope.kind == "all")
+                && !self.has_graph)
             || !self.projects_by_id.contains_key(task.project.as_str())
         {
             return uncacheable_inputs();
@@ -108,13 +121,12 @@ impl<'a> CacheInputIndex<'a> {
         {
             return uncacheable_inputs();
         }
-        let Some((visited_nodes, dynamic_scope_paths, using_full_project)) =
-            self.walk_forward_closure(&task.project, selected_files, setup_files)
+        let Some(closure) = self.walk_forward_closure(&task.project, selected_files, setup_files)
         else {
             return uncacheable_inputs();
         };
         let mut seed_projects = BTreeSet::from([task.project.as_str()]);
-        for &node_idx in &visited_nodes {
+        for &node_idx in &closure.visited_nodes {
             if let Some(owner) = self.owner_by_node[node_idx] {
                 seed_projects.insert(owner);
             }
@@ -124,16 +136,26 @@ impl<'a> CacheInputIndex<'a> {
             self.unified_project_deps,
             &seed_projects,
             task.project.as_str(),
-            using_full_project || !self.has_graph,
+            closure.using_full_project || !self.has_graph,
         ) else {
             return uncacheable_inputs();
         };
-        let impact_paths = self.collect_impact_paths(task, dynamic_scope_paths);
+        let mut impact_paths = self.collect_impact_paths(task, closure.dynamic_scope_paths);
+        for dir in closure.file_read_dirs {
+            if !project_roots.iter().any(|root| path_is_inside(&dir, root)) {
+                impact_paths.insert(dir);
+            }
+        }
         let mut extra_files: BTreeSet<String> = setup_files.iter().cloned().collect();
-        for &node_idx in &visited_nodes {
+        for &node_idx in &closure.visited_nodes {
             let path = &self.nodes[node_idx].path;
             if !project_roots.iter().any(|root| path_is_inside(path, root)) {
                 extra_files.insert(path.clone());
+            }
+        }
+        for path in closure.file_read_targets {
+            if !project_roots.iter().any(|root| path_is_inside(&path, root)) {
+                extra_files.insert(path);
             }
         }
         TaskCacheInputs {
@@ -149,9 +171,15 @@ impl<'a> CacheInputIndex<'a> {
         project_id: &str,
         selected_files: &[String],
         setup_files: &[String],
-    ) -> Option<(BTreeSet<usize>, BTreeSet<String>, bool)> {
+    ) -> Option<ForwardClosure> {
         if !self.has_graph {
-            return Some((BTreeSet::new(), BTreeSet::new(), true));
+            return Some(ForwardClosure {
+                visited_nodes: BTreeSet::new(),
+                dynamic_scope_paths: BTreeSet::new(),
+                file_read_targets: BTreeSet::new(),
+                file_read_dirs: BTreeSet::new(),
+                using_full_project: true,
+            });
         }
         let (seeds, using_full_project) =
             collect_seed_modules(self, project_id, selected_files, setup_files);
@@ -166,6 +194,8 @@ impl<'a> CacheInputIndex<'a> {
             }
         }
         let mut dynamic_scope_paths = BTreeSet::new();
+        let mut file_read_targets = BTreeSet::new();
+        let mut file_read_dirs = BTreeSet::new();
         while let Some(node_idx) = queue.pop_front() {
             let node = &self.nodes[node_idx];
             if self.blocking_uncertainties_by_path.contains(&node.path) {
@@ -195,6 +225,17 @@ impl<'a> CacheInputIndex<'a> {
                 let Some(target) = imp.resolved_path.as_deref() else {
                     continue;
                 };
+                if is_ignored_path(target, &self.manifest.workspace.ignore_paths) {
+                    continue;
+                }
+                if imp.kind == ImportKind::FileRead {
+                    if let Some(dir) = target.strip_suffix('/') {
+                        file_read_dirs.insert(dir.to_owned());
+                    } else {
+                        file_read_targets.insert(target.to_owned());
+                    }
+                    continue;
+                }
                 if self.blocking_uncertainties_by_path.contains(target) {
                     return None;
                 }
@@ -205,7 +246,13 @@ impl<'a> CacheInputIndex<'a> {
                 }
             }
         }
-        Some((visited_nodes, dynamic_scope_paths, using_full_project))
+        Some(ForwardClosure {
+            visited_nodes,
+            dynamic_scope_paths,
+            file_read_targets,
+            file_read_dirs,
+            using_full_project,
+        })
     }
 
     fn collect_impact_paths(
@@ -236,6 +283,12 @@ impl<'a> CacheInputIndex<'a> {
         }
         impact_paths
     }
+}
+
+fn is_ignored_path(path: &str, ignore_paths: &[String]) -> bool {
+    ignore_paths
+        .iter()
+        .any(|pattern| path_matches_impact(path, pattern))
 }
 
 fn uncacheable_inputs() -> TaskCacheInputs {

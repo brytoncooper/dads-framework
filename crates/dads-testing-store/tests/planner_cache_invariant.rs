@@ -6,7 +6,9 @@
 mod support;
 
 use dads_testing_core::NativeRequest;
-use dads_testing_core::graph::{DependencyGraph, ModuleNode};
+use dads_testing_core::graph::{
+    DependencyGraph, ImportFact, ImportKind, ModuleNode, SourceSpan, SymbolFact,
+};
 use serde_json::json;
 use std::error::Error;
 use std::fs;
@@ -274,5 +276,269 @@ fn planner_cache_invariant_holds_for_every_dependency_and_input_channel()
         )?;
         assert_eq!(restored.counts.cached, 1, "channel {}", case.label);
     }
+    Ok(())
+}
+
+fn file_read_import(target: &str) -> ImportFact {
+    ImportFact {
+        specifier: format!("fs:{target}"),
+        span: SourceSpan { start: 0, end: 1 },
+        kind: ImportKind::FileRead,
+        type_only: false,
+        requested_symbols: std::collections::BTreeSet::new(),
+        namespace_import: false,
+        reexport_all: false,
+        reexport_namespace: None,
+        resolved_path: Some(target.to_owned()),
+        position: None,
+        export_deps: None,
+        member_reads: None,
+    }
+}
+
+fn setup_file_read_invariant_workspace(
+    repo: &Path,
+    counter_file: &Path,
+) -> Result<Vec<ModuleNode>, Box<dyn Error>> {
+    let manifest = json!({
+        "schemaVersion": 1,
+        "workspace": {
+            "root": ".",
+            "fullFallback": { "taskIds": ["reader:test"] }
+        },
+        "projects": [
+            { "id": "dep", "root": "libs/dep", "fallbackDependencies": [] },
+            { "id": "target", "root": "libs/target", "fallbackDependencies": [] },
+            { "id": "reader", "root": "apps/reader", "fallbackDependencies": [] }
+        ],
+        "tasks": [{
+            "id": "reader:test",
+            "project": "reader",
+            "kind": "test",
+            "execution": {
+                "executable": "sh",
+                "args": ["-c", format!("printf x >> '{}'", counter_file.display())]
+            },
+            "dependsOn": [],
+            "impact": { "mode": "reachability", "paths": [] }
+        }]
+    });
+    for (rel, content) in [
+        ("libs/dep/src/dep.ts", "export const dep = 1;\n"),
+        (
+            "libs/target/src/entry.ts",
+            "import { dep } from '../../dep/src/dep';\nexport const entry = dep;\n",
+        ),
+        (
+            "libs/target/src/unrelated.ts",
+            "export const unrelated = 1;\n",
+        ),
+        ("libs/target/dir/item.txt", "item-1\n"),
+        ("apps/reader/src/reader.test.ts", "export const t = 1;\n"),
+    ] {
+        write_file(repo, rel, content)?;
+    }
+    write_file(
+        repo,
+        "dads.testing.json",
+        &serde_json::to_string_pretty(&manifest)?,
+    )?;
+    git(repo, &["init", "-q"])?;
+    commit_all(repo)?;
+
+    let mut reader = mod_node("apps/reader/src/reader.test.ts", &["t"], &[]);
+    reader
+        .imports
+        .push(file_read_import("libs/target/src/entry.ts"));
+    reader.imports.push(file_read_import("libs/target/dir/"));
+    let dir_asset = ModuleNode {
+        path: "libs/target/dir/".into(),
+        language: "asset".into(),
+        declarations: vec![SymbolFact {
+            name: "__asset__".into(),
+            span: SourceSpan { start: 0, end: 0 },
+        }],
+        references: Vec::new(),
+        imports: Vec::new(),
+    };
+    Ok(vec![
+        mod_node("libs/dep/src/dep.ts", &["dep"], &[]),
+        mod_node(
+            "libs/target/src/entry.ts",
+            &["entry"],
+            &["libs/dep/src/dep.ts"],
+        ),
+        mod_node("libs/target/src/unrelated.ts", &["unrelated"], &[]),
+        dir_asset,
+        reader,
+    ])
+}
+
+fn assert_file_read_mutation_selects_and_misses(
+    repo: &Path,
+    nodes: &[ModuleNode],
+    store: &RecordingStore,
+    baseline_key: &str,
+    rel_path: &str,
+    mutated: &str,
+    evidence: Option<(&str, &str)>,
+) -> Result<(), Box<dyn Error>> {
+    let original = fs::read_to_string(repo.join(rel_path))?;
+    write_file(repo, rel_path, mutated)?;
+    let graph = match evidence {
+        Some((p, s)) => DependencyGraph::new(nodes.to_vec(), Vec::new())
+            .with_changed_module_evidence(vec![changed_evidence(p, s)]),
+        None => DependencyGraph::new(nodes.to_vec(), Vec::new()),
+    };
+    let (plan, run) = run_cached(
+        repo,
+        NativeRequest {
+            base: Some("HEAD".into()),
+            ..NativeRequest::default()
+        },
+        Some(graph),
+        store,
+    )?;
+    assert_eq!(plan.tasks[0].decision, "run", "path {rel_path}");
+    assert_eq!(run.counts.cached, 0, "path {rel_path}");
+    assert_ne!(
+        store.key_for("reader:test").as_deref(),
+        Some(baseline_key),
+        "path {rel_path}"
+    );
+    write_file(repo, rel_path, &original)?;
+    Ok(())
+}
+
+fn assert_unrelated_mutation_skips_and_hits(
+    repo: &Path,
+    nodes: &[ModuleNode],
+    store: &RecordingStore,
+    baseline_key: &str,
+    rel_path: &str,
+    mutated: &str,
+    export: &str,
+) -> Result<(), Box<dyn Error>> {
+    let original = fs::read_to_string(repo.join(rel_path))?;
+    write_file(repo, rel_path, mutated)?;
+    let graph = DependencyGraph::new(nodes.to_vec(), Vec::new())
+        .with_changed_module_evidence(vec![changed_evidence(rel_path, export)]);
+    let (plan, _) = run_cached(
+        repo,
+        NativeRequest {
+            base: Some("HEAD".into()),
+            ..NativeRequest::default()
+        },
+        Some(graph.clone()),
+        store,
+    )?;
+    assert_eq!(
+        plan.tasks[0].decision, "skip-proven-unaffected",
+        "path {rel_path}"
+    );
+    let (_, hit) = run_cached(
+        repo,
+        NativeRequest {
+            only: true,
+            task_ids: vec!["reader:test".into()],
+            ..NativeRequest::default()
+        },
+        Some(graph),
+        store,
+    )?;
+    assert_eq!(hit.counts.cached, 1, "path {rel_path}");
+    assert_eq!(
+        store.key_for("reader:test").as_deref(),
+        Some(baseline_key),
+        "path {rel_path}"
+    );
+    write_file(repo, rel_path, &original)?;
+    Ok(())
+}
+
+#[test]
+fn planner_cache_invariant_for_file_read_is_direct_and_never_transitive()
+-> Result<(), Box<dyn Error>> {
+    let repo = TempDir::new("invariant-file-read")?;
+    let cache = TempDir::new("invariant-file-read-cache")?;
+    let nodes = setup_file_read_invariant_workspace(&repo.0, &cache.0.join("exec.count"))?;
+    let store = RecordingStore::new(&cache.0.join("store"));
+    let explicit_req = || NativeRequest {
+        only: true,
+        task_ids: vec!["reader:test".into()],
+        ..NativeRequest::default()
+    };
+
+    let (base_plan, base_run) = run_cached(
+        &repo.0,
+        explicit_req(),
+        Some(DependencyGraph::new(nodes.clone(), Vec::new())),
+        &store,
+    )?;
+    assert_eq!(base_run.counts.cached, 0);
+    let baseline_key = store.key_for("reader:test").ok_or("missing baseline key")?;
+    let cache_inputs = base_plan
+        .tasks
+        .iter()
+        .find(|t| t.id == "reader:test")
+        .and_then(|t| t.cache_inputs.as_ref())
+        .ok_or("missing cache_inputs")?;
+    assert!(cache_inputs.cacheable);
+    assert_eq!(cache_inputs.project_roots, vec!["apps/reader"]);
+    assert!(
+        cache_inputs
+            .extra_files
+            .contains(&"libs/target/src/entry.ts".to_owned())
+    );
+    assert!(
+        cache_inputs
+            .impact_paths
+            .contains(&"libs/target/dir".to_owned())
+    );
+
+    assert_file_read_mutation_selects_and_misses(
+        &repo.0,
+        &nodes,
+        &store,
+        &baseline_key,
+        "libs/target/src/entry.ts",
+        "import { dep } from '../../dep/src/dep';\nexport const entry = dep + 1;\n",
+        Some(("libs/target/src/entry.ts", "entry")),
+    )?;
+    assert_unrelated_mutation_skips_and_hits(
+        &repo.0,
+        &nodes,
+        &store,
+        &baseline_key,
+        "libs/dep/src/dep.ts",
+        "export const dep = 99;\n",
+        "dep",
+    )?;
+    assert_unrelated_mutation_skips_and_hits(
+        &repo.0,
+        &nodes,
+        &store,
+        &baseline_key,
+        "libs/target/src/unrelated.ts",
+        "export const unrelated = 2;\n",
+        "unrelated",
+    )?;
+    assert_file_read_mutation_selects_and_misses(
+        &repo.0,
+        &nodes,
+        &store,
+        &baseline_key,
+        "libs/target/dir/item.txt",
+        "item-2\n",
+        None,
+    )?;
+
+    let (_, hit_restored) = run_cached(
+        &repo.0,
+        explicit_req(),
+        Some(DependencyGraph::new(nodes, Vec::new())),
+        &store,
+    )?;
+    assert_eq!(hit_restored.counts.cached, 1);
     Ok(())
 }

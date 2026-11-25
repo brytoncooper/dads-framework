@@ -43,8 +43,8 @@ pub use boundaries_config::{
 };
 pub use execute::{
     execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,
-    expanded_manifest_bytes, graph_analysis_can_change_the_plan, manifest_project_roots,
-    manifest_pure_factories_from_root,
+    expanded_manifest_bytes, graph_analysis_can_change_the_plan, manifest_ignore_paths,
+    manifest_project_roots, manifest_pure_factories_from_root,
 };
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,

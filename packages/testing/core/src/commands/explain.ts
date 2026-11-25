@@ -3,7 +3,7 @@ import { writeCommandSuccess } from "../cli-output.js";
 import type { DadTestCommand } from "../dad-test-cli.js";
 import { explainPlan, renderPlanExplanation } from "../explain-plan.js";
 import { planTesting } from "../testing-api.js";
-import { readTestingManifest } from "../testing-manifest.js";
+import { loadTestingManifestForCommand } from "./load-manifest.js";
 import { buildOperationRequest } from "./plan-run.js";
 
 /**
@@ -28,7 +28,7 @@ export const explainCommand: DadTestCommand = {
   options: explainOptions,
   execute: async (parsed, io, json) => {
     const plan = await planTesting(buildOperationRequest(parsed, io));
-    const manifest = readTestingManifest(io.cwd, parsed.values.get("--manifest"));
+    const manifest = await loadTestingManifestForCommand(io, parsed.values.get("--manifest"));
     const explanation = explainPlan(plan, manifest);
     if (json) {
       writeCommandSuccess(io, json, "explain", explanation);

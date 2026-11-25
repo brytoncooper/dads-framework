@@ -1,9 +1,9 @@
 //! Unified project dependency graph combining declared `fallbackDependencies` with resolved
 //! cross-project module import edges from the language frontend.
 
-use crate::graph::ModuleNode;
+use crate::graph::{ImportKind, ModuleNode};
 use crate::manifest::TestingManifest;
-use crate::scope::deepest_project_for_path;
+use crate::scope::{deepest_project_for_path, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 /// Computes `project_id -> direct dependency project_ids` as the union of:
@@ -36,8 +36,18 @@ pub(crate) fn unified_project_dependencies<'a>(
     if nodes.is_empty() {
         return deps;
     }
+    let is_ignored = |path: &str| {
+        manifest
+            .workspace
+            .ignore_paths
+            .iter()
+            .any(|pattern| path_matches_impact(path, pattern))
+    };
     let mut owner_by_path: HashMap<&str, &'a str> = HashMap::with_capacity(nodes.len());
     for node in nodes {
+        if is_ignored(&node.path) {
+            continue;
+        }
         if let Some(project) = deepest_project_for_path(&manifest.projects, &node.path) {
             owner_by_path.insert(node.path.as_str(), project.id.as_str());
         }
@@ -48,9 +58,15 @@ pub(crate) fn unified_project_dependencies<'a>(
         };
         let entry = deps.entry(proj_a).or_default();
         for imp in &node.imports {
+            if imp.kind == ImportKind::FileRead {
+                continue;
+            }
             let Some(target_path) = imp.resolved_path.as_deref() else {
                 continue;
             };
+            if is_ignored(target_path) {
+                continue;
+            }
             let proj_b = owner_by_path.get(target_path).copied().or_else(|| {
                 deepest_project_for_path(&manifest.projects, target_path).map(|p| p.id.as_str())
             });

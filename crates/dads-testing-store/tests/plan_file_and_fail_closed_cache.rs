@@ -146,11 +146,8 @@ fn plan_file_round_trip_preserves_cache_inputs_and_invalidates_on_oxc_or_impact_
     Ok(())
 }
 
-#[test]
-fn fail_closed_cacheability_blocks_always_fallback_missing_graph_and_unscoped_dynamic_import()
--> Result<(), Box<dyn Error>> {
+fn setup_fail_closed_workspace() -> Result<(TempDir, DependencyGraph), Box<dyn Error>> {
     let repo = TempDir::new("fail-closed-run")?;
-    let cache = TempDir::new("fail-closed-cache")?;
     let manifest = json!({
         "schemaVersion": 1,
         "workspace": { "root": ".", "fullFallback": { "taskIds": ["always:t", "dyn:t", "ok:t"] } },
@@ -175,8 +172,6 @@ fn fail_closed_cacheability_blocks_always_fallback_missing_graph_and_unscoped_dy
     )?;
     git(&repo.0, &["init", "-q"])?;
     commit_all(&repo.0)?;
-
-    let store = RecordingStore::new(&cache.0);
     let graph = DependencyGraph::new(
         vec![
             mod_node("always/a.ts", &["a"], &[]),
@@ -191,6 +186,15 @@ fn fail_closed_cacheability_blocks_always_fallback_missing_graph_and_unscoped_dy
             location: None,
         }],
     );
+    Ok((repo, graph))
+}
+
+#[test]
+fn fail_closed_cacheability_blocks_always_fallback_missing_graph_and_unscoped_dynamic_import()
+-> Result<(), Box<dyn Error>> {
+    let (repo, graph) = setup_fail_closed_workspace()?;
+    let cache = TempDir::new("fail-closed-cache")?;
+    let store = RecordingStore::new(&cache.0);
 
     for round in 0..2 {
         let (_, run) = run_cached(
@@ -222,11 +226,43 @@ fn fail_closed_cacheability_blocks_always_fallback_missing_graph_and_unscoped_dy
         assert_eq!(run.counts.cached, 0);
         assert!(store.key_for("ok:t").is_none());
     }
+    // `--all` with a healthy Oxc graph caches healthy tasks (`ok:t`) while keeping `always:t`
+    // and blocking-uncertainty tasks (`dyn:t`) uncached.
     for _ in 0..2 {
         let (_, run) = run_cached(
             &repo.0,
             NativeRequest {
                 all: true,
+                ..NativeRequest::default()
+            },
+            Some(graph.clone()),
+            &store,
+        )?;
+        assert_eq!(run.counts.cached, 1);
+        assert!(store.key_for("always:t").is_none());
+        assert!(store.key_for("dyn:t").is_none());
+        assert!(store.key_for("ok:t").is_some());
+    }
+    // `--all` without a graph fails closed (0 cached).
+    for _ in 0..2 {
+        let (_, run) = run_cached(
+            &repo.0,
+            NativeRequest {
+                all: true,
+                ..NativeRequest::default()
+            },
+            None,
+            &store,
+        )?;
+        assert_eq!(run.counts.cached, 0);
+    }
+    // Error-induced `evidence.full_fallback` (unowned path) fails closed even with a healthy graph.
+    write_file(&repo.0, "unowned.ts", "export const u = 1;\n")?;
+    for _ in 0..2 {
+        let (_, run) = run_cached(
+            &repo.0,
+            NativeRequest {
+                base: Some("HEAD".into()),
                 ..NativeRequest::default()
             },
             Some(graph.clone()),

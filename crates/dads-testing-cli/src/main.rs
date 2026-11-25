@@ -122,11 +122,13 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
         };
     }
     let always_needs_graph = matches!(request.operation, Operation::Diagnose | Operation::Hotspots);
+    let skip_all_without_cache = request.operation == Operation::Run
+        && !request.cache
+        && (request.all || request.base.as_deref().is_some_and(is_empty_tree_sha));
     if !always_needs_graph
-        && (request.all
+        && (skip_all_without_cache
             || (request.only && !request.cache)
-            || request.plan_file.is_some()
-            || request.base.as_deref().is_some_and(is_empty_tree_sha))
+            || request.plan_file.is_some())
     {
         return GraphAnalysis {
             graph: None,

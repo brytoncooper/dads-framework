@@ -16,7 +16,7 @@ pub(crate) fn referenced_asset_paths(modules: &[JsModuleFacts]) -> BTreeSet<Stri
     let mut assets = BTreeSet::new();
     for module in modules {
         for import in &module.imports {
-            if import.kind == JsImportKind::Asset
+            if matches!(import.kind, JsImportKind::Asset | JsImportKind::FileRead)
                 && let Some(resolved) = &import.resolved_path
                 && !existing.contains(resolved.as_str())
             {
@@ -80,6 +80,9 @@ pub(crate) fn asset_changed_evidence(
 
     let mut evidence = Vec::new();
     for path in asset_paths {
+        if path.ends_with('/') {
+            continue;
+        }
         if changed.contains(path) || untracked.contains(path) {
             evidence.push(ChangedModuleEvidence {
                 path: path.clone(),

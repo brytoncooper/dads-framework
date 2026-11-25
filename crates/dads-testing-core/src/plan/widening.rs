@@ -1,6 +1,9 @@
 //! Turning changed paths into impacted projects. Every step that cannot prove an answer records
 //! a located issue and widens, so a plan is never quietly narrower than the evidence supports.
 use super::PlanEvidence;
+use super::widening_paths::{
+    collect_graph_changed_paths, is_javascript_source_path, record_uncovered_file_read_dirs,
+};
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
@@ -92,38 +95,14 @@ pub(super) fn widen_through_graph<'a>(
     graph: Option<&DependencyGraph>,
     evidence: &mut PlanEvidence<'a>,
 ) {
-    if evidence.full_fallback || scope.changed_paths.is_empty() || !manifest.declares_graph_reader()
+    if scope.full_fallback
+        || evidence.full_fallback
+        || scope.changed_paths.is_empty()
+        || !manifest.declares_graph_reader()
     {
         return;
     }
-    let mut changed_paths: Vec<String> = scope
-        .changed_paths
-        .iter()
-        .filter(|path| {
-            !manifest
-                .workspace
-                .ignore_paths
-                .iter()
-                .any(|pattern| path_matches_impact(path, pattern))
-        })
-        .filter(|path| !is_declared_non_code(path, &manifest.workspace.non_code_suffixes))
-        .filter(|path| !evidence.lockfile_handled_paths.contains(*path))
-        .filter(|path| !evidence.tsconfig_handled_paths.contains(*path))
-        .filter(|path| {
-            !evidence.sql_handled_paths.contains(*path)
-                || graph.is_some_and(|g| g.contains_path(path))
-        })
-        .cloned()
-        .collect();
-    for seeded in evidence
-        .lockfile_seeded_modules
-        .iter()
-        .chain(&evidence.tsconfig_seeded_modules)
-    {
-        if !changed_paths.contains(seeded) {
-            changed_paths.push(seeded.clone());
-        }
-    }
+    let changed_paths = collect_graph_changed_paths(manifest, scope, graph, evidence);
     if changed_paths.is_empty() {
         return;
     }
@@ -131,10 +110,11 @@ pub(super) fn widen_through_graph<'a>(
         record_missing_frontend(manifest, evidence);
         return;
     };
-    let (covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
-        .iter()
-        .cloned()
-        .partition(|path| graph.contains_path(path));
+    let (covered_paths, uncovered_paths): (Vec<String>, Vec<String>) =
+        changed_paths.iter().cloned().partition(|path| {
+            graph.contains_path(path)
+                || (!is_javascript_source_path(path) && graph.has_file_read_dir_for(path))
+        });
     let has_non_test_reachability = manifest
         .tasks
         .iter()
@@ -166,6 +146,14 @@ pub(super) fn widen_through_graph<'a>(
     }
     if !uncovered_paths.is_empty() {
         record_uncovered_paths(manifest, &uncovered_paths, evidence);
+        record_uncovered_file_read_dirs(
+            manifest,
+            &changed_paths,
+            &uncovered_paths,
+            graph,
+            evidence,
+            has_non_test_reachability,
+        );
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
         record_reachable_uncertainties(
             manifest,
@@ -186,10 +174,6 @@ pub(super) fn widen_through_graph<'a>(
             );
         }
     }
-}
-
-fn is_declared_non_code(path: &str, suffixes: &[String]) -> bool {
-    suffixes.iter().any(|suffix| path.ends_with(suffix))
 }
 
 /// No frontend answered at all: in a multi-project workspace, project dependencies cannot be
@@ -275,7 +259,7 @@ fn record_uncovered_paths<'a>(
 
 /// Proven reachability: every reached module puts its owner in scope, and a reached module with
 /// no owner means the graph reaches outside the manifest, which forces the complete fallback.
-fn record_reachable_paths<'a>(
+pub(super) fn record_reachable_paths<'a>(
     manifest: &'a TestingManifest,
     paths: &BTreeSet<String>,
     evidence: &mut PlanEvidence<'a>,
@@ -323,7 +307,7 @@ fn record_reachable_paths<'a>(
 /// Where the traversal stopped being provable. An owned uncertainty widens its project (confined
 /// to its own project when it lives in an unimported test file); an unowned one has nothing to
 /// widen, so it selects the complete fallback.
-fn record_reachable_uncertainties<'a>(
+pub(super) fn record_reachable_uncertainties<'a>(
     manifest: &'a TestingManifest,
     changed_paths: &[String],
     graph: &DependencyGraph,

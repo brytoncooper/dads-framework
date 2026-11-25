@@ -10,7 +10,7 @@ use crate::boundaries_match::{
     matches_external_pattern, matches_ignore_path, normalize_relative_posix,
     resolve_non_relative_target,
 };
-use crate::graph::{DependencyGraph, ImportFact};
+use crate::graph::{DependencyGraph, ImportFact, ImportKind};
 use crate::manifest::Project;
 use crate::protocol::PROTOCOL_SCHEMA_VERSION;
 use std::collections::{BTreeMap, BTreeSet};
@@ -149,6 +149,9 @@ impl CheckCtx<'_> {
 }
 
 fn check_import(ctx: &mut CheckCtx<'_>, import: &ImportFact) {
+    if import.kind == ImportKind::FileRead {
+        return;
+    }
     let raw_specifier = import.specifier.as_str();
     if raw_specifier.is_empty() || matches_allow(raw_specifier, &ctx.config.allow) {
         return;

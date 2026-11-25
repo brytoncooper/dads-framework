@@ -29,7 +29,8 @@ const MAX_DIR_EXPANSION_FILES: usize = 2_500;
 struct TargetRecorder<'a> {
     current_path: &'a str,
     workspace_index: &'a WorkspaceFileIndex,
-    targets: BTreeMap<String, JsSpan>,
+    fs_targets: BTreeMap<String, JsSpan>,
+    glob_targets: BTreeMap<String, JsSpan>,
 }
 
 impl TargetRecorder<'_> {
@@ -38,34 +39,99 @@ impl TargetRecorder<'_> {
             return;
         };
         let normalized = normalize_lexical(candidate);
-        let Ok(canonical_target) = normalized.canonicalize() else {
-            return;
-        };
-        if !canonical_target.starts_with(canonical_root) {
-            return;
-        }
-        let Some(rel) = workspace_relative_path(canonical_root, &canonical_target) else {
-            return;
-        };
-        if is_ignored_workspace_rel_path(&rel) {
-            return;
-        }
-        if canonical_target.is_file() {
-            self.insert_target(rel, span);
-        } else if canonical_target.is_dir() && !rel.is_empty() && rel != "." {
-            let files = self.workspace_index.files_under_dir(&rel);
-            if !files.is_empty() && files.len() <= MAX_DIR_EXPANSION_FILES {
-                for file_rel in files {
-                    self.insert_target(file_rel.clone(), span);
+        match normalized.canonicalize() {
+            Ok(canonical_target) => {
+                if !canonical_target.starts_with(canonical_root) {
+                    return;
+                }
+                let Some(rel) = workspace_relative_path(canonical_root, &canonical_target) else {
+                    return;
+                };
+                if rel.is_empty() || rel == "." || is_ignored_workspace_rel_path(&rel) {
+                    return;
+                }
+                if canonical_target.is_file() {
+                    self.insert_fs_target(rel, span);
+                } else if canonical_target.is_dir() {
+                    let files = self.workspace_index.files_under_dir(&rel);
+                    if files.len() <= MAX_DIR_EXPANSION_FILES {
+                        self.insert_fs_target(format!("{rel}/"), span);
+                    }
+                }
+            }
+            Err(_) => {
+                if let Some(rel) = resolve_missing_workspace_rel_path(canonical_root, &normalized)
+                    && !rel.is_empty()
+                    && rel != "."
+                    && !is_ignored_workspace_rel_path(&rel)
+                {
+                    self.insert_fs_target(rel, span);
                 }
             }
         }
     }
 
-    fn insert_target(&mut self, rel: String, span: Span) {
+    fn insert_fs_target(&mut self, rel: String, span: Span) {
         if rel != self.current_path {
-            self.targets.entry(rel).or_insert_with(|| copied_span(span));
+            self.fs_targets
+                .entry(rel)
+                .or_insert_with(|| copied_span(span));
         }
+    }
+}
+
+fn resolve_missing_workspace_rel_path(canonical_root: &Path, normalized: &Path) -> Option<String> {
+    let mut missing_segments = Vec::new();
+    let mut cursor = normalized;
+    while !cursor.exists() {
+        let name = cursor.file_name()?.to_str()?;
+        if !is_safe_missing_segment(name) {
+            return None;
+        }
+        missing_segments.push(name);
+        cursor = cursor.parent()?;
+    }
+    if missing_segments.is_empty() {
+        return None;
+    }
+    let canonical_ancestor = cursor.canonicalize().ok()?;
+    if !canonical_ancestor.starts_with(canonical_root) {
+        return None;
+    }
+    missing_segments.reverse();
+    let mut joined = canonical_ancestor;
+    for segment in missing_segments {
+        joined.push(segment);
+    }
+    workspace_relative_path(canonical_root, &joined)
+}
+
+fn is_safe_missing_segment(segment: &str) -> bool {
+    !segment.is_empty()
+        && segment.bytes().all(|byte| {
+            byte >= 0x20 && !matches!(byte, b'*' | b'?' | b':' | b'<' | b'>' | b'|' | b'"')
+        })
+}
+
+fn synthetic_import_fact(
+    specifier: String,
+    span: JsSpan,
+    kind: JsImportKind,
+    resolved_path: String,
+) -> JsImportFact {
+    JsImportFact {
+        specifier,
+        span,
+        kind,
+        type_only: false,
+        requested_symbols: BTreeSet::new(),
+        namespace_import: false,
+        reexport_all: false,
+        reexport_namespace: None,
+        resolved_path: Some(resolved_path),
+        position: None,
+        export_deps: None,
+        member_reads: None,
     }
 }
 
@@ -102,7 +168,8 @@ pub(crate) fn collect_fs_read_imports(
     let mut recorder = TargetRecorder {
         current_path: path,
         workspace_index,
-        targets: BTreeMap::new(),
+        fs_targets: BTreeMap::new(),
+        glob_targets: BTreeMap::new(),
     };
     let empty_overrides = HashMap::new();
     let mut saw_fs_read_call = false;
@@ -113,7 +180,7 @@ pub(crate) fn collect_fs_read_imports(
             continue;
         };
         if is_import_meta_glob(call) {
-            expand_meta_glob_call(call, &glob_ctx, &mut recorder.targets);
+            expand_meta_glob_call(call, &glob_ctx, &mut recorder.glob_targets);
             continue;
         }
         if !is_fs_read_call(call, &collected.fs, semantic) {
@@ -137,24 +204,24 @@ pub(crate) fn collect_fs_read_imports(
         resolve_const_array_paths(&collected.const_arrays, &eval_ctx, &mut recorder);
     }
 
-    recorder
-        .targets
-        .into_iter()
-        .map(|(resolved_path, span)| JsImportFact {
-            specifier: format!("fs:{resolved_path}"),
+    let mut facts = Vec::with_capacity(recorder.glob_targets.len() + recorder.fs_targets.len());
+    for (resolved_path, span) in recorder.glob_targets {
+        facts.push(synthetic_import_fact(
+            format!("glob:{resolved_path}"),
             span,
-            kind: JsImportKind::Asset,
-            type_only: false,
-            requested_symbols: BTreeSet::new(),
-            namespace_import: false,
-            reexport_all: false,
-            reexport_namespace: None,
-            resolved_path: Some(resolved_path),
-            position: None,
-            export_deps: None,
-            member_reads: None,
-        })
-        .collect()
+            JsImportKind::Asset,
+            resolved_path,
+        ));
+    }
+    for (resolved_path, span) in recorder.fs_targets {
+        facts.push(synthetic_import_fact(
+            format!("fs:{resolved_path}"),
+            span,
+            JsImportKind::FileRead,
+            resolved_path,
+        ));
+    }
+    facts
 }
 
 fn may_contain_fs_or_glob(module_record: &ModuleRecord<'_>, source: &str) -> bool {

@@ -1,43 +1,39 @@
 //! Reverse traversal: which modules a change reaches, and where the answer stops being provable.
 use super::compact::{CImport, DependencyGraph};
-use super::types::{
-    GraphUncertainty, GraphUncertaintyScope, ImportKind, Reachability, ReachedEdge, SourceLocation,
+use super::queries::file_read_dir_prefixes;
+use super::reachability_walk::{
+    SymbolWalk, ambiguous_import, enqueue_direct_exports, follow_reexport_all,
+    follow_reexport_namespace, is_pure_side_effect_import, uncertainty_span_start,
 };
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-/// The state one symbol-level walk carries: what it has reached, what it could not prove, the
-/// edges it followed, which `(module, symbol)` pairs have already been queued, and which modules
-/// have already propagated their own exports.
-#[derive(Default)]
-struct SymbolWalk {
-    paths: BTreeSet<String>,
-    uncertainties: Vec<GraphUncertainty>,
-    edges: Vec<ReachedEdge>,
-    queue: VecDeque<(String, BTreeSet<String>)>,
-    seen_exports: BTreeMap<String, BTreeSet<String>>,
-    module_eval_queue: VecDeque<String>,
-    seen_module_eval: BTreeSet<String>,
-    own_exports_propagated: BTreeSet<String>,
-    /// Tracks exact changed target members behind `export * as ns from "./target"` per `(barrel, ns)`.
-    ns_reexport_members: BTreeMap<(String, String), BTreeSet<String>>,
-    /// Exports that changed directly (not exclusively via `export * as ns`), disabling member filtering.
-    non_ns_exports: BTreeSet<(String, String)>,
-}
+use super::types::{
+    GraphUncertainty, GraphUncertaintyScope, ImportKind, Reachability, ReachedEdge,
+};
+use std::collections::{BTreeSet, VecDeque};
 
 impl DependencyGraph {
     pub fn reachability_from(&self, changed: impl IntoIterator<Item = String>) -> Reachability {
-        let mut paths = changed.into_iter().collect::<BTreeSet<_>>();
+        let direct = changed.into_iter().collect::<BTreeSet<_>>();
+        let mut paths = direct.clone();
         let mut q = paths.iter().cloned().collect::<VecDeque<_>>();
         while let Some(p) = q.pop_front() {
+            let is_direct = direct.contains(&p);
             if let Some(t) = self.module_index(&p) {
                 for e in self.reverse(t) {
-                    if let Some(s) = self
-                        .imports
-                        .get(*e as usize)
-                        .and_then(|e| self.path(e.source))
+                    if let Some(imp) = self.imports.get(*e as usize)
+                        && (is_direct || imp.kind != ImportKind::FileRead)
+                        && let Some(s) = self.path(imp.source)
                         && paths.insert(s.to_owned())
                     {
                         q.push_back(s.to_owned());
+                    }
+                }
+            }
+            if is_direct {
+                for dir in file_read_dir_prefixes(&p) {
+                    for (imp, source) in self.reverse_import_sources(&dir) {
+                        if imp.kind == ImportKind::FileRead && paths.insert(source.clone()) {
+                            q.push_back(source);
+                        }
                     }
                 }
             }
@@ -70,6 +66,26 @@ impl DependencyGraph {
         self.symbol_reachability_with_options(changed, true)
     }
 
+    /// Follows direct `ImportKind::FileRead` edges (including directory reads) for changed paths
+    /// that have no module node in the graph (for example a deleted file inside a `readdirSync` dir).
+    pub fn file_read_reachability(
+        &self,
+        changed: impl IntoIterator<Item = String>,
+        erase_type_only: bool,
+    ) -> Reachability {
+        let mut walk = SymbolWalk::default();
+        for path in changed {
+            self.follow_direct_file_reads(&mut walk, &path, erase_type_only);
+        }
+        self.walk_importers(&mut walk, erase_type_only);
+        self.collect_uncertainties(&mut walk);
+        Reachability {
+            paths: walk.paths,
+            uncertainties: walk.uncertainties,
+            edges: walk.edges,
+        }
+    }
+
     fn symbol_reachability_with_options(
         &self,
         changed: impl IntoIterator<Item = String>,
@@ -99,6 +115,8 @@ impl DependencyGraph {
     ) -> SymbolWalk {
         let mut walk = SymbolWalk::default();
         for p in changed {
+            let matched_file_read_dir =
+                self.follow_direct_file_reads(&mut walk, &p, erase_type_only);
             match self.change(&p) {
                 Some(c) if c.complete && !c.semantic_change => {}
                 Some(c) if c.complete && c.type_only_change && erase_type_only => {}
@@ -116,8 +134,11 @@ impl DependencyGraph {
                         && c.exports.is_empty()
                         && self
                             .module_index(&p)
-                            .is_some_and(|module| self.reverse(module).is_empty()) =>
+                            .is_some_and(|module| !self.has_non_file_read_reverse(module)) =>
                 {
+                    walk.paths.insert(p);
+                }
+                None if self.module_index(&p).is_none() && matched_file_read_dir => {
                     walk.paths.insert(p);
                 }
                 _ => {
@@ -135,6 +156,40 @@ impl DependencyGraph {
         walk
     }
 
+    fn follow_direct_file_reads(
+        &self,
+        walk: &mut SymbolWalk,
+        target: &str,
+        erase_type_only: bool,
+    ) -> bool {
+        let mut follow_for_key = |key: &str| -> bool {
+            let mut matched = false;
+            for (e, source) in self.reverse_import_sources(key) {
+                if e.kind != ImportKind::FileRead {
+                    continue;
+                }
+                matched = true;
+                walk.edges.push(ReachedEdge {
+                    importer: source.clone(),
+                    target: target.to_owned(),
+                    symbols: BTreeSet::new(),
+                    position: e.position,
+                });
+                walk.paths.insert(source.clone());
+                if walk.own_exports_propagated.insert(source.clone()) {
+                    self.propagate_own_exports(walk, e.source, source, erase_type_only);
+                }
+            }
+            matched
+        };
+        follow_for_key(target);
+        let mut matched_dir = false;
+        for dir in file_read_dir_prefixes(target) {
+            matched_dir |= follow_for_key(&dir);
+        }
+        matched_dir
+    }
+
     fn reverse_import_sources<'a>(&'a self, target: &str) -> Vec<(&'a CImport, String)> {
         let Some(t) = self.module_index(target) else {
             return Vec::new();
@@ -150,14 +205,16 @@ impl DependencyGraph {
     }
 
     fn walk_importers(&self, walk: &mut SymbolWalk, erase_type_only: bool) {
-        while let Some(p) = walk.module_eval_queue.pop_front() {
-            for (e, source) in self.reverse_import_sources(&p) {
-                self.follow_module_eval_edge(walk, e, source, &p, erase_type_only);
+        while !walk.module_eval_queue.is_empty() || !walk.queue.is_empty() {
+            while let Some(p) = walk.module_eval_queue.pop_front() {
+                for (e, source) in self.reverse_import_sources(&p) {
+                    self.follow_module_eval_edge(walk, e, source, &p, erase_type_only);
+                }
             }
-        }
-        while let Some((p, exports)) = walk.queue.pop_front() {
-            for (e, source) in self.reverse_import_sources(&p) {
-                self.follow_edge(walk, e, source, &p, &exports, erase_type_only);
+            while let Some((p, exports)) = walk.queue.pop_front() {
+                for (e, source) in self.reverse_import_sources(&p) {
+                    self.follow_edge(walk, e, source, &p, &exports, erase_type_only);
+                }
             }
         }
     }
@@ -170,6 +227,9 @@ impl DependencyGraph {
         target: &str,
         erase_type_only: bool,
     ) {
+        if e.kind == ImportKind::FileRead {
+            return;
+        }
         if e.type_only {
             if !erase_type_only {
                 walk.uncertainties.push(ambiguous_import(source, e));
@@ -197,6 +257,9 @@ impl DependencyGraph {
         exports: &BTreeSet<String>,
         erase_type_only: bool,
     ) {
+        if e.kind == ImportKind::FileRead {
+            return;
+        }
         if e.type_only {
             if !erase_type_only {
                 walk.uncertainties.push(ambiguous_import(source, e));
@@ -254,7 +317,7 @@ impl DependencyGraph {
                     enqueue_direct_exports(walk, source, affected);
                 }
             } else if walk.own_exports_propagated.insert(source.clone()) {
-                self.propagate_own_exports(walk, e.source, source);
+                self.propagate_own_exports(walk, e.source, source, erase_type_only);
             }
         }
     }
@@ -287,22 +350,41 @@ impl DependencyGraph {
             .any(|member| changed_members.contains(member))
     }
 
-    /// A reached module carries the change onward through its own exports. A module that exports
-    /// nothing yet has importers cannot say what they would see, so it stays uncertain.
-    fn propagate_own_exports(&self, walk: &mut SymbolWalk, module: u32, source: String) {
+    /// A reached module carries the change onward through its own exports. When it exports nothing:
+    /// - `FileRead` edges are ignored (bytes on disk did not change).
+    /// - Pure side-effect runtime imports propagate through `module_eval_queue`.
+    /// - Any reverse JS edge requesting named exports, namespace, or re-exports stays uncertain.
+    fn propagate_own_exports(
+        &self,
+        walk: &mut SymbolWalk,
+        module: u32,
+        source: String,
+        erase_type_only: bool,
+    ) {
         let next = self.exports(module);
-        if next.is_empty() {
-            if !self.reverse(module).is_empty() {
-                walk.uncertainties.push(GraphUncertainty {
-                    path: source,
-                    code: "unattributed-transitive-export".into(),
-                    message: "Reached module has no owned exports to propagate.".into(),
-                    scope: GraphUncertaintyScope::ReachedModule,
-                    location: None,
-                });
-            }
-        } else {
+        if !next.is_empty() {
             enqueue_direct_exports(walk, source, next);
+            return;
+        }
+        let mut has_unattributed_reverse = false;
+        for (e, importer) in self.reverse_import_sources(&source) {
+            if e.kind == ImportKind::FileRead || (e.type_only && erase_type_only) {
+                continue;
+            }
+            if is_pure_side_effect_import(e) {
+                self.follow_module_eval_edge(walk, e, importer, &source, erase_type_only);
+            } else {
+                has_unattributed_reverse = true;
+            }
+        }
+        if has_unattributed_reverse {
+            walk.uncertainties.push(GraphUncertainty {
+                path: source,
+                code: "unattributed-transitive-export".into(),
+                message: "Reached module has no owned exports to propagate.".into(),
+                scope: GraphUncertaintyScope::ReachedModule,
+                location: None,
+            });
         }
     }
 
@@ -329,114 +411,4 @@ impl DependencyGraph {
         });
         walk.uncertainties.dedup();
     }
-}
-
-/// An `export *` re-export forwards every changed name but `default`, which it does not re-export.
-fn follow_reexport_all(
-    walk: &mut SymbolWalk,
-    e: &CImport,
-    source: String,
-    target: &str,
-    exports: &BTreeSet<String>,
-) {
-    let reexported = exports
-        .iter()
-        .filter(|name| name.as_str() != "default")
-        .cloned()
-        .collect::<BTreeSet<_>>();
-    if reexported.is_empty() {
-        return;
-    }
-    walk.edges.push(ReachedEdge {
-        importer: source.clone(),
-        target: target.to_owned(),
-        symbols: reexported.clone(),
-        position: e.position,
-    });
-    walk.paths.insert(source.clone());
-    enqueue_direct_exports(walk, source, reexported);
-}
-
-/// An `export * as ns from "./target"` namespace re-export binds EVERY runtime export of `target`
-/// (including `"default"`) under exported name `ns`, recording the exact changed member names so
-/// tracked downstream `ns.foo` reads stay symbol-precise (`NamespaceAndImports.lean` Theorems 1–3).
-fn follow_reexport_namespace(
-    walk: &mut SymbolWalk,
-    e: &CImport,
-    source: String,
-    target: &str,
-    ns_name: &str,
-    exports: &BTreeSet<String>,
-) {
-    if exports.is_empty() {
-        return;
-    }
-    walk.edges.push(ReachedEdge {
-        importer: source.clone(),
-        target: target.to_owned(),
-        symbols: exports.clone(),
-        position: e.position,
-    });
-    walk.paths.insert(source.clone());
-    let entry = walk
-        .ns_reexport_members
-        .entry((source.clone(), ns_name.to_owned()))
-        .or_default();
-    let mut grew = false;
-    for sym in exports {
-        grew |= entry.insert(sym.clone());
-    }
-    if grew {
-        walk.seen_exports
-            .entry(source.clone())
-            .or_default()
-            .insert(ns_name.to_owned());
-        walk.queue
-            .push_back((source, BTreeSet::from([ns_name.to_owned()])));
-    }
-}
-
-fn enqueue_direct_exports(walk: &mut SymbolWalk, module: String, exports: BTreeSet<String>) {
-    for sym in &exports {
-        walk.non_ns_exports.insert((module.clone(), sym.clone()));
-    }
-    enqueue_exports(walk, module, exports);
-}
-
-/// Enqueues only `(module, symbol)` pairs not yet seen so diamond `export *` barrels and mixed
-/// own-export + `export *` modules propagate every changed symbol without looping.
-fn enqueue_exports(walk: &mut SymbolWalk, module: String, exports: BTreeSet<String>) {
-    let seen = walk.seen_exports.entry(module.clone()).or_default();
-    let fresh = exports
-        .into_iter()
-        .filter(|symbol| seen.insert(symbol.clone()))
-        .collect::<BTreeSet<_>>();
-    if !fresh.is_empty() {
-        walk.queue.push_back((module, fresh));
-    }
-}
-
-fn ambiguous_import(path: String, import: &CImport) -> GraphUncertainty {
-    GraphUncertainty {
-        path,
-        code: "ambiguous-cross-file-import".into(),
-        message: "Importer cannot be matched to a named runtime export.".into(),
-        scope: GraphUncertaintyScope::ReachedModule,
-        location: import_location(import),
-    }
-}
-
-/// A core-generated import uncertainty is located only when its frontend recorded a position.
-fn import_location(import: &CImport) -> Option<SourceLocation> {
-    import.position.map(|position| SourceLocation {
-        span: import.span.clone(),
-        position,
-    })
-}
-
-fn uncertainty_span_start(uncertainty: &GraphUncertainty) -> Option<u32> {
-    uncertainty
-        .location
-        .as_ref()
-        .map(|location| location.span.start)
 }

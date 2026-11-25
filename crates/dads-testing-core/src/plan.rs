@@ -6,6 +6,7 @@ mod filtering;
 mod impacts;
 pub(crate) mod project_graph;
 mod widening;
+mod widening_paths;
 
 use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
@@ -53,7 +54,7 @@ struct PlanEvidence<'a> {
 }
 
 impl<'a> PlanEvidence<'a> {
-    fn new(scope: &ResolvedScope) -> Self {
+    fn new() -> Self {
         Self {
             changed_projects: BTreeSet::new(),
             fallback_impacted_projects: BTreeSet::new(),
@@ -78,7 +79,7 @@ impl<'a> PlanEvidence<'a> {
             tsconfig_impacted_aliases: BTreeSet::new(),
             tsconfig_seeded_modules: Vec::new(),
             issues: Vec::new(),
-            full_fallback: scope.full_fallback,
+            full_fallback: false,
         }
     }
 
@@ -218,7 +219,7 @@ pub(crate) fn build_plan(
     if matches!(jobs, Some(0)) {
         return Err(message("jobs must be greater than zero."));
     }
-    let mut evidence = PlanEvidence::new(scope);
+    let mut evidence = PlanEvidence::new();
     attach_lockfile_impact(workspace_root, scope, graph, &mut evidence);
     attach_tsconfig_impact(workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);
@@ -253,7 +254,7 @@ pub(crate) fn build_plan(
     Ok(PlanResult {
         schema_version: PROTOCOL_SCHEMA_VERSION,
         scope: ResolvedScope {
-            full_fallback: evidence.full_fallback,
+            full_fallback: scope.full_fallback || evidence.full_fallback,
             ..clone_scope(scope)
         },
         tasks: decisions,
@@ -293,7 +294,7 @@ fn select_tasks<'a>(
     let mut selected: BTreeSet<&'a str> = direct_tasks.iter().copied().collect();
     let mut fallback_origins = BTreeMap::new();
     let mut uncertainty_origins = BTreeMap::new();
-    if evidence.full_fallback {
+    if scope.full_fallback || evidence.full_fallback {
         selected.extend(task_by_id.keys().copied());
     } else if scope.kind == "explicit" {
         if direct_tasks.is_empty() {

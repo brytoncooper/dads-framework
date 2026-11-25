@@ -4,6 +4,15 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.8.4] - 2026-11-25
+
+Independent remote-cache performance patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Eliminated `O(N²)` repeated remote receipt lookups in the scheduler:** `scheduler` now records each ready task once checked (`checked_cache`) so missed tasks are never re-queried against L2 on every subsequent task completion (cutting 69-task shards from 2,415 lookups down to 69).
+- **Native connection-pooled Rust S3 & HTTP/HTTPS remote receipt client:** Replaced `s3_index.rs`'s `ListObjectsV2` full-bucket scan (which timed out at 10s on large cache buckets) and per-task Python `aws s3 cp` / `curl` subprocesses with a pooled pure-Rust `ureq` (`rustls` + `webpki-roots`) client and deterministic AWS SigV4 signing (`GET`/`PUT`), supporting env credentials, ECS container credentials, and cached EC2 IMDSv2 credentials + region discovery while retaining fail-closed semantics and `aws` CLI fallback for local SSO/profile setups.
+
 ## [@dads-framework/testing 0.8.3] - 2026-11-25
 
 Independent precision & caching patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

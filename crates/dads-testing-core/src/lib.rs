@@ -19,7 +19,9 @@ mod lockfile_parse;
 mod manifest;
 mod manifest_validate;
 mod plan;
+mod plan_file;
 mod protocol;
+mod protocol_diagnose;
 pub mod receipts;
 mod scheduler;
 mod scope;
@@ -36,9 +38,9 @@ pub use execute::{
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
-    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, RemediationSafety, ResolvedScope,
-    RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput, TaskRunResult, TaskShard,
-    WideningCulprit,
+    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata,
+    RemediationSafety, ResolvedScope, RunCounts, RunResult, TaskCause, TaskDecision, TaskOutput,
+    TaskRunResult, TaskShard, WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 pub use scope::is_empty_tree_sha;

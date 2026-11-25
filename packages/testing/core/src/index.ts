@@ -13,6 +13,7 @@ export {
   type TestingOperationRequest,
   type TestingPlanIssue,
   type TestingPlanResult,
+  type TestingPlanShard,
   type TestingRemediationSafety,
   type TestingRunResult,
   type TestingTaskCause,

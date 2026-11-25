@@ -32,6 +32,7 @@ const operationOptions: readonly OptionSpecification[] = [
 
 const runOptions: readonly OptionSpecification[] = [
   ...operationOptions,
+  { name: "--plan-file", kind: "value" },
   { name: "--cache", kind: "flag" },
   { name: "--no-cache", kind: "flag" },
   { name: "--remote-cache", kind: "value" },
@@ -188,6 +189,38 @@ function loadShardWeightsFile(cwd: string, weightsPath: string): Readonly<Record
   if (!isRecord(raw)) {
     throw new Error(`--weights file '${weightsPath}' must be a JSON object mapping project or task IDs to numbers.`);
   }
+  const nestedProjects = raw["projects"];
+  if (isRecord(nestedProjects)) {
+    return parseNestedProjectWeights(nestedProjects, weightsPath);
+  }
+  return parseFlatWeights(raw, weightsPath);
+}
+
+function parseNestedProjectWeights(
+  projects: Record<string, unknown>,
+  weightsPath: string,
+): Readonly<Record<string, number>> {
+  const weights: Record<string, number> = {};
+  for (const [project, entry] of Object.entries(projects)) {
+    if (typeof entry === "number") {
+      if (!Number.isFinite(entry) || entry <= 0) {
+        throw new Error(`--weights project '${project}' in '${weightsPath}' must be a positive finite number.`);
+      }
+      weights[project] = entry;
+      continue;
+    }
+    const durationMs = isRecord(entry) ? entry["durationMs"] : undefined;
+    if (typeof durationMs !== "number" || !Number.isFinite(durationMs) || durationMs < 0) {
+      throw new Error(
+        `--weights project '${project}' in '${weightsPath}' must be a positive number or an object with a non-negative finite 'durationMs'.`,
+      );
+    }
+    weights[project] = durationMs > 0 ? durationMs : 1;
+  }
+  return weights;
+}
+
+function parseFlatWeights(raw: Record<string, unknown>, weightsPath: string): Readonly<Record<string, number>> {
   const weights: Record<string, number> = {};
   for (const [key, value] of Object.entries(raw)) {
     if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -202,10 +235,12 @@ function optionalExecutionFields(parsed: ParsedArguments, io: DadTestCliIo): Par
   const jobs = parsed.values.get("--jobs");
   const cacheEnabled = parsed.flags.has("--cache") && !parsed.flags.has("--no-cache");
   const remoteCacheUrl = parsed.values.get("--remote-cache");
+  const planFile = parsed.values.get("--plan-file");
   return {
     ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
     ...(cacheEnabled ? { cache: true } : {}),
     ...(remoteCacheUrl === undefined ? {} : { remoteCacheUrl }),
+    ...(planFile === undefined ? {} : { planFile: resolve(io.cwd, planFile) }),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
   };
 }

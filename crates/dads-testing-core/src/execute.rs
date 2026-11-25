@@ -5,6 +5,7 @@ use crate::discover::expand_manifest;
 use crate::graph::DependencyGraph;
 use crate::manifest::{DEFAULT_MANIFEST_PATH, TestingManifest, load_manifest, validate_manifest};
 use crate::plan::{PlanFilters, build_plan};
+use crate::plan_file::load_plan_file;
 use crate::protocol::{
     NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts,
     PlanResult, ResolvedScope,
@@ -137,6 +138,23 @@ fn validate_request(request: &NativeRequest) -> Result<(), TestingError> {
             ));
         }
     }
+    if request.plan_file.is_some() {
+        if request.operation != Operation::Run {
+            return Err(message(
+                "--plan-file is only supported for the run operation.",
+            ));
+        }
+        if request.all
+            || request.only
+            || request.base.is_some()
+            || request.head.is_some()
+            || !request.task_ids.is_empty()
+        {
+            return Err(message(
+                "--plan-file cannot be combined with --all, --only, --base, --head, or --task.",
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -169,7 +187,6 @@ fn execute(
             manifest: None,
         });
     }
-    let scope = resolve_scope(&request, &workspace_root)?;
     let filters = PlanFilters {
         task_kinds: &request.task_kinds,
         targets: &request.targets,
@@ -178,15 +195,26 @@ fn execute(
         shard: request.shard,
         shard_weights: &request.shard_weights,
     };
-    let plan = build_plan(
-        &manifest,
-        &workspace_root,
-        &scope,
-        &request.task_ids,
-        &filters,
-        request.jobs,
-        graph,
-    )?;
+    let plan = if let Some(plan_file) = request.plan_file.as_deref() {
+        load_plan_file(
+            &workspace_root,
+            plan_file,
+            &manifest,
+            &filters,
+            request.jobs,
+        )?
+    } else {
+        let scope = resolve_scope(&request, &workspace_root)?;
+        build_plan(
+            &manifest,
+            &workspace_root,
+            &scope,
+            &request.task_ids,
+            &filters,
+            request.jobs,
+            graph,
+        )?
+    };
     match request.operation {
         Operation::Plan => Ok(OperationResult {
             operation: "plan".into(),
@@ -248,6 +276,7 @@ fn empty_plan_for(kind: &str) -> PlanResult {
             run: 0,
             skip_proven_unaffected: 0,
         },
+        shard: None,
     }
 }
 

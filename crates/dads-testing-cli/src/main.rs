@@ -2,7 +2,7 @@ use dads_testing_core::graph::DependencyGraph;
 use dads_testing_core::{
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, PlanIssue,
     TaskReceiptStore, execute_request_with_graph_and_receipts, graph_analysis_can_change_the_plan,
-    is_empty_tree_sha, manifest_project_roots,
+    is_empty_tree_sha, manifest_project_roots, request_uses_read_guard,
 };
 use dads_testing_javascript::{JavaScriptFrontend, analyze_workspace_graph};
 use dads_testing_store::{
@@ -121,11 +121,18 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
             issues: Vec::new(),
         };
     }
-    let always_needs_graph = matches!(request.operation, Operation::Diagnose | Operation::Hotspots);
+    let read_guard_active = request_uses_read_guard(request);
+    if request.plan_file.is_some() {
+        return GraphAnalysis {
+            graph: None,
+            issues: Vec::new(),
+        };
+    }
+    let graph_only_op = matches!(request.operation, Operation::Diagnose | Operation::Hotspots);
+    let always_needs_graph = graph_only_op || read_guard_active;
     if !always_needs_graph
         && (request.all
             || (request.only && !request.cache)
-            || request.plan_file.is_some()
             || request.base.as_deref().is_some_and(is_empty_tree_sha))
     {
         return GraphAnalysis {
@@ -133,7 +140,7 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
             issues: Vec::new(),
         };
     }
-    if !always_needs_graph && !graph_analysis_can_change_the_plan(request) {
+    if !graph_only_op && !graph_analysis_can_change_the_plan(request) {
         return GraphAnalysis {
             graph: None,
             issues: vec![PlanIssue::new(
@@ -145,6 +152,22 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
         };
     }
     let stored = load_or_update(request, &mut JavaScriptFrontend);
+    if stored.graph.is_none() && read_guard_active && (request.all || request.only) {
+        let workspace_root = Path::new(&request.workspace_root);
+        let graph = if workspace_root.is_absolute() && workspace_root.is_dir() {
+            let project_roots = manifest_project_roots(request);
+            Some(analyze_workspace_graph(
+                workspace_root,
+                project_roots.as_deref(),
+            ))
+        } else {
+            None
+        };
+        return GraphAnalysis {
+            graph,
+            issues: Vec::new(),
+        };
+    }
     GraphAnalysis {
         graph: stored.graph,
         issues: stored.issues.into_iter().map(plan_issue).collect(),

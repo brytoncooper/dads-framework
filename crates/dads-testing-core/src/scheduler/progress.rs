@@ -1,5 +1,6 @@
 //! Execution progress state, dependency readiness, and path rebasing for the scheduler.
 
+use super::read_guard_allowlist::TaskReadGuardAllowlist;
 use super::results::{blocked_result, not_applicable_result};
 use crate::execute::{TestingError, message};
 use crate::manifest::TaskExecution;
@@ -24,6 +25,7 @@ pub(super) struct PreparedTask {
     pub(super) cache: bool,
     pub(super) selected_files: Vec<String>,
     pub(super) base_args_len: usize,
+    pub(super) allowlist: Option<TaskReadGuardAllowlist>,
 }
 
 /// What the run knows so far, indexed the same way `prepared` is: a task's result, its status,

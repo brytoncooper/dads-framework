@@ -101,7 +101,11 @@ comma-separated task target names such as `lint` or `test:integration`),
 partition across runnable tasks; emits `shard` metadata in `plan --json`),
 `--weights` (path to a JSON weight file in either flat `{ "project-or-task": 1234 }`
 or nested `{ "projects": { "proj": { "durationMs": 1234 } } }` form), `--jobs`,
-and `--report` (with an optional path). `run` also accepts `--plan-file <path>`
+`--enforce-declared-reads` (enables the runtime workspace file-read guard on
+Node/Vitest test tasks and unlocks Option 3 caching for tasks with dynamic `fs`
+reads), `--no-enforce-declared-reads` (overrides `workspace.enforceDeclaredReads`
+in `dads.testing.json` for a zero-overhead local run), and `--report` (with an
+optional path). `run` also accepts `--plan-file <path>`
 to reuse the JSON output of `dad-test plan --json` (envelope or raw `PlanResult`)
 with post-plan filters and `--shard` without re-running Git diff or Oxc graph
 analysis on every CI shard. `--json` works on every command and is the contract;
@@ -143,7 +147,23 @@ workspace-relative cache keys. Passing `--remote-cache <url>`
 `DADS_TESTING_REMOTE_CACHE_TOKEN`) adds a fail-closed L2 remote receipt store
 (`file://`, `http://`, `https://`, or `s3://bucket/prefix`, using a per-run S3
 `list-objects-v2` pre-index plus background concurrent uploads) shared across
-workers.
+workers. Default local `run` injects no runtime preload hook (zero overhead);
+passing `--enforce-declared-reads` (or setting
+`workspace.enforceDeclaredReads: true` in `dads.testing.json`, overridable via
+`--no-enforce-declared-reads`) preloads a lightweight V8 file-read guard on
+Node/Vitest test tasks that fails any task reading undeclared workspace files,
+never caches its receipt, and lists every missing path with its callsite and
+remediation in one run.
+
+`dad-test audit` executes test tasks with the runtime file-read guard in
+non-failing audit mode (uncached, disabling cross-project Vitest batching for
+exact per-task attribution), taking `--fix`, `--dry-run`, `--project`
+(repeatable or comma-separated), `--task` (repeatable or comma-separated),
+`--jobs`, `--manifest`, and `--json`. It aggregates undeclared workspace reads
+per task, collapses three or more undeclared sibling files in the same directory
+into `<dir>/**`, and with `--fix` (without `--dry-run`) patches either static
+`tasks[].impact.paths` or `workspace.discover.taskOverrides`, validates the
+updated manifest via `dad-test plan`, and writes `dads.testing.json` atomically.
 
 `dad-test expand` expands a declarative `workspace.discover` manifest into its
 exact canonical `dads.testing.json` IR without running graph analysis or
@@ -321,7 +341,10 @@ the repository, and `workspace.boundaries` (`depConstraints` with `sourceTag`,
 and `allowedExternalImports`; `allow`; `allowCircularSelfDependency`;
 `enforceBuildableLibDependency`; `checkNestedImports`;
 `banTransitiveDependencies`; `ignorePaths`; and `excludeProjects`) for native
-`dad-test check-boundaries` enforcement mirroring `@dads-framework/testing/eslint`.
+`dad-test check-boundaries` enforcement mirroring `@dads-framework/testing/eslint`,
+and `workspace.enforceDeclaredReads` (`boolean`, default `false`) to enable
+runtime workspace file-read enforcement by default (overridable per invocation
+with `--no-enforce-declared-reads`).
 Projects may also carry optional `tags` alongside `project.json` metadata.
 
 Optional `fileNarrowing`, `workspace.dynamicImportScopes`, and `workspace.sql` /
@@ -438,7 +461,9 @@ does not hold.
 
 A run reports each selected task as `executed`, `failed`, `blocked`, or
 `not-applicable`. Executed tasks may include `durationMs`, captured `stdout`
-and `stderr` (each with `text` and `truncated`), and an `error` explanation.
+and `stderr` (each with `text` and `truncated`), an `error` explanation, and
+optional `undeclaredReads` (`path`, optional `location`, optional `api`) when
+the runtime read guard observes workspace reads outside declared inputs.
 
 `--report [path]` writes the report; `--json` embeds the same object under
 `result.report`. It carries totals by reason and confidence; the fallback's

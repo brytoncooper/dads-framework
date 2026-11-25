@@ -78,6 +78,12 @@ pub struct NativeRequest {
     pub boundaries_config_path: Option<String>,
     #[serde(default)]
     pub enforce_declared_reads: bool,
+    #[serde(default)]
+    pub no_enforce_declared_reads: bool,
+    #[serde(default)]
+    pub audit_reads: bool,
+    #[serde(default)]
+    pub read_guard_hook_path: Option<String>,
 }
 
 impl Default for NativeRequest {
@@ -107,6 +113,9 @@ impl Default for NativeRequest {
             hotspots: None,
             boundaries_config_path: None,
             enforce_declared_reads: false,
+            no_enforce_declared_reads: false,
+            audit_reads: false,
+            read_guard_hook_path: None,
         }
     }
 }
@@ -337,60 +346,9 @@ pub struct PlanCounts {
     pub skip_proven_unaffected: usize,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RunResult {
-    pub tasks: Vec<TaskRunResult>,
-    pub counts: RunCounts,
-    pub exit_code: i32,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TaskRunResult {
-    pub id: String,
-    pub status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exit_code: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stdout: Option<TaskOutput>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stderr: Option<TaskOutput>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub cached: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TaskOutput {
-    pub text: String,
-    pub truncated: bool,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RunCounts {
-    pub executed: usize,
-    pub failed: usize,
-    pub blocked: usize,
-    pub not_applicable: usize,
-    #[serde(default, skip_serializing_if = "is_zero")]
-    pub cached: usize,
-}
-
 pub use crate::protocol_diagnose::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     RemediationSafety, WideningCulprit,
 };
-
-fn is_false(value: &bool) -> bool {
-    !*value
-}
-
-fn is_zero(value: &usize) -> bool {
-    *value == 0
-}
+pub use crate::protocol_read_guard::{ReadGuardMode, UndeclaredRead};
+pub use crate::protocol_run::{RunCounts, RunResult, TaskOutput, TaskRunResult};

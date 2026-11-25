@@ -103,9 +103,15 @@ fn the_scheduler_refuses_a_zero_job_limit() {
         &repository,
         &manifest_file,
         &plan,
-        Some(0),
-        None,
-        false,
+        crate::scheduler::RunOptions {
+            jobs: Some(0),
+            receipts: None,
+            stream_enabled: false,
+            graph: None,
+            read_guard_mode: None,
+            read_guard_hook_path: None,
+            workspace_root_raw: &repository,
+        },
     )
     .expect_err("a zero job limit must be refused");
 
@@ -116,9 +122,15 @@ fn the_scheduler_refuses_a_zero_job_limit() {
             &repository,
             &manifest_file,
             &plan,
-            Some(1),
-            None,
-            false,
+            crate::scheduler::RunOptions {
+                jobs: Some(1),
+                receipts: None,
+                stream_enabled: false,
+                graph: None,
+                read_guard_mode: None,
+                read_guard_hook_path: None,
+                workspace_root_raw: &repository,
+            },
         )
         .is_ok()
     );
@@ -258,6 +270,7 @@ fn failed_stream_output_prints_both_stdout_and_stderr_tails() {
         }),
         error: Some("assertion failure".into()),
         cached: false,
+        undeclared_reads: Vec::new(),
     };
 
     let mut rendered = Vec::new();
@@ -291,6 +304,7 @@ fn failed_stream_output_prints_both_stdout_and_stderr_tails() {
         stderr: None,
         error: None,
         cached: false,
+        undeclared_reads: Vec::new(),
     };
     let mut pass_buf = Vec::new();
     crate::scheduler::write_finish(&mut pass_buf, &passed);

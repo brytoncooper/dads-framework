@@ -3,7 +3,7 @@
 use super::PlanEvidence;
 use super::widening_fs::{
     collect_graph_changed_paths, matching_fs_dir_nodes, record_fs_dir_reachable_path,
-    widen_unresolved_fs_readers,
+    record_missing_frontend, widen_ambient_dts_typechecks, widen_unresolved_fs_readers,
 };
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
@@ -137,6 +137,12 @@ pub(super) fn widen_through_graph<'a>(
         evidence.reached_edges = runtime_reachable.edges;
         if has_non_test_reachability {
             let full_reachable = graph.symbol_reachability_from(covered_paths);
+            widen_ambient_dts_typechecks(
+                manifest,
+                &changed_paths,
+                Some(&full_reachable.paths),
+                evidence,
+            );
             record_reachable_paths(manifest, &full_reachable.paths, evidence, false);
             record_reachable_uncertainties(
                 manifest,
@@ -151,6 +157,9 @@ pub(super) fn widen_through_graph<'a>(
     }
     if !uncovered_paths.is_empty() {
         record_uncovered_paths(manifest, &uncovered_paths, evidence);
+        if has_non_test_reachability {
+            widen_ambient_dts_typechecks(manifest, &uncovered_paths, None, evidence);
+        }
         if !enforce_declared_reads {
             widen_unresolved_fs_readers(manifest, graph, evidence, has_non_test_reachability);
         }
@@ -176,50 +185,6 @@ pub(super) fn widen_through_graph<'a>(
             );
         }
     }
-}
-
-/// No frontend answered at all: in a multi-project workspace, project dependencies cannot be
-/// proven without graph analysis, so fail closed to the complete fallback. In a single-project
-/// workspace, widening the lone project already selects every task.
-fn record_missing_frontend(manifest: &TestingManifest, evidence: &mut PlanEvidence<'_>) {
-    let issue_index = evidence.issues.len();
-    if manifest.projects.len() > 1 {
-        evidence.full_fallback = true;
-        evidence.full_fallback_issue_indexes.push(issue_index);
-        evidence.issues.push(PlanIssue::new(
-            "reachability-frontend-unavailable",
-            "No precision frontend was available for changed modules; selected the complete fallback because cross-project dependencies cannot be proven without graph analysis.",
-            IssueSeverity::Uncertainty,
-            IssueScope::Workspace,
-        ));
-        return;
-    }
-    let changed = evidence
-        .changed_projects
-        .iter()
-        .copied()
-        .collect::<Vec<_>>();
-    evidence.reachability_impacted_projects.extend(&changed);
-    evidence
-        .typecheck_reachability_impacted_projects
-        .extend(&changed);
-    evidence.uncertainty_impacted_projects.extend(&changed);
-    evidence
-        .typecheck_uncertainty_impacted_projects
-        .extend(&changed);
-    for project in changed {
-        evidence
-            .issue_indexes_by_project
-            .entry(project)
-            .or_default()
-            .push(issue_index);
-    }
-    evidence.issues.push(PlanIssue::new(
-        "reachability-frontend-unavailable",
-        "No precision frontend was available for changed modules; widened through declared project dependencies.",
-        IssueSeverity::Uncertainty,
-        IssueScope::Workspace,
-    ));
 }
 
 /// The frontend answered, but not about these paths: ONLY their owning projects widen through

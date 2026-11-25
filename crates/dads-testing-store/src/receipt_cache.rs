@@ -24,7 +24,7 @@ pub(crate) enum GitFileInventory {
 
 #[derive(Clone, Copy)]
 pub(crate) enum FileDigestEntry {
-    Regular([u8; 32]),
+    Regular([u8; 32], bool),
     Missing,
     NonRegularOrUnreadable,
 }
@@ -143,5 +143,16 @@ fn inspect_and_hash_file(path: &Path) -> FileDigestEntry {
     let digest = Sha256::digest(&bytes);
     let mut out = [0_u8; 32];
     out.copy_from_slice(&digest);
-    FileDigestEntry::Regular(out)
+    FileDigestEntry::Regular(out, is_executable(&metadata))
+}
+
+#[cfg(unix)]
+fn is_executable(metadata: &fs::Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    metadata.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable(_metadata: &fs::Metadata) -> bool {
+    false
 }

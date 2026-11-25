@@ -85,7 +85,7 @@ fn collect_extra_input_files(
         }
         let candidate = request.workspace_root.join(raw);
         match memo.file_entry(&candidate) {
-            FileDigestEntry::Regular(_) => {
+            FileDigestEntry::Regular(_, _) => {
                 files.insert(raw.clone());
             }
             FileDigestEntry::Missing => {
@@ -119,7 +119,7 @@ fn collect_git_input_files(
         }
         let candidate = workspace_root.join(rel);
         match memo.file_entry(&candidate) {
-            FileDigestEntry::Regular(_) => {
+            FileDigestEntry::Regular(_, _) => {
                 collected.insert(rel.clone());
             }
             FileDigestEntry::Missing => {}

@@ -11,6 +11,7 @@ mod widening_fs;
 use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
+use crate::plan_fingerprint::compute_workspace_fingerprint;
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
 use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::SqlTaskSelection;
@@ -242,6 +243,14 @@ pub(crate) fn build_plan(
         .filter(|decision| decision.decision == "run")
         .count();
     let skip_proven_unaffected = decisions.len() - run;
+    let workspace_fingerprint = if matches!(
+        scope.kind.as_str(),
+        "working-tree" | "base-to-working-tree" | "base-to-head"
+    ) {
+        compute_workspace_fingerprint(workspace_root, &manifest.workspace.ignore_paths)
+    } else {
+        None
+    };
     Ok(PlanResult {
         schema_version: PROTOCOL_SCHEMA_VERSION,
         scope: ResolvedScope {
@@ -256,6 +265,7 @@ pub(crate) fn build_plan(
             skip_proven_unaffected,
         },
         shard,
+        workspace_fingerprint,
     })
 }
 

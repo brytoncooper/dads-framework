@@ -388,6 +388,7 @@ fn empty_plan_for(kind: &str) -> PlanResult {
             skip_proven_unaffected: 0,
         },
         shard: None,
+        workspace_fingerprint: None,
     }
 }
 

@@ -4,6 +4,7 @@ use crate::boundaries_config::BoundariesResult;
 pub use crate::hotspots::{
     HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary,
 };
+pub use crate::plan_fingerprint::WorkspaceFingerprint;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -192,6 +193,8 @@ pub struct PlanResult {
     pub counts: PlanCounts,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shard: Option<PlanShardMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_fingerprint: Option<WorkspaceFingerprint>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -2,12 +2,75 @@
 
 use super::PlanEvidence;
 use crate::graph::DependencyGraph;
-use crate::manifest::TestingManifest;
+use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
 use crate::scope::{deepest_project_for_path, path_matches_impact};
 use std::collections::BTreeSet;
 
 pub(crate) const FS_DIR_PREFIX: &str = "fs-dir:";
+
+pub(crate) fn is_ambient_dts_path(path: &str) -> bool {
+    path.ends_with(".d.ts") || path.ends_with(".d.mts") || path.ends_with(".d.cts")
+}
+
+/// Ambient `.d.ts`/`.d.mts`/`.d.cts` files (`declare global`, `declare module`, or ambient types)
+/// can break any project's `typecheck` via `tsconfig.json` `include` globs without an explicit
+/// `import` edge. Widen only the typecheck channel so runtime `test` tasks stay narrowed.
+pub(super) fn widen_ambient_dts_typechecks<'a>(
+    manifest: &'a TestingManifest,
+    changed_paths: &[String],
+    active_paths: Option<&BTreeSet<String>>,
+    evidence: &mut PlanEvidence<'a>,
+) {
+    let dts_paths: Vec<&String> = changed_paths
+        .iter()
+        .filter(|path| {
+            is_ambient_dts_path(path) && active_paths.is_none_or(|active| active.contains(*path))
+        })
+        .collect();
+    if dts_paths.is_empty() {
+        return;
+    }
+    let typecheck_projects: BTreeSet<&'a str> = manifest
+        .tasks
+        .iter()
+        .filter(|task| {
+            task.impact.mode == ImpactMode::Reachability && task.kind == TaskKind::Typecheck
+        })
+        .map(|task| task.project.as_str())
+        .collect();
+    if typecheck_projects.is_empty() {
+        return;
+    }
+    for dts in dts_paths {
+        let issue_index = evidence.issues.len();
+        evidence.issues.push(PlanIssue {
+            path: Some(dts.clone()),
+            project: deepest_project_for_path(&manifest.projects, dts).map(|p| p.id.clone()),
+            ..PlanIssue::new(
+                "ambient-declaration-typecheck",
+                format!(
+                    "{dts} is an ambient TypeScript declaration file; widened typecheck tasks conservatively."
+                ),
+                IssueSeverity::Uncertainty,
+                IssueScope::Module,
+            )
+        });
+        for &project_id in &typecheck_projects {
+            evidence
+                .typecheck_reachability_impacted_projects
+                .insert(project_id);
+            evidence
+                .typecheck_local_uncertainty_impacted_projects
+                .insert(project_id);
+            evidence
+                .issue_indexes_by_project
+                .entry(project_id)
+                .or_default()
+                .push(issue_index);
+        }
+    }
+}
 
 pub(super) fn collect_graph_changed_paths(
     manifest: &TestingManifest,
@@ -150,4 +213,47 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
             )
         });
     }
+}
+
+/// No frontend answered at all: in a multi-project workspace, project dependencies cannot be
+/// proven without graph analysis, so fail closed to the complete fallback. In a single-project
+/// workspace, widening the lone project already selects every task.
+pub(super) fn record_missing_frontend<'a>(
+    manifest: &'a TestingManifest,
+    evidence: &mut PlanEvidence<'a>,
+) {
+    let issue_index = evidence.issues.len();
+    if manifest.projects.len() > 1 {
+        evidence.full_fallback = true;
+        evidence.full_fallback_issue_indexes.push(issue_index);
+        evidence.issues.push(PlanIssue::new(
+            "reachability-frontend-unavailable",
+            "No precision frontend was available for changed modules; selected the complete fallback because cross-project dependencies cannot be proven without graph analysis.",
+            IssueSeverity::Uncertainty,
+            IssueScope::Workspace,
+        ));
+        return;
+    }
+    let changed: Vec<&'a str> = evidence.changed_projects.iter().copied().collect();
+    evidence.reachability_impacted_projects.extend(&changed);
+    evidence
+        .typecheck_reachability_impacted_projects
+        .extend(&changed);
+    evidence.uncertainty_impacted_projects.extend(&changed);
+    evidence
+        .typecheck_uncertainty_impacted_projects
+        .extend(&changed);
+    for project in changed {
+        evidence
+            .issue_indexes_by_project
+            .entry(project)
+            .or_default()
+            .push(issue_index);
+    }
+    evidence.issues.push(PlanIssue::new(
+        "reachability-frontend-unavailable",
+        "No precision frontend was available for changed modules; widened through declared project dependencies.",
+        IssueSeverity::Uncertainty,
+        IssueScope::Workspace,
+    ));
 }

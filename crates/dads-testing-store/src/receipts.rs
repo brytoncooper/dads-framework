@@ -23,6 +23,7 @@ use std::sync::OnceLock;
 
 const RECEIPT_SCHEMA_VERSION: u32 = 1;
 const RECEIPT_KEY_DOMAIN: &[u8] = b"dads-testing-receipt-v5\0";
+const AMBIENT_RUNTIME_ENV_KEYS: &[&str] = &["TZ", "NODE_ENV", "NODE_OPTIONS", "LC_ALL", "LANG"];
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -139,6 +140,17 @@ impl TaskReceiptStore for FileReceiptStore {
             hash_field(&mut hasher, "env_key", env_key.as_bytes());
             hash_field(&mut hasher, "env_val", env_value.as_bytes());
         }
+        for key in AMBIENT_RUNTIME_ENV_KEYS {
+            if !request.env.contains_key(*key) {
+                hash_field(&mut hasher, "ambient_env_key", key.as_bytes());
+                let val = std::env::var(key).ok();
+                hash_field(
+                    &mut hasher,
+                    "ambient_env_val",
+                    val.as_deref().unwrap_or("").as_bytes(),
+                );
+            }
+        }
         for file in request.selected_files {
             hash_field(&mut hasher, "selected", file.as_bytes());
         }
@@ -154,11 +166,12 @@ impl TaskReceiptStore for FileReceiptStore {
         }
         for rel_path in collected.files {
             let full = request.workspace_root.join(&rel_path);
-            let FileDigestEntry::Regular(digest) = self.memo.file_entry(&full) else {
+            let FileDigestEntry::Regular(digest, executable) = self.memo.file_entry(&full) else {
                 return None;
             };
             hash_field(&mut hasher, "file", rel_path.as_bytes());
             hash_field(&mut hasher, "sha256", &digest);
+            hash_field(&mut hasher, "exec", if executable { b"1" } else { b"0" });
         }
 
         Some(hex_digest(hasher.finalize()))

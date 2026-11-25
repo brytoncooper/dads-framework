@@ -25,6 +25,7 @@ mod manifest;
 mod manifest_validate;
 mod plan;
 mod plan_file;
+mod plan_fingerprint;
 mod protocol;
 mod protocol_diagnose;
 mod protocol_read_guard;

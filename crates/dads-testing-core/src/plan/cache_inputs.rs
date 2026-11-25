@@ -5,9 +5,9 @@
 //! closed (`cacheable = false`) whenever closure soundness cannot be guaranteed.
 
 use super::PlanEvidence;
-use super::widening_fs::FS_DIR_PREFIX;
+use super::widening_fs::{FS_DIR_PREFIX, is_ambient_dts_path};
 use crate::graph::{DependencyGraph, GraphUncertainty, ModuleNode};
-use crate::manifest::{DeclaredTask, ImpactMode, Project, TestingManifest};
+use crate::manifest::{DeclaredTask, ImpactMode, Project, TaskKind, TestingManifest};
 use crate::protocol::{ResolvedScope, TaskCacheInputs};
 use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
@@ -23,6 +23,7 @@ pub(super) struct CacheInputIndex<'a> {
     owner_by_node: Vec<Option<&'a str>>,
     blocking_uncertainties_by_path: BTreeSet<String>,
     unindexed_blocking_projects: BTreeSet<&'a str>,
+    ambient_dts_files: Vec<String>,
 }
 
 impl<'a> CacheInputIndex<'a> {
@@ -41,8 +42,12 @@ impl<'a> CacheInputIndex<'a> {
         let mut node_by_path = HashMap::with_capacity(nodes.len());
         let mut nodes_by_project: BTreeMap<&'a str, Vec<usize>> = BTreeMap::new();
         let mut owner_by_node = Vec::with_capacity(nodes.len());
+        let mut ambient_dts_files = Vec::new();
         for (idx, node) in nodes.iter().enumerate() {
             node_by_path.insert(node.path.as_str(), idx);
+            if is_ambient_dts_path(&node.path) {
+                ambient_dts_files.push(node.path.clone());
+            }
             let owner =
                 deepest_project_for_path(&manifest.projects, &node.path).map(|p| p.id.as_str());
             owner_by_node.push(owner);
@@ -81,6 +86,7 @@ impl<'a> CacheInputIndex<'a> {
             owner_by_node,
             blocking_uncertainties_by_path,
             unindexed_blocking_projects,
+            ambient_dts_files,
         }
     }
 
@@ -140,6 +146,13 @@ impl<'a> CacheInputIndex<'a> {
             }
             if !project_roots.iter().any(|root| path_is_inside(path, root)) {
                 extra_files.insert(path.clone());
+            }
+        }
+        if task.kind == TaskKind::Typecheck {
+            for dts in &self.ambient_dts_files {
+                if !project_roots.iter().any(|root| path_is_inside(dts, root)) {
+                    extra_files.insert(dts.clone());
+                }
             }
         }
         TaskCacheInputs {

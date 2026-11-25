@@ -7,7 +7,9 @@
 use crate::discover_scan::{DiscoveredProject, discover_projects};
 pub(crate) use crate::discover_schema::WorkspaceDiscover;
 use crate::discover_schema::{TargetMatch, validate_discover};
-use crate::discover_vitest::{apply_auto_vitest_narrowing, normalize_vitest_run_args};
+use crate::discover_vitest::{
+    apply_auto_vitest_narrowing, hydrate_static_vitest_setup_files, normalize_vitest_run_args,
+};
 use crate::execute::TestingError;
 use crate::manifest::{
     BatchMode, DeclaredTask, FileNarrowing, Project, TaskBatchConfig, TaskExecution, TaskImpact,
@@ -23,6 +25,7 @@ pub(crate) fn expand_manifest(
     workspace_root: &Path,
 ) -> Result<TestingManifest, TestingError> {
     let Some(discover) = manifest.workspace.discover.take() else {
+        hydrate_static_vitest_setup_files(&mut manifest, workspace_root);
         return Ok(manifest);
     };
     validate_discover(&discover)?;

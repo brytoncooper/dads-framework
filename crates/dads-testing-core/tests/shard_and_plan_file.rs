@@ -276,8 +276,14 @@ fn run_with_plan_file_reuses_plan_without_git_diff_and_supports_sharding()
     assert_eq!(plan.counts.run, 4);
     assert_eq!(plan.counts.skip_proven_unaffected, 2);
 
-    // Save in the exact `dad-test plan --json` CLI envelope format.
-    let envelope_path = dir.join("ci-plan-envelope.json");
+    // Save both the CLI envelope format and raw PlanResult JSON outside the repo working tree.
+    let plan_dir = std::env::temp_dir().join(format!(
+        "dads-testing-plan-file-artifacts-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&plan_dir);
+    fs::create_dir_all(&plan_dir)?;
+    let envelope_path = plan_dir.join("ci-plan-envelope.json");
     let envelope = json!({
         "schemaVersion": 1,
         "ok": true,
@@ -285,12 +291,8 @@ fn run_with_plan_file_reuses_plan_without_git_diff_and_supports_sharding()
     });
     fs::write(&envelope_path, serde_json::to_string_pretty(&envelope)?)?;
 
-    // Also save raw PlanResult JSON to verify both formats are accepted.
-    let raw_plan_path = dir.join("ci-plan-raw.json");
+    let raw_plan_path = plan_dir.join("ci-plan-raw.json");
     fs::write(&raw_plan_path, serde_json::to_string_pretty(&plan)?)?;
-
-    // Modify gamma AFTER planning! A fresh git diff would now run gamma, but --plan-file must NOT!
-    fs::write(dir.join("gamma/index.ts"), "export const gamma = 999;\n")?;
 
     let weights = BTreeMap::from([("alpha".to_owned(), 200.0), ("beta".to_owned(), 50.0)]);
     for (shard_index, file_path) in [(1_u32, &envelope_path), (2_u32, &raw_plan_path)] {
@@ -318,6 +320,9 @@ fn run_with_plan_file_reuses_plan_without_git_diff_and_supports_sharding()
         assert_eq!(meta.selected_projects, 1);
     }
 
+    assert_stale_plan_refused(&dir, &envelope_path)?;
+    let _ = fs::remove_dir_all(&plan_dir);
+
     let executed_lines: Vec<String> = fs::read_to_string(&log_path)?
         .lines()
         .map(str::to_owned)
@@ -340,6 +345,30 @@ fn run_with_plan_file_reuses_plan_without_git_diff_and_supports_sharding()
 
     let _ = fs::remove_file(&log_path);
     let _ = fs::remove_dir_all(&dir);
+    Ok(())
+}
+
+fn assert_stale_plan_refused(dir: &Path, plan_file: &Path) -> Result<(), Box<dyn Error>> {
+    fs::write(dir.join("gamma/index.ts"), "export const gamma = 999;\n")?;
+    let stale_after_edit = execute_request(NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::Run,
+        workspace_root: dir.display().to_string(),
+        plan_file: Some(plan_file.display().to_string()),
+        ..NativeRequest::default()
+    });
+    assert!(
+        !stale_after_edit.ok,
+        "stale --plan-file must be refused after post-plan edits: {stale_after_edit:?}"
+    );
+    assert!(
+        stale_after_edit
+            .error
+            .as_deref()
+            .is_some_and(|msg| msg.contains("stale")),
+        "expected stale error message, got: {:?}",
+        stale_after_edit.error
+    );
     Ok(())
 }
 

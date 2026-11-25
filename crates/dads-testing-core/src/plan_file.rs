@@ -5,6 +5,7 @@
 use crate::execute::{TestingError, message};
 use crate::manifest::{DeclaredTask, TestingManifest};
 use crate::plan::{PlanFilters, apply_plan_filters, parse_kind_filter, validate_shard};
+use crate::plan_fingerprint::{compute_workspace_fingerprint, fingerprints_match};
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanResult};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -47,6 +48,7 @@ pub(crate) fn load_plan_file(
             PROTOCOL_SCHEMA_VERSION
         )));
     }
+    verify_plan_freshness(workspace_root, &resolved, manifest, &plan)?;
 
     let task_by_id: BTreeMap<&str, &DeclaredTask> = manifest
         .tasks
@@ -101,6 +103,41 @@ fn resolve_plan_path(workspace_root: &Path, raw_path: &str) -> PathBuf {
     } else {
         workspace_root.join(candidate)
     }
+}
+
+fn verify_plan_freshness(
+    workspace_root: &Path,
+    plan_file: &Path,
+    manifest: &TestingManifest,
+    plan: &PlanResult,
+) -> Result<(), TestingError> {
+    if !plan.tasks.iter().any(|task| task.decision != "run") {
+        return Ok(());
+    }
+    let Some(expected) = &plan.workspace_fingerprint else {
+        return Ok(());
+    };
+    let actual = compute_workspace_fingerprint(workspace_root, &manifest.workspace.ignore_paths)
+        .ok_or_else(|| {
+            message(format!(
+                "--plan-file '{}' cannot verify workspace freshness because Git state is unavailable. Re-run dad-test plan.",
+                plan_file.display()
+            ))
+        })?;
+    let canonical_plan = plan_file
+        .canonicalize()
+        .unwrap_or_else(|_| plan_file.to_path_buf());
+    let excluded_rel = canonical_plan
+        .strip_prefix(workspace_root)
+        .ok()
+        .map(|rel| rel.to_string_lossy().replace('\\', "/"));
+    if !fingerprints_match(expected, &actual, excluded_rel.as_deref()) {
+        return Err(message(format!(
+            "--plan-file '{}' is stale: workspace HEAD or working tree changed since the plan was generated. Re-run dad-test plan.",
+            plan_file.display()
+        )));
+    }
+    Ok(())
 }
 
 fn unwrap_plan_result(value: Value, path: &Path) -> Result<PlanResult, TestingError> {

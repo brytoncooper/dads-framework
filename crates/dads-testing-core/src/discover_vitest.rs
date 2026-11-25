@@ -4,8 +4,8 @@
 //! extracts statically verifiable `setupFiles`, and fails closed (`dynamic_setup_files = true`)
 //! whenever `setupFiles` uses a non-literal expression.
 
-use crate::manifest::{FileNarrowing, TaskExecution};
-use std::collections::BTreeSet;
+use crate::manifest::{FileNarrowing, ImpactMode, TaskExecution, TaskKind, TestingManifest};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
@@ -266,5 +266,59 @@ fn resolve_setup_path(project_root: &str, entry: &str) -> Option<String> {
         None
     } else {
         Some(parts.join("/"))
+    }
+}
+
+/// Hydrates project-level `vitest.config.*` / `vite.config.*` `setupFiles` and config paths onto
+/// static manifest `reachability` test tasks so editing a config-declared setup file invalidates
+/// planning and caching even when it is not duplicated in `dads.testing.json`.
+pub(crate) fn hydrate_static_vitest_setup_files(
+    manifest: &mut TestingManifest,
+    workspace_root: &Path,
+) {
+    let project_roots: BTreeMap<String, String> = manifest
+        .projects
+        .iter()
+        .map(|project| (project.id.clone(), project.root.clone()))
+        .collect();
+    let mut cache: BTreeMap<String, VitestDiscovery> = BTreeMap::new();
+    for task in &mut manifest.tasks {
+        if task.kind != TaskKind::Test || task.impact.mode != ImpactMode::Reachability {
+            continue;
+        }
+        let Some(project_root) = project_roots.get(&task.project) else {
+            continue;
+        };
+        let inspection = cache
+            .entry(project_root.clone())
+            .or_insert_with(|| inspect_project_vitest_config(workspace_root, project_root));
+        if let Some(config_path) = &inspection.config_path
+            && !task.impact.paths.contains(config_path)
+        {
+            task.impact.paths.push(config_path.clone());
+            task.impact.paths.sort();
+        }
+        if inspection.dynamic_setup_files {
+            task.execution.file_narrowing = None;
+            continue;
+        }
+        if inspection.setup_files.is_empty() {
+            continue;
+        }
+        if let Some(narrowing) = &mut task.execution.file_narrowing {
+            for setup in &inspection.setup_files {
+                if !narrowing.setup_files.contains(setup) {
+                    narrowing.setup_files.push(setup.clone());
+                }
+            }
+            narrowing.setup_files.sort();
+        } else {
+            for setup in &inspection.setup_files {
+                if !task.impact.paths.contains(setup) {
+                    task.impact.paths.push(setup.clone());
+                }
+            }
+            task.impact.paths.sort();
+        }
     }
 }

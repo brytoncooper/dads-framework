@@ -2,7 +2,7 @@
 //! a located issue and widens, so a plan is never quietly narrower than the evidence supports.
 use super::PlanEvidence;
 use super::widening_fs::{
-    collect_graph_changed_paths, has_duplicate_project_issue, matching_fs_dir_nodes,
+    collect_graph_changed_paths, matching_fs_dir_nodes, push_unique_project_issue,
     record_fs_dir_reachable_path, record_missing_frontend, widen_ambient_dts_typechecks,
     widen_unresolved_fs_readers, widen_unresolved_module_importers_on_delete,
 };
@@ -344,27 +344,14 @@ fn record_reachable_uncertainties<'a>(
                             .insert(project.id.as_str());
                     }
                 }
-                let line = position.map(|position| position.line);
-                let column = position.map(|position| position.column);
-                if !has_duplicate_project_issue(
+                push_unique_project_issue(
                     evidence,
                     project.id.as_str(),
-                    &uncertainty.code,
-                    &uncertainty.path,
-                    line,
-                    column,
-                ) {
-                    let index = evidence.issues.len();
-                    evidence
-                        .issue_indexes_by_project
-                        .entry(project.id.as_str())
-                        .or_default()
-                        .push(index);
-                    evidence.issues.push(PlanIssue {
+                    PlanIssue {
                         path: Some(uncertainty.path.clone()),
                         project: Some(project.id.clone()),
-                        line,
-                        column,
+                        line: position.map(|position| position.line),
+                        column: position.map(|position| position.column),
                         ..PlanIssue::new(
                             uncertainty.code,
                             format!(
@@ -374,8 +361,8 @@ fn record_reachable_uncertainties<'a>(
                             IssueSeverity::Uncertainty,
                             uncertainty_scope,
                         )
-                    });
-                }
+                    },
+                );
             }
             None => {
                 evidence.full_fallback = true;

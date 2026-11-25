@@ -328,27 +328,33 @@ fn widen_reached_unresolved_projects<'a>(
     }
 }
 
-pub(super) fn has_duplicate_project_issue(
-    evidence: &PlanEvidence<'_>,
-    project_id: &str,
-    code: &str,
-    path: &str,
-    line: Option<u32>,
-    column: Option<u32>,
-) -> bool {
-    evidence
+pub(super) fn push_unique_project_issue<'a>(
+    evidence: &mut PlanEvidence<'a>,
+    project_id: &'a str,
+    issue: PlanIssue,
+) {
+    let duplicate = evidence
         .issue_indexes_by_project
         .get(project_id)
         .is_some_and(|indexes| {
             indexes.iter().any(|&idx| {
                 evidence.issues.get(idx).is_some_and(|existing| {
-                    existing.code == code
-                        && existing.path.as_deref() == Some(path)
-                        && existing.line == line
-                        && existing.column == column
+                    existing.code == issue.code
+                        && existing.path == issue.path
+                        && existing.line == issue.line
+                        && existing.column == issue.column
                 })
             })
-        })
+        });
+    if !duplicate {
+        let index = evidence.issues.len();
+        evidence
+            .issue_indexes_by_project
+            .entry(project_id)
+            .or_default()
+            .push(index);
+        evidence.issues.push(issue);
+    }
 }
 
 /// No frontend answered at all: in a multi-project workspace, project dependencies cannot be

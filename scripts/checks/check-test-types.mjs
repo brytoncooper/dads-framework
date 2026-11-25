@@ -50,6 +50,7 @@ import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { cacheKey, hasPassed, openStepCache, writeRecord } from "../verify-cache.mjs";
+import { dadTestClosureKey, loadDadTestCacheClosures } from "../verify-dad-test.mjs";
 
 const TSC = "node_modules/typescript-native/bin/tsc";
 const TESTS_PROJECT = "tsconfig.tests.json";
@@ -159,11 +160,15 @@ function compileArguments(project) {
  * before is not compiled again (`scripts/verify-cache.mjs`); run by hand, or
  * under CI, every project compiles.
  */
-function compileOrReuse({ root, project, cache }) {
+function compileOrReuse({ root, project, cache, closures }) {
   if (cache === null) return { ...compileProject({ root, project }), cached: false };
   const directory = dirname(project);
   const command = [process.execPath, ...compileArguments(project)];
-  const key = cacheKey(cache, { kind: "package", directory }, command);
+  const closure = closures?.get(directory);
+  const key =
+    closure !== undefined
+      ? dadTestClosureKey(cache, closure, command)
+      : cacheKey(cache, { kind: "package", directory, staticOnly: true }, command);
   if (hasPassed(cache, "test-types", directory, key)) {
     return { project, ok: true, output: "", cached: true };
   }
@@ -193,7 +198,8 @@ export function checkTestTypes({ root, cache = null }) {
     };
   }
 
-  const results = plan.projects.map((project) => compileOrReuse({ root, project, cache }));
+  const closures = cache === null ? null : loadDadTestCacheClosures(root, cache.environment, "typecheck");
+  const results = plan.projects.map((project) => compileOrReuse({ root, project, cache, closures }));
   const failures = results.filter((result) => !result.ok);
   const note = cacheSentence(cache, results);
 

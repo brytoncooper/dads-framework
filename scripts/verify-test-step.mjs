@@ -21,6 +21,14 @@ import { dirname, join } from "node:path";
 import process from "node:process";
 import { URL, fileURLToPath } from "node:url";
 import { cacheKey, hasPassed, openStepCache, readRecord, writeRecord } from "./verify-cache.mjs";
+import {
+  cleanHeadCommit,
+  dadTestClosureKey,
+  ignoredInputsHash,
+  loadDadTestCacheClosures,
+  narrowPackagesWithDadTestPlan,
+  runtimeEnvironmentKey,
+} from "./verify-dad-test.mjs";
 import { readWorkspace } from "./verify-workspace.mjs";
 
 const ROOT = realpathSync(fileURLToPath(new URL("..", import.meta.url)));
@@ -61,8 +69,10 @@ function ownerOf(path, directories) {
   return best;
 }
 
+const VITEST_COMMAND = [process.execPath, VITEST, ...BASE_ARGS];
+
 /** Every package that owns a test file, keyed; null if a file has no owner. */
-export function planTestPackages(cache) {
+export function planTestPackages(cache, closures = null) {
   const workspace = readWorkspace(cache.root, cache.fingerprint.entries);
   const directories = [...workspace.keys()];
   const candidates = [
@@ -75,11 +85,18 @@ export function planTestPackages(cache) {
     if (owner === undefined) return null;
     owners.add(owner);
   }
-  const command = [process.execPath, VITEST, ...BASE_ARGS];
-  return [...owners].sort().map((directory) => ({
-    directory,
-    key: cacheKey(cache, { kind: "package", directory }, command),
-  }));
+  return [...owners].sort().map((directory) => {
+    const closure = closures?.get(directory);
+    const key =
+      closure !== undefined
+        ? dadTestClosureKey(cache, closure, VITEST_COMMAND)
+        : cacheKey(cache, { kind: "package", directory }, VITEST_COMMAND);
+    return {
+      directory,
+      key,
+      viaDadTest: closure !== undefined,
+    };
+  });
 }
 
 function relativeName(suite) {
@@ -90,7 +107,7 @@ function suitesOf(report, directory) {
   return report.testResults.filter((suite) => relativeName(suite).startsWith(`${directory}/`));
 }
 
-function recordPasses(cache, ran, report) {
+function recordPasses(cache, ran, report, proofMeta) {
   for (const { directory, key } of ran) {
     const suites = suitesOf(report, directory);
     if (key === null || suites.length === 0) continue;
@@ -99,7 +116,11 @@ function recordPasses(cache, ran, report) {
       ...suite,
       name: relativeName(suite),
     }));
-    writeRecord(cache, "test", directory, { key, suites: relative });
+    writeRecord(cache, "test", directory, {
+      key,
+      ...proofMeta,
+      suites: relative,
+    });
   }
 }
 
@@ -136,9 +157,23 @@ function readReport(path) {
 }
 
 function runPartitioned(cache, plan) {
-  const cached = plan.filter(({ directory, key }) => hasPassed(cache, "test", directory, key));
-  const toRun = plan.filter((item) => !cached.includes(item));
-  const note = `${String(cached.length)} of ${String(plan.length)} packages cached`;
+  const cachedByKey = plan.filter(({ directory, key }) => hasPassed(cache, "test", directory, key));
+  const missed = plan.filter((item) => !cachedByKey.includes(item));
+  const { provenUnaffected, remaining } = narrowPackagesWithDadTestPlan({
+    root: cache.root,
+    env: cache.environment,
+    cache,
+    toRun: missed,
+    taskKind: "test",
+    command: VITEST_COMMAND,
+    readRecord,
+    recordKind: "test",
+  });
+  const cached = [...cachedByKey, ...provenUnaffected];
+  const toRun = remaining;
+  const viaDadTest = plan.some((item) => item.viaDadTest) || provenUnaffected.length > 0;
+  const suffix = viaDadTest ? " (dad-test)" : "";
+  const note = `${String(cached.length)} of ${String(plan.length)} packages cached${suffix}`;
   if (toRun.length === 0) {
     writeMergedReport([], cachedSuites(cache, cached));
     process.stdout.write(`verify-cache: hit\n`);
@@ -148,7 +183,12 @@ function runPartitioned(cache, plan) {
   const exitCode = runVitest([`--outputFile=${freshPath}`, ...toRun.map(({ directory }) => `${directory}/`)]);
   const fresh = readReport(freshPath);
   if (fresh === null) return exitCode === 0 ? 1 : exitCode;
-  recordPasses(cache, toRun, fresh);
+  const proofMeta = {
+    cleanCommit: cleanHeadCommit(cache.root, cache.fingerprint),
+    runtimeKey: runtimeEnvironmentKey(cache, VITEST_COMMAND),
+    ignoredHash: ignoredInputsHash(cache.fingerprint),
+  };
+  recordPasses(cache, toRun, fresh, proofMeta);
   writeMergedReport(fresh.testResults, cachedSuites(cache, cached));
   process.stdout.write(`verify-cache: ${note}\n`);
   return exitCode;
@@ -157,7 +197,8 @@ function runPartitioned(cache, plan) {
 /** A plan that cannot be made means no partitions: everything runs. */
 function planOrNothing(cache) {
   try {
-    return planTestPackages(cache);
+    const closures = loadDadTestCacheClosures(cache.root, cache.environment, "test");
+    return planTestPackages(cache, closures);
   } catch {
     return null;
   }

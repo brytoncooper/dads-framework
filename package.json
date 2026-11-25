@@ -28,6 +28,8 @@
     "lint": "node node_modules/typescript-native/bin/tsc -b --pretty false && eslint .",
     "lint:prune": "eslint . --prune-suppressions",
     "test": "vitest run --reporter=default --reporter=json --outputFile=node_modules/.dads/vitest-report.json",
+    "test:dad": "node scripts/testing/run-dad-test.mjs run --cache",
+    "test:dad:plan": "node scripts/testing/run-dad-test.mjs plan",
     "typecheck": "node node_modules/typescript-native/bin/tsc -b --pretty false && node scripts/checks/check-test-types.mjs",
     "api-report": "node scripts/checks/generate-api-report.mjs",
     "api-report:check": "node scripts/checks/generate-api-report.mjs --check",

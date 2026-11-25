@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import process from "node:process";
 import { afterEach, describe, it } from "node:test";
 import {
   RUN_VARIABLE,
@@ -13,9 +14,18 @@ import {
   openRunCache,
   openStepCache,
   openVerifyCache,
+  readRecord,
   runThroughCache,
   writeRecord,
 } from "./verify-cache.mjs";
+import {
+  cleanHeadCommit,
+  dadTestClosureKey,
+  ignoredInputsHash,
+  narrowPackagesWithDadTestPlan,
+  resolveLocalDadTestBinary,
+  runtimeEnvironmentKey,
+} from "./verify-dad-test.mjs";
 import { gitEnvironment } from "./verify-fingerprint.mjs";
 import { summaryBlock } from "./verify-report.mjs";
 
@@ -149,6 +159,186 @@ describe("a package-scoped key", () => {
     const before = packageKey(root, "packages/missing");
     write(root, "packages/c/src/index.ts", "export const c = 300;\n");
     assert.notEqual(packageKey(root, "packages/missing"), before);
+  });
+
+  it("ignores root Rust metadata and JSDoc package mentions without widening", () => {
+    const root = workspace();
+    write(
+      root,
+      "packages/b/src/docs.ts",
+      "/** Mentions `c` and takes workspaceRoot. */\nexport const format = (workspaceRoot: string) => workspaceRoot;\n",
+    );
+    const before = packageKey(root);
+    write(root, "Cargo.lock", "version = 4\n");
+    write(root, "packages/c/src/index.ts", "export const c = 999;\n");
+    assert.equal(packageKey(root), before);
+  });
+
+  it("does not widen staticOnly typecheck scopes on runtime process.cwd() calls", () => {
+    const root = workspace();
+    write(root, "packages/b/src/cwd.ts", "export const where = () => process.cwd();\n");
+    const staticKey = () =>
+      cacheKey(contextFor(root), { kind: "package", directory: "packages/b", staticOnly: true }, COMMAND);
+    const beforeStatic = staticKey();
+    const beforeRuntime = packageKey(root);
+    write(root, "packages/c/src/index.ts", "export const c = 42;\n");
+    assert.equal(staticKey(), beforeStatic);
+    assert.notEqual(packageKey(root), beforeRuntime);
+  });
+});
+
+describe("dad-test local verify integration", () => {
+  it("resolves DADS_TEST_NATIVE_BINARY, then target/release, then target/debug", () => {
+    const root = workspace();
+    assert.equal(resolveLocalDadTestBinary(root, {}), null);
+    const exe = process.platform === "win32" ? "dad-test.exe" : "dad-test";
+    write(root, `target/debug/${exe}`, "debug");
+    assert.equal(resolveLocalDadTestBinary(root, {}), join(root, "target", "debug", exe));
+    write(root, `target/release/${exe}`, "release");
+    assert.equal(resolveLocalDadTestBinary(root, {}), join(root, "target", "release", exe));
+    write(root, "custom-dad-test", "custom");
+    assert.equal(
+      resolveLocalDadTestBinary(root, { DADS_TEST_NATIVE_BINARY: "custom-dad-test" }),
+      join(root, "custom-dad-test"),
+    );
+  });
+
+  it("keys dad-test closures by project roots and impact globs while ignoring unrelated files", () => {
+    const root = workspace();
+    const closure = {
+      projectRoots: ["packages/a", "packages/b"],
+      impactPaths: ["formal/spec/**"],
+      extraFiles: [],
+    };
+    write(root, "formal/spec/proof.lean", "theorem t : True := trivial\n");
+    const keyNow = () => dadTestClosureKey(contextFor(root), closure, COMMAND);
+    const before = keyNow();
+
+    write(root, "third-party/dad-test/Cargo.lock.sha256", "abc123\n");
+    write(root, "Cargo.lock", "lock = 1\n");
+    write(root, "packages/c/src/index.ts", "export const c = 500;\n");
+    assert.equal(keyNow(), before);
+
+    write(root, "formal/spec/proof.lean", "theorem t : True := by trivial\n");
+    assert.notEqual(keyNow(), before);
+  });
+
+  it("narrows remaining packages via dad-test plan only when proven unaffected from a clean commit", () => {
+    const root = workspace();
+    write(
+      root,
+      "dads.testing.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        workspace: { root: ".", fullFallback: { taskIds: ["b:test", "c:test"] } },
+        projects: [
+          { id: "b", root: "packages/b", fallbackDependencies: [] },
+          { id: "c", root: "packages/c", fallbackDependencies: [] },
+        ],
+        tasks: [],
+      }),
+    );
+    git(root, ["config", "user.name", "Fixture"]);
+    git(root, ["config", "user.email", "fixture@dads.invalid"]);
+    git(root, ["config", "commit.gpgsign", "false"]);
+    git(root, ["add", "."]);
+    git(root, ["commit", "-qm", "baseline"]);
+
+    const fakeBinary = join(root, "fake-dad-test.cjs");
+    write(
+      root,
+      "fake-dad-test.cjs",
+      `#!${process.execPath}
+let raw = "";
+process.stdin.on("data", (c) => { raw += c; });
+process.stdin.on("end", () => {
+  const req = JSON.parse(raw);
+  const fullFallback = process.env.FAKE_FALLBACK === "1";
+  process.stdout.write(JSON.stringify({
+    schemaVersion: 1,
+    ok: true,
+    result: {
+      operation: "plan",
+      plan: {
+        complete: true,
+        scope: { kind: "base-to-working-tree", base: req.base, fullFallback, changedPaths: [] },
+        tasks: [
+          { id: "b:test", project: "b", decision: "skip-proven-unaffected" },
+          { id: "c:test", project: "c", decision: "run" }
+        ]
+      }
+    }
+  }));
+});
+`,
+    );
+    chmodSync(fakeBinary, 0o755);
+
+    const cleanContext = contextFor(root);
+    const cleanCommit = cleanHeadCommit(root, cleanContext.fingerprint);
+    assert.ok(cleanCommit === null, "untracked fake binary makes working tree dirty");
+
+    git(root, ["add", "fake-dad-test.cjs"]);
+    git(root, ["commit", "-qm", "add fake binary"]);
+    const committedContext = contextFor(root);
+    const commitSha = cleanHeadCommit(root, committedContext.fingerprint);
+    assert.ok(typeof commitSha === "string" && commitSha.length >= 40);
+
+    const runtimeKey = runtimeEnvironmentKey(committedContext, COMMAND);
+    const ignoredHash = ignoredInputsHash(committedContext.fingerprint);
+    for (const dir of ["packages/b", "packages/c"]) {
+      writeRecord(committedContext, "test", dir, {
+        key: "old-key",
+        cleanCommit: commitSha,
+        runtimeKey,
+        ignoredHash,
+        suites: [{ name: `${dir}/index.test.ts`, status: "passed" }],
+      });
+    }
+
+    const toRun = [
+      { directory: "packages/b", key: "new-key" },
+      { directory: "packages/c", key: "new-key" },
+    ];
+    const narrowed = narrowPackagesWithDadTestPlan({
+      root,
+      env: { DADS_TEST_NATIVE_BINARY: fakeBinary },
+      cache: committedContext,
+      toRun,
+      taskKind: "test",
+      command: COMMAND,
+      readRecord,
+      recordKind: "test",
+    });
+    assert.deepEqual(
+      narrowed.provenUnaffected.map((item) => item.directory),
+      ["packages/b"],
+    );
+    assert.deepEqual(
+      narrowed.remaining.map((item) => item.directory),
+      ["packages/c"],
+    );
+
+    // Fails closed when dad-test reports fullFallback.
+    const previousFallback = process.env.FAKE_FALLBACK;
+    process.env.FAKE_FALLBACK = "1";
+    try {
+      const closed = narrowPackagesWithDadTestPlan({
+        root,
+        env: { DADS_TEST_NATIVE_BINARY: fakeBinary },
+        cache: committedContext,
+        toRun,
+        taskKind: "test",
+        command: COMMAND,
+        readRecord,
+        recordKind: "test",
+      });
+      assert.equal(closed.provenUnaffected.length, 0);
+      assert.equal(closed.remaining.length, 2);
+    } finally {
+      if (previousFallback === undefined) delete process.env.FAKE_FALLBACK;
+      else process.env.FAKE_FALLBACK = previousFallback;
+    }
   });
 });
 

@@ -1,0 +1,1463 @@
+{
+  "schemaVersion": 1,
+  "workspace": {
+    "root": ".",
+    "fullFallback": {
+      "taskIds": [
+        "access:test",
+        "access:typecheck",
+        "audit:test",
+        "audit:typecheck",
+        "client:test",
+        "client:typecheck",
+        "core:test",
+        "core:typecheck",
+        "create-dads:test",
+        "create-dads:typecheck",
+        "documents:test",
+        "documents:typecheck",
+        "email:test",
+        "email:typecheck",
+        "feature-flags:test",
+        "feature-flags:typecheck",
+        "fixture-boundary-verification:test",
+        "fixture-boundary-verification:typecheck",
+        "fixture-dads-app-access:test",
+        "fixture-default-services:test",
+        "fixture-default-services:typecheck",
+        "fixture-domain-boundaries:test",
+        "fixture-domain-boundaries:typecheck",
+        "fixture-plugin-notes:test",
+        "fixture-plugin-notes:typecheck",
+        "fixture-stale-save:test",
+        "fixture-stale-save:typecheck",
+        "fixture-standalone-access:test",
+        "fixture-standalone-access:typecheck",
+        "fixture-testing:test",
+        "fixture-testing:typecheck",
+        "http:test",
+        "http:typecheck",
+        "identity:test",
+        "identity:typecheck",
+        "job-queue:test",
+        "job-queue:typecheck",
+        "kit-workbench:test",
+        "object-storage:test",
+        "object-storage:typecheck",
+        "postgres:test",
+        "postgres:typecheck",
+        "postgres-access:test",
+        "postgres-access:typecheck",
+        "spicedb-access:test",
+        "spicedb-access:typecheck",
+        "sqlite-access:test",
+        "sqlite-access:typecheck",
+        "testing:test",
+        "testing:typecheck",
+        "toolbox:test",
+        "toolbox:typecheck",
+        "ui:test",
+        "ui:typecheck",
+        "workbench:test",
+        "workbench:typecheck"
+      ]
+    },
+    "nonCodeSuffixes": [".md"],
+    "ignorePaths": [
+      ".agents/**",
+      ".claude/**",
+      ".codex/**",
+      ".cursor/**",
+      ".git-blame-ignore-revs",
+      ".gitattributes",
+      ".githooks/**",
+      ".github/**",
+      ".gitignore",
+      ".prettierignore",
+      ".prettierrc.json",
+      "*.md",
+      "Cargo.lock",
+      "Cargo.toml",
+      "ci/**",
+      "clippy.toml",
+      "crates/**",
+      "dads.project.json",
+      "docs/**",
+      "eslint-suppressions.json",
+      "eslint.config.js",
+      "fixtures/daddy-issues/**",
+      "fixtures/testing-import-nx/**",
+      "fixtures/testing-soundness/**",
+      "formal/**",
+      "packages/testing/native/**",
+      "proofs/**",
+      "rust-toolchain.toml",
+      "scripts/**",
+      "specs/**",
+      "third-party/**",
+      "website/**"
+    ],
+    "dynamicImportScopes": {
+      "packages/access/src/core/emit-typescript.test.ts": ["packages/access/src/**"],
+      "packages/foundation/create-dads/bin/create-dads.js": [
+        "packages/foundation/create-dads/src/**",
+        "packages/foundation/create-dads/bin/**"
+      ],
+      "packages/foundation/toolbox/bin/dad.js": [
+        "packages/foundation/toolbox/src/**",
+        "packages/foundation/toolbox/bin/**"
+      ],
+      "packages/foundation/toolbox/src/access-source-loader.ts": [
+        "packages/foundation/toolbox/src/**",
+        "packages/access/src/**"
+      ],
+      "packages/foundation/toolbox/src/cli-db-loader.ts": [
+        "packages/foundation/toolbox/src/**",
+        "packages/server/postgres/src/**"
+      ],
+      "packages/server/spicedb-access/bin/dads-import-spicedb.mjs": [
+        "packages/server/spicedb-access/src/**",
+        "packages/server/spicedb-access/bin/**"
+      ]
+    },
+    "boundaries": {
+      "depConstraints": [
+        {
+          "sourceTag": "kind:core",
+          "notDependOnLibsWithTags": ["kind:composition", "kind:profile", "kind:tooling"]
+        },
+        {
+          "sourceTag": "kind:adapter",
+          "notDependOnLibsWithTags": ["kind:composition", "kind:profile", "kind:tooling"]
+        },
+        {
+          "sourceTag": "kind:binding",
+          "notDependOnLibsWithTags": ["kind:composition", "kind:profile", "kind:tooling"]
+        }
+      ],
+      "allowCircularSelfDependency": true
+    }
+  },
+  "projects": [
+    {
+      "id": "access",
+      "root": "packages/access",
+      "fallbackDependencies": ["core"],
+      "tags": ["kind:core", "scope:package"]
+    },
+    {
+      "id": "audit",
+      "root": "packages/server/audit",
+      "fallbackDependencies": ["core", "email", "http", "job-queue", "postgres", "spicedb-access"],
+      "tags": ["kind:profile", "scope:package"]
+    },
+    {
+      "id": "client",
+      "root": "packages/client",
+      "fallbackDependencies": ["core"],
+      "tags": ["kind:core", "scope:package"]
+    },
+    {
+      "id": "core",
+      "root": "packages/core",
+      "fallbackDependencies": [],
+      "tags": ["kind:core", "scope:package"]
+    },
+    {
+      "id": "create-dads",
+      "root": "packages/foundation/create-dads",
+      "fallbackDependencies": ["toolbox"],
+      "tags": ["kind:tooling", "scope:package"]
+    },
+    {
+      "id": "documents",
+      "root": "packages/documents",
+      "fallbackDependencies": [],
+      "tags": ["kind:adapter", "scope:package"]
+    },
+    {
+      "id": "email",
+      "root": "packages/server/email",
+      "fallbackDependencies": ["core", "job-queue", "postgres"],
+      "tags": ["kind:binding", "scope:package"]
+    },
+    {
+      "id": "feature-flags",
+      "root": "packages/server/feature-flags",
+      "fallbackDependencies": ["access", "core", "http", "postgres"],
+      "tags": ["kind:core", "scope:package"]
+    },
+    {
+      "id": "feature-flags-postgres",
+      "root": "packages/server/feature-flags-postgres",
+      "fallbackDependencies": [],
+      "tags": ["kind:binding", "scope:package"]
+    },
+    {
+      "id": "fixture-boundary-verification",
+      "root": "fixtures/boundary-verification",
+      "fallbackDependencies": ["access"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-dads-app-access",
+      "root": "fixtures/dads-app-access",
+      "fallbackDependencies": ["access", "core", "http", "postgres-access"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-default-services",
+      "root": "fixtures/default-services",
+      "fallbackDependencies": ["access", "identity", "postgres", "postgres-access"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-domain-boundaries",
+      "root": "fixtures/domain-boundaries",
+      "fallbackDependencies": ["core"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-plugin-notes",
+      "root": "fixtures/plugin-notes",
+      "fallbackDependencies": [
+        "access",
+        "audit",
+        "core",
+        "feature-flags",
+        "feature-flags-postgres",
+        "http",
+        "job-queue",
+        "postgres",
+        "spicedb-access"
+      ],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-stale-save",
+      "root": "fixtures/stale-save",
+      "fallbackDependencies": ["access", "core", "http", "postgres", "spicedb-access"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-standalone-access",
+      "root": "fixtures/standalone-access",
+      "fallbackDependencies": ["access", "postgres-access"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "fixture-testing",
+      "root": "fixtures/testing",
+      "fallbackDependencies": ["testing"],
+      "tags": ["kind:composition", "scope:fixture"]
+    },
+    {
+      "id": "http",
+      "root": "packages/server/http",
+      "fallbackDependencies": ["access", "core"],
+      "tags": ["kind:adapter", "scope:package"]
+    },
+    {
+      "id": "identity",
+      "root": "packages/server/identity",
+      "fallbackDependencies": ["access", "postgres", "postgres-access"],
+      "tags": ["kind:binding", "scope:package"]
+    },
+    {
+      "id": "job-queue",
+      "root": "packages/server/job-queue",
+      "fallbackDependencies": ["core"],
+      "tags": ["kind:adapter", "scope:package"]
+    },
+    {
+      "id": "kit-workbench",
+      "root": "apps/kit-workbench",
+      "fallbackDependencies": [
+        "access",
+        "audit",
+        "client",
+        "core",
+        "documents",
+        "email",
+        "feature-flags",
+        "http",
+        "identity",
+        "job-queue",
+        "object-storage",
+        "postgres",
+        "postgres-access",
+        "spicedb-access",
+        "testing",
+        "toolbox",
+        "ui"
+      ],
+      "tags": ["kind:composition", "scope:app"]
+    },
+    {
+      "id": "object-storage",
+      "root": "packages/server/object-storage",
+      "fallbackDependencies": [],
+      "tags": ["kind:adapter", "scope:package"]
+    },
+    {
+      "id": "postgres",
+      "root": "packages/server/postgres",
+      "fallbackDependencies": ["core"],
+      "tags": ["kind:adapter", "scope:package"]
+    },
+    {
+      "id": "postgres-access",
+      "root": "packages/server/postgres-access",
+      "fallbackDependencies": ["access", "postgres", "spicedb-access"],
+      "tags": ["kind:binding", "scope:package"]
+    },
+    {
+      "id": "spicedb-access",
+      "root": "packages/server/spicedb-access",
+      "fallbackDependencies": ["access", "core", "job-queue", "postgres", "postgres-access", "sqlite-access"],
+      "tags": ["kind:binding", "scope:package"]
+    },
+    {
+      "id": "sqlite-access",
+      "root": "packages/server/sqlite-access",
+      "fallbackDependencies": ["access"],
+      "tags": ["kind:binding", "scope:package"]
+    },
+    {
+      "id": "testing",
+      "root": "packages/testing/core",
+      "fallbackDependencies": [],
+      "tags": ["kind:core", "scope:package"]
+    },
+    {
+      "id": "toolbox",
+      "root": "packages/foundation/toolbox",
+      "fallbackDependencies": ["access", "testing"],
+      "tags": ["kind:tooling", "scope:package"]
+    },
+    {
+      "id": "ui",
+      "root": "packages/web/ui",
+      "fallbackDependencies": [],
+      "tags": ["kind:composition", "scope:package"]
+    },
+    {
+      "id": "workbench",
+      "root": "apps/workbench",
+      "fallbackDependencies": ["access", "core", "http", "postgres", "postgres-access", "spicedb-access"],
+      "tags": ["kind:composition", "scope:app"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "access:test",
+      "project": "access",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/access/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/access/package.json", "packages/access/vitest.config.ts", "formal/access-proofs/**"]
+      }
+    },
+    {
+      "id": "access:typecheck",
+      "project": "access",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/access/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/access/package.json",
+          "packages/access/tsconfig.json",
+          "packages/access/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "audit:test",
+      "project": "audit",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/audit/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/audit/package.json",
+          "packages/server/audit/vitest.config.ts",
+          "packages/server/postgres/src/testing/global-setup"
+        ]
+      }
+    },
+    {
+      "id": "audit:typecheck",
+      "project": "audit",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/audit/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/audit/package.json",
+          "packages/server/audit/tsconfig.json",
+          "packages/server/audit/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "client:test",
+      "project": "client",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/client/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/client/package.json", "packages/client/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "client:typecheck",
+      "project": "client",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/client/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/client/package.json",
+          "packages/client/tsconfig.json",
+          "packages/client/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "core:test",
+      "project": "core",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/core/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/core/package.json", "packages/core/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "core:typecheck",
+      "project": "core",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/core/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/core/package.json", "packages/core/tsconfig.json", "packages/core/tsconfig.tests.json"]
+      }
+    },
+    {
+      "id": "create-dads:test",
+      "project": "create-dads",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/foundation/create-dads/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/foundation/create-dads/package.json"]
+      }
+    },
+    {
+      "id": "create-dads:typecheck",
+      "project": "create-dads",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/foundation/create-dads/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/foundation/create-dads/package.json",
+          "packages/foundation/create-dads/tsconfig.json",
+          "packages/foundation/create-dads/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "documents:test",
+      "project": "documents",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/documents/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/documents/package.json", "packages/documents/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "documents:typecheck",
+      "project": "documents",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/documents/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/documents/package.json",
+          "packages/documents/tsconfig.json",
+          "packages/documents/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "email:test",
+      "project": "email",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/email/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/email/package.json",
+          "packages/server/email/vitest.config.ts",
+          "packages/server/postgres/src/testing/global-setup"
+        ]
+      }
+    },
+    {
+      "id": "email:typecheck",
+      "project": "email",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/email/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/email/package.json",
+          "packages/server/email/tsconfig.json",
+          "packages/server/email/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "feature-flags:test",
+      "project": "feature-flags",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/feature-flags/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/feature-flags/package.json", "packages/server/feature-flags/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "feature-flags:typecheck",
+      "project": "feature-flags",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/feature-flags/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/feature-flags/package.json",
+          "packages/server/feature-flags/tsconfig.json",
+          "packages/server/feature-flags/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "fixture-boundary-verification:test",
+      "project": "fixture-boundary-verification",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/boundary-verification/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/boundary-verification/package.json"]
+      }
+    },
+    {
+      "id": "fixture-boundary-verification:typecheck",
+      "project": "fixture-boundary-verification",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/boundary-verification/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "fixtures/boundary-verification/package.json",
+          "fixtures/boundary-verification/tsconfig.json",
+          "fixtures/boundary-verification/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "fixture-dads-app-access:test",
+      "project": "fixture-dads-app-access",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/dads-app-access/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    },
+    {
+      "id": "fixture-default-services:test",
+      "project": "fixture-default-services",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/default-services/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/default-services/package.json"]
+      }
+    },
+    {
+      "id": "fixture-default-services:typecheck",
+      "project": "fixture-default-services",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/default-services/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "fixtures/default-services/package.json",
+          "fixtures/default-services/tsconfig.json",
+          "fixtures/default-services/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "fixture-domain-boundaries:test",
+      "project": "fixture-domain-boundaries",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/domain-boundaries/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/domain-boundaries/package.json", "fixtures/domain-boundaries/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "fixture-domain-boundaries:typecheck",
+      "project": "fixture-domain-boundaries",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/domain-boundaries/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "fixtures/domain-boundaries/package.json",
+          "fixtures/domain-boundaries/tsconfig.json",
+          "fixtures/domain-boundaries/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "fixture-plugin-notes:test",
+      "project": "fixture-plugin-notes",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/plugin-notes/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/plugin-notes/package.json", "fixtures/plugin-notes/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "fixture-plugin-notes:typecheck",
+      "project": "fixture-plugin-notes",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/plugin-notes/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "fixtures/plugin-notes/package.json",
+          "fixtures/plugin-notes/tsconfig.json",
+          "fixtures/plugin-notes/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "fixture-stale-save:test",
+      "project": "fixture-stale-save",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/stale-save/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/stale-save/package.json", "fixtures/stale-save/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "fixture-stale-save:typecheck",
+      "project": "fixture-stale-save",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/stale-save/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "fixtures/stale-save/package.json",
+          "fixtures/stale-save/tsconfig.json",
+          "fixtures/stale-save/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "fixture-standalone-access:test",
+      "project": "fixture-standalone-access",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/standalone-access/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": []
+      }
+    },
+    {
+      "id": "fixture-standalone-access:typecheck",
+      "project": "fixture-standalone-access",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/standalone-access/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/standalone-access/tsconfig.json", "fixtures/standalone-access/tsconfig.tests.json"]
+      }
+    },
+    {
+      "id": "fixture-testing:test",
+      "project": "fixture-testing",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "fixtures/testing/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["fixtures/testing/package.json"]
+      }
+    },
+    {
+      "id": "fixture-testing:typecheck",
+      "project": "fixture-testing",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "fixtures/testing/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "fixtures/testing/package.json",
+          "fixtures/testing/tsconfig.json",
+          "fixtures/testing/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "http:test",
+      "project": "http",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/http/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/http/package.json", "packages/server/http/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "http:typecheck",
+      "project": "http",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/http/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/http/package.json",
+          "packages/server/http/tsconfig.json",
+          "packages/server/http/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "identity:test",
+      "project": "identity",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/identity/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/identity/package.json"]
+      }
+    },
+    {
+      "id": "identity:typecheck",
+      "project": "identity",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/identity/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/identity/package.json",
+          "packages/server/identity/tsconfig.json",
+          "packages/server/identity/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "job-queue:test",
+      "project": "job-queue",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/job-queue/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/job-queue/package.json", "packages/server/job-queue/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "job-queue:typecheck",
+      "project": "job-queue",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/job-queue/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/job-queue/package.json",
+          "packages/server/job-queue/tsconfig.json",
+          "packages/server/job-queue/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "kit-workbench:test",
+      "project": "kit-workbench",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "apps/kit-workbench/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["apps/kit-workbench/package.json"]
+      }
+    },
+    {
+      "id": "object-storage:test",
+      "project": "object-storage",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/object-storage/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/object-storage/package.json", "packages/server/object-storage/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "object-storage:typecheck",
+      "project": "object-storage",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/object-storage/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/object-storage/package.json",
+          "packages/server/object-storage/tsconfig.json",
+          "packages/server/object-storage/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "postgres:test",
+      "project": "postgres",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/postgres/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/postgres/package.json", "packages/server/postgres/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "postgres:typecheck",
+      "project": "postgres",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/postgres/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/postgres/package.json",
+          "packages/server/postgres/tsconfig.json",
+          "packages/server/postgres/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "postgres-access:test",
+      "project": "postgres-access",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/postgres-access/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/postgres-access/package.json",
+          "packages/server/postgres-access/vitest.config.ts",
+          "formal/access-proofs/**"
+        ]
+      }
+    },
+    {
+      "id": "postgres-access:typecheck",
+      "project": "postgres-access",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/postgres-access/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/postgres-access/package.json",
+          "packages/server/postgres-access/tsconfig.json",
+          "packages/server/postgres-access/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "spicedb-access:test",
+      "project": "spicedb-access",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/spicedb-access/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/spicedb-access/package.json", "packages/server/spicedb-access/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "spicedb-access:typecheck",
+      "project": "spicedb-access",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/spicedb-access/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/spicedb-access/package.json",
+          "packages/server/spicedb-access/tsconfig.json",
+          "packages/server/spicedb-access/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "sqlite-access:test",
+      "project": "sqlite-access",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/server/sqlite-access/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/server/sqlite-access/package.json", "formal/access-proofs/**"]
+      }
+    },
+    {
+      "id": "sqlite-access:typecheck",
+      "project": "sqlite-access",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/server/sqlite-access/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/server/sqlite-access/package.json",
+          "packages/server/sqlite-access/tsconfig.json",
+          "packages/server/sqlite-access/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "testing:test",
+      "project": "testing",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/testing/core/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/testing/core/package.json"]
+      }
+    },
+    {
+      "id": "testing:typecheck",
+      "project": "testing",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/testing/core/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/testing/core/package.json",
+          "packages/testing/core/tsconfig.json",
+          "packages/testing/core/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "toolbox:test",
+      "project": "toolbox",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/foundation/toolbox/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/foundation/toolbox/package.json", "dads.project.json"]
+      }
+    },
+    {
+      "id": "toolbox:typecheck",
+      "project": "toolbox",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/foundation/toolbox/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/foundation/toolbox/package.json",
+          "packages/foundation/toolbox/tsconfig.json",
+          "packages/foundation/toolbox/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "ui:test",
+      "project": "ui",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "packages/web/ui/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["packages/web/ui/package.json", "packages/web/ui/vitest.config.ts"]
+      }
+    },
+    {
+      "id": "ui:typecheck",
+      "project": "ui",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "packages/web/ui/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": [
+          "packages/web/ui/package.json",
+          "packages/web/ui/tsconfig.json",
+          "packages/web/ui/tsconfig.tests.json"
+        ]
+      }
+    },
+    {
+      "id": "workbench:test",
+      "project": "workbench",
+      "kind": "test",
+      "execution": {
+        "executable": "node",
+        "args": ["node_modules/vitest/vitest.mjs", "run", "apps/workbench/"],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["apps/workbench/package.json"]
+      }
+    },
+    {
+      "id": "workbench:typecheck",
+      "project": "workbench",
+      "kind": "typecheck",
+      "execution": {
+        "executable": "node",
+        "args": [
+          "node_modules/typescript-native/bin/tsc",
+          "-p",
+          "apps/workbench/tsconfig.tests.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "."
+      },
+      "dependsOn": [],
+      "impact": {
+        "mode": "reachability",
+        "paths": ["apps/workbench/package.json", "apps/workbench/tsconfig.json", "apps/workbench/tsconfig.tests.json"]
+      }
+    }
+  ]
+}

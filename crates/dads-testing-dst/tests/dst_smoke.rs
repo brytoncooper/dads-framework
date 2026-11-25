@@ -25,7 +25,7 @@ fn find_node() -> PathBuf {
 }
 
 #[test]
-fn dst_harness_executes_all_58_mutations_with_zero_harness_errors() {
+fn dst_harness_executes_all_93_mutations_with_zero_harness_errors() {
     let dad_bin = sibling_dad_bin();
     if !dad_bin.is_file() {
         return;

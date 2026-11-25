@@ -1,15 +1,28 @@
-//! Deterministic mutation dispatcher + git/cache fault-injection helpers for DST timelines.
+//! Deterministic mutation dispatcher + git/cache fault-injection helpers for 93-family DST.
 
 use crate::model::{MutationKind, WorkspaceShape};
 use crate::mutations_advanced::{AdvancedMutationPaths, apply_advanced_mutation};
+use crate::mutations_lang_edge::apply_section_c_mutation;
+use crate::mutations_lifecycle::apply_section_d_mutation;
 use crate::mutations_section_a::{apply_section_a_mutation, is_section_a_mutation};
+use crate::mutations_subsystems::apply_section_b_mutation;
+use crate::node_oracle::OracleTestSpec;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpecialTimeline {
+    BoundariesCheck,
+    RemoteCacheFault,
+    ConcurrentCacheWriters,
+    CliFiltersShardStalePlan,
+}
 
 #[derive(Debug, Default)]
 pub struct AppliedMutation {
     pub force_commit: bool,
+    pub force_untracked: bool,
     pub force_plan_file: bool,
     pub corrupt_shared_cache: bool,
     pub chained_dirty_steps: bool,
@@ -18,7 +31,14 @@ pub struct AppliedMutation {
     pub sharded_plan_union: bool,
     pub verify_unrelated_passes: bool,
     pub oracle_env_override: Option<(String, String, String)>,
+    pub dad_process_env: Vec<(String, String)>,
     pub force_only_tasks: Vec<String>,
+    pub extra_oracle_tests: Vec<(String, OracleTestSpec)>,
+    pub deleted_test_files: Vec<String>,
+    pub expected_skipped_tasks: Vec<String>,
+    pub special_timeline: Option<SpecialTimeline>,
+    pub git_head_override: Option<String>,
+    pub worktree_override_dir: Option<PathBuf>,
 }
 
 pub fn apply_mutation(
@@ -55,6 +75,13 @@ pub fn apply_mutation(
         _ if is_section_a_mutation(kind) => {
             apply_section_a_mutation(paths.workspace_dir, kind, step_idx)
         }
+        _ if kind.is_section_b() => {
+            apply_section_b_mutation(paths.workspace_dir, shape, kind, step_idx)
+        }
+        _ if kind.is_section_c() => {
+            apply_section_c_mutation(paths.workspace_dir, shape, kind, step_idx)
+        }
+        _ if kind.is_section_d() => apply_section_d_mutation(paths, shape, kind, step_idx),
         _ => apply_advanced_mutation(paths, shape, kind, step_idx),
     }
 }
@@ -237,6 +264,7 @@ pub fn git_commit_all(root: &Path, message: &str) -> Result<String, String> {
 }
 
 pub fn git_reset_clean(root: &Path, commit: &str) -> Result<(), String> {
+    let _ = fs::remove_file(root.join("lang/casetarget.ts"));
     run_git(root, &["reset", "--hard", "-q", commit])?;
     run_git(root, &["clean", "-fdq"])?;
     Ok(())
@@ -315,7 +343,7 @@ fn corrupt_walk(dir: &Path, count: &mut usize) -> Result<(), String> {
     Ok(())
 }
 
-fn run_git(root: &Path, args: &[&str]) -> Result<String, String> {
+pub fn run_git(root: &Path, args: &[&str]) -> Result<String, String> {
     let output = Command::new("git")
         .args(args)
         .current_dir(root)

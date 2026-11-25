@@ -1,9 +1,9 @@
-//! Stateful multi-step CI timelines: chained dirty-tree snapshot patching, multi-branch shared L2
-//! cache switching, and sharded `--plan-file` union completeness verification.
+//! Stateful multi-step CI timelines: warm baseline cache, chained dirty-tree snapshot patching,
+//! multi-branch shared L2 cache switching, and sharded `--plan-file` union completeness.
 
 use crate::dad_client::{
     DadInvocation, ExecutedTaskView, NativeEnvelope, NativeRequestPayload, NativeResult, PlanView,
-    PlannedTaskView, RunView, TaskShardPayload, invoke_dad,
+    PlannedTaskView, RunView, TaskShardPayload, invoke_dad, invoke_dad_with_env,
 };
 use crate::mutations::{git_checkout_new_branch, git_commit_all, replace_once};
 use std::collections::BTreeMap;
@@ -28,6 +28,16 @@ pub fn warm_shared_cache(
         "impact-consumer:test".to_owned(),
         "build-consumer:test".to_owned(),
         "unrelated:test".to_owned(),
+        "typecheck-app:typecheck".to_owned(),
+        "typecheck-app:test".to_owned(),
+        "sql-migrations:test".to_owned(),
+        "sql-accounts:test".to_owned(),
+        "sql-audits:test".to_owned(),
+        "lock-alpha:test".to_owned(),
+        "lock-beta:test".to_owned(),
+        "vitest-proj:test".to_owned(),
+        "next-app:test".to_owned(),
+        "adv-cache:test".to_owned(),
     ];
     request.cache = true;
     request.cache_dir = Some(shared_cache_dir.to_string_lossy().into_owned());
@@ -37,6 +47,19 @@ pub fn warm_shared_cache(
             "baseline warm-cache run failed: {:?}",
             response.envelope.error
         ));
+    }
+    if let Some(res) = &response.envelope.result
+        && let Some(run) = &res.run
+    {
+        for task in &run.tasks {
+            if task.status == "failed" || task.exit_code.is_some_and(|c| c != 0) {
+                let err = task.stderr.as_ref().map(|s| s.text.trim()).unwrap_or("");
+                return Err(format!(
+                    "baseline warm-cache task {} failed (status={} exit={:?} stderr={err})",
+                    task.id, task.status, task.exit_code
+                ));
+            }
+        }
     }
     Ok(())
 }
@@ -48,7 +71,6 @@ pub fn prepare_chained_dirty_sequence(
     baseline_sha: &str,
     node_dir: Option<&Path>,
 ) -> Result<(), String> {
-    // Edit A: touch pure export in billing/pure.ts and run dad-test (creates snapshot).
     replace_once(
         workspace_dir,
         "billing/pure.ts",
@@ -57,11 +79,9 @@ pub fn prepare_chained_dirty_sequence(
     )?;
     run_plain_plan(dad_bin, workspace_dir, baseline_sha, node_dir)?;
 
-    // Edit B: introduce breaking change in lang/hop-a.ts and run dad-test (incremental patch).
     replace_once(workspace_dir, "lang/hop-a.ts", "origVal = 2", "origVal = 9")?;
     run_plain_plan(dad_bin, workspace_dir, baseline_sha, node_dir)?;
 
-    // Revert A back to baseline while keeping B broken, plus add & delete an extra file.
     replace_once(
         workspace_dir,
         "billing/pure.ts",
@@ -85,7 +105,6 @@ pub fn prepare_multi_branch_shared_l2(
     step_idx: usize,
     node_dir: Option<&Path>,
 ) -> Result<String, String> {
-    // Worker A: branch with a passing edit warms shared L2 cache.
     git_checkout_new_branch(workspace_dir, &format!("dst-pass-{step_idx}"), baseline_sha)?;
     replace_once(
         workspace_dir,
@@ -107,7 +126,6 @@ pub fn prepare_multi_branch_shared_l2(
     let _ = invoke_dad(dad_bin, &warm_req, node_dir)?;
     let _ = pass_sha;
 
-    // Worker B: branch from baseline with a breaking upstream change using the SAME shared L2.
     git_checkout_new_branch(
         workspace_dir,
         &format!("dst-break-{step_idx}"),
@@ -131,12 +149,18 @@ pub struct ShardedRunSpec<'a> {
     pub use_cache: bool,
     pub step_tag: usize,
     pub node_dir: Option<&'a Path>,
+    pub extra_env: &'a [(String, String)],
 }
 
 pub fn run_dad_single_step(
     spec: &ShardedRunSpec<'_>,
     use_plan_file: bool,
 ) -> Result<DadInvocation, String> {
+    let env_refs: Vec<(&str, &str)> = spec
+        .extra_env
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
     let workspace_root = spec.workspace_dir.to_string_lossy().into_owned();
     let cache_dir = spec
         .use_cache
@@ -145,7 +169,7 @@ pub fn run_dad_single_step(
         let mut plan_req = NativeRequestPayload::new("plan", workspace_root.clone());
         plan_req.base = Some(spec.baseline_sha.to_owned());
         plan_req.head = spec.head_sha.map(str::to_owned);
-        let planned = invoke_dad(spec.dad_bin, &plan_req, spec.node_dir)?;
+        let planned = invoke_dad_with_env(spec.dad_bin, &plan_req, spec.node_dir, &env_refs)?;
         let Some(plan_json) = planned.raw_plan_json else {
             return Err(format!(
                 "plan failed before --plan-file run: {:?}",
@@ -160,27 +184,32 @@ pub fn run_dad_single_step(
         run_req.cache = spec.use_cache;
         run_req.cache_dir = cache_dir;
         run_req.plan_file = Some(plan_file_path.to_string_lossy().into_owned());
-        return invoke_dad(spec.dad_bin, &run_req, spec.node_dir);
+        return invoke_dad_with_env(spec.dad_bin, &run_req, spec.node_dir, &env_refs);
     }
     let mut run_req = NativeRequestPayload::new("run", workspace_root);
     run_req.base = Some(spec.baseline_sha.to_owned());
     run_req.head = spec.head_sha.map(str::to_owned);
     run_req.cache = spec.use_cache;
     run_req.cache_dir = cache_dir;
-    invoke_dad(spec.dad_bin, &run_req, spec.node_dir)
+    invoke_dad_with_env(spec.dad_bin, &run_req, spec.node_dir, &env_refs)
 }
 
 pub fn run_dad_only_tasks_cached(
     spec: &ShardedRunSpec<'_>,
     task_ids: &[String],
 ) -> Result<DadInvocation, String> {
+    let env_refs: Vec<(&str, &str)> = spec
+        .extra_env
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
     let mut run_req =
         NativeRequestPayload::new("run", spec.workspace_dir.to_string_lossy().into_owned());
     run_req.only = true;
     run_req.task_ids = task_ids.to_vec();
     run_req.cache = true;
     run_req.cache_dir = Some(spec.shared_cache_dir.to_string_lossy().into_owned());
-    invoke_dad(spec.dad_bin, &run_req, spec.node_dir)
+    invoke_dad_with_env(spec.dad_bin, &run_req, spec.node_dir, &env_refs)
 }
 
 pub fn run_sharded_plan_union(spec: &ShardedRunSpec<'_>) -> Result<DadInvocation, String> {
@@ -250,10 +279,12 @@ pub fn run_sharded_plan_union(spec: &ShardedRunSpec<'_>) -> Result<DadInvocation
                 plan: PlanView {
                     tasks: merged_plan.into_values().collect(),
                     issues: Vec::new(),
+                    shard: None,
                 },
                 run: Some(RunView {
                     tasks: merged_run.into_values().collect(),
                 }),
+                boundaries: None,
             }),
         },
         exit_ok: all_ok,

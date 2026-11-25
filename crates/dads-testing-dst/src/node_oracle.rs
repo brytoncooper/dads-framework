@@ -1,227 +1,12 @@
-//! Persistent Node 24 oracle worker pool + embedded workspace task runner.
-//!
-//! Supports native TypeScript transform (`enum`, parameter properties), `tsconfig.base.json` path
-//! aliases, `.js`-to-`.ts` specifier mapping, directory-index/shadowing resolution, per-task `env`,
-//! and isolated `worker_threads` ESM graphs per test evaluation.
+//! Persistent Node 24 oracle worker pool delegating embedded ESM scripts to `node_runner_js`.
 
+use crate::node_oracle_js::PERSISTENT_ORACLE_JS;
+pub use crate::node_runner_js::DST_RUNNER_JS;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
-
-pub const DST_RUNNER_JS: &str = r#"import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { registerHooks } from "node:module";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-
-const args = process.argv.slice(2);
-let setupFile = null;
-const rest = [];
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === "--setup" && i + 1 < args.length) {
-    setupFile = args[++i];
-  } else {
-    rest.push(args[i]);
-  }
-}
-
-const [projectDir, ...selected] = rest;
-const root = process.cwd();
-installResolverHooks(root);
-
-const files = selected.length > 0
-  ? selected
-  : readdirSync(join(root, projectDir))
-      .filter((f) => f.endsWith(".test.ts"))
-      .sort()
-      .map((f) => `${projectDir}/${f}`);
-
-if (setupFile) {
-  await import(pathToFileURL(resolve(root, setupFile)).href);
-}
-
-let failed = 0;
-for (const file of files) {
-  try {
-    await import(pathToFileURL(resolve(root, file)).href);
-  } catch (error) {
-    failed++;
-    console.error(`FAIL ${file}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-process.exitCode = failed > 0 ? 1 : 0;
-
-function installResolverHooks(workspaceRoot) {
-  let entries = [];
-  const tsconfigPath = join(workspaceRoot, "tsconfig.base.json");
-  if (existsSync(tsconfigPath)) {
-    try {
-      const parsed = JSON.parse(readFileSync(tsconfigPath, "utf8"));
-      entries = Object.entries(parsed?.compilerOptions?.paths ?? {});
-    } catch {
-      entries = [];
-    }
-  }
-  registerHooks({
-    resolve(specifier, context, nextResolve) {
-      for (const [alias, targets] of entries) {
-        if (!Array.isArray(targets) || targets.length === 0) continue;
-        if (alias === specifier) {
-          return { url: pathToFileURL(resolve(workspaceRoot, targets[0])).href, shortCircuit: true };
-        }
-        if (alias.endsWith("/*")) {
-          const prefix = alias.slice(0, -1);
-          if (specifier.startsWith(prefix)) {
-            const tail = specifier.slice(prefix.length);
-            const target = targets[0].replace(/\*$/, tail);
-            return { url: pathToFileURL(resolve(workspaceRoot, target)).href, shortCircuit: true };
-          }
-        }
-      }
-      if ((specifier.startsWith("./") || specifier.startsWith("../")) && context.parentURL) {
-        const baseDir = dirname(fileURLToPath(context.parentURL));
-        if (specifier.endsWith(".js")) {
-          const tsCandidate = resolve(baseDir, specifier.slice(0, -3) + ".ts");
-          if (existsSync(tsCandidate)) {
-            return { url: pathToFileURL(tsCandidate).href, shortCircuit: true };
-          }
-        }
-        const directTs = resolve(baseDir, specifier + ".ts");
-        if (existsSync(directTs)) {
-          return { url: pathToFileURL(directTs).href, shortCircuit: true };
-        }
-        const indexTs = resolve(baseDir, specifier, "index.ts");
-        if (existsSync(indexTs)) {
-          return { url: pathToFileURL(indexTs).href, shortCircuit: true };
-        }
-      }
-      return nextResolve(specifier, context);
-    },
-  });
-}
-"#;
-
-const PERSISTENT_ORACLE_JS: &str = r#"import { createInterface } from "node:readline";
-import { Worker } from "node:worker_threads";
-
-const WORKER_SCRIPT = `
-import { existsSync, readFileSync } from "node:fs";
-import { registerHooks } from "node:module";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { parentPort, workerData } from "node:worker_threads";
-
-const { workspaceRoot, testFile, setupFile } = workerData;
-let entries = [];
-const tsconfigPath = join(workspaceRoot, "tsconfig.base.json");
-if (existsSync(tsconfigPath)) {
-  try {
-    const parsed = JSON.parse(readFileSync(tsconfigPath, "utf8"));
-    entries = Object.entries(parsed?.compilerOptions?.paths ?? {});
-  } catch {
-    entries = [];
-  }
-}
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    for (const [alias, targets] of entries) {
-      if (!Array.isArray(targets) || targets.length === 0) continue;
-      if (alias === specifier) {
-        return { url: pathToFileURL(resolve(workspaceRoot, targets[0])).href, shortCircuit: true };
-      }
-      if (alias.endsWith("/*")) {
-        const prefix = alias.slice(0, -1);
-        if (specifier.startsWith(prefix)) {
-          const tail = specifier.slice(prefix.length);
-          const target = targets[0].replace(/\\*$/, tail);
-          return { url: pathToFileURL(resolve(workspaceRoot, target)).href, shortCircuit: true };
-        }
-      }
-    }
-    if ((specifier.startsWith("./") || specifier.startsWith("../")) && context.parentURL) {
-      const baseDir = dirname(fileURLToPath(context.parentURL));
-      if (specifier.endsWith(".js")) {
-        const tsCandidate = resolve(baseDir, specifier.slice(0, -3) + ".ts");
-        if (existsSync(tsCandidate)) {
-          return { url: pathToFileURL(tsCandidate).href, shortCircuit: true };
-        }
-      }
-      const directTs = resolve(baseDir, specifier + ".ts");
-      if (existsSync(directTs)) {
-        return { url: pathToFileURL(directTs).href, shortCircuit: true };
-      }
-      const indexTs = resolve(baseDir, specifier, "index.ts");
-      if (existsSync(indexTs)) {
-        return { url: pathToFileURL(indexTs).href, shortCircuit: true };
-      }
-    }
-    return nextResolve(specifier, context);
-  },
-});
-
-try {
-  if (setupFile) {
-    await import(pathToFileURL(resolve(workspaceRoot, setupFile)).href);
-  }
-  await import(pathToFileURL(resolve(workspaceRoot, testFile)).href);
-  parentPort.postMessage({ ok: true, error: null });
-} catch (error) {
-  parentPort.postMessage({
-    ok: false,
-    error: error instanceof Error ? error.message : String(error),
-  });
-}
-`;
-
-function runOne(workspaceRoot, testFile, setupFile, extraEnv) {
-  return new Promise((resolvePromise) => {
-    const worker = new Worker(WORKER_SCRIPT, {
-      eval: true,
-      execArgv: ["--no-warnings", "--experimental-transform-types"],
-      env: { ...process.env, ...(extraEnv ?? {}) },
-      workerData: { workspaceRoot, testFile, setupFile },
-    });
-    let settled = false;
-    worker.once("message", (msg) => {
-      settled = true;
-      resolvePromise(msg);
-    });
-    worker.once("error", (err) => {
-      if (!settled) {
-        settled = true;
-        resolvePromise({ ok: false, error: err.message });
-      }
-    });
-    worker.once("exit", (code) => {
-      if (!settled) {
-        settled = true;
-        resolvePromise({ ok: code === 0, error: code === 0 ? null : `worker exit ${code}` });
-      }
-    });
-  });
-}
-
-const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
-rl.on("line", async (line) => {
-  if (!line.trim()) return;
-  try {
-    const req = JSON.parse(line);
-    const entries = await Promise.all(
-      req.tests.map(async (item) => {
-        const res = await runOne(req.workspaceRoot, item.file, item.setupFile ?? null, item.env ?? null);
-        return [item.file, res];
-      }),
-    );
-    const results = Object.fromEntries(entries);
-    process.stdout.write(JSON.stringify({ ok: true, results }) + "\n");
-  } catch (error) {
-    process.stdout.write(
-      JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }) + "\n",
-    );
-  }
-});
-"#;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -279,7 +64,7 @@ pub struct NodeOracleWorker {
 }
 
 impl NodeOracleWorker {
-    pub fn spawn(node_bin: &Path) -> Result<Self, String> {
+    pub fn spawn(node_bin: &Path, typescript_js: &Path) -> Result<Self, String> {
         let mut child = Command::new(node_bin)
             .args([
                 "--no-warnings",
@@ -288,6 +73,7 @@ impl NodeOracleWorker {
                 "-e",
                 PERSISTENT_ORACLE_JS,
             ])
+            .env("DADS_DST_TS_PATH", typescript_js)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

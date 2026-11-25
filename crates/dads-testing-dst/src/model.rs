@@ -1,9 +1,9 @@
-//! Scenario topology, exhaustive 58-family mutation catalog, and report structures for DST sweeps.
+//! Scenario topology, 93-family mutation catalog types, and report structures for DST sweeps.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FallbackMode {
     /// Empty `fallbackDependencies: []` (matches Command's real discovered projects).
@@ -14,7 +14,7 @@ pub enum FallbackMode {
     Complete,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum BarrelStyle {
     DirectImport,
@@ -99,164 +99,34 @@ pub enum MutationKind {
     GitignoredImpactPathsGlob,
     UpstreamPackageExportsAndNestedTsconfig,
     NonRootAndDotenvConfigFiles,
-}
-
-impl MutationKind {
-    pub const ALL: &'static [Self] = &[
-        Self::PureExportValue,
-        Self::UnusedPureExport,
-        Self::PrivateHelperUsedByExport,
-        Self::ImpureExportInitializerAssign,
-        Self::ImpureExportInitializerCall,
-        Self::HelperCalledByImpureInitializer,
-        Self::ClassStaticBlockSideEffect,
-        Self::TopLevelStatementSideEffect,
-        Self::MixedExportAndUnusedRuntimeImport,
-        Self::CommentOrTypeOnlyEdit,
-        Self::StaticJsonImport,
-        Self::FsReadFileSyncNewUrl,
-        Self::FsReaddirSyncExistingFile,
-        Self::FsReaddirSyncAddedFile,
-        Self::SetupFileMutation,
-        Self::TsconfigAliasRetarget,
-        Self::ImpactPathsWithWarmCache,
-        Self::UpstreamLibWithWarmCacheAndPlanFile,
-        Self::UncertainUpstreamWithEmptyFallback,
-        Self::CorruptSharedCacheBlob,
-        Self::DefaultExportMutation,
-        Self::EscapedNamespaceMutation,
-        Self::CommonJsRequireMutation,
-        Self::MultiHopAliasedReExport,
-        Self::TsEnumMutation,
-        Self::FunctionOverloadBodyMutation,
-        Self::ClassExtendsSuperclassMutation,
-        Self::ImpureStaticClassField,
-        Self::DestructuredExportMutation,
-        Self::MultiDeclaratorExportMutation,
-        Self::SeparateDeclBareExport,
-        Self::LiveMutableExportLet,
-        Self::ComputedKeyOrSpreadSideEffect,
-        Self::DeleteBareSideEffectImport,
-        Self::ZeroExportSideEffectModuleEdit,
-        Self::TopLevelAwaitSideEffect,
-        Self::CrossModuleRegistryMutation,
-        Self::PureAnnotationImpureArgTrap,
-        Self::CircularImportMutation,
-        Self::StaticDynamicImportMutation,
-        Self::AsiWhitespaceNewlineMutation,
-        Self::TransitiveHelperFsRead,
-        Self::FsPromisesExistsOrNestedDir,
-        Self::FsReaddirSyncDeletedFile,
-        Self::TsJsExtensionMapping,
-        Self::FileShadowingAddition,
-        Self::TransitiveSetupFileChain,
-        Self::TsconfigNonPathsOptionEdit,
-        Self::PackageSubpathImportsEdit,
-        Self::ChainedDirtyIncrementalSnapshot,
-        Self::MultiBranchSharedL2Cache,
-        Self::TaskEnvOrArgsManifestEdit,
-        Self::SymlinkInImpactPaths,
-        Self::DeletedImpactPathsGlobFile,
-        Self::AlwaysModeNeverCached,
-        Self::DependsOnPrerequisiteChain,
-        Self::ShardedPlanUnionCompleteness,
-        Self::MixedPassFailBatchIsolation,
-        Self::ObjectFreezeSharedIdent,
-        Self::ImplicitCoercionSideEffect,
-        Self::TopLevelLoadThrowPureTrap,
-        Self::ExistsSyncMissingAtBaseline,
-        Self::ReaddirSyncEmptyOrOvercapDir,
-        Self::CrossFileFsHelperAndUnresolved,
-        Self::ExtendedFsAndExecReadApis,
-        Self::GitignoredImpactPathsGlob,
-        Self::UpstreamPackageExportsAndNestedTsconfig,
-        Self::NonRootAndDotenvConfigFiles,
-    ];
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::PureExportValue => "pure-export-value",
-            Self::UnusedPureExport => "unused-pure-export",
-            Self::PrivateHelperUsedByExport => "private-helper-used-by-export",
-            Self::ImpureExportInitializerAssign => "impure-export-initializer-assign",
-            Self::ImpureExportInitializerCall => "impure-export-initializer-call",
-            Self::HelperCalledByImpureInitializer => "helper-called-by-impure-initializer",
-            Self::ClassStaticBlockSideEffect => "class-static-block-side-effect",
-            Self::TopLevelStatementSideEffect => "top-level-statement-side-effect",
-            Self::MixedExportAndUnusedRuntimeImport => "mixed-export-and-unused-runtime-import",
-            Self::CommentOrTypeOnlyEdit => "comment-or-type-only-edit",
-            Self::StaticJsonImport => "static-json-import",
-            Self::FsReadFileSyncNewUrl => "fs-read-file-sync-new-url",
-            Self::FsReaddirSyncExistingFile => "fs-readdir-sync-existing-file",
-            Self::FsReaddirSyncAddedFile => "fs-readdir-sync-added-file",
-            Self::SetupFileMutation => "setup-file-mutation",
-            Self::TsconfigAliasRetarget => "tsconfig-alias-retarget",
-            Self::ImpactPathsWithWarmCache => "impact-paths-with-warm-cache",
-            Self::UpstreamLibWithWarmCacheAndPlanFile => {
-                "upstream-lib-with-warm-cache-and-plan-file"
-            }
-            Self::UncertainUpstreamWithEmptyFallback => "uncertain-upstream-with-empty-fallback",
-            Self::CorruptSharedCacheBlob => "corrupt-shared-cache-blob",
-            Self::DefaultExportMutation => "default-export-mutation",
-            Self::EscapedNamespaceMutation => "escaped-namespace-mutation",
-            Self::CommonJsRequireMutation => "commonjs-require-mutation",
-            Self::MultiHopAliasedReExport => "multi-hop-aliased-reexport",
-            Self::TsEnumMutation => "ts-enum-mutation",
-            Self::FunctionOverloadBodyMutation => "function-overload-body-mutation",
-            Self::ClassExtendsSuperclassMutation => "class-extends-superclass-mutation",
-            Self::ImpureStaticClassField => "impure-static-class-field",
-            Self::DestructuredExportMutation => "destructured-export-mutation",
-            Self::MultiDeclaratorExportMutation => "multi-declarator-export-mutation",
-            Self::SeparateDeclBareExport => "separate-decl-bare-export",
-            Self::LiveMutableExportLet => "live-mutable-export-let",
-            Self::ComputedKeyOrSpreadSideEffect => "computed-key-or-spread-side-effect",
-            Self::DeleteBareSideEffectImport => "delete-bare-side-effect-import",
-            Self::ZeroExportSideEffectModuleEdit => "zero-export-side-effect-module-edit",
-            Self::TopLevelAwaitSideEffect => "top-level-await-side-effect",
-            Self::CrossModuleRegistryMutation => "cross-module-registry-mutation",
-            Self::PureAnnotationImpureArgTrap => "pure-annotation-impure-arg-trap",
-            Self::CircularImportMutation => "circular-import-mutation",
-            Self::StaticDynamicImportMutation => "static-dynamic-import-mutation",
-            Self::AsiWhitespaceNewlineMutation => "asi-whitespace-newline-mutation",
-            Self::TransitiveHelperFsRead => "transitive-helper-fs-read",
-            Self::FsPromisesExistsOrNestedDir => "fs-promises-exists-or-nested-dir",
-            Self::FsReaddirSyncDeletedFile => "fs-readdir-sync-deleted-file",
-            Self::TsJsExtensionMapping => "ts-js-extension-mapping",
-            Self::FileShadowingAddition => "file-shadowing-addition",
-            Self::TransitiveSetupFileChain => "transitive-setup-file-chain",
-            Self::TsconfigNonPathsOptionEdit => "tsconfig-non-paths-option-edit",
-            Self::PackageSubpathImportsEdit => "package-subpath-imports-edit",
-            Self::ChainedDirtyIncrementalSnapshot => "chained-dirty-incremental-snapshot",
-            Self::MultiBranchSharedL2Cache => "multi-branch-shared-l2-cache",
-            Self::TaskEnvOrArgsManifestEdit => "task-env-or-args-manifest-edit",
-            Self::SymlinkInImpactPaths => "symlink-in-impact-paths",
-            Self::DeletedImpactPathsGlobFile => "deleted-impact-paths-glob-file",
-            Self::AlwaysModeNeverCached => "always-mode-never-cached",
-            Self::DependsOnPrerequisiteChain => "depends-on-prerequisite-chain",
-            Self::ShardedPlanUnionCompleteness => "sharded-plan-union-completeness",
-            Self::MixedPassFailBatchIsolation => "mixed-pass-fail-batch-isolation",
-            Self::ObjectFreezeSharedIdent => "object-freeze-shared-ident",
-            Self::ImplicitCoercionSideEffect => "implicit-coercion-side-effect",
-            Self::TopLevelLoadThrowPureTrap => "top-level-load-throw-pure-trap",
-            Self::ExistsSyncMissingAtBaseline => "exists-sync-missing-at-baseline",
-            Self::ReaddirSyncEmptyOrOvercapDir => "readdir-sync-empty-or-overcap-dir",
-            Self::CrossFileFsHelperAndUnresolved => "cross-file-fs-helper-and-unresolved",
-            Self::ExtendedFsAndExecReadApis => "extended-fs-and-exec-read-apis",
-            Self::GitignoredImpactPathsGlob => "gitignored-impact-paths-glob",
-            Self::UpstreamPackageExportsAndNestedTsconfig => {
-                "upstream-package-exports-and-nested-tsconfig"
-            }
-            Self::NonRootAndDotenvConfigFiles => "non-root-and-dotenv-config-files",
-        }
-    }
-
-    pub fn parse(raw: &str) -> Option<Self> {
-        Self::ALL.iter().copied().find(|k| k.as_str() == raw)
-    }
-
-    pub fn is_precision_noop(self) -> bool {
-        matches!(self, Self::UnusedPureExport | Self::CommentOrTypeOnlyEdit)
-    }
+    // --- Section B: Uncovered dad-test Subsystems (#71-#78) ---
+    TypecheckTypeOnlyAndAmbientDts,
+    ImportMetaGlobAddEditDelete,
+    SqlMigrationImpactAndCache,
+    LockfileAndConditionalExports,
+    TsxJsxAndBundlerQueryAssets,
+    VitestViMockHoistedAndConfigSetup,
+    ModuleBoundariesViolationAndFix,
+    RemoteHttpCacheFaultInjection,
+    // --- Section C: Additional JS/TS Language & Purity Traps (#79-#85) ---
+    DefaultReexportGymnastics,
+    ClassAndMemberDecoratorsSideEffect,
+    TaggedTemplateLiteralSideEffect,
+    TsNamespaceDeclarationMergingConstEnum,
+    NewCustomClassAndPureBuiltinEdge,
+    PureFactoriesPrecisionAndImpureArg,
+    DiamondExportStarShadowing,
+    // --- Section D: File Lifecycle, Paths, Git, OS, Concurrency & CLI (#86-#95) ---
+    NextjsSpecialPathChars,
+    CaseOnlyFileRename,
+    NewUntrackedFailingTestFile,
+    FileDeleteGitMvAndDeletionHunk,
+    StagedVsUnstagedSplitDiff,
+    MultiCommitMergeDetachedAndWorktree,
+    EncodingCrlfBomBinaryChmod,
+    ConcurrentParallelCacheWriters,
+    SameSizeSameMsEditAndEnvDrift,
+    CliFiltersWeightedShardAndStalePlanFile,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -272,6 +142,8 @@ pub struct WorkspaceShape {
     pub commit_before_plan: bool,
     pub use_plan_file: bool,
     pub use_shared_cache: bool,
+    #[serde(default)]
+    pub impact_pattern_idx: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

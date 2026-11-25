@@ -1,27 +1,17 @@
-//! Soundness, cache-integrity, and precision invariant verification for DST steps.
+//! Soundness, cache-integrity, typecheck, and precision invariant verification for 93-family DST.
 
 use crate::dad_client::{DadInvocation, ExecutedTaskView, PlannedTaskView};
 use crate::generator::GeneratedWorkspace;
-use crate::model::{DstSummary, MutationKind, MutationStats, SoundnessFailure};
+pub use crate::invariants_report::{
+    FailureRecord, WorkerAccumulator, merge_accumulator, record_cache_integrity_violation,
+    record_soundness_miss,
+};
+use crate::model::MutationKind;
 use crate::node_oracle::OracleTestOutcome;
 use crate::runner::DstConfig;
-use std::collections::BTreeMap;
+use crate::tsc_oracle::TscOracleOutcome;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
-
-#[derive(Default)]
-pub struct WorkerAccumulator {
-    pub scenarios_run: usize,
-    pub steps_executed: usize,
-    pub oracle_failures_total: usize,
-    pub soundness_misses_total: usize,
-    pub stale_cache_hits_total: usize,
-    pub cache_integrity_violations: usize,
-    pub harness_errors: usize,
-    pub precision_checks_total: usize,
-    pub precision_skips_total: usize,
-    pub by_mutation: BTreeMap<String, MutationStats>,
-    pub sample_failures: Vec<SoundnessFailure>,
-}
 
 pub struct StepCheckCtx<'a> {
     pub config: &'a DstConfig,
@@ -30,6 +20,10 @@ pub struct StepCheckCtx<'a> {
     pub mutation: MutationKind,
     pub step_idx: usize,
     pub oracle_outcomes: &'a BTreeMap<String, OracleTestOutcome>,
+    pub tsc_outcomes: &'a BTreeMap<String, TscOracleOutcome>,
+    pub extra_task_tests: &'a [(String, String)],
+    pub deleted_test_files: &'a [String],
+    pub expected_skipped_tasks: &'a [String],
 }
 
 pub fn verify_step_invariants(
@@ -37,11 +31,10 @@ pub fn verify_step_invariants(
     invocation: &DadInvocation,
     acc: &mut WorkerAccumulator,
 ) -> bool {
-    let stats = acc
-        .by_mutation
+    acc.by_mutation
         .entry(ctx.mutation.as_str().to_owned())
-        .or_default();
-    stats.steps += 1;
+        .or_default()
+        .steps += 1;
 
     let Some(result) = &invocation.envelope.result else {
         acc.harness_errors += 1;
@@ -64,8 +57,121 @@ pub fn verify_step_invariants(
         })
         .unwrap_or_default();
 
+    record_precision_stats(ctx, &result.plan.tasks, &plan_by_id, acc);
+
+    let deleted: BTreeSet<&str> = ctx.deleted_test_files.iter().map(String::as_str).collect();
+    let mut had_miss = false;
+    for (task_id, files) in &ctx.generated.task_tests {
+        for test_file in files {
+            if !deleted.contains(test_file.as_str()) {
+                had_miss |=
+                    check_node_test_failure(ctx, task_id, test_file, &plan_by_id, &run_by_id, acc);
+            }
+        }
+    }
+    for (task_id, test_file) in ctx.extra_task_tests {
+        had_miss |= check_node_test_failure(ctx, task_id, test_file, &plan_by_id, &run_by_id, acc);
+    }
+    for (task_id, outcome) in ctx.tsc_outcomes {
+        if !outcome.passed {
+            had_miss |= check_tsc_task_failure(ctx, task_id, &plan_by_id, &run_by_id, acc);
+        }
+    }
+    had_miss
+}
+
+fn check_node_test_failure(
+    ctx: &StepCheckCtx<'_>,
+    task_id: &str,
+    test_file: &str,
+    plan_by_id: &BTreeMap<&str, &PlannedTaskView>,
+    run_by_id: &BTreeMap<&str, &ExecutedTaskView>,
+    acc: &mut WorkerAccumulator,
+) -> bool {
+    if ctx.oracle_outcomes.get(test_file).is_none_or(|o| o.ok) {
+        return false;
+    }
+    bump_oracle_failure(ctx.mutation, acc);
+    if let Some((miss_kind, detail)) =
+        check_task_caught_failure(task_id, test_file, true, plan_by_id, run_by_id)
+    {
+        record_soundness_miss(
+            FailureRecord {
+                config: ctx.config,
+                workspace_dir: ctx.workspace_dir,
+                shape: &ctx.generated.shape,
+                step_idx: ctx.step_idx,
+                mutation: ctx.mutation,
+                kind: miss_kind,
+                task_id,
+                test_file,
+                detail,
+            },
+            miss_kind == "stale-cache-hit",
+            acc,
+        );
+        return true;
+    }
+    false
+}
+
+fn check_tsc_task_failure(
+    ctx: &StepCheckCtx<'_>,
+    task_id: &str,
+    plan_by_id: &BTreeMap<&str, &PlannedTaskView>,
+    run_by_id: &BTreeMap<&str, &ExecutedTaskView>,
+    acc: &mut WorkerAccumulator,
+) -> bool {
+    bump_oracle_failure(ctx.mutation, acc);
+    let tsconfig = ctx
+        .generated
+        .typecheck_tasks
+        .get(task_id)
+        .map(String::as_str)
+        .unwrap_or("tsconfig.json");
+    if let Some((miss_kind, detail)) =
+        check_task_caught_failure(task_id, tsconfig, false, plan_by_id, run_by_id)
+    {
+        record_soundness_miss(
+            FailureRecord {
+                config: ctx.config,
+                workspace_dir: ctx.workspace_dir,
+                shape: &ctx.generated.shape,
+                step_idx: ctx.step_idx,
+                mutation: ctx.mutation,
+                kind: miss_kind,
+                task_id,
+                test_file: tsconfig,
+                detail,
+            },
+            miss_kind == "stale-cache-hit",
+            acc,
+        );
+        return true;
+    }
+    false
+}
+
+fn bump_oracle_failure(mutation: MutationKind, acc: &mut WorkerAccumulator) {
+    acc.by_mutation
+        .entry(mutation.as_str().to_owned())
+        .or_default()
+        .oracle_failures += 1;
+    acc.oracle_failures_total += 1;
+}
+
+fn record_precision_stats(
+    ctx: &StepCheckCtx<'_>,
+    planned_tasks: &[PlannedTaskView],
+    plan_by_id: &BTreeMap<&str, &PlannedTaskView>,
+    acc: &mut WorkerAccumulator,
+) {
+    let stats = acc
+        .by_mutation
+        .entry(ctx.mutation.as_str().to_owned())
+        .or_default();
     if ctx.mutation.is_precision_noop() {
-        for task in &result.plan.tasks {
+        for task in planned_tasks {
             if task.id == "adv-always:test" {
                 continue;
             }
@@ -77,46 +183,16 @@ pub fn verify_step_invariants(
             }
         }
     }
-
-    let mut had_miss = false;
-    for (task_id, files) in &ctx.generated.task_tests {
-        for test_file in files {
-            let failed_in_oracle = ctx.oracle_outcomes.get(test_file).is_some_and(|o| !o.ok);
-            if !failed_in_oracle {
-                continue;
-            }
-            stats.oracle_failures += 1;
-            acc.oracle_failures_total += 1;
-            if let Some((miss_kind, detail)) =
-                check_task_caught_failure(task_id, test_file, &plan_by_id, &run_by_id)
-            {
-                had_miss = true;
-                stats.soundness_misses += 1;
-                acc.soundness_misses_total += 1;
-                if miss_kind == "stale-cache-hit" {
-                    stats.stale_cache_hits += 1;
-                    acc.stale_cache_hits_total += 1;
-                }
-                if acc.sample_failures.len() < ctx.config.max_sample_failures {
-                    acc.sample_failures.push(SoundnessFailure {
-                        seed: ctx.generated.shape.seed,
-                        step: ctx.step_idx,
-                        mutation: ctx.mutation,
-                        kind: miss_kind.to_owned(),
-                        task_id: task_id.clone(),
-                        test_file: test_file.clone(),
-                        detail,
-                        shape: ctx.generated.shape.clone(),
-                        kept_dir: ctx
-                            .config
-                            .keep_failed
-                            .then(|| ctx.workspace_dir.to_string_lossy().into_owned()),
-                    });
-                }
+    for task_id in ctx.expected_skipped_tasks {
+        if let Some(task) = plan_by_id.get(task_id.as_str()) {
+            stats.precision_checks += 1;
+            acc.precision_checks_total += 1;
+            if task.decision != "run" {
+                stats.precision_skips += 1;
+                acc.precision_skips_total += 1;
             }
         }
     }
-    had_miss
 }
 
 pub fn verify_failed_not_cached(
@@ -124,47 +200,71 @@ pub fn verify_failed_not_cached(
     repeat: &DadInvocation,
     acc: &mut WorkerAccumulator,
 ) -> bool {
-    let Some(result) = &repeat.envelope.result else {
-        return false;
-    };
-    let Some(run) = &result.run else {
+    let Some(run) = repeat.envelope.result.as_ref().and_then(|r| r.run.as_ref()) else {
         return false;
     };
     let mut violated = false;
     for (task_id, files) in &ctx.generated.task_tests {
         let failing_file = files
             .iter()
-            .find(|f| ctx.oracle_outcomes.get(*f).is_some_and(|o| !o.ok));
-        let Some(test_file) = failing_file else {
-            continue;
-        };
-        if let Some(executed) = run.tasks.iter().find(|t| t.id == *task_id)
-            && (executed.cached || (executed.status != "failed" && executed.exit_code == Some(0)))
-        {
-            violated = true;
-            acc.cache_integrity_violations += 1;
-            if acc.sample_failures.len() < ctx.config.max_sample_failures {
-                acc.sample_failures.push(SoundnessFailure {
-                    seed: ctx.generated.shape.seed,
-                    step: ctx.step_idx,
-                    mutation: ctx.mutation,
-                    kind: "failed-task-cached".to_owned(),
-                    task_id: task_id.clone(),
-                    test_file: test_file.clone(),
-                    detail: format!(
-                        "repeat run returned cached={} status={} exit={:?}",
-                        executed.cached, executed.status, executed.exit_code
-                    ),
-                    shape: ctx.generated.shape.clone(),
-                    kept_dir: ctx
-                        .config
-                        .keep_failed
-                        .then(|| ctx.workspace_dir.to_string_lossy().into_owned()),
-                });
-            }
+            .find(|f| ctx.oracle_outcomes.get(*f).is_some_and(|o| !o.ok))
+            .map(String::as_str)
+            .or_else(|| {
+                ctx.extra_task_tests
+                    .iter()
+                    .find(|(tid, f)| {
+                        tid == task_id && ctx.oracle_outcomes.get(f).is_some_and(|o| !o.ok)
+                    })
+                    .map(|(_, f)| f.as_str())
+            });
+        if let Some(test_file) = failing_file {
+            violated |= check_repeat_not_cached(ctx, task_id, test_file, &run.tasks, acc);
+        }
+    }
+    for (task_id, outcome) in ctx.tsc_outcomes {
+        if !outcome.passed {
+            let tsconfig = ctx
+                .generated
+                .typecheck_tasks
+                .get(task_id)
+                .map(String::as_str)
+                .unwrap_or("tsconfig.json");
+            violated |= check_repeat_not_cached(ctx, task_id, tsconfig, &run.tasks, acc);
         }
     }
     violated
+}
+
+fn check_repeat_not_cached(
+    ctx: &StepCheckCtx<'_>,
+    task_id: &str,
+    test_file: &str,
+    executed_tasks: &[ExecutedTaskView],
+    acc: &mut WorkerAccumulator,
+) -> bool {
+    if let Some(executed) = executed_tasks.iter().find(|t| t.id == task_id)
+        && (executed.cached || (executed.status != "failed" && executed.exit_code == Some(0)))
+    {
+        record_cache_integrity_violation(
+            FailureRecord {
+                config: ctx.config,
+                workspace_dir: ctx.workspace_dir,
+                shape: &ctx.generated.shape,
+                step_idx: ctx.step_idx,
+                mutation: ctx.mutation,
+                kind: "failed-task-cached",
+                task_id,
+                test_file,
+                detail: format!(
+                    "repeat run returned cached={} status={} exit={:?}",
+                    executed.cached, executed.status, executed.exit_code
+                ),
+            },
+            acc,
+        );
+        return true;
+    }
+    false
 }
 
 pub fn verify_unrelated_batch_isolation(
@@ -190,55 +290,27 @@ pub fn verify_unrelated_batch_isolation(
     if planned_ok && passed_ok {
         return false;
     }
-    acc.cache_integrity_violations += 1;
-    if acc.sample_failures.len() < ctx.config.max_sample_failures {
-        acc.sample_failures.push(SoundnessFailure {
-            seed: ctx.generated.shape.seed,
-            step: ctx.step_idx,
+    record_cache_integrity_violation(
+        FailureRecord {
+            config: ctx.config,
+            workspace_dir: ctx.workspace_dir,
+            shape: &ctx.generated.shape,
+            step_idx: ctx.step_idx,
             mutation: ctx.mutation,
-            kind: "batch-isolation-violation".to_owned(),
-            task_id: "unrelated:test".to_owned(),
-            test_file: "unrelated/control.test.ts".to_owned(),
+            kind: "batch-isolation-violation",
+            task_id: "unrelated:test",
+            test_file: "unrelated/control.test.ts",
             detail: format!("planned_ok={planned_ok} executed={executed:?}"),
-            shape: ctx.generated.shape.clone(),
-            kept_dir: ctx
-                .config
-                .keep_failed
-                .then(|| ctx.workspace_dir.to_string_lossy().into_owned()),
-        });
-    }
+        },
+        acc,
+    );
     true
-}
-
-pub fn merge_accumulator(summary: &mut DstSummary, acc: WorkerAccumulator, max_samples: usize) {
-    summary.scenarios_run += acc.scenarios_run;
-    summary.steps_executed += acc.steps_executed;
-    summary.oracle_failures_total += acc.oracle_failures_total;
-    summary.soundness_misses_total += acc.soundness_misses_total;
-    summary.stale_cache_hits_total += acc.stale_cache_hits_total;
-    summary.cache_integrity_violations += acc.cache_integrity_violations;
-    summary.harness_errors += acc.harness_errors;
-    summary.precision_checks_total += acc.precision_checks_total;
-    summary.precision_skips_total += acc.precision_skips_total;
-    for (name, stats) in acc.by_mutation {
-        let entry = summary.by_mutation.entry(name).or_default();
-        entry.steps += stats.steps;
-        entry.oracle_failures += stats.oracle_failures;
-        entry.soundness_misses += stats.soundness_misses;
-        entry.stale_cache_hits += stats.stale_cache_hits;
-        entry.precision_checks += stats.precision_checks;
-        entry.precision_skips += stats.precision_skips;
-    }
-    for failure in acc.sample_failures {
-        if summary.sample_failures.len() < max_samples {
-            summary.sample_failures.push(failure);
-        }
-    }
 }
 
 fn check_task_caught_failure(
     task_id: &str,
     test_file: &str,
+    check_selected_files: bool,
     plan_by_id: &BTreeMap<&str, &PlannedTaskView>,
     run_by_id: &BTreeMap<&str, &ExecutedTaskView>,
 ) -> Option<(&'static str, String)> {
@@ -251,7 +323,9 @@ fn check_task_caught_failure(
             format!("decision={} reason={}", planned.decision, planned.reason),
         ));
     }
-    if !planned.selected_files.is_empty() && !planned.selected_files.iter().any(|f| f == test_file)
+    if check_selected_files
+        && !planned.selected_files.is_empty()
+        && !planned.selected_files.iter().any(|f| f == test_file)
     {
         return Some((
             "narrowed-past-failing-test",

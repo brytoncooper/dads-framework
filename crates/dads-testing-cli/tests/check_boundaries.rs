@@ -436,3 +436,154 @@ fn refuses_when_no_boundaries_config_is_present() {
         "{resp}"
     );
 }
+
+#[test]
+fn ban_transitive_dependencies_checks_enclosing_and_root_package_jsons() {
+    let ws = BoundaryWorkspace::new("ban-transitive");
+    setup_standard_workspace(
+        &ws,
+        json!({
+            "banTransitiveDependencies": true,
+            "allow": ["exempt-pkg", "exempt-prefix-*"]
+        }),
+    );
+    ws.write(
+        "package.json",
+        &json!({
+            "name": "root-ws",
+            "dependencies": { "zod": "^3.0.0" },
+            "devDependencies": { "@acme/root-dev": "^1.0.0" }
+        })
+        .to_string(),
+    );
+    ws.write(
+        "libs/ui/package.json",
+        &json!({
+            "name": "@ws/ui",
+            "peerDependencies": { "react": "^19.0.0" },
+            "optionalDependencies": { "fsevents": "^2.3.0" }
+        })
+        .to_string(),
+    );
+    ws.write("libs/shared/src/index.ts", "export const shared = 1;\n");
+    ws.write(
+        "libs/ui/src/nested/index.ts",
+        r#"
+import ms from "ms";
+import sub from "@scope/undeclared/subpath";
+import { z } from "zod/v4";
+import { devHelper } from "@acme/root-dev/helper";
+import { useState } from "react";
+import fsevents from "fsevents";
+import { readFileSync } from "node:fs";
+import fs from "fs";
+import exempt from "exempt-pkg";
+import exemptPref from "exempt-prefix-one";
+import { shared } from "@ws/shared";
+export const all = [ms, sub, z, devHelper, useState, fsevents, readFileSync, fs, exempt, exemptPref, shared];
+"#,
+    );
+    ws.init_git_and_commit("baseline");
+
+    let resp = ws.check_boundaries(None, None, None);
+    assert_eq!(resp["ok"], true, "{resp}");
+    let violations = resp["result"]["boundaries"]["violations"]
+        .as_array()
+        .expect("violations array");
+    assert_eq!(violations.len(), 2, "expected only ms and @scope/undeclared: {violations:?}");
+    assert_eq!(violations[0]["rule"], "ban-transitive-dependency");
+    assert_eq!(violations[0]["specifier"], "ms");
+    assert!(
+        violations[0]["message"]
+            .as_str()
+            .is_some_and(|m| m.contains("\"ms\"")),
+        "{violations:?}"
+    );
+    assert_eq!(violations[1]["rule"], "ban-transitive-dependency");
+    assert_eq!(violations[1]["specifier"], "@scope/undeclared/subpath");
+    assert!(
+        violations[1]["message"]
+            .as_str()
+            .is_some_and(|m| m.contains("\"@scope/undeclared\"")),
+        "{violations:?}"
+    );
+}
+
+#[test]
+fn ignore_paths_and_exclude_projects_skip_origin_files_while_keeping_cycle_graph() {
+    let ws = BoundaryWorkspace::new("ignore-and-exclude");
+    setup_standard_workspace(
+        &ws,
+        json!({
+            "ignorePaths": [
+                "libs/ui/src/ignored-exact.ts",
+                "libs/ui/src/generated/**",
+                "libs/ui/scripts",
+                "**/*.mjs"
+            ],
+            "excludeProjects": ["server"],
+            "depConstraints": [
+                {
+                    "sourceTag": "env:browser",
+                    "bannedExternalImports": ["pg"]
+                },
+                {
+                    "sourceTag": "env:server",
+                    "bannedExternalImports": ["pg"]
+                }
+            ]
+        }),
+    );
+    // server is excluded from checking, so its banned `pg` import produces no violation,
+    // yet its `@ws/ui` edge remains in the project graph so `ui -> server` still detects a cycle.
+    ws.write(
+        "libs/server/src/index.ts",
+        "import pg from \"pg\";\nimport { ok } from \"@ws/ui\";\nexport const srv = [pg, ok];\n",
+    );
+    // Ignored via exact file match:
+    ws.write(
+        "libs/ui/src/ignored-exact.ts",
+        "import pg from \"pg\";\nexport const a = pg;\n",
+    );
+    // Ignored via `libs/ui/src/generated/**` glob:
+    ws.write(
+        "libs/ui/src/generated/sub/file.ts",
+        "import pg from \"pg\";\nexport const b = pg;\n",
+    );
+    // Ignored via directory prefix `libs/ui/scripts`:
+    ws.write(
+        "libs/ui/scripts/seed.ts",
+        "import pg from \"pg\";\nexport const c = pg;\n",
+    );
+    // Ignored via `**/*.mjs` glob:
+    ws.write(
+        "libs/ui/src/config.mjs",
+        "import pg from \"pg\";\nexport const d = pg;\n",
+    );
+    // Non-ignored file in ui: triggers both `banned-external-import` and `circular-dependency`.
+    ws.write(
+        "libs/ui/src/index.ts",
+        "import pg from \"pg\";\nimport { srv } from \"@ws/server\";\nexport const ok = [pg, srv];\n",
+    );
+    ws.init_git_and_commit("baseline");
+
+    let resp = ws.check_boundaries(None, None, None);
+    assert_eq!(resp["ok"], true, "{resp}");
+    let violations = resp["result"]["boundaries"]["violations"]
+        .as_array()
+        .expect("violations array");
+    assert_eq!(resp["result"]["boundaries"]["checkedFiles"], 1, "{resp}");
+    assert_eq!(violations.len(), 2, "{violations:?}");
+    assert!(
+        violations.iter().all(|v| v["file"] == "libs/ui/src/index.ts"),
+        "only libs/ui/src/index.ts should be checked: {violations:?}"
+    );
+    assert!(
+        violations.iter().any(|v| v["rule"] == "banned-external-import" && v["specifier"] == "pg"),
+        "{violations:?}"
+    );
+    assert!(
+        violations.iter().any(|v| v["rule"] == "circular-dependency" && v["specifier"] == "@ws/server"),
+        "{violations:?}"
+    );
+}

@@ -315,7 +315,8 @@ workspace directories it actually reads instead of widening to every change in
 the repository, and `workspace.boundaries` (`depConstraints` with `sourceTag`,
 `onlyDependOnLibsWithTags`, `notDependOnLibsWithTags`, `bannedExternalImports`,
 and `allowedExternalImports`; `allow`; `allowCircularSelfDependency`;
-`enforceBuildableLibDependency`; and `checkNestedImports`) for native
+`enforceBuildableLibDependency`; `checkNestedImports`;
+`banTransitiveDependencies`; `ignorePaths`; and `excludeProjects`) for native
 `dad-test check-boundaries` enforcement mirroring `@dads-framework/testing/eslint`.
 Projects may also carry optional `tags` alongside `project.json` metadata.
 

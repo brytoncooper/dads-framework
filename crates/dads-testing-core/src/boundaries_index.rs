@@ -6,7 +6,14 @@ use crate::manifest::Project;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+const DECLARED_DEP_FIELDS: &[&str] = &[
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+];
 
 const SKIP_DIRS: &[&str] = &[
     ".git",
@@ -36,9 +43,11 @@ struct WildcardAlias {
 
 #[derive(Debug, Clone)]
 pub(crate) struct BoundaryWorkspaceIndex {
+    workspace_root: PathBuf,
     projects: Vec<BoundaryProject>,
     exact_aliases: BTreeMap<String, String>,
     wildcard_aliases: Vec<WildcardAlias>,
+    root_declared_deps: BTreeSet<String>,
 }
 
 impl BoundaryWorkspaceIndex {
@@ -61,10 +70,13 @@ impl BoundaryWorkspaceIndex {
             }
         });
         let (exact_aliases, wildcard_aliases) = load_tsconfig_aliases(workspace_root);
+        let root_declared_deps = load_declared_deps(&workspace_root.join("package.json"));
         Self {
+            workspace_root: workspace_root.to_path_buf(),
             projects,
             exact_aliases,
             wildcard_aliases,
+            root_declared_deps,
         }
     }
 
@@ -112,6 +124,52 @@ impl BoundaryWorkspaceIndex {
         }
         None
     }
+
+    pub(crate) fn is_declared_for_file(
+        &self,
+        rel_file: &str,
+        package_name: &str,
+        cache: &mut BTreeMap<PathBuf, BTreeSet<String>>,
+    ) -> bool {
+        if self.root_declared_deps.contains(package_name) {
+            return true;
+        }
+        let abs_file = self.workspace_root.join(rel_file);
+        let mut cursor = abs_file.parent();
+        while let Some(dir) = cursor {
+            if dir == self.workspace_root || !dir.starts_with(&self.workspace_root) {
+                break;
+            }
+            let candidate = dir.join("package.json");
+            let declared = cache
+                .entry(candidate.clone())
+                .or_insert_with(|| load_declared_deps(&candidate));
+            if declared.contains(package_name) {
+                return true;
+            }
+            cursor = dir.parent();
+        }
+        false
+    }
+}
+
+fn load_declared_deps(pkg_json_path: &Path) -> BTreeSet<String> {
+    let Ok(raw) = fs::read_to_string(pkg_json_path) else {
+        return BTreeSet::new();
+    };
+    let Ok(json) = serde_json::from_str::<Value>(&raw) else {
+        return BTreeSet::new();
+    };
+    let Some(obj) = json.as_object() else {
+        return BTreeSet::new();
+    };
+    let mut declared = BTreeSet::new();
+    for field in DECLARED_DEP_FIELDS {
+        if let Some(section) = obj.get(*field).and_then(Value::as_object) {
+            declared.extend(section.keys().cloned());
+        }
+    }
+    declared
 }
 
 fn load_from_manifest(workspace_root: &Path, declared: &[Project]) -> Vec<BoundaryProject> {

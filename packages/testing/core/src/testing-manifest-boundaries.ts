@@ -15,6 +15,9 @@ export type TestingManifestWorkspaceBoundaries = {
   readonly allowCircularSelfDependency?: boolean;
   readonly enforceBuildableLibDependency?: boolean;
   readonly checkNestedImports?: boolean;
+  readonly banTransitiveDependencies?: boolean;
+  readonly ignorePaths?: readonly string[];
+  readonly excludeProjects?: readonly string[];
 };
 
 export function readWorkspaceBoundaries(
@@ -25,7 +28,16 @@ export function readWorkspaceBoundaries(
   const boundaries = readObj(value, where, subject);
   rejectExtraKeys(
     boundaries,
-    ["depConstraints", "allow", "allowCircularSelfDependency", "enforceBuildableLibDependency", "checkNestedImports"],
+    [
+      "depConstraints",
+      "allow",
+      "allowCircularSelfDependency",
+      "enforceBuildableLibDependency",
+      "checkNestedImports",
+      "banTransitiveDependencies",
+      "ignorePaths",
+      "excludeProjects",
+    ],
     where,
     subject,
   );
@@ -45,27 +57,57 @@ export function readWorkspaceBoundaries(
     subject,
   );
   const checkNestedImports = readOptBool(boundaries["checkNestedImports"], `${where}.checkNestedImports`, subject);
+  const banTransitiveDependencies = readOptBool(
+    boundaries["banTransitiveDependencies"],
+    `${where}.banTransitiveDependencies`,
+    subject,
+  );
+  const ignorePaths = readOptStrings(boundaries["ignorePaths"], `${where}.ignorePaths`, subject);
+  const excludeProjects = readOptStrings(boundaries["excludeProjects"], `${where}.excludeProjects`, subject);
   return {
     ...(depConstraints.length === 0 ? {} : { depConstraints }),
     ...(allow.length === 0 ? {} : { allow }),
     ...(allowCircularSelfDependency === true ? { allowCircularSelfDependency: true } : {}),
     ...(enforceBuildableLibDependency === true ? { enforceBuildableLibDependency: true } : {}),
     ...(checkNestedImports === true ? { checkNestedImports: true } : {}),
+    ...(banTransitiveDependencies === true ? { banTransitiveDependencies: true } : {}),
+    ...(ignorePaths.length === 0 ? {} : { ignorePaths }),
+    ...(excludeProjects.length === 0 ? {} : { excludeProjects }),
   };
 }
 
 export function serializeWorkspaceBoundaries(
   boundaries: TestingManifestWorkspaceBoundaries,
 ): TestingManifestWorkspaceBoundaries {
+  const depConstraints = nonEmpty(boundaries.depConstraints)?.map(serializeDepConstraint);
+  const allow = copyNonEmpty(boundaries.allow);
+  const ignorePaths = copyNonEmpty(boundaries.ignorePaths);
+  const excludeProjects = copyNonEmpty(boundaries.excludeProjects);
   return {
-    ...(boundaries.depConstraints === undefined || boundaries.depConstraints.length === 0
-      ? {}
-      : { depConstraints: boundaries.depConstraints.map(serializeDepConstraint) }),
-    ...(boundaries.allow === undefined || boundaries.allow.length === 0 ? {} : { allow: [...boundaries.allow] }),
+    ...(depConstraints === undefined ? {} : { depConstraints }),
+    ...(allow === undefined ? {} : { allow }),
+    ...serializeBoundaryFlags(boundaries),
+    ...(ignorePaths === undefined ? {} : { ignorePaths }),
+    ...(excludeProjects === undefined ? {} : { excludeProjects }),
+  };
+}
+
+function serializeBoundaryFlags(boundaries: TestingManifestWorkspaceBoundaries): TestingManifestWorkspaceBoundaries {
+  return {
     ...(boundaries.allowCircularSelfDependency === true ? { allowCircularSelfDependency: true } : {}),
     ...(boundaries.enforceBuildableLibDependency === true ? { enforceBuildableLibDependency: true } : {}),
     ...(boundaries.checkNestedImports === true ? { checkNestedImports: true } : {}),
+    ...(boundaries.banTransitiveDependencies === true ? { banTransitiveDependencies: true } : {}),
   };
+}
+
+function nonEmpty<T>(items: readonly T[] | undefined): readonly T[] | undefined {
+  return items === undefined || items.length === 0 ? undefined : items;
+}
+
+function copyNonEmpty(items: readonly string[] | undefined): readonly string[] | undefined {
+  const list = nonEmpty(items);
+  return list === undefined ? undefined : [...list];
 }
 
 function parseManifestDepConstraints(

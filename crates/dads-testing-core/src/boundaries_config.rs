@@ -19,6 +19,12 @@ pub struct WorkspaceBoundaries {
     pub enforce_buildable_lib_dependency: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub check_nested_imports: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub ban_transitive_dependencies: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ignore_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude_projects: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -93,11 +99,19 @@ pub(crate) fn validate_workspace_boundaries(
             &format!("workspace.boundaries.depConstraints[{index}].allowedExternalImports"),
         )?;
     }
-    for (index, pattern) in boundaries.allow.iter().enumerate() {
-        if pattern.trim().is_empty() {
-            return Err(message(format!(
-                "workspace.boundaries.allow[{index}] must not be empty."
-            )));
+    validate_non_empty_strings(&boundaries.allow, "workspace.boundaries.allow")?;
+    validate_non_empty_strings(&boundaries.ignore_paths, "workspace.boundaries.ignorePaths")?;
+    validate_non_empty_strings(
+        &boundaries.exclude_projects,
+        "workspace.boundaries.excludeProjects",
+    )?;
+    Ok(())
+}
+
+fn validate_non_empty_strings(values: &[String], field: &str) -> Result<(), TestingError> {
+    for (index, item) in values.iter().enumerate() {
+        if item.trim().is_empty() {
+            return Err(message(format!("{field}[{index}] must not be empty.")));
         }
     }
     Ok(())
@@ -108,11 +122,7 @@ fn validate_optional_non_empty_strings(
     field: &str,
 ) -> Result<(), TestingError> {
     if let Some(items) = values {
-        for (index, item) in items.iter().enumerate() {
-            if item.trim().is_empty() {
-                return Err(message(format!("{field}[{index}] must not be empty.")));
-            }
-        }
+        validate_non_empty_strings(items, field)?;
     }
     Ok(())
 }

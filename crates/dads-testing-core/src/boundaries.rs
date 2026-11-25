@@ -5,16 +5,16 @@ use crate::boundaries_config::{
 };
 use crate::boundaries_index::{BoundaryProject, BoundaryWorkspaceIndex};
 use crate::boundaries_match::{
-    IGNORED_SPECIFIER_PREFIXES, bfs_reaches, extract_package_name, format_quoted_list,
-    has_package_subpath, is_node_builtin, matches_allow, matches_any_tag,
-    matches_external_pattern, normalize_relative_posix,
+    IGNORED_SPECIFIER_PREFIXES, bfs_reaches, build_project_graph, extract_package_name,
+    format_quoted_list, is_nested_import, is_node_builtin, matches_allow, matches_any_tag,
+    matches_external_pattern, matches_ignore_path, normalize_relative_posix,
+    resolve_non_relative_target,
 };
-use crate::graph::{DependencyGraph, ImportFact, ModuleNode};
+use crate::graph::{DependencyGraph, ImportFact};
 use crate::manifest::Project;
 use crate::protocol::PROTOCOL_SCHEMA_VERSION;
-use crate::scope::is_standard_test_path;
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub(crate) fn check_boundaries(
     workspace_root: &Path,
@@ -28,7 +28,13 @@ pub(crate) fn check_boundaries(
     modules.sort_by(|left, right| left.path.cmp(&right.path));
 
     let project_graph = build_project_graph(&modules, &index, config);
+    let excluded_projects: BTreeSet<&str> = config
+        .exclude_projects
+        .iter()
+        .map(String::as_str)
+        .collect();
     let mut reach_cache = BTreeMap::new();
+    let mut package_json_cache = BTreeMap::new();
     let mut violations = Vec::new();
     let mut checked_files = 0usize;
 
@@ -38,9 +44,19 @@ pub(crate) fn check_boundaries(
         {
             continue;
         }
+        if config
+            .ignore_paths
+            .iter()
+            .any(|pattern| matches_ignore_path(&module.path, pattern))
+        {
+            continue;
+        }
         let Some(source_project) = index.find_project_for_path(&module.path) else {
             continue;
         };
+        if excluded_projects.contains(source_project.id.as_str()) {
+            continue;
+        }
         checked_files += 1;
         let matching_constraints: Vec<&DepConstraint> = config
             .dep_constraints
@@ -55,6 +71,7 @@ pub(crate) fn check_boundaries(
             config,
             project_graph: &project_graph,
             reach_cache: &mut reach_cache,
+            package_json_cache: &mut package_json_cache,
             source_project,
             matching_constraints: &matching_constraints,
             file: &module.path,
@@ -88,6 +105,7 @@ struct CheckCtx<'a> {
     config: &'a WorkspaceBoundaries,
     project_graph: &'a BTreeMap<String, BTreeSet<String>>,
     reach_cache: &'a mut BTreeMap<(String, String), bool>,
+    package_json_cache: &'a mut BTreeMap<PathBuf, BTreeSet<String>>,
     source_project: &'a BoundaryProject,
     matching_constraints: &'a [&'a DepConstraint],
     file: &'a str,
@@ -351,62 +369,21 @@ fn check_external_import(
             }
         }
     }
-}
 
-fn build_project_graph(
-    modules: &[ModuleNode],
-    index: &BoundaryWorkspaceIndex,
-    config: &WorkspaceBoundaries,
-) -> BTreeMap<String, BTreeSet<String>> {
-    let mut graph: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for module in modules {
-        if is_standard_test_path(&module.path) || module.path.ends_with(".d.ts") {
-            continue;
-        }
-        let Some(source) = index.find_project_for_path(&module.path) else {
-            continue;
-        };
-        if source.root == "." {
-            continue;
-        }
-        for import in &module.imports {
-            let raw = import.specifier.as_str();
-            if raw.is_empty() || matches_allow(raw, &config.allow) {
-                continue;
-            }
-            let spec = raw.split('?').next().unwrap_or(raw);
-            if spec.starts_with('.') || spec.starts_with('/') {
-                continue;
-            }
-            if let Some(target) = resolve_non_relative_target(index, import, spec)
-                && target.id != source.id
-            {
-                graph
-                    .entry(source.id.clone())
-                    .or_default()
-                    .insert(target.id.clone());
-            }
-        }
-    }
-    graph
-}
-
-fn resolve_non_relative_target<'a>(
-    index: &'a BoundaryWorkspaceIndex,
-    import: &ImportFact,
-    specifier: &str,
-) -> Option<&'a BoundaryProject> {
-    if let Some(resolved) = &import.resolved_path
-        && let Some(project) = index.find_project_for_path(resolved)
+    if ctx.config.ban_transitive_dependencies
+        && !ctx
+            .index
+            .is_declared_for_file(ctx.file, pkg_name, ctx.package_json_cache)
     {
-        return Some(project);
+        ctx.emit(
+            line,
+            column,
+            None,
+            raw_specifier,
+            "ban-transitive-dependency",
+            format!(
+                "Projects cannot import transitive dependency \"{pkg_name}\" (via \"{raw_specifier}\"). Declare it in package.json."
+            ),
+        );
     }
-    index.resolve_alias_target(specifier)
-}
-
-fn is_nested_import(index: &BoundaryWorkspaceIndex, specifier: &str) -> bool {
-    if index.is_exact_alias(specifier) {
-        return false;
-    }
-    index.matches_wildcard_alias(specifier) || has_package_subpath(specifier)
 }

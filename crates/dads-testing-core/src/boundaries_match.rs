@@ -1,6 +1,10 @@
 //! Pattern matching, path normalization, Node builtin detection, and cycle-graph reachability
 //! helpers for native module-boundary enforcement.
 
+use crate::boundaries_config::WorkspaceBoundaries;
+use crate::boundaries_index::{BoundaryProject, BoundaryWorkspaceIndex};
+use crate::graph::{ImportFact, ModuleNode};
+use crate::scope::{is_standard_test_path, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub(crate) const IGNORED_SPECIFIER_PREFIXES: &[&str] = &["virtual:", "data:", "http:", "https:"];
@@ -178,4 +182,74 @@ pub(crate) fn format_quoted_list(items: &[String]) -> String {
         .map(|item| format!("\"{item}\""))
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+pub(crate) fn matches_ignore_path(path: &str, pattern: &str) -> bool {
+    let clean_path = path.strip_prefix("./").unwrap_or(path);
+    let clean_pattern = pattern
+        .strip_prefix("./")
+        .unwrap_or(pattern)
+        .trim_end_matches('/');
+    if clean_pattern.is_empty() {
+        return false;
+    }
+    path_matches_impact(clean_path, clean_pattern)
+}
+
+pub(crate) fn build_project_graph(
+    modules: &[ModuleNode],
+    index: &BoundaryWorkspaceIndex,
+    config: &WorkspaceBoundaries,
+) -> BTreeMap<String, BTreeSet<String>> {
+    let mut graph: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for module in modules {
+        if is_standard_test_path(&module.path) || module.path.ends_with(".d.ts") {
+            continue;
+        }
+        let Some(source) = index.find_project_for_path(&module.path) else {
+            continue;
+        };
+        if source.root == "." {
+            continue;
+        }
+        for import in &module.imports {
+            let raw = import.specifier.as_str();
+            if raw.is_empty() || matches_allow(raw, &config.allow) {
+                continue;
+            }
+            let spec = raw.split('?').next().unwrap_or(raw);
+            if spec.starts_with('.') || spec.starts_with('/') {
+                continue;
+            }
+            if let Some(target) = resolve_non_relative_target(index, import, spec)
+                && target.id != source.id
+            {
+                graph
+                    .entry(source.id.clone())
+                    .or_default()
+                    .insert(target.id.clone());
+            }
+        }
+    }
+    graph
+}
+
+pub(crate) fn resolve_non_relative_target<'a>(
+    index: &'a BoundaryWorkspaceIndex,
+    import: &ImportFact,
+    specifier: &str,
+) -> Option<&'a BoundaryProject> {
+    if let Some(resolved) = &import.resolved_path
+        && let Some(project) = index.find_project_for_path(resolved)
+    {
+        return Some(project);
+    }
+    index.resolve_alias_target(specifier)
+}
+
+pub(crate) fn is_nested_import(index: &BoundaryWorkspaceIndex, specifier: &str) -> bool {
+    if index.is_exact_alias(specifier) {
+        return false;
+    }
+    index.matches_wildcard_alias(specifier) || has_package_subpath(specifier)
 }

@@ -297,6 +297,9 @@ describe("testing manifest", () => {
           allowCircularSelfDependency: true,
           enforceBuildableLibDependency: true,
           checkNestedImports: true,
+          banTransitiveDependencies: true,
+          ignorePaths: ["eslint.config.mjs", "infrastructure/**", "**/*.mjs"],
+          excludeProjects: ["legacy-scripts"],
         },
       },
       projects: [{ id: "ui", root: "libs/ui", tags: ["env:browser"] }],
@@ -316,12 +319,21 @@ describe("testing manifest", () => {
     expect(manifest.workspace.boundaries?.allowCircularSelfDependency).toBe(true);
     expect(manifest.workspace.boundaries?.enforceBuildableLibDependency).toBe(true);
     expect(manifest.workspace.boundaries?.checkNestedImports).toBe(true);
+    expect(manifest.workspace.boundaries?.banTransitiveDependencies).toBe(true);
+    expect(manifest.workspace.boundaries?.ignorePaths).toEqual(["eslint.config.mjs", "infrastructure/**", "**/*.mjs"]);
+    expect(manifest.workspace.boundaries?.excludeProjects).toEqual(["legacy-scripts"]);
     expect(manifest.projects[0]?.tags).toEqual(["env:browser"]);
     expect(parseTestingManifest(serializeTestingManifest(manifest), "round-trip")).toEqual(manifest);
 
     expect(() =>
       parseTestingManifest(text.replace('"checkNestedImports":true', '"unknownBoundaryKey":true'), "dads.testing.json"),
     ).toThrow(/unknown key "unknownBoundaryKey"/);
+    expect(() =>
+      parseTestingManifest(
+        text.replace('"banTransitiveDependencies":true', '"banTransitiveDependencies":"yes"'),
+        "dads.testing.json",
+      ),
+    ).toThrow(/banTransitiveDependencies must be a boolean/);
   });
 });
 

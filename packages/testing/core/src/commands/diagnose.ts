@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { OptionSpecification } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
-import type { DadTestCommand } from "../dad-test-cli.js";
+import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
 import { diagnoseNativeNxTesting } from "../nx/nx-native-workspace.js";
 import { diagnoseTesting } from "../testing-api.js";
 import type {
@@ -13,12 +13,15 @@ import type {
   TestingWideningCulprit,
 } from "../testing-api.js";
 import { defaultTestingManifestFileName } from "../testing-manifest.js";
+import { applyDiagnoseFixes, resolveFixableManifestPath, type DiagnoseFixResult } from "./diagnose-fix.js";
 
 const diagnoseOptions: readonly OptionSpecification[] = [
   { name: "--manifest", kind: "value" },
   { name: "--max-workspace-uncertainties", kind: "value" },
   { name: "--fail-on-workspace-uncertainties", kind: "flag" },
   { name: "--max-unowned-files", kind: "value" },
+  { name: "--fix", kind: "flag" },
+  { name: "--dry-run", kind: "flag" },
 ];
 
 /**
@@ -29,19 +32,33 @@ const diagnoseOptions: readonly OptionSpecification[] = [
  * When invoked in an Nx workspace without a `dads.testing.json`, it runs
  * diagnosis directly through the native Nx adapter so the quickstart works
  * with zero hand-authored manifest.
+ *
+ * With `--fix` (and optional `--dry-run`), it computes and applies safe
+ * manifest remediations to `dads.testing.json` after validating with `plan`.
  */
 export const diagnoseCommand: DadTestCommand = {
   options: diagnoseOptions,
   execute: async (parsed, io, json) => {
     const manifestPath = parsed.values.get("--manifest");
+    const fix = parsed.flags.has("--fix");
+    const dryRun = parsed.flags.has("--dry-run");
+    if (dryRun && !fix) {
+      throw new Error("--dry-run requires --fix.");
+    }
     const maxWorkspace = resolveMaxWorkspaceThreshold(parsed);
     const maxUnowned = parseOptionalNonNegativeInt(parsed.values.get("--max-unowned-files"), "--max-unowned-files");
-    const diagnosis = await runDiagnosis(io.cwd, manifestPath, io.nativeBinary);
-    if (json) {
-      writeCommandSuccess(io, json, "diagnose", diagnosis);
-    } else {
-      io.stdout(renderDiagnosis(diagnosis));
-    }
+    if (fix) resolveFixableManifestPath(io.cwd, manifestPath);
+    const diagnosis = await runDiagnosis(io.cwd, manifestPath, io.nativeBinary, fix);
+    const fixResult = fix
+      ? await applyDiagnoseFixes({
+          workspaceRoot: io.cwd,
+          ...(manifestPath === undefined ? {} : { manifestPath }),
+          diagnosis,
+          dryRun,
+          ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
+        })
+      : undefined;
+    writeDiagnoseOutput(io, json, diagnosis, fixResult);
     const failures = checkDiagnoseThresholds(diagnosis, maxWorkspace, maxUnowned);
     if (failures.length > 0) {
       io.stderr(`${failures.join("\n")}\n`);
@@ -50,6 +67,35 @@ export const diagnoseCommand: DadTestCommand = {
     return 0;
   },
 };
+
+function writeDiagnoseOutput(
+  io: DadTestCliIo,
+  json: boolean,
+  diagnosis: TestingDiagnoseResult,
+  fix: DiagnoseFixResult | undefined,
+): void {
+  if (json) {
+    writeCommandSuccess(io, json, "diagnose", fix === undefined ? diagnosis : { ...diagnosis, fix });
+    return;
+  }
+  const report = renderDiagnosis(diagnosis);
+  io.stdout(fix === undefined ? report : `${report}\n${renderDiagnoseFixReport(fix)}`);
+}
+
+/** Renders the `--fix` summary block appended in human mode. */
+export function renderDiagnoseFixReport(result: DiagnoseFixResult): string {
+  if (result.changes.length === 0) {
+    return `diagnose --fix: no safe automated fixes applicable to ${result.manifestPath}.\n`;
+  }
+  const heading = result.dryRun
+    ? `diagnose --fix (dry-run): ${String(result.changes.length)} planned change(s) for ${result.manifestPath}:`
+    : `diagnose --fix: applied ${String(result.changes.length)} change(s) to ${result.manifestPath} (validated with dad-test plan):`;
+  const lines = [heading];
+  for (const change of result.changes) {
+    lines.push(`  + ${change.field}: ${change.summary}`, `    why: ${change.reason}`);
+  }
+  return `${lines.join("\n")}\n`;
+}
 
 function resolveMaxWorkspaceThreshold(parsed: {
   readonly flags: ReadonlySet<string>;
@@ -106,8 +152,9 @@ async function runDiagnosis(
   workspaceRoot: string,
   manifestPath: string | undefined,
   nativeBinary: string | undefined,
+  requireManifest: boolean,
 ): Promise<TestingDiagnoseResult> {
-  if (shouldDiagnoseViaNx(workspaceRoot, manifestPath)) {
+  if (!requireManifest && shouldDiagnoseViaNx(workspaceRoot, manifestPath)) {
     const nxResult = await diagnoseNativeNxTesting({
       workspaceRoot,
       ...(nativeBinary === undefined ? {} : { nativeBinary }),

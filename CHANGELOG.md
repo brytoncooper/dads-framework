@@ -4,6 +4,18 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.8.1] - 2026-11-24
+
+Independent patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Added
+
+- **Full ESLint boundary parity in `dad-test check-boundaries`:** Added `banTransitiveDependencies` (checks nearest enclosing and root `package.json` dependency declarations) plus `ignorePaths` and `excludeProjects` scoping on `workspace.boundaries`.
+
+### Fixed
+
+- **Native package `"bin"` collision:** Removed the duplicate `"bin": { "dad-test": ... }` field from all five `@dads-framework/testing-native-*` optional packages so incremental `npm install` never overwrites `@dads-framework/testing`'s JS CLI wrapper symlink.
+
 ## [@dads-framework/testing 0.8.0] - 2026-11-24
 
 Independent feature release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

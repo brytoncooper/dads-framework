@@ -25,6 +25,7 @@ mod issues;
 mod persist;
 mod receipt_cache;
 mod receipt_inputs;
+mod receipt_policy;
 mod receipts;
 #[cfg(test)]
 mod receipts_tests;

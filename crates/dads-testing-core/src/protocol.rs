@@ -76,6 +76,8 @@ pub struct NativeRequest {
     pub hotspots: Option<HotspotsOptions>,
     #[serde(default)]
     pub boundaries_config_path: Option<String>,
+    #[serde(default)]
+    pub enforce_declared_reads: bool,
 }
 
 impl Default for NativeRequest {
@@ -104,6 +106,7 @@ impl Default for NativeRequest {
             plan_file: None,
             hotspots: None,
             boundaries_config_path: None,
+            enforce_declared_reads: false,
         }
     }
 }

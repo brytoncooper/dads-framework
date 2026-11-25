@@ -13,6 +13,7 @@ pub(crate) struct PlanFilters<'a> {
     pub(crate) exclude_projects: &'a [String],
     pub(crate) shard: Option<TaskShard>,
     pub(crate) shard_weights: &'a BTreeMap<String, f64>,
+    pub(crate) enforce_declared_reads: bool,
 }
 
 pub(super) fn matches_file_narrowing(path: &str, narrowing: &FileNarrowing) -> bool {

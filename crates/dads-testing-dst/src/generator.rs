@@ -2,6 +2,7 @@
 
 use crate::generator_advanced::write_advanced_workspace;
 use crate::generator_manifest::{ManifestInputs, write_manifest, write_root_config_files};
+use crate::generator_section_a::write_section_a_workspace;
 use crate::model::{BarrelStyle, FallbackMode, WorkspaceShape};
 use crate::node_oracle::OracleTestSpec;
 use crate::rng::SeededRng;
@@ -59,7 +60,20 @@ pub fn generate_workspace(
     write_core_and_billing(root, shape)?;
     write_settings(root)?;
     write_ui_and_consumers(root, shape)?;
-    let adv = write_advanced_workspace(root, external_flag_path, shape)?;
+    let mut adv = write_advanced_workspace(root, external_flag_path, shape)?;
+    let sec_a = write_section_a_workspace(root)?;
+    for file in &sec_a.adv_test_files {
+        adv.oracle_tests.push(OracleTestSpec {
+            file: file.clone(),
+            setup_file: None,
+            env: BTreeMap::new(),
+        });
+    }
+    adv.oracle_tests.extend(sec_a.extra_oracle_tests);
+    if let Some(adv_files) = adv.task_tests.get_mut("adv:test") {
+        adv_files.extend(sec_a.adv_test_files);
+    }
+    adv.task_tests.extend(sec_a.extra_task_tests);
     write_manifest(
         &ManifestInputs {
             root,
@@ -104,7 +118,10 @@ pub fn generate_workspace(
     task_tests.insert("ui:test".to_owned(), ui_files);
     task_tests.insert(
         "impact-consumer:test".to_owned(),
-        vec!["impact-consumer/flag.test.ts".to_owned()],
+        vec![
+            "impact-consumer/flag.test.ts".to_owned(),
+            "impact-consumer/ignored-glob.test.ts".to_owned(),
+        ],
     );
     task_tests.insert(
         "unrelated:test".to_owned(),

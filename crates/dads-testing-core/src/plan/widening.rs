@@ -1,6 +1,10 @@
 //! Turning changed paths into impacted projects. Every step that cannot prove an answer records
 //! a located issue and widens, so a plan is never quietly narrower than the evidence supports.
 use super::PlanEvidence;
+use super::widening_fs::{
+    collect_graph_changed_paths, matching_fs_dir_nodes, record_fs_dir_reachable_path,
+    widen_unresolved_fs_readers,
+};
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
@@ -90,40 +94,14 @@ pub(super) fn widen_through_graph<'a>(
     manifest: &'a TestingManifest,
     scope: &ResolvedScope,
     graph: Option<&DependencyGraph>,
+    enforce_declared_reads: bool,
     evidence: &mut PlanEvidence<'a>,
 ) {
     if evidence.full_fallback || scope.changed_paths.is_empty() || !manifest.declares_graph_reader()
     {
         return;
     }
-    let mut changed_paths: Vec<String> = scope
-        .changed_paths
-        .iter()
-        .filter(|path| {
-            !manifest
-                .workspace
-                .ignore_paths
-                .iter()
-                .any(|pattern| path_matches_impact(path, pattern))
-        })
-        .filter(|path| !is_declared_non_code(path, &manifest.workspace.non_code_suffixes))
-        .filter(|path| !evidence.lockfile_handled_paths.contains(*path))
-        .filter(|path| !evidence.tsconfig_handled_paths.contains(*path))
-        .filter(|path| {
-            !evidence.sql_handled_paths.contains(*path)
-                || graph.is_some_and(|g| g.contains_path(path))
-        })
-        .cloned()
-        .collect();
-    for seeded in evidence
-        .lockfile_seeded_modules
-        .iter()
-        .chain(&evidence.tsconfig_seeded_modules)
-    {
-        if !changed_paths.contains(seeded) {
-            changed_paths.push(seeded.clone());
-        }
-    }
+    let changed_paths = collect_graph_changed_paths(manifest, scope, graph, evidence);
     if changed_paths.is_empty() {
         return;
     }
@@ -131,10 +109,15 @@ pub(super) fn widen_through_graph<'a>(
         record_missing_frontend(manifest, evidence);
         return;
     };
-    let (covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
+    let (mut covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
         .iter()
         .cloned()
         .partition(|path| graph.contains_path(path));
+    for dir_node in matching_fs_dir_nodes(graph, &changed_paths) {
+        if !covered_paths.contains(&dir_node) {
+            covered_paths.push(dir_node);
+        }
+    }
     let has_non_test_reachability = manifest
         .tasks
         .iter()
@@ -149,6 +132,7 @@ pub(super) fn widen_through_graph<'a>(
             runtime_reachable.uncertainties,
             evidence,
             true,
+            enforce_declared_reads,
         );
         evidence.reached_edges = runtime_reachable.edges;
         if has_non_test_reachability {
@@ -161,11 +145,15 @@ pub(super) fn widen_through_graph<'a>(
                 full_reachable.uncertainties,
                 evidence,
                 false,
+                enforce_declared_reads,
             );
         }
     }
     if !uncovered_paths.is_empty() {
         record_uncovered_paths(manifest, &uncovered_paths, evidence);
+        if !enforce_declared_reads {
+            widen_unresolved_fs_readers(manifest, graph, evidence, has_non_test_reachability);
+        }
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
         record_reachable_uncertainties(
             manifest,
@@ -174,6 +162,7 @@ pub(super) fn widen_through_graph<'a>(
             workspace_uncertainties.clone(),
             evidence,
             true,
+            enforce_declared_reads,
         );
         if has_non_test_reachability {
             record_reachable_uncertainties(
@@ -183,13 +172,10 @@ pub(super) fn widen_through_graph<'a>(
                 workspace_uncertainties,
                 evidence,
                 false,
+                enforce_declared_reads,
             );
         }
     }
-}
-
-fn is_declared_non_code(path: &str, suffixes: &[String]) -> bool {
-    suffixes.iter().any(|suffix| path.ends_with(suffix))
 }
 
 /// No frontend answered at all: in a multi-project workspace, project dependencies cannot be
@@ -282,6 +268,9 @@ fn record_reachable_paths<'a>(
     for_runtime_tests: bool,
 ) {
     for path in paths {
+        if record_fs_dir_reachable_path(manifest, path, evidence, for_runtime_tests) {
+            continue;
+        }
         if for_runtime_tests {
             evidence.reached_paths.insert(path.clone());
         }
@@ -330,8 +319,12 @@ fn record_reachable_uncertainties<'a>(
     uncertainties: Vec<GraphUncertainty>,
     evidence: &mut PlanEvidence<'a>,
     for_runtime_tests: bool,
+    enforce_declared_reads: bool,
 ) {
     for uncertainty in uncertainties {
+        if uncertainty.code == "unresolved-fs-read" && enforce_declared_reads {
+            continue;
+        }
         if uncertainty.scope == GraphUncertaintyScope::WholeWorkspace
             && let Some(prefixes) = manifest
                 .workspace

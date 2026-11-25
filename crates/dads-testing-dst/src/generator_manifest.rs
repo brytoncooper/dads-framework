@@ -16,8 +16,11 @@ pub struct ManifestInputs<'a> {
 }
 
 pub fn write_root_config_files(root: &Path, shape: &WorkspaceShape) -> Result<(), String> {
-    fs::write(root.join(".gitignore"), "build-dep/dist/\n")
-        .map_err(|e| format!("write .gitignore: {e}"))?;
+    fs::write(
+        root.join(".gitignore"),
+        "build-dep/dist/\nsettings/generated-ignored/\n.env.test\n",
+    )
+    .map_err(|e| format!("write .gitignore: {e}"))?;
     fs::write(
         root.join("package.json"),
         "{\n  \"name\": \"dst-workspace\",\n  \"type\": \"module\",\n  \"imports\": {\n    \"#subpath\": \"./lang/subpath-target.ts\"\n  }\n}\n",
@@ -59,6 +62,7 @@ pub fn write_manifest(inputs: &ManifestInputs<'_>, rng: &mut SeededRng) -> Resul
                 "taskIds": [
                     "ui:test",
                     "adv:test",
+                    "adv-dyn-fs:test",
                     "adv-always:test",
                     "adv-env:test",
                     "impact-consumer:test",
@@ -100,7 +104,9 @@ fn build_projects(shape: &WorkspaceShape) -> Value {
         { "id": "settings", "root": "settings", "fallbackDependencies": [] },
         { "id": "ui", "root": "ui", "fallbackDependencies": ui_deps },
         { "id": "lang", "root": "lang", "fallbackDependencies": [] },
+        { "id": "lang-pkg", "root": "lang-pkg", "fallbackDependencies": [] },
         { "id": "adv", "root": "adv", "fallbackDependencies": adv_deps },
+        { "id": "adv-dyn-fs", "root": "adv-dyn-fs", "fallbackDependencies": [] },
         { "id": "adv-always", "root": "adv-always", "fallbackDependencies": [] },
         { "id": "adv-env", "root": "adv-env", "fallbackDependencies": [] },
         { "id": "impact-consumer", "root": "impact-consumer", "fallbackDependencies": [] },
@@ -145,6 +151,7 @@ fn build_tasks(inputs: &ManifestInputs<'_>, rng: &mut SeededRng) -> Value {
     let impact_paths = vec![
         impact_pattern.to_owned(),
         "settings/impact-*.json".to_owned(),
+        "settings/generated-ignored/*.json".to_owned(),
     ];
 
     let mut always_env = BTreeMap::new();
@@ -168,6 +175,12 @@ fn build_tasks(inputs: &ManifestInputs<'_>, rng: &mut SeededRng) -> Value {
             "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "adv"), shape.use_file_narrowing, None, &empty_env),
             "dependsOn": [],
             "impact": { "mode": "reachability", "paths": adv_impact_paths }
+        },
+        {
+            "id": "adv-dyn-fs:test", "project": "adv-dyn-fs", "kind": "test", "cache": true,
+            "execution": build_execution(inputs.node_bin, project_args(&runner_arg, "adv-dyn-fs"), false, None, &empty_env),
+            "dependsOn": [],
+            "impact": { "mode": "reachability", "paths": [] }
         },
         {
             "id": "adv-always:test", "project": "adv-always", "kind": "test", "cache": true,

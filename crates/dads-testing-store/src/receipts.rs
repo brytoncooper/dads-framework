@@ -22,7 +22,7 @@ use std::process::Command;
 use std::sync::OnceLock;
 
 const RECEIPT_SCHEMA_VERSION: u32 = 1;
-const RECEIPT_KEY_DOMAIN: &[u8] = b"dads-testing-receipt-v4\0";
+const RECEIPT_KEY_DOMAIN: &[u8] = b"dads-testing-receipt-v5\0";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

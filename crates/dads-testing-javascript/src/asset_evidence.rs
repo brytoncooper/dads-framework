@@ -80,7 +80,16 @@ pub(crate) fn asset_changed_evidence(
 
     let mut evidence = Vec::new();
     for path in asset_paths {
-        if changed.contains(path) || untracked.contains(path) {
+        let is_changed = if let Some(dir) = path.strip_prefix("fs-dir:") {
+            changed.iter().chain(untracked.iter()).any(|p| {
+                p == dir
+                    || p.strip_prefix(dir)
+                        .is_some_and(|rest| rest.starts_with('/'))
+            })
+        } else {
+            changed.contains(path) || untracked.contains(path)
+        };
+        if is_changed {
             evidence.push(ChangedModuleEvidence {
                 path: path.clone(),
                 changed_exports: BTreeSet::from([ASSET_EXPORT_SYMBOL.to_owned()]),

@@ -25,13 +25,29 @@ pub(crate) const FS_READ_METHODS: &[&str] = &[
     "lstat",
     "openSync",
     "open",
+    "createReadStream",
+    "globSync",
+    "glob",
+    "accessSync",
+    "access",
+    "opendirSync",
+    "opendir",
+    "realpathSync",
+    "realpath",
+    "readlinkSync",
+    "readlink",
 ];
+
+pub(crate) const CHILD_PROCESS_EXEC_METHODS: &[&str] =
+    &["execFileSync", "execFile", "spawnSync", "spawn"];
 
 #[derive(Default)]
 pub(crate) struct FsBindings {
     pub(crate) direct_read_syms: HashSet<SymbolId>,
     pub(crate) fs_ns_syms: HashSet<SymbolId>,
     pub(crate) fs_promises_syms: HashSet<SymbolId>,
+    pub(crate) direct_exec_syms: HashSet<SymbolId>,
+    pub(crate) child_process_ns_syms: HashSet<SymbolId>,
 }
 
 #[derive(Default)]
@@ -55,6 +71,7 @@ pub(crate) struct CollectedModule<'a> {
 enum ModuleKind {
     Fs,
     FsPromises,
+    ChildProcess,
     Path,
     Url,
 }
@@ -62,7 +79,11 @@ enum ModuleKind {
 pub(crate) fn is_fs_module_specifier(specifier: &str) -> bool {
     matches!(
         specifier,
-        "fs" | "node:fs" | "fs/promises" | "node:fs/promises"
+        "fs" | "node:fs"
+            | "fs/promises"
+            | "node:fs/promises"
+            | "child_process"
+            | "node:child_process"
     )
 }
 
@@ -70,6 +91,7 @@ fn classify_specifier(specifier: &str) -> Option<ModuleKind> {
     match specifier {
         "fs" | "node:fs" => Some(ModuleKind::Fs),
         "fs/promises" | "node:fs/promises" => Some(ModuleKind::FsPromises),
+        "child_process" | "node:child_process" => Some(ModuleKind::ChildProcess),
         "path" | "node:path" | "path/posix" | "node:path/posix" => Some(ModuleKind::Path),
         "url" | "node:url" => Some(ModuleKind::Url),
         _ => None,
@@ -124,6 +146,19 @@ pub(crate) fn is_fs_promises_expr(
         }
         _ => false,
     }
+}
+
+pub(crate) fn is_child_process_ns_expr(
+    expr: &Expression<'_>,
+    fs: &FsBindings,
+    semantic: &Semantic<'_>,
+) -> bool {
+    matches!(
+        unwrap_transparent_expr(expr),
+        Expression::Identifier(ident)
+            if ident_resolved_symbol(semantic, ident)
+                .is_some_and(|sym| fs.child_process_ns_syms.contains(&sym))
+    )
 }
 
 fn record_import(import: &ImportDeclaration<'_>, out: &mut CollectedModule<'_>) {
@@ -241,6 +276,9 @@ fn bind_namespace(kind: ModuleKind, sym: SymbolId, out: &mut CollectedModule<'_>
         ModuleKind::FsPromises => {
             out.fs.fs_promises_syms.insert(sym);
         }
+        ModuleKind::ChildProcess => {
+            out.fs.child_process_ns_syms.insert(sym);
+        }
         ModuleKind::Path => {
             out.path.path_ns_syms.insert(sym);
         }
@@ -257,6 +295,11 @@ fn bind_member(kind: ModuleKind, member: &str, sym: SymbolId, out: &mut Collecte
                 out.fs.fs_promises_syms.insert(sym);
             } else if FS_READ_METHODS.contains(&member) {
                 out.fs.direct_read_syms.insert(sym);
+            }
+        }
+        ModuleKind::ChildProcess => {
+            if CHILD_PROCESS_EXEC_METHODS.contains(&member) {
+                out.fs.direct_exec_syms.insert(sym);
             }
         }
         ModuleKind::Path => match member {

@@ -3,41 +3,14 @@
 //! Fails closed (`None`) on any symlink, unreadable file, path traversal, or non-UTF-8 entry.
 
 use crate::receipt_cache::{FileDigestEntry, GitFileInventory, RunMemoCache};
+use crate::receipt_policy::{
+    collect_policy_files, collect_project_and_ancestor_configs, collect_root_tsconfig_files,
+};
 use dads_testing_core::{TaskReceiptRequest, path_matches_impact};
 use std::collections::BTreeSet;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Component, Path};
-
-const POLICY_FILES: &[&str] = &[
-    "package.json",
-    "package-lock.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
-    "tsconfig.json",
-    "tsconfig.base.json",
-    "tsconfig.paths.json",
-    ".oxlintrc.json",
-    "eslint.config.mjs",
-    "eslint.config.js",
-    "eslint.config.ts",
-    "eslint.config.mts",
-    "vitest.workspace.ts",
-    "vitest.workspace.mts",
-    "vitest.workspace.js",
-    "vitest.workspace.mjs",
-    "vitest.config.ts",
-    "vitest.config.mts",
-    "vitest.config.js",
-    "vitest.config.mjs",
-    "vite.config.ts",
-    "vite.config.mts",
-    "vite.config.js",
-    "vite.config.mjs",
-    "vitest.setup.ts",
-    "vitest.setup.mts",
-    "vitest.setup.js",
-];
 
 const IGNORED_DIRS: &[&str] = &[
     ".git",
@@ -64,6 +37,11 @@ pub(crate) fn collect_receipt_input_files(
 
     collect_policy_files(request.workspace_root, &mut files)?;
     collect_root_tsconfig_files(request.workspace_root, &mut files)?;
+    collect_project_and_ancestor_configs(
+        request.workspace_root,
+        request.project_roots,
+        &mut files,
+    )?;
     collect_extra_input_files(request, memo, &mut files, &mut missing_extra_files)?;
 
     for impact_path in request.impact_paths {
@@ -93,46 +71,6 @@ pub(crate) fn collect_receipt_input_files(
         files,
         missing_extra_files,
     })
-}
-
-fn collect_policy_files(workspace_root: &Path, out: &mut BTreeSet<String>) -> Option<()> {
-    for policy in POLICY_FILES {
-        let candidate = workspace_root.join(policy);
-        match fs::symlink_metadata(&candidate) {
-            Ok(meta) => {
-                if meta.file_type().is_symlink() {
-                    return None;
-                }
-                if meta.is_file() {
-                    out.insert((*policy).to_owned());
-                }
-            }
-            Err(error) if error.kind() == ErrorKind::NotFound => {}
-            Err(_) => return None,
-        }
-    }
-    Some(())
-}
-
-fn collect_root_tsconfig_files(workspace_root: &Path, out: &mut BTreeSet<String>) -> Option<()> {
-    let entries = fs::read_dir(workspace_root).ok()?;
-    for entry in entries {
-        let entry = entry.ok()?;
-        let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
-            continue;
-        };
-        if !name.starts_with("tsconfig") || !name.ends_with(".json") {
-            continue;
-        }
-        let meta = fs::symlink_metadata(entry.path()).ok()?;
-        if meta.file_type().is_symlink() {
-            return None;
-        }
-        if meta.is_file() {
-            out.insert(name);
-        }
-    }
-    Some(())
 }
 
 fn collect_extra_input_files(
@@ -188,29 +126,11 @@ fn collect_git_input_files(
             FileDigestEntry::NonRegularOrUnreadable => return None,
         }
     }
-    // Check explicit non-glob impact paths directly as well so an exact file or symlink outside
-    // Git's inventory (for example a gitignored generated file) is still hashed or fails closed.
+    // Also walk every declared impact path (exact file, directory, or glob) directly on disk so
+    // gitignored generated files (for example `generated/*.json`) and symlinks outside Git's
+    // inventory are always hashed or fail closed.
     for pattern in impact_paths {
-        if pattern.contains('*') {
-            continue;
-        }
-        let trimmed = normalize_non_glob_path(pattern);
-        if trimmed.is_empty() || trimmed == "." {
-            continue;
-        }
-        let candidate = workspace_root.join(trimmed);
-        match fs::symlink_metadata(&candidate) {
-            Ok(meta) => {
-                if meta.file_type().is_symlink() {
-                    return None;
-                }
-                if meta.is_file() {
-                    collected.insert(trimmed.to_owned());
-                }
-            }
-            Err(error) if error.kind() == ErrorKind::NotFound => {}
-            Err(_) => return None,
-        }
+        collect_fs_impact_path(workspace_root, pattern, &mut collected)?;
     }
     Some(Some(collected))
 }

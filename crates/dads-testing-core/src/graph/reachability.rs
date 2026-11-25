@@ -1,28 +1,13 @@
 //! Reverse traversal: which modules a change reaches, and where the answer stops being provable.
 use super::compact::{CImport, DependencyGraph};
-use super::types::{
-    GraphUncertainty, GraphUncertaintyScope, ImportKind, Reachability, ReachedEdge, SourceLocation,
+use super::reachability_helpers::{
+    SymbolWalk, ambiguous_import, enqueue_direct_exports, follow_reexport_all,
+    follow_reexport_namespace, uncertainty_span_start,
 };
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-/// The state one symbol-level walk carries: what it has reached, what it could not prove, the
-/// edges it followed, which `(module, symbol)` pairs have already been queued, and which modules
-/// have already propagated their own exports.
-#[derive(Default)]
-struct SymbolWalk {
-    paths: BTreeSet<String>,
-    uncertainties: Vec<GraphUncertainty>,
-    edges: Vec<ReachedEdge>,
-    queue: VecDeque<(String, BTreeSet<String>)>,
-    seen_exports: BTreeMap<String, BTreeSet<String>>,
-    module_eval_queue: VecDeque<String>,
-    seen_module_eval: BTreeSet<String>,
-    own_exports_propagated: BTreeSet<String>,
-    /// Tracks exact changed target members behind `export * as ns from "./target"` per `(barrel, ns)`.
-    ns_reexport_members: BTreeMap<(String, String), BTreeSet<String>>,
-    /// Exports that changed directly (not exclusively via `export * as ns`), disabling member filtering.
-    non_ns_exports: BTreeSet<(String, String)>,
-}
+use super::types::{
+    GraphUncertainty, GraphUncertaintyScope, ImportKind, Reachability, ReachedEdge,
+};
+use std::collections::{BTreeSet, VecDeque};
 
 impl DependencyGraph {
     pub fn reachability_from(&self, changed: impl IntoIterator<Item = String>) -> Reachability {
@@ -86,12 +71,9 @@ impl DependencyGraph {
     }
 
     /// A changed module enters the walk with its proven changed exports:
-    /// - A comment-only edit (`complete && !semantic_change`) seeds neither path nor uncertainty.
-    /// - A type-only declaration edit (`complete && type_only_change`) seeds nothing on the
-    ///   runtime channel (`erase_type_only`), while still triggering typecheck.
-    /// - A terminal leaf with no importers (e.g. a `*.test.ts` file) seeds only itself without
-    ///   widening when `complete && exports.is_empty()`.
-    /// - Any incomplete hunk or unattributed non-leaf change emits `unattributed-module-change`.
+    /// - Raw `fs:` / `fs-dir:` readers always fire when their target path changed directly.
+    /// - Comment-only or runtime-erased type-only edits skip JS export propagation.
+    /// - A terminal leaf with no non-`fs:` importers seeds only itself without widening.
     fn seed_changed_exports(
         &self,
         changed: impl IntoIterator<Item = String>,
@@ -99,6 +81,11 @@ impl DependencyGraph {
     ) -> SymbolWalk {
         let mut walk = SymbolWalk::default();
         for p in changed {
+            self.follow_fs_direct_readers(&mut walk, &p, erase_type_only);
+            if p.starts_with("fs-dir:") {
+                walk.paths.insert(p);
+                continue;
+            }
             match self.change(&p) {
                 Some(c) if c.complete && !c.semantic_change => {}
                 Some(c) if c.complete && c.type_only_change && erase_type_only => {}
@@ -116,7 +103,7 @@ impl DependencyGraph {
                         && c.exports.is_empty()
                         && self
                             .module_index(&p)
-                            .is_some_and(|module| self.reverse(module).is_empty()) =>
+                            .is_some_and(|module| !self.has_non_fs_reverse(module)) =>
                 {
                     walk.paths.insert(p);
                 }
@@ -133,6 +120,27 @@ impl DependencyGraph {
             }
         }
         walk
+    }
+
+    fn is_fs_read_edge(&self, e: &CImport) -> bool {
+        self.str(e.specifier)
+            .is_some_and(|s| s.starts_with("fs:") || s.starts_with("fs-dir:"))
+    }
+
+    fn has_non_fs_reverse(&self, module: u32) -> bool {
+        self.reverse(module).iter().any(|edge_id| {
+            self.imports
+                .get(*edge_id as usize)
+                .is_some_and(|e| !self.is_fs_read_edge(e))
+        })
+    }
+
+    fn follow_fs_direct_readers(&self, walk: &mut SymbolWalk, target: &str, erase_type_only: bool) {
+        for (e, source) in self.reverse_import_sources(target) {
+            if self.is_fs_read_edge(e) {
+                self.record_module_eval_hit(walk, e, source, target, erase_type_only);
+            }
+        }
     }
 
     fn reverse_import_sources<'a>(&'a self, target: &str) -> Vec<(&'a CImport, String)> {
@@ -170,6 +178,20 @@ impl DependencyGraph {
         target: &str,
         erase_type_only: bool,
     ) {
+        if self.is_fs_read_edge(e) {
+            return;
+        }
+        self.record_module_eval_hit(walk, e, source, target, erase_type_only);
+    }
+
+    fn record_module_eval_hit(
+        &self,
+        walk: &mut SymbolWalk,
+        e: &CImport,
+        source: String,
+        target: &str,
+        erase_type_only: bool,
+    ) {
         if e.type_only {
             if !erase_type_only {
                 walk.uncertainties.push(ambiguous_import(source, e));
@@ -197,6 +219,9 @@ impl DependencyGraph {
         exports: &BTreeSet<String>,
         erase_type_only: bool,
     ) {
+        if self.is_fs_read_edge(e) {
+            return;
+        }
         if e.type_only {
             if !erase_type_only {
                 walk.uncertainties.push(ambiguous_import(source, e));
@@ -292,7 +317,7 @@ impl DependencyGraph {
     fn propagate_own_exports(&self, walk: &mut SymbolWalk, module: u32, source: String) {
         let next = self.exports(module);
         if next.is_empty() {
-            if !self.reverse(module).is_empty() {
+            if self.has_non_fs_reverse(module) {
                 walk.uncertainties.push(GraphUncertainty {
                     path: source,
                     code: "unattributed-transitive-export".into(),
@@ -329,114 +354,4 @@ impl DependencyGraph {
         });
         walk.uncertainties.dedup();
     }
-}
-
-/// An `export *` re-export forwards every changed name but `default`, which it does not re-export.
-fn follow_reexport_all(
-    walk: &mut SymbolWalk,
-    e: &CImport,
-    source: String,
-    target: &str,
-    exports: &BTreeSet<String>,
-) {
-    let reexported = exports
-        .iter()
-        .filter(|name| name.as_str() != "default")
-        .cloned()
-        .collect::<BTreeSet<_>>();
-    if reexported.is_empty() {
-        return;
-    }
-    walk.edges.push(ReachedEdge {
-        importer: source.clone(),
-        target: target.to_owned(),
-        symbols: reexported.clone(),
-        position: e.position,
-    });
-    walk.paths.insert(source.clone());
-    enqueue_direct_exports(walk, source, reexported);
-}
-
-/// An `export * as ns from "./target"` namespace re-export binds EVERY runtime export of `target`
-/// (including `"default"`) under exported name `ns`, recording the exact changed member names so
-/// tracked downstream `ns.foo` reads stay symbol-precise (`NamespaceAndImports.lean` Theorems 1–3).
-fn follow_reexport_namespace(
-    walk: &mut SymbolWalk,
-    e: &CImport,
-    source: String,
-    target: &str,
-    ns_name: &str,
-    exports: &BTreeSet<String>,
-) {
-    if exports.is_empty() {
-        return;
-    }
-    walk.edges.push(ReachedEdge {
-        importer: source.clone(),
-        target: target.to_owned(),
-        symbols: exports.clone(),
-        position: e.position,
-    });
-    walk.paths.insert(source.clone());
-    let entry = walk
-        .ns_reexport_members
-        .entry((source.clone(), ns_name.to_owned()))
-        .or_default();
-    let mut grew = false;
-    for sym in exports {
-        grew |= entry.insert(sym.clone());
-    }
-    if grew {
-        walk.seen_exports
-            .entry(source.clone())
-            .or_default()
-            .insert(ns_name.to_owned());
-        walk.queue
-            .push_back((source, BTreeSet::from([ns_name.to_owned()])));
-    }
-}
-
-fn enqueue_direct_exports(walk: &mut SymbolWalk, module: String, exports: BTreeSet<String>) {
-    for sym in &exports {
-        walk.non_ns_exports.insert((module.clone(), sym.clone()));
-    }
-    enqueue_exports(walk, module, exports);
-}
-
-/// Enqueues only `(module, symbol)` pairs not yet seen so diamond `export *` barrels and mixed
-/// own-export + `export *` modules propagate every changed symbol without looping.
-fn enqueue_exports(walk: &mut SymbolWalk, module: String, exports: BTreeSet<String>) {
-    let seen = walk.seen_exports.entry(module.clone()).or_default();
-    let fresh = exports
-        .into_iter()
-        .filter(|symbol| seen.insert(symbol.clone()))
-        .collect::<BTreeSet<_>>();
-    if !fresh.is_empty() {
-        walk.queue.push_back((module, fresh));
-    }
-}
-
-fn ambiguous_import(path: String, import: &CImport) -> GraphUncertainty {
-    GraphUncertainty {
-        path,
-        code: "ambiguous-cross-file-import".into(),
-        message: "Importer cannot be matched to a named runtime export.".into(),
-        scope: GraphUncertaintyScope::ReachedModule,
-        location: import_location(import),
-    }
-}
-
-/// A core-generated import uncertainty is located only when its frontend recorded a position.
-fn import_location(import: &CImport) -> Option<SourceLocation> {
-    import.position.map(|position| SourceLocation {
-        span: import.span.clone(),
-        position,
-    })
-}
-
-fn uncertainty_span_start(uncertainty: &GraphUncertainty) -> Option<u32> {
-    uncertainty
-        .location
-        .as_ref()
-        .map(|location| location.span.start)
 }

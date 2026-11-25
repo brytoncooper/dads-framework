@@ -88,6 +88,17 @@ pub enum MutationKind {
     DependsOnPrerequisiteChain,
     ShardedPlanUnionCompleteness,
     MixedPassFailBatchIsolation,
+    // --- Section A: Hardened 0.9.0 Soundness & Caching Holes (10) ---
+    ObjectFreezeSharedIdent,
+    ImplicitCoercionSideEffect,
+    TopLevelLoadThrowPureTrap,
+    ExistsSyncMissingAtBaseline,
+    ReaddirSyncEmptyOrOvercapDir,
+    CrossFileFsHelperAndUnresolved,
+    ExtendedFsAndExecReadApis,
+    GitignoredImpactPathsGlob,
+    UpstreamPackageExportsAndNestedTsconfig,
+    NonRootAndDotenvConfigFiles,
 }
 
 impl MutationKind {
@@ -150,6 +161,16 @@ impl MutationKind {
         Self::DependsOnPrerequisiteChain,
         Self::ShardedPlanUnionCompleteness,
         Self::MixedPassFailBatchIsolation,
+        Self::ObjectFreezeSharedIdent,
+        Self::ImplicitCoercionSideEffect,
+        Self::TopLevelLoadThrowPureTrap,
+        Self::ExistsSyncMissingAtBaseline,
+        Self::ReaddirSyncEmptyOrOvercapDir,
+        Self::CrossFileFsHelperAndUnresolved,
+        Self::ExtendedFsAndExecReadApis,
+        Self::GitignoredImpactPathsGlob,
+        Self::UpstreamPackageExportsAndNestedTsconfig,
+        Self::NonRootAndDotenvConfigFiles,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -214,6 +235,18 @@ impl MutationKind {
             Self::DependsOnPrerequisiteChain => "depends-on-prerequisite-chain",
             Self::ShardedPlanUnionCompleteness => "sharded-plan-union-completeness",
             Self::MixedPassFailBatchIsolation => "mixed-pass-fail-batch-isolation",
+            Self::ObjectFreezeSharedIdent => "object-freeze-shared-ident",
+            Self::ImplicitCoercionSideEffect => "implicit-coercion-side-effect",
+            Self::TopLevelLoadThrowPureTrap => "top-level-load-throw-pure-trap",
+            Self::ExistsSyncMissingAtBaseline => "exists-sync-missing-at-baseline",
+            Self::ReaddirSyncEmptyOrOvercapDir => "readdir-sync-empty-or-overcap-dir",
+            Self::CrossFileFsHelperAndUnresolved => "cross-file-fs-helper-and-unresolved",
+            Self::ExtendedFsAndExecReadApis => "extended-fs-and-exec-read-apis",
+            Self::GitignoredImpactPathsGlob => "gitignored-impact-paths-glob",
+            Self::UpstreamPackageExportsAndNestedTsconfig => {
+                "upstream-package-exports-and-nested-tsconfig"
+            }
+            Self::NonRootAndDotenvConfigFiles => "non-root-and-dotenv-config-files",
         }
     }
 

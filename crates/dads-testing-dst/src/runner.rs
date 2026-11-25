@@ -1,6 +1,7 @@
 //! Parallel seeded DST executor comparing real `dad-test` runs against the real Node 24 oracle.
 
 use crate::generator::{GeneratedWorkspace, generate_workspace, pick_workspace_shape};
+use crate::generator_section_a::reset_section_a_untracked_baseline;
 use crate::invariants::{
     StepCheckCtx, WorkerAccumulator, merge_accumulator, verify_failed_not_cached,
     verify_step_invariants, verify_unrelated_batch_isolation,
@@ -15,7 +16,7 @@ use crate::node_oracle::{DST_RUNNER_JS, NodeOracleWorker, oracle_specs_with_over
 use crate::rng::SeededRng;
 use crate::timelines::{
     ShardedRunSpec, prepare_chained_dirty_sequence, prepare_multi_branch_shared_l2,
-    run_dad_single_step, run_sharded_plan_union, warm_shared_cache,
+    run_dad_only_tasks_cached, run_dad_single_step, run_sharded_plan_union, warm_shared_cache,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -208,6 +209,7 @@ fn execute_scenario_timeline(
     for step_idx in 0..steps {
         if step_idx > 0 {
             git_reset_clean(&input.paths.workspace_dir, &baseline_sha)?;
+            reset_section_a_untracked_baseline(&input.paths.workspace_dir)?;
             fs::write(&input.paths.external_flag_path, "ok\n")
                 .map_err(|e| format!("reset ext flag: {e}"))?;
             run_build_dep_script(&input.config.node_bin, &input.paths.workspace_dir)?;
@@ -296,6 +298,7 @@ fn run_mutation_step(
         || applied.force_commit
         || applied.corrupt_shared_cache
         || applied.multi_branch_l2_cache
+        || !applied.force_only_tasks.is_empty()
         || input.mutation == MutationKind::AlwaysModeNeverCached;
     let step_spec = ShardedRunSpec {
         dad_bin: &input.config.dad_bin,
@@ -307,7 +310,9 @@ fn run_mutation_step(
         step_tag: input.step_idx,
         node_dir: input.node_dir,
     };
-    let invocation = if applied.sharded_plan_union {
+    let invocation = if !applied.force_only_tasks.is_empty() {
+        run_dad_only_tasks_cached(&step_spec, &applied.force_only_tasks)?
+    } else if applied.sharded_plan_union {
         run_sharded_plan_union(&step_spec)?
     } else {
         run_dad_single_step(&step_spec, use_plan_file)?
@@ -333,7 +338,11 @@ fn run_mutation_step(
             step_tag: input.step_idx + 1000,
             ..step_spec
         };
-        let repeat = run_dad_single_step(&repeat_spec, use_plan_file)?;
+        let repeat = if !applied.force_only_tasks.is_empty() {
+            run_dad_only_tasks_cached(&repeat_spec, &applied.force_only_tasks)?
+        } else {
+            run_dad_single_step(&repeat_spec, use_plan_file)?
+        };
         had_failure |= verify_failed_not_cached(&check_ctx, &repeat, acc);
         if applied.verify_unrelated_passes {
             had_failure |= verify_unrelated_batch_isolation(&check_ctx, &repeat, acc);

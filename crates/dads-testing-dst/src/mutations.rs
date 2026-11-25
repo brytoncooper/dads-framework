@@ -2,6 +2,7 @@
 
 use crate::model::{MutationKind, WorkspaceShape};
 use crate::mutations_advanced::{AdvancedMutationPaths, apply_advanced_mutation};
+use crate::mutations_section_a::{apply_section_a_mutation, is_section_a_mutation};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -17,6 +18,7 @@ pub struct AppliedMutation {
     pub sharded_plan_union: bool,
     pub verify_unrelated_passes: bool,
     pub oracle_env_override: Option<(String, String, String)>,
+    pub force_only_tasks: Vec<String>,
 }
 
 pub fn apply_mutation(
@@ -49,6 +51,9 @@ pub fn apply_mutation(
         | MutationKind::UncertainUpstreamWithEmptyFallback
         | MutationKind::CorruptSharedCacheBlob => {
             apply_core_env_or_asset_mutation(paths.workspace_dir, shape, kind, step_idx)
+        }
+        _ if is_section_a_mutation(kind) => {
+            apply_section_a_mutation(paths.workspace_dir, kind, step_idx)
         }
         _ => apply_advanced_mutation(paths, shape, kind, step_idx),
     }

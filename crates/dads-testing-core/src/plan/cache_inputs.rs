@@ -5,6 +5,7 @@
 //! closed (`cacheable = false`) whenever closure soundness cannot be guaranteed.
 
 use super::PlanEvidence;
+use super::widening_fs::FS_DIR_PREFIX;
 use crate::graph::{DependencyGraph, GraphUncertainty, ModuleNode};
 use crate::manifest::{DeclaredTask, ImpactMode, Project, TestingManifest};
 use crate::protocol::{ResolvedScope, TaskCacheInputs};
@@ -30,6 +31,7 @@ impl<'a> CacheInputIndex<'a> {
         graph: Option<&DependencyGraph>,
         nodes: &'a [ModuleNode],
         unified_project_deps: &'a BTreeMap<&'a str, BTreeSet<&'a str>>,
+        enforce_declared_reads: bool,
     ) -> Self {
         let projects_by_id: BTreeMap<&'a str, &'a Project> = manifest
             .projects
@@ -55,6 +57,7 @@ impl<'a> CacheInputIndex<'a> {
                 if !is_closure_breaking_uncertainty(
                     &uncertainty,
                     &manifest.workspace.dynamic_import_scopes,
+                    enforce_declared_reads,
                 ) {
                     continue;
                 }
@@ -132,6 +135,9 @@ impl<'a> CacheInputIndex<'a> {
         let mut extra_files: BTreeSet<String> = setup_files.iter().cloned().collect();
         for &node_idx in &visited_nodes {
             let path = &self.nodes[node_idx].path;
+            if path.starts_with(FS_DIR_PREFIX) {
+                continue;
+            }
             if !project_roots.iter().any(|root| path_is_inside(path, root)) {
                 extra_files.insert(path.clone());
             }
@@ -168,6 +174,12 @@ impl<'a> CacheInputIndex<'a> {
         let mut dynamic_scope_paths = BTreeSet::new();
         while let Some(node_idx) = queue.pop_front() {
             let node = &self.nodes[node_idx];
+            if let Some(dir) = node.path.strip_prefix(FS_DIR_PREFIX) {
+                if !dir.is_empty() {
+                    dynamic_scope_paths.insert(dir.to_owned());
+                }
+                continue;
+            }
             if self.blocking_uncertainties_by_path.contains(&node.path) {
                 return None;
             }
@@ -250,6 +262,7 @@ fn uncacheable_inputs() -> TaskCacheInputs {
 fn is_closure_breaking_uncertainty(
     uncertainty: &GraphUncertainty,
     dynamic_import_scopes: &BTreeMap<String, Vec<String>>,
+    enforce_declared_reads: bool,
 ) -> bool {
     match uncertainty.code.as_str() {
         "unresolved-local-module"
@@ -259,6 +272,9 @@ fn is_closure_breaking_uncertainty(
         | "javascript-source-read-failed" => true,
         "nonliteral-dynamic-import" | "nonliteral-commonjs-require" => {
             !dynamic_import_scopes.contains_key(&uncertainty.path)
+        }
+        "unresolved-fs-read" => {
+            !enforce_declared_reads && !dynamic_import_scopes.contains_key(&uncertainty.path)
         }
         _ => false,
     }

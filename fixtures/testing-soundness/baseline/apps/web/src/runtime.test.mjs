@@ -1,29 +1,27 @@
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 import { expect, test } from "vitest";
 
 const workspace = fileURLToPath(new URL("../../..", import.meta.url));
+const CJS_RUNTIME_FILES = [
+  "packages/core/src/leaf.ts",
+  "packages/core/src/reexport.ts",
+  "packages/core/src/runtime.cjs",
+  "apps/web/src/runtime.cjs",
+  "apps/web/src/dynamic.cjs",
+];
 
 test("CommonJS consumers preserve their runtime export contracts", () => {
   const emitted = mkdtempSync(join(tmpdir(), "dads-cjs-runtime-"));
   const requireEmitted = createRequire(join(emitted, "package.json"));
   try {
     writeFileSync(join(emitted, "package.json"), '{"type":"commonjs"}\n');
-    for (const source of ["packages/core/src", "apps/web/src"]) {
-      emitCommonJsDirectory(join(workspace, source), join(emitted, source));
+    for (const relPath of CJS_RUNTIME_FILES) {
+      emitCommonJsFile(join(workspace, relPath), join(emitted, relPath));
     }
 
     const runtime = requireEmitted("./apps/web/src/runtime.cjs");
@@ -43,24 +41,18 @@ test("CommonJS consumers preserve their runtime export contracts", () => {
   }
 });
 
-function emitCommonJsDirectory(source, destination) {
-  mkdirSync(destination, { recursive: true });
-  for (const entry of readdirSync(source, { withFileTypes: true })) {
-    const input = join(source, entry.name);
-    const output = join(destination, entry.name);
-    if (entry.isDirectory()) {
-      emitCommonJsDirectory(input, output);
-    } else if (entry.isFile() && entry.name.endsWith(".cjs")) {
-      copyFileSync(input, output);
-    } else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) {
-      const result = transpileModule(readFileSync(input, "utf8"), {
-        fileName: input,
-        compilerOptions: {
-          module: ModuleKind.CommonJS,
-          target: ScriptTarget.ES2022,
-        },
-      });
-      writeFileSync(output.replace(/\.ts$/, ".js"), result.outputText);
-    }
+function emitCommonJsFile(input, output) {
+  mkdirSync(dirname(output), { recursive: true });
+  if (input.endsWith(".cjs")) {
+    copyFileSync(input, output);
+  } else if (input.endsWith(".ts") && !input.endsWith(".d.ts")) {
+    const result = transpileModule(readFileSync(input, "utf8"), {
+      fileName: input,
+      compilerOptions: {
+        module: ModuleKind.CommonJS,
+        target: ScriptTarget.ES2022,
+      },
+    });
+    writeFileSync(output.replace(/\.ts$/, ".js"), result.outputText);
   }
 }

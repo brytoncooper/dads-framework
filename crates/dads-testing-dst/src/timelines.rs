@@ -22,6 +22,7 @@ pub fn warm_shared_cache(
     request.task_ids = vec![
         "ui:test".to_owned(),
         "adv:test".to_owned(),
+        "adv-dyn-fs:test".to_owned(),
         "adv-always:test".to_owned(),
         "adv-env:test".to_owned(),
         "impact-consumer:test".to_owned(),
@@ -166,6 +167,19 @@ pub fn run_dad_single_step(
     run_req.head = spec.head_sha.map(str::to_owned);
     run_req.cache = spec.use_cache;
     run_req.cache_dir = cache_dir;
+    invoke_dad(spec.dad_bin, &run_req, spec.node_dir)
+}
+
+pub fn run_dad_only_tasks_cached(
+    spec: &ShardedRunSpec<'_>,
+    task_ids: &[String],
+) -> Result<DadInvocation, String> {
+    let mut run_req =
+        NativeRequestPayload::new("run", spec.workspace_dir.to_string_lossy().into_owned());
+    run_req.only = true;
+    run_req.task_ids = task_ids.to_vec();
+    run_req.cache = true;
+    run_req.cache_dir = Some(spec.shared_cache_dir.to_string_lossy().into_owned());
     invoke_dad(spec.dad_bin, &run_req, spec.node_dir)
 }
 

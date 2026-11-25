@@ -6,6 +6,7 @@ mod filtering;
 mod impacts;
 pub(crate) mod project_graph;
 mod widening;
+mod widening_fs;
 
 use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
@@ -25,6 +26,7 @@ use widening::{own_changed_paths, widen_through_graph};
 
 /// What the changed paths and the graph proved, accumulated as the plan is built. The issue list
 /// lives here because a decision cites an issue by its index in the emitted list.
+#[derive(Default)]
 struct PlanEvidence<'a> {
     changed_projects: BTreeSet<&'a str>,
     fallback_impacted_projects: BTreeSet<&'a str>,
@@ -55,30 +57,8 @@ struct PlanEvidence<'a> {
 impl<'a> PlanEvidence<'a> {
     fn new(scope: &ResolvedScope) -> Self {
         Self {
-            changed_projects: BTreeSet::new(),
-            fallback_impacted_projects: BTreeSet::new(),
-            reachability_impacted_projects: BTreeSet::new(),
-            uncertainty_impacted_projects: BTreeSet::new(),
-            local_uncertainty_impacted_projects: BTreeSet::new(),
-            typecheck_reachability_impacted_projects: BTreeSet::new(),
-            typecheck_uncertainty_impacted_projects: BTreeSet::new(),
-            typecheck_local_uncertainty_impacted_projects: BTreeSet::new(),
-            changed_paths_by_project: BTreeMap::new(),
-            reached_paths: BTreeSet::new(),
-            reached_paths_by_project: BTreeMap::new(),
-            issue_indexes_by_project: BTreeMap::new(),
-            full_fallback_issue_indexes: Vec::new(),
-            reached_edges: Vec::new(),
-            sql_handled_paths: BTreeSet::new(),
-            sql_selected_tasks: BTreeMap::new(),
-            lockfile_handled_paths: BTreeSet::new(),
-            lockfile_impacted_packages: BTreeSet::new(),
-            lockfile_seeded_modules: Vec::new(),
-            tsconfig_handled_paths: BTreeSet::new(),
-            tsconfig_impacted_aliases: BTreeSet::new(),
-            tsconfig_seeded_modules: Vec::new(),
-            issues: Vec::new(),
             full_fallback: scope.full_fallback,
+            ..Self::default()
         }
     }
 
@@ -223,7 +203,13 @@ pub(crate) fn build_plan(
     attach_tsconfig_impact(workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);
     attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
-    widen_through_graph(manifest, scope, graph, &mut evidence);
+    widen_through_graph(
+        manifest,
+        scope,
+        graph,
+        filters.enforce_declared_reads,
+        &mut evidence,
+    );
     let nodes = graph.map_or_else(Vec::new, DependencyGraph::materialize_modules);
     let project_deps = unified_project_dependencies(manifest, &nodes);
     let selection = select_tasks(
@@ -234,7 +220,13 @@ pub(crate) fn build_plan(
         &project_deps,
         &mut evidence,
     )?;
-    let cache_index = CacheInputIndex::new(manifest, graph, &nodes, &project_deps);
+    let cache_index = CacheInputIndex::new(
+        manifest,
+        graph,
+        &nodes,
+        &project_deps,
+        filters.enforce_declared_reads,
+    );
     let mut decisions = explain_decisions(
         manifest,
         scope,

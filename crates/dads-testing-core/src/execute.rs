@@ -242,6 +242,7 @@ fn execute_plan_or_run(
         exclude_projects: &request.exclude_projects,
         shard: request.shard,
         shard_weights: &request.shard_weights,
+        enforce_declared_reads: request.enforce_declared_reads,
     };
     let plan = if let Some(plan_file) = request.plan_file.as_deref() {
         load_plan_file(workspace_root, plan_file, manifest, &filters, request.jobs)?

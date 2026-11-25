@@ -1,10 +1,13 @@
 //! Purity checks for top-level expressions, classes, and pure declarations used by
 //! intra-file def-use analysis and load-time side-effect classification.
 
+use crate::intra_file_purity_checks::{
+    binary_is_pure, identifier_is_tdz_safe, is_pure_builtin_call, is_pure_builtin_new,
+    template_is_pure, unary_is_pure,
+};
 use oxc_ast::ast::{
     Argument, ArrayExpressionElement, BindingPattern, CallExpression, Class, ClassElement,
-    Declaration, ExportDefaultDeclarationKind, Expression, NewExpression, ObjectPropertyKind,
-    UnaryOperator,
+    Declaration, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind,
 };
 use oxc_semantic::Semantic;
 use oxc_span::{GetSpan, Span};
@@ -166,10 +169,10 @@ pub(crate) fn expr_is_pure(expr: &Expression<'_>, ctx: &PurityContext<'_>) -> bo
         | Expression::NumericLiteral(_)
         | Expression::BigIntLiteral(_)
         | Expression::RegExpLiteral(_)
-        | Expression::StringLiteral(_)
-        | Expression::Identifier(_) => true,
+        | Expression::StringLiteral(_) => true,
+        Expression::Identifier(ident) => identifier_is_tdz_safe(ident, ctx.semantic),
         Expression::ClassExpression(class) => class_is_pure(class, ctx),
-        Expression::TemplateLiteral(tpl) => tpl.expressions.iter().all(|e| expr_is_pure(e, ctx)),
+        Expression::TemplateLiteral(tpl) => template_is_pure(tpl, ctx),
         Expression::ArrayExpression(arr) => arr.elements.iter().all(|el| match el {
             ArrayExpressionElement::Elision(_) => true,
             ArrayExpressionElement::SpreadElement(_) => false,
@@ -179,12 +182,8 @@ pub(crate) fn expr_is_pure(expr: &Expression<'_>, ctx: &PurityContext<'_>) -> bo
             ObjectPropertyKind::SpreadProperty(_) => false,
             ObjectPropertyKind::ObjectProperty(p) => !p.computed && expr_is_pure(&p.value, ctx),
         }),
-        Expression::UnaryExpression(u) => {
-            !matches!(u.operator, UnaryOperator::Delete) && expr_is_pure(&u.argument, ctx)
-        }
-        Expression::BinaryExpression(b) => {
-            expr_is_pure(&b.left, ctx) && expr_is_pure(&b.right, ctx)
-        }
+        Expression::UnaryExpression(u) => unary_is_pure(u, ctx),
+        Expression::BinaryExpression(b) => binary_is_pure(b, ctx),
         Expression::ParenthesizedExpression(p) => expr_is_pure(&p.expression, ctx),
         Expression::TSAsExpression(e) => expr_is_pure(&e.expression, ctx),
         Expression::TSSatisfiesExpression(e) => expr_is_pure(&e.expression, ctx),
@@ -209,7 +208,7 @@ pub(crate) fn expr_is_pure(expr: &Expression<'_>, ctx: &PurityContext<'_>) -> bo
     }
 }
 
-fn unwrap_transparent_expr<'a>(mut expr: &'a Expression<'a>) -> &'a Expression<'a> {
+pub(crate) fn unwrap_transparent_expr<'a>(mut expr: &'a Expression<'a>) -> &'a Expression<'a> {
     loop {
         match expr {
             Expression::ParenthesizedExpression(p) => expr = &p.expression,
@@ -238,73 +237,6 @@ fn callee_is_pure_reference(callee: &Expression<'_>, ctx: &PurityContext<'_>) ->
             callee_is_pure_reference(&member.object, ctx) || expr_is_pure(&member.object, ctx)
         }
         Expression::CallExpression(inner) => expr_is_pure(callee, ctx) && !inner.optional,
-        _ => false,
-    }
-}
-
-fn is_unshadowed_global(semantic: &Semantic<'_>, name: &str) -> bool {
-    let scoping = semantic.scoping();
-    scoping
-        .get_binding(scoping.root_scope_id(), name.into())
-        .is_none()
-}
-
-fn is_pure_builtin_call(call: &CallExpression<'_>, ctx: &PurityContext<'_>) -> bool {
-    match unwrap_transparent_expr(&call.callee) {
-        Expression::Identifier(ident) => {
-            ident.name == "Symbol" && is_unshadowed_global(ctx.semantic, "Symbol")
-        }
-        Expression::StaticMemberExpression(member) => {
-            member.property.name == "freeze"
-                && matches!(
-                    unwrap_transparent_expr(&member.object),
-                    Expression::Identifier(ident)
-                        if ident.name == "Object" && is_unshadowed_global(ctx.semantic, "Object")
-                )
-        }
-        _ => false,
-    }
-}
-
-fn is_pure_builtin_new(new_expr: &NewExpression<'_>, ctx: &PurityContext<'_>) -> bool {
-    let Expression::Identifier(callee) = unwrap_transparent_expr(&new_expr.callee) else {
-        return false;
-    };
-    let name = callee.name.as_str();
-    if !is_unshadowed_global(ctx.semantic, name) {
-        return false;
-    }
-    match name {
-        "RegExp" => is_pure_regexp_args(&new_expr.arguments),
-        "Set" | "Map" => is_pure_collection_args(&new_expr.arguments, ctx),
-        _ => false,
-    }
-}
-
-fn is_pure_regexp_args(arguments: &[Argument<'_>]) -> bool {
-    arguments.len() <= 2
-        && arguments.iter().enumerate().all(|(idx, arg)| {
-            arg.as_expression().is_some_and(|expr| {
-                let inner = unwrap_transparent_expr(expr);
-                match idx {
-                    0 => matches!(
-                        inner,
-                        Expression::StringLiteral(_) | Expression::RegExpLiteral(_)
-                    ),
-                    1 => matches!(inner, Expression::StringLiteral(_)),
-                    _ => false,
-                }
-            })
-        })
-}
-
-fn is_pure_collection_args(arguments: &[Argument<'_>], ctx: &PurityContext<'_>) -> bool {
-    match arguments {
-        [] => true,
-        [arg] => arg.as_expression().is_some_and(|expr| {
-            let inner = unwrap_transparent_expr(expr);
-            matches!(inner, Expression::ArrayExpression(_)) && expr_is_pure(inner, ctx)
-        }),
         _ => false,
     }
 }

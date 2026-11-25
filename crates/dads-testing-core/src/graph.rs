@@ -3,6 +3,7 @@
 mod compact;
 mod pack;
 mod reachability;
+mod reachability_helpers;
 mod types;
 
 pub use compact::DependencyGraph;

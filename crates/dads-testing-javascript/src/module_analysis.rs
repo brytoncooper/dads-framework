@@ -69,7 +69,14 @@ pub(crate) fn analyze_file(
         source: &source,
         workspace_index,
     };
-    let mut imports = collect_imports(&scan, module_record, &semantic.semantic, &mut uncertainties);
+    let mut fs_uncertainties = Vec::new();
+    let mut imports = collect_imports(
+        &scan,
+        module_record,
+        &semantic.semantic,
+        &mut uncertainties,
+        &mut fs_uncertainties,
+    );
     attach_intra_file_export_deps(
         &parsed.program,
         module_record,
@@ -77,6 +84,7 @@ pub(crate) fn analyze_file(
         !uncertainties.is_empty(),
         &mut imports,
     );
+    uncertainties.extend(fs_uncertainties);
     locate_positions(&source, &mut imports, &mut uncertainties);
 
     Ok((
@@ -203,6 +211,7 @@ fn collect_imports(
     module_record: &ModuleRecord<'_>,
     semantic: &Semantic<'_>,
     uncertainties: &mut Vec<JsUncertainty>,
+    fs_uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<JsImportFact> {
     let mut imports = requested_module_imports(scan, module_record, semantic, uncertainties);
     if let Some(ambiguous_reexport) =
@@ -224,7 +233,7 @@ fn collect_imports(
         scan.source,
         uncertainties,
     ));
-    imports.extend(collect_fs_read_imports(
+    let (fs_imports, detected_fs_uncertainties) = collect_fs_read_imports(
         module_record,
         semantic,
         scan.source,
@@ -232,7 +241,9 @@ fn collect_imports(
         scan.absolute_path,
         scan.path,
         scan.workspace_index,
-    ));
+    );
+    imports.extend(fs_imports);
+    fs_uncertainties.extend(detected_fs_uncertainties);
     imports.sort_by(|left, right| {
         left.specifier
             .cmp(&right.specifier)

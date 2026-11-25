@@ -93,6 +93,15 @@ pub fn manifest_project_roots(request: &NativeRequest) -> Option<Vec<String>> {
     )
 }
 
+/// Returns the declared `workspace.pureFactories` patterns from the default workspace manifest
+/// (or empty when no default manifest exists or cannot be read).
+pub fn manifest_pure_factories_from_root(workspace_root: &Path) -> Vec<String> {
+    let manifest_file = workspace_root.join(DEFAULT_MANIFEST_PATH);
+    load_manifest(&manifest_file)
+        .map(|manifest| manifest.workspace.pure_factories)
+        .unwrap_or_default()
+}
+
 /// Returns the canonical serialized expanded manifest bytes when the manifest uses declarative
 /// `workspace.discover`, or `None` when it is static (callers hash raw manifest bytes instead).
 pub fn expanded_manifest_bytes(

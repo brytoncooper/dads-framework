@@ -89,21 +89,36 @@ def scopeToJson (s : TaskExecutionScope) : String :=
   | .subset files => "{\"decision\":\"run\",\"widened\":false,\"selectedFiles\":" ++ jsonList files ++ "}"
   | .allTests => "{\"decision\":\"run\",\"widened\":true,\"selectedFiles\":[]}"
 
+def moduleEvalGraph : DepGraph :=
+  { tightPrecisionGraph with
+    changeOf := fun m =>
+      if m == "domains/a/foo.ts" then
+        some { complete := true, semanticChange := true, exports := ["foo"], moduleEvalChanged := true }
+      else none }
+
 def main (args : List String) : IO Unit := do
   let plan := buildPlan tightManifest (some tightPrecisionGraph) ["domains/a/foo.ts", "domains/a/bar.ts"]
   let commentPlan := buildPlan tightManifest (some tightPrecisionGraph) ["domains/a/commentOnly.ts"]
+  let evalPlan := buildPlan tightManifest (some moduleEvalGraph) ["domains/a/foo.ts"]
   match tightManifest.tasks with
   | [unitTask, typeTask] =>
       let unitScope := plan.taskScope unitTask
       let typeScope := plan.taskScope typeTask
       let commentUnitScope := commentPlan.taskScope unitTask
       let commentTypeScope := commentPlan.taskScope typeTask
+      let evalUnitScope := evalPlan.taskScope unitTask
       if unitScope != .subset ["domains/a/usesBar.test.ts", "domains/a/nsConsumer.test.ts"] then
         throw (IO.userError s!"unexpected runtime scope: {repr unitScope}")
       if typeScope != .subset ["domains/a/usesBar.test.ts", "domains/a/typeConsumer.test.ts", "domains/a/nsConsumer.test.ts"] then
         throw (IO.userError s!"unexpected typecheck scope: {repr typeScope}")
       if commentUnitScope != .skipProvenUnaffected then
         throw (IO.userError s!"expected skipProvenUnaffected for comment-only edit, got {repr commentUnitScope}")
+      if evalUnitScope != .subset [
+          "domains/a/usesBar.test.ts",
+          "domains/a/unrelated.test.ts",
+          "domains/a/nsConsumer.test.ts"
+        ] then
+        throw (IO.userError s!"unexpected module-eval runtime scope: {repr evalUnitScope}")
       if args.contains "--json" then
         IO.println (
           "{" ++

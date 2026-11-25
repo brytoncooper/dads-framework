@@ -86,6 +86,7 @@ fn build_graph(projects: &[&str]) -> DependencyGraph {
             every_hunk_is_attributed: true,
             semantic_change: true,
             type_only_change: false,
+            module_eval_changed: false,
         })
         .collect();
     DependencyGraph::new(nodes, Vec::new()).with_changed_module_evidence(evidence)
@@ -461,12 +462,11 @@ fn vitest_batching_fails_safe_on_missing_file_report() -> Result<(), Box<dyn Err
 }
 
 #[test]
-fn vitest_batching_runs_from_workspace_root_when_member_cwds_differ() -> Result<(), Box<dyn Error>> {
+fn vitest_batching_runs_from_workspace_root_when_member_cwds_differ() -> Result<(), Box<dyn Error>>
+{
     let projects = ["a", "b"];
-    let dir_preview = std::env::temp_dir().join(format!(
-        "dads-vitest-batch-diff-cwd-{}",
-        std::process::id()
-    ));
+    let dir_preview =
+        std::env::temp_dir().join(format!("dads-vitest-batch-diff-cwd-{}", std::process::id()));
     let log_path = dir_preview.join(".git/invocations.log");
     let mut task_a = vitest_task_json("a", &log_path, &[], true);
     let mut task_b = vitest_task_json("b", &log_path, &[], true);

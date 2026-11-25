@@ -55,7 +55,7 @@
     },
     {
       "id": "transitive-ts-import",
-      "description": "A transitive re-export chain must not hide its consumer or require a whole-workspace fallback.",
+      "description": "A transitive re-export change reaches consumers of the changed export through export-star while skipping runtime test suites that only import an unchanged re-exported symbol.",
       "operations": [
         {
           "kind": "write",
@@ -65,7 +65,16 @@
       ],
       "requiredTaskIds": [
         "api:lint",
-        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
         "api:typecheck",
         "core:lint",
         "core:test",
@@ -104,7 +113,7 @@
     },
     {
       "id": "mixed-export-and-unattributed-hunk",
-      "description": "An unattributed hunk must widen through declared dependents without forcing an unrelated global fallback.",
+      "description": "A pure unreferenced private declaration alongside an unrelated export still runs core lint/typecheck/test while proving unrelated downstream runtime tests unaffected.",
       "operations": [
         {
           "kind": "write",
@@ -114,13 +123,20 @@
       ],
       "requiredTaskIds": [
         "api:lint",
-        "api:test",
         "api:typecheck",
         "core:lint",
         "core:test",
         "core:typecheck",
         "web:lint",
-        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
         "web:typecheck"
       ],
       "fullFallbackPolicy": "forbidden",
@@ -179,7 +195,7 @@
     },
     {
       "id": "type-only-dependency",
-      "description": "A type-only cross-file dependency must never be silently skipped or require a global fallback.",
+      "description": "A type-only cross-file dependency selects downstream project typechecks without running proven-unaffected runtime tests or requiring a global fallback.",
       "operations": [
         {
           "kind": "write",
@@ -189,13 +205,20 @@
       ],
       "requiredTaskIds": [
         "api:lint",
-        "api:test",
         "api:typecheck",
         "core:lint",
         "core:test",
         "core:typecheck",
         "web:lint",
-        "web:test",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
         "web:typecheck"
       ],
       "fullFallbackPolicy": "forbidden",
@@ -489,6 +512,240 @@
         "web:typecheck"
       ],
       "fullFallbackPolicy": "required",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "export-initializer-assignment",
+      "description": "An impure assignment inside an unimported export initializer propagates via module_eval_changed to runtime consumers while keeping unrelated web tests skipped.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(2);\nexport const assignMarker = (shared.factor = 5);\nexport const schema = defineSchema({ currency: \"USD\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v1\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 0;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `$${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:test"]
+    },
+    {
+      "id": "export-initializer-call",
+      "description": "An unannotated function call inside an unimported export initializer propagates via module_eval_changed to runtime consumers while skipping unrelated web tests.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(5);\nexport const assignMarker = 2;\nexport const schema = defineSchema({ currency: \"USD\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v1\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 0;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `$${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:test"]
+    },
+    {
+      "id": "private-helper-called-by-export-initializer",
+      "description": "Editing a private helper invoked by a top-level export initializer reaches runtime importers via reverse def-use to module_eval_changed while skipping unrelated web tests.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate + 3;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(2);\nexport const assignMarker = 2;\nexport const schema = defineSchema({ currency: \"USD\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v1\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 0;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `$${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:test"]
+    },
+    {
+      "id": "class-static-block-side-effect",
+      "description": "Editing a class static initialization block propagates via module_eval_changed to runtime consumers while keeping unrelated web tests skipped.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(2);\nexport const assignMarker = 2;\nexport const schema = defineSchema({ currency: \"USD\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v1\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 5;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `$${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:test"]
+    },
+    {
+      "id": "mixed-export-and-unused-runtime-import",
+      "description": "Adding an unused runtime import alongside a pure export edit triggers module_eval_changed and selects runtime consumers without widening to unrelated web tests.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\nimport { unused } from \"./side-effect.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(2);\nexport const assignMarker = 2;\nexport const schema = defineSchema({ currency: \"USD\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v1\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 0;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `USD ${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:test",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "breaking",
+      "expectedChangedTaskIds": ["api:test", "core:lint"]
+    },
+    {
+      "id": "pure-annotation-and-pure-factory-narrowing",
+      "description": "Edits to /*#__PURE__*/ annotated initializers and workspace.pureFactories calls stay narrowed and skip downstream runtime tests when those exports are not imported.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(2);\nexport const assignMarker = 2;\nexport const schema = defineSchema({ currency: \"EUR\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v2\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 0;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `$${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
+      "classification": "control",
+      "expectedChangedTaskIds": []
+    },
+    {
+      "id": "pure-export-alongside-untouched-impure-const",
+      "description": "Editing a pure unimported export in a module that also contains untouched impure top-level declarations stays narrow and skips downstream runtime tests.",
+      "operations": [
+        {
+          "kind": "write",
+          "path": "packages/core/src/tax.ts",
+          "contents": "import { defineSchema } from \"./schema-factory.js\";\nimport { shared } from \"./shared.js\";\n\nfunction setRate(nextRate: number): number {\n  shared.factor = nextRate;\n  return nextRate;\n}\n\nfunction makePureTag(label: string): string {\n  return label;\n}\n\nexport const callMarker = setRate(2);\nexport const assignMarker = 2;\nexport const schema = defineSchema({ currency: \"USD\" });\nexport const pureTag = /*#__PURE__*/ makePureTag(\"v1\");\n\nexport class TaxPolicy {\n  readonly kind = \"tax-policy\";\n  static {\n    shared.policyBoost = 0;\n  }\n}\n\nexport function computeTax(amount: number): number {\n  return amount * shared.factor + shared.policyBoost + shared.importSideEffect;\n}\n\nexport function formatTax(amount: number): string {\n  return `CAD ${String(amount)}`;\n}\n"
+        }
+      ],
+      "requiredTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "expectedSelectionTaskIds": [
+        "api:lint",
+        "api:typecheck",
+        "core:lint",
+        "core:test",
+        "core:typecheck",
+        "web:lint",
+        "web:typecheck"
+      ],
+      "fullFallbackPolicy": "forbidden",
       "classification": "control",
       "expectedChangedTaskIds": []
     }

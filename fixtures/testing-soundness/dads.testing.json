@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "workspace": {
     "root": ".",
+    "pureFactories": ["defineSchema"],
     "fullFallback": {
       "taskIds": [
         "core:lint",

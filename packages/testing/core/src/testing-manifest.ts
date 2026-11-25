@@ -59,6 +59,7 @@ export type TestingManifest = {
     readonly sql?: TestingManifestWorkspaceSql;
     readonly nonCodeSuffixes?: readonly string[];
     readonly ignorePaths?: readonly string[];
+    readonly pureFactories?: readonly string[];
     readonly dynamicImportScopes?: Readonly<Record<string, readonly string[]>>;
     readonly boundaries?: TestingManifestWorkspaceBoundaries;
   };
@@ -168,24 +169,7 @@ export function parseTestingManifest(text: string, subject: string): TestingMani
 export function serializeTestingManifest(manifest: TestingManifest): string {
   const document = {
     schemaVersion: manifest.schemaVersion,
-    workspace: {
-      ...(manifest.workspace.root === undefined ? {} : { root: manifest.workspace.root }),
-      fullFallback: { taskIds: [...manifest.workspace.fullFallback.taskIds] },
-      ...(manifest.workspace.sql === undefined ? {} : { sql: serializeWorkspaceSql(manifest.workspace.sql) }),
-      ...(manifest.workspace.nonCodeSuffixes === undefined || manifest.workspace.nonCodeSuffixes.length === 0
-        ? {}
-        : { nonCodeSuffixes: [...manifest.workspace.nonCodeSuffixes] }),
-      ...(manifest.workspace.ignorePaths === undefined || manifest.workspace.ignorePaths.length === 0
-        ? {}
-        : { ignorePaths: [...manifest.workspace.ignorePaths] }),
-      ...(manifest.workspace.dynamicImportScopes === undefined ||
-      Object.keys(manifest.workspace.dynamicImportScopes).length === 0
-        ? {}
-        : { dynamicImportScopes: serializeDynamicImportScopes(manifest.workspace.dynamicImportScopes) }),
-      ...(manifest.workspace.boundaries === undefined
-        ? {}
-        : { boundaries: serializeWorkspaceBoundaries(manifest.workspace.boundaries) }),
-    },
+    workspace: serializeWorkspace(manifest.workspace),
     projects: manifest.projects.map((project) => ({
       id: project.id,
       root: project.root,
@@ -218,11 +202,47 @@ export function serializeTestingManifest(manifest: TestingManifest): string {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
+function serializeWorkspaceStringLists(
+  workspace: TestingManifest["workspace"],
+): Readonly<Record<string, readonly string[]>> {
+  const lists: Record<string, readonly string[]> = {};
+  for (const key of ["nonCodeSuffixes", "ignorePaths", "pureFactories"] as const) {
+    const entries = workspace[key];
+    if (entries !== undefined && entries.length > 0) {
+      lists[key] = [...entries];
+    }
+  }
+  return lists;
+}
+
+function serializeWorkspace(workspace: TestingManifest["workspace"]): Readonly<Record<string, unknown>> {
+  const scopes = workspace.dynamicImportScopes;
+  return {
+    ...(workspace.root === undefined ? {} : { root: workspace.root }),
+    fullFallback: { taskIds: [...workspace.fullFallback.taskIds] },
+    ...(workspace.sql === undefined ? {} : { sql: serializeWorkspaceSql(workspace.sql) }),
+    ...serializeWorkspaceStringLists(workspace),
+    ...(scopes === undefined || Object.keys(scopes).length === 0
+      ? {}
+      : { dynamicImportScopes: serializeDynamicImportScopes(scopes) }),
+    ...(workspace.boundaries === undefined ? {} : { boundaries: serializeWorkspaceBoundaries(workspace.boundaries) }),
+  };
+}
+
 function readWorkspace(value: unknown, subject: string): TestingManifest["workspace"] {
   const workspace = readRecord(value, "workspace", subject);
   rejectUnknownKeys(
     workspace,
-    ["root", "fullFallback", "sql", "nonCodeSuffixes", "ignorePaths", "dynamicImportScopes", "boundaries"],
+    [
+      "root",
+      "fullFallback",
+      "sql",
+      "nonCodeSuffixes",
+      "ignorePaths",
+      "pureFactories",
+      "dynamicImportScopes",
+      "boundaries",
+    ],
     "workspace",
     subject,
   );
@@ -231,8 +251,6 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
   const root = workspace["root"];
   const sql = workspace["sql"];
   const boundaries = workspace["boundaries"];
-  const nonCodeSuffixes = readOptionalStringArray(workspace["nonCodeSuffixes"], "workspace.nonCodeSuffixes", subject);
-  const ignorePaths = readOptionalStringArray(workspace["ignorePaths"], "workspace.ignorePaths", subject);
   const rawScopes = workspace["dynamicImportScopes"];
   const dynamicImportScopes =
     rawScopes === undefined ? undefined : readDynamicImportScopes(rawScopes, "workspace.dynamicImportScopes", subject);
@@ -242,14 +260,27 @@ function readWorkspace(value: unknown, subject: string): TestingManifest["worksp
       taskIds: readStringArray(fullFallback["taskIds"], "workspace.fullFallback.taskIds", subject),
     },
     ...(sql === undefined ? {} : { sql: readWorkspaceSql(sql, "workspace.sql", subject) }),
-    ...(nonCodeSuffixes.length === 0 ? {} : { nonCodeSuffixes }),
-    ...(ignorePaths.length === 0 ? {} : { ignorePaths }),
+    ...readWorkspaceStringLists(workspace, subject),
     ...(dynamicImportScopes === undefined || Object.keys(dynamicImportScopes).length === 0
       ? {}
       : { dynamicImportScopes }),
     ...(boundaries === undefined
       ? {}
       : { boundaries: readWorkspaceBoundaries(boundaries, "workspace.boundaries", subject) }),
+  };
+}
+
+function readWorkspaceStringLists(
+  workspace: Readonly<Record<string, unknown>>,
+  subject: string,
+): Pick<TestingManifest["workspace"], "nonCodeSuffixes" | "ignorePaths" | "pureFactories"> {
+  const nonCodeSuffixes = readOptionalStringArray(workspace["nonCodeSuffixes"], "workspace.nonCodeSuffixes", subject);
+  const ignorePaths = readOptionalStringArray(workspace["ignorePaths"], "workspace.ignorePaths", subject);
+  const pureFactories = readOptionalStringArray(workspace["pureFactories"], "workspace.pureFactories", subject);
+  return {
+    ...(nonCodeSuffixes.length === 0 ? {} : { nonCodeSuffixes }),
+    ...(ignorePaths.length === 0 ? {} : { ignorePaths }),
+    ...(pureFactories.length === 0 ? {} : { pureFactories }),
   };
 }
 

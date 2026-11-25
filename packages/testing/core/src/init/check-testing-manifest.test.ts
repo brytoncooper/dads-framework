@@ -230,6 +230,14 @@ describe("generated manifest checking", () => {
       }),
       message: "Manifest must declare at least one task.",
     },
+    {
+      name: "an invalid workspace.pureFactories pattern",
+      break: (manifest) => ({
+        ...manifest,
+        workspace: { ...manifest.workspace, pureFactories: ["z.*", "*"] },
+      }),
+      message: "workspace.pureFactories entry '*' must be an identifier chain like 'pgTable', 'React.memo', or 'z.*'.",
+    },
   ];
 
   for (const violation of violations) {

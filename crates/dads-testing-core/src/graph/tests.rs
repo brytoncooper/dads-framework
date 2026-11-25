@@ -19,6 +19,7 @@ fn compact_graph_round_trips_patch_and_propagates_three_hops() {
             every_hunk_is_attributed: true,
             semantic_change: true,
             type_only_change: false,
+            module_eval_changed: false,
         },
     ]);
     let r = g.symbol_reachability_from(["a".into()]);
@@ -51,6 +52,7 @@ fn literal_runtime_import_reaches_its_importer_without_named_symbols() {
             every_hunk_is_attributed: true,
             semantic_change: true,
             type_only_change: false,
+            module_eval_changed: false,
         }]);
     assert!(
         graph
@@ -114,6 +116,7 @@ fn export_star_preserves_the_changed_symbol_for_downstream_importers() {
         every_hunk_is_attributed: true,
         semantic_change: true,
         type_only_change: false,
+        module_eval_changed: false,
     }]);
 
     let reachable = graph.symbol_reachability_from(["leaf".into()]);
@@ -174,6 +177,7 @@ fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
                 every_hunk_is_attributed: true,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: false,
             },
             ChangedModuleEvidence {
                 path: "b".into(),
@@ -181,6 +185,7 @@ fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
                 every_hunk_is_attributed: true,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: false,
             },
         ]);
 
@@ -244,6 +249,7 @@ fn mixed_export_star_and_named_import_still_propagates_own_exports() {
                 every_hunk_is_attributed: true,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: false,
             },
             ChangedModuleEvidence {
                 path: "b".into(),
@@ -251,6 +257,7 @@ fn mixed_export_star_and_named_import_still_propagates_own_exports() {
                 every_hunk_is_attributed: true,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: false,
             },
         ]);
 
@@ -291,6 +298,7 @@ fn terminal_importer_without_exports_does_not_make_reachability_uncertain() {
             every_hunk_is_attributed: true,
             semantic_change: true,
             type_only_change: false,
+            module_eval_changed: false,
         }]);
 
     let reachable = graph.symbol_reachability_from(["leaf".into()]);
@@ -324,6 +332,7 @@ fn symbol_reachability_records_followed_edges() {
                 every_hunk_is_attributed: true,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: false,
             },
         ]);
 
@@ -377,6 +386,7 @@ fn type_only_edge_uncertainty_carries_the_import_location() {
                 every_hunk_is_attributed: true,
                 semantic_change: true,
                 type_only_change: false,
+                module_eval_changed: false,
             },
         ]);
 
@@ -419,6 +429,76 @@ fn a_graph_without_locations_still_deserializes() {
             .uncertainties
             .iter()
             .all(|uncertainty| uncertainty.location.is_none())
+    );
+}
+
+#[test]
+fn module_eval_changed_propagates_runtime_edges_transitively_and_erases_import_type() {
+    let leaf = node("leaf", "marker", None);
+    let mid = node("mid", "computeTax", Some(("leaf", "computeTax")));
+    let runtime_test = node("runtime.test", "t", Some(("mid", "computeTax")));
+    let unrelated_test = node("unrelated.test", "u", None);
+    let mut type_only_test = node("type-only.test", "ty", Some(("leaf", "LeafType")));
+    type_only_test.imports[0].type_only = true;
+    let mut cycle_a = node("cycle-a", "a", Some(("leaf", "other")));
+    cycle_a.imports.push(ImportFact {
+        specifier: "cycle-b".into(),
+        span: SourceSpan { start: 2, end: 3 },
+        kind: ImportKind::Static,
+        type_only: false,
+        requested_symbols: ["b".to_owned()].into_iter().collect(),
+        namespace_import: false,
+        reexport_all: false,
+        reexport_namespace: None,
+        resolved_path: Some("cycle-b".into()),
+        position: None,
+        export_deps: None,
+        member_reads: None,
+    });
+    let cycle_b = node("cycle-b", "b", Some(("cycle-a", "a")));
+    let graph = DependencyGraph::new(
+        vec![
+            leaf,
+            mid,
+            runtime_test,
+            unrelated_test,
+            type_only_test,
+            cycle_a,
+            cycle_b,
+        ],
+        vec![],
+    )
+    .with_changed_module_evidence(vec![ChangedModuleEvidence {
+        path: "leaf".into(),
+        changed_exports: ["marker".to_owned()].into_iter().collect(),
+        every_hunk_is_attributed: true,
+        semantic_change: true,
+        type_only_change: false,
+        module_eval_changed: true,
+    }]);
+
+    let round_tripped: DependencyGraph =
+        serde_json::from_str(&serde_json::to_string(&graph).expect("serialize"))
+            .expect("deserialize");
+    assert!(round_tripped.module_eval_changed("leaf"));
+
+    let runtime = round_tripped.symbol_reachability_runtime(["leaf".into()]);
+    assert!(runtime.paths.contains("leaf"));
+    assert!(runtime.paths.contains("mid"));
+    assert!(runtime.paths.contains("runtime.test"));
+    assert!(runtime.paths.contains("cycle-a"));
+    assert!(runtime.paths.contains("cycle-b"));
+    assert!(!runtime.paths.contains("type-only.test"));
+    assert!(!runtime.paths.contains("unrelated.test"));
+    assert!(runtime.uncertainties.is_empty());
+
+    let typecheck = round_tripped.symbol_reachability_from(["leaf".into()]);
+    assert!(typecheck.paths.contains("runtime.test"));
+    assert!(
+        typecheck
+            .uncertainties
+            .iter()
+            .any(|u| { u.path == "type-only.test" && u.code == "ambiguous-cross-file-import" })
     );
 }
 

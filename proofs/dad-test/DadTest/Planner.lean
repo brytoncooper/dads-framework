@@ -974,6 +974,16 @@ theorem comment_only_edit_has_no_impact
     | typeOnlyCheck _ _ _ _ _ ih => exact ih
     | bareRuntime _ _ _ ih => exact ih
     | boundedDynamic _ _ _ ih => exact ih
+  have hNoEval : ∀ m, ¬ ImpactedModuleEval g changed m := by
+    intro m hEval
+    induction hEval with
+    | @seed m c hm hch _ hsem _ =>
+        rcases hCommentOnly m hm with ⟨c', hc', _, hsemFalse⟩
+        rw [hc'] at hch
+        cases hch
+        rw [hsemFalse] at hsem
+        cases hsem
+    | runtimeImporter _ _ _ ih => exact ih
   refine ⟨hNoSym, ?_⟩
   intro m hMod
   cases hMod with
@@ -988,6 +998,7 @@ theorem comment_only_edit_has_no_impact
       rw [hc'] at hbad
       simp [hcompTrue] at hbad
   | @fromSymbol s hSym => exact hNoSym m s hSym
+  | @fromModuleEval hEval => exact hNoEval m hEval
   | @namedImporter tgt _ s hSym _ _ => exact hNoSym tgt s hSym
   | @namespaceTrackedImporter tgt _ s hSym _ _ => exact hNoSym tgt s hSym
   | @typeOnlyImporter tgt _ s _ hSym _ _ => exact hNoSym tgt s hSym
@@ -1011,5 +1022,44 @@ theorem comment_only_edit_runs_zero_tests
   have ⟨_, hNoMod⟩ := comment_only_edit_has_no_impact (ch := t.channel) hCommentOnly
   exact (exact_file_subset_iff m g changed reqFull fuel ht htMode htEnum hAllOwned
     hNotFull hNotWidened hNoAsset).2 (fun f _ => hNoMod f)
+
+/--
+Theorem 10 (Module-Evaluation Side-Effect Soundness & Runtime Narrowing):
+Any test file `f ∈ t.testFiles` that transitively loads a `moduleEvalChanged` module through
+runtime edges (`ImpactedModuleEval`) is GUARANTEED never to be skipped by `buildPlan`, while
+under clean `.subset fs` planning any `import type`-only (or unrelated) test file `u` stays excluded!
+-/
+theorem module_eval_change_selects_runtime_test
+    (m : Manifest) (g : DepGraph) (changed : List ModuleId)
+    (reqFull : Bool) (fuel : Nat)
+    {t : TaskSpec} {f : ModuleId}
+    (ht : t ∈ m.tasks)
+    (htMode : t.impact = .reachability)
+    (hfTask : f ∈ t.testFiles)
+    (hfOwner : m.ownerOf f = some t.project)
+    (hfEval : ImpactedModuleEval g (changed.filter (fun x => g.modules.contains x)) f) :
+    let scope := (buildPlan m (some g) changed reqFull fuel).taskScope t
+    scope = .allTests ∨ ∃ fs, scope = .subset fs ∧ f ∈ fs :=
+  no_false_file_skips m g changed reqFull fuel ht htMode hfTask hfOwner
+    (ImpactedModule.fromModuleEval hfEval)
+
+theorem module_eval_type_only_test_stays_excluded_in_subset
+    (m : Manifest) (g : DepGraph) (changed : List ModuleId)
+    (reqFull : Bool) (fuel : Nat)
+    {t : TaskSpec} {fs : List ModuleId} {typeOnlyTest : ModuleId}
+    (htChan : t.channel = .runtime)
+    (hErase : g.erasesTypeOnly = true)
+    (hNotFull : (buildPlan m (some g) changed reqFull fuel).fullFallback = false)
+    (hSub : (buildPlan m (some g) changed reqFull fuel).taskScope t = .subset fs)
+    (huTask : typeOnlyTest ∈ t.testFiles)
+    (huNotChanged : typeOnlyTest ∉ changed.filter (fun x => g.modules.contains x))
+    (huOnlyType : ∀ e ∈ g.edges, e.source = typeOnlyTest → e.kind.isRuntime = false)
+    (huNoDecl : ∀ u ∈ g.declaredUncertainties, u.path ≠ typeOnlyTest) :
+    typeOnlyTest ∉ fs := by
+  have ⟨_, hNotMod, _⟩ :=
+    module_eval_erases_type_only_runtime hErase huNotChanged huOnlyType huNoDecl
+  have ⟨_, hExcl⟩ := no_spurious_file_runs m g changed reqFull fuel hNotFull hSub
+  rw [htChan] at hExcl
+  exact hExcl typeOnlyTest huTask hNotMod
 
 end DadTest

@@ -1,4 +1,4 @@
-//! Sound intra-file def-use projection for pure top-level ES modules.
+//! Sound intra-file def-use projection for ES/TS modules.
 //!
 //! When every top-level statement in a module is side-effect-free (imports, exports, functions,
 //! classes, type declarations, or pure variable initializers), Oxc's resolved reference table
@@ -8,8 +8,7 @@
 
 use crate::facts::{JsImportFact, JsImportKind};
 use crate::intra_file_purity::{
-    DeclNode, find_root_symbol, record_any_declaration, record_pure_declaration,
-    record_pure_default_export,
+    DeclNode, PurityContext, find_root_symbol, record_pure_declaration, record_pure_default_export,
 };
 use oxc_ast::ast::{Program, Statement};
 use oxc_semantic::Semantic;
@@ -31,7 +30,7 @@ pub(crate) fn attach_intra_file_export_deps(
     if has_uncertainties {
         return;
     }
-    let Some(decl_spans) = collect_pure_top_level_decls(program, semantic) else {
+    let Some(decl_spans) = collect_pure_top_level_decls(program, semantic, &[]) else {
         return;
     };
     let export_specifier_spans = collect_bare_export_spans(program);
@@ -72,7 +71,8 @@ fn attach_indirect_reexport_deps(module_record: &ModuleRecord<'_>, imports: &mut
             let Some(module_request) = &entry.module_request else {
                 continue;
             };
-            if module_request.name != import.specifier
+            if (!import.type_only && entry.is_type)
+                || module_request.name != import.specifier
                 || entry.statement_span.start > import.span.start
                 || import.span.end > entry.statement_span.end
             {
@@ -95,23 +95,29 @@ fn attach_indirect_reexport_deps(module_record: &ModuleRecord<'_>, imports: &mut
 pub(crate) fn collect_pure_top_level_decls(
     program: &Program<'_>,
     semantic: &Semantic<'_>,
+    pure_factories: &[String],
 ) -> Option<Vec<(Span, DeclNode)>> {
+    let ctx = PurityContext {
+        semantic,
+        pure_factories,
+    };
     let mut decls = Vec::new();
     for stmt in &program.body {
         match stmt {
             Statement::ImportDeclaration(_)
             | Statement::ExportAllDeclaration(_)
             | Statement::ExportNamedDeclaration(_)
-            | Statement::ExportFromDeclaration(_) => {}
+            | Statement::ExportFromDeclaration(_)
+            | Statement::EmptyStatement(_) => {}
             Statement::ExportDeclaration(export) => {
-                record_pure_declaration(&export.declaration, semantic, &mut decls)?;
+                record_pure_declaration(&export.declaration, &ctx, &mut decls)?;
             }
             Statement::ExportDefaultDeclaration(export) => {
-                record_pure_default_export(&export.declaration, export.span, semantic, &mut decls)?;
+                record_pure_default_export(&export.declaration, export.span, &ctx, &mut decls)?;
             }
             other => {
                 let decl = other.as_declaration()?;
-                record_pure_declaration(decl, semantic, &mut decls)?;
+                record_pure_declaration(decl, &ctx, &mut decls)?;
             }
         }
     }
@@ -228,11 +234,10 @@ fn matching_import_symbols(
     seeds
 }
 
-pub(crate) fn bfs_affected_exports(
+pub(crate) fn bfs_reachable_nodes(
     graph: &BTreeMap<DeclNode, BTreeSet<DeclNode>>,
-    exports_by_node: &BTreeMap<DeclNode, BTreeSet<String>>,
     seeds: &[DeclNode],
-) -> BTreeSet<String> {
+) -> BTreeSet<DeclNode> {
     let mut seen = BTreeSet::new();
     let mut queue = VecDeque::new();
     for seed in seeds {
@@ -240,11 +245,7 @@ pub(crate) fn bfs_affected_exports(
             queue.push_back(*seed);
         }
     }
-    let mut affected = BTreeSet::new();
     while let Some(node) = queue.pop_front() {
-        if let Some(names) = exports_by_node.get(&node) {
-            affected.extend(names.iter().cloned());
-        }
         if let Some(nexts) = graph.get(&node) {
             for next in nexts {
                 if seen.insert(*next) {
@@ -253,82 +254,24 @@ pub(crate) fn bfs_affected_exports(
             }
         }
     }
+    seen
+}
+
+pub(crate) fn bfs_affected_exports(
+    graph: &BTreeMap<DeclNode, BTreeSet<DeclNode>>,
+    exports_by_node: &BTreeMap<DeclNode, BTreeSet<String>>,
+    seeds: &[DeclNode],
+) -> BTreeSet<String> {
+    let mut affected = BTreeSet::new();
+    for node in bfs_reachable_nodes(graph, seeds) {
+        if let Some(names) = exports_by_node.get(&node) {
+            affected.extend(names.iter().cloned());
+        }
+    }
     affected
 }
 
-/// Expands a set of directly changed export names in `source` to include every other own export
-/// in the same module that transitively references them (e.g., `createNoteRecord` calling
-/// `normalizeNoteText` in the same file). Returns `None` if the module cannot be analyzed cleanly
-/// (top-level side effects or parse/semantic errors), letting the caller fall back conservatively.
-pub(crate) fn expand_same_file_changed_exports(
-    source: &str,
-    path: &std::path::Path,
-    direct_changed_exports: &BTreeSet<String>,
-) -> Option<BTreeSet<String>> {
-    use oxc_allocator::Allocator;
-    use oxc_parser::Parser;
-    use oxc_semantic::SemanticBuilder;
-    use oxc_span::SourceType;
-
-    if direct_changed_exports.is_empty() {
-        return Some(BTreeSet::new());
-    }
-    let source_type = SourceType::from_path(path).ok()?;
-    let allocator = Allocator::default();
-    let parsed = Parser::new(&allocator, source, source_type).parse();
-    if parsed.panicked || !parsed.diagnostics.is_empty() {
-        return None;
-    }
-    let semantic = SemanticBuilder::new()
-        .with_build_nodes(true)
-        .with_check_syntax_error(true)
-        .build(&parsed.program);
-    if !semantic.diagnostics.is_empty() {
-        return None;
-    }
-    let decl_spans = collect_all_top_level_decls(&parsed.program, &semantic.semantic);
-    let export_specifier_spans = collect_bare_export_spans(&parsed.program);
-    let graph = build_intra_file_graph(&semantic.semantic, &decl_spans, &export_specifier_spans)?;
-    let exports_by_node = map_nodes_to_export_names(&parsed.module_record, &semantic.semantic);
-
-    let mut seeds = Vec::new();
-    for (node, names) in &exports_by_node {
-        if names
-            .iter()
-            .any(|name| direct_changed_exports.contains(name))
-        {
-            seeds.push(*node);
-        }
-    }
-    let mut expanded = direct_changed_exports.clone();
-    expanded.extend(bfs_affected_exports(&graph, &exports_by_node, &seeds));
-    Some(expanded)
-}
-
-fn collect_all_top_level_decls(
-    program: &Program<'_>,
-    semantic: &Semantic<'_>,
-) -> Vec<(Span, DeclNode)> {
-    let mut decls = Vec::new();
-    for stmt in &program.body {
-        match stmt {
-            Statement::ExportDeclaration(export) => {
-                record_any_declaration(&export.declaration, semantic, &mut decls);
-            }
-            Statement::ExportDefaultDeclaration(export) => {
-                decls.push((export.span, DeclNode::DefaultExport));
-            }
-            other => {
-                if let Some(decl) = other.as_declaration() {
-                    record_any_declaration(decl, semantic, &mut decls);
-                }
-            }
-        }
-    }
-    decls
-}
-
-fn find_root_symbol_by_name(semantic: &Semantic<'_>, name: &str) -> Option<SymbolId> {
+pub(crate) fn find_root_symbol_by_name(semantic: &Semantic<'_>, name: &str) -> Option<SymbolId> {
     let scoping = semantic.scoping();
     let root_scope = scoping.root_scope_id();
     scoping.get_binding(root_scope, name.into())

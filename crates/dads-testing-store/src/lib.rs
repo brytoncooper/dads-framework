@@ -39,7 +39,7 @@ pub use crate::cache_dir::resolve_cache_dir;
 pub use crate::issues::{StoreIssue, StoreIssueSeverity};
 pub use crate::receipts::FileReceiptStore;
 
-pub const SNAPSHOT_SCHEMA_VERSION: u32 = 1;
+pub const SNAPSHOT_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SnapshotAction {

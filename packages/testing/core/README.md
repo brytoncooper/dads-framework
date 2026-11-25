@@ -308,6 +308,10 @@ migration runners plus only affected database domains via bidirectional FK
 closure while global/unrecognized DDL widens safely to all database tasks.
 Workspaces may also declare `workspace.nonCodeSuffixes` (for example `[".md"]`)
 so documentation-only edits do not widen JavaScript/TypeScript reachability,
+`workspace.pureFactories` (for example `["z.*", "pgTable", "createContext", "React.memo", "React.forwardRef"]`)
+to opt known side-effect-free top-level factory calls (whose arguments are also pure)
+out of module-evaluation propagation alongside standard `/*#__PURE__*/` / `/*@__PURE__*/`
+annotations and unshadowed pure built-ins (`Object.freeze`, `Symbol`, `new RegExp`, `new Set`, `new Map`),
 `workspace.dynamicImportScopes` (a map from module path to allowed directory
 prefixes, such as `{ "scripts/load-rules.mjs": ["scripts/rules"] }`) to bound a
 deliberate directory-scanning loader (such as a plugin or rule loader) to the

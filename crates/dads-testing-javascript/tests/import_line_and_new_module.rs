@@ -40,7 +40,10 @@ fn make_workspace(name: &str) -> Result<PathBuf, Box<dyn Error>> {
 "#;
     fs::write(dir.join("dads.testing.json"), manifest)?;
     fs::write(dir.join("src/dep-a.ts"), "export const aVal = 1;\n")?;
-    fs::write(dir.join("src/dep-b.ts"), "export const bVal = 2;\n")?;
+    fs::write(
+        dir.join("src/dep-b.ts"),
+        "export const bVal = 2;\nexport const bValAlt = 22;\n",
+    )?;
     fs::write(dir.join("src/dep-b2.ts"), "export const bVal = 20;\n")?;
     fs::write(dir.join("src/polyfill.ts"), "export const ok = true;\n")?;
     fs::write(
@@ -95,13 +98,14 @@ fn bound_import_line_edit_narrows_to_referencing_export_and_bare_import_widens()
 -> Result<(), Box<dyn Error>> {
     let dir = make_workspace("bound-vs-bare")?;
 
-    // 1. Change ONLY `import { bVal } from './dep-b'` -> `'./dep-b2'`:
-    //    MUST attribute ONLY to `useB` and reach ONLY `src/b.test.ts` (skip `src/a.test.ts`!).
+    // 1. Edit ONLY a used named specifier on the SAME module specifier (`./dep-b`):
+    //    module load graph is unchanged, so MUST narrow to `useB` and skip `src/a.test.ts`!
     fs::write(
         dir.join("src/service.ts"),
-        "import { aVal } from './dep-a';\nimport { bVal } from './dep-b2';\nexport function useA() { return aVal; }\nexport function useB() { return bVal; }\n",
+        "import { aVal } from './dep-a';\nimport { bValAlt as bVal } from './dep-b';\nexport function useA() { return aVal; }\nexport function useB() { return bVal; }\n",
     )?;
     let g1 = analyze_request(&request(&dir)).ok_or("missing graph")?;
+    assert!(!g1.module_eval_changed("src/service.ts"));
     assert_eq!(
         g1.changed_exports("src/service.ts"),
         Some(BTreeSet::from(["useB".to_owned()]))
@@ -111,19 +115,35 @@ fn bound_import_line_edit_narrows_to_referencing_export_and_bare_import_widens()
     assert!(r1.paths.contains("src/b.test.ts"));
     assert!(!r1.paths.contains("src/a.test.ts"));
 
-    // 2. Adding a bare side-effect import (`import './polyfill'`) MUST widen conservatively!
+    // 2. Changing the runtime module specifier (`'./dep-b'` -> `'./dep-b2'`) changes which module
+    //    evaluates at load time -> `module_eval_changed = true` reaches BOTH runtime importers!
+    fs::write(
+        dir.join("src/service.ts"),
+        "import { aVal } from './dep-a';\nimport { bVal } from './dep-b2';\nexport function useA() { return aVal; }\nexport function useB() { return bVal; }\n",
+    )?;
+    let g_spec = analyze_request(&request(&dir)).ok_or("missing graph")?;
+    assert!(g_spec.module_eval_changed("src/service.ts"));
+    let r_spec = g_spec.symbol_reachability_runtime(vec!["src/service.ts".to_owned()]);
+    assert!(
+        r_spec.uncertainties.is_empty(),
+        "{:?}",
+        r_spec.uncertainties
+    );
+    assert!(r_spec.paths.contains("src/a.test.ts"));
+    assert!(r_spec.paths.contains("src/b.test.ts"));
+
+    // 3. Adding a bare side-effect import (`import './polyfill'`) sets `module_eval_changed = true`
+    //    and propagates to every runtime importer!
     fs::write(
         dir.join("src/service.ts"),
         "import './polyfill';\nimport { aVal } from './dep-a';\nimport { bVal } from './dep-b';\nexport function useA() { return aVal; }\nexport function useB() { return bVal; }\n",
     )?;
     let g2 = analyze_request(&request(&dir)).ok_or("missing graph")?;
-    assert!(g2.changed_exports("src/service.ts").is_none());
+    assert!(g2.module_eval_changed("src/service.ts"));
     let r2 = g2.symbol_reachability_runtime(vec!["src/service.ts".to_owned()]);
-    assert!(
-        r2.uncertainties
-            .iter()
-            .any(|u| u.code == "unattributed-module-change")
-    );
+    assert!(r2.uncertainties.is_empty(), "{:?}", r2.uncertainties);
+    assert!(r2.paths.contains("src/a.test.ts"));
+    assert!(r2.paths.contains("src/b.test.ts"));
 
     let _ = fs::remove_dir_all(&dir);
     Ok(())

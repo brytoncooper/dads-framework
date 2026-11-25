@@ -50,6 +50,8 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) non_code_suffixes: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) ignore_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) pure_factories: Vec<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) dynamic_import_scopes: BTreeMap<String, Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

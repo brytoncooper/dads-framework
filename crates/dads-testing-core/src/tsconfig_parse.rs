@@ -135,9 +135,10 @@ pub(crate) fn parse_tsconfig_jsonc(raw: &str) -> Option<Value> {
 /// Compares `base_raw` and `head_raw` tsconfigs. Returns `TsconfigDiff::PathsOnly` strictly when
 /// both parse cleanly and every field outside `compilerOptions.paths` is identical.
 pub(crate) fn diff_tsconfig_paths(base_raw: &str, head_raw: &str) -> TsconfigDiff {
-    let (Some(Value::Object(base_obj)), Some(Value::Object(head_obj))) =
-        (parse_tsconfig_jsonc(base_raw), parse_tsconfig_jsonc(head_raw))
-    else {
+    let (Some(Value::Object(base_obj)), Some(Value::Object(head_obj))) = (
+        parse_tsconfig_jsonc(base_raw),
+        parse_tsconfig_jsonc(head_raw),
+    ) else {
         return TsconfigDiff::ParseError;
     };
 

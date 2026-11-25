@@ -10,8 +10,7 @@ use dads_testing_core::graph::{
     DependencyGraph, ImportFact, ImportKind, ModuleNode, SourceSpan, SymbolFact,
 };
 use dads_testing_core::{
-    HotspotsOptions, NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION,
-    execute_request_with_graph,
+    HotspotsOptions, NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, execute_request_with_graph,
 };
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -96,7 +95,12 @@ fn manifest_json() -> String {
     .to_string()
 }
 
-fn make_import(resolved: &str, kind: ImportKind, reexport_all: bool, span: (u32, u32)) -> ImportFact {
+fn make_import(
+    resolved: &str,
+    kind: ImportKind,
+    reexport_all: bool,
+    span: (u32, u32),
+) -> ImportFact {
     ImportFact {
         specifier: resolved.to_owned(),
         span: SourceSpan {
@@ -163,8 +167,18 @@ fn sample_graph() -> DependencyGraph {
             declarations: vec![make_symbol("runA", (0, 30))],
             references: Vec::new(),
             imports: vec![
-                make_import("packages/core/src/index.ts", ImportKind::Static, false, (0, 10)),
-                make_import("packages/core/src/helper.ts", ImportKind::Static, false, (12, 22)),
+                make_import(
+                    "packages/core/src/index.ts",
+                    ImportKind::Static,
+                    false,
+                    (0, 10),
+                ),
+                make_import(
+                    "packages/core/src/helper.ts",
+                    ImportKind::Static,
+                    false,
+                    (12, 22),
+                ),
             ],
         },
         ModuleNode {

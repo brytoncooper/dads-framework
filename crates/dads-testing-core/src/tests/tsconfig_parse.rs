@@ -1,4 +1,6 @@
-use crate::tsconfig_parse::{TsconfigDiff, diff_tsconfig_paths, parse_tsconfig_jsonc, specifier_matches_alias};
+use crate::tsconfig_parse::{
+    TsconfigDiff, diff_tsconfig_paths, parse_tsconfig_jsonc, specifier_matches_alias,
+};
 use std::collections::BTreeSet;
 
 #[test]

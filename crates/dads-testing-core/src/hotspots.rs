@@ -108,7 +108,10 @@ pub(crate) fn build_hotspots(
     }
 }
 
-fn index_modules(manifest: &TestingManifest, graph: Option<&DependencyGraph>) -> Vec<IndexedModule> {
+fn index_modules(
+    manifest: &TestingManifest,
+    graph: Option<&DependencyGraph>,
+) -> Vec<IndexedModule> {
     let proj_by_id: HashMap<&str, usize> = manifest
         .projects
         .iter()
@@ -357,7 +360,10 @@ fn rank_project_hotspots(
         b.affected_projects
             .cmp(&a.affected_projects)
             .then_with(|| b.affected_files.cmp(&a.affected_files))
-            .then_with(|| b.direct_dependent_projects.cmp(&a.direct_dependent_projects))
+            .then_with(|| {
+                b.direct_dependent_projects
+                    .cmp(&a.direct_dependent_projects)
+            })
             .then_with(|| a.project.cmp(&b.project))
     });
     projects.truncate(limit);

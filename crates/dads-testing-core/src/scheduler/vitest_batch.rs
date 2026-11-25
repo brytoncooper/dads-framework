@@ -161,13 +161,7 @@ fn attribute_from_report_file(
             );
         }
     };
-    attribute_report(
-        &report,
-        members,
-        batch_result,
-        workspace_root,
-        batch_cwd,
-    )
+    attribute_report(&report, members, batch_result, workspace_root, batch_cwd)
 }
 
 fn attribute_report(
@@ -414,10 +408,7 @@ fn normalize_report_path(
 
 fn normalize_relative_str(raw: &str) -> String {
     let replaced = raw.replace('\\', "/");
-    replaced
-        .strip_prefix("./")
-        .unwrap_or(&replaced)
-        .to_owned()
+    replaced.strip_prefix("./").unwrap_or(&replaced).to_owned()
 }
 
 fn path_to_forward_slashes(path: &Path) -> String {

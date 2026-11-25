@@ -254,7 +254,11 @@ fn adding_unused_alias_widens_zero_projects() -> Result<(), Box<dyn Error>> {
     )?;
     assert!(!outcome.full_fallback);
     assert_eq!(outcome.selected, Vec::<String>::new());
-    assert!(outcome.issue_codes.contains(&"tsconfig-paths-narrowed".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-paths-narrowed".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -305,7 +309,11 @@ fn adding_alias_imported_by_existing_module_selects_only_that_project() -> Resul
     let outcome = run_plan_with_graph(&dir, "HEAD", None, graph)?;
     assert!(!outcome.full_fallback);
     assert_eq!(outcome.selected, vec!["beta:test".to_owned()]);
-    assert!(outcome.issue_codes.contains(&"tsconfig-paths-narrowed".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-paths-narrowed".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -338,7 +346,11 @@ fn modifying_alias_selects_only_importer_and_reverse_dependents() -> Result<(), 
         outcome.selected,
         vec!["alpha:test".to_owned(), "gamma:test".to_owned()]
     );
-    assert!(outcome.issue_codes.contains(&"tsconfig-paths-narrowed".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-paths-narrowed".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -366,7 +378,11 @@ fn removing_alias_selects_only_importer_and_reverse_dependents() -> Result<(), B
         outcome.selected,
         vec!["alpha:test".to_owned(), "gamma:test".to_owned()]
     );
-    assert!(outcome.issue_codes.contains(&"tsconfig-paths-narrowed".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-paths-narrowed".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -403,7 +419,11 @@ fn changing_compiler_options_strict_widens_all_tasks() -> Result<(), Box<dyn Err
             "shared:test".to_owned(),
         ]
     );
-    assert!(outcome.issue_codes.contains(&"tsconfig-global-change".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-global-change".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -431,7 +451,11 @@ fn malformed_json_in_tsconfig_fails_closed_and_widens_all() -> Result<(), Box<dy
             "shared:test".to_owned(),
         ]
     );
-    assert!(outcome.issue_codes.contains(&"tsconfig-parse-fallback".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-parse-fallback".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -460,7 +484,11 @@ fn newly_added_tsconfig_without_base_fails_closed_and_widens_all() -> Result<(),
             "shared:test".to_owned(),
         ]
     );
-    assert!(outcome.issue_codes.contains(&"tsconfig-base-unavailable".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-base-unavailable".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
@@ -523,7 +551,11 @@ fn commit_to_commit_wildcard_alias_narrowing_works() -> Result<(), Box<dyn Error
     let outcome = run_plan_with_graph(&dir, "HEAD~1", Some("HEAD"), graph)?;
     assert!(!outcome.full_fallback);
     assert_eq!(outcome.selected, vec!["beta:test".to_owned()]);
-    assert!(outcome.issue_codes.contains(&"tsconfig-paths-narrowed".to_owned()));
+    assert!(
+        outcome
+            .issue_codes
+            .contains(&"tsconfig-paths-narrowed".to_owned())
+    );
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }

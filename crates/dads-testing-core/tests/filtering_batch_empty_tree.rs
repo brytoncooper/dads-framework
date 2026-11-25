@@ -90,10 +90,7 @@ fn empty_tree_base_resolves_to_all_scope_without_dumping_paths() -> Result<(), B
     Ok(())
 }
 
-#[test]
-fn target_project_exclude_and_weighted_sharding_filter_deterministically()
--> Result<(), Box<dyn Error>> {
-    let dir = make_repo("filters")?;
+fn write_filters_manifest(dir: &Path) -> Result<(), Box<dyn Error>> {
     let manifest = serde_json::json!({
         "schemaVersion": 1,
         "workspace": {
@@ -139,23 +136,10 @@ fn target_project_exclude_and_weighted_sharding_filter_deterministically()
         dir.join("dads.testing.json"),
         serde_json::to_string_pretty(&manifest)?,
     )?;
-    commit_all(&dir)?;
+    commit_all(dir)
+}
 
-    // Filter by target with colon (`test:integration`) and exclude project `b`.
-    let resp = execute_request(NativeRequest {
-        schema_version: PROTOCOL_SCHEMA_VERSION,
-        operation: Operation::Plan,
-        workspace_root: dir.display().to_string(),
-        all: true,
-        targets: vec!["test:integration".into()],
-        exclude_projects: vec!["b".into()],
-        ..NativeRequest::default()
-    });
-    assert!(resp.ok, "{resp:?}");
-    let plan = resp.result.ok_or("missing result")?.plan;
-    let ids: Vec<&str> = plan.tasks.iter().map(|t| t.id.as_str()).collect();
-    assert_eq!(ids, vec!["a:test:integration"]);
-
+fn assert_weighted_sharding(dir: &Path) -> Result<(), Box<dyn Error>> {
     // Weighted LPT sharding: a=100, b=50, c=50 across 2 shards -> shard 1 gets [a], shard 2 gets [b, c].
     let weights = BTreeMap::from([
         ("a".to_owned(), 100.0),
@@ -200,7 +184,10 @@ fn target_project_exclude_and_weighted_sharding_filter_deterministically()
         .collect();
     assert_eq!(ids1, vec!["a:lint"]);
     assert_eq!(ids2, vec!["b:lint", "c:lint"]);
+    Ok(())
+}
 
+fn assert_only_mode_filters(dir: &Path) -> Result<(), Box<dyn Error>> {
     // `--only --task b:lint` on a dirty working tree selects ONLY `b:lint` without git-diff widening
     // or unrelated `impact: always` tasks!
     fs::write(dir.join("a/index.ts"), "export const a = 999;\n")?;
@@ -239,16 +226,38 @@ fn target_project_exclude_and_weighted_sharding_filter_deterministically()
     assert_eq!(only_f_plan.scope.kind, "explicit");
     assert_eq!(only_f_plan.counts.run, 1);
     assert_eq!(only_f_plan.tasks[0].id, "a:test:integration");
+    Ok(())
+}
+
+#[test]
+fn target_project_exclude_and_weighted_sharding_filter_deterministically()
+-> Result<(), Box<dyn Error>> {
+    let dir = make_repo("filters")?;
+    write_filters_manifest(&dir)?;
+
+    // Filter by target with colon (`test:integration`) and exclude project `b`.
+    let resp = execute_request(NativeRequest {
+        schema_version: PROTOCOL_SCHEMA_VERSION,
+        operation: Operation::Plan,
+        workspace_root: dir.display().to_string(),
+        all: true,
+        targets: vec!["test:integration".into()],
+        exclude_projects: vec!["b".into()],
+        ..NativeRequest::default()
+    });
+    assert!(resp.ok, "{resp:?}");
+    let plan = resp.result.ok_or("missing result")?.plan;
+    let ids: Vec<&str> = plan.tasks.iter().map(|t| t.id.as_str()).collect();
+    assert_eq!(ids, vec!["a:test:integration"]);
+
+    assert_weighted_sharding(&dir)?;
+    assert_only_mode_filters(&dir)?;
 
     let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
 
-#[test]
-fn native_task_batching_combines_passing_tasks_and_isolates_failures() -> Result<(), Box<dyn Error>>
-{
-    let dir = make_repo("batching")?;
-    let counter = dir.join(".git/invocations.log");
+fn write_batching_fixture(dir: &Path, counter: &Path) -> Result<(), Box<dyn Error>> {
     let script = dir.join("check.sh");
     fs::write(
         &script,
@@ -299,7 +308,15 @@ fn native_task_batching_combines_passing_tasks_and_isolates_failures() -> Result
         dir.join("dads.testing.json"),
         serde_json::to_string_pretty(&manifest)?,
     )?;
-    commit_all(&dir)?;
+    commit_all(dir)
+}
+
+#[test]
+fn native_task_batching_combines_passing_tasks_and_isolates_failures() -> Result<(), Box<dyn Error>>
+{
+    let dir = make_repo("batching")?;
+    let counter = dir.join(".git/invocations.log");
+    write_batching_fixture(&dir, &counter)?;
 
     // Happy path: all 3 tasks execute in ONE single process invocation!
     let pass = execute_request(NativeRequest {

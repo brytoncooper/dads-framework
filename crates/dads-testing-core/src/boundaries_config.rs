@@ -67,8 +67,12 @@ pub struct BoundaryViolation {
 pub(crate) fn load_boundaries_config(path: &Path) -> Result<WorkspaceBoundaries, TestingError> {
     let contents = fs::read_to_string(path)
         .map_err(|error| message(format!("Unable to read {}: {error}", path.display())))?;
-    let config: WorkspaceBoundaries = serde_json::from_str(&contents)
-        .map_err(|error| message(format!("Invalid boundaries config {}: {error}", path.display())))?;
+    let config: WorkspaceBoundaries = serde_json::from_str(&contents).map_err(|error| {
+        message(format!(
+            "Invalid boundaries config {}: {error}",
+            path.display()
+        ))
+    })?;
     validate_workspace_boundaries(&config)?;
     Ok(config)
 }

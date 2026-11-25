@@ -15,17 +15,8 @@ fn git(dir: &Path, args: &[&str]) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn make_lockfile_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
-    let dir = std::env::temp_dir().join(format!(
-        "dads-testing-lockfile-{name}-{}",
-        std::process::id()
-    ));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(dir.join("packages/alpha/src"))?;
-    fs::create_dir_all(dir.join("packages/beta/src"))?;
-    git(&dir, &["init", "-q"])?;
-
-    let manifest = json!({
+fn lockfile_manifest() -> serde_json::Value {
+    json!({
         "schemaVersion": 1,
         "workspace": {
             "root": ".",
@@ -53,13 +44,11 @@ fn make_lockfile_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
                 "impact": { "mode": "reachability", "paths": ["package-lock.json"] }
             }
         ]
-    });
-    fs::write(
-        dir.join("dads.testing.json"),
-        serde_json::to_string_pretty(&manifest)?,
-    )?;
+    })
+}
 
-    let pkg = json!({
+fn lockfile_package_json() -> serde_json::Value {
+    json!({
         "name": "lockfile-fixture",
         "version": "1.0.0",
         "dependencies": {
@@ -69,13 +58,11 @@ fn make_lockfile_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
         "devDependencies": {
             "typescript": "5.8.0"
         }
-    });
-    fs::write(
-        dir.join("package.json"),
-        serde_json::to_string_pretty(&pkg)?,
-    )?;
+    })
+}
 
-    let lock = json!({
+fn lockfile_lock_json() -> serde_json::Value {
+    json!({
         "name": "lockfile-fixture",
         "lockfileVersion": 3,
         "packages": {
@@ -99,10 +86,30 @@ fn make_lockfile_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
                 "dev": true
             }
         }
-    });
+    })
+}
+
+fn make_lockfile_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let dir = std::env::temp_dir().join(format!(
+        "dads-testing-lockfile-{name}-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("packages/alpha/src"))?;
+    fs::create_dir_all(dir.join("packages/beta/src"))?;
+    git(&dir, &["init", "-q"])?;
+
+    fs::write(
+        dir.join("dads.testing.json"),
+        serde_json::to_string_pretty(&lockfile_manifest())?,
+    )?;
+    fs::write(
+        dir.join("package.json"),
+        serde_json::to_string_pretty(&lockfile_package_json())?,
+    )?;
     fs::write(
         dir.join("package-lock.json"),
-        serde_json::to_string_pretty(&lock)?,
+        serde_json::to_string_pretty(&lockfile_lock_json())?,
     )?;
 
     fs::write(

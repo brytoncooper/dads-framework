@@ -116,7 +116,7 @@ pub(crate) struct TaskExecution {
 }
 
 /// Optional native batching configuration for commands that accept multiple project or file paths
-/// in a single process invocation (for example `oxlint` or `eslint`).
+/// in a single process invocation (for example `oxlint`, `eslint`, or narrowed `vitest` runs).
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct TaskBatchConfig {
@@ -125,6 +125,24 @@ pub(crate) struct TaskBatchConfig {
     pub(crate) group_key: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) shared_args: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) mode: Option<BatchMode>,
+}
+
+impl TaskBatchConfig {
+    pub(crate) fn effective_mode(&self) -> BatchMode {
+        self.mode.unwrap_or(BatchMode::Args)
+    }
+}
+
+/// Strategy used by the native scheduler to pack compatible tasks into a single process.
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum BatchMode {
+    /// Concatenate per-task trailing arguments (for example `oxlint` or `eslint` directories).
+    Args,
+    /// Combine narrowed Vitest test files into one `vitest run` with JSON report attribution.
+    VitestFiles,
 }
 
 /// Optional file-level test narrowing for an un-widened `reachability` task (for example Vitest).

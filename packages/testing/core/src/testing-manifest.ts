@@ -2,6 +2,12 @@ import { readFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { isRecord, isUnknownArray } from "./parse-guards.js";
 import {
+  readTaskBatch,
+  serializeTaskBatch,
+  type TestingManifestTaskBatch,
+  type TestingManifestTaskBatchMode,
+} from "./testing-manifest-batch.js";
+import {
   readTaskSqlImpact,
   readWorkspaceSql,
   serializeTaskSqlImpact,
@@ -15,6 +21,8 @@ import {
 export type {
   TestingManifestSqlEdge,
   TestingManifestSqlSnapshotPattern,
+  TestingManifestTaskBatch,
+  TestingManifestTaskBatchMode,
   TestingManifestTaskSqlImpact,
   TestingManifestWorkspaceSql,
 };
@@ -51,12 +59,6 @@ export type TestingManifestFileNarrowing = {
   readonly suffixes: readonly string[];
   readonly excludeSuffixes?: readonly string[];
   readonly setupFiles?: readonly string[];
-};
-
-export type TestingManifestTaskBatch = {
-  readonly maxSize: number;
-  readonly groupKey?: string;
-  readonly sharedArgs?: number;
 };
 
 export type TestingManifestTask = {
@@ -286,33 +288,6 @@ function readExecution(value: unknown, where: string, subject: string): TestingM
       ? {}
       : { fileNarrowing: readFileNarrowing(fileNarrowing, `${where}.fileNarrowing`, subject) }),
     ...(batch === undefined ? {} : { batch: readTaskBatch(batch, `${where}.batch`, subject) }),
-  };
-}
-
-function readTaskBatch(value: unknown, where: string, subject: string): TestingManifestTaskBatch {
-  const batch = readRecord(value, where, subject);
-  rejectUnknownKeys(batch, ["maxSize", "groupKey", "sharedArgs"], where, subject);
-  const maxSize = batch["maxSize"];
-  if (typeof maxSize !== "number" || !Number.isInteger(maxSize) || maxSize < 2) {
-    throw new Error(`${subject}: ${where}.maxSize must be an integer >= 2`);
-  }
-  const groupKey = batch["groupKey"];
-  const sharedArgs = batch["sharedArgs"];
-  if (sharedArgs !== undefined && (typeof sharedArgs !== "number" || !Number.isInteger(sharedArgs) || sharedArgs < 0)) {
-    throw new Error(`${subject}: ${where}.sharedArgs must be a non-negative integer`);
-  }
-  return {
-    maxSize,
-    ...(groupKey === undefined ? {} : { groupKey: readString(groupKey, `${where}.groupKey`, subject) }),
-    ...(sharedArgs === undefined ? {} : { sharedArgs }),
-  };
-}
-
-function serializeTaskBatch(batch: TestingManifestTaskBatch): TestingManifestTaskBatch {
-  return {
-    maxSize: batch.maxSize,
-    ...(batch.groupKey === undefined ? {} : { groupKey: batch.groupKey }),
-    ...(batch.sharedArgs === undefined ? {} : { sharedArgs: batch.sharedArgs }),
   };
 }
 

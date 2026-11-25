@@ -21,7 +21,9 @@ pub(super) struct PreparedTask {
     pub(super) dependencies: Vec<String>,
     pub(super) execution: TaskExecution,
     pub(super) receipt_key: Option<String>,
-    pub(super) has_selected_files: bool,
+    pub(super) cache: bool,
+    pub(super) selected_files: Vec<String>,
+    pub(super) base_args_len: usize,
 }
 
 /// What the run knows so far, indexed the same way `prepared` is: a task's result, its status,

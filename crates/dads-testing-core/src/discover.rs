@@ -10,7 +10,8 @@ use crate::discover_schema::{TargetMatch, validate_discover};
 use crate::discover_vitest::{apply_auto_vitest_narrowing, normalize_vitest_run_args};
 use crate::execute::TestingError;
 use crate::manifest::{
-    DeclaredTask, FileNarrowing, Project, TaskExecution, TaskImpact, TestingManifest,
+    BatchMode, DeclaredTask, FileNarrowing, Project, TaskBatchConfig, TaskExecution, TaskImpact,
+    TestingManifest,
 };
 use crate::scope::path_matches_impact;
 use std::collections::{BTreeMap, BTreeSet};
@@ -125,6 +126,19 @@ fn expand_templates(
                     &mut impact_paths,
                     exclude_integration_tiers,
                 );
+            }
+            if template.auto_vitest_batching
+                && execution.batch.is_none()
+                && !execution.shell
+                && template.cache
+                && execution.file_narrowing.is_some()
+            {
+                execution.batch = Some(TaskBatchConfig {
+                    max_size: 16,
+                    group_key: Some(format!("vitest:{}", template.target)),
+                    shared_args: None,
+                    mode: Some(BatchMode::VitestFiles),
+                });
             }
             tasks.push(DeclaredTask {
                 id,

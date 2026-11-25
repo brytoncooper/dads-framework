@@ -37,6 +37,8 @@ pub(crate) struct TargetTemplate {
     pub(crate) depends_on_if_exists: bool,
     #[serde(default)]
     pub(crate) auto_vitest_narrowing: bool,
+    #[serde(default)]
+    pub(crate) auto_vitest_batching: bool,
     pub(crate) impact: TemplateImpact,
     #[serde(default)]
     pub(crate) sql_impact: Option<TaskSqlImpact>,

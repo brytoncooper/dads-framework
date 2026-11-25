@@ -236,21 +236,31 @@ ids are unique, all references must resolve, task cycles are rejected, and
 pairs passed to the process and hashed into receipts); an explicit `shell: true`
 runs `executable` and `args` through the platform shell for shell recipes.
 Tasks that accept multiple paths in one invocation (such as `oxlint` or
-`eslint`) may declare `execution.batch` (`maxSize`, optional `groupKey`, and
-optional `sharedArgs`): the scheduler groups ready uncached tasks with matching
-command signatures into one process, caches each task's individual receipt on
-exit `0`, and automatically falls back to individual execution if a multi-task
-batch fails so only the failing task fails. A `reachability` test task may also
-declare `execution.fileNarrowing` (`suffixes`, optional `excludeSuffixes`, and
-optional `setupFiles`) so that an un-widened run appends only the reached test
-files to `execution.args` and skips the task when zero matching test files are
-reached.
+`eslint`) may declare `execution.batch` (`maxSize`, optional `groupKey`,
+optional `sharedArgs`, and optional `mode`: `"args"` or `"vitest-files"`):
+in default `"args"` mode, the scheduler groups ready uncached tasks with
+matching command signatures into one process, caches each task's individual
+receipt on exit `0`, and automatically falls back to individual execution if a
+multi-task batch fails so only the failing task fails. In `"vitest-files"` mode
+(opt-in via `execution.batch.mode: "vitest-files"` or `autoVitestBatching: true`
+on a `workspace.discover` target template), the scheduler batches ready,
+cacheable (`cache !== false`) Vitest tasks that have narrowed file lists and
+identical `groupKey`, `executable`, shared `args`, and `env` into a single
+`vitest run --reporter=default --reporter=json --outputFile=<tmp>` invocation
+from their shared `cwd` (or workspace root), attributes pass/fail status and
+duration per task from Vitest's JSON report, caches only tasks whose files all
+passed, and fails closed if Vitest crashes without a valid report. A
+`reachability` test task may also declare `execution.fileNarrowing` (`suffixes`,
+optional `excludeSuffixes`, and optional `setupFiles`) so that an un-widened run
+appends only the reached test files to `execution.args` and skips the task when
+zero matching test files are reached.
 
 Large monorepos may declare `workspace.discover` (`projectFiles` globs,
 optional `excludeRoots`, `namedImpacts`, `targetTemplates` with `{project}` /
-`{projectRoot}` placeholders, `dependsOnIfExists`, and `autoVitestNarrowing` to
+`{projectRoot}` placeholders, `dependsOnIfExists`, `autoVitestNarrowing` to
 inspect each project's `vitest.config.*` for static `setupFiles` while ensuring
-`vitest run`), and `taskOverrides` so `dads.testing.json` stays compact and
+`vitest run`, and `autoVitestBatching` to opt narrowed Vitest templates into
+`"vitest-files"` batching), and `taskOverrides` so `dads.testing.json` stays compact and
 never drifts when projects are added.
 `workspace.discover` expands losslessly into the exact canonical `projects`,
 `tasks`, and `workspace.fullFallback.taskIds` IR in memory before validation

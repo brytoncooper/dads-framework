@@ -112,6 +112,32 @@ impl DependencyGraph {
         }
         matched.into_iter().collect()
     }
+
+    /// Returns every workspace module path that has an import or re-export whose raw specifier
+    /// matches any of the given TypeScript `compilerOptions.paths` alias patterns.
+    ///
+    /// Unlike `modules_importing_external_packages`, this checks both resolved (`target.is_some()`)
+    /// and unresolved (`target.is_none()`) imports because a modified alias resolves to a workspace
+    /// module while a removed alias no longer resolves.
+    pub fn modules_matching_path_aliases(&self, aliases: &BTreeSet<String>) -> Vec<String> {
+        if aliases.is_empty() {
+            return Vec::new();
+        }
+        let mut matched = BTreeSet::new();
+        for import in &self.imports {
+            let Some(specifier) = self.str(import.specifier) else {
+                continue;
+            };
+            if aliases
+                .iter()
+                .any(|pattern| crate::tsconfig_parse::specifier_matches_alias(specifier, pattern))
+                && let Some(source_path) = self.str(self.modules[import.source as usize].path)
+            {
+                matched.insert(source_path.to_owned());
+            }
+        }
+        matched.into_iter().collect()
+    }
     pub fn has_uncertainty(&self) -> bool {
         !self.uncertainties.is_empty()
     }

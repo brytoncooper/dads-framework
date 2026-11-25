@@ -2,18 +2,19 @@
 //! select the tasks that answer, and explain every decision with located evidence.
 mod decisions;
 mod filtering;
+mod impacts;
 mod widening;
 
 use crate::execute::{TestingError, message};
 use crate::graph::{DependencyGraph, ReachedEdge};
-use crate::lockfile_impact::analyze_lockfile_impact;
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
 use crate::scope::{path_is_inside, path_matches_impact};
-use crate::sql_impact::{SqlTaskSelection, analyze_sql_impact};
+use crate::sql_impact::SqlTaskSelection;
 use decisions::explain_decisions;
 pub(crate) use filtering::PlanFilters;
 use filtering::{apply_plan_filters, matches_file_narrowing, parse_kind_filter, validate_shard};
+use impacts::{attach_lockfile_impact, attach_sql_impact, attach_tsconfig_impact};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 use widening::{own_changed_paths, widen_through_graph};
@@ -40,6 +41,9 @@ struct PlanEvidence<'a> {
     lockfile_handled_paths: BTreeSet<String>,
     lockfile_impacted_packages: BTreeSet<String>,
     lockfile_seeded_modules: Vec<String>,
+    tsconfig_handled_paths: BTreeSet<String>,
+    tsconfig_impacted_aliases: BTreeSet<String>,
+    tsconfig_seeded_modules: Vec<String>,
     issues: Vec<PlanIssue>,
     full_fallback: bool,
 }
@@ -66,6 +70,9 @@ impl<'a> PlanEvidence<'a> {
             lockfile_handled_paths: BTreeSet::new(),
             lockfile_impacted_packages: BTreeSet::new(),
             lockfile_seeded_modules: Vec::new(),
+            tsconfig_handled_paths: BTreeSet::new(),
+            tsconfig_impacted_aliases: BTreeSet::new(),
+            tsconfig_seeded_modules: Vec::new(),
             issues: Vec::new(),
             full_fallback: scope.full_fallback,
         }
@@ -115,6 +122,7 @@ impl<'a> PlanEvidence<'a> {
         task.impact.paths.iter().any(|owned_path| {
             scope.changed_paths.iter().any(|changed_path| {
                 !self.lockfile_handled_paths.contains(changed_path)
+                    && !self.tsconfig_handled_paths.contains(changed_path)
                     && path_matches_impact(changed_path, owned_path)
             })
         })
@@ -208,6 +216,7 @@ pub(crate) fn build_plan(
     }
     let mut evidence = PlanEvidence::new(scope);
     attach_lockfile_impact(workspace_root, scope, graph, &mut evidence);
+    attach_tsconfig_impact(workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);
     attach_sql_impact(manifest, workspace_root, scope, &mut evidence);
     widen_through_graph(manifest, scope, graph, &mut evidence);
@@ -234,43 +243,6 @@ pub(crate) fn build_plan(
             skip_proven_unaffected,
         },
     })
-}
-
-fn attach_lockfile_impact(
-    workspace_root: &Path,
-    scope: &ResolvedScope,
-    graph: Option<&DependencyGraph>,
-    evidence: &mut PlanEvidence<'_>,
-) {
-    if evidence.full_fallback {
-        return;
-    }
-    let report = analyze_lockfile_impact(workspace_root, scope, graph);
-    evidence.issues.extend(report.issues);
-    evidence.lockfile_handled_paths = report.handled_paths;
-    evidence.lockfile_impacted_packages = report.impacted_packages;
-    evidence.lockfile_seeded_modules = report.seeded_modules;
-}
-
-fn attach_sql_impact(
-    manifest: &TestingManifest,
-    workspace_root: &Path,
-    scope: &ResolvedScope,
-    evidence: &mut PlanEvidence<'_>,
-) {
-    if evidence.full_fallback {
-        return;
-    }
-    let report = analyze_sql_impact(manifest, scope, workspace_root);
-    let offset = evidence.issues.len();
-    evidence.issues.extend(report.issues);
-    evidence.sql_handled_paths = report.handled_paths;
-    for (task_id, mut selection) in report.selected_tasks {
-        for idx in &mut selection.issue_indexes {
-            *idx += offset;
-        }
-        evidence.sql_selected_tasks.insert(task_id, selection);
-    }
 }
 
 /// The tasks the caller named. An unknown id is a request error, not a widening.

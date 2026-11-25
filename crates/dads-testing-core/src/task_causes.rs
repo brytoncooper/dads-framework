@@ -18,6 +18,8 @@ pub(super) struct CauseEvidence<'a> {
     pub(super) uncertainty_origins: &'a BTreeMap<&'a str, BTreeSet<&'a str>>,
     pub(super) reached_edges: &'a [ReachedEdge],
     pub(super) sql_selected_tasks: &'a BTreeMap<String, SqlTaskSelection>,
+    pub(super) lockfile_handled_paths: &'a BTreeSet<String>,
+    pub(super) tsconfig_handled_paths: &'a BTreeSet<String>,
 }
 
 impl CauseEvidence<'_> {
@@ -73,10 +75,13 @@ impl CauseEvidence<'_> {
         task: &'a DeclaredTask,
     ) -> impl Iterator<Item = &'a String> {
         self.changed_paths.iter().filter(move |changed_path| {
-            task.impact
-                .paths
-                .iter()
-                .any(|input_path| path_matches_impact(changed_path, input_path))
+            !self.lockfile_handled_paths.contains(*changed_path)
+                && !self.tsconfig_handled_paths.contains(*changed_path)
+                && task
+                    .impact
+                    .paths
+                    .iter()
+                    .any(|input_path| path_matches_impact(changed_path, input_path))
         })
     }
 

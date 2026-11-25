@@ -28,6 +28,8 @@ pub(super) fn explain_decisions<'a>(
         uncertainty_origins: &selection.uncertainty_origins,
         reached_edges: &evidence.reached_edges,
         sql_selected_tasks: &evidence.sql_selected_tasks,
+        lockfile_handled_paths: &evidence.lockfile_handled_paths,
+        tsconfig_handled_paths: &evidence.tsconfig_handled_paths,
     };
     let mut decisions = Vec::new();
     for id in task_order(&manifest.tasks)? {

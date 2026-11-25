@@ -127,7 +127,7 @@ impl DependencyGraph {
             .is_some_and(|s| s.starts_with("fs:") || s.starts_with("fs-dir:"))
     }
 
-    fn has_non_fs_reverse(&self, module: u32) -> bool {
+    pub(super) fn has_non_fs_reverse(&self, module: u32) -> bool {
         self.reverse(module).iter().any(|edge_id| {
             self.imports
                 .get(*edge_id as usize)

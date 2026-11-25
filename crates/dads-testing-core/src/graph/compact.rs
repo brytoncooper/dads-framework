@@ -86,9 +86,11 @@ impl DependencyGraph {
     pub fn contains_path(&self, path: &str) -> bool {
         self.module_index(path).is_some()
     }
+    /// True iff another module imports or requires `path` as code (ignoring raw `fs:` / `fs-dir:`
+    /// file-read edges, which do not execute or re-export the target module).
     pub fn has_importers(&self, path: &str) -> bool {
         self.module_index(path)
-            .is_some_and(|m| !self.reverse(m).is_empty())
+            .is_some_and(|m| self.has_non_fs_reverse(m))
     }
 
     /// Returns every workspace module path that statically imports or requires any external npm

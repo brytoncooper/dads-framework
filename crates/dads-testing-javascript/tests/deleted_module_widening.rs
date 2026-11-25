@@ -135,3 +135,80 @@ fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fal
     remove_dir_all(&root)?;
     Ok(())
 }
+
+#[test]
+fn fs_read_edge_targeting_isolated_test_file_does_not_widen_downstream_dependents()
+-> Result<(), Box<dyn Error>> {
+    let root = fresh_repo("fs-edge-isolated-test-file")?;
+    for dir in ["lib", "app", "other"] {
+        create_dir_all(root.join(dir))?;
+    }
+    write(root.join("lib/index.ts"), "export const v = 1;\n")?;
+    write(
+        root.join("lib/parity.test.ts"),
+        r#"import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+const files = readdirSync(join(__dirname, "../other"));
+export const check = (name: string) => readFileSync(join(__dirname, name), "utf8") + files.length;
+"#,
+    )?;
+    write(
+        root.join("app/app.test.ts"),
+        "import { v } from '../lib/index.ts';\nif (v !== 1) throw new Error('bad');\n",
+    )?;
+    write(
+        root.join("other/scanner.test.ts"),
+        r#"import { readdirSync } from "node:fs";
+import { join } from "node:path";
+export const entries = readdirSync(join(__dirname, "../lib"));
+"#,
+    )?;
+    write(
+        root.join("dads.testing.json"),
+        r#"{
+  "schemaVersion": 1,
+  "workspace": { "fullFallback": { "taskIds": ["lib:test", "app:test", "other:test"] } },
+  "projects": [
+    { "id": "lib", "root": "lib", "fallbackDependencies": [] },
+    { "id": "app", "root": "app", "fallbackDependencies": ["lib"] },
+    { "id": "other", "root": "other", "fallbackDependencies": [] }
+  ],
+  "tasks": [
+    { "id": "lib:test", "project": "lib", "kind": "test", "execution": { "executable": "true" }, "dependsOn": [], "impact": { "mode": "reachability" } },
+    { "id": "app:test", "project": "app", "kind": "test", "execution": { "executable": "true" }, "dependsOn": [], "impact": { "mode": "reachability" } },
+    { "id": "other:test", "project": "other", "kind": "test", "execution": { "executable": "true" }, "dependsOn": [], "impact": { "mode": "reachability" } }
+  ]
+}
+"#,
+    )?;
+    git(&root, &["add", "."])?;
+    git(&root, &["commit", "-q", "-m", "baseline"])?;
+
+    write(
+        root.join("other/scanner.test.ts"),
+        r#"import { readdirSync } from "node:fs";
+import { join } from "node:path";
+export const entries = readdirSync(join(__dirname, "../lib")).slice(0);
+"#,
+    )?;
+
+    let req = plan_request(&root);
+    let graph = analyze_request(&req).ok_or("graph must build")?;
+    assert!(
+        !graph.has_importers("lib/parity.test.ts"),
+        "raw fs: edge from readdirSync must not mark an isolated test file as imported"
+    );
+    let resp = execute_request_with_graph(req, Some(graph));
+    assert!(resp.ok, "{resp:?}");
+    let plan = &resp.result.ok_or("plan result")?.plan;
+    assert_eq!(find_task(&plan.tasks, "lib:test")?.decision, "run");
+    assert_eq!(find_task(&plan.tasks, "other:test")?.decision, "run");
+    assert_eq!(
+        find_task(&plan.tasks, "app:test")?.decision,
+        "skip-proven-unaffected",
+        "downstream dependent of lib must not widen because lib/parity.test.ts is an isolated test file"
+    );
+
+    remove_dir_all(&root)?;
+    Ok(())
+}

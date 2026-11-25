@@ -168,7 +168,7 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
     evidence: &mut PlanEvidence<'a>,
     has_non_test_reachability: bool,
 ) {
-    let unresolved: Vec<_> = graph
+    let seeds: Vec<String> = graph
         .uncertainties()
         .into_iter()
         .filter(|u| {
@@ -178,42 +178,23 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
                     .dynamic_import_scopes
                     .contains_key(&u.path)
         })
+        .map(|u| u.path)
         .collect();
-    if unresolved.is_empty() {
+    if seeds.is_empty() {
         return;
     }
-    let seeds: Vec<String> = unresolved.iter().map(|u| u.path.clone()).collect();
-    let reached = graph.reachability_from(seeds);
-    for reached_path in &reached.paths {
-        let Some(project) = deepest_project_for_path(&manifest.projects, reached_path) else {
-            continue;
-        };
-        let id = project.id.as_str();
-        evidence.reachability_impacted_projects.insert(id);
-        evidence.uncertainty_impacted_projects.insert(id);
-        if has_non_test_reachability {
-            evidence.typecheck_reachability_impacted_projects.insert(id);
-            evidence.typecheck_uncertainty_impacted_projects.insert(id);
-        }
-        let issue_index = evidence.issues.len();
-        evidence
-            .issue_indexes_by_project
-            .entry(id)
-            .or_default()
-            .push(issue_index);
-        evidence.issues.push(PlanIssue {
-            path: Some(reached_path.clone()),
-            project: Some(project.id.clone()),
-            ..PlanIssue::new(
-                "unresolved-fs-read",
-                format!(
-                    "{reached_path} depends on an unresolved dynamic filesystem read while uncovered files changed; widened conservatively (enable --enforce-declared-reads to verify at runtime)."
-                ),
-                IssueSeverity::Uncertainty,
-                IssueScope::Module,
-            )
-        });
-    }
+    widen_reached_unresolved_projects(
+        manifest,
+        graph,
+        evidence,
+        has_non_test_reachability,
+        seeds,
+        UnresolvedWidenSpec {
+            code: "unresolved-fs-read",
+            fallback_on_unowned: false,
+            detail: "depends on an unresolved dynamic filesystem read while uncovered files changed; widened conservatively (enable --enforce-declared-reads to verify at runtime).",
+        },
+    );
 }
 
 /// When any changed path has been deleted from disk, its reverse edges vanish from the current
@@ -248,24 +229,58 @@ pub(super) fn widen_unresolved_module_importers_on_delete<'a>(
     if seeds.is_empty() {
         return;
     }
+    widen_reached_unresolved_projects(
+        manifest,
+        graph,
+        evidence,
+        has_non_test_reachability,
+        seeds,
+        UnresolvedWidenSpec {
+            code: "unresolved-import-after-delete",
+            fallback_on_unowned: true,
+            detail: "depends on an unresolved module import while changed workspace files were deleted; widened conservatively.",
+        },
+    );
+}
+
+struct UnresolvedWidenSpec<'a> {
+    code: &'a str,
+    fallback_on_unowned: bool,
+    detail: &'a str,
+}
+
+fn widen_reached_unresolved_projects<'a>(
+    manifest: &'a TestingManifest,
+    graph: &DependencyGraph,
+    evidence: &mut PlanEvidence<'a>,
+    has_non_test_reachability: bool,
+    seeds: Vec<String>,
+    spec: UnresolvedWidenSpec<'_>,
+) {
     let reached = graph.reachability_from(seeds);
+    let mut recorded_projects: BTreeSet<&'a str> = BTreeSet::new();
+    let mut recorded_unowned = false;
     for reached_path in &reached.paths {
         let Some(project) = deepest_project_for_path(&manifest.projects, reached_path) else {
-            evidence.full_fallback = true;
-            evidence
-                .full_fallback_issue_indexes
-                .push(evidence.issues.len());
-            evidence.issues.push(PlanIssue {
-                path: Some(reached_path.clone()),
-                ..PlanIssue::new(
-                    "unresolved-import-after-delete",
-                    format!(
-                        "{reached_path} has an unresolved module import while workspace files were deleted and has no declared project owner; selected the complete fallback."
-                    ),
-                    IssueSeverity::Uncertainty,
-                    IssueScope::Workspace,
-                )
-            });
+            if spec.fallback_on_unowned && !recorded_unowned {
+                recorded_unowned = true;
+                evidence.full_fallback = true;
+                evidence
+                    .full_fallback_issue_indexes
+                    .push(evidence.issues.len());
+                evidence.issues.push(PlanIssue {
+                    path: Some(reached_path.clone()),
+                    ..PlanIssue::new(
+                        spec.code,
+                        format!(
+                            "{reached_path} {} (no declared project owner; selected the complete fallback).",
+                            spec.detail
+                        ),
+                        IssueSeverity::Uncertainty,
+                        IssueScope::Workspace,
+                    )
+                });
+            }
             continue;
         };
         let id = project.id.as_str();
@@ -292,25 +307,48 @@ pub(super) fn widen_unresolved_module_importers_on_delete<'a>(
                 evidence.typecheck_uncertainty_impacted_projects.insert(id);
             }
         }
-        let issue_index = evidence.issues.len();
-        evidence
-            .issue_indexes_by_project
-            .entry(id)
-            .or_default()
-            .push(issue_index);
-        evidence.issues.push(PlanIssue {
-            path: Some(reached_path.clone()),
-            project: Some(project.id.clone()),
-            ..PlanIssue::new(
-                "unresolved-import-after-delete",
-                format!(
-                    "{reached_path} depends on an unresolved module import while changed workspace files were deleted; widened conservatively."
-                ),
-                IssueSeverity::Uncertainty,
-                IssueScope::Module,
-            )
-        });
+        if recorded_projects.insert(id) {
+            let issue_index = evidence.issues.len();
+            evidence
+                .issue_indexes_by_project
+                .entry(id)
+                .or_default()
+                .push(issue_index);
+            evidence.issues.push(PlanIssue {
+                path: Some(reached_path.clone()),
+                project: Some(project.id.clone()),
+                ..PlanIssue::new(
+                    spec.code,
+                    format!("{reached_path} {}", spec.detail),
+                    IssueSeverity::Uncertainty,
+                    IssueScope::Module,
+                )
+            });
+        }
     }
+}
+
+pub(super) fn has_duplicate_project_issue(
+    evidence: &PlanEvidence<'_>,
+    project_id: &str,
+    code: &str,
+    path: &str,
+    line: Option<u32>,
+    column: Option<u32>,
+) -> bool {
+    evidence
+        .issue_indexes_by_project
+        .get(project_id)
+        .is_some_and(|indexes| {
+            indexes.iter().any(|&idx| {
+                evidence.issues.get(idx).is_some_and(|existing| {
+                    existing.code == code
+                        && existing.path.as_deref() == Some(path)
+                        && existing.line == line
+                        && existing.column == column
+                })
+            })
+        })
 }
 
 /// No frontend answered at all: in a multi-project workspace, project dependencies cannot be

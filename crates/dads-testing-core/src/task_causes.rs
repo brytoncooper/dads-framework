@@ -90,19 +90,45 @@ impl CauseEvidence<'_> {
         origins: &BTreeMap<&str, BTreeSet<&str>>,
         task: &DeclaredTask,
     ) -> Vec<TaskCause> {
+        const MAX_ISSUES_PER_ORIGIN: usize = 4;
+        const MAX_ISSUE_CAUSES_PER_TASK: usize = 32;
         let mut causes = Vec::new();
-        for origin in origins.get(task.project.as_str()).into_iter().flatten() {
+        let mut seen_issues = BTreeSet::new();
+        let Some(origin_set) = origins.get(task.project.as_str()) else {
+            return causes;
+        };
+        let ordered: Vec<&str> = origin_set
+            .iter()
+            .copied()
+            .filter(|o| *o == task.project.as_str())
+            .chain(
+                origin_set
+                    .iter()
+                    .copied()
+                    .filter(|o| *o != task.project.as_str()),
+            )
+            .collect();
+        for origin in ordered {
+            let mut per_origin = 0usize;
             for index in self
                 .issue_indexes_by_project
-                .get(*origin)
+                .get(origin)
                 .into_iter()
                 .flatten()
             {
-                causes.push(TaskCause::Issue { index: *index });
+                if per_origin >= MAX_ISSUES_PER_ORIGIN
+                    || seen_issues.len() >= MAX_ISSUE_CAUSES_PER_TASK
+                {
+                    break;
+                }
+                if seen_issues.insert(*index) {
+                    causes.push(TaskCause::Issue { index: *index });
+                    per_origin += 1;
+                }
             }
-            if *origin != task.project.as_str() {
+            if origin != task.project.as_str() {
                 causes.push(TaskCause::FallbackDependency {
-                    project: (*origin).to_owned(),
+                    project: origin.to_owned(),
                 });
             }
         }

@@ -173,10 +173,7 @@ function mergeStaticTaskImpactPaths(
   return added;
 }
 
-function mergeDiscoverTaskOverride(
-  discover: Record<string, unknown>,
-  proposal: AuditPathProposal,
-): readonly string[] {
+function mergeDiscoverTaskOverride(discover: Record<string, unknown>, proposal: AuditPathProposal): readonly string[] {
   const { projectId, targetName } = splitTaskProjectAndTarget(proposal.taskId, proposal.project);
   const overrides = ensureArrayField(discover, "taskOverrides");
   const existingOverride = findSingleProjectOverride(overrides, projectId, targetName);
@@ -222,7 +219,13 @@ function findSingleProjectOverride(
     if (!isRecord(when)) continue;
     const keys = Object.keys(when);
     const projects = when["projects"];
-    if (keys.length === 1 && keys[0] === "projects" && Array.isArray(projects) && projects.length === 1 && projects[0] === projectId) {
+    if (
+      keys.length === 1 &&
+      keys[0] === "projects" &&
+      Array.isArray(projects) &&
+      projects.length === 1 &&
+      projects[0] === projectId
+    ) {
       return item;
     }
   }

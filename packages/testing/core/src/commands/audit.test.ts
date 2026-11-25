@@ -158,9 +158,9 @@ describe("manifest and CLI read-guard flags", () => {
     expect(fixture.readRequest()).toMatchObject({ enforceDeclaredReads: true });
 
     const h2 = createHarness(dir, fixture.binary);
-    expect(await runDadTestCli(["plan", "--enforce-declared-reads", "--no-enforce-declared-reads", "--json"], h2.io)).toBe(
-      0,
-    );
+    expect(
+      await runDadTestCli(["plan", "--enforce-declared-reads", "--no-enforce-declared-reads", "--json"], h2.io),
+    ).toBe(0);
     const req2 = fixture.readRequest();
     expect(req2).toMatchObject({ noEnforceDeclaredReads: true });
     expect(req2).not.toHaveProperty("enforceDeclaredReads");
@@ -182,10 +182,10 @@ describe.skipIf(!existsSync(nativeBinary))("dad-test audit end-to-end with nativ
       "apps/web/src/web.test.mjs",
       [
         'import { readFileSync } from "node:fs";',
-        '// Static literal read is resolved by Oxc and must NOT be flagged as undeclared:',
+        "// Static literal read is resolved by Oxc and must NOT be flagged as undeclared:",
         'readFileSync("static-known/ok.json", "utf8");',
-        '// Dynamic runtime reads cannot be resolved statically and MUST be reported by audit:',
-        'const dynamicPaths = process.env.WEB_DYNAMIC_FILES ? JSON.parse(process.env.WEB_DYNAMIC_FILES) : [];',
+        "// Dynamic runtime reads cannot be resolved statically and MUST be reported by audit:",
+        "const dynamicPaths = process.env.WEB_DYNAMIC_FILES ? JSON.parse(process.env.WEB_DYNAMIC_FILES) : [];",
         'for (const p of dynamicPaths) readFileSync(p, "utf8");',
       ].join("\n"),
     );
@@ -194,7 +194,7 @@ describe.skipIf(!existsSync(nativeBinary))("dad-test audit end-to-end with nativ
       "apps/api/src/api.test.mjs",
       [
         'import { readFileSync } from "node:fs";',
-        'const target = process.env.API_SECRET_PATH;',
+        "const target = process.env.API_SECRET_PATH;",
         'if (target) readFileSync(target, "utf8");',
       ].join("\n"),
     );
@@ -304,7 +304,10 @@ describe.skipIf(!existsSync(nativeBinary))("dad-test audit end-to-end with nativ
     expect(await runDadTestCli(["audit", "--fix"], fixHarness.io)).toBe(0);
     expect(fixHarness.stdout()).toContain("Updated dads.testing.json");
 
-    const updatedManifest = parseTestingManifest(readFileSync(join(root, "dads.testing.json"), "utf8"), "dads.testing.json");
+    const updatedManifest = parseTestingManifest(
+      readFileSync(join(root, "dads.testing.json"), "utf8"),
+      "dads.testing.json",
+    );
     const webTask = updatedManifest.tasks.find((t) => t.id === "web:test");
     const apiTask = updatedManifest.tasks.find((t) => t.id === "api:test");
     expect(webTask?.impact.paths).toEqual(["fixtures/invoices/**", "settings/web-flag.json"]);
@@ -320,13 +323,17 @@ describe.skipIf(!existsSync(nativeBinary))("dad-test audit end-to-end with nativ
     const root = makeTempDir();
     writeRel(root, "package.json", JSON.stringify({ name: "discover-audit-fixture" }));
     writeRel(root, "shared-config/flags.json", '{"ok":true}');
-    writeRel(root, "packages/web/package.json", JSON.stringify({ name: "@app/web", scripts: { test: "node test.mjs" } }));
+    writeRel(
+      root,
+      "packages/web/package.json",
+      JSON.stringify({ name: "@app/web", scripts: { test: "node test.mjs" } }),
+    );
     writeRel(
       root,
       "packages/web/src/web.test.mjs",
       [
         'import { readFileSync } from "node:fs";',
-        'const target = process.env.DISCOVER_SECRET_PATH;',
+        "const target = process.env.DISCOVER_SECRET_PATH;",
         'if (target) readFileSync(target, "utf8");',
       ].join("\n"),
     );
@@ -439,7 +446,14 @@ describe.skipIf(!existsSync(nativeBinary))("dad-test audit end-to-end with nativ
       const samples: number[] = [];
       for (let run = 0; run < 3; run += 1) {
         const harness = createHarness(root, nativeBinary);
-        const args = ["run", "--only", "--task", "bench:test", "--json", ...(enforce ? ["--enforce-declared-reads"] : [])];
+        const args = [
+          "run",
+          "--only",
+          "--task",
+          "bench:test",
+          "--json",
+          ...(enforce ? ["--enforce-declared-reads"] : []),
+        ];
         const started = performance.now();
         const code = await runDadTestCli(args, harness.io);
         const elapsed = performance.now() - started;

@@ -12,6 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+const EMBEDDED_READ_GUARD_HELPERS: &str = include_str!("read_guard_helpers.mjs");
 const EMBEDDED_READ_GUARD_HOOK: &str = include_str!("read_guard.mjs");
 const CONFIG_ENV_KEY: &str = "DADS_TEST_READ_GUARD_CONFIG";
 const NODE_OPTIONS_KEY: &str = "NODE_OPTIONS";
@@ -26,6 +27,14 @@ impl Drop for TempFileGuard {
     }
 }
 
+struct TempDirGuard(PathBuf);
+
+impl Drop for TempDirGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
 /// Shared session state for one `run_plan` execution when read guard is enabled.
 ///
 /// Materializes the embedded V8 preload hook once for the entire run and cleans it up on drop.
@@ -34,7 +43,7 @@ pub(super) struct ReadGuardSession {
     workspace_root: PathBuf,
     workspace_root_raw: PathBuf,
     hook_file_url: String,
-    _hook_temp_guard: Option<TempFileGuard>,
+    _hook_temp_guard: Option<TempDirGuard>,
 }
 
 /// Per-process temporary config and JSONL report guards for one spawned task invocation.
@@ -78,15 +87,29 @@ impl ReadGuardSession {
             }
             None => {
                 let seq = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-                let path = std::env::temp_dir()
-                    .join(format!("dads-read-guard-{}-{seq}.mjs", std::process::id()));
+                let dir = std::env::temp_dir()
+                    .join(format!("dads-read-guard-{}-{seq}", std::process::id()));
+                fs::create_dir_all(&dir).map_err(|error| {
+                    message(format!(
+                        "Unable to create read-guard hook dir {}: {error}",
+                        dir.display()
+                    ))
+                })?;
+                let helpers_path = dir.join("read_guard_helpers.mjs");
+                let path = dir.join("read_guard.mjs");
+                fs::write(&helpers_path, EMBEDDED_READ_GUARD_HELPERS).map_err(|error| {
+                    message(format!(
+                        "Unable to write read-guard helpers {}: {error}",
+                        helpers_path.display()
+                    ))
+                })?;
                 fs::write(&path, EMBEDDED_READ_GUARD_HOOK).map_err(|error| {
                     message(format!(
                         "Unable to write read-guard hook {}: {error}",
                         path.display()
                     ))
                 })?;
-                (path.clone(), Some(TempFileGuard(path)))
+                (path, Some(TempDirGuard(dir)))
             }
         };
         let hook_file_url = path_to_file_url(&hook_path);

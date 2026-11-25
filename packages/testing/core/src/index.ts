@@ -35,11 +35,7 @@ export {
   type TestingUndeclaredRead,
   type TestingWideningCulprit,
 } from "./testing-api.js";
-export {
-  renderAuditResult,
-  type TestingAuditResult,
-  type TestingAuditTaskFinding,
-} from "./commands/audit.js";
+export { renderAuditResult, type TestingAuditResult, type TestingAuditTaskFinding } from "./commands/audit.js";
 export { renderBoundariesResult } from "./commands/check-boundaries.js";
 export { renderDiagnosis } from "./commands/diagnose.js";
 export { renderHotspots } from "./commands/hotspots.js";

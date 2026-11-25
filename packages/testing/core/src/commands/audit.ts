@@ -55,7 +55,13 @@ export const auditCommand: DadTestCommand = {
     const fixRequested = parsed.flags.has("--fix");
     const dryRun = parsed.flags.has("--dry-run");
     const manifestPath = parsed.values.get("--manifest") ?? defaultTestingManifestFileName;
-    const fixOutcome = await runAuditFixIfRequested(fixRequested, dryRun, io, parsed.values.get("--manifest"), findings);
+    const fixOutcome = await runAuditFixIfRequested(
+      fixRequested,
+      dryRun,
+      io,
+      parsed.values.get("--manifest"),
+      findings,
+    );
     const result = buildAuditResult({
       findings,
       run,
@@ -135,7 +141,14 @@ async function runAuditFixIfRequested(
   io: DadTestCliIo,
   manifestPath: string | undefined,
   findings: readonly TestingAuditTaskFinding[],
-): Promise<{ readonly manifestPath: string; readonly applied: boolean; readonly changes: Readonly<Record<string, readonly string[]>> } | undefined> {
+): Promise<
+  | {
+      readonly manifestPath: string;
+      readonly applied: boolean;
+      readonly changes: Readonly<Record<string, readonly string[]>>;
+    }
+  | undefined
+> {
   if (!fixRequested && !dryRun) return undefined;
   const proposals: readonly AuditPathProposal[] = findings.map((finding) => ({
     taskId: finding.taskId,

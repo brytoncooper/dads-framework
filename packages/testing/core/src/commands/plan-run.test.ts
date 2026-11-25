@@ -1,6 +1,6 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runDadTestCli } from "../dad-test-cli.js";
 import type { DadTestCliIo } from "../dad-test-cli.js";
@@ -279,6 +279,51 @@ describe("plan/run --report", () => {
     expect(await runDadTestCli(["plan", "--all", "--shard", "bad", "--json"], harness.io)).toBe(1);
   });
 
+  it("resolves --cache-dir and DAD_TEST_CACHE_DIR with flag precedence and tilde expansion", async () => {
+    const directory = makeManifestDirectory();
+    const fixture = createFakeNativeBinary(directory, {
+      schemaVersion: 1,
+      ok: true,
+      result: { operation: "run", plan: planResult, run: runResult },
+    });
+
+    // 1. DAD_TEST_CACHE_DIR env var is forwarded when --cache-dir is absent
+    const envHarness = createHarness(directory, fixture.binary, {
+      HOME: "/tmp/fake-home",
+      DAD_TEST_CACHE_DIR: "~/.cache/dad-test",
+    });
+    expect(await runDadTestCli(["run", "--all", "--cache", "--json"], envHarness.io)).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({
+      operation: "run",
+      cache: true,
+      cacheDir: resolve("/tmp/fake-home", ".cache/dad-test"),
+    });
+
+    // 2. --cache-dir overrides DAD_TEST_CACHE_DIR and resolves relative paths against cwd
+    expect(
+      await runDadTestCli(["run", "--all", "--cache", "--cache-dir", "shared-cache", "--json"], envHarness.io),
+    ).toBe(0);
+    expect(fixture.readRequest()).toMatchObject({
+      operation: "run",
+      cache: true,
+      cacheDir: resolve(directory, "shared-cache"),
+    });
+
+    // 3. Whitespace-only DAD_TEST_CACHE_DIR is ignored
+    const blankEnvHarness = createHarness(directory, fixture.binary, {
+      DAD_TEST_CACHE_DIR: "   ",
+    });
+    expect(await runDadTestCli(["run", "--all", "--cache", "--json"], blankEnvHarness.io)).toBe(0);
+    expect(fixture.readRequest()).not.toHaveProperty("cacheDir");
+
+    // 4. Empty --cache-dir is rejected cleanly
+    const emptyFlagHarness = createHarness(directory, fixture.binary);
+    expect(await runDadTestCli(["run", "--all", "--cache", "--cache-dir", "   ", "--json"], emptyFlagHarness.io)).toBe(
+      1,
+    );
+    expect(emptyFlagHarness.stderr()).toContain("--cache-dir must not be empty.");
+  });
+
   it("forwards --target, --project, --exclude, --weights, --stream, and expand", async () => {
     const directory = makeManifestDirectory();
     writeFileSync(join(directory, "weights.json"), JSON.stringify({ api: 120, web: 40 }), "utf8");
@@ -359,6 +404,7 @@ function makeManifestDirectory(): string {
 function createHarness(
   cwd: string,
   nativeBinary: string,
+  env: NodeJS.ProcessEnv = {},
 ): {
   readonly io: DadTestCliIo;
   readonly stdout: () => string;
@@ -368,7 +414,7 @@ function createHarness(
   const stderrChunks: string[] = [];
   const io: DadTestCliIo = {
     cwd,
-    env: {},
+    env,
     stdout: (text) => {
       stdoutChunks.push(text);
     },

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import type { OptionSpecification, ParsedArguments } from "../cli-arguments.js";
 import { readPositiveInteger } from "../cli-arguments.js";
@@ -34,6 +35,7 @@ const runOptions: readonly OptionSpecification[] = [
   ...operationOptions,
   { name: "--cache", kind: "flag" },
   { name: "--no-cache", kind: "flag" },
+  { name: "--cache-dir", kind: "value" },
   { name: "--remote-cache", kind: "value" },
   { name: "--stream", kind: "flag" },
 ];
@@ -201,13 +203,38 @@ function loadShardWeightsFile(cwd: string, weightsPath: string): Readonly<Record
 function optionalExecutionFields(parsed: ParsedArguments, io: DadTestCliIo): Partial<TestingOperationRequest> {
   const jobs = parsed.values.get("--jobs");
   const cacheEnabled = parsed.flags.has("--cache") && !parsed.flags.has("--no-cache");
+  const cacheDir = resolveCacheDirOption(parsed.values.get("--cache-dir"), io.env, io.cwd);
   const remoteCacheUrl = parsed.values.get("--remote-cache");
   return {
     ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
     ...(cacheEnabled ? { cache: true } : {}),
+    ...(cacheDir === undefined ? {} : { cacheDir }),
     ...(remoteCacheUrl === undefined ? {} : { remoteCacheUrl }),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
   };
+}
+
+function resolveCacheDirOption(flagValue: string | undefined, env: NodeJS.ProcessEnv, cwd: string): string | undefined {
+  if (flagValue !== undefined) {
+    const trimmed = flagValue.trim();
+    if (trimmed.length === 0) {
+      throw new Error("--cache-dir must not be empty.");
+    }
+    return expandAndResolvePath(trimmed, env, cwd);
+  }
+  const envValue = env["DAD_TEST_CACHE_DIR"]?.trim();
+  if (envValue !== undefined && envValue.length > 0) {
+    return expandAndResolvePath(envValue, env, cwd);
+  }
+  return undefined;
+}
+
+function expandAndResolvePath(rawPath: string, env: NodeJS.ProcessEnv, cwd: string): string {
+  if (rawPath === "~" || rawPath.startsWith("~/") || rawPath.startsWith("~\\")) {
+    const home = env["HOME"] ?? env["USERPROFILE"] ?? homedir();
+    return rawPath === "~" ? resolve(home) : resolve(home, rawPath.slice(2));
+  }
+  return resolve(cwd, rawPath);
 }
 
 function parseShardOption(raw: string): TestingTaskShard {

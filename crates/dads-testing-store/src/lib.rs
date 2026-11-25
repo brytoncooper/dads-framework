@@ -17,6 +17,7 @@ use crate::snapshot::{
     Snapshot, manifest_digest, patchable_paths, read_snapshot, snapshot_matches,
 };
 
+mod cache_dir;
 #[cfg(test)]
 mod deleted_path_tests;
 mod git_state;
@@ -34,6 +35,7 @@ mod snapshot;
 #[cfg(test)]
 mod tests;
 
+pub use crate::cache_dir::resolve_cache_dir;
 pub use crate::issues::{StoreIssue, StoreIssueSeverity};
 pub use crate::receipts::FileReceiptStore;
 

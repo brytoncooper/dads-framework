@@ -5,7 +5,9 @@ use dads_testing_core::{
     is_empty_tree_sha,
 };
 use dads_testing_javascript::JavaScriptFrontend;
-use dads_testing_store::{FileReceiptStore, StoreIssue, StoreIssueSeverity, load_or_update};
+use dads_testing_store::{
+    FileReceiptStore, StoreIssue, StoreIssueSeverity, load_or_update, resolve_cache_dir,
+};
 use std::io::{self, Read};
 use std::path::Path;
 
@@ -37,24 +39,7 @@ struct GraphAnalysis {
 
 fn answer(request: NativeRequest) -> NativeResponse {
     let analysis = analyze_workspace(&request);
-    let receipt_store = if request.cache {
-        let remote_url = request.remote_cache_url.clone().or_else(|| {
-            std::env::var("DADS_TESTING_REMOTE_CACHE_URL")
-                .ok()
-                .filter(|value| !value.trim().is_empty())
-        });
-        let remote_token = std::env::var("DADS_TESTING_REMOTE_CACHE_TOKEN")
-            .ok()
-            .filter(|value| !value.trim().is_empty());
-        FileReceiptStore::for_workspace(Path::new(&request.workspace_root)).map(|store| {
-            match remote_url {
-                Some(url) => store.with_remote_url(&url, remote_token),
-                None => store,
-            }
-        })
-    } else {
-        None
-    };
+    let receipt_store = build_receipt_store(&request);
     let receipts: Option<&dyn TaskReceiptStore> = receipt_store
         .as_ref()
         .map(|store| store as &dyn TaskReceiptStore);
@@ -66,6 +51,39 @@ fn answer(request: NativeRequest) -> NativeResponse {
         result.plan.issues.extend(analysis.issues);
     }
     response
+}
+
+fn build_receipt_store(request: &NativeRequest) -> Option<FileReceiptStore> {
+    if !request.cache {
+        return None;
+    }
+    let remote_url = request.remote_cache_url.clone().or_else(|| {
+        std::env::var("DADS_TESTING_REMOTE_CACHE_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+    });
+    let remote_token = std::env::var("DADS_TESTING_REMOTE_CACHE_TOKEN")
+        .ok()
+        .filter(|value| !value.trim().is_empty());
+    let explicit_cache_dir = request
+        .cache_dir
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| {
+            std::env::var("DAD_TEST_CACHE_DIR")
+                .ok()
+                .filter(|value| !value.trim().is_empty())
+        });
+    let workspace_root = Path::new(&request.workspace_root);
+    let base_store = match explicit_cache_dir {
+        Some(raw) => resolve_cache_dir(&raw, workspace_root)
+            .map(|dir| FileReceiptStore::for_cache_dir(&dir)),
+        None => FileReceiptStore::for_workspace(workspace_root),
+    };
+    base_store.map(|store| match remote_url {
+        Some(url) => store.with_remote_url(&url, remote_token),
+        None => store,
+    })
 }
 
 /// Analyzing the workspace means parsing every module in it, so it happens only when a declared

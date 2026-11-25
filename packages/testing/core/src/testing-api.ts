@@ -28,6 +28,8 @@ export type TestingOperationRequest = {
   readonly jobs?: number;
   /** Opt-in content-hashed task receipt cache (`--cache` / `--no-cache`). Defaults to `false`. */
   readonly cache?: boolean;
+  /** Optional local disk cache directory (`--cache-dir` or `DAD_TEST_CACHE_DIR`), safely shared across worktrees. */
+  readonly cacheDir?: string;
   /** Optional L2 remote receipt store URL (`file://`, `http://`, `https://`, or `s3://`). */
   readonly remoteCacheUrl?: string;
   /** Stream live task progress to stderr during `run`. */
@@ -255,6 +257,7 @@ type NativeRequest = {
   readonly shardWeights?: Readonly<Record<string, number>>;
   readonly jobs?: number;
   readonly cache?: boolean;
+  readonly cacheDir?: string;
   readonly remoteCacheUrl?: string;
   readonly stream?: boolean;
 };
@@ -347,6 +350,7 @@ function optionalNativeRunFields(request: TestingOperationRequest): Partial<Nati
   return {
     ...(request.jobs === undefined ? {} : { jobs: request.jobs }),
     ...(request.cache === true ? { cache: true } : {}),
+    ...(request.cacheDir === undefined ? {} : { cacheDir: request.cacheDir }),
     ...(request.remoteCacheUrl === undefined ? {} : { remoteCacheUrl: request.remoteCacheUrl }),
     ...(request.stream === true ? { stream: true } : {}),
   };

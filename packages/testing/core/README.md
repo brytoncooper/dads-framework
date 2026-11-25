@@ -124,7 +124,12 @@ fresh. Passing `--cache` opts into content-hashed passing receipts persisted
 under Git metadata (memoized per run and computed in parallel across workers;
 invalidated by any source, policy-file, manifest, command, `execution.env`,
 runtime fingerprint, or selected-file change; failing runs never write
-receipts); `--no-cache` forces fresh execution. Passing `--remote-cache <url>`
+receipts); `--no-cache` forces fresh execution. Passing `--cache-dir <path>`
+(or setting `DAD_TEST_CACHE_DIR`, with `--cache-dir` taking precedence over
+`DAD_TEST_CACHE_DIR` and supporting `~` expansion plus relative or absolute
+paths) redirects the local disk receipt store to a shared directory so multiple
+Git worktrees and parallel local agents reuse passing receipts atomically with
+workspace-relative cache keys. Passing `--remote-cache <url>`
 (or setting `DADS_TESTING_REMOTE_CACHE_URL`, with optional
 `DADS_TESTING_REMOTE_CACHE_TOKEN`) adds a fail-closed L2 remote receipt store
 (`file://`, `http://`, `https://`, or `s3://bucket/prefix`, using a per-run S3

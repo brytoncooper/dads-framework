@@ -1,12 +1,15 @@
+use crate::cache_dir::resolve_cache_dir;
 use crate::receipts::FileReceiptStore;
 use dads_testing_core::{
-    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, RunResult, TaskReceiptStore,
-    execute_request_with_graph_and_receipts,
+    NativeRequest, Operation, PROTOCOL_SCHEMA_VERSION, RunResult, TaskOutput, TaskReceiptEntry,
+    TaskReceiptStore, execute_request_with_graph_and_receipts,
 };
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Arc;
+use std::thread;
 
 fn git(dir: &Path, args: &[&str]) -> Result<(), Box<dyn Error>> {
     let status = Command::new("git").args(args).current_dir(dir).status()?;
@@ -162,4 +165,134 @@ fn receipts_hit_when_unchanged_and_invalidate_on_source_policy_command_or_corrup
 
     let _ = fs::remove_dir_all(&dir);
     Ok(())
+}
+
+#[test]
+fn shared_cache_dir_hits_across_separate_worktree_directories() -> Result<(), Box<dyn Error>> {
+    let wt_a = temp_repo("shared-wt-a")?;
+    let wt_b = temp_repo("shared-wt-b")?;
+    let shared_cache = std::env::temp_dir().join(format!(
+        "dads-testing-shared-cache-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&shared_cache);
+
+    let cmd = "printf x >> .git/ran.txt && printf 'shared-ok'";
+    for dir in [&wt_a, &wt_b] {
+        write_manifest(dir, cmd)?;
+        git(dir, &["add", "."])?;
+        git(
+            dir,
+            &[
+                "-c",
+                "user.name=T",
+                "-c",
+                "user.email=t@e.invalid",
+                "commit",
+                "-qm",
+                "base",
+            ],
+        )?;
+    }
+
+    let store_a = FileReceiptStore::for_cache_dir(&shared_cache);
+    let r_a = run_with_cache(&wt_a, true, &store_a)?;
+    assert_eq!(r_a.exit_code, 0);
+    assert_eq!(r_a.counts.cached, 0);
+    assert!(!r_a.tasks[0].cached);
+    assert_eq!(fs::read_to_string(wt_a.join(".git/ran.txt"))?.len(), 1);
+
+    let store_b = FileReceiptStore::for_cache_dir(&shared_cache);
+    let r_b = run_with_cache(&wt_b, true, &store_b)?;
+    assert_eq!(r_b.exit_code, 0);
+    assert_eq!(r_b.counts.cached, 1);
+    assert!(r_b.tasks[0].cached);
+    assert_eq!(
+        r_b.tasks[0].stdout.as_ref().map(|o| o.text.as_str()),
+        Some("shared-ok")
+    );
+    assert!(!wt_b.join(".git/ran.txt").exists());
+
+    let _ = fs::remove_dir_all(&wt_a);
+    let _ = fs::remove_dir_all(&wt_b);
+    let _ = fs::remove_dir_all(&shared_cache);
+    Ok(())
+}
+
+#[test]
+fn concurrent_writes_to_same_cache_key_never_corrupt_receipts() -> Result<(), Box<dyn Error>> {
+    let shared_cache = std::env::temp_dir().join(format!(
+        "dads-testing-concurrent-cache-{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&shared_cache);
+    let store = Arc::new(FileReceiptStore::for_cache_dir(&shared_cache));
+    let key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    let mut handles = Vec::new();
+    for worker in 0..8 {
+        let store_ref = Arc::clone(&store);
+        handles.push(thread::spawn(move || {
+            for iter in 0..20 {
+                let entry = TaskReceiptEntry {
+                    stdout: Some(TaskOutput {
+                        text: format!("worker-{worker}-iter-{iter}"),
+                        truncated: false,
+                    }),
+                    stderr: None,
+                };
+                store_ref.record_pass(key, &entry);
+                let found = store_ref.lookup(key);
+                assert!(found.is_some(), "receipt must remain readable under races");
+            }
+        }));
+    }
+    for handle in handles {
+        assert!(handle.join().is_ok());
+    }
+
+    let final_entry = store.lookup(key).ok_or("missing final receipt")?;
+    assert!(
+        final_entry
+            .stdout
+            .as_ref()
+            .is_some_and(|out| out.text.starts_with("worker-"))
+    );
+    for entry in fs::read_dir(store.receipts_dir())? {
+        let name = entry?.file_name();
+        let name = name.to_string_lossy();
+        assert!(
+            !name.ends_with(".tmp"),
+            "unexpected leftover temp file: {name}"
+        );
+    }
+
+    let _ = fs::remove_dir_all(&shared_cache);
+    Ok(())
+}
+
+#[test]
+fn resolve_cache_dir_handles_absolute_relative_empty_and_tilde_paths() {
+    let workspace = Path::new("/tmp/ws-root");
+    assert_eq!(resolve_cache_dir("", workspace), None);
+    assert_eq!(resolve_cache_dir("   ", workspace), None);
+    assert_eq!(
+        resolve_cache_dir("rel/cache", workspace),
+        Some(PathBuf::from("/tmp/ws-root/rel/cache"))
+    );
+    assert_eq!(
+        resolve_cache_dir("/var/tmp/shared-cache", workspace),
+        Some(PathBuf::from("/var/tmp/shared-cache"))
+    );
+    if let Some(home) = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .filter(|value| !value.is_empty())
+    {
+        let home_path = PathBuf::from(home);
+        assert_eq!(resolve_cache_dir("~", workspace), Some(home_path.clone()));
+        assert_eq!(
+            resolve_cache_dir("~/.cache/dad-test", workspace),
+            Some(home_path.join(".cache/dad-test"))
+        );
+    }
 }

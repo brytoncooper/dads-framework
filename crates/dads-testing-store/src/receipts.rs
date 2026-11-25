@@ -8,6 +8,7 @@
 //!   miss / no caching).
 //! - Only passing executions (`exit_code == 0`) are persisted, via atomic temp-file + rename.
 
+use crate::cache_dir::write_file_atomically;
 use crate::git_state::git_dir;
 use crate::receipt_cache::{FileDigestEntry, GitFileInventory, RunMemoCache};
 use crate::remote_receipts::RemoteReceiptClient;
@@ -19,7 +20,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 const RECEIPT_SCHEMA_VERSION: u32 = 1;
 const RECEIPT_KEY_DOMAIN: &[u8] = b"dads-testing-receipt-v3\0";
@@ -53,8 +53,6 @@ const IGNORED_DIRS: &[&str] = &[
     ".lake",
     "_apalache-out",
 ];
-
-static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,6 +88,18 @@ impl FileReceiptStore {
         })
     }
 
+    /// Resolves `<cache_dir>/receipts/v1` for an explicit local disk cache directory shared across
+    /// worktrees or local agents.
+    pub fn for_cache_dir(cache_dir: &Path) -> Self {
+        Self {
+            receipts_dir: cache_dir
+                .join("receipts")
+                .join(format!("v{RECEIPT_SCHEMA_VERSION}")),
+            remote: None,
+            memo: RunMemoCache::default(),
+        }
+    }
+
     /// Attaches an optional L2 remote receipt store (`file://`, `http://`, or `https://`).
     /// Unrecognized URL schemes are ignored fail-closed (L1-only).
     #[must_use]
@@ -123,20 +133,7 @@ impl FileReceiptStore {
         let Some(final_path) = self.receipt_path(key) else {
             return;
         };
-        if fs::create_dir_all(&self.receipts_dir).is_err() {
-            return;
-        }
-        let nonce = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let temp_path = self
-            .receipts_dir
-            .join(format!(".{key}.{}.{nonce}.tmp", std::process::id()));
-        if fs::write(&temp_path, bytes).is_err() {
-            let _ = fs::remove_file(&temp_path);
-            return;
-        }
-        if fs::rename(&temp_path, &final_path).is_err() {
-            let _ = fs::remove_file(&temp_path);
-        }
+        write_file_atomically(&self.receipts_dir, key, &final_path, bytes);
     }
 }
 

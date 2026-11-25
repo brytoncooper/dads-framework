@@ -47,6 +47,8 @@ pub struct NativeRequest {
     #[serde(default)]
     pub cache: bool,
     #[serde(default)]
+    pub cache_dir: Option<String>,
+    #[serde(default)]
     pub remote_cache_url: Option<String>,
     #[serde(default)]
     pub stream: bool,
@@ -72,6 +74,7 @@ impl Default for NativeRequest {
             shard_weights: BTreeMap::new(),
             jobs: None,
             cache: false,
+            cache_dir: None,
             remote_cache_url: None,
             stream: false,
         }

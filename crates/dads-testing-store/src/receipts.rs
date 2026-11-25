@@ -92,6 +92,12 @@ impl FileReceiptStore {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn with_remote_client(mut self, remote: RemoteReceiptClient) -> Self {
+        self.remote = Some(remote);
+        self
+    }
+
     fn receipt_path(&self, key: &str) -> Option<PathBuf> {
         if key.is_empty() || !key.bytes().all(|b| b.is_ascii_hexdigit()) {
             return None;

@@ -18,9 +18,9 @@ use crate::manifest::TestingManifest;
 use crate::protocol::{PlanResult, RunResult, TaskRunResult};
 use crate::receipts::{TaskReceiptEntry, TaskReceiptStore};
 use batch::{WorkUnit, pack_work_units};
-use cache_ops::{lookup_receipts_parallel, prepare_tasks, spawn_upload_pool};
+use cache_ops::{prepare_tasks, serve_cached_receipts, spawn_upload_pool};
 use progress::{PreparedTask, RunProgress, TaskStatus, count_outcomes, partition_pending};
-use results::{cached_task_result, worker_panic_result};
+use results::worker_panic_result;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::sync::mpsc;
@@ -50,6 +50,7 @@ struct LoopState {
     workers: BTreeMap<usize, thread::JoinHandle<()>>,
     next_worker_id: usize,
     isolated_single: BTreeSet<usize>,
+    checked_cache: Vec<bool>,
 }
 
 pub(crate) fn run_plan(
@@ -98,6 +99,7 @@ fn run_scheduler_loop(
         workers: BTreeMap::new(),
         next_worker_id: 0,
         isolated_single: BTreeSet::new(),
+        checked_cache: vec![false; prepared.len()],
     };
 
     while state.progress.results.iter().any(Option::is_none) {
@@ -107,6 +109,7 @@ fn run_scheduler_loop(
             prepared,
             &ready,
             receipts,
+            &mut state.checked_cache,
             &mut state.progress,
             stream_enabled,
         );
@@ -150,38 +153,6 @@ fn job_limit(jobs: Option<u32>) -> Result<usize, TestingError> {
             .map_err(|_| message("jobs exceeds this platform's supported range.")),
         None => Ok(DEFAULT_JOBS),
     }
-}
-
-fn serve_cached_receipts(
-    prepared: &[PreparedTask],
-    ready: &[usize],
-    receipts: Option<&dyn TaskReceiptStore>,
-    progress: &mut RunProgress,
-    stream_enabled: bool,
-) -> (Vec<usize>, bool) {
-    let Some(store) = receipts else {
-        return (ready.to_vec(), false);
-    };
-    let lookups = lookup_receipts_parallel(store, prepared, ready);
-    let mut to_spawn = Vec::new();
-    let mut hit_cache = false;
-    for (index, maybe_entry) in lookups {
-        let task = &prepared[index];
-        if let Some(entry) = maybe_entry {
-            progress.results[index] =
-                Some(cached_task_result(&task.id, entry.stdout, entry.stderr));
-            progress
-                .statuses
-                .insert(task.id.clone(), TaskStatus::Executed);
-            progress.counts.executed += 1;
-            progress.counts.cached += 1;
-            stream::emit_cached(stream_enabled, &task.id);
-            hit_cache = true;
-            continue;
-        }
-        to_spawn.push(index);
-    }
-    (to_spawn, hit_cache)
 }
 
 fn dispatch_units(

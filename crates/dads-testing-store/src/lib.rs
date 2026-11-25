@@ -31,7 +31,13 @@ mod receipts_tests;
 mod remote_receipts;
 #[cfg(test)]
 mod remote_receipts_tests;
-mod s3_index;
+mod s3_client;
+#[cfg(test)]
+mod s3_client_tests;
+mod s3_credentials;
+mod s3_sigv4;
+#[cfg(test)]
+mod s3_sigv4_tests;
 mod snapshot;
 #[cfg(test)]
 mod tests;

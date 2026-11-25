@@ -79,7 +79,7 @@ fn deleting_cross_project_module_widens_relative_and_alias_consumers_without_fal
         root.join("dads.testing.json"),
         r#"{
   "schemaVersion": 1,
-  "workspace": { "fullFallback": { "taskIds": ["lib:test", "app-rel:test", "app-alias:test", "unrelated:test"] } },
+  "workspace": { "fullFallback": { "taskIds": ["lib:test", "app-rel:test", "app-rel:typecheck", "app-alias:test", "app-alias:typecheck", "unrelated:test"] } },
   "projects": [
     { "id": "lib", "root": "lib", "fallbackDependencies": [] },
     { "id": "app-rel", "root": "app-rel", "fallbackDependencies": [] },

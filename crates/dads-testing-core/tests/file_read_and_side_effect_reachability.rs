@@ -128,6 +128,7 @@ fn changed_evidence(path: &str, exports: &[&str]) -> ChangedModuleEvidence {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }
 }
 

@@ -87,6 +87,7 @@ fn build_graph(projects: &[&str]) -> DependencyGraph {
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         })
         .collect();
     DependencyGraph::new(nodes, Vec::new()).with_changed_module_evidence(evidence)

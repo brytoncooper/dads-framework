@@ -349,6 +349,7 @@ fn combined_js_and_sql_union_selects_both_channels_without_false_skips()
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
 
     let p = plan(&dir, Some(graph))?;

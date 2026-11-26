@@ -100,6 +100,7 @@ pub(crate) fn asset_changed_evidence(
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             });
         }
     }

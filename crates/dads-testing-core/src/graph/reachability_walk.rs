@@ -122,6 +122,16 @@ pub(super) fn enqueue_exports(walk: &mut SymbolWalk, module: String, exports: BT
     }
 }
 
+pub(super) fn unattributed_change(path: String) -> GraphUncertainty {
+    GraphUncertainty {
+        path,
+        code: "unattributed-module-change".into(),
+        message: "Changed exports could not be proven for every hunk.".into(),
+        scope: GraphUncertaintyScope::ReachedModule,
+        location: None,
+    }
+}
+
 pub(super) fn ambiguous_import(path: String, import: &CImport) -> GraphUncertainty {
     GraphUncertainty {
         path,

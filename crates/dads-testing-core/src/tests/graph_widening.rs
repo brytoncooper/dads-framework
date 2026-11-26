@@ -115,6 +115,7 @@ fn static_importers_select_their_reachability_tasks_across_projects() {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
     let proven_response = execute_request_with_graph(request(&repository, Vec::new()), Some(graph));
     assert!(proven_response.ok, "{proven_response:?}");
@@ -242,6 +243,7 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
 
     let response =
@@ -297,6 +299,7 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
     let dependency_response =
         execute_request_with_graph(request(&repository, Vec::new()), Some(dependency_graph));
@@ -360,6 +363,7 @@ fn graph_uncertainty_widens_only_through_declared_project_dependencies() {
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         }]);
     let full_fallback_response =
         execute_request_with_graph(request(&repository, Vec::new()), Some(unowned_graph));
@@ -457,6 +461,7 @@ fn unreached_unbounded_import_uncertainty_widens_its_owner_project() {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
 
     let response = execute_request_with_graph(request(&repository, Vec::new()), Some(graph));

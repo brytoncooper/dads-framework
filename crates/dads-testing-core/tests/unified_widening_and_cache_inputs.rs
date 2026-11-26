@@ -205,6 +205,7 @@ fn empty_fallback_deps_widen_unattributed_and_uncovered_changes_across_oxc_edges
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         }]);
     let plan1 = plan_with_graph(&repo.0, Some(unattr_graph))?;
     assert_eq!(task(&plan1, "billing:test")?.decision, "run");
@@ -331,6 +332,7 @@ fn cache_inputs_fixture() -> Result<(TempRepo, DependencyGraph), Box<dyn Error>>
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     };
     let graph = DependencyGraph::new(
         vec![

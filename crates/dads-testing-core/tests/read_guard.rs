@@ -554,6 +554,7 @@ fn vitest_batch_isolates_members_on_undeclared_read_in_enforce_mode() -> Result<
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         })
         .collect();
     let graph = DependencyGraph::new(

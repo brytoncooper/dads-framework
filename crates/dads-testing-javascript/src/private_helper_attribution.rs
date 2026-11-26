@@ -64,15 +64,27 @@ pub(crate) fn attribute_module_hunks_with_eval(
     baseline_source: Option<&str>,
     current_source: &str,
     path: &Path,
-    old_ranges: &[ByteRange],
-    new_ranges: &[ByteRange],
+    (old_ranges, new_ranges): (&[ByteRange], &[ByteRange]),
     pure_factories: &[String],
+    include_type_only: bool,
 ) -> Option<ModuleHunkAttribution> {
-    let current = analyze_side_hunks(current_source, path, new_ranges, pure_factories)?;
+    let current = analyze_side_hunks(
+        current_source,
+        path,
+        new_ranges,
+        pure_factories,
+        include_type_only,
+    )?;
     let mut changed_exports = current.changed_exports;
     let mut module_eval_changed = current.module_eval_changed;
     if let Some(baseline) = baseline_source {
-        let old = analyze_side_hunks(baseline, path, old_ranges, pure_factories)?;
+        let old = analyze_side_hunks(
+            baseline,
+            path,
+            old_ranges,
+            pure_factories,
+            include_type_only,
+        )?;
         changed_exports.extend(old.changed_exports);
         module_eval_changed |= old.module_eval_changed;
         if old.runtime_import_specifiers != current.runtime_import_specifiers {
@@ -100,6 +112,7 @@ struct SideContext {
     named_exports: Vec<NamedExportSpan>,
     reexport_froms: Vec<ReexportFromSpan>,
     export_all_spans: Vec<Span>,
+    comment_spans: Vec<Span>,
 }
 
 struct TouchAccumulator {
@@ -113,6 +126,7 @@ fn analyze_side_hunks(
     path: &Path,
     changed_ranges: &[ByteRange],
     pure_factories: &[String],
+    include_type_only: bool,
 ) -> Option<SideAttribution> {
     let source_type = SourceType::from_path(path).ok()?;
     let allocator = Allocator::default();
@@ -151,10 +165,19 @@ fn analyze_side_hunks(
         effectful_nodes: classified.effectful_nodes,
         exports_by_node: map_nodes_to_export_names(&parsed.module_record, &semantic.semantic),
         ownership_spans: statement_ownership_spans(&parsed.program, &classified.decl_spans),
-        bound_imports: bound_import_ownership_spans(&parsed.program, &semantic.semantic),
-        named_exports: named_export_ownership_spans(&parsed.program, &semantic.semantic),
-        reexport_froms: reexport_from_ownership_spans(&parsed.program),
+        bound_imports: bound_import_ownership_spans(
+            &parsed.program,
+            &semantic.semantic,
+            include_type_only,
+        ),
+        named_exports: named_export_ownership_spans(
+            &parsed.program,
+            &semantic.semantic,
+            include_type_only,
+        ),
+        reexport_froms: reexport_from_ownership_spans(&parsed.program, include_type_only),
         export_all_spans: collect_export_all_spans(&parsed.program),
+        comment_spans: parsed.program.comments.iter().map(|c| c.span).collect(),
     };
     attribute_ranges_against_side(source, changed_ranges, &side, runtime_import_specifiers)
 }
@@ -231,6 +254,11 @@ fn attribute_trimmed_range(
         if span_overlaps(reexp.statement_span, trimmed) {
             covering_spans.push(reexp.statement_span);
             attribute_reexport_from_touch(source, reexp, trimmed, acc);
+        }
+    }
+    for span in &side.comment_spans {
+        if span_overlaps(*span, trimmed) {
+            covering_spans.push(*span);
         }
     }
     if covering_spans.is_empty() || !range_covered_with(source, trimmed, &covering_spans, false) {

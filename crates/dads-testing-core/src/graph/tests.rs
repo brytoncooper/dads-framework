@@ -20,6 +20,7 @@ fn compact_graph_round_trips_patch_and_propagates_three_hops() {
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         },
     ]);
     let r = g.symbol_reachability_from(["a".into()]);
@@ -53,6 +54,7 @@ fn literal_runtime_import_reaches_its_importer_without_named_symbols() {
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         }]);
     assert!(
         graph
@@ -117,6 +119,7 @@ fn export_star_preserves_the_changed_symbol_for_downstream_importers() {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
 
     let reachable = graph.symbol_reachability_from(["leaf".into()]);
@@ -178,6 +181,7 @@ fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             },
             ChangedModuleEvidence {
                 path: "b".into(),
@@ -186,6 +190,7 @@ fn diamond_export_star_propagates_symbols_from_both_changed_leaves() {
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             },
         ]);
 
@@ -250,6 +255,7 @@ fn mixed_export_star_and_named_import_still_propagates_own_exports() {
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             },
             ChangedModuleEvidence {
                 path: "b".into(),
@@ -258,6 +264,7 @@ fn mixed_export_star_and_named_import_still_propagates_own_exports() {
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             },
         ]);
 
@@ -299,6 +306,7 @@ fn terminal_importer_without_exports_does_not_make_reachability_uncertain() {
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         }]);
 
     let reachable = graph.symbol_reachability_from(["leaf".into()]);
@@ -333,6 +341,7 @@ fn symbol_reachability_records_followed_edges() {
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             },
         ]);
 
@@ -363,9 +372,10 @@ fn symbol_reachability_records_followed_edges() {
 }
 
 #[test]
-fn type_only_edge_uncertainty_carries_the_import_location() {
+fn type_only_namespace_edge_uncertainty_carries_the_import_location() {
     let mut importer = node("importer", "result", Some(("leaf", "changed")));
     importer.imports[0].type_only = true;
+    importer.imports[0].namespace_import = true;
     importer.imports[0].span = SourceSpan { start: 40, end: 52 };
     importer.imports[0].position = Some(LineColumn { line: 3, column: 9 });
     let leaf = ModuleNode {
@@ -387,6 +397,7 @@ fn type_only_edge_uncertainty_carries_the_import_location() {
                 semantic_change: true,
                 type_only_change: false,
                 module_eval_changed: false,
+                changed_type_exports: None,
             },
         ]);
 
@@ -395,7 +406,7 @@ fn type_only_edge_uncertainty_carries_the_import_location() {
         .uncertainties
         .iter()
         .find(|uncertainty| uncertainty.code == "ambiguous-cross-file-import")
-        .expect("a type-only edge must stay uncertain");
+        .expect("a namespace type-only edge must stay uncertain");
 
     assert_eq!(
         uncertainty.location,
@@ -404,6 +415,44 @@ fn type_only_edge_uncertainty_carries_the_import_location() {
             position: LineColumn { line: 3, column: 9 },
         })
     );
+}
+
+#[test]
+fn named_type_only_import_matches_symbols_without_widening() {
+    let mut matching = node("matching", "result", Some(("leaf", "ChangedType")));
+    matching.imports[0].type_only = true;
+    let mut unrelated = node("unrelated", "other", Some(("leaf", "UnchangedType")));
+    unrelated.imports[0].type_only = true;
+    let leaf = ModuleNode {
+        path: "leaf".into(),
+        language: "fixture".into(),
+        declarations: vec![SymbolFact {
+            name: "runtimeFn".into(),
+            span: SourceSpan { start: 0, end: 1 },
+        }],
+        references: vec![],
+        imports: vec![],
+    };
+    let graph = DependencyGraph::new(vec![leaf, matching, unrelated], vec![])
+        .with_changed_module_evidence(vec![ChangedModuleEvidence {
+            path: "leaf".into(),
+            changed_exports: BTreeSet::new(),
+            every_hunk_is_attributed: true,
+            semantic_change: true,
+            type_only_change: true,
+            module_eval_changed: false,
+            changed_type_exports: Some(["ChangedType".to_owned()].into_iter().collect()),
+        }]);
+
+    let runtime = graph.symbol_reachability_runtime(["leaf".into()]);
+    assert!(runtime.paths.is_empty());
+    assert!(runtime.uncertainties.is_empty());
+
+    let typecheck = graph.symbol_reachability_from(["leaf".into()]);
+    assert!(typecheck.paths.contains("leaf"));
+    assert!(typecheck.paths.contains("matching"));
+    assert!(!typecheck.paths.contains("unrelated"));
+    assert!(typecheck.uncertainties.is_empty());
 }
 
 #[test]
@@ -475,6 +524,7 @@ fn module_eval_changed_propagates_runtime_edges_transitively_and_erases_import_t
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: true,
+        changed_type_exports: None,
     }]);
 
     let round_tripped: DependencyGraph =
@@ -494,12 +544,8 @@ fn module_eval_changed_propagates_runtime_edges_transitively_and_erases_import_t
 
     let typecheck = round_tripped.symbol_reachability_from(["leaf".into()]);
     assert!(typecheck.paths.contains("runtime.test"));
-    assert!(
-        typecheck
-            .uncertainties
-            .iter()
-            .any(|u| { u.path == "type-only.test" && u.code == "ambiguous-cross-file-import" })
-    );
+    assert!(!typecheck.paths.contains("type-only.test"));
+    assert!(typecheck.uncertainties.is_empty());
 }
 
 fn node(path: &str, export: &str, dep: Option<(&str, &str)>) -> ModuleNode {

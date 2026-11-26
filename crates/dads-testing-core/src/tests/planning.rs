@@ -387,6 +387,7 @@ fn reachability_task_runs_explicitly_when_extra_impact_path_changes() {
         semantic_change: true,
         type_only_change: false,
         module_eval_changed: false,
+        changed_type_exports: None,
     }]);
 
     let response = crate::execute_request_with_graph(

@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/testing-native-win32-x64",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Native dad-test executable for Windows x64.",
   "license": "MIT",
   "os": [

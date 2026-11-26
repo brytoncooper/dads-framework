@@ -76,6 +76,11 @@ fn intern_symbols(
         for s in &c.changed_exports {
             table.insert(s.clone());
         }
+        if let Some(type_exports) = &c.changed_type_exports {
+            for s in type_exports {
+                table.insert(s.clone());
+            }
+        }
     }
     table.into_iter().collect()
 }

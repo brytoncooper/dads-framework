@@ -3,7 +3,8 @@ use super::compact::{CImport, DependencyGraph};
 use super::queries::file_read_dir_prefixes;
 use super::reachability_walk::{
     SymbolWalk, ambiguous_import, enqueue_direct_exports, follow_reexport_all,
-    follow_reexport_namespace, is_pure_side_effect_import, uncertainty_span_start,
+    follow_reexport_namespace, is_pure_side_effect_import, unattributed_change,
+    uncertainty_span_start,
 };
 use super::types::{
     GraphUncertainty, GraphUncertaintyScope, ImportKind, Reachability, ReachedEdge,
@@ -121,13 +122,35 @@ impl DependencyGraph {
             match self.change(&p) {
                 Some(c) if c.complete && !c.semantic_change => {}
                 Some(c) if c.complete && c.type_only_change && erase_type_only => {}
+                Some(c) if c.complete && c.type_only_change && !erase_type_only => {
+                    if let Some(type_exports) = c.type_exports {
+                        walk.paths.insert(p.clone());
+                        if !type_exports.is_empty() {
+                            enqueue_direct_exports(&mut walk, p, type_exports);
+                        }
+                    } else if self
+                        .module_index(&p)
+                        .is_some_and(|module| !self.has_non_file_read_reverse(module))
+                    {
+                        walk.paths.insert(p);
+                    } else {
+                        walk.paths.insert(p.clone());
+                        walk.uncertainties.push(unattributed_change(p));
+                    }
+                }
                 Some(c) if c.complete && (c.module_eval_changed || !c.exports.is_empty()) => {
                     walk.paths.insert(p.clone());
                     if c.module_eval_changed && walk.seen_module_eval.insert(p.clone()) {
                         walk.module_eval_queue.push_back(p.clone());
                     }
-                    if !c.exports.is_empty() {
-                        enqueue_direct_exports(&mut walk, p, c.exports);
+                    let mut combined = c.exports;
+                    if !erase_type_only
+                        && let Some(type_exports) = c.type_exports
+                    {
+                        combined.extend(type_exports);
+                    }
+                    if !combined.is_empty() {
+                        enqueue_direct_exports(&mut walk, p, combined);
                     }
                 }
                 Some(c)
@@ -144,13 +167,7 @@ impl DependencyGraph {
                 }
                 _ => {
                     walk.paths.insert(p.clone());
-                    walk.uncertainties.push(GraphUncertainty {
-                        path: p,
-                        code: "unattributed-module-change".into(),
-                        message: "Changed exports could not be proven for every hunk.".into(),
-                        scope: GraphUncertaintyScope::ReachedModule,
-                        location: None,
-                    });
+                    walk.uncertainties.push(unattributed_change(p));
                 }
             }
         }
@@ -226,15 +243,9 @@ impl DependencyGraph {
         e: &CImport,
         source: String,
         target: &str,
-        erase_type_only: bool,
+        _erase_type_only: bool,
     ) {
-        if self.is_file_read_edge(e) {
-            return;
-        }
-        if e.type_only {
-            if !erase_type_only {
-                walk.uncertainties.push(ambiguous_import(source, e));
-            }
+        if self.is_file_read_edge(e) || e.type_only {
             return;
         }
         walk.edges.push(ReachedEdge {
@@ -261,10 +272,7 @@ impl DependencyGraph {
         if self.is_file_read_edge(e) {
             return;
         }
-        if e.type_only {
-            if !erase_type_only {
-                walk.uncertainties.push(ambiguous_import(source, e));
-            }
+        if e.type_only && erase_type_only {
             return;
         }
         if e.kind == ImportKind::ReExport && e.reexport_all {
@@ -275,6 +283,9 @@ impl DependencyGraph {
             && let Some(ns_name) = self.str(ns_id)
         {
             follow_reexport_namespace(walk, e, source, target, ns_name, exports);
+            return;
+        }
+        if e.kind == ImportKind::Static && is_pure_side_effect_import(e) {
             return;
         }
         let runtime_module_dependency =

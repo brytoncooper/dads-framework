@@ -3,7 +3,8 @@
 
 use crate::commonjs::{scan_commonjs_module_value_exports, scan_commonjs_requires};
 use crate::export_declarations::{
-    explicit_import_reexport_declarations, is_explicit_import_reexport, runtime_export_declarations,
+    ambiguous_reexport_uncertainty, explicit_import_reexport_declarations,
+    runtime_export_declarations,
 };
 use crate::facts::{
     JsImportFact, JsImportKind, JsLanguage, JsModuleFacts, JsSymbolFact, JsUncertainty,
@@ -276,54 +277,47 @@ fn requested_module_imports(
                 request.is_type,
             );
             let type_only = binding.type_only;
-            imports.push(import_fact(
-                ImportFactContext {
-                    workspace_root: scan.workspace_root,
-                    absolute_path: scan.absolute_path,
-                    path: scan.path,
-                    resolver: scan.resolver,
-                    workspace_index: scan.workspace_index,
-                    uncertainties: &mut *uncertainties,
-                },
-                ImportFactInput {
+            let mixed_type_symbols = binding.mixed_type_symbols;
+            let mut push_fact = |input: ImportFactInput<'_>| {
+                imports.push(import_fact(
+                    ImportFactContext {
+                        workspace_root: scan.workspace_root,
+                        absolute_path: scan.absolute_path,
+                        path: scan.path,
+                        resolver: scan.resolver,
+                        workspace_index: scan.workspace_index,
+                        uncertainties: &mut *uncertainties,
+                    },
+                    input,
+                ));
+            };
+            push_fact(ImportFactInput {
+                specifier: &specifier,
+                span: copied_span(request.span),
+                kind,
+                type_only,
+                requested_symbols: binding.requested_symbols,
+                namespace_import: binding.namespace_import,
+                reexport_all: binding.reexport_all,
+                reexport_namespace: binding.reexport_namespace,
+                member_reads: binding.member_reads,
+            });
+            if !mixed_type_symbols.is_empty() {
+                push_fact(ImportFactInput {
                     specifier: &specifier,
                     span: copied_span(request.span),
                     kind,
-                    type_only,
-                    requested_symbols: binding.requested_symbols,
-                    namespace_import: binding.namespace_import,
-                    reexport_all: binding.reexport_all,
-                    reexport_namespace: binding.reexport_namespace,
-                    member_reads: binding.member_reads,
-                },
-            ));
+                    type_only: true,
+                    requested_symbols: mixed_type_symbols,
+                    namespace_import: false,
+                    reexport_all: false,
+                    reexport_namespace: None,
+                    member_reads: None,
+                });
+            }
         }
     }
     imports
-}
-
-fn ambiguous_reexport_uncertainty(
-    module_record: &ModuleRecord<'_>,
-    semantic: &Semantic<'_>,
-    path: &str,
-) -> Option<JsUncertainty> {
-    use oxc_syntax::module_record::{ExportExportName, ExportImportName};
-    let ambiguous_reexport = module_record.indirect_export_entries.iter().find(|entry| {
-        let is_named_ns_reexport = matches!(entry.import_name, ExportImportName::All)
-            && matches!(entry.export_name, ExportExportName::Name(_));
-        !entry.is_type
-            && !matches!(entry.import_name, ExportImportName::Name(_))
-            && !is_named_ns_reexport
-            && !is_explicit_import_reexport(semantic, entry.span)
-    })?;
-    Some(JsUncertainty {
-        path: path.to_owned(),
-        code: "ambiguous-re-export".to_owned(),
-        message: "A cross-file re-export cannot be attributed to a local exported declaration."
-            .to_owned(),
-        span: Some(copied_span(ambiguous_reexport.span)),
-        position: None,
-    })
 }
 
 fn dynamic_import_facts(

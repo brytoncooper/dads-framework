@@ -4,6 +4,16 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.9.2] - 2026-11-26
+
+Independent precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Type-channel symbol precision (`frontend_version` 19):** Named `import type { ... }` and `export type { ... }` edges now match changed type/runtime symbols on the non-runtime (`typecheck`/`lint`/`build`) channel instead of unconditionally emitting `ambiguous-cross-file-import` project-level fallbacks. Mixed runtime+type statements (`import { a, type B }`) emit a companion type-only edge so type edits never miss downstream typechecks, while `import type * as ns` continues to fail closed.
+- **Pure side-effect imports & `module_eval` isolation:** Bare ES side-effect imports (`import "./x"`) no longer emit `ambiguous-cross-file-import` on pure named-export changes (module-evaluation edits still propagate through `follow_module_eval_edge`), and `follow_module_eval_edge` skips runtime-erased `import type` edges on both channels.
+- **Comment + declaration diff hunk attribution:** Oxc comment spans (`//`, `/* ... */`, `/** ... */`) are now included in hunk coverage checks so adding or editing a JSDoc/line comment right above an export in the same diff hunk attributes cleanly to that export instead of emitting `unattributed-module-change`.
+
 ## [@dads-framework/testing 0.9.1] - 2026-11-25
 
 Independent precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

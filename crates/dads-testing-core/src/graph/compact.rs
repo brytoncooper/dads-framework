@@ -59,6 +59,8 @@ pub(super) struct CChange {
     pub(super) type_only_change: bool,
     #[serde(default)]
     pub(super) module_eval_changed: bool,
+    #[serde(default)]
+    pub(super) type_exports: Option<Vec<u32>>,
 }
 
 fn default_semantic_change() -> bool {
@@ -110,6 +112,11 @@ impl DependencyGraph {
                     semantic_change: c.semantic_change,
                     type_only_change: c.type_only_change,
                     module_eval_changed: c.module_eval_changed,
+                    changed_type_exports: c.type_exports.as_ref().map(|ids| {
+                        ids.iter()
+                            .filter_map(|n| self.str(*n).map(str::to_owned))
+                            .collect()
+                    }),
                 })
             })
             .collect()
@@ -163,6 +170,9 @@ impl DependencyGraph {
                     semantic_change: c.semantic_change,
                     type_only_change: c.type_only_change,
                     module_eval_changed: c.module_eval_changed,
+                    type_exports: c
+                        .changed_type_exports
+                        .map(|set| set.iter().filter_map(|s| self.id(s)).collect()),
                 })
             })
             .collect()
@@ -226,6 +236,11 @@ impl DependencyGraph {
                 semantic_change: x.semantic_change,
                 type_only_change: x.type_only_change,
                 module_eval_changed: x.module_eval_changed,
+                type_exports: x.type_exports.as_ref().map(|ids| {
+                    ids.iter()
+                        .filter_map(|n| self.str(*n).map(str::to_owned))
+                        .collect()
+                }),
             })
     }
     pub fn uncertainties(&self) -> Vec<GraphUncertainty> {
@@ -318,4 +333,5 @@ pub(super) struct CChangeView {
     pub(super) semantic_change: bool,
     pub(super) type_only_change: bool,
     pub(super) module_eval_changed: bool,
+    pub(super) type_exports: Option<BTreeSet<String>>,
 }

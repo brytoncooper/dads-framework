@@ -78,13 +78,14 @@ pub(crate) fn collect_export_all_spans(program: &Program<'_>) -> Vec<Span> {
 pub(crate) fn bound_import_ownership_spans(
     program: &Program<'_>,
     semantic: &Semantic<'_>,
+    include_type_only: bool,
 ) -> Vec<BoundImportSpan> {
     let mut out = Vec::new();
     for stmt in &program.body {
         let Statement::ImportDeclaration(imp) = stmt else {
             continue;
         };
-        if imp.import_kind.is_type() {
+        if imp.import_kind.is_type() && !include_type_only {
             out.push(BoundImportSpan {
                 statement_span: imp.span,
                 source_span: imp.source.span,
@@ -98,11 +99,12 @@ pub(crate) fn bound_import_ownership_spans(
         let Some(specifiers) = imp.specifiers.as_ref().filter(|specs| !specs.is_empty()) else {
             continue;
         };
-        let (nodes, type_spans, all_resolved) = resolve_import_specifiers(specifiers, semantic);
+        let (nodes, type_spans, all_resolved) =
+            resolve_import_specifiers(specifiers, semantic, include_type_only);
         out.push(BoundImportSpan {
             statement_span: imp.span,
             source_span: imp.source.span,
-            is_type_only: false,
+            is_type_only: imp.import_kind.is_type() && !include_type_only,
             all_resolved,
             specifiers: nodes,
             type_specifier_spans: type_spans,
@@ -114,6 +116,7 @@ pub(crate) fn bound_import_ownership_spans(
 fn resolve_import_specifiers(
     specifiers: &[ImportDeclarationSpecifier<'_>],
     semantic: &Semantic<'_>,
+    include_type_only: bool,
 ) -> (Vec<(Span, DeclNode)>, Vec<Span>, bool) {
     let mut nodes = Vec::new();
     let mut type_spans = Vec::new();
@@ -121,7 +124,7 @@ fn resolve_import_specifiers(
     for spec in specifiers {
         match spec {
             ImportDeclarationSpecifier::ImportSpecifier(named) => {
-                if named.import_kind.is_type() {
+                if named.import_kind.is_type() && !include_type_only {
                     type_spans.push(named.span);
                 } else if let Some(sym) =
                     find_root_symbol(semantic, named.local.name.as_str(), named.local.span)
@@ -158,13 +161,14 @@ fn resolve_import_specifiers(
 pub(crate) fn named_export_ownership_spans(
     program: &Program<'_>,
     semantic: &Semantic<'_>,
+    include_type_only: bool,
 ) -> Vec<NamedExportSpan> {
     let mut out = Vec::new();
     for stmt in &program.body {
         let Statement::ExportNamedDeclaration(exp) = stmt else {
             continue;
         };
-        if exp.export_kind.is_type() {
+        if exp.export_kind.is_type() && !include_type_only {
             out.push(NamedExportSpan {
                 statement_span: exp.span,
                 is_type_only: true,
@@ -178,7 +182,7 @@ pub(crate) fn named_export_ownership_spans(
         let mut type_spans = Vec::new();
         let mut all_resolved = true;
         for spec in &exp.specifiers {
-            if spec.export_kind.is_type() {
+            if spec.export_kind.is_type() && !include_type_only {
                 type_spans.push(spec.span);
             } else if let Some(sym) = find_root_symbol_by_name(semantic, spec.local.name().as_str())
             {
@@ -193,7 +197,7 @@ pub(crate) fn named_export_ownership_spans(
         }
         out.push(NamedExportSpan {
             statement_span: exp.span,
-            is_type_only: false,
+            is_type_only: exp.export_kind.is_type() && !include_type_only,
             all_resolved,
             specifiers,
             type_specifier_spans: type_spans,
@@ -202,7 +206,10 @@ pub(crate) fn named_export_ownership_spans(
     out
 }
 
-pub(crate) fn reexport_from_ownership_spans(program: &Program<'_>) -> Vec<ReexportFromSpan> {
+pub(crate) fn reexport_from_ownership_spans(
+    program: &Program<'_>,
+    include_type_only: bool,
+) -> Vec<ReexportFromSpan> {
     program
         .body
         .iter()
@@ -212,9 +219,9 @@ pub(crate) fn reexport_from_ownership_spans(program: &Program<'_>) -> Vec<Reexpo
             };
             let mut specifiers = Vec::new();
             let mut type_spans = Vec::new();
-            if !exp.export_kind.is_type() {
+            if include_type_only || !exp.export_kind.is_type() {
                 for spec in &exp.specifiers {
-                    if spec.export_kind.is_type() {
+                    if spec.export_kind.is_type() && !include_type_only {
                         type_spans.push(spec.span);
                     } else {
                         specifiers.push((spec.span, spec.exported.name().as_str().to_owned()));
@@ -224,7 +231,7 @@ pub(crate) fn reexport_from_ownership_spans(program: &Program<'_>) -> Vec<Reexpo
             Some(ReexportFromSpan {
                 statement_span: exp.span,
                 source_span: exp.source.span,
-                is_type_only: exp.export_kind.is_type(),
+                is_type_only: exp.export_kind.is_type() && !include_type_only,
                 specifiers,
                 type_specifier_spans: type_spans,
             })

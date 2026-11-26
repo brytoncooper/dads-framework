@@ -18,6 +18,9 @@ use std::path::Path;
 pub(crate) struct RequestedBindingFacts {
     pub(crate) type_only: bool,
     pub(crate) requested_symbols: BTreeSet<String>,
+    /// Type-only symbols requested in a mixed runtime+type statement (e.g. `import { a, type B }`).
+    /// Empty when the statement is purely runtime or purely type-only.
+    pub(crate) mixed_type_symbols: BTreeSet<String>,
     pub(crate) namespace_import: bool,
     pub(crate) reexport_all: bool,
     pub(crate) reexport_namespace: Option<String>,
@@ -34,6 +37,7 @@ pub(crate) fn requested_binding_facts(
     let mut facts = RequestedBindingFacts {
         type_only: false,
         requested_symbols: BTreeSet::new(),
+        mixed_type_symbols: BTreeSet::new(),
         namespace_import: false,
         reexport_all: false,
         reexport_namespace: None,
@@ -65,7 +69,9 @@ pub(crate) fn requested_binding_facts(
         }
         if entry.is_type {
             has_type_only_binding = true;
-            if let ExportImportName::Name(name) = &entry.import_name {
+            if entry.import_name.is_all_but_default() {
+                facts.reexport_all = true;
+            } else if let ExportImportName::Name(name) = &entry.import_name {
                 type_requested_symbols.insert(name.name.to_string());
             }
             continue;
@@ -84,7 +90,9 @@ pub(crate) fn requested_binding_facts(
         }
         if entry.is_type {
             has_type_only_binding = true;
-            if let ExportImportName::Name(name) = &entry.import_name {
+            if entry.import_name.is_all_but_default() {
+                facts.reexport_all = true;
+            } else if let ExportImportName::Name(name) = &entry.import_name {
                 type_requested_symbols.insert(name.name.to_string());
             }
             continue;
@@ -111,8 +119,13 @@ pub(crate) fn requested_binding_facts(
     facts.type_only = has_type_only_binding && !has_runtime_binding;
     if facts.type_only {
         facts.requested_symbols = type_requested_symbols;
-    } else if !member_reads.is_empty() {
-        facts.member_reads = Some(member_reads);
+    } else {
+        if !type_requested_symbols.is_empty() {
+            facts.mixed_type_symbols = type_requested_symbols;
+        }
+        if !member_reads.is_empty() {
+            facts.member_reads = Some(member_reads);
+        }
     }
     facts
 }
@@ -145,7 +158,9 @@ fn collect_import_entry_bindings(
                 ImportImportName::Default(_) => {
                     acc.type_requested_symbols.insert("default".to_owned());
                 }
-                ImportImportName::NamespaceObject => {}
+                ImportImportName::NamespaceObject => {
+                    acc.facts.namespace_import = true;
+                }
             }
             continue;
         }

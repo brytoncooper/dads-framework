@@ -329,3 +329,27 @@ fn enclosing_export_statement_span(
         })
         .min_by_key(|span| span.end.saturating_sub(span.start))
 }
+
+pub(crate) fn ambiguous_reexport_uncertainty(
+    module_record: &ModuleRecord<'_>,
+    semantic: &Semantic<'_>,
+    path: &str,
+) -> Option<JsUncertainty> {
+    use oxc_syntax::module_record::{ExportExportName, ExportImportName};
+    let ambiguous_reexport = module_record.indirect_export_entries.iter().find(|entry| {
+        let is_named_ns_reexport = matches!(entry.import_name, ExportImportName::All)
+            && matches!(entry.export_name, ExportExportName::Name(_));
+        !entry.is_type
+            && !matches!(entry.import_name, ExportImportName::Name(_))
+            && !is_named_ns_reexport
+            && !is_explicit_import_reexport(semantic, entry.span)
+    })?;
+    Some(JsUncertainty {
+        path: path.to_owned(),
+        code: "ambiguous-re-export".to_owned(),
+        message: "A cross-file re-export cannot be attributed to a local exported declaration."
+            .to_owned(),
+        span: Some(copied_span(ambiguous_reexport.span)),
+        position: None,
+    })
+}

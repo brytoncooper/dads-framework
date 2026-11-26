@@ -97,6 +97,11 @@ pub struct ChangedModuleEvidence {
     /// (impure initializer, top-level statement, class static block, or runtime import change).
     #[serde(default)]
     pub module_eval_changed: bool,
+    /// Exported symbols (including `export type` / `export interface` / `export type { ... }`)
+    /// touched by type-level hunks when every type-level hunk was cleanly attributed. `None`
+    /// means type-level hunks were not attributed and the non-runtime channel must fail closed.
+    #[serde(default)]
+    pub changed_type_exports: Option<BTreeSet<String>>,
 }
 
 fn default_semantic_change() -> bool {

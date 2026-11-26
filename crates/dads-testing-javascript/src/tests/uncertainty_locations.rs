@@ -31,6 +31,7 @@ fn nonliteral_dynamic_import_is_a_whole_workspace_uncertainty() {
             semantic_change: true,
             type_only_change: false,
             module_eval_changed: false,
+            changed_type_exports: None,
         },
     ]);
     let reachable = graph.symbol_reachability_from(["src/changed.ts".to_owned()]);
@@ -156,5 +157,5 @@ fn file_level_uncertainties_have_no_location() {
 
 #[test]
 fn located_facts_declare_their_own_frontend_version() {
-    assert_eq!(JavaScriptFrontend.frontend_version(), 18);
+    assert_eq!(JavaScriptFrontend.frontend_version(), 19);
 }

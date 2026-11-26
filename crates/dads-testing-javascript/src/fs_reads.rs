@@ -97,61 +97,6 @@ impl TargetRecorder<'_> {
     }
 }
 
-fn resolve_missing_workspace_rel_path(canonical_root: &Path, normalized: &Path) -> Option<String> {
-    let mut missing_segments = Vec::new();
-    let mut cursor = normalized;
-    while !cursor.exists() {
-        let name = cursor.file_name()?.to_str()?;
-        if !is_safe_missing_segment(name) {
-            return None;
-        }
-        missing_segments.push(name);
-        cursor = cursor.parent()?;
-    }
-    if missing_segments.is_empty() {
-        return None;
-    }
-    let canonical_ancestor = cursor.canonicalize().ok()?;
-    if !canonical_ancestor.starts_with(canonical_root) {
-        return None;
-    }
-    missing_segments.reverse();
-    let mut joined = canonical_ancestor;
-    for segment in missing_segments {
-        joined.push(segment);
-    }
-    workspace_relative_path(canonical_root, &joined)
-}
-
-fn is_safe_missing_segment(segment: &str) -> bool {
-    !segment.is_empty()
-        && segment.bytes().all(|byte| {
-            byte >= 0x20 && !matches!(byte, b'*' | b'?' | b':' | b'<' | b'>' | b'|' | b'"')
-        })
-}
-
-fn synthetic_import_fact(
-    specifier: String,
-    span: JsSpan,
-    kind: JsImportKind,
-    resolved_path: String,
-) -> JsImportFact {
-    JsImportFact {
-        specifier,
-        span,
-        kind,
-        type_only: false,
-        requested_symbols: BTreeSet::new(),
-        namespace_import: false,
-        reexport_all: false,
-        reexport_namespace: None,
-        resolved_path: Some(resolved_path),
-        position: None,
-        export_deps: None,
-        member_reads: None,
-    }
-}
-
 pub(crate) fn collect_fs_read_imports(
     module_record: &ModuleRecord<'_>,
     semantic: &Semantic<'_>,

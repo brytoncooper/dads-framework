@@ -8,6 +8,7 @@ mod reachability_walk;
 mod types;
 
 pub use compact::DependencyGraph;
+pub use queries::external_package_name;
 pub use types::{
     ChangedModuleEvidence, GraphUncertainty, GraphUncertaintyScope, ImportFact, ImportKind,
     LineColumn, ModuleNode, Reachability, ReachedEdge, SourceLocation, SourceSpan, SymbolFact,

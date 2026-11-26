@@ -1,6 +1,6 @@
 {
   "name": "@dads-framework/testing-native-darwin-arm64",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Native dad-test executable for macOS arm64.",
   "license": "MIT",
   "os": [

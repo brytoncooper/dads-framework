@@ -16,7 +16,9 @@ import {
   isIgnoredInternalRel,
   isTsconfigName,
   isWriteOnlyOpenFlag,
+  NODE_EVAL_FLAGS,
   NODE_RUNNERS,
+  NODE_VALUE_FLAGS,
   normalizeSlashes,
   rawPathToString,
   ROOT_POLICY_BASENAMES,
@@ -31,6 +33,7 @@ function installReadGuard() {
 
   const origReadFileSync = fs.readFileSync;
   const origAppendFileSync = fs.appendFileSync;
+  const origExistsSync = fs.existsSync;
   let config;
   try {
     config = JSON.parse(origReadFileSync(configPath, "utf8"));
@@ -106,7 +109,7 @@ function installReadGuard() {
   function checkPath(rawPath, api, isMetaOnly, baseDir) {
     if (allow.allowAll) return;
     const p = rawPathToString(rawPath);
-    if (!p || p.length === 0) return;
+    if (!p || p.length === 0 || p.includes("\n") || p.includes("\r") || p.includes("\0")) return;
 
     const isAbsPosix = p.charCodeAt(0) === 47;
     if (isAbsPosix) {
@@ -157,6 +160,7 @@ function installReadGuard() {
 
     const caller = classifyCaller(wsRoot, wsRootRaw, SELF_FILE);
     if (!caller.isUserCode) return;
+    if (caller.viaNodeModules && !origExistsSync(abs)) return;
     const entry = { path: rel, ...(caller.location ? { location: caller.location } : {}), api };
     violations.set(rel, entry);
     if (!isMainThread) flushViolations();
@@ -214,8 +218,20 @@ function installReadGuard() {
       .toLowerCase()
       .replace(/\.(exe|cmd|bat)$/, "");
     if (cpArgs && NODE_RUNNERS.has(base)) {
+      let skipNext = false;
       for (const arg of cpArgs) {
-        if (typeof arg !== "string" || arg.length === 0 || arg.startsWith("-")) continue;
+        if (typeof arg !== "string" || arg.length === 0) continue;
+        if (skipNext) {
+          skipNext = false;
+          continue;
+        }
+        if (arg === "--") break;
+        if (NODE_EVAL_FLAGS.has(arg)) break;
+        if (NODE_VALUE_FLAGS.has(arg)) {
+          skipNext = true;
+          continue;
+        }
+        if (arg.startsWith("-")) continue;
         checkPath(arg, api, false, cwd);
         break;
       }

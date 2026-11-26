@@ -4,6 +4,18 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.9.3] - 2026-11-26
+
+Independent precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Runtime read guard (`enforceDeclaredReads`) precision:**
+  - Skip `ENOENT` probes initiated inside `node_modules` (such as native addon loaders probing `build/Debug`, `build/Release`, `prebuilds`, or Prettier probing missing `.prettierrc.*` files) while keeping direct user-code sentinel checks and existing-file reads strictly enforced.
+  - Properly parse `child_process` Node runner flags (`-e`/`--eval`/`-p`/`--print` and value-taking flags) and reject multiline/NUL non-path strings.
+  - Allow root/ancestor tool-policy config files (`.nvmrc`, `.node-version`, `.tool-versions`, `.prettierrc*`, `prettier.config.*`).
+  - Filter untracked gitignored paths via `git check-ignore` while keeping all tracked workspace files strictly enforced.
+
 ## [@dads-framework/testing 0.9.2] - 2026-11-26
 
 Independent precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

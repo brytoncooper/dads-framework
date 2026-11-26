@@ -2,6 +2,7 @@
 //! parsing, and actionable failure diagnostics.
 
 use super::read_guard_allowlist::TaskReadGuardAllowlist;
+use super::read_guard_gitignore::filter_gitignored_reads;
 use crate::execute::{TestingError, message};
 use crate::manifest::{TaskExecution, TaskKind};
 use crate::protocol::{ReadGuardMode, TaskOutput, TaskRunResult, UndeclaredRead};
@@ -49,6 +50,7 @@ pub(super) struct ReadGuardSession {
 
 /// Per-process temporary config and JSONL report guards for one spawned task invocation.
 pub(super) struct ReadGuardInvocation {
+    workspace_root: PathBuf,
     report_path: PathBuf,
     _config_guard: TempFileGuard,
     _report_guard: TempFileGuard,
@@ -192,6 +194,7 @@ impl ReadGuardSession {
         );
 
         Ok(ReadGuardInvocation {
+            workspace_root: self.workspace_root.clone(),
             report_path: report_path.clone(),
             _config_guard: TempFileGuard(config_path),
             _report_guard: TempFileGuard(report_path),
@@ -228,7 +231,7 @@ impl ReadGuardInvocation {
                 })
                 .or_insert(parsed);
         }
-        by_path.into_values().collect()
+        filter_gitignored_reads(&self.workspace_root, by_path.into_values().collect())
     }
 }
 

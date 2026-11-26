@@ -7,6 +7,7 @@ mod dispatch;
 mod progress;
 mod read_guard;
 mod read_guard_allowlist;
+mod read_guard_gitignore;
 mod receipt_keys;
 mod results;
 mod stream;

@@ -64,6 +64,20 @@ export const ROOT_POLICY_BASENAMES = new Set([
   "babel.config.json",
   ".babelrc",
   ".babelrc.json",
+  ".nvmrc",
+  ".node-version",
+  ".tool-versions",
+  ".prettierrc",
+  ".prettierrc.json",
+  ".prettierrc.js",
+  ".prettierrc.cjs",
+  ".prettierrc.mjs",
+  ".prettierrc.yaml",
+  ".prettierrc.yml",
+  "prettier.config.js",
+  "prettier.config.cjs",
+  "prettier.config.mjs",
+  "prettier.config.ts",
 ]);
 
 export const ANCESTOR_POLICY_BASENAMES = new Set([
@@ -71,6 +85,17 @@ export const ANCESTOR_POLICY_BASENAMES = new Set([
   ".env.local",
   ".env.test",
   ".env.test.local",
+  ".prettierrc",
+  ".prettierrc.json",
+  ".prettierrc.js",
+  ".prettierrc.cjs",
+  ".prettierrc.mjs",
+  ".prettierrc.yaml",
+  ".prettierrc.yml",
+  "prettier.config.js",
+  "prettier.config.cjs",
+  "prettier.config.mjs",
+  "prettier.config.ts",
   "package.json",
   "vitest.config.ts",
   "vitest.config.mts",
@@ -99,6 +124,32 @@ export const ANCESTOR_POLICY_BASENAMES = new Set([
 ]);
 
 export const NODE_RUNNERS = new Set(["node", "nodejs", "tsx", "ts-node"]);
+export const NODE_EVAL_FLAGS = new Set(["-e", "--eval", "-p", "--print"]);
+export const NODE_VALUE_FLAGS = new Set([
+  "-r",
+  "--require",
+  "--import",
+  "--loader",
+  "--experimental-loader",
+  "-C",
+  "--conditions",
+  "--input-type",
+  "--title",
+  "--max-old-space-size",
+  "--test-name-pattern",
+  "--test-reporter",
+  "--test-reporter-destination",
+  "--watch-path",
+  "--env-file",
+  "--env-file-if-exists",
+  "--diagnostic-dir",
+  "--redirect-warnings",
+  "--heapsnapshot-signal",
+  "--cpu-prof-dir",
+  "--cpu-prof-name",
+  "--heap-prof-dir",
+  "--heap-prof-name",
+]);
 const WRITE_ONLY_FLAGS = new Set(["w", "wx", "xw", "a", "ax", "xa", "as"]);
 
 export function normalizeSlashes(value) {
@@ -212,10 +263,14 @@ export function classifyCaller(wsRoot, wsRootRaw, selfFile) {
       sawExternalScript = true;
       continue;
     }
-    if (!isIgnoredInternalRel(rel)) return { isUserCode: true, location: `${rel}:${frame.lineNumber}` };
+    if (!isIgnoredInternalRel(rel)) {
+      return { isUserCode: true, location: `${rel}:${frame.lineNumber}`, viaNodeModules: sawNodeModules };
+    }
   }
-  if (sawEval || (sawExternalScript && !sawNodeModules)) return { isUserCode: true, location: undefined };
-  return { isUserCode: false, location: undefined };
+  if (sawEval || (sawExternalScript && !sawNodeModules)) {
+    return { isUserCode: true, location: undefined, viaNodeModules: sawNodeModules };
+  }
+  return { isUserCode: false, location: undefined, viaNodeModules: sawNodeModules };
 }
 
 export function rawPathToString(rawPath) {

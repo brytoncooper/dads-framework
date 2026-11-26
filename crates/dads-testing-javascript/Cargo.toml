@@ -18,3 +18,4 @@ oxc_resolver = "11.24.3"
 oxc_semantic = "0.148.0"
 oxc_span = "0.148.0"
 oxc_syntax = "0.148.0"
+serde_json.workspace = true

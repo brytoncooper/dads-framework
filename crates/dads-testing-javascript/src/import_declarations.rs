@@ -2,7 +2,8 @@
 //! namespace objects, and export-star forms are separated here so the graph can stay precise.
 
 use crate::facts::{JsImportFact, JsImportKind, JsSpan, JsUncertainty};
-use crate::specifier_resolution::{ResolvedSpecifier, resolve_static_specifier};
+use crate::file_discovery::WorkspaceFileIndex;
+use crate::specifier_resolution::{ResolveContext, ResolvedSpecifier, resolve_static_specifier};
 use oxc_ast::AstKind;
 use oxc_ast::ast::{BindingPattern, Expression};
 use oxc_resolver::Resolver;
@@ -283,6 +284,7 @@ pub(crate) struct ImportFactContext<'a> {
     pub(crate) absolute_path: &'a Path,
     pub(crate) path: &'a str,
     pub(crate) resolver: &'a Resolver,
+    pub(crate) workspace_index: &'a WorkspaceFileIndex,
     pub(crate) uncertainties: &'a mut Vec<JsUncertainty>,
 }
 
@@ -302,11 +304,15 @@ pub(crate) fn import_fact(
     context: ImportFactContext<'_>,
     input: ImportFactInput<'_>,
 ) -> JsImportFact {
+    let resolve_ctx = ResolveContext {
+        workspace_root: context.workspace_root,
+        absolute_path: context.absolute_path,
+        path: context.path,
+        resolver: context.resolver,
+        workspace_index: context.workspace_index,
+    };
     match resolve_static_specifier(
-        context.workspace_root,
-        context.absolute_path,
-        context.path,
-        context.resolver,
+        &resolve_ctx,
         input.specifier,
         input.span,
         context.uncertainties,

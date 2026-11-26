@@ -2,6 +2,7 @@
 //! and everything that cannot be resolved, becomes an uncertainty located at the specifier itself.
 
 use crate::facts::{JsSpan, JsUncertainty};
+use crate::file_discovery::WorkspaceFileIndex;
 use crate::workspace::{is_javascript_path, workspace_relative_path};
 use oxc_resolver::Resolver;
 use std::path::Path;
@@ -12,20 +13,25 @@ pub(crate) enum ResolvedSpecifier {
     Asset(String),
 }
 
+pub(crate) struct ResolveContext<'a> {
+    pub(crate) workspace_root: &'a Path,
+    pub(crate) absolute_path: &'a Path,
+    pub(crate) path: &'a str,
+    pub(crate) resolver: &'a Resolver,
+    pub(crate) workspace_index: &'a WorkspaceFileIndex,
+}
+
 /// Every resolution uncertainty is located at the specifier that could not be resolved, so a plan
 /// can point at the import instead of the file.
 pub(crate) fn resolve_static_specifier(
-    workspace_root: &Path,
-    absolute_path: &Path,
-    path: &str,
-    resolver: &Resolver,
+    ctx: &ResolveContext<'_>,
     specifier: &str,
     span: JsSpan,
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Option<ResolvedSpecifier> {
     if specifier.starts_with("virtual:") || specifier.starts_with('\0') {
         uncertainties.push(JsUncertainty {
-            path: path.to_owned(),
+            path: ctx.path.to_owned(),
             code: "generated-or-virtual-module".to_owned(),
             message: format!("{specifier} is a generated or virtual module."),
             span: Some(span),
@@ -33,18 +39,18 @@ pub(crate) fn resolve_static_specifier(
         });
         return None;
     }
-    match resolver.resolve_file(absolute_path, specifier) {
-        Ok(resolution) => canonical_workspace_path(workspace_root, resolution.path()),
+    match ctx.resolver.resolve_file(ctx.absolute_path, specifier) {
+        Ok(resolution) => canonical_workspace_path(ctx.workspace_root, resolution.path()),
         Err(error) if is_local_specifier(specifier) => {
             resolve_local_javascript_specifier_to_typescript_source(
-                workspace_root,
-                absolute_path,
+                ctx.workspace_root,
+                ctx.absolute_path,
                 specifier,
             )
             .map(ResolvedSpecifier::JavaScript)
             .or_else(|| {
                 uncertainties.push(JsUncertainty {
-                    path: path.to_owned(),
+                    path: ctx.path.to_owned(),
                     code: "unresolved-local-module".to_owned(),
                     message: format!("Could not resolve {specifier}: {error}"),
                     span: Some(span),
@@ -56,12 +62,15 @@ pub(crate) fn resolve_static_specifier(
         Err(_) if specifier.starts_with("node:") => None,
         Err(error) if is_bare_specifier(specifier) => {
             if let Some(types_specifier) = at_types_specifier(specifier)
-                && let Ok(resolution) = resolver.resolve_file(absolute_path, &types_specifier)
+                && let Ok(resolution) = ctx.resolver.resolve_file(ctx.absolute_path, &types_specifier)
             {
-                return canonical_workspace_path(workspace_root, resolution.path());
+                return canonical_workspace_path(ctx.workspace_root, resolution.path());
+            }
+            if ctx.workspace_index.is_known_external_specifier(specifier) {
+                return None;
             }
             uncertainties.push(JsUncertainty {
-                path: path.to_owned(),
+                path: ctx.path.to_owned(),
                 code: "unresolved-bare-module".to_owned(),
                 message: format!("Could not resolve bare module {specifier}: {error}"),
                 span: Some(span),
@@ -71,7 +80,7 @@ pub(crate) fn resolve_static_specifier(
         }
         Err(error) => {
             uncertainties.push(JsUncertainty {
-                path: path.to_owned(),
+                path: ctx.path.to_owned(),
                 code: "unresolved-module-scheme".to_owned(),
                 message: format!("Could not resolve module specifier {specifier}: {error}"),
                 span: Some(span),

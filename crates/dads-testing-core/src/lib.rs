@@ -64,6 +64,7 @@ pub use tsconfig_extends::{
     collect_project_tsconfig_extends_allowlist, collect_tsconfig_extends_chain,
     list_tsconfig_files_in_dir,
 };
+pub use tsconfig_parse::{specifier_matches_alias, strip_jsonc};
 
 #[cfg(test)]
 mod tests;

@@ -2,6 +2,7 @@
 //! scanner. The scanner skips comments and quoted text and never assigns meaning to expressions.
 
 use crate::facts::{JsImportFact, JsImportKind, JsSpan, JsSymbolFact, JsUncertainty};
+use crate::file_discovery::WorkspaceFileIndex;
 use crate::import_declarations::{ImportFactContext, ImportFactInput, import_fact};
 use crate::spans::byte_span;
 use oxc_resolver::Resolver;
@@ -13,6 +14,7 @@ pub(crate) fn scan_commonjs_requires(
     absolute_path: &Path,
     path: &str,
     resolver: &Resolver,
+    workspace_index: &WorkspaceFileIndex,
     source: &str,
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<JsImportFact> {
@@ -74,6 +76,7 @@ pub(crate) fn scan_commonjs_requires(
                     absolute_path,
                     path,
                     resolver,
+                    workspace_index,
                     uncertainties: &mut *uncertainties,
                 },
                 ImportFactInput {

@@ -5,6 +5,7 @@
 //! never scanned. Outside a Git repository (such as standalone test fixtures), it falls back to
 //! directory traversal with a conservative ignore list.
 
+use crate::external_packages::ExternalPackageIndex;
 use crate::facts::JsUncertainty;
 use crate::workspace::{git_output, is_javascript_path, uncertainty, workspace_relative_path};
 use std::collections::HashSet;
@@ -35,6 +36,7 @@ const IGNORED_DIRS: &[&str] = &[
 pub(crate) struct WorkspaceFileIndex {
     files: Vec<String>,
     canonical_root: Option<PathBuf>,
+    external_packages: ExternalPackageIndex,
 }
 
 impl WorkspaceFileIndex {
@@ -47,14 +49,21 @@ impl WorkspaceFileIndex {
         });
         files.sort();
         files.dedup();
+        let external_packages = ExternalPackageIndex::build(workspace_root, &files);
         Self {
             files,
             canonical_root,
+            external_packages,
         }
     }
 
     pub(crate) fn canonical_root(&self) -> Option<&Path> {
         self.canonical_root.as_deref()
+    }
+
+    pub(crate) fn is_known_external_specifier(&self, specifier: &str) -> bool {
+        self.external_packages
+            .is_known_external_specifier(specifier)
     }
 
     /// Returns all indexed workspace files strictly underneath `dir_rel` using O(log N) range

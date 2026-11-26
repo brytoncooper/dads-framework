@@ -10,6 +10,7 @@ mod commonjs;
 mod diff_hunks;
 mod erased_spans;
 mod export_declarations;
+mod external_packages;
 mod facts;
 mod file_discovery;
 mod frontend;

@@ -22,7 +22,7 @@ pub(crate) enum TsconfigDiff {
 /// Strips JSONC comments (`//`, `/* ... */`), optional UTF-8 BOM, and trailing commas before `}`
 /// or `]` while preserving string literals verbatim. Returns `None` on unterminated strings or
 /// block comments so callers fail closed.
-pub(crate) fn strip_jsonc(raw: &str) -> Option<String> {
+pub fn strip_jsonc(raw: &str) -> Option<String> {
     let without_bom = raw.strip_prefix('\u{FEFF}').unwrap_or(raw);
     let without_comments = strip_jsonc_comments(without_bom)?;
     Some(strip_trailing_commas(&without_comments))
@@ -283,7 +283,7 @@ fn compute_changed_aliases(
 ///
 /// Relative (`./`, `../`, `.`, `..`), `node:`, and `virtual:` specifiers never consult `paths`.
 /// Query suffixes (`?raw`, `?url`) are stripped before matching.
-pub(crate) fn specifier_matches_alias(specifier: &str, pattern: &str) -> bool {
+pub fn specifier_matches_alias(specifier: &str, pattern: &str) -> bool {
     let spec = specifier.split_once('?').map_or(specifier, |(s, _)| s);
     if spec.is_empty()
         || spec == "."

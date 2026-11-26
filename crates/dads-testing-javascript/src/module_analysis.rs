@@ -230,6 +230,7 @@ fn collect_imports(
         scan.absolute_path,
         scan.path,
         scan.resolver,
+        scan.workspace_index,
         scan.source,
         uncertainties,
     ));
@@ -281,6 +282,7 @@ fn requested_module_imports(
                     absolute_path: scan.absolute_path,
                     path: scan.path,
                     resolver: scan.resolver,
+                    workspace_index: scan.workspace_index,
                     uncertainties: &mut *uncertainties,
                 },
                 ImportFactInput {
@@ -340,6 +342,7 @@ fn dynamic_import_facts(
                     absolute_path: scan.absolute_path,
                     path: scan.path,
                     resolver: scan.resolver,
+                    workspace_index: scan.workspace_index,
                     uncertainties: &mut *uncertainties,
                 },
                 ImportFactInput {

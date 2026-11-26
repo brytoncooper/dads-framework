@@ -4,6 +4,14 @@ This file records notable changes to Dads Framework.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [@dads-framework/testing 0.9.1] - 2026-11-25
+
+Independent precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Declared external npm package resolution without `node_modules` (`frontend_version` 18):** When `dad-test plan` runs standalone in CI before `npm ci` (with no `node_modules` on disk), bare imports of declared external dependencies (e.g. `zod`, `vitest`, `@tanstack/react-query`) are now recognized from workspace `package.json` dependency blocks and root `package-lock.json` instead of emitting `unresolved-bare-module` and triggering `graph-uncertainty-project-fallback`. Undeclared packages, workspace package names, `workspace:`/`file:`/`link:`/`portal:` dependencies, and `tsconfig*.json` `compilerOptions.paths` aliases continue to fail closed.
+
 ## [@dads-framework/testing 0.9.0] - 2026-11-25
 
 Independent soundness, runtime-verification, adversarial DST, and onboarding DX feature release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

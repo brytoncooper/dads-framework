@@ -201,7 +201,7 @@ pub(crate) fn build_plan(
     if matches!(jobs, Some(0)) {
         return Err(message("jobs must be greater than zero."));
     }
-    let mut evidence = PlanEvidence::new();
+    let mut evidence = PlanEvidence::new(scope);
     attach_lockfile_impact(workspace_root, scope, graph, &mut evidence);
     attach_tsconfig_impact(manifest, workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);

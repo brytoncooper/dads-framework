@@ -180,6 +180,7 @@ pub(super) fn widen_through_graph<'a>(
             graph,
             evidence,
             has_non_test_reachability,
+            enforce_declared_reads,
         );
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
         record_reachable_uncertainties(

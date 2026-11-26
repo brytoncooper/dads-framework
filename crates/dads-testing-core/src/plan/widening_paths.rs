@@ -50,6 +50,7 @@ pub(super) fn record_uncovered_file_read_dirs<'a>(
     graph: &DependencyGraph,
     evidence: &mut PlanEvidence<'a>,
     has_non_test_reachability: bool,
+    enforce_declared_reads: bool,
 ) {
     let dir_matched: Vec<String> = uncovered_paths
         .iter()
@@ -68,6 +69,7 @@ pub(super) fn record_uncovered_file_read_dirs<'a>(
         rt_dir.uncertainties,
         evidence,
         true,
+        enforce_declared_reads,
     );
     evidence.reached_edges.extend(rt_dir.edges);
     if has_non_test_reachability {
@@ -80,6 +82,7 @@ pub(super) fn record_uncovered_file_read_dirs<'a>(
             full_dir.uncertainties,
             evidence,
             false,
+            enforce_declared_reads,
         );
     }
 }

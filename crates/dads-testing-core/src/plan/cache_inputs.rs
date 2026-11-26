@@ -10,10 +10,10 @@ use super::cache_inputs_helpers::{
     is_ignored_path, snapshot_pattern_globs, uncacheable_inputs,
 };
 use super::widening_fs::{FS_DIR_PREFIX, is_ambient_dts_path};
-use crate::graph::{DependencyGraph, GraphUncertainty, ImportKind, ModuleNode};
+use crate::graph::{DependencyGraph, ImportKind, ModuleNode};
 use crate::manifest::{DeclaredTask, ImpactMode, Project, TaskKind, TestingManifest};
 use crate::protocol::{ResolvedScope, TaskCacheInputs};
-use crate::scope::{deepest_project_for_path, path_is_inside};
+use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 struct ForwardClosure {

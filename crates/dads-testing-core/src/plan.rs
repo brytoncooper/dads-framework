@@ -58,11 +58,8 @@ struct PlanEvidence<'a> {
 }
 
 impl<'a> PlanEvidence<'a> {
-    fn new(scope: &ResolvedScope) -> Self {
-        Self {
-            full_fallback: scope.full_fallback,
-            ..Self::default()
-        }
+    fn new() -> Self {
+        Self::default()
     }
 
     fn is_widened_for_task(&self, task: &DeclaredTask) -> bool {
@@ -201,7 +198,7 @@ pub(crate) fn build_plan(
     if matches!(jobs, Some(0)) {
         return Err(message("jobs must be greater than zero."));
     }
-    let mut evidence = PlanEvidence::new(scope);
+    let mut evidence = PlanEvidence::new();
     attach_lockfile_impact(workspace_root, scope, graph, &mut evidence);
     attach_tsconfig_impact(manifest, workspace_root, scope, graph, &mut evidence);
     own_changed_paths(manifest, scope, &mut evidence);

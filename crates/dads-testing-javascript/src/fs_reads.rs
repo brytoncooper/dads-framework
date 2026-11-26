@@ -185,36 +185,41 @@ pub(crate) fn collect_fs_read_imports(
     };
     let mut fs_uncertainties = Vec::new();
     record_unresolved_fs_reads(&scan, &mut recorder, &mut fs_uncertainties);
+    (recorder.into_import_facts(), fs_uncertainties)
+}
 
-    let mut facts = Vec::with_capacity(
-        recorder.glob_targets.len() + recorder.fs_targets.len() + recorder.dir_targets.len(),
-    );
-    for (resolved_path, span) in recorder.glob_targets {
-        facts.push(synthetic_import_fact(
-            format!("glob:{resolved_path}"),
-            span,
-            JsImportKind::Asset,
-            resolved_path,
-        ));
+impl TargetRecorder<'_> {
+    fn into_import_facts(self) -> Vec<JsImportFact> {
+        let mut facts = Vec::with_capacity(
+            self.glob_targets.len() + self.fs_targets.len() + self.dir_targets.len(),
+        );
+        for (resolved_path, span) in self.glob_targets {
+            facts.push(synthetic_import_fact(
+                format!("glob:{resolved_path}"),
+                span,
+                JsImportKind::Asset,
+                resolved_path,
+            ));
+        }
+        for (resolved_path, span) in self.fs_targets {
+            facts.push(synthetic_import_fact(
+                format!("fs:{resolved_path}"),
+                span,
+                JsImportKind::FileRead,
+                resolved_path,
+            ));
+        }
+        for (dir_rel, span) in self.dir_targets {
+            let dir_node = format!("{FS_DIR_PREFIX}{dir_rel}");
+            facts.push(synthetic_import_fact(
+                dir_node.clone(),
+                span,
+                JsImportKind::FileRead,
+                dir_node,
+            ));
+        }
+        facts
     }
-    for (resolved_path, span) in recorder.fs_targets {
-        facts.push(synthetic_import_fact(
-            format!("fs:{resolved_path}"),
-            span,
-            JsImportKind::FileRead,
-            resolved_path,
-        ));
-    }
-    for (dir_rel, span) in recorder.dir_targets {
-        let dir_node = format!("{FS_DIR_PREFIX}{dir_rel}");
-        facts.push(synthetic_import_fact(
-            dir_node.clone(),
-            span,
-            JsImportKind::FileRead,
-            dir_node,
-        ));
-    }
-    (facts, fs_uncertainties)
 }
 
 fn synthetic_import_fact(

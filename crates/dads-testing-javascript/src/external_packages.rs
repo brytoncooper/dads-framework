@@ -25,7 +25,9 @@ pub(crate) struct ExternalPackageIndex {
     declared_external: HashSet<String>,
     workspace_packages: HashSet<String>,
     local_linked: HashSet<String>,
-    tsconfig_aliases: Vec<String>,
+    /// `(dir_prefix, alias_pattern)` for `compilerOptions.paths` entries that can target workspace
+    /// files (excluding aliases whose targets all point into `node_modules/`).
+    tsconfig_aliases: Vec<(String, String)>,
 }
 
 impl ExternalPackageIndex {
@@ -35,7 +37,7 @@ impl ExternalPackageIndex {
             if is_package_json_path(rel) {
                 index.ingest_package_json(&workspace_root.join(rel));
             } else if is_tsconfig_json_path(rel) {
-                index.ingest_tsconfig(&workspace_root.join(rel));
+                index.ingest_tsconfig(rel, &workspace_root.join(rel));
             }
         }
         index.ingest_package_lock(&workspace_root.join("package-lock.json"));
@@ -44,20 +46,20 @@ impl ExternalPackageIndex {
         index
     }
 
-    /// True iff `specifier` is provably a declared external npm package and cannot refer to a
-    /// workspace package, local linked dependency, or `tsconfig` path alias.
-    pub(crate) fn is_known_external_specifier(&self, specifier: &str) -> bool {
+    /// True iff `specifier` imported from `importer_path` is provably a declared external npm
+    /// package and cannot refer to a workspace package, local linked dependency, or workspace
+    /// `tsconfig` path alias in scope for `importer_path`.
+    pub(crate) fn is_known_external_specifier(&self, importer_path: &str, specifier: &str) -> bool {
         let Some(pkg) = external_package_name(specifier) else {
             return false;
         };
         if self.workspace_packages.contains(pkg) || self.local_linked.contains(pkg) {
             return false;
         }
-        if self
-            .tsconfig_aliases
-            .iter()
-            .any(|pattern| specifier_matches_alias(specifier, pattern))
-        {
+        if self.tsconfig_aliases.iter().any(|(dir_prefix, pattern)| {
+            (dir_prefix.is_empty() || importer_path.starts_with(dir_prefix.as_str()))
+                && specifier_matches_alias(specifier, pattern)
+        }) {
             return false;
         }
         self.declared_external.contains(pkg)
@@ -121,7 +123,7 @@ impl ExternalPackageIndex {
         }
     }
 
-    fn ingest_tsconfig(&mut self, path: &Path) {
+    fn ingest_tsconfig(&mut self, rel: &str, path: &Path) {
         let Ok(raw) = fs::read_to_string(path) else {
             return;
         };
@@ -137,8 +139,23 @@ impl ExternalPackageIndex {
         let Some(Value::Object(paths)) = opts.get("paths") else {
             return;
         };
-        for alias in paths.keys() {
-            self.tsconfig_aliases.push(alias.clone());
+        let dir_prefix = match rel.rsplit_once('/') {
+            Some((dir, _)) => format!("{dir}/"),
+            None => String::new(),
+        };
+        for (alias, targets) in paths {
+            let all_node_modules = targets.as_array().is_some_and(|arr| {
+                !arr.is_empty()
+                    && arr.iter().all(|t| {
+                        t.as_str().is_some_and(|s| {
+                            s.split('/').any(|seg| seg == "node_modules")
+                        })
+                    })
+            });
+            if !all_node_modules {
+                self.tsconfig_aliases
+                    .push((dir_prefix.clone(), alias.clone()));
+            }
         }
     }
 }

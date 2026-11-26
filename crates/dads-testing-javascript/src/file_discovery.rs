@@ -61,9 +61,9 @@ impl WorkspaceFileIndex {
         self.canonical_root.as_deref()
     }
 
-    pub(crate) fn is_known_external_specifier(&self, specifier: &str) -> bool {
+    pub(crate) fn is_known_external_specifier(&self, importer_path: &str, specifier: &str) -> bool {
         self.external_packages
-            .is_known_external_specifier(specifier)
+            .is_known_external_specifier(importer_path, specifier)
     }
 
     /// Returns all indexed workspace files strictly underneath `dir_rel` using O(log N) range

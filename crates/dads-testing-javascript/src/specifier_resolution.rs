@@ -66,7 +66,10 @@ pub(crate) fn resolve_static_specifier(
             {
                 return canonical_workspace_path(ctx.workspace_root, resolution.path());
             }
-            if ctx.workspace_index.is_known_external_specifier(specifier) {
+            if ctx
+                .workspace_index
+                .is_known_external_specifier(ctx.path, specifier)
+            {
                 return None;
             }
             uncertainties.push(JsUncertainty {

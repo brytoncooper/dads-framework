@@ -26,6 +26,27 @@ Independent soundness, runtime-verification, adversarial DST, and onboarding DX 
 - **Deleted cross-project modules, ambient `.d.ts`, and static-manifest Vitest `setupFiles`:** Widens unresolved module importers when workspace files are deleted (caught by chaos fuzzer `seed=142`), widens cross-project `typecheck` tasks on ambient `.d.ts`/`.d.mts`/`.d.cts` edits and hashes `.d.ts` files into `typecheck` receipts, and hydrates project-level `vitest.config.*` `setupFiles` for static manifests.
 - **20k-file monorepo precision & plan JSON scaling (caught by real `command` shadow replay):** Ignored raw `fs:`/`fs-dir:` edges in `DependencyGraph::has_importers` so isolated test files scanned by architecture tests never widen downstream library dependents (lifting leaf-commit skip rate on `command` from `1.5%` to `98.9%–99.7%`), confined `unresolved-fs-read` on isolated test files, deduplicated per-project widening issues, and bounded `TaskCause::Issue` entries per origin/task (cutting worst-case 1,499-task plan JSON from `276 MB` to `11.3 MB`).
 
+## [@dads-framework/testing 0.8.4] - 2026-11-25
+
+Independent remote-cache performance patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Eliminated `O(N²)` repeated remote receipt lookups in the scheduler:** `scheduler` now records each ready task once checked (`checked_cache`) so missed tasks are never re-queried against L2 on every subsequent task completion (cutting 69-task shards from 2,415 lookups down to 69).
+- **Native connection-pooled Rust S3 & HTTP/HTTPS remote receipt client:** Replaced `s3_index.rs`'s `ListObjectsV2` full-bucket scan (which timed out at 10s on large cache buckets) and per-task Python `aws s3 cp` / `curl` subprocesses with a pooled pure-Rust `ureq` (`rustls` + `webpki-roots`) client and deterministic AWS SigV4 signing (`GET`/`PUT`), supporting env credentials, ECS container credentials, and cached EC2 IMDSv2 credentials + region discovery while retaining fail-closed semantics and `aws` CLI fallback for local SSO/profile setups.
+
+## [@dads-framework/testing 0.8.3] - 2026-11-25
+
+Independent precision & caching patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).
+
+### Fixed
+
+- **Direct-only static `fs` file/directory read edges (`ImportKind::FileRead`):** Static `fs` reads (`readFileSync`, `readFile`, `readdirSync`, `readdir`, `existsSync`, `statSync`) now emit `ImportKind::FileRead` edges (and single directory nodes for `readdir*`) instead of transitive JS `ImportKind::Runtime` edges. Direct edits, additions, or deletions to read files/directories still trigger the reader and invalidate its `cacheInputs` (`extraFiles`/`impactPaths`), while transitive JS edits behind a read file no longer cause false `unattributed-transitive-export` uncertainties, phantom cross-project dependencies, or monorepo-wide cache widening. `import.meta.glob` remains a real transitive `Runtime` edge.
+- **Pure side-effect JS imports in `propagate_own_exports`:** Zero-export entry/route modules reached via bare side-effect imports (`import "./foo"`) now propagate through module-evaluation reachability rather than emitting false `unattributed-transitive-export` uncertainties, while reverse edges requesting named/namespace/re-export bindings stay fail-closed.
+- **Respect `workspace.ignorePaths` in JS graph discovery, project graph, cache closures, and `diagnose`:** Ignored config stubs (such as nested per-project `eslint.config.mjs` files) are excluded from Oxc file discovery, fallback project edges, and `cacheInputs` roots while explicit `task.impact.paths` remain honored.
+- **Sound `v4` `cacheInputs` on `--all` runs:** `dad-test plan/run --all` now computes exact `v4` `cacheInputs` using the Oxc graph when healthy instead of marking every `--all` task uncacheable, while still failing closed on error fallbacks, missing graphs, `impact.mode: "always"`, or blocking uncertainties.
+- **`dad-test explain` with `workspace.discover`:** `explain` and `--report` now expand `workspace.discover` via the native manifest expander before rendering explanations.
+
 ## [@dads-framework/testing 0.8.2] - 2026-11-25
 
 Independent soundness & precision patch release of `@dads-framework/testing` and its five `@dads-framework/testing-native-*` packages (framework packages remain at `0.6.5`).

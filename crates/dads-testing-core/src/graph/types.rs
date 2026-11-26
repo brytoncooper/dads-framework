@@ -56,6 +56,9 @@ pub enum ImportKind {
     ReExport,
     Dynamic,
     Runtime,
+    /// Direct file-content or directory read (`fs.readFileSync`, `readdirSync`, `existsSync`, etc.)
+    /// that observes the target's bytes on disk without loading or executing its JS imports.
+    FileRead,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModuleNode {

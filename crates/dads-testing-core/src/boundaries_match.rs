@@ -3,12 +3,12 @@
 
 use crate::boundaries_config::WorkspaceBoundaries;
 use crate::boundaries_index::{BoundaryProject, BoundaryWorkspaceIndex};
-use crate::graph::{ImportFact, ModuleNode};
+use crate::graph::{ImportFact, ImportKind, ModuleNode};
 use crate::scope::{is_standard_test_path, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub(crate) const IGNORED_SPECIFIER_PREFIXES: &[&str] =
-    &["virtual:", "data:", "http:", "https:", "fs:", "fs-dir:"];
+    &["virtual:", "data:", "http:", "https:", "fs:", "fs-dir:", "glob:"];
 
 const NODE_BUILTINS: &[&str] = &[
     "_http_agent",
@@ -214,6 +214,9 @@ pub(crate) fn build_project_graph(
             continue;
         }
         for import in &module.imports {
+            if import.kind == ImportKind::FileRead {
+                continue;
+            }
             let raw = import.specifier.as_str();
             if raw.is_empty() || matches_allow(raw, &config.allow) {
                 continue;

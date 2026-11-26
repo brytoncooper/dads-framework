@@ -8,10 +8,10 @@ import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
 import { isRecord } from "../parse-guards.js";
 import { planTesting, runTesting } from "../testing-api.js";
 import type { TestingOperationRequest, TestingPlanResult, TestingRunResult, TestingTaskShard } from "../testing-api.js";
-import { readTestingManifest } from "../testing-manifest.js";
 import { buildTestingReport } from "../testing-report.js";
 import type { TestingReport } from "../testing-report.js";
 import { writeFilesAtomically } from "../write-files-atomically.js";
+import { loadTestingManifestForCommand } from "./load-manifest.js";
 import { renderShadowVerification, runShadowVerification } from "./verify-shadow.js";
 
 /** `plan` and `run` select the same scope, so they accept the same options. */
@@ -50,7 +50,7 @@ export const planCommand: DadTestCommand = {
   options: operationOptions,
   execute: async (parsed, io, json) => {
     const plan = await planTesting(buildOperationRequest(parsed, io));
-    const report = buildReportIfRequested(parsed, io, plan);
+    const report = await buildReportIfRequested(parsed, io, plan);
     writeCommandSuccess(io, json, "plan", report === undefined ? plan : { ...plan, report });
     writeReportWrittenLine(parsed, io, json, report);
     return 0;
@@ -71,7 +71,7 @@ export const runCommand: DadTestCommand = {
     const shadow = verifyShadow
       ? await runShadowVerification(request, result, { strict: failOnShadowEscape, ...streamOptions })
       : undefined;
-    const report = buildReportIfRequested(parsed, io, result.plan, result.run);
+    const report = await buildReportIfRequested(parsed, io, result.plan, result.run);
     emitRunOutput(io, json, result, report, shadow);
     writeReportWrittenLine(parsed, io, json, report);
     return resolveRunExitCode(result.run.exitCode, failOnShadowEscape, shadow);
@@ -140,14 +140,14 @@ function writeHumanRunSummary(io: DadTestCliIo, plan: TestingPlanResult, run: Te
  * only in that case: without `--report`, `plan`/`run` output must stay exactly
  * what it was before this option existed.
  */
-function buildReportIfRequested(
+async function buildReportIfRequested(
   parsed: ParsedArguments,
   io: DadTestCliIo,
   plan: TestingPlanResult,
   run?: TestingRunResult,
-): TestingReport | undefined {
+): Promise<TestingReport | undefined> {
   if (!parsed.present.has("--report")) return undefined;
-  const manifest = readTestingManifest(io.cwd, parsed.values.get("--manifest"));
+  const manifest = await loadTestingManifestForCommand(io, parsed.values.get("--manifest"));
   const report = buildTestingReport({
     plan,
     manifest,

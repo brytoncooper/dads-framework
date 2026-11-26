@@ -54,6 +54,7 @@ pub enum JsImportKind {
     DynamicImport,
     CommonJsRequire,
     Asset,
+    FileRead,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -2,9 +2,12 @@
 //! a located issue and widens, so a plan is never quietly narrower than the evidence supports.
 use super::PlanEvidence;
 use super::widening_fs::{
-    collect_graph_changed_paths, matching_fs_dir_nodes, push_unique_project_issue,
-    record_fs_dir_reachable_path, record_missing_frontend, widen_ambient_dts_typechecks,
-    widen_unresolved_fs_readers, widen_unresolved_module_importers_on_delete,
+    matching_fs_dir_nodes, push_unique_project_issue, record_fs_dir_reachable_path,
+    record_missing_frontend, widen_ambient_dts_typechecks, widen_unresolved_fs_readers,
+    widen_unresolved_module_importers_on_delete,
+};
+use super::widening_paths::{
+    collect_graph_changed_paths, is_javascript_source_path, record_uncovered_file_read_dirs,
 };
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
@@ -100,7 +103,10 @@ pub(super) fn widen_through_graph<'a>(
     enforce_declared_reads: bool,
     evidence: &mut PlanEvidence<'a>,
 ) {
-    if evidence.full_fallback || scope.changed_paths.is_empty() || !manifest.declares_graph_reader()
+    if scope.full_fallback
+        || evidence.full_fallback
+        || scope.changed_paths.is_empty()
+        || !manifest.declares_graph_reader()
     {
         return;
     }
@@ -112,10 +118,11 @@ pub(super) fn widen_through_graph<'a>(
         record_missing_frontend(manifest, evidence);
         return;
     };
-    let (mut covered_paths, uncovered_paths): (Vec<String>, Vec<String>) = changed_paths
-        .iter()
-        .cloned()
-        .partition(|path| graph.contains_path(path));
+    let (mut covered_paths, uncovered_paths): (Vec<String>, Vec<String>) =
+        changed_paths.iter().cloned().partition(|path| {
+            graph.contains_path(path)
+                || (!is_javascript_source_path(path) && graph.has_file_read_dir_for(path))
+        });
     for dir_node in matching_fs_dir_nodes(graph, &changed_paths) {
         if !covered_paths.contains(&dir_node) {
             covered_paths.push(dir_node);
@@ -166,6 +173,14 @@ pub(super) fn widen_through_graph<'a>(
         if !enforce_declared_reads {
             widen_unresolved_fs_readers(manifest, graph, evidence, has_non_test_reachability);
         }
+        record_uncovered_file_read_dirs(
+            manifest,
+            &changed_paths,
+            &uncovered_paths,
+            graph,
+            evidence,
+            has_non_test_reachability,
+        );
         let workspace_uncertainties = graph.whole_workspace_uncertainties();
         record_reachable_uncertainties(
             manifest,
@@ -237,7 +252,7 @@ fn record_uncovered_paths<'a>(
 
 /// Proven reachability: every reached module puts its owner in scope, and a reached module with
 /// no owner means the graph reaches outside the manifest, which forces the complete fallback.
-fn record_reachable_paths<'a>(
+pub(super) fn record_reachable_paths<'a>(
     manifest: &'a TestingManifest,
     paths: &BTreeSet<String>,
     evidence: &mut PlanEvidence<'a>,
@@ -288,7 +303,7 @@ fn record_reachable_paths<'a>(
 /// Where the traversal stopped being provable. An owned uncertainty widens its project (confined
 /// to its own project when it lives in an unimported test file); an unowned one has nothing to
 /// widen, so it selects the complete fallback.
-fn record_reachable_uncertainties<'a>(
+pub(super) fn record_reachable_uncertainties<'a>(
     manifest: &'a TestingManifest,
     changed_paths: &[String],
     graph: &DependencyGraph,

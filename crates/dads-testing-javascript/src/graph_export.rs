@@ -78,6 +78,7 @@ fn convert_workspace_facts(
                         JsImportKind::ExportFrom => ImportKind::ReExport,
                         JsImportKind::DynamicImport => ImportKind::Dynamic,
                         JsImportKind::CommonJsRequire | JsImportKind::Asset => ImportKind::Runtime,
+                        JsImportKind::FileRead => ImportKind::FileRead,
                     },
                     type_only: import.type_only,
                     requested_symbols: import.requested_symbols,

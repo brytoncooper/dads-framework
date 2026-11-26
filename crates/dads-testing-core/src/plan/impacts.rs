@@ -19,7 +19,7 @@ pub(super) fn attach_lockfile_impact(
     graph: Option<&DependencyGraph>,
     evidence: &mut PlanEvidence<'_>,
 ) {
-    if evidence.full_fallback {
+    if scope.full_fallback || evidence.full_fallback {
         return;
     }
     let report = analyze_lockfile_impact(workspace_root, scope, graph);
@@ -36,7 +36,7 @@ pub(super) fn attach_tsconfig_impact<'a>(
     graph: Option<&DependencyGraph>,
     evidence: &mut PlanEvidence<'a>,
 ) {
-    if evidence.full_fallback {
+    if scope.full_fallback || evidence.full_fallback {
         return;
     }
     let report = analyze_tsconfig_impact(workspace_root, scope, graph);
@@ -187,7 +187,7 @@ pub(super) fn attach_sql_impact(
     scope: &ResolvedScope,
     evidence: &mut PlanEvidence<'_>,
 ) {
-    if evidence.full_fallback {
+    if scope.full_fallback || evidence.full_fallback {
         return;
     }
     let report = analyze_sql_impact(manifest, scope, workspace_root);

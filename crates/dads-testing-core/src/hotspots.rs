@@ -144,6 +144,9 @@ fn index_modules(
 
     for (imp_i, node) in nodes.iter().enumerate() {
         for imp in &node.imports {
+            if imp.kind == ImportKind::FileRead {
+                continue;
+            }
             let Some(&target_i) = imp.resolved_path.as_deref().and_then(|p| by_path.get(p)) else {
                 continue;
             };

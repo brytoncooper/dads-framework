@@ -4,7 +4,7 @@ use crate::diagnose_remediation::{fallback_trap_remediation, is_safe_doc_or_asse
 use crate::graph::DependencyGraph;
 use crate::manifest::TestingManifest;
 use crate::protocol::FallbackTrap;
-use crate::scope::{deepest_project_for_path, path_is_inside};
+use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
@@ -50,6 +50,14 @@ pub(crate) fn find_fallback_traps(
     let mut groups: BTreeMap<(String, String), TrapGroup> = BTreeMap::new();
     let non_code = &manifest.workspace.non_code_suffixes;
     for path in tracked_files(root) {
+        if manifest
+            .workspace
+            .ignore_paths
+            .iter()
+            .any(|pattern| path_matches_impact(&path, pattern))
+        {
+            continue;
+        }
         let (kind, prefix, project) = match deepest_project_for_path(&manifest.projects, &path) {
             None => {
                 if is_root_policy_file(&path) {

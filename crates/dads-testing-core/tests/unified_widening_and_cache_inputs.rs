@@ -414,6 +414,8 @@ fn cache_inputs_fail_closed_on_always_fallback_missing_graph_and_blocking_uncert
             .cacheable
     );
 
+    // Under `--all` with a healthy Oxc graph, sound `v4` cacheInputs are emitted for healthy tasks
+    // while `always` tasks and tasks with blocking uncertainties still fail closed.
     let all_resp = execute_request_with_graph(
         NativeRequest {
             schema_version: PROTOCOL_SCHEMA_VERSION,
@@ -422,18 +424,79 @@ fn cache_inputs_fail_closed_on_always_fallback_missing_graph_and_blocking_uncert
             all: true,
             ..NativeRequest::default()
         },
-        Some(graph),
+        Some(graph.clone()),
     );
     assert!(all_resp.ok, "{all_resp:?}");
     let all_plan = all_resp.result.ok_or("missing result")?.plan;
-    for decision in &all_plan.tasks {
-        let ci = decision
+    assert!(
+        !task(&all_plan, "always:task")?
             .cache_inputs
             .as_ref()
-            .ok_or("runnable task must have cache_inputs")?;
+            .ok_or("missing cache_inputs")?
+            .cacheable
+    );
+    assert!(
+        !task(&all_plan, "broken:test")?
+            .cache_inputs
+            .as_ref()
+            .ok_or("missing cache_inputs")?
+            .cacheable
+    );
+    let all_clean_ci = task(&all_plan, "clean:test")?
+        .cache_inputs
+        .as_ref()
+        .ok_or("missing cache_inputs on clean:test")?;
+    assert!(all_clean_ci.cacheable);
+    assert_eq!(all_clean_ci.project_roots, vec!["libs/clean"]);
+    assert_eq!(all_clean_ci.extra_files, vec!["root-helper.ts"]);
+    let all_scoped_ci = task(&all_plan, "scoped:test")?
+        .cache_inputs
+        .as_ref()
+        .ok_or("missing cache_inputs on scoped:test")?;
+    assert!(all_scoped_ci.cacheable);
+    assert!(
+        all_scoped_ci
+            .impact_paths
+            .contains(&"libs/scoped/src/plugins/**".to_owned())
+    );
+
+    // Under `--all` without a graph, every task fails closed (`cacheable = false`).
+    let all_no_graph_resp = execute_request_with_graph(
+        NativeRequest {
+            schema_version: PROTOCOL_SCHEMA_VERSION,
+            operation: Operation::Plan,
+            workspace_root: repo.0.to_string_lossy().into_owned(),
+            all: true,
+            ..NativeRequest::default()
+        },
+        None,
+    );
+    assert!(all_no_graph_resp.ok, "{all_no_graph_resp:?}");
+    let all_no_graph_plan = all_no_graph_resp.result.ok_or("missing result")?.plan;
+    for decision in &all_no_graph_plan.tasks {
         assert!(
-            !ci.cacheable,
-            "full_fallback task {} must fail closed",
+            !decision
+                .cache_inputs
+                .as_ref()
+                .ok_or("runnable task must have cache_inputs")?
+                .cacheable,
+            "--all without graph must fail closed for {}",
+            decision.id
+        );
+    }
+
+    // Error-induced `evidence.full_fallback` (unowned changed path) fails closed even with a graph.
+    fs::write(repo.0.join("unowned.ts"), "export const x = 1;\n")?;
+    let err_fallback_plan = plan_with_graph(&repo.0, Some(graph))?;
+    assert!(err_fallback_plan.scope.full_fallback);
+    for decision in &err_fallback_plan.tasks {
+        assert!(
+            !decision
+                .cache_inputs
+                .as_ref()
+                .ok_or("runnable task must have cache_inputs")?
+                .cacheable,
+            "error full_fallback task {} must fail closed",
             decision.id
         );
     }

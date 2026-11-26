@@ -10,6 +10,8 @@ workspace = true
 
 [dependencies]
 dads-testing-core = { path = "../dads-testing-core" }
+hmac = "0.12.1"
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10.9"
+ureq = { version = "3.0.12", default-features = false, features = ["rustls"] }

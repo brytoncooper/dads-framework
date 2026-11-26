@@ -1,6 +1,8 @@
-//! Re-export propagation, queue bookkeeping, and uncertainty builders for graph reachability.
+//! Walk state and edge-following helpers shared by symbol-level reverse reachability.
 use super::compact::CImport;
-use super::types::{GraphUncertainty, GraphUncertaintyScope, ReachedEdge, SourceLocation};
+use super::types::{
+    GraphUncertainty, GraphUncertaintyScope, ImportKind, ReachedEdge, SourceLocation,
+};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// The state one symbol-level walk carries: what it has reached, what it could not prove, the
@@ -20,6 +22,15 @@ pub(super) struct SymbolWalk {
     pub(super) ns_reexport_members: BTreeMap<(String, String), BTreeSet<String>>,
     /// Exports that changed directly (not exclusively via `export * as ns`), disabling member filtering.
     pub(super) non_ns_exports: BTreeSet<(String, String)>,
+}
+
+pub(super) fn is_pure_side_effect_import(e: &CImport) -> bool {
+    matches!(e.kind, ImportKind::Runtime | ImportKind::Static)
+        && !e.type_only
+        && !e.namespace
+        && e.requested.is_empty()
+        && !e.reexport_all
+        && e.reexport_namespace.is_none()
 }
 
 /// An `export *` re-export forwards every changed name but `default`, which it does not re-export.

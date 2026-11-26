@@ -1,13 +1,10 @@
-import { readFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
 import type { OptionSpecification } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
-import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
+import type { DadTestCommand } from "../dad-test-cli.js";
 import { explainPlan, renderPlanExplanation } from "../explain-plan.js";
-import { isRecord } from "../parse-guards.js";
-import { expandTestingManifest, planTesting } from "../testing-api.js";
-import { defaultTestingManifestFileName, readTestingManifest, type TestingManifest } from "../testing-manifest.js";
+import { planTesting } from "../testing-api.js";
 import { buildFocusedTaskExplanation, renderFocusedTaskExplanation } from "./explain-causal.js";
+import { loadTestingManifestForCommand } from "./load-manifest.js";
 import { buildOperationRequest } from "./plan-run.js";
 
 /**
@@ -41,7 +38,7 @@ export const explainCommand: DadTestCommand = {
     const baseRequest = buildOperationRequest(parsed, io);
     const request = whyTaskId === undefined ? baseRequest : { ...baseRequest, taskIds: [] };
     const plan = await planTesting(request);
-    const manifest = await loadManifestForExplain(io, parsed.values.get("--manifest"));
+    const manifest = await loadTestingManifestForCommand(io, parsed.values.get("--manifest"));
     const explanation = explainPlan(plan, manifest);
     if (whyTaskId !== undefined) {
       const focused = buildFocusedTaskExplanation(explanation, whyTaskId, manifest);
@@ -62,28 +59,3 @@ export const explainCommand: DadTestCommand = {
     return 0;
   },
 };
-
-async function loadManifestForExplain(io: DadTestCliIo, manifestPath: string | undefined): Promise<TestingManifest> {
-  try {
-    return readTestingManifest(io.cwd, manifestPath);
-  } catch (error: unknown) {
-    if (!manifestUsesDiscover(io.cwd, manifestPath)) throw error;
-    return expandTestingManifest({
-      workspaceRoot: io.cwd,
-      ...(manifestPath === undefined ? {} : { manifestPath }),
-      ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),
-    });
-  }
-}
-
-function manifestUsesDiscover(workspaceRoot: string, manifestPath: string | undefined): boolean {
-  const root = resolve(workspaceRoot);
-  const resolvedPath = resolve(root, manifestPath ?? defaultTestingManifestFileName);
-  if (resolvedPath !== root && !resolvedPath.startsWith(`${root}${sep}`)) return false;
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(resolvedPath, "utf8"));
-    return isRecord(parsed) && isRecord(parsed["workspace"]) && parsed["workspace"]["discover"] !== undefined;
-  } catch {
-    return false;
-  }
-}

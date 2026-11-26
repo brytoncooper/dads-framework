@@ -20,7 +20,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 type FileAnalysisResult = Result<(JsModuleFacts, Vec<JsUncertainty>), JsUncertainty>;
 
 pub fn analyze_workspace(workspace_root: &Path) -> JsWorkspaceFacts {
-    analyze_workspace_roots(workspace_root, None)
+    analyze_workspace_roots(workspace_root, None, &[])
 }
 
 /// Analyzes the workspace's JavaScript/TypeScript modules in parallel and returns a core
@@ -29,15 +29,21 @@ pub fn analyze_workspace_graph(
     workspace_root: &Path,
     project_roots: Option<&[String]>,
 ) -> DependencyGraph {
-    copy_to_core_graph(analyze_workspace_roots(workspace_root, project_roots))
+    copy_to_core_graph(analyze_workspace_roots(workspace_root, project_roots, &[]))
 }
 
 pub(crate) fn analyze_workspace_roots(
     workspace_root: &Path,
     project_roots: Option<&[String]>,
+    ignore_paths: &[String],
 ) -> JsWorkspaceFacts {
     let mut uncertainties = Vec::new();
-    let files = discover_javascript_files(workspace_root, project_roots, &mut uncertainties);
+    let files = discover_javascript_files(
+        workspace_root,
+        project_roots,
+        ignore_paths,
+        &mut uncertainties,
+    );
 
     let targets = files
         .into_iter()
@@ -162,12 +168,16 @@ fn javascript_resolver() -> Resolver {
 /// Commit-to-commit planning intentionally returns no evidence: current files cannot prove which
 /// declarations changed in an arbitrary requested head revision.
 pub fn analyze_request(request: &NativeRequest) -> Option<DependencyGraph> {
-    if request.all {
-        return None;
-    }
     let workspace_root = Path::new(&request.workspace_root);
     if !workspace_root.is_absolute() || !workspace_root.is_dir() {
         return None;
+    }
+    if request.all {
+        let project_roots = dads_testing_core::manifest_project_roots(request);
+        let ignore_paths = dads_testing_core::manifest_ignore_paths(request);
+        let facts =
+            analyze_workspace_roots(workspace_root, project_roots.as_deref(), &ignore_paths);
+        return Some(copy_to_core_graph(facts));
     }
     if let Some(head) = &request.head {
         let requested = git_output(workspace_root, &["rev-parse", "--verify", head])?;
@@ -187,7 +197,15 @@ pub fn analyze_request(request: &NativeRequest) -> Option<DependencyGraph> {
         }
     }
     let project_roots = dads_testing_core::manifest_project_roots(request);
-    let facts = analyze_workspace_roots(workspace_root, project_roots.as_deref());
+    let ignore_paths = dads_testing_core::manifest_ignore_paths(request);
+    let facts = analyze_workspace_roots(workspace_root, project_roots.as_deref(), &ignore_paths);
+    if request
+        .base
+        .as_deref()
+        .is_some_and(dads_testing_core::is_empty_tree_sha)
+    {
+        return Some(copy_to_core_graph(facts));
+    }
     let asset_paths = referenced_asset_paths(&facts.modules);
     let mut changes =
         changed_module_evidence(workspace_root, request.base.as_deref(), &facts.modules)?;
@@ -238,11 +256,25 @@ pub(crate) fn incremental_request(
             "A graph with uncertainty requires a full rebuild before its files change.".to_owned(),
         );
     }
-    if request.all
-        || request.head.is_some()
-        || changed_paths
-            .iter()
-            .any(|path| !is_javascript_path(Path::new(path)))
+    if request.all || request.head.is_some() {
+        return Err("Changed paths require a full graph rebuild.".to_owned());
+    }
+    let ignore_paths = dads_testing_core::manifest_ignore_paths(request);
+    let changed_paths: Vec<String> = changed_paths
+        .iter()
+        .filter(|path| {
+            !ignore_paths
+                .iter()
+                .any(|pattern| dads_testing_core::path_matches_impact(path, pattern))
+        })
+        .cloned()
+        .collect();
+    if changed_paths.is_empty() {
+        return Ok(previous);
+    }
+    if changed_paths
+        .iter()
+        .any(|path| !is_javascript_path(Path::new(path)))
     {
         return Err("Changed paths require a full graph rebuild.".to_owned());
     }
@@ -254,10 +286,10 @@ pub(crate) fn incremental_request(
         // path would retain the old module and its resolution edges, so rebuild the current graph.
         return Err("A delete or rename invalidates retained resolution edges.".to_owned());
     }
-    let facts = analyze_changed_paths(workspace_root, &previous, changed_paths)?;
+    let facts = analyze_changed_paths(workspace_root, &previous, &changed_paths)?;
     if facts.modules.iter().any(|module| {
         module.imports.iter().any(|import| {
-            import.kind == JsImportKind::Asset
+            matches!(import.kind, JsImportKind::Asset | JsImportKind::FileRead)
                 && import
                     .resolved_path
                     .as_deref()

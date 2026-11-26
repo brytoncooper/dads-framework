@@ -60,3 +60,38 @@ test("fails closed for malformed external manifests", () => {
     true,
   );
 });
+
+test("classifies a platform-scoped native binary package without a bin field", () => {
+  assert.equal(
+    isExecutableOnlyAdoptionPackage({
+      os: ["darwin"],
+      cpu: ["arm64"],
+      exports: { ".": "./bin/dad-test" },
+    }),
+    true,
+  );
+  assert.equal(
+    isExecutableOnlyAdoptionPackage({
+      os: ["win32"],
+      cpu: ["x64"],
+      exports: { ".": "./bin/dad-test.exe" },
+    }),
+    true,
+  );
+  assert.equal(
+    isExecutableOnlyAdoptionPackage({
+      os: ["darwin"],
+      cpu: ["arm64"],
+      exports: { ".": "./bin/dad-test.js" },
+    }),
+    false,
+  );
+  assert.equal(
+    isExecutableOnlyAdoptionPackage({
+      os: [],
+      cpu: ["arm64"],
+      exports: { ".": "./bin/dad-test" },
+    }),
+    false,
+  );
+});

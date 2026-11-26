@@ -3,7 +3,7 @@
 use crate::diagnose_reachability::analyze_reachability;
 use crate::diagnose_remediation::{culprit_remediation, is_tool_config_file};
 use crate::diagnose_traps::find_fallback_traps;
-use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
+use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope, ImportKind};
 use crate::manifest::{FileNarrowing, ImpactMode, TestingManifest};
 use crate::plan::project_graph::unified_project_dependencies;
 use crate::protocol::{
@@ -188,6 +188,9 @@ fn wire_edges(
 ) {
     for (imp_i, node) in nodes.iter().enumerate() {
         for imp in &node.imports {
+            if imp.kind == ImportKind::FileRead {
+                continue;
+            }
             let Some(&t_i) = imp.resolved_path.as_deref().and_then(|p| by_path.get(p)) else {
                 continue;
             };

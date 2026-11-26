@@ -2,8 +2,9 @@
 //! intern table plus u32 module/import IDs and packed reverse adjacency.
 mod compact;
 mod pack;
+mod queries;
 mod reachability;
-mod reachability_helpers;
+mod reachability_walk;
 mod types;
 
 pub use compact::DependencyGraph;

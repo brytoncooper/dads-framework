@@ -159,10 +159,11 @@ fn collect_all_workspace_files(workspace_root: &Path, directory: &Path, files: &
 pub(crate) fn discover_javascript_files(
     workspace_root: &Path,
     project_roots: Option<&[String]>,
+    ignore_paths: &[String],
     uncertainties: &mut Vec<JsUncertainty>,
 ) -> Vec<PathBuf> {
     let mut files = if let Some(git_files) =
-        collect_git_javascript_files(workspace_root, project_roots)
+        collect_git_javascript_files(workspace_root, project_roots, ignore_paths)
     {
         git_files
     } else {
@@ -173,10 +174,16 @@ pub(crate) fn discover_javascript_files(
                 .first()
                 .is_some_and(|root| root != workspace_root);
         for scan_root in scan_roots {
-            collect_javascript_files(workspace_root, &scan_root, &mut discovered, uncertainties);
+            collect_javascript_files(
+                workspace_root,
+                &scan_root,
+                ignore_paths,
+                &mut discovered,
+                uncertainties,
+            );
         }
         if scoped {
-            collect_root_javascript_files(workspace_root, &mut discovered);
+            collect_root_javascript_files(workspace_root, ignore_paths, &mut discovered);
         }
         discovered
     };
@@ -185,9 +192,16 @@ pub(crate) fn discover_javascript_files(
     files
 }
 
+fn matches_ignore_paths(rel: &str, ignore_paths: &[String]) -> bool {
+    ignore_paths
+        .iter()
+        .any(|pattern| dads_testing_core::path_matches_impact(rel, pattern))
+}
+
 fn collect_git_javascript_files(
     workspace_root: &Path,
     project_roots: Option<&[String]>,
+    ignore_paths: &[String],
 ) -> Option<Vec<PathBuf>> {
     let output = git_output(
         workspace_root,
@@ -214,11 +228,15 @@ fn collect_git_javascript_files(
         if !is_javascript_path(Path::new(rel)) {
             continue;
         }
+        let normalized_rel = rel.replace('\\', "/");
+        if matches_ignore_paths(&normalized_rel, ignore_paths) {
+            continue;
+        }
         if let Some(roots) = &normalized_roots {
-            let in_root = !rel.contains('/')
-                || roots
-                    .iter()
-                    .any(|root| rel == root || rel.starts_with(&format!("{root}/")));
+            let in_root = !normalized_rel.contains('/')
+                || roots.iter().any(|root| {
+                    normalized_rel == *root || normalized_rel.starts_with(&format!("{root}/"))
+                });
             if !in_root {
                 continue;
             }
@@ -270,13 +288,21 @@ fn resolve_scan_roots(workspace_root: &Path, project_roots: Option<&[String]>) -
     }
 }
 
-fn collect_root_javascript_files(workspace_root: &Path, files: &mut Vec<PathBuf>) {
+fn collect_root_javascript_files(
+    workspace_root: &Path,
+    ignore_paths: &[String],
+    files: &mut Vec<PathBuf>,
+) {
     let Ok(entries) = fs::read_dir(workspace_root) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if entry.file_type().is_ok_and(|kind| kind.is_file()) && is_javascript_path(&path) {
+        if entry.file_type().is_ok_and(|kind| kind.is_file())
+            && is_javascript_path(&path)
+            && !workspace_relative_path(workspace_root, &path)
+                .is_some_and(|rel| matches_ignore_paths(&rel, ignore_paths))
+        {
             files.push(path);
         }
     }
@@ -285,6 +311,7 @@ fn collect_root_javascript_files(workspace_root: &Path, files: &mut Vec<PathBuf>
 fn collect_javascript_files(
     workspace_root: &Path,
     directory: &Path,
+    ignore_paths: &[String],
     files: &mut Vec<PathBuf>,
     uncertainties: &mut Vec<JsUncertainty>,
 ) {
@@ -323,8 +350,11 @@ fn collect_javascript_files(
             {
                 continue;
             }
-            collect_javascript_files(workspace_root, &path, files, uncertainties);
-        } else if is_javascript_path(&path) {
+            collect_javascript_files(workspace_root, &path, ignore_paths, files, uncertainties);
+        } else if is_javascript_path(&path)
+            && !workspace_relative_path(workspace_root, &path)
+                .is_some_and(|rel| matches_ignore_paths(&rel, ignore_paths))
+        {
             files.push(path);
         }
     }

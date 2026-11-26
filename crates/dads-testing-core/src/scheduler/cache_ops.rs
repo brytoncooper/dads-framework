@@ -1,9 +1,11 @@
 //! Task preparation, parallel receipt key hashing, and parallel L2 lookups using scoped threads.
 
-use super::progress::{PreparedTask, rebase_file_for_cwd};
+use super::progress::{PreparedTask, RunProgress, TaskStatus, rebase_file_for_cwd};
 use super::read_guard::should_guard_task;
 use super::read_guard_allowlist::AllowlistBuilder;
 use super::receipt_keys::compute_task_receipt_key;
+use super::results::cached_task_result;
+use super::stream;
 use crate::execute::{TestingError, message};
 use crate::graph::DependencyGraph;
 use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
@@ -256,4 +258,54 @@ pub(super) fn lookup_receipts_parallel(
         }
     });
     results.into_iter().flatten().collect()
+}
+
+/// Checks each newly ready task against the receipt store at most once per run, applying cached
+/// hits immediately while preserving exact `ready` order for tasks that must execute.
+pub(super) fn serve_cached_receipts(
+    prepared: &[PreparedTask],
+    ready: &[usize],
+    receipts: Option<&dyn TaskReceiptStore>,
+    checked_cache: &mut [bool],
+    progress: &mut RunProgress,
+    stream_enabled: bool,
+) -> (Vec<usize>, bool) {
+    let Some(store) = receipts else {
+        return (ready.to_vec(), false);
+    };
+    let unchecked: Vec<usize> = ready
+        .iter()
+        .copied()
+        .filter(|&index| !checked_cache.get(index).copied().unwrap_or(false))
+        .collect();
+    let mut hits = BTreeMap::new();
+    if !unchecked.is_empty() {
+        for (index, maybe_entry) in lookup_receipts_parallel(store, prepared, &unchecked) {
+            if let Some(slot) = checked_cache.get_mut(index) {
+                *slot = true;
+            }
+            if let Some(entry) = maybe_entry {
+                hits.insert(index, entry);
+            }
+        }
+    }
+    let mut to_spawn = Vec::with_capacity(ready.len());
+    let mut hit_cache = false;
+    for &index in ready {
+        if let Some(entry) = hits.remove(&index) {
+            let task = &prepared[index];
+            progress.results[index] =
+                Some(cached_task_result(&task.id, entry.stdout, entry.stderr));
+            progress
+                .statuses
+                .insert(task.id.clone(), TaskStatus::Executed);
+            progress.counts.executed += 1;
+            progress.counts.cached += 1;
+            stream::emit_cached(stream_enabled, &task.id);
+            hit_cache = true;
+            continue;
+        }
+        to_spawn.push(index);
+    }
+    (to_spawn, hit_cache)
 }

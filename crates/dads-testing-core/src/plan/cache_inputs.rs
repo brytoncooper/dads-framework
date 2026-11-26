@@ -5,12 +5,24 @@
 //! closed (`cacheable = false`) whenever closure soundness cannot be guaranteed.
 
 use super::PlanEvidence;
+use super::cache_inputs_helpers::{
+    collect_seed_modules, expand_project_dependency_roots, is_closure_breaking_uncertainty,
+    is_ignored_path, snapshot_pattern_globs, uncacheable_inputs,
+};
 use super::widening_fs::{FS_DIR_PREFIX, is_ambient_dts_path};
-use crate::graph::{DependencyGraph, GraphUncertainty, ModuleNode};
+use crate::graph::{DependencyGraph, GraphUncertainty, ImportKind, ModuleNode};
 use crate::manifest::{DeclaredTask, ImpactMode, Project, TaskKind, TestingManifest};
 use crate::protocol::{ResolvedScope, TaskCacheInputs};
-use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
+use crate::scope::{deepest_project_for_path, path_is_inside};
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
+
+struct ForwardClosure {
+    visited_nodes: BTreeSet<usize>,
+    dynamic_scope_paths: BTreeSet<String>,
+    file_read_targets: BTreeSet<String>,
+    file_read_dirs: BTreeSet<String>,
+    using_full_project: bool,
+}
 
 pub(super) struct CacheInputIndex<'a> {
     manifest: &'a TestingManifest,
@@ -48,8 +60,12 @@ impl<'a> CacheInputIndex<'a> {
             if is_ambient_dts_path(&node.path) {
                 ambient_dts_files.push(node.path.clone());
             }
-            let owner =
-                deepest_project_for_path(&manifest.projects, &node.path).map(|p| p.id.as_str());
+            let ignored = is_ignored_path(&node.path, &manifest.workspace.ignore_paths);
+            let owner = if ignored {
+                None
+            } else {
+                deepest_project_for_path(&manifest.projects, &node.path).map(|p| p.id.as_str())
+            };
             owner_by_node.push(owner);
             if let Some(proj_id) = owner {
                 nodes_by_project.entry(proj_id).or_default().push(idx);
@@ -98,9 +114,10 @@ impl<'a> CacheInputIndex<'a> {
         selected_files: &[String],
     ) -> TaskCacheInputs {
         if task.impact.mode == ImpactMode::Always
-            || scope.full_fallback
+            || (scope.full_fallback && scope.kind != "all")
             || evidence.full_fallback
-            || (task.impact.mode == ImpactMode::Reachability && !self.has_graph)
+            || ((task.impact.mode == ImpactMode::Reachability || scope.kind == "all")
+                && !self.has_graph)
             || !self.projects_by_id.contains_key(task.project.as_str())
         {
             return uncacheable_inputs();
@@ -117,13 +134,12 @@ impl<'a> CacheInputIndex<'a> {
         {
             return uncacheable_inputs();
         }
-        let Some((visited_nodes, dynamic_scope_paths, using_full_project)) =
-            self.walk_forward_closure(&task.project, selected_files, setup_files)
+        let Some(closure) = self.walk_forward_closure(&task.project, selected_files, setup_files)
         else {
             return uncacheable_inputs();
         };
         let mut seed_projects = BTreeSet::from([task.project.as_str()]);
-        for &node_idx in &visited_nodes {
+        for &node_idx in &closure.visited_nodes {
             if let Some(owner) = self.owner_by_node[node_idx] {
                 seed_projects.insert(owner);
             }
@@ -133,13 +149,18 @@ impl<'a> CacheInputIndex<'a> {
             self.unified_project_deps,
             &seed_projects,
             task.project.as_str(),
-            using_full_project || !self.has_graph,
+            closure.using_full_project || !self.has_graph,
         ) else {
             return uncacheable_inputs();
         };
-        let impact_paths = self.collect_impact_paths(task, dynamic_scope_paths);
+        let mut impact_paths = self.collect_impact_paths(task, closure.dynamic_scope_paths);
+        for dir in closure.file_read_dirs {
+            if !project_roots.iter().any(|root| path_is_inside(&dir, root)) {
+                impact_paths.insert(dir);
+            }
+        }
         let mut extra_files: BTreeSet<String> = setup_files.iter().cloned().collect();
-        for &node_idx in &visited_nodes {
+        for &node_idx in &closure.visited_nodes {
             let path = &self.nodes[node_idx].path;
             if path.starts_with(FS_DIR_PREFIX) {
                 continue;
@@ -155,6 +176,11 @@ impl<'a> CacheInputIndex<'a> {
                 }
             }
         }
+        for path in closure.file_read_targets {
+            if !project_roots.iter().any(|root| path_is_inside(&path, root)) {
+                extra_files.insert(path);
+            }
+        }
         TaskCacheInputs {
             cacheable: true,
             project_roots: project_roots.into_iter().collect(),
@@ -168,12 +194,23 @@ impl<'a> CacheInputIndex<'a> {
         project_id: &str,
         selected_files: &[String],
         setup_files: &[String],
-    ) -> Option<(BTreeSet<usize>, BTreeSet<String>, bool)> {
+    ) -> Option<ForwardClosure> {
         if !self.has_graph {
-            return Some((BTreeSet::new(), BTreeSet::new(), true));
+            return Some(ForwardClosure {
+                visited_nodes: BTreeSet::new(),
+                dynamic_scope_paths: BTreeSet::new(),
+                file_read_targets: BTreeSet::new(),
+                file_read_dirs: BTreeSet::new(),
+                using_full_project: true,
+            });
         }
-        let (seeds, using_full_project) =
-            collect_seed_modules(self, project_id, selected_files, setup_files);
+        let (seeds, using_full_project) = collect_seed_modules(
+            &self.node_by_path,
+            &self.nodes_by_project,
+            project_id,
+            selected_files,
+            setup_files,
+        );
         if using_full_project && self.unindexed_blocking_projects.contains(project_id) {
             return None;
         }
@@ -185,6 +222,8 @@ impl<'a> CacheInputIndex<'a> {
             }
         }
         let mut dynamic_scope_paths = BTreeSet::new();
+        let mut file_read_targets = BTreeSet::new();
+        let mut file_read_dirs = BTreeSet::new();
         while let Some(node_idx) = queue.pop_front() {
             let node = &self.nodes[node_idx];
             if let Some(dir) = node.path.strip_prefix(FS_DIR_PREFIX) {
@@ -220,6 +259,17 @@ impl<'a> CacheInputIndex<'a> {
                 let Some(target) = imp.resolved_path.as_deref() else {
                     continue;
                 };
+                if is_ignored_path(target, &self.manifest.workspace.ignore_paths) {
+                    continue;
+                }
+                if imp.kind == ImportKind::FileRead {
+                    if let Some(dir) = target.strip_suffix('/') {
+                        file_read_dirs.insert(dir.to_owned());
+                    } else {
+                        file_read_targets.insert(target.to_owned());
+                    }
+                    continue;
+                }
                 if self.blocking_uncertainties_by_path.contains(target) {
                     return None;
                 }
@@ -230,7 +280,13 @@ impl<'a> CacheInputIndex<'a> {
                 }
             }
         }
-        Some((visited_nodes, dynamic_scope_paths, using_full_project))
+        Some(ForwardClosure {
+            visited_nodes,
+            dynamic_scope_paths,
+            file_read_targets,
+            file_read_dirs,
+            using_full_project,
+        })
     }
 
     fn collect_impact_paths(
@@ -260,130 +316,5 @@ impl<'a> CacheInputIndex<'a> {
             }
         }
         impact_paths
-    }
-}
-
-fn uncacheable_inputs() -> TaskCacheInputs {
-    TaskCacheInputs {
-        cacheable: false,
-        project_roots: Vec::new(),
-        impact_paths: Vec::new(),
-        extra_files: Vec::new(),
-    }
-}
-
-fn is_closure_breaking_uncertainty(
-    uncertainty: &GraphUncertainty,
-    dynamic_import_scopes: &BTreeMap<String, Vec<String>>,
-    enforce_declared_reads: bool,
-) -> bool {
-    match uncertainty.code.as_str() {
-        "unresolved-local-module"
-        | "generated-or-virtual-module"
-        | "javascript-parse-failed"
-        | "javascript-semantic-failed"
-        | "javascript-source-read-failed" => true,
-        "nonliteral-dynamic-import" | "nonliteral-commonjs-require" => {
-            !dynamic_import_scopes.contains_key(&uncertainty.path)
-        }
-        "unresolved-fs-read" => {
-            !enforce_declared_reads && !dynamic_import_scopes.contains_key(&uncertainty.path)
-        }
-        _ => false,
-    }
-}
-
-fn collect_seed_modules(
-    index: &CacheInputIndex<'_>,
-    project_id: &str,
-    selected_files: &[String],
-    setup_files: &[String],
-) -> (Vec<usize>, bool) {
-    if !selected_files.is_empty() {
-        let mut seeds = Vec::with_capacity(selected_files.len() + setup_files.len());
-        let mut all_present = true;
-        for path in selected_files.iter().chain(setup_files.iter()) {
-            if let Some(&idx) = index.node_by_path.get(path.as_str()) {
-                seeds.push(idx);
-            } else {
-                all_present = false;
-            }
-        }
-        if all_present {
-            return (seeds, false);
-        }
-        if let Some(project_nodes) = index.nodes_by_project.get(project_id) {
-            seeds.extend(project_nodes.iter().copied());
-        }
-        return (seeds, true);
-    }
-    let mut seeds = index
-        .nodes_by_project
-        .get(project_id)
-        .cloned()
-        .unwrap_or_default();
-    for path in setup_files {
-        if let Some(&idx) = index.node_by_path.get(path.as_str()) {
-            seeds.push(idx);
-        }
-    }
-    (seeds, true)
-}
-
-fn expand_project_dependency_roots<'a>(
-    projects_by_id: &BTreeMap<&'a str, &'a Project>,
-    unified_project_deps: &BTreeMap<&'a str, BTreeSet<&'a str>>,
-    seed_projects: &BTreeSet<&'a str>,
-    owner_project: &'a str,
-    expand_owner_via_unified: bool,
-) -> Option<BTreeSet<String>> {
-    let mut visited = BTreeSet::new();
-    let mut queue = VecDeque::new();
-    let mut roots = BTreeSet::new();
-    for &project_id in seed_projects {
-        if visited.insert(project_id) {
-            queue.push_back((project_id, false));
-        }
-    }
-    while let Some((project_id, reached_via_fallback)) = queue.pop_front() {
-        let project = projects_by_id.get(project_id)?;
-        roots.insert(project.root.clone());
-        for dep in &project.fallback_dependencies {
-            if visited.insert(dep.as_str()) {
-                queue.push_back((dep.as_str(), true));
-            }
-        }
-        // If a project was pulled in via `fallbackDependencies` (not Oxc module traversal),
-        // also include its Oxc dependencies so indirect `fallback -> Oxc` chains never go stale.
-        let use_unified =
-            reached_via_fallback || (expand_owner_via_unified && project_id == owner_project);
-        if use_unified && let Some(deps) = unified_project_deps.get(project_id) {
-            for &dep in deps {
-                if visited.insert(dep) {
-                    queue.push_back((dep, true));
-                }
-            }
-        }
-    }
-    Some(roots)
-}
-
-fn snapshot_pattern_globs(prefix: &str, suffix: &str) -> Vec<String> {
-    if prefix.ends_with('/') {
-        if suffix.starts_with('/') {
-            vec![format!("{prefix}**{suffix}")]
-        } else {
-            vec![format!("{prefix}**/*{suffix}")]
-        }
-    } else if suffix.starts_with('/') {
-        vec![
-            format!("{prefix}*{suffix}"),
-            format!("{prefix}*/**{suffix}"),
-        ]
-    } else {
-        vec![
-            format!("{prefix}*{suffix}"),
-            format!("{prefix}*/**/*{suffix}"),
-        ]
     }
 }

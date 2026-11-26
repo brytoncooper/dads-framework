@@ -3,11 +3,11 @@
 use super::PlanEvidence;
 use super::widening_fs::{
     matching_fs_dir_nodes, push_unique_project_issue, record_fs_dir_reachable_path,
-    record_missing_frontend, widen_ambient_dts_typechecks, widen_unresolved_fs_readers,
+    record_missing_frontend, widen_ambient_dts_typechecks,
     widen_unresolved_module_importers_on_delete,
 };
 use super::widening_paths::{
-    collect_graph_changed_paths, is_javascript_source_path, record_uncovered_file_read_dirs,
+    collect_graph_changed_paths, is_javascript_source_path, widen_uncovered_paths,
 };
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
@@ -166,14 +166,7 @@ pub(super) fn widen_through_graph<'a>(
         }
     }
     if !uncovered_paths.is_empty() {
-        record_uncovered_paths(manifest, &uncovered_paths, evidence);
-        if has_non_test_reachability {
-            widen_ambient_dts_typechecks(manifest, &uncovered_paths, None, evidence);
-        }
-        if !enforce_declared_reads {
-            widen_unresolved_fs_readers(manifest, graph, evidence, has_non_test_reachability);
-        }
-        record_uncovered_file_read_dirs(
+        widen_uncovered_paths(
             manifest,
             &changed_paths,
             &uncovered_paths,
@@ -182,27 +175,6 @@ pub(super) fn widen_through_graph<'a>(
             has_non_test_reachability,
             enforce_declared_reads,
         );
-        let workspace_uncertainties = graph.whole_workspace_uncertainties();
-        record_reachable_uncertainties(
-            manifest,
-            &changed_paths,
-            graph,
-            workspace_uncertainties.clone(),
-            evidence,
-            true,
-            enforce_declared_reads,
-        );
-        if has_non_test_reachability {
-            record_reachable_uncertainties(
-                manifest,
-                &changed_paths,
-                graph,
-                workspace_uncertainties,
-                evidence,
-                false,
-                enforce_declared_reads,
-            );
-        }
     }
     widen_unresolved_module_importers_on_delete(
         manifest,
@@ -216,7 +188,7 @@ pub(super) fn widen_through_graph<'a>(
 
 /// The frontend answered, but not about these paths: ONLY their owning projects widen through
 /// declared fallback dependents; covered JS/TS paths in other projects keep exact symbol narrowing.
-fn record_uncovered_paths<'a>(
+pub(super) fn record_uncovered_paths<'a>(
     manifest: &'a TestingManifest,
     uncovered_paths: &[String],
     evidence: &mut PlanEvidence<'a>,

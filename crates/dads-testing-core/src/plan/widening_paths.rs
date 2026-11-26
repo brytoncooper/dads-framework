@@ -1,6 +1,9 @@
 //! Path filtering and uncovered-directory `FileRead` helpers for graph widening.
 use super::PlanEvidence;
-use super::widening::{record_reachable_paths, record_reachable_uncertainties};
+use super::widening::{
+    record_reachable_paths, record_reachable_uncertainties, record_uncovered_paths,
+};
+use super::widening_fs::{widen_ambient_dts_typechecks, widen_unresolved_fs_readers};
 use crate::graph::DependencyGraph;
 use crate::manifest::TestingManifest;
 use crate::protocol::ResolvedScope;
@@ -43,7 +46,55 @@ pub(super) fn collect_graph_changed_paths(
     changed_paths
 }
 
-pub(super) fn record_uncovered_file_read_dirs<'a>(
+pub(super) fn widen_uncovered_paths<'a>(
+    manifest: &'a TestingManifest,
+    changed_paths: &[String],
+    uncovered_paths: &[String],
+    graph: &DependencyGraph,
+    evidence: &mut PlanEvidence<'a>,
+    has_non_test_reachability: bool,
+    enforce_declared_reads: bool,
+) {
+    record_uncovered_paths(manifest, uncovered_paths, evidence);
+    if has_non_test_reachability {
+        widen_ambient_dts_typechecks(manifest, uncovered_paths, None, evidence);
+    }
+    if !enforce_declared_reads {
+        widen_unresolved_fs_readers(manifest, graph, evidence, has_non_test_reachability);
+    }
+    record_uncovered_file_read_dirs(
+        manifest,
+        changed_paths,
+        uncovered_paths,
+        graph,
+        evidence,
+        has_non_test_reachability,
+        enforce_declared_reads,
+    );
+    let workspace_uncertainties = graph.whole_workspace_uncertainties();
+    record_reachable_uncertainties(
+        manifest,
+        changed_paths,
+        graph,
+        workspace_uncertainties.clone(),
+        evidence,
+        true,
+        enforce_declared_reads,
+    );
+    if has_non_test_reachability {
+        record_reachable_uncertainties(
+            manifest,
+            changed_paths,
+            graph,
+            workspace_uncertainties,
+            evidence,
+            false,
+            enforce_declared_reads,
+        );
+    }
+}
+
+fn record_uncovered_file_read_dirs<'a>(
     manifest: &'a TestingManifest,
     changed_paths: &[String],
     uncovered_paths: &[String],

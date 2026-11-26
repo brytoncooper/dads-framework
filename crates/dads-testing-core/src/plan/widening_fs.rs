@@ -3,8 +3,8 @@
 use super::PlanEvidence;
 use crate::graph::DependencyGraph;
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
-use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
-use crate::scope::{deepest_project_for_path, is_isolated_test_file, path_matches_impact};
+use crate::protocol::{IssueScope, IssueSeverity, PlanIssue};
+use crate::scope::{deepest_project_for_path, is_isolated_test_file};
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -71,49 +71,6 @@ pub(super) fn widen_ambient_dts_typechecks<'a>(
                 .push(issue_index);
         }
     }
-}
-
-pub(super) fn collect_graph_changed_paths(
-    manifest: &TestingManifest,
-    scope: &ResolvedScope,
-    graph: Option<&DependencyGraph>,
-    evidence: &PlanEvidence<'_>,
-) -> Vec<String> {
-    let mut changed_paths: Vec<String> = scope
-        .changed_paths
-        .iter()
-        .filter(|path| {
-            !manifest
-                .workspace
-                .ignore_paths
-                .iter()
-                .any(|pattern| path_matches_impact(path, pattern))
-        })
-        .filter(|path| {
-            !manifest
-                .workspace
-                .non_code_suffixes
-                .iter()
-                .any(|suffix| path.ends_with(suffix))
-        })
-        .filter(|path| !evidence.lockfile_handled_paths.contains(*path))
-        .filter(|path| !evidence.tsconfig_handled_paths.contains(*path))
-        .filter(|path| {
-            !evidence.sql_handled_paths.contains(*path)
-                || graph.is_some_and(|g| g.contains_path(path))
-        })
-        .cloned()
-        .collect();
-    for seeded in evidence
-        .lockfile_seeded_modules
-        .iter()
-        .chain(&evidence.tsconfig_seeded_modules)
-    {
-        if !changed_paths.contains(seeded) {
-            changed_paths.push(seeded.clone());
-        }
-    }
-    changed_paths
 }
 
 pub(super) fn record_fs_dir_reachable_path<'a>(

@@ -6,18 +6,30 @@ use crate::execute::{TestingError, message};
 use crate::graph::DependencyGraph;
 use crate::manifest::{DeclaredTask, ImpactMode, TestingManifest, task_order};
 use crate::protocol::{ResolvedScope, TaskDecision};
+use crate::scheduler::{AllowlistBuilder, should_guard_task};
 use crate::task_causes::CauseEvidence;
 use std::collections::BTreeMap;
 
-pub(super) fn explain_decisions<'a>(
-    manifest: &'a TestingManifest,
-    scope: &ResolvedScope,
-    graph: Option<&DependencyGraph>,
-    task_by_id: &BTreeMap<&'a str, &'a DeclaredTask>,
-    evidence: &PlanEvidence<'a>,
-    selection: &Selection<'a>,
-    cache_index: &CacheInputIndex<'a>,
-) -> Result<Vec<TaskDecision>, TestingError> {
+pub(super) struct DecisionInputs<'a> {
+    pub(super) manifest: &'a TestingManifest,
+    pub(super) scope: &'a ResolvedScope,
+    pub(super) graph: Option<&'a DependencyGraph>,
+    pub(super) task_by_id: &'a BTreeMap<&'a str, &'a DeclaredTask>,
+    pub(super) evidence: &'a PlanEvidence<'a>,
+    pub(super) selection: &'a Selection<'a>,
+    pub(super) cache_index: &'a CacheInputIndex<'a>,
+    pub(super) allowlist_builder: Option<&'a AllowlistBuilder<'a>>,
+}
+
+pub(super) fn explain_decisions(inputs: &DecisionInputs<'_>) -> Result<Vec<TaskDecision>, TestingError> {
+    let manifest = inputs.manifest;
+    let scope = inputs.scope;
+    let graph = inputs.graph;
+    let task_by_id = inputs.task_by_id;
+    let evidence = inputs.evidence;
+    let selection = inputs.selection;
+    let cache_index = inputs.cache_index;
+    let allowlist_builder = inputs.allowlist_builder;
     let causes = CauseEvidence {
         manifest,
         graph,
@@ -61,6 +73,11 @@ pub(super) fn explain_decisions<'a>(
         };
         let cache_inputs =
             run.then(|| cache_index.for_task(task, scope, evidence, &selected_files));
+        let read_guard_allowlist = allowlist_builder.and_then(|builder| {
+            (run && should_guard_task(&task.kind, &task.execution)).then(|| {
+                builder.for_task_parts(task, &selected_files, cache_inputs.as_ref())
+            })
+        });
         decisions.push(TaskDecision {
             decision: if run {
                 "run".into()
@@ -75,6 +92,7 @@ pub(super) fn explain_decisions<'a>(
             reached_files,
             selected_files,
             cache_inputs,
+            read_guard_allowlist,
             id,
         });
     }

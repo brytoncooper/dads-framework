@@ -48,7 +48,8 @@ pub use boundaries_config::{
 pub use execute::{
     execute_request, execute_request_with_graph, execute_request_with_graph_and_receipts,
     expanded_manifest_bytes, graph_analysis_can_change_the_plan, manifest_ignore_paths,
-    manifest_project_roots, manifest_pure_factories_from_root, request_uses_read_guard,
+    manifest_project_roots, manifest_pure_factories_from_root,
+    plan_file_needs_graph_for_read_guard, request_uses_read_guard,
 };
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
@@ -56,7 +57,8 @@ pub use protocol::{
     IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
     PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata, ReadGuardMode,
     RemediationSafety, ResolvedScope, RunCounts, RunResult, TaskCacheInputs, TaskCause,
-    TaskDecision, TaskOutput, TaskRunResult, TaskShard, UndeclaredRead, WideningCulprit,
+    TaskDecision, TaskOutput, TaskReadGuardAllowlist, TaskRunResult, TaskShard, UndeclaredRead,
+    WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 pub use scope::{is_empty_tree_sha, path_matches_impact};

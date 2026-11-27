@@ -8,7 +8,7 @@ use crate::graph::DependencyGraph;
 use crate::hotspots::build_hotspots;
 use crate::manifest::{DEFAULT_MANIFEST_PATH, TestingManifest, load_manifest, validate_manifest};
 use crate::plan::{PlanFilters, build_plan};
-use crate::plan_file::load_plan_file;
+use crate::plan_file::{load_plan_file, plan_file_missing_read_guard_allowlists};
 use crate::protocol::{
     NativeRequest, NativeResponse, Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts,
     PlanResult, ReadGuardMode, ResolvedScope,
@@ -95,6 +95,32 @@ pub fn request_uses_read_guard(request: &NativeRequest) -> bool {
         || load_declared_manifest(request)
             .map(|(_, _, manifest)| manifest.workspace.enforce_declared_reads)
             .unwrap_or(false)
+}
+
+/// Whether a `--plan-file` run with active read guarding needs the dependency graph loaded because
+/// at least one runnable guarded task lacks a planner-computed `readGuardAllowlist`.
+pub fn plan_file_needs_graph_for_read_guard(request: &NativeRequest) -> bool {
+    let Some(plan_file) = request.plan_file.as_deref() else {
+        return false;
+    };
+    if !request_uses_read_guard(request) {
+        return false;
+    }
+    let Ok((workspace_root, _, manifest)) = load_declared_manifest(request) else {
+        return false;
+    };
+    let effective_enforce = !request.no_enforce_declared_reads
+        && (request.enforce_declared_reads || manifest.workspace.enforce_declared_reads);
+    let filters = PlanFilters {
+        task_kinds: &request.task_kinds,
+        targets: &request.targets,
+        projects: &request.projects,
+        exclude_projects: &request.exclude_projects,
+        shard: request.shard,
+        shard_weights: &request.shard_weights,
+        enforce_declared_reads: effective_enforce,
+    };
+    plan_file_missing_read_guard_allowlists(&workspace_root, plan_file, &manifest, &filters)
 }
 
 /// Returns the declared project roots from the workspace's manifest so a language frontend can

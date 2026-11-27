@@ -237,7 +237,7 @@ impl ReadGuardInvocation {
 
 /// Only inject the V8 preload hook on `TaskKind::Test` tasks that invoke a Node-compatible
 /// executable so non-Node commands (`oxlint`, `tsc`, native binaries) are never affected.
-pub(super) fn should_guard_task(kind: &TaskKind, execution: &TaskExecution) -> bool {
+pub(crate) fn should_guard_task(kind: &TaskKind, execution: &TaskExecution) -> bool {
     if *kind != TaskKind::Test {
         return false;
     }

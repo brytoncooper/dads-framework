@@ -1,7 +1,7 @@
 //! Planning one request: own the changed paths, widen through whatever graph evidence exists,
 //! select the tasks that answer, and explain every decision with located evidence.
 mod cache_inputs;
-mod cache_inputs_helpers;
+pub(crate) mod cache_inputs_helpers;
 mod decisions;
 mod filtering;
 mod impacts;
@@ -15,10 +15,11 @@ use crate::graph::{DependencyGraph, ReachedEdge};
 use crate::manifest::{DeclaredTask, FileNarrowing, ImpactMode, TaskKind, TestingManifest};
 use crate::plan_fingerprint::compute_workspace_fingerprint;
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, ResolvedScope};
+use crate::scheduler::AllowlistBuilder;
 use crate::scope::{path_is_inside, path_matches_impact};
 use crate::sql_impact::SqlTaskSelection;
 use cache_inputs::CacheInputIndex;
-use decisions::explain_decisions;
+use decisions::{DecisionInputs, explain_decisions};
 use filtering::matches_file_narrowing;
 pub(crate) use filtering::{PlanFilters, apply_plan_filters, parse_kind_filter, validate_shard};
 use impacts::{attach_lockfile_impact, attach_sql_impact, attach_tsconfig_impact};
@@ -228,15 +229,19 @@ pub(crate) fn build_plan(
         &project_deps,
         filters.enforce_declared_reads,
     );
-    let mut decisions = explain_decisions(
+    let allowlist_builder = filters.enforce_declared_reads.then(|| {
+        AllowlistBuilder::from_graph_parts(manifest, graph.is_some(), &nodes, &project_deps)
+    });
+    let mut decisions = explain_decisions(&DecisionInputs {
         manifest,
         scope,
         graph,
-        &task_by_id,
-        &evidence,
-        &selection,
-        &cache_index,
-    )?;
+        task_by_id: &task_by_id,
+        evidence: &evidence,
+        selection: &selection,
+        cache_index: &cache_index,
+        allowlist_builder: allowlist_builder.as_ref(),
+    })?;
     let shard = apply_plan_filters(&mut decisions, &task_by_id, kind_filter.as_deref(), filters);
     let run = decisions
         .iter()

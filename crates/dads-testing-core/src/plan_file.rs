@@ -7,10 +7,37 @@ use crate::manifest::{DeclaredTask, TestingManifest};
 use crate::plan::{PlanFilters, apply_plan_filters, parse_kind_filter, validate_shard};
 use crate::plan_fingerprint::{compute_workspace_fingerprint, fingerprints_match};
 use crate::protocol::{PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanResult};
+use crate::scheduler::should_guard_task;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// Returns `true` when any runnable guarded task in the filtered `--plan-file` is missing a
+/// precomputed `readGuardAllowlist`, meaning the CLI must load the workspace dependency graph so
+/// `AllowlistBuilder` can compute accurate allowlists instead of falling back to an empty graph.
+pub(crate) fn plan_file_missing_read_guard_allowlists(
+    workspace_root: &Path,
+    raw_path: &str,
+    manifest: &TestingManifest,
+    filters: &PlanFilters<'_>,
+) -> bool {
+    let Ok(plan) = load_plan_file(workspace_root, raw_path, manifest, filters, None) else {
+        return false;
+    };
+    let task_by_id: BTreeMap<&str, &DeclaredTask> = manifest
+        .tasks
+        .iter()
+        .map(|task| (task.id.as_str(), task))
+        .collect();
+    plan.tasks.iter().any(|decision| {
+        decision.decision == "run"
+            && decision.read_guard_allowlist.is_none()
+            && task_by_id
+                .get(decision.id.as_str())
+                .is_some_and(|task| should_guard_task(&task.kind, &task.execution))
+    })
+}
 
 pub(crate) fn load_plan_file(
     workspace_root: &Path,

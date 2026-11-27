@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
-const VITEST_CONFIG_CANDIDATES: &[&str] = &[
+pub(crate) const VITEST_CONFIG_CANDIDATES: &[&str] = &[
     "vitest.config.ts",
     "vitest.config.mts",
     "vitest.config.js",

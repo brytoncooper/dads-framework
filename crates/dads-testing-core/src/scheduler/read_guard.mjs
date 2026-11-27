@@ -54,6 +54,7 @@ function installReadGuard() {
   const approvedAbs = new Set();
   const approvedRawRel = new Set();
   const approvedRel = new Set();
+  const approvedDirRel = new Set();
   const approvedMetaRel = new Set();
   const violations = new Map();
   const flushed = new Set();
@@ -106,7 +107,21 @@ function installReadGuard() {
     return false;
   }
 
-  function checkPath(rawPath, api, isMetaOnly, baseDir) {
+  function isAllowedGlobTraversal(rel, isMetaOnly) {
+    if (allow.allowRootGlobDirTraversal) return true;
+    if (allow.globDirExact.has(rel)) return true;
+    for (let i = 0; i < allow.globDeepPrefixes.length; i += 1) {
+      if (rel.startsWith(allow.globDeepPrefixes[i])) return true;
+    }
+    if (isMetaOnly && allow.globShallowDirs.size > 0) {
+      const lastSlash = rel.lastIndexOf("/");
+      const dir = lastSlash === -1 ? "" : rel.slice(0, lastSlash);
+      if (allow.globShallowDirs.has(dir)) return true;
+    }
+    return false;
+  }
+
+  function checkPath(rawPath, api, readKind, baseDir) {
     if (allow.allowAll) return;
     const p = rawPathToString(rawPath);
     if (!p || p.length === 0 || p.includes("\n") || p.includes("\r") || p.includes("\0")) return;
@@ -143,7 +158,8 @@ function installReadGuard() {
       else if (!baseDir && approvedRawRel.size < 50000) approvedRawRel.add(p);
       return;
     }
-    if (isMetaOnly && approvedMetaRel.has(rel)) return;
+    if (readKind === "meta" && approvedMetaRel.has(rel)) return;
+    if (readKind === "dir" && approvedDirRel.has(rel)) return;
 
     if (rel.length > 0 && isAllowedRel(rel)) {
       approvedRel.add(rel);
@@ -151,8 +167,12 @@ function installReadGuard() {
       else if (!baseDir && approvedRawRel.size < 50000) approvedRawRel.add(p);
       return;
     }
-    if (isMetaOnly && (rel === "" || allow.ancestorDirs.has(rel))) {
+    if (readKind === "meta" && (rel === "" || allow.ancestorDirs.has(rel) || isAllowedGlobTraversal(rel, true))) {
       approvedMetaRel.add(rel);
+      return;
+    }
+    if (readKind === "dir" && (rel.length > 0 ? isAllowedGlobTraversal(rel, false) : allow.allowRootGlobDirTraversal)) {
+      approvedDirRel.add(rel);
       return;
     }
     if (rel.length === 0) rel = ".";
@@ -166,17 +186,17 @@ function installReadGuard() {
     if (!isMainThread) flushViolations();
   }
 
-  function wrapPathMethod(target, name, api, isMetaOnly) {
+  function wrapPathMethod(target, name, api, readKind) {
     const orig = target[name];
     if (typeof orig !== "function") return;
     const wrapped = function (...args) {
-      checkPath(args[0], api, isMetaOnly);
+      checkPath(args[0], api, readKind);
       return orig.apply(this, args);
     };
     if (typeof orig.native === "function") {
       const origNative = orig.native;
       wrapped.native = function (...args) {
-        checkPath(args[0], `${api}.native`, isMetaOnly);
+        checkPath(args[0], `${api}.native`, readKind);
         return origNative.apply(this, args);
       };
     }
@@ -187,7 +207,7 @@ function installReadGuard() {
     const orig = target[name];
     if (typeof orig !== "function") return;
     target[name] = function (...args) {
-      if (!isWriteOnlyOpenFlag(args[1])) checkPath(args[0], api, false);
+      if (!isWriteOnlyOpenFlag(args[1])) checkPath(args[0], api, "content");
       return orig.apply(this, args);
     };
   }
@@ -200,7 +220,7 @@ function installReadGuard() {
       const opts = args[1];
       const cwd = opts && typeof opts === "object" && opts.cwd ? rawPathToString(opts.cwd) : undefined;
       for (const pat of patterns) {
-        if (typeof pat === "string") checkPath(globLiteralPrefix(pat), api, false, cwd);
+        if (typeof pat === "string") checkPath(globLiteralPrefix(pat), api, "dir", cwd);
       }
       return orig.apply(this, args);
     };
@@ -212,7 +232,7 @@ function installReadGuard() {
     const cpArgs = Array.isArray(args[1]) ? args[1] : undefined;
     const opts = cpArgs ? args[2] : args[1];
     const cwd = opts && typeof opts === "object" && opts.cwd ? rawPathToString(opts.cwd) : undefined;
-    if (file.includes("/") || file.includes("\\") || file.startsWith(".")) checkPath(file, api, false, cwd);
+    if (file.includes("/") || file.includes("\\") || file.startsWith(".")) checkPath(file, api, "content", cwd);
     const base = path
       .basename(file)
       .toLowerCase()
@@ -232,7 +252,7 @@ function installReadGuard() {
           continue;
         }
         if (arg.startsWith("-")) continue;
-        checkPath(arg, api, false, cwd);
+        checkPath(arg, api, "content", cwd);
         break;
       }
     }
@@ -255,19 +275,11 @@ function installReadGuard() {
     childProcess[name] = wrapped;
   }
 
-  for (const name of [
-    "readFileSync",
-    "readFile",
-    "readdirSync",
-    "readdir",
-    "createReadStream",
-    "opendirSync",
-    "opendir",
-    "readlinkSync",
-    "readlink",
-    "openAsBlob",
-  ]) {
-    wrapPathMethod(fs, name, `fs.${name}`, false);
+  for (const name of ["readFileSync", "readFile", "createReadStream", "readlinkSync", "readlink", "openAsBlob"]) {
+    wrapPathMethod(fs, name, `fs.${name}`, "content");
+  }
+  for (const name of ["readdirSync", "readdir", "opendirSync", "opendir"]) {
+    wrapPathMethod(fs, name, `fs.${name}`, "dir");
   }
   for (const name of [
     "existsSync",
@@ -280,18 +292,21 @@ function installReadGuard() {
     "realpathSync",
     "realpath",
   ]) {
-    wrapPathMethod(fs, name, `fs.${name}`, true);
+    wrapPathMethod(fs, name, `fs.${name}`, "meta");
   }
   wrapOpenMethod(fs, "openSync", "fs.openSync");
   wrapOpenMethod(fs, "open", "fs.open");
   wrapGlobMethod(fs, "globSync", "fs.globSync");
   wrapGlobMethod(fs, "glob", "fs.glob");
 
-  for (const name of ["readFile", "readdir", "opendir", "readlink"]) {
-    wrapPathMethod(fsPromises, name, `fs.promises.${name}`, false);
+  for (const name of ["readFile", "readlink"]) {
+    wrapPathMethod(fsPromises, name, `fs.promises.${name}`, "content");
+  }
+  for (const name of ["readdir", "opendir"]) {
+    wrapPathMethod(fsPromises, name, `fs.promises.${name}`, "dir");
   }
   for (const name of ["stat", "lstat", "access", "realpath"]) {
-    wrapPathMethod(fsPromises, name, `fs.promises.${name}`, true);
+    wrapPathMethod(fsPromises, name, `fs.promises.${name}`, "meta");
   }
   wrapOpenMethod(fsPromises, "open", "fs.promises.open");
   wrapGlobMethod(fsPromises, "glob", "fs.promises.glob");

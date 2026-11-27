@@ -4,65 +4,67 @@
 //! `setupFiles`, `workspace.ignorePaths`, SQL roots), and a non-aborting forward graph walk
 //! so `--all`, `audit`, and `--plan-file` all receive accurate allowlists without false positives.
 
-use crate::graph::{DependencyGraph, ModuleNode};
+use crate::discover_vitest::VITEST_CONFIG_CANDIDATES;
+use crate::graph::{DependencyGraph, ImportKind, ModuleNode};
 use crate::manifest::{DeclaredTask, Project, TestingManifest};
+use crate::plan::cache_inputs_helpers::snapshot_pattern_globs;
 use crate::plan::project_graph::unified_project_dependencies;
-use crate::protocol::TaskDecision;
+use crate::protocol::{TaskCacheInputs, TaskDecision};
+pub(super) use crate::protocol::TaskReadGuardAllowlist;
 use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 const FS_DIR_PREFIX: &str = "fs-dir:";
 
-#[derive(Debug, Clone, Default)]
-pub(super) struct TaskReadGuardAllowlist {
-    pub(super) allowed_project_roots: Vec<String>,
-    pub(super) allowed_impact_paths: Vec<String>,
-    pub(super) allowed_extra_files: Vec<String>,
-    pub(super) allowed_ancestor_dirs: Vec<String>,
-}
-
-impl TaskReadGuardAllowlist {
-    /// Unions multiple task allowlists (used when a Vitest batch executes tasks together in
-    /// enforce mode; any violation triggers isolated per-task re-execution for exact attribution).
-    pub(super) fn merge_many<'a>(lists: impl IntoIterator<Item = &'a Self>) -> Self {
-        let mut project_roots = BTreeSet::new();
-        let mut impact_paths = BTreeSet::new();
-        let mut extra_files = BTreeSet::new();
-        let mut ancestor_dirs = BTreeSet::new();
-        for list in lists {
-            project_roots.extend(list.allowed_project_roots.iter().cloned());
-            impact_paths.extend(list.allowed_impact_paths.iter().cloned());
-            extra_files.extend(list.allowed_extra_files.iter().cloned());
-            ancestor_dirs.extend(list.allowed_ancestor_dirs.iter().cloned());
-        }
-        Self {
-            allowed_project_roots: project_roots.into_iter().collect(),
-            allowed_impact_paths: impact_paths.into_iter().collect(),
-            allowed_extra_files: extra_files.into_iter().collect(),
-            allowed_ancestor_dirs: ancestor_dirs.into_iter().collect(),
-        }
-    }
-}
-
-pub(super) struct AllowlistBuilder<'a> {
+pub(crate) struct AllowlistBuilder<'a> {
     manifest: &'a TestingManifest,
     projects_by_id: BTreeMap<&'a str, &'a Project>,
-    nodes: Vec<ModuleNode>,
+    nodes: Cow<'a, [ModuleNode]>,
     node_by_path: HashMap<String, usize>,
     nodes_by_project: BTreeMap<&'a str, Vec<usize>>,
     owner_by_node: Vec<Option<&'a str>>,
-    unified_project_deps: BTreeMap<&'a str, BTreeSet<&'a str>>,
+    unified_project_deps: Cow<'a, BTreeMap<&'a str, BTreeSet<&'a str>>>,
     has_graph: bool,
 }
 
 impl<'a> AllowlistBuilder<'a> {
-    pub(super) fn new(manifest: &'a TestingManifest, graph: Option<&DependencyGraph>) -> Self {
+    pub(crate) fn new(manifest: &'a TestingManifest, graph: Option<&DependencyGraph>) -> Self {
+        let nodes = graph.map_or_else(Vec::new, DependencyGraph::materialize_modules);
+        let unified_project_deps = unified_project_dependencies(manifest, &nodes);
+        Self::build(
+            manifest,
+            graph.is_some(),
+            Cow::Owned(nodes),
+            Cow::Owned(unified_project_deps),
+        )
+    }
+
+    pub(crate) fn from_graph_parts(
+        manifest: &'a TestingManifest,
+        has_graph: bool,
+        nodes: &'a [ModuleNode],
+        unified_project_deps: &'a BTreeMap<&'a str, BTreeSet<&'a str>>,
+    ) -> Self {
+        Self::build(
+            manifest,
+            has_graph,
+            Cow::Borrowed(nodes),
+            Cow::Borrowed(unified_project_deps),
+        )
+    }
+
+    fn build(
+        manifest: &'a TestingManifest,
+        has_graph: bool,
+        nodes: Cow<'a, [ModuleNode]>,
+        unified_project_deps: Cow<'a, BTreeMap<&'a str, BTreeSet<&'a str>>>,
+    ) -> Self {
         let projects_by_id: BTreeMap<&'a str, &'a Project> = manifest
             .projects
             .iter()
             .map(|project| (project.id.as_str(), project))
             .collect();
-        let nodes = graph.map_or_else(Vec::new, DependencyGraph::materialize_modules);
         let mut node_by_path = HashMap::with_capacity(nodes.len());
         let mut nodes_by_project: BTreeMap<&'a str, Vec<usize>> = BTreeMap::new();
         let mut owner_by_node = Vec::with_capacity(nodes.len());
@@ -75,7 +77,6 @@ impl<'a> AllowlistBuilder<'a> {
                 nodes_by_project.entry(proj_id).or_default().push(idx);
             }
         }
-        let unified_project_deps = unified_project_dependencies(manifest, &nodes);
         Self {
             manifest,
             projects_by_id,
@@ -84,21 +85,38 @@ impl<'a> AllowlistBuilder<'a> {
             nodes_by_project,
             owner_by_node,
             unified_project_deps,
-            has_graph: graph.is_some(),
+            has_graph,
         }
     }
 
-    pub(super) fn for_task(
+    pub(crate) fn for_task(
         &self,
         task: &DeclaredTask,
         decision: &TaskDecision,
     ) -> TaskReadGuardAllowlist {
+        self.for_task_parts(task, &decision.selected_files, decision.cache_inputs.as_ref())
+    }
+
+    pub(crate) fn for_task_parts(
+        &self,
+        task: &DeclaredTask,
+        selected_files: &[String],
+        cache_inputs: Option<&TaskCacheInputs>,
+    ) -> TaskReadGuardAllowlist {
+        let owner_is_workspace_root = self
+            .projects_by_id
+            .get(task.project.as_str())
+            .is_some_and(|project| is_workspace_root_path(&project.root));
         let mut project_roots = BTreeSet::new();
         let mut impact_paths = BTreeSet::new();
         let mut extra_files = BTreeSet::new();
 
-        if let Some(cache_inputs) = decision.cache_inputs.as_ref() {
-            project_roots.extend(cache_inputs.project_roots.iter().cloned());
+        if let Some(cache_inputs) = cache_inputs {
+            for root in &cache_inputs.project_roots {
+                if owner_is_workspace_root || !is_workspace_root_path(root) {
+                    project_roots.insert(root.clone());
+                }
+            }
             impact_paths.extend(cache_inputs.impact_paths.iter().cloned());
             for file in &cache_inputs.extra_files {
                 if let Some(dir) = file.strip_prefix(FS_DIR_PREFIX) {
@@ -129,8 +147,8 @@ impl<'a> AllowlistBuilder<'a> {
 
         if self.has_graph {
             let walk = self.walk_forward_best_effort(
-                &task.project,
-                &decision.selected_files,
+                task,
+                selected_files,
                 setup_files,
                 &mut impact_paths,
                 &mut external_targets,
@@ -139,7 +157,14 @@ impl<'a> AllowlistBuilder<'a> {
             using_full_project = walk.1;
             for &idx in &visited_nodes {
                 if let Some(owner) = self.owner_by_node[idx] {
-                    seed_projects.insert(owner);
+                    let is_catch_all_root = owner != task.project
+                        && self
+                            .projects_by_id
+                            .get(owner)
+                            .is_some_and(|p| is_workspace_root_path(&p.root));
+                    if !is_catch_all_root {
+                        seed_projects.insert(owner);
+                    }
                 }
             }
         }
@@ -147,6 +172,7 @@ impl<'a> AllowlistBuilder<'a> {
         self.expand_project_roots(
             &seed_projects,
             &task.project,
+            owner_is_workspace_root,
             using_full_project,
             &mut project_roots,
         );
@@ -179,14 +205,13 @@ impl<'a> AllowlistBuilder<'a> {
 
     fn walk_forward_best_effort(
         &self,
-        project_id: &str,
+        task: &DeclaredTask,
         selected_files: &[String],
         setup_files: &[String],
         impact_paths: &mut BTreeSet<String>,
         external_targets: &mut BTreeSet<String>,
     ) -> (BTreeSet<usize>, bool) {
-        let (seeds, using_full_project) =
-            self.collect_seeds(project_id, selected_files, setup_files);
+        let (seeds, using_full_project) = self.collect_seeds(task, selected_files, setup_files);
         let mut visited = BTreeSet::new();
         let mut queue = VecDeque::new();
         for idx in seeds {
@@ -230,6 +255,16 @@ impl<'a> AllowlistBuilder<'a> {
                     }
                     continue;
                 }
+                if imp.kind == ImportKind::FileRead {
+                    if let Some(dir) = target.strip_suffix('/') {
+                        if !dir.is_empty() {
+                            impact_paths.insert(dir.to_owned());
+                        }
+                    } else {
+                        external_targets.insert(target.to_owned());
+                    }
+                    continue;
+                }
                 if let Some(&target_idx) = self.node_by_path.get(target) {
                     if visited.insert(target_idx) {
                         queue.push_back(target_idx);
@@ -244,18 +279,41 @@ impl<'a> AllowlistBuilder<'a> {
 
     fn collect_seeds(
         &self,
-        project_id: &str,
+        task: &DeclaredTask,
         selected_files: &[String],
         setup_files: &[String],
     ) -> (Vec<usize>, bool) {
+        let project_id = task.project.as_str();
         if !selected_files.is_empty() {
-            let mut seeds = Vec::with_capacity(selected_files.len() + setup_files.len());
+            let mut seeds = Vec::with_capacity(selected_files.len() + setup_files.len() + 2);
             let mut all_present = true;
             for path in selected_files.iter().chain(setup_files.iter()) {
                 if let Some(&idx) = self.node_by_path.get(path.as_str()) {
                     seeds.push(idx);
                 } else {
                     all_present = false;
+                }
+            }
+            if let Some(project) = self.projects_by_id.get(project_id) {
+                let root_prefix = project.root.trim_end_matches('/');
+                for candidate in VITEST_CONFIG_CANDIDATES {
+                    let full = if is_workspace_root_path(root_prefix) {
+                        (*candidate).to_owned()
+                    } else {
+                        format!("{root_prefix}/{candidate}")
+                    };
+                    if let Some(&idx) = self.node_by_path.get(&full) {
+                        seeds.push(idx);
+                    }
+                }
+                if !is_workspace_root_path(root_prefix) {
+                    for impact_path in &task.impact.paths {
+                        if path_is_inside(impact_path, root_prefix)
+                            && let Some(&idx) = self.node_by_path.get(impact_path.as_str())
+                        {
+                            seeds.push(idx);
+                        }
+                    }
                 }
             }
             if all_present {
@@ -283,6 +341,7 @@ impl<'a> AllowlistBuilder<'a> {
         &self,
         seed_projects: &BTreeSet<&str>,
         owner_project: &str,
+        owner_is_workspace_root: bool,
         expand_owner_via_unified: bool,
         project_roots: &mut BTreeSet<String>,
     ) {
@@ -297,6 +356,9 @@ impl<'a> AllowlistBuilder<'a> {
             let Some(project) = self.projects_by_id.get(project_id) else {
                 continue;
             };
+            if is_workspace_root_path(&project.root) && !owner_is_workspace_root {
+                continue;
+            }
             project_roots.insert(project.root.clone());
             for dep in &project.fallback_dependencies {
                 if visited.insert(dep.as_str()) {
@@ -316,6 +378,11 @@ impl<'a> AllowlistBuilder<'a> {
     }
 }
 
+fn is_workspace_root_path(root: &str) -> bool {
+    let trimmed = root.trim_start_matches("./").trim_end_matches('/');
+    trimmed.is_empty() || trimmed == "."
+}
+
 fn add_sql_impact_paths(
     manifest: &TestingManifest,
     task: &DeclaredTask,
@@ -325,29 +392,13 @@ fn add_sql_impact_paths(
         return;
     };
     for root in &sql.migration_roots {
-        let trimmed = if root == "." {
-            "."
-        } else {
-            root.trim_end_matches('/')
-        };
+        let trimmed = if root == "." { "." } else { root.trim_end_matches('/') };
         if !trimmed.is_empty() {
             impact_paths.insert(trimmed.to_owned());
         }
     }
     for pattern in &sql.snapshot_patterns {
-        if pattern.prefix.ends_with('/') {
-            if pattern.suffix.starts_with('/') {
-                impact_paths.insert(format!("{}**{}", pattern.prefix, pattern.suffix));
-            } else {
-                impact_paths.insert(format!("{}**/*{}", pattern.prefix, pattern.suffix));
-            }
-        } else if pattern.suffix.starts_with('/') {
-            impact_paths.insert(format!("{}*{}", pattern.prefix, pattern.suffix));
-            impact_paths.insert(format!("{}*/**{}", pattern.prefix, pattern.suffix));
-        } else {
-            impact_paths.insert(format!("{}*{}", pattern.prefix, pattern.suffix));
-            impact_paths.insert(format!("{}*/**/*{}", pattern.prefix, pattern.suffix));
-        }
+        impact_paths.extend(snapshot_pattern_globs(&pattern.prefix, &pattern.suffix));
     }
 }
 

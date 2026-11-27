@@ -245,6 +245,8 @@ pub struct TaskDecision {
     pub selected_files: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cache_inputs: Option<TaskCacheInputs>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_guard_allowlist: Option<TaskReadGuardAllowlist>,
 }
 
 /// The located evidence behind one task decision. Every widening reason names either the issue
@@ -353,5 +355,5 @@ pub use crate::protocol_diagnose::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     RemediationSafety, WideningCulprit,
 };
-pub use crate::protocol_read_guard::{ReadGuardMode, UndeclaredRead};
+pub use crate::protocol_read_guard::{ReadGuardMode, TaskReadGuardAllowlist, UndeclaredRead};
 pub use crate::protocol_run::{RunCounts, RunResult, TaskOutput, TaskRunResult};

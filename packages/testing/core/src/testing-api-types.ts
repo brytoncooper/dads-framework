@@ -62,6 +62,13 @@ export type TestingTaskCacheInputs = {
   readonly extraFiles?: readonly string[];
 };
 
+export type TestingTaskReadGuardAllowlist = {
+  readonly allowedProjectRoots?: readonly string[];
+  readonly allowedImpactPaths?: readonly string[];
+  readonly allowedExtraFiles?: readonly string[];
+  readonly allowedAncestorDirs?: readonly string[];
+};
+
 export type TestingTaskDecision = {
   readonly id: string;
   readonly decision: "run" | "skip-proven-unaffected";
@@ -78,6 +85,8 @@ export type TestingTaskDecision = {
   readonly selectedFiles?: readonly string[];
   /** Planner-computed receipt cache input closure for runnable tasks. */
   readonly cacheInputs?: TestingTaskCacheInputs;
+  /** Planner-computed workspace allowlist for guarded test tasks when read enforcement is active. */
+  readonly readGuardAllowlist?: TestingTaskReadGuardAllowlist;
 };
 
 /**

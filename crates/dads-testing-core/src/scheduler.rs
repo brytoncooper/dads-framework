@@ -18,6 +18,9 @@ mod worker;
 #[cfg(test)]
 pub(crate) use stream::write_finish;
 
+pub(crate) use read_guard::should_guard_task;
+pub(crate) use read_guard_allowlist::AllowlistBuilder;
+
 use crate::execute::{TestingError, message};
 use crate::graph::DependencyGraph;
 use crate::manifest::TestingManifest;

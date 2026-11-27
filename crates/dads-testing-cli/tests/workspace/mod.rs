@@ -43,7 +43,11 @@ impl TemporaryWorkspace {
     }
 
     pub fn write(&self, relative: &str, contents: &str) {
-        fs::write(self.0.join(relative), contents).expect("the workspace file must be writable");
+        let full = self.0.join(relative);
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).expect("parent directory must be creatable");
+        }
+        fs::write(full, contents).expect("the workspace file must be writable");
     }
 
     /// One plan request through the shipped binary, exactly as a caller sends it.
@@ -76,7 +80,7 @@ impl TemporaryWorkspace {
         serde_json::from_slice(&output.stdout).expect("dad-test must answer with one JSON response")
     }
 
-    fn git(&self, arguments: &[&str]) {
+    pub fn git(&self, arguments: &[&str]) {
         let output = Command::new("git")
             .args(arguments)
             .current_dir(&self.0)

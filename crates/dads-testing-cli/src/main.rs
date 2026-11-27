@@ -2,7 +2,8 @@ use dads_testing_core::graph::DependencyGraph;
 use dads_testing_core::{
     IssueScope, IssueSeverity, NativeRequest, NativeResponse, Operation, PlanIssue,
     TaskReceiptStore, execute_request_with_graph_and_receipts, graph_analysis_can_change_the_plan,
-    is_empty_tree_sha, manifest_project_roots, request_uses_read_guard,
+    is_empty_tree_sha, manifest_project_roots, plan_file_needs_graph_for_read_guard,
+    request_uses_read_guard,
 };
 use dads_testing_javascript::{JavaScriptFrontend, analyze_workspace_graph};
 use dads_testing_store::{
@@ -122,7 +123,9 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
         };
     }
     let read_guard_active = request_uses_read_guard(request);
-    if request.plan_file.is_some() {
+    if request.plan_file.is_some()
+        && (!read_guard_active || !plan_file_needs_graph_for_read_guard(request))
+    {
         return GraphAnalysis {
             graph: None,
             issues: Vec::new(),
@@ -153,7 +156,10 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
         };
     }
     let stored = load_or_update(request, &mut JavaScriptFrontend);
-    if stored.graph.is_none() && read_guard_active && (request.all || request.only) {
+    if stored.graph.is_none()
+        && read_guard_active
+        && (request.all || request.only || request.plan_file.is_some())
+    {
         let workspace_root = Path::new(&request.workspace_root);
         let graph = if workspace_root.is_absolute() && workspace_root.is_dir() {
             let project_roots = manifest_project_roots(request);

@@ -301,6 +301,14 @@ export function isWriteOnlyOpenFlag(flags) {
   return typeof flags === "number" && (flags & O_ACCMODE) === O_WRONLY;
 }
 
+function addAncestorDirs(targetSet, pathStr) {
+  let cursor = pathStr;
+  for (let idx = cursor.lastIndexOf("/"); idx !== -1; idx = cursor.lastIndexOf("/")) {
+    cursor = cursor.slice(0, idx);
+    targetSet.add(cursor);
+  }
+}
+
 export function buildAllowlist(config) {
   let allowAll = false;
   const projectRoots = [];
@@ -314,11 +322,7 @@ export function buildAllowlist(config) {
     }
     projectRootExact.add(trimmed);
     projectRoots.push(`${trimmed}/`);
-    let cursor = trimmed;
-    for (let idx = cursor.lastIndexOf("/"); idx !== -1; idx = cursor.lastIndexOf("/")) {
-      cursor = cursor.slice(0, idx);
-      ancestorDirs.add(cursor);
-    }
+    addAncestorDirs(ancestorDirs, trimmed);
   }
   for (const raw of config.allowedAncestorDirs || []) {
     const trimmed = normalizeSlashes(String(raw)).replace(/^\.\//, "").replace(/\/+$/, "");
@@ -332,14 +336,32 @@ export function buildAllowlist(config) {
   const impactExact = new Set();
   const impactPrefixes = [];
   const impactRegexes = [];
+  const globDirExact = new Set();
+  const globDeepPrefixes = [];
+  const globShallowDirs = new Set();
+  let allowRootGlobDirTraversal = false;
   for (const raw of config.allowedImpactPaths || []) {
     const trimmed = normalizeSlashes(String(raw)).replace(/^\.\//, "").replace(/\/+$/, "");
     if (trimmed === "" || trimmed === "." || trimmed === "**") {
       allowAll = true;
       break;
     }
-    if (trimmed.includes("*")) impactRegexes.push(compileGlobRegex(trimmed));
-    else {
+    if (trimmed.includes("*")) {
+      impactRegexes.push(compileGlobRegex(trimmed));
+      const prefix = globLiteralPrefix(trimmed);
+      if (prefix.length > 0 && prefix !== ".") {
+        globDirExact.add(prefix);
+        addAncestorDirs(ancestorDirs, prefix);
+        const remainder = trimmed.slice(prefix.length).replace(/^\/+/, "");
+        if (remainder.includes("**") || remainder.includes("/")) {
+          globDeepPrefixes.push(`${prefix}/`);
+        } else {
+          globShallowDirs.add(prefix);
+        }
+      } else if (trimmed.startsWith("**/")) {
+        allowRootGlobDirTraversal = true;
+      }
+    } else {
       impactExact.add(trimmed);
       impactPrefixes.push(`${trimmed}/`);
     }
@@ -353,5 +375,9 @@ export function buildAllowlist(config) {
     impactExact,
     impactPrefixes,
     impactRegexes,
+    globDirExact,
+    globDeepPrefixes,
+    globShallowDirs,
+    allowRootGlobDirTraversal,
   };
 }

@@ -459,7 +459,11 @@ The plan JSON carries `scope`, `tasks`, and `issues`. A task has `id`,
 that owns it, optional `reachedFiles` and `selectedFiles` lists for narrowed
 test selection, optional `cacheInputs` (`cacheable`, `projectRoots`,
 `impactPaths`, `extraFiles`) carrying the planner's receipt input closure for
-`run` and `--plan-file`, and an optional `causes` list naming every reason it was
+`run` and `--plan-file`, optional `readGuardAllowlist` (`allowedProjectRoots`,
+`allowedImpactPaths`, `allowedExtraFiles`, `allowedAncestorDirs`) carrying the
+planner's workspace read-guard allowlist for runnable guarded test tasks when
+read enforcement is active so `--plan-file` runs without re-parsing the
+dependency graph, and an optional `causes` list naming every reason it was
 selected: a direct task input, a prerequisite of another selected task, a
 changed path, a changed export, a reached import (with its location, the
 module it was imported from, and the symbols), a plan issue, or a fallback

@@ -118,7 +118,7 @@ pub(super) fn expand_project_dependency_roots<'a>(
     Some(roots)
 }
 
-pub(super) fn snapshot_pattern_globs(prefix: &str, suffix: &str) -> Vec<String> {
+pub(crate) fn snapshot_pattern_globs(prefix: &str, suffix: &str) -> Vec<String> {
     if prefix.ends_with('/') {
         if suffix.starts_with('/') {
             vec![format!("{prefix}**{suffix}")]

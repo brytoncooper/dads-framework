@@ -67,7 +67,15 @@ pub(super) fn prepare_tasks(
         .map(|task| (task.id.as_str(), task))
         .collect();
     let planned_ids: BTreeSet<&str> = plan.tasks.iter().map(|d| d.id.as_str()).collect();
-    let allowlist_builder = read_guard_active.then(|| AllowlistBuilder::new(manifest, graph));
+    let needs_fallback_builder = read_guard_active
+        && plan.tasks.iter().any(|decision| {
+            decision.decision == "run"
+                && decision.read_guard_allowlist.is_none()
+                && declared
+                    .get(decision.id.as_str())
+                    .is_some_and(|task| should_guard_task(&task.kind, &task.execution))
+        });
+    let allowlist_builder = needs_fallback_builder.then(|| AllowlistBuilder::new(manifest, graph));
     let mut staged = Vec::with_capacity(plan.tasks.len());
     for decision in &plan.tasks {
         let task = declared
@@ -88,10 +96,17 @@ pub(super) fn prepare_tasks(
             .filter(|dep| planned_ids.contains(dep.as_str()))
             .cloned()
             .collect();
-        let allowlist = allowlist_builder.as_ref().and_then(|builder| {
-            (decision.decision == "run" && should_guard_task(&task.kind, &execution))
-                .then(|| builder.for_task(task, decision))
-        });
+        let allowlist = if read_guard_active
+            && decision.decision == "run"
+            && should_guard_task(&task.kind, &execution)
+        {
+            decision
+                .read_guard_allowlist
+                .clone()
+                .or_else(|| allowlist_builder.as_ref().map(|b| b.for_task(task, decision)))
+        } else {
+            None
+        };
         staged.push((
             *task,
             execution,

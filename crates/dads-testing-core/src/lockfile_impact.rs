@@ -6,7 +6,7 @@ use crate::lockfile_parse::{
     PackageSnapshot, is_toolchain_package, only_dependency_blocks_changed,
     parse_lockfile_v3_packages,
 };
-use crate::lockfile_pnpm::{parse_pnpm_lockfile_v9_packages, scoped_pnpm_widen_importers};
+use crate::lockfile_pnpm::diff_pnpm_lockfile_v9;
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
@@ -94,21 +94,17 @@ pub(crate) fn analyze_lockfile_impact(
         return report;
     }
 
-    report.seeded_modules = graph.modules_importing_external_packages(&diff.impacted_packages);
+    let mut seeded = graph.modules_importing_external_packages(&diff.impacted_packages);
+    if let Some(ref dirs) = diff.scoped_importer_dirs {
+        seeded.retain(|path| dirs.iter().any(|dir| crate::scope::path_is_inside(path, dir)));
+    }
+    report.seeded_modules = seeded;
     report.handled_paths.insert(lockfile_path.to_owned());
     if pkg_changed {
         report.handled_paths.insert(MANIFEST_PATH.to_owned());
     }
     if pnpm_lock_changed {
-        for path in &scope.changed_paths {
-            if path.ends_with("/package.json")
-                && let Some(base_pkg) = read_git_file(workspace_root, base_ref, path)
-                && let Some(head_pkg) = read_target_file(workspace_root, scope, path)
-                && only_dependency_blocks_changed(&base_pkg, &head_pkg)
-            {
-                report.handled_paths.insert(path.clone());
-            }
-        }
+        collect_handled_workspace_manifests(workspace_root, base_ref, scope, &mut report);
     }
     report.widened_importer_dirs = diff.widened_importer_dirs;
     report.impacted_packages = diff.impacted_packages;
@@ -134,6 +130,23 @@ pub(crate) fn analyze_lockfile_impact(
         )
     });
     report
+}
+
+fn collect_handled_workspace_manifests(
+    workspace_root: &Path,
+    base_ref: &str,
+    scope: &ResolvedScope,
+    report: &mut LockfileImpactReport,
+) {
+    for path in &scope.changed_paths {
+        if path.ends_with("/package.json")
+            && let Some(base_pkg) = read_git_file(workspace_root, base_ref, path)
+            && let Some(head_pkg) = read_target_file(workspace_root, scope, path)
+            && only_dependency_blocks_changed(&base_pkg, &head_pkg)
+        {
+            report.handled_paths.insert(path.clone());
+        }
+    }
 }
 
 fn validate_manifest_change(
@@ -165,6 +178,7 @@ fn validate_manifest_change(
 
 struct LockfileDiffOutcome {
     impacted_packages: BTreeSet<String>,
+    scoped_importer_dirs: Option<BTreeSet<String>>,
     widened_importer_dirs: BTreeSet<String>,
     newly_added_only: bool,
     must_widen: bool,
@@ -174,27 +188,24 @@ struct LockfileDiffOutcome {
 fn diff_lockfiles_v3(base_raw: &str, head_raw: &str) -> Option<LockfileDiffOutcome> {
     let base_map = parse_lockfile_v3_packages(base_raw)?;
     let head_map = parse_lockfile_v3_packages(head_raw)?;
-    diff_lockfile_maps(&base_map, &head_map, None)
+    diff_lockfile_maps(&base_map, &head_map)
 }
 
 fn diff_pnpm_lockfiles_v9(base_raw: &str, head_raw: &str) -> Option<LockfileDiffOutcome> {
-    let (base, head) = parse_pnpm_lockfile_v9_packages(base_raw, head_raw)?;
-    diff_lockfile_maps(
-        &base.packages,
-        &head.packages,
-        Some((&base.importers, &head.importers)),
-    )
+    let out = diff_pnpm_lockfile_v9(base_raw, head_raw)?;
+    Some(LockfileDiffOutcome {
+        impacted_packages: out.impacted_packages,
+        scoped_importer_dirs: out.scoped_importer_dirs,
+        widened_importer_dirs: out.widened_importer_dirs,
+        newly_added_only: out.newly_added_only,
+        must_widen: out.must_widen,
+        widen_reason: out.widen_reason,
+    })
 }
-
-type ImporterMaps<'a> = (
-    &'a BTreeMap<String, BTreeSet<String>>,
-    &'a BTreeMap<String, BTreeSet<String>>,
-);
 
 fn diff_lockfile_maps(
     base_map: &BTreeMap<String, PackageSnapshot>,
     head_map: &BTreeMap<String, PackageSnapshot>,
-    pnpm_importers: Option<ImporterMaps<'_>>,
 ) -> Option<LockfileDiffOutcome> {
 
     let mut direct_changed = BTreeSet::new();
@@ -243,6 +254,7 @@ fn diff_lockfile_maps(
         if !all_packages.contains(pkg) {
             return Some(LockfileDiffOutcome {
                 impacted_packages: BTreeSet::new(),
+                scoped_importer_dirs: None,
                 widened_importer_dirs: BTreeSet::new(),
                 newly_added_only: false,
                 must_widen: true,
@@ -274,26 +286,21 @@ fn diff_lockfile_maps(
             None
         }
     });
-    let mut widened_importer_dirs = BTreeSet::new();
     if let Some(reason) = trigger_reason {
-        if let Some((base_imp, head_imp)) = pnpm_importers
-            && let Some(scoped) = scoped_pnpm_widen_importers(base_imp, head_imp, &closure)
-        {
-            widened_importer_dirs = scoped;
-        } else {
-            return Some(LockfileDiffOutcome {
-                impacted_packages: closure,
-                widened_importer_dirs,
-                newly_added_only: false,
-                must_widen: true,
-                widen_reason: Some(reason),
-            });
-        }
+        return Some(LockfileDiffOutcome {
+            impacted_packages: closure,
+            scoped_importer_dirs: None,
+            widened_importer_dirs: BTreeSet::new(),
+            newly_added_only: false,
+            must_widen: true,
+            widen_reason: Some(reason),
+        });
     }
 
     Some(LockfileDiffOutcome {
         impacted_packages: closure,
-        widened_importer_dirs,
+        scoped_importer_dirs: None,
+        widened_importer_dirs: BTreeSet::new(),
         newly_added_only: existing_changed_or_removed.is_empty() && !newly_added.is_empty(),
         must_widen: false,
         widen_reason: None,

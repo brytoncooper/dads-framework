@@ -203,7 +203,7 @@ function buildSafeIgnorePaths(projectDirs: readonly string[]): readonly string[]
   const ignores: string[] = [];
   const hasDocsProject = projectDirs.some((dir) => dir === "docs" || dir.startsWith("docs/"));
   if (!hasDocsProject) ignores.push("docs/**");
-  ignores.push(".github/**", "**/*.md", "**/*.mdx");
+  ignores.push(".github/**", ".agents/**", ".claude/**", ".cursor/**", "**/*.md", "**/*.mdx");
   return ignores;
 }
 

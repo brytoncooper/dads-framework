@@ -15,6 +15,7 @@ mod discover;
 mod discover_scan;
 mod discover_schema;
 mod discover_vitest;
+mod discover_vitest_tiers;
 mod execute;
 mod git;
 pub mod graph;

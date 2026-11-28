@@ -4,6 +4,7 @@
 //! extracts statically verifiable `setupFiles`, and fails closed (`dynamic_setup_files = true`)
 //! whenever `setupFiles` uses a non-literal expression.
 
+use crate::discover_vitest_tiers::{INTEGRATION_TIER_SUFFIXES, VitestTierInfo, inspect_vitest_tiers};
 use crate::manifest::{FileNarrowing, ImpactMode, TaskExecution, TaskKind, TestingManifest};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -24,6 +25,7 @@ pub(crate) struct VitestDiscovery {
     pub(crate) config_path: Option<String>,
     pub(crate) setup_files: Vec<String>,
     pub(crate) dynamic_setup_files: bool,
+    pub(crate) tiers: VitestTierInfo,
 }
 
 /// Ensures discovered Vitest commands always run non-interactively (`vitest run`) instead of
@@ -89,13 +91,14 @@ pub(crate) fn apply_auto_vitest_narrowing(
         ".spec.ts".to_owned(),
         ".spec.tsx".to_owned(),
     ];
-    let default_excludes = if exclude_integration_tiers {
-        vec![
-            ".integration.test.ts".to_owned(),
-            ".integration.test.tsx".to_owned(),
-            ".e2e.test.ts".to_owned(),
-            ".e2e.test.tsx".to_owned(),
-        ]
+    let default_excludes = if exclude_integration_tiers || inspection.tiers.excludes_integration_tiers {
+        let mut set: BTreeSet<String> = if exclude_integration_tiers {
+            INTEGRATION_TIER_SUFFIXES.iter().map(|s| (*s).to_owned()).collect()
+        } else {
+            BTreeSet::new()
+        };
+        set.extend(inspection.tiers.excluded_tier_suffixes.iter().cloned());
+        set.into_iter().collect()
     } else {
         Vec::new()
     };
@@ -134,6 +137,7 @@ pub(crate) fn inspect_project_vitest_config(
             config_path: None,
             setup_files: Vec::new(),
             dynamic_setup_files: false,
+            tiers: VitestTierInfo::default(),
         };
     };
     let Ok(source) = fs::read_to_string(workspace_root.join(&rel_config)) else {
@@ -141,13 +145,16 @@ pub(crate) fn inspect_project_vitest_config(
             config_path: Some(rel_config),
             setup_files: Vec::new(),
             dynamic_setup_files: true,
+            tiers: VitestTierInfo::default(),
         };
     };
     let (setup_files, dynamic_setup_files) = extract_static_setup_files(&source, project_root);
+    let tiers = inspect_vitest_tiers(&source);
     VitestDiscovery {
         config_path: Some(rel_config),
         setup_files,
         dynamic_setup_files,
+        tiers,
     }
 }
 

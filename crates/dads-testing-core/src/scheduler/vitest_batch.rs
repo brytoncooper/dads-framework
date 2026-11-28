@@ -11,6 +11,7 @@ use super::vitest_report::{
     normalize_relative_str, normalize_report_path,
 };
 use super::worker::execute_task;
+use crate::discover_vitest_tiers::DADS_TEST_EXPLICIT_FILES_ENV;
 use crate::manifest::TaskExecution;
 use crate::protocol::{ReadGuardMode, TaskOutput, TaskRunResult};
 use std::collections::{BTreeMap, BTreeSet};
@@ -94,6 +95,9 @@ fn append_vitest_batch_args(
         .args
         .push(format!("--outputFile={}", report_path.display()));
 
+    execution
+        .env
+        .insert(DADS_TEST_EXPLICIT_FILES_ENV.to_owned(), "1".to_owned());
     let mut seen = BTreeSet::new();
     for member in members {
         for file in &member.selected_files {

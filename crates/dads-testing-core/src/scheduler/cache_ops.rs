@@ -6,6 +6,7 @@ use super::read_guard_allowlist::AllowlistBuilder;
 use super::receipt_keys::compute_task_receipt_key;
 use super::results::cached_task_result;
 use super::stream;
+use crate::discover_vitest_tiers::DADS_TEST_EXPLICIT_FILES_ENV;
 use crate::execute::{TestingError, message};
 use crate::graph::DependencyGraph;
 use crate::manifest::{DeclaredTask, TaskExecution, TestingManifest};
@@ -84,6 +85,9 @@ pub(super) fn prepare_tasks(
         let mut execution = task.execution.clone();
         let base_args_len = execution.args.len();
         if !decision.selected_files.is_empty() {
+            execution
+                .env
+                .insert(DADS_TEST_EXPLICIT_FILES_ENV.to_owned(), "1".to_owned());
             for file in &decision.selected_files {
                 execution
                     .args

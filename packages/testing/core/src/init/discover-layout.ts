@@ -77,6 +77,7 @@ function buildNxLayout(
       combinedExcludes,
     );
   }
+  mergeNestedUnownedPackageDirs(workspaceRoot, relFiles, nxIgnores, seenRoots, projects, combinedFiles);
   return {
     kind: "nx-project-json",
     packageManager: detected.packageManager,
@@ -109,6 +110,58 @@ function mergeWorkspacePackagesIntoNxLayout(
       projects,
       combinedExcludes,
     );
+  }
+}
+
+const nestedPackageSkipDirs = new Set(["fixtures", "__fixtures__", "templates", "examples", "node_modules", "dist"]);
+
+function mergeNestedUnownedPackageDirs(
+  workspaceRoot: string,
+  nxProjectFiles: readonly string[],
+  nxIgnores: readonly string[],
+  seenRoots: Set<string>,
+  projects: ScannedProject[],
+  combinedFiles: Set<string>,
+): void {
+  const topDirs = new Set<string>();
+  for (const rel of nxProjectFiles) {
+    const slash = rel.indexOf("/");
+    if (slash > 0) topDirs.add(rel.slice(0, slash));
+  }
+  for (const top of topDirs) {
+    for (const child of readEntriesSafe(join(workspaceRoot, top))) {
+      if (!child.isDirectory() || child.isSymbolicLink()) continue;
+      const childRel = `${top}/${child.name}`;
+      if (ignoredWalkDirs.has(child.name) || seenRoots.has(childRel) || matchesNxIgnore(childRel, nxIgnores)) continue;
+      scanNestedPackageApps(workspaceRoot, childRel, 2, nxIgnores, seenRoots, projects, combinedFiles);
+    }
+  }
+}
+
+function scanNestedPackageApps(
+  workspaceRoot: string,
+  prefix: string,
+  depthLeft: number,
+  nxIgnores: readonly string[],
+  seenRoots: Set<string>,
+  projects: ScannedProject[],
+  combinedFiles: Set<string>,
+): void {
+  if (depthLeft === 0) return;
+  for (const entry of readEntriesSafe(join(workspaceRoot, prefix))) {
+    if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+    if (ignoredWalkDirs.has(entry.name) || nestedPackageSkipDirs.has(entry.name)) continue;
+    const rel = `${prefix}/${entry.name}`;
+    if (seenRoots.has(rel) || matchesNxIgnore(rel, nxIgnores)) continue;
+    const pkgRel = `${rel}/package.json`;
+    const scanned = readScannedProject(workspaceRoot, pkgRel);
+    if (scanned.valid) {
+      projects.push(scanned.project);
+      seenRoots.add(rel);
+      combinedFiles.add(pkgRel);
+    } else {
+      scanNestedPackageApps(workspaceRoot, rel, depthLeft - 1, nxIgnores, seenRoots, projects, combinedFiles);
+    }
   }
 }
 

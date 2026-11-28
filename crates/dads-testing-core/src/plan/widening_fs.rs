@@ -4,7 +4,7 @@ use super::PlanEvidence;
 use crate::graph::DependencyGraph;
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue};
-use crate::scope::{deepest_project_for_path, is_isolated_test_file};
+use crate::scope::{deepest_project_for_path, is_isolated_test_file, is_standard_test_path};
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -134,6 +134,7 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
                     .workspace
                     .dynamic_import_scopes
                     .contains_key(&u.path)
+                && (graph.has_importers(&u.path) || is_test_or_setup_path(&u.path, manifest))
         })
         .map(|u| u.path)
         .collect();
@@ -152,6 +153,19 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
             detail: "depends on an unresolved dynamic filesystem read while uncovered files changed; widened conservatively (enable --enforce-declared-reads to verify at runtime).",
         },
     );
+}
+
+fn is_test_or_setup_path(path: &str, manifest: &TestingManifest) -> bool {
+    if is_standard_test_path(path) {
+        return true;
+    }
+    manifest.tasks.iter().any(|task| {
+        task.execution.file_narrowing.as_ref().is_some_and(|n| {
+            n.setup_files.iter().any(|s| s == path)
+                || (n.suffixes.iter().any(|s| path.ends_with(s))
+                    && !n.exclude_suffixes.iter().any(|e| path.ends_with(e)))
+        })
+    })
 }
 
 /// When any changed path has been deleted from disk, its reverse edges vanish from the current

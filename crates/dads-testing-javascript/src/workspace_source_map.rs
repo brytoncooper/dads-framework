@@ -48,6 +48,10 @@ impl WorkspaceSourceMap {
         map
     }
 
+    pub(crate) fn has_workspace_package(&self, specifier: &str) -> bool {
+        external_package_name(specifier).is_some_and(|name| self.packages.contains_key(name))
+    }
+
     pub(crate) fn resolve_specifier(&self, specifier: &str) -> Option<String> {
         let canonical_root = self.canonical_root.as_deref()?;
         let pkg_name = external_package_name(specifier)?;

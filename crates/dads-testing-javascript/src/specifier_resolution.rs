@@ -101,6 +101,8 @@ pub(crate) fn resolve_static_specifier(
             if ctx
                 .workspace_index
                 .is_known_external_specifier(ctx.path, specifier)
+                || (is_stylesheet_specifier(specifier)
+                    && ctx.workspace_index.has_workspace_package(specifier))
             {
                 return None;
             }
@@ -210,6 +212,13 @@ fn is_local_specifier(specifier: &str) -> bool {
 
 fn is_bare_specifier(specifier: &str) -> bool {
     !is_local_specifier(specifier) && !specifier.contains(':')
+}
+
+fn is_stylesheet_specifier(specifier: &str) -> bool {
+    specifier.ends_with(".css")
+        || specifier.ends_with(".scss")
+        || specifier.ends_with(".sass")
+        || specifier.ends_with(".less")
 }
 
 fn is_node_builtin(specifier: &str) -> bool {

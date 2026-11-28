@@ -134,7 +134,7 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
                     .workspace
                     .dynamic_import_scopes
                     .contains_key(&u.path)
-                && (graph.has_importers(&u.path) || is_test_or_setup_path(&u.path, manifest))
+                && unresolved_fs_reader_reaches_tests(&u.path, manifest, graph)
         })
         .map(|u| u.path)
         .collect();
@@ -153,6 +153,39 @@ pub(super) fn widen_unresolved_fs_readers<'a>(
             detail: "depends on an unresolved dynamic filesystem read while uncovered files changed; widened conservatively (enable --enforce-declared-reads to verify at runtime).",
         },
     );
+}
+
+fn unresolved_fs_reader_reaches_tests(
+    path: &str,
+    manifest: &TestingManifest,
+    graph: &DependencyGraph,
+) -> bool {
+    if is_test_or_setup_path(path, manifest) {
+        return true;
+    }
+    if !graph.has_importers(path) {
+        return false;
+    }
+    let reached = graph.reachability_from(vec![path.to_owned()]);
+    if reached
+        .paths
+        .iter()
+        .any(|p| is_test_or_setup_path(p, manifest))
+    {
+        return true;
+    }
+    // If any reached project has a non-narrowed reachability test task (custom runner without
+    // declared test suffixes), fail closed conservatively.
+    reached.paths.iter().any(|p| {
+        deepest_project_for_path(&manifest.projects, p).is_some_and(|proj| {
+            manifest.tasks.iter().any(|t| {
+                t.project == proj.id
+                    && t.kind == TaskKind::Test
+                    && t.impact.mode == ImpactMode::Reachability
+                    && t.execution.file_narrowing.is_none()
+            })
+        })
+    })
 }
 
 fn is_test_or_setup_path(path: &str, manifest: &TestingManifest) -> bool {

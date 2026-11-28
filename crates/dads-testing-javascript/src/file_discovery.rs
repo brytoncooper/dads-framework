@@ -71,6 +71,10 @@ impl WorkspaceFileIndex {
             .is_known_external_specifier(importer_path, specifier)
     }
 
+    pub(crate) fn has_workspace_package(&self, specifier: &str) -> bool {
+        self.workspace_sources.has_workspace_package(specifier)
+    }
+
     pub(crate) fn resolve_workspace_package_source(&self, specifier: &str) -> Option<String> {
         self.workspace_sources.resolve_specifier(specifier)
     }

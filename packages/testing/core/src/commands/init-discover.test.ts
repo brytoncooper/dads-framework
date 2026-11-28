@@ -107,7 +107,7 @@ describe("dad-test init --discover", () => {
     expect(stdout).toContain(
       "pureFactories: React.forwardRef, React.memo, createContext, cva, defineStore, mysqlTable, pgTable, sqliteTable, v.*, z.*",
     );
-    expect(stdout).toContain("ignorePaths: docs/**, .github/**, **/*.md");
+    expect(stdout).toContain("ignorePaths: docs/**, .github/**, .agents/**, .claude/**, .cursor/**, **/*.md, **/*.mdx");
     expect(stdout).toContain("setupFiles: test/setup-a.ts, test/setup-b.ts");
     expect(stdout).toContain("sql.migrationRoots: db/drizzle, db/migrations, migrations");
     expect(stdout).toContain("Run npx dad-test audit --fix to discover dynamic file reads.");
@@ -117,7 +117,7 @@ describe("dad-test init --discover", () => {
       schemaVersion: 1,
       workspace: {
         root: ".",
-        ignorePaths: ["docs/**", ".github/**", "**/*.md"],
+        ignorePaths: ["docs/**", ".github/**", ".agents/**", ".claude/**", ".cursor/**", "**/*.md", "**/*.mdx"],
         pureFactories: [
           "React.forwardRef",
           "React.memo",

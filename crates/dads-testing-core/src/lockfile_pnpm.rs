@@ -88,6 +88,11 @@ fn parse_single_pnpm_v9(raw: &str) -> Option<BTreeMap<String, PackageSnapshot>> 
         if indent == 2 && trimmed.ends_with(':') {
             let raw_key = unquote_yaml_key(trimmed.trim_end_matches(':'));
             let (name, version) = split_pnpm_pkg_key(&raw_key)?;
+            let base_meta = if section == "snapshots:" {
+                map.get(strip_peer_suffix(&raw_key)).cloned()
+            } else {
+                None
+            };
             let entry = map
                 .entry(raw_key.clone())
                 .or_insert_with(|| PackageSnapshot {
@@ -102,14 +107,10 @@ fn parse_single_pnpm_v9(raw: &str) -> Option<BTreeMap<String, PackageSnapshot>> 
                     has_install_script: false,
                     deps: BTreeSet::new(),
                 });
-            if section == "snapshots:" {
-                // Ensure snapshot-only entries (peer-parameterized keys) retain resolution identity.
-                let base_key = strip_peer_suffix(&raw_key);
-                if let Some(pkg_meta) = map.get(base_key).cloned() {
-                    entry.integrity = pkg_meta.integrity;
-                    entry.has_bin = pkg_meta.has_bin;
-                    entry.has_install_script = pkg_meta.has_install_script;
-                }
+            if let Some(pkg_meta) = base_meta {
+                entry.integrity = pkg_meta.integrity;
+                entry.has_bin = pkg_meta.has_bin;
+                entry.has_install_script = pkg_meta.has_install_script;
             }
             current_key = Some(raw_key);
             in_deps_block = false;

@@ -90,8 +90,7 @@ pub(crate) fn porcelain_status_is_clean_for_head(
         return true;
     }
     let allowed = normalize_manifest_rel(manifest_path.unwrap_or("dads.testing.json"));
-    let mut entries = status.split(|&b| b == 0);
-    while let Some(entry) = entries.next() {
+    for entry in status.split(|&b| b == 0) {
         if entry.is_empty() {
             continue;
         }

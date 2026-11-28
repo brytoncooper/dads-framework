@@ -200,13 +200,13 @@ pub(super) fn widen_unresolved_module_importers_on_delete<'a>(
     );
 }
 
-struct UnresolvedWidenSpec<'a> {
-    code: &'a str,
-    fallback_on_unowned: bool,
-    detail: &'a str,
+pub(super) struct UnresolvedWidenSpec<'a> {
+    pub(super) code: &'a str,
+    pub(super) fallback_on_unowned: bool,
+    pub(super) detail: &'a str,
 }
 
-fn widen_reached_unresolved_projects<'a>(
+pub(super) fn widen_reached_unresolved_projects<'a>(
     manifest: &'a TestingManifest,
     graph: &DependencyGraph,
     evidence: &mut PlanEvidence<'a>,

@@ -8,6 +8,7 @@ use super::widening_fs::{
 };
 use super::widening_paths::{
     collect_graph_changed_paths, is_javascript_source_path, widen_uncovered_paths,
+    widen_unresolved_workspace_dependents,
 };
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
@@ -184,6 +185,7 @@ pub(super) fn widen_through_graph<'a>(
         evidence,
         has_non_test_reachability,
     );
+    widen_unresolved_workspace_dependents(manifest, graph, evidence, has_non_test_reachability);
 }
 
 /// The frontend answered, but not about these paths: ONLY their owning projects widen through

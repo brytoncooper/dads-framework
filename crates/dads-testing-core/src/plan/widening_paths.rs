@@ -147,3 +147,82 @@ pub(super) fn is_javascript_source_path(path: &str) -> bool {
 fn is_declared_non_code(path: &str, suffixes: &[String]) -> bool {
     suffixes.iter().any(|suffix| path.ends_with(suffix))
 }
+
+/// When an upstream workspace project changes semantically (e.g. a compiled `dist/` package whose
+/// `exports` cannot be traced directly into `src/`), any downstream dependent declared via
+/// `fallbackDependencies` that carries an unresolved module import could depend on the changed
+/// upstream package. Widen those unresolved importers conservatively so compiled-`dist/` monorepos
+/// never silently skip affected downstream consumers.
+pub(super) fn widen_unresolved_workspace_dependents<'a>(
+    manifest: &'a TestingManifest,
+    graph: &DependencyGraph,
+    evidence: &mut PlanEvidence<'a>,
+    has_non_test_reachability: bool,
+) {
+    let mut impacted: std::collections::BTreeSet<&'a str> = std::collections::BTreeSet::new();
+    impacted.extend(evidence.reachability_impacted_projects.iter().copied());
+    impacted.extend(
+        evidence
+            .typecheck_reachability_impacted_projects
+            .iter()
+            .copied(),
+    );
+    impacted.extend(evidence.uncertainty_impacted_projects.iter().copied());
+    impacted.extend(
+        evidence
+            .typecheck_uncertainty_impacted_projects
+            .iter()
+            .copied(),
+    );
+    if impacted.is_empty() {
+        return;
+    }
+
+    let mut downstream = impacted.clone();
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for project in &manifest.projects {
+            if !downstream.contains(project.id.as_str())
+                && project
+                    .fallback_dependencies
+                    .iter()
+                    .any(|dep| downstream.contains(dep.as_str()))
+            {
+                downstream.insert(project.id.as_str());
+                changed = true;
+            }
+        }
+    }
+
+    let seeds: Vec<String> = graph
+        .uncertainties()
+        .into_iter()
+        .filter(|u| {
+            matches!(
+                u.code.as_str(),
+                "unresolved-bare-module" | "unresolved-local-module" | "unresolved-module-scheme"
+            )
+        })
+        .filter(|u| {
+            crate::scope::deepest_project_for_path(&manifest.projects, &u.path)
+                .is_some_and(|project| downstream.contains(project.id.as_str()))
+        })
+        .map(|u| u.path)
+        .collect();
+    if seeds.is_empty() {
+        return;
+    }
+    super::widening_fs::widen_reached_unresolved_projects(
+        manifest,
+        graph,
+        evidence,
+        has_non_test_reachability,
+        seeds,
+        super::widening_fs::UnresolvedWidenSpec {
+            code: "unresolved-workspace-dependency-import",
+            fallback_on_unowned: false,
+            detail: "depends on an unresolved module import in a downstream project of a changed workspace dependency; widened conservatively.",
+        },
+    );
+}

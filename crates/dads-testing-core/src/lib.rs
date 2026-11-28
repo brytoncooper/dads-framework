@@ -24,6 +24,7 @@ pub mod graph;
 mod hotspots;
 mod lockfile_impact;
 mod lockfile_parse;
+mod lockfile_pnpm;
 mod manifest;
 mod manifest_validate;
 mod plan;

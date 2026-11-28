@@ -3,15 +3,18 @@
 
 use crate::graph::DependencyGraph;
 use crate::lockfile_parse::{
-    is_toolchain_package, only_dependency_blocks_changed, parse_lockfile_v3_packages,
+    PackageSnapshot, is_toolchain_package, only_dependency_blocks_changed,
+    parse_lockfile_v3_packages,
 };
+use crate::lockfile_pnpm::parse_pnpm_lockfile_v9_packages;
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue, ResolvedScope};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const LOCKFILE_PATH: &str = "package-lock.json";
+const NPM_LOCKFILE_PATH: &str = "package-lock.json";
+const PNPM_LOCKFILE_PATH: &str = "pnpm-lock.yaml";
 const MANIFEST_PATH: &str = "package.json";
 
 #[derive(Debug, Default)]
@@ -28,9 +31,13 @@ pub(crate) fn analyze_lockfile_impact(
     graph: Option<&DependencyGraph>,
 ) -> LockfileImpactReport {
     let mut report = LockfileImpactReport::default();
-    let lock_changed = scope.changed_paths.iter().any(|p| p == LOCKFILE_PATH);
+    let npm_lock_changed = scope.changed_paths.iter().any(|p| p == NPM_LOCKFILE_PATH);
+    let pnpm_lock_changed = scope.changed_paths.iter().any(|p| p == PNPM_LOCKFILE_PATH);
     let pkg_changed = scope.changed_paths.iter().any(|p| p == MANIFEST_PATH);
-    if !lock_changed && !pkg_changed {
+    if !npm_lock_changed && !pnpm_lock_changed && !pkg_changed {
+        return report;
+    }
+    if npm_lock_changed && pnpm_lock_changed {
         return report;
     }
     let (Some(graph), Some(base_ref)) = (graph, scope.base.as_deref()) else {
@@ -40,22 +47,31 @@ pub(crate) fn analyze_lockfile_impact(
     if pkg_changed && !validate_manifest_change(workspace_root, base_ref, scope, &mut report) {
         return report;
     }
-    if !lock_changed {
+    let lockfile_path = if npm_lock_changed {
+        NPM_LOCKFILE_PATH
+    } else if pnpm_lock_changed {
+        PNPM_LOCKFILE_PATH
+    } else {
         return report;
-    }
+    };
 
-    let Some(base_lock) = read_git_file(workspace_root, base_ref, LOCKFILE_PATH) else {
+    let Some(base_lock) = read_git_file(workspace_root, base_ref, lockfile_path) else {
         return report;
     };
-    let Some(head_lock) = read_target_file(workspace_root, scope, LOCKFILE_PATH) else {
+    let Some(head_lock) = read_target_file(workspace_root, scope, lockfile_path) else {
         return report;
     };
-    let Some(diff) = diff_lockfiles_v3(&base_lock, &head_lock) else {
+    let diff_opt = if npm_lock_changed {
+        diff_lockfiles_v3(&base_lock, &head_lock)
+    } else {
+        diff_pnpm_lockfiles_v9(&base_lock, &head_lock)
+    };
+    let Some(diff) = diff_opt else {
         report.issues.push(PlanIssue {
-            path: Some(LOCKFILE_PATH.to_owned()),
+            path: Some(lockfile_path.to_owned()),
             ..PlanIssue::new(
                 "lockfile-parse-fallback",
-                "Could not parse package-lock.json (lockfileVersion 3); keeping conservative widening.",
+                format!("Could not parse {lockfile_path}; keeping conservative widening."),
                 IssueSeverity::Uncertainty,
                 IssueScope::Workspace,
             )
@@ -64,11 +80,11 @@ pub(crate) fn analyze_lockfile_impact(
     };
     if diff.must_widen {
         report.issues.push(PlanIssue {
-            path: Some(LOCKFILE_PATH.to_owned()),
+            path: Some(lockfile_path.to_owned()),
             ..PlanIssue::new(
                 "lockfile-toolchain-change",
                 diff.widen_reason.unwrap_or_else(|| {
-                    "package-lock.json changed a global toolchain package; keeping conservative widening.".to_owned()
+                    format!("{lockfile_path} changed a global toolchain package; keeping conservative widening.")
                 }),
                 IssueSeverity::Info,
                 IssueScope::Workspace,
@@ -78,25 +94,25 @@ pub(crate) fn analyze_lockfile_impact(
     }
 
     report.seeded_modules = graph.modules_importing_external_packages(&diff.impacted_packages);
-    report.handled_paths.insert(LOCKFILE_PATH.to_owned());
+    report.handled_paths.insert(lockfile_path.to_owned());
     if pkg_changed {
         report.handled_paths.insert(MANIFEST_PATH.to_owned());
     }
     report.impacted_packages = diff.impacted_packages;
     let detail = if report.seeded_modules.is_empty() && diff.newly_added_only {
         format!(
-            "package-lock.json added {} unused package(s) with no toolchain impact; 0 workspace modules import them.",
+            "{lockfile_path} added {} unused package(s) with no toolchain impact; 0 workspace modules import them.",
             report.impacted_packages.len()
         )
     } else {
         format!(
-            "package-lock.json impacted {} package(s), seeding {} workspace module(s).",
+            "{lockfile_path} impacted {} package(s), seeding {} workspace module(s).",
             report.impacted_packages.len(),
             report.seeded_modules.len()
         )
     };
     report.issues.push(PlanIssue {
-        path: Some(LOCKFILE_PATH.to_owned()),
+        path: Some(lockfile_path.to_owned()),
         ..PlanIssue::new(
             "lockfile-narrowed",
             detail,
@@ -144,11 +160,23 @@ struct LockfileDiffOutcome {
 fn diff_lockfiles_v3(base_raw: &str, head_raw: &str) -> Option<LockfileDiffOutcome> {
     let base_map = parse_lockfile_v3_packages(base_raw)?;
     let head_map = parse_lockfile_v3_packages(head_raw)?;
+    diff_lockfile_maps(&base_map, &head_map)
+}
+
+fn diff_pnpm_lockfiles_v9(base_raw: &str, head_raw: &str) -> Option<LockfileDiffOutcome> {
+    let (base_map, head_map) = parse_pnpm_lockfile_v9_packages(base_raw, head_raw)?;
+    diff_lockfile_maps(&base_map, &head_map)
+}
+
+fn diff_lockfile_maps(
+    base_map: &BTreeMap<String, PackageSnapshot>,
+    head_map: &BTreeMap<String, PackageSnapshot>,
+) -> Option<LockfileDiffOutcome> {
 
     let mut direct_changed = BTreeSet::new();
     let mut newly_added = BTreeSet::new();
     let mut existing_changed_or_removed = BTreeSet::new();
-    for (key, head_entry) in &head_map {
+    for (key, head_entry) in head_map {
         match base_map.get(key) {
             None => {
                 direct_changed.insert(head_entry.name.clone());
@@ -161,7 +189,7 @@ fn diff_lockfiles_v3(base_raw: &str, head_raw: &str) -> Option<LockfileDiffOutco
             _ => {}
         }
     }
-    for (key, base_entry) in &base_map {
+    for (key, base_entry) in base_map {
         if !head_map.contains_key(key) {
             direct_changed.insert(base_entry.name.clone());
             existing_changed_or_removed.insert(base_entry.name.clone());

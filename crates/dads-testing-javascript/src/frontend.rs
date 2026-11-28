@@ -8,7 +8,9 @@ use crate::file_discovery::{WorkspaceFileIndex, discover_javascript_files};
 use crate::graph_export::{copy_to_core_graph, copy_to_core_patch_parts};
 use crate::module_analysis::analyze_file;
 use crate::removed_paths::removed_javascript_path_exists;
-use crate::workspace::{git_output, is_javascript_path, workspace_relative_path};
+use crate::workspace::{
+    git_output, is_javascript_path, workspace_relative_path, worktree_is_clean_for_head,
+};
 use dads_testing_core::NativeRequest;
 use dads_testing_core::graph::DependencyGraph;
 use dads_testing_store::GraphFrontend;
@@ -185,14 +187,10 @@ pub fn analyze_request(request: &NativeRequest) -> Option<DependencyGraph> {
         if requested != current {
             return None;
         }
-        let worktree_status = git_output(
-            workspace_root,
-            &["status", "--porcelain=v1", "--untracked-files=all", "-z"],
-        )?;
-        if !worktree_status.is_empty() {
+        if !worktree_is_clean_for_head(workspace_root, request.manifest_path.as_deref()) {
             // A requested head only describes the current source tree when every tracked and
-            // untracked path is clean. Otherwise a base-to-head diff would be attributed using
-            // declarations from a different tree and could skip a broken consumer.
+            // untracked path (aside from an untracked manifest itself) is clean. Otherwise a
+            // base-to-head diff would be attributed using declarations from a different tree.
             return None;
         }
     }

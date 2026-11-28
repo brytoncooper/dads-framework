@@ -51,26 +51,37 @@ function buildNxLayout(
   packageManager: PackageManager,
   relFiles: readonly string[],
 ): WorkspaceLayout {
+  const projects: ScannedProject[] = [];
+  const invalidRoots: string[] = [];
+  for (const relFile of relFiles) {
+    const scanned = readScannedProject(workspaceRoot, relFile);
+    if (scanned.valid) projects.push(scanned.project);
+    else if (scanned.project.root !== ".") invalidRoots.push(scanned.project.root);
+  }
   return {
     kind: "nx-project-json",
     packageManager,
     projectFiles: deriveProjectJsonGlobs(relFiles),
-    excludeRoots: [],
-    projects: relFiles.map((relFile) => readScannedProject(workspaceRoot, relFile)),
+    excludeRoots: [...new Set(invalidRoots)].sort(compareText),
+    projects,
   };
 }
 
 function buildPackageJsonLayout(workspaceRoot: string, detected: DetectedWorkspace): WorkspaceLayout {
   const { projectFiles, excludeRoots } = translateWorkspacePatterns(detected.patterns);
-  const projects = detected.packageDirectories.map((directory) => {
+  const projects: ScannedProject[] = [];
+  const invalidRoots: string[] = [];
+  for (const directory of detected.packageDirectories) {
     const relFile = directory === "." ? "package.json" : `${directory}/package.json`;
-    return readScannedProject(workspaceRoot, relFile);
-  });
+    const scanned = readScannedProject(workspaceRoot, relFile);
+    if (scanned.valid) projects.push(scanned.project);
+    else if (scanned.project.root !== ".") invalidRoots.push(scanned.project.root);
+  }
   return {
     kind: "package-json",
     packageManager: detected.packageManager,
     projectFiles,
-    excludeRoots,
+    excludeRoots: [...new Set([...excludeRoots, ...invalidRoots])].sort(compareText),
     projects,
   };
 }
@@ -146,25 +157,32 @@ function readEntriesSafe(directory: string): readonly Dirent[] {
   }
 }
 
-function readScannedProject(workspaceRoot: string, relFile: string): ScannedProject {
+function readScannedProject(
+  workspaceRoot: string,
+  relFile: string,
+): { readonly valid: boolean; readonly project: ScannedProject } {
   const slash = relFile.lastIndexOf("/");
   const root = slash === -1 ? "." : relFile.slice(0, slash);
-  const targets = readDeclaredTargetNames(join(workspaceRoot, relFile));
-  return { root, targets };
+  const { valid, targets } = readDeclaredTargetNames(join(workspaceRoot, relFile));
+  return { valid, project: { root, targets } };
 }
 
-function readDeclaredTargetNames(filePath: string): ReadonlySet<string> {
+function readDeclaredTargetNames(filePath: string): {
+  readonly valid: boolean;
+  readonly targets: ReadonlySet<string>;
+} {
   const targets = new Set<string>();
   try {
     const parsed: unknown = JSON.parse(stripJsonComments(readFileSync(filePath, "utf8")));
-    if (!isRecord(parsed)) return targets;
+    if (!isRecord(parsed)) return { valid: false, targets };
     const source = isRecord(parsed["targets"]) ? parsed["targets"] : parsed["scripts"];
-    if (!isRecord(source)) return targets;
-    for (const key of Object.keys(source)) targets.add(key);
+    if (isRecord(source)) {
+      for (const key of Object.keys(source)) targets.add(key);
+    }
+    return { valid: true, targets };
   } catch {
-    // Unreadable project manifests are surfaced during native expansion.
+    return { valid: false, targets };
   }
-  return targets;
 }
 
 function stripRelativeSlashes(raw: string): string {

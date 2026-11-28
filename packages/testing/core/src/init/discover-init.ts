@@ -96,8 +96,13 @@ type TargetSpec = {
 
 const recognizedTargets: readonly TargetSpec[] = [
   { target: "test", kind: "test", impactMode: "reachability" },
+  { target: "test:unit", kind: "test", impactMode: "reachability" },
+  { target: "test:lib", kind: "test", impactMode: "reachability" },
   { target: "test:integration", kind: "test", impactMode: "reachability" },
   { target: "typecheck", kind: "typecheck", impactMode: "reachability" },
+  { target: "test:types", kind: "typecheck", impactMode: "reachability" },
+  { target: "type-check", kind: "typecheck", impactMode: "reachability" },
+  { target: "check-types", kind: "typecheck", impactMode: "reachability" },
   { target: "lint", kind: "lint", impactMode: "project" },
   { target: "build", kind: "build", impactMode: "project" },
 ];

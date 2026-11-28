@@ -8,5 +8,6 @@
 mod changed_export_evidence;
 mod conservative_widening;
 mod fixtures;
+mod head_clean_status;
 mod module_facts;
 mod uncertainty_locations;

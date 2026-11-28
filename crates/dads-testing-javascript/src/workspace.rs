@@ -64,3 +64,54 @@ pub(crate) fn git_output(workspace_root: &Path, args: &[&str]) -> Option<Vec<u8>
         .ok()?;
     output.status.success().then_some(output.stdout)
 }
+
+/// Returns true when the working tree matches `HEAD` cleanly enough for `--head` diff attribution.
+/// An untracked (`?? `) entry matching the requested manifest file itself (e.g. immediately after
+/// `dad-test init` before committing `dads.testing.json`) is allowed; any tracked modification or
+/// any other untracked file returns `false` (fail-closed).
+pub(crate) fn worktree_is_clean_for_head(
+    workspace_root: &Path,
+    manifest_path: Option<&str>,
+) -> bool {
+    let Some(status) = git_output(
+        workspace_root,
+        &["status", "--porcelain=v1", "--untracked-files=all", "-z"],
+    ) else {
+        return false;
+    };
+    porcelain_status_is_clean_for_head(&status, manifest_path)
+}
+
+pub(crate) fn porcelain_status_is_clean_for_head(
+    status: &[u8],
+    manifest_path: Option<&str>,
+) -> bool {
+    if status.is_empty() {
+        return true;
+    }
+    let allowed = normalize_manifest_rel(manifest_path.unwrap_or("dads.testing.json"));
+    let mut entries = status.split(|&b| b == 0);
+    while let Some(entry) = entries.next() {
+        if entry.is_empty() {
+            continue;
+        }
+        if entry.len() < 4 || &entry[..3] != b"?? " {
+            return false;
+        }
+        let Ok(path) = std::str::from_utf8(&entry[3..]) else {
+            return false;
+        };
+        if normalize_manifest_rel(path) != allowed {
+            return false;
+        }
+    }
+    true
+}
+
+fn normalize_manifest_rel(raw: &str) -> String {
+    let mut s = raw.replace('\\', "/");
+    while let Some(stripped) = s.strip_prefix("./") {
+        s = stripped.to_owned();
+    }
+    s
+}

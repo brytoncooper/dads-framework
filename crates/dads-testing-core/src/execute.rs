@@ -3,6 +3,7 @@
 use crate::boundaries::check_boundaries;
 use crate::boundaries_config::{load_boundaries_config, validate_workspace_boundaries};
 use crate::diagnose::build_diagnose;
+use crate::doctor::build_doctor;
 use crate::discover::expand_manifest;
 use crate::graph::DependencyGraph;
 use crate::hotspots::build_hotspots;
@@ -247,6 +248,11 @@ fn execute(
             result.diagnose = Some(build_diagnose(&manifest, &workspace_root, graph));
             Ok(result)
         }
+        Operation::Doctor => {
+            let mut result = result_for("doctor", empty_plan_for("doctor"));
+            result.doctor = Some(build_doctor(&manifest, &workspace_root, graph));
+            Ok(result)
+        }
         Operation::Hotspots => {
             let mut result = result_for("hotspots", empty_plan_for("hotspots"));
             result.hotspots = Some(build_hotspots(&manifest, graph, request.hotspots.as_ref()));
@@ -386,6 +392,7 @@ fn result_for(operation: &str, plan: PlanResult) -> OperationResult {
         plan,
         run: None,
         diagnose: None,
+        doctor: None,
         hotspots: None,
         manifest: None,
         boundaries: None,

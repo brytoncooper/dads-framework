@@ -16,6 +16,7 @@ mod discover_scan;
 mod discover_schema;
 mod discover_vitest;
 mod discover_vitest_tiers;
+mod doctor;
 mod execute;
 mod git;
 pub mod graph;
@@ -29,6 +30,7 @@ mod plan_file;
 mod plan_fingerprint;
 mod protocol;
 mod protocol_diagnose;
+mod protocol_doctor;
 mod protocol_read_guard;
 mod protocol_run;
 pub mod receipts;
@@ -53,7 +55,8 @@ pub use execute::{
     plan_file_needs_graph_for_read_guard, request_uses_read_guard,
 };
 pub use protocol::{
-    CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
+    CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, DoctorCounts,
+    DoctorFinding, DoctorResult, FallbackTrap,
     HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary, IssueScope,
     IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
     PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata, ReadGuardMode,

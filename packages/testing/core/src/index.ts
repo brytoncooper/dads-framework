@@ -1,6 +1,7 @@
 export {
   checkTestingBoundaries,
   diagnoseTesting,
+  doctorTesting,
   expandTestingManifest,
   hotspotsTesting,
   planTesting,
@@ -38,6 +39,7 @@ export {
 export { renderAuditResult, type TestingAuditResult, type TestingAuditTaskFinding } from "./commands/audit.js";
 export { renderBoundariesResult } from "./commands/check-boundaries.js";
 export { renderDiagnosis } from "./commands/diagnose.js";
+export { renderDoctorResult } from "./commands/doctor.js";
 export { renderHotspots } from "./commands/hotspots.js";
 export { listDadTestCommands, runDadTestCli, type DadTestCliIo } from "./dad-test-cli.js";
 export {

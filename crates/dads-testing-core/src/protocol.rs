@@ -127,6 +127,7 @@ pub enum Operation {
     Plan,
     Run,
     Diagnose,
+    Doctor,
     Hotspots,
     ExpandManifest,
     CheckBoundaries,
@@ -172,6 +173,8 @@ pub struct OperationResult {
     pub run: Option<RunResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnose: Option<DiagnoseResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doctor: Option<DoctorResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hotspots: Option<HotspotsResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -351,6 +354,7 @@ pub struct PlanCounts {
     pub skip_proven_unaffected: usize,
 }
 
+pub use crate::protocol_doctor::{DoctorCounts, DoctorFinding, DoctorResult};
 pub use crate::protocol_diagnose::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     RemediationSafety, WideningCulprit,

@@ -22,6 +22,8 @@ import type {
   TestingCheckBoundariesRequest,
   TestingDiagnoseRequest,
   TestingDiagnoseResult,
+  TestingDoctorRequest,
+  TestingDoctorResult,
   TestingExpandManifestRequest,
   TestingOperationRequest,
   TestingPlanResult,
@@ -33,7 +35,7 @@ export type * from "./testing-api-types.js";
 
 const protocolSchemaVersion = 1;
 
-type NativeOperation = "plan" | "run" | "diagnose" | "hotspots" | "expand-manifest" | "check-boundaries";
+type NativeOperation = "plan" | "run" | "diagnose" | "doctor" | "hotspots" | "expand-manifest" | "check-boundaries";
 
 type NativeResponse = {
   readonly schemaVersion: number;
@@ -43,6 +45,7 @@ type NativeResponse = {
     readonly plan: TestingPlanResult;
     readonly run?: TestingRunResult;
     readonly diagnose?: TestingDiagnoseResult;
+    readonly doctor?: TestingDoctorResult;
     readonly hotspots?: TestingHotspotsResult;
     readonly manifest?: unknown;
     readonly boundaries?: TestingBoundariesResult;
@@ -102,6 +105,14 @@ export async function diagnoseTesting(request: TestingDiagnoseRequest): Promise<
     throw new Error("The native testing engine returned a diagnose response without diagnose details.");
   }
   return response.diagnose;
+}
+
+export async function doctorTesting(request: TestingDoctorRequest): Promise<TestingDoctorResult> {
+  const response = await invokeNativeTestingEngine("doctor", request);
+  if (!response.doctor) {
+    throw new Error("The native testing engine returned a doctor response without doctor details.");
+  }
+  return response.doctor;
 }
 
 export async function hotspotsTesting(request: TestingHotspotsRequest): Promise<TestingHotspotsResult> {

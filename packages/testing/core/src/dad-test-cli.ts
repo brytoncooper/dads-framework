@@ -3,6 +3,7 @@ import type { OptionSpecification, ParsedArguments } from "./cli-arguments.js";
 import { auditCommand } from "./commands/audit.js";
 import { checkBoundariesCommand } from "./commands/check-boundaries.js";
 import { diagnoseCommand } from "./commands/diagnose.js";
+import { doctorCommand } from "./commands/doctor.js";
 import { expandCommand } from "./commands/expand.js";
 import { explainCommand } from "./commands/explain.js";
 import { hotspotsCommand } from "./commands/hotspots.js";
@@ -31,7 +32,7 @@ export type DadTestCommand = {
 
 const usage =
   [
-    "Usage: dad-test <plan|run|audit|explain|diagnose|hotspots|init|expand|check-boundaries> [options] [--json]",
+    "Usage: dad-test <plan|run|audit|explain|diagnose|doctor|hotspots|init|expand|check-boundaries> [options] [--json]",
     "",
     "Commands:",
     "  plan              Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --enforce-declared-reads, --no-enforce-declared-reads, --manifest)",
@@ -39,6 +40,7 @@ const usage =
     "  audit             Trace runtime workspace file reads per task and optionally patch dads.testing.json (--fix, --dry-run, --project, --task, --jobs, --manifest)",
     "  explain           Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task, --why)",
     "  diagnose          Coupling & precision X-ray with widening culprits and fixes (--fix, --dry-run; auto-detects Nx workspaces)",
+    "  doctor            Verify Vitest tier parity, runner ↔ narrowing alignment, test ownership, and zero workspace uncertainties (--max-workspace-uncertainties, --manifest)",
     "  hotspots          Rank highest-blast-radius files, barrel re-export hubs, and projects (--limit, --min-projects, --barrels-only, --manifest)",
     "  init              Generate dads.testing.json for npm/pnpm/yarn or Nx workspaces (--discover, --manifest, --force)",
     "  expand            Expand declarative workspace.discover into the canonical manifest IR (--manifest, --out)",
@@ -57,6 +59,7 @@ const commands = new Map<string, DadTestCommand>([
   ["audit", auditCommand],
   ["explain", explainCommand],
   ["diagnose", diagnoseCommand],
+  ["doctor", doctorCommand],
   ["hotspots", hotspotsCommand],
   ["init", initCommand],
   ["expand", expandCommand],
@@ -95,7 +98,7 @@ export async function runDadTestCli(argumentsAfterExecutable: readonly string[],
     const command = operation === undefined ? undefined : commands.get(operation);
     if (command === undefined) {
       throw new Error(
-        "Expected operation plan, run, audit, explain, diagnose, hotspots, init, expand, or check-boundaries.",
+        "Expected operation plan, run, audit, explain, diagnose, doctor, hotspots, init, expand, or check-boundaries.",
       );
     }
     const parsed = parseCommandOptions(argumentsAfterExecutable.slice(1), command.options);

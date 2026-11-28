@@ -294,3 +294,35 @@ export type TestingDiagnoseResult = {
   readonly couplingHotspots: readonly TestingCouplingHotspot[];
   readonly fallbackTraps: readonly TestingFallbackTrap[];
 };
+
+export type TestingDoctorRequest = {
+  readonly workspaceRoot: string;
+  readonly manifestPath?: string;
+  readonly nativeBinary?: string;
+};
+
+export type TestingDoctorFinding = {
+  readonly code: string;
+  readonly severity: "error" | "uncertainty" | "info";
+  readonly project?: string;
+  readonly taskId?: string;
+  readonly path?: string;
+  readonly message: string;
+  readonly fix: string;
+};
+
+export type TestingDoctorCounts = {
+  readonly projectsChecked: number;
+  readonly testTasksChecked: number;
+  readonly testFilesChecked: number;
+  readonly errors: number;
+  readonly warnings: number;
+  readonly workspaceUncertainties: number;
+};
+
+export type TestingDoctorResult = {
+  readonly schemaVersion: 1;
+  readonly ok: boolean;
+  readonly counts: TestingDoctorCounts;
+  readonly findings: readonly TestingDoctorFinding[];
+};

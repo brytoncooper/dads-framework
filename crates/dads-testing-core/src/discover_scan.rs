@@ -40,7 +40,8 @@ pub(crate) fn discover_projects(
     matched_files.sort();
     matched_files.dedup();
 
-    let mut projects = Vec::new();
+    let mut by_root: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
     for rel_file in matched_files {
         let root = parent_posix(&rel_file);
         if exclude_roots.iter().any(|pattern| {
@@ -48,8 +49,28 @@ pub(crate) fn discover_projects(
         }) {
             continue;
         }
-        let full = workspace_root.join(&rel_file);
-        let project = parse_project_file(&full, &rel_file, &root)?;
+        by_root.entry(root).or_default().push(rel_file);
+    }
+
+    let mut projects = Vec::with_capacity(by_root.len());
+    for (root, mut files) in by_root {
+        // Prefer `project.json` as primary when both `project.json` and `package.json` match.
+        files.sort_by_key(|f| (!f.ends_with("project.json"), f.clone()));
+        let primary_rel = &files[0];
+        let mut project =
+            parse_project_file(&workspace_root.join(primary_rel), primary_rel, &root)?;
+        for extra_rel in &files[1..] {
+            if let Ok(extra) = parse_project_file(&workspace_root.join(extra_rel), extra_rel, &root)
+            {
+                let mut deps: BTreeSet<String> =
+                    project.fallback_dependencies.into_iter().collect();
+                deps.extend(extra.fallback_dependencies);
+                project.fallback_dependencies = deps.into_iter().collect();
+                if project.targets.is_empty() {
+                    project.targets = extra.targets;
+                }
+            }
+        }
         projects.push(project);
     }
     projects.sort_by(|left, right| {

@@ -12,6 +12,7 @@ mod diagnose_reachability;
 mod diagnose_remediation;
 mod diagnose_traps;
 mod discover;
+mod discover_jest;
 mod discover_scan;
 mod discover_schema;
 mod discover_vitest;

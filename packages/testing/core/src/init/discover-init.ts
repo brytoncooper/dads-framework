@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { resolveNativeTestingBinary } from "../native-platform.js";
 import { expandTestingManifest } from "../testing-api.js";
 import { defaultTestingManifestFileName } from "../testing-manifest.js";
@@ -49,6 +49,7 @@ export type DiscoverTargetTemplate = {
     };
   };
   readonly autoVitestNarrowing?: boolean;
+  readonly autoJestNarrowing?: boolean;
   readonly impact: {
     readonly mode: "reachability" | "changed-files" | "project" | "always";
     readonly paths: readonly string[];
@@ -159,9 +160,10 @@ function detectWorkspaceFeatures(workspaceRoot: string): DetectedDiscoverFeature
   const pureFactories = detectWorkspacePureFactories(workspaceRoot, projectDirs);
   const rootVitest = detectRootVitestConfig(workspaceRoot);
   const usesVitest = workspaceUsesVitest(workspaceRoot, projectDirs);
+  const usesJest = workspaceUsesJest(workspaceRoot, projectDirs);
   const sqlMigrationRoots = detectSqlMigrationRoots(workspaceRoot);
   const ignorePaths = buildSafeIgnorePaths(projectDirs);
-  const templates = buildTargetTemplates(layout, usesVitest, rootVitest);
+  const templates = buildTargetTemplates(layout, usesVitest, usesJest, rootVitest);
   if (templates.length === 0) {
     throw new Error(
       "No recognized test, test:integration, typecheck, lint, or build targets were found; no manifest was written.",
@@ -210,6 +212,7 @@ function buildSafeIgnorePaths(projectDirs: readonly string[]): readonly string[]
 function buildTargetTemplates(
   layout: WorkspaceLayout,
   usesVitest: boolean,
+  usesJest: boolean,
   rootVitest: RootVitestConfig,
 ): readonly DiscoverTargetTemplate[] {
   const declaredTargets = new Set<string>();
@@ -219,7 +222,7 @@ function buildTargetTemplates(
   const templates: DiscoverTargetTemplate[] = [];
   for (const spec of recognizedTargets) {
     if (!declaredTargets.has(spec.target)) continue;
-    templates.push(createTemplateForTarget(spec, layout, usesVitest, rootVitest));
+    templates.push(createTemplateForTarget(spec, layout, usesVitest, usesJest, rootVitest));
   }
   return templates;
 }
@@ -228,10 +231,12 @@ function createTemplateForTarget(
   spec: TargetSpec,
   layout: WorkspaceLayout,
   usesVitest: boolean,
+  usesJest: boolean,
   rootVitest: RootVitestConfig,
 ): DiscoverTargetTemplate {
-  if (spec.target === "test" && usesVitest) {
-    return buildVitestTestTemplate(rootVitest);
+  if (spec.target === "test" && layout.kind === "package-json") {
+    if (usesVitest) return buildVitestTestTemplate(rootVitest);
+    if (usesJest) return buildJestTestTemplate();
   }
   const execution =
     layout.kind === "nx-project-json"
@@ -243,8 +248,55 @@ function createTemplateForTarget(
     kind: spec.kind,
     when: { hasTarget: spec.target },
     execution,
+    ...autoNarrowingFlags(spec.target, usesVitest, usesJest, rootVitest),
     impact: { mode: spec.impactMode, paths: impactPaths },
   };
+}
+
+function autoNarrowingFlags(
+  target: string,
+  usesVitest: boolean,
+  usesJest: boolean,
+  rootVitest: RootVitestConfig,
+): { readonly autoVitestNarrowing?: boolean; readonly autoJestNarrowing?: boolean } {
+  if (target !== "test") return {};
+  return {
+    ...(usesVitest && !rootVitest.dynamicSetupFiles ? { autoVitestNarrowing: true } : {}),
+    ...(usesJest ? { autoJestNarrowing: true } : {}),
+  };
+}
+
+function buildJestTestTemplate(): DiscoverTargetTemplate {
+  return {
+    target: "test",
+    kind: "test",
+    when: { hasTarget: "test" },
+    execution: { executable: "npx", args: ["jest", "--runTestsByPath"], cwd: "{projectRoot}" },
+    autoJestNarrowing: true,
+    impact: { mode: "reachability", paths: [] },
+  };
+}
+
+function workspaceUsesJest(workspaceRoot: string, projectDirs: readonly string[]): boolean {
+  const jestConfigs = [
+    "jest.config.ts",
+    "jest.config.mts",
+    "jest.config.cts",
+    "jest.config.js",
+    "jest.config.mjs",
+    "jest.config.cjs",
+    "jest.config.json",
+  ];
+  for (const dir of [".", ...projectDirs]) {
+    const base = dir === "." ? workspaceRoot : join(workspaceRoot, dir);
+    if (jestConfigs.some((name) => existsSync(join(base, name)))) return true;
+  }
+  try {
+    const raw = readFileSync(join(workspaceRoot, "package.json"), "utf8");
+    return /"(?:jest|@nx\/jest)"\s*:/u.test(raw);
+  } catch {
+    return false;
+  }
 }
 
 function buildVitestTestTemplate(rootVitest: RootVitestConfig): DiscoverTargetTemplate {

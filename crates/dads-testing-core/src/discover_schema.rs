@@ -38,6 +38,8 @@ pub(crate) struct TargetTemplate {
     #[serde(default)]
     pub(crate) auto_vitest_narrowing: bool,
     #[serde(default)]
+    pub(crate) auto_jest_narrowing: bool,
+    #[serde(default)]
     pub(crate) auto_vitest_batching: bool,
     pub(crate) impact: TemplateImpact,
     #[serde(default)]

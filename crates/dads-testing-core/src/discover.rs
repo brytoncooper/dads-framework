@@ -4,6 +4,7 @@
 //! downstream invariant (including file-level Vitest narrowing and the Lean-proved planner)
 //! sees the exact same canonical manifest as a static `dads.testing.json`.
 
+use crate::discover_jest::{apply_auto_jest_narrowing, has_project_jest_config};
 use crate::discover_scan::{DiscoveredProject, discover_projects};
 pub(crate) use crate::discover_schema::WorkspaceDiscover;
 use crate::discover_schema::{TargetMatch, validate_discover};
@@ -122,10 +123,20 @@ fn expand_templates(
                 &template.impact.paths,
                 project,
             );
-            if template.auto_vitest_narrowing {
-                let exclude_integration_tiers = template.target == "test"
-                    && (project.targets.contains("test:integration")
-                        || project.targets.contains("test:e2e"));
+            let exclude_integration_tiers = template.target == "test"
+                && (project.targets.contains("test:integration")
+                    || project.targets.contains("test:e2e"));
+            let is_jest_project = template.auto_jest_narrowing
+                && has_project_jest_config(workspace_root, &project.root);
+            if is_jest_project {
+                apply_auto_jest_narrowing(
+                    workspace_root,
+                    &project.root,
+                    &mut execution,
+                    &mut impact_paths,
+                    exclude_integration_tiers,
+                );
+            } else if template.auto_vitest_narrowing {
                 apply_auto_vitest_narrowing(
                     workspace_root,
                     &project.root,

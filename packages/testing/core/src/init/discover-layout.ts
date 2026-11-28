@@ -39,39 +39,105 @@ const ignoredWalkDirs = new Set([
 
 export function scanWorkspaceLayout(workspaceRoot: string): WorkspaceLayout {
   const detected = detectWorkspace(workspaceRoot);
-  const nxProjectFiles = collectNamedFiles(workspaceRoot, "", "project.json");
+  const nxIgnores = readNxIgnorePatterns(workspaceRoot);
+  const nxProjectFiles = collectNamedFiles(workspaceRoot, "", "project.json", nxIgnores);
   if (nxProjectFiles.length > 0) {
-    return buildNxLayout(workspaceRoot, detected.packageManager, nxProjectFiles);
+    return buildNxLayout(workspaceRoot, detected, nxProjectFiles, nxIgnores);
   }
-  return buildPackageJsonLayout(workspaceRoot, detected);
+  return buildPackageJsonLayout(workspaceRoot, detected, nxIgnores);
 }
 
 function buildNxLayout(
   workspaceRoot: string,
-  packageManager: PackageManager,
+  detected: DetectedWorkspace,
   relFiles: readonly string[],
+  nxIgnores: readonly string[],
 ): WorkspaceLayout {
   const projects: ScannedProject[] = [];
-  const invalidRoots: string[] = [];
+  const seenRoots = new Set<string>();
+  const combinedFiles = new Set<string>(deriveProjectJsonGlobs(relFiles));
+  const combinedExcludes = new Set<string>(nxIgnores);
   for (const relFile of relFiles) {
     const scanned = readScannedProject(workspaceRoot, relFile);
-    if (scanned.valid) projects.push(scanned.project);
-    else if (scanned.project.root !== ".") invalidRoots.push(scanned.project.root);
+    if (scanned.valid) {
+      projects.push(scanned.project);
+      seenRoots.add(scanned.project.root);
+    } else if (scanned.project.root !== ".") {
+      combinedExcludes.add(scanned.project.root);
+    }
+  }
+  if (detected.patterns.length > 0) {
+    mergeWorkspacePackagesIntoNxLayout(
+      workspaceRoot,
+      detected,
+      nxIgnores,
+      seenRoots,
+      projects,
+      combinedFiles,
+      combinedExcludes,
+    );
   }
   return {
     kind: "nx-project-json",
-    packageManager,
-    projectFiles: deriveProjectJsonGlobs(relFiles),
-    excludeRoots: [...new Set(invalidRoots)].sort(compareText),
+    packageManager: detected.packageManager,
+    projectFiles: [...combinedFiles].sort(compareText),
+    excludeRoots: [...combinedExcludes].sort(compareText),
     projects,
   };
 }
 
-function buildPackageJsonLayout(workspaceRoot: string, detected: DetectedWorkspace): WorkspaceLayout {
+function mergeWorkspacePackagesIntoNxLayout(
+  workspaceRoot: string,
+  detected: DetectedWorkspace,
+  nxIgnores: readonly string[],
+  seenRoots: Set<string>,
+  projects: ScannedProject[],
+  combinedFiles: Set<string>,
+  combinedExcludes: Set<string>,
+): void {
+  const pkgTranslated = translateWorkspacePatterns(detected.patterns);
+  for (const pat of pkgTranslated.projectFiles) {
+    if (pat !== "package.json" || !combinedFiles.has("project.json")) combinedFiles.add(pat);
+  }
+  for (const ex of pkgTranslated.excludeRoots) combinedExcludes.add(ex);
+  for (const directory of detected.packageDirectories) {
+    if (seenRoots.has(directory) || matchesNxIgnore(directory, nxIgnores)) continue;
+    recordScannedProject(
+      workspaceRoot,
+      directory === "." ? "package.json" : `${directory}/package.json`,
+      seenRoots,
+      projects,
+      combinedExcludes,
+    );
+  }
+}
+
+function recordScannedProject(
+  workspaceRoot: string,
+  relFile: string,
+  seenRoots: Set<string>,
+  projects: ScannedProject[],
+  excludes: Set<string>,
+): void {
+  const scanned = readScannedProject(workspaceRoot, relFile);
+  if (scanned.valid) {
+    projects.push(scanned.project);
+    seenRoots.add(scanned.project.root);
+  } else if (scanned.project.root !== ".") {
+    excludes.add(scanned.project.root);
+  }
+}
+
+function buildPackageJsonLayout(
+  workspaceRoot: string,
+  detected: DetectedWorkspace,
+  nxIgnores: readonly string[],
+): WorkspaceLayout {
   const { projectFiles, excludeRoots } = translateWorkspacePatterns(detected.patterns);
   const projects: ScannedProject[] = [];
   const invalidRoots: string[] = [];
   for (const directory of detected.packageDirectories) {
+    if (matchesNxIgnore(directory, nxIgnores)) continue;
     const relFile = directory === "." ? "package.json" : `${directory}/package.json`;
     const scanned = readScannedProject(workspaceRoot, relFile);
     if (scanned.valid) projects.push(scanned.project);
@@ -81,7 +147,7 @@ function buildPackageJsonLayout(workspaceRoot: string, detected: DetectedWorkspa
     kind: "package-json",
     packageManager: detected.packageManager,
     projectFiles,
-    excludeRoots: [...new Set([...excludeRoots, ...invalidRoots])].sort(compareText),
+    excludeRoots: [...new Set([...excludeRoots, ...nxIgnores, ...invalidRoots])].sort(compareText),
     projects,
   };
 }
@@ -134,19 +200,52 @@ function deriveProjectJsonGlobs(relFiles: readonly string[]): readonly string[] 
   return patterns;
 }
 
-function collectNamedFiles(workspaceRoot: string, prefix: string, fileName: string): string[] {
+function collectNamedFiles(
+  workspaceRoot: string,
+  prefix: string,
+  fileName: string,
+  nxIgnores: readonly string[],
+): string[] {
   const entries = readEntriesSafe(prefix === "" ? workspaceRoot : join(workspaceRoot, prefix));
   const found: string[] = [];
   for (const entry of entries) {
     if (entry.isSymbolicLink()) continue;
     const rel = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
     if (entry.isDirectory()) {
-      if (!ignoredWalkDirs.has(entry.name)) found.push(...collectNamedFiles(workspaceRoot, rel, fileName));
+      if (!ignoredWalkDirs.has(entry.name) && !matchesNxIgnore(rel, nxIgnores)) {
+        found.push(...collectNamedFiles(workspaceRoot, rel, fileName, nxIgnores));
+      }
     } else if (entry.isFile() && entry.name === fileName) {
       found.push(rel);
     }
   }
   return found.sort(compareText);
+}
+
+function readNxIgnorePatterns(workspaceRoot: string): readonly string[] {
+  try {
+    const raw = readFileSync(join(workspaceRoot, ".nxignore"), "utf8");
+    const patterns = new Set<string>();
+    for (const line of raw.split(/\r?\n/u)) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith("!")) continue;
+      const cleaned = stripRelativeSlashes(trimmed);
+      if (cleaned.length > 0) patterns.add(cleaned);
+    }
+    return [...patterns].sort(compareText);
+  } catch {
+    return [];
+  }
+}
+
+function matchesNxIgnore(relPath: string, nxIgnores: readonly string[]): boolean {
+  if (nxIgnores.length === 0) return false;
+  const segments = relPath.split("/");
+  for (const pattern of nxIgnores) {
+    if (relPath === pattern || relPath.startsWith(`${pattern}/`)) return true;
+    if (!pattern.includes("/") && !pattern.includes("*") && segments.includes(pattern)) return true;
+  }
+  return false;
 }
 
 function readEntriesSafe(directory: string): readonly Dirent[] {

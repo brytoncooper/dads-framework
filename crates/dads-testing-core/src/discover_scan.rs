@@ -153,6 +153,21 @@ fn parse_project_file(
             }
         }
     }
+    for key in [
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+    ] {
+        if let Some(deps) = object.get(key).and_then(Value::as_object) {
+            for dep_name in deps.keys() {
+                let trimmed = dep_name.trim();
+                if !trimmed.is_empty() {
+                    dep_set.insert(normalize_identifier(trimmed));
+                }
+            }
+        }
+    }
     let fallback_dependencies: Vec<String> = dep_set.into_iter().collect();
     Ok(DiscoveredProject {
         id,

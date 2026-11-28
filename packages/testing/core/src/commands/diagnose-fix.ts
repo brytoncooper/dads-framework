@@ -104,6 +104,7 @@ export async function applyDiagnoseFixes(options: ApplyDiagnoseFixesOptions): Pr
       ...projectRoots.values(),
     ]),
     scopeAdditions: collectDynamicScopeAdditions(
+      root,
       options.diagnosis,
       readScopesRecord(workspace["dynamicImportScopes"]),
       projectRoots,
@@ -244,6 +245,7 @@ function extractExplicitProjectRoots(document: Readonly<Record<string, unknown>>
 }
 
 function collectDynamicScopeAdditions(
+  workspaceRoot: string,
   diagnosis: TestingDiagnoseResult,
   existingScopes: Readonly<Record<string, readonly string[]>>,
   projectRoots: ReadonlyMap<string, string>,
@@ -251,7 +253,7 @@ function collectDynamicScopeAdditions(
   const seen = new Set<string>(Object.keys(existingScopes));
   const additions: DynamicScopeAddition[] = [];
   for (const culprit of [...diagnosis.workspaceUncertainties, ...diagnosis.wideningCulprits]) {
-    const candidate = toDynamicScopeAddition(culprit, seen, projectRoots);
+    const candidate = toDynamicScopeAddition(workspaceRoot, culprit, seen, projectRoots);
     if (candidate === undefined) continue;
     seen.add(candidate.loaderPath);
     additions.push(candidate);
@@ -260,6 +262,7 @@ function collectDynamicScopeAdditions(
 }
 
 function toDynamicScopeAddition(
+  workspaceRoot: string,
   culprit: TestingWideningCulprit,
   seen: ReadonlySet<string>,
   projectRoots: ReadonlyMap<string, string>,
@@ -269,7 +272,31 @@ function toDynamicScopeAddition(
   const loaderPath = normalizeSafeRelativePath(culprit.path);
   const projectRoot = resolveSafeOwningRoot(culprit.project, loaderPath, projectRoots);
   if (loaderPath === undefined || projectRoot === undefined) return undefined;
-  return { loaderPath, project: culprit.project, projectRoot, code: culprit.code };
+  const narrowedScope = inferStaticTemplateImportScope(workspaceRoot, loaderPath, projectRoot) ?? projectRoot;
+  return { loaderPath, project: culprit.project, projectRoot: narrowedScope, code: culprit.code };
+}
+
+function inferStaticTemplateImportScope(
+  workspaceRoot: string,
+  loaderPath: string,
+  projectRoot: string,
+): string | undefined {
+  let source: string;
+  try {
+    source = readFileSync(join(workspaceRoot, loaderPath), "utf8");
+  } catch {
+    return undefined;
+  }
+  const matches = [...source.matchAll(/\bimport\s*\(\s*`(\.\.?\/[^`$]*)\$\{/gu)];
+  if (matches.length !== 1) return undefined;
+  const rawPrefix = matches[0]?.[1];
+  if (rawPrefix === undefined) return undefined;
+  const dirPart = rawPrefix.includes("/") ? rawPrefix.slice(0, rawPrefix.lastIndexOf("/")) : ".";
+  const loaderDir = loaderPath.includes("/") ? loaderPath.slice(0, loaderPath.lastIndexOf("/")) : ".";
+  const resolved = resolve(workspaceRoot, loaderDir, dirPart);
+  const rel = normalizeSafeRelativePath(workspaceRelative(workspaceRoot, resolved));
+  if (rel === undefined || rel === "." || !rel.startsWith(`${projectRoot}/`)) return undefined;
+  return rel;
 }
 
 function resolveSafeOwningRoot(

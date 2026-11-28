@@ -8,6 +8,7 @@
 use crate::external_packages::ExternalPackageIndex;
 use crate::facts::JsUncertainty;
 use crate::workspace::{git_output, is_javascript_path, uncertainty, workspace_relative_path};
+use crate::workspace_source_map::WorkspaceSourceMap;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -37,6 +38,7 @@ pub(crate) struct WorkspaceFileIndex {
     files: Vec<String>,
     canonical_root: Option<PathBuf>,
     external_packages: ExternalPackageIndex,
+    workspace_sources: WorkspaceSourceMap,
 }
 
 impl WorkspaceFileIndex {
@@ -50,10 +52,13 @@ impl WorkspaceFileIndex {
         files.sort();
         files.dedup();
         let external_packages = ExternalPackageIndex::build(workspace_root, &files);
+        let workspace_sources =
+            WorkspaceSourceMap::build(workspace_root, canonical_root.as_deref(), &files);
         Self {
             files,
             canonical_root,
             external_packages,
+            workspace_sources,
         }
     }
 
@@ -64,6 +69,10 @@ impl WorkspaceFileIndex {
     pub(crate) fn is_known_external_specifier(&self, importer_path: &str, specifier: &str) -> bool {
         self.external_packages
             .is_known_external_specifier(importer_path, specifier)
+    }
+
+    pub(crate) fn resolve_workspace_package_source(&self, specifier: &str) -> Option<String> {
+        self.workspace_sources.resolve_specifier(specifier)
     }
 
     /// Returns all indexed workspace files strictly underneath `dir_rel` using O(log N) range

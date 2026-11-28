@@ -62,7 +62,7 @@ fn seed_compiled_dist_monorepo(root: &Path) -> Result<(), Box<dyn Error>> {
     )?;
     write(
         root.join("packages/provider-utils/src/index.ts"),
-        "export function parseEvent(raw: string): number { return raw.length; }\n",
+        "export function parseEvent(raw: string): number { return raw.length; }\nexport function unusedHelper(n: number): number { return n * 2; }\n",
     )?;
     write(
         root.join("packages/ai/package.json"),
@@ -135,12 +135,11 @@ fn compiled_dist_workspace_edit_widens_unresolved_fallback_dependents_without_wi
     let root = fresh_repo("compiled-dist-widening")?;
     seed_compiled_dist_monorepo(&root)?;
 
-    // 1. Semantic edit in upstream compiled-dist package must widen downstream fallback dependent
-    //    `ai` (which carries an unresolved bare import for `@ai-sdk/provider-utils`), while
-    //    leaving `unrelated` skipped.
+    // 1. Editing the imported symbol `parseEvent` in compiled-dist `provider-utils` must select
+    //    both `provider-utils:test` and `ai:test` while leaving `unrelated:test` skipped.
     write(
         root.join("packages/provider-utils/src/index.ts"),
-        "export function parseEvent(raw: string): number { return raw.length + 1; }\n",
+        "export function parseEvent(raw: string): number { return raw.length + 1; }\nexport function unusedHelper(n: number): number { return n * 2; }\n",
     )?;
     let req = plan_request(&root);
     let graph = analyze_request(&req);
@@ -157,10 +156,37 @@ fn compiled_dist_workspace_edit_widens_unresolved_fallback_dependents_without_wi
         "skip-proven-unaffected"
     );
 
-    // 2. Pure comment-only edit in upstream package must still skip everything.
+    // 2. Editing an UNUSED export (`unusedHelper`) in compiled-dist `provider-utils` must run
+    //    `provider-utils:test` while proving `ai:test` unaffected via dist->src symbol resolution.
     write(
         root.join("packages/provider-utils/src/index.ts"),
-        "// comment only\nexport function parseEvent(raw: string): number { return raw.length; }\n",
+        "export function parseEvent(raw: string): number { return raw.length; }\nexport function unusedHelper(n: number): number { return n * 3; }\n",
+    )?;
+    let req_unused = plan_request(&root);
+    let graph_unused = analyze_request(&req_unused);
+    let resp_unused = execute_request_with_graph(req_unused, graph_unused);
+    let plan_unused = resp_unused
+        .result
+        .ok_or("expected plan result for unused export edit")?
+        .plan;
+
+    assert_eq!(
+        find_task(&plan_unused.tasks, "provider-utils:test")?.decision,
+        "run"
+    );
+    assert_eq!(
+        find_task(&plan_unused.tasks, "ai:test")?.decision,
+        "skip-proven-unaffected"
+    );
+    assert_eq!(
+        find_task(&plan_unused.tasks, "unrelated:test")?.decision,
+        "skip-proven-unaffected"
+    );
+
+    // 3. Pure comment-only edit in upstream package must still skip everything.
+    write(
+        root.join("packages/provider-utils/src/index.ts"),
+        "// comment only\nexport function parseEvent(raw: string): number { return raw.length; }\nexport function unusedHelper(n: number): number { return n * 2; }\n",
     )?;
     let req2 = plan_request(&root);
     let graph2 = analyze_request(&req2);

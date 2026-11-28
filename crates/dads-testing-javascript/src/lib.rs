@@ -33,6 +33,7 @@ mod spans;
 mod specifier_resolution;
 mod top_level_classification;
 mod workspace;
+mod workspace_source_map;
 
 #[cfg(test)]
 mod tests;

@@ -4,6 +4,7 @@
 use crate::facts::{JsSpan, JsUncertainty};
 use crate::file_discovery::WorkspaceFileIndex;
 use crate::workspace::{is_javascript_path, workspace_relative_path};
+use crate::workspace_source_map::path_is_in_compiled_output;
 use oxc_resolver::Resolver;
 use std::path::Path;
 
@@ -40,7 +41,21 @@ pub(crate) fn resolve_static_specifier(
         return None;
     }
     match ctx.resolver.resolve_file(ctx.absolute_path, specifier) {
-        Ok(resolution) => canonical_workspace_path(ctx.workspace_root, resolution.path()),
+        Ok(resolution) => {
+            let resolved = canonical_workspace_path(ctx.workspace_root, resolution.path());
+            if is_bare_specifier(specifier)
+                && matches!(
+                    &resolved,
+                    Some(ResolvedSpecifier::JavaScript(rel)) if path_is_in_compiled_output(rel)
+                )
+                && let Some(src) = ctx
+                    .workspace_index
+                    .resolve_workspace_package_source(specifier)
+            {
+                return Some(ResolvedSpecifier::JavaScript(src));
+            }
+            resolved
+        }
         Err(error) if is_local_specifier(specifier) => {
             resolve_local_javascript_specifier_to_typescript_source(
                 ctx.workspace_root,
@@ -61,6 +76,12 @@ pub(crate) fn resolve_static_specifier(
         }
         Err(_) if specifier.starts_with("node:") => None,
         Err(error) if is_bare_specifier(specifier) => {
+            if let Some(src) = ctx
+                .workspace_index
+                .resolve_workspace_package_source(specifier)
+            {
+                return Some(ResolvedSpecifier::JavaScript(src));
+            }
             if let Some(types_specifier) = at_types_specifier(specifier)
                 && let Ok(resolution) = ctx
                     .resolver

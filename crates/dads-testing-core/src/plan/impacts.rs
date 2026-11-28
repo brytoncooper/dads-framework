@@ -63,6 +63,8 @@ fn attach_tsconfig_extends_impact<'a>(
                 && !evidence.lockfile_handled_paths.contains(*path)
                 && !path.ends_with("/package-lock.json")
                 && *path != "package-lock.json"
+                && *path != "package.json"
+                && !path.ends_with("/package.json")
                 && !manifest
                     .workspace
                     .ignore_paths

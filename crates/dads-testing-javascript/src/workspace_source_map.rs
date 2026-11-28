@@ -101,6 +101,42 @@ pub(crate) fn path_is_in_compiled_output(rel: &str) -> bool {
         .any(|seg| matches!(seg, "dist" | "build" | "out"))
 }
 
+/// Maps local re-export stubs (e.g. `internal.d.ts` -> `./dist/internal` or `../dist/anthropic`)
+/// to their real TypeScript source when `dist/` has not been compiled yet.
+pub(crate) fn resolve_local_compiled_output_to_source(
+    workspace_root: &Path,
+    absolute_path: &Path,
+    specifier: &str,
+) -> Option<String> {
+    let canonical_root = workspace_root.canonicalize().ok()?;
+    let joined = absolute_path.parent()?.join(specifier);
+    let mut parts: Vec<std::ffi::OsString> = Vec::new();
+    for comp in joined.components() {
+        match comp {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                parts.pop();
+            }
+            std::path::Component::Normal(s) => parts.push(s.to_os_string()),
+            std::path::Component::RootDir => parts.push(std::ffi::OsString::from("/")),
+            std::path::Component::Prefix(p) => parts.push(p.as_os_str().to_os_string()),
+        }
+    }
+    let normalized: PathBuf = parts.iter().collect();
+    let rel = normalized.strip_prefix(&canonical_root).ok()?;
+    let rel_str = rel.to_string_lossy().replace('\\', "/");
+    let segments: Vec<&str> = rel_str.split('/').collect();
+    let idx = segments
+        .iter()
+        .position(|s| matches!(*s, "dist" | "build" | "out"))?;
+    let pkg_dir = segments[..idx].join("/");
+    let tail = segments[idx + 1..].join("/");
+    if tail.is_empty() {
+        return None;
+    }
+    map_target_to_source(&canonical_root, &pkg_dir, &format!("dist/{tail}"))
+}
+
 fn collect_exports(value: &Value, out: &mut HashMap<String, String>) {
     match value {
         Value::String(s) => {
@@ -181,8 +217,9 @@ fn map_target_to_source(canonical_root: &Path, pkg_dir: &str, raw_target: &str) 
     let stem = strip_js_or_dts_extension(stripped);
     for candidate_rel in [
         format!("src/{stem}"),
-        stem.to_owned(),
         format!("src/{stem}/index"),
+        stem.to_owned(),
+        format!("{stem}/index"),
     ] {
         for ext in SOURCE_EXTENSIONS {
             let candidate = pkg_base.join(format!("{candidate_rel}.{ext}"));

@@ -16,13 +16,15 @@ const GLOBAL_POLICY_SECTIONS: &[&str] = &[
     "catalogs:",
 ];
 
+pub(crate) struct PnpmLockfileV9 {
+    pub(crate) packages: BTreeMap<String, PackageSnapshot>,
+    pub(crate) importers: BTreeMap<String, BTreeSet<String>>,
+}
+
 pub(crate) fn parse_pnpm_lockfile_v9_packages(
     base_raw: &str,
     head_raw: &str,
-) -> Option<(
-    BTreeMap<String, PackageSnapshot>,
-    BTreeMap<String, PackageSnapshot>,
-)> {
+) -> Option<(PnpmLockfileV9, PnpmLockfileV9)> {
     if !is_pnpm_v9(base_raw) || !is_pnpm_v9(head_raw) {
         return None;
     }
@@ -33,9 +35,39 @@ pub(crate) fn parse_pnpm_lockfile_v9_packages(
             return None;
         }
     }
-    let base_map = parse_single_pnpm_v9(base_raw)?;
-    let head_map = parse_single_pnpm_v9(head_raw)?;
-    Some((base_map, head_map))
+    let base = parse_single_pnpm_v9(base_raw)?;
+    let head = parse_single_pnpm_v9(head_raw)?;
+    Some((base, head))
+}
+
+/// Returns `Some(dirs)` when every affected importer is a non-root workspace directory (never `.`),
+/// or `None` when the workspace root `.` is affected or no importer can be traced (caller must
+/// widen the whole workspace conservatively).
+pub(crate) fn scoped_pnpm_widen_importers(
+    base_importers: &BTreeMap<String, BTreeSet<String>>,
+    head_importers: &BTreeMap<String, BTreeSet<String>>,
+    impacted_closure: &BTreeSet<String>,
+) -> Option<BTreeSet<String>> {
+    let mut affected = BTreeSet::new();
+    for dir in base_importers.keys().chain(head_importers.keys()) {
+        let in_base = base_importers
+            .get(dir)
+            .is_some_and(|deps| deps.iter().any(|d| impacted_closure.contains(d)));
+        let in_head = head_importers
+            .get(dir)
+            .is_some_and(|deps| deps.iter().any(|d| impacted_closure.contains(d)));
+        if in_base || in_head {
+            if dir == "." || dir.is_empty() {
+                return None;
+            }
+            affected.insert(dir.clone());
+        }
+    }
+    if affected.is_empty() {
+        None
+    } else {
+        Some(affected)
+    }
 }
 
 fn is_pnpm_v9(raw: &str) -> bool {
@@ -64,8 +96,9 @@ fn extract_top_level_section<'a>(raw: &'a str, header: &str) -> Vec<&'a str> {
     out
 }
 
-fn parse_single_pnpm_v9(raw: &str) -> Option<BTreeMap<String, PackageSnapshot>> {
+fn parse_single_pnpm_v9(raw: &str) -> Option<PnpmLockfileV9> {
     let mut map: BTreeMap<String, PackageSnapshot> = BTreeMap::new();
+    let mut importers: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let mut section = "";
     let mut current_key: Option<String> = None;
     let mut in_deps_block = false;
@@ -80,11 +113,21 @@ fn parse_single_pnpm_v9(raw: &str) -> Option<BTreeMap<String, PackageSnapshot>> 
             in_deps_block = false;
             continue;
         }
+        let indent = line.bytes().take_while(|&b| b == b' ').count();
+        let trimmed = line.trim();
+        if section == "importers:" {
+            parse_importer_line(
+                indent,
+                trimmed,
+                &mut importers,
+                &mut current_key,
+                &mut in_deps_block,
+            );
+            continue;
+        }
         if section != "packages:" && section != "snapshots:" {
             continue;
         }
-        let indent = line.bytes().take_while(|&b| b == b' ').count();
-        let trimmed = line.trim();
         if indent == 2 && trimmed.ends_with(':') {
             let raw_key = unquote_yaml_key(trimmed.trim_end_matches(':'));
             let (name, version) = split_pnpm_pkg_key(&raw_key)?;
@@ -147,7 +190,40 @@ fn parse_single_pnpm_v9(raw: &str) -> Option<BTreeMap<String, PackageSnapshot>> 
     if map.is_empty() {
         return None;
     }
-    Some(map)
+    Some(PnpmLockfileV9 {
+        packages: map,
+        importers,
+    })
+}
+
+fn parse_importer_line(
+    indent: usize,
+    trimmed: &str,
+    importers: &mut BTreeMap<String, BTreeSet<String>>,
+    current_key: &mut Option<String>,
+    in_deps_block: &mut bool,
+) {
+    if indent == 2 && trimmed.ends_with(':') {
+        let dir = unquote_yaml_key(trimmed.trim_end_matches(':'));
+        importers.entry(dir.clone()).or_default();
+        *current_key = Some(dir);
+        *in_deps_block = false;
+    } else if indent == 4 {
+        *in_deps_block = matches!(
+            trimmed,
+            "dependencies:" | "devDependencies:" | "optionalDependencies:" | "peerDependencies:"
+        );
+    } else if indent == 6
+        && *in_deps_block
+        && let Some((dep_key, _)) = trimmed.split_once(':')
+        && let Some(dir) = current_key.as_ref()
+        && let Some(deps) = importers.get_mut(dir)
+    {
+        let dep_name = unquote_yaml_key(dep_key.trim());
+        if !dep_name.is_empty() {
+            deps.insert(dep_name);
+        }
+    }
 }
 
 fn unquote_yaml_key(raw: &str) -> String {

@@ -201,12 +201,16 @@ pub(super) fn widen_unresolved_workspace_dependents<'a>(
         .filter(|u| {
             matches!(
                 u.code.as_str(),
-                "unresolved-bare-module" | "unresolved-local-module" | "unresolved-module-scheme"
+                "unresolved-bare-module" | "unresolved-module-scheme"
             )
         })
         .filter(|u| {
-            crate::scope::deepest_project_for_path(&manifest.projects, &u.path)
-                .is_some_and(|project| downstream.contains(project.id.as_str()))
+            crate::scope::deepest_project_for_path(&manifest.projects, &u.path).is_some_and(
+                |project| {
+                    downstream.contains(project.id.as_str())
+                        && !impacted.contains(project.id.as_str())
+                },
+            )
         })
         .map(|u| u.path)
         .collect();

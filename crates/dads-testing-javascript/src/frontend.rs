@@ -221,7 +221,7 @@ pub struct JavaScriptFrontend;
 
 impl GraphFrontend for JavaScriptFrontend {
     fn frontend_version(&self) -> u32 {
-        20
+        21
     }
 
     fn initial_index(&mut self, request: &NativeRequest) -> Result<DependencyGraph, String> {

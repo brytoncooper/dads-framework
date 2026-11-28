@@ -4,7 +4,9 @@
 use crate::facts::{JsSpan, JsUncertainty};
 use crate::file_discovery::WorkspaceFileIndex;
 use crate::workspace::{is_javascript_path, workspace_relative_path};
-use crate::workspace_source_map::path_is_in_compiled_output;
+use crate::workspace_source_map::{
+    path_is_in_compiled_output, resolve_local_compiled_output_to_source,
+};
 use oxc_resolver::Resolver;
 use std::path::Path;
 
@@ -62,6 +64,13 @@ pub(crate) fn resolve_static_specifier(
                 ctx.absolute_path,
                 specifier,
             )
+            .or_else(|| {
+                resolve_local_compiled_output_to_source(
+                    ctx.workspace_root,
+                    ctx.absolute_path,
+                    specifier,
+                )
+            })
             .map(ResolvedSpecifier::JavaScript)
             .or_else(|| {
                 uncertainties.push(JsUncertainty {
@@ -74,7 +83,7 @@ pub(crate) fn resolve_static_specifier(
                 None
             })
         }
-        Err(_) if specifier.starts_with("node:") => None,
+        Err(_) if is_node_builtin(specifier) => None,
         Err(error) if is_bare_specifier(specifier) => {
             if let Some(src) = ctx
                 .workspace_index
@@ -201,4 +210,17 @@ fn is_local_specifier(specifier: &str) -> bool {
 
 fn is_bare_specifier(specifier: &str) -> bool {
     !is_local_specifier(specifier) && !specifier.contains(':')
+}
+
+fn is_node_builtin(specifier: &str) -> bool {
+    const BUILTINS: &[&str] = &[
+        "assert", "async_hooks", "buffer", "child_process", "cluster", "console", "constants",
+        "crypto", "dgram", "diagnostics_channel", "dns", "domain", "events", "fs", "http",
+        "http2", "https", "inspector", "module", "net", "os", "path", "perf_hooks", "process",
+        "punycode", "querystring", "readline", "repl", "sqlite", "stream", "string_decoder",
+        "sys", "test", "timers", "tls", "trace_events", "tty", "url", "util", "v8", "vm",
+        "wasi", "worker_threads", "zlib",
+    ];
+    specifier.starts_with("node:")
+        || BUILTINS.contains(&specifier.split('/').next().unwrap_or(specifier))
 }

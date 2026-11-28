@@ -13,11 +13,12 @@ use crate::tsconfig_impact::analyze_tsconfig_impact;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-pub(super) fn attach_lockfile_impact(
+pub(super) fn attach_lockfile_impact<'a>(
+    manifest: &'a TestingManifest,
     workspace_root: &Path,
     scope: &ResolvedScope,
     graph: Option<&DependencyGraph>,
-    evidence: &mut PlanEvidence<'_>,
+    evidence: &mut PlanEvidence<'a>,
 ) {
     if scope.full_fallback || evidence.full_fallback {
         return;
@@ -27,6 +28,21 @@ pub(super) fn attach_lockfile_impact(
     evidence.lockfile_handled_paths = report.handled_paths;
     evidence.lockfile_impacted_packages = report.impacted_packages;
     evidence.lockfile_seeded_modules = report.seeded_modules;
+    for importer_dir in report.widened_importer_dirs {
+        let probe = format!("{importer_dir}/package.json");
+        if let Some(project) = crate::scope::deepest_project_for_path(&manifest.projects, &probe) {
+            mark_tsconfig_extends_project(
+                evidence,
+                project.id.as_str(),
+                "lockfile-importer-widened",
+                &probe,
+                format!(
+                    "pnpm-lock.yaml changed a toolchain or bin/install dependency of {importer_dir}; widened {} conservatively.",
+                    project.id
+                ),
+            );
+        }
+    }
 }
 
 pub(super) fn attach_tsconfig_impact<'a>(

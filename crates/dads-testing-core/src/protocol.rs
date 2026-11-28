@@ -357,10 +357,10 @@ pub struct PlanCounts {
     pub skip_proven_unaffected: usize,
 }
 
-pub use crate::protocol_doctor::{DoctorCounts, DoctorFinding, DoctorResult};
 pub use crate::protocol_diagnose::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, FallbackTrap,
     RemediationSafety, WideningCulprit,
 };
+pub use crate::protocol_doctor::{DoctorCounts, DoctorFinding, DoctorResult};
 pub use crate::protocol_read_guard::{ReadGuardMode, TaskReadGuardAllowlist, UndeclaredRead};
 pub use crate::protocol_run::{RunCounts, RunResult, TaskOutput, TaskRunResult};

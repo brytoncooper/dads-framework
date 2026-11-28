@@ -132,3 +132,14 @@ export function readPositiveInteger(value: string, option: string): number {
   }
   return parsed;
 }
+
+/** Parses an optional non-negative integer flag value. */
+export function parseOptionalNonNegativeInt(raw: string | undefined, flag: string): number | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!/^\d+$/.test(raw)) {
+    throw new Error(`${flag} must be a non-negative integer.`);
+  }
+  return Number.parseInt(raw, 10);
+}

@@ -54,15 +54,30 @@ impl TaskReadGuardAllowlist {
             first.allowed_project_roots.iter().cloned().collect();
         let mut impact_paths: BTreeSet<String> =
             first.allowed_impact_paths.iter().cloned().collect();
-        let mut extra_files: BTreeSet<String> =
-            first.allowed_extra_files.iter().cloned().collect();
+        let mut extra_files: BTreeSet<String> = first.allowed_extra_files.iter().cloned().collect();
         let mut ancestor_dirs: BTreeSet<String> =
             first.allowed_ancestor_dirs.iter().cloned().collect();
         for list in iter {
-            let pr: BTreeSet<&str> = list.allowed_project_roots.iter().map(String::as_str).collect();
-            let ip: BTreeSet<&str> = list.allowed_impact_paths.iter().map(String::as_str).collect();
-            let ef: BTreeSet<&str> = list.allowed_extra_files.iter().map(String::as_str).collect();
-            let ad: BTreeSet<&str> = list.allowed_ancestor_dirs.iter().map(String::as_str).collect();
+            let pr: BTreeSet<&str> = list
+                .allowed_project_roots
+                .iter()
+                .map(String::as_str)
+                .collect();
+            let ip: BTreeSet<&str> = list
+                .allowed_impact_paths
+                .iter()
+                .map(String::as_str)
+                .collect();
+            let ef: BTreeSet<&str> = list
+                .allowed_extra_files
+                .iter()
+                .map(String::as_str)
+                .collect();
+            let ad: BTreeSet<&str> = list
+                .allowed_ancestor_dirs
+                .iter()
+                .map(String::as_str)
+                .collect();
             project_roots.retain(|item| pr.contains(item.as_str()));
             impact_paths.retain(|item| ip.contains(item.as_str()));
             extra_files.retain(|item| ef.contains(item.as_str()));

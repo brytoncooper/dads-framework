@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { parseOptionalNonNegativeInt } from "../cli-arguments.js";
 import type { OptionSpecification } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
 import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
@@ -109,14 +110,6 @@ function resolveMaxWorkspaceThreshold(parsed: {
     return explicit === undefined ? 0 : Math.min(0, explicit);
   }
   return explicit;
-}
-
-function parseOptionalNonNegativeInt(raw: string | undefined, flag: string): number | undefined {
-  if (raw === undefined) return undefined;
-  if (!/^\d+$/.test(raw)) {
-    throw new Error(`${flag} requires a non-negative integer, received '${raw}'.`);
-  }
-  return Number.parseInt(raw, 10);
 }
 
 function checkDiagnoseThresholds(

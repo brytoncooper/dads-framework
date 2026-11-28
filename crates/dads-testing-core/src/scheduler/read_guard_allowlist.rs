@@ -9,8 +9,8 @@ use crate::graph::{DependencyGraph, ImportKind, ModuleNode};
 use crate::manifest::{DeclaredTask, Project, TestingManifest};
 use crate::plan::cache_inputs_helpers::snapshot_pattern_globs;
 use crate::plan::project_graph::unified_project_dependencies;
-use crate::protocol::{TaskCacheInputs, TaskDecision};
 pub(super) use crate::protocol::TaskReadGuardAllowlist;
+use crate::protocol::{TaskCacheInputs, TaskDecision};
 use crate::scope::{deepest_project_for_path, path_is_inside, path_matches_impact};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
@@ -94,7 +94,11 @@ impl<'a> AllowlistBuilder<'a> {
         task: &DeclaredTask,
         decision: &TaskDecision,
     ) -> TaskReadGuardAllowlist {
-        self.for_task_parts(task, &decision.selected_files, decision.cache_inputs.as_ref())
+        self.for_task_parts(
+            task,
+            &decision.selected_files,
+            decision.cache_inputs.as_ref(),
+        )
     }
 
     pub(crate) fn for_task_parts(
@@ -392,7 +396,7 @@ fn add_sql_impact_paths(
         return;
     };
     for root in &sql.migration_roots {
-        let trimmed = if root == "." { "." } else { root.trim_end_matches('/') };
+        let trimmed = root.trim_end_matches('/');
         if !trimmed.is_empty() {
             impact_paths.insert(trimmed.to_owned());
         }

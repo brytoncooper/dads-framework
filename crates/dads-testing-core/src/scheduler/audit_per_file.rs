@@ -8,30 +8,38 @@
 //!    Because `A_common` is a subset of every `A(F_i)`, a task with 0 violations in Pass 1 is
 //!    mathematically guaranteed to have 0 undeclared reads under every single-file narrowing.
 //! 2. Pass 2 runs ONLY tasks that flagged in Pass 1, partitioning their test files into
-//!    equivalence classes with identical narrowed allowlists `A(G)` (zero sibling masking!).
+//!    equivalence classes with identical narrowed allowlists `A(G)` (zero sibling masking).
 //! 3. Pass 3 runs ONLY failing groups of size > 1 one file at a time so every reported
 //!    `UndeclaredRead` carries its exact `selected_file`.
 
+use super::audit_per_file_plan::{
+    audit_subrun_options, clone_plan, matching_files_for_task, record_reads_for_file,
+    synthetic_audit_task, synthetic_plan, synthetic_run_decision, workspace_candidate_files,
+};
 use super::read_guard::should_guard_task;
 use super::read_guard_allowlist::AllowlistBuilder;
 use super::{RunOptions, run_plan_once};
 use crate::execute::TestingError;
-use crate::git::git_untracked_paths;
-use crate::manifest::{DeclaredTask, FileNarrowing, TestingManifest};
-use crate::protocol::{
-    PlanCounts, PlanResult, ReadGuardMode, ResolvedScope, RunResult, TaskDecision,
-    PROTOCOL_SCHEMA_VERSION, TaskReadGuardAllowlist, UndeclaredRead,
-};
-use crate::scope::{deepest_project_for_path, path_matches_impact};
+use crate::manifest::{DeclaredTask, TestingManifest};
+use crate::protocol::{PlanResult, RunResult, TaskReadGuardAllowlist, UndeclaredRead};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
-use std::process::Command;
 
 struct NarrowedTaskSpec {
     task_index: usize,
     task_id: String,
     matching_files: Vec<String>,
     per_file_allowlists: BTreeMap<String, TaskReadGuardAllowlist>,
+}
+
+type ConfirmedReadsByTask = BTreeMap<usize, BTreeSet<UndeclaredRead>>;
+
+struct Pass3Candidate {
+    orig_idx: usize,
+    orig_id: String,
+    group_idx: usize,
+    files: Vec<String>,
+    allowlist: TaskReadGuardAllowlist,
 }
 
 pub(super) fn run_plan_audit_per_file(
@@ -46,11 +54,75 @@ pub(super) fn run_plan_audit_per_file(
         .iter()
         .map(|task| (task.id.as_str(), task))
         .collect();
-    let allowlist_builder = AllowlistBuilder::new(manifest, options.graph);
-    let candidate_files = workspace_candidate_files(workspace_root);
+    let (pass1_plan, narrowed_specs) =
+        build_pass1_plan(manifest, workspace_root, plan, &declared, options.graph);
 
+    let mut pass1_run = run_plan_once(
+        manifest,
+        workspace_root,
+        manifest_file,
+        &pass1_plan,
+        RunOptions {
+            audit_per_file: false,
+            ..options
+        },
+    )?;
+    tag_single_file_reads(&narrowed_specs, &mut pass1_run);
+
+    let flagged_specs: Vec<&NarrowedTaskSpec> = narrowed_specs
+        .values()
+        .filter(|spec| {
+            spec.matching_files.len() > 1
+                && pass1_run
+                    .tasks
+                    .get(spec.task_index)
+                    .is_some_and(|res| !res.undeclared_reads.is_empty())
+        })
+        .collect();
+    if flagged_specs.is_empty() {
+        return Ok(pass1_run);
+    }
+
+    let (mut confirmed_by_task, pass3_candidates) = run_pass2_groups(
+        manifest,
+        workspace_root,
+        manifest_file,
+        &declared,
+        &flagged_specs,
+        &options,
+    )?;
+
+    if !pass3_candidates.is_empty() {
+        run_pass3_single_files(
+            manifest,
+            workspace_root,
+            manifest_file,
+            &declared,
+            &pass3_candidates,
+            &options,
+            &mut confirmed_by_task,
+        )?;
+    }
+
+    for (orig_idx, reads) in confirmed_by_task {
+        if let Some(task_result) = pass1_run.tasks.get_mut(orig_idx) {
+            task_result.undeclared_reads = reads.into_iter().collect();
+        }
+    }
+    Ok(pass1_run)
+}
+
+fn build_pass1_plan(
+    manifest: &TestingManifest,
+    workspace_root: &Path,
+    plan: &PlanResult,
+    declared: &BTreeMap<&str, &DeclaredTask>,
+    graph: Option<&crate::graph::DependencyGraph>,
+) -> (PlanResult, BTreeMap<String, NarrowedTaskSpec>) {
+    let allowlist_builder = AllowlistBuilder::new(manifest, graph);
+    let candidate_files = workspace_candidate_files(workspace_root);
     let mut pass1_plan = clone_plan(plan);
-    let mut narrowed_specs: BTreeMap<String, NarrowedTaskSpec> = BTreeMap::new();
+    let mut narrowed_specs = BTreeMap::new();
 
     for (task_index, decision) in pass1_plan.tasks.iter_mut().enumerate() {
         if decision.decision != "run" || !decision.selected_files.is_empty() {
@@ -72,11 +144,8 @@ pub(super) fn run_plan_audit_per_file(
         if matching.len() == 1 {
             let only_file = matching[0].clone();
             decision.selected_files = vec![only_file.clone()];
-            decision.read_guard_allowlist = Some(allowlist_builder.for_task_parts(
-                task,
-                &decision.selected_files,
-                None,
-            ));
+            decision.read_guard_allowlist =
+                Some(allowlist_builder.for_task_parts(task, &decision.selected_files, None));
             narrowed_specs.insert(
                 task.id.clone(),
                 NarrowedTaskSpec {
@@ -93,8 +162,8 @@ pub(super) fn run_plan_audit_per_file(
             let allow = allowlist_builder.for_task_parts(task, std::slice::from_ref(file), None);
             per_file.insert(file.clone(), allow);
         }
-        let common = TaskReadGuardAllowlist::intersect_many(per_file.values());
-        decision.read_guard_allowlist = Some(common);
+        decision.read_guard_allowlist =
+            Some(TaskReadGuardAllowlist::intersect_many(per_file.values()));
         narrowed_specs.insert(
             task.id.clone(),
             NarrowedTaskSpec {
@@ -105,56 +174,42 @@ pub(super) fn run_plan_audit_per_file(
             },
         );
     }
+    (pass1_plan, narrowed_specs)
+}
 
-    // Pass 1: run every task at full speed with A_common allowlists for narrowed tasks.
-    let mut pass1_run = run_plan_once(
-        manifest,
-        workspace_root,
-        manifest_file,
-        &pass1_plan,
-        RunOptions {
-            audit_per_file: false,
-            ..options
-        },
-    )?;
-
-    // Tag single-file tasks directly with their selected_file.
+fn tag_single_file_reads(
+    narrowed_specs: &BTreeMap<String, NarrowedTaskSpec>,
+    pass1_run: &mut RunResult,
+) {
     for spec in narrowed_specs.values() {
-        if spec.matching_files.len() == 1 {
-            let only_file = &spec.matching_files[0];
-            if let Some(result) = pass1_run.tasks.get_mut(spec.task_index) {
-                for read in &mut result.undeclared_reads {
-                    if read.selected_file.is_none() {
-                        read.selected_file = Some(only_file.clone());
-                    }
+        if spec.matching_files.len() != 1 {
+            continue;
+        }
+        let only_file = &spec.matching_files[0];
+        if let Some(result) = pass1_run.tasks.get_mut(spec.task_index) {
+            for read in &mut result.undeclared_reads {
+                if read.selected_file.is_none() {
+                    read.selected_file = Some(only_file.clone());
                 }
             }
         }
     }
+}
 
-    // Collect multi-file tasks that flagged reads outside A_common in Pass 1.
-    let flagged_specs: Vec<&NarrowedTaskSpec> = narrowed_specs
-        .values()
-        .filter(|spec| {
-            spec.matching_files.len() > 1
-                && pass1_run
-                    .tasks
-                    .get(spec.task_index)
-                    .is_some_and(|res| !res.undeclared_reads.is_empty())
-        })
-        .collect();
-
-    if flagged_specs.is_empty() {
-        return Ok(pass1_run);
-    }
-
-    // Pass 2: group each flagged task's files into exact allowlist equivalence classes.
+fn run_pass2_groups(
+    manifest: &TestingManifest,
+    workspace_root: &Path,
+    manifest_file: &Path,
+    declared: &BTreeMap<&str, &DeclaredTask>,
+    flagged_specs: &[&NarrowedTaskSpec],
+    options: &RunOptions<'_>,
+) -> Result<(ConfirmedReadsByTask, Vec<Pass3Candidate>), TestingError> {
     let mut pass2_manifest = manifest.clone();
     pass2_manifest.tasks.clear();
     let mut pass2_decisions = Vec::new();
-    let mut pass2_meta: Vec<(usize, String, Vec<String>, TaskReadGuardAllowlist)> = Vec::new();
+    let mut pass2_meta = Vec::new();
 
-    for spec in &flagged_specs {
+    for spec in flagged_specs {
         let Some(&base_task) = declared.get(spec.task_id.as_str()) else {
             continue;
         };
@@ -169,12 +224,9 @@ pub(super) fn run_plan_audit_per_file(
         }
         for (group_idx, (allowlist, files)) in by_allowlist.into_iter().enumerate() {
             let synth_id = format!("{}#audit-group-{group_idx}", spec.task_id);
-            let mut synth_task = base_task.clone();
-            synth_task.id = synth_id.clone();
-            synth_task.depends_on.clear();
-            synth_task.cache = false;
-            synth_task.execution.batch = None;
-            pass2_manifest.tasks.push(synth_task);
+            pass2_manifest
+                .tasks
+                .push(synthetic_audit_task(base_task, synth_id.clone()));
             pass2_decisions.push(synthetic_run_decision(
                 synth_id,
                 base_task.project.clone(),
@@ -191,25 +243,14 @@ pub(super) fn run_plan_audit_per_file(
         workspace_root,
         manifest_file,
         &pass2_plan,
-        RunOptions {
-            receipts: None,
-            stream_enabled: false,
-            read_guard_mode: Some(ReadGuardMode::Audit),
-            audit_per_file: false,
-            ..options
-        },
+        audit_subrun_options(options),
     )?;
 
-    // Collect confirmed violations per original task, and queue Pass 3 for multi-file failing groups.
-    let mut confirmed_by_task: BTreeMap<usize, BTreeSet<UndeclaredRead>> = BTreeMap::new();
-    for spec in &flagged_specs {
-        confirmed_by_task.insert(spec.task_index, BTreeSet::new());
-    }
-
-    let mut pass3_manifest = manifest.clone();
-    pass3_manifest.tasks.clear();
-    let mut pass3_decisions = Vec::new();
-    let mut pass3_meta: Vec<(usize, String)> = Vec::new();
+    let mut confirmed_by_task: BTreeMap<usize, BTreeSet<UndeclaredRead>> = flagged_specs
+        .iter()
+        .map(|spec| (spec.task_index, BTreeSet::new()))
+        .collect();
+    let mut pass3_candidates = Vec::new();
 
     for (idx, group_result) in pass2_run.tasks.iter().enumerate() {
         if group_result.undeclared_reads.is_empty() {
@@ -217,233 +258,78 @@ pub(super) fn run_plan_audit_per_file(
         }
         let (orig_idx, orig_id, files, allowlist) = &pass2_meta[idx];
         if files.len() == 1 {
-            let file = &files[0];
-            let entry = confirmed_by_task.entry(*orig_idx).or_default();
-            for read in &group_result.undeclared_reads {
-                entry.insert(UndeclaredRead {
-                    path: read.path.clone(),
-                    location: read.location.clone(),
-                    api: read.api.clone(),
-                    selected_file: Some(file.clone()),
-                });
-            }
-            continue;
+            record_reads_for_file(
+                confirmed_by_task.entry(*orig_idx).or_default(),
+                &group_result.undeclared_reads,
+                &files[0],
+            );
+        } else {
+            pass3_candidates.push(Pass3Candidate {
+                orig_idx: *orig_idx,
+                orig_id: orig_id.clone(),
+                group_idx: idx,
+                files: files.clone(),
+                allowlist: allowlist.clone(),
+            });
         }
-        let Some(&base_task) = declared.get(orig_id.as_str()) else {
+    }
+    Ok((confirmed_by_task, pass3_candidates))
+}
+
+fn run_pass3_single_files(
+    manifest: &TestingManifest,
+    workspace_root: &Path,
+    manifest_file: &Path,
+    declared: &BTreeMap<&str, &DeclaredTask>,
+    candidates: &[Pass3Candidate],
+    options: &RunOptions<'_>,
+    confirmed_by_task: &mut ConfirmedReadsByTask,
+) -> Result<(), TestingError> {
+    let mut pass3_manifest = manifest.clone();
+    pass3_manifest.tasks.clear();
+    let mut pass3_decisions = Vec::new();
+    let mut pass3_meta = Vec::new();
+
+    for candidate in candidates {
+        let Some(&base_task) = declared.get(candidate.orig_id.as_str()) else {
             continue;
         };
-        for (file_idx, file) in files.iter().enumerate() {
-            let synth_id = format!("{orig_id}#audit-file-{idx}-{file_idx}");
-            let mut synth_task = base_task.clone();
-            synth_task.id = synth_id.clone();
-            synth_task.depends_on.clear();
-            synth_task.cache = false;
-            synth_task.execution.batch = None;
-            pass3_manifest.tasks.push(synth_task);
+        for (file_idx, file) in candidate.files.iter().enumerate() {
+            let synth_id = format!(
+                "{}#audit-file-{}-{file_idx}",
+                candidate.orig_id, candidate.group_idx
+            );
+            pass3_manifest
+                .tasks
+                .push(synthetic_audit_task(base_task, synth_id.clone()));
             pass3_decisions.push(synthetic_run_decision(
                 synth_id,
                 base_task.project.clone(),
                 vec![file.clone()],
-                allowlist.clone(),
+                candidate.allowlist.clone(),
             ));
-            pass3_meta.push((*orig_idx, file.clone()));
+            pass3_meta.push((candidate.orig_idx, file.clone()));
         }
     }
 
-    // Pass 3: exact single-file attribution ONLY for failing groups with > 1 file.
-    if !pass3_decisions.is_empty() {
-        let pass3_plan = synthetic_plan(pass3_decisions);
-        let pass3_run = run_plan_once(
-            &pass3_manifest,
-            workspace_root,
-            manifest_file,
-            &pass3_plan,
-            RunOptions {
-                receipts: None,
-                stream_enabled: false,
-                read_guard_mode: Some(ReadGuardMode::Audit),
-                audit_per_file: false,
-                ..options
-            },
-        )?;
-        for (idx, file_result) in pass3_run.tasks.iter().enumerate() {
-            if file_result.undeclared_reads.is_empty() {
-                continue;
-            }
-            let (orig_idx, file) = &pass3_meta[idx];
-            let entry = confirmed_by_task.entry(*orig_idx).or_default();
-            for read in &file_result.undeclared_reads {
-                entry.insert(UndeclaredRead {
-                    path: read.path.clone(),
-                    location: read.location.clone(),
-                    api: read.api.clone(),
-                    selected_file: Some(file.clone()),
-                });
-            }
-        }
-    }
-
-    // Replace Pass-1 over-approximated reads on flagged tasks with exact per-file confirmed reads.
-    for (orig_idx, reads) in confirmed_by_task {
-        if let Some(task_result) = pass1_run.tasks.get_mut(orig_idx) {
-            task_result.undeclared_reads = reads.into_iter().collect();
-        }
-    }
-
-    Ok(pass1_run)
-}
-
-fn clone_plan(plan: &PlanResult) -> PlanResult {
-    PlanResult {
-        schema_version: plan.schema_version,
-        scope: ResolvedScope {
-            kind: plan.scope.kind.clone(),
-            base: plan.scope.base.clone(),
-            head: plan.scope.head.clone(),
-            changed_paths: plan.scope.changed_paths.clone(),
-            full_fallback: plan.scope.full_fallback,
-        },
-        tasks: plan.tasks.clone(),
-        issues: plan.issues.clone(),
-        complete: plan.complete,
-        counts: PlanCounts {
-            run: plan.counts.run,
-            skip_proven_unaffected: plan.counts.skip_proven_unaffected,
-        },
-        shard: plan.shard.clone(),
-        workspace_fingerprint: plan.workspace_fingerprint.clone(),
-    }
-}
-
-fn synthetic_run_decision(
-    id: String,
-    project: String,
-    selected_files: Vec<String>,
-    allowlist: TaskReadGuardAllowlist,
-) -> TaskDecision {
-    TaskDecision {
-        id,
-        decision: "run".to_owned(),
-        reason: "audit-per-file".to_owned(),
-        confidence: "conservative".to_owned(),
-        widened: false,
-        project,
-        causes: Vec::new(),
-        reached_files: selected_files.clone(),
-        selected_files,
-        cache_inputs: None,
-        read_guard_allowlist: Some(allowlist),
-    }
-}
-
-fn synthetic_plan(tasks: Vec<TaskDecision>) -> PlanResult {
-    let run_count = tasks.len();
-    PlanResult {
-        schema_version: PROTOCOL_SCHEMA_VERSION,
-        scope: ResolvedScope {
-            kind: "all".to_owned(),
-            base: None,
-            head: None,
-            changed_paths: Vec::new(),
-            full_fallback: false,
-        },
-        tasks,
-        issues: Vec::new(),
-        complete: true,
-        counts: PlanCounts {
-            run: run_count,
-            skip_proven_unaffected: 0,
-        },
-        shard: None,
-        workspace_fingerprint: None,
-    }
-}
-
-fn matching_files_for_task(
-    manifest: &TestingManifest,
-    task: &DeclaredTask,
-    narrowing: &FileNarrowing,
-    candidate_files: &BTreeSet<String>,
-) -> Vec<String> {
-    let mut matches = Vec::new();
-    for rel in candidate_files {
-        if is_ignored_segment(rel) {
+    let pass3_plan = synthetic_plan(pass3_decisions);
+    let pass3_run = run_plan_once(
+        &pass3_manifest,
+        workspace_root,
+        manifest_file,
+        &pass3_plan,
+        audit_subrun_options(options),
+    )?;
+    for (idx, file_result) in pass3_run.tasks.iter().enumerate() {
+        if file_result.undeclared_reads.is_empty() {
             continue;
         }
-        if manifest
-            .workspace
-            .ignore_paths
-            .iter()
-            .any(|pattern| path_matches_impact(rel, pattern))
-        {
-            continue;
-        }
-        let Some(owner) = deepest_project_for_path(&manifest.projects, rel) else {
-            continue;
-        };
-        if owner.id != task.project {
-            continue;
-        }
-        if !narrowing.suffixes.iter().any(|s| rel.ends_with(s)) {
-            continue;
-        }
-        if narrowing.exclude_suffixes.iter().any(|e| rel.ends_with(e)) {
-            continue;
-        }
-        if is_excluded_by_args(&task.execution.args, rel) {
-            continue;
-        }
-        matches.push(rel.clone());
+        let (orig_idx, file) = &pass3_meta[idx];
+        record_reads_for_file(
+            confirmed_by_task.entry(*orig_idx).or_default(),
+            &file_result.undeclared_reads,
+            file,
+        );
     }
-    matches
-}
-
-fn is_excluded_by_args(args: &[String], rel: &str) -> bool {
-    let mut iter = args.iter();
-    while let Some(arg) = iter.next() {
-        if arg == "--exclude" {
-            if let Some(next) = iter.next()
-                && next.trim_start_matches("./") == rel
-            {
-                return true;
-            }
-        } else if let Some(val) = arg.strip_prefix("--exclude=")
-            && val.trim_start_matches("./") == rel
-        {
-            return true;
-        }
-    }
-    false
-}
-
-fn is_ignored_segment(rel: &str) -> bool {
-    rel.split('/').any(|seg| {
-        matches!(
-            seg,
-            "node_modules" | "dist" | ".git" | "target" | "fixtures" | "__fixtures__" | "__mocks__"
-        )
-    })
-}
-
-fn workspace_candidate_files(workspace_root: &Path) -> BTreeSet<String> {
-    let mut files = BTreeSet::new();
-    if let Ok(output) = Command::new("git")
-        .args(["ls-files", "-z"])
-        .current_dir(workspace_root)
-        .output()
-        && output.status.success()
-    {
-        for raw in output.stdout.split(|&b| b == 0) {
-            if raw.is_empty() {
-                continue;
-            }
-            if let Ok(s) = std::str::from_utf8(raw) {
-                files.insert(s.replace('\\', "/"));
-            }
-        }
-    }
-    if let Ok(untracked) = git_untracked_paths(workspace_root) {
-        files.extend(untracked);
-    }
-    files
+    Ok(())
 }

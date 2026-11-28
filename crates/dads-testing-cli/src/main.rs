@@ -131,14 +131,15 @@ fn analyze_workspace(request: &NativeRequest) -> GraphAnalysis {
             issues: Vec::new(),
         };
     }
-    let graph_only_op = matches!(request.operation, Operation::Diagnose | Operation::Doctor | Operation::Hotspots);
+    let graph_only_op = matches!(
+        request.operation,
+        Operation::Diagnose | Operation::Doctor | Operation::Hotspots
+    );
     let always_needs_graph = graph_only_op || read_guard_active;
     let skip_all_without_cache = request.operation == Operation::Run
         && !request.cache
         && (request.all || request.base.as_deref().is_some_and(is_empty_tree_sha));
-    if !always_needs_graph
-        && (skip_all_without_cache || (request.only && !request.cache))
-    {
+    if !always_needs_graph && (skip_all_without_cache || (request.only && !request.cache)) {
         return GraphAnalysis {
             graph: None,
             issues: Vec::new(),

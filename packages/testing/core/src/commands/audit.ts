@@ -36,6 +36,8 @@ const auditOptions: readonly OptionSpecification[] = [
   { name: "--fix", kind: "flag" },
   { name: "--dry-run", kind: "flag" },
   { name: "--no-per-file", kind: "flag" },
+  { name: "--fail-on-findings", kind: "flag" },
+  { name: "--target", kind: "repeatable" },
   { name: "--project", kind: "repeatable" },
   { name: "--task", kind: "repeatable" },
   { name: "--jobs", kind: "value" },
@@ -77,14 +79,43 @@ export const auditCommand: DadTestCommand = {
     } else {
       io.stdout(renderAuditResult(result));
     }
-    return run.exitCode;
+    return resolveAuditExitCode(run.exitCode, parsed.flags.has("--fail-on-findings"), findings.length);
   },
 };
 
+function resolveAuditExitCode(runExitCode: number, failOnFindings: boolean, findingCount: number): number {
+  if (failOnFindings && findingCount > 0 && runExitCode === 0) {
+    return 1;
+  }
+  return runExitCode;
+}
+
+function readAuditList(parsed: ParsedArguments, flag: string): readonly string[] | undefined {
+  const values = collectAuditCommaList(parsed.repeated.get(flag) ?? []);
+  return values.length > 0 ? values : undefined;
+}
+
+function buildAuditScopeFilter(parsed: ParsedArguments): {
+  readonly all?: boolean;
+  readonly only?: boolean;
+  readonly taskKinds?: readonly string[];
+  readonly targets?: readonly string[];
+  readonly projects?: readonly string[];
+  readonly taskIds?: readonly string[];
+} {
+  const projects = readAuditList(parsed, "--project");
+  const taskIds = readAuditList(parsed, "--task");
+  const targets = readAuditList(parsed, "--target");
+  const hasScope = Boolean(projects || taskIds || targets);
+  return {
+    ...(hasScope ? { only: true } : { all: true }),
+    ...(taskIds ? { taskIds } : { taskKinds: ["test"] }),
+    ...(targets ? { targets } : {}),
+    ...(projects ? { projects } : {}),
+  };
+}
+
 function buildAuditRunRequest(parsed: ParsedArguments, io: DadTestCliIo): TestingOperationRequest {
-  const projects = collectAuditCommaList(parsed.repeated.get("--project") ?? []);
-  const taskIds = collectAuditCommaList(parsed.repeated.get("--task") ?? []);
-  const hasScopeFilter = projects.length > 0 || taskIds.length > 0;
   const manifestPath = parsed.values.get("--manifest");
   const jobs = parsed.values.get("--jobs");
   return {
@@ -92,9 +123,7 @@ function buildAuditRunRequest(parsed: ParsedArguments, io: DadTestCliIo): Testin
     auditReads: true,
     auditPerFile: !parsed.flags.has("--no-per-file"),
     cache: false,
-    ...(hasScopeFilter ? { only: true } : { all: true }),
-    ...(projects.length > 0 ? { projects } : {}),
-    ...(taskIds.length > 0 ? { taskIds } : {}),
+    ...buildAuditScopeFilter(parsed),
     ...(manifestPath === undefined ? {} : { manifestPath }),
     ...(jobs === undefined ? {} : { jobs: readPositiveInteger(jobs, "--jobs") }),
     ...(io.nativeBinary === undefined ? {} : { nativeBinary: io.nativeBinary }),

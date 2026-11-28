@@ -111,6 +111,7 @@ fn the_scheduler_refuses_a_zero_job_limit() {
             read_guard_mode: None,
             read_guard_hook_path: None,
             workspace_root_raw: &repository,
+            audit_per_file: false,
         },
     )
     .expect_err("a zero job limit must be refused");
@@ -130,6 +131,7 @@ fn the_scheduler_refuses_a_zero_job_limit() {
                 read_guard_mode: None,
                 read_guard_hook_path: None,
                 workspace_root_raw: &repository,
+                audit_per_file: false,
             },
         )
         .is_ok()

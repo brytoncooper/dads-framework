@@ -53,17 +53,24 @@ export type DadsVitestTierSelection = {
  * - Otherwise (direct `npx vitest run` or widened runs), it applies the
  *   canonical unit/integration tier split consistently.
  */
+function isIntegrationTier(
+  tier: "auto" | "unit" | "integration",
+  env: Readonly<Record<string, string | undefined>>,
+): boolean {
+  if (tier === "integration") {
+    return true;
+  }
+  return tier === "auto" && env["VITEST_TIER"] === "integration";
+}
+
 export function dadsVitestTier(options: DadsVitestTierOptions = {}): DadsVitestTierSelection {
   const env = options.env ?? process.env;
   const baseExclude = [...(options.baseExclude ?? DEFAULT_BASE_EXCLUDE)];
   const integrationInclude = [...(options.integrationInclude ?? DADS_DEFAULT_INTEGRATION_PATTERNS)];
   const unitInclude = [...(options.unitInclude ?? DEFAULT_UNIT_INCLUDE)];
-  const tier = options.tier ?? "auto";
-  const isIntegration =
-    tier === "integration" || (tier === "auto" && env["VITEST_TIER"] === "integration");
-  const isExplicitFiles = env[DADS_TEST_EXPLICIT_FILES_ENV] === "1";
+  const isIntegration = isIntegrationTier(options.tier ?? "auto", env);
 
-  if (isExplicitFiles) {
+  if (env[DADS_TEST_EXPLICIT_FILES_ENV] === "1") {
     return {
       include: [...EXPLICIT_FILES_INCLUDE],
       exclude: baseExclude,
@@ -72,10 +79,12 @@ export function dadsVitestTier(options: DadsVitestTierOptions = {}): DadsVitestT
     };
   }
 
-  return {
-    include: isIntegration ? integrationInclude : unitInclude,
-    exclude: isIntegration ? baseExclude : [...baseExclude, ...integrationInclude],
-    isIntegration,
-    isExplicitFiles: false,
-  };
+  return isIntegration
+    ? { include: integrationInclude, exclude: baseExclude, isIntegration: true, isExplicitFiles: false }
+    : {
+        include: unitInclude,
+        exclude: [...baseExclude, ...integrationInclude],
+        isIntegration: false,
+        isExplicitFiles: false,
+      };
 }

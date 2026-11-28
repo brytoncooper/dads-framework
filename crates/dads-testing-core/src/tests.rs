@@ -6,6 +6,7 @@
     clippy::panic,
     clippy::too_many_lines
 )]
+mod discover_vitest_tiers;
 mod graph_analysis_need;
 mod graph_widening;
 mod planning;

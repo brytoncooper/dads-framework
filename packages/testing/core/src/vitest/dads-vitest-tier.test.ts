@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DADS_DEFAULT_INTEGRATION_PATTERNS,
-  DADS_TEST_EXPLICIT_FILES_ENV,
-  dadsVitestTier,
-} from "./dads-vitest-tier.js";
+import { DADS_DEFAULT_INTEGRATION_PATTERNS, DADS_TEST_EXPLICIT_FILES_ENV, dadsVitestTier } from "./dads-vitest-tier.js";
 
 describe("dadsVitestTier", () => {
   it("excludes integration and e2e patterns by default in unit mode", () => {
@@ -11,11 +7,7 @@ describe("dadsVitestTier", () => {
     expect(tier.isIntegration).toBe(false);
     expect(tier.isExplicitFiles).toBe(false);
     expect(tier.include).toEqual(["src/**/*.test.ts", "src/**/*.test.tsx"]);
-    expect(tier.exclude).toEqual([
-      "**/node_modules/**",
-      "**/dist/**",
-      ...DADS_DEFAULT_INTEGRATION_PATTERNS,
-    ]);
+    expect(tier.exclude).toEqual(["**/node_modules/**", "**/dist/**", ...DADS_DEFAULT_INTEGRATION_PATTERNS]);
   });
 
   it("switches to integration patterns when VITEST_TIER=integration", () => {

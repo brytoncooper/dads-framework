@@ -104,10 +104,11 @@ pub(super) fn prepare_tasks(
             && decision.decision == "run"
             && should_guard_task(&task.kind, &execution)
         {
-            decision
-                .read_guard_allowlist
-                .clone()
-                .or_else(|| allowlist_builder.as_ref().map(|b| b.for_task(task, decision)))
+            decision.read_guard_allowlist.clone().or_else(|| {
+                allowlist_builder
+                    .as_ref()
+                    .map(|b| b.for_task(task, decision))
+            })
         } else {
             None
         };

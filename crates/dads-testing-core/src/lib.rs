@@ -17,6 +17,7 @@ mod discover_schema;
 mod discover_vitest;
 mod discover_vitest_tiers;
 mod doctor;
+mod doctor_ownership;
 mod execute;
 mod git;
 pub mod graph;
@@ -56,13 +57,12 @@ pub use execute::{
 };
 pub use protocol::{
     CouplingHotspot, DiagnoseRemediation, DiagnoseResult, DiagnoseSummary, DoctorCounts,
-    DoctorFinding, DoctorResult, FallbackTrap,
-    HotspotFile, HotspotProject, HotspotsOptions, HotspotsResult, HotspotsSummary, IssueScope,
-    IssueSeverity, NativeRequest, NativeResponse, Operation, OperationResult,
-    PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult, PlanShardMetadata, ReadGuardMode,
-    RemediationSafety, ResolvedScope, RunCounts, RunResult, TaskCacheInputs, TaskCause,
-    TaskDecision, TaskOutput, TaskReadGuardAllowlist, TaskRunResult, TaskShard, UndeclaredRead,
-    WideningCulprit,
+    DoctorFinding, DoctorResult, FallbackTrap, HotspotFile, HotspotProject, HotspotsOptions,
+    HotspotsResult, HotspotsSummary, IssueScope, IssueSeverity, NativeRequest, NativeResponse,
+    Operation, OperationResult, PROTOCOL_SCHEMA_VERSION, PlanCounts, PlanIssue, PlanResult,
+    PlanShardMetadata, ReadGuardMode, RemediationSafety, ResolvedScope, RunCounts, RunResult,
+    TaskCacheInputs, TaskCause, TaskDecision, TaskOutput, TaskReadGuardAllowlist, TaskRunResult,
+    TaskShard, UndeclaredRead, WideningCulprit,
 };
 pub use receipts::{TaskReceiptEntry, TaskReceiptRequest, TaskReceiptStore};
 pub use scope::{is_empty_tree_sha, path_matches_impact};

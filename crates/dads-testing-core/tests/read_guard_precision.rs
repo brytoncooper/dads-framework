@@ -188,7 +188,10 @@ fn ignores_node_modules_enoent_probes_eval_code_policy_files_and_gitignored_path
 #[test]
 fn file_read_edge_and_root_project_import_do_not_enable_allow_all() -> Result<(), Box<dyn Error>> {
     let ws = TempWorkspace::new("root-catchall")?;
-    ws.write("package.json", r#"{"name":"root-catchall-ws","type":"module"}"#)?;
+    ws.write(
+        "package.json",
+        r#"{"name":"root-catchall-ws","type":"module"}"#,
+    )?;
     ws.write("vitest.config.mts", "export const shared = true;\n")?;
     ws.write("root-secret.txt", "root-file\n")?;
     ws.write("pacts/undeclared.json", "{}\n")?;
@@ -402,7 +405,11 @@ fn glob_impact_paths_allow_directory_traversal_and_meta_but_block_unmatched_cont
         Some(graph),
     );
     assert!(resp.ok, "{resp:?}");
-    let run = resp.result.ok_or("missing result")?.run.ok_or("missing run")?;
+    let run = resp
+        .result
+        .ok_or("missing result")?
+        .run
+        .ok_or("missing run")?;
     assert_eq!(run.exit_code, 1);
     let test = run
         .tasks
@@ -489,7 +496,11 @@ fn root_spanning_glob_allows_dir_traversal_but_blocks_unmatched_content()
         Some(graph),
     );
     assert!(resp.ok, "{resp:?}");
-    let run = resp.result.ok_or("missing result")?.run.ok_or("missing run")?;
+    let run = resp
+        .result
+        .ok_or("missing result")?
+        .run
+        .ok_or("missing run")?;
     assert_eq!(run.exit_code, 1);
     let test = run
         .tasks

@@ -161,13 +161,29 @@ non-zero if any skipped task fails.
 
 `dad-test audit` executes test tasks with the runtime file-read guard in
 non-failing audit mode (uncached, disabling cross-project Vitest batching for
-exact per-task attribution), taking `--fix`, `--dry-run`, `--project`
-(repeatable or comma-separated), `--task` (repeatable or comma-separated),
-`--jobs`, `--manifest`, and `--json`. It aggregates undeclared workspace reads
+exact per-task attribution), taking `--fix`, `--dry-run`, `--no-per-file`, `--target`, `--fail-on-findings`,
+`--project` (repeatable or comma-separated), `--task` (repeatable or
+comma-separated), `--jobs`, `--manifest`, and `--json`. By default, for
+tasks with `fileNarrowing`, it proves per-file narrowed allowlists using a
+two-pass intersection + equivalence-class confirmation pass so sibling static
+imports cannot mask narrowed undeclared reads (pass `--no-per-file` for
+whole-task union mode). It aggregates undeclared workspace reads
 per task, collapses three or more undeclared sibling files in the same directory
 into `<dir>/**`, and with `--fix` (without `--dry-run`) patches either static
 `tasks[].impact.paths` or `workspace.discover.taskOverrides`, validates the
 updated manifest via `dad-test plan`, and writes `dads.testing.json` atomically.
+
+`dad-test doctor` statically verifies workspace setup and runner parity
+without executing test suites, taking `--manifest`,
+`--max-workspace-uncertainties` (default `0`), and `--json`. It checks five
+invariants: (1) every project whose `vitest.config.*` splits on `VITEST_TIER`
+or `dadsVitestTier()` defines a `test:integration` or `test:e2e` target,
+(2) every Vitest task's `fileNarrowing` agrees with its project and
+`vitest-files` batch `vitest.config.*`, (3) every test file inside a
+test-owning project is claimed by at least one test task, (4) no two narrowed
+test tasks in the same project overlap on the same file, and (5) whole-workspace
+graph uncertainties do not exceed the configured threshold. It exits `0` when
+clean and `1` otherwise with actionable fix lines.
 
 `dad-test expand` expands a declarative `workspace.discover` manifest into its
 exact canonical `dads.testing.json` IR without running graph analysis or
@@ -499,7 +515,7 @@ constructs, the manifest's checksum, and the validation method: `native` when
 a binary was available, otherwise `structural`, or `none`.
 
 The package also exposes `planTesting(request)`, `runTesting(request)`,
-`diagnoseTesting(request)`, `expandTestingManifest(request)`,
+`diagnoseTesting(request)`, `doctorTesting(request)`, `expandTestingManifest(request)`,
 `nativePackageNameForPlatform()`, and `resolveNativeTestingBinary()`. Each
 operation makes one JSON request to the native `dad-test` process. Companion
 subpath exports cover standalone Nx-free workflows:
@@ -516,7 +532,7 @@ subpath exports cover standalone Nx-free workflows:
   `loadWorkspaceBoundaryIndex`) enforcing cross-project relative import bans,
   tag `depConstraints`, `bannedExternalImports`, `banTransitiveDependencies`,
   `enforceBuildableLibDependency`, and project dependency cycles.
-- `@dads-framework/testing/vitest`: `dadsTsconfigPaths()` Vite/Vitest plugin.
+- `@dads-framework/testing/vitest`: `dadsTsconfigPaths()` Vite/Vitest plugin and `dadsVitestTier()` (`DADS_DEFAULT_INTEGRATION_PATTERNS`, `DADS_TEST_EXPLICIT_FILES_ENV`) so Vitest honors `DADS_TEST_EXPLICIT_FILES=1` on narrowed runs and shares one canonical unit/integration tier split with `dad-test`.
 - `@dads-framework/testing/nx`: live Nx adapter and `dad-test-nx eject`
   (see the [Nx guide](nx/README.md)).
 

@@ -4,7 +4,9 @@
 //! extracts statically verifiable `setupFiles`, and fails closed (`dynamic_setup_files = true`)
 //! whenever `setupFiles` uses a non-literal expression.
 
-use crate::discover_vitest_tiers::{INTEGRATION_TIER_SUFFIXES, VitestTierInfo, inspect_vitest_tiers};
+use crate::discover_vitest_tiers::{
+    INTEGRATION_TIER_SUFFIXES, VitestTierInfo, inspect_vitest_tiers,
+};
 use crate::manifest::{FileNarrowing, ImpactMode, TaskExecution, TaskKind, TestingManifest};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -21,6 +23,7 @@ pub(crate) const VITEST_CONFIG_CANDIDATES: &[&str] = &[
     "vite.config.mjs",
 ];
 
+#[derive(Clone)]
 pub(crate) struct VitestDiscovery {
     pub(crate) config_path: Option<String>,
     pub(crate) setup_files: Vec<String>,
@@ -91,17 +94,26 @@ pub(crate) fn apply_auto_vitest_narrowing(
         ".spec.ts".to_owned(),
         ".spec.tsx".to_owned(),
     ];
-    let default_excludes = if exclude_integration_tiers || inspection.tiers.excludes_integration_tiers {
-        let mut set: BTreeSet<String> = if exclude_integration_tiers {
-            INTEGRATION_TIER_SUFFIXES.iter().map(|s| (*s).to_owned()).collect()
+    let default_excludes =
+        if exclude_integration_tiers || inspection.tiers.excludes_integration_tiers {
+            let mut excludes = Vec::new();
+            let mut seen = BTreeSet::new();
+            if exclude_integration_tiers {
+                for suffix in INTEGRATION_TIER_SUFFIXES {
+                    if seen.insert((*suffix).to_owned()) {
+                        excludes.push((*suffix).to_owned());
+                    }
+                }
+            }
+            for suffix in &inspection.tiers.excluded_tier_suffixes {
+                if seen.insert(suffix.clone()) {
+                    excludes.push(suffix.clone());
+                }
+            }
+            excludes
         } else {
-            BTreeSet::new()
+            Vec::new()
         };
-        set.extend(inspection.tiers.excluded_tier_suffixes.iter().cloned());
-        set.into_iter().collect()
-    } else {
-        Vec::new()
-    };
     let existing = execution.file_narrowing.take();
     let (suffixes, exclude_suffixes, mut setup_set) = match existing {
         Some(n) => (

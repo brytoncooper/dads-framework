@@ -16,10 +16,8 @@ fn git(root: &Path, args: &[&str]) -> Result<(), Box<dyn Error>> {
 }
 
 fn init_fixture(name: &str) -> Result<PathBuf, Box<dyn Error>> {
-    let root = std::env::temp_dir().join(format!(
-        "dads-testing-js-092-{name}-{}",
-        std::process::id()
-    ));
+    let root =
+        std::env::temp_dir().join(format!("dads-testing-js-092-{name}-{}", std::process::id()));
     let _ = remove_dir_all(&root);
     create_dir_all(root.join("lib"))?;
     create_dir_all(root.join("app"))?;
@@ -84,7 +82,11 @@ fn jsdoc_plus_export_type_attributes_precisely_without_fallback() -> Result<(), 
         "export type Kept = string;\nexport function runtimeFn() { return 1; }\n/** Added wire type. */\nexport type AddedType = number;\n",
     )?;
     let plan = plan_for(&root)?;
-    assert!(plan.issues.is_empty(), "unexpected issues: {:?}", plan.issues);
+    assert!(
+        plan.issues.is_empty(),
+        "unexpected issues: {:?}",
+        plan.issues
+    );
     assert_eq!(
         plan.tasks
             .iter()
@@ -122,7 +124,11 @@ fn mixed_runtime_and_type_import_reaches_typecheck_when_type_changes() -> Result
         "/** Updated type. */\nexport type SharedType = { id: number };\nexport function helper() { return 1; }\n",
     )?;
     let plan = plan_for(&root)?;
-    assert!(plan.issues.is_empty(), "unexpected issues: {:?}", plan.issues);
+    assert!(
+        plan.issues.is_empty(),
+        "unexpected issues: {:?}",
+        plan.issues
+    );
     assert_eq!(
         plan.tasks
             .iter()

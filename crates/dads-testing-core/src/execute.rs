@@ -3,8 +3,8 @@
 use crate::boundaries::check_boundaries;
 use crate::boundaries_config::{load_boundaries_config, validate_workspace_boundaries};
 use crate::diagnose::build_diagnose;
-use crate::doctor::build_doctor;
 use crate::discover::expand_manifest;
+use crate::doctor::build_doctor;
 use crate::graph::DependencyGraph;
 use crate::hotspots::build_hotspots;
 use crate::manifest::{DEFAULT_MANIFEST_PATH, TestingManifest, load_manifest, validate_manifest};

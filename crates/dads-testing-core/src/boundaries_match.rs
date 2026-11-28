@@ -7,8 +7,9 @@ use crate::graph::{ImportFact, ImportKind, ModuleNode};
 use crate::scope::{is_standard_test_path, path_matches_impact};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-pub(crate) const IGNORED_SPECIFIER_PREFIXES: &[&str] =
-    &["virtual:", "data:", "http:", "https:", "fs:", "fs-dir:", "glob:"];
+pub(crate) const IGNORED_SPECIFIER_PREFIXES: &[&str] = &[
+    "virtual:", "data:", "http:", "https:", "fs:", "fs-dir:", "glob:",
+];
 
 const NODE_BUILTINS: &[&str] = &[
     "_http_agent",

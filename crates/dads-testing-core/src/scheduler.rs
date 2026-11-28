@@ -2,6 +2,7 @@
 //! protocol's default behavior is predictable across machines; callers can provide `jobs` to
 //! select a different positive bound.
 mod audit_per_file;
+mod audit_per_file_plan;
 mod batch;
 mod cache_ops;
 mod dispatch;

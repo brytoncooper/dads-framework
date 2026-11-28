@@ -111,10 +111,7 @@ impl ExternalPackageIndex {
             let Some(pkg_name) = package_name_from_lock_key(key) else {
                 continue;
             };
-            let is_link = entry
-                .get("link")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
+            let is_link = entry.get("link").and_then(Value::as_bool).unwrap_or(false);
             if is_link {
                 self.local_linked.insert(pkg_name.to_owned());
             } else {
@@ -147,9 +144,8 @@ impl ExternalPackageIndex {
             let all_node_modules = targets.as_array().is_some_and(|arr| {
                 !arr.is_empty()
                     && arr.iter().all(|t| {
-                        t.as_str().is_some_and(|s| {
-                            s.split('/').any(|seg| seg == "node_modules")
-                        })
+                        t.as_str()
+                            .is_some_and(|s| s.split('/').any(|seg| seg == "node_modules"))
                     })
             });
             if !all_node_modules {

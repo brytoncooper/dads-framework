@@ -21,7 +21,9 @@ pub(super) struct DecisionInputs<'a> {
     pub(super) allowlist_builder: Option<&'a AllowlistBuilder<'a>>,
 }
 
-pub(super) fn explain_decisions(inputs: &DecisionInputs<'_>) -> Result<Vec<TaskDecision>, TestingError> {
+pub(super) fn explain_decisions(
+    inputs: &DecisionInputs<'_>,
+) -> Result<Vec<TaskDecision>, TestingError> {
     let manifest = inputs.manifest;
     let scope = inputs.scope;
     let graph = inputs.graph;
@@ -74,9 +76,8 @@ pub(super) fn explain_decisions(inputs: &DecisionInputs<'_>) -> Result<Vec<TaskD
         let cache_inputs =
             run.then(|| cache_index.for_task(task, scope, evidence, &selected_files));
         let read_guard_allowlist = allowlist_builder.and_then(|builder| {
-            (run && should_guard_task(&task.kind, &task.execution)).then(|| {
-                builder.for_task_parts(task, &selected_files, cache_inputs.as_ref())
-            })
+            (run && should_guard_task(&task.kind, &task.execution))
+                .then(|| builder.for_task_parts(task, &selected_files, cache_inputs.as_ref()))
         });
         decisions.push(TaskDecision {
             decision: if run {

@@ -1,6 +1,7 @@
+import { parseOptionalNonNegativeInt } from "../cli-arguments.js";
 import type { OptionSpecification } from "../cli-arguments.js";
 import { writeCommandSuccess } from "../cli-output.js";
-import type { DadTestCliIo, DadTestCommand } from "../dad-test-cli.js";
+import type { DadTestCommand } from "../dad-test-cli.js";
 import { doctorTesting } from "../testing-api.js";
 import type { TestingDoctorFinding, TestingDoctorResult } from "../testing-api.js";
 
@@ -37,18 +38,6 @@ export const doctorCommand: DadTestCommand = {
     return result.ok ? 0 : 1;
   },
 };
-
-function parseOptionalNonNegativeInt(raw: string | undefined, flag: string): number | undefined {
-  if (raw === undefined) return undefined;
-  if (!/^\d+$/u.test(raw.trim())) {
-    throw new Error(`${flag} must be a non-negative integer.`);
-  }
-  const value = Number.parseInt(raw.trim(), 10);
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`${flag} must be a non-negative integer.`);
-  }
-  return value;
-}
 
 function applyDoctorThreshold(result: TestingDoctorResult, maxWorkspaceUncertainties: number): TestingDoctorResult {
   if (maxWorkspaceUncertainties === 0) return result;

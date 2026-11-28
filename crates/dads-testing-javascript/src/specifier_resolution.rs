@@ -62,7 +62,9 @@ pub(crate) fn resolve_static_specifier(
         Err(_) if specifier.starts_with("node:") => None,
         Err(error) if is_bare_specifier(specifier) => {
             if let Some(types_specifier) = at_types_specifier(specifier)
-                && let Ok(resolution) = ctx.resolver.resolve_file(ctx.absolute_path, &types_specifier)
+                && let Ok(resolution) = ctx
+                    .resolver
+                    .resolve_file(ctx.absolute_path, &types_specifier)
             {
                 return canonical_workspace_path(ctx.workspace_root, resolution.path());
             }

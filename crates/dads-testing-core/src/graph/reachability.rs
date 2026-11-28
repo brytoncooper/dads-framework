@@ -144,9 +144,7 @@ impl DependencyGraph {
                         walk.module_eval_queue.push_back(p.clone());
                     }
                     let mut combined = c.exports;
-                    if !erase_type_only
-                        && let Some(type_exports) = c.type_exports
-                    {
+                    if !erase_type_only && let Some(type_exports) = c.type_exports {
                         combined.extend(type_exports);
                     }
                     if !combined.is_empty() {

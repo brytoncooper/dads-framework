@@ -37,7 +37,7 @@ const usage =
     "Commands:",
     "  plan              Compute affected tasks without running them (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --enforce-declared-reads, --no-enforce-declared-reads, --manifest)",
     "  run               Execute affected tasks (--base, --head, --all, --only, --task, --kind, --target, --project, --exclude, --shard, --weights, --plan-file, --jobs, --cache, --cache-dir, --remote-cache, --enforce-declared-reads, --no-enforce-declared-reads, --verify-shadow, --fail-on-shadow-escape, --stream, --report)",
-    "  audit             Trace runtime workspace file reads per task and optionally patch dads.testing.json (--fix, --dry-run, --project, --task, --jobs, --manifest)",
+    "  audit             Trace runtime workspace file reads per task and optionally patch dads.testing.json (--fix, --dry-run, --no-per-file, --project, --task, --jobs, --manifest)",
     "  explain           Show why each task ran or was skipped with located evidence (--base, --head, --all, --only, --task, --why)",
     "  diagnose          Coupling & precision X-ray with widening culprits and fixes (--fix, --dry-run; auto-detects Nx workspaces)",
     "  doctor            Verify Vitest tier parity, runner ↔ narrowing alignment, test ownership, and zero workspace uncertainties (--max-workspace-uncertainties, --manifest)",

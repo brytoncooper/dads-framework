@@ -636,3 +636,173 @@ fn vitest_batch_isolates_members_on_undeclared_read_in_enforce_mode() -> Result<
     assert!(find_task(&audit_run, "b:test")?.undeclared_reads.is_empty());
     Ok(())
 }
+
+#[test]
+fn audit_per_file_catches_sibling_masked_undeclared_read_with_zero_false_positives()
+-> Result<(), Box<dyn Error>> {
+    let ws = TempWorkspace::new("audit-per-file")?;
+    ws.write("libs/shared/helper.mjs", "export const v = 42;\n")?;
+    ws.write("libs/other/other.mjs", "export const o = 99;\n")?;
+    // Sibling a.test.mjs statically imports libs/shared/helper.mjs AND reads it legitimately.
+    ws.write(
+        "scripts/a.test.mjs",
+        "import { v } from '../libs/shared/helper.mjs';\nif (v !== 42) throw new Error('bad');\n",
+    )?;
+    // Sibling b.test.mjs dynamically reads libs/shared/helper.mjs WITHOUT statically importing it.
+    ws.write(
+        "scripts/b.test.mjs",
+        "import fs from 'node:fs';\nfs.readFileSync('libs/shared/helper.mjs', 'utf8');\n",
+    )?;
+    // Sibling c.test.mjs statically imports libs/other/other.mjs (distinct legitimate import).
+    ws.write(
+        "scripts/c.test.mjs",
+        "import { o } from '../libs/other/other.mjs';\nif (o !== 99) throw new Error('bad');\n",
+    )?;
+    ws.write(
+        "scripts/run.mjs",
+        r#"
+import { spawnSync } from 'node:child_process';
+const files = process.argv.slice(2);
+const targets = files.length > 0 ? files : ['scripts/a.test.mjs', 'scripts/b.test.mjs', 'scripts/c.test.mjs'];
+for (const f of targets) {
+  const res = spawnSync(process.execPath, [f], { stdio: 'inherit' });
+  if (res.status !== 0) process.exit(res.status ?? 1);
+}
+"#,
+    )?;
+    ws.write(
+        "dads.testing.json",
+        &serde_json::to_string_pretty(&serde_json::json!({
+            "schemaVersion": 1,
+            "workspace": {
+                "root": ".",
+                "fullFallback": { "taskIds": ["scripts:test"] }
+            },
+            "projects": [
+                { "id": "scripts", "root": "scripts" },
+                { "id": "shared", "root": "libs/shared" },
+                { "id": "other", "root": "libs/other" }
+            ],
+            "tasks": [{
+                "id": "scripts:test",
+                "project": "scripts",
+                "kind": "test",
+                "execution": {
+                    "executable": "node",
+                    "args": ["scripts/run.mjs"],
+                    "fileNarrowing": { "suffixes": [".test.mjs"] }
+                },
+                "impact": { "mode": "reachability", "paths": [] },
+                "cache": false
+            }]
+        }))?,
+    )?;
+    ws.init_git()?;
+
+    let graph = DependencyGraph::new(
+        vec![
+            ModuleNode {
+                path: "libs/shared/helper.mjs".into(),
+                language: "javascript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![],
+            },
+            ModuleNode {
+                path: "libs/other/other.mjs".into(),
+                language: "javascript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![],
+            },
+            ModuleNode {
+                path: "scripts/a.test.mjs".into(),
+                language: "javascript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![ImportFact {
+                    specifier: "../libs/shared/helper.mjs".into(),
+                    span: SourceSpan { start: 0, end: 1 },
+                    kind: ImportKind::Static,
+                    type_only: false,
+                    requested_symbols: BTreeSet::from(["v".into()]),
+                    namespace_import: false,
+                    reexport_all: false,
+                    reexport_namespace: None,
+                    resolved_path: Some("libs/shared/helper.mjs".into()),
+                    position: None,
+                    export_deps: None,
+                    member_reads: None,
+                }],
+            },
+            ModuleNode {
+                path: "scripts/b.test.mjs".into(),
+                language: "javascript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![],
+            },
+            ModuleNode {
+                path: "scripts/c.test.mjs".into(),
+                language: "javascript".into(),
+                declarations: vec![],
+                references: vec![],
+                imports: vec![ImportFact {
+                    specifier: "../libs/other/other.mjs".into(),
+                    span: SourceSpan { start: 0, end: 1 },
+                    kind: ImportKind::Static,
+                    type_only: false,
+                    requested_symbols: BTreeSet::from(["o".into()]),
+                    namespace_import: false,
+                    reexport_all: false,
+                    reexport_namespace: None,
+                    resolved_path: Some("libs/other/other.mjs".into()),
+                    position: None,
+                    export_deps: None,
+                    member_reads: None,
+                }],
+            },
+        ],
+        vec![],
+    );
+
+    // Whole-task audit (audit_per_file = false) is masked by sibling a.test.mjs's static import!
+    let whole_run = extract_run(execute_request_with_graph(
+        NativeRequest {
+            schema_version: PROTOCOL_SCHEMA_VERSION,
+            operation: Operation::Run,
+            workspace_root: ws.0.to_string_lossy().into_owned(),
+            all: true,
+            audit_reads: true,
+            audit_per_file: false,
+            ..NativeRequest::default()
+        },
+        Some(graph.clone()),
+    ))?;
+    assert!(
+        find_task(&whole_run, "scripts:test")?
+            .undeclared_reads
+            .is_empty(),
+        "whole-task audit should be masked by sibling static import"
+    );
+
+    // Per-file audit (audit_per_file = true) catches b.test.mjs with exact selected_file and zero
+    // false positives for a.test.mjs or c.test.mjs!
+    let per_file_run = extract_run(execute_request_with_graph(
+        NativeRequest {
+            schema_version: PROTOCOL_SCHEMA_VERSION,
+            operation: Operation::Run,
+            workspace_root: ws.0.to_string_lossy().into_owned(),
+            all: true,
+            audit_reads: true,
+            audit_per_file: true,
+            ..NativeRequest::default()
+        },
+        Some(graph),
+    ))?;
+    let reads = &find_task(&per_file_run, "scripts:test")?.undeclared_reads;
+    assert_eq!(reads.len(), 1, "expected exactly 1 per-file undeclared read, got {reads:?}");
+    assert_eq!(reads[0].path, "libs/shared/helper.mjs");
+    assert_eq!(reads[0].selected_file.as_deref(), Some("scripts/b.test.mjs"));
+    Ok(())
+}

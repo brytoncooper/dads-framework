@@ -324,6 +324,7 @@ fn execute_plan_or_run(
                 read_guard_mode,
                 read_guard_hook_path: request.read_guard_hook_path.as_deref(),
                 workspace_root_raw: Path::new(&request.workspace_root),
+                audit_per_file: request.audit_per_file,
             },
         )?;
         let mut result = result_for("run", plan);

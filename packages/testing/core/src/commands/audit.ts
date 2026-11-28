@@ -35,6 +35,7 @@ export type TestingAuditResult = {
 const auditOptions: readonly OptionSpecification[] = [
   { name: "--fix", kind: "flag" },
   { name: "--dry-run", kind: "flag" },
+  { name: "--no-per-file", kind: "flag" },
   { name: "--project", kind: "repeatable" },
   { name: "--task", kind: "repeatable" },
   { name: "--jobs", kind: "value" },
@@ -89,6 +90,7 @@ function buildAuditRunRequest(parsed: ParsedArguments, io: DadTestCliIo): Testin
   return {
     workspaceRoot: io.cwd,
     auditReads: true,
+    auditPerFile: !parsed.flags.has("--no-per-file"),
     cache: false,
     ...(hasScopeFilter ? { only: true } : { all: true }),
     ...(projects.length > 0 ? { projects } : {}),
@@ -210,8 +212,9 @@ export function renderAuditResult(result: TestingAuditResult): string {
 
 function appendFindingLines(lines: string[], finding: TestingAuditTaskFinding): void {
   for (const read of finding.undeclaredReads) {
-    const suffix = read.location === undefined ? "" : `  (read at ${read.location})`;
-    lines.push(`    - ${read.path}${suffix}`);
+    const loc = read.location === undefined ? "" : `  (read at ${read.location})`;
+    const via = read.selectedFile === undefined ? "" : `  [when narrowed to ${read.selectedFile}]`;
+    lines.push(`    - ${read.path}${loc}${via}`);
   }
   const quoted = finding.suggestedImpactPaths.map((entry) => `"${entry}"`).join(", ");
   lines.push(`    suggested impact.paths: ${quoted}`);

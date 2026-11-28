@@ -78,6 +78,7 @@ type NativeRequest = {
   readonly enforceDeclaredReads?: boolean;
   readonly noEnforceDeclaredReads?: boolean;
   readonly auditReads?: boolean;
+  readonly auditPerFile?: boolean;
   readonly readGuardHookPath?: string;
   readonly hotspots?: NativeHotspotsOptions;
   readonly boundariesConfigPath?: string;
@@ -219,6 +220,7 @@ function optionalNativeReadGuardFields(request: TestingOperationRequest): Partia
     ...(request.enforceDeclaredReads === true ? { enforceDeclaredReads: true } : {}),
     ...(request.noEnforceDeclaredReads === true ? { noEnforceDeclaredReads: true } : {}),
     ...(request.auditReads === true ? { auditReads: true } : {}),
+    ...(request.auditPerFile === true ? { auditPerFile: true } : {}),
     ...(request.readGuardHookPath === undefined ? {} : { readGuardHookPath: request.readGuardHookPath }),
   };
 }

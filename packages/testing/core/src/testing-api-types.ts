@@ -47,6 +47,8 @@ export type TestingOperationRequest = {
   readonly noEnforceDeclaredReads?: boolean;
   /** Audit undeclared workspace file reads per task without failing tasks (used by `dad-test audit`). */
   readonly auditReads?: boolean;
+  /** Audit fileNarrowing tasks against per-file narrowed allowlists (used by `dad-test audit`). */
+  readonly auditPerFile?: boolean;
   /** Optional explicit path to the V8 read-guard preload hook (for testing). */
   readonly readGuardHookPath?: string;
   /** Optional sink receiving live progress chunks when `stream` is enabled. */
@@ -155,6 +157,7 @@ export type TestingUndeclaredRead = {
   readonly path: string;
   readonly location?: string;
   readonly api?: string;
+  readonly selectedFile?: string;
 };
 
 export type TestingTaskRunResult = {

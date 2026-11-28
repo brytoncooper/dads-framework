@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 /// Serialized on runnable guarded `TaskDecision`s when read enforcement is active so
 /// `dad-test run --plan-file` enforces the exact same allowlist as `--all` / `--base --head`
 /// without re-parsing the workspace dependency graph.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskReadGuardAllowlist {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -42,6 +42,39 @@ impl TaskReadGuardAllowlist {
             allowed_ancestor_dirs: ancestor_dirs.into_iter().collect(),
         }
     }
+
+    /// Intersects multiple per-file allowlists to form the sound lower bound A_common used by
+    /// Pass 1 of per-file read-guard auditing.
+    pub(crate) fn intersect_many<'a>(lists: impl IntoIterator<Item = &'a Self>) -> Self {
+        let mut iter = lists.into_iter();
+        let Some(first) = iter.next() else {
+            return Self::default();
+        };
+        let mut project_roots: BTreeSet<String> =
+            first.allowed_project_roots.iter().cloned().collect();
+        let mut impact_paths: BTreeSet<String> =
+            first.allowed_impact_paths.iter().cloned().collect();
+        let mut extra_files: BTreeSet<String> =
+            first.allowed_extra_files.iter().cloned().collect();
+        let mut ancestor_dirs: BTreeSet<String> =
+            first.allowed_ancestor_dirs.iter().cloned().collect();
+        for list in iter {
+            let pr: BTreeSet<&str> = list.allowed_project_roots.iter().map(String::as_str).collect();
+            let ip: BTreeSet<&str> = list.allowed_impact_paths.iter().map(String::as_str).collect();
+            let ef: BTreeSet<&str> = list.allowed_extra_files.iter().map(String::as_str).collect();
+            let ad: BTreeSet<&str> = list.allowed_ancestor_dirs.iter().map(String::as_str).collect();
+            project_roots.retain(|item| pr.contains(item.as_str()));
+            impact_paths.retain(|item| ip.contains(item.as_str()));
+            extra_files.retain(|item| ef.contains(item.as_str()));
+            ancestor_dirs.retain(|item| ad.contains(item.as_str()));
+        }
+        Self {
+            allowed_project_roots: project_roots.into_iter().collect(),
+            allowed_impact_paths: impact_paths.into_iter().collect(),
+            allowed_extra_files: extra_files.into_iter().collect(),
+            allowed_ancestor_dirs: ancestor_dirs.into_iter().collect(),
+        }
+    }
 }
 
 /// One undeclared workspace file read observed at runtime by the V8 preload read guard.
@@ -53,6 +86,8 @@ pub struct UndeclaredRead {
     pub location: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_file: Option<String>,
 }
 
 /// Execution mode for the runtime workspace file-read tracer.

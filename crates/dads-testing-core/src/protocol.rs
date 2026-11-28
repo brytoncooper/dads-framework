@@ -84,6 +84,8 @@ pub struct NativeRequest {
     #[serde(default)]
     pub audit_reads: bool,
     #[serde(default)]
+    pub audit_per_file: bool,
+    #[serde(default)]
     pub read_guard_hook_path: Option<String>,
 }
 
@@ -116,6 +118,7 @@ impl Default for NativeRequest {
             enforce_declared_reads: false,
             no_enforce_declared_reads: false,
             audit_reads: false,
+            audit_per_file: false,
             read_guard_hook_path: None,
         }
     }
@@ -230,7 +233,7 @@ pub struct TaskCacheInputs {
     pub extra_files: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskDecision {
     pub id: String,
@@ -254,7 +257,7 @@ pub struct TaskDecision {
 
 /// The located evidence behind one task decision. Every widening reason names either the issue
 /// that forced it or the project whose fallback dependency carried it.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(
     tag = "kind",
     rename_all = "kebab-case",
@@ -295,7 +298,7 @@ pub enum TaskCause {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanIssue {
     pub code: String,

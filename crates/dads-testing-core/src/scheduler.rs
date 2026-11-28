@@ -1,6 +1,7 @@
 //! Running the selected task DAG. The default is deliberately fixed at four workers so the
 //! protocol's default behavior is predictable across machines; callers can provide `jobs` to
 //! select a different positive bound.
+mod audit_per_file;
 mod batch;
 mod cache_ops;
 mod dispatch;
@@ -47,6 +48,7 @@ pub(crate) struct RunOptions<'a> {
     pub(crate) read_guard_mode: Option<ReadGuardMode>,
     pub(crate) read_guard_hook_path: Option<&'a str>,
     pub(crate) workspace_root_raw: &'a Path,
+    pub(crate) audit_per_file: bool,
 }
 
 struct LoopState {
@@ -67,6 +69,25 @@ struct LoopContext<'a> {
 }
 
 pub(crate) fn run_plan(
+    manifest: &TestingManifest,
+    workspace_root: &Path,
+    manifest_file: &Path,
+    plan: &PlanResult,
+    options: RunOptions<'_>,
+) -> Result<RunResult, TestingError> {
+    if options.read_guard_mode == Some(ReadGuardMode::Audit) && options.audit_per_file {
+        return audit_per_file::run_plan_audit_per_file(
+            manifest,
+            workspace_root,
+            manifest_file,
+            plan,
+            options,
+        );
+    }
+    run_plan_once(manifest, workspace_root, manifest_file, plan, options)
+}
+
+pub(super) fn run_plan_once(
     manifest: &TestingManifest,
     workspace_root: &Path,
     manifest_file: &Path,

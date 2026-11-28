@@ -133,14 +133,14 @@ fn parse_single_pnpm_v9(raw: &str) -> Option<BTreeMap<String, PackageSnapshot>> 
                     entry.has_install_script = true;
                 }
             }
-        } else if indent == 6 && in_deps_block {
-            if let Some((dep_key, _)) = trimmed.split_once(':')
-                && let Some(entry) = map.get_mut(key)
-            {
-                let dep_name = unquote_yaml_key(dep_key.trim());
-                if !dep_name.is_empty() {
-                    entry.deps.insert(dep_name);
-                }
+        } else if indent == 6
+            && in_deps_block
+            && let Some((dep_key, _)) = trimmed.split_once(':')
+            && let Some(entry) = map.get_mut(key)
+        {
+            let dep_name = unquote_yaml_key(dep_key.trim());
+            if !dep_name.is_empty() {
+                entry.deps.insert(dep_name);
             }
         }
     }

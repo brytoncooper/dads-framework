@@ -138,7 +138,11 @@ fn collect_direct_snapshot_changes(
             newly_added_only = false;
         }
     }
-    (direct_changed, existing_changed_or_removed, newly_added_only)
+    (
+        direct_changed,
+        existing_changed_or_removed,
+        newly_added_only,
+    )
 }
 
 fn compute_snapshot_closure(

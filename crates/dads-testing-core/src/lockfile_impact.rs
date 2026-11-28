@@ -96,7 +96,10 @@ pub(crate) fn analyze_lockfile_impact(
 
     let mut seeded = graph.modules_importing_external_packages(&diff.impacted_packages);
     if let Some(ref dirs) = diff.scoped_importer_dirs {
-        seeded.retain(|path| dirs.iter().any(|dir| crate::scope::path_is_inside(path, dir)));
+        seeded.retain(|path| {
+            dirs.iter()
+                .any(|dir| crate::scope::path_is_inside(path, dir))
+        });
     }
     report.seeded_modules = seeded;
     report.handled_paths.insert(lockfile_path.to_owned());
@@ -207,7 +210,6 @@ fn diff_lockfile_maps(
     base_map: &BTreeMap<String, PackageSnapshot>,
     head_map: &BTreeMap<String, PackageSnapshot>,
 ) -> Option<LockfileDiffOutcome> {
-
     let mut direct_changed = BTreeSet::new();
     let mut newly_added = BTreeSet::new();
     let mut existing_changed_or_removed = BTreeSet::new();

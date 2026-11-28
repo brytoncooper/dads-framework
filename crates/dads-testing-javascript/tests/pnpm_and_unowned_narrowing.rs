@@ -197,7 +197,10 @@ fn pnpm_v9_exact_snapshot_bfs_isolates_example_dep_bumps() -> Result<(), Box<dyn
         root.join("examples/app/package.json"),
         r#"{ "name": "example-app", "dependencies": { "sentry-cli": "1.0.0" } }"#,
     )?;
-    write(root.join("pnpm-lock.yaml"), pnpm_lock_fixture("1.0.0", "8.0.0"))?;
+    write(
+        root.join("pnpm-lock.yaml"),
+        pnpm_lock_fixture("1.0.0", "8.0.0"),
+    )?;
     write(
         root.join("dads.testing.json"),
         r#"{
@@ -230,7 +233,10 @@ fn pnpm_v9_exact_snapshot_bfs_isolates_example_dep_bumps() -> Result<(), Box<dyn
         root.join("examples/app/package.json"),
         r#"{ "name": "example-app", "dependencies": { "sentry-cli": "1.0.1" } }"#,
     )?;
-    write(root.join("pnpm-lock.yaml"), pnpm_lock_fixture("1.0.1", "8.0.1"))?;
+    write(
+        root.join("pnpm-lock.yaml"),
+        pnpm_lock_fixture("1.0.1", "8.0.1"),
+    )?;
 
     let req = plan_request(&root, Some("HEAD"));
     let graph = analyze_request(&req);

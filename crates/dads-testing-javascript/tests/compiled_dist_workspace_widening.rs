@@ -149,7 +149,10 @@ fn compiled_dist_workspace_edit_widens_unresolved_fallback_dependents_without_wi
         .ok_or("expected plan result for semantic edit")?
         .plan;
 
-    assert_eq!(find_task(&plan.tasks, "provider-utils:test")?.decision, "run");
+    assert_eq!(
+        find_task(&plan.tasks, "provider-utils:test")?.decision,
+        "run"
+    );
     assert_eq!(find_task(&plan.tasks, "ai:test")?.decision, "run");
     assert_eq!(
         find_task(&plan.tasks, "unrelated:test")?.decision,

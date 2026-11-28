@@ -4,11 +4,10 @@ use super::PlanEvidence;
 use super::widening_fs::{
     matching_fs_dir_nodes, push_unique_project_issue, record_fs_dir_reachable_path,
     record_missing_frontend, widen_ambient_dts_typechecks,
-    widen_unresolved_module_importers_on_delete,
 };
 use super::widening_paths::{
     collect_graph_changed_paths, is_javascript_source_path, widen_uncovered_paths,
-    widen_unresolved_workspace_dependents,
+    widen_unresolved_module_importers_on_delete, widen_unresolved_workspace_dependents,
 };
 use crate::graph::{DependencyGraph, GraphUncertainty, GraphUncertaintyScope};
 use crate::manifest::{ImpactMode, TaskKind, TestingManifest};

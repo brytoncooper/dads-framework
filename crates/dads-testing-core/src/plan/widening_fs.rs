@@ -6,7 +6,6 @@ use crate::manifest::{ImpactMode, TaskKind, TestingManifest};
 use crate::protocol::{IssueScope, IssueSeverity, PlanIssue};
 use crate::scope::{deepest_project_for_path, is_isolated_test_file, is_standard_test_path};
 use std::collections::BTreeSet;
-use std::path::Path;
 
 pub(crate) const FS_DIR_PREFIX: &str = "fs-dir:";
 
@@ -174,16 +173,17 @@ fn unresolved_fs_reader_reaches_tests(
     {
         return true;
     }
-    // If any reached project has a non-narrowed reachability test task (custom runner without
-    // declared test suffixes), fail closed conservatively.
+    // Only fall back to non-narrowed custom-runner widening when a reached project has a
+    // reachability test task without fileNarrowing AND no standard test files in the graph.
     reached.paths.iter().any(|p| {
         deepest_project_for_path(&manifest.projects, p).is_some_and(|proj| {
-            manifest.tasks.iter().any(|t| {
+            let has_non_narrowed_test = manifest.tasks.iter().any(|t| {
                 t.project == proj.id
                     && t.kind == TaskKind::Test
                     && t.impact.mode == ImpactMode::Reachability
                     && t.execution.file_narrowing.is_none()
-            })
+            });
+            has_non_narrowed_test && !graph.project_has_standard_tests(&proj.root)
         })
     })
 }
@@ -199,52 +199,6 @@ fn is_test_or_setup_path(path: &str, manifest: &TestingManifest) -> bool {
                     && !n.exclude_suffixes.iter().any(|e| path.ends_with(e)))
         })
     })
-}
-
-/// When any changed path has been deleted from disk, its reverse edges vanish from the current
-/// working-tree graph and every consumer that still imports it records an unresolved module
-/// uncertainty. Widen those unresolved importers (and every module that imports them) so
-/// cross-project deletes never silently skip broken tests or typechecks.
-pub(super) fn widen_unresolved_module_importers_on_delete<'a>(
-    manifest: &'a TestingManifest,
-    workspace_root: &Path,
-    changed_paths: &[String],
-    graph: &DependencyGraph,
-    evidence: &mut PlanEvidence<'a>,
-    has_non_test_reachability: bool,
-) {
-    if !changed_paths
-        .iter()
-        .any(|path| !workspace_root.join(path).is_file())
-    {
-        return;
-    }
-    let seeds: Vec<String> = graph
-        .uncertainties()
-        .into_iter()
-        .filter(|u| {
-            matches!(
-                u.code.as_str(),
-                "unresolved-local-module" | "unresolved-bare-module" | "unresolved-module-scheme"
-            )
-        })
-        .map(|u| u.path)
-        .collect();
-    if seeds.is_empty() {
-        return;
-    }
-    widen_reached_unresolved_projects(
-        manifest,
-        graph,
-        evidence,
-        has_non_test_reachability,
-        seeds,
-        UnresolvedWidenSpec {
-            code: "unresolved-import-after-delete",
-            fallback_on_unowned: true,
-            detail: "depends on an unresolved module import while changed workspace files were deleted; widened conservatively.",
-        },
-    );
 }
 
 pub(super) struct UnresolvedWidenSpec<'a> {

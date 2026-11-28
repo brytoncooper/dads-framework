@@ -286,8 +286,9 @@ impl DependencyGraph {
         if e.kind == ImportKind::Static && is_pure_side_effect_import(e) {
             return;
         }
-        let runtime_module_dependency =
-            e.kind == ImportKind::Runtime && !e.namespace && e.requested.is_empty();
+        let runtime_module_dependency = matches!(e.kind, ImportKind::Runtime | ImportKind::Dynamic)
+            && !e.namespace
+            && e.requested.is_empty();
         if e.namespace || (e.requested.is_empty() && !runtime_module_dependency) {
             walk.uncertainties.push(ambiguous_import(source, e));
             return;

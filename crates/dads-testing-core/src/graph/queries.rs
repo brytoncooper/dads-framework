@@ -10,6 +10,16 @@ impl DependencyGraph {
             .is_some_and(|m| self.has_non_file_read_reverse(m))
     }
 
+    pub fn project_has_standard_tests(&self, project_root: &str) -> bool {
+        self.modules
+            .iter()
+            .filter_map(|m| self.str(m.path))
+            .any(|p| {
+                crate::scope::path_is_inside(p, project_root)
+                    && crate::scope::is_standard_test_path(p)
+            })
+    }
+
     pub fn has_file_read_dir_for(&self, path: &str) -> bool {
         file_read_dir_prefixes(path).into_iter().any(|dir| {
             self.module_index(&dir).is_some_and(|m| {

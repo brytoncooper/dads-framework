@@ -230,3 +230,108 @@ pub(super) fn widen_unresolved_workspace_dependents<'a>(
         },
     );
 }
+
+/// When any changed path has been deleted from disk, its reverse edges vanish from the current
+/// working-tree graph and every consumer that still imports it records an unresolved module
+/// uncertainty. Widen unresolved importers in the deleted project and its transitive dependents.
+pub(super) fn widen_unresolved_module_importers_on_delete<'a>(
+    manifest: &'a TestingManifest,
+    workspace_root: &std::path::Path,
+    changed_paths: &[String],
+    graph: &DependencyGraph,
+    evidence: &mut PlanEvidence<'a>,
+    has_non_test_reachability: bool,
+) {
+    let deleted: Vec<&String> = changed_paths
+        .iter()
+        .filter(|path| !workspace_root.join(path).is_file())
+        .collect();
+    if deleted.is_empty() {
+        return;
+    }
+    let mut deleted_projects: std::collections::BTreeSet<&'a str> =
+        std::collections::BTreeSet::new();
+    let mut has_unowned_delete = false;
+    for path in &deleted {
+        match crate::scope::deepest_project_for_path(&manifest.projects, path) {
+            Some(proj) => {
+                deleted_projects.insert(proj.id.as_str());
+            }
+            None => has_unowned_delete = true,
+        }
+    }
+    let mut downstream = deleted_projects.clone();
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for proj in &manifest.projects {
+            if !downstream.contains(proj.id.as_str())
+                && proj
+                    .fallback_dependencies
+                    .iter()
+                    .any(|dep| downstream.contains(dep.as_str()))
+            {
+                downstream.insert(proj.id.as_str());
+                changed = true;
+            }
+        }
+    }
+    let deleted_stems: Vec<&str> = deleted
+        .iter()
+        .filter_map(|p| {
+            let file = p.rsplit('/').next()?;
+            let stem = file.split('.').next().filter(|s| !s.is_empty())?;
+            if stem == "index" {
+                p.rsplit('/').nth(1)
+            } else {
+                Some(stem)
+            }
+        })
+        .collect();
+    let seeds: Vec<String> = graph
+        .uncertainties()
+        .into_iter()
+        .filter(|u| {
+            matches!(
+                u.code.as_str(),
+                "unresolved-local-module" | "unresolved-bare-module" | "unresolved-module-scheme"
+            )
+        })
+        .filter(|u| {
+            if has_unowned_delete {
+                return true;
+            }
+            if u.code == "unresolved-local-module" && u.message.contains("../") {
+                return true;
+            }
+            if deleted_stems.iter().any(|stem| u.message.contains(stem)) {
+                return true;
+            }
+            let Some(proj) = crate::scope::deepest_project_for_path(&manifest.projects, &u.path)
+            else {
+                return true;
+            };
+            if u.code == "unresolved-local-module" {
+                deleted_projects.contains(proj.id.as_str())
+            } else {
+                downstream.contains(proj.id.as_str())
+            }
+        })
+        .map(|u| u.path)
+        .collect();
+    if seeds.is_empty() {
+        return;
+    }
+    super::widening_fs::widen_reached_unresolved_projects(
+        manifest,
+        graph,
+        evidence,
+        has_non_test_reachability,
+        seeds,
+        super::widening_fs::UnresolvedWidenSpec {
+            code: "unresolved-import-after-delete",
+            fallback_on_unowned: true,
+            detail: "depends on an unresolved module import while changed workspace files were deleted; widened conservatively.",
+        },
+    );
+}
